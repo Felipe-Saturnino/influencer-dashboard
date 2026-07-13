@@ -1102,7 +1102,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Geração de Links",
         texto:
-          "Consolida **TOTAL**, **ATIVOS** e **INATIVOS**. Um link fica **Ativo** quando gerou resultados (métricas) nos últimos 30 dias; caso contrário, **Inativo**.\n\nEm **Links cadastrados**, a tabela mostra UTM, Operadora, Criado em, Usuário (quem criou), Status e Última Visita. Com permissão de **Criar**, use **Novo Link**: escolha a operadora (**Casa de Apostas** ou **Blaze**), a **campanha ativa** da mesma operadora e o parâmetro UTM na URL base fixa (utm_source na CDA; utm_campaign na Blaze). Ao gerar, o link é mapeado automaticamente à campanha (como na Gestão de Links), a URL completa aparece com **Copiar** e o registro entra na tabela.",
+          "Consolida **TOTAL**, **ATIVOS** e **INATIVOS**. Um link fica **Ativo** quando gerou resultados (métricas) nos últimos 30 dias; caso contrário, **Inativo**.\n\nEm **Links cadastrados**, a tabela mostra UTM, Operadora, Criado em, Usuário (quem criou), Status e Última Visita. Com permissão de **Criar**, use **Novo Link**: escolha a operadora (**Casa de Apostas** ou **Blaze**), a **campanha ativa** da mesma operadora e o campo **UTM** (utm_source na CDA; utm_campaign na Blaze). Ao gerar, a URL completa é montada com a base da operadora, o link é mapeado à campanha (como na Gestão de Links), aparece com **Copiar** e o registro entra na tabela.",
       },
     ],
   },
@@ -1159,12 +1159,31 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e edição",
         texto:
-          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network, **Agregadora**, **Último Contato**).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada**, **Network** ou **Agregadora** para alterar via lista; em **Último Contato**, clique na data para escolher ou alterar o dia do último contato comercial. **Agregadora** aceita Alea, BetConstruct, Cactus, Cometa Gaming, Playtech ou SoftSwiss (ou **—** para limpar). Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.\n\nA coluna **Envio de Material** exibe a data do último envio de material (somente leitura na tabela). Todas as abas exibem as mesmas colunas, na ordem: Razão Social, Marca, Contato, Comercial, Status, Dedicada, Network, Agregadora, Último Contato, Envio de Material e Ação.",
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network, **Agregadora**, **Último Contato**).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada**, **Network** ou **Agregadora** para alterar via lista; em **Último Contato**, clique na data para escolher ou alterar o dia do último contato comercial. **Agregadora** aceita Alea, BetConstruct, Cactus, Cometa Gaming, Playtech ou SoftSwiss (ou **—** para limpar). Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.\n\nTodas as abas exibem as mesmas colunas, na ordem: Razão Social, Marca, Contato, Comercial, Status, Dedicada, Network, Agregadora, Último Contato e Ação.",
       },
       {
         subtitulo: "Comunicar",
         texto:
-          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) e alimentar a coluna **Envio de Material** — fluxo em implementação posterior.",
+          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) — fluxo em implementação posterior.",
+      },
+    ],
+  },
+  comercial_pipeline_agregadoras: {
+    titulo: "Pipeline Agregadoras",
+    blocos: [
+      {
+        texto:
+          "A página **Pipeline Agregadoras** concentra a prospecção comercial de agregadoras de jogos (plataformas B2B de conteúdo). O acesso depende da permissão de Ver em Gestão de Usuários; cadastro exige permissão de Criar; alteração de status e último contato exige permissão de Editar.",
+      },
+      {
+        subtitulo: "Filtros e abas",
+        texto:
+          "Use a busca por nome ou site e o filtro **Comercial** (**Todos Comerciais**, **Nenhum** ou um gestor canónico). As abas **Todos**, **Conexão**, **Negociação** e **Fechado** organizam o funil. Os KPIs **Disponíveis**, **Conexão**, **Negociação** e **Fechado** filtram a tabela por status (clique novamente para limpar).",
+      },
+      {
+        subtitulo: "Cadastro e tabela",
+        texto:
+          "Com permissão de Criar, use **Cadastrar** para informar Nome, Site, Jogos e Comercial. Toda agregadora nova entra no status **Conexão**. A tabela exibe Nome, Site, Jogos, Status, Último Contato e ações **Ver** e **Histórico**. Com Editar, altere o status pelo badge e a data de último contato na própria linha.",
       },
     ],
   },

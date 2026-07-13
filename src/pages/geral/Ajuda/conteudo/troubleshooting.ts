@@ -1018,6 +1018,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  comercial_pipeline_agregadoras: {
+    titulo: "Pipeline Agregadoras",
+    blocos: [
+      {
+        subtitulo: "Não vejo Pipeline Agregadoras no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline Agregadoras. Administradores têm acesso total. Demais perfis começam com Ver/Criar/Editar em **Não** até liberação explícita.",
+      },
+      {
+        subtitulo: "Não consigo cadastrar ou alterar status?",
+        texto:
+          "O botão **Cadastrar** exige permissão de Criar. Alterar Status ou Último Contato exige permissão de Editar. Sem Editar, os modais Ver e Histórico permanecem em modo consulta.",
+      },
+      {
+        subtitulo: "A tabela está vazia?",
+        texto:
+          "Ainda não há seed automático — cadastre agregadoras manualmente. Se já houver registros, revise busca, filtro Comercial, aba ativa e KPI selecionado.",
+      },
+    ],
+  },
   gestao_operadoras: {
     titulo: "Gestão de Operadoras",
     blocos: [

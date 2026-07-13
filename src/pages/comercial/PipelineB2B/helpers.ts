@@ -440,11 +440,9 @@ export function sortMarcas(
         return compareLocaleTexto(produtoDisplay(a, "mesa_network"), produtoDisplay(b, "mesa_network"), dir);
       case "agregadora":
         return compareLocaleTexto(a.agregadora ?? "", b.agregadora ?? "", dir);
-      case "ultimo_contato":
-      case "ultima": {
-        const field = col === "ultimo_contato" ? "ultimo_contato" : "ultima_comunicacao";
-        const da = a[field] ?? "";
-        const db = b[field] ?? "";
+      case "ultimo_contato": {
+        const da = a.ultimo_contato ?? "";
+        const db = b.ultimo_contato ?? "";
         if (da === db) return 0;
         if (!da) return 1;
         if (!db) return -1;

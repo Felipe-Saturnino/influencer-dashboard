@@ -162,8 +162,6 @@ export function ModalNovoLink({
 
   const linkStripOuterBorder = brand.primaryTransparentBorder;
   const linkStripBg = brand.primaryTransparentBg;
-  const linkStripDivider = t.cardBorder;
-  const linkStripInputBg = t.inputBg ?? t.cardBg;
 
   const utmOk = sanitizarUtmCampanha(utmInput).trim().length > 0;
   const podeGerar =
@@ -369,72 +367,30 @@ export function ModalNovoLink({
 
               <div style={{ marginBottom: 18 }}>
                 <label style={labelStyle}>
-                  {`Link (URL base + ${paramLabel})`}
+                  UTM
                   <CampoObrigatorioMark />
                 </label>
-                <div
-                  style={{
-                    borderRadius: 12,
-                    border: linkStripOuterBorder,
-                    background: linkStripBg,
-                    overflow: "hidden",
+                <input
+                  type="text"
+                  value={utmInput}
+                  onChange={(e) => setUtmInput(sanitizarUtmCampanha(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === " ") e.preventDefault();
                   }}
-                >
-                  <div style={{ display: "flex", alignItems: "stretch", minHeight: 44, overflowX: "auto" }}>
-                    <span
-                      style={{
-                        flexShrink: 0,
-                        padding: "10px 12px",
-                        fontFamily: "ui-monospace, monospace",
-                        fontSize: 12,
-                        color: t.text,
-                        whiteSpace: "nowrap",
-                        display: "flex",
-                        alignItems: "center",
-                        lineHeight: 1.4,
-                        background: linkStripBg,
-                      }}
-                    >
-                      {linkCfg.urlBase}
-                    </span>
-                    <div
-                      style={{
-                        width: 1,
-                        flexShrink: 0,
-                        background: linkStripDivider,
-                        alignSelf: "stretch",
-                      }}
-                      aria-hidden
-                    />
-                    <input
-                      type="text"
-                      value={utmInput}
-                      onChange={(e) => setUtmInput(sanitizarUtmCampanha(e.target.value))}
-                      onKeyDown={(e) => {
-                        if (e.key === " ") e.preventDefault();
-                      }}
-                      disabled={gerando}
-                      placeholder={paramLabel}
-                      autoComplete="off"
-                      aria-label={`Valor do ${paramLabel}`}
-                      style={{
-                        flex: "1 1 140px",
-                        minWidth: 100,
-                        boxSizing: "border-box",
-                        padding: "10px 12px",
-                        border: "none",
-                        background: linkStripInputBg,
-                        color: t.text,
-                        fontSize: 13,
-                        fontFamily: "ui-monospace, monospace",
-                        outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
+                  disabled={gerando}
+                  placeholder={paramLabel}
+                  autoComplete="off"
+                  aria-label={`Valor do ${paramLabel}`}
+                  style={{
+                    ...inputStyle,
+                    fontFamily: "ui-monospace, monospace",
+                    fontSize: 13,
+                  }}
+                />
                 <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  O trecho à direita é o {paramLabel} — construa do zero. Não use espaços (use _) nem caracteres
-                  especiais (~, ^, ç, etc.). Ao gerar, o link é mapeado automaticamente à campanha selecionada.
+                  Informe o {paramLabel} — construa do zero. Não use espaços (use _) nem caracteres especiais (~, ^,
+                  ç, etc.). Ao gerar, a URL completa é montada e o link é mapeado automaticamente à campanha
+                  selecionada.
                 </p>
               </div>
             </>

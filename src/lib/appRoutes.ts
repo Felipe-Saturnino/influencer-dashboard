@@ -77,7 +77,6 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "upload", slug: "Upload", label: "Upload", access: "galeria_upload" },
   ]),
   page("Overview Comercial", "comercial_overview", "OverviewComercial"),
-  page("Atendimento", "cs_atendimento", "Atendimento"),
   page("Pipeline B2B", "comercial_pipeline_b2b", "PipelineB2B", [
     { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
     { tabId: "disponiveis", slug: "Disponiveis", label: "Disponíveis", access: "always" },
@@ -85,6 +84,13 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "negociacao", slug: "Negociacao", label: "Negociação", access: "always" },
     { tabId: "fechado", slug: "Fechado", label: "Fechado", access: "always" },
   ]),
+  page("Pipeline Agregadoras", "comercial_pipeline_agregadoras", "PipelineAgregadoras", [
+    { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
+    { tabId: "conexao", slug: "Conexao", label: "Conexão", access: "always" },
+    { tabId: "negociacao", slug: "Negociacao", label: "Negociação", access: "always" },
+    { tabId: "fechado", slug: "Fechado", label: "Fechado", access: "always" },
+  ]),
+  page("Atendimento", "cs_atendimento", "Atendimento"),
   page("Gestão de Dealers", "gestao_dealers", "GestaoDeDealers"),
   page("Roteiro de Mesa", "roteiro_mesa", "RoteiroDeMesa"),
   page("Gestão de Escala", "rh_gestao_escala", "GestaoDeEscala"),

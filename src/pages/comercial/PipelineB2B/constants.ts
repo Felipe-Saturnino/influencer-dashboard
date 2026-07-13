@@ -61,7 +61,6 @@ export type TableCol =
   | "network"
   | "agregadora"
   | "ultimo_contato"
-  | "ultima"
   | "acao";
 
 /** Colunas da tabela — mesma ordem em todas as abas. */
@@ -75,7 +74,6 @@ export const PIPELINE_TABLE_COLS: TableCol[] = [
   "network",
   "agregadora",
   "ultimo_contato",
-  "ultima",
   "acao",
 ];
 
@@ -244,7 +242,6 @@ export const COL_LABEL: Record<TableCol, string> = {
   network: "Network",
   agregadora: "Agregadora",
   ultimo_contato: "Último Contato",
-  ultima: "Envio de Material",
   acao: "Ação",
 };
 
@@ -254,7 +251,6 @@ export const SORTABLE_COLS: TableCol[] = [
   "network",
   "agregadora",
   "ultimo_contato",
-  "ultima",
 ];
 
 export const COMERCIAL_FILTRO_TODOS = "todos";

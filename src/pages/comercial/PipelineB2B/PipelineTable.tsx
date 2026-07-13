@@ -33,7 +33,6 @@ import {
   buildRazaoMerge,
   buildPipelineComercialPopoverOptions,
   fmtDataNascimento,
-  fmtDataPipeline,
   pipelineComercialDisplayNome,
   pipelineComercialExibeSiteOffline,
   pipelineComercialIsMissingOptionValue,
@@ -431,10 +430,6 @@ export function PipelineTable({
                         </div>
                       )}
                     </td>
-                  ) : null}
-
-                  {cfg.cols.includes("ultima") ? (
-                    <td style={dataTable.tdCenter}>{fmtDataPipeline(row.ultima_comunicacao)}</td>
                   ) : null}
 
                   {cfg.cols.includes("acao") ? (
