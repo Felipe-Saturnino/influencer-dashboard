@@ -235,6 +235,61 @@ export default function PipelineAgregadoras() {
     setVerRow((v) => (v?.id === row.id ? { ...v, status_pipeline: status } : v));
   }
 
+  async function updateComercial(row: AgregadoraRow, userId: string | null) {
+    if (!perm.canEditarOk) return;
+    const anterior = row.comercial_user_id;
+    if ((anterior ?? null) === (userId ?? null)) return;
+    const { error } = await supabase
+      .from("comercial_agregadoras")
+      .update({ comercial_user_id: userId })
+      .eq("id", row.id);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    const nomeNovo = pipelineComercialNomePorId(userId, comerciais);
+    await insertHistorico(
+      row.id,
+      "comercial_user_id",
+      pipelineComercialNomePorId(anterior, comerciais) ?? "—",
+      nomeNovo ?? "—",
+    );
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === row.id
+          ? { ...r, comercial_user_id: userId, comercial_nome: nomeNovo }
+          : r,
+      ),
+    );
+    setVerRow((v) =>
+      v?.id === row.id
+        ? { ...v, comercial_user_id: userId, comercial_nome: nomeNovo }
+        : v,
+    );
+  }
+
+  async function updateJogos(row: AgregadoraRow, jogos: number | null) {
+    if (!perm.canEditarOk) return;
+    if ((row.jogos ?? null) === (jogos ?? null)) return;
+    const anterior = row.jogos;
+    const { error } = await supabase
+      .from("comercial_agregadoras")
+      .update({ jogos })
+      .eq("id", row.id);
+    if (error) {
+      console.error(error);
+      return;
+    }
+    await insertHistorico(
+      row.id,
+      "jogos",
+      anterior == null ? null : String(anterior),
+      jogos == null ? null : String(jogos),
+    );
+    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, jogos } : r)));
+    setVerRow((v) => (v?.id === row.id ? { ...v, jogos } : v));
+  }
+
   async function updateUltimoContato(row: AgregadoraRow, iso: string | null) {
     if (!perm.canEditarOk) return;
     const anterior = row.ultimo_contato;
@@ -414,12 +469,15 @@ export default function PipelineAgregadoras() {
         ) : (
           <AgregadorasTable
             rows={tableRows}
+            comerciais={comerciais}
             sort={sort}
             onSort={toggleSort}
             canEditar={perm.canEditarOk}
             onVer={setVerRow}
             onHistorico={setHistoricoRow}
             onUpdateStatus={updateStatus}
+            onUpdateComercial={updateComercial}
+            onUpdateJogos={updateJogos}
             onUpdateUltimoContato={updateUltimoContato}
             t={t}
           />

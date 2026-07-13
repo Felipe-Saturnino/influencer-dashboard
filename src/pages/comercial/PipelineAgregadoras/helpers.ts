@@ -15,9 +15,15 @@ import type { AgregadoraRow } from "./types";
 export {
   buildPipelineComerciais,
   buildComercialFiltroExtraOptions,
+  buildPipelineComercialPopoverOptions,
   pipelineComercialNomePorId,
+  pipelineComercialPopoverLabel,
+  pipelineComercialPopoverUserId,
+  pipelineComercialIsMissingOptionValue,
   fmtDataPipeline,
   fmtDataHora,
+  fmtDataNascimento,
+  toDateInputValue,
 } from "../PipelineB2B/helpers";
 
 export function normalizeAgregadoraSite(raw: string): string | null {
@@ -25,6 +31,21 @@ export function normalizeAgregadoraSite(raw: string): string | null {
   if (!trimmed) return null;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
+}
+
+export function comercialDisplayAgregadora(row: AgregadoraRow): string {
+  return row.comercial_nome ?? "—";
+}
+
+export function parseJogosInput(raw: string): { value: number | null; error?: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { value: null };
+  const cleaned = trimmed.replace(/\./g, "").replace(",", ".");
+  const n = Number(cleaned);
+  if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+    return { value: null, error: "Informe a quantidade de jogos como número inteiro." };
+  }
+  return { value: n };
 }
 
 export function filterAgregadoras(
@@ -74,6 +95,9 @@ export function sortAgregadoras(
           STATUS_PIPELINE_AGREGADORA_LABEL[b.status_pipeline],
           dir,
         );
+        break;
+      case "comercial":
+        cmp = compareLocaleTexto(a.comercial_nome ?? "", b.comercial_nome ?? "", dir);
         break;
       case "ultimo_contato":
         cmp = compareLocaleTexto(a.ultimo_contato ?? "", b.ultimo_contato ?? "", dir);

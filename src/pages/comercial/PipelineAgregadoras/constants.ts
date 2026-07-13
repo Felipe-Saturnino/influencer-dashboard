@@ -13,6 +13,7 @@ export type TableColAgregadora =
   | "site"
   | "jogos"
   | "status"
+  | "comercial"
   | "ultimo_contato"
   | "acao";
 
@@ -56,6 +57,7 @@ export const AGREGADORA_TABLE_COLS: TableColAgregadora[] = [
   "site",
   "jogos",
   "status",
+  "comercial",
   "ultimo_contato",
   "acao",
 ];
@@ -65,6 +67,7 @@ export const AGREGADORA_COL_LABEL: Record<TableColAgregadora, string> = {
   site: "Site",
   jogos: "Jogos",
   status: "Status",
+  comercial: "Comercial",
   ultimo_contato: "Último Contato",
   acao: "Ação",
 };

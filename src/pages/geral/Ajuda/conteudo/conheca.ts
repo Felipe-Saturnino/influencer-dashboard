@@ -1183,7 +1183,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastro e tabela",
         texto:
-          "Com permissão de Criar, use **Cadastrar** para informar Nome, Site, Jogos e Comercial. Toda agregadora nova entra no status **Conexão**. A tabela exibe Nome, Site, Jogos, Status, Último Contato e ações **Ver** e **Histórico**. Com Editar, altere o status pelo badge e a data de último contato na própria linha.",
+          "Com permissão de Criar, use **Cadastrar** para informar Nome, Site, Jogos e Comercial. Toda agregadora nova entra no status **Conexão**. A tabela exibe Nome, Site, Jogos, Status, Comercial, Último Contato e ações **Ver** e **Histórico**. Com Editar, altere Status e Comercial pelo popover; em Jogos e Último Contato, clique na célula (vazio mostra **—**) para editar.",
       },
     ],
   },

@@ -178,9 +178,10 @@ Quatro cards clicáveis: **Disponíveis**, **Conexão**, **Negociação**, **Fec
 ### Tabela Agregadoras
 
 - CTA **Cadastrar** (`CtaCriarButton`) no topo do bloco — exige permissão de **Criar**.
-- Colunas: Nome · Site · Jogos · Status · Último Contato · Ação (`SortTableTh` nas ordenáveis).
+- Colunas: Nome · Site · Jogos · Status · Comercial · Último Contato · Ação (`SortTableTh` nas ordenáveis).
 - Ações: **Ver** (`Eye`) e **Histórico** (`History`) — `BtnIconeAcaoLinha` + `tooltipAcao`.
-- Com **Editar:** status via popover no badge; último contato via `<input type="date">`.
+- Com **Editar:** Status e Comercial via popover; Jogos e Último Contato via clique (vazio = **—** até selecionar/editar).
+- Nome **sem** hiperlink (só texto). Site permanece link externo.
 - Cadastro novo: status inicial **`conexao`**; campos modal Nome*, Site*, Jogos, Comercial*.
 - Vazio: `Nenhuma agregadora encontrada para os filtros selecionados.`
 
