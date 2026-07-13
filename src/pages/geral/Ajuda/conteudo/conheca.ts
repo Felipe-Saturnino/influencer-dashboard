@@ -1149,7 +1149,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página **Integração** acompanha a integração técnica das marcas depois que Dedicada ou Network ficam em **Contrato Assinado** no Pipeline B2B. O acesso depende da permissão de Ver; o botão **Nova Integração** exige Criar; alteração de status, prioridade, caminho, PAM, agregador e comentários exige Editar.",
+          "A página **Integração** acompanha a integração técnica das marcas que estão na aba **Fechado** do Pipeline B2B (Dedicada ou Network em **Contrato Assinado** ou **Ativo**). O acesso depende da permissão de Ver; o botão **Nova Integração** exige Criar; alteração de status, prioridade, caminho, PAM, agregador e comentários exige Editar.",
       },
       {
         subtitulo: "Filtros e abas",
@@ -1159,7 +1159,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e Nova Integração",
         texto:
-          "Cada linha é uma combinação de marca (Operador) e Tipo (**Dedicada** ou **Network**). Agregador usa os nomes cadastrados em **Pipeline Agregadoras**. **Histórico** mostra alterações; **Comentar** registra o comentário visível na coluna.\n\nEm **Nova Integração**, escolha uma marca com Contrato Assinado (lista com pesquisa) e preencha Prioridade, Tipo, Caminho, PAM e Agregador (todos obrigatórios).\n\nQuando Dedicada ou Network passam a **Contrato Assinado** no Pipeline B2B, a plataforma cria automaticamente uma linha (Prioridade Baixo, Status Não Iniciado, Caminho e PAM em branco). Se depois o outro tipo também for assinado, nasce uma segunda linha.",
+          "Cada linha vincula um Operador (marca) a um Tipo (**Dedicada** ou **Network**). Agregador usa os nomes cadastrados em **Pipeline Agregadoras**. **Histórico** mostra alterações; **Comentar** registra o comentário visível na coluna.\n\nEm **Nova Integração**, escolha uma marca da aba **Fechado** do Pipeline B2B (lista com pesquisa) e preencha Prioridade, Tipo, Caminho, PAM e Agregador (todos obrigatórios). É possível criar mais de uma integração para a mesma marca.\n\nAo marcar Dedicada ou Network como **Contrato Assinado** ou **Ativo**, a plataforma cria automaticamente uma linha (Prioridade Baixo, Status Não Iniciado, Caminho e PAM em branco), se ainda não existir para aquele tipo.",
       },
     ],
   },

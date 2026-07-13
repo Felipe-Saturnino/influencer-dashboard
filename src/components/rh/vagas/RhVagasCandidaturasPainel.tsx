@@ -4,7 +4,7 @@ import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import {
   RH_VAGA_CANDIDATURA_ETAPAS,
-  emailCandidaturaDeJoin,
+  emailCandidaturaDisplay,
   labelVagaComCodigo,
   normalizarBuscaVaga,
   vagaPassaFiltroTipoCandidaturas,
@@ -83,7 +83,7 @@ export function RhVagasCandidaturasPainel({
       if (normalizarBuscaVaga(vaga.titulo).includes(q)) return true;
       if (normalizarBuscaVaga(vaga.codigo_vaga ?? "").includes(q)) return true;
       if (normalizarBuscaVaga(c.nome_completo).includes(q)) return true;
-      const em = emailCandidaturaDeJoin(c.funcionario);
+      const em = emailCandidaturaDisplay(c);
       if (em !== "—" && normalizarBuscaVaga(em).includes(q)) return true;
       return false;
     });

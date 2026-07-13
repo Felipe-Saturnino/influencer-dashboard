@@ -6,6 +6,12 @@ export function sanitizeStorageFileName(name: string): string {
   return name.replace(/[^\w.-]/g, "_").slice(0, 120);
 }
 
+/** Prefixo de path: prestador UUID ou pasta `externo` (candidatura site). */
+export function pathOwnerCandidaturaVaga(funcionarioId: string | null | undefined): string {
+  const id = (funcionarioId ?? "").trim();
+  return id || "externo";
+}
+
 export async function uploadCurriculoCandidaturaVaga(
   funcionarioId: string,
   vagaId: string,
@@ -23,12 +29,13 @@ export async function uploadCurriculoCandidaturaVaga(
 }
 
 export async function uploadAnexoCandidaturaVaga(
-  funcionarioId: string,
+  funcionarioId: string | null | undefined,
   vagaId: string,
   file: File,
 ): Promise<{ ok: true; path: string; fileName: string } | { ok: false; message: string }> {
   const safe = sanitizeStorageFileName(file.name);
-  const path = `${funcionarioId}/${vagaId}/anexos/${crypto.randomUUID()}_${safe}`;
+  const owner = pathOwnerCandidaturaVaga(funcionarioId);
+  const path = `${owner}/${vagaId}/anexos/${crypto.randomUUID()}_${safe}`;
   const { error } = await supabase.storage.from(RH_VAGA_CANDIDATURAS_BUCKET).upload(path, file, {
     cacheControl: "3600",
     upsert: false,
@@ -42,6 +49,11 @@ export async function urlAssinadaCurriculoCandidatura(storagePath: string): Prom
   const { data, error } = await supabase.storage.from(RH_VAGA_CANDIDATURAS_BUCKET).createSignedUrl(storagePath, 3600);
   if (error || !data?.signedUrl) return null;
   return data.signedUrl;
+}
+
+/** Alias semântico — mesmo helper de URL assinada (currículo, portfólio, vídeo, anexos). */
+export async function urlAssinadaArquivoCandidatura(storagePath: string): Promise<string | null> {
+  return urlAssinadaCurriculoCandidatura(storagePath);
 }
 
 export function downloadTextoComoArquivo(conteudo: string, nomeArquivo: string) {

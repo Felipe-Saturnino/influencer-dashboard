@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -12,16 +12,16 @@ import {
   PRIORIDADE_LABEL,
   PRIORIDADE_ORDEM,
   TIPO_INTEGRACAO_LABEL,
+  TIPO_INTEGRACAO_ORDEM,
   type PrioridadeIntegracao,
   type TipoIntegracao,
 } from "./constants";
-import type { MarcaAssinadaOpcao } from "./types";
+import type { MarcaFechadaOpcao } from "./types";
 
 export function ModalNovaIntegracao({
   onClose,
   onCreated,
   marcas,
-  tiposJaIntegrados,
   agregadoraOpcoes,
   canCriar,
 }: {
@@ -35,9 +35,7 @@ export function ModalNovaIntegracao({
     pam: string;
     agregadora: string;
   }) => Promise<string | null>;
-  marcas: MarcaAssinadaOpcao[];
-  /** Chaves `${marcaId}:${tipo}` já existentes. */
-  tiposJaIntegrados: Set<string>;
+  marcas: MarcaFechadaOpcao[];
   agregadoraOpcoes: string[];
   canCriar: boolean;
 }) {
@@ -60,19 +58,6 @@ export function ModalNovaIntegracao({
     () => marcas.filter((m) => textoContemBusca(m.nome, buscaMarca)),
     [marcas, buscaMarca],
   );
-
-  const tiposDisponiveis = useMemo(() => {
-    if (!marcaSel) return [] as TipoIntegracao[];
-    return marcaSel.tiposAssinados.filter(
-      (tp) => !tiposJaIntegrados.has(`${marcaSel.id}:${tp}`),
-    );
-  }, [marcaSel, tiposJaIntegrados]);
-
-  useEffect(() => {
-    if (tipo && marcaSel && !tiposDisponiveis.includes(tipo)) {
-      setTipo("");
-    }
-  }, [tipo, marcaSel, tiposDisponiveis]);
 
   const inputStyle = {
     width: "100%",
@@ -115,10 +100,6 @@ export function ModalNovaIntegracao({
     }
     if (!agregadora.trim()) {
       setErr("Selecione o agregador.");
-      return;
-    }
-    if (!tiposDisponiveis.includes(tipo)) {
-      setErr("Já existe integração para este tipo nesta marca.");
       return;
     }
 
@@ -213,7 +194,7 @@ export function ModalNovaIntegracao({
               />
               <ul
                 role="listbox"
-                aria-label="Marcas com contrato assinado"
+                aria-label="Marcas da aba Fechado do Pipeline B2B"
                 style={{
                   listStyle: "none",
                   margin: "8px 0 0",
@@ -231,49 +212,36 @@ export function ModalNovaIntegracao({
                       fontFamily: FONT.body,
                     }}
                   >
-                    Nenhuma marca com Contrato Assinado disponível.
+                    Nenhuma marca em Fechado disponível.
                   </li>
                 ) : (
-                  marcasFiltradas.map((m) => {
-                    const livres = m.tiposAssinados.filter(
-                      (tp) => !tiposJaIntegrados.has(`${m.id}:${tp}`),
-                    );
-                    const disabled = livres.length === 0;
-                    return (
-                      <li key={m.id}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={false}
-                          disabled={disabled}
-                          onClick={() => {
-                            setMarcaId(m.id);
-                            setBuscaMarca("");
-                          }}
-                          style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "8px 10px",
-                            border: "none",
-                            borderRadius: 8,
-                            background: "transparent",
-                            color: disabled ? t.textMuted : t.text,
-                            fontSize: 13,
-                            fontFamily: FONT.body,
-                            cursor: disabled ? "not-allowed" : "pointer",
-                          }}
-                          title={
-                            disabled
-                              ? "Já existem integrações para Dedicada e Network desta marca"
-                              : undefined
-                          }
-                        >
-                          {m.nome}
-                          {disabled ? " (já integrada)" : ""}
-                        </button>
-                      </li>
-                    );
-                  })
+                  marcasFiltradas.map((m) => (
+                    <li key={m.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={false}
+                        onClick={() => {
+                          setMarcaId(m.id);
+                          setBuscaMarca("");
+                        }}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "8px 10px",
+                          border: "none",
+                          borderRadius: 8,
+                          background: "transparent",
+                          color: t.text,
+                          fontSize: 13,
+                          fontFamily: FONT.body,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {m.nome}
+                      </button>
+                    </li>
+                  ))
                 )}
               </ul>
             </div>
@@ -315,7 +283,7 @@ export function ModalNovaIntegracao({
                 aria-label="Tipo"
               >
                 <option value="">Selecione…</option>
-                {tiposDisponiveis.map((tp) => (
+                {TIPO_INTEGRACAO_ORDEM.map((tp) => (
                   <option key={tp} value={tp}>
                     {TIPO_INTEGRACAO_LABEL[tp]}
                   </option>

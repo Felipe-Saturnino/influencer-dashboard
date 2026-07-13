@@ -74,7 +74,7 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 
 ## Integração (`comercial_integracao`)
 
-Acompanhamento técnico pós **Contrato Assinado** no Pipeline B2B. Menu entre Overview Comercial e Pipeline B2B. Uma linha por `(marca, tipo)` Dedicada ou Network.
+Acompanhamento técnico das marcas na aba **Fechado** do Pipeline B2B (Dedicada/Network em **Contrato Assinado** ou **Ativo**). Menu entre Overview Comercial e Pipeline B2B.
 
 ### Filtros (bloco nível 2)
 
@@ -88,15 +88,15 @@ Quatro cards: **Total de Operadores**, **Concluídos**, **Em andamento**, **Não
 
 ### Tabela
 
-- CTA **Nova Integração** (`CtaCriarButton`) — permissão de **Criar**. Modal: seleção única de marca com Contrato Assinado (Dedicada ou Network) + busca; campos obrigatórios Prioridade, Tipo, Caminho, PAM, Agregador (nomes de `comercial_agregadoras`).
+- CTA **Nova Integração** (`CtaCriarButton`) — permissão de **Criar**. Modal: seleção única de marca da aba **Fechado** (Dedicada/Network em Contrato Assinado ou Ativo) + busca; campos obrigatórios Prioridade, Tipo, Caminho, PAM, Agregador (nomes de `comercial_agregadoras`). **Sem** trava «já integrada» — permite outra integração na mesma marca.
 - Colunas: Operador · Prioridade · Tipo · Caminho · PAM · Agregador · Status · Comentário · Ação.
 - Ações: **Histórico** e **Comentar** (`BtnIconeAcaoLinha`).
-- Com **Editar:** Prioridade, Status e Agregador via popover; Caminho e PAM via clique inline.
+- Com **Editar:** Prioridade, Status e Agregador via popover (Agregador com **barra de pesquisa**); Caminho e PAM via clique inline.
 - Vazio: `Nenhuma integração encontrada para os filtros selecionados.`
 
 ### Criação automática (Pipeline B2B)
 
-Trigger `comercial_integracao_from_assinado` em `comercial_marca_produtos`: ao passar Dedicada **ou** Network para **Contrato Assinado**, cria linha com Operador = nome da marca, Prioridade **Baixo**, Status **Não Iniciado**, Caminho/PAM vazios, Agregador copiado de `comercial_marcas.agregadora` se houver. Dedicada e Network geram linhas **independentes** (`UNIQUE (marca_id, tipo)`). Backfill na migration para produtos já assinados.
+Trigger `comercial_integracao_from_assinado` em `comercial_marca_produtos`: ao passar Dedicada **ou** Network para **Contrato Assinado** ou **Ativo**, cria linha com Operador = nome da marca, Prioridade **Baixo**, Status **Não Iniciado**, Caminho/PAM vazios, Agregador copiado de `comercial_marcas.agregadora` se houver — se ainda não existir linha automática para aquele `(marca, tipo)`. **Nova Integração** pode criar linhas adicionais (sem UNIQUE).
 
 ### Dados (Supabase)
 
@@ -134,7 +134,7 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 
 - Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato** — **sem** sort em Marca, Contato, Comercial, Status.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
-- Edição inline (Comercial, Status, Dedicada, Network, **Agregadora**): popover + permissão **Editar**; grava em `comercial_marca_historico`. **Agregadora:** opções = **Nome** das linhas de `comercial_agregadoras` (página **Pipeline Agregadoras**), em ordem alfabética, ou **—** para limpar; valor legado fora do catálogo continua visível e permanece na lista até alteração. Coluna `comercial_marcas.agregadora` é texto livre (sem CHECK). **Último Contato:** campo `date` editável inline (`<input type="date">`) com permissão **Editar**; grava em `comercial_marcas.ultimo_contato` + histórico. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
+- Edição inline (Comercial, Status, Dedicada, Network, **Agregadora**): popover + permissão **Editar**; grava em `comercial_marca_historico`. **Agregadora:** opções = **Nome** das linhas de `comercial_agregadoras` (página **Pipeline Agregadoras**), em ordem alfabética, ou **—** para limpar; popover com **barra de pesquisa** (`BarraPesquisaFiltroPainel` + `textoContemBusca`); valor legado fora do catálogo continua visível e permanece na lista até alteração. Coluna `comercial_marcas.agregadora` é texto livre (sem CHECK). **Último Contato:** campo `date` editável inline (`<input type="date">`) com permissão **Editar**; grava em `comercial_marcas.ultimo_contato` + histórico. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
 - **Colunas (todas as abas, mesma ordem):** Razão Social · Marca · Contato · Comercial · Status · Dedicada · Network · Agregadora · Último Contato · Ação (`PIPELINE_TABLE_COLS`). Campo `ultima_comunicacao` permanece no banco para o fluxo **Comunicar** (futuro) — **sem** coluna na tabela.
 - **Domínio:** clique no nome da **Marca** ou no ícone **Ver** abre o modal **Dados da Marca**; na aba Dados, **Domínio** é **hiperlink** (nova aba). Com permissão **Editar**, botão só ícone **`Pencil`** ao lado abre edição inline (Cancelar / Salvar); ao alterar, `status_dominio` → `inativo` até a próxima validação HTTP.
 - **Comercial — Site Offline:** badge automático quando `status_dominio = inativo` **e** sem comercial atribuído; com **Editar**, popover permite atribuir comercial canónico ou **Nenhum** (override manual).

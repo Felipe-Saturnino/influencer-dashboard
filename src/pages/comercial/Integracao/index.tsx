@@ -52,7 +52,7 @@ import {
   type TableColIntegracao,
   type TipoIntegracao,
 } from "./constants";
-import type { IntegracaoRow, MarcaAssinadaOpcao } from "./types";
+import type { IntegracaoRow, MarcaFechadaOpcao } from "./types";
 import { filterIntegracoes, sortIntegracoes } from "./helpers";
 
 const TAB_ICONS: Record<IntegracaoTab, ReactNode> = {
@@ -88,7 +88,7 @@ export default function Integracao() {
   const [kpiStatus, setKpiStatus] = useState<StatusIntegracao | null>(null);
   const [rows, setRows] = useState<IntegracaoRow[]>([]);
   const [agregadoraOpcoes, setAgregadoraOpcoes] = useState<string[]>([]);
-  const [marcasAssinadas, setMarcasAssinadas] = useState<MarcaAssinadaOpcao[]>([]);
+  const [marcasFechadas, setMarcasFechadas] = useState<MarcaFechadaOpcao[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<{ col: TableColIntegracao; dir: SortDir }>({
     col: "operador",
@@ -118,7 +118,7 @@ export default function Integracao() {
       supabase
         .from("comercial_marca_produtos")
         .select("marca_id, produto, status_produto, marca:comercial_marcas(id, nome)")
-        .eq("status_produto", "contrato_assinado")
+        .in("status_produto", ["contrato_assinado", "ativo"])
         .limit(5000),
     ]);
 
@@ -133,7 +133,7 @@ export default function Integracao() {
         .filter(Boolean),
     );
 
-    const byMarca = new Map<string, MarcaAssinadaOpcao>();
+    const byMarca = new Map<string, MarcaFechadaOpcao>();
     for (const raw of prodRes.data ?? []) {
       const marcaEmbed = (raw as { marca?: unknown }).marca;
       const marcaObj = Array.isArray(marcaEmbed) ? marcaEmbed[0] : marcaEmbed;
@@ -142,16 +142,9 @@ export default function Integracao() {
       const id = String(m.id ?? raw.marca_id ?? "");
       const nome = String(m.nome ?? "").trim();
       if (!id || !nome) continue;
-      const tipo = String((raw as { produto?: string }).produto) as TipoIntegracao;
-      if (tipo !== "mesa_dedicada" && tipo !== "mesa_network") continue;
-      const cur = byMarca.get(id);
-      if (cur) {
-        if (!cur.tiposAssinados.includes(tipo)) cur.tiposAssinados.push(tipo);
-      } else {
-        byMarca.set(id, { id, nome, tiposAssinados: [tipo] });
-      }
+      if (!byMarca.has(id)) byMarca.set(id, { id, nome });
     }
-    setMarcasAssinadas(
+    setMarcasFechadas(
       [...byMarca.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
     );
 
@@ -171,12 +164,6 @@ export default function Integracao() {
     const filtered = filterIntegracoes(rows, tab, busca, prioridadeFiltro, kpiStatus);
     return sortIntegracoes(filtered, sort.col, sort.dir);
   }, [rows, tab, busca, prioridadeFiltro, kpiStatus, sort]);
-
-  const tiposJaIntegrados = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of rows) set.add(`${r.marca_id}:${r.tipo}`);
-    return set;
-  }, [rows]);
 
   async function insertHistorico(
     integracaoId: string,
@@ -219,9 +206,6 @@ export default function Integracao() {
 
     if (error) {
       console.error(error);
-      if (error.code === "23505") {
-        return "Já existe uma integração para esta marca e tipo.";
-      }
       return "Não foi possível criar a integração. Se o problema persistir, entre em contato com o suporte.";
     }
 
@@ -520,8 +504,7 @@ export default function Integracao() {
         <ModalNovaIntegracao
           onClose={() => setMostrarNova(false)}
           onCreated={handleCreate}
-          marcas={marcasAssinadas}
-          tiposJaIntegrados={tiposJaIntegrados}
+          marcas={marcasFechadas}
           agregadoraOpcoes={agregadoraOpcoes}
           canCriar={perm.canCriarOk}
         />

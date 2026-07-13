@@ -122,6 +122,34 @@ export function emailCandidaturaDeJoin(f: { email?: string; email_spin?: string 
   return (f?.email ?? "").trim() || "—";
 }
 
+/** E-mail exibido no kanban/busca: candidatura site ou prestador (join). */
+export function emailCandidaturaDisplay(c: {
+  email?: string | null;
+  origem_formulario?: string | null;
+  funcionario?: { email?: string; email_spin?: string | null } | null;
+}): string {
+  const site = (c.email ?? "").trim();
+  if (site) return site;
+  return emailCandidaturaDeJoin(c.funcionario);
+}
+
+export function labelOrigemCandidaturaSite(origem: string | null | undefined): string {
+  switch ((origem ?? "").trim()) {
+    case "linkedin":
+      return "LinkedIn";
+    case "indicacao":
+      return "Indicação";
+    case "site_vagas":
+      return "Site de Vagas";
+    case "instagram":
+      return "Instagram";
+    case "site_spin":
+      return "Site Spin";
+    default:
+      return "—";
+  }
+}
+
 export function labelSimNao(valor: boolean): string {
   return valor ? "Sim" : "Não";
 }

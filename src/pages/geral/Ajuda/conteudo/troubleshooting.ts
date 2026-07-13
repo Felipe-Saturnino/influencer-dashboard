@@ -1004,12 +1004,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparece marca em Nova Integração?",
         texto:
-          "Só entram marcas com Dedicada ou Network em **Contrato Assinado** no Pipeline B2B. Se já existir integração para os dois tipos da marca, ela fica indisponível na lista.",
+          "Só entram marcas da aba **Fechado** do Pipeline B2B — Dedicada ou Network em **Contrato Assinado** ou **Ativo**. Use a pesquisa pelo nome da marca. Se o problema persistir, entre em contato com o suporte.",
       },
       {
-        subtitulo: "A linha não foi criada ao assinar no Pipeline B2B?",
+        subtitulo: "A linha não foi criada ao fechar no Pipeline B2B?",
         texto:
-          "A criação automática ocorre ao marcar **Contrato Assinado** (não só Ativo). Confirme o tipo (Dedicada vs Network) — cada um gera uma linha. Se o problema persistir, entre em contato com o suporte.",
+          "A criação automática ocorre ao marcar **Contrato Assinado** ou **Ativo** em Dedicada ou Network. Confirme o tipo — cada produto gera no máximo uma linha automática; novas linhas extras saem de **Nova Integração**. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },

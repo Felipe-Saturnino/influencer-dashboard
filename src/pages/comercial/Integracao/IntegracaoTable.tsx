@@ -8,6 +8,7 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { FONT } from "../../../constants/theme";
 import { CellSelectPopover } from "../PipelineB2B/CellSelectPopover";
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import {
   INTEGRACAO_COL_LABEL,
   INTEGRACAO_TABLE_COLS,
@@ -384,6 +385,8 @@ export function IntegracaoTable({
           onSelect={(v) => onUpdateAgregadora(popover.row, v || null)}
           onClose={() => setPopover(null)}
           labelOption={(v) => (v ? v : "—")}
+          enableSearch
+          searchPlaceholder={placeholderPesquisaFiltro("Agregador")}
           t={t}
         />
       ) : null}

@@ -40,6 +40,7 @@ import {
   toDateInputValue,
 } from "./helpers";
 import { CellSelectPopover } from "./CellSelectPopover";
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 
 type PopoverKind = "comercial" | "status" | "dedicada" | "network" | "agregadora";
 
@@ -519,6 +520,8 @@ export function PipelineTable({
           onSelect={(v) => onUpdateAgregadora(popover.row, v || null)}
           onClose={() => setPopover(null)}
           labelOption={(v) => (v ? v : "—")}
+          enableSearch
+          searchPlaceholder={placeholderPesquisaFiltro("Agregadora")}
           t={t}
         />
       ) : null}

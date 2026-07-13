@@ -2,7 +2,7 @@
 
 export const RH_CANDIDATURAS_SELECT = `
   *,
-  vaga:rh_vagas ( id, codigo_vaga, titulo, tipo_vaga, status ),
+  vaga:rh_vagas ( id, codigo_vaga, titulo, tipo_vaga, status, necessario_video_apresentacao, necessario_turno ),
   funcionario:rh_funcionarios ( id, email, email_spin, cargo, data_inicio, data_funcao )
 `.trim();
 

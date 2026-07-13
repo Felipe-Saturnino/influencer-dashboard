@@ -122,3 +122,91 @@ export function supabaseProxyOptionsResponse(): Response {
     },
   });
 }
+
+/**
+ * Repasse de multipart/form-data (arquivos) — não força Content-Type JSON.
+ * Usado por formulários com upload (ex.: candidatura a vaga).
+ */
+export async function proxyMultipartPostToSupabaseEdge(
+  context: SupabaseProxyContext,
+  functionName: string,
+  options?: { forwardHeaders?: Record<string, string>; timeoutMs?: number }
+): Promise<Response> {
+  const { url, anonKey } = resolveProxySupabaseEnv(context);
+  const timeoutMs = options?.timeoutMs ?? 120_000;
+
+  if (!url || !anonKey) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Configuração do servidor incompleta (sem URL/chave Supabase no Worker). No Cloudflare Pages → Settings → Environment variables: defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY (ou SUPABASE_URL e SUPABASE_ANON_KEY) para Production e para Preview, marcando-as disponíveis para Functions — não basta só o build do Vite.",
+      }),
+      { status: 500, headers: jsonCorsHeaders() }
+    );
+  }
+
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.endsWith(".pages.dev") || host.endsWith(".cloudflareapp.com")) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "SUPABASE_URL no proxy aponta para o domínio do Cloudflare Pages. Use a Project URL do Supabase (Settings → API).",
+        }),
+        { status: 500, headers: jsonCorsHeaders() }
+      );
+    }
+  } catch {
+    return new Response(
+      JSON.stringify({ error: "SUPABASE_URL inválida no proxy (URL malformada)." }),
+      { status: 500, headers: jsonCorsHeaders() }
+    );
+  }
+
+  const contentType = context.request.headers.get("Content-Type") ?? "";
+  if (!contentType.toLowerCase().includes("multipart/form-data")) {
+    return new Response(JSON.stringify({ error: "Use multipart/form-data." }), {
+      status: 400,
+      headers: jsonCorsHeaders(),
+    });
+  }
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+
+  try {
+    const body = await context.request.arrayBuffer();
+    const res = await fetch(`${url.replace(/\/$/, "")}/functions/v1/${functionName}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": contentType,
+        Authorization: context.request.headers.get("Authorization") || `Bearer ${anonKey}`,
+        Apikey: anonKey,
+        ...(options?.forwardHeaders ?? {}),
+      },
+      body,
+      signal: ctrl.signal,
+    });
+
+    const data = await res.text();
+    return new Response(data, {
+      status: res.status,
+      headers: jsonCorsHeaders(),
+    });
+  } catch (e) {
+    if (isAbortError(e)) {
+      return new Response(
+        JSON.stringify({
+          error: `Tempo esgotado ao contactar a Edge Function "${functionName}" no Supabase (${timeoutMs / 1000}s). Confirme deploy da função e secrets.`,
+        }),
+        { status: 504, headers: jsonCorsHeaders() }
+      );
+    }
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : "Erro ao chamar Edge Function" }),
+      { status: 500, headers: jsonCorsHeaders() }
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}

@@ -1,7 +1,6 @@
 import {
   STATUS_INTEGRACAO_COLOR,
   STATUS_INTEGRACAO_KPI_LABEL,
-  STATUS_INTEGRACAO_ORDEM,
   type StatusIntegracao,
 } from "./constants";
 import type { IntegracaoRow } from "./types";

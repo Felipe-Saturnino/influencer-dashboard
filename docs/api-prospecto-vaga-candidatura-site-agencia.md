@@ -218,13 +218,13 @@ LGPD / aviso de privacidade: já coberto pelo site; este fluxo não exige campo 
 
 ## TI Spin (checklist — não é da agência)
 
-1. Migration de candidatura externa + storage (currículo / vídeo).
+1. Migration `20260713120000_rh_vaga_candidaturas_externas_site.sql` aplicada.
 2. Deploy Edge Function **`prospecto-vaga-candidatura-site`**.
-3. Proxy Cloudflare **`/api/prospecto-vaga-candidatura-site`**.
+3. Proxy Cloudflare **`/api/prospecto-vaga-candidatura-site`** (deploy Pages).
 4. Secret **`PROSPECTO_VAGA_CANDIDATURA_FORM_SECRET`** no Supabase e no Cloudflare (mesmo valor).
 5. Informar à agência a **URL final** do proxy.
 
-Até o TI concluir os itens acima, o endpoint pode responder 404 — alinhar data de go-live juntos.
+Guia TI: `docs/SETUP-PROSPECTO-VAGA-CANDIDATURA.md`.
 
 ---
 

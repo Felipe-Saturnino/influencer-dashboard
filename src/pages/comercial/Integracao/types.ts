@@ -24,9 +24,8 @@ export type IntegracaoHistorico = {
   usuario_nome?: string | null;
 };
 
-/** Marca com ≥1 produto em Contrato Assinado (candidata a Nova Integração). */
-export type MarcaAssinadaOpcao = {
+/** Marca da aba Fechado do Pipeline B2B (Dedicada/Network em Contrato Assinado ou Ativo). */
+export type MarcaFechadaOpcao = {
   id: string;
   nome: string;
-  tiposAssinados: TipoIntegracao[];
 };

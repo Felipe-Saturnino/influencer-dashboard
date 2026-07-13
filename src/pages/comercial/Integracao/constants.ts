@@ -82,6 +82,8 @@ export const TIPO_INTEGRACAO_LABEL: Record<TipoIntegracao, string> = {
   mesa_network: "Network",
 };
 
+export const TIPO_INTEGRACAO_ORDEM: TipoIntegracao[] = ["mesa_dedicada", "mesa_network"];
+
 export const INTEGRACAO_TABLE_COLS: TableColIntegracao[] = [
   "operador",
   "prioridade",
