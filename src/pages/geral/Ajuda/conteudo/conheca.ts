@@ -1087,22 +1087,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Campanhas permite cadastrar as campanhas de mídia social utilizadas nas ações de marketing da plataforma. Cada campanha pode ser vinculada a uma operadora específica ou permanecer genérica. Os UTMs mapeados na Gestão de Links que são associados a uma campanha alimentam automaticamente a página **Mídias Sociais** com dados de funil e performance.",
+          "A página **Campanhas** reúne o cadastro de campanhas de mídia e a **Geração de Links** com UTMs rastreados. Use o carrossel de operadoras (e o botão **Todas Operadoras**) na barra de filtros para restringir o que aparece nas duas abas. Campanhas sem operadora vinculada entram em qualquer filtro específico. Os UTMs mapeados na **Gestão de Links** e associados a uma campanha alimentam a página **Mídias Sociais**.",
       },
       {
-        subtitulo: "Indicadores de Resumo",
+        subtitulo: "Filtros e abas",
         texto:
-          "Três cards no topo (formato Financeiro/Banca de Jogo — rótulo em caixa alta acima do valor): **TOTAL**, **ATIVAS** e **INATIVAS**. Os valores se atualizam imediatamente após qualquer criação, edição ou exclusão.",
+          "Na barra superior, navegue entre operadoras com as setas ou ative **Todas Operadoras**. Abaixo, alterne entre as abas **Campanhas** e **Geração de Links** (também pela URL). Com o foco numa aba, use ← → do teclado para trocar.",
       },
       {
-        subtitulo: "Tabela de Campanhas",
+        subtitulo: "Aba Campanhas — indicadores e tabela",
         texto:
-          "Lista todas as campanhas ordenadas pelo campo selecionado. Colunas disponíveis: Nome, Operadora, Status (Ativa/Inativa) e data de criação.\n\nO botão Editar abre o formulário preenchido com os dados atuais da campanha, permitindo alterar o nome, a operadora e o status. O botão Excluir (ícone vermelho) abre o pop-up padrão de confirmação e remove a campanha permanentemente — os vínculos com UTMs mapeados na Gestão de Links são desfeitos automaticamente, mas os dados históricos de performance permanecem nos dashboards.",
+          "Três cards no topo: **TOTAL**, **ATIVAS** e **INATIVAS**. A tabela lista Nome, Operadora, Status (Ativa/Inativa) e data de criação.\n\n**Nova Campanha** abre o formulário (nome obrigatório; operadora opcional). Editar altera nome, operadora e status; Excluir remove a campanha e desfaz vínculos na Gestão de Links, mantendo o histórico nos dashboards.\n\nCampanhas inativas não aparecem como opção ao mapear novos links, mas mantêm UTMs já vinculados.",
       },
       {
-        subtitulo: "Criando uma Campanha",
+        subtitulo: "Aba Geração de Links",
         texto:
-          "No bloco **Campanhas cadastradas**, use **Nova Campanha** na mesma linha do título (ícone + no padrão de criação) para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+          "Consolida **TOTAL**, **ATIVOS** e **INATIVOS**. Um link fica **Ativo** quando gerou resultados (métricas) nos últimos 30 dias; caso contrário, **Inativo**.\n\nEm **Links cadastrados**, a tabela mostra UTM, Operadora, Criado em, Usuário (quem criou), Status e Última Visita. **Novo Link** (permissão de Criar) abre o fluxo de criação — em evolução na plataforma.",
       },
     ],
   },

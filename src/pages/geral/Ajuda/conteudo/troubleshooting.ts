@@ -929,7 +929,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A tabela está vazia mas sei que há campanhas cadastradas?",
         texto:
-          "Tente recarregar a página. Se o problema persistir, verifique se seu perfil tem permissão de visualização para a seção Campanhas.",
+          "Confira o filtro de operadora no carrossel — com uma operadora específica, só entram campanhas daquela parceira (e campanhas sem operadora). Tente **Todas Operadoras**. Se o problema persistir, verifique se seu perfil tem permissão de visualização para Campanhas e recarregue a página.",
+      },
+      {
+        subtitulo: "A aba Geração de Links não mostra nenhum link?",
+        texto:
+          "A lista só exibe links cadastrados nessa aba (botão **Novo Link**). Não é a mesma fila da Gestão de Links (UTMs detectados automaticamente). Confira também o filtro de operadora. Se a tabela permanecer vazia após criar links e o problema persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "O que significa Status Ativo ou Inativo nos links gerados?",
+        texto:
+          "**Ativo** indica que o link gerou resultados (métricas de visitas, registros ou FTDs) nos últimos 30 dias. **Inativo** significa que não houve resultados nesse período — o link continua cadastrado.",
       },
     ],
   },

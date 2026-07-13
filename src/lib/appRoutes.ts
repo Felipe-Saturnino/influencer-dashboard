@@ -68,7 +68,10 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Network", "afiliados_network", "Network"),
   page("Financeiro", "financeiro", "Financeiro"),
   page("Banca de Jogo", "banca_jogo", "BancaDeJogo"),
-  page("Campanhas", "campanhas", "Campanhas"),
+  page("Campanhas", "campanhas", "Campanhas", [
+    { tabId: "campanhas", slug: "Campanhas", label: "Campanhas", access: "always" },
+    { tabId: "geracao_links", slug: "GeracaoDeLinks", label: "Geração de Links", access: "always" },
+  ]),
   page("Galeria de Fotos", "galeria_fotos", "GaleriaDeFotos", [
     { tabId: "galeria", slug: "Galeria", label: "Galeria", access: "always" },
     { tabId: "upload", slug: "Upload", label: "Upload", access: "galeria_upload" },

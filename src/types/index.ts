@@ -159,6 +159,21 @@ export interface Campanha {
   updated_at?:     string;
 }
 
+/** Link gerado em Campanhas → Geração de Links (`campanha_links`). */
+export interface CampanhaLink {
+  id: string;
+  utm_source: string;
+  operadora_slug: string;
+  created_by: string | null;
+  created_at: string;
+  /** Nome do usuário que criou (join em profiles). */
+  usuario_nome?: string;
+  /** Última visita conhecida (utm_aliases.ultimo_visto ou métricas). */
+  ultima_visita?: string | null;
+  /** Ativo = teve resultados (métricas) nos últimos 30 dias. */
+  ativo_30d?: boolean;
+}
+
 // ─── UTM ALIAS ───────────────────────────────────────────────────────────────
 export type UtmAliasStatus = "pendente" | "mapeado" | "ignorado";
 
