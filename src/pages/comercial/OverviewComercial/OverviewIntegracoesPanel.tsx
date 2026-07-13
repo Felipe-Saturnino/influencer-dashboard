@@ -95,7 +95,7 @@ export function OverviewIntegracoesPanel({
       <div className="app-grid-2">
         <div style={pageBox}>
           <SectionTitle sub="Tempo médio até a próxima etapa do funil">SLA por etapa</SectionTitle>
-          <div className="app-grid-kpi-3">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {STATUS_INTEGRACAO_ORDEM.map((st) => (
               <OverviewKpiButton
                 key={st}

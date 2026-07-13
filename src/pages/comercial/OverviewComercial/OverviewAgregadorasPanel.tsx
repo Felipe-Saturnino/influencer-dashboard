@@ -9,10 +9,6 @@ import {
   STATUS_PIPELINE_AGREGADORA_LABEL,
   STATUS_PIPELINE_AGREGADORA_ORDEM,
 } from "../PipelineAgregadoras/constants";
-import {
-  STATUS_PRODUTO_COLOR,
-  STATUS_PRODUTO_ORDEM,
-} from "../PipelineB2B/constants";
 import type { ComercialOpcao } from "../PipelineB2B/types";
 import { OverviewGenericFunnel } from "./OverviewGenericFunnel";
 import { OverviewKpiButton } from "./OverviewKpiButton";
@@ -23,27 +19,18 @@ import {
   buildAgregadoraMovimentacao,
   carteiraAgregadorasPorComercial,
   countAgregadoraByStatus,
-  marcasVinculadasAgregadoras,
   type OverviewAgregadoraHistorico,
   type OverviewAgregadoraRow,
 } from "./helpersAgregadoras";
-import {
-  countProdutoByStatus,
-  maxProdutoCount,
-  STATUS_PRODUTO_LABEL,
-  type OverviewMarcaRow,
-} from "./helpers";
 
 export function OverviewAgregadorasPanel({
   rows,
-  marcas,
   historico,
   comerciais,
   pageBox,
   t,
 }: {
   rows: OverviewAgregadoraRow[];
-  marcas: OverviewMarcaRow[];
   historico: OverviewAgregadoraHistorico[];
   comerciais: ComercialOpcao[];
   pageBox: CSSProperties;
@@ -55,20 +42,6 @@ export function OverviewAgregadorasPanel({
 
   const levels = useMemo(() => agregadoraFunnelLevels(rows), [rows]);
   const taxas = useMemo(() => agregadoraFunnelTaxas(rows), [rows]);
-  const marcasProduto = useMemo(
-    () => marcasVinculadasAgregadoras(marcas, rows),
-    [marcas, rows],
-  );
-  const dedicadaCounts = useMemo(
-    () => countProdutoByStatus(marcasProduto, "mesa_dedicada"),
-    [marcasProduto],
-  );
-  const networkCounts = useMemo(
-    () => countProdutoByStatus(marcasProduto, "mesa_network"),
-    [marcasProduto],
-  );
-  const maxDed = maxProdutoCount(dedicadaCounts);
-  const maxNet = maxProdutoCount(networkCounts);
   const carteira = useMemo(
     () => carteiraAgregadorasPorComercial(rows, comerciais),
     [rows, comerciais],
@@ -102,105 +75,13 @@ export function OverviewAgregadorasPanel({
         </div>
       </div>
 
-      <div className="app-grid-2">
-        <div style={pageBox}>
-          <SectionTitle sub="Agregadoras no funil">Funil do pipeline</SectionTitle>
-          <OverviewGenericFunnel
-            levels={levels}
-            taxas={taxas}
-            ariaLabel="Funil do pipeline de agregadoras"
-          />
-        </div>
-        <div style={pageBox}>
-          <SectionTitle sub="Status de Dedicada x Network nas marcas vinculadas">
-            Produto
-          </SectionTitle>
-          <div className="app-grid-2" style={{ gap: 20 }}>
-            {(
-              [
-                ["Dedicada", dedicadaCounts, maxDed],
-                ["Network", networkCounts, maxNet],
-              ] as const
-            ).map(([title, counts, maxVal]) => (
-              <div key={title}>
-                <h4 style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, fontFamily: FONT.body }}>
-                  {title}
-                </h4>
-                {STATUS_PRODUTO_ORDEM.map((st) => (
-                  <div
-                    key={st}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 8,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>
-                      {STATUS_PRODUTO_LABEL[st]}
-                    </span>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: 10,
-                        background: t.inputBg,
-                        borderRadius: 999,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${(counts[st] / maxVal) * 100}%`,
-                          borderRadius: 999,
-                          background: STATUS_PRODUTO_COLOR[st],
-                          opacity: 0.85,
-                        }}
-                      />
-                    </div>
-                    <span style={{ width: 28, fontSize: 11, fontWeight: 700, textAlign: "right" }}>
-                      {counts[st]}
-                    </span>
-                  </div>
-                ))}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 8,
-                    fontFamily: FONT.body,
-                  }}
-                >
-                  <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>Sem Status</span>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: 10,
-                      background: t.inputBg,
-                      borderRadius: 999,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${(counts.sem_status / maxVal) * 100}%`,
-                        borderRadius: 999,
-                        background: "#6b7280",
-                        opacity: 0.85,
-                      }}
-                    />
-                  </div>
-                  <span style={{ width: 28, fontSize: 11, fontWeight: 700, textAlign: "right" }}>
-                    {counts.sem_status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div style={pageBox}>
+        <SectionTitle sub="Agregadoras no funil">Funil do pipeline</SectionTitle>
+        <OverviewGenericFunnel
+          levels={levels}
+          taxas={taxas}
+          ariaLabel="Funil do pipeline de agregadoras"
+        />
       </div>
 
       <div className="app-grid-2">
