@@ -993,6 +993,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  comercial_integracao: {
+    titulo: "Integração",
+    blocos: [
+      {
+        subtitulo: "Não vejo Integração no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Integração. Administradores têm acesso total. Demais perfis começam com Ver/Criar/Editar em **Não** até liberação explícita.",
+      },
+      {
+        subtitulo: "Não aparece marca em Nova Integração?",
+        texto:
+          "Só entram marcas com Dedicada ou Network em **Contrato Assinado** no Pipeline B2B. Se já existir integração para os dois tipos da marca, ela fica indisponível na lista.",
+      },
+      {
+        subtitulo: "A linha não foi criada ao assinar no Pipeline B2B?",
+        texto:
+          "A criação automática ocorre ao marcar **Contrato Assinado** (não só Ativo). Confirme o tipo (Dedicada vs Network) — cada um gera uma linha. Se o problema persistir, entre em contato com o suporte.",
+      },
+    ],
+  },
   comercial_pipeline_b2b: {
     titulo: "Pipeline B2B",
     blocos: [

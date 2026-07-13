@@ -1160,7 +1160,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   financeiro_operacional: ["financeiro", "banca_jogo"],
   estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa"],
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
-  comercial: ["comercial_overview", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
+  comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
   customer_success: ["cs_atendimento"],
   rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
   escala: [

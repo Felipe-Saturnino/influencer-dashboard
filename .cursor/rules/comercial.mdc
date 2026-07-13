@@ -19,6 +19,7 @@ alwaysApply: false
 | PageKey | h1 | Subtítulo |
 |---|---|---|
 | `comercial_overview` | Overview Comercial | Visão consolidada do funil B2B, produtos Live Cassino e carteira da equipe comercial. |
+| `comercial_integracao` | Integração | Acompanhe a integração técnica das marcas com Contrato Assinado no Pipeline B2B. |
 | `comercial_pipeline_b2b` | Pipeline B2B | Organize empresas, marcas e oportunidades de Live Cassino no mercado B2B. |
 | `comercial_pipeline_agregadoras` | Pipeline Agregadoras | Organize agregadoras de jogos e oportunidades comerciais no funil B2B. |
 
@@ -29,6 +30,7 @@ alwaysApply: false
 | PageKey | Página | Caminho |
 |---------|--------|---------|
 | `comercial_overview` | Overview Comercial | `comercial/OverviewComercial/` |
+| `comercial_integracao` | Integração | `comercial/Integracao/` |
 | `comercial_pipeline_b2b` | Pipeline B2B | `comercial/PipelineB2B/` |
 | `comercial_pipeline_agregadoras` | Pipeline Agregadoras | `comercial/PipelineAgregadoras/` |
 
@@ -70,6 +72,38 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 
 ---
 
+## Integração (`comercial_integracao`)
+
+Acompanhamento técnico pós **Contrato Assinado** no Pipeline B2B. Menu entre Overview Comercial e Pipeline B2B. Uma linha por `(marca, tipo)` Dedicada ou Network.
+
+### Filtros (bloco nível 2)
+
+- **Linha 1:** `BarraPesquisaPagina` (operador / caminho / PAM) + `FiltroBarCampoSelect` Prioridade — **Todas Prioridades** / Baixo / Médio / Alta.
+- **Linha 2:** abas `FiltroBarTabButton` + `useRouteTab` — `todos | nao_iniciados | em_andamento | concluidos`.
+- **Alinhamento:** centralizado — Global § Filtros.
+
+### KPIs Consolidados (bloco nível 3)
+
+Quatro cards: **Total de Operadores**, **Concluídos**, **Em andamento**, **Não Iniciados**. Status clicáveis filtram a tabela e sincronizam a aba; **Total** limpa o filtro de status.
+
+### Tabela
+
+- CTA **Nova Integração** (`CtaCriarButton`) — permissão de **Criar**. Modal: seleção única de marca com Contrato Assinado (Dedicada ou Network) + busca; campos obrigatórios Prioridade, Tipo, Caminho, PAM, Agregador (nomes de `comercial_agregadoras`).
+- Colunas: Operador · Prioridade · Tipo · Caminho · PAM · Agregador · Status · Comentário · Ação.
+- Ações: **Histórico** e **Comentar** (`BtnIconeAcaoLinha`).
+- Com **Editar:** Prioridade, Status e Agregador via popover; Caminho e PAM via clique inline.
+- Vazio: `Nenhuma integração encontrada para os filtros selecionados.`
+
+### Criação automática (Pipeline B2B)
+
+Trigger `comercial_integracao_from_assinado` em `comercial_marca_produtos`: ao passar Dedicada **ou** Network para **Contrato Assinado**, cria linha com Operador = nome da marca, Prioridade **Baixo**, Status **Não Iniciado**, Caminho/PAM vazios, Agregador copiado de `comercial_marcas.agregadora` se houver. Dedicada e Network geram linhas **independentes** (`UNIQUE (marca_id, tipo)`). Backfill na migration para produtos já assinados.
+
+### Dados (Supabase)
+
+Tabelas: `comercial_integracoes`, `comercial_integracao_historico`. RLS: `_comercial_integracao_perm`. SELECT auxiliar em marcas/produtos/agregadoras para quem tem Ver na página. Permissões iniciais **Não** para todos exceto Admin.
+
+---
+
 ## Pipeline B2B (`comercial_pipeline_b2b`)
 
 ### Filtros (bloco nível 2)
@@ -77,6 +111,8 @@ Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas
 - **Busca:** `BarraPesquisaPagina` — CNPJ, razão social ou marca (`...` ASCII no placeholder).
 - **Comercial:** `FiltroBarCampoSelect` + ícone `User` (`FilterBarIcons.influencer`) — agregadora **Todos Comerciais** (default), opções **Nenhum** + nomes em `PIPELINE_COMERCIAL_NOMES` (`constants.ts`: Marcus Morin, Fred Ring, Nathan Yoles, Simcha Neumark; perfis resolvidos por nome). Coluna e popover inline: só esses nomes, **—** ou **Site Offline** (domínio inativo sem comercial). Override manual de comercial em Site Offline permitido com **Editar**.
 - **Abas:** `FiltroBarTabButton` + `useRouteTab` — `todos | disponiveis | conexao | negociacao | fechado` (URLs em `appRoutes.ts`).
+  - **Fechado:** filtra por Dedicada **ou** Network em **Contrato Assinado** / **Ativo** (não exige só `status_pipeline = fechado`). Marcas já fechadas por produto saem da aba Negociação.
+  - **Cascata automática Status ← Dedicada/Network** (prioridade estrita; para no 1º match): (1) Assinado/Ativo → **Fechado**; (2) Contrato enviado → **Negociação**; (3) Em negociação → **Conexão**. Avalia ambos os produtos juntos (ex.: Assinado em Dedicada + Em negociação em Network → Fechado).
 - **Alinhamento:** centralizado (`justifyContent: center`, `width: 100%`) — Global § Filtros.
 
 ### Consolidado (bloco nível 3)
@@ -91,14 +127,14 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 - **Disponíveis:** Site Ativo / Site Offline = `status_dominio`; Sem contato = zero contatos.
 - **Conexão:** Iniciada / Realizada = regra de produtos vazios vs preenchidos; **Sem interesse** = `sem_interesse` ou **`desinteresse_comercial`** em ≥1 produto (status Conexão).
 - **Negociação:** Enviar contrato → `sem_proposta` ou ambos vazios; Interessado → outro valor preenchido (exceto sem interesse / desinteresse comercial); **Contrato enviado** = `contrato_enviado` em ≥1 produto (status Negociação).
-- **Fechado:** Assinado / Ativo pelos status de produto (prioridade: Ativo > Assinado).
+- **Fechado:** Assinado / Ativo pelos status de produto (**sem** exigir `status_pipeline = fechado`).
 - KPIs clicáveis (`aria-pressed`) filtram a tabela; segundo clique limpa.
 
 ### Tabela
 
 - Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato** — **sem** sort em Marca, Contato, Comercial, Status.
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
-- Edição inline (Comercial, Status, Dedicada, Network, **Agregadora**): popover + permissão **Editar**; grava em `comercial_marca_historico`. **Agregadora:** seleção única entre Alea, BetConstruct, Cactus, Cometa Gaming, Playtech e SoftSwiss (ordem alfabética) ou **—** para limpar. **Último Contato:** campo `date` editável inline (`<input type="date">`) com permissão **Editar**; grava em `comercial_marcas.ultimo_contato` + histórico. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
+- Edição inline (Comercial, Status, Dedicada, Network, **Agregadora**): popover + permissão **Editar**; grava em `comercial_marca_historico`. **Agregadora:** opções = **Nome** das linhas de `comercial_agregadoras` (página **Pipeline Agregadoras**), em ordem alfabética, ou **—** para limpar; valor legado fora do catálogo continua visível e permanece na lista até alteração. Coluna `comercial_marcas.agregadora` é texto livre (sem CHECK). **Último Contato:** campo `date` editável inline (`<input type="date">`) com permissão **Editar**; grava em `comercial_marcas.ultimo_contato` + histórico. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
 - **Colunas (todas as abas, mesma ordem):** Razão Social · Marca · Contato · Comercial · Status · Dedicada · Network · Agregadora · Último Contato · Ação (`PIPELINE_TABLE_COLS`). Campo `ultima_comunicacao` permanece no banco para o fluxo **Comunicar** (futuro) — **sem** coluna na tabela.
 - **Domínio:** clique no nome da **Marca** ou no ícone **Ver** abre o modal **Dados da Marca**; na aba Dados, **Domínio** é **hiperlink** (nova aba). Com permissão **Editar**, botão só ícone **`Pencil`** ao lado abre edição inline (Cancelar / Salvar); ao alterar, `status_dominio` → `inativo` até a próxima validação HTTP.
 - **Comercial — Site Offline:** badge automático quando `status_dominio = inativo` **e** sem comercial atribuído; com **Editar**, popover permite atribuir comercial canónico ou **Nenhum** (override manual).
@@ -187,7 +223,7 @@ Quatro cards clicáveis: **Disponíveis**, **Conexão**, **Negociação**, **Fec
 
 ### Dados (Supabase)
 
-Tabelas: `comercial_agregadoras`, `comercial_agregadora_historico`. RLS: `_comercial_pipeline_agregadoras_perm`. Permissões iniciais **Não** para todos exceto Admin.
+Tabelas: `comercial_agregadoras`, `comercial_agregadora_historico`. RLS: `_comercial_pipeline_agregadoras_perm`. Quem tem Ver no **Pipeline B2B** também pode **SELECT** nomes (`comercial_agregadoras_select_pipeline_b2b`) para a coluna Agregadora. Permissões iniciais **Não** para todos exceto Admin.
 
 ---
 

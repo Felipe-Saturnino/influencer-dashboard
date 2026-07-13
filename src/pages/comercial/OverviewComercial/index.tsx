@@ -29,7 +29,6 @@ import {
   PIPELINE_COMERCIAL_NOMES,
   STATUS_PRODUTO_COLOR,
   STATUS_PRODUTO_ORDEM,
-  type Agregadora,
   type StatusPipeline,
 } from "../PipelineB2B/constants";
 import {
@@ -90,7 +89,7 @@ function mapOverviewRow(
     status_folha: raw.status_folha as OverviewMarcaRow["status_folha"],
     comercial_user_id: comercialId,
     comercial_nome: comercialNomeCanonico,
-    agregadora: raw.agregadora ? (String(raw.agregadora) as Agregadora) : null,
+    agregadora: raw.agregadora ? String(raw.agregadora) : null,
     ultimo_contato: raw.ultimo_contato ? String(raw.ultimo_contato) : null,
     ultima_comunicacao: raw.ultima_comunicacao ? String(raw.ultima_comunicacao) : null,
     created_at: raw.created_at ? String(raw.created_at) : null,

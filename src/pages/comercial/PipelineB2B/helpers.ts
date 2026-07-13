@@ -201,6 +201,43 @@ function algumProdutoStatus(row: PipelineMarcaRow, statuses: StatusProduto[]): b
   return (d !== null && statuses.includes(d)) || (n !== null && statuses.includes(n));
 }
 
+/** Dedicada ou Network em Contrato Assinado ou Ativo — critério da aba / consolidado Fechado. */
+export function marcaComContratoFechado(row: PipelineMarcaRow): boolean {
+  return algumProdutoStatus(row, ["contrato_assinado", "ativo"]);
+}
+
+/**
+ * Cascata automática Status ← produtos (prioridade estrita, para no 1º match):
+ * 1. Contrato Assinado ou Ativo → fechado
+ * 2. Contrato Enviado → negociacao
+ * 3. Em negociação → conexao
+ * Sem match → null (não altera Status).
+ */
+export function derivarStatusPipelinePorProdutos(
+  produtos: { status_produto: StatusProduto | null }[],
+): StatusPipeline | null {
+  const statuses = produtos
+    .map((p) => p.status_produto)
+    .filter((s): s is StatusProduto => s != null);
+  const has = (list: StatusProduto[]) => statuses.some((s) => list.includes(s));
+  if (has(["contrato_assinado", "ativo"])) return "fechado";
+  if (has(["contrato_enviado"])) return "negociacao";
+  if (has(["em_negociacao"])) return "conexao";
+  return null;
+}
+
+export function folhaDerivadaPorPipelineEProdutos(
+  pipeline: StatusPipeline,
+  produtos: { status_produto: StatusProduto | null }[],
+): StatusFolha {
+  if (pipeline === "fechado") {
+    const ativo = produtos.some((p) => p.status_produto === "ativo");
+    return ativo ? "fech_ativo" : "fech_assinado";
+  }
+  if (pipeline === "conexao") return "conexao_realizada";
+  return defaultFolhaForPipeline(pipeline);
+}
+
 function algumProdutoComValor(row: PipelineMarcaRow): boolean {
   return produtoStatus(row, "mesa_dedicada") !== null || produtoStatus(row, "mesa_network") !== null;
 }
@@ -250,10 +287,9 @@ export function rowMatchesConsolidadoFolha(
       }
       return algumProdutoComValor(row) && !algumProdutoStatus(row, ["sem_proposta"]);
     case "fech_ativo":
-      return row.status_pipeline === "fechado" && algumProdutoStatus(row, ["ativo"]);
+      return algumProdutoStatus(row, ["ativo"]);
     case "fech_assinado":
       return (
-        row.status_pipeline === "fechado" &&
         !algumProdutoStatus(row, ["ativo"]) &&
         algumProdutoStatus(row, ["contrato_assinado"])
       );
@@ -326,7 +362,15 @@ export function filterMarcas(
   let list = rows;
   const canonicalIds = pipelineComercialCanonicoIds(comerciais);
 
-  if (cfg.pipelines) {
+  if (tab === "fechado") {
+    // Fechado: Dedicada ou Network em Contrato Assinado / Ativo (não só status_pipeline).
+    list = list.filter((r) => marcaComContratoFechado(r));
+  } else if (tab === "negociacao") {
+    // Evita duplicar na aba Negociação marcas já fechadas por produto.
+    list = list.filter(
+      (r) => r.status_pipeline === "negociacao" && !marcaComContratoFechado(r),
+    );
+  } else if (cfg.pipelines) {
     list = list.filter((r) => cfg.pipelines!.includes(r.status_pipeline));
   }
 
@@ -359,6 +403,12 @@ export function filterMarcas(
 }
 
 export function countByPipeline(rows: PipelineMarcaRow[], pipeline: StatusPipeline): number {
+  if (pipeline === "fechado") {
+    return rows.filter((r) => marcaComContratoFechado(r)).length;
+  }
+  if (pipeline === "negociacao") {
+    return rows.filter((r) => r.status_pipeline === "negociacao" && !marcaComContratoFechado(r)).length;
+  }
   return rows.filter((r) => r.status_pipeline === pipeline).length;
 }
 

@@ -57,6 +57,7 @@ export type PageKey =
   | "campanhas"
   | "galeria_fotos"
   | "comercial_overview"
+  | "comercial_integracao"
   | "comercial_pipeline_b2b"
   | "comercial_pipeline_agregadoras"
   | "cs_atendimento"

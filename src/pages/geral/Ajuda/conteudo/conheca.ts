@@ -1144,6 +1144,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  comercial_integracao: {
+    titulo: "Integração",
+    blocos: [
+      {
+        texto:
+          "A página **Integração** acompanha a integração técnica das marcas depois que Dedicada ou Network ficam em **Contrato Assinado** no Pipeline B2B. O acesso depende da permissão de Ver; o botão **Nova Integração** exige Criar; alteração de status, prioridade, caminho, PAM, agregador e comentários exige Editar.",
+      },
+      {
+        subtitulo: "Filtros e abas",
+        texto:
+          "Use a busca por operador, caminho ou PAM e o filtro **Prioridade** (**Todas Prioridades**, Baixo, Médio ou Alta). As abas **Todos**, **Não Iniciados**, **Em andamento** e **Concluídos** organizam o funil de integração. Os KPIs **Concluídos**, **Em andamento** e **Não Iniciados** também filtram a tabela; **Total de Operadores** limpa o filtro de status.",
+      },
+      {
+        subtitulo: "Tabela e Nova Integração",
+        texto:
+          "Cada linha é uma combinação de marca (Operador) e Tipo (**Dedicada** ou **Network**). Agregador usa os nomes cadastrados em **Pipeline Agregadoras**. **Histórico** mostra alterações; **Comentar** registra o comentário visível na coluna.\n\nEm **Nova Integração**, escolha uma marca com Contrato Assinado (lista com pesquisa) e preencha Prioridade, Tipo, Caminho, PAM e Agregador (todos obrigatórios).\n\nQuando Dedicada ou Network passam a **Contrato Assinado** no Pipeline B2B, a plataforma cria automaticamente uma linha (Prioridade Baixo, Status Não Iniciado, Caminho e PAM em branco). Se depois o outro tipo também for assinado, nasce uma segunda linha.",
+      },
+    ],
+  },
   comercial_pipeline_b2b: {
     titulo: "Pipeline B2B",
     blocos: [
@@ -1154,12 +1173,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e abas",
         texto:
-          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n\nAs URLs das abas são sincronizadas com a rota (`/PipelineB2B/...`).",
+          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n— **Fechado** lista marcas com Dedicada ou Network em **Contrato Assinado** ou **Ativo** (mesmo que o Status ainda estivesse em Negociação).\n\nAs URLs das abas são sincronizadas com a rota (`/PipelineB2B/...`).",
       },
       {
         subtitulo: "Tabela e edição",
         texto:
-          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network, **Agregadora**, **Último Contato**).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada**, **Network** ou **Agregadora** para alterar via lista; em **Último Contato**, clique na data para escolher ou alterar o dia do último contato comercial. **Agregadora** aceita Alea, BetConstruct, Cactus, Cometa Gaming, Playtech ou SoftSwiss (ou **—** para limpar). Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.\n\nTodas as abas exibem as mesmas colunas, na ordem: Razão Social, Marca, Contato, Comercial, Status, Dedicada, Network, Agregadora, Último Contato e Ação.",
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network, **Agregadora**, **Último Contato**).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada**, **Network** ou **Agregadora** para alterar via lista; em **Último Contato**, clique na data para escolher ou alterar o dia do último contato comercial. **Agregadora** lista os nomes cadastrados em **Pipeline Agregadoras** (ou **—** para limpar). Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAo alterar **Dedicada** ou **Network**, o Status do funil é recalculado automaticamente nesta ordem (para no primeiro match): (1) Contrato Assinado ou Ativo → **Fechado**; (2) Contrato enviado → **Negociação**; (3) Em negociação → **Conexão**. Ao marcar **Contrato Assinado** em Dedicada ou Network, a página **Integração** recebe automaticamente uma linha para aquele tipo (se ainda não existir).\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.\n\nTodas as abas exibem as mesmas colunas, na ordem: Razão Social, Marca, Contato, Comercial, Status, Dedicada, Network, Agregadora, Último Contato e Ação.",
       },
       {
         subtitulo: "Comunicar",

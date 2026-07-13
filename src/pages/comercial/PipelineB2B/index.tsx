@@ -61,6 +61,8 @@ import {
   normalizeRetificacoes,
   pipelineComercialNomePorId,
   sortMarcas,
+  derivarStatusPipelinePorProdutos,
+  folhaDerivadaPorPipelineEProdutos,
 } from "./helpers";
 
 const TAB_ICONS = {
@@ -95,7 +97,7 @@ function mapRow(
     status_folha: raw.status_folha as PipelineMarcaRow["status_folha"],
     comercial_user_id: comercialId,
     comercial_nome: comercialNomeCanonico,
-    agregadora: raw.agregadora ? (String(raw.agregadora) as Agregadora) : null,
+    agregadora: raw.agregadora ? String(raw.agregadora) : null,
     ultimo_contato: raw.ultimo_contato ? String(raw.ultimo_contato) : null,
     ultima_comunicacao: raw.ultima_comunicacao ? String(raw.ultima_comunicacao) : null,
     empresa: {
@@ -126,6 +128,7 @@ export default function PipelineB2B() {
   const [kpiFolha, setKpiFolha] = useState<import("./constants").StatusFolha | null>(null);
   const [rows, setRows] = useState<PipelineMarcaRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
+  const [agregadoraOpcoes, setAgregadoraOpcoes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<{ col: TableCol; dir: SortDir }>({ col: "razao", dir: "asc" });
 
@@ -164,7 +167,7 @@ export default function PipelineB2B() {
   const loadData = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading !== false;
     if (showLoading) setLoading(true);
-    const [marcasRes, gestoresRes] = await Promise.all([
+    const [marcasRes, gestoresRes, agregadorasRes] = await Promise.all([
       supabase
         .from("comercial_marcas")
         .select(
@@ -181,13 +184,20 @@ export default function PipelineB2B() {
         .select("id, name")
         .in("name", [...PIPELINE_COMERCIAL_NOMES])
         .or("ativo.is.null,ativo.eq.true"),
+      supabase.from("comercial_agregadoras").select("nome").order("nome"),
     ]);
 
     if (marcasRes.error) console.error(marcasRes.error);
     if (gestoresRes.error) console.error(gestoresRes.error);
+    if (agregadorasRes.error) console.error(agregadorasRes.error);
 
     const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
     setComerciais(comercialList);
+    setAgregadoraOpcoes(
+      (agregadorasRes.data ?? [])
+        .map((r) => String((r as { nome?: string }).nome ?? "").trim())
+        .filter(Boolean),
+    );
 
     const names = Object.fromEntries(
       comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
@@ -370,16 +380,59 @@ export default function PipelineB2B() {
       return;
     }
     await insertHistorico(row.id, tipo, anterior, status);
-    patchMarcaRow(row.id, (r) => {
-      const produtos = [...r.produtos];
+
+    const produtosNext = (() => {
+      const produtos = [...row.produtos];
       const idx = produtos.findIndex((p) => p.produto === tipo);
       if (idx >= 0) {
         produtos[idx] = { ...produtos[idx], status_produto: status };
       } else {
         produtos.push({ produto: tipo, status_produto: status });
       }
-      return { ...r, produtos };
-    });
+      return produtos;
+    })();
+
+    // Cascata Status (prioridade 1→2→3; para no primeiro match):
+    // 1. Assinado/Ativo → Fechado · 2. Contrato enviado → Negociação · 3. Em negociação → Conexão
+    let statusPipelineNext = row.status_pipeline;
+    let statusFolhaNext = row.status_folha;
+    const derivado = derivarStatusPipelinePorProdutos(produtosNext);
+    if (derivado && derivado !== row.status_pipeline) {
+      statusPipelineNext = derivado;
+      statusFolhaNext = folhaDerivadaPorPipelineEProdutos(derivado, produtosNext);
+      const { error: errStatus } = await supabase
+        .from("comercial_marcas")
+        .update({ status_pipeline: statusPipelineNext, status_folha: statusFolhaNext })
+        .eq("id", row.id);
+      if (errStatus) {
+        console.error(errStatus);
+        statusPipelineNext = row.status_pipeline;
+        statusFolhaNext = row.status_folha;
+      } else {
+        await insertHistorico(row.id, "status_pipeline", row.status_pipeline, statusPipelineNext);
+      }
+    } else if (derivado === row.status_pipeline) {
+      // Mantém Status; pode ajustar folha (ex.: Assinado → Ativo no Fechado).
+      const folhaIdeal = folhaDerivadaPorPipelineEProdutos(derivado, produtosNext);
+      if (folhaIdeal !== row.status_folha && FOLHA_BY_PIPELINE[derivado].includes(folhaIdeal)) {
+        statusFolhaNext = folhaIdeal;
+        const { error: errFolha } = await supabase
+          .from("comercial_marcas")
+          .update({ status_folha: statusFolhaNext })
+          .eq("id", row.id);
+        if (errFolha) {
+          console.error(errFolha);
+          statusFolhaNext = row.status_folha;
+        }
+      }
+    }
+
+    patchMarcaRow(row.id, (r) => ({
+      ...r,
+      produtos: produtosNext,
+      status_pipeline: statusPipelineNext,
+      status_folha: statusFolhaNext,
+    }));
   }
 
   function toggleSort(col: TableCol) {
@@ -522,6 +575,7 @@ export default function PipelineB2B() {
             tab={tab}
             rows={tableRows}
             comerciais={comerciais}
+            agregadoraOpcoes={agregadoraOpcoes}
             sort={sort}
             onSort={toggleSort}
             canEditar={perm.canEditarOk}

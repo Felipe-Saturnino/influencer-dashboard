@@ -11,7 +11,6 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import type { ComercialOpcao, ComercialContato, PipelineMarcaRow } from "./types";
 import {
-  AGREGADORA_POPOVER_OPTS,
   COL_LABEL,
   PIPELINE_COLOR,
   PIPELINE_COMERCIAL_SITE_OFFLINE_COLOR,
@@ -24,7 +23,6 @@ import {
   badgePipelineStyle,
   badgeProdutoStyle,
   type Agregadora,
-  type AgregadoraPopoverValue,
   type StatusPipeline,
   type StatusProduto,
   type TableCol,
@@ -63,6 +61,7 @@ export function PipelineTable({
   tab,
   rows,
   comerciais,
+  agregadoraOpcoes,
   sort,
   onSort,
   canEditar,
@@ -80,6 +79,8 @@ export function PipelineTable({
   tab: import("./constants").PipelineTab;
   rows: PipelineMarcaRow[];
   comerciais: ComercialOpcao[];
+  /** Nomes do catálogo Pipeline Agregadoras (só Nome). */
+  agregadoraOpcoes: string[];
   sort: { col: TableCol; dir: SortDir };
   onSort: (col: TableCol) => void;
   canEditar: boolean;
@@ -110,6 +111,14 @@ export function PipelineTable({
     rect: DOMRect;
     produto?: "mesa_dedicada" | "mesa_network";
   } | null>(null);
+
+  const agregadoraPopoverOpts = useMemo(() => {
+    const nomes = [...agregadoraOpcoes];
+    const atual = popover?.kind === "agregadora" ? popover.row.agregadora : null;
+    if (atual && !nomes.includes(atual)) nomes.push(atual);
+    nomes.sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return ["", ...nomes] as string[];
+  }, [agregadoraOpcoes, popover]);
 
   const [editingUltimoContatoId, setEditingUltimoContatoId] = useState<string | null>(null);
 
@@ -505,9 +514,9 @@ export function PipelineTable({
         <CellSelectPopover
           open
           anchorRect={popover.rect}
-          options={AGREGADORA_POPOVER_OPTS}
-          value={(popover.row.agregadora ?? "") as AgregadoraPopoverValue}
-          onSelect={(v) => onUpdateAgregadora(popover.row, v ? (v as Agregadora) : null)}
+          options={agregadoraPopoverOpts}
+          value={popover.row.agregadora ?? ""}
+          onSelect={(v) => onUpdateAgregadora(popover.row, v || null)}
           onClose={() => setPopover(null)}
           labelOption={(v) => (v ? v : "—")}
           t={t}
