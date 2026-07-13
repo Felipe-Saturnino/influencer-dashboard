@@ -62,7 +62,7 @@ export function useHomeAtualizacaoCadastral() {
       cancelled = true;
       window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
     };
-  }, [user?.email, user?.name, user?.role, permissionsAcoes.rh_dados_cadastro?.editar]);
+  }, [user, permissionsAcoes.rh_dados_cadastro?.editar]);
 
   return { loading, pendente, primeiroNome };
 }

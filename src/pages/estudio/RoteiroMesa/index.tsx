@@ -1222,7 +1222,6 @@ export default function RoteiroMesa() {
   }, [
     estudioSlugSelecionada,
     role,
-    estudioSlugsForcadoKey,
     estudioSlugsForcado,
     operadoraSlugsForcado,
     estudiosReady,
@@ -1240,7 +1239,7 @@ export default function RoteiroMesa() {
     if (role === "operador" && estudioSlugsForcado?.length === 1) {
       setFiltroEstudio(estudioSlugsForcado[0]!);
     }
-  }, [role, estudioSlugsForcadoKey, estudioSlugsForcado]);
+  }, [role, estudioSlugsForcado]);
 
   if (perm.canView === "nao") {
     return (
