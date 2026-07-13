@@ -57,10 +57,11 @@ Perfis: Gestor (operação interna).
 ### Aba Geração de Links
 
 - **KPIs:** **TOTAL** (links na tabela), **ATIVOS** (métricas/resultados nos últimos 30 dias em `utm_metricas_diarias`), **INATIVOS** (resto) — mesma grelha KPI da aba Campanhas.
-- **Links cadastrados:** `SectionTitle` `compact` + **`CtaCriarButton`** **Novo Link** (`canCriarOk`) — modal de criação em entrega seguinte (botão preparado, sem modal ainda).
+- **Links cadastrados:** `SectionTitle` `compact` + **`CtaCriarButton`** **Novo Link** (`canCriarOk`) — abre **`ModalNovoLink`**.
+- **Modal Novo Link:** Operadora obrigatória (só ativas). **Casa de Apostas** (`casa_apostas`): strip URL base travada `https://go.aff.casadeapostas.bet.br/290td2jz?utm_source=` + input `utm_source` (sanitização igual Links e Materiais; UTM construída do zero). Demais operadoras: aviso «em breve»; **Gerar Link** desabilitado. Após gerar: URL completa + **Copiar**; persiste em `campanha_links` e atualiza a tabela. Duplicata `(utm_source, operadora_slug)` → mensagem amigável.
 - Tabela: UTM, Operadora, Criado em, Usuário (nome em `profiles`), Status (Ativo/Inativo), Última Visita — `SortTableTh`; default **Criado em** `desc`. Fonte: tabela `campanha_links` (`src/lib/campanhaLinks.ts`).
 - Vazio: `Nenhum link cadastrado.`
-- **Handoff:** modal Novo Link; sync opcional com `utm_aliases` na emissão.
+- **Handoff:** bases de URL das demais operadoras; sync opcional com `utm_aliases` na emissão.
 
 ---
 

@@ -23,7 +23,7 @@ interface GeracaoLinksTabContentProps {
   links: CampanhaLink[];
   operadoras: { slug: string; nome: string }[];
   loading: boolean;
-  /** Modal Novo Link — implementação futura. */
+  /** Abre o modal Novo Link. */
   onNovoLink?: () => void;
 }
 

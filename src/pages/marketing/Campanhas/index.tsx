@@ -26,6 +26,7 @@ import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { carregarCampanhaLinks } from "../../../lib/campanhaLinks";
 import { CampanhasTabContent } from "./CampanhasTabContent";
 import { GeracaoLinksTabContent } from "./GeracaoLinksTabContent";
+import { ModalNovoLink } from "./ModalNovoLink";
 
 type AbaCampanhas = "campanhas" | "geracao_links";
 
@@ -50,6 +51,7 @@ export default function Campanhas() {
   const [loadingCampanhas, setLoadingCampanhas] = useState(true);
   const [loadingLinks, setLoadingLinks] = useState(false);
   const [filtroOperadora, setFiltroOperadora] = useState<string>(OPERADORA_FILTRO_TODAS_VALUE);
+  const [modalNovoLinkOpen, setModalNovoLinkOpen] = useState(false);
 
   const carregarCampanhas = useCallback(async () => {
     setLoadingCampanhas(true);
@@ -282,12 +284,21 @@ export default function Campanhas() {
             links={links}
             operadoras={operadoras}
             loading={loadingLinks}
-            onNovoLink={() => {
-              /* Modal Novo Link — próxima entrega */
-            }}
+            onNovoLink={() => setModalNovoLinkOpen(true)}
           />
         ) : null}
       </div>
+
+      {modalNovoLinkOpen ? (
+        <ModalNovoLink
+          operadoras={operadorasFiltro}
+          operadoraInicial={
+            filtroOperadora !== OPERADORA_FILTRO_TODAS_VALUE ? filtroOperadora : undefined
+          }
+          onClose={() => setModalNovoLinkOpen(false)}
+          onGerado={carregarLinks}
+        />
+      ) : null}
     </div>
   );
 }

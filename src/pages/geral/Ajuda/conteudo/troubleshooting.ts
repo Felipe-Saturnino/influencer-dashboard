@@ -934,7 +934,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Geração de Links não mostra nenhum link?",
         texto:
-          "A lista só exibe links cadastrados nessa aba (botão **Novo Link**). Não é a mesma fila da Gestão de Links (UTMs detectados automaticamente). Confira também o filtro de operadora. Se a tabela permanecer vazia após criar links e o problema persistir, entre em contato com o suporte.",
+          "A lista só exibe links gerados nesta aba (botão **Novo Link**). Não é a mesma fila da Gestão de Links (UTMs detectados automaticamente). Confira também o filtro de operadora. Se a tabela permanecer vazia após gerar um link e o problema persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Não consigo gerar link para outra operadora além da Casa de Apostas?",
+        texto:
+          "Por enquanto a URL base de afiliado está disponível apenas para **Casa de Apostas**. As demais operadoras serão liberadas em atualizações futuras — o modal informa quando a geração ainda não está disponível.",
       },
       {
         subtitulo: "O que significa Status Ativo ou Inativo nos links gerados?",

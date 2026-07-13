@@ -1102,7 +1102,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Geração de Links",
         texto:
-          "Consolida **TOTAL**, **ATIVOS** e **INATIVOS**. Um link fica **Ativo** quando gerou resultados (métricas) nos últimos 30 dias; caso contrário, **Inativo**.\n\nEm **Links cadastrados**, a tabela mostra UTM, Operadora, Criado em, Usuário (quem criou), Status e Última Visita. **Novo Link** (permissão de Criar) abre o fluxo de criação — em evolução na plataforma.",
+          "Consolida **TOTAL**, **ATIVOS** e **INATIVOS**. Um link fica **Ativo** quando gerou resultados (métricas) nos últimos 30 dias; caso contrário, **Inativo**.\n\nEm **Links cadastrados**, a tabela mostra UTM, Operadora, Criado em, Usuário (quem criou), Status e Última Visita. Com permissão de **Criar**, use **Novo Link**: escolha a operadora e, para **Casa de Apostas**, informe o utm_source na URL base fixa. Ao gerar, a URL completa aparece com botão **Copiar** e o link entra na tabela.",
       },
     ],
   },
