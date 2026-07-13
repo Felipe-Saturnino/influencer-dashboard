@@ -1130,17 +1130,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O **Overview Comercial** consolida KPIs, funil, produtos Live Cassino, mapa por UF, carteira por comercial, marcas recentes e movimentação do histórico. É **somente leitura** — edição permanece no **Pipeline B2B**.",
+          "O **Overview Comercial** consolida a visão de **Operadoras** (Pipeline B2B), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração.",
       },
       {
-        subtitulo: "Filtros",
+        subtitulo: "Abas e filtros",
         texto:
-          "Use **Comercial** para restringir ao responsável interno. **Estados** lista os 27 UFs (**Todos Estados** por defeito). Os chips de status refinam todos os blocos.",
+          "No topo do bloco de filtros escolha **Operadoras**, **Agregadoras** ou **Integrações**.\n\n— **Operadoras:** Comercial, Estados e chips de status do funil B2B.\n— **Agregadoras:** só o filtro **Comercial**.\n— **Integrações:** chips de **Status** (Todos Status, Não Iniciado, Em andamento, Concluído).",
+      },
+      {
+        subtitulo: "Conteúdo por aba",
+        texto:
+          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Agregadoras** mostra KPIs do funil (Disponíveis → Fechado), funil/produto por status, carteira por comercial e movimentação recente.\n\n**Integrações** mostra totais por status, funil de status, volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
       },
       {
         subtitulo: "Mapa e movimentação",
         texto:
-          "No bloco **Distribuição geográfica**, a coluna à direita lista **UF, Estado e Marcas**; ao clicar em um estado no mapa ou na lista, aparecem as marcas agrupadas por **cidade** (com a quantidade por cidade). Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
+          "Na aba **Operadoras**, o bloco **Distribuição geográfica** lista **UF, Estado e Marcas**; ao clicar em um estado, aparecem as marcas por **cidade**. Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
       },
     ],
   },

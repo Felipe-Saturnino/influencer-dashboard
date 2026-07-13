@@ -40,34 +40,31 @@ Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos 
 
 ## Overview Comercial (`comercial_overview`)
 
-Dashboard analítico **somente leitura** — agrega dados de `comercial_empresas`, `comercial_marcas`, produtos e histórico. Permissão própria (`comercial_overview`); ver exige liberação independente do Pipeline B2B.
+Dashboard analítico **somente leitura** — agrega Pipeline B2B (Operadoras), Pipeline Agregadoras e Integração. Permissão própria (`comercial_overview`).
 
-### Filtros (bloco nível 2)
+### Abas principais (nível 2 — topo do filtro)
 
-- **Comercial:** `FiltroBarCampoSelect` + ícone `User` — **Todos Comerciais** (default), **Nenhum** + nomes canónicos (`PIPELINE_COMERCIAL_NOMES`).
-- **UF:** `FiltroBarCampoSelect` + ícone `MapPin` — agregadora **Todos Estados**; lista fixa dos 27 estados (`UF_FILTRO_OPTIONS`).
-- **Status pipeline:** `FiltroSemanticoTabPill` — Todos + Disponíveis / Conexão / Negociação / Fechado (cores `PIPELINE_COLOR`); toggle off no segundo clique.
-- **Alinhamento:** centralizado — Global § Filtros.
+`FiltroBarTabButton` + `useRouteTab` — `operadoras | agregadoras | integracoes` (URLs em `appRoutes.ts`), padrão Overview Spin.
 
-### Blocos (nível 3)
+| Aba | Filtros abaixo | Conteúdo |
+|-----|----------------|----------|
+| **Operadoras** | Comercial + UF + pills de status pipeline | Layout legado (KPIs, funil, produto Dedicada/Network, geo, carteira, novas marcas, movimentação) |
+| **Agregadoras** | Só Comercial | KPIs Disponíveis/Conexão/Negociação/Fechado; Funil + Produto (volume por status); Carteira + Movimentação |
+| **Integrações** | Pills de Status (Todos + Não Iniciado / Em andamento / Concluído) | KPIs Total/Não Iniciados/Em andamento/Concluídos; Funil (status) + Produto (Tipo); Caminho + Agregadores |
 
-| Bloco | Conteúdo |
-|-------|----------|
-| KPIs consolidados | Empresas, Marcas, Site ativo, Negociação, Fechado — clique navega para Pipeline B2B detalhado (aba quando aplicável). |
-| Funil do pipeline | `OverviewPipelineFunnel` — layout `FunilVisual` (Streamers): funil SVG + taxas centralizadas verticalmente. |
-| Produto | Barras Dedicada / Network por `STATUS_PRODUTO_ORDEM` (incl. **Desinteresse Comercial**) + linha **Sem Status** (coluna vazia). |
-| Distribuição geográfica | Mapa + painel lateral: **UF / Estado / Marcas** (visão geral) ou **Cidade + marcas** ao selecionar UF — cidades por volume de marcas (maior → menor); dentro de cada cidade, marcas por **razão social** (intensidade do mapa = marcas). |
-| Carteira por comercial | Barras por comercial canónico + «Nenhum» — **sem** link para Pipeline. |
-| Novas marcas | `created_at` ≥ **20/06/2026** (corte pontual pós-import); badge = status pipeline (`PIPELINE_TAB_LABEL` / `PIPELINE_COLOR`). |
-| Movimentação recente | Histórico 30 dias; hover no número abre pop-up com nomes das marcas alteradas (respeita filtros). |
+### Dados (Supabase)
+
+Operadoras: `comercial_marcas` (+ empresa/contatos/produtos) e `comercial_marca_historico`. Agregadoras: `comercial_agregadoras` + histórico. Integrações: `comercial_integracoes`. SELECT via `_comercial_overview_perm('view')`.
 
 ### Estados de vazio (secção)
 
 | Contexto | Mensagem |
 |----------|----------|
 | UF sem dados no mapa/lista | `Nenhuma marca com UF cadastrada para os filtros selecionados.` |
-| Carteira vazia | `Nenhuma marca atribuída para os filtros selecionados.` |
+| Carteira vazia (operadoras) | `Nenhuma marca atribuída para os filtros selecionados.` |
+| Carteira vazia (agregadoras) | `Nenhuma agregadora atribuída para os filtros selecionados.` |
 | Novas marcas vazias | `Nenhuma marca cadastrada nos últimos 30 dias.` |
+| Barras sem dados | `Sem dados para o período selecionado.` |
 | Sem permissão | String Global |
 
 ---
