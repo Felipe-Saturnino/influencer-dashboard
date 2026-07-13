@@ -68,13 +68,25 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Network", "afiliados_network", "Network"),
   page("Financeiro", "financeiro", "Financeiro"),
   page("Banca de Jogo", "banca_jogo", "BancaDeJogo"),
-  page("Campanhas", "campanhas", "Campanhas"),
+  page("Campanhas", "campanhas", "Campanhas", [
+    { tabId: "campanhas", slug: "Campanhas", label: "Campanhas", access: "always" },
+    { tabId: "geracao_links", slug: "GeracaoDeLinks", label: "Geração de Links", access: "always" },
+  ]),
   page("Galeria de Fotos", "galeria_fotos", "GaleriaDeFotos", [
     { tabId: "galeria", slug: "Galeria", label: "Galeria", access: "always" },
     { tabId: "upload", slug: "Upload", label: "Upload", access: "galeria_upload" },
   ]),
-  page("Overview Comercial", "comercial_overview", "OverviewComercial"),
-  page("Atendimento", "cs_atendimento", "Atendimento"),
+  page("Overview Comercial", "comercial_overview", "OverviewComercial", [
+    { tabId: "operadoras", slug: "Operadoras", label: "Operadoras", access: "always" },
+    { tabId: "agregadoras", slug: "Agregadoras", label: "Agregadoras", access: "always" },
+    { tabId: "integracoes", slug: "Integracoes", label: "Integrações", access: "always" },
+  ]),
+  page("Integração", "comercial_integracao", "Integracao", [
+    { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
+    { tabId: "nao_iniciados", slug: "NaoIniciados", label: "Não Iniciados", access: "always" },
+    { tabId: "em_andamento", slug: "EmAndamento", label: "Em andamento", access: "always" },
+    { tabId: "concluidos", slug: "Concluidos", label: "Concluídos", access: "always" },
+  ]),
   page("Pipeline B2B", "comercial_pipeline_b2b", "PipelineB2B", [
     { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
     { tabId: "disponiveis", slug: "Disponiveis", label: "Disponíveis", access: "always" },
@@ -82,6 +94,13 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "negociacao", slug: "Negociacao", label: "Negociação", access: "always" },
     { tabId: "fechado", slug: "Fechado", label: "Fechado", access: "always" },
   ]),
+  page("Pipeline Agregadoras", "comercial_pipeline_agregadoras", "PipelineAgregadoras", [
+    { tabId: "todos", slug: "Todos", label: "Todos", access: "always" },
+    { tabId: "conexao", slug: "Conexao", label: "Conexão", access: "always" },
+    { tabId: "negociacao", slug: "Negociacao", label: "Negociação", access: "always" },
+    { tabId: "fechado", slug: "Fechado", label: "Fechado", access: "always" },
+  ]),
+  page("Atendimento", "cs_atendimento", "Atendimento"),
   page("Gestão de Dealers", "gestao_dealers", "GestaoDeDealers"),
   page("Roteiro de Mesa", "roteiro_mesa", "RoteiroDeMesa"),
   page("Gestão de Escala", "rh_gestao_escala", "GestaoDeEscala"),

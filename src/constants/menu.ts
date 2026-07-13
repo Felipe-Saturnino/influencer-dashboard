@@ -13,6 +13,7 @@ import {
   Images,
   GraduationCap,
   LayoutGrid,
+  Layers,
   LineChart,
   Link2,
   Megaphone,
@@ -22,6 +23,7 @@ import {
   Network,
   Newspaper,
   Notebook,
+  Plug,
   Radar,
   Radio,
   Scale,
@@ -101,7 +103,9 @@ export const MENU: MenuSection[] = [
     section: "Comercial",
     items: [
       { key: "comercial_overview", label: "Overview Comercial", icon: LineChart },
+      { key: "comercial_integracao", label: "Integração", icon: Plug },
       { key: "comercial_pipeline_b2b", label: "Pipeline B2B", icon: Briefcase },
+      { key: "comercial_pipeline_agregadoras", label: "Pipeline Agregadoras", icon: Layers },
     ],
   },
   {

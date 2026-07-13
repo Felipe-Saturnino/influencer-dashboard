@@ -91,6 +91,10 @@ verify_jwt = false
 verify_jwt = false
 # Formulário site Spin → cs_chamado_criar_site_spin
 
+[functions.prospecto-vaga-candidatura-site]
+verify_jwt = false
+# Formulário Carreiras (multipart) → rh_vaga_candidaturas externas
+
 [functions.ingest-cs-atendimento-outlook]
 verify_jwt = false
 # Ingestão e-mail contato@ via Microsoft Graph → cs_chamado_criar_email (cron / service_role).

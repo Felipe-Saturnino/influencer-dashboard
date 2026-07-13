@@ -404,6 +404,7 @@ export default function SocialMediaDashboard() {
           p_data_inicio: start,
           p_data_fim: end,
           p_operadora_slug: operadoraParaRpc,
+          p_modo_historico: historico,
         }),
         supabase.rpc("get_campanha_funil_serie_temporal", {
           p_data_inicio: start,
@@ -416,6 +417,7 @@ export default function SocialMediaDashboard() {
               p_data_inicio: startPrev,
               p_data_fim: endPrev,
               p_operadora_slug: operadoraParaRpc,
+              p_modo_historico: false,
             })
           : Promise.resolve({ data: null as CampanhaPerfRow[] | null, error: null }),
       ]);

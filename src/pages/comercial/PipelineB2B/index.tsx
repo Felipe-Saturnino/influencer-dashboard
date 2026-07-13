@@ -57,10 +57,12 @@ import {
   buildPipelineComerciais,
   defaultFolhaForPipeline,
   filterMarcas,
-  mapContatoFromDb,
-  normalizeRetificacoes,
+  mapPipelineMarcaFromDb,
+  PIPELINE_MARCA_SELECT_EMBED,
   pipelineComercialNomePorId,
   sortMarcas,
+  derivarStatusPipelinePorProdutos,
+  folhaDerivadaPorPipelineEProdutos,
 } from "./helpers";
 
 const TAB_ICONS = {
@@ -70,50 +72,6 @@ const TAB_ICONS = {
   negociacao: <Handshake {...FILTRO_BAR_TAB_ICON_PROPS} />,
   fechado: <BadgeCheck {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
-
-function mapRow(
-  raw: Record<string, unknown>,
-  comercialNames: Record<string, string>,
-): PipelineMarcaRow {
-  const empresaRaw = raw.empresa as Record<string, unknown>;
-  const contatosRaw = (raw.contatos as Record<string, unknown>[] | null) ?? [];
-  const produtosRaw = (raw.produtos as Record<string, unknown>[] | null) ?? [];
-  const comercialId = raw.comercial_user_id ? String(raw.comercial_user_id) : null;
-  const rawComercialNome = comercialId ? comercialNames[comercialId] ?? null : null;
-  const comercialNomeCanonico =
-    rawComercialNome &&
-    (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(rawComercialNome)
-      ? rawComercialNome
-      : null;
-
-  return {
-    id: String(raw.id),
-    nome: String(raw.nome ?? ""),
-    dominio: raw.dominio ? String(raw.dominio) : null,
-    status_dominio: raw.status_dominio === "ok" ? "ok" : "inativo",
-    status_pipeline: raw.status_pipeline as StatusPipeline,
-    status_folha: raw.status_folha as PipelineMarcaRow["status_folha"],
-    comercial_user_id: comercialId,
-    comercial_nome: comercialNomeCanonico,
-    agregadora: raw.agregadora ? (String(raw.agregadora) as Agregadora) : null,
-    ultimo_contato: raw.ultimo_contato ? String(raw.ultimo_contato) : null,
-    ultima_comunicacao: raw.ultima_comunicacao ? String(raw.ultima_comunicacao) : null,
-    empresa: {
-      id: String(empresaRaw.id),
-      razao_social: String(empresaRaw.razao_social ?? ""),
-      cnpj: String(empresaRaw.cnpj ?? ""),
-      portaria: empresaRaw.portaria ? String(empresaRaw.portaria) : null,
-      portaria_retificacoes: normalizeRetificacoes(empresaRaw.portaria_retificacoes),
-      requerimento_numero: empresaRaw.requerimento_numero ? String(empresaRaw.requerimento_numero) : null,
-      requerimento_ano: empresaRaw.requerimento_ano ? String(empresaRaw.requerimento_ano) : null,
-    },
-    contatos: contatosRaw.map(mapContatoFromDb),
-    produtos: produtosRaw.map((p) => ({
-      produto: p.produto as "mesa_dedicada" | "mesa_network",
-      status_produto: p.status_produto as StatusProduto | null,
-    })),
-  };
-}
 
 export default function PipelineB2B() {
   const { theme: t, user } = useApp();
@@ -126,6 +84,7 @@ export default function PipelineB2B() {
   const [kpiFolha, setKpiFolha] = useState<import("./constants").StatusFolha | null>(null);
   const [rows, setRows] = useState<PipelineMarcaRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
+  const [agregadoraOpcoes, setAgregadoraOpcoes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<{ col: TableCol; dir: SortDir }>({ col: "razao", dir: "asc" });
 
@@ -164,35 +123,37 @@ export default function PipelineB2B() {
   const loadData = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading !== false;
     if (showLoading) setLoading(true);
-    const [marcasRes, gestoresRes] = await Promise.all([
+    const [marcasRes, gestoresRes, agregadorasRes] = await Promise.all([
       supabase
         .from("comercial_marcas")
-        .select(
-          `
-          id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, ultima_comunicacao,
-          empresa:comercial_empresas(id, razao_social, cnpj, portaria, portaria_retificacoes, requerimento_numero, requerimento_ano),
-          contatos:comercial_marca_contatos(id, marca_id, nome, telefones, emails, linkedin, instagram, data_nascimento, ordem),
-          produtos:comercial_marca_produtos(produto, status_produto)
-        `,
-        )
+        .select(PIPELINE_MARCA_SELECT_EMBED)
         .order("nome"),
       supabase
         .from("profiles")
         .select("id, name")
         .in("name", [...PIPELINE_COMERCIAL_NOMES])
         .or("ativo.is.null,ativo.eq.true"),
+      supabase.from("comercial_agregadoras").select("nome").order("nome"),
     ]);
 
     if (marcasRes.error) console.error(marcasRes.error);
     if (gestoresRes.error) console.error(gestoresRes.error);
+    if (agregadorasRes.error) console.error(agregadorasRes.error);
 
     const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
     setComerciais(comercialList);
+    setAgregadoraOpcoes(
+      (agregadorasRes.data ?? [])
+        .map((r) => String((r as { nome?: string }).nome ?? "").trim())
+        .filter(Boolean),
+    );
 
     const names = Object.fromEntries(
       comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
     );
-    const mapped = (marcasRes.data ?? []).map((r) => mapRow(r as Record<string, unknown>, names));
+    const mapped = (marcasRes.data ?? []).map((r) =>
+      mapPipelineMarcaFromDb(r as Record<string, unknown>, names),
+    );
     setRows(mapped);
     if (showLoading) setLoading(false);
   }, []);
@@ -370,16 +331,59 @@ export default function PipelineB2B() {
       return;
     }
     await insertHistorico(row.id, tipo, anterior, status);
-    patchMarcaRow(row.id, (r) => {
-      const produtos = [...r.produtos];
+
+    const produtosNext = (() => {
+      const produtos = [...row.produtos];
       const idx = produtos.findIndex((p) => p.produto === tipo);
       if (idx >= 0) {
         produtos[idx] = { ...produtos[idx], status_produto: status };
       } else {
         produtos.push({ produto: tipo, status_produto: status });
       }
-      return { ...r, produtos };
-    });
+      return produtos;
+    })();
+
+    // Cascata Status (prioridade 1→2→3; para no primeiro match):
+    // 1. Assinado/Ativo → Fechado · 2. Contrato enviado → Negociação · 3. Em negociação → Conexão
+    let statusPipelineNext = row.status_pipeline;
+    let statusFolhaNext = row.status_folha;
+    const derivado = derivarStatusPipelinePorProdutos(produtosNext);
+    if (derivado && derivado !== row.status_pipeline) {
+      statusPipelineNext = derivado;
+      statusFolhaNext = folhaDerivadaPorPipelineEProdutos(derivado, produtosNext);
+      const { error: errStatus } = await supabase
+        .from("comercial_marcas")
+        .update({ status_pipeline: statusPipelineNext, status_folha: statusFolhaNext })
+        .eq("id", row.id);
+      if (errStatus) {
+        console.error(errStatus);
+        statusPipelineNext = row.status_pipeline;
+        statusFolhaNext = row.status_folha;
+      } else {
+        await insertHistorico(row.id, "status_pipeline", row.status_pipeline, statusPipelineNext);
+      }
+    } else if (derivado === row.status_pipeline) {
+      // Mantém Status; pode ajustar folha (ex.: Assinado → Ativo no Fechado).
+      const folhaIdeal = folhaDerivadaPorPipelineEProdutos(derivado, produtosNext);
+      if (folhaIdeal !== row.status_folha && FOLHA_BY_PIPELINE[derivado].includes(folhaIdeal)) {
+        statusFolhaNext = folhaIdeal;
+        const { error: errFolha } = await supabase
+          .from("comercial_marcas")
+          .update({ status_folha: statusFolhaNext })
+          .eq("id", row.id);
+        if (errFolha) {
+          console.error(errFolha);
+          statusFolhaNext = row.status_folha;
+        }
+      }
+    }
+
+    patchMarcaRow(row.id, (r) => ({
+      ...r,
+      produtos: produtosNext,
+      status_pipeline: statusPipelineNext,
+      status_folha: statusFolhaNext,
+    }));
   }
 
   function toggleSort(col: TableCol) {
@@ -522,6 +526,7 @@ export default function PipelineB2B() {
             tab={tab}
             rows={tableRows}
             comerciais={comerciais}
+            agregadoraOpcoes={agregadoraOpcoes}
             sort={sort}
             onSort={toggleSort}
             canEditar={perm.canEditarOk}

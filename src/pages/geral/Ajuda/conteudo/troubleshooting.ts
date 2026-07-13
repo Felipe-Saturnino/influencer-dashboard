@@ -89,7 +89,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparecem dados no Overview mesmo com o mês selecionado?",
         texto:
-          "O Overview exibe dados de campanhas com UTMs mapeadas. Se nenhuma campanha tiver UTMs vinculadas no período, as tabelas ficam vazias e os KPIs mostram zero. Verifique se as campanhas estão ativas e com UTMs cadastradas em Marketing → Gestão de Links. O dashboard de Mídias Sociais só exibe dados de tráfego originado por links rastreados.",
+          "O Overview exibe dados de campanhas com UTMs mapeadas. Se nenhuma campanha tiver UTMs vinculadas no período, as tabelas ficam vazias e os KPIs mostram zero. Verifique se há UTMs mapeadas em Marketing → Gestão de Links e se houve tráfego no mês. Campanhas inativas ainda entram nos totais e nas tabelas quando geraram métricas no período (ou sempre, com Histórico ativo).",
       },
       {
         subtitulo: "Os KPIs de alcance na aba Alcance estão zerados ou com '—'?",
@@ -104,7 +104,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O Comparativo de campanha não mostra todas as campanhas?",
         texto:
-          "Apenas campanhas com pelo menos uma UTM mapeada e tráfego registrado no período aparecem na tabela. Campanhas criadas mas sem UTMs vinculadas ou sem acessos no período não aparecem. Para verificar as UTMs cadastradas, acesse Marketing → Gestão de Links.",
+          "Campanhas **ativas** aparecem mesmo sem tráfego no período. Campanhas **inativas** só aparecem no mês do carrossel se geraram métricas (visitas, registros, FTDs ou volume financeiro) naquele período; com o botão **Histórico** ativo, as inativas aparecem sempre. Sem UTM mapeada, a campanha pode listar zeros. Para verificar UTMs, use Marketing → Gestão de Links.",
+      },
+      {
+        subtitulo: "Uma campanha inativa sumiu do dashboard?",
+        texto:
+          "No mês específico do carrossel, campanha inativa sem métricas naquele período não aparece. Ative **Histórico** para ver todas as campanhas (ativas e inativas), ou navegue até um mês em que ela tenha gerado resultados.",
       },
       {
         subtitulo: "O GGR do Overview de Mídias Sociais é diferente do GGR do Streamers?",
@@ -929,7 +934,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A tabela está vazia mas sei que há campanhas cadastradas?",
         texto:
-          "Tente recarregar a página. Se o problema persistir, verifique se seu perfil tem permissão de visualização para a seção Campanhas.",
+          "Confira o filtro de operadora no carrossel — com uma operadora específica, só entram campanhas daquela parceira (e campanhas sem operadora). Tente **Todas Operadoras**. Se o problema persistir, verifique se seu perfil tem permissão de visualização para Campanhas e recarregue a página.",
+      },
+      {
+        subtitulo: "A aba Geração de Links não mostra nenhum link?",
+        texto:
+          "A lista só exibe links gerados nesta aba (botão **Novo Link**). Não é a mesma fila da Gestão de Links (UTMs detectados automaticamente). Confira também o filtro de operadora. Se a tabela permanecer vazia após gerar um link e o problema persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Não consigo gerar link para outra operadora além da Casa de Apostas e Blaze?",
+        texto:
+          "Por enquanto a geração de links está disponível para **Casa de Apostas** e **Blaze**. As demais operadoras serão liberadas em atualizações futuras — o modal informa quando a geração ainda não está disponível.",
+      },
+      {
+        subtitulo: "O que significa Status Ativo ou Inativo nos links gerados?",
+        texto:
+          "**Ativo** indica que o link gerou resultados (métricas de visitas, registros ou FTDs) nos últimos 30 dias. **Inativo** significa que não houve resultados nesse período — o link continua cadastrado.",
       },
     ],
   },
@@ -969,7 +989,27 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs zerados mas há marcas no Pipeline?",
         texto:
-          "Verifique os filtros de Comercial, UF e status no topo da página — todos os blocos respeitam a mesma seleção. Limpe os chips de status com um segundo clique ou volte **Todos Comerciais** / **Todas UFs**.",
+          "Na aba **Operadoras**, verifique o filtro **Comercial** (**Todos Comerciais**). Na aba **Integrações**, confira **Prioridade** (**Todas Prioridades**). Os KPIs e gráficos da aba ativa respeitam só esses filtros — não há mais chips de status do funil nem filtro de Estados no Overview.",
+      },
+    ],
+  },
+  comercial_integracao: {
+    titulo: "Integração",
+    blocos: [
+      {
+        subtitulo: "Não vejo Integração no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Integração. Administradores têm acesso total. Demais perfis começam com Ver/Criar/Editar em **Não** até liberação explícita.",
+      },
+      {
+        subtitulo: "Não aparece marca em Nova Integração?",
+        texto:
+          "Só entram marcas da aba **Fechado** do Pipeline B2B — Dedicada ou Network em **Contrato Assinado** ou **Ativo**. Use a pesquisa pelo nome da marca. Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "A linha não foi criada ao fechar no Pipeline B2B?",
+        texto:
+          "A criação automática ocorre ao marcar **Contrato Assinado** ou **Ativo** em Dedicada ou Network. Confirme o tipo — cada produto gera no máximo uma linha automática; novas linhas extras saem de **Nova Integração**. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },
@@ -995,6 +1035,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Erro ao salvar contato ou anotação?",
         texto:
           "Verifique conexão e permissão de Editar. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.",
+      },
+    ],
+  },
+  comercial_pipeline_agregadoras: {
+    titulo: "Pipeline Agregadoras",
+    blocos: [
+      {
+        subtitulo: "Não vejo Pipeline Agregadoras no menu?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para Pipeline Agregadoras. Administradores têm acesso total. Demais perfis começam com Ver/Criar/Editar em **Não** até liberação explícita.",
+      },
+      {
+        subtitulo: "Não consigo cadastrar ou alterar status?",
+        texto:
+          "O botão **Cadastrar** exige permissão de Criar. Alterar Status ou Último Contato exige permissão de Editar. Sem Editar, os modais Ver e Histórico permanecem em modo consulta.",
+      },
+      {
+        subtitulo: "A tabela está vazia?",
+        texto:
+          "Ainda não há seed automático — cadastre agregadoras manualmente. Se já houver registros, revise busca, filtro Comercial, aba ativa e KPI selecionado.",
       },
     ],
   },

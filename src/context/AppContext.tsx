@@ -53,7 +53,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "home",
   "mesas_spin", "streamers", "dash_overview_influencer", "dash_overview_prestador", "dash_midias_sociais", "academy_performance_hub", "academy_portal",
   "agenda", "resultados", "feedback",
-  "influencers", "scout", "afiliados", "afiliados_network", "financeiro", "banca_jogo", "gestao_links", "campanhas", "galeria_fotos", "comercial_overview", "comercial_pipeline_b2b", "cs_atendimento", "gestao_dealers", "central_notificacoes",
+  "influencers", "scout", "afiliados", "afiliados_network", "financeiro", "banca_jogo", "gestao_links", "campanhas", "galeria_fotos", "comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras", "cs_atendimento", "gestao_dealers", "central_notificacoes",
   "gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico",
   "roteiro_mesa",
   "playbook_influencers",

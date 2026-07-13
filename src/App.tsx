@@ -65,7 +65,9 @@ const GestaoLinks = lazyWithRetry(() => import("./pages/marketing/GestaoLinks"))
 const Campanhas = lazyWithRetry(() => import("./pages/marketing/Campanhas"));
 const GaleriaFotos = lazyWithRetry(() => import("./pages/marketing/GaleriaFotos"));
 const PipelineB2B = lazyWithRetry(() => import("./pages/comercial/PipelineB2B"));
+const PipelineAgregadoras = lazyWithRetry(() => import("./pages/comercial/PipelineAgregadoras"));
 const OverviewComercial = lazyWithRetry(() => import("./pages/comercial/OverviewComercial"));
+const ComercialIntegracao = lazyWithRetry(() => import("./pages/comercial/Integracao"));
 const CsAtendimento = lazyWithRetry(() => import("./pages/customerSuccess/Atendimento"));
 const AfiliadosLista = lazyWithRetry(() => import("./pages/afiliados/Afiliados"));
 const AfiliadosNetwork = lazyWithRetry(() => import("./pages/afiliados/Network"));
@@ -118,7 +120,9 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   campanhas:        Campanhas,
   galeria_fotos:    GaleriaFotos,
   comercial_overview: OverviewComercial,
+  comercial_integracao: ComercialIntegracao,
   comercial_pipeline_b2b: PipelineB2B,
+  comercial_pipeline_agregadoras: PipelineAgregadoras,
   cs_atendimento: CsAtendimento,
   gestao_dealers:   GestaoDealers,
   central_notificacoes: CentralNotificacoes,

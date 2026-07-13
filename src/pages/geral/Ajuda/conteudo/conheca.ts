@@ -92,7 +92,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Overview — Conversão por Campanha",
         texto:
-          "Apresenta três blocos (KPIs e comparativos com subtítulo \"acumulado\" no modo Histórico):\n\n— KPIs Consolidados: GGR, Registros e GGR por Jogador gerados pelas campanhas com UTMs mapeadas, com comparativo ao mesmo período do mês anterior quando não está em Histórico.\n\n— Detalhamento: tabela com os totais por dia (ou por mês no Histórico) de visitas, registros, FTDs e volume financeiro.\n\n— Comparativo de campanha: tabela com a performance de cada campanha individualmente. Clique nos cabeçalhos para ordenar. O GGR é calculado como Depósitos menos Saques.",
+          "Apresenta três blocos (KPIs e comparativos com subtítulo \"acumulado\" no modo Histórico):\n\n— KPIs Consolidados: GGR, Registros e GGR por Jogador gerados pelas campanhas com UTMs mapeadas, com comparativo ao mesmo período do mês anterior quando não está em Histórico.\n\n— Detalhamento: tabela com os totais por dia (ou por mês no Histórico) de visitas, registros, FTDs e volume financeiro.\n\n— Comparativo de campanha: tabela com a performance de cada campanha individualmente. Clique nos cabeçalhos para ordenar. O GGR é calculado como Depósitos menos Saques.\n\nCampanhas **inativas** no cadastro: no mês selecionado no carrossel, só aparecem se geraram métricas naquele período; com **Histórico** ativo, aparecem sempre. Os totais do funil incluem UTMs mapeadas a campanhas ativas e inativas.",
       },
       {
         subtitulo: "Aba Conversão — Funis de Campanha",
@@ -1087,22 +1087,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Campanhas permite cadastrar as campanhas de mídia social utilizadas nas ações de marketing da plataforma. Cada campanha pode ser vinculada a uma operadora específica ou permanecer genérica. Os UTMs mapeados na Gestão de Links que são associados a uma campanha alimentam automaticamente a página **Mídias Sociais** com dados de funil e performance.",
+          "A página **Campanhas** reúne o cadastro de campanhas de mídia e a **Geração de Links** com UTMs rastreados. Use o carrossel de operadoras (e o botão **Todas Operadoras**) na barra de filtros para restringir o que aparece nas duas abas. Campanhas sem operadora vinculada entram em qualquer filtro específico. Os UTMs mapeados na **Gestão de Links** e associados a uma campanha alimentam a página **Mídias Sociais**.",
       },
       {
-        subtitulo: "Indicadores de Resumo",
+        subtitulo: "Filtros e abas",
         texto:
-          "Três cards no topo (formato Financeiro/Banca de Jogo — rótulo em caixa alta acima do valor): **TOTAL**, **ATIVAS** e **INATIVAS**. Os valores se atualizam imediatamente após qualquer criação, edição ou exclusão.",
+          "Na barra superior, navegue entre operadoras com as setas ou ative **Todas Operadoras**. Abaixo, alterne entre as abas **Campanhas** e **Geração de Links** (também pela URL). Com o foco numa aba, use ← → do teclado para trocar.",
       },
       {
-        subtitulo: "Tabela de Campanhas",
+        subtitulo: "Aba Campanhas — indicadores e tabela",
         texto:
-          "Lista todas as campanhas ordenadas pelo campo selecionado. Colunas disponíveis: Nome, Operadora, Status (Ativa/Inativa) e data de criação.\n\nO botão Editar abre o formulário preenchido com os dados atuais da campanha, permitindo alterar o nome, a operadora e o status. O botão Excluir (ícone vermelho) abre o pop-up padrão de confirmação e remove a campanha permanentemente — os vínculos com UTMs mapeados na Gestão de Links são desfeitos automaticamente, mas os dados históricos de performance permanecem nos dashboards.",
+          "Três cards no topo: **TOTAL**, **ATIVAS** e **INATIVAS**. A tabela lista Nome, Operadora, Status (Ativa/Inativa) e data de criação.\n\n**Nova Campanha** abre o formulário (nome obrigatório; operadora opcional). Editar altera nome, operadora e status; Excluir remove a campanha e desfaz vínculos na Gestão de Links, mantendo o histórico nos dashboards.\n\nCampanhas inativas não aparecem como opção ao mapear novos links, mas mantêm UTMs já vinculados.",
       },
       {
-        subtitulo: "Criando uma Campanha",
+        subtitulo: "Aba Geração de Links",
         texto:
-          "No bloco **Campanhas cadastradas**, use **Nova Campanha** na mesma linha do título (ícone + no padrão de criação) para abrir o formulário. O nome é obrigatório; a operadora é opcional — use quando a campanha for específica para uma plataforma. Novas campanhas são criadas como Ativas por padrão.\n\nAo editar, o campo Status permite marcar a campanha como Inativa. UTMs já mapeados permanecem vinculados mesmo após a inativação — a campanha inativa apenas deixa de aparecer como opção ao mapear novos links.",
+          "Consolida **TOTAL**, **ATIVOS** e **INATIVOS**. Um link fica **Ativo** quando gerou resultados (métricas) nos últimos 30 dias; caso contrário, **Inativo**.\n\nEm **Links cadastrados**, a tabela mostra UTM, Operadora, Criado em, Usuário (quem criou), Status e Última Visita. Com permissão de **Criar**, use **Novo Link**: escolha a operadora (**Casa de Apostas** ou **Blaze**), a **campanha ativa** da mesma operadora e o campo **UTM** (utm_source na CDA; utm_campaign na Blaze). Ao gerar, a URL completa é montada com a base da operadora, o link é mapeado à campanha (como na Gestão de Links), aparece com **Copiar** e o registro entra na tabela.",
       },
     ],
   },
@@ -1130,17 +1130,41 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O **Overview Comercial** consolida KPIs, funil, produtos Live Cassino, mapa por UF, carteira por comercial, marcas recentes e movimentação do histórico. É **somente leitura** — edição permanece no **Pipeline B2B**.",
+          "O **Overview Comercial** consolida a visão de **Operadoras** (Pipeline B2B), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração.",
       },
       {
-        subtitulo: "Filtros",
+        subtitulo: "Abas e filtros",
         texto:
-          "Use **Comercial** para restringir ao responsável interno. **Estados** lista os 27 UFs (**Todos Estados** por defeito). Os chips de status refinam todos os blocos.",
+          "No topo do bloco de filtros escolha **Operadoras**, **Agregadoras** ou **Integrações**.\n\n— **Operadoras:** filtro **Comercial** abaixo das abas (visão consolidada do funil completo).\n— **Agregadoras:** só o filtro **Comercial**.\n— **Integrações:** filtro **Prioridade** (**Todas Prioridades**, Baixo, Médio ou Alta).",
+      },
+      {
+        subtitulo: "Conteúdo por aba",
+        texto:
+          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Agregadoras** mostra KPIs do funil (sem legenda nos cards), funil, **Produto** Dedicada × Network das marcas vinculadas às agregadoras filtradas, carteira por comercial e **Movimentação recente** em grade 2×2 (→ Conexão, → Negociação, → Fechado, Alterações totais).\n\n**Integrações** mostra totais por status (sem legenda nos cards), **SLA por etapa** (tempo médio: criação → Em andamento; Em andamento → Concluído; criação → Concluído), volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
       },
       {
         subtitulo: "Mapa e movimentação",
         texto:
-          "No bloco **Distribuição geográfica**, a coluna à direita lista **UF, Estado e Marcas**; ao clicar em um estado no mapa ou na lista, aparecem as marcas agrupadas por **cidade** (com a quantidade por cidade). Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
+          "Na aba **Operadoras**, o bloco **Distribuição geográfica** lista **UF, Estado e Marcas**; ao clicar em um estado, aparecem as marcas por **cidade**. Em **Movimentação recente**, passe o mouse sobre o número para ver quais marcas foram alteradas nos últimos 30 dias.",
+      },
+    ],
+  },
+  comercial_integracao: {
+    titulo: "Integração",
+    blocos: [
+      {
+        texto:
+          "A página **Integração** acompanha a integração técnica das marcas que estão na aba **Fechado** do Pipeline B2B (Dedicada ou Network em **Contrato Assinado** ou **Ativo**). O acesso depende da permissão de Ver; o botão **Nova Integração** exige Criar; alteração de status, prioridade, caminho, PAM, agregador e comentários exige Editar.",
+      },
+      {
+        subtitulo: "Filtros e abas",
+        texto:
+          "Use a busca por operador, caminho ou PAM e o filtro **Prioridade** (**Todas Prioridades**, Baixo, Médio ou Alta). As abas **Todos**, **Não Iniciados**, **Em andamento** e **Concluídos** organizam o funil de integração. Os KPIs **Concluídos**, **Em andamento** e **Não Iniciados** também filtram a tabela; **Total de Operadores** limpa o filtro de status.",
+      },
+      {
+        subtitulo: "Tabela e Nova Integração",
+        texto:
+          "Cada linha vincula um Operador (marca) a um Tipo (**Dedicada** ou **Network**). Clique no **Operador** para abrir o mesmo modal de dados da marca do Pipeline B2B (domínio, licença, contatos — somente leitura). Agregador usa os nomes cadastrados em **Pipeline Agregadoras**. **Histórico** mostra alterações; **Comentar** registra o comentário visível na coluna.\n\nEm **Nova Integração**, escolha uma marca da aba **Fechado** do Pipeline B2B (lista com pesquisa) e preencha Prioridade, Tipo, Caminho, PAM e Agregador (todos obrigatórios). É possível criar mais de uma integração para a mesma marca.\n\nAo marcar Dedicada ou Network como **Contrato Assinado** ou **Ativo**, a plataforma cria automaticamente uma linha (Prioridade Baixo, Status Não Iniciado, Caminho e PAM em branco), se ainda não existir para aquele tipo.",
       },
     ],
   },
@@ -1154,17 +1178,36 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e abas",
         texto:
-          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n\nAs URLs das abas são sincronizadas com a rota (`/PipelineB2B/...`).",
+          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n— **Fechado** lista marcas com Dedicada ou Network em **Contrato Assinado** ou **Ativo** (mesmo que o Status ainda estivesse em Negociação).\n\nAs URLs das abas são sincronizadas com a rota (`/PipelineB2B/...`).",
       },
       {
         subtitulo: "Tabela e edição",
         texto:
-          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network, **Agregadora**, **Último Contato**).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada**, **Network** ou **Agregadora** para alterar via lista; em **Último Contato**, clique na data para escolher ou alterar o dia do último contato comercial. **Agregadora** aceita Alea, BetConstruct, Cactus, Cometa Gaming, Playtech ou SoftSwiss (ou **—** para limpar). Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.\n\nA coluna **Envio de Material** exibe a data do último envio de material (somente leitura na tabela). Todas as abas exibem as mesmas colunas, na ordem: Razão Social, Marca, Contato, Comercial, Status, Dedicada, Network, Agregadora, Último Contato, Envio de Material e Ação.",
+          "A coluna **Razão Social** agrupa marcas do mesmo CNPJ. Clique no nome da marca ou no ícone **Ver** para abrir domínio, portaria, requerimento e contatos (somente leitura). **Registro** abre anotações da equipe e histórico de alterações (Comercial, Status, Dedicada, Network, **Agregadora**, **Último Contato**).\n\nCom permissão de Editar, clique nas células **Comercial**, **Status**, **Dedicada**, **Network** ou **Agregadora** para alterar via lista; em **Último Contato**, clique na data para escolher ou alterar o dia do último contato comercial. **Agregadora** lista os nomes cadastrados em **Pipeline Agregadoras** (ou **—** para limpar). Contatos: clique no nome para editar ou use **+** para adicionar.\n\nAo alterar **Dedicada** ou **Network**, o Status do funil é recalculado automaticamente nesta ordem (para no primeiro match): (1) Contrato Assinado ou Ativo → **Fechado**; (2) Contrato enviado → **Negociação**; (3) Em negociação → **Conexão**. Ao marcar **Contrato Assinado** em Dedicada ou Network, a página **Integração** recebe automaticamente uma linha para aquele tipo (se ainda não existir).\n\nAs flags de **Dedicada** e **Network** usam cores em progressão do pior ao melhor cenário: vermelho (Sem interesse / Desinteresse Comercial) → cinza (Sem proposta) → amarelo (Em negociação) → azul (Contrato enviado) → roxo (Contrato Assinado) → verde (Ativo). **Desinteresse Comercial** entra na linha **Sem interesse** do consolidado de Negociação.\n\nTodas as abas exibem as mesmas colunas, na ordem: Razão Social, Marca, Contato, Comercial, Status, Dedicada, Network, Agregadora, Último Contato e Ação.",
       },
       {
         subtitulo: "Comunicar",
         texto:
-          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) e alimentar a coluna **Envio de Material** — fluxo em implementação posterior.",
+          "O botão **Comunicar** na toolbar da tabela será usado para registrar comunicações com a marca (e-mail/mensagem) — fluxo em implementação posterior.",
+      },
+    ],
+  },
+  comercial_pipeline_agregadoras: {
+    titulo: "Pipeline Agregadoras",
+    blocos: [
+      {
+        texto:
+          "A página **Pipeline Agregadoras** concentra a prospecção comercial de agregadoras de jogos (plataformas B2B de conteúdo). O acesso depende da permissão de Ver em Gestão de Usuários; cadastro exige permissão de Criar; alteração de status e último contato exige permissão de Editar.",
+      },
+      {
+        subtitulo: "Filtros e abas",
+        texto:
+          "Use a busca por nome ou site e o filtro **Comercial** (**Todos Comerciais**, **Nenhum** ou um gestor canónico). As abas **Todos**, **Conexão**, **Negociação** e **Fechado** organizam o funil. Os KPIs **Disponíveis**, **Conexão**, **Negociação** e **Fechado** filtram a tabela por status (clique novamente para limpar).",
+      },
+      {
+        subtitulo: "Cadastro e tabela",
+        texto:
+          "Com permissão de Criar, use **Cadastrar** para informar Nome, Site, Jogos e Comercial. Toda agregadora nova entra no status **Conexão**. A tabela exibe Nome, Site, Jogos, Status, Comercial, Último Contato e ações **Ver** e **Histórico**. Com Editar, altere Status e Comercial pelo popover; em Jogos e Último Contato, clique na célula (vazio mostra **—**) para editar.",
       },
     ],
   },
@@ -1295,6 +1338,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Filtro de Operadora",
         texto:
           "Quando visível, o filtro de operadora restringe a listagem à plataforma selecionada. Ao selecionar uma operadora específica, a coluna Operadora some da tabela — os dados já estão filtrados. Selecione **Todas Operadoras** no filtro para ver tudo junto.",
+      },
+      {
+        subtitulo: "Busca por UTM Source",
+        texto:
+          "Abaixo das abas, use a barra de pesquisa para filtrar a lista pelo **UTM Source**. A busca ignora maiúsculas/minúsculas e acentos. O filtro vale para a aba ativa (Pendentes, Mapeados ou Ignorados).",
       },
       {
         subtitulo: "Tabela de Links",

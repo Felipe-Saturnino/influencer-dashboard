@@ -106,7 +106,9 @@ const PAGES_META: {
   { key: "gestao_links", label: "Gestão de Links", secao: "Marketing", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Comercial
   { key: "comercial_overview", label: "Overview Comercial", secao: "Comercial", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "comercial_integracao", label: "Integração", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "comercial_pipeline_b2b", label: "Pipeline B2B", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "comercial_pipeline_agregadoras", label: "Pipeline Agregadoras", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: false },
   // Customer Success
   { key: "cs_atendimento", label: "Atendimento", secao: "Customer Success", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Estúdio (menu)

@@ -19,12 +19,6 @@ import {
 
 export type OverviewMarcaRow = PipelineMarcaRow & { created_at: string | null };
 
-export type OverviewPipelineFilter = StatusPipeline | "todos";
-
-export const UF_FILTRO_TODAS = "todas";
-export const UF_FILTRO_TODAS_LABEL = "Todos Estados";
-export const UF_FILTRO_ARIA_LABEL = "Estados";
-
 /** Corte pontual — exclui legado do import em massa anterior a 20/06/2026. */
 export const NOVAS_MARCAS_DESDE_ISO = "2026-06-20T00:00:00.000-03:00";
 
@@ -58,23 +52,13 @@ export const UF_NOMES: Record<string, string> = {
   TO: "Tocantins",
 };
 
-export const UF_FILTRO_OPTIONS = Object.keys(UF_NOMES)
-  .sort((a, b) => UF_NOMES[a].localeCompare(UF_NOMES[b], "pt-BR"))
-  .map((uf) => ({ value: uf, label: `${uf} — ${UF_NOMES[uf]}` }));
-
 export function filterOverviewRows(
   rows: OverviewMarcaRow[],
   comercialFiltro: string,
-  ufFiltro: string,
-  pipelineFiltro: OverviewPipelineFilter,
   comerciais: ComercialOpcao[],
 ): OverviewMarcaRow[] {
   let list = rows;
   const canonicalIds = pipelineComercialCanonicoIds(comerciais);
-
-  if (pipelineFiltro !== "todos") {
-    list = list.filter((r) => r.status_pipeline === pipelineFiltro);
-  }
 
   if (comercialFiltro === COMERCIAL_FILTRO_NENHUM) {
     list = list.filter(
@@ -82,10 +66,6 @@ export function filterOverviewRows(
     );
   } else if (comercialFiltro !== COMERCIAL_FILTRO_TODOS) {
     list = list.filter((r) => r.comercial_user_id === comercialFiltro);
-  }
-
-  if (ufFiltro !== UF_FILTRO_TODAS) {
-    list = list.filter((r) => (r.empresa.estado ?? "").toUpperCase() === ufFiltro);
   }
 
   return list;

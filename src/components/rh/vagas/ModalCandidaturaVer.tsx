@@ -13,10 +13,16 @@ import {
   patchCamposParaEtapa,
   type CamposEtapaCandidatura,
 } from "../../../lib/rhVagaCandidaturaKanban";
-import { urlAssinadaCurriculoCandidatura, uploadAnexoCandidaturaVaga } from "../../../lib/rhVagaCandidaturaFiles";
+import { urlAssinadaArquivoCandidatura, uploadAnexoCandidaturaVaga } from "../../../lib/rhVagaCandidaturaFiles";
 import { inserirHistoricoCandidatura, resumoMudancaEtapa } from "../../../lib/rhVagaCandidaturaHistorico";
 import { RH_CANDIDATURAS_SELECT } from "../../../lib/rhVagaCandidaturaQueries";
-import { fmtDataBR, labelEtapaCandidatura, labelVagaComCodigo } from "../../../lib/rhVagasFormat";
+import {
+  fmtDataBR,
+  labelEtapaCandidatura,
+  labelOrigemCandidaturaSite,
+  labelSimNao,
+  labelVagaComCodigo,
+} from "../../../lib/rhVagasFormat";
 import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow } from "../../../types/rhVagaCandidatura";
 import type { RhVagaTipo } from "../../../types/rhVaga";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
@@ -150,15 +156,21 @@ export function ModalCandidaturaVer({
 
   const readOnlyStyle: CSSProperties = { ...inputStyle, opacity: 0.92, cursor: "not-allowed" };
 
-  async function baixarCurriculo() {
-    if (!c?.curriculo_storage_path) return;
-    const url = await urlAssinadaCurriculoCandidatura(c.curriculo_storage_path);
+  async function baixarArquivoStorage(storagePath: string | null | undefined, nomeArquivo: string) {
+    if (!storagePath?.trim()) return;
+    const url = await urlAssinadaArquivoCandidatura(storagePath);
     if (!url) return;
     const a = document.createElement("a");
     a.href = url;
-    a.download = c.curriculo_nome_arquivo || "curriculo";
+    a.download = nomeArquivo || "arquivo";
     a.target = "_blank";
+    a.rel = "noopener noreferrer";
     a.click();
+  }
+
+  async function baixarCurriculo() {
+    if (!c?.curriculo_storage_path) return;
+    await baixarArquivoStorage(c.curriculo_storage_path, c.curriculo_nome_arquivo || "curriculo");
   }
 
   async function salvarAnotacao() {
@@ -349,7 +361,94 @@ export function ModalCandidaturaVer({
                 </div>
               </>
             ) : (
-              <p style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Vaga externa — detalhes em breve.</p>
+              <>
+                <CampoLeitura label="E-mail" valor={(c.email ?? "").trim() || "—"} style={readOnlyStyle} t={t} />
+                <CampoLeitura label="Telefone" valor={(c.telefone ?? "").trim() || "—"} style={readOnlyStyle} t={t} />
+                <CampoLeitura label="Cidade" valor={(c.cidade ?? "").trim() || "—"} style={readOnlyStyle} t={t} />
+                <CampoLeitura
+                  label="Redes sociais"
+                  valor={(c.redes_sociais ?? "").trim() || "—"}
+                  style={readOnlyStyle}
+                  t={t}
+                />
+                <CampoLeitura label="Como chegou até nós?" valor={labelOrigemCandidaturaSite(c.origem)} style={readOnlyStyle} t={t} />
+                {c.origem === "indicacao" ? (
+                  <CampoLeitura
+                    label="Quem indicou?"
+                    valor={(c.quem_indicou ?? "").trim() || "—"}
+                    style={readOnlyStyle}
+                    t={t}
+                  />
+                ) : null}
+                {c.turno_trabalho?.trim() ? (
+                  <CampoLeitura label="Turno de trabalho" valor={c.turno_trabalho.trim()} style={readOnlyStyle} t={t} />
+                ) : null}
+                {c.vaga?.necessario_video_apresentacao != null ? (
+                  <CampoLeitura
+                    label="Necessário vídeo de apresentação?"
+                    valor={labelSimNao(!!c.vaga.necessario_video_apresentacao)}
+                    style={readOnlyStyle}
+                    t={t}
+                  />
+                ) : null}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>Currículo</div>
+                  {c.curriculo_storage_path ? (
+                    <BtnSec
+                      t={t}
+                      label={c.curriculo_nome_arquivo?.trim() || "Download"}
+                      onClick={() => void baixarCurriculo()}
+                    />
+                  ) : (
+                    <div style={{ ...readOnlyStyle, opacity: 0.92 }}>—</div>
+                  )}
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>Portfólio</div>
+                  {c.portfolio_storage_path ? (
+                    <BtnSec
+                      t={t}
+                      label={c.portfolio_nome_arquivo?.trim() || "Download arquivo"}
+                      onClick={() =>
+                        void baixarArquivoStorage(c.portfolio_storage_path, c.portfolio_nome_arquivo || "portfolio")
+                      }
+                    />
+                  ) : null}
+                  {(c.portfolio_url ?? "").trim() ? (
+                    <a
+                      href={(c.portfolio_url ?? "").trim()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-block",
+                        marginTop: c.portfolio_storage_path ? 8 : 0,
+                        fontSize: 13,
+                        fontFamily: FONT.body,
+                        color: "var(--brand-primary, #7c3aed)",
+                        fontWeight: 600,
+                        wordBreak: "break-all",
+                      }}
+                    >
+                      {(c.portfolio_url ?? "").trim()}
+                    </a>
+                  ) : null}
+                  {!c.portfolio_storage_path && !(c.portfolio_url ?? "").trim() ? (
+                    <div style={{ ...readOnlyStyle, opacity: 0.92 }}>—</div>
+                  ) : null}
+                </div>
+                {c.video_storage_path ? (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}>
+                      Vídeo de apresentação
+                    </div>
+                    <BtnSec
+                      t={t}
+                      label={c.video_nome_arquivo?.trim() || "Download vídeo"}
+                      onClick={() => void baixarArquivoStorage(c.video_storage_path, c.video_nome_arquivo || "video")}
+                    />
+                  </div>
+                ) : null}
+              </>
             )
           ) : null}
 

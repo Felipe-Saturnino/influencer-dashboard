@@ -42,13 +42,26 @@ Perfis: Gestor (operação interna).
 
 ## Campanhas (`campanhas`)
 
-- Sem FilterBar de período/operadora.
+- **FilterBar (nível 2):** `getPageFilterBoxStyle` — **carrossel de operadoras** (setas Brand §7) + pill **`Todas Operadoras`** (`FiltroBarPillButton` + `FilterBarIcons.operadora`), padrão Organograma (diretorias). Quando «Todas» ativo, setas desabilitadas; ao desativar, vai à primeira operadora ativa. Lista do carrossel: só operadoras **ativas**. Perfil operador com escopo fixo: carrossel oculto (`showFiltroOperadora`).
+- **Abas** (`useRouteTab` + `appRoutes`): **Campanhas** | **Geração de Links** — `FiltroBarTabButton` + ícones `Megaphone` / `Link2` (16px); URL `/Campanhas/Campanhas` e `/Campanhas/GeracaoDeLinks`.
+- Filtro de operadora aplica-se às duas abas (campanhas genéricas `operadora_slug` null entram em qualquer filtro específico).
+
+### Aba Campanhas
+
 - **KPIs do topo:** grelha `app-grid-kpi-3` + `getPageKpiSectionGapStyle()` — layout igual Financeiro/Banca de Jogo (`borderLeft` 3px, rótulo em caixa alta acima: **TOTAL**, **ATIVAS**, **INATIVAS**; `brand.blockBg`; sem caixa pai).
 - **Campanhas cadastradas:** `getPageContentBoxStyle` + **`SectionTitle`** `compact` na mesma linha que **`CtaCriarButton`** **Nova Campanha** quando `canCriarOk`.
 - Toggle status: dois botões pill **Ativa / Inativa** com `aria-pressed` — nunca botão único alternante.
 - `autoFocus` em modal: ref + `setTimeout(100)`.
 - Vazio: `Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.`
-- **Handoff:** UTMs, classificação, ativar/inativar.
+
+### Aba Geração de Links
+
+- **KPIs:** **TOTAL** (links na tabela), **ATIVOS** (métricas/resultados nos últimos 30 dias em `utm_metricas_diarias`), **INATIVOS** (resto) — mesma grelha KPI da aba Campanhas.
+- **Links cadastrados:** `SectionTitle` `compact` + **`CtaCriarButton`** **Novo Link** (`canCriarOk`) — abre **`ModalNovoLink`**.
+- **Modal Novo Link:** Operadora obrigatória (só ativas). Operadoras com geração: **Casa de Apostas** (`utm_source`) e **Blaze** (`utm_campaign`). Select obrigatório **Campanha** (ativas da mesma operadora). Campo **UTM** só com o valor editável (sem URL base no formulário). Demais operadoras: aviso «em breve». **Gerar Link** monta a URL completa (base fixa da operadora + UTM), chama RPC `gerar_campanha_link` — grava `campanha_links` + mapeia `utm_aliases` (`status = mapeado`, `campanha_id`). Valor sanitizado e persistido em `utm_source` (identificador interno); URL completa só no resultado + **Copiar**.
+- Tabela: UTM, Operadora, Criado em, Usuário (nome em `profiles`), Status (Ativo/Inativo), Última Visita — `SortTableTh`; default **Criado em** `desc`. Fonte: tabela `campanha_links` (`src/lib/campanhaLinks.ts`).
+- Vazio: `Nenhum link cadastrado.`
+- **Handoff:** bases de URL das demais operadoras; sync opcional com `utm_aliases` na emissão.
 
 ---
 
@@ -56,6 +69,7 @@ Perfis: Gestor (operação interna).
 
 - Filtro operadora: **`FiltroOperadoraSelect`** (`pill`) **dentro** do strip `primaryTransparent*` — nunca solto entre header e abas; agregadora **Todas Operadoras**.
 - Abas `pendentes | mapeados | ignorados`: ARIA completo (tablist, tab, tabpanel, teclado).
+- **Busca:** `BarraPesquisaPagina` abaixo das abas, no mesmo bloco de filtros — filtra por **UTM Source** (`textoContemBusca`, insensível a acentos); placeholder `PAGE_SEARCH.utmSource`. Vazio com busca: `Nenhum link encontrado para a busca.`
 - Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
 - Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal).
 - `SortTableTh` + default em coluna de data quando existir (Global).
@@ -87,9 +101,11 @@ Perfis: Gestor (operação interna).
 
 | Estado | Mensagem |
 |--------|----------|
+| Links gerados vazio (Campanhas) | `Nenhum link cadastrado.` |
 | Links pendentes vazio | `Nenhum link pendente. Tudo mapeado!` |
 | Mapeados vazio | `Nenhum link mapeado ainda.` |
 | Ignorados vazio | `Nenhum link ignorado.` |
+| Busca UTM sem resultado (Gestão de Links) | `Nenhum link encontrado para a busca.` |
 | Galeria sem fotos (filtros) | `Nenhuma foto encontrada para os filtros selecionados.` |
 | Minhas Fotos sem vínculo de login | `Nenhum colaborador vinculado ao seu login.` |
 | Sem permissão | String Global |

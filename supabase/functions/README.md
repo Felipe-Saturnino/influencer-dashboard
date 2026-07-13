@@ -27,6 +27,7 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `prestador-ponto` |
 | `prospecto-afiliados-network-site` |
 | `prospecto-cs-atendimento-site` |
+| `prospecto-vaga-candidatura-site` |
 | `prospecto-scout-site` |
 | `sync-vagas-carreiras-site` |
 | `sync-metricas-cda` |
@@ -152,6 +153,20 @@ Detalhes: `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md`.
 Secrets: `WORDPRESS_VAGAS_SYNC_URL`, `SPIN_VAGAS_SYNC_SECRET` · opcional `SPIN_VAGAS_CARREIRAS_INGEST_SECRET`
 
 Detalhes: `docs/SETUP-SYNC-VAGAS-CARREIRAS.md` · contrato agência: `docs/api-sync-vagas-carreiras-site-agencia.md`.
+
+---
+
+### Candidatura Carreiras — formulário site (multipart)
+
+**Function:** `prospecto-vaga-candidatura-site`
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+
+Secret: `PROSPECTO_VAGA_CANDIDATURA_FORM_SECRET` · Proxy: `/api/prospecto-vaga-candidatura-site`
+
+Detalhes: `docs/SETUP-PROSPECTO-VAGA-CANDIDATURA.md` · contrato agência: `docs/api-prospecto-vaga-candidatura-site-agencia.md`.
 
 ---
 

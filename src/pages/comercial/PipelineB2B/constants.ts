@@ -28,28 +28,8 @@ export type StatusProduto =
 
 export type ProdutoTipo = "mesa_dedicada" | "mesa_network";
 
-/** Agregadoras disponíveis no Pipeline B2B — ordem alfabética por rótulo. */
-export type Agregadora =
-  | "Alea"
-  | "BetConstruct"
-  | "Cactus"
-  | "Cometa Gaming"
-  | "Playtech"
-  | "SoftSwiss";
-
-export const AGREGADORA_ORDEM: Agregadora[] = [
-  "Alea",
-  "BetConstruct",
-  "Cactus",
-  "Cometa Gaming",
-  "Playtech",
-  "SoftSwiss",
-];
-
-/** Opções do popover inline (vazio = sem agregadora). */
-export const AGREGADORA_POPOVER_OPTS = ["", ...AGREGADORA_ORDEM] as const;
-
-export type AgregadoraPopoverValue = (typeof AGREGADORA_POPOVER_OPTS)[number];
+/** Nome da agregadora (catálogo `comercial_agregadoras`) ou null. */
+export type Agregadora = string;
 
 export type TableCol =
   | "razao"
@@ -61,7 +41,6 @@ export type TableCol =
   | "network"
   | "agregadora"
   | "ultimo_contato"
-  | "ultima"
   | "acao";
 
 /** Colunas da tabela — mesma ordem em todas as abas. */
@@ -75,7 +54,6 @@ export const PIPELINE_TABLE_COLS: TableCol[] = [
   "network",
   "agregadora",
   "ultimo_contato",
-  "ultima",
   "acao",
 ];
 
@@ -244,7 +222,6 @@ export const COL_LABEL: Record<TableCol, string> = {
   network: "Network",
   agregadora: "Agregadora",
   ultimo_contato: "Último Contato",
-  ultima: "Envio de Material",
   acao: "Ação",
 };
 
@@ -254,7 +231,6 @@ export const SORTABLE_COLS: TableCol[] = [
   "network",
   "agregadora",
   "ultimo_contato",
-  "ultima",
 ];
 
 export const COMERCIAL_FILTRO_TODOS = "todos";

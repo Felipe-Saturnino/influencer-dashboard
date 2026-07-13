@@ -733,9 +733,21 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Campanha",
         definicao:
-          "Agrupamento de ações de marketing vinculado a uma ou mais operadoras. Campanhas são criadas na página Campanhas e podem ser usadas como destino no mapeamento de links na Gestão de Links.",
+          "Agrupamento de ações de marketing vinculado a uma ou mais operadoras. Campanhas são criadas na página Campanhas (aba Campanhas) e podem ser usadas como destino no mapeamento de links na Gestão de Links.",
         nota: "Campanhas inativas não aparecem como opção ao mapear novos links, mas mantêm os vínculos existentes.",
         referencia: "Campanhas · Gestão de Links",
+      },
+      {
+        termo: "Geração de Links",
+        definicao:
+          "Aba da página Campanhas para cadastrar links com UTM por operadora. O consolidado separa Total, Ativos (com resultados nos últimos 30 dias) e Inativos.",
+        referencia: "Campanhas",
+      },
+      {
+        termo: "Link Ativo (30 dias)",
+        definicao:
+          "Na Geração de Links, status do link que gerou resultados (métricas) nos últimos 30 dias. Sem resultados nesse período, o status é Inativo.",
+        referencia: "Campanhas",
       },
     ],
   },
@@ -1148,7 +1160,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   financeiro_operacional: ["financeiro", "banca_jogo"],
   estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa"],
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
-  comercial: ["comercial_overview", "comercial_pipeline_b2b"],
+  comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
   customer_success: ["cs_atendimento"],
   rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
   escala: [

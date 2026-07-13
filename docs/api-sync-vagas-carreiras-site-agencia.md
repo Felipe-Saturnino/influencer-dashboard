@@ -4,7 +4,7 @@ Documento **simplificado** para a **agência / admin WordPress** (`https://sping
 
 **Objetivo:** substituir a lista **estática** de vagas na página Carreiras por uma listagem **atualizada automaticamente** com as vagas **externas e abertas** cadastradas na plataforma Spin (Data Intelligence).
 
-**Escopo deste documento:** apenas **receber e exibir** vagas. O formulário de candidatura (envio de currículo etc.) será tratado em uma **segunda etapa**.
+**Escopo deste documento:** apenas **receber e exibir** vagas. O formulário de candidatura (retorno site → plataforma) está em **`api-prospecto-vaga-candidatura-site-agencia.md`**.
 
 ---
 
@@ -210,13 +210,11 @@ A plataforma Spin **já está preparada** para enviar o sync assim que a URL e o
 
 ---
 
-## Fora de escopo (etapa 2 — candidaturas)
+## Etapa 2 — candidaturas (retorno site → plataforma)
 
-- Formulário “Candidatar-se” enviando dados para a plataforma
-- Upload de currículo, vídeo ou portfólio
-- Integração com e-mail ou notificações
+Documento da agência: **`api-prospecto-vaga-candidatura-site-agencia.md`**.
 
-Será documentado separadamente quando a listagem estiver estável.
+Resumo: formulário **Candidatar-se** com POST `multipart/form-data` para o proxy da Spin (`/api/prospecto-vaga-candidatura-site`), usando `codigo_vaga` e os flags `necessario_video_apresentacao` / `necessario_turno` vindos deste sync.
 
 ---
 

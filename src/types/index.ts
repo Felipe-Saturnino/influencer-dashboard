@@ -57,7 +57,9 @@ export type PageKey =
   | "campanhas"
   | "galeria_fotos"
   | "comercial_overview"
+  | "comercial_integracao"
   | "comercial_pipeline_b2b"
+  | "comercial_pipeline_agregadoras"
   | "cs_atendimento"
   | "gestao_usuarios"
   | "gestao_operadoras" // ✅ adicionado para Etapa 5
@@ -157,6 +159,22 @@ export interface Campanha {
   ativo:           boolean;
   created_at?:     string;
   updated_at?:     string;
+}
+
+/** Link gerado em Campanhas → Geração de Links (`campanha_links`). */
+export interface CampanhaLink {
+  id: string;
+  utm_source: string;
+  operadora_slug: string;
+  campanha_id?: string | null;
+  created_by: string | null;
+  created_at: string;
+  /** Nome do usuário que criou (join em profiles). */
+  usuario_nome?: string;
+  /** Última visita conhecida (utm_aliases.ultimo_visto ou métricas). */
+  ultima_visita?: string | null;
+  /** Ativo = teve resultados (métricas) nos últimos 30 dias. */
+  ativo_30d?: boolean;
 }
 
 // ─── UTM ALIAS ───────────────────────────────────────────────────────────────

@@ -1,36 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
-import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
-import { FilterBarIcons, FILTRO_BAR_ICON_PROPS } from "../../../lib/filterBarIconCatalog";
-import {
-  FiltroSemanticoTabPill,
-  SectionTitle,
-} from "../../../components/dashboard";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
-import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   COMERCIAL_FILTRO_ARIA,
   COMERCIAL_FILTRO_TODOS,
   COMERCIAL_FILTRO_TODOS_LABEL,
-  PIPELINE_COLOR,
-  PIPELINE_TAB_LABEL,
   PIPELINE_COMERCIAL_NOMES,
-  STATUS_PRODUTO_COLOR,
-  STATUS_PRODUTO_ORDEM,
-  type Agregadora,
-  type StatusPipeline,
 } from "../PipelineB2B/constants";
 import {
   buildComercialFiltroExtraOptions,
@@ -39,32 +28,40 @@ import {
   normalizeRetificacoes,
 } from "../PipelineB2B/helpers";
 import type { ComercialOpcao } from "../PipelineB2B/types";
-import { GeoDistributionBlock } from "./GeoDistributionBlock";
-import { OverviewPipelineFunnel } from "./OverviewPipelineFunnel";
-import { MovimentacaoHoverCard } from "./MovimentacaoHoverCard";
 import {
-  UF_FILTRO_ARIA_LABEL,
-  UF_FILTRO_OPTIONS,
-  UF_FILTRO_TODAS,
-  UF_FILTRO_TODAS_LABEL,
-  buildMovimentacaoDetalhe,
-  buildNovasMarcas,
-  carteiraPorComercial,
-  countProdutoByStatus,
-  countSiteAtivo,
-  countUniqueEmpresas,
+  PRIORIDADE_FILTRO_ARIA,
+  PRIORIDADE_FILTRO_TODAS,
+  PRIORIDADE_FILTRO_TODAS_LABEL,
+  PRIORIDADE_LABEL,
+  PRIORIDADE_ORDEM,
+  type PrioridadeIntegracao,
+  type StatusIntegracao,
+  type TipoIntegracao,
+} from "../Integracao/constants";
+import type { StatusPipelineAgregadora } from "../PipelineAgregadoras/constants";
+import { OverviewComercialAbaNav } from "./OverviewComercialAbaNav";
+import { OverviewOperadorasPanel } from "./OverviewOperadorasPanel";
+import { OverviewAgregadorasPanel } from "./OverviewAgregadorasPanel";
+import { OverviewIntegracoesPanel } from "./OverviewIntegracoesPanel";
+import {
+  OVERVIEW_COMERCIAL_TABS,
+  type OverviewComercialTab,
+} from "./overviewComercialTabs";
+import {
   filterOverviewRows,
-  formatDataBr,
-  marcasPorUf,
-  maxProdutoCount,
-  pipelineFunnelCounts,
-  STATUS_PRODUTO_LABEL,
   type HistoricoOverviewRow,
   type OverviewMarcaRow,
-  type OverviewPipelineFilter,
 } from "./helpers";
-
-const PIPELINE_STAGES: StatusPipeline[] = ["disponiveis", "conexao", "negociacao", "fechado"];
+import {
+  filterOverviewAgregadoras,
+  type OverviewAgregadoraHistorico,
+  type OverviewAgregadoraRow,
+} from "./helpersAgregadoras";
+import {
+  filterOverviewIntegracoes,
+  type OverviewIntegracaoHistorico,
+  type OverviewIntegracaoRow,
+} from "./helpersIntegracoes";
 
 function mapOverviewRow(
   raw: Record<string, unknown>,
@@ -90,7 +87,7 @@ function mapOverviewRow(
     status_folha: raw.status_folha as OverviewMarcaRow["status_folha"],
     comercial_user_id: comercialId,
     comercial_nome: comercialNomeCanonico,
-    agregadora: raw.agregadora ? (String(raw.agregadora) as Agregadora) : null,
+    agregadora: raw.agregadora ? String(raw.agregadora) : null,
     ultimo_contato: raw.ultimo_contato ? String(raw.ultimo_contato) : null,
     ultima_comunicacao: raw.ultima_comunicacao ? String(raw.ultima_comunicacao) : null,
     created_at: raw.created_at ? String(raw.created_at) : null,
@@ -100,7 +97,9 @@ function mapOverviewRow(
       cnpj: String(empresaRaw.cnpj ?? ""),
       portaria: empresaRaw.portaria ? String(empresaRaw.portaria) : null,
       portaria_retificacoes: normalizeRetificacoes(empresaRaw.portaria_retificacoes),
-      requerimento_numero: empresaRaw.requerimento_numero ? String(empresaRaw.requerimento_numero) : null,
+      requerimento_numero: empresaRaw.requerimento_numero
+        ? String(empresaRaw.requerimento_numero)
+        : null,
       requerimento_ano: empresaRaw.requerimento_ano ? String(empresaRaw.requerimento_ano) : null,
       cidade: empresaRaw.cidade ? String(empresaRaw.cidade) : null,
       estado: empresaRaw.estado ? String(empresaRaw.estado) : null,
@@ -113,94 +112,41 @@ function mapOverviewRow(
   };
 }
 
-function OverviewKpiButton({
-  label,
-  value,
-  hint,
-  accent,
-  active,
-  onClick,
-  t,
-}: {
-  label: string;
-  value: number;
-  hint: string;
-  accent: string;
-  active?: boolean;
-  onClick: () => void;
-  t: { cardBorder: string; inputBg: string };
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active ?? false}
-      style={{
-        border: `1px solid ${t.cardBorder}`,
-        borderRadius: 18,
-        padding: "16px 18px",
-        background: t.inputBg,
-        cursor: "pointer",
-        textAlign: "left",
-        borderLeft: `3px solid ${accent}`,
-        outline: active ? `2px solid ${accent}` : undefined,
-        outlineOffset: active ? 2 : undefined,
-        fontFamily: FONT.body,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          color: "var(--text-muted, #6b7280)",
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontFamily: FONT_TITLE,
-          fontSize: 28,
-          fontWeight: 800,
-          marginTop: 4,
-          fontVariantNumeric: "tabular-nums",
-          color: accent,
-        }}
-      >
-        {value.toLocaleString("pt-BR")}
-      </div>
-      <div style={{ fontSize: 10, color: "var(--text-muted, #6b7280)", marginTop: 6 }}>{hint}</div>
-    </button>
-  );
-}
-
 export default function OverviewComercial() {
   const { theme: t, navigateTo } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("comercial_overview");
+  const [aba, setAba] = useRouteTab(
+    "comercial_overview",
+    "operadoras",
+    OVERVIEW_COMERCIAL_TABS,
+  );
 
   const [comercialFiltro, setComercialFiltro] = useState(COMERCIAL_FILTRO_TODOS);
-  const [ufFiltro, setUfFiltro] = useState(UF_FILTRO_TODAS);
-  const [pipelineFiltro, setPipelineFiltro] = useState<OverviewPipelineFilter>("todos");
+  const [prioridadeFiltro, setPrioridadeFiltro] = useState(PRIORIDADE_FILTRO_TODAS);
+
   const [rows, setRows] = useState<OverviewMarcaRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
   const [historico, setHistorico] = useState<HistoricoOverviewRow[]>([]);
+  const [agregadoras, setAgregadoras] = useState<OverviewAgregadoraRow[]>([]);
+  const [agregadoraHist, setAgregadoraHist] = useState<OverviewAgregadoraHistorico[]>([]);
+  const [integracoes, setIntegracoes] = useState<OverviewIntegracaoRow[]>([]);
+  const [integracaoHist, setIntegracaoHist] = useState<OverviewIntegracaoHistorico[]>([]);
   const [loading, setLoading] = useState(true);
 
   const pageBox = getPageContentBoxStyle(brand, t);
   const filterBox = getPageFilterBoxStyle(brand, t);
-  const grad = getCtaCriarGradient(brand);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const [marcasRes, gestoresRes, histRes] = await Promise.all([
+    const [marcasRes, gestoresRes, histRes, aggRes, aggHistRes, intRes, intHistRes] =
+      await Promise.all([
       supabase
         .from("comercial_marcas")
         .select(
           `
-          id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, ultima_comunicacao, created_at,
+          id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, ultima_comunicacao, created_at,
           empresa:comercial_empresas(id, razao_social, cnpj, portaria, portaria_retificacoes, requerimento_numero, requerimento_ano, cidade, estado),
           contatos:comercial_marca_contatos(id, marca_id, nome, telefones, emails, linkedin, instagram, data_nascimento, ordem),
           produtos:comercial_marca_produtos(produto, status_produto)
@@ -216,11 +162,37 @@ export default function OverviewComercial() {
         .from("comercial_marca_historico")
         .select("campo, valor_novo, marca_id, marca:comercial_marcas(nome)")
         .gte("created_at", cutoff),
+      supabase
+        .from("comercial_agregadoras")
+        .select("id, nome, status_pipeline, comercial_user_id, jogos")
+        .order("nome")
+        .limit(500),
+      supabase
+        .from("comercial_agregadora_historico")
+        .select(
+          "agregadora_id, campo, valor_novo, agregadora:comercial_agregadoras(nome)",
+        )
+        .gte("created_at", cutoff)
+        .limit(2000),
+      supabase
+        .from("comercial_integracoes")
+        .select("id, operador_nome, prioridade, tipo, status, caminho, agregadora, created_at")
+        .order("operador_nome")
+        .limit(2000),
+      supabase
+        .from("comercial_integracao_historico")
+        .select("integracao_id, campo, valor_novo, created_at")
+        .eq("campo", "status")
+        .limit(10000),
     ]);
 
     if (marcasRes.error) console.error(marcasRes.error);
     if (gestoresRes.error) console.error(gestoresRes.error);
     if (histRes.error) console.error(histRes.error);
+    if (aggRes.error) console.error(aggRes.error);
+    if (aggHistRes.error) console.error(aggHistRes.error);
+    if (intRes.error) console.error(intRes.error);
+    if (intHistRes.error) console.error(intHistRes.error);
 
     const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
     setComerciais(comercialList);
@@ -228,7 +200,6 @@ export default function OverviewComercial() {
       comercialList.flatMap((c) => (c.id ? [[c.id, c.name] as const] : [])),
     );
     setRows((marcasRes.data ?? []).map((r) => mapOverviewRow(r as Record<string, unknown>, names)));
-
     setHistorico(
       (histRes.data ?? []).map((h) => {
         const raw = h as Record<string, unknown>;
@@ -241,6 +212,71 @@ export default function OverviewComercial() {
         };
       }),
     );
+
+    setAgregadoras(
+      (aggRes.data ?? []).map((r) => {
+        const raw = r as Record<string, unknown>;
+        const cid = raw.comercial_user_id ? String(raw.comercial_user_id) : null;
+        const nomeC = cid ? names[cid] ?? null : null;
+        return {
+          id: String(raw.id),
+          nome: String(raw.nome ?? ""),
+          status_pipeline: raw.status_pipeline as StatusPipelineAgregadora,
+          comercial_user_id: cid,
+          comercial_nome:
+            nomeC && (PIPELINE_COMERCIAL_NOMES as readonly string[]).includes(nomeC)
+              ? nomeC
+              : null,
+          jogos: raw.jogos == null ? null : Number(raw.jogos),
+        };
+      }),
+    );
+
+    setAgregadoraHist(
+      (aggHistRes.data ?? []).map((h) => {
+        const raw = h as Record<string, unknown>;
+        const emb = raw.agregadora as { nome?: string } | { nome?: string }[] | null;
+        const nome =
+          emb && typeof emb === "object"
+            ? String((Array.isArray(emb) ? emb[0]?.nome : emb.nome) ?? "—")
+            : "—";
+        return {
+          agregadora_id: String(raw.agregadora_id ?? ""),
+          agregadora_nome: nome,
+          campo: String(raw.campo ?? ""),
+          valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+        };
+      }),
+    );
+
+    setIntegracoes(
+      (intRes.data ?? []).map((r) => {
+        const raw = r as Record<string, unknown>;
+        return {
+          id: String(raw.id),
+          operador_nome: String(raw.operador_nome ?? ""),
+          prioridade: raw.prioridade as PrioridadeIntegracao,
+          tipo: raw.tipo as TipoIntegracao,
+          status: raw.status as StatusIntegracao,
+          caminho: raw.caminho ? String(raw.caminho) : null,
+          agregadora: raw.agregadora ? String(raw.agregadora) : null,
+          created_at: raw.created_at ? String(raw.created_at) : null,
+        };
+      }),
+    );
+
+    setIntegracaoHist(
+      (intHistRes.data ?? []).map((h) => {
+        const raw = h as Record<string, unknown>;
+        return {
+          integracao_id: String(raw.integracao_id ?? ""),
+          campo: String(raw.campo ?? ""),
+          valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+          created_at: String(raw.created_at ?? ""),
+        };
+      }),
+    );
+
     setLoading(false);
   }, []);
 
@@ -248,51 +284,24 @@ export default function OverviewComercial() {
     void loadData();
   }, [loadData]);
 
-  const filtered = useMemo(
-    () => filterOverviewRows(rows, comercialFiltro, ufFiltro, pipelineFiltro, comerciais),
-    [rows, comercialFiltro, ufFiltro, pipelineFiltro, comerciais],
+  const filteredOperadoras = useMemo(
+    () => filterOverviewRows(rows, comercialFiltro, comerciais),
+    [rows, comercialFiltro, comerciais],
   );
 
-  const funnel = useMemo(() => pipelineFunnelCounts(filtered), [filtered]);
-  const funnelCounts = useMemo(
-    () =>
-      Object.fromEntries(funnel.map((f) => [f.stage, f.count])) as Record<StatusPipeline, number>,
-    [funnel],
+  const filteredAgregadoras = useMemo(
+    () => filterOverviewAgregadoras(agregadoras, comercialFiltro, comerciais),
+    [agregadoras, comercialFiltro, comerciais],
   );
 
-  const dedicadaCounts = useMemo(
-    () => countProdutoByStatus(filtered, "mesa_dedicada"),
-    [filtered],
-  );
-  const networkCounts = useMemo(
-    () => countProdutoByStatus(filtered, "mesa_network"),
-    [filtered],
-  );
-  const maxDed = maxProdutoCount(dedicadaCounts);
-  const maxNet = maxProdutoCount(networkCounts);
-
-  const porUf = useMemo(() => marcasPorUf(filtered), [filtered]);
-  const carteira = useMemo(
-    () => carteiraPorComercial(filtered, comerciais),
-    [filtered, comerciais],
-  );
-  const maxCarteira = Math.max(1, ...carteira.map((c) => c.count));
-  const novasMarcas = useMemo(
-    () => buildNovasMarcas(filtered, comerciais),
-    [filtered, comerciais],
-  );
-  const filteredMarcaIds = useMemo(() => new Set(filtered.map((r) => r.id)), [filtered]);
-  const movimentacao = useMemo(
-    () => buildMovimentacaoDetalhe(historico, filteredMarcaIds),
-    [historico, filteredMarcaIds],
+  const filteredIntegracoes = useMemo(
+    () => filterOverviewIntegracoes(integracoes, prioridadeFiltro),
+    [integracoes, prioridadeFiltro],
   );
 
-  const goPipeline = useCallback(
-    (tabSlug?: string) => {
-      navigateTo("comercial_pipeline_b2b", tabSlug ?? "Todos");
-    },
-    [navigateTo],
-  );
+  function handleSelectAba(next: OverviewComercialTab) {
+    setAba(next);
+  }
 
   if (perm.canView === "nao") {
     return (
@@ -311,67 +320,59 @@ export default function OverviewComercial() {
       />
 
       <div style={filterBox}>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-            marginBottom: 10,
-          }}
-        >
-          <FiltroBarCampoSelect
-            value={comercialFiltro}
-            onChange={setComercialFiltro}
-            icon={FilterBarIcons.influencer}
-            ariaLabel={COMERCIAL_FILTRO_ARIA}
-            todasValue={COMERCIAL_FILTRO_TODOS}
-            todasLabel={COMERCIAL_FILTRO_TODOS_LABEL}
-            extraOptions={buildComercialFiltroExtraOptions(comerciais)}
-            options={[]}
-            minWidth={200}
-          />
-          <FiltroBarCampoSelect
-            value={ufFiltro}
-            onChange={setUfFiltro}
-            icon={<MapPin {...FILTRO_BAR_ICON_PROPS} aria-hidden />}
-            ariaLabel={UF_FILTRO_ARIA_LABEL}
-            todasValue={UF_FILTRO_TODAS}
-            todasLabel={UF_FILTRO_TODAS_LABEL}
-            options={UF_FILTRO_OPTIONS}
-            minWidth={200}
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-          }}
-        >
-          <FiltroSemanticoTabPill
-            label="Todos"
-            semanticColor={brand.primary}
-            active={pipelineFiltro === "todos"}
-            onClick={() => setPipelineFiltro("todos")}
-          />
-          {PIPELINE_STAGES.map((stage) => (
-            <FiltroSemanticoTabPill
-              key={stage}
-              label={PIPELINE_TAB_LABEL[stage]}
-              semanticColor={PIPELINE_COLOR[stage]}
-              active={pipelineFiltro === stage}
-              onClick={() =>
-                setPipelineFiltro((prev) => (prev === stage ? "todos" : stage))
-              }
+        <OverviewComercialAbaNav aba={aba} onSelectAba={handleSelectAba} />
+
+        {aba === "operadoras" || aba === "agregadoras" ? (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              width: "100%",
+            }}
+          >
+            <FiltroBarCampoSelect
+              value={comercialFiltro}
+              onChange={setComercialFiltro}
+              icon={FilterBarIcons.influencer}
+              ariaLabel={COMERCIAL_FILTRO_ARIA}
+              todasValue={COMERCIAL_FILTRO_TODOS}
+              todasLabel={COMERCIAL_FILTRO_TODOS_LABEL}
+              extraOptions={buildComercialFiltroExtraOptions(comerciais)}
+              options={[]}
+              minWidth={200}
             />
-          ))}
-        </div>
+          </div>
+        ) : null}
+
+        {aba === "integracoes" ? (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              width: "100%",
+            }}
+          >
+            <FiltroBarCampoSelect
+              value={prioridadeFiltro}
+              onChange={setPrioridadeFiltro}
+              icon={FilterBarIcons.status}
+              ariaLabel={PRIORIDADE_FILTRO_ARIA}
+              todasValue={PRIORIDADE_FILTRO_TODAS}
+              todasLabel={PRIORIDADE_FILTRO_TODAS_LABEL}
+              options={PRIORIDADE_ORDEM.map((p) => ({
+                value: p,
+                label: PRIORIDADE_LABEL[p],
+              }))}
+              minWidth={200}
+            />
+          </div>
+        ) : null}
       </div>
 
       {loading ? (
@@ -396,327 +397,51 @@ export default function OverviewComercial() {
         </div>
       ) : (
         <>
-          <div style={pageBox}>
-            <SectionTitle sub="Clique para abrir o Pipeline B2B detalhado">
-              KPIs consolidados
-            </SectionTitle>
-            <div className="app-grid-kpi-5">
-              <OverviewKpiButton
-                label="Empresas"
-                value={countUniqueEmpresas(filtered)}
-                hint="CNPJs licenciados"
-                accent={brand.primary}
-                onClick={() => goPipeline("Todos")}
+          <div
+            role="tabpanel"
+            id="panel-overview-comercial-operadoras"
+            hidden={aba !== "operadoras"}
+          >
+            {aba === "operadoras" ? (
+              <OverviewOperadorasPanel
+                filtered={filteredOperadoras}
+                comerciais={comerciais}
+                historico={historico}
+                pageBox={pageBox}
                 t={t}
+                onGoPipeline={(slug) => navigateTo("comercial_pipeline_b2b", slug ?? "Todos")}
               />
-              <OverviewKpiButton
-                label="Marcas"
-                value={filtered.length}
-                hint="No pipeline"
-                accent={brand.accent}
-                onClick={() => goPipeline("Todos")}
-                t={t}
-              />
-              <OverviewKpiButton
-                label="Site ativo"
-                value={countSiteAtivo(filtered)}
-                hint="Domínio OK"
-                accent={PIPELINE_COLOR.fechado}
-                onClick={() => goPipeline("Disponiveis")}
-                t={t}
-              />
-              <OverviewKpiButton
-                label="Negociação"
-                value={funnelCounts.negociacao}
-                hint="Em proposta"
-                accent={PIPELINE_COLOR.negociacao}
-                onClick={() => goPipeline("Negociacao")}
-                t={t}
-              />
-              <OverviewKpiButton
-                label="Fechado"
-                value={funnelCounts.fechado}
-                hint="Assinado / Ativo"
-                accent={PIPELINE_COLOR.fechado}
-                onClick={() => goPipeline("Fechado")}
-                t={t}
-              />
-            </div>
+            ) : null}
           </div>
-
-          <div className="app-grid-2">
-            <div style={pageBox}>
-              <SectionTitle sub="Marcas reguladas">Funil do pipeline</SectionTitle>
-              <OverviewPipelineFunnel funnel={funnel} funnelCounts={funnelCounts} />
-            </div>
-
-            <div style={pageBox}>
-              <SectionTitle sub="Status de Dedicada x Network">Produto</SectionTitle>
-              <div className="app-grid-2" style={{ gap: 20 }}>
-                {(
-                  [
-                    ["Dedicada", dedicadaCounts, maxDed],
-                    ["Network", networkCounts, maxNet],
-                  ] as const
-                ).map(([title, counts, maxVal]) => (
-                  <div key={title}>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, fontFamily: FONT.body }}>
-                      {title}
-                    </h4>
-                    {STATUS_PRODUTO_ORDEM.map((st) => (
-                      <div
-                        key={st}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          marginBottom: 8,
-                          fontFamily: FONT.body,
-                        }}
-                      >
-                        <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>
-                          {STATUS_PRODUTO_LABEL[st]}
-                        </span>
-                        <div
-                          style={{
-                            flex: 1,
-                            height: 10,
-                            background: t.inputBg,
-                            borderRadius: 999,
-                            overflow: "hidden",
-                          }}
-                        >
-                          <div
-                            style={{
-                              height: "100%",
-                              width: `${(counts[st] / maxVal) * 100}%`,
-                              borderRadius: 999,
-                              background: STATUS_PRODUTO_COLOR[st],
-                              opacity: 0.85,
-                            }}
-                          />
-                        </div>
-                        <span
-                          style={{
-                            width: 28,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            textAlign: "right",
-                          }}
-                        >
-                          {counts[st]}
-                        </span>
-                      </div>
-                    ))}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 8,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>
-                        Sem Status
-                      </span>
-                      <div
-                        style={{
-                          flex: 1,
-                          height: 10,
-                          background: t.inputBg,
-                          borderRadius: 999,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          style={{
-                            height: "100%",
-                            width: `${(counts.sem_status / maxVal) * 100}%`,
-                            borderRadius: 999,
-                            background: "#6b7280",
-                            opacity: 0.85,
-                          }}
-                        />
-                      </div>
-                      <span
-                        style={{
-                          width: 28,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          textAlign: "right",
-                        }}
-                      >
-                        {counts.sem_status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div
+            role="tabpanel"
+            id="panel-overview-comercial-agregadoras"
+            hidden={aba !== "agregadoras"}
+          >
+            {aba === "agregadoras" ? (
+              <OverviewAgregadorasPanel
+                rows={filteredAgregadoras}
+                marcas={rows}
+                historico={agregadoraHist}
+                comerciais={comerciais}
+                pageBox={pageBox}
+                t={t}
+              />
+            ) : null}
           </div>
-
-          <div style={pageBox}>
-            <SectionTitle sub="Clique no estado para ver as marcas com sede na região">
-              Distribuição geográfica
-            </SectionTitle>
-            <GeoDistributionBlock
-              porUf={porUf}
-              brandPrimary={brand.primary}
-              brandAccent={brand.accent}
-              t={t}
-            />
-          </div>
-
-          <div className="app-grid-2">
-            <div style={pageBox}>
-              <SectionTitle sub="Comercial atribuído a cada Marca">
-                Carteira por comercial
-              </SectionTitle>
-              {carteira.length === 0 ? (
-                <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhuma marca atribuída para os filtros selecionados.
-                </p>
-              ) : (
-                carteira.map((c) => (
-                  <div
-                    key={c.label}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      marginBottom: 10,
-                      fontFamily: FONT.body,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 120,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: c.userId ? t.text : t.textMuted,
-                      }}
-                    >
-                      {c.label}
-                    </span>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: 22,
-                        background: t.inputBg,
-                        borderRadius: 6,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${(c.count / maxCarteira) * 100}%`,
-                          borderRadius: 6,
-                          background: c.userId ? grad : "#9ca3af",
-                        }}
-                      />
-                    </div>
-                    <span style={{ fontSize: 11, color: t.textMuted, width: 90, textAlign: "right" }}>
-                      {c.count} marcas
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div style={pageBox}>
-              <SectionTitle sub="Marcas cadastradas nos últimos 30 dias">
-                Novas marcas
-              </SectionTitle>
-              {novasMarcas.length === 0 ? (
-                <p style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhuma marca cadastrada nos últimos 30 dias.
-                </p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {novasMarcas.map((m) => (
-                    <div
-                      key={m.id}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr auto",
-                        gap: "2px 12px",
-                        padding: "10px 12px",
-                        borderRadius: 10,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg,
-                        fontFamily: FONT.body,
-                      }}
-                    >
-                      <strong style={{ fontSize: 12 }}>{m.nome}</strong>
-                      <span
-                        style={{
-                          gridColumn: 2,
-                          gridRow: "1 / span 2",
-                          alignSelf: "start",
-                          display: "inline-flex",
-                          padding: "3px 9px",
-                          borderRadius: 20,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          background: `${m.statusCor}22`,
-                          color: m.statusCor,
-                          border: `1px solid ${m.statusCor}44`,
-                        }}
-                      >
-                        {m.statusLabel}
-                      </span>
-                      <span style={{ fontSize: 11, color: t.textMuted }}>
-                        {m.empresa} · {m.uf}
-                      </span>
-                      <span style={{ fontSize: 11, color: t.textMuted }}>
-                        {formatDataBr(m.created_at)} · {m.comercial}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={pageBox}>
-            <SectionTitle sub="Alterações dos últimos 30 dias">
-              Movimentação recente
-            </SectionTitle>
-            <div className="app-grid-kpi-4">
-              <MovimentacaoHoverCard
-                label="→ Negociação"
-                value={movimentacao.negociacao.length}
-                marcas={movimentacao.negociacao}
-                valueColor={PIPELINE_COLOR.negociacao}
-                prefixPlus
+          <div
+            role="tabpanel"
+            id="panel-overview-comercial-integracoes"
+            hidden={aba !== "integracoes"}
+          >
+            {aba === "integracoes" ? (
+              <OverviewIntegracoesPanel
+                rows={filteredIntegracoes}
+                historico={integracaoHist}
+                pageBox={pageBox}
                 t={t}
               />
-              <MovimentacaoHoverCard
-                label="→ Fechado"
-                value={movimentacao.fechado.length}
-                marcas={movimentacao.fechado}
-                valueColor={PIPELINE_COLOR.fechado}
-                prefixPlus
-                t={t}
-              />
-              <MovimentacaoHoverCard
-                label="Sem interesse"
-                value={movimentacao.semInteresse.length}
-                marcas={movimentacao.semInteresse}
-                valueColor="#e84025"
-                prefixPlus
-                t={t}
-              />
-              <MovimentacaoHoverCard
-                label="Alterações totais"
-                value={movimentacao.total.length}
-                marcas={movimentacao.total}
-                valueColor={brand.primary}
-                t={t}
-              />
-            </div>
+            ) : null}
           </div>
         </>
       )}
