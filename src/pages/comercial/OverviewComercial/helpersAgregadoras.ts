@@ -92,7 +92,7 @@ export function agregadoraFunnelTaxas(rows: OverviewAgregadoraRow[]) {
   ];
 }
 
-/** “Produto” das agregadoras: volume por status (barras). */
+/** “Produto” das agregadoras: volume por status (barras) — legado; preferir Dedicada/Network via marcas. */
 export function agregadoraStatusBars(rows: OverviewAgregadoraRow[]) {
   return STATUS_PIPELINE_AGREGADORA_ORDEM.map((s) => ({
     key: s,
@@ -100,6 +100,21 @@ export function agregadoraStatusBars(rows: OverviewAgregadoraRow[]) {
     count: countAgregadoraByStatus(rows, s),
     color: STATUS_PIPELINE_AGREGADORA_COLOR[s],
   }));
+}
+
+/** Marcas do Pipeline B2B vinculadas às agregadoras filtradas (campo `agregadora` = nome). */
+export function marcasVinculadasAgregadoras<T extends { agregadora: string | null }>(
+  marcas: T[],
+  agregadoras: OverviewAgregadoraRow[],
+): T[] {
+  const nomes = new Set(
+    agregadoras.map((a) => a.nome.trim().toLowerCase()).filter(Boolean),
+  );
+  if (nomes.size === 0) return [];
+  return marcas.filter((m) => {
+    const n = m.agregadora?.trim().toLowerCase();
+    return !!n && nomes.has(n);
+  });
 }
 
 export function carteiraAgregadorasPorComercial(
@@ -130,6 +145,7 @@ export function carteiraAgregadorasPorComercial(
 }
 
 export function buildAgregadoraMovimentacao(historico: OverviewAgregadoraHistorico[]) {
+  const conexao: string[] = [];
   const negociacao: string[] = [];
   const fechado: string[] = [];
   const total = new Set<string>();
@@ -137,11 +153,13 @@ export function buildAgregadoraMovimentacao(historico: OverviewAgregadoraHistori
     total.add(h.agregadora_nome);
     if (h.campo !== "status_pipeline") continue;
     const v = (h.valor_novo ?? "").toLowerCase();
+    if (v.includes("conex") || v === "conexao") conexao.push(h.agregadora_nome);
     if (v.includes("negoci") || v === "negociacao") negociacao.push(h.agregadora_nome);
     if (v.includes("fechado") || v === "fechado") fechado.push(h.agregadora_nome);
   }
   const uniq = (arr: string[]) => [...new Set(arr)];
   return {
+    conexao: uniq(conexao),
     negociacao: uniq(negociacao),
     fechado: uniq(fechado),
     total: [...total],

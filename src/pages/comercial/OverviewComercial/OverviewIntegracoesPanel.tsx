@@ -3,37 +3,46 @@ import { SectionTitle } from "../../../components/dashboard";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useApp } from "../../../context/AppContext";
 import { OverviewBarList } from "./OverviewBarList";
-import { OverviewGenericFunnel } from "./OverviewGenericFunnel";
 import { OverviewKpiButton } from "./OverviewKpiButton";
 import {
+  computeIntegracaoSla,
   countIntegracaoByStatus,
+  formatSlaDuracao,
   integracaoAgregadorBars,
   integracaoCaminhoBars,
-  integracaoFunnelLevels,
-  integracaoFunnelTaxas,
   integracaoTipoBars,
   STATUS_INTEGRACAO_COLOR,
   STATUS_INTEGRACAO_KPI_LABEL,
+  STATUS_INTEGRACAO_LABEL,
+  STATUS_INTEGRACAO_ORDEM,
+  type OverviewIntegracaoHistorico,
   type OverviewIntegracaoRow,
 } from "./helpersIntegracoes";
 
+const SLA_SUB: Record<(typeof STATUS_INTEGRACAO_ORDEM)[number], string> = {
+  nao_iniciado: "Criação → Em andamento",
+  em_andamento: "Em andamento → Concluído",
+  concluido: "Criação → Concluído",
+};
+
 export function OverviewIntegracoesPanel({
   rows,
+  historico,
   pageBox,
   t,
 }: {
   rows: OverviewIntegracaoRow[];
+  historico: OverviewIntegracaoHistorico[];
   pageBox: CSSProperties;
   t: { text: string; textMuted: string; cardBorder: string; inputBg: string };
 }) {
   const brand = useDashboardBrand();
   const { navigateTo } = useApp();
 
-  const levels = useMemo(() => integracaoFunnelLevels(rows), [rows]);
-  const taxas = useMemo(() => integracaoFunnelTaxas(rows), [rows]);
   const tipoBars = useMemo(() => integracaoTipoBars(rows), [rows]);
   const caminhoBars = useMemo(() => integracaoCaminhoBars(rows), [rows]);
   const agregadorBars = useMemo(() => integracaoAgregadorBars(rows), [rows]);
+  const sla = useMemo(() => computeIntegracaoSla(rows, historico), [rows, historico]);
 
   const kpiOrder = [
     { key: "total" as const, value: rows.length, accent: brand.primary },
@@ -68,7 +77,6 @@ export function OverviewIntegracoesPanel({
                   : STATUS_INTEGRACAO_KPI_LABEL[kpi.key]
               }
               value={kpi.value}
-              hint="Integrações"
               accent={kpi.accent}
               onClick={() => {
                 if (kpi.key === "total") navigateTo("comercial_integracao", "Todos");
@@ -86,12 +94,19 @@ export function OverviewIntegracoesPanel({
 
       <div className="app-grid-2">
         <div style={pageBox}>
-          <SectionTitle sub="Status da integração">Funil do pipeline</SectionTitle>
-          <OverviewGenericFunnel
-            levels={levels}
-            taxas={taxas}
-            ariaLabel="Funil do pipeline de integrações"
-          />
+          <SectionTitle sub="Tempo médio até a próxima etapa do funil">SLA por etapa</SectionTitle>
+          <div className="app-grid-kpi-3">
+            {STATUS_INTEGRACAO_ORDEM.map((st) => (
+              <OverviewKpiButton
+                key={st}
+                label={STATUS_INTEGRACAO_LABEL[st]}
+                valueText={formatSlaDuracao(sla[st])}
+                hint={SLA_SUB[st]}
+                accent={STATUS_INTEGRACAO_COLOR[st]}
+                t={t}
+              />
+            ))}
+          </div>
         </div>
         <div style={pageBox}>
           <SectionTitle sub="Dedicada x Network">Produto</SectionTitle>

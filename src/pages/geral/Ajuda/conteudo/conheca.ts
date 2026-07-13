@@ -1135,12 +1135,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas e filtros",
         texto:
-          "No topo do bloco de filtros escolha **Operadoras**, **Agregadoras** ou **Integrações**.\n\n— **Operadoras:** Comercial, Estados e chips de status do funil B2B.\n— **Agregadoras:** só o filtro **Comercial**.\n— **Integrações:** chips de **Status** (Todos Status, Não Iniciado, Em andamento, Concluído).",
+          "No topo do bloco de filtros escolha **Operadoras**, **Agregadoras** ou **Integrações**.\n\n— **Operadoras:** filtro **Comercial** abaixo das abas (visão consolidada do funil completo).\n— **Agregadoras:** só o filtro **Comercial**.\n— **Integrações:** filtro **Prioridade** (**Todas Prioridades**, Baixo, Médio ou Alta).",
       },
       {
         subtitulo: "Conteúdo por aba",
         texto:
-          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Agregadoras** mostra KPIs do funil (Disponíveis → Fechado), funil/produto por status, carteira por comercial e movimentação recente.\n\n**Integrações** mostra totais por status, funil de status, volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
+          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Agregadoras** mostra KPIs do funil (sem legenda nos cards), funil, **Produto** Dedicada × Network das marcas vinculadas às agregadoras filtradas, carteira por comercial e **Movimentação recente** em grade 2×2 (→ Conexão, → Negociação, → Fechado, Alterações totais).\n\n**Integrações** mostra totais por status (sem legenda nos cards), **SLA por etapa** (tempo médio: criação → Em andamento; Em andamento → Concluído; criação → Concluído), volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
       },
       {
         subtitulo: "Mapa e movimentação",

@@ -989,7 +989,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs zerados mas há marcas no Pipeline?",
         texto:
-          "Verifique os filtros de Comercial, UF e status no topo da página — todos os blocos respeitam a mesma seleção. Limpe os chips de status com um segundo clique ou volte **Todos Comerciais** / **Todas UFs**.",
+          "Na aba **Operadoras**, verifique o filtro **Comercial** (**Todos Comerciais**). Na aba **Integrações**, confira **Prioridade** (**Todas Prioridades**). Os KPIs e gráficos da aba ativa respeitam só esses filtros — não há mais chips de status do funil nem filtro de Estados no Overview.",
       },
     ],
   },

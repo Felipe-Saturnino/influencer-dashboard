@@ -4,6 +4,7 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants";
 export function OverviewKpiButton({
   label,
   value,
+  valueText,
   hint,
   accent,
   active,
@@ -11,8 +12,10 @@ export function OverviewKpiButton({
   t,
 }: {
   label: string;
-  value: number;
-  hint: string;
+  value?: number;
+  /** Quando informado, substitui o valor numérico formatado (ex.: SLA). */
+  valueText?: string;
+  hint?: string;
   accent: string;
   active?: boolean;
   onClick?: () => void;
@@ -33,6 +36,11 @@ export function OverviewKpiButton({
     width: "100%",
   };
 
+  const displayValue =
+    valueText != null
+      ? valueText
+      : (value ?? 0).toLocaleString("pt-BR");
+
   const body = (
     <>
       <div
@@ -48,14 +56,14 @@ export function OverviewKpiButton({
       <div
         style={{
           fontFamily: FONT_TITLE,
-          fontSize: 28,
+          fontSize: valueText != null ? 22 : 28,
           fontWeight: 800,
           marginTop: 4,
           fontVariantNumeric: "tabular-nums",
           color: accent,
         }}
       >
-        {value.toLocaleString("pt-BR")}
+        {displayValue}
       </div>
       {hint ? (
         <div style={{ fontSize: 10, color: "var(--text-muted, #6b7280)", marginTop: 6 }}>{hint}</div>

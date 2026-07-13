@@ -48,9 +48,9 @@ Dashboard analítico **somente leitura** — agrega Pipeline B2B (Operadoras), P
 
 | Aba | Filtros abaixo | Conteúdo |
 |-----|----------------|----------|
-| **Operadoras** | Comercial + UF + pills de status pipeline | Layout legado (KPIs, funil, produto Dedicada/Network, geo, carteira, novas marcas, movimentação) |
-| **Agregadoras** | Só Comercial | KPIs Disponíveis/Conexão/Negociação/Fechado; Funil + Produto (volume por status); Carteira + Movimentação |
-| **Integrações** | Pills de Status (Todos + Não Iniciado / Em andamento / Concluído) | KPIs Total/Não Iniciados/Em andamento/Concluídos; Funil (status) + Produto (Tipo); Caminho + Agregadores |
+| **Operadoras** | Só Comercial (abaixo das abas principais; mesma posição que Agregadoras) | KPIs, funil completo (visão Todos), produto Dedicada/Network, geo, carteira, novas marcas, movimentação — **sem** chips de status pipeline nem filtro de UF |
+| **Agregadoras** | Só Comercial | KPIs sem legenda inferior; Funil; **Produto** Dedicada × Network (marcas vinculadas por nome de agregadora); Carteira; **Movimentação** 2×2 (→ Conexão · → Negociação / → Fechado · Alterações totais) |
+| **Integrações** | Só Prioridade (**Todas Prioridades** / Baixo / Médio / Alta) | KPIs sem legenda; **SLA por etapa** (tempos médios Não Iniciado / Em andamento / Concluído via histórico de status); Produto (Tipo); Caminho; Agregadores |
 
 ### Dados (Supabase)
 

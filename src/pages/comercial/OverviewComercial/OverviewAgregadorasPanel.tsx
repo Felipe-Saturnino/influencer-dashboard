@@ -9,36 +9,45 @@ import {
   STATUS_PIPELINE_AGREGADORA_LABEL,
   STATUS_PIPELINE_AGREGADORA_ORDEM,
 } from "../PipelineAgregadoras/constants";
+import {
+  STATUS_PRODUTO_COLOR,
+  STATUS_PRODUTO_ORDEM,
+} from "../PipelineB2B/constants";
 import type { ComercialOpcao } from "../PipelineB2B/types";
-import { OverviewBarList } from "./OverviewBarList";
 import { OverviewGenericFunnel } from "./OverviewGenericFunnel";
 import { OverviewKpiButton } from "./OverviewKpiButton";
 import { MovimentacaoHoverCard } from "./MovimentacaoHoverCard";
 import {
   agregadoraFunnelLevels,
   agregadoraFunnelTaxas,
-  agregadoraStatusBars,
   buildAgregadoraMovimentacao,
   carteiraAgregadorasPorComercial,
   countAgregadoraByStatus,
+  marcasVinculadasAgregadoras,
   type OverviewAgregadoraHistorico,
   type OverviewAgregadoraRow,
 } from "./helpersAgregadoras";
+import {
+  countProdutoByStatus,
+  maxProdutoCount,
+  STATUS_PRODUTO_LABEL,
+  type OverviewMarcaRow,
+} from "./helpers";
 
 export function OverviewAgregadorasPanel({
   rows,
+  marcas,
   historico,
   comerciais,
   pageBox,
   t,
-  onGoPipeline,
 }: {
   rows: OverviewAgregadoraRow[];
+  marcas: OverviewMarcaRow[];
   historico: OverviewAgregadoraHistorico[];
   comerciais: ComercialOpcao[];
   pageBox: CSSProperties;
   t: { text: string; textMuted: string; cardBorder: string; inputBg: string };
-  onGoPipeline: () => void;
 }) {
   const brand = useDashboardBrand();
   const { navigateTo } = useApp();
@@ -46,7 +55,20 @@ export function OverviewAgregadorasPanel({
 
   const levels = useMemo(() => agregadoraFunnelLevels(rows), [rows]);
   const taxas = useMemo(() => agregadoraFunnelTaxas(rows), [rows]);
-  const statusBars = useMemo(() => agregadoraStatusBars(rows), [rows]);
+  const marcasProduto = useMemo(
+    () => marcasVinculadasAgregadoras(marcas, rows),
+    [marcas, rows],
+  );
+  const dedicadaCounts = useMemo(
+    () => countProdutoByStatus(marcasProduto, "mesa_dedicada"),
+    [marcasProduto],
+  );
+  const networkCounts = useMemo(
+    () => countProdutoByStatus(marcasProduto, "mesa_network"),
+    [marcasProduto],
+  );
+  const maxDed = maxProdutoCount(dedicadaCounts);
+  const maxNet = maxProdutoCount(networkCounts);
   const carteira = useMemo(
     () => carteiraAgregadorasPorComercial(rows, comerciais),
     [rows, comerciais],
@@ -66,7 +88,6 @@ export function OverviewAgregadorasPanel({
               key={status}
               label={STATUS_PIPELINE_AGREGADORA_LABEL[status]}
               value={countAgregadoraByStatus(rows, status)}
-              hint="No funil"
               accent={STATUS_PIPELINE_AGREGADORA_COLOR[status]}
               onClick={() => {
                 if (status === "disponiveis") navigateTo("comercial_pipeline_agregadoras", "Todos");
@@ -91,8 +112,94 @@ export function OverviewAgregadorasPanel({
           />
         </div>
         <div style={pageBox}>
-          <SectionTitle sub="Volume por status">Produto</SectionTitle>
-          <OverviewBarList items={statusBars} t={t} />
+          <SectionTitle sub="Status de Dedicada x Network nas marcas vinculadas">
+            Produto
+          </SectionTitle>
+          <div className="app-grid-2" style={{ gap: 20 }}>
+            {(
+              [
+                ["Dedicada", dedicadaCounts, maxDed],
+                ["Network", networkCounts, maxNet],
+              ] as const
+            ).map(([title, counts, maxVal]) => (
+              <div key={title}>
+                <h4 style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, fontFamily: FONT.body }}>
+                  {title}
+                </h4>
+                {STATUS_PRODUTO_ORDEM.map((st) => (
+                  <div
+                    key={st}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 8,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>
+                      {STATUS_PRODUTO_LABEL[st]}
+                    </span>
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 10,
+                        background: t.inputBg,
+                        borderRadius: 999,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${(counts[st] / maxVal) * 100}%`,
+                          borderRadius: 999,
+                          background: STATUS_PRODUTO_COLOR[st],
+                          opacity: 0.85,
+                        }}
+                      />
+                    </div>
+                    <span style={{ width: 28, fontSize: 11, fontWeight: 700, textAlign: "right" }}>
+                      {counts[st]}
+                    </span>
+                  </div>
+                ))}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 8,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <span style={{ width: 110, fontSize: 11, color: t.textMuted }}>Sem Status</span>
+                  <div
+                    style={{
+                      flex: 1,
+                      height: 10,
+                      background: t.inputBg,
+                      borderRadius: 999,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${(counts.sem_status / maxVal) * 100}%`,
+                        borderRadius: 999,
+                        background: "#6b7280",
+                        opacity: 0.85,
+                      }}
+                    />
+                  </div>
+                  <span style={{ width: 28, fontSize: 11, fontWeight: 700, textAlign: "right" }}>
+                    {counts.sem_status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -154,7 +261,15 @@ export function OverviewAgregadorasPanel({
         </div>
         <div style={pageBox}>
           <SectionTitle sub="Alterações dos últimos 30 dias">Movimentação recente</SectionTitle>
-          <div className="app-grid-kpi-3">
+          <div className="app-grid-2" style={{ gap: 12, marginBottom: 12 }}>
+            <MovimentacaoHoverCard
+              label="→ Conexão"
+              value={movimentacao.conexao.length}
+              marcas={movimentacao.conexao}
+              valueColor={STATUS_PIPELINE_AGREGADORA_COLOR.conexao}
+              prefixPlus
+              t={t}
+            />
             <MovimentacaoHoverCard
               label="→ Negociação"
               value={movimentacao.negociacao.length}
@@ -163,6 +278,8 @@ export function OverviewAgregadorasPanel({
               prefixPlus
               t={t}
             />
+          </div>
+          <div className="app-grid-2" style={{ gap: 12 }}>
             <MovimentacaoHoverCard
               label="→ Fechado"
               value={movimentacao.fechado.length}
@@ -179,23 +296,6 @@ export function OverviewAgregadorasPanel({
               t={t}
             />
           </div>
-          <button
-            type="button"
-            onClick={onGoPipeline}
-            style={{
-              marginTop: 12,
-              border: "none",
-              background: "transparent",
-              color: "var(--brand-primary, #7c3aed)",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              padding: 0,
-            }}
-          >
-            Abrir Pipeline Agregadoras
-          </button>
         </div>
       </div>
     </>

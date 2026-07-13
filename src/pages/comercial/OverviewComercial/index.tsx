@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -10,8 +10,7 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
-import { FilterBarIcons, FILTRO_BAR_ICON_PROPS } from "../../../lib/filterBarIconCatalog";
-import { FiltroSemanticoTabPill } from "../../../components/dashboard";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
@@ -20,10 +19,7 @@ import {
   COMERCIAL_FILTRO_ARIA,
   COMERCIAL_FILTRO_TODOS,
   COMERCIAL_FILTRO_TODOS_LABEL,
-  PIPELINE_COLOR,
-  PIPELINE_TAB_LABEL,
   PIPELINE_COMERCIAL_NOMES,
-  type StatusPipeline,
 } from "../PipelineB2B/constants";
 import {
   buildComercialFiltroExtraOptions,
@@ -33,9 +29,12 @@ import {
 } from "../PipelineB2B/helpers";
 import type { ComercialOpcao } from "../PipelineB2B/types";
 import {
-  STATUS_INTEGRACAO_COLOR,
-  STATUS_INTEGRACAO_LABEL,
-  STATUS_INTEGRACAO_ORDEM,
+  PRIORIDADE_FILTRO_ARIA,
+  PRIORIDADE_FILTRO_TODAS,
+  PRIORIDADE_FILTRO_TODAS_LABEL,
+  PRIORIDADE_LABEL,
+  PRIORIDADE_ORDEM,
+  type PrioridadeIntegracao,
   type StatusIntegracao,
   type TipoIntegracao,
 } from "../Integracao/constants";
@@ -49,14 +48,9 @@ import {
   type OverviewComercialTab,
 } from "./overviewComercialTabs";
 import {
-  UF_FILTRO_ARIA_LABEL,
-  UF_FILTRO_OPTIONS,
-  UF_FILTRO_TODAS,
-  UF_FILTRO_TODAS_LABEL,
   filterOverviewRows,
   type HistoricoOverviewRow,
   type OverviewMarcaRow,
-  type OverviewPipelineFilter,
 } from "./helpers";
 import {
   filterOverviewAgregadoras,
@@ -65,11 +59,9 @@ import {
 } from "./helpersAgregadoras";
 import {
   filterOverviewIntegracoes,
-  type IntegracaoStatusFilter,
+  type OverviewIntegracaoHistorico,
   type OverviewIntegracaoRow,
 } from "./helpersIntegracoes";
-
-const PIPELINE_STAGES: StatusPipeline[] = ["disponiveis", "conexao", "negociacao", "fechado"];
 
 function mapOverviewRow(
   raw: Record<string, unknown>,
@@ -131,10 +123,7 @@ export default function OverviewComercial() {
   );
 
   const [comercialFiltro, setComercialFiltro] = useState(COMERCIAL_FILTRO_TODOS);
-  const [ufFiltro, setUfFiltro] = useState(UF_FILTRO_TODAS);
-  const [pipelineFiltro, setPipelineFiltro] = useState<OverviewPipelineFilter>("todos");
-  const [statusIntegracaoFiltro, setStatusIntegracaoFiltro] =
-    useState<IntegracaoStatusFilter>("todos");
+  const [prioridadeFiltro, setPrioridadeFiltro] = useState(PRIORIDADE_FILTRO_TODAS);
 
   const [rows, setRows] = useState<OverviewMarcaRow[]>([]);
   const [comerciais, setComerciais] = useState<ComercialOpcao[]>([]);
@@ -142,6 +131,7 @@ export default function OverviewComercial() {
   const [agregadoras, setAgregadoras] = useState<OverviewAgregadoraRow[]>([]);
   const [agregadoraHist, setAgregadoraHist] = useState<OverviewAgregadoraHistorico[]>([]);
   const [integracoes, setIntegracoes] = useState<OverviewIntegracaoRow[]>([]);
+  const [integracaoHist, setIntegracaoHist] = useState<OverviewIntegracaoHistorico[]>([]);
   const [loading, setLoading] = useState(true);
 
   const pageBox = getPageContentBoxStyle(brand, t);
@@ -150,12 +140,13 @@ export default function OverviewComercial() {
   const loadData = useCallback(async () => {
     setLoading(true);
     const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const [marcasRes, gestoresRes, histRes, aggRes, aggHistRes, intRes] = await Promise.all([
+    const [marcasRes, gestoresRes, histRes, aggRes, aggHistRes, intRes, intHistRes] =
+      await Promise.all([
       supabase
         .from("comercial_marcas")
         .select(
           `
-          id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, ultima_comunicacao, created_at,
+          id, nome, dominio, status_dominio, status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, ultima_comunicacao, created_at,
           empresa:comercial_empresas(id, razao_social, cnpj, portaria, portaria_retificacoes, requerimento_numero, requerimento_ano, cidade, estado),
           contatos:comercial_marca_contatos(id, marca_id, nome, telefones, emails, linkedin, instagram, data_nascimento, ordem),
           produtos:comercial_marca_produtos(produto, status_produto)
@@ -185,9 +176,14 @@ export default function OverviewComercial() {
         .limit(2000),
       supabase
         .from("comercial_integracoes")
-        .select("id, operador_nome, tipo, status, caminho, agregadora")
+        .select("id, operador_nome, prioridade, tipo, status, caminho, agregadora, created_at")
         .order("operador_nome")
         .limit(2000),
+      supabase
+        .from("comercial_integracao_historico")
+        .select("integracao_id, campo, valor_novo, created_at")
+        .eq("campo", "status")
+        .limit(10000),
     ]);
 
     if (marcasRes.error) console.error(marcasRes.error);
@@ -196,6 +192,7 @@ export default function OverviewComercial() {
     if (aggRes.error) console.error(aggRes.error);
     if (aggHistRes.error) console.error(aggHistRes.error);
     if (intRes.error) console.error(intRes.error);
+    if (intHistRes.error) console.error(intHistRes.error);
 
     const comercialList = buildPipelineComerciais(gestoresRes.data ?? []);
     setComerciais(comercialList);
@@ -258,10 +255,24 @@ export default function OverviewComercial() {
         return {
           id: String(raw.id),
           operador_nome: String(raw.operador_nome ?? ""),
+          prioridade: raw.prioridade as PrioridadeIntegracao,
           tipo: raw.tipo as TipoIntegracao,
           status: raw.status as StatusIntegracao,
           caminho: raw.caminho ? String(raw.caminho) : null,
           agregadora: raw.agregadora ? String(raw.agregadora) : null,
+          created_at: raw.created_at ? String(raw.created_at) : null,
+        };
+      }),
+    );
+
+    setIntegracaoHist(
+      (intHistRes.data ?? []).map((h) => {
+        const raw = h as Record<string, unknown>;
+        return {
+          integracao_id: String(raw.integracao_id ?? ""),
+          campo: String(raw.campo ?? ""),
+          valor_novo: raw.valor_novo != null ? String(raw.valor_novo) : null,
+          created_at: String(raw.created_at ?? ""),
         };
       }),
     );
@@ -274,8 +285,8 @@ export default function OverviewComercial() {
   }, [loadData]);
 
   const filteredOperadoras = useMemo(
-    () => filterOverviewRows(rows, comercialFiltro, ufFiltro, pipelineFiltro, comerciais),
-    [rows, comercialFiltro, ufFiltro, pipelineFiltro, comerciais],
+    () => filterOverviewRows(rows, comercialFiltro, comerciais),
+    [rows, comercialFiltro, comerciais],
   );
 
   const filteredAgregadoras = useMemo(
@@ -284,8 +295,8 @@ export default function OverviewComercial() {
   );
 
   const filteredIntegracoes = useMemo(
-    () => filterOverviewIntegracoes(integracoes, statusIntegracaoFiltro),
-    [integracoes, statusIntegracaoFiltro],
+    () => filterOverviewIntegracoes(integracoes, prioridadeFiltro),
+    [integracoes, prioridadeFiltro],
   );
 
   function handleSelectAba(next: OverviewComercialTab) {
@@ -311,73 +322,7 @@ export default function OverviewComercial() {
       <div style={filterBox}>
         <OverviewComercialAbaNav aba={aba} onSelectAba={handleSelectAba} />
 
-        {aba === "operadoras" ? (
-          <>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                width: "100%",
-                marginBottom: 10,
-              }}
-            >
-              <FiltroBarCampoSelect
-                value={comercialFiltro}
-                onChange={setComercialFiltro}
-                icon={FilterBarIcons.influencer}
-                ariaLabel={COMERCIAL_FILTRO_ARIA}
-                todasValue={COMERCIAL_FILTRO_TODOS}
-                todasLabel={COMERCIAL_FILTRO_TODOS_LABEL}
-                extraOptions={buildComercialFiltroExtraOptions(comerciais)}
-                options={[]}
-                minWidth={200}
-              />
-              <FiltroBarCampoSelect
-                value={ufFiltro}
-                onChange={setUfFiltro}
-                icon={<MapPin {...FILTRO_BAR_ICON_PROPS} aria-hidden />}
-                ariaLabel={UF_FILTRO_ARIA_LABEL}
-                todasValue={UF_FILTRO_TODAS}
-                todasLabel={UF_FILTRO_TODAS_LABEL}
-                options={UF_FILTRO_OPTIONS}
-                minWidth={200}
-              />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                width: "100%",
-              }}
-            >
-              <FiltroSemanticoTabPill
-                label="Todos"
-                semanticColor={brand.primary}
-                active={pipelineFiltro === "todos"}
-                onClick={() => setPipelineFiltro("todos")}
-              />
-              {PIPELINE_STAGES.map((stage) => (
-                <FiltroSemanticoTabPill
-                  key={stage}
-                  label={PIPELINE_TAB_LABEL[stage]}
-                  semanticColor={PIPELINE_COLOR[stage]}
-                  active={pipelineFiltro === stage}
-                  onClick={() =>
-                    setPipelineFiltro((prev) => (prev === stage ? "todos" : stage))
-                  }
-                />
-              ))}
-            </div>
-          </>
-        ) : null}
-
-        {aba === "agregadoras" ? (
+        {aba === "operadoras" || aba === "agregadoras" ? (
           <div
             style={{
               display: "flex",
@@ -413,23 +358,19 @@ export default function OverviewComercial() {
               width: "100%",
             }}
           >
-            <FiltroSemanticoTabPill
-              label="Todos Status"
-              semanticColor={brand.primary}
-              active={statusIntegracaoFiltro === "todos"}
-              onClick={() => setStatusIntegracaoFiltro("todos")}
+            <FiltroBarCampoSelect
+              value={prioridadeFiltro}
+              onChange={setPrioridadeFiltro}
+              icon={FilterBarIcons.status}
+              ariaLabel={PRIORIDADE_FILTRO_ARIA}
+              todasValue={PRIORIDADE_FILTRO_TODAS}
+              todasLabel={PRIORIDADE_FILTRO_TODAS_LABEL}
+              options={PRIORIDADE_ORDEM.map((p) => ({
+                value: p,
+                label: PRIORIDADE_LABEL[p],
+              }))}
+              minWidth={200}
             />
-            {STATUS_INTEGRACAO_ORDEM.map((st) => (
-              <FiltroSemanticoTabPill
-                key={st}
-                label={STATUS_INTEGRACAO_LABEL[st]}
-                semanticColor={STATUS_INTEGRACAO_COLOR[st]}
-                active={statusIntegracaoFiltro === st}
-                onClick={() =>
-                  setStatusIntegracaoFiltro((prev) => (prev === st ? "todos" : st))
-                }
-              />
-            ))}
           </div>
         ) : null}
       </div>
@@ -480,11 +421,11 @@ export default function OverviewComercial() {
             {aba === "agregadoras" ? (
               <OverviewAgregadorasPanel
                 rows={filteredAgregadoras}
+                marcas={rows}
                 historico={agregadoraHist}
                 comerciais={comerciais}
                 pageBox={pageBox}
                 t={t}
-                onGoPipeline={() => navigateTo("comercial_pipeline_agregadoras", "Todos")}
               />
             ) : null}
           </div>
@@ -494,7 +435,12 @@ export default function OverviewComercial() {
             hidden={aba !== "integracoes"}
           >
             {aba === "integracoes" ? (
-              <OverviewIntegracoesPanel rows={filteredIntegracoes} pageBox={pageBox} t={t} />
+              <OverviewIntegracoesPanel
+                rows={filteredIntegracoes}
+                historico={integracaoHist}
+                pageBox={pageBox}
+                t={t}
+              />
             ) : null}
           </div>
         </>
