@@ -8,12 +8,13 @@ type DashboardBrand = ReturnType<
 >;
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { OverviewSpinAbaNav } from "./OverviewSpinAbaNav";
-import type { OverviewSpinTab } from "./overviewSpinTabs";
+import { abaEhFinanceira, type OverviewSpinTab } from "./overviewSpinTabs";
 
 type Props = {
   brand: DashboardBrand;
   t: Theme;
   aba: OverviewSpinTab;
+  tabsVisiveis: OverviewSpinTab[];
   labelCarrosselCentral: string;
   carrosselAnteriorDisabled: boolean;
   carrosselProximoDisabled: boolean;
@@ -34,6 +35,7 @@ export function OverviewSpinFiltroBar({
   brand,
   t,
   aba,
+  tabsVisiveis,
   labelCarrosselCentral,
   carrosselAnteriorDisabled,
   carrosselProximoDisabled,
@@ -49,6 +51,8 @@ export function OverviewSpinFiltroBar({
   loading,
   onSelectAba,
 }: Props) {
+  const financeira = abaEhFinanceira(aba);
+
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
       <div
@@ -61,7 +65,7 @@ export function OverviewSpinFiltroBar({
           marginBottom: 12,
         }}
       >
-        {aba !== "posicionamento" ? (
+        {financeira ? (
           <button
             type="button"
             aria-label="Mês anterior"
@@ -77,7 +81,7 @@ export function OverviewSpinFiltroBar({
         <span style={getCarouselPeriodLabelStyle(t, { minWidth: "min(100%, 180px)" })}>
           {labelCarrosselCentral}
         </span>
-        {aba !== "posicionamento" ? (
+        {financeira ? (
           <button
             type="button"
             aria-label="Próximo mês"
@@ -91,7 +95,7 @@ export function OverviewSpinFiltroBar({
           <span style={{ width: CAROUSEL_NAV_BTN_PX, flexShrink: 0 }} aria-hidden />
         )}
 
-        {aba === "overview" ? (
+        {financeira ? (
           <FiltroHistoricoButton active={historico} onClick={onToggleHistorico} />
         ) : null}
 
@@ -104,7 +108,7 @@ export function OverviewSpinFiltroBar({
           />
         )}
 
-        {aba === "overview" && loading && (
+        {financeira && loading && (
           <span
             style={{
               fontSize: 12,
@@ -121,7 +125,7 @@ export function OverviewSpinFiltroBar({
         )}
       </div>
 
-      <OverviewSpinAbaNav aba={aba} onSelectAba={onSelectAba} />
+      <OverviewSpinAbaNav aba={aba} onSelectAba={onSelectAba} tabsVisiveis={tabsVisiveis} />
     </div>
   );
 }

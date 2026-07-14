@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback, Suspense, lazy } from "react
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
-import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
@@ -15,8 +14,15 @@ import { useOverviewSpinComparativos } from "./useOverviewSpinComparativos";
 import { OverviewSpinMesaDiaTabela } from "./OverviewSpinMesaDiaTabela";
 import { OverviewSpinDetalhamentoInterativo } from "./OverviewSpinDetalhamentoInterativo";
 import { OverviewSpinComparativoJogoInterativo } from "./OverviewSpinComparativoJogoInterativo";
+import { useOverviewSpinCatalogo } from "./useOverviewSpinCatalogo";
+import { useOverviewSpinFiltrosAcesso } from "./useOverviewSpinFiltrosAcesso";
 
-import type { OverviewSpinTab } from "./overviewSpinTabs";
+import {
+  abaEhFinanceira,
+  canalDaAba,
+  TAB_IDS_SPIN_TODAS,
+  type OverviewSpinTab,
+} from "./overviewSpinTabs";
 import { labelCarrosselPos, parseDateKey } from "../../../lib/lobbyMonitorHelpers";
 import { hojeIsoBrasil } from "../../../lib/dateBrasil";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -30,10 +36,6 @@ import {
   type KpiJogoKey,
 } from "./overviewSpinLogic";
 
-
-
-
-
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
 import { Loader2 } from "lucide-react";
@@ -45,11 +47,48 @@ import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { createDataTableBlockStyles } from "../../../lib/dataTableStyles";
 
 export default function OverviewSpin() {
-  const { theme: t, escoposVisiveis } = useApp();
-  const { showFiltroOperadora, podeVerOperadora, operadoraSlugsForcado } = useDashboardFiltros();
+  const { theme: t, escoposVisiveis, user, effectiveRole } = useApp();
   const perm = usePermission("mesas_spin");
+  const role = effectiveRole ?? user?.role;
+  const isAdmin = role === "admin";
 
-  const [aba, setAba] = useRouteTab("mesas_spin", "overview", ["overview", "posicionamento"] as const);
+  const [aba, setAba] = useRouteTab("mesas_spin", "overview", TAB_IDS_SPIN_TODAS);
+  const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
+
+  const { catalogo, verAbaDedicado, verAbaNetwork } = useOverviewSpinCatalogo({
+    isAdmin,
+    canView: perm.canView === "sim" || perm.canView === "proprios" ? perm.canView : "nao",
+    operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
+  });
+
+  const tabsVisiveis = useMemo((): OverviewSpinTab[] => {
+    return TAB_IDS_SPIN_TODAS.filter((id) => {
+      if (id === "estudio_dedicado") return verAbaDedicado;
+      if (id === "estudio_network") return verAbaNetwork;
+      return true;
+    });
+  }, [verAbaDedicado, verAbaNetwork]);
+
+  useEffect(() => {
+    if (!tabsVisiveis.includes(aba)) {
+      setAba("overview");
+    }
+  }, [aba, tabsVisiveis, setAba]);
+
+  const {
+    showFiltroOperadora,
+    podeVerOperadora,
+    operadoraSlugsForcado,
+    operadorasDoFiltro,
+    operadorasAtivas,
+    slugsPermitidosPelaAba,
+  } = useOverviewSpinFiltrosAcesso({
+    canView: perm.canView,
+    aba,
+    catalogo,
+  });
+
+  const canal = canalDaAba(aba);
 
   const {
     mesesDisponiveis,
@@ -57,11 +96,8 @@ export default function OverviewSpin() {
     historico,
     setHistorico,
     loading,
-    filtroOperadora,
-    setFiltroOperadora,
     modoAgregadoTodasOperadoras,
     mesSelecionado,
-    operadorasOcr,
     mesasCadastro,
     dailyData,
     monthlyData,
@@ -76,7 +112,21 @@ export default function OverviewSpin() {
     irMesAnterior,
     irMesProximo,
     toggleHistorico,
-  } = useOverviewSpinDados(aba);
+  } = useOverviewSpinDados(canal, {
+    operadoraSlugsForcado,
+    slugsPermitidosPelaAba,
+    filtroOperadora,
+    setFiltroOperadora,
+  });
+
+  useEffect(() => {
+    if (filtroOperadora === "todas") return;
+    if (!operadorasDoFiltro.some((o) => o.slug === filtroOperadora)) {
+      setFiltroOperadora(
+        operadoraSlugsForcado?.length === 1 ? operadoraSlugsForcado[0]! : "todas",
+      );
+    }
+  }, [filtroOperadora, operadorasDoFiltro, operadoraSlugsForcado]);
 
   const [compMesaA, setCompMesaA] = useState("");
   const [compMesaB, setCompMesaB] = useState("");
@@ -103,11 +153,11 @@ export default function OverviewSpin() {
     });
   }, [modoAgregadoTodasOperadoras]);
 
-  const operadorasListFmt = operadorasOcr;
+  const operadorasListFmt = operadorasAtivas;
 
   const slugToNome = useCallback(
-    (slug: string) => operadorasOcr.find((o) => o.slug === slug)?.nome ?? slug,
-    [operadorasOcr],
+    (slug: string) => operadorasAtivas.find((o) => o.slug === slug)?.nome ?? slug,
+    [operadorasAtivas],
   );
 
   const { porTabelaFiltradas, porTabelaFiltradasHist, tabelaRows } = useOverviewSpinTabelaRows({
@@ -232,22 +282,23 @@ export default function OverviewSpin() {
 
   const refDatePosicionamento = useMemo(() => parseDateKey(hojeIsoBrasil()), []);
 
+  const financeira = abaEhFinanceira(aba);
+
   const carrosselAnteriorDisabled = useMemo(() => {
-    if (aba === "posicionamento") return true;
+    if (!financeira) return true;
     return historico || isPrimeiro;
-  }, [aba, historico, isPrimeiro]);
+  }, [financeira, historico, isPrimeiro]);
 
   const carrosselProximoDisabled = useMemo(() => {
-    if (aba === "posicionamento") return true;
+    if (!financeira) return true;
     return historico || isUltimo;
-  }, [aba, historico, isUltimo]);
+  }, [financeira, historico, isUltimo]);
 
-  const labelCarrosselCentral =
-    aba === "overview"
-      ? historico
-        ? "Todo o período"
-        : (mesSelecionado?.label ?? "")
-      : labelCarrosselPos("dia", refDatePosicionamento);
+  const labelCarrosselCentral = financeira
+    ? historico
+      ? "Todo o período"
+      : (mesSelecionado?.label ?? "")
+    : labelCarrosselPos("dia", refDatePosicionamento);
 
   const operadoraSlugPosicionamento = useMemo(() => {
     if (filtroOperadora !== "todas") return filtroOperadora;
@@ -265,12 +316,12 @@ export default function OverviewSpin() {
   ]);
 
   function irCarrosselAnterior() {
-    if (aba === "posicionamento") return;
+    if (!financeira) return;
     irMesAnterior();
   }
 
   function irCarrosselProximo() {
-    if (aba === "posicionamento") return;
+    if (!financeira) return;
     irMesProximo();
   }
 
@@ -330,6 +381,7 @@ export default function OverviewSpin() {
         brand={brand}
         t={t}
         aba={aba}
+        tabsVisiveis={tabsVisiveis}
         labelCarrosselCentral={labelCarrosselCentral}
         carrosselAnteriorDisabled={carrosselAnteriorDisabled}
         carrosselProximoDisabled={carrosselProximoDisabled}
@@ -340,14 +392,14 @@ export default function OverviewSpin() {
         showFiltroOperadora={showFiltroOperadora}
         filtroOperadora={filtroOperadora}
         onFiltroOperadoraChange={setFiltroOperadora}
-        operadorasOcr={operadorasOcr}
+        operadorasOcr={operadorasDoFiltro}
         podeVerOperadora={podeVerOperadora}
         loading={loading}
         onSelectAba={selecionarAbaSpin}
       />
 
       <div role="tabpanel" id={`panel-overview-spin-${aba}`} aria-labelledby={`tab-overview-spin-${aba}`}>
-      {aba === "overview" && (
+      {financeira && (
       <>
       <OverviewSpinKpisConsolidados
         contentBoxStyle={contentBox}

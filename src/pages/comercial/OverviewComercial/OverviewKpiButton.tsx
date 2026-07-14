@@ -23,6 +23,7 @@ export function OverviewKpiButton({
 }) {
   const interactive = typeof onClick === "function";
   const commonStyle = {
+    boxSizing: "border-box" as const,
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 18,
     padding: "16px 18px",
@@ -34,6 +35,8 @@ export function OverviewKpiButton({
     outlineOffset: active ? 2 : undefined,
     fontFamily: FONT.body,
     width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
   };
 
   const displayValue =
