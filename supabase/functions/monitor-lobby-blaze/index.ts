@@ -125,8 +125,7 @@ function mergeMesasMonitorBlaze(
 }
 
 async function carregarMesasMonitorBlaze(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
 ): Promise<{ mesas: MesaCadastro[]; erro: string | null }> {
   const [juncRes, legadoRes] = await Promise.all([
     supabase
