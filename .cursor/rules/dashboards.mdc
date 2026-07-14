@@ -97,6 +97,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **UAP no Overview consolidado:** soma dos UAP de cada canal (não é UAP único entre Dedicado e Network) — documentar em Ajuda.
 - **Abas financeiras** partilham a mesma FilterBar (mês, Histórico, operadora).
 - **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia civil **Brasília** (`hojeIsoBrasil` + `periodoDiaBrasil`), não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData` (`lobby_monitor_*`), nunca do mesmo fetch do Overview; posições carregadas em lotes (`fetchInBatched`) por volume horário.
+- **Posição atual das mesas:** rótulo **`{Nome do Estúdio} - {Nome da Mesa}`** via `labelMesaPosicionamentoRow` (`estudios_spin.nome` + `lobby_monitor_posicao.nome_mesa`); Network aparece no card da operadora quando monitorada (IDs em Gestão de Estúdios).
 - **Posição atual das mesas / Concorrentes à frente / Ranking de concorrentes:** `SectionTitle` com `sub={fmtUltimaAtualizacao(...)}` (`lobbyMonitorHelpers`) — **sem** `<p>` legado abaixo do título.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.

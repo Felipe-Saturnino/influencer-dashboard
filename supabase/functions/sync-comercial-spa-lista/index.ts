@@ -1,20 +1,21 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
 /**
  * Edge Function: sync-comercial-spa-lista
- * Importa CSV oficial SPA/MF → comercial_empresas + comercial_marcas.
- * Não altera status_pipeline, status_folha, comercial_user_id, status_dominio.
+ * Importa planilha oficial SPA/MF (CSV `;` ou XLSX) → comercial_empresas + comercial_marcas.
+ * Não altera status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, status_dominio.
  *
  * Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- * Opcional: COMERCIAL_SPA_CSV_URL — URL direta do CSV (senão descobre na página gov.br)
+ * Opcional: COMERCIAL_SPA_CSV_URL — URL direta do CSV/XLSX (senão descobre na página gov.br)
  * Opcional: COMERCIAL_SPA_LISTA_PAGE_URL — página de listagem (default gov.br)
  *
  * POST JSON: { dry_run?: boolean, force?: boolean, csv_url?: string }
  *
  * Deploy no painel Supabase: um único ficheiro index.ts (sem imports locais).
- * Parser espelhado em src/lib/comercialSpaCsvParser.ts para testes locais.
+ * Parser espelhado em src/lib/comercialSpaCsvParser.ts + src/lib/comercialSpaXlsx.ts.
  */
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { unzipSync } from "https://esm.sh/fflate@0.8.2";
 
 // --- Parser CSV SPA/MF (inline — não extrair para outro ficheiro no deploy) ---
 
@@ -153,6 +154,10 @@ function findHeaderIndex(rows: string[][]): number {
 
 function parseSpaAutorizacoesCsv(text: string): ParsedEmpresaBloco[] {
   const rows = parseCsvSemicolon(text.replace(/^\uFEFF/, ""));
+  return parseSpaAutorizacoesMatrix(rows);
+}
+
+function parseSpaAutorizacoesMatrix(rows: string[][]): ParsedEmpresaBloco[] {
   const headerIdx = findHeaderIndex(rows);
   const dataRows = rows.slice(headerIdx + 1);
 
@@ -203,19 +208,144 @@ async function sha256Hex(text: string): Promise<string> {
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function extractAutorizacoesCsvUrl(html: string): string | null {
-  const re =
-    /href="(https:\/\/www\.gov\.br\/fazenda\/[^"]*planilha-de-autorizacoes-[^"]+\.csv)"/gi;
-  let match = re.exec(html);
-  if (match?.[1]) return match[1];
-  match = re.exec(html);
-  return match?.[1] ?? null;
+function colLettersToIndex(letters: string): number {
+  let n = 0;
+  for (const ch of letters.toUpperCase()) {
+    if (ch < "A" || ch > "Z") break;
+    n = n * 26 + (ch.charCodeAt(0) - 64);
+  }
+  return n - 1;
+}
+
+function decodeXmlEntities(s: string): string {
+  return s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&amp;/g, "&");
+}
+
+function parseSharedStrings(xml: string): string[] {
+  const out: string[] = [];
+  for (const m of xml.matchAll(/<si>([\s\S]*?)<\/si>/g)) {
+    const parts = [...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((t) =>
+      decodeXmlEntities(t[1]),
+    );
+    out.push(parts.join(""));
+  }
+  return out;
+}
+
+function parseSheetToMatrix(sheetXml: string, shared: string[]): string[][] {
+  const rowMap = new Map<number, Map<number, string>>();
+  let maxCol = 0;
+
+  for (const rm of sheetXml.matchAll(/<row\b[^>]*\br="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)) {
+    const rowNum = Number(rm[1]);
+    const cells = new Map<number, string>();
+    for (const cm of rm[2].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const attrs = cm[1] ?? "";
+      const inner = cm[2] ?? "";
+      const ref = attrs.match(/\br="([A-Z]+)(\d+)"/);
+      if (!ref) continue;
+      const col = colLettersToIndex(ref[1]);
+      const vMatch = inner.match(/<v>([\s\S]*?)<\/v>/);
+      let raw = vMatch?.[1] ?? "";
+      if (/\bt="inlineStr"/.test(attrs)) {
+        const texts = [...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((t) =>
+          decodeXmlEntities(t[1]),
+        );
+        raw = texts.join("");
+      } else if (/\bt="s"/.test(attrs)) {
+        raw = shared[Number(raw)] ?? "";
+      } else {
+        raw = decodeXmlEntities(raw);
+      }
+      cells.set(col, raw);
+      if (col > maxCol) maxCol = col;
+    }
+    rowMap.set(rowNum, cells);
+  }
+
+  const maxRow = Math.max(0, ...rowMap.keys());
+  const matrix: string[][] = [];
+  for (let r = 1; r <= maxRow; r++) {
+    const cells = rowMap.get(r);
+    const row: string[] = [];
+    for (let c = 0; c <= Math.max(maxCol, 6); c++) {
+      row.push(cells?.get(c) ?? "");
+    }
+    matrix.push(row);
+  }
+  return matrix;
+}
+
+function matrixToSemicolonCsv(rows: string[][]): string {
+  return rows
+    .map((row) =>
+      row
+        .map((cell) => {
+          const v = String(cell ?? "");
+          if (/[;"\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+          return v;
+        })
+        .join(";"),
+    )
+    .join("\n");
+}
+
+function xlsxBytesToMatrix(bytes: Uint8Array): string[][] {
+  const files = unzipSync(bytes) as Record<string, Uint8Array>;
+  const decoder = new TextDecoder("utf-8");
+  const sharedXml = files["xl/sharedStrings.xml"]
+    ? decoder.decode(files["xl/sharedStrings.xml"])
+    : "";
+  const sheetXml = files["xl/worksheets/sheet1.xml"]
+    ? decoder.decode(files["xl/worksheets/sheet1.xml"])
+    : "";
+  if (!sheetXml) throw new Error("XLSX sem worksheet sheet1.xml");
+  const shared = sharedXml ? parseSharedStrings(sharedXml) : [];
+  return parseSheetToMatrix(sheetXml, shared);
+}
+
+/**
+ * Descobre URL da planilha nacional de autorizações.
+ * Prefere `.xlsx` (`planilha-de-autorizacoes.xlsx`); aceita legado `.csv`.
+ * Ignora ficheiros de processos judiciais.
+ */
+function extractAutorizacoesPlanilhaUrl(html: string): string | null {
+  const hrefRe =
+    /href="(https:\/\/www\.gov\.br\/fazenda\/[^"]*lista-de-empresas\/[^"]+)"/gi;
+  const urls: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = hrefRe.exec(html)) !== null) {
+    urls.push(m[1].replace(/&amp;/g, "&"));
+  }
+
+  const isJudicial = (u: string) => /processos?\s*judiciais|judicial/i.test(u);
+  const xlsx = urls.find(
+    (u) => /planilha-de-autorizacoes[^"/]*\.xlsx$/i.test(u) && !isJudicial(u),
+  );
+  if (xlsx) return xlsx;
+
+  const csv = urls.find(
+    (u) => /planilha-de-autorizacoes[^"/]*\.csv$/i.test(u) && !isJudicial(u),
+  );
+  if (csv) return csv;
+
+  return null;
 }
 
 // --- Sync ---
 
 const DEFAULT_LISTA_PAGE =
   "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas";
+
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
 const FETCH_TIMEOUT_MS = 45_000;
 const INTEGRACAO_SLUG = "comercial_spa_lista";
@@ -264,7 +394,8 @@ async function fetchText(url: string): Promise<{ ok: true; text: string } | { ok
       signal: ctrl.signal,
       headers: {
         Accept: "text/html,application/xhtml+xml,text/csv,*/*",
-        "User-Agent": "SpinGaming-DataIntelligence/1.0 (sync-comercial-spa-lista)",
+        "User-Agent": BROWSER_UA,
+        Referer: DEFAULT_LISTA_PAGE,
       },
     });
     clearTimeout(timer);
@@ -281,23 +412,72 @@ async function fetchText(url: string): Promise<{ ok: true; text: string } | { ok
   }
 }
 
-async function resolveCsvUrl(bodyUrl?: string): Promise<{ ok: true; url: string } | { ok: false; erro: string }> {
+async function fetchBytes(
+  url: string,
+): Promise<{ ok: true; bytes: Uint8Array; contentType: string } | { ok: false; erro: string }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,*/*",
+        "User-Agent": BROWSER_UA,
+        Referer: DEFAULT_LISTA_PAGE,
+      },
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      return { ok: false, erro: `HTTP ${res.status} ao buscar ${url}` };
+    }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.byteLength === 0) return { ok: false, erro: "Resposta vazia" };
+    return {
+      ok: true,
+      bytes: buf,
+      contentType: res.headers.get("content-type") ?? "",
+    };
+  } catch (e) {
+    clearTimeout(timer);
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, erro: msg };
+  }
+}
+
+function looksLikeZip(bytes: Uint8Array): boolean {
+  return bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b;
+}
+
+async function resolvePlanilhaUrl(
+  bodyUrl?: string,
+): Promise<
+  | { ok: true; url: string; listaAtualizadaEm: string | null }
+  | { ok: false; erro: string }
+> {
   const envUrl = Deno.env.get("COMERCIAL_SPA_CSV_URL")?.trim();
   const direct = bodyUrl?.trim() || envUrl;
-  if (direct) return { ok: true, url: direct };
+  if (direct) {
+    return { ok: true, url: direct, listaAtualizadaEm: null };
+  }
 
   const pageUrl = Deno.env.get("COMERCIAL_SPA_LISTA_PAGE_URL")?.trim() || DEFAULT_LISTA_PAGE;
   const page = await fetchText(pageUrl);
   if (!page.ok) return { ok: false, erro: `Não foi possível abrir a página oficial: ${page.erro}` };
 
-  const csvUrl = extractAutorizacoesCsvUrl(page.text);
-  if (!csvUrl) {
+  const planilhaUrl = extractAutorizacoesPlanilhaUrl(page.text);
+  if (!planilhaUrl) {
     return {
       ok: false,
-      erro: "CSV de autorizações não encontrado na página. Defina COMERCIAL_SPA_CSV_URL nos Secrets.",
+      erro:
+        "Planilha de autorizações não encontrada na página (CSV/XLSX). Defina COMERCIAL_SPA_CSV_URL nos Secrets.",
     };
   }
-  return { ok: true, url: csvUrl };
+  return {
+    ok: true,
+    url: planilhaUrl,
+    listaAtualizadaEm: extractListaAtualizadaEm(page.text),
+  };
 }
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
@@ -572,7 +752,7 @@ serve(async (req) => {
   const force = body.force === true;
   const inicioMs = Date.now();
 
-  const resolved = await resolveCsvUrl(body.csv_url);
+  const resolved = await resolvePlanilhaUrl(body.csv_url);
   if (!resolved.ok) {
     if (!dry_run) {
       await gravarSyncLog(supabase, {
@@ -588,9 +768,9 @@ serve(async (req) => {
     return json({ ok: false, erro: resolved.erro }, req, 200);
   }
 
-  const csvFetch = await fetchText(resolved.url);
-  if (!csvFetch.ok) {
-    const msg = `Não foi possível baixar o CSV oficial: ${csvFetch.erro}`;
+  const arquivo = await fetchBytes(resolved.url);
+  if (!arquivo.ok) {
+    const msg = `Não foi possível baixar a planilha oficial: ${arquivo.erro}`;
     if (!dry_run) {
       await gravarSyncLog(supabase, {
         status: "falha",
@@ -605,7 +785,40 @@ serve(async (req) => {
     return json({ ok: false, erro: msg, csv_url: resolved.url }, req, 200);
   }
 
-  const contentHash = await sha256Hex(csvFetch.text);
+  const urlLower = resolved.url.toLowerCase();
+  const isXlsx =
+    urlLower.endsWith(".xlsx") ||
+    arquivo.contentType.includes("spreadsheetml") ||
+    arquivo.contentType.includes("excel") ||
+    looksLikeZip(arquivo.bytes);
+
+  let canonicalText: string;
+  let blocos: ParsedEmpresaBloco[];
+  try {
+    if (isXlsx) {
+      const matrix = xlsxBytesToMatrix(arquivo.bytes);
+      canonicalText = matrixToSemicolonCsv(matrix);
+      blocos = parseSpaAutorizacoesMatrix(matrix);
+    } else {
+      canonicalText = new TextDecoder("utf-8").decode(arquivo.bytes);
+      blocos = parseSpaAutorizacoesCsv(canonicalText);
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!dry_run) {
+      await gravarSyncLog(supabase, {
+        status: "falha",
+        registros_inseridos: 0,
+        registros_atualizados: 0,
+        erros_count: 1,
+        mensagem_erro: `Erro ao interpretar planilha: ${msg}`,
+        duracao_ms: Date.now() - inicioMs,
+      });
+    }
+    return json({ ok: false, erro: `Erro ao interpretar planilha: ${msg}` }, req, 200);
+  }
+
+  const contentHash = await sha256Hex(canonicalText);
   const ultimoHash = dry_run ? null : await getUltimoHash(supabase);
 
   if (!force && !dry_run && ultimoHash && ultimoHash === contentHash) {
@@ -620,38 +833,39 @@ serve(async (req) => {
     return json({
       ok: true,
       skipped: true,
-      motivo: "CSV sem alteração (hash igual ao último sync).",
+      motivo: "Planilha sem alteração (hash igual ao último sync).",
       content_hash: contentHash,
       csv_url: resolved.url,
+      formato: isXlsx ? "xlsx" : "csv",
     }, req);
   }
 
-  let blocos: ParsedEmpresaBloco[];
-  try {
-    blocos = parseSpaAutorizacoesCsv(csvFetch.text);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+  if (blocos.length === 0) {
+    const msg = "Planilha interpretada sem empresas (verifique o formato oficial).";
     if (!dry_run) {
       await gravarSyncLog(supabase, {
         status: "falha",
         registros_inseridos: 0,
         registros_atualizados: 0,
         erros_count: 1,
-        mensagem_erro: `Erro ao interpretar CSV: ${msg}`,
+        mensagem_erro: msg,
         duracao_ms: Date.now() - inicioMs,
       });
+      await gravarTechLog(supabase, msg);
     }
-    return json({ ok: false, erro: `Erro ao interpretar CSV: ${msg}` }, req, 200);
+    return json({ ok: false, erro: msg, csv_url: resolved.url }, req, 200);
   }
 
   const totalMarcas = blocos.reduce((s, b) => s + b.marcas.length, 0);
-  const listaAtualizada = extractListaAtualizadaEm(csvFetch.text.slice(0, 500));
+  const listaAtualizada =
+    resolved.listaAtualizadaEm ?? extractListaAtualizadaEm(canonicalText.slice(0, 500));
 
   if (dry_run) {
     return json({
       ok: true,
       dry_run: true,
       csv_url: resolved.url,
+      formato: isXlsx ? "xlsx" : "csv",
       content_hash: contentHash,
       blocos: blocos.length,
       marcas: totalMarcas,

@@ -38,7 +38,7 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `enrich-comercial-cnpj` |
 | `trigger-social-kpis` |
 
-**`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser inline). Testes locais do parser: `src/lib/comercialSpaCsvParser.ts`.
+**`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser CSV/XLSX inline). Testes locais: `src/lib/comercialSpaCsvParser.ts` + `src/lib/comercialSpaXlsx.ts`. A página gov.br publica **`planilha-de-autorizacoes.xlsx`** (rótulo “CSV”); a Edge descoberta esse URL automaticamente.
 
 **`validate-comercial-dominios`:** deploy com **apenas** `index.ts`. Lógica HTTP espelhada em `src/lib/comercialDominioValidation.ts`.
 

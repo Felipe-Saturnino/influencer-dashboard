@@ -158,20 +158,22 @@ Tabelas: `comercial_empresas`, `comercial_marcas`, … RLS: `_comercial_pipeline
 
 ### Sync automático — Lista SPA/MF (cron)
 
-Edge Function **`sync-comercial-spa-lista`** — import diário do CSV oficial do Ministério da Fazenda (empresas autorizadas).
+Edge Function **`sync-comercial-spa-lista`** — import diário da planilha oficial do Ministério da Fazenda (empresas autorizadas).
 
 | Regra | Valor |
 |-------|-------|
 | Agendamento | GitHub Actions `sync-comercial-spa-lista-daily.yml` — **7h30 BRT** (~10h30 UTC) |
-| Fonte | Página gov.br (descobre URL do CSV) ou secret **`COMERCIAL_SPA_CSV_URL`** |
+| Fonte | Página gov.br (descobre URL de **`planilha-de-autorizacoes.xlsx`** ou CSV legado) ou secret **`COMERCIAL_SPA_CSV_URL`** |
+| Formato | **XLSX** (atual no site) ou **CSV `;`** — XLSX convertido pela Edge (1ª aba) |
 | Chave empresa | **CNPJ** — bloco = linhas até o próximo CNPJ |
 | Chave marca | **`empresa_id` + nome** (normalizado) |
 | Atualiza | razão social, portaria, retificações, requerimento, nome/dominio da marca |
 | **Não sobrescreve** | `status_pipeline`, `status_folha`, `comercial_user_id`, `agregadora`, `ultimo_contato`, `ultima_comunicacao` |
-| **Exceção domínio** | Se `dominio` mudar no CSV → atualiza domínio e **`status_dominio` → `inativo`** (revalidação HTTP) |
+| **Exceção domínio** | Se `dominio` mudar na planilha → atualiza domínio e **`status_dominio` → `inativo`** (revalidação HTTP) |
 | Marca nova | defaults `disponiveis` + `sem_contato`; domínio `inativo` até cron de validação HTTP |
-| Idempotência | Hash SHA-256 do CSV em `comercial_spa_sync_meta` — sem diff, sync OK sem writes |
+| Idempotência | Hash SHA-256 do conteúdo canónico (CSV `;`) em `comercial_spa_sync_meta` — sem diff, sync OK sem writes |
 | Logs | `sync_logs.integracao_slug = comercial_spa_lista` (Status Técnico) |
+| User-Agent | Browser (gov.br bloqueia UA customizado no download do ficheiro) |
 
 **Validação de domínio (cron separado):** Edge Function **`validate-comercial-dominios`** — verificação HTTP diária; atualiza `status_dominio` (`ok` = **Ativo**, `inativo` = **Inativo**). Coluna **Comercial** exibe **Site Offline** (automático, cinza) quando `inativo` — **não** entra no filtro Comercial e **não** permite atribuição manual.
 

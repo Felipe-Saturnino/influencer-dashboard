@@ -138,6 +138,11 @@ function findHeaderIndex(rows: string[][]): number {
 
 export function parseSpaAutorizacoesCsv(text: string): ParsedEmpresaBloco[] {
   const rows = parseCsvSemicolon(text.replace(/^\uFEFF/, ""));
+  return parseSpaAutorizacoesMatrix(rows);
+}
+
+/** Aceita matriz já montada (ex.: 1ª aba de XLSX convertida). */
+export function parseSpaAutorizacoesMatrix(rows: string[][]): ParsedEmpresaBloco[] {
   const headerIdx = findHeaderIndex(rows);
   const dataRows = rows.slice(headerIdx + 1);
 
@@ -186,13 +191,4 @@ export async function sha256Hex(text: string): Promise<string> {
   const data = new TextEncoder().encode(text);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-export function extractAutorizacoesCsvUrl(html: string): string | null {
-  const re =
-    /href="(https:\/\/www\.gov\.br\/fazenda\/[^"]*planilha-de-autorizacoes-[^"]+\.csv)"/gi;
-  let match = re.exec(html);
-  if (match?.[1]) return match[1];
-  match = re.exec(html);
-  return match?.[1] ?? null;
 }

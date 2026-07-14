@@ -58,10 +58,31 @@ export interface LobbyPosicaoRow {
   execucao_id: string;
   mesa_identificacao: string;
   nome_mesa: string;
+  /** Nome do estúdio (Gestão de Estúdios); usado no rótulo «Estúdio - Mesa». */
+  nome_estudio?: string | null;
   tipo_jogo: string;
   posicao: number | null;
   qtd_concorrentes_a_frente: number;
   concorrentes_a_frente: ConcorrenteLobby[];
+}
+
+/** Rótulo canónico Posicionamento: «Estúdio - Mesa» (fallback só Mesa). */
+export function labelMesaPosicionamento(
+  nomeEstudio: string | null | undefined,
+  nomeMesa: string,
+): string {
+  const e = nomeEstudio?.trim();
+  const m = nomeMesa.trim();
+  if (!m) return e || "—";
+  if (!e) return m;
+  return `${e} - ${m}`;
+}
+
+export function labelMesaPosicionamentoRow(p: {
+  nome_estudio?: string | null;
+  nome_mesa: string;
+}): string {
+  return labelMesaPosicionamento(p.nome_estudio, p.nome_mesa);
 }
 
 export interface SnapshotMesa {
@@ -335,7 +356,7 @@ export function melhorPosicaoSnapshot(posicoes: LobbyPosicaoRow[]): {
   for (const p of posicoes) {
     if (p.posicao == null) continue;
     if (!best || p.posicao < best.posicao) {
-      best = { posicao: p.posicao, nome_mesa: p.nome_mesa };
+      best = { posicao: p.posicao, nome_mesa: labelMesaPosicionamentoRow(p) };
     }
   }
   return best;
@@ -352,7 +373,7 @@ export function maiorQuedaSnapshot(
     if (p.posicao == null || pa == null) continue;
     const delta = p.posicao - pa;
     if (delta > 0 && (!worst || delta > worst.delta)) {
-      worst = { delta, nome_mesa: p.nome_mesa };
+      worst = { delta, nome_mesa: labelMesaPosicionamentoRow(p) };
     }
   }
   return worst;
@@ -647,7 +668,7 @@ export function maiorQuedaEntreSnapshots(
     if (p.posicao == null || pa == null) continue;
     const delta = p.posicao - pa;
     if (delta > 0 && (!worst || delta > worst.delta)) {
-      worst = { delta, nome_mesa: p.nome_mesa };
+      worst = { delta, nome_mesa: labelMesaPosicionamentoRow(p) };
     }
   }
   return worst;
@@ -809,22 +830,23 @@ export function gerarAlertas(
 
   for (const p of snapshot) {
     const pa = prev.get(p.mesa_identificacao);
+    const label = labelMesaPosicionamentoRow(p);
     if (p.posicao === 1 && pa != null && pa > 1) {
       alertas.push({
         tipo: "positivo",
-        texto: `${p.nome_mesa} conquistou P1 (antes ${fmtPosicao(pa)}).`,
+        texto: `${label} conquistou P1 (antes ${fmtPosicao(pa)}).`,
       });
     }
     if (p.posicao != null && p.posicao <= POS_TOP3_MAX && pa != null && pa > POS_TOP3_MAX) {
       alertas.push({
         tipo: "positivo",
-        texto: `${p.nome_mesa} entrou no top 3 (${fmtPosicao(p.posicao)}).`,
+        texto: `${label} entrou no top 3 (${fmtPosicao(p.posicao)}).`,
       });
     }
     if (pa != null && p.posicao != null && p.posicao - pa >= 8) {
       alertas.push({
         tipo: "atencao",
-        texto: `Queda brusca em ${p.nome_mesa}: ${fmtPosicao(pa)} → ${fmtPosicao(p.posicao)}.`,
+        texto: `Queda brusca em ${label}: ${fmtPosicao(pa)} → ${fmtPosicao(p.posicao)}.`,
       });
     }
   }
