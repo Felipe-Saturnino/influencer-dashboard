@@ -55,25 +55,28 @@ export default function OverviewSpin() {
   const [aba, setAba] = useRouteTab("mesas_spin", "overview", TAB_IDS_SPIN_TODAS);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
 
-  const { catalogo, verAbaDedicado, verAbaNetwork } = useOverviewSpinCatalogo({
+  const { catalogo, loadingCatalogo, verAbaDedicado, verAbaNetwork } = useOverviewSpinCatalogo({
     isAdmin,
     canView: perm.canView === "sim" || perm.canView === "proprios" ? perm.canView : "nao",
     operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
   });
 
+  /** Evita flash: enquanto o catálogo não resolve, mantém as 4 abas (Overview + Dedicado + Network + Posicionamento). */
   const tabsVisiveis = useMemo((): OverviewSpinTab[] => {
+    if (loadingCatalogo) return [...TAB_IDS_SPIN_TODAS];
     return TAB_IDS_SPIN_TODAS.filter((id) => {
       if (id === "estudio_dedicado") return verAbaDedicado;
       if (id === "estudio_network") return verAbaNetwork;
       return true;
     });
-  }, [verAbaDedicado, verAbaNetwork]);
+  }, [loadingCatalogo, verAbaDedicado, verAbaNetwork]);
 
   useEffect(() => {
+    if (loadingCatalogo) return;
     if (!tabsVisiveis.includes(aba)) {
       setAba("overview");
     }
-  }, [aba, tabsVisiveis, setAba]);
+  }, [aba, tabsVisiveis, setAba, loadingCatalogo]);
 
   const {
     showFiltroOperadora,

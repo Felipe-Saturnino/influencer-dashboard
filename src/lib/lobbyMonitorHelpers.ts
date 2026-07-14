@@ -773,6 +773,24 @@ export function concorrentesPorJogoDetalhe(posicoes: LobbyPosicaoRow[]): {
   return rows.map((r) => ({ ...r, max: maxQ }));
 }
 
+/**
+ * Ranking alinhado a «Concorrentes à frente»: união dos concorrentes
+ * (`concorrentes_a_frente`) de todas as mesas Spin do snapshot, sem duplicar game_id.
+ * Não usa `jogos_a_frente_pior_mesa` (só a pior mesa / vitrine).
+ */
+export function rankingConcorrentesFromPosicoes(posicoes: LobbyPosicaoRow[]): ConcorrenteLobby[] {
+  const byId = new Map<number, ConcorrenteLobby>();
+  for (const p of posicoes) {
+    for (const c of p.concorrentes_a_frente ?? []) {
+      const prev = byId.get(c.game_id);
+      if (!prev || c.posicao < prev.posicao) {
+        byId.set(c.game_id, c);
+      }
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.posicao - b.posicao || a.name.localeCompare(b.name, "pt-BR"));
+}
+
 export function concorrentesPorJogoSnapshot(
   posicoes: LobbyPosicaoRow[],
 ): { jogo: string; qtd: number; max: number }[] {
