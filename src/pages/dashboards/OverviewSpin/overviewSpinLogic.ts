@@ -647,10 +647,11 @@ export function buildUapPorJogoQuery(
   from: number,
   to: number,
   slugList: string[] | null,
+  tabelaUap: string = "relatorio_uap_por_jogo",
 ) {
   let q = applyMesasOperadoraSlugFilter(
     supabase
-      .from("relatorio_uap_por_jogo")
+      .from(tabelaUap)
       .select("data, jogo, uap, operadora_slug")
       .order("data", { ascending: true })
       .order("jogo", { ascending: true })

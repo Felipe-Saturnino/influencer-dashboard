@@ -81,17 +81,36 @@ export function useLobbyPosicionamentoData(operadoraSlug: string, refDate: Date)
       }
 
       const ids = execucoes.map((e) => e.id);
-      const posRows = await fetchInBatched(ids, LOBBY_MONITOR_EXECUCAO_IN_CHUNK, async (slice) =>
-        fetchAllPages(async (from, to) =>
-          supabase
-            .from("lobby_monitor_posicao")
-            .select(
-              "execucao_id, mesa_identificacao, nome_mesa, tipo_jogo, posicao, qtd_concorrentes_a_frente, concorrentes_a_frente",
-            )
-            .in("execucao_id", slice)
-            .range(from, to),
+      const [posRows, mesasCad, estudiosCad] = await Promise.all([
+        fetchInBatched(ids, LOBBY_MONITOR_EXECUCAO_IN_CHUNK, async (slice) =>
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("lobby_monitor_posicao")
+              .select(
+                "execucao_id, mesa_identificacao, nome_mesa, tipo_jogo, posicao, qtd_concorrentes_a_frente, concorrentes_a_frente",
+              )
+              .in("execucao_id", slice)
+              .range(from, to),
+          ),
         ),
-      );
+        supabase.from("mesas_spin_cadastro").select("mesa_identificacao, estudio_slug"),
+        supabase.from("estudios_spin").select("slug, nome"),
+      ]);
+
+      const nomeEstudioPorSlug = new Map<string, string>();
+      for (const e of estudiosCad.data ?? []) {
+        const slug = typeof e.slug === "string" ? e.slug.trim() : "";
+        const nome = typeof e.nome === "string" ? e.nome.trim() : "";
+        if (slug && nome) nomeEstudioPorSlug.set(slug, nome);
+      }
+      const nomeEstudioPorMesaSpin = new Map<string, string>();
+      for (const m of mesasCad.data ?? []) {
+        const mid = typeof m.mesa_identificacao === "string" ? m.mesa_identificacao.trim() : "";
+        const estSlug = typeof m.estudio_slug === "string" ? m.estudio_slug.trim() : "";
+        if (!mid || !estSlug) continue;
+        const nomeEst = nomeEstudioPorSlug.get(estSlug);
+        if (nomeEst) nomeEstudioPorMesaSpin.set(mid, nomeEst);
+      }
 
       setExecucoesAll(
         execucoes.map((e) => ({
@@ -104,6 +123,7 @@ export function useLobbyPosicionamentoData(operadoraSlug: string, refDate: Date)
       setPosicoesAll(
         (posRows as LobbyPosicaoRow[]).map((p) => ({
           ...p,
+          nome_estudio: nomeEstudioPorMesaSpin.get(p.mesa_identificacao.trim()) ?? null,
           concorrentes_a_frente: Array.isArray(p.concorrentes_a_frente)
             ? p.concorrentes_a_frente
             : [],

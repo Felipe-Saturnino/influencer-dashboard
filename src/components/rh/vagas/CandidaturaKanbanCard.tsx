@@ -56,11 +56,6 @@ export function CandidaturaKanbanCard({
       }}
     >
       <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 8, fontFamily: FONT.body }}>{c.nome_completo}</div>
-      {(c.email ?? "").trim() ? (
-        <div style={{ ...linhaStyle, marginBottom: 6 }}>
-          <span style={valorStyle}>{(c.email ?? "").trim()}</span>
-        </div>
-      ) : null}
       <div style={linhaStyle}>
         <span style={valorStyle}>{codigo}</span>
       </div>

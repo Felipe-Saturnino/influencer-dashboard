@@ -19,7 +19,7 @@ alwaysApply: false
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
 | Overview Prestador | `src/pages/dashboards/OverviewPrestador/` — `index.tsx`, `useOverviewPrestadorDados.ts`, `OverviewPrestadorFiltroBar.tsx`, `OverviewPrestadorAbaEscala.tsx`; métricas em `lib/overviewPrestadorMetrics.ts` |
-| Overview Spin | `src/pages/dashboards/OverviewSpin/` — `index.tsx` (shell + aba overview layout), `useOverviewSpinDados.ts`, `useOverviewSpinTabelaRows.ts`, `useOverviewSpinComparativos.ts`, `useOverviewSpinKpiExibir.ts`, `OverviewSpinFiltroBar.tsx`, `OverviewSpinKpisConsolidados.tsx`, `OverviewSpinDetalhamentoInterativo.tsx`, `OverviewSpinComparativoJogoInterativo.tsx`, `OverviewSpinMesaDiaTabela.tsx`, `overviewSpinLogic.ts`, `overviewSpinTabs.ts` + `OverviewSpinAbaNav.tsx`, `DashboardPosicionamento/` lazy (`mesas_spin`) |
+| Overview Spin | `src/pages/dashboards/OverviewSpin/` — shell + abas Overview / Estúdio Dedicado / Estúdio Network / Posicionamento; `useOverviewSpinDados.ts` (canal consolidado|dedicado|network), `overviewSpinCanal.ts`, `overviewSpinCatalogo.ts`, `useOverviewSpinCatalogo.ts`, `useOverviewSpinFiltrosAcesso.ts`, FilterBar/AbaNav, KPIs/comparativos, `DashboardPosicionamento/` lazy (`mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
 
 **Marca / FilterBar:** `useDashboardBrand()` + tokens canónicos `--brand-action` / `--brand-contrast` / `--brand-icon-color` — detalhes em **Brand MDC** e tabela abaixo só onde for **analítico**.
@@ -85,15 +85,19 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 
 **Páginas novas nesta secção:** copiar o padrão acima (ícone Lucide + `h1` + `<p>` subtítulo). Regras completas de tipografia e famílias: **Brand MDC §4**. Ao mudar subtítulo, atualizar esta tabela e `geral/Ajuda` (`titulo` = nome do menu).
 
-**Exceção — Overview Spin:** cabeçalho com badge 28×28 à esquerda (ícone + h1 + subtítulo em linha), não o bloco centralizado acima. Motivo: página híbrida com abas Overview + Posicionamento operacional.
+**Exceção — Overview Spin:** cabeçalho com badge 28×28 à esquerda (ícone + h1 + subtítulo em linha), não o bloco centralizado acima. Motivo: página híbrida com abas financeiras + Posicionamento operacional.
 
 ---
 
 ## Overview Spin — Padrões Específicos
 
+- **Quatro abas:** Overview (soma Dedicado + Network) → Estúdio Dedicado (`relatorio_*`) → Estúdio Network (`relatorio_network_*`) → Posicionamento. Visibilidade Dedicado/Network: catálogo Gestão de Estúdios (`useOverviewSpinCatalogo`) — ≥1 mesa do tipo para o escopo; Admin / Ver Sim veem se existir catálogo global.
+- **Filtros (página inteira):** Admin irrestrito; demais perfis via `canView` de `mesas_spin` (Sim = filtro aberto; Próprios = escopo travado). Em Dedicado/Network a lista do select restringe às operadoras com mesa daquele tipo.
 - **Filtro de operadora (referência de produto):** `FiltroOperadoraSelect` na FilterBar — opção agregadora **Todas Operadoras**, ícone Shield no campo (Global + Brand). Não usar como modelo o markup legado de outras páginas.
-- **Duas abas (Overview + Posicionamento)** partilham a mesma FilterBar.
+- **UAP no Overview consolidado:** soma dos UAP de cada canal (não é UAP único entre Dedicado e Network) — documentar em Ajuda.
+- **Abas financeiras** partilham a mesma FilterBar (mês, Histórico, operadora).
 - **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia civil **Brasília** (`hojeIsoBrasil` + `periodoDiaBrasil`), não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData` (`lobby_monitor_*`), nunca do mesmo fetch do Overview; posições carregadas em lotes (`fetchInBatched`) por volume horário.
+- **Posição atual das mesas:** rótulo **`{Nome do Estúdio} - {Nome da Mesa}`** via `labelMesaPosicionamentoRow` (`estudios_spin.nome` + `lobby_monitor_posicao.nome_mesa`); Network aparece no card da operadora quando monitorada (IDs em Gestão de Estúdios).
 - **Posição atual das mesas / Concorrentes à frente / Ranking de concorrentes:** `SectionTitle` com `sub={fmtUltimaAtualizacao(...)}` (`lobbyMonitorHelpers`) — **sem** `<p>` legado abaixo do título.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.

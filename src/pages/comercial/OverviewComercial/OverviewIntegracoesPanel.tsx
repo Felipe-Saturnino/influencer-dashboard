@@ -93,9 +93,17 @@ export function OverviewIntegracoesPanel({
       </div>
 
       <div className="app-grid-2">
-        <div style={pageBox}>
+        <div style={{ ...pageBox, minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
           <SectionTitle sub="Tempo médio até a próxima etapa do funil">SLA por etapa</SectionTitle>
-          <div className="app-grid-kpi-3">
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
             {STATUS_INTEGRACAO_ORDEM.map((st) => (
               <OverviewKpiButton
                 key={st}
@@ -108,7 +116,7 @@ export function OverviewIntegracoesPanel({
             ))}
           </div>
         </div>
-        <div style={pageBox}>
+        <div style={{ ...pageBox, minWidth: 0, maxWidth: "100%" }}>
           <SectionTitle sub="Dedicada x Network">Produto</SectionTitle>
           <OverviewBarList items={tipoBars} t={t} />
         </div>

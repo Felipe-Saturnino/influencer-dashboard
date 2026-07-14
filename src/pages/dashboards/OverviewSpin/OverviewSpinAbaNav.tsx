@@ -1,13 +1,15 @@
 import { FiltroBarTabButton } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
-import { TAB_ICONS_SPIN, TAB_IDS_SPIN, TAB_LABELS_SPIN, type OverviewSpinTab } from "./overviewSpinTabs";
+import { TAB_ICONS_SPIN, TAB_LABELS_SPIN, type OverviewSpinTab } from "./overviewSpinTabs";
 
 export function OverviewSpinAbaNav({
   aba,
   onSelectAba,
+  tabsVisiveis,
 }: {
   aba: OverviewSpinTab;
   onSelectAba: (key: OverviewSpinTab) => void;
+  tabsVisiveis: OverviewSpinTab[];
 }) {
   return (
     <div
@@ -15,7 +17,7 @@ export function OverviewSpinAbaNav({
       aria-label="Seções Overview Spin"
       style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
     >
-      {TAB_IDS_SPIN.map((key) => {
+      {tabsVisiveis.map((key) => {
         const TabIcon = TAB_ICONS_SPIN[key];
         return (
           <FiltroBarTabButton
@@ -25,7 +27,7 @@ export function OverviewSpinAbaNav({
             aria-controls={`panel-overview-spin-${key}`}
             onClick={() => onSelectAba(key)}
             onKeyDown={(e) =>
-              handleFiltroBarTabsArrowKeyDown(e, TAB_IDS_SPIN, key, onSelectAba, "tab-overview-spin-")
+              handleFiltroBarTabsArrowKeyDown(e, tabsVisiveis, key, onSelectAba, "tab-overview-spin-")
             }
             icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
           >

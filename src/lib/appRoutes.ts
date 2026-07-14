@@ -116,6 +116,8 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Simulador de Login", "simulador_login", "SimuladorDeLogin"),
   page("Overview Spin", "mesas_spin", "OverviewSpin", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
+    { tabId: "estudio_dedicado", slug: "EstudioDedicado", label: "Estúdio Dedicado", access: "always" },
+    { tabId: "estudio_network", slug: "EstudioNetwork", label: "Estúdio Network", access: "always" },
     { tabId: "posicionamento", slug: "Posicionamento", label: "Posicionamento", access: "always" },
   ]),
   page("Streamers", "streamers", "Streamers", [

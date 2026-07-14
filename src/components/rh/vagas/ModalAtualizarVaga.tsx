@@ -22,6 +22,7 @@ import { ModalBase, ModalHeader } from "../../OperacoesModal";
 import { orgVinculoDeRow, orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
 import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
 import { CampoTagsVaga } from "./CampoTagsVaga";
+import { formatarMoedaDigitos, centavosInteirosDeStringMoeda } from "../../../lib/rhFuncionarioValidators";
 
 type Theme = {
   text: string;
@@ -84,6 +85,7 @@ export function ModalAtualizarVaga({
   const [dataFimInscricoes, setDataFimInscricoes] = useState("");
   const [descricao, setDescricao] = useState("");
   const [responsabilidades, setResponsabilidades] = useState("");
+  const [repasseInicialCentavos, setRepasseInicialCentavos] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [necessarioVideoApresentacao, setNecessarioVideoApresentacao] = useState(false);
   const [necessarioTurno, setNecessarioTurno] = useState(false);
@@ -129,6 +131,9 @@ export function ModalAtualizarVaga({
     setDataFimInscricoes(dataIsoDateOnly(vaga.data_fim_inscricoes));
     setDescricao(vaga.descricao ?? "");
     setResponsabilidades(vaga.responsabilidades ?? "");
+    setRepasseInicialCentavos(
+      vaga.repasse_inicial_centavos > 0 ? String(Math.trunc(vaga.repasse_inicial_centavos)) : "",
+    );
     setTags(Array.isArray(vaga.tags) ? vaga.tags : []);
     setNecessarioVideoApresentacao(Boolean(vaga.necessario_video_apresentacao));
     setNecessarioTurno(Boolean(vaga.necessario_turno));
@@ -246,6 +251,9 @@ export function ModalAtualizarVaga({
     }
     if (!descricao.trim()) e.descricao = "Informe a descrição.";
     if (!responsabilidades.trim()) e.responsabilidades = "Informe as responsabilidades.";
+    if (centavosInteirosDeStringMoeda(repasseInicialCentavos) <= 0) {
+      e.repasse_inicial = "Informe o repasse inicial.";
+    }
     if (tipoVaga === "externa" && tags.length === 0) e.tags = "Adicione ao menos uma tag.";
     setFieldErr(e);
     return Object.keys(e).length === 0;
@@ -298,6 +306,7 @@ export function ModalAtualizarVaga({
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
+        repasse_inicial_centavos: centavosInteirosDeStringMoeda(repasseInicialCentavos),
         tags: tipoVaga === "externa" ? tags : [],
         ...camposExterna,
         status: "aberta",
@@ -315,6 +324,7 @@ export function ModalAtualizarVaga({
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
+        repasse_inicial_centavos: centavosInteirosDeStringMoeda(repasseInicialCentavos),
         tags: tipoVaga === "externa" ? tags : [],
         ...camposExterna,
       };
@@ -511,6 +521,24 @@ export function ModalAtualizarVaga({
                 {lblReq("atv-fim", "Data fim das inscrições")}
                 <input id="atv-fim" type="date" value={dataFimInscricoes} onChange={(e) => setDataFimInscricoes(e.target.value)} style={inputStyle} />
                 {fieldErr.data_fim ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_fim}</div> : null}
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                {lblReq("atv-repasse", "Repasse inicial")}
+                <input
+                  id="atv-repasse"
+                  type="text"
+                  inputMode="decimal"
+                  value={repasseInicialCentavos ? formatarMoedaDigitos(repasseInicialCentavos) : ""}
+                  onChange={(e) => setRepasseInicialCentavos(e.target.value.replace(/\D/g, ""))}
+                  placeholder="R$ 0,00"
+                  autoComplete="off"
+                  aria-label="Repasse inicial em reais"
+                  style={inputStyle}
+                />
+                {fieldErr.repasse_inicial ? (
+                  <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.repasse_inicial}</div>
+                ) : null}
               </div>
 
               <div style={{ marginBottom: 14 }}>

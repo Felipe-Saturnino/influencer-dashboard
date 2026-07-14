@@ -79,7 +79,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo selecionar operadoras no filtro?",
         texto:
-          "O filtro de operadoras é exibido apenas para usuários com permissão de visualização multi-operadora. Se o seletor não aparecer, seu perfil de acesso está restrito a uma operadora específica, e os dados já estão filtrados automaticamente. Isso é configurado pelo administrador da plataforma.",
+          "O filtro de operadoras aparece para Administrador e para quem tem permissão de Ver **Sim** em Overview Spin (Gestão de Usuários). Com Ver **Próprios**, o seletor não aparece e os dados ficam travados no escopo da operadora. Nas abas Estúdio Dedicado e Estúdio Network, a lista só inclui operadoras com mesas daquele tipo em Gestão de Estúdios.",
+      },
+      {
+        subtitulo: "Não vejo a aba Estúdio Dedicado ou Estúdio Network?",
+        texto:
+          "Essas abas só aparecem quando existe mesa cadastrada do tipo correspondente em Gestão de Estúdios para a(s) operadora(s) do seu escopo (ou no catálogo global se a permissão de Ver for **Sim**). Se a operadora opera só em estúdio network, a aba Estúdio Dedicado fica oculta — e o contrário também.",
       },
     ],
   },

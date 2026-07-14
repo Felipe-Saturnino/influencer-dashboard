@@ -94,10 +94,16 @@ Relatórios PLS (Per table, Daily, UAP por jogo, Monthly) — leitura humana / p
 
 | Tabela | Chave | Conteúdo |
 |--------|-------|----------|
-| `relatorio_daily_summary` | `(data, operadora_slug)` | Turnover, GGR, apostas, UAP **da operadora no dia** |
-| `relatorio_por_tabela` | `(dia, operadora_slug, mesa)` | Métricas por mesa; `operadora` = texto de exibição do print |
-| `relatorio_uap_por_jogo` | `(data, jogo, operadora_slug)` | UAP por vertical de jogo |
-| `relatorio_monthly_summary` | `(mes, operadora_slug)` | UAP mensal (`mes` = `YYYY-MM-01`) |
+| `relatorio_daily_summary` | `(data, operadora_slug)` | Turnover, GGR, apostas, UAP — **Estúdio Dedicado** |
+| `relatorio_por_tabela` | `(dia, operadora_slug, mesa)` | Métricas por mesa dedicada; `operadora` = texto de exibição do print |
+| `relatorio_uap_por_jogo` | `(data, jogo, operadora_slug)` | UAP por vertical — Dedicado |
+| `relatorio_monthly_summary` | `(mes, operadora_slug)` | UAP/ARPU mensal dedicado (`mes` = `YYYY-MM-01`) |
+| `relatorio_network_daily_summary` | `(data, operadora_slug)` | Idem — fatia **Estúdio Network** por operadora parceira |
+| `relatorio_network_por_tabela` | `(dia, operadora_slug, mesa)` | Mesas Network por operadora |
+| `relatorio_network_uap_por_jogo` | `(data, jogo, operadora_slug)` | UAP por vertical — Network |
+| `relatorio_network_monthly_summary` | `(mes, operadora_slug)` | UAP/ARPU mensal Network |
+
+**Overview Spin (UI):** aba Overview = soma Dedicado + Network; Estúdio Dedicado / Estúdio Network leem cada família de tabelas. Nunca carregar Network com slug de estúdio (ex. Sports Club) — só `operadora_slug` de parceiro.
 
 ### Regras de reconciliação (carga)
 

@@ -25,7 +25,10 @@ SELECT slug, nome, ativo FROM integrations WHERE slug IN ('lobby_blaze', 'lobby_
 
 ## 2. IDs das mesas CDA
 
-Executar:
+**Preferido:** Gestão de Estúdios → cada mesa → campo **ID CDA** (grava em `mesas_spin_operadora_identificacao`).  
+Descobrir IDs no F12 → Rede → **`casino-categories`** → `competitions[].id` (provider **GamesGlobal**). Ver [SETUP-MONITOR-LOBBY-CDA.md](./SETUP-MONITOR-LOBBY-CDA.md).
+
+**Legado (mesas dedicadas iniciais):**
 
 `scripts/manual-supabase-mesas-spin-cda-lobby-ids.sql`
 

@@ -33,17 +33,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo por operadora — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página está dividida em duas abas: Overview, com KPIs e detalhamentos financeiros, e Posicionamento, com dados de visibilidade no lobby das operadoras parceiras.",
+          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo por operadora — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página tem quatro abas: **Overview** (soma Dedicado + Network), **Estúdio Dedicado**, **Estúdio Network** e **Posicionamento** (visibilidade no lobby).",
+      },
+      {
+        subtitulo: "Abas Estúdio Dedicado e Estúdio Network",
+        texto:
+          "Estúdio Dedicado mostra só as mesas de estúdios dedicados; Estúdio Network só as de estúdios network (ex.: Sports Club), sempre pela fatia da operadora parceira.\n\nAs abas Dedicado e Network só aparecem se a operadora do seu escopo tiver ao menos uma mesa daquele tipo cadastrada em Gestão de Estúdios. Quem tem permissão de Ver **Sim** vê o filtro completo de operadoras elegíveis; com Ver **Próprios**, o filtro fica travado no escopo. Administrador vê tudo.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas laterais para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por operadora (ex.: Blaze, Casa de Apostas). Com **Todas Operadoras** selecionado no filtro, os valores financeiros são somados entre operadoras.",
+          "Use as setas laterais para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por operadora. Em Estúdio Dedicado / Estúdio Network a lista contém apenas operadoras com mesas daquele tipo. Com **Todas Operadoras**, os valores financeiros são somados entre operadoras visíveis.",
       },
       {
         subtitulo: "KPIs Consolidados",
         texto:
-          "Apresenta os principais indicadores do período: GGR (receita bruta), Turnover (volume apostado), Margem (GGR ÷ Turnover), Apostas (quantidade de rodadas), Aposta Média, UAP (jogadores ativos únicos) e ARPU (GGR ÷ UAP).\n\nO indicador de variação abaixo de cada KPI compara o período atual com o mesmo período do mês anterior (MTD vs MTD). No modo Histórico, a comparação MoM é ocultada e o subtítulo do bloco passa a \"acumulado\".",
+          "Apresenta os principais indicadores do período: GGR (receita bruta), Turnover (volume apostado), Margem (GGR ÷ Turnover), Apostas (quantidade de rodadas), Aposta Média, UAP (jogadores ativos únicos) e ARPU (GGR ÷ UAP).\n\nNa aba Overview, GGR, Turnover e Apostas somam Dedicado e Network. O UAP consolidado é a soma dos UAP de cada canal (não elimina jogadores que jogaram nos dois).\n\nO indicador de variação abaixo de cada KPI compara o período atual com o mesmo período do mês anterior (MTD vs MTD). No modo Histórico, a comparação MoM é ocultada e o subtítulo do bloco passa a \"acumulado\".",
       },
       {
         subtitulo: "Detalhamento Diário / Mensal",
@@ -71,9 +76,9 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Monitora a posição das mesas Spin no lobby das plataformas parceiras. Os dados refletem o dia atual e são atualizados automaticamente ao longo do dia — a navegação por mês e o botão Histórico não se aplicam nesta aba.\n\nOs KPIs mostram: Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição vs o mesmo horário do dia anterior.\n\nA lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓) vs ontem no mesmo horário.\n\n'Concorrentes à frente' lista quantos jogos de outras plataformas aparecem antes de cada tipo de jogo Spin.\n\nO Histórico de Posicionamento exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período.",
       },
       {
-        subtitulo: "Navegação entre abas (Overview e Posicionamento)",
+        subtitulo: "Navegação entre abas",
         texto:
-          "As abas Overview e Posicionamento compartilham a FilterBar de mês/operadora na visão Overview. Com o foco em uma aba, use ← → do teclado para alternar entre elas (padrão tablist).",
+          "As abas compartilham a FilterBar de mês/operadora nas seções financeiras. Com o foco em uma aba, use ← → do teclado para alternar entre as abas visíveis (padrão tablist).",
       },
     ],
   },
@@ -1140,7 +1145,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Conteúdo por aba",
         texto:
-          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Agregadoras** mostra KPIs do funil (sem legenda nos cards), funil, **Produto** Dedicada × Network das marcas vinculadas às agregadoras filtradas, carteira por comercial e **Movimentação recente** em grade 2×2 (→ Conexão, → Negociação, → Fechado, Alterações totais).\n\n**Integrações** mostra totais por status (sem legenda nos cards), **SLA por etapa** (tempo médio: criação → Em andamento; Em andamento → Concluído; criação → Concluído), volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
+          "**Operadoras** mantém KPIs, funil, produto Dedicada/Network, mapa, carteira, novas marcas e movimentação.\n\n**Agregadoras** mostra KPIs do funil (sem legenda nos cards), funil em largura total, carteira por comercial e **Movimentação recente** lado a lado em grade 2×2 (→ Conexão, → Negociação, → Fechado, Alterações totais).\n\n**Integrações** mostra totais por status (sem legenda nos cards), **SLA por etapa** (tempo médio: criação → Em andamento; Em andamento → Concluído; criação → Concluído), volume por Tipo (Dedicada/Network), por Caminho e por Agregador.",
       },
       {
         subtitulo: "Mapa e movimentação",

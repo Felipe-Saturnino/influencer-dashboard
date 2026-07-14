@@ -29,6 +29,7 @@ import {
   execIdsColunaHistorico,
   fmtUltimaAtualizacao,
   SEMANTIC,
+  labelMesaPosicionamentoRow,
 } from "../../../../lib/lobbyMonitorHelpers";
 import { useLobbyPosicionamentoData } from "./useLobbyPosicionamentoData";
 import {
@@ -289,6 +290,7 @@ function PosicaoAtualMesasBlock({
         {mesasOrdenadas.map((m) => {
           const pa = prevMap.get(m.mesa_identificacao) ?? null;
           const d = deltaPosicao(m.posicao, pa);
+          const label = labelMesaPosicionamentoRow(m);
           return (
             <li
               key={m.mesa_identificacao}
@@ -318,17 +320,17 @@ function PosicaoAtualMesasBlock({
               </span>
               <span
                 style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }}
-                title={m.nome_mesa}
+                title={label}
               >
-                {m.nome_mesa}
+                {label}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 2, minWidth: 28, justifyContent: "flex-end" }}>
                 {d == null || d === 0 ? (
                   <Minus size={14} color={SEMANTIC.cinza} aria-label="Sem variação de posição" />
                 ) : d < 0 ? (
-                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label={`${m.nome_mesa} melhorou posição`} />
+                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label={`${label} melhorou posição`} />
                 ) : (
-                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label={`${m.nome_mesa} piorou posição`} />
+                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label={`${label} piorou posição`} />
                 )}
               </span>
             </li>
@@ -481,7 +483,10 @@ function DashboardPosicionamentoOperadora({
   const heatMesas = useMemo(() => mesasOrdenadas.map((m) => m.mesa_identificacao), [mesasOrdenadas]);
 
   const nomeMesaHist = useCallback(
-    (mid: string) => snapshotAtual.find((m) => m.mesa_identificacao === mid)?.nome_mesa ?? mid,
+    (mid: string) => {
+      const row = snapshotAtual.find((m) => m.mesa_identificacao === mid);
+      return row ? labelMesaPosicionamentoRow(row) : mid;
+    },
     [snapshotAtual],
   );
 

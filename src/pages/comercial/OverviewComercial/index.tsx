@@ -421,7 +421,6 @@ export default function OverviewComercial() {
             {aba === "agregadoras" ? (
               <OverviewAgregadorasPanel
                 rows={filteredAgregadoras}
-                marcas={rows}
                 historico={agregadoraHist}
                 comerciais={comerciais}
                 pageBox={pageBox}
