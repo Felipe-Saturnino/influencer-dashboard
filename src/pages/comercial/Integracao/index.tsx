@@ -97,7 +97,7 @@ export default function Integracao() {
   const [marcasFechadas, setMarcasFechadas] = useState<MarcaFechadaOpcao[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<{ col: TableColIntegracao; dir: SortDir }>({
-    col: "operador",
+    col: "status",
     dir: "asc",
   });
 

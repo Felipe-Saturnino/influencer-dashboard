@@ -11,6 +11,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
  *
  * Na CDA as mesas Spin aparecem como provider "GamesGlobal" — usar mesa_identificacao_operadora
  * = competition.id (ex.: 3304) ou externalIdentifier.identifier (ex.: 62082).
+ *
+ * Fontes de ID (união, dedupe por mesa Spin):
+ * 1. `mesas_spin_operadora_identificacao` onde operadora_slug = casa_apostas (Gestão de Estúdios — ID CDA)
+ * 2. Legado: `mesas_spin_cadastro.operadora_slug = casa_apostas` + coluna mesa_identificacao_operadora
  */
 
 const OPERADORA_SLUG = "casa_apostas";
@@ -39,6 +43,112 @@ interface MesaCadastro {
   tipo_jogo: string;
   mesa_identificacao: string;
   mesa_identificacao_operadora: string | null;
+}
+
+interface MesaCadastroComId extends MesaCadastro {
+  id?: string;
+}
+
+type JunctionEmbed = {
+  mesa_id: string;
+  mesa_identificacao_operadora: string | null;
+  mesas_spin_cadastro:
+    | {
+        nome_mesa: string;
+        tipo_jogo: string;
+        mesa_identificacao: string;
+      }
+    | {
+        nome_mesa: string;
+        tipo_jogo: string;
+        mesa_identificacao: string;
+      }[]
+    | null;
+};
+
+function unwrapCadastroEmbed(
+  emb: JunctionEmbed["mesas_spin_cadastro"],
+): { nome_mesa: string; tipo_jogo: string; mesa_identificacao: string } | null {
+  if (!emb) return null;
+  const row = Array.isArray(emb) ? emb[0] : emb;
+  if (!row?.mesa_identificacao?.trim()) return null;
+  return row;
+}
+
+/**
+ * Une IDs CDA da Gestão de Estúdios (junction N:N) com o cadastro legado por operadora_slug.
+ * Preferência: ID na junction; se a mesma mesa Spin já estiver no mapa, não duplica.
+ */
+function mergeMesasMonitorCda(
+  junctionRows: JunctionEmbed[],
+  legadoRows: MesaCadastroComId[],
+): MesaCadastro[] {
+  const bySpinId = new Map<string, MesaCadastro>();
+
+  for (const j of junctionRows) {
+    const idOp = j.mesa_identificacao_operadora?.trim();
+    if (!idOp) continue;
+    const cad = unwrapCadastroEmbed(j.mesas_spin_cadastro);
+    if (!cad) continue;
+    const spinId = cad.mesa_identificacao.trim();
+    if (!spinId) continue;
+    bySpinId.set(spinId, {
+      nome_mesa: cad.nome_mesa,
+      tipo_jogo: cad.tipo_jogo,
+      mesa_identificacao: spinId,
+      mesa_identificacao_operadora: idOp,
+    });
+  }
+
+  for (const m of legadoRows) {
+    const spinId = m.mesa_identificacao?.trim();
+    if (!spinId) continue;
+    if (bySpinId.has(spinId)) continue;
+    const idOp = m.mesa_identificacao_operadora?.trim();
+    if (!idOp) continue;
+    bySpinId.set(spinId, {
+      nome_mesa: m.nome_mesa,
+      tipo_jogo: m.tipo_jogo,
+      mesa_identificacao: spinId,
+      mesa_identificacao_operadora: idOp,
+    });
+  }
+
+  return [...bySpinId.values()].sort((a, b) =>
+    a.nome_mesa.localeCompare(b.nome_mesa, "pt-BR")
+  );
+}
+
+async function carregarMesasMonitorCda(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+): Promise<{ mesas: MesaCadastro[]; erro: string | null }> {
+  const [juncRes, legadoRes] = await Promise.all([
+    supabase
+      .from("mesas_spin_operadora_identificacao")
+      .select(
+        "mesa_id, mesa_identificacao_operadora, mesas_spin_cadastro(nome_mesa, tipo_jogo, mesa_identificacao)",
+      )
+      .eq("operadora_slug", OPERADORA_SLUG),
+    supabase
+      .from("mesas_spin_cadastro")
+      .select("id, nome_mesa, tipo_jogo, mesa_identificacao, mesa_identificacao_operadora")
+      .eq("operadora_slug", OPERADORA_SLUG)
+      .order("nome_mesa"),
+  ]);
+
+  if (juncRes.error) {
+    return { mesas: [], erro: juncRes.error.message };
+  }
+  if (legadoRes.error) {
+    return { mesas: [], erro: legadoRes.error.message };
+  }
+
+  const mesas = mergeMesasMonitorCda(
+    (juncRes.data ?? []) as JunctionEmbed[],
+    (legadoRes.data ?? []) as MesaCadastroComId[],
+  );
+  return { mesas, erro: null };
 }
 
 interface CdaExternalId {
@@ -398,22 +508,17 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
   const inicioMs = Date.now();
 
-  const { data: mesas, error: mesasErr } = await supabase
-    .from("mesas_spin_cadastro")
-    .select("nome_mesa, tipo_jogo, mesa_identificacao, mesa_identificacao_operadora")
-    .eq("operadora_slug", OPERADORA_SLUG)
-    .order("nome_mesa");
-
-  if (mesasErr) {
-    return json({ ok: false, erro: mesasErr.message }, req, 500);
+  const { mesas: mesasList, erro: mesasLoadErr } = await carregarMesasMonitorCda(supabase);
+  if (mesasLoadErr) {
+    return json({ ok: false, erro: mesasLoadErr }, req, 500);
   }
 
-  const mesasList = (mesas ?? []) as MesaCadastro[];
   if (mesasList.length === 0) {
     return json({
       ok: false,
       status: "erro_config",
-      erro: `Nenhuma mesa em mesas_spin_cadastro para operadora ${OPERADORA_SLUG}`,
+      erro:
+        `Nenhuma mesa CDA com ID: preencha ID CDA em Gestão de Estúdios (mesas_spin_operadora_identificacao) ou legado mesas_spin_cadastro.operadora_slug=${OPERADORA_SLUG}`,
     }, req, 200);
   }
 

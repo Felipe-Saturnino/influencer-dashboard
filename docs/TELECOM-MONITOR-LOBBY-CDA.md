@@ -50,6 +50,16 @@ Criar um arquivo de ambiente no servidor da Telecom (ex.: `.env.monitor-cda`) �
 
 Recomendação: revisar o cookie **pelo menos 1× por semana** ou ao primeiro 401 consecutivo.
 
+### Como achar IDs das mesas (mesmo request)
+
+No mesmo F12 → Rede → **`casino-categories`** → **Resposta**:
+
+- Cada categoria tem `competitions[]`
+- Mesas Spin: `providerName` = **GamesGlobal**
+- Cadastrar em Gestão de Estúdios (ID CDA) o campo **`id`** da competition (ex. `3304`)
+
+Cadastro na plataforma (Spin): Gestão de Estúdios → mesa → ID CDA. O monitor passa a incluir mesas dedicadas **e** Network com esse ID preenchido.
+
 ---
 
 ## Comandos
@@ -66,7 +76,7 @@ node monitor-lobby-cda-run.mjs --dry-run
 
 - `Edge HTTP 200`
 - JSON com `"dry_run": true`
-- `"mesas_encontradas": 5` (ou o número de mesas cadastradas)
+- `"mesas_encontradas": 5` (ou o número de mesas com ID CDA no cadastro — dedicadas + Network)
 - `"status": "ok"` (ou `"parcial"` se alguma mesa não aparecer no lobby)
 
 ### 2) Produção (grava snapshot)
