@@ -34,7 +34,8 @@ export type AppRouteTabAccess =
   | "galeria_upload"
   | "academy_gerenciamento"
   | "academy_configuracao"
-  | "academy_portal_gerenciamento";
+  | "academy_portal_gerenciamento"
+  | "calendario_relatorio_presenca";
 
 export type AppRouteTabDefFull = AppRouteTabDef & {
   access: AppRouteTabAccess;
@@ -151,6 +152,12 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Calendário", "rh_calendario", "Calendario", [
     { tabId: "compromissos", slug: "Compromissos", label: "Compromissos", access: "always" },
     { tabId: "presenca", slug: "ControleDePresenca", label: "Controle de Presença", access: "always" },
+    {
+      tabId: "relatorio",
+      slug: "RelatorioDePresenca",
+      label: "Relatório de Presença",
+      access: "calendario_relatorio_presenca",
+    },
   ]),
   page("Marketplace", "escala_marketplace_turnos", "Marketplace", [
     { tabId: "todas", slug: "TodasAsOfertas", label: "Todas as Ofertas", access: "always" },
@@ -426,6 +433,8 @@ export function isTabAllowedForUser(
       return podeExecutarPerm(acoes.academy_performance_hub?.criar ?? null);
     case "academy_portal_gerenciamento":
       return podeExecutarPerm(acoes.academy_portal?.editar ?? null);
+    case "calendario_relatorio_presenca":
+      return podeExecutarPerm(acoes.rh_calendario?.editar ?? null);
     default:
       return true;
   }

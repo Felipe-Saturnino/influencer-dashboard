@@ -1201,6 +1201,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e alinhado à conta Auth. A leitura do ponto usa o vínculo RH ↔ Auth; com e-mail pessoal e e-mail Spin em contas diferentes, a correção exige a migration de `funcionario_id` no ponto e o deploy da função **prestador-ponto**. Depois de aplicar, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
       },
+      {
+        subtitulo: "Não vejo a aba Relatório de Presença?",
+        texto:
+          "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar** no Calendário (Gestão de Usuários → Permissões). Administradores vêem sempre. Sem essa permissão, usam-se só **Compromissos** e **Controle de Presença**.",
+      },
     ],
   },
   escala_marketplace_turnos: {

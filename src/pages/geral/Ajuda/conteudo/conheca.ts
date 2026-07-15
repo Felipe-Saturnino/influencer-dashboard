@@ -670,6 +670,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Na aba **Controle de Presença**, cada linha é o **turno** do dia na escala — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na **mesma linha** do dia do check-in.\n\nO botão **Fazer Check-out** permanece disponível por **20 horas** após o check-in. Se não houver check-out nesse período, o sistema assume esquecimento e libera **Fazer Check-in** para o próximo turno. Turnos incompletos podem ser tratados com **Justificar** (motivo Esquecimento).",
       },
+      {
+        subtitulo: "Relatório de Presença",
+        texto:
+          "Aba disponível apenas com permissão de **Editar** no Calendário (Gestão de Usuários → Permissões). Use o carrossel de **dia** e o filtro de **time** para ver o Controle de Presença de todos os prestadores daquele time no dia selecionado — as colunas são as mesmas da aba mensal, com **Prestador** no lugar de **Data**.",
+      },
     ],
   },
   escala_marketplace_turnos: {
