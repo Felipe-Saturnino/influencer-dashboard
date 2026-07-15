@@ -1204,7 +1204,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo a aba Relatório de Presença?",
         texto:
-          "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar** no Calendário (Gestão de Usuários → Permissões). Administradores vêem sempre. Sem essa permissão, usam-se só **Compromissos** e **Controle de Presença**.",
+          "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar** no Calendário (Gestão de Usuários → Permissões → linha Calendário → coluna Editar). Escolha **Sim** ou **Próprios** e salve. Administradores vêem sempre. Sem essa permissão, usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
       },
     ],
   },
