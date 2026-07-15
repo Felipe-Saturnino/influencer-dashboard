@@ -9,6 +9,7 @@ import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers"
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { supabase } from "../../../lib/supabase"
+import { fetchLiveResultadosBatched } from "../../../lib/supabasePaginate"
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail"
 import type { CicloPagamento, PagamentoStatus } from "../../../types"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
@@ -88,8 +89,9 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     const liveIds = livesFiltradas.map((l) => l.id);
     let resultados: FinanceiroLiveResultadoRow[] = [];
     if (liveIds.length > 0) {
-      const { data: resData } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIds);
-      resultados = (resData ?? []) as FinanceiroLiveResultadoRow[];
+      resultados = (await fetchLiveResultadosBatched(liveIds, async (ids) =>
+        await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", ids),
+      )) as FinanceiroLiveResultadoRow[];
     }
 
     const horasPorPar: Record<string, { horas: number; qtd: number }> = {};
@@ -189,10 +191,11 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     let pagsFinais: FinanceiroPagamentoDbRow[] = pagsList;
     if (livesSemPagamento.length > 0) {
       const liveIdsSync = livesSemPagamento.map((l) => l.id);
-      const { data: resSync } = await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", liveIdsSync);
+      const resSyncList = (await fetchLiveResultadosBatched(liveIdsSync, async (ids) =>
+        await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", ids),
+      )) as FinanceiroLiveResultadoRow[];
       const horasPorPar: Record<string, number> = {};
       const keySync = (inf: string, op: string) => `${inf}::${op}`;
-      const resSyncList = (resSync ?? []) as FinanceiroLiveResultadoRow[];
       for (const live of livesSemPagamento) {
         const res = resSyncList.find((r) => String(r.live_id) === String(live.id));
         if (res) {
@@ -202,10 +205,20 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           horasPorPar[k] = (horasPorPar[k] ?? 0) + horas;
         }
       }
+      const influencerIdsSync = [...new Set(Object.keys(horasPorPar).map((k) => k.split("::")[0]!))];
+      const cachePorInfluencer: Record<string, number> = {};
+      if (influencerIdsSync.length > 0) {
+        const { data: perfisSync } = await supabase
+          .from("influencer_perfil")
+          .select("id, cache_hora")
+          .in("id", influencerIdsSync);
+        for (const p of (perfisSync ?? []) as Array<{ id: string; cache_hora: number | null }>) {
+          cachePorInfluencer[p.id] = p.cache_hora ?? 0;
+        }
+      }
       for (const [parKey, horas] of Object.entries(horasPorPar)) {
         const [influencer_id, operadora_slug] = parKey.split("::");
-        const { data: perfil } = await supabase.from("influencer_perfil").select("cache_hora").eq("id", influencer_id).single();
-        const cache_hora = perfil?.cache_hora ?? 0;
+        const cache_hora = cachePorInfluencer[influencer_id!] ?? 0;
         const total = Math.round(horas * cache_hora * 100) / 100;
         await supabase.from("pagamentos").upsert({
           ciclo_id: c.id, influencer_id, operadora_slug,
@@ -222,8 +235,9 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     const liveIds = livesCicloList.map((l) => l.id);
     let resultados: { live_id: string | number }[] = [];
     if (liveIds.length > 0) {
-      const { data: resData } = await supabase.from("live_resultados").select("live_id").in("live_id", liveIds);
-      resultados = (resData ?? []) as { live_id: string | number }[];
+      resultados = (await fetchLiveResultadosBatched(liveIds, async (ids) =>
+        await supabase.from("live_resultados").select("live_id").in("live_id", ids),
+      )) as { live_id: string | number }[];
     }
     const qtdPorPar: Record<string, number> = {};
     const key = (inf: string, op: string) => `${inf}::${op}`;

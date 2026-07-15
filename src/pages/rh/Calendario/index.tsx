@@ -1149,7 +1149,24 @@ export default function RhCalendarioPage() {
       }
       if (cancelled) return;
       setLoadingPontoMes(false);
-      setPontoMesLinhas(hadError && merged.length === 0 ? [] : merged);
+      if (hadError && merged.length === 0) {
+        setPontoMesLinhas([]);
+        return;
+      }
+      // Preserva horários já vistos (ex.: otimista pós check-in) se a RPC ainda vier sem o user_id certo.
+      setPontoMesLinhas((prev) => {
+        const prevPorDia = new Map(prev.map((r) => [r.dia_sp.slice(0, 10), r]));
+        return merged.map((r) => {
+          const key = r.dia_sp.slice(0, 10);
+          const ant = prevPorDia.get(key);
+          if (!ant) return r;
+          return {
+            ...r,
+            check_in_at: r.check_in_at ?? ant.check_in_at,
+            check_out_at: r.check_out_at ?? ant.check_out_at,
+          };
+        });
+      });
     })();
     return () => {
       cancelled = true;
@@ -1928,6 +1945,35 @@ export default function RhCalendarioPage() {
       const res = await registrarPrestadorPonto(tok);
       if (res.ok && res.estado) {
         setPontoEstado(res.estado);
+        const diaRegistro = String(
+          res.registro?.diaSp ?? res.estado.turnoDiaSp ?? res.estado.diaSp ?? "",
+        ).slice(0, 10);
+        const createdAtReg = res.registro?.createdAt ?? new Date().toISOString();
+        if (diaRegistro && (tipoRegistro === "check_in" || tipoRegistro === "check_out")) {
+          // Atualização otimista: evita tela vazia se a RPC ainda resolver Auth pelo e-mail errado.
+          setPontoMesLinhas((prev) => {
+            const idx = prev.findIndex((r) => r.dia_sp.slice(0, 10) === diaRegistro);
+            if (idx >= 0) {
+              const cur = prev[idx]!;
+              const next = [...prev];
+              next[idx] = {
+                ...cur,
+                check_in_at:
+                  tipoRegistro === "check_in" ? createdAtReg : cur.check_in_at ?? createdAtReg,
+                check_out_at: tipoRegistro === "check_out" ? createdAtReg : cur.check_out_at,
+              };
+              return next;
+            }
+            return [
+              ...prev,
+              {
+                dia_sp: diaRegistro,
+                check_in_at: tipoRegistro === "check_in" ? createdAtReg : null,
+                check_out_at: tipoRegistro === "check_out" ? createdAtReg : null,
+              },
+            ];
+          });
+        }
         setPontoMesTick((x) => x + 1);
         if (tipoRegistro === "check_in" || tipoRegistro === "check_out") {
           const agora = new Date();

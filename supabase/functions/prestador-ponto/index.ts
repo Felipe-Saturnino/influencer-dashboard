@@ -346,8 +346,10 @@ serve(async (req) => {
       )
     }
 
+    const createdAt = new Date().toISOString()
     const { error: insErr } = await svc.from('prestador_ponto_registros').insert({
       user_id: userId,
+      funcionario_id: rhFid,
       tipo: proximoTipo,
       dia_sp: turnoDiaSp,
       client_ip: ip,
@@ -365,7 +367,12 @@ serve(async (req) => {
       JSON.stringify({
         ok: true,
         estado: estadoPos,
-        registro: { tipo: proximoTipo, diaSp: turnoDiaSp },
+        registro: {
+          tipo: proximoTipo,
+          diaSp: turnoDiaSp,
+          createdAt,
+          funcionarioId: rhFid,
+        },
       }),
       {
         status: 200,

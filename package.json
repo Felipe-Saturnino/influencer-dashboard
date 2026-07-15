@@ -11,6 +11,7 @@
     "build": "npm run typecheck && vite build",
     "typecheck": "tsc --noEmit",
     "analyze": "npm run typecheck && vite build --mode analyze",
+    "check:bundle": "node scripts/check-bundle-budgets.mjs",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
@@ -18,7 +19,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:related": "vitest related --run",
-    "ci": "npm run lint && npm run test && npm run build",
+    "ci": "npm run lint && npm run test && npm run build && npm run check:bundle",
     "precommit": "lint-staged",
     "prepare": "node scripts/install-git-hooks.mjs"
   },

@@ -1196,6 +1196,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar após o deploy da função **prestador-ponto**, peça ao suporte para revisar registros antigos gravados no dia civil errado.",
       },
+      {
+        subtitulo: "O pop-up confirma o check-in, mas o horário realizado não aparece?",
+        texto:
+          "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e alinhado à conta Auth. A leitura do ponto usa o vínculo RH ↔ Auth; com e-mail pessoal e e-mail Spin em contas diferentes, a correção exige a migration de `funcionario_id` no ponto e o deploy da função **prestador-ponto**. Depois de aplicar, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
+      },
     ],
   },
   escala_marketplace_turnos: {

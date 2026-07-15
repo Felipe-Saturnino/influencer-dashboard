@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- Provider + hook useApp no mesmo módulo (padrão do projeto). */
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from "react";
 import { User, PageKey, PermissaoValor, Role } from "../types";
 import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
@@ -882,101 +882,104 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   // Wrapper de setUser que também carrega permissões e escopos
-  async function setUser(u: User | null) {
-    if (u) {
-      // Login explícito — reinicia o timer de inatividade (evita logout imediato com timestamp stale no localStorage).
-      writeIdleSessionLastActivity(Date.now());
-    }
-    setUserState(u);
-    userRef.current = u;
-    if (u) {
-      try {
-        const escopos = await carregarEscoposVisiveis(u.id, u.role);
-        const [perms, acoes] = await Promise.all([
-          carregarPermissoes(u.role, {
-            operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
-            prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
-          }),
-          carregarPermissoesAcoes(u.role),
-        ]);
-        setPermissionsReais(perms);
-        setPermissionsAcoesReais(acoes);
-        setEscoposReais(escopos);
-        const rolesSimulador = podeVerSimuladorLoginMapa(u.role, perms)
-          ? await carregarRolesSimulaveisParaViewer(u.role)
-          : [];
-        setSimuladorRolesPermitidos(rolesSimulador);
-        simuladorRolesPermitidosRef.current = rolesSimulador;
-        const savedSim = readSimulacaoSession(rolesSimulador);
-        if (savedSim && podeVerSimuladorLoginMapa(u.role, perms)) {
-          await tentarRestaurarSimulacaoSessao(u, perms, rolesSimulador);
-        } else {
-          writeSimulacaoSession(null);
-          setSimulacaoLogin(null);
-          simulacaoLoginRef.current = null;
-          effectiveRoleRef.current = u.role;
-          setEscoposVisiveis(escopos);
-          if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
-            await syncOperadoraBrandState(
-              escopos.operadorasVisiveis[0],
-              setOperadoraBrand,
-              setOperadoraHomeReady,
-            );
+  const setUser = useCallback(
+    async (u: User | null) => {
+      if (u) {
+        // Login explícito — reinicia o timer de inatividade (evita logout imediato com timestamp stale no localStorage).
+        writeIdleSessionLastActivity(Date.now());
+      }
+      setUserState(u);
+      userRef.current = u;
+      if (u) {
+        try {
+          const escopos = await carregarEscoposVisiveis(u.id, u.role);
+          const [perms, acoes] = await Promise.all([
+            carregarPermissoes(u.role, {
+              operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
+              prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
+            }),
+            carregarPermissoesAcoes(u.role),
+          ]);
+          setPermissionsReais(perms);
+          setPermissionsAcoesReais(acoes);
+          setEscoposReais(escopos);
+          const rolesSimulador = podeVerSimuladorLoginMapa(u.role, perms)
+            ? await carregarRolesSimulaveisParaViewer(u.role)
+            : [];
+          setSimuladorRolesPermitidos(rolesSimulador);
+          simuladorRolesPermitidosRef.current = rolesSimulador;
+          const savedSim = readSimulacaoSession(rolesSimulador);
+          if (savedSim && podeVerSimuladorLoginMapa(u.role, perms)) {
+            await tentarRestaurarSimulacaoSessao(u, perms, rolesSimulador);
+          } else {
+            writeSimulacaoSession(null);
+            setSimulacaoLogin(null);
+            simulacaoLoginRef.current = null;
+            effectiveRoleRef.current = u.role;
+            setEscoposVisiveis(escopos);
+            if (u.role === "operador" && escopos.operadorasVisiveis[0]) {
+              await syncOperadoraBrandState(
+                escopos.operadorasVisiveis[0],
+                setOperadoraBrand,
+                setOperadoraHomeReady,
+              );
+            }
+            setPermissions(perms);
+            setPermissionsAcoes(acoes);
+            syncAuthRefs(u, perms, acoes);
           }
-          setPermissions(perms);
-          setPermissionsAcoes(acoes);
-          syncAuthRefs(u, perms, acoes);
-        }
 
-        const pendingReturn = sessionStorage.getItem(PENDING_RETURN_PATH_KEY);
-        if (pendingReturn) {
-          sessionStorage.removeItem(PENDING_RETURN_PATH_KEY);
-          try {
-            const url = new URL(pendingReturn, window.location.origin);
-            syncHistory(`${url.pathname}${url.search}`, true);
-          } catch {
-            syncHistory(pendingReturn, true);
+          const pendingReturn = sessionStorage.getItem(PENDING_RETURN_PATH_KEY);
+          if (pendingReturn) {
+            sessionStorage.removeItem(PENDING_RETURN_PATH_KEY);
+            try {
+              const url = new URL(pendingReturn, window.location.origin);
+              syncHistory(`${url.pathname}${url.search}`, true);
+            } catch {
+              syncHistory(pendingReturn, true);
+            }
           }
-        }
 
-        const params = new URLSearchParams(window.location.search);
-        const afterLogin = params.get("after_login")?.trim();
-        if (afterLogin === "rh_dados_cadastro") {
-          syncHistory(buildAppPath("rh_dados_cadastro"), true);
-        } else if (params.toString()) {
-          syncHistory(window.location.pathname, true);
+          const params = new URLSearchParams(window.location.search);
+          const afterLogin = params.get("after_login")?.trim();
+          if (afterLogin === "rh_dados_cadastro") {
+            syncHistory(buildAppPath("rh_dados_cadastro"), true);
+          } else if (params.toString()) {
+            syncHistory(window.location.pathname, true);
+          }
+        } catch (err) {
+          console.error("Erro ao carregar permissões/escopos após login:", err);
+          const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
+          const emptyAcoes = emptyAcoesMapa();
+          setPermissions(emptyPerms);
+          setPermissionsAcoes(emptyAcoes);
+          setEscoposVisiveis(ESCOPOS_VAZIOS);
+          syncAuthRefs(u, emptyPerms, emptyAcoes);
         }
-      } catch (err) {
-        console.error("Erro ao carregar permissões/escopos após login:", err);
+        setRouteReady(true);
+        applyPathFromLocation({ replace: true });
+      } else {
         const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
         const emptyAcoes = emptyAcoesMapa();
         setPermissions(emptyPerms);
         setPermissionsAcoes(emptyAcoes);
+        setPermissionsReais(emptyPerms);
+        setPermissionsAcoesReais(emptyAcoes);
+        setEscoposReais(ESCOPOS_VAZIOS);
         setEscoposVisiveis(ESCOPOS_VAZIOS);
-        syncAuthRefs(u, emptyPerms, emptyAcoes);
+        setSimulacaoLogin(null);
+        simulacaoLoginRef.current = null;
+        setSimuladorRolesPermitidos([]);
+        simuladorRolesPermitidosRef.current = [];
+        writeSimulacaoSession(null);
+        syncAuthRefs(null, emptyPerms, emptyAcoes);
+        setLayoutView("app");
+        setRouteReady(true);
+        syncHistory(buildLoginPath(), true);
       }
-      setRouteReady(true);
-      applyPathFromLocation({ replace: true });
-    } else {
-      const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
-      const emptyAcoes = emptyAcoesMapa();
-      setPermissions(emptyPerms);
-      setPermissionsAcoes(emptyAcoes);
-      setPermissionsReais(emptyPerms);
-      setPermissionsAcoesReais(emptyAcoes);
-      setEscoposReais(ESCOPOS_VAZIOS);
-      setEscoposVisiveis(ESCOPOS_VAZIOS);
-      setSimulacaoLogin(null);
-      simulacaoLoginRef.current = null;
-      setSimuladorRolesPermitidos([]);
-      simuladorRolesPermitidosRef.current = [];
-      writeSimulacaoSession(null);
-      syncAuthRefs(null, emptyPerms, emptyAcoes);
-      setLayoutView("app");
-      setRouteReady(true);
-      syncHistory(buildLoginPath(), true);
-    }
-  }
+    },
+    [applyPathFromLocation, tentarRestaurarSimulacaoSessao],
+  );
 
   useEffect(() => {
     // Carrega fontes
@@ -1110,14 +1113,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [escoposVisiveis],
   );
 
-  const setTheme = (v: boolean) => {
+  const setTheme = useCallback((v: boolean) => {
     if (effectiveRole === "operador") return; // Operador travado em Dark
     setIsDark(v);
-  };
+  }, [effectiveRole]);
 
-  return (
-    <AppContext.Provider value={{
-      user, setUser, checking, routeReady,
+  const contextValue = useMemo<AppContextValue>(
+    () => ({
+      user,
+      setUser,
+      checking,
+      routeReady,
       effectiveRole,
       simulacaoLogin,
       simulacaoSomenteLeitura,
@@ -1127,13 +1133,61 @@ export function AppProvider({ children }: { children: ReactNode }) {
       encerrarSimulacaoLogin,
       permissionsReais,
       permissionsAcoesReais,
-      activePage, activeTabSlug, layoutView, setActivePage, navigateTo, applyPathFromLocation, goToSemAcesso,
-      permissions, permissionsAcoes, setPermissions,
-      escoposVisiveis, podeVerInfluencer, podeVerOperadora,
+      activePage,
+      activeTabSlug,
+      layoutView,
+      setActivePage,
+      navigateTo,
+      applyPathFromLocation,
+      goToSemAcesso,
+      permissions,
+      permissionsAcoes,
+      setPermissions,
+      escoposVisiveis,
+      podeVerInfluencer,
+      podeVerOperadora,
       operadoraBrand,
       operadoraHomeReady,
-      theme, isDark: effectiveIsDark, setIsDark: setTheme,
-    }}>
+      theme,
+      isDark: effectiveIsDark,
+      setIsDark: setTheme,
+    }),
+    [
+      user,
+      setUser,
+      checking,
+      routeReady,
+      effectiveRole,
+      simulacaoLogin,
+      simulacaoSomenteLeitura,
+      podeAcessarSimuladorLogin,
+      simuladorRolesPermitidos,
+      iniciarSimulacaoLogin,
+      encerrarSimulacaoLogin,
+      permissionsReais,
+      permissionsAcoesReais,
+      activePage,
+      activeTabSlug,
+      layoutView,
+      setActivePage,
+      navigateTo,
+      applyPathFromLocation,
+      goToSemAcesso,
+      permissions,
+      permissionsAcoes,
+      escoposVisiveis,
+      podeVerInfluencer,
+      podeVerOperadora,
+      operadoraBrand,
+      operadoraHomeReady,
+      theme,
+      effectiveIsDark,
+      setTheme,
+    ],
+  );
+
+  return (
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

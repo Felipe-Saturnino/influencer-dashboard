@@ -7,7 +7,11 @@ import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
+
+const LIVE_RESULTADO_COLS =
+  "id, live_id, duracao_horas, duracao_min, media_views, max_views, created_at, updated_at";
 import {
   X, Pencil, Calendar, User, ChevronLeft, ChevronRight, Loader2,
 } from "lucide-react";
@@ -407,19 +411,22 @@ export default function Feedback() {
       const allIds = visiveis.map(l => l.id);
       const resMapAll: Record<string, LiveResultado> = {};
       if (allIds.length > 0) {
-        const { data: resAll } = await supabase.from("live_resultados").select("*").in("live_id", allIds);
-        if (resAll) resAll.forEach((r: LiveResultado) => { resMapAll[r.live_id] = r; });
+        const resAll = await fetchLiveResultadosBatched(allIds, async (ids) =>
+          await supabase.from("live_resultados").select(LIVE_RESULTADO_COLS).in("live_id", ids),
+        );
+        resAll.forEach((r) => {
+          resMapAll[(r as LiveResultado).live_id] = r as LiveResultado;
+        });
       }
       setResultadosAll(resMapAll);
 
       const filtered = statusFiltro === "todos" ? visiveis : visiveis.filter(l => l.status === statusFiltro);
       setLives(filtered);
 
-      const filteredIds = filtered.map(l => l.id);
       const resMap: Record<string, LiveResultado> = {};
-      if (filteredIds.length > 0) {
-        const { data: resData } = await supabase.from("live_resultados").select("*").in("live_id", filteredIds);
-        if (resData) resData.forEach((r: LiveResultado) => { resMap[r.live_id] = r; });
+      for (const l of filtered) {
+        const row = resMapAll[l.id];
+        if (row) resMap[l.id] = row;
       }
       setResultados(resMap);
     }

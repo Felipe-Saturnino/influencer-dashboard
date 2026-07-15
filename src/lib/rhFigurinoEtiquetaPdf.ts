@@ -1,9 +1,9 @@
-import { jsPDF } from "jspdf";
 import type { RhFigurinoPeca } from "../pages/estudio/Figurinos/types";
 
-/** Etiqueta ~10×5 cm (mm), geração 100% no cliente. */
+/** Etiqueta ~10×5 cm (mm), geração 100% no cliente. jspdf só carrega no download. */
 export async function baixarEtiquetaFigurinoPdf(peca: RhFigurinoPeca, estudiosTexto: string): Promise<void> {
-  const JsBarcode = (await import("jsbarcode")).default;
+  const [{ jsPDF }, JsBarcodeMod] = await Promise.all([import("jspdf"), import("jsbarcode")]);
+  const JsBarcode = JsBarcodeMod.default;
   const canvas = document.createElement("canvas");
   JsBarcode(canvas, peca.barcode, {
     format: "CODE128",

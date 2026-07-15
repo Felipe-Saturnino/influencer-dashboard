@@ -1,5 +1,3 @@
-import QRCode from "qrcode";
-
 export type SpinQrFrameVariant = "dark" | "light";
 
 const FRAME_W = 600;
@@ -137,6 +135,7 @@ export async function renderSpinBrandedQrToCanvas(
   roundRectPath(ctx, qrLeft, qrTop, QR_BOX, QR_BOX, QR_BOX_R);
   ctx.fill();
 
+  const QRCode = (await import("qrcode")).default;
   const qrCanvas = document.createElement("canvas");
   const qrInner = 232;
   await QRCode.toCanvas(qrCanvas, link, {
