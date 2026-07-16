@@ -313,7 +313,7 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     const linhasAg = await buscarLinhasAgente(c);
 
     setRows([...linhasInf, ...linhasAg]);
-  }, [buscarLinhasAgente, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
+  }, [buscarLinhasAgente, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp]);
 
   const carregarDados = useCallback(async (c: CicloPagamento) => {
     setLoading(true);
