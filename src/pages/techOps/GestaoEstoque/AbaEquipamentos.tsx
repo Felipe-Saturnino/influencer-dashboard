@@ -18,6 +18,7 @@ import {
   ESTOQUE_EQUIP_CATEGORIA_LABEL,
   ESTOQUE_EQUIP_STATUS_COLOR,
   ESTOQUE_EQUIP_STATUS_LABEL,
+  proximoCodigoEstoque,
   type EstoqueEquipamentoRow,
   type EstoqueEquipStatus,
 } from "../../../lib/techOpsEstoque";
@@ -262,7 +263,13 @@ export function AbaEquipamentos({
         )}
       </div>
 
-      {novoAberto ? <ModalNovoEquipamentoEstoque onClose={() => setNovoAberto(false)} onCriado={onReload} /> : null}
+      {novoAberto ? (
+        <ModalNovoEquipamentoEstoque
+          proximoCodigo={proximoCodigoEstoque("EQP", rows)}
+          onClose={() => setNovoAberto(false)}
+          onCriado={onReload}
+        />
+      ) : null}
 
       {editRow ? (
         <ModalEditarEquipamentoEstoque row={editRow} onClose={() => setEditRow(null)} onSalvo={onReload} />

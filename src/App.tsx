@@ -2,6 +2,7 @@ import { Suspense, lazy, useState, useEffect, useCallback, type ComponentType, t
 import { Loader2 } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
+import { queryClient } from "./lib/queryClient";
 import ErrorBoundary from "./components/ErrorBoundary";
 import type { PageKey } from "./types";
 import { useMediaQuery, MEDIA_MAX_NAV_DRAWER } from "./hooks/useMediaQuery";
@@ -335,6 +336,7 @@ function Root() {
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
+    queryClient.clear();
     setUser(null);
   }, [setUser]);
 

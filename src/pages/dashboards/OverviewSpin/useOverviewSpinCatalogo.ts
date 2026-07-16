@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../../lib/supabase";
 import {
   buildCatalogoCanaisMesas,
@@ -18,37 +19,27 @@ export function useOverviewSpinCatalogo(opts: {
   canView: "sim" | "proprios" | "nao";
   operadorasVisiveis: string[];
 }) {
-  const [catalogo, setCatalogo] = useState<OverviewSpinCatalogoCanais>(CATALOGO_VAZIO);
-  const [loadingCatalogo, setLoadingCatalogo] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-    setLoadingCatalogo(true);
-    void (async () => {
-      try {
-        const [estRes, mesasRes] = await Promise.all([
-          supabase
-            .from("estudios_spin")
-            .select("slug, tipo, ativo, estudios_spin_operadoras(operadora_slug)")
-            .eq("ativo", true),
-          supabase.from("mesas_spin_cadastro").select("estudio_slug, operadora_slug"),
-        ]);
-        if (!alive) return;
-        const built = buildCatalogoCanaisMesas(
-          (estRes.data ?? []) as EstudioCatalogoRow[],
-          (mesasRes.data ?? []) as MesaCatalogoRow[],
-        );
-        setCatalogo(built);
-      } catch {
-        if (alive) setCatalogo(CATALOGO_VAZIO);
-      } finally {
-        if (alive) setLoadingCatalogo(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const catalogoQuery = useQuery({
+    queryKey: ["overview-spin", "catalogo-canais"],
+    queryFn: async () => {
+      const [estRes, mesasRes] = await Promise.all([
+        supabase
+          .from("estudios_spin")
+          .select("slug, tipo, ativo, estudios_spin_operadoras(operadora_slug)")
+          .eq("ativo", true),
+        supabase.from("mesas_spin_cadastro").select("estudio_slug, operadora_slug"),
+      ]);
+      if (estRes.error) throw estRes.error;
+      if (mesasRes.error) throw mesasRes.error;
+      return buildCatalogoCanaisMesas(
+        (estRes.data ?? []) as EstudioCatalogoRow[],
+        (mesasRes.data ?? []) as MesaCatalogoRow[],
+      );
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+  const catalogo = catalogoQuery.data ?? CATALOGO_VAZIO;
+  const loadingCatalogo = catalogoQuery.isPending;
 
   const verAbaDedicado = useMemo(
     () =>

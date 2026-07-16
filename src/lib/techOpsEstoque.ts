@@ -160,7 +160,19 @@ export interface EstoqueHistoricoRow {
 /* ─── Códigos e quantidades derivadas ─────────────────────────────────────── */
 
 export function formatCodigoEstoque(prefixo: "ITM" | "EQP" | "JOG", num: number): string {
-  return `${prefixo}-${String(num).padStart(3, "0")}`;
+  return `${prefixo}-${String(num).padStart(4, "0")}`;
+}
+
+/**
+ * Próximo código previsto (pré-visualização no modal Novo) = maior `codigo_num`
+ * carregado + 1. A numeração definitiva continua sendo atribuída pelo banco.
+ */
+export function proximoCodigoEstoque(
+  prefixo: "ITM" | "EQP" | "JOG",
+  rows: { codigo_num: number }[],
+): string {
+  const max = rows.reduce((m, r) => Math.max(m, r.codigo_num), 0);
+  return formatCodigoEstoque(prefixo, max + 1);
 }
 
 export const codigoEstoqueItem = (r: Pick<EstoqueItemRow, "codigo_num">) =>

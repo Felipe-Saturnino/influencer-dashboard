@@ -42,6 +42,7 @@ import { Loader2 } from "lucide-react";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { RenderWhenVisible } from "../../../components/RenderWhenVisible";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { createDataTableBlockStyles } from "../../../lib/dataTableStyles";
@@ -580,7 +581,8 @@ export default function OverviewSpin() {
                     {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
-                  <OverviewSpinComparativoJogoInterativo
+                  <RenderWhenVisible minHeight={240}>
+                    <OverviewSpinComparativoJogoInterativo
                   colTempoLabel="Data"
                   historico={historico}
                   mesSelecionadoLabel={mesSelecionado?.label ?? ""}
@@ -603,7 +605,8 @@ export default function OverviewSpin() {
                   dataTable={dataTable}
                   brand={brand}
                   t={t}
-                />
+                    />
+                  </RenderWhenVisible>
                 )}
               </div>
 
@@ -872,7 +875,8 @@ export default function OverviewSpin() {
                     {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
-                  <OverviewSpinComparativoJogoInterativo
+                  <RenderWhenVisible minHeight={240}>
+                    <OverviewSpinComparativoJogoInterativo
                   colTempoLabel="Mês"
                   historico={historico}
                   mesSelecionadoLabel={mesSelecionado?.label ?? ""}
@@ -895,7 +899,8 @@ export default function OverviewSpin() {
                   dataTable={dataTable}
                   brand={brand}
                   t={t}
-                />
+                    />
+                  </RenderWhenVisible>
                 )}
               </div>
 

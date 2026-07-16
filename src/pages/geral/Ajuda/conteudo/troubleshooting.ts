@@ -69,7 +69,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
         texto:
-          "O Histórico agrega todos os meses disponíveis desde o início da operação. Algumas métricas como UAP e ARPU são calculadas de forma diferente: no modo Histórico, o UAP exibido no KPI é a média mensal dos períodos, não a soma. Isso é esperado — UAP é uma métrica de período, não acumulável. Para ver o UAP exato de um mês específico, navegue até aquele mês sem ativar o Histórico.",
+          "O Histórico agrega os últimos 12 meses disponíveis. Algumas métricas como UAP e ARPU são calculadas de forma diferente: no modo Histórico, o UAP exibido no KPI é a média mensal dos períodos, não a soma. Isso é esperado — UAP é uma métrica de período, não acumulável. Para ver o UAP exato de um mês específico entre o atual e os dois anteriores, navegue até aquele mês sem ativar o Histórico.",
       },
       {
         subtitulo: "O modo gráfico do Detalhamento mostra barras muito pequenas para uma operadora?",

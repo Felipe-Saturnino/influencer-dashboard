@@ -1107,14 +1107,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Item de Estoque",
         definicao:
-          "Material de uso geral da operação técnica controlado por quantidade (cabos, energia, iluminação, rede, tripés, áudio e vídeo). Recebe código sequencial ITM-### e distribui a quantidade total entre Estoque, Em Uso e Manutenção.",
+          "Material de uso geral da operação técnica controlado por quantidade (cabos, energia, iluminação, rede, tripés, áudio e vídeo). Recebe código sequencial (ex.: ITM-0001) e distribui a quantidade total entre Estoque, Em Uso e Manutenção.",
         formula: "Estoque = Quantidade Total − Em Uso − Manutenção",
         referencia: "Gestão de Estoque → Itens",
       },
       {
         termo: "Equipamento",
         definicao:
-          "Peça individual identificada por número de série (roleta, máquina de cartas, câmera, lentes, vídeo/switcher, áudio). Recebe código sequencial EQP-### e tem um único status por vez: Estoque, Em uso ou Manutenção.",
+          "Peça individual identificada por número de série (roleta, máquina de cartas, câmera, lentes, vídeo/switcher, áudio). Recebe código sequencial (ex.: EQP-0001) e tem um único status por vez: Estoque, Em uso ou Manutenção.",
         nota:
           "A coluna Alocação exibe o estúdio (cadastro de Gestão de Estúdios) apenas quando o equipamento está Em uso.",
         referencia: "Gestão de Estoque → Equipamentos",
@@ -1122,7 +1122,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Lote de Jogo",
         definicao:
-          "Conjunto de consumíveis de jogo (bolinhas, cartas ou tecidos) registrado com quantidade inicial. Recebe código sequencial JOG-### e a quantidade atual é calculada a partir do consumo e do descarte.",
+          "Conjunto de consumíveis de jogo (bolinhas, cartas ou tecidos) registrado com quantidade inicial. Recebe código sequencial (ex.: JOG-0001) e a quantidade atual é calculada a partir do consumo e do descarte.",
         formula: "Qtd Atual = Qtd Inicial − Qtd Consumida − Qtd Descartada",
         referencia: "Gestão de Estoque → Jogo",
       },

@@ -90,7 +90,8 @@ export default function InformativosPage() {
       .from("conteudo_informativo")
       .select("id, assunto, descricao, perfis, published_at, created_by, published_by, status")
       .eq("status", "publicado")
-      .order("published_at", { ascending: false });
+      .order("published_at", { ascending: false })
+      .limit(200);
 
     if (error) {
       console.error("[Informativos] carregar:", error);

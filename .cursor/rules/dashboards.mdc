@@ -96,6 +96,10 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Filtro de operadora (referência de produto):** `FiltroOperadoraSelect` na FilterBar — opção agregadora **Todas Operadoras**, ícone Shield no campo (Global + Brand). Não usar como modelo o markup legado de outras páginas.
 - **UAP no Overview consolidado:** soma dos UAP de cada canal (não é UAP único entre Dedicado e Network) — documentar em Ajuda.
 - **Abas financeiras** partilham a mesma FilterBar (mês, Histórico, operadora).
+- **Janela do carrossel:** mês civil atual + **2 meses anteriores** (ordem cronológica crescente). O modo **Histórico** consulta no máximo **12 meses**, incluindo o atual; não voltar a buscar desde o início da base.
+- **Cache de dados:** consultas financeiras e catálogos usam TanStack Query com chave que inclui canal, período, filtro de operadora e slugs efetivamente permitidos pelo escopo. Nunca omitir o escopo da `queryKey`.
+- **Gráficos:** o chunk Recharts de Detalhamento e Comparativo de Jogo é carregado somente quando o usuário alterna para **Gráfico**; a visualização padrão em tabela não deve importar Recharts.
+- **Blocos abaixo da dobra:** conteúdo interativo pesado usa `RenderWhenVisible` com margem antecipada para preservar a rolagem sem montar DOM distante da viewport.
 - **Aba Posicionamento:** desabilita navegação de mês (botões ← → ocultos/placeholder), exibe data do dia civil **Brasília** (`hojeIsoBrasil` + `periodoDiaBrasil`), não tem botão Histórico. Dados vêm de `useLobbyPosicionamentoData` (`lobby_monitor_*`), nunca do mesmo fetch do Overview; posições carregadas em lotes (`fetchInBatched`) por volume horário.
 - **Concorrentes à frente / Ranking de concorrentes:** mesma fonte (`concorrentes_a_frente` por mesa no snapshot). Contagens por tipo vs lista única ordenada por posição — **não** usar só `jogos_a_frente_pior_mesa` no Ranking.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.

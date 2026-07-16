@@ -374,7 +374,8 @@ export default function CentralNotificacoes() {
           .select("*, profiles!created_by(name)")
           .or(`data_inicio.is.null,data_inicio.lte.${periodo.fim}`)
           .or(`data_fim.is.null,data_fim.gte.${periodo.inicio}`)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(100);
 
         if (operadoraSlugsForcado?.length) {
           qCamp = qCamp.in("operadora_slug", operadoraSlugsForcado);

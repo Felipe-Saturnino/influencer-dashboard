@@ -15,6 +15,7 @@ import {
   codigoEstoqueJogoLote,
   ESTOQUE_JOGO_CATEGORIAS,
   ESTOQUE_JOGO_CATEGORIA_LABEL,
+  proximoCodigoEstoque,
   qtdAtualJogoLote,
   type EstoqueJogoCategoria,
   type EstoqueJogoLoteRow,
@@ -210,7 +211,13 @@ export function AbaJogo({
         )}
       </div>
 
-      {novoAberto ? <ModalNovoJogoEstoque onClose={() => setNovoAberto(false)} onCriado={onReload} /> : null}
+      {novoAberto ? (
+        <ModalNovoJogoEstoque
+          proximoCodigo={proximoCodigoEstoque("JOG", rows)}
+          onClose={() => setNovoAberto(false)}
+          onCriado={onReload}
+        />
+      ) : null}
 
       {editRow ? <ModalEditarJogoEstoque row={editRow} onClose={() => setEditRow(null)} onSalvo={onReload} /> : null}
 

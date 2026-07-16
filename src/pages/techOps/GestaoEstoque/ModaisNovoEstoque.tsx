@@ -66,14 +66,14 @@ async function inserirComHistorico(params: {
   return id;
 }
 
-function CampoCodigoTravado({ formato }: { formato: string }) {
+function CampoCodigoTravado({ codigo }: { codigo: string }) {
   const { theme: t } = useApp();
   return (
     <div>
       <label style={getEstoqueLabelStyle(t)}>Código</label>
       <input
         type="text"
-        value={`Gerado automaticamente (${formato})`}
+        value={codigo}
         disabled
         aria-label="Código gerado automaticamente"
         style={{ ...getEstoqueInputStyle(t), opacity: 0.65 }}
@@ -85,9 +85,11 @@ function CampoCodigoTravado({ formato }: { formato: string }) {
 /* ─── Novo Item ───────────────────────────────────────────────────────────── */
 
 export function ModalNovoItemEstoque({
+  proximoCodigo,
   onClose,
   onCriado,
 }: {
+  proximoCodigo: string;
   onClose: () => void;
   onCriado: () => void;
 }) {
@@ -151,7 +153,7 @@ export function ModalNovoItemEstoque({
       <ModalHeader title="Novo Item" onClose={onClose} />
       <ErroInlineEstoque>{err}</ErroInlineEstoque>
       <div style={{ display: "grid", gap: 14 }}>
-        <CampoCodigoTravado formato="ITM-###" />
+        <CampoCodigoTravado codigo={proximoCodigo} />
         <div>
           <label htmlFor="novo-item-categoria" style={labelStyle}>
             Categoria
@@ -237,9 +239,11 @@ export function ModalNovoItemEstoque({
 /* ─── Novo Equipamento ────────────────────────────────────────────────────── */
 
 export function ModalNovoEquipamentoEstoque({
+  proximoCodigo,
   onClose,
   onCriado,
 }: {
+  proximoCodigo: string;
   onClose: () => void;
   onCriado: () => void;
 }) {
@@ -297,7 +301,7 @@ export function ModalNovoEquipamentoEstoque({
       <ModalHeader title="Novo Equipamento" onClose={onClose} />
       <ErroInlineEstoque>{err}</ErroInlineEstoque>
       <div style={{ display: "grid", gap: 14 }}>
-        <CampoCodigoTravado formato="EQP-###" />
+        <CampoCodigoTravado codigo={proximoCodigo} />
         <div>
           <label htmlFor="novo-eqp-categoria" style={labelStyle}>
             Categoria
@@ -379,9 +383,11 @@ export function ModalNovoEquipamentoEstoque({
 /* ─── Novo Item de Jogo ───────────────────────────────────────────────────── */
 
 export function ModalNovoJogoEstoque({
+  proximoCodigo,
   onClose,
   onCriado,
 }: {
+  proximoCodigo: string;
   onClose: () => void;
   onCriado: () => void;
 }) {
@@ -434,7 +440,7 @@ export function ModalNovoJogoEstoque({
       <ModalHeader title="Novo Item de Jogo" onClose={onClose} />
       <ErroInlineEstoque>{err}</ErroInlineEstoque>
       <div style={{ display: "grid", gap: 14 }}>
-        <CampoCodigoTravado formato="JOG-###" />
+        <CampoCodigoTravado codigo={proximoCodigo} />
         <div>
           <label htmlFor="novo-jogo-categoria" style={labelStyle}>
             Categoria

@@ -149,7 +149,11 @@ export default function RhSolicitacoesPage() {
 
   const fetchLista = useCallback(async () => {
     setLoading(true);
-    let q = supabase.from("rh_solicitacoes").select(RH_SOLICITACOES_SELECT).order("created_at", { ascending: false });
+    let q = supabase
+      .from("rh_solicitacoes")
+      .select(RH_SOLICITACOES_SELECT)
+      .order("created_at", { ascending: false })
+      .limit(200);
 
     if (filtroStatus !== RH_SOLICITACAO_FILTRO_TODOS_STATUS_VALUE) {
       q = q.eq("status", filtroStatus);

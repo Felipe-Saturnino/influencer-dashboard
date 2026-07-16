@@ -17,6 +17,7 @@ import {
   ESTOQUE_ITEM_CATEGORIAS,
   ESTOQUE_ITEM_CATEGORIA_LABEL,
   estoqueDisponivelItem,
+  proximoCodigoEstoque,
   type EstoqueItemRow,
 } from "../../../lib/techOpsEstoque";
 import {
@@ -250,7 +251,13 @@ export function AbaItens({
         )}
       </div>
 
-      {novoAberto ? <ModalNovoItemEstoque onClose={() => setNovoAberto(false)} onCriado={onReload} /> : null}
+      {novoAberto ? (
+        <ModalNovoItemEstoque
+          proximoCodigo={proximoCodigoEstoque("ITM", rows)}
+          onClose={() => setNovoAberto(false)}
+          onCriado={onReload}
+        />
+      ) : null}
 
       {editRow ? <ModalEditarItemEstoque row={editRow} onClose={() => setEditRow(null)} onSalvo={onReload} /> : null}
 

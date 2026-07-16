@@ -43,7 +43,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas laterais para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por operadora. Em Estúdio Dedicado / Estúdio Network a lista contém apenas operadoras com mesas daquele tipo. Com **Todas Operadoras**, os valores financeiros são somados entre operadoras visíveis.",
+          "Use as setas laterais para navegar entre o mês atual e os dois meses anteriores. O botão Histórico exibe o acumulado dos últimos 12 meses em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por operadora. Em Estúdio Dedicado / Estúdio Network a lista contém apenas operadoras com mesas daquele tipo. Com **Todas Operadoras**, os valores financeiros são somados entre operadoras visíveis.",
       },
       {
         subtitulo: "KPIs Consolidados",
@@ -1333,7 +1333,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Códigos e quantidades",
         texto:
-          "Os códigos são gerados automaticamente em sequência: ITM-001 (itens), EQP-001 (equipamentos) e JOG-001 (lotes de jogo) — o campo Código aparece travado nos formulários de criação.\n\nAs quantidades derivadas são sempre calculadas: Estoque do item = Total − Em Uso − Manutenção; Qtd Atual do lote = Qtd Inicial − Consumida − Descartada. No modal Ver do item, o Valor do Estoque = Valor Unitário × quantidade em estoque.",
+          "Os códigos são gerados automaticamente em sequência: ITM-0001 (itens), EQP-0001 (equipamentos) e JOG-0001 (lotes de jogo) — o campo Código aparece travado nos formulários de criação, já preenchido com o próximo código da fila.\n\nAs quantidades derivadas são sempre calculadas: Estoque do item = Total − Em Uso − Manutenção; Qtd Atual do lote = Qtd Inicial − Consumida − Descartada. No modal Ver do item, o Valor do Estoque = Valor Unitário × quantidade em estoque.",
       },
       {
         subtitulo: "Ver: Anotações e Histórico",

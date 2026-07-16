@@ -20,7 +20,7 @@ globs:
 | Subtítulo | Controle o estoque de itens, equipamentos e insumos de jogo e o cadastro de fornecedores. |
 | Origem | Protótipo interno de prestador — adaptado ao Data Intelligence (sem PIN local; permissões via Gestão de Usuários) |
 | Tabelas | `tech_ops_estoque_itens`, `tech_ops_estoque_equipamentos`, `tech_ops_estoque_jogo_lotes`, `tech_ops_estoque_fornecedores`, `tech_ops_estoque_fornecedor_contatos`, `tech_ops_estoque_anotacoes`, `tech_ops_estoque_historico` |
-| Migração | `supabase/migrations/20261016150000_tech_ops_estoque.sql` — restaura também `_role_sem_escopo_app` / `_staff_spin_page_perm` (lista completa de roles) e estende `_estudios_spin_leitura_perm` |
+| Migração | `supabase/migrations/20261016150000_tech_ops_estoque.sql` — restaura também `_role_sem_escopo_app` / `_staff_spin_page_perm` (lista completa de roles) e estende `_estudios_spin_leitura_perm` · `20261016160000_tech_ops_estoque_codigo_4_digitos.sql` — comentários do código com 4 dígitos |
 | RLS | `_tech_ops_estoque_perm(need)` — padrão `_afiliados_network_perm` (gestores, prestadores, staff Spin via `role_permissions`) |
 | Storage | bucket `tech-ops-estoque` (anexos opcionais de anotações — pasta `anotacoes/`) |
 | Lib de domínio | `src/lib/techOpsEstoque.ts` — tipos, labels, códigos, fetch/write |
@@ -56,7 +56,7 @@ globs:
 
 ### Códigos sequenciais
 
-`codigo_num` = `GENERATED ALWAYS AS IDENTITY`; exibição `formatCodigoEstoque` — **ITM-###** (itens), **EQP-###** (equipamentos), **JOG-###** (lotes de jogo). Campo Código nos modais Novo é **travado** («Gerado automaticamente»).
+`codigo_num` = `GENERATED ALWAYS AS IDENTITY`; exibição `formatCodigoEstoque` (**4 dígitos**) — **ITM-0001** (itens), **EQP-0001** (equipamentos), **JOG-0001** (lotes de jogo). Campo Código nos modais Novo é **travado** e **pré-preenchido** com o próximo código previsto (`proximoCodigoEstoque` = maior `codigo_num` carregado + 1); a numeração definitiva continua sendo atribuída pelo banco.
 
 ### Quantidades derivadas (nunca persistidas)
 
