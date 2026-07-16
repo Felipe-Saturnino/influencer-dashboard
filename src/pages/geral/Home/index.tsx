@@ -133,6 +133,7 @@ const ROLE_LABELS: Record<Role, string> = {
   gestor_aquisicao: "Gestor de Aquisição",
   gestor_marketing: "Gestor de Marketing",
   gestor_operacoes: "Gestor de Operações",
+  gestor_tech_ops: "Gestor de Tech Ops",
   gestor_academy: "Gestor de Academy",
   gestor_rh: "Gestor de RH",
   prestador: "Prestadores",
@@ -175,6 +176,11 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
     title: "Gestão de Operações",
     subtitle:
       "Estúdio, escala e páginas operacionais liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
+  },
+  gestor_tech_ops: {
+    title: "Gestão de Tech Ops",
+    subtitle:
+      "Status técnico, estoque e páginas de Tech Ops liberadas ao seu perfil — ajuste fino em Gestão de Usuários.",
   },
   gestor_academy: {
     title: "Gestão de Academy",

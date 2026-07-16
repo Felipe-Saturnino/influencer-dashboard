@@ -469,6 +469,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Navegue entre as abas de gestão (cadastro, head count, anotações e fluxos conforme liberado ao perfil). Use os filtros de operadora, time ou busca quando disponíveis para restringir a lista antes de editar ou exportar.",
       },
+      {
+        subtitulo: "Remuneração e dados sensíveis",
+        texto:
+          "Quem tem permissão de Ver na página enxerga a coluna **Remuneração** e os dados financeiros no detalhe do prestador. Os valores da tabela ficam ocultos por padrão — use o ícone de olho no cabeçalho da coluna para exibir ou ocultar. Alterar valores continua exigindo permissão de Editar.",
+      },
     ],
   },
   rh_organograma: {
@@ -1305,6 +1310,50 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Testes automatizados (CI) vs diagnóstico na plataforma",
         texto:
           "A suíte Vitest no repositório (CI e pre-commit) valida helpers e imports — não substitui o diagnóstico em produção. Use **Executar diagnóstico** quando precisar de um snapshot operacional gravado em Logs Recentes no ambiente atual.",
+      },
+    ],
+  },
+  tech_ops_estoque: {
+    titulo: "Gestão de Estoque",
+    blocos: [
+      {
+        texto:
+          "A Gestão de Estoque centraliza o controle do inventário da operação técnica em quatro abas: **Itens** (materiais de uso geral, como cabos, energia e rede), **Equipamentos** (peças identificadas por número de série, como roletas e câmeras), **Jogo** (lotes de consumíveis — bolinhas, cartas e tecidos) e **Fornecedores** (empresas e contatos).\n\nNão há dados de exemplo: os registros são criados diretamente pelas ações de Novo Item, Novo Equipamento, Novo Item de Jogo e Novo Fornecedor.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "A barra no topo tem as quatro abas e, abaixo, a busca (por código, nome, marca, modelo, série, lote, empresa, CNPJ ou contato — sem diferenciar acentos), o filtro de Estúdio (cadastro de Gestão de Estúdios) e o filtro de Categoria, cujas opções mudam conforme a aba. Estúdio e Categoria não se aplicam à aba Fornecedores.\n\nCom o foco nas abas, use ← → do teclado para alternar entre elas (padrão tablist).",
+      },
+      {
+        subtitulo: "Consolidado de KPIs",
+        texto:
+          "Nas abas Itens e Equipamentos, os cards Total, Estoque, Em uso e Manutenção mostram as quantidades por status com o detalhamento por categoria. Clique em um card para filtrar o catálogo por aquele status; clique novamente (ou em Total) para limpar.\n\nNa aba Jogo, os cards Bolinhas, Cartas e Tecidos mostram a quantidade atual de cada categoria — o clique aplica o mesmo filtro de categoria da barra.",
+      },
+      {
+        subtitulo: "Códigos e quantidades",
+        texto:
+          "Os códigos são gerados automaticamente em sequência: ITM-001 (itens), EQP-001 (equipamentos) e JOG-001 (lotes de jogo) — o campo Código aparece travado nos formulários de criação.\n\nAs quantidades derivadas são sempre calculadas: Estoque do item = Total − Em Uso − Manutenção; Qtd Atual do lote = Qtd Inicial − Consumida − Descartada. No modal Ver do item, o Valor do Estoque = Valor Unitário × quantidade em estoque.",
+      },
+      {
+        subtitulo: "Ver: Anotações e Histórico",
+        texto:
+          "O botão Ver abre o detalhamento do registro em três abas: os dados da entidade (quantidades e valores no caso de itens; contatos no caso de fornecedores), as Anotações registradas (com anexo quando houver) e o Histórico — lista de todas as ações e edições com autor e data/hora.",
+      },
+      {
+        subtitulo: "Editar: Alterações e Anotações",
+        texto:
+          "O botão Editar abre um modal com duas abas. Em **Alterações**, escolha o Tipo de Alteração — Novas Unidades ou Alteração de Valor/Cadastral em Itens; Alteração de Valor/Cadastral em Equipamentos; Alteração de Contato/Cadastral em Fornecedores — e os campos correspondentes abrem pré-preenchidos com os valores atuais. Na aba Jogo os campos abrem diretamente. Em **Anotações**, registre um texto (obrigatório para salvar a anotação) com anexo opcional.\n\nO botão Salvar grava tudo de uma vez e cada mudança fica registrada no Histórico com o valor anterior e o novo.",
+      },
+      {
+        subtitulo: "Fornecedores",
+        texto:
+          "O cadastro tem duas abas: Empresa (Razão Social, CNPJ, Tipo e Observação) e Contato (nome, telefone e e-mail — é possível adicionar mais de um). Na tabela, passe o mouse sobre a Empresa para ver o CNPJ e clique no nome de um contato para abrir os dados dele.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "O acesso segue a matriz de Gestão de Usuários: permissão de **Ver** exibe a página; **Criar** habilita os botões de novo registro; **Editar** habilita o botão Editar. A página não possui exclusão — registros são corrigidos por alterações, sempre com histórico.",
       },
     ],
   },

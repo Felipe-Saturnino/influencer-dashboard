@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mockup — Estoque · Tech Ops · Data Intelligence</title>
+  <title>Mockup — Gestão de Estoque · Tech Ops · Data Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
@@ -426,7 +426,7 @@
       <div class="sidebar-section">Tech Ops</div>
       <div class="sidebar-item active">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>
-        Estoque
+        Gestão de Estoque
       </div>
       <div class="sidebar-section">Plataforma</div>
       <div class="sidebar-item">Gestão de Estúdios</div>
@@ -435,7 +435,7 @@
 
     <main class="main">
       <div class="mockup-banner">
-        <strong>Mockup interativo</strong> — página Estoque (Tech Ops). Abas, KPIs clicáveis, filtros e modais. Dados fictícios para validação de UX.
+        <strong>Mockup interativo</strong> — página Gestão de Estoque (Tech Ops). Abas, KPIs clicáveis, filtros e modais. Dados fictícios para validação de UX.
       </div>
 
       <header class="page-header">
@@ -443,7 +443,7 @@
           <span class="page-icon" aria-hidden="true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>
           </span>
-          <h1>Estoque</h1>
+          <h1>Gestão de Estoque</h1>
         </div>
         <p class="subtitle">Controle de itens, equipamentos, materiais de jogo e fornecedores da operação Tech Ops.</p>
       </header>
@@ -1173,6 +1173,52 @@
     </div>
   </div>
 
+  <!-- Modal Editar (Itens / Equipamentos / Jogo / Fornecedores) -->
+  <div class="overlay" id="modal-editar" role="dialog" aria-modal="true" aria-labelledby="edit-titulo">
+    <div class="modal modal-wide">
+      <div class="modal-header" style="align-items:flex-start">
+        <div class="modal-ver-head" style="margin:0;flex:1;padding-right:12px">
+          <h3 id="edit-titulo">—</h3>
+          <div class="modal-ver-sub" id="edit-subtitulo">—</div>
+        </div>
+        <button type="button" class="modal-close" data-close="modal-editar" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs" id="edit-tabs" role="tablist" aria-label="Edição do registro"></div>
+        <div id="edit-panels"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="modal-editar">Cancelar</button>
+        <button type="button" class="cta-criar" id="btn-salvar-edicao">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Novo Contato (dentro da edição de fornecedor) -->
+  <div class="overlay" id="modal-novo-contato-edit" role="dialog" aria-modal="true" aria-labelledby="titulo-novo-contato-edit" style="z-index:1100">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-header">
+        <h3 id="titulo-novo-contato-edit">Novo Contato</h3>
+        <button type="button" class="modal-close" data-close="modal-novo-contato-edit" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label class="field full"><span>Nome<span class="req">*</span></span><input type="text" id="nc-nome" required /></label>
+          <label class="field"><span>Telefone<span class="req">*</span></span><input type="tel" id="nc-tel" required /></label>
+          <label class="field"><span>E-mail<span class="req">*</span></span><input type="email" id="nc-email" required /></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="modal-novo-contato-edit">Cancelar</button>
+        <button type="button" class="cta-criar" id="btn-confirmar-novo-contato">Adicionar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status">Registro simulado — mockup sem persistência.</div>
 
   <script>
@@ -1543,6 +1589,7 @@
       const nome = tr.children[2].textContent.trim();
       const serie = tr.children[3].textContent.trim();
       const marca = tr.children[4].textContent.trim();
+      const modelo = tr.children[5].textContent.trim();
       const valor = fmtBRL(VALOR_EQUIP[codigo] || 0);
 
       document.getElementById("ver-titulo").textContent = nome;
@@ -1554,8 +1601,9 @@
           label: "Dados do Item",
           html:
             '<div class="form-grid">' +
-              htmlField("Número de Série", serie, true) +
+              htmlField("Número de Série", serie) +
               htmlField("Marca", marca) +
+              htmlField("Modelo", modelo) +
               htmlField("Valor", valor) +
             "</div>",
         },
@@ -1636,6 +1684,377 @@
         else if (tbodyId === "tbody-equip") openVerEquip(tr);
         else if (tbodyId === "tbody-jogo") openVerJogo(tr);
         else if (tbodyId === "tbody-forn") openVerFornecedor(tr);
+      });
+    });
+
+    /* ——— Modal Editar ——— */
+    const CAT_ITENS = ["Cabos e Conectores", "Energia", "Iluminação", "Rede / IT", "Tripés e Suportes", "Áudio e Vídeo"];
+    const CAT_EQUIP = ["Roleta", "Máquina de Cartas", "Câmera", "Iluminação", "Lentes", "Vídeo/Switcher", "Áudio"];
+    const CAT_JOGO = ["Bolinhas", "Cartas", "Tecidos"];
+    const TIPOS_FORN = ["Destruição de cartas", "Geral"];
+
+    let editContext = null;
+
+    function htmlInput(label, name, value, opts) {
+      const o = opts || {};
+      const full = o.full ? " full" : "";
+      const req = o.required ? '<span class="req">*</span>' : "";
+      const type = o.type || "text";
+      const extra = o.extra || "";
+      return (
+        '<label class="field' + full + '"><span>' + label + req + "</span>" +
+        '<input type="' + type + '" name="' + name + '" value="' + String(value ?? "").replace(/"/g, "&quot;") + '" ' +
+        (o.required ? "required " : "") + (o.min != null ? 'min="' + o.min + '" ' : "") +
+        (o.inputmode ? 'inputmode="' + o.inputmode + '" ' : "") + extra + "/>" +
+        "</label>"
+      );
+    }
+
+    function htmlSelect(label, name, options, selected, opts) {
+      const o = opts || {};
+      const full = o.full ? " full" : "";
+      const req = o.required ? '<span class="req">*</span>' : "";
+      const optsHtml = options.map((opt) =>
+        '<option value="' + opt + '"' + (opt === selected ? " selected" : "") + ">" + opt + "</option>"
+      ).join("");
+      return (
+        '<label class="field' + full + '"><span>' + label + req + "</span>" +
+        '<select name="' + name + '"' + (o.required ? " required" : "") + ">" +
+        (o.placeholder ? '<option value="">' + o.placeholder + "</option>" : "") +
+        optsHtml + "</select></label>"
+      );
+    }
+
+    function htmlAnotacoesEdit() {
+      return (
+        '<div class="info-block">' +
+          '<div class="info-block-title">Nova anotação</div>' +
+          '<div class="form-grid">' +
+            '<label class="field full"><span>Anotação<span class="req">*</span></span>' +
+              '<textarea name="anotacao" rows="5" required placeholder="Descreva a observação sobre esta alteração..."></textarea>' +
+            "</label>" +
+            '<label class="field full"><span>Anexo</span>' +
+              '<input type="file" name="anexo" accept=".pdf,.png,.jpg,.jpeg,.webp" />' +
+              '<span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-top:4px">Opcional — PDF ou imagem (máx. 10 MB).</span>' +
+            "</label>" +
+          "</div>" +
+        "</div>"
+      );
+    }
+
+    function setEditTabs(tabs) {
+      const tabsEl = document.getElementById("edit-tabs");
+      const panelsEl = document.getElementById("edit-panels");
+      tabsEl.innerHTML = "";
+      panelsEl.innerHTML = "";
+      tabs.forEach((t, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "modal-tab" + (i === 0 ? " active" : "");
+        btn.setAttribute("role", "tab");
+        btn.dataset.etab = t.id;
+        btn.textContent = t.label;
+        btn.addEventListener("click", () => {
+          tabsEl.querySelectorAll(".modal-tab").forEach((b) => b.classList.remove("active"));
+          panelsEl.querySelectorAll(".modal-tab-panel").forEach((p) => p.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById("epanel-" + t.id).classList.add("active");
+        });
+        tabsEl.appendChild(btn);
+
+        const panel = document.createElement("div");
+        panel.className = "modal-tab-panel" + (i === 0 ? " active" : "");
+        panel.id = "epanel-" + t.id;
+        panel.setAttribute("role", "tabpanel");
+        panel.innerHTML = t.html;
+        panelsEl.appendChild(panel);
+      });
+    }
+
+    function wireTipoAlteracao(selectName, map) {
+      const sel = document.querySelector('#edit-panels select[name="' + selectName + '"]');
+      if (!sel) return;
+      const apply = () => {
+        const val = sel.value;
+        Object.keys(map).forEach((key) => {
+          const el = document.getElementById(map[key]);
+          if (el) el.style.display = key === val ? "" : "none";
+        });
+      };
+      sel.addEventListener("change", apply);
+      apply();
+    }
+
+    function openEditItem(tr) {
+      const codigo = tr.children[0].textContent.trim();
+      const categoria = tr.children[1].textContent.trim();
+      const nome = tr.children[2].textContent.trim();
+      const modelo = tr.children[3].textContent.trim();
+      const total = tr.children[4].textContent.trim();
+      const marca = MARCA_ITEM[codigo] || "";
+      const unit = VALOR_ITEM[codigo] || 0;
+
+      editContext = { tipo: "itens", tr, codigo };
+      document.getElementById("edit-titulo").textContent = nome;
+      document.getElementById("edit-subtitulo").textContent = codigo + " — " + categoria;
+
+      setEditTabs([
+        {
+          id: "alteracoes",
+          label: "Alterações",
+          html:
+            '<div class="form-grid">' +
+              htmlSelect("Tipo de Alteração", "tipo_alteracao",
+                ["Novas Unidades", "Alteração de Valor", "Alteração Cadastral"],
+                "Novas Unidades", { full: true, required: true }) +
+            "</div>" +
+            '<div id="edit-bloco-unidades" class="info-block" style="margin-top:14px">' +
+              '<div class="info-block-title">Novas Unidades</div>' +
+              '<div class="form-grid">' +
+                htmlInput("Quantidade", "quantidade", total, { type: "number", min: 0, required: true, full: true }) +
+              "</div>" +
+            "</div>" +
+            '<div id="edit-bloco-valor" class="info-block" style="margin-top:14px;display:none">' +
+              '<div class="info-block-title">Alteração de Valor</div>' +
+              '<div class="form-grid">' +
+                htmlInput("Valor Unitário", "valor_unitario", unit.toFixed(2).replace(".", ","), { inputmode: "decimal", required: true, full: true }) +
+              "</div>" +
+            "</div>" +
+            '<div id="edit-bloco-cadastro" class="info-block" style="margin-top:14px;display:none">' +
+              '<div class="info-block-title">Alteração Cadastral</div>' +
+              '<div class="form-grid">' +
+                htmlInput("Nome", "nome", nome, { required: true, full: true }) +
+                htmlSelect("Categoria", "categoria", CAT_ITENS, categoria, { required: true }) +
+                htmlInput("Marca", "marca", marca, { required: true }) +
+                htmlInput("Modelo", "modelo", modelo, { required: true }) +
+              "</div>" +
+            "</div>",
+        },
+        { id: "anotacoes", label: "Anotações", html: htmlAnotacoesEdit() },
+      ]);
+
+      wireTipoAlteracao("tipo_alteracao", {
+        "Novas Unidades": "edit-bloco-unidades",
+        "Alteração de Valor": "edit-bloco-valor",
+        "Alteração Cadastral": "edit-bloco-cadastro",
+      });
+      openModal("modal-editar");
+    }
+
+    function openEditEquip(tr) {
+      const codigo = tr.children[0].textContent.trim();
+      const categoria = tr.children[1].textContent.trim();
+      const nome = tr.children[2].textContent.trim();
+      const serie = tr.children[3].textContent.trim();
+      const marca = tr.children[4].textContent.trim();
+      const modelo = tr.children[5].textContent.trim();
+      const valor = VALOR_EQUIP[codigo] || 0;
+
+      editContext = { tipo: "equipamentos", tr, codigo };
+      document.getElementById("edit-titulo").textContent = nome;
+      document.getElementById("edit-subtitulo").textContent = codigo + " — " + categoria;
+
+      setEditTabs([
+        {
+          id: "alteracoes",
+          label: "Alterações",
+          html:
+            '<div class="form-grid">' +
+              htmlSelect("Tipo de Alteração", "tipo_alteracao",
+                ["Alteração de Valor", "Alteração Cadastral"],
+                "Alteração de Valor", { full: true, required: true }) +
+            "</div>" +
+            '<div id="edit-bloco-valor" class="info-block" style="margin-top:14px">' +
+              '<div class="info-block-title">Alteração de Valor</div>' +
+              '<div class="form-grid">' +
+                htmlInput("Valor", "valor", valor.toFixed(2).replace(".", ","), { inputmode: "decimal", required: true, full: true }) +
+              "</div>" +
+            "</div>" +
+            '<div id="edit-bloco-cadastro" class="info-block" style="margin-top:14px;display:none">' +
+              '<div class="info-block-title">Alteração Cadastral</div>' +
+              '<div class="form-grid">' +
+                htmlInput("Nome", "nome", nome, { required: true, full: true }) +
+                htmlSelect("Categoria", "categoria", CAT_EQUIP, categoria, { required: true }) +
+                htmlInput("Número de Série", "serie", serie, { required: true, full: true }) +
+                htmlInput("Marca", "marca", marca, { required: true }) +
+                htmlInput("Modelo", "modelo", modelo, { required: true }) +
+              "</div>" +
+            "</div>",
+        },
+        { id: "anotacoes", label: "Anotações", html: htmlAnotacoesEdit() },
+      ]);
+
+      wireTipoAlteracao("tipo_alteracao", {
+        "Alteração de Valor": "edit-bloco-valor",
+        "Alteração Cadastral": "edit-bloco-cadastro",
+      });
+      openModal("modal-editar");
+    }
+
+    function openEditJogo(tr) {
+      const codigo = tr.children[0].textContent.trim();
+      const categoria = tr.children[1].textContent.trim();
+      const nome = tr.children[2].textContent.trim();
+      const quantidade = tr.children[5].textContent.trim();
+
+      editContext = { tipo: "jogo", tr, codigo };
+      document.getElementById("edit-titulo").textContent = nome;
+      document.getElementById("edit-subtitulo").textContent = codigo + " — " + categoria;
+
+      setEditTabs([
+        {
+          id: "alteracoes",
+          label: "Alterações",
+          html:
+            '<div class="form-grid">' +
+              htmlInput("Nome do Lote", "nome_lote", nome, { required: true, full: true }) +
+              htmlSelect("Categoria", "categoria", CAT_JOGO, categoria, { required: true }) +
+              htmlInput("Quantidade", "quantidade", quantidade, { type: "number", min: 0, required: true }) +
+            "</div>",
+        },
+        { id: "anotacoes", label: "Anotações", html: htmlAnotacoesEdit() },
+      ]);
+      openModal("modal-editar");
+    }
+
+    function renderEditContatosBlocks(contatos) {
+      if (!contatos.length) {
+        return '<div class="empty-hint" id="edit-contatos-empty">Nenhum contato cadastrado.</div><div id="edit-contatos-list"></div>';
+      }
+      return (
+        '<div id="edit-contatos-list">' +
+        contatos.map((c, i) =>
+          '<div class="contato-block" data-contato-idx="' + i + '"><div class="form-grid">' +
+            htmlInput("Nome", "contato_nome_" + i, c.nome, { required: true, full: true }) +
+            htmlInput("Telefone", "contato_tel_" + i, c.tel, { type: "tel", required: true }) +
+            htmlInput("E-mail", "contato_email_" + i, c.email, { type: "email", required: true }) +
+          "</div></div>"
+        ).join("") +
+        "</div>"
+      );
+    }
+
+    function openEditFornecedor(tr) {
+      const tip = tr.querySelector(".empresa-tip");
+      const razao = tip ? tip.textContent.trim() : tr.children[0].textContent.trim();
+      const cnpj = tip ? (tip.getAttribute("data-cnpj") || "").replace(/^CNPJ\s*/, "") : "";
+      const tipo = tr.children[1].textContent.trim();
+      const contatos = [...tr.querySelectorAll(".link-contato")].map((b) => ({
+        nome: b.dataset.nome,
+        tel: b.dataset.tel,
+        email: b.dataset.email,
+      }));
+
+      editContext = { tipo: "fornecedores", tr, contatos: contatos.slice() };
+      document.getElementById("edit-titulo").textContent = tipo;
+      document.getElementById("edit-subtitulo").textContent = razao + " — " + cnpj;
+
+      setEditTabs([
+        {
+          id: "alteracoes",
+          label: "Alterações",
+          html:
+            '<div class="form-grid">' +
+              htmlSelect("Tipo de Alteração", "tipo_alteracao",
+                ["Alteração de Contato", "Alteração Cadastral"],
+                "Alteração de Contato", { full: true, required: true }) +
+            "</div>" +
+            '<div id="edit-bloco-contato" class="info-block" style="margin-top:14px">' +
+              '<div class="info-block-title">Alteração de Contato</div>' +
+              renderEditContatosBlocks(contatos) +
+              '<button type="button" class="btn-add-contato" id="btn-add-contato-edit">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>' +
+                "Adicionar contato" +
+              "</button>" +
+            "</div>" +
+            '<div id="edit-bloco-cadastro" class="info-block" style="margin-top:14px;display:none">' +
+              '<div class="info-block-title">Alteração Cadastral</div>' +
+              '<div class="form-grid">' +
+                htmlInput("Razão Social", "razao_social", razao, { required: true, full: true }) +
+                htmlInput("CNPJ", "cnpj", cnpj, { required: true }) +
+                htmlSelect("Tipo", "tipo", TIPOS_FORN, tipo, { required: true }) +
+              "</div>" +
+            "</div>",
+        },
+        { id: "anotacoes", label: "Anotações", html: htmlAnotacoesEdit() },
+      ]);
+
+      wireTipoAlteracao("tipo_alteracao", {
+        "Alteração de Contato": "edit-bloco-contato",
+        "Alteração Cadastral": "edit-bloco-cadastro",
+      });
+
+      const addBtn = document.getElementById("btn-add-contato-edit");
+      if (addBtn) {
+        addBtn.addEventListener("click", () => {
+          document.getElementById("nc-nome").value = "";
+          document.getElementById("nc-tel").value = "";
+          document.getElementById("nc-email").value = "";
+          openModal("modal-novo-contato-edit");
+        });
+      }
+      openModal("modal-editar");
+    }
+
+    document.getElementById("btn-confirmar-novo-contato").addEventListener("click", () => {
+      const nome = document.getElementById("nc-nome").value.trim();
+      const tel = document.getElementById("nc-tel").value.trim();
+      const email = document.getElementById("nc-email").value.trim();
+      if (!nome || !tel || !email) return;
+
+      if (!editContext) return;
+      editContext.contatos = editContext.contatos || [];
+      const idx = editContext.contatos.length;
+      editContext.contatos.push({ nome, tel, email });
+
+      const list = document.getElementById("edit-contatos-list");
+      const empty = document.getElementById("edit-contatos-empty");
+      if (empty) empty.remove();
+      if (list) {
+        const block = document.createElement("div");
+        block.className = "contato-block";
+        block.dataset.contatoIdx = String(idx);
+        block.innerHTML =
+          '<div class="form-grid">' +
+            htmlInput("Nome", "contato_nome_" + idx, nome, { required: true, full: true }) +
+            htmlInput("Telefone", "contato_tel_" + idx, tel, { type: "tel", required: true }) +
+            htmlInput("E-mail", "contato_email_" + idx, email, { type: "email", required: true }) +
+          "</div>";
+        list.appendChild(block);
+      }
+      closeModal("modal-novo-contato-edit");
+    });
+
+    document.getElementById("btn-salvar-edicao").addEventListener("click", () => {
+      const anot = document.querySelector('#edit-panels textarea[name="anotacao"]');
+      if (anot && !anot.value.trim()) {
+        anot.focus();
+        const tabsEl = document.getElementById("edit-tabs");
+        const panelsEl = document.getElementById("edit-panels");
+        tabsEl.querySelectorAll(".modal-tab").forEach((b) => b.classList.toggle("active", b.dataset.etab === "anotacoes"));
+        panelsEl.querySelectorAll(".modal-tab-panel").forEach((p) => p.classList.toggle("active", p.id === "epanel-anotacoes"));
+        return;
+      }
+      const toast = document.getElementById("toast");
+      toast.textContent = "Alteração salva (simulado) — mockup sem persistência.";
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+        toast.textContent = "Registro simulado — mockup sem persistência.";
+      }, 2200);
+      closeModal("modal-editar");
+      editContext = null;
+    });
+
+    document.querySelectorAll('button[aria-label="Editar"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tr = btn.closest("tr");
+        if (!tr) return;
+        const tbodyId = tr.closest("tbody")?.id;
+        if (tbodyId === "tbody-itens") openEditItem(tr);
+        else if (tbodyId === "tbody-equip") openEditEquip(tr);
+        else if (tbodyId === "tbody-jogo") openEditJogo(tr);
+        else if (tbodyId === "tbody-forn") openEditFornecedor(tr);
       });
     });
 

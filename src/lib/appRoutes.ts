@@ -251,6 +251,12 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
       access: "informativos_gerenciamento",
     },
   ]),
+  page("Gestão de Estoque", "tech_ops_estoque", "GestaoDeEstoque", [
+    { tabId: "itens", slug: "Itens", label: "Itens", access: "always" },
+    { tabId: "equipamentos", slug: "Equipamentos", label: "Equipamentos", access: "always" },
+    { tabId: "jogo", slug: "Jogo", label: "Jogo", access: "always" },
+    { tabId: "fornecedores", slug: "Fornecedores", label: "Fornecedores", access: "always" },
+  ]),
   page("Gestão de Usuários", "gestao_usuarios", "GestaoDeUsuarios", [
     { tabId: "usuarios", slug: "Usuarios", label: "Usuários", access: "always" },
     { tabId: "permissoes", slug: "Permissoes", label: "Permissões", access: "always" },

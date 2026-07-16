@@ -25,6 +25,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "gestor_aquisicao", label: "Gestor de Aquisição" },
   { value: "gestor_marketing", label: "Gestor de Marketing" },
   { value: "gestor_operacoes", label: "Gestor de Operações" },
+  { value: "gestor_tech_ops", label: "Gestor de Tech Ops" },
   { value: "gestor_academy", label: "Gestor de Academy" },
   { value: "gestor_rh", label: "Gestor de RH" },
   { value: "rh", label: "RH" },
@@ -173,6 +174,8 @@ const PAGES_META: {
   { key: "spin_na_rede", label: "Spin na Rede", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_portal", label: "Portal de RH", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "informativos", label: "Informativos", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: true },
+  // Tech Ops
+  { key: "tech_ops_estoque", label: "Gestão de Estoque", secao: "Tech Ops", hasCriar: true, hasEditar: true, hasExcluir: false },
   // Plataforma — Criar/Editar/Excluir alinhados a Novo usuário / modais e abas / desativação
   { key: "gestao_usuarios", label: "Gestão de Usuários", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_operadoras", label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
@@ -285,6 +288,7 @@ export function roleBadgeColor(role: Role): string {
     gestor_aquisicao: BRAND.azul,
     gestor_marketing: BRAND.ciano,
     gestor_operacoes: BRAND.roxo,
+    gestor_tech_ops: BRAND.ciano,
     gestor_academy: BRAND.roxoVivo,
     gestor_rh: BRAND.roxo,
     prestador: BRAND.roxo,

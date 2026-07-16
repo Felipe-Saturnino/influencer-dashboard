@@ -1128,6 +1128,41 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  tech_ops_estoque: {
+    titulo: "Gestão de Estoque",
+    blocos: [
+      {
+        subtitulo: "A página abre vazia, sem nenhum registro?",
+        texto:
+          "Comportamento esperado em ambiente recém-implantado: a Gestão de Estoque não tem dados de exemplo. Os catálogos são preenchidos pelas ações Novo Item, Novo Equipamento, Novo Item de Jogo e Novo Fornecedor. Se os botões de criação não aparecem, verifique a permissão de **Criar** em Gestão de Usuários → Permissões.",
+      },
+      {
+        subtitulo: "Um registro sumiu da tabela, mas eu não excluí nada?",
+        texto:
+          "A página não possui exclusão. Verifique os filtros ativos: um card de KPI selecionado (Estoque, Em uso ou Manutenção), o filtro de Categoria, o filtro de Estúdio ou o texto na busca restringem o catálogo. Clique no card Total (ou no card ativo) e limpe busca e filtros para ver a lista completa.",
+      },
+      {
+        subtitulo: "O Estoque ou a Qtd Atual não batem com o que digitei?",
+        texto:
+          "Essas colunas são calculadas: Estoque do item = Quantidade Total − Em Uso − Manutenção; Qtd Atual do lote = Qtd Inicial − Consumida − Descartada. Para ajustar o total de um item, use Editar → Novas Unidades; a mudança fica registrada no Histórico com o valor anterior e o novo.",
+      },
+      {
+        subtitulo: "Não consigo salvar a edição?",
+        texto:
+          "O Salvar exige um Tipo de Alteração selecionado (com os campos preenchidos) ou um texto de anotação. Anexo sem texto de anotação também bloqueia o salvamento — escreva a anotação antes de enviar o arquivo. Se o erro persistir após corrigir os campos, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "O filtro de Estúdio não mostra o estúdio esperado?",
+        texto:
+          "A lista vem do cadastro de Gestão de Estúdios e exibe apenas estúdios ativos. Se o estúdio não aparece, confirme o cadastro com o administrador. A coluna Alocação dos equipamentos só mostra estúdio quando o status é Em uso.",
+      },
+      {
+        subtitulo: "Vejo a página mas os botões Novo e Editar não aparecem?",
+        texto:
+          "Comportamento esperado: os botões seguem as permissões de **Criar** e **Editar** da página em Gestão de Usuários. Com apenas permissão de Ver, a página fica somente leitura — incluindo os modais Ver com Anotações e Histórico.",
+      },
+    ],
+  },
   gestao_usuarios: {
     titulo: "Gestão de Usuários",
     blocos: [

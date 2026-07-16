@@ -1100,6 +1100,55 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "tech_ops_estoque",
+    label: "Tech Ops — Estoque",
+    accentColor: "#0ea5e9",
+    termos: [
+      {
+        termo: "Item de Estoque",
+        definicao:
+          "Material de uso geral da operação técnica controlado por quantidade (cabos, energia, iluminação, rede, tripés, áudio e vídeo). Recebe código sequencial ITM-### e distribui a quantidade total entre Estoque, Em Uso e Manutenção.",
+        formula: "Estoque = Quantidade Total − Em Uso − Manutenção",
+        referencia: "Gestão de Estoque → Itens",
+      },
+      {
+        termo: "Equipamento",
+        definicao:
+          "Peça individual identificada por número de série (roleta, máquina de cartas, câmera, lentes, vídeo/switcher, áudio). Recebe código sequencial EQP-### e tem um único status por vez: Estoque, Em uso ou Manutenção.",
+        nota:
+          "A coluna Alocação exibe o estúdio (cadastro de Gestão de Estúdios) apenas quando o equipamento está Em uso.",
+        referencia: "Gestão de Estoque → Equipamentos",
+      },
+      {
+        termo: "Lote de Jogo",
+        definicao:
+          "Conjunto de consumíveis de jogo (bolinhas, cartas ou tecidos) registrado com quantidade inicial. Recebe código sequencial JOG-### e a quantidade atual é calculada a partir do consumo e do descarte.",
+        formula: "Qtd Atual = Qtd Inicial − Qtd Consumida − Qtd Descartada",
+        referencia: "Gestão de Estoque → Jogo",
+      },
+      {
+        termo: "Valor do Estoque",
+        definicao:
+          "Valor financeiro das unidades disponíveis de um item, exibido no modal Ver.",
+        formula: "Valor do Estoque = Valor Unitário × Quantidade em Estoque",
+        referencia: "Gestão de Estoque → Itens",
+      },
+      {
+        termo: "Anotação de Estoque",
+        definicao:
+          "Registro de texto livre vinculado a um item, equipamento, lote de jogo ou fornecedor, com anexo opcional. Fica disponível na aba Anotações do modal Ver, com autor e data/hora.",
+        referencia: "Gestão de Estoque",
+      },
+      {
+        termo: "Histórico de Estoque",
+        definicao:
+          "Lista de todas as ações sobre um registro — criação, novas unidades, alterações de valor, cadastrais e de contato, e anotações — com autor, data/hora e o detalhe da mudança (valor anterior e novo).",
+        nota: "A página não possui exclusão: correções são feitas por alterações, sempre registradas no histórico.",
+        referencia: "Gestão de Estoque",
+      },
+    ],
+  },
+  {
     key: "geral_conta",
     label: "Geral — Conta e simulação",
     accentColor: "#64748b",
@@ -1177,6 +1226,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   home_perfis: ["informativos", "mesas_spin", "streamers", "gestao_operadoras"],
   whitelabel: ["gestao_operadoras"],
   academy: ["academy_performance_hub", "academy_portal"],
+  tech_ops_estoque: ["tech_ops_estoque"],
   periodos: DASHBOARD_PAGE_KEYS,
   geral_conta: ["configuracoes", "simulador_login"],
 };

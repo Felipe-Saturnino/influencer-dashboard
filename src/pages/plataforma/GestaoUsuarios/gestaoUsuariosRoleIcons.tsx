@@ -21,6 +21,7 @@ import {
   UserCog,
   Users,
   Flag,
+  Cpu,
   Wrench,
 } from "lucide-react";
 import type { Role } from "../../../types";
@@ -33,6 +34,7 @@ export const ROLE_PERM_TAB_ICONS: Partial<Record<Role, ReactNode>> = {
   gestor_aquisicao: <HandCoins {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_marketing: <Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_operacoes: <Settings {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  gestor_tech_ops: <Cpu {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_academy: <GraduationCap {...FILTRO_BAR_TAB_ICON_PROPS} />,
   gestor_rh: <Users {...FILTRO_BAR_TAB_ICON_PROPS} />,
   rh: <Users {...FILTRO_BAR_TAB_ICON_PROPS} />,
