@@ -18,6 +18,7 @@ import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { Banknote, Clock, Loader2 } from "lucide-react"
 import { STATUS_INFLUENCER, STATUS_PAG } from "./financeiroConstants"
 import { cicloAberto, fmtCicloDatas, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos"
+import { filtrarAgentesDoCiclo, mapAgentesParaPagamentoRows } from "./financeiroAgenteLinhas"
 import { fecharCicloExpiradoSeNecessario } from "./financeiroFecharCiclo"
 import { type FinanceiroAgenteDbRow, type FinanceiroLiveRow, type FinanceiroLiveResultadoRow, type FinanceiroPagamentoDbRow, type FinanceiroPerfilCacheRow, type FinanceiroPerfilRow, type FinanceiroProfileRow, type PagamentoRow } from "./financeiroTypes"
 import type { BlocoFiltros } from "./financeiroFiltros"
@@ -75,7 +76,26 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
   const OPERADORA_PADRAO = "casa_apostas";
 
+  const buscarLinhasAgente = useCallback(
+    async (c: CicloPagamento): Promise<PagamentoRow[]> => {
+      if (!podeVerPagamentosAgenteFinanceiro(user?.role)) return [];
+      const { data: agentes } = await supabase
+        .from("pagamentos_agentes")
+        .select("*")
+        .eq("ciclo_id", c.id)
+        .order("criado_em", { ascending: true });
+      const filtrados = filtrarAgentesDoCiclo((agentes ?? []) as FinanceiroAgenteDbRow[], {
+        filterOperadora,
+        filtroOp,
+      });
+      return mapAgentesParaPagamentoRows(filtrados);
+    },
+    [user?.role, filterOperadora, filtroOp],
+  );
+
   const carregarPreview = useCallback(async (c: CicloPagamento) => {
+    const linhasAg = await buscarLinhasAgente(c);
+
     const { data: lives } = await supabase
       .from("lives")
       .select("id, influencer_id, operadora_slug")
@@ -84,7 +104,10 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       .lte("data", c.data_fim);
 
     const livesFiltradas = ((lives ?? []) as FinanceiroLiveRow[]).filter((l) => podeVerInfluencer(l.influencer_id));
-    if (livesFiltradas.length === 0) { setRows([]); return; }
+    if (livesFiltradas.length === 0) {
+      setRows(linhasAg);
+      return;
+    }
 
     const liveIds = livesFiltradas.map((l) => l.id);
     let resultados: FinanceiroLiveResultadoRow[] = [];
@@ -156,22 +179,15 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     });
 
     result.sort((a, b) => b.total - a.total);
-    setRows(result);
-  }, [filterInfluencers, filterOperadora, filtroOp, podeVerInfluencer]);
+    setRows([...result, ...linhasAg]);
+  }, [buscarLinhasAgente, filterInfluencers, filterOperadora, filtroOp, podeVerInfluencer]);
 
   const carregarPagamentos = useCallback(async (c: CicloPagamento) => {
-    const incluirLinhasAgente = podeVerPagamentosAgenteFinanceiro(user?.role);
-    const [{ data: pags }, { data: agentes }, { data: livesCiclo }] = await Promise.all([
+    const [{ data: pags }, { data: livesCiclo }] = await Promise.all([
       supabase.from("pagamentos")
         .select("*")
         .eq("ciclo_id", c.id)
         .order("total", { ascending: false }),
-      incluirLinhasAgente
-        ? supabase.from("pagamentos_agentes")
-            .select("*")
-            .eq("ciclo_id", c.id)
-            .order("criado_em", { ascending: true })
-        : Promise.resolve({ data: [] as FinanceiroAgenteDbRow[] }),
       supabase.from("lives")
         .select("id, influencer_id, operadora_slug")
         .eq("status", "realizada")
@@ -294,28 +310,10 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
       };
     });
 
-    let agentesFiltrados: FinanceiroAgenteDbRow[] = incluirLinhasAgente ? ((agentes ?? []) as FinanceiroAgenteDbRow[]) : [];
-    if (filtroOp?.length) {
-      agentesFiltrados = agentesFiltrados.filter((a) => a.operadora_slug && filtroOp.includes(a.operadora_slug));
-    } else if (filterOperadora && filterOperadora !== "todas") {
-      agentesFiltrados = agentesFiltrados.filter((a) => a.operadora_slug === filterOperadora);
-    }
-    const linhasAg: PagamentoRow[] = agentesFiltrados.map((a) => ({
-      id: a.id!,
-      influencer_id: "agente",
-      influencer_name: "Agentes",
-      horas_realizadas: 0,
-      cache_hora: 0,
-      total: a.total,
-      status: a.status as PagamentoStatus,
-      pago_em: a.pago_em ?? null,
-      is_agente: true,
-      descricao: a.descricao ?? undefined,
-      qtd_lives: 0,
-    }));
+    const linhasAg = await buscarLinhasAgente(c);
 
     setRows([...linhasInf, ...linhasAg]);
-  }, [podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
+  }, [buscarLinhasAgente, podeVerInfluencer, filterInfluencers, filterOperadora, filtroOp, user?.role]);
 
   const carregarDados = useCallback(async (c: CicloPagamento) => {
     setLoading(true);
@@ -798,8 +796,10 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     title={row.influencer_name}
                   >
                     <div style={{ fontWeight: 600 }}>{row.influencer_name}</div>
-                    {row.is_agente && row.descricao ? (
-                      <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{row.descricao}</div>
+                    {row.is_agente ? (
+                      <div style={{ fontSize: 10, color: t.textMuted, marginTop: 4, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        Agente
+                      </div>
                     ) : null}
                   </td>
 
@@ -828,7 +828,9 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
 
                   {filterOperadora === "todas" && (
                     <td style={{ ...dataTable.tdCenter, color: t.textMuted, fontSize: "12px" }}>
-                      {row.is_agente ? "—" : (operadorasList.find(o => o.slug === row.operadora_slug)?.nome ?? row.operadora_slug ?? "—")}
+                      {row.is_agente
+                        ? (operadorasList.find(o => o.slug === row.operadora_slug)?.nome ?? row.operadora_slug ?? "—")
+                        : (operadorasList.find(o => o.slug === row.operadora_slug)?.nome ?? row.operadora_slug ?? "—")}
                     </td>
                   )}
 
@@ -927,7 +929,11 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           operadorasList={operadorasList}
           podeVerOperadora={filtros.podeVerOperadora}
           onClose={() => setModalAgente(false)}
-          onSalvo={async () => { setModalAgente(false); if (ciclo) await carregarDados(ciclo); }}
+          onSalvo={async () => {
+            setModalAgente(false);
+            if (ciclo) await carregarDados(ciclo);
+            onRecarregar();
+          }}
         />
       )}
     </div>

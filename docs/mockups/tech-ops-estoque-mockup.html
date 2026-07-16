@@ -1,0 +1,1645 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Estoque · Tech Ops · Data Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-action: #7c3aed;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e5e7eb;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --input-bg: #f9fafb;
+      --green: #22c55e;
+      --red: #e84025;
+      --yellow: #f59e0b;
+      --purple: #a78bfa;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --font-body: "DM Sans", system-ui, sans-serif;
+      --font-title: "Outfit", system-ui, sans-serif;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px; background: #141414; color: #e4e4e4;
+      padding: 20px 0; flex-shrink: 0;
+    }
+    .sidebar-brand {
+      padding: 0 20px 20px; font-family: var(--font-title);
+      font-weight: 800; font-size: 14px; letter-spacing: 0.04em;
+      color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;
+    }
+    .sidebar-section {
+      padding: 8px 20px 4px; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: rgba(228,228,228,0.45);
+    }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px; font-size: 13px; color: rgba(228,228,228,0.75);
+    }
+    .sidebar-item.active {
+      background: rgba(124, 58, 237, 0.18); color: #fff;
+      border-right: 2px solid var(--brand-primary);
+    }
+    .main { flex: 1; padding: 24px 28px 48px; overflow-x: auto; }
+
+    .mockup-banner {
+      background: color-mix(in srgb, var(--brand-primary) 8%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      border-radius: var(--radius-box); padding: 12px 16px; margin-bottom: 18px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .mockup-banner strong { color: var(--brand-primary); }
+
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 8px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary);
+    }
+    .page-header h1 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.02em;
+    }
+    .page-header .subtitle {
+      margin: 5px 0 0 40px; font-size: 13px; color: var(--text-muted);
+    }
+
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 12px 20px; margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .filter-row {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; gap: 10px; width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; }
+
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); font-family: var(--font-body);
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      font-weight: 700; color: var(--brand-secondary);
+      border-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 12%, #fff);
+    }
+
+    .search-input {
+      flex: 1; min-width: 220px; max-width: 320px;
+      padding: 8px 12px 8px 38px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-family: var(--font-body); color: var(--text);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: 12px center;
+    }
+    .pill-select {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; color: var(--text); cursor: pointer;
+      font-family: var(--font-body);
+    }
+    .pill-select.active {
+      border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 12%, #fff);
+      color: var(--brand-primary); font-weight: 600;
+    }
+    .pill-select svg { opacity: 0.7; flex-shrink: 0; }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 20px; margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .section-title {
+      display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .section-title h2 {
+      font-family: var(--font-title); font-size: 14px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.04em;
+    }
+    .section-title .sub {
+      font-size: 11px; font-weight: 400; color: var(--text-muted);
+    }
+    .section-title .sub::before { content: "— "; }
+    .section-title-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+    }
+    .section-title-row .section-title { margin-bottom: 0; }
+
+    .cta-criar {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: var(--radius-tab); border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font-family: var(--font-body); font-size: 13px;
+      font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .cta-criar:hover { filter: brightness(1.05); }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    }
+    @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+    .kpi-card {
+      background: var(--input-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 14px 16px;
+      border-left: 3px solid var(--kpi-color, var(--brand-primary));
+      cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
+      text-align: left; font-family: inherit; width: 100%;
+    }
+    .kpi-card:hover { box-shadow: var(--shadow); }
+    .kpi-card.active {
+      border-color: var(--kpi-color, var(--brand-primary));
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-color, var(--brand-primary)) 25%, transparent);
+    }
+    .kpi-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-family: var(--font-title); font-size: 26px; font-weight: 800;
+      color: var(--kpi-color, var(--brand-primary)); margin: 6px 0 10px;
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-breakdown {
+      display: flex; flex-direction: column; gap: 4px;
+      border-top: 1px solid var(--card-border); padding-top: 10px;
+    }
+    .kpi-breakdown-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: var(--text-muted); gap: 8px;
+    }
+    .kpi-breakdown-row span:last-child {
+      font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-grid-jogo {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    }
+    @media (max-width: 700px) { .kpi-grid-jogo { grid-template-columns: 1fr; } }
+
+    .table-wrap {
+      overflow-x: auto; border-radius: var(--radius-box);
+      border: 1px solid var(--card-border);
+    }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 720px; }
+    thead th {
+      background: color-mix(in srgb, #fff 86%, var(--brand-action) 14%);
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text); padding: 12px 10px;
+      text-align: center; white-space: nowrap; border-bottom: 1px solid var(--card-border);
+    }
+    tbody td {
+      padding: 11px 10px; font-size: 13px; text-align: center;
+      border-bottom: 1px solid var(--card-border);
+      font-variant-numeric: tabular-nums;
+    }
+    tbody tr:nth-child(even) { background: color-mix(in srgb, #fff 92%, var(--brand-secondary) 8%); }
+    tbody tr:nth-child(odd) { background: #fff; }
+    tbody tr:hover { background: color-mix(in srgb, #fff 88%, var(--brand-action) 12%) !important; }
+    tbody tr.dimmed { opacity: 0.35; }
+    .td-left { text-align: left !important; }
+    .badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge-estoque { background: #22c55e22; color: #16a34a; border: 1px solid #22c55e44; }
+    .badge-uso { background: #1e36f822; color: #1e36f8; border: 1px solid #1e36f844; }
+    .badge-manut { background: #f59e0b22; color: #d97706; border: 1px solid #f59e0b44; }
+    .badge-ativo { background: #22c55e22; color: #16a34a; border: 1px solid #22c55e44; }
+    .badge-inativo { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+
+    .btn-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); cursor: pointer; margin: 0 2px;
+    }
+    .btn-icon:hover { color: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary) 40%, transparent); }
+    .contatos-stack {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .link-contato {
+      color: var(--brand-secondary); font-weight: 600; cursor: pointer;
+      text-decoration: underline; text-underline-offset: 2px; background: none; border: none;
+      font-family: inherit; font-size: 13px; padding: 0;
+    }
+    .link-contato:hover { color: var(--brand-primary); }
+
+    .empresa-tip { position: relative; cursor: help; font-weight: 600; }
+    .empresa-tip::after {
+      content: attr(data-cnpj);
+      position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+      background: #111827; color: #fff; font-size: 11px; font-weight: 500;
+      padding: 6px 10px; border-radius: 8px; white-space: nowrap;
+      opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 5;
+    }
+    .empresa-tip:hover::after { opacity: 1; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .filter-chip {
+      display: none; align-items: center; gap: 6px;
+      margin-top: 12px; font-size: 12px; color: var(--text-muted);
+    }
+    .filter-chip.visible { display: inline-flex; }
+    .filter-chip button {
+      border: none; background: none; color: var(--red); cursor: pointer;
+      font-size: 12px; font-weight: 600; font-family: inherit;
+    }
+
+    /* Modal */
+    .overlay {
+      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55);
+      z-index: 1000; align-items: center; justify-content: center; padding: 16px;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg); border-radius: 16px; width: 100%; max-width: 520px;
+      max-height: 90dvh; overflow: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      border: 1px solid var(--card-border);
+    }
+    .modal-wide { max-width: 640px; }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px; border-bottom: 1px solid var(--card-border);
+    }
+    .modal-header h3 {
+      font-family: var(--font-title); font-size: 16px; font-weight: 800;
+      color: var(--brand-primary); text-transform: uppercase;
+    }
+    .modal-close {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; color: var(--text-muted);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+      padding: 0 20px 20px; display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .form-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+    @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
+    label.field {
+      display: flex; flex-direction: column; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--text);
+    }
+    label.field .req { color: var(--red); margin-left: 2px; }
+    label.field input, label.field select, label.field textarea {
+      padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-family: var(--font-body); font-size: 13px; color: var(--text);
+    }
+    label.field input:disabled {
+      opacity: 0.75; cursor: not-allowed;
+      background: color-mix(in srgb, var(--input-bg) 80%, var(--card-border));
+    }
+    .btn-secondary {
+      padding: 10px 18px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-family: var(--font-body); font-size: 13px;
+      font-weight: 600; cursor: pointer; color: var(--text);
+    }
+    .btn-add-contato {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 10px; padding: 8px 14px; border-radius: 10px;
+      border: 1px dashed color-mix(in srgb, var(--brand-primary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-primary) 6%, #fff);
+      color: var(--brand-primary); font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .modal-tabs {
+      display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .modal-tab {
+      padding: 8px 16px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-size: 13px; font-weight: 500;
+      color: var(--text-muted); cursor: pointer; font-family: inherit;
+    }
+    .modal-tab.active {
+      font-weight: 700; color: var(--brand-secondary);
+      border-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 12%, #fff);
+    }
+    .modal-tab-panel { display: none; }
+    .modal-tab-panel.active { display: block; }
+    .contato-block {
+      border: 1px solid var(--card-border); border-radius: 12px;
+      padding: 14px; margin-bottom: 12px; background: var(--input-bg);
+    }
+    .contato-block-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .modal-ver-head { margin-bottom: 16px; }
+    .modal-ver-head h3 {
+      font-family: var(--font-title); font-size: 16px; font-weight: 800;
+      color: var(--brand-primary); text-transform: none; letter-spacing: 0;
+      margin: 0 0 4px;
+    }
+    .modal-ver-sub {
+      font-size: 13px; color: var(--text-muted); font-weight: 500;
+    }
+    .info-block {
+      border: 1px solid var(--card-border); border-radius: 12px;
+      padding: 14px; margin-top: 14px; background: var(--input-bg);
+    }
+    .info-block-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--brand-primary); margin-bottom: 12px;
+    }
+    .info-readonly {
+      padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: color-mix(in srgb, var(--input-bg) 80%, var(--card-border));
+      font-size: 13px; color: var(--text); min-height: 38px;
+      display: flex; align-items: center;
+    }
+    .anotacao-item {
+      border: 1px solid var(--card-border); border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 10px; background: var(--input-bg);
+    }
+    .anotacao-item:last-child { margin-bottom: 0; }
+    .anotacao-meta {
+      font-size: 11px; color: var(--text-muted); margin-bottom: 6px;
+      display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+    }
+    .anotacao-texto { font-size: 13px; color: var(--text); line-height: 1.45; }
+    .historico-list { display: flex; flex-direction: column; gap: 0; }
+    .historico-item {
+      display: grid; grid-template-columns: 1fr auto auto; gap: 12px;
+      align-items: start; padding: 12px 0;
+      border-bottom: 1px solid var(--card-border); font-size: 13px;
+    }
+    .historico-item:last-child { border-bottom: none; }
+    .historico-acao { font-weight: 600; color: var(--text); text-align: left; }
+    .historico-data { color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .historico-user { color: var(--text-muted); white-space: nowrap; }
+    .empty-hint {
+      text-align: center; padding: 28px 12px; color: var(--text-muted); font-size: 13px;
+    }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 1100;
+      background: #111827; color: #fff; padding: 12px 16px; border-radius: 10px;
+      font-size: 13px; box-shadow: var(--shadow); display: none;
+    }
+    .toast.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Menu">
+      <div class="sidebar-brand">SPIN · Data Intelligence</div>
+      <div class="sidebar-section">Conteúdo</div>
+      <div class="sidebar-item">Playbook Influencers</div>
+      <div class="sidebar-item">Informativos</div>
+      <div class="sidebar-section">Tech Ops</div>
+      <div class="sidebar-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>
+        Estoque
+      </div>
+      <div class="sidebar-section">Plataforma</div>
+      <div class="sidebar-item">Gestão de Estúdios</div>
+      <div class="sidebar-item">Status Técnico</div>
+    </aside>
+
+    <main class="main">
+      <div class="mockup-banner">
+        <strong>Mockup interativo</strong> — página Estoque (Tech Ops). Abas, KPIs clicáveis, filtros e modais. Dados fictícios para validação de UX.
+      </div>
+
+      <header class="page-header">
+        <div class="page-header-row">
+          <span class="page-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>
+          </span>
+          <h1>Estoque</h1>
+        </div>
+        <p class="subtitle">Controle de itens, equipamentos, materiais de jogo e fornecedores da operação Tech Ops.</p>
+      </header>
+
+      <!-- BLOCO 1 — FILTROS -->
+      <div class="filter-box">
+        <div class="filter-row" role="tablist" aria-label="Módulos do estoque">
+          <button type="button" class="tab-btn active" role="tab" data-tab="itens" aria-selected="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            Itens
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="equipamentos" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+            Equipamentos
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="jogo" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m14.5 9.5-5 5"/><path d="m9.5 9.5 5 5"/></svg>
+            Jogo
+          </button>
+          <button type="button" class="tab-btn" role="tab" data-tab="fornecedores" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Fornecedores
+          </button>
+        </div>
+
+        <div class="filter-row" id="filter-row-2">
+          <input type="search" class="search-input" id="busca" placeholder="Pesquisar..." aria-label="Barra de pesquisa" />
+          <label class="pill-select" id="wrap-estudio">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+            <select id="filtro-estudio" aria-label="Estúdios" style="border:none;background:transparent;font:inherit;color:inherit;outline:none;cursor:pointer;">
+              <option value="todos">Todos Estúdios</option>
+              <option value="sports_club">Sports Club</option>
+              <option value="blaze">Estúdio Blaze</option>
+              <option value="cda">Estúdio CDA</option>
+            </select>
+          </label>
+          <label class="pill-select" id="wrap-categoria">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+            <select id="filtro-categoria" aria-label="Categoria" style="border:none;background:transparent;font:inherit;color:inherit;outline:none;cursor:pointer;">
+              <!-- preenchido por JS -->
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- ========== ABA ITENS ========== -->
+      <div class="panel active" id="panel-itens" role="tabpanel">
+        <div class="content-box">
+          <div class="section-title">
+            <h2>Consolidado</h2>
+            <span class="sub">Clique no card para filtrar a tabela por status</span>
+          </div>
+          <div class="kpi-grid" id="kpi-itens">
+            <button type="button" class="kpi-card active" data-status="" style="--kpi-color: var(--brand-primary)" aria-pressed="true">
+              <div class="kpi-label">Total</div>
+              <div class="kpi-value">248</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Cabos e Conectores</span><span>72</span></div>
+                <div class="kpi-breakdown-row"><span>Energia</span><span>41</span></div>
+                <div class="kpi-breakdown-row"><span>Iluminação</span><span>38</span></div>
+                <div class="kpi-breakdown-row"><span>Rede / IT</span><span>45</span></div>
+                <div class="kpi-breakdown-row"><span>Tripés e Suportes</span><span>28</span></div>
+                <div class="kpi-breakdown-row"><span>Áudio e Vídeo</span><span>24</span></div>
+              </div>
+            </button>
+            <button type="button" class="kpi-card" data-status="estoque" style="--kpi-color: var(--green)" aria-pressed="false">
+              <div class="kpi-label">Estoque</div>
+              <div class="kpi-value">156</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Cabos e Conectores</span><span>48</span></div>
+                <div class="kpi-breakdown-row"><span>Energia</span><span>22</span></div>
+                <div class="kpi-breakdown-row"><span>Iluminação</span><span>20</span></div>
+                <div class="kpi-breakdown-row"><span>Rede / IT</span><span>30</span></div>
+                <div class="kpi-breakdown-row"><span>Tripés e Suportes</span><span>18</span></div>
+                <div class="kpi-breakdown-row"><span>Áudio e Vídeo</span><span>18</span></div>
+              </div>
+            </button>
+            <button type="button" class="kpi-card" data-status="uso" style="--kpi-color: var(--brand-secondary)" aria-pressed="false">
+              <div class="kpi-label">Em uso</div>
+              <div class="kpi-value">72</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Cabos e Conectores</span><span>20</span></div>
+                <div class="kpi-breakdown-row"><span>Energia</span><span>14</span></div>
+                <div class="kpi-breakdown-row"><span>Iluminação</span><span>12</span></div>
+                <div class="kpi-breakdown-row"><span>Rede / IT</span><span>12</span></div>
+                <div class="kpi-breakdown-row"><span>Tripés e Suportes</span><span>8</span></div>
+                <div class="kpi-breakdown-row"><span>Áudio e Vídeo</span><span>6</span></div>
+              </div>
+            </button>
+            <button type="button" class="kpi-card" data-status="manutencao" style="--kpi-color: var(--yellow)" aria-pressed="false">
+              <div class="kpi-label">Manutenção</div>
+              <div class="kpi-value">20</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Cabos e Conectores</span><span>4</span></div>
+                <div class="kpi-breakdown-row"><span>Energia</span><span>5</span></div>
+                <div class="kpi-breakdown-row"><span>Iluminação</span><span>6</span></div>
+                <div class="kpi-breakdown-row"><span>Rede / IT</span><span>3</span></div>
+                <div class="kpi-breakdown-row"><span>Tripés e Suportes</span><span>2</span></div>
+                <div class="kpi-breakdown-row"><span>Áudio e Vídeo</span><span>0</span></div>
+              </div>
+            </button>
+          </div>
+          <div class="filter-chip" id="chip-itens"><span></span><button type="button">Limpar filtro</button></div>
+        </div>
+
+        <div class="content-box">
+          <div class="section-title-row">
+            <div class="section-title">
+              <h2>Catálogo</h2>
+              <span class="sub">Itens de operação Tech Ops</span>
+            </div>
+            <button type="button" class="cta-criar" id="btn-novo-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Novo Item
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption style="display:none">Catálogo de itens</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Código</th>
+                  <th scope="col">Categoria</th>
+                  <th scope="col">Nome</th>
+                  <th scope="col">Modelo</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Em Uso</th>
+                  <th scope="col">Estoque</th>
+                  <th scope="col">Manutenção</th>
+                  <th scope="col">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-itens">
+                <tr data-cat="Cabos e Conectores" data-status="estoque">
+                  <td>ITM-001</td><td>Cabos e Conectores</td><td class="td-left">Cabo HDMI 5m</td><td>HDMI-5M</td>
+                  <td>40</td><td>12</td><td>26</td><td>2</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Energia" data-status="uso">
+                  <td>ITM-002</td><td>Energia</td><td class="td-left">Régua 8 tomadas</td><td>RG-8</td>
+                  <td>18</td><td>10</td><td>6</td><td>2</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Iluminação" data-status="manutencao">
+                  <td>ITM-003</td><td>Iluminação</td><td class="td-left">Softbox LED</td><td>SB-LED-60</td>
+                  <td>12</td><td>4</td><td>5</td><td>3</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Rede / IT" data-status="estoque">
+                  <td>ITM-004</td><td>Rede / IT</td><td class="td-left">Switch 24 portas</td><td>SW-24G</td>
+                  <td>6</td><td>3</td><td>3</td><td>0</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Tripés e Suportes" data-status="uso">
+                  <td>ITM-005</td><td>Tripés e Suportes</td><td class="td-left">Tripé C-Stand</td><td>CS-40</td>
+                  <td>15</td><td>8</td><td>6</td><td>1</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Áudio e Vídeo" data-status="estoque">
+                  <td>ITM-006</td><td>Áudio e Vídeo</td><td class="td-left">Microfone lapela</td><td>WL-200</td>
+                  <td>24</td><td>6</td><td>18</td><td>0</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== ABA EQUIPAMENTOS ========== -->
+      <div class="panel" id="panel-equipamentos" role="tabpanel">
+        <div class="content-box">
+          <div class="section-title">
+            <h2>Consolidado</h2>
+            <span class="sub">Clique no card para filtrar a tabela por status</span>
+          </div>
+          <div class="kpi-grid" id="kpi-equip">
+            <button type="button" class="kpi-card active" data-status="" style="--kpi-color: var(--brand-primary)" aria-pressed="true">
+              <div class="kpi-label">Total</div>
+              <div class="kpi-value">64</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Roleta</span><span>8</span></div>
+                <div class="kpi-breakdown-row"><span>Máquina de Cartas</span><span>6</span></div>
+                <div class="kpi-breakdown-row"><span>Câmera</span><span>18</span></div>
+                <div class="kpi-breakdown-row"><span>Iluminação</span><span>12</span></div>
+                <div class="kpi-breakdown-row"><span>Lentes</span><span>10</span></div>
+                <div class="kpi-breakdown-row"><span>Vídeo/Switcher</span><span>6</span></div>
+                <div class="kpi-breakdown-row"><span>Áudio</span><span>4</span></div>
+              </div>
+            </button>
+            <button type="button" class="kpi-card" data-status="estoque" style="--kpi-color: var(--green)" aria-pressed="false">
+              <div class="kpi-label">Estoque</div>
+              <div class="kpi-value">22</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Roleta</span><span>1</span></div>
+                <div class="kpi-breakdown-row"><span>Máquina de Cartas</span><span>1</span></div>
+                <div class="kpi-breakdown-row"><span>Câmera</span><span>6</span></div>
+                <div class="kpi-breakdown-row"><span>Iluminação</span><span>5</span></div>
+                <div class="kpi-breakdown-row"><span>Lentes</span><span>5</span></div>
+                <div class="kpi-breakdown-row"><span>Vídeo/Switcher</span><span>2</span></div>
+                <div class="kpi-breakdown-row"><span>Áudio</span><span>2</span></div>
+              </div>
+            </button>
+            <button type="button" class="kpi-card" data-status="uso" style="--kpi-color: var(--brand-secondary)" aria-pressed="false">
+              <div class="kpi-label">Em uso</div>
+              <div class="kpi-value">36</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Roleta</span><span>6</span></div>
+                <div class="kpi-breakdown-row"><span>Máquina de Cartas</span><span>4</span></div>
+                <div class="kpi-breakdown-row"><span>Câmera</span><span>10</span></div>
+                <div class="kpi-breakdown-row"><span>Iluminação</span><span>6</span></div>
+                <div class="kpi-breakdown-row"><span>Lentes</span><span>4</span></div>
+                <div class="kpi-breakdown-row"><span>Vídeo/Switcher</span><span>4</span></div>
+                <div class="kpi-breakdown-row"><span>Áudio</span><span>2</span></div>
+              </div>
+            </button>
+            <button type="button" class="kpi-card" data-status="manutencao" style="--kpi-color: var(--yellow)" aria-pressed="false">
+              <div class="kpi-label">Manutenção</div>
+              <div class="kpi-value">6</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Roleta</span><span>1</span></div>
+                <div class="kpi-breakdown-row"><span>Máquina de Cartas</span><span>1</span></div>
+                <div class="kpi-breakdown-row"><span>Câmera</span><span>2</span></div>
+                <div class="kpi-breakdown-row"><span>Iluminação</span><span>1</span></div>
+                <div class="kpi-breakdown-row"><span>Lentes</span><span>1</span></div>
+                <div class="kpi-breakdown-row"><span>Vídeo/Switcher</span><span>0</span></div>
+                <div class="kpi-breakdown-row"><span>Áudio</span><span>0</span></div>
+              </div>
+            </button>
+          </div>
+          <div class="filter-chip" id="chip-equip"><span></span><button type="button">Limpar filtro</button></div>
+        </div>
+
+        <div class="content-box">
+          <div class="section-title-row">
+            <div class="section-title">
+              <h2>Catálogo</h2>
+              <span class="sub">Equipamentos com número de série</span>
+            </div>
+            <button type="button" class="cta-criar" id="btn-novo-equip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Novo Equipamento
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption style="display:none">Catálogo de equipamentos</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Código</th>
+                  <th scope="col">Categoria</th>
+                  <th scope="col">Nome</th>
+                  <th scope="col">Número de Série</th>
+                  <th scope="col">Marca</th>
+                  <th scope="col">Modelo</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Alocação</th>
+                  <th scope="col">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-equip">
+                <tr data-cat="Roleta" data-status="uso">
+                  <td>EQP-001</td><td>Roleta</td><td class="td-left">Roleta Speed</td><td>SN-RL-88421</td><td>Interblock</td><td>Galaxy II</td>
+                  <td><span class="badge badge-uso">Em uso</span></td><td>Sports Club</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Máquina de Cartas" data-status="manutencao">
+                  <td>EQP-002</td><td>Máquina de Cartas</td><td class="td-left">Shuffler A</td><td>SN-SH-11209</td><td>SHFL</td><td>MD-2</td>
+                  <td><span class="badge badge-manut">Manutenção</span></td><td>—</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Câmera" data-status="uso">
+                  <td>EQP-003</td><td>Câmera</td><td class="td-left">Câmera PTZ Mesa 1</td><td>SN-CM-44012</td><td>Sony</td><td>Brc-X400</td>
+                  <td><span class="badge badge-uso">Em uso</span></td><td>Estúdio Blaze</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Iluminação" data-status="estoque">
+                  <td>EQP-004</td><td>Iluminação</td><td class="td-left">Painel LED Panel</td><td>SN-IL-99801</td><td>Aputure</td><td>600d</td>
+                  <td><span class="badge badge-estoque">Estoque</span></td><td>—</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Lentes" data-status="uso">
+                  <td>EQP-005</td><td>Lentes</td><td class="td-left">Lente 24-70</td><td>SN-LN-22011</td><td>Canon</td><td>EF 24-70</td>
+                  <td><span class="badge badge-uso">Em uso</span></td><td>Estúdio CDA</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Vídeo/Switcher" data-status="estoque">
+                  <td>EQP-006</td><td>Vídeo/Switcher</td><td class="td-left">ATEM Mini Pro</td><td>SN-VD-77102</td><td>Blackmagic</td><td>ATEM Mini Pro</td>
+                  <td><span class="badge badge-estoque">Estoque</span></td><td>—</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Áudio" data-status="uso">
+                  <td>EQP-007</td><td>Áudio</td><td class="td-left">Mixer digital</td><td>SN-AU-33008</td><td>Yamaha</td><td>TF1</td>
+                  <td><span class="badge badge-uso">Em uso</span></td><td>Sports Club</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== ABA JOGO ========== -->
+      <div class="panel" id="panel-jogo" role="tabpanel">
+        <div class="content-box">
+          <div class="section-title">
+            <h2>Consolidado de Estoque</h2>
+            <span class="sub">Clique no card para filtrar a tabela por categoria</span>
+          </div>
+          <div class="kpi-grid-jogo" id="kpi-jogo">
+            <button type="button" class="kpi-card" data-cat="Bolinhas" style="--kpi-color: #ea580c" aria-pressed="false">
+              <div class="kpi-label">Bolinhas</div>
+              <div class="kpi-value">1.240</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Qtd atual consolidada</span><span>un.</span></div>
+              </div>
+            </button>
+            <button type="button" class="kpi-card" data-cat="Cartas" style="--kpi-color: #1e36f8" aria-pressed="false">
+              <div class="kpi-label">Cartas</div>
+              <div class="kpi-value">86</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Qtd atual (sets)</span><span>sets</span></div>
+              </div>
+            </button>
+            <button type="button" class="kpi-card" data-cat="Tecidos" style="--kpi-color: #22c55e" aria-pressed="false">
+              <div class="kpi-label">Tecidos</div>
+              <div class="kpi-value">34</div>
+              <div class="kpi-breakdown">
+                <div class="kpi-breakdown-row"><span>Qtd atual consolidada</span><span>un.</span></div>
+              </div>
+            </button>
+          </div>
+          <div class="filter-chip" id="chip-jogo"><span></span><button type="button">Limpar filtro</button></div>
+        </div>
+
+        <div class="content-box">
+          <div class="section-title-row">
+            <div class="section-title">
+              <h2>Catálogo</h2>
+              <span class="sub">Lotes de materiais de jogo</span>
+            </div>
+            <button type="button" class="cta-criar" id="btn-novo-jogo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Novo Item de Jogo
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption style="display:none">Catálogo de itens de jogo</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Código</th>
+                  <th scope="col">Categoria</th>
+                  <th scope="col">Nome do Lote</th>
+                  <th scope="col">Qtd Inicial</th>
+                  <th scope="col">Qtd Consumida</th>
+                  <th scope="col">Qtd Atual</th>
+                  <th scope="col">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-jogo">
+                <tr data-cat="Bolinhas">
+                  <td>JOG-001</td><td>Bolinhas</td><td class="td-left">Lote Bolinhas Red — Mar/2026</td>
+                  <td>500</td><td>120</td><td>380</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Cartas">
+                  <td>JOG-002</td><td>Cartas</td><td class="td-left">Lote Cartas RED — Lote A12</td>
+                  <td>40</td><td>12</td><td>28</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Tecidos">
+                  <td>JOG-003</td><td>Tecidos</td><td class="td-left">Tecido Feltro Verde — Lote T03</td>
+                  <td>20</td><td>6</td><td>14</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Bolinhas">
+                  <td>JOG-004</td><td>Bolinhas</td><td class="td-left">Lote Bolinhas Black — Abr/2026</td>
+                  <td>1000</td><td>140</td><td>860</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Cartas">
+                  <td>JOG-005</td><td>Cartas</td><td class="td-left">Lote Cartas BLACK — Lote B07</td>
+                  <td>80</td><td>22</td><td>58</td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== ABA FORNECEDORES ========== -->
+      <div class="panel" id="panel-fornecedores" role="tabpanel">
+        <div class="content-box">
+          <div class="section-title-row">
+            <div class="section-title">
+              <h2>Catálogo</h2>
+              <span class="sub">Empresas e contatos</span>
+            </div>
+            <button type="button" class="cta-criar" id="btn-novo-fornecedor">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Novo Fornecedor
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption style="display:none">Catálogo de fornecedores</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Empresa</th>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Contato</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-forn">
+                <tr data-cat="Destruição de cartas">
+                  <td><span class="empresa-tip" data-cnpj="CNPJ 12.345.678/0001-90">Secure Destroy Ltda</span></td>
+                  <td>Destruição de cartas</td>
+                  <td>
+                    <div class="contatos-stack">
+                      <button type="button" class="link-contato" data-nome="Ana Paula Costa" data-tel="(11) 98888-1100" data-email="ana@securedestroy.com.br">Ana Paula Costa</button>
+                      <button type="button" class="link-contato" data-nome="Bruno Mendes" data-tel="(11) 97777-2200" data-email="bruno@securedestroy.com.br">Bruno Mendes</button>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-ativo">Ativo</span></td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Geral">
+                  <td><span class="empresa-tip" data-cnpj="CNPJ 98.765.432/0001-10">TechParts Brasil</span></td>
+                  <td>Geral</td>
+                  <td>
+                    <div class="contatos-stack">
+                      <button type="button" class="link-contato" data-nome="Carla Nogueira" data-tel="(11) 96666-3300" data-email="carla@techparts.com.br">Carla Nogueira</button>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-ativo">Ativo</span></td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-cat="Geral">
+                  <td><span class="empresa-tip" data-cnpj="CNPJ 11.222.333/0001-44">Ilumina Pro AV</span></td>
+                  <td>Geral</td>
+                  <td>
+                    <div class="contatos-stack">
+                      <button type="button" class="link-contato" data-nome="Diego Ramos" data-tel="(11) 95555-4400" data-email="diego@iluminapro.com.br">Diego Ramos</button>
+                      <button type="button" class="link-contato" data-nome="Elisa Freitas" data-tel="(11) 94444-5500" data-email="elisa@iluminapro.com.br">Elisa Freitas</button>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-inativo">Inativo</span></td>
+                  <td>
+                    <button type="button" class="btn-icon" title="Ver" aria-label="Ver"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="btn-icon" title="Editar" aria-label="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Novo Item -->
+  <div class="overlay" id="modal-item" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-item">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="titulo-modal-item">Novo Item</h3>
+        <button type="button" class="modal-close" data-close="modal-item" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label class="field"><span>Código<span class="req">*</span></span><input type="text" value="ITM-007" disabled /></label>
+          <label class="field"><span>Categoria<span class="req">*</span></span>
+            <select required>
+              <option value="">Selecione…</option>
+              <option>Cabos e Conectores</option>
+              <option>Energia</option>
+              <option>Iluminação</option>
+              <option>Rede / IT</option>
+              <option>Tripés e Suportes</option>
+              <option>Áudio e Vídeo</option>
+            </select>
+          </label>
+          <label class="field full"><span>Nome<span class="req">*</span></span><input type="text" placeholder="Ex.: Cabo SDI 10m" required /></label>
+          <label class="field"><span>Marca<span class="req">*</span></span><input type="text" required /></label>
+          <label class="field"><span>Modelo<span class="req">*</span></span><input type="text" required /></label>
+          <label class="field"><span>Quantidade<span class="req">*</span></span><input type="number" min="1" required /></label>
+          <label class="field"><span>Valor Unitário<span class="req">*</span></span><input type="text" inputmode="decimal" placeholder="R$ 0,00" required /></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="modal-item">Cancelar</button>
+        <button type="button" class="cta-criar" data-register="item">Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Novo Equipamento -->
+  <div class="overlay" id="modal-equip" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-equip">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="titulo-modal-equip">Novo Equipamento</h3>
+        <button type="button" class="modal-close" data-close="modal-equip" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label class="field"><span>Código<span class="req">*</span></span><input type="text" value="EQP-008" disabled /></label>
+          <label class="field"><span>Categoria<span class="req">*</span></span>
+            <select required>
+              <option value="">Selecione…</option>
+              <option>Roleta</option>
+              <option>Máquina de Cartas</option>
+              <option>Câmera</option>
+              <option>Iluminação</option>
+              <option>Lentes</option>
+              <option>Vídeo/Switcher</option>
+              <option>Áudio</option>
+            </select>
+          </label>
+          <label class="field full"><span>Nome<span class="req">*</span></span><input type="text" required /></label>
+          <label class="field"><span>Número de Série<span class="req">*</span></span><input type="text" required /></label>
+          <label class="field"><span>Marca<span class="req">*</span></span><input type="text" required /></label>
+          <label class="field"><span>Modelo<span class="req">*</span></span><input type="text" required /></label>
+          <label class="field"><span>Valor<span class="req">*</span></span><input type="text" inputmode="decimal" placeholder="R$ 0,00" required /></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="modal-equip">Cancelar</button>
+        <button type="button" class="cta-criar" data-register="equip">Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Novo Item de Jogo -->
+  <div class="overlay" id="modal-jogo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-jogo">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="titulo-modal-jogo">Novo Item de Jogo</h3>
+        <button type="button" class="modal-close" data-close="modal-jogo" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label class="field"><span>Código<span class="req">*</span></span><input type="text" value="JOG-006" disabled /></label>
+          <label class="field"><span>Categoria<span class="req">*</span></span>
+            <select required>
+              <option value="">Selecione…</option>
+              <option>Bolinhas</option>
+              <option>Cartas</option>
+              <option>Tecidos</option>
+            </select>
+          </label>
+          <label class="field full"><span>Nome do Lote<span class="req">*</span></span><input type="text" required /></label>
+          <label class="field full">
+            <span>Quantidade<span class="req">*</span></span>
+            <input type="number" min="1" required />
+            <span style="font-size:11px;font-weight:400;color:var(--text-muted)">Será registrada como Quantidade Inicial.</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="modal-jogo">Cancelar</button>
+        <button type="button" class="cta-criar" data-register="jogo">Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Novo Fornecedor -->
+  <div class="overlay" id="modal-fornecedor" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-forn">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3 id="titulo-modal-forn">Novo Fornecedor</h3>
+        <button type="button" class="modal-close" data-close="modal-fornecedor" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs" role="tablist" aria-label="Cadastro de fornecedor">
+          <button type="button" class="modal-tab active" data-mtab="empresa">Empresa</button>
+          <button type="button" class="modal-tab" data-mtab="contato">Contato</button>
+        </div>
+        <div class="modal-tab-panel active" id="mtab-empresa">
+          <div class="form-grid">
+            <label class="field full"><span>Razão Social<span class="req">*</span></span><input type="text" required /></label>
+            <label class="field"><span>CNPJ<span class="req">*</span></span><input type="text" placeholder="00.000.000/0000-00" required /></label>
+            <label class="field"><span>Tipo<span class="req">*</span></span>
+              <select required>
+                <option value="">Selecione…</option>
+                <option>Destruição de cartas</option>
+                <option>Geral</option>
+              </select>
+            </label>
+            <label class="field full"><span>Observação</span><textarea rows="3"></textarea></label>
+          </div>
+        </div>
+        <div class="modal-tab-panel" id="mtab-contato">
+          <div id="contatos-list">
+            <div class="contato-block">
+              <div class="form-grid">
+                <label class="field full"><span>Nome do Contato<span class="req">*</span></span><input type="text" required /></label>
+                <label class="field"><span>Telefone<span class="req">*</span></span><input type="tel" required /></label>
+                <label class="field"><span>E-mail<span class="req">*</span></span><input type="email" required /></label>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn-add-contato" id="btn-add-contato">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Adicionar contato
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="modal-fornecedor">Cancelar</button>
+        <button type="button" class="cta-criar" data-register="fornecedor">Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Contato (leitura) -->
+  <div class="overlay" id="modal-contato-view" role="dialog" aria-modal="true" aria-labelledby="titulo-contato-view">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <h3 id="titulo-contato-view">Contato</h3>
+        <button type="button" class="modal-close" data-close="modal-contato-view" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label class="field full"><span>Nome do Contato</span><input type="text" id="view-contato-nome" disabled /></label>
+          <label class="field"><span>Telefone</span><input type="text" id="view-contato-tel" disabled /></label>
+          <label class="field"><span>E-mail</span><input type="text" id="view-contato-email" disabled /></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="modal-contato-view">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Ver (Itens / Equipamentos / Jogo / Fornecedores) -->
+  <div class="overlay" id="modal-ver" role="dialog" aria-modal="true" aria-labelledby="ver-titulo">
+    <div class="modal modal-wide">
+      <div class="modal-header" style="align-items:flex-start">
+        <div class="modal-ver-head" style="margin:0;flex:1;padding-right:12px">
+          <h3 id="ver-titulo">—</h3>
+          <div class="modal-ver-sub" id="ver-subtitulo">—</div>
+        </div>
+        <button type="button" class="modal-close" data-close="modal-ver" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs" id="ver-tabs" role="tablist" aria-label="Detalhes do registro"></div>
+        <div id="ver-panels"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" data-close="modal-ver">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status">Registro simulado — mockup sem persistência.</div>
+
+  <script>
+    const CATEGORIAS = {
+      itens: ["Todas Categorias", "Cabos e Conectores", "Energia", "Iluminação", "Rede / IT", "Tripés e Suportes", "Áudio e Vídeo"],
+      equipamentos: ["Todas Categorias", "Roleta", "Máquina de Cartas", "Câmera", "Iluminação", "Lentes", "Vídeo/Switcher", "Áudio"],
+      jogo: ["Todas Categorias", "Bolinhas", "Cartas", "Tecidos"],
+      fornecedores: ["Todos Tipos", "Destruição de cartas", "Geral"],
+    };
+    const PLACEHOLDERS = {
+      itens: "Pesquisar item...",
+      equipamentos: "Pesquisar equipamento...",
+      jogo: "Pesquisar lote...",
+      fornecedores: "Pesquisar fornecedor...",
+    };
+
+    let currentTab = "itens";
+    const statusFilter = { itens: "", equipamentos: "", jogo: "" };
+
+    const catSelect = document.getElementById("filtro-categoria");
+    const busca = document.getElementById("busca");
+    const wrapEstudio = document.getElementById("wrap-estudio");
+
+    function fillCategorias(tab) {
+      const opts = CATEGORIAS[tab] || [];
+      catSelect.innerHTML = opts.map((o, i) => `<option value="${i === 0 ? "" : o}">${o}</option>`).join("");
+      wrapEstudio.style.display = tab === "fornecedores" ? "none" : "";
+      busca.placeholder = PLACEHOLDERS[tab] || "Pesquisar...";
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        const on = btn.dataset.tab === tab;
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + tab));
+      fillCategorias(tab);
+      applyFilters();
+    }
+
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+    });
+
+    function wireKpiStatus(kpiId, group, chipId) {
+      document.querySelectorAll("#" + kpiId + " .kpi-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const s = card.dataset.status || "";
+          statusFilter[group] = s;
+          document.querySelectorAll("#" + kpiId + " .kpi-card").forEach((c) => {
+            const on = (c.dataset.status || "") === s;
+            c.classList.toggle("active", on);
+            c.setAttribute("aria-pressed", on ? "true" : "false");
+          });
+          const chip = document.getElementById(chipId);
+          if (s) {
+            chip.classList.add("visible");
+            chip.querySelector("span").textContent = "Filtro ativo: " + card.querySelector(".kpi-label").textContent;
+          } else {
+            chip.classList.remove("visible");
+          }
+          applyFilters();
+        });
+      });
+    }
+    wireKpiStatus("kpi-itens", "itens", "chip-itens");
+    wireKpiStatus("kpi-equip", "equipamentos", "chip-equip");
+
+    document.querySelectorAll("#kpi-jogo .kpi-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const cat = card.dataset.cat || "";
+        const next = statusFilter.jogo === cat ? "" : cat;
+        statusFilter.jogo = next;
+        document.querySelectorAll("#kpi-jogo .kpi-card").forEach((c) => {
+          const on = c.dataset.cat === next;
+          c.classList.toggle("active", on);
+          c.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        const chip = document.getElementById("chip-jogo");
+        if (next) {
+          chip.classList.add("visible");
+          chip.querySelector("span").textContent = "Filtro ativo: " + next;
+          catSelect.value = next;
+        } else {
+          chip.classList.remove("visible");
+          catSelect.value = "";
+        }
+        applyFilters();
+      });
+    });
+
+    document.querySelectorAll(".filter-chip button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const chip = btn.closest(".filter-chip");
+        if (chip.id === "chip-itens") {
+          statusFilter.itens = "";
+          document.querySelectorAll("#kpi-itens .kpi-card").forEach((c) => {
+            c.classList.toggle("active", !c.dataset.status);
+            c.setAttribute("aria-pressed", !c.dataset.status ? "true" : "false");
+          });
+        } else if (chip.id === "chip-equip") {
+          statusFilter.equipamentos = "";
+          document.querySelectorAll("#kpi-equip .kpi-card").forEach((c) => {
+            c.classList.toggle("active", !c.dataset.status);
+            c.setAttribute("aria-pressed", !c.dataset.status ? "true" : "false");
+          });
+        } else if (chip.id === "chip-jogo") {
+          statusFilter.jogo = "";
+          document.querySelectorAll("#kpi-jogo .kpi-card").forEach((c) => {
+            c.classList.remove("active");
+            c.setAttribute("aria-pressed", "false");
+          });
+          catSelect.value = "";
+        }
+        chip.classList.remove("visible");
+        applyFilters();
+      });
+    });
+
+    function normalize(s) {
+      return (s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+    }
+
+    function applyFilters() {
+      const q = normalize(busca.value);
+      const cat = catSelect.value;
+
+      if (currentTab === "itens") {
+        document.querySelectorAll("#tbody-itens tr").forEach((tr) => {
+          const matchCat = !cat || tr.dataset.cat === cat;
+          let matchStatus = true;
+          if (statusFilter.itens === "estoque") matchStatus = Number(tr.children[6].textContent) > 0;
+          else if (statusFilter.itens === "uso") matchStatus = Number(tr.children[5].textContent) > 0;
+          else if (statusFilter.itens === "manutencao") matchStatus = Number(tr.children[7].textContent) > 0;
+          const text = normalize(tr.textContent);
+          tr.style.display = matchCat && matchStatus && (!q || text.includes(q)) ? "" : "none";
+        });
+      }
+      if (currentTab === "equipamentos") {
+        document.querySelectorAll("#tbody-equip tr").forEach((tr) => {
+          const matchCat = !cat || tr.dataset.cat === cat;
+          const matchStatus = !statusFilter.equipamentos || tr.dataset.status === statusFilter.equipamentos;
+          const text = normalize(tr.textContent);
+          tr.style.display = matchCat && matchStatus && (!q || text.includes(q)) ? "" : "none";
+        });
+      }
+      if (currentTab === "jogo") {
+        const catFilter = statusFilter.jogo || cat;
+        document.querySelectorAll("#tbody-jogo tr").forEach((tr) => {
+          const matchCat = !catFilter || tr.dataset.cat === catFilter;
+          const text = normalize(tr.textContent);
+          tr.style.display = matchCat && (!q || text.includes(q)) ? "" : "none";
+        });
+      }
+      if (currentTab === "fornecedores") {
+        document.querySelectorAll("#tbody-forn tr").forEach((tr) => {
+          const matchCat = !cat || tr.dataset.cat === cat;
+          const text = normalize(tr.textContent);
+          tr.style.display = matchCat && (!q || text.includes(q)) ? "" : "none";
+        });
+      }
+
+      const estudio = document.getElementById("filtro-estudio");
+      wrapEstudio.classList.toggle("active", estudio.value !== "todos");
+      document.getElementById("wrap-categoria").classList.toggle("active", !!catSelect.value);
+    }
+
+    busca.addEventListener("input", applyFilters);
+    catSelect.addEventListener("change", () => {
+      if (currentTab === "jogo") {
+        statusFilter.jogo = catSelect.value;
+        document.querySelectorAll("#kpi-jogo .kpi-card").forEach((c) => {
+          const on = c.dataset.cat === statusFilter.jogo;
+          c.classList.toggle("active", on);
+          c.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        const chip = document.getElementById("chip-jogo");
+        if (statusFilter.jogo) {
+          chip.classList.add("visible");
+          chip.querySelector("span").textContent = "Filtro ativo: " + statusFilter.jogo;
+        } else chip.classList.remove("visible");
+      }
+      applyFilters();
+    });
+    document.getElementById("filtro-estudio").addEventListener("change", applyFilters);
+
+    function openModal(id) { document.getElementById(id).classList.add("open"); }
+    function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+    document.querySelectorAll("[data-close]").forEach((btn) => {
+      btn.addEventListener("click", () => closeModal(btn.dataset.close));
+    });
+    document.querySelectorAll(".overlay").forEach((ov) => {
+      ov.addEventListener("click", (e) => { if (e.target === ov) ov.classList.remove("open"); });
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") document.querySelectorAll(".overlay.open").forEach((ov) => ov.classList.remove("open"));
+    });
+
+    document.getElementById("btn-novo-item").addEventListener("click", () => openModal("modal-item"));
+    document.getElementById("btn-novo-equip").addEventListener("click", () => openModal("modal-equip"));
+    document.getElementById("btn-novo-jogo").addEventListener("click", () => openModal("modal-jogo"));
+    document.getElementById("btn-novo-fornecedor").addEventListener("click", () => openModal("modal-fornecedor"));
+
+    document.querySelectorAll("[data-register]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const toast = document.getElementById("toast");
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 2200);
+        btn.closest(".overlay").classList.remove("open");
+      });
+    });
+
+    document.querySelectorAll("#modal-fornecedor .modal-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll("#modal-fornecedor .modal-tab").forEach((t) => t.classList.remove("active"));
+        document.querySelectorAll("#modal-fornecedor .modal-tab-panel").forEach((p) => p.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById("mtab-" + tab.dataset.mtab).classList.add("active");
+      });
+    });
+
+    let contatoCount = 1;
+    document.getElementById("btn-add-contato").addEventListener("click", () => {
+      contatoCount += 1;
+      const block = document.createElement("div");
+      block.className = "contato-block";
+      block.innerHTML =
+        '<div class="form-grid">' +
+        '<label class="field full"><span>Nome do Contato<span class="req">*</span></span><input type="text" required /></label>' +
+        '<label class="field"><span>Telefone<span class="req">*</span></span><input type="tel" required /></label>' +
+        '<label class="field"><span>E-mail<span class="req">*</span></span><input type="email" required /></label>' +
+        "</div>";
+      document.getElementById("contatos-list").appendChild(block);
+    });
+
+    document.querySelectorAll(".link-contato").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.getElementById("view-contato-nome").value = btn.dataset.nome;
+        document.getElementById("view-contato-tel").value = btn.dataset.tel;
+        document.getElementById("view-contato-email").value = btn.dataset.email;
+        openModal("modal-contato-view");
+      });
+    });
+
+    /* ——— Modal Ver ——— */
+    const MARCA_ITEM = {
+      "ITM-001": "Generic", "ITM-002": "ForceLine", "ITM-003": "Aputure",
+      "ITM-004": "TP-Link", "ITM-005": "Manfrotto", "ITM-006": "Sennheiser",
+    };
+    const VALOR_ITEM = {
+      "ITM-001": 89.9, "ITM-002": 149.0, "ITM-003": 890.0,
+      "ITM-004": 1290.0, "ITM-005": 620.0, "ITM-006": 450.0,
+    };
+    const VALOR_EQUIP = {
+      "EQP-001": 85000, "EQP-002": 42000, "EQP-003": 18500,
+      "EQP-004": 9800, "EQP-005": 7200, "EQP-006": 3100, "EQP-007": 14500,
+    };
+
+    function fmtBRL(v) {
+      return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function htmlField(label, value, full) {
+      return '<label class="field' + (full ? " full" : "") + '"><span>' + label + '</span><div class="info-readonly">' +
+        (value === "" || value == null ? "—" : value) + "</div></label>";
+    }
+
+    function htmlAnotacoes(nome) {
+      return (
+        '<div class="anotacao-item">' +
+          '<div class="anotacao-meta"><span>Yuri Silvestre</span><span>14/07/2026 · 09:42</span></div>' +
+          '<div class="anotacao-texto">Conferido na rotina semanal. Item «' + nome + '» ok para operação.</div>' +
+        "</div>" +
+        '<div class="anotacao-item">' +
+          '<div class="anotacao-meta"><span>Rafael Vila</span><span>10/07/2026 · 16:18</span></div>' +
+          '<div class="anotacao-texto">Registrada observação após inspeção visual no estúdio.</div>' +
+        "</div>"
+      );
+    }
+
+    function htmlHistorico(codigo) {
+      return (
+        '<div class="historico-list">' +
+          '<div class="historico-item"><div class="historico-acao">Edição de cadastro</div><div class="historico-data">15/07/2026 · 11:20</div><div class="historico-user">Felipe</div></div>' +
+          '<div class="historico-item"><div class="historico-acao">Ajuste de quantidade</div><div class="historico-data">12/07/2026 · 14:05</div><div class="historico-user">Helio Alexsandro</div></div>' +
+          '<div class="historico-item"><div class="historico-acao">Registro criado (' + codigo + ')</div><div class="historico-data">01/06/2026 · 08:30</div><div class="historico-user">Admin</div></div>' +
+        "</div>"
+      );
+    }
+
+    function setVerTabs(tabs) {
+      const tabsEl = document.getElementById("ver-tabs");
+      const panelsEl = document.getElementById("ver-panels");
+      tabsEl.innerHTML = "";
+      panelsEl.innerHTML = "";
+      tabs.forEach((t, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "modal-tab" + (i === 0 ? " active" : "");
+        btn.setAttribute("role", "tab");
+        btn.dataset.vtab = t.id;
+        btn.textContent = t.label;
+        btn.addEventListener("click", () => {
+          tabsEl.querySelectorAll(".modal-tab").forEach((b) => b.classList.remove("active"));
+          panelsEl.querySelectorAll(".modal-tab-panel").forEach((p) => p.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById("vpanel-" + t.id).classList.add("active");
+        });
+        tabsEl.appendChild(btn);
+
+        const panel = document.createElement("div");
+        panel.className = "modal-tab-panel" + (i === 0 ? " active" : "");
+        panel.id = "vpanel-" + t.id;
+        panel.setAttribute("role", "tabpanel");
+        panel.innerHTML = t.html;
+        panelsEl.appendChild(panel);
+      });
+    }
+
+    function openVerItem(tr) {
+      const codigo = tr.children[0].textContent.trim();
+      const categoria = tr.children[1].textContent.trim();
+      const nome = tr.children[2].textContent.trim();
+      const modelo = tr.children[3].textContent.trim();
+      const total = tr.children[4].textContent.trim();
+      const emUso = tr.children[5].textContent.trim();
+      const estoque = tr.children[6].textContent.trim();
+      const manut = tr.children[7].textContent.trim();
+      const marca = MARCA_ITEM[codigo] || "—";
+      const unit = VALOR_ITEM[codigo] || 0;
+      const valorEstoque = unit * Number(estoque);
+
+      document.getElementById("ver-titulo").textContent = nome;
+      document.getElementById("ver-subtitulo").textContent = codigo + " — " + categoria;
+
+      setVerTabs([
+        {
+          id: "dados",
+          label: "Dados do Item",
+          html:
+            '<div class="form-grid">' +
+              htmlField("Marca", marca) +
+              htmlField("Modelo", modelo) +
+            "</div>" +
+            '<div class="info-block"><div class="info-block-title">Quantidade</div><div class="form-grid">' +
+              htmlField("Quantidade Total", total) +
+              htmlField("Quantidade Em Uso", emUso) +
+              htmlField("Quantidade Estoque", estoque) +
+              htmlField("Quantidade Manutenção", manut) +
+            "</div></div>" +
+            '<div class="info-block"><div class="info-block-title">Valores</div><div class="form-grid">' +
+              htmlField("Valor Unitário", fmtBRL(unit)) +
+              htmlField("Valor do Estoque", fmtBRL(valorEstoque)) +
+            "</div></div>",
+        },
+        { id: "anotacoes", label: "Anotações", html: htmlAnotacoes(nome) },
+        { id: "historico", label: "Histórico", html: htmlHistorico(codigo) },
+      ]);
+      openModal("modal-ver");
+    }
+
+    function openVerEquip(tr) {
+      const codigo = tr.children[0].textContent.trim();
+      const categoria = tr.children[1].textContent.trim();
+      const nome = tr.children[2].textContent.trim();
+      const serie = tr.children[3].textContent.trim();
+      const marca = tr.children[4].textContent.trim();
+      const valor = fmtBRL(VALOR_EQUIP[codigo] || 0);
+
+      document.getElementById("ver-titulo").textContent = nome;
+      document.getElementById("ver-subtitulo").textContent = codigo + " — " + categoria;
+
+      setVerTabs([
+        {
+          id: "dados",
+          label: "Dados do Item",
+          html:
+            '<div class="form-grid">' +
+              htmlField("Número de Série", serie, true) +
+              htmlField("Marca", marca) +
+              htmlField("Valor", valor) +
+            "</div>",
+        },
+        { id: "anotacoes", label: "Anotações", html: htmlAnotacoes(nome) },
+        { id: "historico", label: "Histórico", html: htmlHistorico(codigo) },
+      ]);
+      openModal("modal-ver");
+    }
+
+    function openVerJogo(tr) {
+      const codigo = tr.children[0].textContent.trim();
+      const categoria = tr.children[1].textContent.trim();
+      const nome = tr.children[2].textContent.trim();
+      const inicial = Number(tr.children[3].textContent.trim());
+      const consumida = Number(tr.children[4].textContent.trim());
+      const atual = Number(tr.children[5].textContent.trim());
+      const descartada = Math.max(0, inicial - consumida - atual);
+
+      document.getElementById("ver-titulo").textContent = nome;
+      document.getElementById("ver-subtitulo").textContent = codigo + " — " + categoria;
+
+      setVerTabs([
+        {
+          id: "quantidades",
+          label: "Quantidades do Item",
+          html:
+            '<div class="form-grid">' +
+              htmlField("Quantidade Inicial", String(inicial)) +
+              htmlField("Quantidade Consumida", String(consumida)) +
+              htmlField("Quantidade Descartada", String(descartada)) +
+              htmlField("Quantidade de Estoque", String(atual)) +
+            "</div>",
+        },
+        { id: "anotacoes", label: "Anotações", html: htmlAnotacoes(nome) },
+        { id: "historico", label: "Histórico", html: htmlHistorico(codigo) },
+      ]);
+      openModal("modal-ver");
+    }
+
+    function openVerFornecedor(tr) {
+      const tip = tr.querySelector(".empresa-tip");
+      const razao = tip ? tip.textContent.trim() : tr.children[0].textContent.trim();
+      const cnpj = tip ? (tip.getAttribute("data-cnpj") || "—").replace(/^CNPJ\s*/, "") : "—";
+      const tipo = tr.children[1].textContent.trim();
+      const contatos = [...tr.querySelectorAll(".link-contato")].map((b) => ({
+        nome: b.dataset.nome,
+        tel: b.dataset.tel,
+        email: b.dataset.email,
+      }));
+
+      document.getElementById("ver-titulo").textContent = tipo;
+      document.getElementById("ver-subtitulo").textContent = razao + " — " + cnpj;
+
+      const contatosHtml = contatos.length
+        ? contatos.map((c) =>
+            '<div class="contato-block"><div class="form-grid">' +
+              htmlField("Nome", c.nome, true) +
+              htmlField("Telefone", c.tel) +
+              htmlField("E-mail", c.email) +
+            "</div></div>"
+          ).join("")
+        : '<div class="empty-hint">Nenhum contato cadastrado.</div>';
+
+      setVerTabs([
+        { id: "contatos", label: "Contatos", html: contatosHtml },
+        { id: "anotacoes", label: "Anotações", html: htmlAnotacoes(razao) },
+        { id: "historico", label: "Histórico", html: htmlHistorico(razao) },
+      ]);
+      openModal("modal-ver");
+    }
+
+    document.querySelectorAll('button[aria-label="Ver"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tr = btn.closest("tr");
+        if (!tr) return;
+        const tbodyId = tr.closest("tbody")?.id;
+        if (tbodyId === "tbody-itens") openVerItem(tr);
+        else if (tbodyId === "tbody-equip") openVerEquip(tr);
+        else if (tbodyId === "tbody-jogo") openVerJogo(tr);
+        else if (tbodyId === "tbody-forn") openVerFornecedor(tr);
+      });
+    });
+
+    fillCategorias("itens");
+  </script>
+</body>
+</html>

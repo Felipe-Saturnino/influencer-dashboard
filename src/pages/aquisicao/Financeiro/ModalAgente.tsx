@@ -18,27 +18,39 @@ export function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerO
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [operadoraSlug, setOperadoraSlug] = useState(filterOperadora !== "todas" ? filterOperadora : "");
 
   const opcoes = operadorasList.filter((o) => podeVerOperadora(o.slug));
   const precisaSelecionarOp = filterOperadora === "todas" && opcoes.length > 1;
-  const opFinal = filterOperadora !== "todas" ? filterOperadora : operadoraSlug;
+  const opUnica = opcoes.length === 1 ? opcoes[0]!.slug : "";
+  const opFinal =
+    filterOperadora !== "todas" ? filterOperadora : (operadoraSlug || opUnica);
 
   const valorNum = parseFloat(valor.replace(",", ".")) || 0;
-  const canSubmit = descricao.trim().length > 0 && valorNum > 0 && (!precisaSelecionarOp || opFinal);
+  const canSubmit = descricao.trim().length > 0 && valorNum > 0 && Boolean(opFinal);
 
   async function handleConfirm() {
     if (!canSubmit || !opFinal) return;
     setSaving(true);
-    await supabase.from("pagamentos_agentes").insert({
+    setErr("");
+    const { error } = await supabase.from("pagamentos_agentes").insert({
       ciclo_id: cicloId,
       operadora_slug: opFinal,
       descricao: descricao.trim(),
       total: valorNum,
       status: "em_analise",
     });
+    if (error) {
+      console.error("pagamentos_agentes insert:", error);
+      setErr(
+        "Não foi possível registrar o pagamento. Se o problema persistir, entre em contato com o suporte.",
+      );
+      setSaving(false);
+      return;
+    }
     await onSalvo();
     setSaving(false);
   }
@@ -67,7 +79,7 @@ export function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerO
               <CampoObrigatorioMark />
             </label>
             <select
-              aria-label="Filtrar por operadora"
+              aria-label="Operadoras"
               value={operadoraSlug}
               onChange={e => setOperadoraSlug(e.target.value)}
               style={{ ...inputStyle, cursor: "pointer" }}
@@ -79,10 +91,10 @@ export function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerO
         )}
         <div>
           <label style={labelStyle}>
-            Descrição
+            Nome do agente
             <CampoObrigatorioMark />
           </label>
-          <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: Comissão João" style={inputStyle} />
+          <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: João Silva" style={inputStyle} />
         </div>
         <div>
           <label style={labelStyle}>
@@ -106,6 +118,11 @@ export function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerO
             style={inputStyle}
           />
         </div>
+        {err ? (
+          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body }}>
+            {err}
+          </div>
+        ) : null}
       </div>
       <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
         <button
@@ -128,7 +145,7 @@ export function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerO
         </button>
         <button
           type="button"
-          onClick={handleConfirm}
+          onClick={() => void handleConfirm()}
           disabled={saving || !canSubmit}
           style={{
             flex: 2,
@@ -153,7 +170,7 @@ export function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerO
           {saving ? (
             <>
               <Loader2 size={13} className="app-lucide-spin" color="#fff" aria-hidden />
-              Salvando...
+              Salvando…
             </>
           ) : (
             <>
