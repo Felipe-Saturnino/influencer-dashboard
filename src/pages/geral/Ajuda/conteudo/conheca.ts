@@ -668,7 +668,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Modos e filtros",
         texto:
-          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda.\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
+          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
       },
       {
         subtitulo: "Check-in e Check-out",
@@ -1315,6 +1315,30 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Testes automatizados (CI) vs diagnóstico na plataforma",
         texto:
           "A suíte Vitest no repositório (CI e pre-commit) valida helpers e imports — não substitui o diagnóstico em produção. Use **Executar diagnóstico** quando precisar de um snapshot operacional gravado em Logs Recentes no ambiente atual.",
+      },
+    ],
+  },
+  tech_ops_ordem_saida: {
+    titulo: "Ordem de Saída",
+    blocos: [
+      {
+        texto:
+          "A Ordem de Saída registra movimentações de ativos Tech Ops em três abas: **O.S. Interna** (entre estúdios e áreas), **O.S. Externa** (saídas para fora) e **O.S. Manutenção** (envio a fornecedores). Os itens vêm do cadastro da Gestão de Estoque; os locais internos usam os estúdios de Gestão de Estúdios mais Estoque, Shuffler Room, OCR e Academy.",
+      },
+      {
+        subtitulo: "Filtros e período",
+        texto:
+          "O carrossel cobre o mês atual e os dois anteriores. O botão Histórico mostra todo o período. Ordens ainda Solicitadas ou Abertas de meses anteriores continuam aparecendo no mês seguinte até serem Concluídas ou Canceladas.\n\nOs cards Total, Solicitadas, Abertas, Concluídas e Canceladas filtraram a listagem por status — clique de novo no card ativo (ou em Total) para limpar.",
+      },
+      {
+        subtitulo: "Códigos e solicitação",
+        texto:
+          "Cada OS recebe um código automático no formato OS/INT-MMAA-####, OS/EXT-MMAA-#### ou OS/MAN-MMAA-#### (mês/ano de abertura + sequencial). Ao Solicitar, a ordem entra como Solicitada (na Manutenção o rótulo exibido é Registrada). Use Atualizar para avançar o status e registrar datas realizadas.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Depende da permissão de **Ver** / **Criar** / **Editar** em Gestão de Usuários. Não há exclusão — correções seguem por atualização de status e histórico.",
       },
     ],
   },

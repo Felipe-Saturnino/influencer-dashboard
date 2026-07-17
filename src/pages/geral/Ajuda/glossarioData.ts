@@ -1149,6 +1149,39 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "tech_ops_ordem_saida",
+    label: "Tech Ops — Ordem de Saída",
+    accentColor: "#0ea5e9",
+    termos: [
+      {
+        termo: "Ordem de Saída",
+        definicao:
+          "Documento que registra a movimentação de itens, equipamentos ou lotes de jogo entre locais internos, para destinos externos ou para fornecedores de manutenção. Código no formato OS/INT|EXT|MAN-MMAA-####.",
+        nota:
+          "Ordens Solicitadas ou Abertas de meses anteriores continuam visíveis no mês seguinte até serem Concluídas ou Canceladas.",
+        referencia: "Ordem de Saída",
+      },
+      {
+        termo: "O.S. Interna",
+        definicao:
+          "Movimentação entre estúdios e áreas (Estoque, Shuffler Room, OCR, Academy). Origem e Destino não podem ser iguais.",
+        referencia: "Ordem de Saída → O.S. Interna",
+      },
+      {
+        termo: "O.S. Externa",
+        definicao:
+          "Saída de ativos para um destino externo (texto livre), com previsão de saída e retorno. Organizada em Ordens Futuras, Em Aberto e Encerradas.",
+        referencia: "Ordem de Saída → O.S. Externa",
+      },
+      {
+        termo: "O.S. Manutenção",
+        definicao:
+          "Envio de equipamentos/itens a um fornecedor cadastrado na Gestão de Estoque. Na abertura o status exibido é Registrada.",
+        referencia: "Ordem de Saída → O.S. Manutenção",
+      },
+    ],
+  },
+  {
     key: "geral_conta",
     label: "Geral — Conta e simulação",
     accentColor: "#64748b",
@@ -1227,6 +1260,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   whitelabel: ["gestao_operadoras"],
   academy: ["academy_performance_hub", "academy_portal"],
   tech_ops_estoque: ["tech_ops_estoque"],
+  tech_ops_ordem_saida: ["tech_ops_ordem_saida"],
   periodos: DASHBOARD_PAGE_KEYS,
   geral_conta: ["configuracoes", "simulador_login"],
 };

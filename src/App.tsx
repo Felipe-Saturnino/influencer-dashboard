@@ -97,6 +97,7 @@ const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunci
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
 const TechOpsGestaoEstoque = lazyWithRetry(() => import("./pages/techOps/GestaoEstoque"));
+const TechOpsOrdemSaida = lazyWithRetry(() => import("./pages/techOps/OrdemSaida"));
 const PerformanceHub = lazyWithRetry(() => import("./pages/academy/PerformanceHub"));
 const PortalAcademy = lazyWithRetry(() => import("./pages/academy/PortalAcademy"));
 const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
@@ -151,6 +152,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   rh_portal:         RhPortal,
   informativos:      Informativos,
   tech_ops_estoque:  TechOpsGestaoEstoque,
+  tech_ops_ordem_saida: TechOpsOrdemSaida,
   academy_performance_hub: PerformanceHub,
   academy_portal: PortalAcademy,
   configuracoes:    Configuracoes,

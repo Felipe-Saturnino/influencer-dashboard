@@ -94,6 +94,9 @@ export function primeiroValorGradeDia(
   return v0 || null;
 }
 
+/** Referência visual da grade sintética de Escritório (seg–sex Comercial). */
+export const HORARIO_ESCRITORIO_COMERCIAL = { entrada: "09:00", saida: "18:00" } as const;
+
 function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { entrada: string; saida: string } | null {
   const raw = (valor ?? "").trim();
   const m = /^(\d{1,2})-(\d{1,2})$/.exec(raw);
@@ -106,22 +109,59 @@ function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { ent
   };
 }
 
+function ehCadastroOuGradeEscritorio(
+  p: RhFuncionario | undefined,
+  areaKey?: string | null,
+): boolean {
+  if (p?.area_atuacao === "escritorio") return true;
+  return (areaKey ?? "").trim().toLowerCase() === "escritorio";
+}
+
+/** `area_key` da célula da grade usada em `primeiroValorGradeDia` (mesmo dia / funcionário). */
+export function areaKeyGradeDia(
+  rows: RpcGradeCalendarioRow[],
+  funcionarioId: string,
+  iso: string,
+): string | null {
+  const hits = rows.filter((r) => r.funcionario_id === funcionarioId && diaIsoChaveGrade(r) === iso);
+  if (hits.length === 0) return null;
+  for (const h of hits) {
+    const t = turnoExibicaoDeValorCelulaEscala((h.valor ?? "").trim());
+    if (t) return (h.area_key ?? "").trim() || null;
+  }
+  return (hits[0]?.area_key ?? "").trim() || null;
+}
+
+/**
+ * Entrada / saída programadas (HH:mm).
+ * Escritório (cadastro ou `area_key` da grade sintética) + Comercial → 09:00–18:00.
+ * Estúdio Comercial 5x2 → `staff_horario_turno`. Demais turnos → escala/operadora.
+ */
 export function obterEntradaSaidaEscaladasPrestadorDia(
   p: RhFuncionario | undefined,
   valorCelula: string | null | undefined,
   op: OpTurnosHorarioPick | null | undefined,
+  areaKey?: string | null,
 ): { entrada: string; saida: string } | null {
-  if (!p) return null;
   const turnoNome = turnoExibicaoDeValorCelulaEscala(valorCelula ?? "");
   if (!turnoNome) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNome)) return { entrada: "—", saida: "—" };
 
-  const escala = p.escala ?? "";
-
-  if (turnoNome === "Comercial" && turnoStaffEhComercial5x2(p.staff_turno)) {
-    const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
-    return parsed ?? { entrada: "—", saida: "—" };
+  if (turnoNome === "Comercial") {
+    if (ehCadastroOuGradeEscritorio(p, areaKey)) {
+      return { ...HORARIO_ESCRITORIO_COMERCIAL };
+    }
+    if (p && turnoStaffEhComercial5x2(p.staff_turno)) {
+      const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
+      return parsed ?? { entrada: "—", saida: "—" };
+    }
+    // Grade sintética / cadastro incompleto: Comercial sem 5x2 → referência Escritório.
+    return { ...HORARIO_ESCRITORIO_COMERCIAL };
   }
+
+  if (!p) return null;
+
+  const escala = p.escala ?? "";
 
   if (turnoNome !== "Manhã" && turnoNome !== "Tarde" && turnoNome !== "Noite") {
     return { entrada: "—", saida: "—" };

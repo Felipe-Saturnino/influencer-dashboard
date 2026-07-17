@@ -74,6 +74,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "rh_portal",
   "informativos",
   "tech_ops_estoque",
+  "tech_ops_ordem_saida",
   "configuracoes", "simulador_login", "ajuda",
 ];
 

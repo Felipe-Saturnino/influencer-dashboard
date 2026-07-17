@@ -1128,6 +1128,36 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  tech_ops_ordem_saida: {
+    titulo: "Ordem de Saída",
+    blocos: [
+      {
+        subtitulo: "A página abre sem nenhuma ordem?",
+        texto:
+          "Comportamento esperado em ambiente novo: não há dados de exemplo. Use Nova O.S. Interna, Externa ou Manutenção. Se os botões não aparecem, confira a permissão de **Criar** em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Uma OS antiga ainda aparece no mês atual?",
+        texto:
+          "Comportamento esperado: ordens Solicitadas ou Abertas de meses anteriores permanecem no quadro até serem Concluídas ou Canceladas. Use Atualizar para encerrar o fluxo.",
+      },
+      {
+        subtitulo: "Não consigo escolher o mesmo local em Origem e Destino?",
+        texto:
+          "Na O.S. Interna, Origem e Destino devem ser diferentes — a mensagem de erro aparece ao tentar selecionar o mesmo valor.",
+      },
+      {
+        subtitulo: "O catálogo de itens está vazio no modal?",
+        texto:
+          "Os itens vêm da Gestão de Estoque: só entram materiais com quantidade em estoque, equipamentos com status Estoque e lotes de jogo com quantidade atual maior que zero (na Manutenção a lista é mais ampla). Cadastre ou libere itens na Gestão de Estoque antes de solicitar a OS.",
+      },
+      {
+        subtitulo: "A data de retorno foi recusada?",
+        texto:
+          "A data de retorno (ou previsão) deve ser posterior à data de saída. Use o formato DD/MM/AAAA. Em Interna e Manutenção, marque Sem retorno / Sem previsão quando não houver data.",
+      },
+    ],
+  },
   tech_ops_estoque: {
     titulo: "Gestão de Estoque",
     blocos: [

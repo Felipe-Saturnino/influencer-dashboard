@@ -14,6 +14,7 @@ import {
   horaRegistoSP,
   isoEstaNoPeriodo,
   obterEntradaSaidaEscaladasPrestadorDia,
+  areaKeyGradeDia,
   primeiroValorGradeDia,
   saidaAntecipadaMais5Min,
   situacaoGestaoEscalaParaDia,
@@ -165,7 +166,12 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
 
       const valorG = primeiroValorGradeDia(gradeRows, funcionarioId, iso);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
-      const esc = obterEntradaSaidaEscaladasPrestadorDia(prestador, valorG, opTurnos);
+      const esc = obterEntradaSaidaEscaladasPrestadorDia(
+        prestador,
+        valorG,
+        opTurnos,
+        areaKeyGradeDia(gradeRows, funcionarioId, iso),
+      );
       const pt = mapaPonto.get(iso);
       const gestao = presencaGestao.get(chavePresencaGestao(funcionarioId, iso));
       const { ent: entRealExib, sai: saiRealExib, checkInIso, checkOutIso } = horariosRealizadosExib(

@@ -302,6 +302,13 @@
       background: color-mix(in srgb, var(--input-bg) 80%, var(--card-border));
     }
     .field-hint { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    .field-error {
+      display: none; font-size: 11px; font-weight: 500; color: var(--red); margin-top: 4px;
+    }
+    .field-error.visible { display: block; }
+    label.field input.invalid, label.field select.invalid {
+      border-color: var(--red);
+    }
     .check-inline {
       display: inline-flex; align-items: center; gap: 6px;
       font-size: 12px; font-weight: 500; color: var(--text-muted); cursor: pointer;
@@ -362,7 +369,8 @@
     <main class="main">
       <div class="mockup-banner">
         <strong>Mockup interativo</strong> — Ordem de Saída (Tech Ops). Dados fictícios apenas para visualização.
-        Clique nas abas, nos cards de KPI (filtro de status), nos CTAs de criação e navegue nas abas internas dos modais.
+        Carrossel = mês atual + 2 anteriores. OS Solicitada/Aberta de meses anteriores permanece no mês seguinte até ser Concluída ou Cancelada.
+        Datas no formato DD/MM/AAAA. Equipamento trava Qtd em 1.
       </div>
 
       <div class="page-header">
@@ -372,7 +380,7 @@
           </div>
           <h1>Ordem de Saída</h1>
         </div>
-        <p class="subtitle">Solicite e acompanhe as ordens de saída internas, externas e de manutenção dos ativos Tech Ops.</p>
+        <p class="subtitle">Solicite e acompanhe as ordens de saída internas, externas e de manutenção dos ativos.</p>
       </div>
 
       <!-- Bloco 1 — Filtros -->
@@ -413,7 +421,7 @@
       <div class="content-box">
         <div class="section-title">
           <h2>KPIs Consolidados</h2>
-          <span class="sub" id="kpiSub">Julho 2026 · aba O.S. Interna — clique em um card para filtrar por status</span>
+          <span class="sub" id="kpiSub">— clique em um card para filtrar por status</span>
         </div>
         <div class="kpi-grid">
           <button type="button" class="kpi-card active" data-status="todas" style="--kpi-color: var(--brand-primary);">
@@ -450,7 +458,7 @@
           <div class="section-title-row">
             <div class="section-title">
               <h2>Listagem</h2>
-              <span class="sub">Movimentações internas entre estúdios e áreas</span>
+              <span class="sub">Movimentações internas</span>
             </div>
             <button type="button" class="cta-criar" data-modal="modalNovaInterna">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></svg>
@@ -466,7 +474,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr data-status="solicitada">
+                <tr data-status="solicitada" data-abertura="2026-07">
                   <td class="cod">OS/INT-0726-0001</td>
                   <td>Estoque</td><td>21/07/2026</td><td>Estúdio Blaze</td><td>28/07/2026</td>
                   <td><span class="itens-tip" data-itens="ITM-0001 Cabo HDMI 4K 3m (x4)&#10;EQP-0002 Câmera Sony FR7&#10;JOG-0001 Lote Bolinhas Roleta (x6)">3 itens</span></td>
@@ -477,9 +485,9 @@
                     <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
                   </td>
                 </tr>
-                <tr data-status="aberta">
-                  <td class="cod">OS/INT-0726-0002</td>
-                  <td>Estúdio Sports Club</td><td>10/07/2026</td><td>Shuffler Room</td><td>Sem retorno</td>
+                <tr data-status="aberta" data-abertura="2026-06">
+                  <td class="cod">OS/INT-0626-0002</td>
+                  <td>Estúdio Sports Club</td><td>10/06/2026</td><td>Shuffler Room</td><td>Sem retorno</td>
                   <td><span class="itens-tip" data-itens="EQP-0003 Shuffler Deckmate 2">1 item</span></td>
                   <td>Renata Lima</td>
                   <td><span class="badge badge-aberta">Aberta</span></td>
@@ -488,7 +496,7 @@
                     <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
                   </td>
                 </tr>
-                <tr data-status="concluida">
+                <tr data-status="concluida" data-abertura="2026-07">
                   <td class="cod">OS/INT-0726-0003</td>
                   <td>OCR</td><td>03/07/2026</td><td>Academy</td><td>08/07/2026</td>
                   <td><span class="itens-tip" data-itens="ITM-0003 Switch 24 portas (x1)&#10;ITM-0002 Régua de Energia (x2)">2 itens</span></td>
@@ -499,12 +507,23 @@
                     <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
                   </td>
                 </tr>
-                <tr data-status="cancelada">
+                <tr data-status="cancelada" data-abertura="2026-07">
                   <td class="cod">OS/INT-0726-0004</td>
                   <td>Estúdio Casa de Apostas</td><td>15/07/2026</td><td>Estoque</td><td>—</td>
                   <td><span class="itens-tip" data-itens="EQP-0001 Roleta Cammegh Mercury 360">1 item</span></td>
                   <td>Carlos Mendes</td>
                   <td><span class="badge badge-cancelada">Cancelada</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-status="aberta" data-abertura="2026-05">
+                  <td class="cod">OS/INT-0526-0001</td>
+                  <td>Estoque</td><td>20/05/2026</td><td>Estúdio Blaze</td><td>Sem retorno</td>
+                  <td><span class="itens-tip" data-itens="ITM-0001 Cabo HDMI 4K 3m (x2)">1 item</span></td>
+                  <td>Renata Lima</td>
+                  <td><span class="badge badge-aberta">Aberta</span></td>
                   <td>
                     <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
                     <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
@@ -538,7 +557,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr data-status="solicitada">
+                <tr data-status="solicitada" data-abertura="2026-07">
                   <td class="cod">OS/EXT-0726-0001</td>
                   <td>Evento SiGMA São Paulo</td><td>24/07/2026</td><td>29/07/2026</td>
                   <td><span class="itens-tip" data-itens="EQP-0002 Câmera Sony FR7&#10;ITM-0001 Cabo HDMI 4K 3m (x6)&#10;ITM-0002 Régua de Energia (x3)&#10;JOG-0002 Lote Cartas Copag (x20)">4 itens</span></td>
@@ -568,9 +587,9 @@
                 </tr>
               </thead>
               <tbody>
-                <tr data-status="aberta">
-                  <td class="cod">OS/EXT-0726-0002</td>
-                  <td>Gravação externa — Praia Grande</td><td>12/07/2026</td><td>19/07/2026</td>
+                <tr data-status="aberta" data-abertura="2026-06">
+                  <td class="cod">OS/EXT-0626-0002</td>
+                  <td>Gravação externa — Praia Grande</td><td>12/06/2026</td><td>19/07/2026</td>
                   <td><span class="itens-tip" data-itens="EQP-0002 Câmera Sony FR7&#10;ITM-0001 Cabo HDMI 4K 3m (x2)">2 itens</span></td>
                   <td>Bruno Carvalho — Conteúdo</td>
                   <td><span class="badge badge-aberta">Aberta</span></td>
@@ -598,7 +617,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr data-status="concluida">
+                <tr data-status="concluida" data-abertura="2026-07">
                   <td class="cod">OS/EXT-0726-0003</td>
                   <td>01/07/2026</td><td>07/07/2026</td>
                   <td>Ana Souza — Marketing</td>
@@ -607,7 +626,7 @@
                     <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
                   </td>
                 </tr>
-                <tr data-status="cancelada">
+                <tr data-status="cancelada" data-abertura="2026-07">
                   <td class="cod">OS/EXT-0726-0004</td>
                   <td>—</td><td>—</td>
                   <td>Bruno Carvalho — Conteúdo</td>
@@ -644,7 +663,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr data-status="solicitada">
+                <tr data-status="solicitada" data-abertura="2026-07">
                   <td class="cod">OS/MAN-0726-0001</td>
                   <td>TechParts Manutenção Ltda</td><td>22/07/2026</td><td>Sem previsão</td>
                   <td><span class="itens-tip" data-itens="EQP-0001 Roleta Cammegh Mercury 360">EQP-0001</span></td>
@@ -655,9 +674,9 @@
                     <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
                   </td>
                 </tr>
-                <tr data-status="aberta">
-                  <td class="cod">OS/MAN-0726-0002</td>
-                  <td>CardShred Brasil Ltda</td><td>09/07/2026</td><td>23/07/2026</td>
+                <tr data-status="aberta" data-abertura="2026-06">
+                  <td class="cod">OS/MAN-0626-0002</td>
+                  <td>CardShred Brasil Ltda</td><td>09/06/2026</td><td>23/07/2026</td>
                   <td><span class="itens-tip" data-itens="EQP-0003 Shuffler Deckmate 2">EQP-0003</span></td>
                   <td>Renata Lima — Tech Ops</td>
                   <td><span class="badge badge-aberta">Aberta</span></td>
@@ -685,7 +704,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr data-status="concluida">
+                <tr data-status="concluida" data-abertura="2026-07">
                   <td class="cod">OS/MAN-0726-0003</td>
                   <td><span class="itens-tip" data-itens="EQP-0002 Câmera Sony FR7">EQP-0002</span></td>
                   <td>01/07/2026</td><td>10/07/2026</td>
@@ -721,7 +740,6 @@
           <div class="form-grid">
             <label class="field full">Código
               <input type="text" value="OS/INT-0726-0005" disabled aria-label="Código gerado automaticamente" />
-              <span class="field-hint">Gerado automaticamente — OS/INT-MMAA-#### (mês/ano de abertura + sequencial).</span>
             </label>
             <label class="field">Origem<span class="req">*</span>
               <select class="sel-origem">
@@ -736,7 +754,7 @@
               </select>
             </label>
             <label class="field">Saída<span class="req">*</span>
-              <input type="date" class="inp-saida" />
+              <input type="text" class="inp-saida" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" />
             </label>
             <label class="field">Destino<span class="req">*</span>
               <select class="sel-destino">
@@ -749,12 +767,12 @@
                 <option>OCR</option>
                 <option>Academy</option>
               </select>
-              <span class="field-hint">Não pode ser o mesmo valor da Origem.</span>
+              <span class="field-error err-destino">Não pode ser o mesmo valor da Origem.</span>
             </label>
             <label class="field">Retorno<span class="req">*</span>
-              <input type="date" class="inp-retorno" />
+              <input type="text" class="inp-retorno" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" />
               <span class="check-inline"><input type="checkbox" class="chk-sem-retorno" /> Sem retorno</span>
-              <span class="field-hint">Deve ser maior que a data de Saída.</span>
+              <span class="field-error err-retorno">A data de Retorno deve ser maior que a data de Saída.</span>
             </label>
           </div>
         </div>
@@ -821,17 +839,16 @@
           <div class="form-grid">
             <label class="field full">Código
               <input type="text" value="OS/EXT-0726-0005" disabled aria-label="Código gerado automaticamente" />
-              <span class="field-hint">Gerado automaticamente — OS/EXT-MMAA-#### (mês/ano de abertura + sequencial).</span>
             </label>
             <label class="field full">Destino<span class="req">*</span>
               <input type="text" placeholder="Ex.: Evento SiGMA São Paulo, gravação externa..." />
             </label>
             <label class="field">Saída<span class="req">*</span>
-              <input type="date" class="inp-saida" />
+              <input type="text" class="inp-saida" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" />
             </label>
             <label class="field">Retorno<span class="req">*</span>
-              <input type="date" class="inp-retorno" />
-              <span class="field-hint">Deve ser maior que a data de Saída.</span>
+              <input type="text" class="inp-retorno" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" />
+              <span class="field-error err-retorno">A data de Retorno deve ser maior que a data de Saída.</span>
             </label>
           </div>
         </div>
@@ -898,7 +915,6 @@
           <div class="form-grid">
             <label class="field full">Código
               <input type="text" value="OS/MAN-0726-0004" disabled aria-label="Código gerado automaticamente" />
-              <span class="field-hint">Gerado automaticamente — OS/MAN-MMAA-#### (mês/ano de abertura + sequencial).</span>
             </label>
             <label class="field full">Fornecedor<span class="req">*</span>
               <select>
@@ -907,15 +923,14 @@
                 <option>TechParts Manutenção Ltda — Manutenção de equipamentos</option>
                 <option>Global Gaming Supplies — Geral</option>
               </select>
-              <span class="field-hint">Fornecedores cadastrados na Gestão de Estoque → Fornecedores.</span>
             </label>
             <label class="field">Saída<span class="req">*</span>
-              <input type="date" class="inp-saida" />
+              <input type="text" class="inp-saida" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" />
             </label>
             <label class="field">Previsão de Retorno<span class="req">*</span>
-              <input type="date" class="inp-retorno" />
+              <input type="text" class="inp-retorno" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" autocomplete="off" />
               <span class="check-inline"><input type="checkbox" class="chk-sem-retorno" /> Sem previsão</span>
-              <span class="field-hint">Deve ser maior que a data de Saída.</span>
+              <span class="field-error err-retorno">A data de Previsão de Retorno deve ser maior que a data de Saída.</span>
             </label>
           </div>
         </div>
@@ -966,7 +981,6 @@
 
   <script>
     // ── Abas principais ──────────────────────────────────────────────────────
-    const tabLabels = { interna: "O.S. Interna", externa: "O.S. Externa", manutencao: "O.S. Manutenção" };
     let abaAtiva = "interna";
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -980,16 +994,41 @@
       });
     });
 
-    // ── Carrossel de mês + Histórico ─────────────────────────────────────────
-    const meses = ["Maio 2026", "Junho 2026", "Julho 2026"];
+    // ── Carrossel: mês atual + 2 anteriores ──────────────────────────────────
+    const MESES_NOMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const ref = new Date(2026, 6, 1); // Julho 2026 (mês corrente do mockup)
+    const meses = [];
+    for (let i = 2; i >= 0; i--) {
+      const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
+      meses.push({
+        label: MESES_NOMES[d.getMonth()] + " " + d.getFullYear(),
+        key: d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"),
+      });
+    }
     let mesIdx = meses.length - 1;
     let historico = false;
     const mesLabel = document.getElementById("mesLabel");
     const mesPrev = document.getElementById("mesPrev");
     const mesNext = document.getElementById("mesNext");
     const btnHistorico = document.getElementById("btnHistorico");
+
+    function mesSelecionadoKey() {
+      return meses[mesIdx].key;
+    }
+
+    /** OS aberta (Solicitada/Aberta) carregada de meses anteriores continua no quadro do mês atual. */
+    function linhaVisivelNoMes(tr) {
+      if (historico) return true;
+      const abertura = tr.dataset.abertura || "";
+      const status = tr.dataset.status || "";
+      const mes = mesSelecionadoKey();
+      if (abertura === mes) return true;
+      if ((status === "solicitada" || status === "aberta") && abertura && abertura < mes) return true;
+      return false;
+    }
+
     function renderCarrossel() {
-      mesLabel.textContent = historico ? "Todo o período" : meses[mesIdx];
+      mesLabel.textContent = historico ? "Todo o período" : meses[mesIdx].label;
       mesPrev.disabled = historico || mesIdx === 0;
       mesNext.disabled = historico || mesIdx === meses.length - 1;
       btnHistorico.classList.toggle("active", historico);
@@ -998,7 +1037,11 @@
     }
     mesPrev.addEventListener("click", () => { if (mesIdx > 0) { mesIdx--; renderCarrossel(); } });
     mesNext.addEventListener("click", () => { if (mesIdx < meses.length - 1) { mesIdx++; renderCarrossel(); } });
-    btnHistorico.addEventListener("click", () => { historico = !historico; if (!historico) mesIdx = meses.length - 1; renderCarrossel(); });
+    btnHistorico.addEventListener("click", () => {
+      historico = !historico;
+      if (!historico) mesIdx = meses.length - 1;
+      renderCarrossel();
+    });
 
     // ── KPIs clicáveis (filtro de status) ────────────────────────────────────
     let statusAtivo = "todas";
@@ -1010,22 +1053,22 @@
       });
     });
 
-    // ── Busca ────────────────────────────────────────────────────────────────
     const busca = document.getElementById("busca");
     busca.addEventListener("input", aplicarFiltros);
 
     function aplicarFiltros() {
       const termo = busca.value.trim().toLowerCase();
-      document.querySelectorAll(".panel.active table[data-filtravel] tbody tr").forEach((tr) => {
+      document.querySelectorAll(".panel.active table[data-filtravel] tbody tr[data-status]").forEach((tr) => {
+        const okMes = linhaVisivelNoMes(tr);
         const okStatus = statusAtivo === "todas" || tr.dataset.status === statusAtivo;
         const okBusca = !termo || tr.textContent.toLowerCase().includes(termo);
-        tr.classList.toggle("hidden-row", !(okStatus && okBusca));
+        tr.classList.toggle("hidden-row", !(okMes && okStatus && okBusca));
       });
     }
 
     function atualizarKpis() {
       const painel = document.getElementById("panel-" + abaAtiva);
-      const rows = painel.querySelectorAll("table[data-filtravel] tbody tr[data-status]");
+      const rows = [...painel.querySelectorAll("table[data-filtravel] tbody tr[data-status]")].filter(linhaVisivelNoMes);
       const contagem = { solicitada: 0, aberta: 0, concluida: 0, cancelada: 0 };
       rows.forEach((tr) => { contagem[tr.dataset.status] = (contagem[tr.dataset.status] || 0) + 1; });
       document.getElementById("kpiTotal").textContent = rows.length;
@@ -1033,10 +1076,49 @@
       document.getElementById("kpiAbertas").textContent = contagem.aberta;
       document.getElementById("kpiConcluidas").textContent = contagem.concluida;
       document.getElementById("kpiCanceladas").textContent = contagem.cancelada;
-      document.getElementById("kpiSub").textContent =
-        (historico ? "Todo o período" : meses[mesIdx]) + " · aba " + tabLabels[abaAtiva] + " — clique em um card para filtrar por status";
+      document.getElementById("kpiSub").textContent = "— clique em um card para filtrar por status";
       aplicarFiltros();
     }
+
+    // ── Datas DD/MM/AAAA ─────────────────────────────────────────────────────
+    function mascaraDataBr(inp) {
+      inp.addEventListener("input", () => {
+        let v = inp.value.replace(/\D/g, "").slice(0, 8);
+        if (v.length > 4) v = v.slice(0, 2) + "/" + v.slice(2, 4) + "/" + v.slice(4);
+        else if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
+        inp.value = v;
+        validarRetornoModal(inp.closest(".modal"));
+      });
+      inp.addEventListener("blur", () => validarRetornoModal(inp.closest(".modal")));
+    }
+    function parseDataBr(str) {
+      const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((str || "").trim());
+      if (!m) return null;
+      const d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
+      if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+      const dt = new Date(y, mo - 1, d);
+      if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+      return dt;
+    }
+    function validarRetornoModal(modal) {
+      if (!modal) return;
+      const saida = modal.querySelector(".inp-saida");
+      const retorno = modal.querySelector(".inp-retorno");
+      const err = modal.querySelector(".err-retorno");
+      if (!saida || !retorno || !err) return;
+      const chk = modal.querySelector(".chk-sem-retorno");
+      if (chk && chk.checked) {
+        err.classList.remove("visible");
+        retorno.classList.remove("invalid");
+        return;
+      }
+      const ds = parseDataBr(saida.value);
+      const dr = parseDataBr(retorno.value);
+      const invalido = ds && dr && dr <= ds;
+      err.classList.toggle("visible", !!invalido);
+      retorno.classList.toggle("invalid", !!invalido);
+    }
+    document.querySelectorAll(".inp-saida, .inp-retorno").forEach(mascaraDataBr);
 
     // ── Modais ───────────────────────────────────────────────────────────────
     document.querySelectorAll("[data-modal]").forEach((btn) => {
@@ -1050,7 +1132,6 @@
       if (e.key === "Escape") document.querySelectorAll(".overlay.open").forEach((ov) => ov.classList.remove("open"));
     });
 
-    // ── Abas internas dos modais ─────────────────────────────────────────────
     document.querySelectorAll(".modal-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         const modal = tab.closest(".modal");
@@ -1060,54 +1141,71 @@
       });
     });
 
-    // ── Origem ≠ Destino (O.S. Interna) ─────────────────────────────────────
-    document.querySelectorAll("#modalNovaInterna").forEach((modal) => {
+    // ── Origem ≠ Destino (só aviso ao tentar o mesmo valor) ──────────────────
+    (function () {
+      const modal = document.getElementById("modalNovaInterna");
+      if (!modal) return;
       const origem = modal.querySelector(".sel-origem");
       const destino = modal.querySelector(".sel-destino");
-      origem.addEventListener("change", () => {
-        [...destino.options].forEach((opt) => { opt.disabled = opt.value !== "" && opt.value === origem.value; });
-        if (destino.value === origem.value) destino.value = "";
-      });
-    });
+      const err = modal.querySelector(".err-destino");
+      function validarDestino() {
+        const mesmo = origem.value && destino.value && origem.value === destino.value;
+        err.classList.toggle("visible", !!mesmo);
+        destino.classList.toggle("invalid", !!mesmo);
+      }
+      origem.addEventListener("change", validarDestino);
+      destino.addEventListener("change", validarDestino);
+    })();
 
-    // ── Sem retorno / Sem previsão desabilita a data ─────────────────────────
     document.querySelectorAll(".chk-sem-retorno").forEach((chk) => {
       chk.addEventListener("change", () => {
         const campo = chk.closest("label.field").querySelector(".inp-retorno");
         campo.disabled = chk.checked;
-        if (chk.checked) campo.value = "";
+        if (chk.checked) {
+          campo.value = "";
+          campo.classList.remove("invalid");
+        }
+        validarRetornoModal(chk.closest(".modal"));
       });
     });
 
-    // ── Retorno > Saída (validação visual simples) ───────────────────────────
-    document.querySelectorAll(".modal").forEach((modal) => {
-      const saida = modal.querySelector(".inp-saida");
-      const retorno = modal.querySelector(".inp-retorno");
-      if (!saida || !retorno) return;
-      saida.addEventListener("change", () => { retorno.min = saida.value; });
-      retorno.addEventListener("change", () => {
-        retorno.style.borderColor = retorno.value && saida.value && retorno.value <= saida.value ? "var(--red)" : "";
-      });
-    });
-
-    // ── Adicionar / remover linhas de item ───────────────────────────────────
-    document.querySelectorAll("[data-add-item]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const lista = btn.previousElementSibling;
-        const nova = lista.querySelector(".item-row").cloneNode(true);
-        nova.querySelector("select").value = "";
-        nova.querySelector("input[type=number]").value = "1";
-        ligarRemover(nova);
-        lista.appendChild(nova);
-      });
-    });
-    function ligarRemover(row) {
+    // ── Equipamento → Qtd travada em 1 ───────────────────────────────────────
+    function aplicarRegraEquipamento(row) {
+      const sel = row.querySelector("select");
+      const qtd = row.querySelector("input[type=number]");
+      if (!sel || !qtd) return;
+      const isEqp = (sel.value || "").startsWith("EQP-");
+      if (isEqp) {
+        qtd.value = "1";
+        qtd.disabled = true;
+        qtd.title = "Equipamentos são únicos — quantidade fixa em 1";
+      } else {
+        qtd.disabled = false;
+        qtd.title = "";
+      }
+    }
+    function ligarItemRow(row) {
+      const sel = row.querySelector("select");
+      if (sel) sel.addEventListener("change", () => aplicarRegraEquipamento(row));
+      aplicarRegraEquipamento(row);
       row.querySelector(".btn-remove").addEventListener("click", () => {
         const lista = row.parentElement;
         if (lista.querySelectorAll(".item-row").length > 1) row.remove();
       });
     }
-    document.querySelectorAll(".item-row").forEach(ligarRemover);
+    document.querySelectorAll("[data-add-item]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const lista = btn.previousElementSibling;
+        const nova = lista.querySelector(".item-row").cloneNode(true);
+        nova.querySelector("select").value = "";
+        const qtd = nova.querySelector("input[type=number]");
+        qtd.value = "1";
+        qtd.disabled = false;
+        ligarItemRow(nova);
+        lista.appendChild(nova);
+      });
+    });
+    document.querySelectorAll(".item-row").forEach(ligarItemRow);
 
     renderCarrossel();
   </script>

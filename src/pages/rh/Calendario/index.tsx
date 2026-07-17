@@ -421,7 +421,8 @@ function resumoHorarioTurnoModalCalendario(
       const lbl = labelHorarioTurnoStaffPorValor(p.staff_horario_turno);
       return lbl !== "—" ? lbl : null;
     }
-    return null;
+    // Comercial sem 5x2 (ex.: Escritório com area_atuacao ausente no cliente) → 09h–18h.
+    return "Início 09:00 · Fim 18:00";
   }
 
   if (turnoNomeExibicao !== "Manhã" && turnoNomeExibicao !== "Tarde" && turnoNomeExibicao !== "Noite") return null;
@@ -465,6 +466,8 @@ function primeiroValorGradeDia(rows: RpcGradeCalendarioRow[], funcionarioId: str
   return v0 || null;
 }
 
+const HORARIO_ESCRITORIO_COMERCIAL = { entrada: "09:00", saida: "18:00" } as const;
+
 function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { entrada: string; saida: string } | null {
   const raw = (valor ?? "").trim();
   const m = /^(\d{1,2})-(\d{1,2})$/.exec(raw);
@@ -477,26 +480,58 @@ function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { ent
   };
 }
 
-/** Entrada / saída programadas (HH:mm) a partir da escala e do cadastro do prestador. */
+function ehCadastroOuGradeEscritorio(
+  p: RhFuncionario | undefined,
+  areaKey?: string | null,
+): boolean {
+  if (p?.area_atuacao === "escritorio") return true;
+  return (areaKey ?? "").trim().toLowerCase() === "escritorio";
+}
+
+/** `area_key` da célula usada em `primeiroValorGradeDia`. */
+function areaKeyGradeDia(
+  rows: RpcGradeCalendarioRow[],
+  funcionarioId: string,
+  iso: string,
+): string | null {
+  const hits = rows.filter((r) => r.funcionario_id === funcionarioId && diaIsoChaveGrade(r) === iso);
+  if (hits.length === 0) return null;
+  for (const h of hits) {
+    const t = turnoExibicaoDeValorCelulaEscala((h.valor ?? "").trim());
+    if (t) return (h.area_key ?? "").trim() || null;
+  }
+  return (hits[0]?.area_key ?? "").trim() || null;
+}
+
+/**
+ * Entrada / saída programadas (HH:mm).
+ * Escritório (cadastro ou grade sintética) + Comercial → 09:00–18:00.
+ * Não depender só de `area_atuacao` no cliente (pode vir vazio com Ver=Próprios).
+ */
 function obterEntradaSaidaEscaladasPrestadorDia(
   p: RhFuncionario | undefined,
   valorCelula: string | null | undefined,
   op: OpTurnosHorarioPick | null | undefined,
+  areaKey?: string | null,
 ): { entrada: string; saida: string } | null {
-  if (!p) return null;
   const turnoNome = turnoExibicaoDeValorCelulaEscala(valorCelula ?? "");
   if (!turnoNome) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNome)) return { entrada: "—", saida: "—" };
-  if (p.area_atuacao === "escritorio" && turnoNome === "Comercial") {
-    return { entrada: "09:00", saida: "18:00" };
+
+  if (turnoNome === "Comercial") {
+    if (ehCadastroOuGradeEscritorio(p, areaKey)) {
+      return { ...HORARIO_ESCRITORIO_COMERCIAL };
+    }
+    if (p && turnoStaffEhComercial5x2(p.staff_turno)) {
+      const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
+      return parsed ?? { entrada: "—", saida: "—" };
+    }
+    return { ...HORARIO_ESCRITORIO_COMERCIAL };
   }
+
+  if (!p) return null;
 
   const escala = p.escala ?? "";
-
-  if (turnoNome === "Comercial" && turnoStaffEhComercial5x2(p.staff_turno)) {
-    const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
-    return parsed ?? { entrada: "—", saida: "—" };
-  }
 
   if (turnoNome !== "Manhã" && turnoNome !== "Tarde" && turnoNome !== "Noite") {
     return { entrada: "—", saida: "—" };
@@ -974,10 +1009,14 @@ export default function RhCalendarioPage() {
     const allowedIds = new Set(staffPresencaMultiselectItems.map((x) => x.id));
     setPresencaFilterStaffIds((prev) => {
       if (prev.length === 0) return prev;
+      // Ver=Próprios: não dropar o próprio id enquanto a lista de staff ainda carrega.
+      if (soPropriosCal && meuRhFuncionarioId && prev.length === 1 && prev[0] === meuRhFuncionarioId) {
+        return prev;
+      }
       const next = prev.filter((id) => allowedIds.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [staffPresencaMultiselectItems]);
+  }, [staffPresencaMultiselectItems, soPropriosCal, meuRhFuncionarioId]);
 
   const mesAnteriorPresencaRef = useMemo(
     () => refPrimeiroDiaMesAnterior(current),
@@ -2151,7 +2190,12 @@ export default function RhCalendarioPage() {
     const slug = (pRow?.staff_operadora_slug ?? "").trim();
     const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
     const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
-    return obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+    return obterEntradaSaidaEscaladasPrestadorDia(
+      pRow,
+      valorG,
+      opRow,
+      areaKeyGradeDia(rawGradeRows, fid, iso),
+    );
   }, [mesPresencaFechado, diasDoMesPresenca, presencaFilterStaffIds, prestadorPorId, mapOpTurnos, rawGradeRows]);
 
   const exibirCheckInMesFechadoExcecao = useMemo(() => {
@@ -2205,7 +2249,12 @@ export default function RhCalendarioPage() {
       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
       if (situacao !== "Escalado") continue;
-      const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+      const esc = obterEntradaSaidaEscaladasPrestadorDia(
+        pRow,
+        valorG,
+        opRow,
+        areaKeyGradeDia(rawGradeRows, fid, iso),
+      );
       const pt = mapaPontoPorDiaIso.get(iso);
       const entEsc = esc ? esc.entrada : "—";
       const saiEsc = esc ? esc.saida : "—";
@@ -2270,7 +2319,12 @@ export default function RhCalendarioPage() {
         const iso = toISO(dia);
         const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
         const situacao = situacaoGestaoEscalaParaDia(valorG);
-        const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+        const esc = obterEntradaSaidaEscaladasPrestadorDia(
+          pRow,
+          valorG,
+          opRow,
+          areaKeyGradeDia(rawGradeRows, fid, iso),
+        );
         const pt = mapaPontoPorDiaIso.get(iso);
         const entEsc = esc ? esc.entrada : "—";
         const saiEsc = esc ? esc.saida : "—";
@@ -2325,7 +2379,12 @@ export default function RhCalendarioPage() {
       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
       const slug = (pRow.staff_operadora_slug ?? "").trim();
       const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
-      const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+      const esc = obterEntradaSaidaEscaladasPrestadorDia(
+        pRow,
+        valorG,
+        opRow,
+        areaKeyGradeDia(rawGradeRows, fid, iso),
+      );
       const pt = pontoRelatorioPorFid.get(fid);
       const entEsc = esc ? esc.entrada : "—";
       const saiEsc = esc ? esc.saida : "—";
@@ -3422,13 +3481,25 @@ export default function RhCalendarioPage() {
                       const pRow = prestadorPorId.get(fid);
                       const slug = (pRow?.staff_operadora_slug ?? "").trim();
                       const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
-                      const esc = obterEntradaSaidaEscaladasPrestadorDia(pRow, valorG, opRow);
+                      const esc = obterEntradaSaidaEscaladasPrestadorDia(
+                        pRow,
+                        valorG,
+                        opRow,
+                        areaKeyGradeDia(rawGradeRows, fid, iso),
+                      );
                       const pt = mapaPontoPorDiaIso.get(iso);
                       const entEsc = esc ? esc.entrada : "—";
                       const saiEsc = esc ? esc.saida : "—";
                       const escAnterior =
                         valorGAnterior != null
-                          ? obterEntradaSaidaEscaladasPrestadorDia(pRow, valorGAnterior, opRow)
+                          ? obterEntradaSaidaEscaladasPrestadorDia(
+                              pRow,
+                              valorGAnterior,
+                              opRow,
+                              isoAnterior
+                                ? areaKeyGradeDia(rawGradeRows, fid, isoAnterior)
+                                : null,
+                            )
                           : null;
                       const entEscAnterior = escAnterior ? escAnterior.entrada : undefined;
                       const saiEscAnterior = escAnterior ? escAnterior.saida : undefined;

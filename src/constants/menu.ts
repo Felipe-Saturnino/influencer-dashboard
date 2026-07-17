@@ -166,6 +166,7 @@ export const MENU: MenuSection[] = [
     section: "Tech Ops",
     items: [
       { key: "tech_ops_estoque", label: "Gestão de Estoque", icon: Boxes },
+      { key: "tech_ops_ordem_saida", label: "Ordem de Saída", icon: ClipboardList },
     ],
   },
   {
