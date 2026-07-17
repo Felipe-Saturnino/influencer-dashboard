@@ -94,6 +94,8 @@ Status: Rascunho · Publicado · Arquivado. Ações: editar (rascunho), arquivar
 
 Carrossel mês + Histórico (`Todo o período`) por `published_at`; abas leitura só `status === publicado`.
 
+Comunicados, dicas, manuais e recibos de leitura usam paginação interna (`fetchAllPages`) para preservar o histórico completo sem depender do limite padrão do PostgREST. Não aplicar hard cap silencioso ao modo **Todo o período**.
+
 ### Strings de vazio
 
 - Período sem dados: **`Sem dados para o período selecionado.`**

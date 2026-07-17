@@ -279,11 +279,47 @@ export function useOverviewPrestadorDados(
 
   const staffSelecionadoId = filtroStaffIds[0] ?? null;
 
-  const mesesParaCarga = useMemo(() => {
+  const periodoComparativo = useMemo(() => {
+    if (historico || !mesSelecionado) {
+      const primeiro = mesesDisponiveis[0];
+      const ultimo = mesesDisponiveis[mesesDisponiveis.length - 1];
+      if (!primeiro || !ultimo) {
+        return {
+          atual: { inicio: "1970-01-01", fim: "1970-01-01" },
+          anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
+        };
+      }
+      const inicio = refMesPrimeiroDiaISO(new Date(primeiro.ano, primeiro.mes, 1));
+      const fimRef = new Date(ultimo.ano, ultimo.mes + 1, 0);
+      const fim = `${fimRef.getFullYear()}-${String(fimRef.getMonth() + 1).padStart(2, "0")}-${String(fimRef.getDate()).padStart(2, "0")}`;
+      return {
+        atual: { inicio, fim },
+        anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
+      };
+    }
+    return getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+  }, [historico, mesSelecionado, mesesDisponiveis]);
+
+  const mesesMetricasAtual = useMemo(() => {
     if (historico) return mesesDisponiveis.map((m) => ({ ano: m.ano, mes: m.mes }));
     if (!mesSelecionado) return [];
     return [{ ano: mesSelecionado.ano, mes: mesSelecionado.mes }];
   }, [historico, mesesDisponiveis, mesSelecionado]);
+
+  const mesesMetricasAnterior = useMemo(() => {
+    if (historico || !mesSelecionado) return [];
+    const [ano, mes] = periodoComparativo.anterior.inicio.split("-").map(Number);
+    if (!ano || !mes) return [];
+    return [{ ano, mes: mes - 1 }];
+  }, [historico, mesSelecionado, periodoComparativo.anterior.inicio]);
+
+  const mesesParaCarga = useMemo(() => {
+    const unicos = new Map<string, { ano: number; mes: number }>();
+    for (const ref of [...mesesMetricasAtual, ...mesesMetricasAnterior]) {
+      unicos.set(`${ref.ano}-${ref.mes}`, ref);
+    }
+    return [...unicos.values()];
+  }, [mesesMetricasAtual, mesesMetricasAnterior]);
 
   useEffect(() => {
     if (permLoading || permCanView === "nao") return;
@@ -385,33 +421,6 @@ export function useOverviewPrestadorDados(
     };
   }, [prestadores]);
 
-  const periodoComparativo = useMemo(() => {
-    if (historico || !mesSelecionado) {
-      const primeiro = mesesDisponiveis[0];
-      const ultimo = mesesDisponiveis[mesesDisponiveis.length - 1];
-      if (!primeiro || !ultimo) {
-        return {
-          atual: { inicio: "1970-01-01", fim: "1970-01-01" },
-          anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
-        };
-      }
-      const inicio = refMesPrimeiroDiaISO(new Date(primeiro.ano, primeiro.mes, 1));
-      const fimRef = new Date(ultimo.ano, ultimo.mes + 1, 0);
-      const fim = `${fimRef.getFullYear()}-${String(fimRef.getMonth() + 1).padStart(2, "0")}-${String(fimRef.getDate()).padStart(2, "0")}`;
-      return {
-        atual: { inicio, fim },
-        anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
-      };
-    }
-    return getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
-  }, [historico, mesSelecionado, mesesDisponiveis]);
-
-  const mesesRefMetricas = useMemo(() => {
-    if (historico) return mesesDisponiveis.map((m) => ({ ano: m.ano, mes: m.mes }));
-    if (!mesSelecionado) return [];
-    return [{ ano: mesSelecionado.ano, mes: mesSelecionado.mes }];
-  }, [historico, mesesDisponiveis, mesSelecionado]);
-
   const metricasAtual: OverviewPrestadorMetricas = useMemo(() => {
     if (!staffSelecionadoId) return OVERVIEW_PRESTADOR_METRICAS_ZERO;
     const pRow = prestadorPorId.get(staffSelecionadoId);
@@ -426,7 +435,7 @@ export function useOverviewPrestadorDados(
       presencaGestao: presencaGestaoPorChave,
       periodoInicio: periodoComparativo.atual.inicio,
       periodoFim: periodoComparativo.atual.fim,
-      mesesRef: mesesRefMetricas,
+      mesesRef: mesesMetricasAtual,
     });
   }, [
     staffSelecionadoId,
@@ -436,7 +445,7 @@ export function useOverviewPrestadorDados(
     pontoMesLinhas,
     presencaGestaoPorChave,
     periodoComparativo.atual,
-    mesesRefMetricas,
+    mesesMetricasAtual,
   ]);
 
   const metricasAnterior: OverviewPrestadorMetricas = useMemo(() => {
@@ -453,7 +462,7 @@ export function useOverviewPrestadorDados(
       presencaGestao: presencaGestaoPorChave,
       periodoInicio: periodoComparativo.anterior.inicio,
       periodoFim: periodoComparativo.anterior.fim,
-      mesesRef: mesesRefMetricas,
+      mesesRef: mesesMetricasAnterior,
     });
   }, [
     historico,
@@ -464,7 +473,7 @@ export function useOverviewPrestadorDados(
     pontoMesLinhas,
     presencaGestaoPorChave,
     periodoComparativo.anterior,
-    mesesRefMetricas,
+    mesesMetricasAnterior,
   ]);
 
   const setFiltroTimeIdsNormalizado = useCallback((ids: string[]) => {

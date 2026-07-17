@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useStreamersFiltrosOptional } from "../StreamersFiltrosContext";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
+import { useDashboardCatalogos } from "../../../../hooks/useDashboardCatalogos";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../../hooks/usePermission";
 import { FONT } from "../../../../constants/theme";
@@ -14,8 +15,7 @@ import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants"
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
-import { supabase } from "../../../../lib/supabase";
-import { fetchAllPages, fetchLiveResultadosBatched } from "../../../../lib/supabasePaginate";
+import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
 import { fmtBRL, getIdxMesCarrosselPadrao, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
 import {
@@ -198,6 +198,17 @@ export default function DashboardFinanceiro() {
   const perm = usePermission("streamers");
   const sf = useStreamersFiltrosOptional();
   const embed = sf !== null;
+  const {
+    perfis,
+    operadoras,
+    operadoraInfluencers,
+    isPending: catalogosPending,
+    error: catalogosError,
+  } = useDashboardCatalogos();
+  const operadorasListStandalone = useMemo(
+    () => operadoras.filter((o) => podeVerOperadora(o.slug)),
+    [operadoras, podeVerOperadora],
+  );
 
   const mesesDisponiveisLocal = useMemo(() => getMesesDisponiveis(), []);
   const idxStartLocal = getIdxMesCarrosselPadrao(mesesDisponiveisLocal);
@@ -223,10 +234,8 @@ export default function DashboardFinanceiro() {
   const [totaisAnt, setTotaisAnt]   = useState<TotaisFinanceiros>({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
   const [investimentoAgentes, setInvestimentoAgentes] = useState(0);
   const [sortFinRank, setSortFinRank] = useState<{ col: FinanceRankSortCol; dir: SortDir }>({ col: "pvi", dir: "desc" });
-  const [operadorasListLocal, setOperadorasListLocal] = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMapLocal, setOperadoraInfMapLocal] = useState<Record<string, string[]>>({});
-  const operadorasList = embed ? sf.operadorasList : operadorasListLocal;
-  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfMapLocal;
+  const operadorasList = embed ? sf.operadorasList : operadorasListStandalone;
+  const operadoraInfMap = embed ? sf.operadoraInfMap : operadoraInfluencers;
   const idxInicial = embed ? sf.idxInicial : idxStartLocal;
 
   useEffect(() => {
@@ -247,142 +256,75 @@ export default function DashboardFinanceiro() {
 
   // ── BUSCA DE DADOS (lógica 100% idêntica ao original) ────────────────────────
   useEffect(() => {
+    if (catalogosPending) return;
+    if (catalogosError) {
+      console.error("[StreamersFinanceiro] catálogos:", catalogosError);
+      setLoading(false);
+      return;
+    }
     async function carregar() {
       setLoading(true);
 
-      let perfisLista: InfluencerPerfil[] = [];
-
-      if (!embed) {
-        const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
-          supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
-          supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
-          supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
-        ]);
-        perfisLista = perfisData || [];
-        setOperadorasListLocal(opsData || []);
-        const map: Record<string, string[]> = {};
-        (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
-          if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
-          map[o.operadora_slug].push(o.influencer_id);
-        });
-        setOperadoraInfMapLocal(map);
-      } else {
-        const { data: perfisData } = await supabase
-          .from("influencer_perfil")
-          .select("id, nome_artistico, cache_hora")
-          .order("nome_artistico");
-        perfisLista = perfisData || [];
-      }
+      const perfisLista: InfluencerPerfil[] = perfis;
 
       const hojeNow = new Date();
-      const isMesAtual = !historico && mesSelecionado && mesSelecionado.ano === hojeNow.getFullYear() && mesSelecionado.mes === hojeNow.getMonth();
       const { inicio: periodoInicio, fim: periodoFim } = historico || !mesSelecionado
         ? { inicio: "2020-01-01", fim: hojeNow.toISOString().split("T")[0] }
         : getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
-
-      let metricas: { influencer_id: string; ftd_count: number; ftd_total: number; deposit_count: number; deposit_total: number; withdrawal_count: number; withdrawal_total: number; ggr: number }[] = [];
-      try {
-        if (isMesAtual) throw new Error("Usar fallback para MTD");
-        const { data: rpcData, error: rpcErr } = await supabase.rpc("get_metricas_financeiro", {
-          p_ano: historico ? null : mesSelecionado?.ano ?? null,
-          p_mes: historico ? null : mesSelecionado?.mes ?? null,
-          p_influencer_id: filtroInfluencer === "todos" ? null : filtroInfluencer,
-          p_historico: historico,
-          p_operadora_slug: operadoraForApi,
+      const operadoraSlugsQuery = operadoraSlugsForcado?.length
+        ? operadoraSlugsForcado
+        : operadoraFiltro !== "todas"
+          ? [operadoraFiltro]
+          : escoposVisiveis.semRestricaoEscopo
+            ? null
+            : escoposVisiveis.operadorasVisiveis;
+      const influencerIdsQuery =
+        filtroInfluencer !== "todos"
+          ? [filtroInfluencer]
+          : escoposVisiveis.vêTodosInfluencers
+            ? null
+            : escoposVisiveis.influencersVisiveis;
+      const analytics = await fetchInfluencerAnalyticsPeriodoCached({
+        inicio: periodoInicio,
+        fim: periodoFim,
+        operadoraSlugs: operadoraSlugsQuery,
+        influencerIds: influencerIdsQuery,
+      });
+      const mapaAgreg = new Map<string, MetricaRow>();
+      analytics.metricas.forEach((m) => {
+        if (!mapaAgreg.has(m.influencer_id)) mapaAgreg.set(m.influencer_id, { influencer_id: m.influencer_id, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
+        const r = mapaAgreg.get(m.influencer_id)!;
+        r.ftd_count += m.ftd_count || 0; r.ftd_total += m.ftd_total ?? 0;
+        r.deposit_count += m.deposit_count || 0; r.deposit_total += m.deposit_total || 0;
+        r.withdrawal_count += m.withdrawal_count || 0; r.withdrawal_total += m.withdrawal_total || 0;
+        r.ggr += m.ggr || 0;
+      });
+      if (historico) {
+        const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
+        const aliasesSinteticas = await buscarMetricasDeAliases({
+          operadora_slug: operadoraForApi ?? undefined,
+          influencerIds: influencerIdsQuery ?? undefined,
+          dataInicio: periodoInicio,
+          dataFim: periodoFim,
         });
-        if (!rpcErr && rpcData) {
-          metricas = rpcData;
-          if (historico) {
-            const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
-            const aliasesSinteticas = await buscarMetricasDeAliases({
-              operadora_slug: operadoraForApi ?? undefined,
-              influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
-              dataInicio: periodoInicio,
-              dataFim: periodoFim,
+        for (const a of aliasesSinteticas) {
+          if (!mapaAgreg.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
+            mapaAgreg.set(a.influencer_id, {
+              influencer_id: a.influencer_id,
+              ftd_count: a.ftd_count,
+              ftd_total: a.ftd_total,
+              deposit_count: a.deposit_count,
+              deposit_total: a.deposit_total,
+              withdrawal_count: a.withdrawal_count,
+              withdrawal_total: a.withdrawal_total,
+              ggr: a.ggr,
             });
-            const idsNaRpc = new Set(metricas.map((m) => m.influencer_id));
-            for (const a of aliasesSinteticas) {
-              if (!idsNaRpc.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
-                metricas = [...metricas, { influencer_id: a.influencer_id, ftd_count: a.ftd_count, ftd_total: a.ftd_total, deposit_count: a.deposit_count, deposit_total: a.deposit_total, withdrawal_count: a.withdrawal_count, withdrawal_total: a.withdrawal_total, ggr: a.ggr, ano: mesSelecionado?.ano, mes: mesSelecionado?.mes } as (typeof metricas)[0]];
-              }
-            }
-          }
-        } else { throw new Error("RPC vazia ou erro"); }
-      } catch {
-        const raw = await fetchAllPages<{ influencer_id: string; ftd_count: number; ftd_total: number; deposit_count: number; deposit_total: number; withdrawal_count: number; withdrawal_total: number; ggr: number }>(
-          async (from, to) => {
-            let qMetricas = supabase.from("influencer_metricas")
-              .select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug")
-              .order("data", { ascending: true })
-              .order("influencer_id", { ascending: true })
-              .order("operadora_slug", { ascending: true })
-              .range(from, to);
-            if (!historico && mesSelecionado) {
-              const { inicio, fim } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
-              qMetricas = qMetricas.gte("data", inicio).lte("data", fim);
-            }
-            if (filtroInfluencer !== "todos") qMetricas = qMetricas.eq("influencer_id", filtroInfluencer);
-            if (operadoraSlugsForcado?.length) qMetricas = qMetricas.in("operadora_slug", operadoraSlugsForcado);
-            else if (operadoraFiltro !== "todas") qMetricas = qMetricas.eq("operadora_slug", operadoraFiltro);
-            return qMetricas;
-          }
-        );
-        const mapaAgreg = new Map<string, MetricaRow>();
-        raw.forEach((m) => {
-          if (!mapaAgreg.has(m.influencer_id)) mapaAgreg.set(m.influencer_id, { influencer_id: m.influencer_id, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
-          const r = mapaAgreg.get(m.influencer_id)!;
-          r.ftd_count += m.ftd_count || 0; r.ftd_total += m.ftd_total ?? 0;
-          r.deposit_count += m.deposit_count || 0; r.deposit_total += m.deposit_total || 0;
-          r.withdrawal_count += m.withdrawal_count || 0; r.withdrawal_total += m.withdrawal_total || 0;
-          r.ggr += m.ggr || 0;
-        });
-        if (historico) {
-          const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
-          const aliasesSinteticas = await buscarMetricasDeAliases({
-            operadora_slug: operadoraForApi ?? undefined,
-            influencerIds: filtroInfluencer !== "todos" ? [filtroInfluencer] : undefined,
-            dataInicio: periodoInicio,
-            dataFim: periodoFim,
-          });
-          for (const a of aliasesSinteticas) {
-            if (!mapaAgreg.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
-              mapaAgreg.set(a.influencer_id, {
-                influencer_id: a.influencer_id,
-                ftd_count: a.ftd_count,
-                ftd_total: a.ftd_total,
-                deposit_count: a.deposit_count,
-                deposit_total: a.deposit_total,
-                withdrawal_count: a.withdrawal_count,
-                withdrawal_total: a.withdrawal_total,
-                ggr: a.ggr,
-              });
-            }
           }
         }
-        metricas = Array.from(mapaAgreg.entries()).map(([id, r]) => ({ ...r, influencer_id: id, ano: mesSelecionado?.ano, mes: mesSelecionado?.mes })) as typeof metricas;
       }
-
-      const lives = await fetchAllPages<{ id: string; influencer_id: string; status: string; data: string; operadora_slug: string }>(
-        async (from, to) => {
-          let qLives = supabase.from("lives").select("id, influencer_id, status, data, operadora_slug").eq("status", "realizada")
-            .order("data", { ascending: true })
-            .order("id", { ascending: true })
-            .range(from, to);
-          if (!historico && mesSelecionado) {
-            const { inicio, fim } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
-            qLives = qLives.gte("data", inicio).lte("data", fim);
-          }
-          if (filtroInfluencer !== "todos") qLives = qLives.eq("influencer_id", filtroInfluencer);
-          if (operadoraSlugsForcado?.length) qLives = qLives.in("operadora_slug", operadoraSlugsForcado);
-          else if (operadoraFiltro !== "todas") qLives = qLives.eq("operadora_slug", operadoraFiltro);
-          return qLives;
-        }
-      );
-      const liveIds = lives.map((l) => l.id);
-      const resultados = await fetchLiveResultadosBatched<{ live_id: string; duracao_horas: number; duracao_min: number }>(
-        liveIds,
-        async (slice) => await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min").in("live_id", slice)
-      );
+      const metricas = [...mapaAgreg.values()];
+      const lives = analytics.lives;
+      const resultados = analytics.resultados;
       const horasMap = new Map<string, number>();
       lives.forEach((live: { influencer_id: string; id: string }) => {
         const res = resultados.find((r) => r.live_id === live.id);
@@ -447,7 +389,7 @@ export default function DashboardFinanceiro() {
 
       if (!historico && mesSelecionado) {
         const periodoAnt = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).anterior;
-        const [investAnt, mA] = await Promise.all([
+        const [investAnt, analyticsAnt] = await Promise.all([
           buscarInvestimentoPago(
             { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
             filtrosInvestimentoPorEscopo(
@@ -459,29 +401,22 @@ export default function DashboardFinanceiro() {
               { operadora_slug: operadoraForApi, filtroInfluencer }
             )
           ),
-          (async () =>
-            fetchAllPages(async (from, to) => {
-              let qA = supabase.from("influencer_metricas").select("influencer_id, ftd_count, ftd_total, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data, operadora_slug")
-                .gte("data", periodoAnt.inicio).lte("data", periodoAnt.fim)
-                .order("data", { ascending: true })
-                .order("influencer_id", { ascending: true })
-                .order("operadora_slug", { ascending: true })
-                .range(from, to);
-              if (filtroInfluencer !== "todos") qA = qA.eq("influencer_id", filtroInfluencer);
-              if (operadoraSlugsForcado?.length) qA = qA.in("operadora_slug", operadoraSlugsForcado);
-              else if (operadoraFiltro !== "todas") qA = qA.eq("operadora_slug", operadoraFiltro);
-              return qA;
-            }))(),
+          fetchInfluencerAnalyticsPeriodoCached({
+            inicio: periodoAnt.inicio,
+            fim: periodoAnt.fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          }),
         ]);
         const mapaA = new Map<string, MetricaRow>();
-        (mA as Record<string, unknown>[]).forEach((m: Record<string, unknown>) => {
-          const mid = m.influencer_id as string;
+        analyticsAnt.metricas.forEach((m) => {
+          const mid = m.influencer_id;
           if (!mapaA.has(mid)) mapaA.set(mid, { influencer_id: mid, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
           const r = mapaA.get(mid)!;
-          r.ftd_count += (m.ftd_count as number)||0; r.ftd_total += (m.ftd_total as number)??0;
-          r.deposit_count += (m.deposit_count as number)||0; r.deposit_total += (m.deposit_total as number)||0;
-          r.withdrawal_count += (m.withdrawal_count as number)||0; r.withdrawal_total += (m.withdrawal_total as number)||0;
-          r.ggr += (m.ggr as number)||0;
+          r.ftd_count += m.ftd_count || 0; r.ftd_total += m.ftd_total ?? 0;
+          r.deposit_count += m.deposit_count || 0; r.deposit_total += m.deposit_total || 0;
+          r.withdrawal_count += m.withdrawal_count || 0; r.withdrawal_total += m.withdrawal_total || 0;
+          r.ggr += m.ggr || 0;
         });
         const rowsAnt: FinanceiroRow[] = [];
         mapaA.forEach((data, id) => {
@@ -502,7 +437,20 @@ export default function DashboardFinanceiro() {
       setLoading(false);
     }
     carregar();
-  }, [embed, escoposVisiveis, historico, idxMes, filtroInfluencer, operadoraFiltro, mesSelecionado, podeVerInfluencer, operadoraSlugsForcado, operadoraForApi]);
+  }, [
+    catalogosPending,
+    catalogosError,
+    escoposVisiveis,
+    historico,
+    idxMes,
+    filtroInfluencer,
+    operadoraFiltro,
+    mesSelecionado,
+    podeVerInfluencer,
+    operadoraSlugsForcado,
+    operadoraForApi,
+    perfis,
+  ]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
   const rowsParaExibir = useMemo(() => {
