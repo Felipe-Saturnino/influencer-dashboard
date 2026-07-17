@@ -6,7 +6,11 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
+
+const LIVE_RESULTADO_COLS =
+  "id, live_id, duracao_horas, duracao_min, media_views, max_views, created_at, updated_at";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
@@ -598,12 +602,14 @@ export default function Resultados() {
 
       const ids = visiveis.map((l) => l.id);
       if (ids.length > 0) {
-        const { data: resData } = await supabase.from("live_resultados").select("*").in("live_id", ids);
-        if (resData) {
-          const map: Record<string, LiveResultado> = {};
-          resData.forEach((r: LiveResultado) => { map[r.live_id] = r; });
-          setResultados(map);
-        }
+        const resData = await fetchLiveResultadosBatched(ids, async (chunk) =>
+          await supabase.from("live_resultados").select(LIVE_RESULTADO_COLS).in("live_id", chunk),
+        );
+        const map: Record<string, LiveResultado> = {};
+        resData.forEach((r) => {
+          map[(r as LiveResultado).live_id] = r as LiveResultado;
+        });
+        setResultados(map);
       }
 
       const influencerIds = [...new Set(visiveis.map((l) => l.influencer_id).filter(Boolean))];

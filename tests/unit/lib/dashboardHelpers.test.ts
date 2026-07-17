@@ -6,6 +6,9 @@ import {
   getDatasDoMes,
   getIdxMesCarrosselPadrao,
   getPeriodoComparativoMoM,
+  getPeriodoHistoricoCompetencias,
+  HISTORICO_COMPETENCIAS_MESES,
+  isDataNoPeriodoHistoricoCompetencias,
   getStatusROI,
 } from "@/lib/dashboardHelpers";
 
@@ -40,6 +43,31 @@ describe("fmtDia", () => {
 describe("getDatasDoMes", () => {
   it("retorna primeiro e último dia do mês civil", () => {
     expect(getDatasDoMes(2026, 1)).toEqual({ inicio: "2026-02-01", fim: "2026-02-28" });
+  });
+});
+
+describe("getPeriodoHistoricoCompetencias", () => {
+  it("inclui a competência atual e as 12 anteriores para comparação YoY", () => {
+    expect(HISTORICO_COMPETENCIAS_MESES).toBe(13);
+    expect(getPeriodoHistoricoCompetencias(new Date(2026, 6, 16))).toEqual({
+      inicio: "2025-07-01",
+      fim: "2026-07-16",
+    });
+  });
+
+  it("atravessa a virada de ano mantendo 13 competências inclusivas", () => {
+    expect(getPeriodoHistoricoCompetencias(new Date(2026, 0, 31))).toEqual({
+      inicio: "2025-01-01",
+      fim: "2026-01-31",
+    });
+  });
+
+  it("valida datas ISO dentro dos limites inclusivos da janela", () => {
+    const ref = new Date(2026, 6, 16);
+    expect(isDataNoPeriodoHistoricoCompetencias("2025-07-01T00:00:00Z", ref)).toBe(true);
+    expect(isDataNoPeriodoHistoricoCompetencias("2026-07-16", ref)).toBe(true);
+    expect(isDataNoPeriodoHistoricoCompetencias("2025-06-30T23:59:59Z", ref)).toBe(false);
+    expect(isDataNoPeriodoHistoricoCompetencias(null, ref)).toBe(false);
   });
 });
 

@@ -11,14 +11,13 @@ import {
   type SetStateAction,
 } from "react";
 import { INFLUENCER_FILTRO_TODOS_VALUE } from "../../../components/FiltroInfluencerSelect";
+import { useDashboardCatalogos } from "../../../hooks/useDashboardCatalogos";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { getMesesDisponiveis, getIdxMesCarrosselPadrao } from "../../../lib/dashboardHelpers";
-import { supabase } from "../../../lib/supabase";
 import {
   buildInfluencerFilterOptions,
   fetchInfluencerIdsComDadosNoPeriodo,
   periodoStreamersFiltro,
-  type PerfilInfluencerMin,
 } from "./streamersInfluencerFilterHelpers";
 
 export type MesRef = { ano: number; mes: number; label: string };
@@ -61,7 +60,7 @@ export function useStreamersFiltros(): StreamersFiltrosContextValue {
 }
 
 export function StreamersFiltrosProvider({ children }: { children: ReactNode }) {
-  const { podeVerInfluencer, operadoraSlugsForcado } = useDashboardFiltros();
+  const { podeVerInfluencer, operadoraSlugsForcado, escoposVisiveis } = useDashboardFiltros();
   const mesesDisponiveis = useMemo(() => getMesesDisponiveis(), []);
   const idxInicial = useMemo(() => getIdxMesCarrosselPadrao(mesesDisponiveis), [mesesDisponiveis]);
 
@@ -69,37 +68,17 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
   const [historico, setHistorico] = useState(false);
   const [filtroInfluencer, setFiltroInfluencer] = useState(INFLUENCER_FILTRO_TODOS_VALUE);
   const [filtroOperadora, setFiltroOperadora] = useState("todas");
-  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
-  const [operadoraInfMap, setOperadoraInfMap] = useState<Record<string, string[]>>({});
-  const [perfis, setPerfis] = useState<PerfilInfluencerMin[]>([]);
   const [influencerOptions, setInfluencerOptions] = useState<{ id: string; nome: string }[]>([]);
   const [isLoading, setIsLoadingState] = useState(false);
   const setIsLoading = useCallback((v: boolean) => {
     setIsLoadingState(v);
   }, []);
 
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
-        supabase.from("influencer_perfil").select("id, nome_artistico").order("nome_artistico"),
-        supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
-        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
-      ]);
-      if (cancel) return;
-      const map: Record<string, string[]> = {};
-      (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
-        if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
-        map[o.operadora_slug].push(o.influencer_id);
-      });
-      setOperadoraInfMap(map);
-      setOperadorasList(opsData || []);
-      setPerfis((perfisData || []) as PerfilInfluencerMin[]);
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, []);
+  const {
+    perfis,
+    operadoras: operadorasList,
+    operadoraInfluencers: operadoraInfMap,
+  } = useDashboardCatalogos();
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -131,7 +110,15 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
     return () => {
       cancel = true;
     };
-  }, [perfis, historico, mesSelecionado, filtroOperadora, operadoraSlugsForcado, podeVerInfluencer]);
+  }, [
+    perfis,
+    historico,
+    mesSelecionado,
+    filtroOperadora,
+    operadoraSlugsForcado,
+    podeVerInfluencer,
+    escoposVisiveis.influencersVisiveis,
+  ]);
 
   useEffect(() => {
     if (

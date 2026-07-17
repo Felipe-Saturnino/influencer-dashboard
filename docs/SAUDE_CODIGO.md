@@ -1,6 +1,6 @@
 # Relatório de Saúde do Código — Data Intelligence (Spin Gaming)
 
-*Última verificação: março 2025*
+*Última verificação: julho 2026 (Fase 5 eficiência pré-i18n)*
 
 ---
 
@@ -51,7 +51,13 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 
 ### Dependência pesada
 
-- **recharts** (~494 KB minificado): usado em dashboards. Considerar troca por lib mais leve ou lazy load apenas nas páginas que usam gráficos.
+- **recharts**: isolado em `vendor-charts` e carregado sob demanda no Overview Spin; imports estáticos residuais em dashboards específicos permanecem no backlog.
+
+### Contrato do modo Histórico
+
+- Janela padrão: **13 competências mensais inclusivas** (competência atual + 12 anteriores), centralizada em `getPeriodoHistoricoCompetencias`.
+- O contrato substitui datas iniciais fixas e permite a futura comparação Year over Year.
+- O rótulo visual permanece **Todo o período**.
 
 ---
 
@@ -110,7 +116,7 @@ Componentes compartilhados criados:
 
 - Revisar `useEffect` e dependências para evitar loops e re-fetches desnecessários.
 - Adicionar tratamento de erro em fetches críticos (ex.: Supabase).
-- Considerar React Query ou similar para cache e estado de requisições.
+- Expandir o uso de TanStack Query já implantado para as páginas de alto volume que ainda fazem cargas locais sem cache.
 
 ### Testes automatizados (Vitest)
 

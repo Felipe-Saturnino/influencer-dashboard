@@ -1,9 +1,13 @@
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { isoDateBrasilFromInstant } from "../../../lib/dateBrasil";
 
-/** Horários agendados no GitHub Actions (America/Sao_Paulo) — ver `.github/workflows/*.yml`. */
+/** Horários a partir dos quais Status Técnico exige “ok hoje” (America/Sao_Paulo). */
 export const HORARIO_AGENDADO_BR = {
-  cda: 4,
+  /**
+   * Cron Actions: 4h BRT (`0 7 * * *` UTC). GitHub atrasa com frequência até ~7h30.
+   * Checagem após 8h evita falso positivo; o watchdog re-dispara às 9h30 BRT.
+   */
+  cda: 8,
   social: 6,
   spinRss: 6,
   comercialSpa: 7,
@@ -13,6 +17,33 @@ export const HORARIO_AGENDADO_BR = {
   emailDiretoria: 6,
   emailAgenda: 6,
 } as const;
+
+/**
+ * Slugs com alerta/KPI “ok hoje” — buscados à parte do topo global de `sync_logs`.
+ * Jobs horários (CS Outlook, painel, lobby) empurram diários para fora de um `limit` único.
+ */
+export const SYNC_LOG_SLUGS_GARANTIDOS = [
+  "casa_apostas",
+  "spin_na_rede_rss",
+  "comercial_spa_lista",
+  "comercial_dominio_validacao",
+  "comercial_cnpj_enriquecimento",
+  "lobby_blaze",
+  "lobby_cda",
+  "cs_atendimento_outlook",
+] as const;
+
+export function mesclarSyncLogsPorExecucao<T extends { id: string; executado_em: string }>(
+  ...listas: (T[] | null | undefined)[]
+): T[] {
+  const map = new Map<string, T>();
+  for (const lista of listas) {
+    for (const row of lista ?? []) {
+      map.set(row.id, row);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.executado_em.localeCompare(a.executado_em));
+}
 
 export function syncLogOkNoDia(
   logs: { status: string; executado_em?: string | null }[],

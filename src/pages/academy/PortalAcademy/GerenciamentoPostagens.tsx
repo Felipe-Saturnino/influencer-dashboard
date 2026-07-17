@@ -29,6 +29,7 @@ import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalAcademyCarrossel";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
 
@@ -291,6 +292,10 @@ export function GerenciamentoPostagens({
     if (!modoHistorico) {
       const mesSel = mesesDisponiveis[idxMes];
       list = list.filter((r) => itemNoMesCarrossel(r.publishedAt ?? r.createdAt, mesSel));
+    } else {
+      list = list.filter((r) =>
+        isDataNoPeriodoHistoricoCompetencias(r.publishedAt ?? r.createdAt),
+      );
     }
     if (filtroTipo !== "todos") list = list.filter((r) => r.tipoUi === filtroTipo);
     if (filtroStatus !== "todos") list = list.filter((r) => r.status === filtroStatus);

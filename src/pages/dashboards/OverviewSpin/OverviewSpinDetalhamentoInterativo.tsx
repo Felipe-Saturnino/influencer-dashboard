@@ -1,4 +1,4 @@
-import { Fragment, type Dispatch, type SetStateAction } from "react";
+import { Fragment, Suspense, lazy, type Dispatch, type SetStateAction } from "react";
 import { ChevronDown, Table2, ChartColumnBig } from "lucide-react";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
@@ -9,19 +9,6 @@ import {
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
 import { MarginBadge } from "../../../components/dashboard";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
-import { TooltipDetalheOperadoras } from "./overviewSpinChartTooltips";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { useApp } from "../../../context/AppContext";
 import {
@@ -34,6 +21,10 @@ import {
   type LinhaDetalheTab,
   type MonthlyRawRow,
 } from "./overviewSpinLogic";
+
+const OverviewSpinDetalhamentoChart = lazy(() =>
+  import("./OverviewSpinCharts").then((m) => ({ default: m.OverviewSpinDetalhamentoChart })),
+);
 
 type Brand = ReturnType<typeof useDashboardBrand>;
 type Theme = ReturnType<typeof useApp>["theme"];
@@ -437,103 +428,19 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                 aria-label={`Gráfico de ${kpiGraficoDetalheConfig.label} por operadora — ${historico ? "todo o período" : mesSelecionadoLabel ?? ""}`}
                 style={{ width: "100%", height: "clamp(220px, 35vh, 420px)", minHeight: 220 }}
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  {kpiGraficoDetalheConfig.tipoGrafico === "barra" ? (
-                    <BarChart
-                      data={dadosGraficoDetalheOperadoras as Record<string, string | number | null>[]}
-                      margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
-                      barCategoryGap="30%"
-                      barGap={3}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                        interval="preserveStartEnd"
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                        width={isBRLKpiGraficoDetalhe ? 72 : 44}
-                        tickFormatter={(v) =>
-                          isBRLKpiGraficoDetalhe ? `R$${(v / 1000).toFixed(0)}K` : v.toLocaleString("pt-BR")
-                        }
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        content={
-                          <TooltipDetalheOperadoras
-                            theme={chartTooltipTheme}
-                            kpiGraficoDetalhe={kpiGraficoDetalhe}
-                            somavel={kpiGraficoDetalheConfig.somavel}
-                            isBRL={isBRLKpiGraficoDetalhe}
-                          />
-                        }
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
-                      {slugsGraficoDetalhe.map((slug) => (
-                        <Bar
-                          key={slug}
-                          dataKey={slug}
-                          name={slugToNome(slug)}
-                          fill={coresOperadorasDetalhe.get(slug) ?? "var(--brand-action, #7c3aed)"}
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={28}
-                        />
-                      ))}
-                    </BarChart>
-                  ) : (
-                    <LineChart
-                      data={dadosGraficoDetalheOperadoras as Record<string, string | number | null>[]}
-                      margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                        interval="preserveStartEnd"
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                        width={isBRLKpiGraficoDetalhe ? 72 : 44}
-                        tickFormatter={(v) =>
-                          isBRLKpiGraficoDetalhe
-                            ? `R$${(v / 1000).toFixed(0)}K`
-                            : kpiGraficoDetalhe === "margin_pct"
-                              ? `${v.toFixed(0)}%`
-                              : v.toLocaleString("pt-BR")
-                        }
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        content={
-                          <TooltipDetalheOperadoras
-                            theme={chartTooltipTheme}
-                            kpiGraficoDetalhe={kpiGraficoDetalhe}
-                            somavel={kpiGraficoDetalheConfig.somavel}
-                            isBRL={isBRLKpiGraficoDetalhe}
-                          />
-                        }
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
-                      {slugsGraficoDetalhe.map((slug) => (
-                        <Line
-                          key={slug}
-                          type="monotone"
-                          name={slugToNome(slug)}
-                          dataKey={slug}
-                          stroke={coresOperadorasDetalhe.get(slug) ?? "var(--brand-action, #7c3aed)"}
-                          strokeWidth={2}
-                          dot={{ r: 2 }}
-                          connectNulls
-                        />
-                      ))}
-                    </LineChart>
-                  )}
-                </ResponsiveContainer>
+                <Suspense fallback={<div style={{ minHeight: 220 }} aria-hidden="true" />}>
+                  <OverviewSpinDetalhamentoChart
+                    dados={dadosGraficoDetalheOperadoras}
+                    slugs={slugsGraficoDetalhe}
+                    cores={coresOperadorasDetalhe}
+                    slugToNome={slugToNome}
+                    kpi={kpiGraficoDetalhe}
+                    config={kpiGraficoDetalheConfig}
+                    isBRL={isBRLKpiGraficoDetalhe}
+                    tooltipTheme={chartTooltipTheme}
+                    t={t}
+                  />
+                </Suspense>
               </div>
             </>
           )}

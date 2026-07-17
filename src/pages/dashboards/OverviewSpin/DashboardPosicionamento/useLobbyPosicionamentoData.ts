@@ -26,6 +26,7 @@ import {
   gerarAlertas,
   toDateKey,
   POS_MONITOR_DIA_MIN,
+  rankingConcorrentesFromPosicoes,
 } from "../../../../lib/lobbyMonitorHelpers";
 
 export const LOBBY_POS_SLUGS_CONSOLIDADOS = ["blaze", "casa_apostas"] as const;
@@ -198,10 +199,10 @@ export function useLobbyPosicionamentoData(operadoraSlug: string, refDate: Date)
     [snapshotAtual],
   );
 
-  const rankingJogos = useMemo(() => {
-    const raw = ultimaNoDia?.jogos_a_frente_pior_mesa ?? [];
-    return [...raw].sort((a, b) => a.posicao - b.posicao);
-  }, [ultimaNoDia]);
+  const rankingJogos = useMemo(
+    () => rankingConcorrentesFromPosicoes(snapshotAtual),
+    [snapshotAtual],
+  );
 
   const cats = useMemo(
     () => visibilidadePorCategoriaDia(execDia, posByExec),

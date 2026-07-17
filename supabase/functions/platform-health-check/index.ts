@@ -185,13 +185,16 @@ serve(async (req) => {
   }
 
   const hojeIso = hojeIsoBrasil();
-  const passouHorarioCda = horaAtualBrasil() >= 4;
+  // Cron CDA 4h BRT; GitHub atrasa com frequência — espelha HORARIO_AGENDADO_BR.cda no front (8h).
+  const passouHorarioCda = horaAtualBrasil() >= 8;
   const passouHorarioSocial = horaAtualBrasil() >= 6;
   const desde24h = new Date(Date.now() - MS_24H).toISOString();
 
+  const syncSelect = "integracao_slug, status, executado_em, erros_count";
   const [
     { data: integrations },
     { data: syncLogs },
+    { data: syncLogsCda },
     { data: pipelineRuns },
     { data: techLogs24h },
     { data: emailEnviosHoje },
@@ -199,9 +202,16 @@ serve(async (req) => {
     supabase.from("integrations").select("slug, nome").eq("ativo", true),
     supabase
       .from("sync_logs")
-      .select("integracao_slug, status, executado_em, erros_count")
+      .select(syncSelect)
       .order("executado_em", { ascending: false })
       .limit(200),
+    // Jobs horários empurram o CDA para fora do topo global — fetch dedicado.
+    supabase
+      .from("sync_logs")
+      .select(syncSelect)
+      .eq("integracao_slug", "casa_apostas")
+      .order("executado_em", { ascending: false })
+      .limit(30),
     supabase
       .from("pipeline_runs")
       .select("status, run_date, created_at, channel")
@@ -214,11 +224,21 @@ serve(async (req) => {
     supabase.from("email_envios").select("tipo, data").eq("data", hojeIso).limit(50),
   ]);
 
-  const logsBySlug = new Map<string, typeof syncLogs>();
-  for (const row of syncLogs ?? []) {
-    const slug = row.integracao_slug as string;
+  type SyncLogRow = { integracao_slug: string; status: string; executado_em: string; erros_count: number };
+  const logsBySlug = new Map<string, SyncLogRow[]>();
+  const pushLog = (row: SyncLogRow) => {
+    const slug = row.integracao_slug;
     if (!logsBySlug.has(slug)) logsBySlug.set(slug, []);
     logsBySlug.get(slug)!.push(row);
+  };
+  for (const row of (syncLogs ?? []) as SyncLogRow[]) pushLog(row);
+  for (const row of (syncLogsCda ?? []) as SyncLogRow[]) {
+    const list = logsBySlug.get("casa_apostas") ?? [];
+    const em = row.executado_em;
+    if (!list.some((r) => r.executado_em === em && r.status === row.status)) pushLog(row);
+  }
+  for (const [, list] of logsBySlug) {
+    list.sort((a, b) => b.executado_em.localeCompare(a.executado_em));
   }
 
   const tech24 = techLogs24h ?? [];

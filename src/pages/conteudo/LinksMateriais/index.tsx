@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import QRCode from "qrcode";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -337,6 +336,7 @@ export default function LinksMateriais() {
     setErro(null);
     try {
       setBaixandoQr("plain");
+      const QRCode = (await import("qrcode")).default;
       const canvas = document.createElement("canvas");
       await QRCode.toCanvas(canvas, linkCompleto, {
         width: 512,

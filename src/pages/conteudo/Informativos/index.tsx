@@ -13,6 +13,7 @@ import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 import { getPageContentBoxShadow } from "../../../lib/pageContentBoxStyles";
 import { stripHtmlText } from "../../../lib/informativosWorkflow";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
 import { InformativosBlocoFiltros } from "./InformativosBlocoFiltros";
@@ -90,7 +91,8 @@ export default function InformativosPage() {
       .from("conteudo_informativo")
       .select("id, assunto, descricao, perfis, published_at, created_by, published_by, status")
       .eq("status", "publicado")
-      .order("published_at", { ascending: false });
+      .order("published_at", { ascending: false })
+      .limit(200);
 
     if (error) {
       console.error("[Informativos] carregar:", error);
@@ -140,6 +142,7 @@ export default function InformativosPage() {
     const q = buscaDeb;
     return lista.filter((item) => {
       if (!modoHistorico && mes && !itemNoMesCarrossel(item.published_at, mes)) return false;
+      if (modoHistorico && !isDataNoPeriodoHistoricoCompetencias(item.published_at)) return false;
       if (q) {
         const texto = normalizarTextoBusca(`${item.assunto} ${stripHtmlText(item.descricao)}`);
         if (!texto.includes(q)) return false;

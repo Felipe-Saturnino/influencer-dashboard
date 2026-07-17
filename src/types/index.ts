@@ -4,6 +4,7 @@ export type Role =
   | "gestor_aquisicao"
   | "gestor_marketing"
   | "gestor_operacoes"
+  | "gestor_tech_ops"
   | "gestor_academy"
   | "gestor_rh"
   | "prestador"
@@ -85,6 +86,7 @@ export type PageKey =
   | "rh_central_denuncias"
   | "rh_portal"
   | "informativos"
+  | "tech_ops_estoque"
   | "configuracoes"
   | "simulador_login"
   | "ajuda";

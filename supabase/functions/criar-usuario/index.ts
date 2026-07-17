@@ -25,6 +25,7 @@ const ROLES_BLOQUEADOS = [
   'gestor_aquisicao',
   'gestor_marketing',
   'gestor_operacoes',
+  'gestor_tech_ops',
   'gestor_academy',
   'gestor_rh',
   'prestador',

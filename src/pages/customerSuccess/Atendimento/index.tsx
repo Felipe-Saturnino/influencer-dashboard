@@ -215,7 +215,11 @@ export default function CsAtendimentoPage() {
   const fetchLista = useCallback(async () => {
     setLoading(true);
 
-    let q = supabase.from("cs_chamados").select(CS_CHAMADOS_SELECT).order("created_at", { ascending: false });
+    let q = supabase
+      .from("cs_chamados")
+      .select(CS_CHAMADOS_SELECT)
+      .order("created_at", { ascending: false })
+      .limit(200);
 
     if (abaOrigem === CS_ATENDIMENTO_ABA_INSTAGRAM) {
       q = q.in("origem", [CS_ATENDIMENTO_ORIGEM_INSTAGRAM_DM, CS_ATENDIMENTO_ORIGEM_INSTAGRAM_COMENTARIO]);
@@ -248,7 +252,8 @@ export default function CsAtendimentoPage() {
       .from("cs_chamado_historico")
       .select("*")
       .eq("chamado_id", chamadoId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(300);
     if (error) {
       console.error("[CsAtendimento] historico", error);
       setHistorico([]);

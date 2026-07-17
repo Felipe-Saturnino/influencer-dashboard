@@ -42,6 +42,7 @@ import { Loader2 } from "lucide-react";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { RenderWhenVisible } from "../../../components/RenderWhenVisible";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { createDataTableBlockStyles } from "../../../lib/dataTableStyles";
@@ -55,25 +56,28 @@ export default function OverviewSpin() {
   const [aba, setAba] = useRouteTab("mesas_spin", "overview", TAB_IDS_SPIN_TODAS);
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
 
-  const { catalogo, verAbaDedicado, verAbaNetwork } = useOverviewSpinCatalogo({
+  const { catalogo, loadingCatalogo, verAbaDedicado, verAbaNetwork } = useOverviewSpinCatalogo({
     isAdmin,
     canView: perm.canView === "sim" || perm.canView === "proprios" ? perm.canView : "nao",
     operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
   });
 
+  /** Evita flash: enquanto o catálogo não resolve, mantém as 4 abas (Overview + Dedicado + Network + Posicionamento). */
   const tabsVisiveis = useMemo((): OverviewSpinTab[] => {
+    if (loadingCatalogo) return [...TAB_IDS_SPIN_TODAS];
     return TAB_IDS_SPIN_TODAS.filter((id) => {
       if (id === "estudio_dedicado") return verAbaDedicado;
       if (id === "estudio_network") return verAbaNetwork;
       return true;
     });
-  }, [verAbaDedicado, verAbaNetwork]);
+  }, [loadingCatalogo, verAbaDedicado, verAbaNetwork]);
 
   useEffect(() => {
+    if (loadingCatalogo) return;
     if (!tabsVisiveis.includes(aba)) {
       setAba("overview");
     }
-  }, [aba, tabsVisiveis, setAba]);
+  }, [aba, tabsVisiveis, setAba, loadingCatalogo]);
 
   const {
     showFiltroOperadora,
@@ -577,7 +581,8 @@ export default function OverviewSpin() {
                     {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
-                  <OverviewSpinComparativoJogoInterativo
+                  <RenderWhenVisible minHeight={240}>
+                    <OverviewSpinComparativoJogoInterativo
                   colTempoLabel="Data"
                   historico={historico}
                   mesSelecionadoLabel={mesSelecionado?.label ?? ""}
@@ -600,7 +605,8 @@ export default function OverviewSpin() {
                   dataTable={dataTable}
                   brand={brand}
                   t={t}
-                />
+                    />
+                  </RenderWhenVisible>
                 )}
               </div>
 
@@ -869,7 +875,8 @@ export default function OverviewSpin() {
                     {MSG_SEM_DADOS_FILTRO}
                   </div>
                 ) : (
-                  <OverviewSpinComparativoJogoInterativo
+                  <RenderWhenVisible minHeight={240}>
+                    <OverviewSpinComparativoJogoInterativo
                   colTempoLabel="Mês"
                   historico={historico}
                   mesSelecionadoLabel={mesSelecionado?.label ?? ""}
@@ -892,7 +899,8 @@ export default function OverviewSpin() {
                   dataTable={dataTable}
                   brand={brand}
                   t={t}
-                />
+                    />
+                  </RenderWhenVisible>
                 )}
               </div>
 

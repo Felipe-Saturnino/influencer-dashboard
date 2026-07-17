@@ -88,9 +88,16 @@ export default function Influencers() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const { data: opsList } = await supabase.from("operadoras").select("*").order("nome");
+    const { data: opsList } = await supabase
+      .from("operadoras")
+      .select("slug, nome, ativo, brand_action, brand_contrast, brand_bg, brand_text, logo_url, font_url")
+      .order("nome");
     setOperadorasList(opsList ?? []);
     const opsMap = Object.fromEntries((opsList ?? []).map((o: Operadora) => [o.slug, o.nome]));
+
+    const PERFIL_COLS =
+      "id, nome_artistico, nome_completo, status, telefone, cpf, canais, link_twitch, link_youtube, link_kick, link_instagram, link_tiktok, link_discord, link_whatsapp, link_telegram, cache_hora, banco, agencia, conta, chave_pix, created_at, updated_at, status_alterado_em";
+    const INF_OP_COLS = "influencer_id, operadora_slug, id_operadora, ativo, criado_em, atualizado_em";
 
     if (showManagementUI) {
       const { data: profiles } = await supabase
@@ -98,8 +105,8 @@ export default function Influencers() {
       if (profiles) {
         const ids = profiles.map((p: { id: string }) => p.id);
         const [perfisRes, opsRes] = await Promise.all([
-          ids.length > 0 ? supabase.from("influencer_perfil").select("*").in("id", ids) : { data: [] },
-          ids.length > 0 ? supabase.from("influencer_operadoras").select("*").in("influencer_id", ids) : { data: [] },
+          ids.length > 0 ? supabase.from("influencer_perfil").select(PERFIL_COLS).in("id", ids) : { data: [] },
+          ids.length > 0 ? supabase.from("influencer_operadoras").select(INF_OP_COLS).in("influencer_id", ids) : { data: [] },
         ]);
         const perfisMap: Record<string, Perfil> = {};
         (perfisRes.data ?? []).forEach((p: Perfil) => { perfisMap[p.id] = p; });
@@ -133,8 +140,8 @@ export default function Influencers() {
     } else {
       if (!user) return;
       const [perfilRes, opsRes] = await Promise.all([
-        supabase.from("influencer_perfil").select("*").eq("id", user.id).single(),
-        supabase.from("influencer_operadoras").select("*").eq("influencer_id", user.id),
+        supabase.from("influencer_perfil").select(PERFIL_COLS).eq("id", user.id).single(),
+        supabase.from("influencer_operadoras").select(INF_OP_COLS).eq("influencer_id", user.id),
       ]);
       const perfil = perfilRes.data ?? null;
       const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({

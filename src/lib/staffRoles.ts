@@ -12,6 +12,7 @@ export const ROLES_GESTOR_DEPARTAMENTO: readonly Role[] = [
   "gestor_aquisicao",
   "gestor_marketing",
   "gestor_operacoes",
+  "gestor_tech_ops",
   "gestor_academy",
   "gestor_rh",
 ];

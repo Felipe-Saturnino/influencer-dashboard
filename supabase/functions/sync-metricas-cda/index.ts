@@ -496,20 +496,20 @@ async function gravarSyncLog(supabase: ReturnType<typeof createClient>, opts: {
   periodo_inicio: string
   periodo_fim: string
 }): Promise<void> {
-  try {
-    await supabase.from('sync_logs').insert({
-      integracao_slug: 'casa_apostas',
-      status: opts.status,
-      registros_inseridos: opts.registros_inseridos,
-      registros_atualizados: opts.registros_atualizados ?? 0,
-      erros_count: opts.erros_count,
-      mensagem_erro: opts.mensagem_erro ?? null,
-      duracao_ms: opts.duracao_ms,
-      periodo_inicio: opts.periodo_inicio,
-      periodo_fim: opts.periodo_fim,
-    })
-  } catch (e) {
-    console.error('[sync-metricas-cda] Falha sync_log:', e)
+  const { error } = await supabase.from('sync_logs').insert({
+    integracao_slug: 'casa_apostas',
+    status: opts.status,
+    registros_inseridos: opts.registros_inseridos,
+    registros_atualizados: opts.registros_atualizados ?? 0,
+    erros_count: opts.erros_count,
+    mensagem_erro: opts.mensagem_erro ?? null,
+    duracao_ms: opts.duracao_ms,
+    periodo_inicio: opts.periodo_inicio,
+    periodo_fim: opts.periodo_fim,
+  })
+  // PostgREST não lança — sem este check o Actions fica verde e o Status Técnico alerta “não executou”.
+  if (error) {
+    console.error('[sync-metricas-cda] Falha sync_log:', error.message, error.code, error.details)
   }
 }
 

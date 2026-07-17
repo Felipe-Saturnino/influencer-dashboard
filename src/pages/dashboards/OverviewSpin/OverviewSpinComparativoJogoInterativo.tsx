@@ -1,4 +1,4 @@
-import { Fragment, type Dispatch, type SetStateAction } from "react";
+import { Fragment, Suspense, lazy, type Dispatch, type SetStateAction } from "react";
 import { Table2, ChartColumnBig } from "lucide-react";
 import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import { FONT } from "../../../constants/theme";
@@ -7,19 +7,6 @@ import {
   getDataTableStyle,
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
-import { TooltipComparativoJogo } from "./overviewSpinChartTooltips";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { useApp } from "../../../context/AppContext";
 import {
@@ -31,6 +18,10 @@ import {
   type KpiJogoKey,
   type LinhaComparativoJogoTab,
 } from "./overviewSpinLogic";
+
+const OverviewSpinComparativoJogoChart = lazy(() =>
+  import("./OverviewSpinCharts").then((m) => ({ default: m.OverviewSpinComparativoJogoChart })),
+);
 
 type Brand = ReturnType<typeof useDashboardBrand>;
 type Theme = ReturnType<typeof useApp>["theme"];
@@ -464,102 +455,17 @@ export function OverviewSpinComparativoJogoInterativo(props: OverviewSpinCompara
                 aria-label={`Gráfico de ${kpiGraficoConfig.label} por jogo — ${historico ? "todo o período" : mesSelecionadoLabel ?? ""}`}
                 style={{ width: "100%", height: "clamp(220px, 35vh, 420px)", minHeight: 220 }}
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  {kpiGraficoConfig.tipoGrafico === "barra" ? (
-                    <BarChart
-                      data={dadosGraficoComparativoJogo}
-                      margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
-                      barCategoryGap="30%"
-                      barGap={3}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                        interval="preserveStartEnd"
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                        width={isBRLKpiGrafico ? 72 : 44}
-                        tickFormatter={(v) =>
-                          isBRLKpiGrafico ? `R$${(v / 1000).toFixed(0)}K` : v.toLocaleString("pt-BR")
-                        }
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        content={
-                          <TooltipComparativoJogo
-                            theme={chartTooltipTheme}
-                            kpiGrafico={kpiGrafico}
-                            somavel={kpiGraficoConfig.somavel}
-                            isBRL={isBRLKpiGrafico}
-                          />
-                        }
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
-                      {jogosComparativoAtivos.map((jogo) => (
-                        <Bar
-                          key={jogo.key}
-                          dataKey={jogo.label}
-                          fill={jogo.cor}
-                          radius={[4, 4, 0, 0]}
-                          maxBarSize={32}
-                        />
-                      ))}
-                    </BarChart>
-                  ) : (
-                    <LineChart
-                      data={dadosGraficoComparativoJogo}
-                      margin={{ top: 8, right: 16, left: 8, bottom: 4 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={t.cardBorder} opacity={0.5} />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                        interval="preserveStartEnd"
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10, fill: t.textMuted, fontFamily: FONT.body }}
-                        width={isBRLKpiGrafico ? 72 : 44}
-                        tickFormatter={(v) =>
-                          isBRLKpiGrafico
-                            ? `R$${(v / 1000).toFixed(0)}K`
-                            : kpiGrafico === "margin_pct"
-                              ? `${v.toFixed(0)}%`
-                              : v.toLocaleString("pt-BR")
-                        }
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        content={
-                          <TooltipComparativoJogo
-                            theme={chartTooltipTheme}
-                            kpiGrafico={kpiGrafico}
-                            somavel={kpiGraficoConfig.somavel}
-                            isBRL={isBRLKpiGrafico}
-                          />
-                        }
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }} />
-                      {jogosComparativoAtivos.map((jogo) => (
-                        <Line
-                          key={jogo.key}
-                          type="monotone"
-                          name={jogo.label}
-                          dataKey={jogo.label}
-                          stroke={jogo.cor}
-                          strokeWidth={2}
-                          dot={{ r: 2 }}
-                          connectNulls
-                        />
-                      ))}
-                    </LineChart>
-                  )}
-                </ResponsiveContainer>
+                <Suspense fallback={<div style={{ minHeight: 220 }} aria-hidden="true" />}>
+                  <OverviewSpinComparativoJogoChart
+                    dados={dadosGraficoComparativoJogo}
+                    jogos={jogosComparativoAtivos}
+                    kpi={kpiGrafico}
+                    config={kpiGraficoConfig}
+                    isBRL={isBRLKpiGrafico}
+                    tooltipTheme={chartTooltipTheme}
+                    t={t}
+                  />
+                </Suspense>
               </div>
             </>
           )}

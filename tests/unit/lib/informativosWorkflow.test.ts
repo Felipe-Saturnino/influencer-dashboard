@@ -15,6 +15,7 @@ describe("informativosWorkflow — aprovação", () => {
     expect(perfisRequeremFluxoAprovacao(["influencer"])).toBe(true);
     expect(perfisRequeremFluxoAprovacao(["investidor"])).toBe(true);
     expect(perfisRequeremFluxoAprovacao(["gestor_operacoes"])).toBe(true);
+    expect(perfisRequeremFluxoAprovacao(["gestor_tech_ops"])).toBe(true);
     expect(perfisRequeremFluxoAprovacao(["gestor_operacoes", "rh"])).toBe(true);
   });
 

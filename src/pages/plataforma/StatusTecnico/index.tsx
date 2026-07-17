@@ -48,9 +48,11 @@ import {
   ERRO_SYNC_CS_OUTLOOK,
   formatarErroRespostaCsOutlook,
   HORARIO_AGENDADO_BR,
+  mesclarSyncLogsPorExecucao,
   MODAL_OVERLAY_BG,
   MSG_SEM_PERMISSAO,
   pipelineSucessoNoDia,
+  SYNC_LOG_SLUGS_GARANTIDOS,
   syncLogOkNoDia,
   tableRowHoverBg,
 } from "./statusTecnicoHelpers";
@@ -212,6 +214,8 @@ export default function StatusTecnico() {
   const carregar = useCallback(async () => {
     setLoading(true);
     const hoje = hojeIsoBrasil();
+    const dataInicioStr = subDiasIso(hoje, 14);
+    const syncDesdeUtc = inicioDiaBrasilUtcIso(dataInicioStr);
 
     // Integrações (sem upload PLS — descontinuado; pode sobrar linha no DB até migração)
     const { data: intData } = await supabase.from("integrations").select("*").eq("ativo", true);
@@ -219,14 +223,30 @@ export default function StatusTecnico() {
       (intData ?? []).filter((i) => i.slug !== SLUG_INTEGRACAO_PLS_UPLOAD_RETIRADA),
     );
 
-    // Sync logs (últimos 7 dias)
-    const { data: syncDataRaw } = await supabase
-      .from("sync_logs")
-      .select("*")
-      .order("executado_em", { ascending: false })
-      .limit(100);
-    const syncData = syncDataRaw ?? [];
-    setSyncLogs(syncData);
+    // Sync logs: janela 14d + fetch dedicado por slug crítico (jobs horários empurram diários fora do topo global)
+    const [{ data: syncDataRaw }, ...slugSyncRes] = await Promise.all([
+      supabase
+        .from("sync_logs")
+        .select("*")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(300),
+      ...SYNC_LOG_SLUGS_GARANTIDOS.map((slug) =>
+        supabase
+          .from("sync_logs")
+          .select("*")
+          .eq("integracao_slug", slug)
+          .gte("executado_em", syncDesdeUtc)
+          .order("executado_em", { ascending: false })
+          .limit(40),
+      ),
+    ]);
+    setSyncLogs(
+      mesclarSyncLogsPorExecucao(
+        (syncDataRaw ?? []) as SyncLog[],
+        ...slugSyncRes.map((r) => (r.data ?? []) as SyncLog[]),
+      ),
+    );
 
     // Tech logs — sempre buscar 48h para alertas; exibir conforme logFiltro
     const desde = new Date();
@@ -258,9 +278,6 @@ export default function StatusTecnico() {
     setRegistrosHoje(count ?? 0);
 
     // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails (datas civis em SP)
-    const dataInicioStr = subDiasIso(hoje, 14);
-    const syncDesdeUtc = inicioDiaBrasilUtcIso(dataInicioStr);
-
     const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync, resComercialCnpjSync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
@@ -2748,9 +2765,9 @@ export default function StatusTecnico() {
               <tbody>
                 {[
                   ["Nenhum Sync CDA com sucesso", "Último sync com falha, nenhum OK"],
-                  ["Sync CDA não executou hoje (agendado 4h)", "Após 4h BRT, sem sync_logs OK na data civil de hoje (SP)"],
+                  ["Sync CDA não executou hoje (agendado 4h)", "Após 8h BRT, sem sync_logs OK na data civil de hoje (SP); cron 4h — atraso do GitHub Actions é comum"],
                   ["Taxa de erro alta no Sync CDA", "> 5%"],
-                  ["Sync CDA sem dados recentes", "Após 4h BRT, sem influencer_metricas com data = ontem (D-1), com histórico"],
+                  ["Sync CDA sem dados recentes", "Após 8h BRT, sem influencer_metricas com data = ontem (D-1), com histórico"],
                   ["Erro no Sync Social Media", "pipeline_runs status=error (24h)"],
                   ["Sync Social Media com erro", "tech_logs canal (24h)"],
                   ["Sync Social Media sem dados recentes", "Sem kpi_daily em 3 dias (com histórico)"],

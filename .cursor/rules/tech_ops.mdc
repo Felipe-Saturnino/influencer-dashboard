@@ -1,0 +1,121 @@
+---
+description: Tech Ops — Gestão de Estoque (itens, equipamentos, itens de jogo, fornecedores)
+globs:
+  - src/pages/techOps/**
+  - src/lib/techOpsEstoque.ts
+---
+
+# Tech Ops — Gestão de Estoque
+
+**Antes de implementar:** `business.mdc` → `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+
+**PageKey:** `tech_ops_estoque` · **Menu:** Tech Ops → Gestão de Estoque · **Rota:** `GestaoDeEstoque` (abas `Itens`, `Equipamentos`, `Jogo`, `Fornecedores`)
+
+---
+
+## Identificação
+
+| Item | Valor |
+|------|-------|
+| Subtítulo | Controle o estoque de itens, equipamentos e insumos de jogo e o cadastro de fornecedores. |
+| Origem | Protótipo interno de prestador — adaptado ao Data Intelligence (sem PIN local; permissões via Gestão de Usuários) |
+| Tabelas | `tech_ops_estoque_itens`, `tech_ops_estoque_equipamentos`, `tech_ops_estoque_jogo_lotes`, `tech_ops_estoque_fornecedores`, `tech_ops_estoque_fornecedor_contatos`, `tech_ops_estoque_anotacoes`, `tech_ops_estoque_historico` |
+| Migração | `supabase/migrations/20261016150000_tech_ops_estoque.sql` — restaura também `_role_sem_escopo_app` / `_staff_spin_page_perm` (lista completa de roles) e estende `_estudios_spin_leitura_perm` · `20261016160000_tech_ops_estoque_codigo_4_digitos.sql` — comentários do código com 4 dígitos |
+| RLS | `_tech_ops_estoque_perm(need)` — padrão `_afiliados_network_perm` (gestores, prestadores, staff Spin via `role_permissions`) |
+| Storage | bucket `tech-ops-estoque` (anexos opcionais de anotações — pasta `anotacoes/`) |
+| Lib de domínio | `src/lib/techOpsEstoque.ts` — tipos, labels, códigos, fetch/write |
+| Ações na matriz | `hasCriar: true`, `hasEditar: true`, `hasExcluir: false` — **não há exclusão** na v1 (só criação e alterações com histórico) |
+| Seed permissões | `nao` para todos os perfis exceto admin (nenhum dado seed nas tabelas — carga real via UI) |
+
+---
+
+## Estrutura da página (`src/pages/techOps/GestaoEstoque/`)
+
+| Ficheiro | Conteúdo |
+|----------|----------|
+| `index.tsx` | Gate de permissão, `PageHeader`, bloco de filtros (linha 1: abas `FiltroBarTabButton`; linha 2: `BarraPesquisaPagina` + `FiltroEstudioSelect` + categoria `FiltroBarCampoSelect`), fetch das quatro listas + estúdios |
+| `AbaItens.tsx` / `AbaEquipamentos.tsx` / `AbaJogo.tsx` / `AbaFornecedores.tsx` | KPIs + catálogo + wiring dos modais por aba |
+| `ModaisNovoEstoque.tsx` | Modais Novo Item / Novo Equipamento / Novo Item de Jogo / Novo Fornecedor (abas Empresa + Contato) |
+| `ModaisEditarEstoque.tsx` | Modais Editar por entidade — abas **Alterações** + **Anotações** (pré-save entre abas, um Salvar) |
+| `ModalVerEstoque.tsx` | Modal Ver genérico — 1ª aba injetada + **Anotações** + **Histórico** (fetch por `entidade_tipo` + `entidade_id`) |
+| `estoqueUi.tsx` | Estilos de formulário, `CampoLeituraEstoque`, `BlocoInfoEstoque`, `KpiEstoqueCard`, `BadgeEstoque`, `parseValorEstoque` |
+
+### Abas e URL
+
+`useRouteTab("tech_ops_estoque", "itens", [itens, equipamentos, jogo, fornecedores])` — slugs em `APP_ROUTE_CATALOG` (`Itens`, `Equipamentos`, `Jogo`, `Fornecedores`), todas `access: "always"`.
+
+### Filtros
+
+- **Busca:** `textoContemBuscaEmAlgum` (insensível a acentos) — campos por aba (código, nome, marca, modelo, série, lote, empresa, CNPJ, contato).
+- **Estúdio:** `FiltroEstudioSelect` (mestre `estudios_spin` ativos — **não** criar cadastro local); oculto na aba Fornecedores.
+- **Categoria:** `FiltroBarCampoSelect` com ícone `Tags`, agregadora **Todas Categorias** (`todasValue=""`); opções mudam por aba; estado independente por aba; oculto em Fornecedores.
+
+---
+
+## Regras de domínio
+
+### Códigos sequenciais
+
+`codigo_num` = `GENERATED ALWAYS AS IDENTITY`; exibição `formatCodigoEstoque` (**4 dígitos**) — **ITM-0001** (itens), **EQP-0001** (equipamentos), **JOG-0001** (lotes de jogo). Campo Código nos modais Novo é **travado** e **pré-preenchido** com o próximo código previsto (`proximoCodigoEstoque` = maior `codigo_num` carregado + 1); a numeração definitiva continua sendo atribuída pelo banco.
+
+### Quantidades derivadas (nunca persistidas)
+
+| Derivada | Fórmula | Helper |
+|----------|---------|--------|
+| Estoque do item | `quantidade_total − quantidade_em_uso − quantidade_manutencao` (mín. 0) | `estoqueDisponivelItem` |
+| Qtd Atual do lote | `qtd_inicial − qtd_consumida − qtd_descartada` (mín. 0) | `qtdAtualJogoLote` |
+| Valor do Estoque (modal Ver Item) | `valor_unitario × estoque disponível` | — |
+
+`qtd_descartada`: origem do valor ainda não definida por produto (v1 exibe; edição futura).
+
+### KPIs clicáveis (Consolidado)
+
+- **Itens / Equipamentos:** cards Total (cor `--brand-primary`), Estoque (`#22c55e`), Em uso (`#3b82f6`), Manutenção (`#f59e0b`) com breakdown por categoria; clique aplica filtro de status na tabela (`aria-pressed`). Itens filtram por quantidade > 0 no estado; Equipamentos pelo campo `status`.
+- **Jogo:** 3 cards por categoria (Bolinhas `#a78bfa`, Cartas `#3b82f6`, Tecidos `#22c55e`) com Qtd Atual; clique sincroniza com o **mesmo** filtro de categoria da barra. **Não** são identidade de jogo (Baccarat/Roleta/BJ/FB) — cores locais de consumíveis.
+
+### Status de equipamento (workflow)
+
+`estoque` / `em_uso` / `manutencao` — labels e cores em `ESTOQUE_EQUIP_STATUS_LABEL` / `ESTOQUE_EQUIP_STATUS_COLOR` (badge padrão Global). Novo equipamento nasce `estoque`. Coluna **Alocação** = nome do estúdio (`estudios_spin`) quando `em_uso`; senão `—`. Fluxo de alocação/mudança de status ainda não exposto na UI (fase futura).
+
+### Modais Ver (3 abas)
+
+Título/subtítulo por entidade: Item/Equipamento `nome` + `CÓD — Categoria`; Jogo `nome_lote` + `CÓD — Categoria`; Fornecedor `tipo` + `Razão Social — CNPJ`. 1ª aba: «Dados do Item» (Item: Marca/Modelo + blocos Quantidade e Valores; Equipamento: Número de Série, Marca, Modelo e Valor — **sem campos extra**), «Quantidades do Item» (Jogo), «Contatos» (Fornecedor). Abas 2–3: **Anotações** e **Histórico** (`ModalVerEstoque` genérico).
+
+### Modais Editar (2 abas — pré-save)
+
+Aba **Alterações** com «Tipo de Alteração» condicional:
+
+| Entidade | Tipos | Campos abertos |
+|----------|-------|----------------|
+| Item | Novas Unidades · Alteração de Valor · Alteração Cadastral | Quantidade / Valor Unitário / Nome+Categoria+Marca+Modelo |
+| Equipamento | Alteração de Valor · Alteração Cadastral | Valor / Nome+Categoria+Nº Série+Marca+Modelo |
+| Item de Jogo | (sem seletor) | Nome do Lote, Categoria, Quantidade (→ `qtd_inicial`) |
+| Fornecedor | Alteração de Contato · Alteração Cadastral | Blocos de contato editáveis + «Adicionar contato» (sub-modal zIndex 1100, adiciona rascunho — persiste no Salvar) / Razão Social+CNPJ+Tipo |
+
+Aba **Anotações:** texto longo obrigatório (quando usada) + anexo opcional (upload no bucket). **Um** Salvar persiste alterações + anotação; validação: exige tipo de alteração **ou** anotação; anexo sem texto bloqueia.
+
+### Histórico e anotações
+
+Toda escrita registra em `tech_ops_estoque_historico` (`acao` + `detalhe` «antes → depois», `autor_nome` = `user.name`): Criação, Novas Unidades, Alteração de Valor, Alteração Cadastral, Alteração de Contato, Anotação registrada. Garantia forte do autor (PIN/assinatura) ficou para fase futura — hoje `autor_user_id = auth.uid()` + nome exibido.
+
+### Strings de vazio (específicas)
+
+`Nenhum item encontrado.` · `Nenhum equipamento encontrado.` · `Nenhum item de jogo encontrado.` · `Nenhum fornecedor encontrado.` · `Nenhuma anotação registrada.` · `Nenhuma ação registrada.` · `Nenhum contato cadastrado.`
+
+---
+
+## Fora do escopo v1 (protótipo — não implementar sem handoff)
+
+Recados, Tarefas, Horas Extras, Admin/Telemetria, páginas de equipamento por tipo (Roletas / Shuffling / Mesas), autenticação por PIN, fluxo de alocação de equipamento em estúdio e origem editável de `qtd_consumida` / `qtd_descartada`.
+
+## Exceções — identidade de jogo
+
+Nenhuma. As categorias da aba Jogo (Bolinhas, Cartas, Tecidos) são consumíveis — não usam `gameIdentityColors`.
+
+## Anti-patterns da secção
+
+- Cadastro local de estúdio em vez de `estudios_spin` (Business § Estúdio vs Operadora).
+- Persistir `estoque` disponível ou `qtd_atual` em coluna — sempre derivar.
+- Editar entidade sem registrar `tech_ops_estoque_historico`.
+- Expor exclusão (a página não tem `hasExcluir`).
+- Seed de dados fictícios nas tabelas de estoque.

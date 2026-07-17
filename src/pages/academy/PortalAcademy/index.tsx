@@ -14,6 +14,7 @@ import {
 import { stripHtmlText, type AcademyPostagemStatus } from "../../../lib/academyPortalWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { normalizarAnexosAcademyPortal, normalizarImagensAcademyPortal } from "../../../lib/academyPortalPostagemFiles";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 import { autorIdPostagem, carregarMetaAutoresPortalAcademy, type AcademyPortalAutorInfo } from "../../../lib/academyPortalAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
@@ -33,6 +34,7 @@ import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionari
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
@@ -223,6 +225,8 @@ function filtrarListaPortal<T extends PostagemBase>(
   if (!modoHistorico) {
     const mesSel = meses[idxMes];
     out = out.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
+  } else {
+    out = out.filter((c) => isDataNoPeriodoHistoricoCompetencias(c.published_at));
   }
   if (filtroCat !== "todos") {
     const cfg = configs.find((x) => x.key === filtroCat);
@@ -259,6 +263,8 @@ function filtrarManuaisPortal(
   if (!modoHistorico) {
     const mesSel = meses[idxMes];
     out = out.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
+  } else {
+    out = out.filter((c) => isDataNoPeriodoHistoricoCompetencias(c.published_at));
   }
   if (filtroCat !== "todos") {
     const cfg = configs.find((x) => x.key === filtroCat);
@@ -358,20 +364,37 @@ export default function PortalAcademyPage() {
     if (!user?.id) return;
     setLoading(true);
     setErro(null);
+    try {
 
-    const [catRes, comRes, dicaRes, manualRes] = await Promise.all([
+    const [catRes, comData, dicaData, manualData] = await Promise.all([
       supabase.from("academy_portal_categoria").select("*").order("sort_order", { ascending: true }),
-      supabase.from("academy_portal_comunicado").select("*, categoria:academy_portal_categoria(*)").order("published_at", { ascending: false }),
-      supabase.from("academy_portal_dica").select("*, categoria:academy_portal_categoria(*)").order("published_at", { ascending: false }),
-      supabase.from("academy_portal_manual").select("*, categoria:academy_portal_categoria(*)").order("published_at", { ascending: false }),
+      fetchAllPages<PostagemBase>(async (from, to) =>
+        await supabase
+          .from("academy_portal_comunicado")
+          .select("*, categoria:academy_portal_categoria(*)")
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllPages<PostagemBase & { jogo_mesa?: string[] | null }>(async (from, to) =>
+        await supabase
+          .from("academy_portal_dica")
+          .select("*, categoria:academy_portal_categoria(*)")
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllPages<ManualRow>(async (from, to) =>
+        await supabase
+          .from("academy_portal_manual")
+          .select("*, categoria:academy_portal_categoria(*)")
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
     ]);
 
-    if (catRes.error || comRes.error || dicaRes.error || manualRes.error) {
-      console.error("[PortalAcademy] carregar:", catRes.error ?? comRes.error ?? dicaRes.error ?? manualRes.error);
-      setErro(ERRO_CARREGAR);
-      setLoading(false);
-      return;
-    }
+    if (catRes.error) throw catRes.error;
 
     const cats = (catRes.data ?? []) as AcademyPortalCategoria[];
     setCategoriasCom(cats.filter((c) => c.scope === "comunicado"));
@@ -380,24 +403,26 @@ export default function PortalAcademyPage() {
 
     const visivel = (status: AcademyPostagemStatus | null | undefined) => isPostagemPublica(status);
 
-    const comRows = ((comRes.data ?? []) as PostagemBase[]).filter((c) => visivel(c.status));
-    const dicaRows = ((dicaRes.data ?? []) as (PostagemBase & { jogo_mesa?: string[] | null })[]).filter((d) =>
+    const comRows = comData.filter((c) => visivel(c.status));
+    const dicaRows = dicaData.filter((d) =>
       visivel(d.status),
     );
-    const manualRows = ((manualRes.data ?? []) as ManualRow[]).filter((m) => visivel(m.status));
+    const manualRows = manualData.filter((m) => visivel(m.status));
 
     setComunicados(comRows);
     setDicas(dicaRows);
     setManuais(manualRows);
 
-    const { data: recData } = await supabase
-      .from("academy_portal_read_receipt")
-      .select("content_id, read_at, acknowledged_at")
-      .eq("user_id", user.id);
+    const recData = await fetchAllPages<AcademyPortalReadReceiptRow>(async (from, to) =>
+      await supabase
+        .from("academy_portal_read_receipt")
+        .select("content_id, read_at, acknowledged_at")
+        .eq("user_id", user.id)
+        .range(from, to)
+    );
 
     const recMap = new Map<string, AcademyPortalReadReceiptRow>();
-    for (const r of recData ?? []) {
-      const row = r as AcademyPortalReadReceiptRow;
+    for (const row of recData) {
       recMap.set(academyManualReceiptKey(row.content_id), row);
     }
     setReceipts(recMap);
@@ -408,7 +433,12 @@ export default function PortalAcademyPage() {
       if (aid) userIds.add(aid);
     }
     setMetaAutores(await carregarMetaAutoresPortalAcademy([...userIds]));
-    setLoading(false);
+    } catch (error) {
+      console.error("[PortalAcademy] carregar:", error);
+      setErro(ERRO_CARREGAR);
+    } finally {
+      setLoading(false);
+    }
   }, [user?.id]);
 
   useEffect(() => {

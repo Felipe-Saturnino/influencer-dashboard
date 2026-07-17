@@ -1,8 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
+  mesclarSyncLogsPorExecucao,
   pipelineSucessoNoDia,
   syncLogOkNoDia,
 } from "@/pages/plataforma/StatusTecnico/statusTecnicoHelpers";
+
+describe("mesclarSyncLogsPorExecucao", () => {
+  it("deduplica por id e ordena por executado_em desc", () => {
+    const merged = mesclarSyncLogsPorExecucao(
+      [
+        { id: "a", executado_em: "2026-07-15T09:00:00.000Z" },
+        { id: "b", executado_em: "2026-07-15T10:00:00.000Z" },
+      ],
+      [{ id: "a", executado_em: "2026-07-15T09:00:00.000Z" }, { id: "c", executado_em: "2026-07-14T08:00:00.000Z" }],
+    );
+    expect(merged.map((r) => r.id)).toEqual(["b", "a", "c"]);
+  });
+});
 
 describe("syncLogOkNoDia", () => {
   it("true quando há log ok no dia civil SP", () => {

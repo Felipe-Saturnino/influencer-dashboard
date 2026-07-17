@@ -3,6 +3,7 @@ import {
   Banknote,
   Bell,
   BookOpen,
+  Boxes,
   Briefcase,
   Calendar,
   CalendarRange,
@@ -55,7 +56,7 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
-/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Comercial, Customer Success, Estúdio, Academy, Escala, RH, Conteúdo, Plataforma. */
+/** Ordem: Dashboards, Lives, Afiliados, Aquisição, Marketing, Comercial, Customer Success, Estúdio, Academy, Escala, RH, Conteúdo, Tech Ops, Plataforma. */
 export const MENU: MenuSection[] = [
   {
     section: "Dashboards",
@@ -159,6 +160,12 @@ export const MENU: MenuSection[] = [
       { key: "spin_na_rede", label: "Spin na Rede", icon: Radio },
       { key: "rh_portal", label: "Portal de RH", icon: Newspaper },
       { key: "informativos", label: "Informativos", icon: Bell },
+    ],
+  },
+  {
+    section: "Tech Ops",
+    items: [
+      { key: "tech_ops_estoque", label: "Gestão de Estoque", icon: Boxes },
     ],
   },
   {

@@ -10,7 +10,12 @@ import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
-import { fmt, getMesesDisponiveis, getDatasDoMes, fmtDia } from "../../../lib/dashboardHelpers";
+import {
+  getMesesDisponiveis,
+  getDatasDoMes,
+  getPeriodoHistoricoCompetencias,
+  fmtDia,
+} from "../../../lib/dashboardHelpers";
 import type { RoteiroCampanha } from "../RoteiroMesa";
 import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
@@ -349,7 +354,7 @@ export default function CentralNotificacoes() {
   }, [operadorasList]);
 
   const periodo = useMemo(() => {
-    if (historico) return { inicio: "2020-01-01", fim: fmt(new Date()) };
+    if (historico) return getPeriodoHistoricoCompetencias();
     if (!mesSelecionado) {
       const now = new Date();
       return getDatasDoMes(now.getFullYear(), now.getMonth());
@@ -374,7 +379,8 @@ export default function CentralNotificacoes() {
           .select("*, profiles!created_by(name)")
           .or(`data_inicio.is.null,data_inicio.lte.${periodo.fim}`)
           .or(`data_fim.is.null,data_fim.gte.${periodo.inicio}`)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(100);
 
         if (operadoraSlugsForcado?.length) {
           qCamp = qCamp.in("operadora_slug", operadoraSlugsForcado);

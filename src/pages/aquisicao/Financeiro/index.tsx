@@ -7,6 +7,7 @@ import { usePermission } from "../../../hooks/usePermission"
 import { BASE_COLORS, FONT } from "../../../constants/theme"
 import { FONT_TITLE } from "../../../lib/dashboardConstants"
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles"
+import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers"
 import { supabase } from "../../../lib/supabase"
 import type { CicloPagamento } from "../../../types"
 import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard"
@@ -87,7 +88,13 @@ export default function Financeiro() {
   }), [podeVerInfluencer, podeVerOperadora, filterInfluencers, filterOperadoraEfetivo, filtroOp, operadoraInfMap, operadorasList, mesFiltro, historico]);
 
   const ciclosFiltradosPorMes = useMemo(() => {
-    if (historico || !mesFiltro) return ciclos;
+    if (historico) {
+      const periodo = getPeriodoHistoricoCompetencias();
+      return ciclos.filter(
+        (c) => c.data_fim && c.data_fim >= periodo.inicio && c.data_fim <= periodo.fim,
+      );
+    }
+    if (!mesFiltro) return ciclos;
     const periodo = periodoDoMes(mesFiltro);
     if (!periodo) return ciclos;
     return ciclos.filter(c => c.data_fim && c.data_fim >= periodo.inicio && c.data_fim <= periodo.fim);

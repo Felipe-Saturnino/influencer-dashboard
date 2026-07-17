@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { stripHtmlText, type RhPostagemStatus, type RhPostagemTipoUi } from "../../../lib/portalRhWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
@@ -44,6 +45,7 @@ import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionari
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
@@ -407,27 +409,37 @@ export default function PortalRhPage() {
     if (!user?.id) return;
     setLoading(true);
     setErro(null);
+    try {
 
-    const [catRes, comRes, docRes, talkRes] = await Promise.all([
+    const [catRes, comData, docData, talkData] = await Promise.all([
       supabase.from("rh_portal_categoria").select("*").order("sort_order", { ascending: true }),
-      supabase
-        .from("rh_portal_comunicado")
-        .select("*, categoria:rh_portal_categoria(*)")
-        .order("published_at", { ascending: false }),
-      supabase
-        .from("rh_portal_documento")
-        .select("*, categoria:rh_portal_categoria(*)")
-        .order("updated_at", { ascending: false }),
-      supabase.from("rh_portal_rh_talk").select("*").order("data_reuniao", { ascending: false }),
+      fetchAllPages<RhPortalComunicado>(async (from, to) =>
+        await supabase
+          .from("rh_portal_comunicado")
+          .select("*, categoria:rh_portal_categoria(*)")
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllPages<RhPortalDocumento>(async (from, to) =>
+        await supabase
+          .from("rh_portal_documento")
+          .select("*, categoria:rh_portal_categoria(*)")
+          .order("updated_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
+      fetchAllPages<RhPortalRhTalk>(async (from, to) =>
+        await supabase
+          .from("rh_portal_rh_talk")
+          .select("*")
+          .order("data_reuniao", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to)
+      ),
     ]);
 
-    if (catRes.error || comRes.error || docRes.error || talkRes.error) {
-      const err = catRes.error ?? comRes.error ?? docRes.error ?? talkRes.error;
-      console.error("[PortalRh] carregar:", err);
-      setErro(ERRO_CARREGAR_PORTAL);
-      setLoading(false);
-      return;
-    }
+    if (catRes.error) throw catRes.error;
 
     const cats = (catRes.data ?? []) as RhPortalCategoria[];
     setCategoriasCom(cats.filter((c) => c.scope === "comunicado"));
@@ -436,21 +448,25 @@ export default function PortalRhPage() {
     /** Abas de leitura: nunca exibir arquivados — só conteúdo publicado. */
     const visivelPortal = (status: RhPostagemStatus | null | undefined) => isPostagemPublica(status);
 
-    const comRows = ((comRes.data ?? []) as RhPortalComunicado[]).filter((c) => visivelPortal(c.status));
+    const comRows = comData.filter((c) => visivelPortal(c.status));
     setComunicados(comRows);
-    setDocumentos(((docRes.data ?? []) as RhPortalDocumento[]).filter((d) => visivelPortal(d.status)));
-    const talkRows = ((talkRes.data ?? []) as RhPortalRhTalk[]).filter((tk) => visivelPortal(tk.status));
+    setDocumentos(docData.filter((d) => visivelPortal(d.status)));
+    const talkRows = talkData.filter((tk) => visivelPortal(tk.status));
     setTalks(talkRows);
 
     const talkIds = talkRows.map((x) => x.id);
     if (talkIds.length > 0) {
-      const { data: parts } = await supabase
-        .from("rh_portal_rh_talk_participant")
-        .select("talk_id, user_id")
-        .in("talk_id", talkIds);
+      const parts = await fetchInBatched(talkIds, 100, async (ids) => {
+        const { data, error } = await supabase
+          .from("rh_portal_rh_talk_participant")
+          .select("talk_id, user_id")
+          .in("talk_id", ids);
+        if (error) throw error;
+        return data ?? [];
+      });
       const mySet = new Set<string>();
       const counts: Record<string, number> = {};
-      for (const p of parts ?? []) {
+      for (const p of parts) {
         const row = p as { talk_id: string; user_id: string };
         counts[row.talk_id] = (counts[row.talk_id] ?? 0) + 1;
         if (row.user_id === user.id) mySet.add(row.talk_id);
@@ -462,19 +478,21 @@ export default function PortalRhPage() {
       setTalkCounts({});
     }
 
-    const { data: recData } = await supabase
-      .from("rh_portal_read_receipt")
-      .select("content_type, content_id, read_at, acknowledged_at")
-      .eq("user_id", user.id);
+    const recData = await fetchAllPages<ReadReceiptRow>(async (from, to) =>
+      await supabase
+        .from("rh_portal_read_receipt")
+        .select("content_type, content_id, read_at, acknowledged_at")
+        .eq("user_id", user.id)
+        .range(from, to)
+    );
 
     const map = new Map<string, ReadReceiptRow>();
-    for (const r of recData ?? []) {
-      const row = r as ReadReceiptRow;
+    for (const row of recData) {
       map.set(receiptKey(row.content_type, row.content_id), row);
     }
     setReceipts(map);
 
-    const docRows = (docRes.data ?? []) as RhPortalDocumento[];
+    const docRows = docData;
     const userIds = new Set<string>();
     for (const c of comRows) {
       const aid = autorIdPostagem(c);
@@ -492,7 +510,12 @@ export default function PortalRhPage() {
     }
     setMetaAutores(await carregarMetaAutoresPortalRh([...userIds]));
 
-    setLoading(false);
+    } catch (error) {
+      console.error("[PortalRh] carregar:", error);
+      setErro(ERRO_CARREGAR_PORTAL);
+    } finally {
+      setLoading(false);
+    }
   }, [user?.id]);
 
   useEffect(() => {
@@ -651,6 +674,8 @@ export default function PortalRhPage() {
     if (!modoHistorico) {
       const mesSel = mesesCom[idxMesCom];
       list = list.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
+    } else {
+      list = list.filter((c) => isDataNoPeriodoHistoricoCompetencias(c.published_at));
     }
     if (filtroCatCom !== "todos") {
       const cfg = SUBTABS_COMUNICADO.find((x) => x.key === filtroCatCom);
@@ -698,6 +723,8 @@ export default function PortalRhPage() {
     if (!modoHistorico) {
       const mesSel = mesesPol[idxMesPol];
       list = list.filter((d) => itemNoMesCarrossel(d.published_at, mesSel));
+    } else {
+      list = list.filter((d) => isDataNoPeriodoHistoricoCompetencias(d.published_at));
     }
     if (filtroCatPol !== "todos") {
       list = list.filter((d) => itemNoFiltroDocumento(d, filtroCatPol));
@@ -727,6 +754,8 @@ export default function PortalRhPage() {
     if (!modoHistorico) {
       const mesSel = mesesTalksDisponiveis[idxMesTalk];
       list = list.filter((tk) => itemNoMesCarrossel(tk.published_at, mesSel));
+    } else {
+      list = list.filter((tk) => isDataNoPeriodoHistoricoCompetencias(tk.published_at));
     }
     if (buscaDeb) {
       list = list.filter(

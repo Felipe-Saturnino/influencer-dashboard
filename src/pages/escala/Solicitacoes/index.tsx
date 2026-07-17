@@ -19,6 +19,7 @@ import {
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
@@ -405,7 +406,11 @@ export default function EscalaSolicitacoesPage() {
   const staffFiltroId = filtroStaffIds[0];
 
   const linhasNoPeriodoCarrossel = useMemo(() => {
-    if (historico) return linhasBase;
+    if (historico) {
+      return linhasBase.filter((r) =>
+        isDataNoPeriodoHistoricoCompetencias(dataAberturaSolicitacaoIso(r)),
+      );
+    }
     const m = mesesDisponiveis[idxMes];
     if (!m) return [];
     return filtrarPorMesAberturaSolicitacao(linhasBase, m.ano, m.mes);

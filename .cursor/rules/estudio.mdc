@@ -78,7 +78,7 @@ alwaysApply: false
 ## Central de Notificações (`central_notificacoes`)
 
 - Abas staff com contagem e `aria-label` quando `count > 0`.
-- Histórico na FilterBar: **`FiltroHistoricoButton`** (padrão Overview Influencer); loading secundário: `Clock` + “Carregando…” (U+2026) — não `Loader2` na barra.
+- Histórico na FilterBar: **`FiltroHistoricoButton`** (padrão Overview Influencer), limitado às 13 competências mensais inclusivas do Global; loading secundário: `Clock` + “Carregando…” (U+2026) — não `Loader2` na barra.
 - Cards: `<article aria-label={Campanha|Observação...}>`.
 - Datas campanha: badge **VIGENTE** verde quando no intervalo.
 - Texto longo: line-clamp + “Ver mais” / “Ver menos”.

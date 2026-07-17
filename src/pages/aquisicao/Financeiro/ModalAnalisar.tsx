@@ -96,7 +96,7 @@ export function ModalAnalisar({ row, ciclo, onClose, onConfirm }: {
   return (
     <ModalBase maxWidth={480} onClose={onClose}>
       <ModalHeader
-        title={row.is_agente ? "Analisar — Agente" : `Analisar — ${row.influencer_name}`}
+        title={`Analisar — ${row.influencer_name}`}
         onClose={onClose}
       />
 

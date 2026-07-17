@@ -1,6 +1,7 @@
 import type { BancaRowDb } from "./bancaJogoTypes"
 import { MESES_NOMES } from "./bancaJogoTypes"
 import type { BlocoFiltros } from "./bancaJogoFiltros"
+import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers"
 
 export function fmtMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -46,17 +47,19 @@ export function diaISO(iso: string | null | undefined): string {
 }
 
 export function rowNoMesSolicitacao(r: BancaRowDb, periodo: { inicio: string; fim: string } | null, historico: boolean) {
-  if (historico || !periodo) return true;
+  const periodoEfetivo = historico ? getPeriodoHistoricoCompetencias() : periodo;
+  if (!periodoEfetivo) return true;
   const d = diaISO(r.solicitado_em);
-  return d >= periodo.inicio && d <= periodo.fim;
+  return d >= periodoEfetivo.inicio && d <= periodoEfetivo.fim;
 }
 
 export function rowInteressaConsolidado(r: BancaRowDb, periodo: { inicio: string; fim: string } | null, historico: boolean) {
-  if (historico || !periodo) return true;
+  const periodoEfetivo = historico ? getPeriodoHistoricoCompetencias() : periodo;
+  if (!periodoEfetivo) return true;
   const s = diaISO(r.solicitado_em);
   const l = diaISO(r.liberado_em);
-  if (s >= periodo.inicio && s <= periodo.fim) return true;
-  if (l && l >= periodo.inicio && l <= periodo.fim) return true;
+  if (s >= periodoEfetivo.inicio && s <= periodoEfetivo.fim) return true;
+  if (l && l >= periodoEfetivo.inicio && l <= periodoEfetivo.fim) return true;
   return false;
 }
 

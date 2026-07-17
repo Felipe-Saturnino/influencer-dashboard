@@ -144,7 +144,9 @@ export default function RhPrestadoresPage() {
   const dataTable = useDataTableBlock();
   const perm = usePermission("rh_funcionarios");
 
-  const podeVerDadosSensiveis = user?.role === "admin" || perm.canEditarOk;
+  // Remuneração e dados financeiros: visíveis a quem tem permissão de Ver na página
+  // (valores ocultos por defeito — Eye/EyeOff na tabela). Edição segue gated por canEditarOk.
+  const podeVerDadosSensiveis = perm.canView === "sim" || perm.canView === "proprios";
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
 

@@ -16,8 +16,10 @@ import {
   idxMesInicialEscalaCarrossel,
   type MesCarrosselEscalaEntry,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
-import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
-import { carregarPresencaGestaoMes } from "../../../lib/rhCalendarioPresencaGestaoDb";
+import {
+  getPeriodoComparativoMoM,
+  HISTORICO_COMPETENCIAS_MESES,
+} from "../../../lib/dashboardHelpers";
 import type { PresencaDiaGestao } from "../../../lib/rhCalendarioPresencaGestao";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
@@ -31,6 +33,11 @@ import {
   type RpcGradeCalendarioRow,
   type RpcPontoMesRow,
 } from "../../../lib/overviewPrestadorCalendarioHelpers";
+import {
+  fetchOverviewPrestadorGradeMes,
+  fetchOverviewPrestadorPontoMes,
+  fetchOverviewPrestadorPresencaMes,
+} from "./overviewPrestadorQueries";
 
 export type OverviewPrestadorTab = "escala" | "performance";
 
@@ -59,7 +66,9 @@ export function useOverviewPrestadorDados(
     () => new Map(),
   );
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosHorarioPick>>(() => new Map());
-  const [loadingDados, setLoadingDados] = useState(false);
+  const [loadingGrade, setLoadingGrade] = useState(false);
+  const [loadingPonto, setLoadingPonto] = useState(false);
+  const [loadingPresenca, setLoadingPresenca] = useState(false);
 
   const mesSelecionado: MesCarrosselEscalaEntry | undefined = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes <= 0;
@@ -92,7 +101,10 @@ export function useOverviewPrestadorDados(
   }, []);
 
   useEffect(() => {
-    if (permLoading || permCanView === "nao") return;
+    if (permLoading || permCanView === "nao") {
+      setLoadingGrade(false);
+      return;
+    }
     if (soProprios) {
       setTimes([]);
       return;
@@ -269,31 +281,67 @@ export function useOverviewPrestadorDados(
   }, [prestadores]);
 
   const staffSelecionadoId = filtroStaffIds[0] ?? null;
+  const mesesHistorico = useMemo(
+    () => mesesDisponiveis.slice(-HISTORICO_COMPETENCIAS_MESES),
+    [mesesDisponiveis],
+  );
 
-  const mesesParaCarga = useMemo(() => {
-    if (historico) return mesesDisponiveis.map((m) => ({ ano: m.ano, mes: m.mes }));
+  const periodoComparativo = useMemo(() => {
+    if (historico || !mesSelecionado) {
+      const primeiro = mesesHistorico[0];
+      const ultimo = mesesHistorico[mesesHistorico.length - 1];
+      if (!primeiro || !ultimo) {
+        return {
+          atual: { inicio: "1970-01-01", fim: "1970-01-01" },
+          anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
+        };
+      }
+      const inicio = refMesPrimeiroDiaISO(new Date(primeiro.ano, primeiro.mes, 1));
+      const fimRef = new Date(ultimo.ano, ultimo.mes + 1, 0);
+      const fim = `${fimRef.getFullYear()}-${String(fimRef.getMonth() + 1).padStart(2, "0")}-${String(fimRef.getDate()).padStart(2, "0")}`;
+      return {
+        atual: { inicio, fim },
+        anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
+      };
+    }
+    return getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+  }, [historico, mesSelecionado, mesesHistorico]);
+
+  const mesesMetricasAtual = useMemo(() => {
+    if (historico) return mesesHistorico.map((m) => ({ ano: m.ano, mes: m.mes }));
     if (!mesSelecionado) return [];
     return [{ ano: mesSelecionado.ano, mes: mesSelecionado.mes }];
-  }, [historico, mesesDisponiveis, mesSelecionado]);
+  }, [historico, mesesHistorico, mesSelecionado]);
+
+  const mesesMetricasAnterior = useMemo(() => {
+    if (historico || !mesSelecionado) return [];
+    const [ano, mes] = periodoComparativo.anterior.inicio.split("-").map(Number);
+    if (!ano || !mes) return [];
+    return [{ ano, mes: mes - 1 }];
+  }, [historico, mesSelecionado, periodoComparativo.anterior.inicio]);
+
+  const mesesParaCarga = useMemo(() => {
+    const unicos = new Map<string, { ano: number; mes: number }>();
+    for (const ref of [...mesesMetricasAtual, ...mesesMetricasAnterior]) {
+      unicos.set(`${ref.ano}-${ref.mes}`, ref);
+    }
+    return [...unicos.values()];
+  }, [mesesMetricasAtual, mesesMetricasAnterior]);
 
   useEffect(() => {
     if (permLoading || permCanView === "nao") return;
     let cancelled = false;
-    setLoadingDados(true);
+    setLoadingGrade(true);
     void (async () => {
-      const merged: RpcGradeCalendarioRow[] = [];
       try {
-        for (const { ano, mes } of mesesParaCarga) {
-          if (cancelled) return;
-          const refIso = refMesPrimeiroDiaISO(new Date(ano, mes, 1));
-          const { data, error } = await supabase.rpc("rh_calendario_grade_escala_mes", { p_ref_mes: refIso });
-          if (cancelled) return;
-          if (error || !data) continue;
-          merged.push(...(data as RpcGradeCalendarioRow[]));
-        }
-        if (!cancelled) setRawGradeRows(merged);
+        const grupos = await Promise.all(
+          mesesParaCarga.map(({ ano, mes }) =>
+            fetchOverviewPrestadorGradeMes(refMesPrimeiroDiaISO(new Date(ano, mes, 1))).catch(() => []),
+          ),
+        );
+        if (!cancelled) setRawGradeRows(grupos.flat());
       } finally {
-        if (!cancelled) setLoadingDados(false);
+        if (!cancelled) setLoadingGrade(false);
       }
     })();
     return () => {
@@ -304,27 +352,24 @@ export function useOverviewPrestadorDados(
   useEffect(() => {
     if (!staffSelecionadoId || mesesParaCarga.length === 0) {
       setPontoMesLinhas([]);
+      setLoadingPonto(false);
       return;
     }
     let cancelled = false;
-    setLoadingDados(true);
+    setLoadingPonto(true);
     void (async () => {
-      const merged: RpcPontoMesRow[] = [];
       try {
-        for (const { ano, mes } of mesesParaCarga) {
-          if (cancelled) return;
-          const refIso = refMesPrimeiroDiaISO(new Date(ano, mes, 1));
-          const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
-            p_funcionario_id: staffSelecionadoId,
-            p_ref_mes: refIso,
-          });
-          if (cancelled) return;
-          if (error || !data) continue;
-          merged.push(...(data as RpcPontoMesRow[]));
-        }
-        if (!cancelled) setPontoMesLinhas(merged);
+        const grupos = await Promise.all(
+          mesesParaCarga.map(({ ano, mes }) =>
+            fetchOverviewPrestadorPontoMes(
+              staffSelecionadoId,
+              refMesPrimeiroDiaISO(new Date(ano, mes, 1)),
+            ).catch(() => []),
+          ),
+        );
+        if (!cancelled) setPontoMesLinhas(grupos.flat());
       } finally {
-        if (!cancelled) setLoadingDados(false);
+        if (!cancelled) setLoadingPonto(false);
       }
     })();
     return () => {
@@ -335,24 +380,26 @@ export function useOverviewPrestadorDados(
   useEffect(() => {
     if (!staffSelecionadoId || mesesParaCarga.length === 0) {
       setPresencaGestaoPorChave(new Map());
+      setLoadingPresenca(false);
       return;
     }
     let cancelled = false;
-    setLoadingDados(true);
+    setLoadingPresenca(true);
     void (async () => {
-      const next = new Map<string, PresencaDiaGestao>();
       try {
-        for (const { ano, mes } of mesesParaCarga) {
-          if (cancelled) return;
-          const refIso = refMesPrimeiroDiaISO(new Date(ano, mes, 1));
-          const { mapa, error } = await carregarPresencaGestaoMes(supabase, staffSelecionadoId, refIso);
-          if (cancelled) return;
-          if (error) continue;
-          mapa.forEach((v, k) => next.set(k, v));
-        }
+        const mapas = await Promise.all(
+          mesesParaCarga.map(({ ano, mes }) =>
+            fetchOverviewPrestadorPresencaMes(
+              staffSelecionadoId,
+              refMesPrimeiroDiaISO(new Date(ano, mes, 1)),
+            ).catch(() => new Map<string, PresencaDiaGestao>()),
+          ),
+        );
+        const next = new Map<string, PresencaDiaGestao>();
+        mapas.forEach((mapa) => mapa.forEach((v, k) => next.set(k, v)));
         if (!cancelled) setPresencaGestaoPorChave(next);
       } finally {
-        if (!cancelled) setLoadingDados(false);
+        if (!cancelled) setLoadingPresenca(false);
       }
     })();
     return () => {
@@ -381,33 +428,6 @@ export function useOverviewPrestadorDados(
     };
   }, [prestadores]);
 
-  const periodoComparativo = useMemo(() => {
-    if (historico || !mesSelecionado) {
-      const primeiro = mesesDisponiveis[0];
-      const ultimo = mesesDisponiveis[mesesDisponiveis.length - 1];
-      if (!primeiro || !ultimo) {
-        return {
-          atual: { inicio: "1970-01-01", fim: "1970-01-01" },
-          anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
-        };
-      }
-      const inicio = refMesPrimeiroDiaISO(new Date(primeiro.ano, primeiro.mes, 1));
-      const fimRef = new Date(ultimo.ano, ultimo.mes + 1, 0);
-      const fim = `${fimRef.getFullYear()}-${String(fimRef.getMonth() + 1).padStart(2, "0")}-${String(fimRef.getDate()).padStart(2, "0")}`;
-      return {
-        atual: { inicio, fim },
-        anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
-      };
-    }
-    return getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
-  }, [historico, mesSelecionado, mesesDisponiveis]);
-
-  const mesesRefMetricas = useMemo(() => {
-    if (historico) return mesesDisponiveis.map((m) => ({ ano: m.ano, mes: m.mes }));
-    if (!mesSelecionado) return [];
-    return [{ ano: mesSelecionado.ano, mes: mesSelecionado.mes }];
-  }, [historico, mesesDisponiveis, mesSelecionado]);
-
   const metricasAtual: OverviewPrestadorMetricas = useMemo(() => {
     if (!staffSelecionadoId) return OVERVIEW_PRESTADOR_METRICAS_ZERO;
     const pRow = prestadorPorId.get(staffSelecionadoId);
@@ -422,7 +442,7 @@ export function useOverviewPrestadorDados(
       presencaGestao: presencaGestaoPorChave,
       periodoInicio: periodoComparativo.atual.inicio,
       periodoFim: periodoComparativo.atual.fim,
-      mesesRef: mesesRefMetricas,
+      mesesRef: mesesMetricasAtual,
     });
   }, [
     staffSelecionadoId,
@@ -432,7 +452,7 @@ export function useOverviewPrestadorDados(
     pontoMesLinhas,
     presencaGestaoPorChave,
     periodoComparativo.atual,
-    mesesRefMetricas,
+    mesesMetricasAtual,
   ]);
 
   const metricasAnterior: OverviewPrestadorMetricas = useMemo(() => {
@@ -449,7 +469,7 @@ export function useOverviewPrestadorDados(
       presencaGestao: presencaGestaoPorChave,
       periodoInicio: periodoComparativo.anterior.inicio,
       periodoFim: periodoComparativo.anterior.fim,
-      mesesRef: mesesRefMetricas,
+      mesesRef: mesesMetricasAnterior,
     });
   }, [
     historico,
@@ -460,7 +480,7 @@ export function useOverviewPrestadorDados(
     pontoMesLinhas,
     presencaGestaoPorChave,
     periodoComparativo.anterior,
-    mesesRefMetricas,
+    mesesMetricasAnterior,
   ]);
 
   const setFiltroTimeIdsNormalizado = useCallback((ids: string[]) => {
@@ -471,7 +491,7 @@ export function useOverviewPrestadorDados(
     setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids));
   }, [filtroStaffIds]);
 
-  const isLoading = loadingStaff || loadingDados;
+  const isLoading = loadingStaff || loadingGrade || loadingPonto || loadingPresenca;
 
   return {
     mesesDisponiveis,

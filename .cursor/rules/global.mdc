@@ -365,6 +365,8 @@ supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome")
 
 Sempre que a página tiver **toggle Histórico** na barra de filtros (junto ao carrossel de período), usar **`FiltroHistoricoButton`** — referência visual: **Overview Influencer** (`DashboardOverviewInfluencer`).
 
+**Janela temporal canônica:** Histórico = **13 competências mensais inclusivas** (competência atual + 12 anteriores), usando `getPeriodoHistoricoCompetencias` / `HISTORICO_COMPETENCIAS_MESES` de `lib/dashboardHelpers.ts`. Isso preserva a comparação futura Year over Year entre a competência atual e a mesma competência do ano anterior. **Proibido** buscar desde uma data fixa antiga (`2020-01-01`, `2000-01-01`), usar todo o banco ou limitar a só 12 competências. O rótulo visual permanece **`Todo o período`**.
+
 | Regra | Valor |
 |--------|--------|
 | Componente | `FiltroHistoricoButton` (`src/components/dashboard/FiltroHistoricoButton.tsx`) |

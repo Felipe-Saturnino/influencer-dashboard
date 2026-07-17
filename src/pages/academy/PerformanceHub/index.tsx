@@ -20,6 +20,7 @@ import {
   scoringConfigParaTime,
 } from "../../../lib/academyPerformanceHubScoring";
 import { normalizarTextoBusca } from "../../../lib/searchText";
+import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { usePerformanceHubCadastro } from "../../../hooks/usePerformanceHubCadastro";
 import { usePerformanceHubAvaliacoes } from "../../../hooks/usePerformanceHubAvaliacoes";
 import {
@@ -88,6 +89,14 @@ function isAvaliacaoNoMes(row: PerformanceHubAvaliacao, mes: MesCarrossel | unde
   const parsed = parseDateBr(row.data);
   if (!parsed) return false;
   return parsed.getFullYear() === mes.ano && parsed.getMonth() === mes.mes;
+}
+
+function isAvaliacaoNoHistorico(row: PerformanceHubAvaliacao): boolean {
+  const parsed = parseDateBr(row.data);
+  if (!parsed) return false;
+  const dataIso = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+  const { inicio, fim } = getPeriodoHistoricoCompetencias();
+  return dataIso >= inicio && dataIso <= fim;
 }
 
 function initialTab(
@@ -174,6 +183,7 @@ export default function PerformanceHubPage() {
       if (perm.canView === "proprios" && user?.name && !nomeCoincideUsuario(row.avaliadoNome, user.name)) {
         return false;
       }
+      if (historico && !isAvaliacaoNoHistorico(row)) return false;
       if (!historico && !isAvaliacaoNoMes(row, mesSelecionado)) return false;
       if (selectedStaffName && row.avaliadoNome !== selectedStaffName) return false;
       return true;

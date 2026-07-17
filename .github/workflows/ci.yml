@@ -56,3 +56,6 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ci-placeholder-key"
+
+      - name: Bundle size budgets
+        run: npm run check:bundle

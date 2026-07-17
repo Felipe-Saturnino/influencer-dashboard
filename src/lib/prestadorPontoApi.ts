@@ -30,6 +30,8 @@ export type PrestadorPontoEstado = {
 export type PrestadorPontoRegistroResumo = {
   tipo: "check_in" | "check_out";
   diaSp: string;
+  createdAt?: string;
+  funcionarioId?: string;
 };
 
 export type PrestadorPontoRegistrarResposta = {

@@ -69,7 +69,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
         texto:
-          "O Histórico agrega todos os meses disponíveis desde o início da operação. Algumas métricas como UAP e ARPU são calculadas de forma diferente: no modo Histórico, o UAP exibido no KPI é a média mensal dos períodos, não a soma. Isso é esperado — UAP é uma métrica de período, não acumulável. Para ver o UAP exato de um mês específico, navegue até aquele mês sem ativar o Histórico.",
+          "O Histórico agrega 13 competências mensais — a atual e as 12 anteriores. Algumas métricas como UAP e ARPU são calculadas de forma diferente: no modo Histórico, o UAP exibido no KPI é a média mensal dos períodos, não a soma. Isso é esperado — UAP é uma métrica de período, não acumulável. Para ver o UAP exato de um mês específico entre o atual e os dois anteriores, navegue até aquele mês sem ativar o Histórico.",
       },
       {
         subtitulo: "O modo gráfico do Detalhamento mostra barras muito pequenas para uma operadora?",
@@ -1128,6 +1128,41 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  tech_ops_estoque: {
+    titulo: "Gestão de Estoque",
+    blocos: [
+      {
+        subtitulo: "A página abre vazia, sem nenhum registro?",
+        texto:
+          "Comportamento esperado em ambiente recém-implantado: a Gestão de Estoque não tem dados de exemplo. Os catálogos são preenchidos pelas ações Novo Item, Novo Equipamento, Novo Item de Jogo e Novo Fornecedor. Se os botões de criação não aparecem, verifique a permissão de **Criar** em Gestão de Usuários → Permissões.",
+      },
+      {
+        subtitulo: "Um registro sumiu da tabela, mas eu não excluí nada?",
+        texto:
+          "A página não possui exclusão. Verifique os filtros ativos: um card de KPI selecionado (Estoque, Em uso ou Manutenção), o filtro de Categoria, o filtro de Estúdio ou o texto na busca restringem o catálogo. Clique no card Total (ou no card ativo) e limpe busca e filtros para ver a lista completa.",
+      },
+      {
+        subtitulo: "O Estoque ou a Qtd Atual não batem com o que digitei?",
+        texto:
+          "Essas colunas são calculadas: Estoque do item = Quantidade Total − Em Uso − Manutenção; Qtd Atual do lote = Qtd Inicial − Consumida − Descartada. Para ajustar o total de um item, use Editar → Novas Unidades; a mudança fica registrada no Histórico com o valor anterior e o novo.",
+      },
+      {
+        subtitulo: "Não consigo salvar a edição?",
+        texto:
+          "O Salvar exige um Tipo de Alteração selecionado (com os campos preenchidos) ou um texto de anotação. Anexo sem texto de anotação também bloqueia o salvamento — escreva a anotação antes de enviar o arquivo. Se o erro persistir após corrigir os campos, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "O filtro de Estúdio não mostra o estúdio esperado?",
+        texto:
+          "A lista vem do cadastro de Gestão de Estúdios e exibe apenas estúdios ativos. Se o estúdio não aparece, confirme o cadastro com o administrador. A coluna Alocação dos equipamentos só mostra estúdio quando o status é Em uso.",
+      },
+      {
+        subtitulo: "Vejo a página mas os botões Novo e Editar não aparecem?",
+        texto:
+          "Comportamento esperado: os botões seguem as permissões de **Criar** e **Editar** da página em Gestão de Usuários. Com apenas permissão de Ver, a página fica somente leitura — incluindo os modais Ver com Anotações e Histórico.",
+      },
+    ],
+  },
   gestao_usuarios: {
     titulo: "Gestão de Usuários",
     blocos: [
@@ -1195,6 +1230,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
         texto:
           "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar após o deploy da função **prestador-ponto**, peça ao suporte para revisar registros antigos gravados no dia civil errado.",
+      },
+      {
+        subtitulo: "O pop-up confirma o check-in, mas o horário realizado não aparece?",
+        texto:
+          "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e alinhado à conta Auth. A leitura do ponto usa o vínculo RH ↔ Auth; com e-mail pessoal e e-mail Spin em contas diferentes, a correção exige a migration de `funcionario_id` no ponto e o deploy da função **prestador-ponto**. Depois de aplicar, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Não vejo a aba Relatório de Presença?",
+        texto:
+          "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar** no Calendário (Gestão de Usuários → Permissões → linha Calendário → coluna Editar). Escolha **Sim** ou **Próprios** e salve. Administradores vêem sempre. Sem essa permissão, usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
       },
     ],
   },

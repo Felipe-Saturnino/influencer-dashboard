@@ -29,6 +29,7 @@ import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
 
@@ -406,6 +407,10 @@ export function GerenciamentoPostagens({
         }
         return true;
       });
+    } else {
+      list = list.filter((row) =>
+        isDataNoPeriodoHistoricoCompetencias(row.publishedAt ?? row.createdAt),
+      );
     }
     if (filtroTipo !== "todos") {
       list = list.filter((r) => r.tipoUi === filtroTipo);

@@ -114,7 +114,11 @@ export default function RhVagasPage() {
     if (!opts?.silent) setLoading(true);
     setErro(null);
     await supabase.rpc("rh_vagas_atualizar_status_inscricoes_encerradas");
-    const { data, error } = await supabase.from("rh_vagas").select(RH_VAGAS_SELECT).order("data_abertura", { ascending: false });
+    const { data, error } = await supabase
+      .from("rh_vagas")
+      .select(RH_VAGAS_SELECT)
+      .order("data_abertura", { ascending: false })
+      .limit(200);
     if (error) {
       setErro(error.message);
       setVagas([]);

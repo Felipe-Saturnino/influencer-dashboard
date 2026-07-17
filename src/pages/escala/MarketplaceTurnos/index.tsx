@@ -18,6 +18,7 @@ import {
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -175,7 +176,11 @@ export default function EscalaMarketplaceTurnosPage() {
   }, [filtroTimeIdsTodas]);
 
   const linhasMes = useMemo(() => {
-    if (historico) return MOCK_OFERTAS;
+    if (historico) {
+      return MOCK_OFERTAS.filter((r) =>
+        isDataNoPeriodoHistoricoCompetencias(r.dataOfertaIso),
+      );
+    }
     const m = mesesDisponiveis[idxMes];
     if (!m) return [];
     return filtrarPorMesEscala(MOCK_OFERTAS, m.ano, m.mes);

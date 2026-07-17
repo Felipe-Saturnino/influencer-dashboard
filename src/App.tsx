@@ -2,6 +2,7 @@ import { Suspense, lazy, useState, useEffect, useCallback, type ComponentType, t
 import { Loader2 } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { supabase, supabaseConfigOk } from "./lib/supabase";
+import { queryClient } from "./lib/queryClient";
 import ErrorBoundary from "./components/ErrorBoundary";
 import type { PageKey } from "./types";
 import { useMediaQuery, MEDIA_MAX_NAV_DRAWER } from "./hooks/useMediaQuery";
@@ -95,6 +96,7 @@ const EscalaSolicitacoes = lazyWithRetry(() => import("./pages/escala/Solicitaco
 const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunciasSpin"));
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
+const TechOpsGestaoEstoque = lazyWithRetry(() => import("./pages/techOps/GestaoEstoque"));
 const PerformanceHub = lazyWithRetry(() => import("./pages/academy/PerformanceHub"));
 const PortalAcademy = lazyWithRetry(() => import("./pages/academy/PortalAcademy"));
 const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
@@ -148,6 +150,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   rh_central_denuncias: RhCentralDenuncias,
   rh_portal:         RhPortal,
   informativos:      Informativos,
+  tech_ops_estoque:  TechOpsGestaoEstoque,
   academy_performance_hub: PerformanceHub,
   academy_portal: PortalAcademy,
   configuracoes:    Configuracoes,
@@ -333,6 +336,7 @@ function Root() {
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
+    queryClient.clear();
     setUser(null);
   }, [setUser]);
 

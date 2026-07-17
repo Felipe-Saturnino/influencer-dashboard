@@ -208,7 +208,11 @@ export default function AfiliadosNetwork() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("afiliados_network").select("*").order("nome");
+    const { data, error } = await supabase
+      .from("afiliados_network")
+      .select("*")
+      .order("nome")
+      .limit(500);
     if (error) {
       console.error("[Afiliados Network] Erro ao carregar:", error);
       setList([]);
@@ -533,6 +537,7 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
       .select("id, afiliado_id, usuario_id, texto, created_at")
       .eq("afiliado_id", row.id)
       .order("created_at", { ascending: false })
+      .limit(200)
       .then(({ data }) => {
         const lista = (data ?? []) as AfiliadoAnotacao[];
         const ids = [...new Set(lista.map((a) => a.usuario_id).filter(Boolean))] as string[];
@@ -737,6 +742,7 @@ function ModalEditar({
       .select("id, afiliado_id, usuario_id, texto, created_at")
       .eq("afiliado_id", row.id)
       .order("created_at", { ascending: false })
+      .limit(200)
       .then(({ data }) => {
         const lista = (data ?? []) as AfiliadoAnotacao[];
         const ids = [...new Set(lista.map((a) => a.usuario_id).filter(Boolean))] as string[];

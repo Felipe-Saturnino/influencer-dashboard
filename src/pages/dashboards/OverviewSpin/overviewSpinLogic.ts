@@ -73,12 +73,20 @@ export const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "A
 /** Primeiro mês com operação Overview Spin — o carrossel não lista meses anteriores (evita confusão). */
 export const CARROSSEL_MESAS_MIN_ANO = 2025;
 export const CARROSSEL_MESAS_MIN_MES = 11; // Dezembro (0-based)
+export const CARROSSEL_MESAS_QTD_MESES = 3;
 
-export function getMesesDisponiveis() {
-  const hoje = new Date();
+export function getMesesDisponiveis(ref = new Date()) {
+  const hoje = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  const inicioOperacao = new Date(CARROSSEL_MESAS_MIN_ANO, CARROSSEL_MESAS_MIN_MES, 1);
+  const inicioJanela = new Date(
+    hoje.getFullYear(),
+    hoje.getMonth() - (CARROSSEL_MESAS_QTD_MESES - 1),
+    1,
+  );
+  const inicio = inicioJanela < inicioOperacao ? inicioOperacao : inicioJanela;
   const lista: { ano: number; mes: number; label: string }[] = [];
-  let ano = CARROSSEL_MESAS_MIN_ANO,
-    mes = CARROSSEL_MESAS_MIN_MES;
+  let ano = inicio.getFullYear();
+  let mes = inicio.getMonth();
   while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())) {
     lista.push({ ano, mes, label: `${MESES_PT[mes]} ${ano}` });
     mes++;
