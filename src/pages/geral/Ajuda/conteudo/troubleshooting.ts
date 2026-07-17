@@ -1219,7 +1219,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Turnos não aparecem no calendário?",
         texto:
-          "Confirme se a escala do período foi publicada em Gestão de Escala e se filtros de time ou staff não estão restringindo a visão. Prestadores com **Ver = Próprios** veem apenas a própria grade.",
+          "Para prestadores do Estúdio, confirme se a escala do período foi publicada em Gestão de Escala e se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, verifique se a área de atuação está cadastrada corretamente; a escala de segunda a sexta-feira é gerada automaticamente.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
       },
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
@@ -1235,6 +1235,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "O pop-up confirma o check-in, mas o horário realizado não aparece?",
         texto:
           "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e alinhado à conta Auth. A leitura do ponto usa o vínculo RH ↔ Auth; com e-mail pessoal e e-mail Spin em contas diferentes, a correção exige a migration de `funcionario_id` no ponto e o deploy da função **prestador-ponto**. Depois de aplicar, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Posso registrar ponto em uma Folga?",
+        texto:
+          "Sim. Check-in e Check-out ficam disponíveis independentemente da Situação do dia para coberturas e plantões emergenciais. O dia continua identificado como **Folga**, e os horários realizados ficam pendentes de aprovação do gestor.",
       },
       {
         subtitulo: "Não vejo a aba Relatório de Presença?",

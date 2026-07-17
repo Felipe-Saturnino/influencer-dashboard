@@ -53,6 +53,28 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 
 - **recharts**: isolado em `vendor-charts` e carregado sob demanda no Overview Spin; imports estáticos residuais em dashboards específicos permanecem no backlog.
 
+### Fase 6 — Gargalos críticos de dados (jul/2026)
+
+| Área | Correção |
+|------|----------|
+| **Calendário RH — Relatório diário** | N+1 de `3N` RPCs → **2 RPCs em lote** (`rh_calendario_ponto_registros_dia_lote` + `rh_calendario_presenca_gestao_dia_lote`); migration `20261003140000_…`. |
+| **Financeiro — fechar ciclo** | N+1 perfil+upsert por par → 1× `.in()` de `cache_hora` + **upsert em lote**; `live_resultados` via `fetchLiveResultadosBatched`; fechos expirados com concorrência 3. |
+| **Banca de Jogo** | Dump all-time → janela de 13 competências (`solicitado_em`/`liberado_em`); colunas explícitas; catálogos em `Promise.all`. |
+| **Portal RH / Academy (leitura)** | SQL com `status = publicado` + `published_at` na janela histórica; join de categoria estreito; receipts/participantes/autores em paralelo. |
+
+Pendências conscientes (próximas ondas): paginação server-side no Gerenciamento dos portais; N+1 da aprovação mensal do Calendário; virtualização Escala/Prestadores (Fases 7–8).
+
+### Carga em duas fases (padrão para janelas históricas pesadas)
+
+Aplicado na aba **Posicionamento** do Overview Spin (`useLobbyPosicionamentoData.ts`) e documentado como padrão transversal em `.cursor/rules/global.mdc` (§ Carga de dados em duas fases):
+
+- **Fase 1 (essencial):** só hoje + ontem, colunas completas — KPIs, snapshot, alertas e heatmap «Dia» renderizam de imediato.
+- **Fase 2 (background):** janela do heatmap 7d/30d (`refDate − 29`, sem margem extra) com colunas mínimas (`execucao_id, mesa_identificacao, posicao` — sem o JSON `concorrentes_a_frente`), lotes com concorrência 4 (`fetchInBatched`).
+- Visão consolidada («todas»), que não tem heatmap, usa `{ historico: false }` e não baixa a janela histórica.
+- Consultas independentes (período atual vs anterior, tabelas paralelas) sempre em `Promise.all` — aplicado também no Social Media (abas Alcance e Impulsionamento) e no filtro de influencers dos Streamers.
+
+Candidatos futuros: qualquer aba/vista com matriz densa ou janela histórica que hoje bloqueie o primeiro paint.
+
 ### Contrato do modo Histórico
 
 - Janela padrão: **13 competências mensais inclusivas** (competência atual + 12 anteriores), centralizada em `getPeriodoHistoricoCompetencias`.

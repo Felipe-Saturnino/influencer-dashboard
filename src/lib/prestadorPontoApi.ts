@@ -18,7 +18,7 @@ export type PrestadorPontoEstado = {
   escaladoHoje?: boolean;
   /** Escala no dia do turno (relevante para check-out noturno). */
   escaladoTurno?: boolean;
-  /** Pode registrar o próximo ato (escala no dia correto). */
+  /** Pode registrar o próximo ato; a escala é apenas informativa. */
   escaladoParaAcao?: boolean;
   rhFuncionarioId?: string | null;
   proximoTipo?: "check_in" | "check_out" | null;

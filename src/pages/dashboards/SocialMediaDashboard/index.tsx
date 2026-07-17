@@ -202,38 +202,29 @@ export default function SocialMediaDashboard() {
       setLoadingAlcance(true);
       setCarIdx(0);
 
-      const kpi = await fetchAllPages<KpiDaily>(async (from, to) =>
-        supabase
-          .from("kpi_daily")
-          .select("*")
-          .gte("date", start)
-          .lte("date", end)
-          .order("date", { ascending: true })
-          .order("channel", { ascending: true })
-          .range(from, to)
-      );
-
-      if (cancelled) return;
-      setKpiData(kpi);
-
-      if (startPrev && endPrev) {
-        const kpiPrev = await fetchAllPages<KpiDaily>(async (from, to) =>
+      const [kpi, kpiPrev, igRes, fbRes, ytRes] = await Promise.all([
+        fetchAllPages<KpiDaily>(async (from, to) =>
           supabase
             .from("kpi_daily")
             .select("*")
-            .gte("date", startPrev)
-            .lte("date", endPrev)
+            .gte("date", start)
+            .lte("date", end)
             .order("date", { ascending: true })
             .order("channel", { ascending: true })
             .range(from, to)
-        );
-        if (cancelled) return;
-        setKpiAntRows(kpiPrev);
-      } else {
-        setKpiAntRows([]);
-      }
-
-      const [igRes, fbRes, ytRes] = await Promise.all([
+        ),
+        startPrev && endPrev
+          ? fetchAllPages<KpiDaily>(async (from, to) =>
+              supabase
+                .from("kpi_daily")
+                .select("*")
+                .gte("date", startPrev)
+                .lte("date", endPrev)
+                .order("date", { ascending: true })
+                .order("channel", { ascending: true })
+                .range(from, to)
+            )
+          : Promise.resolve([] as KpiDaily[]),
         supabase.from("instagram_posts")
           .select("date,published_at,type,caption,likes,comments,saves,impressions,permalink,thumbnail_url")
           .gte("date", start).lte("date", end)
@@ -249,6 +240,8 @@ export default function SocialMediaDashboard() {
       ]);
 
       if (cancelled) return;
+      setKpiData(kpi);
+      setKpiAntRows(kpiPrev);
 
       const ig = (igRes.data ?? []) as Array<{
         date: string; published_at: string | null; type: string; caption: string | null;
@@ -342,43 +335,39 @@ export default function SocialMediaDashboard() {
     let cancelled = false;
     async function loadImpulsionamento() {
       setLoadingImpulsionamento(true);
-      const daily = await fetchAllPages<MetaAdsDaily>(async (from, to) =>
-        supabase
-          .from("meta_ads_daily")
-          .select("*")
-          .gte("date", start)
-          .lte("date", end)
-          .order("date", { ascending: true })
-          .range(from, to)
-      );
-      if (cancelled) return;
-      setMetaAdsDaily(daily);
-
-      const postsRes = await supabase
-        .from("meta_boosted_posts")
-        .select("*")
-        .gte("date", start)
-        .lte("date", end)
-        .order("spend", { ascending: false })
-        .limit(500);
-      if (cancelled) return;
-      setMetaBoostedPosts((postsRes.data ?? []) as MetaBoostedPost[]);
-
-      if (startPrev && endPrev) {
-        const dailyPrev = await fetchAllPages<MetaAdsDaily>(async (from, to) =>
+      const [daily, dailyPrev, postsRes] = await Promise.all([
+        fetchAllPages<MetaAdsDaily>(async (from, to) =>
           supabase
             .from("meta_ads_daily")
             .select("*")
-            .gte("date", startPrev)
-            .lte("date", endPrev)
+            .gte("date", start)
+            .lte("date", end)
             .order("date", { ascending: true })
             .range(from, to)
-        );
-        if (cancelled) return;
-        setMetaAdsDailyPrev(dailyPrev);
-      } else {
-        setMetaAdsDailyPrev([]);
-      }
+        ),
+        startPrev && endPrev
+          ? fetchAllPages<MetaAdsDaily>(async (from, to) =>
+              supabase
+                .from("meta_ads_daily")
+                .select("*")
+                .gte("date", startPrev)
+                .lte("date", endPrev)
+                .order("date", { ascending: true })
+                .range(from, to)
+            )
+          : Promise.resolve([] as MetaAdsDaily[]),
+        supabase
+          .from("meta_boosted_posts")
+          .select("*")
+          .gte("date", start)
+          .lte("date", end)
+          .order("spend", { ascending: false })
+          .limit(500),
+      ]);
+      if (cancelled) return;
+      setMetaAdsDaily(daily);
+      setMetaAdsDailyPrev(dailyPrev);
+      setMetaBoostedPosts((postsRes.data ?? []) as MetaBoostedPost[]);
       setLoadingImpulsionamento(false);
     }
     loadImpulsionamento();

@@ -398,7 +398,10 @@ export function ModalCriarPostagem({
         });
       }
       setFieldErr(errs);
-      if (Object.keys(errs).length > 0) return;
+      if (Object.keys(errs).length > 0) {
+        setErro("Preencha os campos obrigatórios destacados antes de publicar.");
+        return;
+      }
     } else {
       setFieldErr({});
     }
@@ -406,7 +409,15 @@ export function ModalCriarPostagem({
     setSalvando(true);
     setErro(null);
 
-    const up = await uploadArquivos();
+    let up: Awaited<ReturnType<typeof uploadArquivos>>;
+    try {
+      up = await uploadArquivos();
+    } catch (e) {
+      console.error("[ModalCriarPostagem Academy] upload exception:", e);
+      setSalvando(false);
+      setErro(ERRO_UPLOAD);
+      return;
+    }
     if (up.err) {
       console.error("[ModalCriarPostagem Academy] upload:", up.err);
       setSalvando(false);
@@ -570,12 +581,6 @@ export function ModalCriarPostagem({
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: "min(70dvh, 560px)", overflowY: "auto", paddingRight: 4 }}>
-          {erro ? (
-            <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
-              {erro}
-            </div>
-          ) : null}
-
           <div>
             {lbl("ap-tipo-post", "Tipo de Postagem", modo === "criar")}
             <select
@@ -765,7 +770,17 @@ export function ModalCriarPostagem({
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20, flexWrap: "wrap" }}>
+      {erro ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, marginTop: 16 }}
+        >
+          {erro}
+        </div>
+      ) : null}
+
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: erro ? 12 : 20, flexWrap: "wrap" }}>
         <button
           type="button"
           onClick={onClose}

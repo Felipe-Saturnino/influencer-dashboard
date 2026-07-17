@@ -14,12 +14,16 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles"
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles"
+import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers"
 import { fmtMoeda, gerarMeses, periodoDoMes, rowPassaFiltrosKpiBanca } from "./bancaJogoHelpers"
 import type { BancaPerfilMapRow, BancaRowDb, BancaStatusConta } from "./bancaJogoTypes"
 import { STATUS_BANCA } from "./bancaJogoTypes"
 import type { BlocoFiltros } from "./bancaJogoFiltros"
 import { BlocoSolicitacoes } from "./BlocoSolicitacoes"
 import { BlocoConsolidadoBanca } from "./BlocoConsolidadoBanca"
+
+const BANCA_SOLICITACAO_COLS =
+  "id, influencer_id, operadora_slug, id_operadora_exibicao, valor, status, solicitado_em, aprovado_em, aprovado_por, liberado_em, liberado_por"
 
 export default function BancaJogo() {
   const { theme: t, user } = useApp();
@@ -105,7 +109,12 @@ export default function BancaJogo() {
 
   async function carregarDados() {
     setLoading(true);
-    const { data } = await supabase.from("banca_jogo_solicitacoes").select("*").order("solicitado_em", { ascending: false });
+    const { inicio } = getPeriodoHistoricoCompetencias();
+    const { data } = await supabase
+      .from("banca_jogo_solicitacoes")
+      .select(BANCA_SOLICITACAO_COLS)
+      .or(`solicitado_em.gte.${inicio},liberado_em.gte.${inicio}`)
+      .order("solicitado_em", { ascending: false });
     setCiclosRows((data ?? []) as BancaRowDb[]);
     setLoading(false);
   }
@@ -113,26 +122,26 @@ export default function BancaJogo() {
   useEffect(() => { void carregarDados(); }, []);
 
   useEffect(() => {
-    void supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).then(({ data }) => {
-      if (data) setInfluencerList(data);
-    });
-  }, []);
-
-  useEffect(() => {
-    void supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => {
-      if (data) setOperadorasList(data);
+    void Promise.all([
+      supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]),
+      supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
+    ]).then(([infRes, opRes]) => {
+      if (infRes.data) setInfluencerList(infRes.data);
+      if (opRes.data) setOperadorasList(opRes.data);
     });
   }, []);
 
   const carregarPerfis = useCallback(async () => {
-    const { data: perfis } = await supabase
-      .from("influencer_perfil")
-      .select("id, nome_artistico, cpf, banca_status_conta, banca_data_bloqueio, banca_data_desbloqueio, status");
-    const { data: emails } = await supabase.from("profiles").select("id, email").in("role", [...ROLES_PARIDADE_INFLUENCER]);
+    const [perfisRes, emailsRes] = await Promise.all([
+      supabase
+        .from("influencer_perfil")
+        .select("id, nome_artistico, cpf, banca_status_conta, banca_data_bloqueio, banca_data_desbloqueio, status"),
+      supabase.from("profiles").select("id, email").in("role", [...ROLES_PARIDADE_INFLUENCER]),
+    ]);
     const emailM: Record<string, string> = {};
-    for (const e of emails ?? []) emailM[(e as { id: string }).id] = (e as { email: string }).email;
+    for (const e of emailsRes.data ?? []) emailM[(e as { id: string }).id] = (e as { email: string }).email;
     const m: Record<string, BancaPerfilMapRow> = {};
-    for (const p of perfis ?? []) {
+    for (const p of perfisRes.data ?? []) {
       const row = p as {
         id: string;
         nome_artistico?: string;

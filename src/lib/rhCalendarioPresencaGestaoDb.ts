@@ -54,6 +54,58 @@ export async function carregarPresencaGestaoMes(
   return { mapa, error: false };
 }
 
+type RpcPresencaGestaoDiaLoteRow = RpcPresencaGestaoMesRow & { funcionario_id: string };
+
+/** Relatório diário: 1 RPC para gestão de vários funcionários no mesmo dia. */
+export async function carregarPresencaGestaoDiaLote(
+  supabase: SupabaseClient,
+  funcionarioIds: string[],
+  diaIso: string,
+): Promise<{ mapa: Map<string, PresencaDiaGestao>; error: boolean }> {
+  const mapa = new Map<string, PresencaDiaGestao>();
+  if (funcionarioIds.length === 0) return { mapa, error: false };
+  const { data, error } = await supabase.rpc("rh_calendario_presenca_gestao_dia_lote", {
+    p_funcionario_ids: funcionarioIds,
+    p_dia: diaIso,
+  });
+  if (error) return { mapa, error: true };
+  for (const row of (data ?? []) as RpcPresencaGestaoDiaLoteRow[]) {
+    const fid = typeof row.funcionario_id === "string" ? row.funcionario_id : "";
+    if (!fid) continue;
+    const { diaIso: d, gestao } = mapRpcPresencaGestaoMesRow(row);
+    mapa.set(chavePresencaGestao(fid, d), gestao);
+  }
+  return { mapa, error: false };
+}
+
+/** Relatório diário: 1 RPC para ponto de vários funcionários no mesmo dia. */
+export async function carregarPontoRegistrosDiaLote(
+  supabase: SupabaseClient,
+  funcionarioIds: string[],
+  diaIso: string,
+): Promise<{
+  mapa: Map<string, { check_in_at: string | null; check_out_at: string | null }>;
+  error: boolean;
+}> {
+  const mapa = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
+  if (funcionarioIds.length === 0) return { mapa, error: false };
+  const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_dia_lote", {
+    p_funcionario_ids: funcionarioIds,
+    p_dia: diaIso,
+  });
+  if (error) return { mapa, error: true };
+  for (const row of (data ?? []) as {
+    funcionario_id: string;
+    check_in_at: string | null;
+    check_out_at: string | null;
+  }[]) {
+    const fid = typeof row.funcionario_id === "string" ? row.funcionario_id : "";
+    if (!fid) continue;
+    mapa.set(fid, { check_in_at: row.check_in_at, check_out_at: row.check_out_at });
+  }
+  return { mapa, error: false };
+}
+
 export async function salvarPresencaGestaoDia(
   supabase: SupabaseClient,
   funcionarioId: string,

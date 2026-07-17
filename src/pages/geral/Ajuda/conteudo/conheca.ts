@@ -668,17 +668,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Modos e filtros",
         texto:
-          "Alterne entre visões de calendário conforme o perfil (próprio time, staff selecionado ou visão ampliada). Use filtros de time, staff e período; ações de presença e justificativa dependem de permissão de Editar.",
+          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda.\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
       },
       {
-        subtitulo: "Check-in e Check-out (turnos noturnos)",
+        subtitulo: "Check-in e Check-out",
         texto:
-          "Na aba **Controle de Presença**, cada linha é o **turno** do dia na escala — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na **mesma linha** do dia do check-in.\n\nO botão **Fazer Check-out** permanece disponível por **20 horas** após o check-in. Se não houver check-out nesse período, o sistema assume esquecimento e libera **Fazer Check-in** para o próximo turno. Turnos incompletos podem ser tratados com **Justificar** (motivo Esquecimento).",
+          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. O vínculo do login com o cadastro RH e a conexão à rede Spin Colaboradores continuam obrigatórios.\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.",
+      },
+      {
+        subtitulo: "Prestadores de Escritório",
+        texto:
+          "Prestadores com área de atuação **Escritório** não dependem da Gestão de Escala. De segunda a sexta-feira, o Calendário gera automaticamente a situação **Escalado**, com Entrada programada às 09:00 e Saída programada às 18:00. Sábados e domingos aparecem como Folga.\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
       },
       {
         subtitulo: "Relatório de Presença",
         texto:
-          "Aba disponível apenas com permissão de **Editar** no Calendário (Gestão de Usuários → Permissões). Use o carrossel de **dia** e o filtro de **time** para ver o Controle de Presença de todos os prestadores daquele time no dia selecionado — as colunas são as mesmas da aba mensal, com **Prestador** no lugar de **Data**.",
+          "Aba disponível apenas com permissão de **Editar** no Calendário (Gestão de Usuários → Permissões). Use o carrossel de **dia** e os filtros de **Time** e **Staff** para ver o Controle de Presença autorizado no dia selecionado. Selecione ao menos um dos filtros para carregar; as colunas são as mesmas da aba mensal, com **Prestador** no lugar de **Data**.",
       },
     ],
   },

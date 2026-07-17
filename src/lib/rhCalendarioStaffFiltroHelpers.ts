@@ -39,16 +39,16 @@ export function prestadorAtendeFiltroTime(
   opts: {
     filtroAtivo: boolean;
     filtroTimeIdsReais: Set<string>;
-    treinamentoSelecionado: boolean;
-    treinamentoGerenciaId: string | null;
-    treinamentoTimeIds: Set<string>;
+    treinamentoSelecionado?: boolean;
+    treinamentoGerenciaId?: string | null;
+    treinamentoTimeIds?: Set<string>;
   },
 ): boolean {
   if (!opts.filtroAtivo) return true;
   if (p.org_time_id && opts.filtroTimeIdsReais.has(p.org_time_id)) return true;
   if (opts.treinamentoSelecionado && opts.treinamentoGerenciaId) {
     if (p.org_gerencia_id === opts.treinamentoGerenciaId) return true;
-    if (p.org_time_id && opts.treinamentoTimeIds.has(p.org_time_id)) return true;
+    if (p.org_time_id && opts.treinamentoTimeIds?.has(p.org_time_id)) return true;
   }
   return false;
 }

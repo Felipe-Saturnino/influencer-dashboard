@@ -83,7 +83,7 @@ export function RelatorioPresencaPainel({
 
   return (
     <div style={contentBox}>
-      <SectionTitle sub="Presença do time no dia selecionado">Controle de Presença</SectionTitle>
+      <SectionTitle sub="Presença dos prestadores no dia selecionado">Controle de Presença</SectionTitle>
       {semTime ? (
         <div
           style={{
@@ -94,7 +94,7 @@ export function RelatorioPresencaPainel({
             fontFamily: FONT.body,
           }}
         >
-          Selecione um time na lista para ver o relatório de presença do dia.
+          Selecione um time ou prestador para ver o relatório de presença do dia.
         </div>
       ) : (
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -124,7 +124,7 @@ export function RelatorioPresencaPainel({
                 fontFamily: FONT.body,
               }}
             >
-              Nenhum prestador encontrado para o time selecionado.
+              Nenhum prestador encontrado para os filtros selecionados.
             </div>
           ) : (
             <table style={getDataTableStyle({ minWidth: 960 })}>

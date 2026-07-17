@@ -84,20 +84,10 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
 import {
   normalizarSelecaoUnica,
-  TREINAMENTO_FILTRO_ID,
   CALENDARIO_TIMES_FILTRO_ORDEM,
-  normalizarNomeCalFiltro,
-  timeRowPorRotuloCanonica,
   prestadorAtendeFiltroTime,
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
-import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
-import { carregarArvoreOrganograma } from "../../../lib/rhOrganogramaFetch";
-import {
-  cadeiaLideresFuncionarioIdsPrestador,
-  usuarioEhLiderNaCadeiaPresenca,
-} from "../../../lib/rhOrganogramaLiderImediato";
-import type { RhOrgDiretoriaComFilhos } from "../../../types/rhOrganograma";
 import { ModalAprovarPresencaMesCalendario } from "./ModalAprovarPresencaMesCalendario";
 import {
   RelatorioPresencaPainel,
@@ -151,7 +141,12 @@ import {
   type PresencaJustificativaMeta,
   type PresencaMesAprovacaoLinha,
 } from "../../../lib/rhCalendarioPresencaGestao";
-import { carregarPresencaGestaoMes, salvarPresencaGestaoDia } from "../../../lib/rhCalendarioPresencaGestaoDb";
+import {
+  carregarPontoRegistrosDiaLote,
+  carregarPresencaGestaoDiaLote,
+  carregarPresencaGestaoMes,
+  salvarPresencaGestaoDia,
+} from "../../../lib/rhCalendarioPresencaGestaoDb";
 import {
   carregarAprovacaoPresencaMes,
   salvarAprovacaoPresencaMes,
@@ -415,6 +410,9 @@ function resumoHorarioTurnoModalCalendario(
 ): string | null {
   if (!p) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNomeExibicao)) return null;
+  if (p.area_atuacao === "escritorio" && turnoNomeExibicao === "Comercial") {
+    return "Início 09:00 · Fim 18:00";
+  }
 
   const escala = p.escala ?? "";
 
@@ -489,6 +487,9 @@ function obterEntradaSaidaEscaladasPrestadorDia(
   const turnoNome = turnoExibicaoDeValorCelulaEscala(valorCelula ?? "");
   if (!turnoNome) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNome)) return { entrada: "—", saida: "—" };
+  if (p.area_atuacao === "escritorio" && turnoNome === "Comercial") {
+    return { entrada: "09:00", saida: "18:00" };
+  }
 
   const escala = p.escala ?? "";
 
@@ -642,7 +643,6 @@ export default function RhCalendarioPage() {
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const perm = usePermission("rh_calendario");
-  const soPropriosCal = !perm.loading && perm.canView === "proprios";
 
   const [current, setCurrent] = useState(() => mesInicialCalendarioRhNaEntrada());
   const [abaPrincipal, setAbaPrincipal] = useRouteTab(
@@ -658,6 +658,8 @@ export default function RhCalendarioPage() {
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [erroStaff, setErroStaff] = useState<string | null>(null);
+  const [escopoVersao, setEscopoVersao] = useState<string | null>(null);
+  const [escopoRefreshTick, setEscopoRefreshTick] = useState(0);
 
   /** Filtros da aba Compromissos (multi). */
   const [compFilterStaffIds, setCompFilterStaffIds] = useState<string[]>([]);
@@ -666,6 +668,7 @@ export default function RhCalendarioPage() {
   const [presencaFilterTimeIds, setPresencaFilterTimeIds] = useState<string[]>([]);
   const [presencaFilterStaffIds, setPresencaFilterStaffIds] = useState<string[]>([]);
   const [relatorioFilterTimeIds, setRelatorioFilterTimeIds] = useState<string[]>([]);
+  const [relatorioFilterStaffIds, setRelatorioFilterStaffIds] = useState<string[]>([]);
   const [relatorioDia, setRelatorioDia] = useState(() => {
     const hoje = new Date();
     return new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
@@ -678,15 +681,12 @@ export default function RhCalendarioPage() {
   );
   const [loadingRelatorioPresenca, setLoadingRelatorioPresenca] = useState(false);
   const [sortRelatorioNomeDir, setSortRelatorioNomeDir] = useState<SortDir>("asc");
-  const [treinamentoGerenciaId, setTreinamentoGerenciaId] = useState<string | null>(null);
-  const [treinamentoTimeIdsList, setTreinamentoTimeIdsList] = useState<string[]>([]);
 
   const [rawGradeRows, setRawGradeRows] = useState<RpcGradeCalendarioRow[]>([]);
   const [loadingEscala, setLoadingEscala] = useState(false);
-  /** Quando `rh_calendario` está em «Próprios»: id do `rh_funcionarios` do utilizador autenticado (e-mail / e-mail Spin). */
+  /** Funcionário ligado ao login atual (e-mail / e-mail Spin). */
   const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
-  /** Vista completa (`canView === "sim"`): id do prestador ligado ao utilizador, para filtro «Meu Calendário». */
-  const [meuPrestadorRhIdVistaCompleta, setMeuPrestadorRhIdVistaCompleta] = useState<string | null>(null);
+  const [funcionariosGerenciaveisIds, setFuncionariosGerenciaveisIds] = useState<Set<string>>(() => new Set());
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosCalPick>>(() => new Map());
 
   const [pontoEstado, setPontoEstado] = useState<PrestadorPontoEstado | null>(null);
@@ -696,7 +696,6 @@ export default function RhCalendarioPage() {
   const [pontoSucessoModal, setPontoSucessoModal] = useState<PontoSucessoModalData | null>(null);
   const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
   const [loadingPontoMes, setLoadingPontoMes] = useState(false);
-  const [orgArvorePresenca, setOrgArvorePresenca] = useState<RhOrgDiretoriaComFilhos[]>([]);
   const [pontoMesTick, setPontoMesTick] = useState(0);
   const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
   const [reunioesMesTick, setReunioesMesTick] = useState(0);
@@ -716,190 +715,133 @@ export default function RhCalendarioPage() {
   } | null>(null);
   const [presencaJustificarAlvo, setPresencaJustificarAlvo] = useState<PresencaJustificarAlvo | null>(null);
 
-  const carregarTimes = useCallback(async () => {
-    setErroStaff(null);
-    const { data, error } = await supabase.rpc("rh_staff_times_filtrados");
-    if (error) {
-      setErroStaff("Não foi possível carregar os times de staff.");
-      setTimes([]);
-      return;
-    }
-    setTimes((data ?? []) as StaffTimeRow[]);
-  }, []);
-
   const timeIds = useMemo(() => times.map((x) => x.id), [times]);
+  const soPropriosCal =
+    !perm.loading &&
+    perm.canView === "proprios" &&
+    prestadores.length <= 1;
 
   useEffect(() => {
-    if (perm.loading || perm.canView === "nao") return;
-    if (perm.canView !== "sim" && perm.canView !== "proprios") return;
-    if (perm.canView === "proprios") {
+    if (perm.loading || (perm.canView !== "sim" && perm.canView !== "proprios")) {
       setTimes([]);
-      setErroStaff(null);
-      return;
-    }
-    setLoadingStaff(true);
-    void carregarTimes().finally(() => setLoadingStaff(false));
-  }, [perm.loading, perm.canView, carregarTimes]);
-
-  useEffect(() => {
-    if (perm.loading || perm.canView !== "proprios") return;
-    if (!user?.email?.trim()) {
       setPrestadores([]);
       setMeuRhFuncionarioId(null);
+      setFuncionariosGerenciaveisIds(new Set());
       setLoadingStaff(false);
       return;
     }
     let cancelled = false;
     setLoadingStaff(true);
+    setErroStaff(null);
     void (async () => {
-      const row = await buscarRhFuncionarioAtivoPorEmailLogin(user.email!);
+      const [timesRes, staffRes, meuIdRes, gerenciaveisRes, versaoRes] = await Promise.all([
+        supabase.rpc("rh_calendario_times_visiveis"),
+        supabase.rpc("rh_calendario_funcionarios_visiveis"),
+        supabase.rpc("rh_calendario_meu_funcionario_id"),
+        supabase.rpc("rh_calendario_funcionarios_gerenciaveis"),
+        supabase.rpc("rh_calendario_escopo_versao"),
+      ]);
       if (cancelled) return;
-      if (row) {
-        setPrestadores([row]);
-        setMeuRhFuncionarioId(row.id);
-        setErroStaff(null);
-      } else {
+      if (
+        timesRes.error ||
+        staffRes.error ||
+        meuIdRes.error ||
+        gerenciaveisRes.error ||
+        versaoRes.error
+      ) {
+        console.error("rh_calendario escopo", {
+          times: timesRes.error,
+          staff: staffRes.error,
+          meuId: meuIdRes.error,
+          gerenciaveis: gerenciaveisRes.error,
+          versao: versaoRes.error,
+        });
+        setTimes([]);
         setPrestadores([]);
         setMeuRhFuncionarioId(null);
-        setErroStaff(null);
+        setFuncionariosGerenciaveisIds(new Set());
+        setErroStaff(
+          "Não foi possível carregar os times e prestadores. Se o problema persistir, entre em contato com o suporte.",
+        );
+      } else {
+        setTimes((timesRes.data ?? []) as StaffTimeRow[]);
+        setPrestadores(
+          ((staffRes.data ?? []) as RhFuncionario[]).sort((a, b) =>
+            (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR"),
+          ),
+        );
+        setMeuRhFuncionarioId((meuIdRes.data as string | null) ?? null);
+        setFuncionariosGerenciaveisIds(
+          new Set(
+            ((gerenciaveisRes.data ?? []) as { funcionario_id: string }[]).map(
+              (row) => row.funcionario_id,
+            ),
+          ),
+        );
+        setEscopoVersao(versaoRes.data ? String(versaoRes.data) : null);
       }
       setLoadingStaff(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, user?.email]);
+  }, [perm.loading, perm.canView, escopoRefreshTick]);
 
   useEffect(() => {
-    if (perm.loading) return;
-    if (perm.canView !== "sim") {
-      setMeuPrestadorRhIdVistaCompleta(null);
-      return;
-    }
-    if (!user?.email?.trim()) {
-      setMeuPrestadorRhIdVistaCompleta(null);
-      return;
-    }
+    if (perm.loading || (perm.canView !== "sim" && perm.canView !== "proprios")) return;
     let cancelled = false;
-    void buscarRhFuncionarioAtivoPorEmailLogin(user.email).then((row) => {
-      if (!cancelled) setMeuPrestadorRhIdVistaCompleta(row?.id ?? null);
-    });
+    const verificarEscopoAtual = async () => {
+      const { data, error } = await supabase.rpc("rh_calendario_escopo_versao");
+      if (cancelled || error || !data) return;
+      const proximaVersao = String(data);
+      if (escopoVersao && proximaVersao !== escopoVersao) {
+        setEscopoVersao(proximaVersao);
+        setEscopoRefreshTick((tick) => tick + 1);
+      } else if (!escopoVersao) {
+        setEscopoVersao(proximaVersao);
+      }
+    };
+    const verificarAoFocar = () => void verificarEscopoAtual();
+    const verificarAoExibir = () => {
+      if (document.visibilityState === "visible") void verificarEscopoAtual();
+    };
+    // Organograma muda raramente — verificação leve a cada 5 min + ao voltar o foco à aba.
+    const intervalId = window.setInterval(() => void verificarEscopoAtual(), 300_000);
+    window.addEventListener("focus", verificarAoFocar);
+    document.addEventListener("visibilitychange", verificarAoExibir);
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", verificarAoFocar);
+      document.removeEventListener("visibilitychange", verificarAoExibir);
     };
-  }, [perm.loading, perm.canView, user?.email]);
+  }, [perm.loading, perm.canView, escopoVersao]);
 
   useEffect(() => {
-    if (perm.loading || perm.canView === "nao") return;
-    let cancelled = false;
-    void (async () => {
-      const { data, error } = await supabase
-        .from("rh_org_gerencias")
-        .select("id, nome")
-        .eq("status", "ativo")
-        .ilike("nome", "%treinamento%");
-      if (cancelled) return;
-      if (error || !data?.length) {
-        setTreinamentoGerenciaId(null);
-        return;
-      }
-      const exato = data.find((r: { nome: string }) => normalizarNomeCalFiltro(r.nome) === "treinamento");
-      setTreinamentoGerenciaId(exato?.id ?? data[0]!.id);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [perm.loading, perm.canView]);
-
-  useEffect(() => {
-    if (perm.loading || perm.canView === "nao") return;
-    if (perm.canView === "proprios") return;
-    let cancelled = false;
-    void (async () => {
-      const idsStaff = times.map((x) => x.id);
-      const merged = new Map<string, RhFuncionario>();
-
-      if (idsStaff.length > 0) {
-        const { data, error } = await supabase
-          .from("rh_funcionarios")
-          .select("*")
-          .in("org_time_id", idsStaff)
-          .in("status", ["ativo", "indisponivel"])
-          .order("nome", { ascending: true });
-        if (!cancelled && !error) (data ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
-      }
-
-      let ttIdsLocal: string[] = [];
-      if (treinamentoGerenciaId) {
-        const { data: tt } = await supabase
-          .from("rh_org_times")
-          .select("id")
-          .eq("gerencia_id", treinamentoGerenciaId)
-          .eq("status", "ativo");
-        ttIdsLocal = (tt ?? []).map((r: { id: string }) => r.id);
-        if (!cancelled) setTreinamentoTimeIdsList(ttIdsLocal);
-
-        let q = supabase
-          .from("rh_funcionarios")
-          .select("*")
-          .in("status", ["ativo", "indisponivel"])
-          .order("nome", { ascending: true });
-        if (ttIdsLocal.length > 0) {
-          q = q.or(`org_gerencia_id.eq.${treinamentoGerenciaId},org_time_id.in.(${ttIdsLocal.join(",")})`);
-        } else {
-          q = q.eq("org_gerencia_id", treinamentoGerenciaId);
-        }
-        const { data: d2, error: e2 } = await q;
-        if (!cancelled && !e2) (d2 ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
-      } else if (!cancelled) {
-        setTreinamentoTimeIdsList([]);
-      }
-
-      if (!cancelled) {
-        setPrestadores(
-          [...merged.values()].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")),
-        );
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [perm.loading, perm.canView, times, treinamentoGerenciaId]);
-
-  useEffect(() => {
-    if (perm.canView === "proprios") {
-      setCompFilterStaffIds([]);
-      setCompFilterTimeIds([]);
-    }
-  }, [perm.canView]);
-
-  useEffect(() => {
-    if (perm.canView !== "proprios" || !meuRhFuncionarioId) return;
+    if (!soPropriosCal || !meuRhFuncionarioId) return;
     setPresencaFilterStaffIds([meuRhFuncionarioId]);
-  }, [perm.canView, meuRhFuncionarioId]);
-
-  const treinamentoTimeIds = useMemo(() => new Set(treinamentoTimeIdsList), [treinamentoTimeIdsList]);
+    setRelatorioFilterStaffIds([meuRhFuncionarioId]);
+  }, [soPropriosCal, meuRhFuncionarioId]);
 
   const filtroTimeIdsReais = useMemo(() => {
     const allowed = new Set(timeIds);
-    return new Set(compFilterTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
+    return new Set(compFilterTimeIds.filter((id) => allowed.has(id)));
   }, [compFilterTimeIds, timeIds]);
 
-  const treinamentoSelecionado = compFilterTimeIds.includes(TREINAMENTO_FILTRO_ID);
   const filtroTimeAtivo = compFilterTimeIds.length > 0;
 
   const timeMultiselectItems = useMemo(() => {
-    const items: { id: string; name: string }[] = [];
-    for (const rotulo of CALENDARIO_TIMES_FILTRO_ORDEM) {
-      if (rotulo === "Treinamento") {
-        if (treinamentoGerenciaId) items.push({ id: TREINAMENTO_FILTRO_ID, name: "Treinamento" });
-        continue;
-      }
-      const row = timeRowPorRotuloCanonica(times, rotulo);
-      if (row) items.push({ id: row.id, name: rotulo });
-    }
-    return items;
-  }, [times, treinamentoGerenciaId]);
+    const prioridade = new Map<string, number>(
+      CALENDARIO_TIMES_FILTRO_ORDEM.map((nome, index) => [nome.toLocaleLowerCase("pt-BR"), index]),
+    );
+    return [...times]
+      .sort((a, b) => {
+        const pa = prioridade.get(a.nome.trim().toLocaleLowerCase("pt-BR")) ?? Number.MAX_SAFE_INTEGER;
+        const pb = prioridade.get(b.nome.trim().toLocaleLowerCase("pt-BR")) ?? Number.MAX_SAFE_INTEGER;
+        return pa - pb || a.nome.localeCompare(b.nome, "pt-BR");
+      })
+      .map((row) => ({ id: row.id, name: row.nome }));
+  }, [times]);
 
   useEffect(() => {
     const valid = new Set(timeMultiselectItems.map((x) => x.id));
@@ -914,9 +856,6 @@ export default function RhCalendarioPage() {
     const opts = {
       filtroAtivo: true,
       filtroTimeIdsReais,
-      treinamentoSelecionado,
-      treinamentoGerenciaId,
-      treinamentoTimeIds,
     };
     setCompFilterStaffIds((prev) => {
       if (prev.length === 0) return prev;
@@ -924,36 +863,29 @@ export default function RhCalendarioPage() {
       const next = prev.filter((id) => allowedStaff.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds, compFilterTimeIds]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, compFilterTimeIds]);
 
   const staffMultiselectItems = useMemo(() => {
     const opts = {
       filtroAtivo: filtroTimeAtivo,
       filtroTimeIdsReais,
-      treinamentoSelecionado,
-      treinamentoGerenciaId,
-      treinamentoTimeIds,
     };
     return prestadores
       .filter((p) => prestadorAtendeFiltroTime(p, opts))
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
-  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, treinamentoSelecionado, treinamentoGerenciaId, treinamentoTimeIds]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais]);
 
   const presencaFiltroTimeIdsReais = useMemo(() => {
     const allowed = new Set(timeIds);
-    return new Set(presencaFilterTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
+    return new Set(presencaFilterTimeIds.filter((id) => allowed.has(id)));
   }, [presencaFilterTimeIds, timeIds]);
 
-  const presencaTreinamentoSelecionado = presencaFilterTimeIds.includes(TREINAMENTO_FILTRO_ID);
   const presencaFiltroTimeAtivo = presencaFilterTimeIds.length > 0;
 
   const staffPresencaMultiselectItems = useMemo(() => {
     const opts = {
       filtroAtivo: presencaFiltroTimeAtivo,
       filtroTimeIdsReais: presencaFiltroTimeIdsReais,
-      treinamentoSelecionado: presencaTreinamentoSelecionado,
-      treinamentoGerenciaId,
-      treinamentoTimeIds,
     };
     return prestadores
       .filter((p) => prestadorAtendeFiltroTime(p, opts))
@@ -962,39 +894,43 @@ export default function RhCalendarioPage() {
     prestadores,
     presencaFiltroTimeAtivo,
     presencaFiltroTimeIdsReais,
-    presencaTreinamentoSelecionado,
-    treinamentoGerenciaId,
-    treinamentoTimeIds,
   ]);
 
   const relatorioFiltroTimeIdsReais = useMemo(() => {
     const allowed = new Set(timeIds);
-    return new Set(relatorioFilterTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
+    return new Set(relatorioFilterTimeIds.filter((id) => allowed.has(id)));
   }, [relatorioFilterTimeIds, timeIds]);
 
-  const relatorioTreinamentoSelecionado = relatorioFilterTimeIds.includes(TREINAMENTO_FILTRO_ID);
   const relatorioFiltroTimeAtivo = relatorioFilterTimeIds.length > 0;
+  const relatorioFiltroStaffAtivo = relatorioFilterStaffIds.length > 0;
 
   const prestadoresRelatorioTime = useMemo(() => {
-    if (!relatorioFiltroTimeAtivo) return [] as RhFuncionario[];
     const opts = {
-      filtroAtivo: true,
+      filtroAtivo: relatorioFiltroTimeAtivo,
       filtroTimeIdsReais: relatorioFiltroTimeIdsReais,
-      treinamentoSelecionado: relatorioTreinamentoSelecionado,
-      treinamentoGerenciaId,
-      treinamentoTimeIds,
     };
+    const filtroStaff = relatorioFiltroStaffAtivo ? new Set(relatorioFilterStaffIds) : null;
     return prestadores
       .filter((p) => prestadorAtendeFiltroTime(p, opts))
+      .filter((p) => !filtroStaff || filtroStaff.has(p.id))
       .sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR"));
   }, [
     prestadores,
     relatorioFiltroTimeAtivo,
     relatorioFiltroTimeIdsReais,
-    relatorioTreinamentoSelecionado,
-    treinamentoGerenciaId,
-    treinamentoTimeIds,
+    relatorioFiltroStaffAtivo,
+    relatorioFilterStaffIds,
   ]);
+
+  const staffRelatorioMultiselectItems = useMemo(() => {
+    const opts = {
+      filtroAtivo: relatorioFiltroTimeAtivo,
+      filtroTimeIdsReais: relatorioFiltroTimeIdsReais,
+    };
+    return prestadores
+      .filter((p) => prestadorAtendeFiltroTime(p, opts))
+      .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
+  }, [prestadores, relatorioFiltroTimeAtivo, relatorioFiltroTimeIdsReais]);
 
   const podeVerAbaRelatorioPresenca =
     !perm.loading &&
@@ -1027,6 +963,14 @@ export default function RhCalendarioPage() {
   }, [timeMultiselectItems]);
 
   useEffect(() => {
+    const valid = new Set(staffRelatorioMultiselectItems.map((item) => item.id));
+    setRelatorioFilterStaffIds((prev) => {
+      const next = prev.filter((id) => valid.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [staffRelatorioMultiselectItems]);
+
+  useEffect(() => {
     const allowedIds = new Set(staffPresencaMultiselectItems.map((x) => x.id));
     setPresencaFilterStaffIds((prev) => {
       if (prev.length === 0) return prev;
@@ -1054,7 +998,7 @@ export default function RhCalendarioPage() {
       try {
         for (const refIso of mesesRefISOConsulta) {
           if (cancelled) return;
-          const { data, error } = await supabase.rpc("rh_calendario_grade_escala_mes", { p_ref_mes: refIso });
+          const { data, error } = await supabase.rpc("rh_calendario_grade_mes", { p_ref_mes: refIso });
           if (cancelled) return;
           if (error || !data) continue;
           merged.push(...(data as RpcGradeCalendarioRow[]));
@@ -1104,10 +1048,10 @@ export default function RhCalendarioPage() {
   }, [perm.loading, perm.canView, loadingEscala, user?.id]);
 
   const rawGradeRowsFiltrados = useMemo(() => {
-    if (perm.canView !== "proprios") return rawGradeRows;
+    if (!soPropriosCal) return rawGradeRows;
     if (!meuRhFuncionarioId) return [];
     return rawGradeRows.filter((r) => r.funcionario_id === meuRhFuncionarioId);
-  }, [rawGradeRows, perm.canView, meuRhFuncionarioId]);
+  }, [rawGradeRows, soPropriosCal, meuRhFuncionarioId]);
 
   const nomePrestadorPorId = useMemo(() => {
     const m = new Map<string, string>();
@@ -1127,28 +1071,13 @@ export default function RhCalendarioPage() {
     return m;
   }, [prestadores]);
 
-  const orgGerenciaIdPorPrestadorId = useMemo(() => {
-    const m = new Map<string, string | null>();
-    prestadores.forEach((p) => m.set(p.id, p.org_gerencia_id ?? null));
-    return m;
-  }, [prestadores]);
-
   const prestadorPorId = useMemo(() => {
     const m = new Map<string, RhFuncionario>();
     prestadores.forEach((p) => m.set(p.id, p));
     return m;
   }, [prestadores]);
 
-  const cadeiaLideresPorPrestadorId = useMemo(() => {
-    const m = new Map<string, string[]>();
-    if (orgArvorePresenca.length === 0) return m;
-    for (const p of prestadores) {
-      m.set(p.id, cadeiaLideresFuncionarioIdsPrestador(p, orgArvorePresenca));
-    }
-    return m;
-  }, [prestadores, orgArvorePresenca]);
-
-  const meuFuncionarioIdOrganograma = meuRhFuncionarioId ?? meuPrestadorRhIdVistaCompleta;
+  const meuFuncionarioIdOrganograma = meuRhFuncionarioId;
   const isAdminPresenca = user?.role === "admin";
 
   /**
@@ -1156,10 +1085,7 @@ export default function RhCalendarioPage() {
    * funcionário coincide com o login (e-mail / e-mail Spin em `rh_funcionarios`). Sem esse vínculo o
    * agendamento seria rejeitado — por isso o botão «Agendar» só aparece quando conseguimos resolver o id.
    */
-  const solicitanteAgendarId = useMemo(
-    () => meuRhFuncionarioId ?? meuPrestadorRhIdVistaCompleta,
-    [meuRhFuncionarioId, meuPrestadorRhIdVistaCompleta],
-  );
+  const solicitanteAgendarId = meuRhFuncionarioId;
 
   const gradeValorPorDiaIsoAgendar = useMemo(() => {
     const m = new Map<string, string>();
@@ -1315,26 +1241,16 @@ export default function RhCalendarioPage() {
   ]);
 
   useEffect(() => {
-    if (perm.loading || perm.canView === "nao" || (abaPrincipal !== "presenca" && abaPrincipal !== "relatorio"))
-      return;
-    let cancelled = false;
-    void carregarArvoreOrganograma().then(({ arvore, error }) => {
-      if (cancelled) return;
-      if (!error) setOrgArvorePresenca(arvore);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [perm.loading, perm.canView, abaPrincipal]);
-
-  useEffect(() => {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "relatorio" || !podeVerAbaRelatorioPresenca) {
       setPontoRelatorioPorFid(new Map());
       setGestaoRelatorioPorChave(new Map());
       setLoadingRelatorioPresenca(false);
       return;
     }
-    const fids = prestadoresRelatorioTime.map((p) => p.id);
+    const fids =
+      relatorioFiltroTimeAtivo || relatorioFiltroStaffAtivo
+        ? prestadoresRelatorioTime.map((p) => p.id)
+        : [];
     if (fids.length === 0) {
       setPontoRelatorioPorFid(new Map());
       setGestaoRelatorioPorChave(new Map());
@@ -1344,45 +1260,15 @@ export default function RhCalendarioPage() {
     let cancelled = false;
     setLoadingRelatorioPresenca(true);
     const diaIso = toISO(relatorioDia);
-    const refIso = refMesPrimeiroDiaISO(relatorioDia);
-    const refAnt = refMesPrimeiroDiaISO(
-      new Date(relatorioDia.getFullYear(), relatorioDia.getMonth() - 1, 1),
-    );
     void (async () => {
-      const pontoMap = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
-      const gestaoMap = new Map<string, PresencaDiaGestao>();
-      await Promise.all(
-        fids.map(async (fid) => {
-          const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
-            p_funcionario_id: fid,
-            p_ref_mes: refIso,
-          });
-          if (!error && data) {
-            const rows = data as { dia_sp: string | Date; check_in_at: string | null; check_out_at: string | null }[];
-            for (const r of rows) {
-              const raw = r.dia_sp;
-              const ds =
-                typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw as Date));
-              if (ds === diaIso) {
-                pontoMap.set(fid, { check_in_at: r.check_in_at, check_out_at: r.check_out_at });
-                break;
-              }
-            }
-          }
-          for (const mes of [refIso, refAnt]) {
-            const { mapa, error: gErr } = await carregarPresencaGestaoMes(supabase, fid, mes);
-            if (!gErr) {
-              for (const [k, v] of mapa) {
-                if (k.endsWith(`:${diaIso}`) || k.includes(`:${diaIso}`)) gestaoMap.set(k, v);
-                else if (k.startsWith(`${fid}:`)) gestaoMap.set(k, v);
-              }
-            }
-          }
-        }),
-      );
+      // 2 RPCs em lote (antes: 3N — ponto mês + gestão mês atual + gestão mês anterior por fid).
+      const [pontoRes, gestaoRes] = await Promise.all([
+        carregarPontoRegistrosDiaLote(supabase, fids, diaIso),
+        carregarPresencaGestaoDiaLote(supabase, fids, diaIso),
+      ]);
       if (cancelled) return;
-      setPontoRelatorioPorFid(pontoMap);
-      setGestaoRelatorioPorChave(gestaoMap);
+      setPontoRelatorioPorFid(pontoRes.mapa);
+      setGestaoRelatorioPorChave(gestaoRes.mapa);
       setLoadingRelatorioPresenca(false);
     })();
     return () => {
@@ -1394,6 +1280,8 @@ export default function RhCalendarioPage() {
     abaPrincipal,
     podeVerAbaRelatorioPresenca,
     prestadoresRelatorioTime,
+    relatorioFiltroTimeAtivo,
+    relatorioFiltroStaffAtivo,
     relatorioDia,
     presencaGestaoTick,
     pontoMesTick,
@@ -1430,14 +1318,7 @@ export default function RhCalendarioPage() {
       if (filtroStaff && !filtroStaff.has(r.funcionario_id)) continue;
       if (filtroTimeAtivo) {
         const tid = orgTimeIdPorPrestadorId.get(r.funcionario_id) ?? null;
-        const gid = orgGerenciaIdPorPrestadorId.get(r.funcionario_id) ?? null;
-        let pass = false;
-        if (tid && filtroTimeIdsReais.has(tid)) pass = true;
-        if (treinamentoSelecionado && treinamentoGerenciaId) {
-          if (gid === treinamentoGerenciaId) pass = true;
-          if (tid && treinamentoTimeIds.has(tid)) pass = true;
-        }
-        if (!pass) continue;
+        if (!tid || !filtroTimeIdsReais.has(tid)) continue;
       }
       const turno = turnoExibicaoDeValorCelulaEscala(r.valor ?? "");
       if (!turno) continue;
@@ -1455,12 +1336,8 @@ export default function RhCalendarioPage() {
     compFilterStaffIds,
     nomePrestadorPorId,
     orgTimeIdPorPrestadorId,
-    orgGerenciaIdPorPrestadorId,
     filtroTimeAtivo,
     filtroTimeIdsReais,
-    treinamentoSelecionado,
-    treinamentoGerenciaId,
-    treinamentoTimeIds,
   ]);
 
   useEffect(() => {
@@ -1489,14 +1366,7 @@ export default function RhCalendarioPage() {
       if (compFilterStaffIds.length > 0 && !compFilterStaffIds.includes(row.solicitante_funcionario_id)) continue;
       if (filtroTimeAtivo) {
         const tid = orgTimeIdPorPrestadorId.get(row.solicitante_funcionario_id) ?? null;
-        const gid = orgGerenciaIdPorPrestadorId.get(row.solicitante_funcionario_id) ?? null;
-        let pass = false;
-        if (tid && filtroTimeIdsReais.has(tid)) pass = true;
-        if (treinamentoSelecionado && treinamentoGerenciaId) {
-          if (gid === treinamentoGerenciaId) pass = true;
-          if (tid && treinamentoTimeIds.has(tid)) pass = true;
-        }
-        if (!pass) continue;
+        if (!tid || !filtroTimeIdsReais.has(tid)) continue;
       }
       const iso = isoChaveDiaReuniaoRpc(row.dia_iso as string | Date | undefined);
       if (!iso) continue;
@@ -1539,11 +1409,7 @@ export default function RhCalendarioPage() {
     compFilterStaffIds,
     filtroTimeAtivo,
     filtroTimeIdsReais,
-    treinamentoSelecionado,
-    treinamentoGerenciaId,
-    treinamentoTimeIds,
     orgTimeIdPorPrestadorId,
-    orgGerenciaIdPorPrestadorId,
   ]);
 
   const obterReunioesDiaIso = useCallback(
@@ -2198,14 +2064,10 @@ export default function RhCalendarioPage() {
     !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
   const labelBotaoPonto =
     pontoEstado?.proximoTipo === "check_out" ? "Fazer Check-out" : "Fazer Check-in";
-  const pontoEscaladoParaAcao =
-    pontoEstado?.escaladoParaAcao === true ||
-    (pontoEstado?.escaladoParaAcao == null && pontoEstado?.escaladoHoje === true);
   const pontoBotaoHabilitado =
     mostrarBotaoPontoCalendario &&
     !pontoEstadoLoading &&
     !pontoSubmitting &&
-    pontoEscaladoParaAcao &&
     pontoEstado?.proximoTipo != null;
   const pontoBotaoTitle = (() => {
     if (!mostrarBotaoPontoCalendario) return undefined;
@@ -2213,11 +2075,6 @@ export default function RhCalendarioPage() {
     if (!pontoEstado) return "Não foi possível obter o estado do ponto.";
     if (!pontoEstado.rhFuncionarioId) {
       return "Não há colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).";
-    }
-    if (!pontoEscaladoParaAcao) {
-      return pontoEstado.proximoTipo === "check_out"
-        ? "Sem escala aprovada para o dia do turno na Gestão de Escala."
-        : "Sem escala aprovada para hoje na Gestão de Escala.";
     }
     if (pontoEstado.proximoTipo == null) return "Check-in e Check-out de hoje já foram registrados.";
     return undefined;
@@ -2228,14 +2085,14 @@ export default function RhCalendarioPage() {
   const hasStaffFilterComp = compFilterStaffIds.length > 0;
   const hasTimeFilterComp = compFilterTimeIds.length > 0;
   const mostrarBotaoMeuCalendario =
-    !perm.loading && perm.canView === "sim" && Boolean(meuPrestadorRhIdVistaCompleta);
+    !perm.loading && Boolean(meuRhFuncionarioId) && prestadores.length > 1;
   const calendarioSoMeuAtivo =
-    Boolean(meuPrestadorRhIdVistaCompleta) &&
+    Boolean(meuRhFuncionarioId) &&
     compFilterStaffIds.length === 1 &&
-    compFilterStaffIds[0] === meuPrestadorRhIdVistaCompleta;
-  const meuIdParaBotoesMeu = perm.canView === "proprios" ? meuRhFuncionarioId : meuPrestadorRhIdVistaCompleta;
+    compFilterStaffIds[0] === meuRhFuncionarioId;
+  const meuIdParaBotoesMeu = meuRhFuncionarioId;
   const mostrarBotaoMeuControle =
-    !perm.loading && perm.canView === "sim" && Boolean(meuPrestadorRhIdVistaCompleta);
+    !perm.loading && Boolean(meuRhFuncionarioId) && prestadores.length > 1;
   const meuControleAtivo =
     Boolean(meuIdParaBotoesMeu) &&
     presencaFilterStaffIds.length === 1 &&
@@ -2327,15 +2184,13 @@ export default function RhCalendarioPage() {
     if (!fid || !mesPresencaFechado) return false;
     if (perm.canEditar === "nao") return false;
     if (perm.canEditar === "sim" || isAdminPresenca) return true;
-    const cadeia = cadeiaLideresPorPrestadorId.get(fid) ?? [];
-    return usuarioEhLiderNaCadeiaPresenca(meuFuncionarioIdOrganograma, cadeia, isAdminPresenca);
+    return funcionariosGerenciaveisIds.has(fid);
   }, [
     presencaFilterStaffIds,
     mesPresencaFechado,
     perm.canEditar,
     isAdminPresenca,
-    cadeiaLideresPorPrestadorId,
-    meuFuncionarioIdOrganograma,
+    funcionariosGerenciaveisIds,
   ]);
 
   const linhasAprovacaoPresencaMes = useMemo((): PresencaMesAprovacaoLinha[] => {
@@ -2462,7 +2317,7 @@ export default function RhCalendarioPage() {
     presencaFilterStaffIds.length === 1 && (loadingEscala || loadingPontoMes || loadingPresencaGestao);
 
   const linhasRelatorioPresenca = useMemo((): RelatorioPresencaLinha[] => {
-    if (!relatorioFiltroTimeAtivo) return [];
+    if (!relatorioFiltroTimeAtivo && !relatorioFiltroStaffAtivo) return [];
     const iso = toISO(relatorioDia);
     const out: RelatorioPresencaLinha[] = [];
     for (const pRow of prestadoresRelatorioTime) {
@@ -2525,11 +2380,10 @@ export default function RhCalendarioPage() {
         correcaoAprovada && correcao && (correcaoEntradaAlterada || correcaoSaidaAlterada)
           ? formatoDuracaoFmtHorasTotal(entRealExib, saiRealExib)
           : horasReal;
-      const cadeiaLider = cadeiaLideresPorPrestadorId.get(fid) ?? [];
       const podeAnalisarCorrecao = Boolean(
         correcao &&
           presencaCorrecaoAnaliseStatusEfetivo(correcao) === "pendente" &&
-          usuarioEhLiderNaCadeiaPresenca(meuFuncionarioIdOrganograma, cadeiaLider, isAdminPresenca),
+          (perm.canEditar === "sim" || isAdminPresenca || funcionariosGerenciaveisIds.has(fid)),
       );
       out.push({
         funcionarioId: fid,
@@ -2569,14 +2423,15 @@ export default function RhCalendarioPage() {
     return out;
   }, [
     relatorioFiltroTimeAtivo,
+    relatorioFiltroStaffAtivo,
     relatorioDia,
     prestadoresRelatorioTime,
     rawGradeRows,
     mapOpTurnos,
     pontoRelatorioPorFid,
     gestaoRelatorioPorChave,
-    cadeiaLideresPorPrestadorId,
-    meuFuncionarioIdOrganograma,
+    perm.canEditar,
+    funcionariosGerenciaveisIds,
     isAdminPresenca,
   ]);
 
@@ -3023,7 +2878,7 @@ export default function RhCalendarioPage() {
                           setCompFilterStaffIds([]);
                         } else {
                           setCompFilterTimeIds([]);
-                          setCompFilterStaffIds([meuPrestadorRhIdVistaCompleta!]);
+                          setCompFilterStaffIds([meuRhFuncionarioId!]);
                         }
                       }}
                     />
@@ -3044,13 +2899,24 @@ export default function RhCalendarioPage() {
                   ) : null}
                 </>
               ) : abaPrincipal === "relatorio" ? (
-                showTimeFilterPresenca ? (
-                  <FiltroCalendarioTimeSelect
-                    selected={relatorioFilterTimeIds}
-                    onChange={(ids) => setRelatorioFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
-                    items={timeMultiselectItems}
-                  />
-                ) : null
+                <>
+                  {showTimeFilterPresenca ? (
+                    <FiltroCalendarioTimeSelect
+                      selected={relatorioFilterTimeIds}
+                      onChange={(ids) => setRelatorioFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
+                      items={timeMultiselectItems}
+                    />
+                  ) : null}
+                  {!soPropriosCal && staffRelatorioMultiselectItems.length > 0 ? (
+                    <FiltroCalendarioStaffSelect
+                      selected={relatorioFilterStaffIds}
+                      onChange={(ids) =>
+                        setRelatorioFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))
+                      }
+                      items={staffRelatorioMultiselectItems}
+                    />
+                  ) : null}
+                </>
               ) : (
                 <>
                   {mostrarBotaoMeuControle ? (
@@ -3263,7 +3129,7 @@ export default function RhCalendarioPage() {
           contentBox={contentBox}
           linhas={linhasRelatorioPresencaOrdenadas}
           loading={loadingRelatorioPresenca || loadingEscala}
-          semTime={!relatorioFiltroTimeAtivo}
+          semTime={!relatorioFiltroTimeAtivo && !relatorioFiltroStaffAtivo}
           sortDir={sortRelatorioNomeDir}
           onToggleSortNome={() =>
             setSortRelatorioNomeDir((d) => (d === "asc" ? "desc" : "asc"))
@@ -3632,15 +3498,12 @@ export default function RhCalendarioPage() {
                               pt?.check_in_at ?? null,
                               pt?.check_out_at ?? null,
                             );
-                      const cadeiaLider = cadeiaLideresPorPrestadorId.get(fid) ?? [];
                       const podeAnalisarCorrecao = Boolean(
                         correcao &&
                           presencaCorrecaoAnaliseStatusEfetivo(correcao) === "pendente" &&
-                          usuarioEhLiderNaCadeiaPresenca(
-                            meuFuncionarioIdOrganograma,
-                            cadeiaLider,
-                            isAdminPresenca,
-                          ),
+                          (perm.canEditar === "sim" ||
+                            isAdminPresenca ||
+                            funcionariosGerenciaveisIds.has(fid)),
                       );
                       const acoesCellInner: CSSProperties = {
                         display: "flex",

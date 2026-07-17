@@ -21,7 +21,10 @@ import {
 } from "lucide-react";
 import { stripHtmlText, type RhPostagemStatus, type RhPostagemTipoUi } from "../../../lib/portalRhWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
-import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import {
+  getPeriodoHistoricoCompetencias,
+  isDataNoPeriodoHistoricoCompetencias,
+} from "../../../lib/dashboardHelpers";
 import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
@@ -411,12 +414,17 @@ export default function PortalRhPage() {
     setErro(null);
     try {
 
+    const { inicio: histInicio } = getPeriodoHistoricoCompetencias();
+    const catJoin = "categoria:rh_portal_categoria(slug,label,accent_hex)";
+
     const [catRes, comData, docData, talkData] = await Promise.all([
       supabase.from("rh_portal_categoria").select("*").order("sort_order", { ascending: true }),
       fetchAllPages<RhPortalComunicado>(async (from, to) =>
         await supabase
           .from("rh_portal_comunicado")
-          .select("*, categoria:rh_portal_categoria(*)")
+          .select(`*, ${catJoin}`)
+          .eq("status", "publicado")
+          .or(`is_pinned.eq.true,published_at.gte.${histInicio}`)
           .order("published_at", { ascending: false })
           .order("id", { ascending: true })
           .range(from, to)
@@ -424,7 +432,9 @@ export default function PortalRhPage() {
       fetchAllPages<RhPortalDocumento>(async (from, to) =>
         await supabase
           .from("rh_portal_documento")
-          .select("*, categoria:rh_portal_categoria(*)")
+          .select(`*, ${catJoin}`)
+          .eq("status", "publicado")
+          .gte("published_at", histInicio)
           .order("updated_at", { ascending: false })
           .order("id", { ascending: true })
           .range(from, to)
@@ -433,6 +443,8 @@ export default function PortalRhPage() {
         await supabase
           .from("rh_portal_rh_talk")
           .select("*")
+          .eq("status", "publicado")
+          .gte("published_at", histInicio)
           .order("data_reuniao", { ascending: false })
           .order("id", { ascending: true })
           .range(from, to)
@@ -450,49 +462,12 @@ export default function PortalRhPage() {
 
     const comRows = comData.filter((c) => visivelPortal(c.status));
     setComunicados(comRows);
-    setDocumentos(docData.filter((d) => visivelPortal(d.status)));
+    const docRows = docData.filter((d) => visivelPortal(d.status));
+    setDocumentos(docRows);
     const talkRows = talkData.filter((tk) => visivelPortal(tk.status));
     setTalks(talkRows);
 
     const talkIds = talkRows.map((x) => x.id);
-    if (talkIds.length > 0) {
-      const parts = await fetchInBatched(talkIds, 100, async (ids) => {
-        const { data, error } = await supabase
-          .from("rh_portal_rh_talk_participant")
-          .select("talk_id, user_id")
-          .in("talk_id", ids);
-        if (error) throw error;
-        return data ?? [];
-      });
-      const mySet = new Set<string>();
-      const counts: Record<string, number> = {};
-      for (const p of parts) {
-        const row = p as { talk_id: string; user_id: string };
-        counts[row.talk_id] = (counts[row.talk_id] ?? 0) + 1;
-        if (row.user_id === user.id) mySet.add(row.talk_id);
-      }
-      setTalkParticipantTalkIds(mySet);
-      setTalkCounts(counts);
-    } else {
-      setTalkParticipantTalkIds(new Set());
-      setTalkCounts({});
-    }
-
-    const recData = await fetchAllPages<ReadReceiptRow>(async (from, to) =>
-      await supabase
-        .from("rh_portal_read_receipt")
-        .select("content_type, content_id, read_at, acknowledged_at")
-        .eq("user_id", user.id)
-        .range(from, to)
-    );
-
-    const map = new Map<string, ReadReceiptRow>();
-    for (const row of recData) {
-      map.set(receiptKey(row.content_type, row.content_id), row);
-    }
-    setReceipts(map);
-
-    const docRows = docData;
     const userIds = new Set<string>();
     for (const c of comRows) {
       const aid = autorIdPostagem(c);
@@ -508,7 +483,49 @@ export default function PortalRhPage() {
       const aid = autorIdPostagem(tk);
       if (aid) userIds.add(aid);
     }
-    setMetaAutores(await carregarMetaAutoresPortalRh([...userIds]));
+
+    const [parts, recData, meta] = await Promise.all([
+      talkIds.length > 0
+        ? fetchInBatched(talkIds, 100, async (ids) => {
+            const { data, error } = await supabase
+              .from("rh_portal_rh_talk_participant")
+              .select("talk_id, user_id")
+              .in("talk_id", ids);
+            if (error) throw error;
+            return data ?? [];
+          }, 3)
+        : Promise.resolve([] as { talk_id: string; user_id: string }[]),
+      fetchAllPages<ReadReceiptRow>(async (from, to) =>
+        await supabase
+          .from("rh_portal_read_receipt")
+          .select("content_type, content_id, read_at, acknowledged_at")
+          .eq("user_id", user.id)
+          .range(from, to)
+      ),
+      carregarMetaAutoresPortalRh([...userIds]),
+    ]);
+
+    if (talkIds.length > 0) {
+      const mySet = new Set<string>();
+      const counts: Record<string, number> = {};
+      for (const p of parts) {
+        const row = p as { talk_id: string; user_id: string };
+        counts[row.talk_id] = (counts[row.talk_id] ?? 0) + 1;
+        if (row.user_id === user.id) mySet.add(row.talk_id);
+      }
+      setTalkParticipantTalkIds(mySet);
+      setTalkCounts(counts);
+    } else {
+      setTalkParticipantTalkIds(new Set());
+      setTalkCounts({});
+    }
+
+    const map = new Map<string, ReadReceiptRow>();
+    for (const row of recData) {
+      map.set(receiptKey(row.content_type, row.content_id), row);
+    }
+    setReceipts(map);
+    setMetaAutores(meta);
 
     } catch (error) {
       console.error("[PortalRh] carregar:", error);

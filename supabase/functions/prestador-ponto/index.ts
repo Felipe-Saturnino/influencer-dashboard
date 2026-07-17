@@ -10,9 +10,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const MSG_REDE =
   'Você deve estar logado na rede Spin Colaboradores para realizar o Check-in/Check-out.'
-const MSG_SEM_ESCALA = 'Sem escala aprovada para hoje na Gestão de Escala.'
-const MSG_SEM_ESCALA_TURNO =
-  'Sem escala aprovada para o dia do turno na Gestão de Escala.'
 const MSG_SEM_VINCULO_RH =
   'Não encontramos um colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).'
 const MSG_SEQUENCIA_HOJE = 'Check-in e Check-out de hoje já foram registrados.'
@@ -210,7 +207,9 @@ async function montarEstado(
       ? await funcionarioEscaladoNoDia(svc, fid, turnoDiaSp)
       : escaladoHoje
 
-  const escaladoParaAcao = proximoTipo == null ? false : escaladoTurno
+  // A escala é referência de presença, não bloqueio de ponto. Folgas, fins de
+  // semana e plantões emergenciais também permitem Check-in/Check-out.
+  const escaladoParaAcao = proximoTipo != null
 
   return {
     ok: true,
@@ -310,7 +309,6 @@ serve(async (req) => {
     const proximoTipo = estado.proximoTipo as ProximoTipo | null
     const rhFid = estado.rhFuncionarioId as string | null | undefined
     const turnoDiaSp = String(estado.turnoDiaSp ?? estado.diaSp ?? hojeDiaSp()).slice(0, 10)
-    const escaladoParaAcao = estado.escaladoParaAcao === true
 
     if (!rhFid) {
       return new Response(
@@ -334,14 +332,6 @@ serve(async (req) => {
           code: 'sequencia',
           estado,
         }),
-        { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
-      )
-    }
-
-    if (!escaladoParaAcao) {
-      const msgEscala = proximoTipo === 'check_out' ? MSG_SEM_ESCALA_TURNO : MSG_SEM_ESCALA
-      return new Response(
-        JSON.stringify({ ok: false, error: msgEscala, code: 'escala', estado }),
         { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
       )
     }

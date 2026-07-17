@@ -94,7 +94,7 @@ Status: Rascunho · Publicado · Arquivado. Ações: editar (rascunho), arquivar
 
 Carrossel mês + Histórico (`Todo o período`) por `published_at`; o Histórico usa 13 competências mensais inclusivas; abas leitura só `status === publicado`.
 
-Comunicados, dicas, manuais e recibos de leitura usam paginação interna (`fetchAllPages`) sem depender do limite padrão do PostgREST. A lista visível em **Todo o período** aplica a janela canônica de 13 competências; paginação server-side por período fica para a fase de otimização de dados.
+Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências**; join de categoria estreito (`slug,label,accent_hex`). Receipts e autores em **`Promise.all`**. **Proibido** baixar rascunhos/arquivados no portal de leitura ou filtrar só no cliente o status/período da listagem pública.
 
 ### Strings de vazio
 
@@ -226,6 +226,8 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 | Go-live | `rh_funcionarios.staff_live_no_estudio` (fallback `data_inicio`) | Coluna Go-live na agenda |
 | Avaliações | `academy_performance_hub_avaliacao` | Abas Avaliações e Analisar; vazio até carga histórica |
 | Mesas / estúdios | `mesas_spin_cadastro`, `estudios_spin` | Modal Dados (GP) |
+
+**RLS mesas/estúdios:** leitura de `mesas_spin_cadastro` e `estudios_spin` inclui quem tem **Ver** em `academy_performance_hub` (`_academy_performance_hub_perm` — migração `20261017120000`); sem isso, os selects Estúdio/Jogo/Mesa do modal ficam vazios para Performance Coach.
 
 **Agenda de Avaliações (Gerenciamento):** lista prestadores **ativos/indisponíveis** do time filtrado, elegíveis no mês do carrossel. **Realizadas** = avaliações **Concluída** no mês; **Pendentes** = `max(0, 3 − realizadas)` (`PERFORMANCE_HUB_MIN_AVALIACOES_MES`) — GP e Shuffler.
 

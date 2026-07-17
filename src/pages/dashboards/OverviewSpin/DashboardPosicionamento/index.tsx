@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  Clock,
   Eye,
   Loader2,
   MapPin,
@@ -394,8 +395,8 @@ function DashboardPosicionamentoTodas({
   slugToNome: (slug: string) => string;
   card: CSSProperties;
 }) {
-  const blaze = useLobbyPosicionamentoData("blaze", refDate);
-  const cda = useLobbyPosicionamentoData("casa_apostas", refDate);
+  const blaze = useLobbyPosicionamentoData("blaze", refDate, { historico: false });
+  const cda = useLobbyPosicionamentoData("casa_apostas", refDate, { historico: false });
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -457,6 +458,7 @@ function DashboardPosicionamentoOperadora({
   const data = useLobbyPosicionamentoData(operadoraSlug, refDate);
   const {
     loading,
+    loadingHistorico,
     semDados,
     execucoesAll,
     posByExec,
@@ -479,6 +481,16 @@ function DashboardPosicionamentoOperadora({
   const heatCols = useMemo(
     () => colunasHistoricoPosicionamento(historicoModo, refDate),
     [historicoModo, refDate],
+  );
+  const heatColExecIds = useMemo(
+    () =>
+      new Map(
+        heatCols.map((c) => [
+          c.key,
+          execIdsColunaHistorico(historicoModo, c.key, refDate, execucoesAll),
+        ]),
+      ),
+    [heatCols, historicoModo, refDate, execucoesAll],
   );
   const heatMesas = useMemo(() => mesasOrdenadas.map((m) => m.mesa_identificacao), [mesasOrdenadas]);
 
@@ -667,7 +679,22 @@ function DashboardPosicionamentoOperadora({
           }}
         >
           <SectionTitle>Histórico de posicionamento</SectionTitle>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            {loadingHistorico && historicoModo !== "dia" && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  color: t.textMuted,
+                  fontSize: 12,
+                  fontFamily: FONT.body,
+                }}
+              >
+                <Clock size={12} aria-hidden />
+                Carregando…
+              </span>
+            )}
             {HISTORICO_MODOS.map((m) => {
               const ativo = historicoModo === m.id;
               return (
@@ -727,7 +754,7 @@ function DashboardPosicionamentoOperadora({
                       {nome}
                     </td>
                     {heatCols.map((col) => {
-                      const execIds = execIdsColunaHistorico(historicoModo, col.key, refDate, execucoesAll);
+                      const execIds = heatColExecIds.get(col.key) ?? [];
                       const pos = posicaoMediaMesaNoBucket(mid, execIds, posByExec);
                       return (
                         <td key={col.key} style={dataTable.tdCenter}>
