@@ -532,6 +532,7 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 
 - CTA novo prospecto: **`CtaCriarButton`** na barra de filtros — rótulo **`Novo Influencer`** (`Plus` 14px no componente; Brand §3).
 - **Funil de Prospecção:** quatro cards no topo via **`FunilProspeccaoKpiGrid`** — clicáveis para filtrar por status (toggle); **sem** chips de Status na barra. Default `todos`: lista exclui **Fechados**; clique no card Fechado para visualizá-los. **`Limpar filtros`** reseta também o card ativo.
+- **Proteção de volume:** a listagem inicial consulta no máximo 500 prospectos, preservando a ordenação alfabética e evitando carga sem limite.
 
 **`StatusScoutBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
 

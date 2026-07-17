@@ -165,7 +165,8 @@ export default function CentralDenunciasSpin() {
     let q = supabase
       .from("canal_denuncias_spin")
       .select("id, protocolo, created_at, status, tipos_denuncia, tipo_outro_descricao, relato, deseja_identificar, nome, email, telefone, descricao_resolucao")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(200);
 
     if (filtroPeriodoLista !== "historico") {
       const { start, end } = rangeForMonth(filtroPeriodoLista);

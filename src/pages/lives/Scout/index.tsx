@@ -321,7 +321,11 @@ export default function Scout() {
     setLoading(true);
     const SCOUT_COLS =
       "id, nome_artistico, status, tipo_contato, nome_agente, telefone, cache_negociado, live_cassino, email, plataformas, link_twitch, link_youtube, link_kick, link_instagram, link_tiktok, link_discord, link_whatsapp, link_telegram, views_twitch, views_youtube, views_kick, views_instagram, views_tiktok, views_discord, views_whatsapp, views_telegram, categorias, operadora_slug, user_id, created_by, created_at, updated_at";
-    const { data, error } = await supabase.from("scout_influencer").select(SCOUT_COLS).order("nome_artistico");
+    const { data, error } = await supabase
+      .from("scout_influencer")
+      .select(SCOUT_COLS)
+      .order("nome_artistico")
+      .limit(500);
     if (error) { console.error("[Scout] Erro ao carregar:", error); setList([]); }
     else {
       const rows = await enrichProspectosComCriadorNome((data ?? []) as ScoutInfluencer[]);

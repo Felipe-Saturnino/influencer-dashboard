@@ -17,7 +17,6 @@ import {
   type MesCarrosselEscalaEntry,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
 import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
-import { carregarPresencaGestaoMes } from "../../../lib/rhCalendarioPresencaGestaoDb";
 import type { PresencaDiaGestao } from "../../../lib/rhCalendarioPresencaGestao";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
@@ -31,6 +30,11 @@ import {
   type RpcGradeCalendarioRow,
   type RpcPontoMesRow,
 } from "../../../lib/overviewPrestadorCalendarioHelpers";
+import {
+  fetchOverviewPrestadorGradeMes,
+  fetchOverviewPrestadorPontoMes,
+  fetchOverviewPrestadorPresencaMes,
+} from "./overviewPrestadorQueries";
 
 export type OverviewPrestadorTab = "escala" | "performance";
 
@@ -59,7 +63,9 @@ export function useOverviewPrestadorDados(
     () => new Map(),
   );
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosHorarioPick>>(() => new Map());
-  const [loadingDados, setLoadingDados] = useState(false);
+  const [loadingGrade, setLoadingGrade] = useState(false);
+  const [loadingPonto, setLoadingPonto] = useState(false);
+  const [loadingPresenca, setLoadingPresenca] = useState(false);
 
   const mesSelecionado: MesCarrosselEscalaEntry | undefined = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes <= 0;
@@ -92,7 +98,10 @@ export function useOverviewPrestadorDados(
   }, []);
 
   useEffect(() => {
-    if (permLoading || permCanView === "nao") return;
+    if (permLoading || permCanView === "nao") {
+      setLoadingGrade(false);
+      return;
+    }
     if (soProprios) {
       setTimes([]);
       return;
@@ -279,21 +288,17 @@ export function useOverviewPrestadorDados(
   useEffect(() => {
     if (permLoading || permCanView === "nao") return;
     let cancelled = false;
-    setLoadingDados(true);
+    setLoadingGrade(true);
     void (async () => {
-      const merged: RpcGradeCalendarioRow[] = [];
       try {
-        for (const { ano, mes } of mesesParaCarga) {
-          if (cancelled) return;
-          const refIso = refMesPrimeiroDiaISO(new Date(ano, mes, 1));
-          const { data, error } = await supabase.rpc("rh_calendario_grade_escala_mes", { p_ref_mes: refIso });
-          if (cancelled) return;
-          if (error || !data) continue;
-          merged.push(...(data as RpcGradeCalendarioRow[]));
-        }
-        if (!cancelled) setRawGradeRows(merged);
+        const grupos = await Promise.all(
+          mesesParaCarga.map(({ ano, mes }) =>
+            fetchOverviewPrestadorGradeMes(refMesPrimeiroDiaISO(new Date(ano, mes, 1))).catch(() => []),
+          ),
+        );
+        if (!cancelled) setRawGradeRows(grupos.flat());
       } finally {
-        if (!cancelled) setLoadingDados(false);
+        if (!cancelled) setLoadingGrade(false);
       }
     })();
     return () => {
@@ -304,27 +309,24 @@ export function useOverviewPrestadorDados(
   useEffect(() => {
     if (!staffSelecionadoId || mesesParaCarga.length === 0) {
       setPontoMesLinhas([]);
+      setLoadingPonto(false);
       return;
     }
     let cancelled = false;
-    setLoadingDados(true);
+    setLoadingPonto(true);
     void (async () => {
-      const merged: RpcPontoMesRow[] = [];
       try {
-        for (const { ano, mes } of mesesParaCarga) {
-          if (cancelled) return;
-          const refIso = refMesPrimeiroDiaISO(new Date(ano, mes, 1));
-          const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
-            p_funcionario_id: staffSelecionadoId,
-            p_ref_mes: refIso,
-          });
-          if (cancelled) return;
-          if (error || !data) continue;
-          merged.push(...(data as RpcPontoMesRow[]));
-        }
-        if (!cancelled) setPontoMesLinhas(merged);
+        const grupos = await Promise.all(
+          mesesParaCarga.map(({ ano, mes }) =>
+            fetchOverviewPrestadorPontoMes(
+              staffSelecionadoId,
+              refMesPrimeiroDiaISO(new Date(ano, mes, 1)),
+            ).catch(() => []),
+          ),
+        );
+        if (!cancelled) setPontoMesLinhas(grupos.flat());
       } finally {
-        if (!cancelled) setLoadingDados(false);
+        if (!cancelled) setLoadingPonto(false);
       }
     })();
     return () => {
@@ -335,24 +337,26 @@ export function useOverviewPrestadorDados(
   useEffect(() => {
     if (!staffSelecionadoId || mesesParaCarga.length === 0) {
       setPresencaGestaoPorChave(new Map());
+      setLoadingPresenca(false);
       return;
     }
     let cancelled = false;
-    setLoadingDados(true);
+    setLoadingPresenca(true);
     void (async () => {
-      const next = new Map<string, PresencaDiaGestao>();
       try {
-        for (const { ano, mes } of mesesParaCarga) {
-          if (cancelled) return;
-          const refIso = refMesPrimeiroDiaISO(new Date(ano, mes, 1));
-          const { mapa, error } = await carregarPresencaGestaoMes(supabase, staffSelecionadoId, refIso);
-          if (cancelled) return;
-          if (error) continue;
-          mapa.forEach((v, k) => next.set(k, v));
-        }
+        const mapas = await Promise.all(
+          mesesParaCarga.map(({ ano, mes }) =>
+            fetchOverviewPrestadorPresencaMes(
+              staffSelecionadoId,
+              refMesPrimeiroDiaISO(new Date(ano, mes, 1)),
+            ).catch(() => new Map<string, PresencaDiaGestao>()),
+          ),
+        );
+        const next = new Map<string, PresencaDiaGestao>();
+        mapas.forEach((mapa) => mapa.forEach((v, k) => next.set(k, v)));
         if (!cancelled) setPresencaGestaoPorChave(next);
       } finally {
-        if (!cancelled) setLoadingDados(false);
+        if (!cancelled) setLoadingPresenca(false);
       }
     })();
     return () => {
@@ -471,7 +475,7 @@ export function useOverviewPrestadorDados(
     setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids));
   }, [filtroStaffIds]);
 
-  const isLoading = loadingStaff || loadingDados;
+  const isLoading = loadingStaff || loadingGrade || loadingPonto || loadingPresenca;
 
   return {
     mesesDisponiveis,

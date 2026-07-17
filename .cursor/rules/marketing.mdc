@@ -72,6 +72,7 @@ Perfis: Gestor (operação interna).
 - **Busca:** `BarraPesquisaPagina` abaixo das abas, no mesmo bloco de filtros — filtra por **UTM Source** (`textoContemBusca`, insensível a acentos); placeholder `PAGE_SEARCH.utmSource`. Vazio com busca: `Nenhum link encontrado para a busca.`
 - Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
 - Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal).
+- **Proteção de volume:** cada aba consulta no máximo 500 aliases, mantendo primeiro os maiores valores de `total_ftds`.
 - `SortTableTh` + default em coluna de data quando existir (Global).
 - Vazios por aba: ver tabela em estados abaixo.
 - **Handoff:** mapear UTM, ignorar, sincronização métricas.

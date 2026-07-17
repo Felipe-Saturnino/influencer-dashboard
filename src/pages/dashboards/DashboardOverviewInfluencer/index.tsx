@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
+import { useDashboardCatalogos } from "../../../hooks/useDashboardCatalogos";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { supabase } from "../../../lib/supabase";
-import { fetchAllPages, fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { fetchInfluencerAnalyticsPeriodoCached } from "../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { buscarMetricasDeAliases, mesclarMetricasComAliases } from "../../../lib/metricasAliases";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
@@ -108,7 +110,7 @@ interface LiveResultado {
   duracao_horas: number;
   duracao_min: number;
   media_views: number;
-  max_views?: number;
+  max_views?: number | null;
 }
 
 interface InfluencerPerfil {
@@ -473,8 +475,17 @@ export default function DashboardOverviewInfluencer() {
   const [loading, setLoading] = useState(true);
   const [filtroInfluencer, setFiltroInfluencer] = useState<string>("todos");
   const [filtroOperadora, setFiltroOperadora] = useState<string>("todas");
-  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
-  const [, setOperadoraInfMap] = useState<Record<string, string[]>>({});
+  const {
+    perfis,
+    operadoras,
+    operadoraInfluencers,
+    isPending: catalogosPending,
+    error: catalogosError,
+  } = useDashboardCatalogos();
+  const operadorasList = useMemo(
+    () => operadoras.filter((o) => podeVerOperadora(o.slug)),
+    [operadoras, podeVerOperadora],
+  );
 
   const [totais, setTotais] = useState<TotaisData>({ ggr: 0, investimento: 0, roi: 0, ftds: 0, ftd_total: 0, registros: 0, acessos: 0, views: 0, depositos_qtd: 0, depositos_valor: 0, saques_qtd: 0, saques_valor: 0, lives: 0, horas: 0 });
   const [totaisAnt, setTotaisAnt] = useState<TotaisData>(totais);
@@ -484,7 +495,6 @@ export default function DashboardOverviewInfluencer() {
   const [liveResultadosComparativo, setLiveResultadosComparativo] = useState<LiveResultado[]>([]);
   const [modoVisualizacaoComparativo, setModoVisualizacaoComparativo] = useState<"tabela" | "grafico">("tabela");
   const [kpiGraficoComparativo, setKpiGraficoComparativo] = useState<KpiComparativoInflKey>("ggr");
-  const [perfis, setPerfis] = useState<InfluencerPerfil[]>([]);
   const [influencersComDadosIds, setInfluencersComDadosIds] = useState<string[]>([]);
   const [filtroResetado, setFiltroResetado] = useState(false);
 
@@ -509,28 +519,17 @@ export default function DashboardOverviewInfluencer() {
   }, [filtroInfluencer, influencersComDadosIds]);
 
   useEffect(() => {
+    if (catalogosPending) return;
+    if (catalogosError) {
+      console.error("[OverviewInfluencer] catálogos:", catalogosError);
+      setLoading(false);
+      return;
+    }
     async function carregar() {
       setLoading(true);
       setMetricasComparativo([]);
       setLivesComparativo([]);
       setLiveResultadosComparativo([]);
-
-      const [{ data: perfisData }, { data: opsData }, { data: infOpsData }] = await Promise.all([
-        supabase.from("influencer_perfil").select("id, nome_artistico, cache_hora").order("nome_artistico"),
-        supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
-        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
-      ]);
-      setPerfis(perfisData || []);
-      const opsFiltradas = (opsData || []).filter(
-        (o: { slug: string }) => podeVerOperadora(o.slug)
-      );
-      setOperadorasList(opsFiltradas);
-      const map: Record<string, string[]> = {};
-      (infOpsData || []).forEach((o: { influencer_id: string; operadora_slug: string }) => {
-        if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
-        map[o.operadora_slug].push(o.influencer_id);
-      });
-      setOperadoraInfMap(map);
 
       const mom =
         !historico && mesSelecionado
@@ -544,47 +543,28 @@ export default function DashboardOverviewInfluencer() {
       const infIds = filtroInfluencer !== "todos"
         ? [filtroInfluencer]
         : filtroOperadora !== "todas"
-          ? (map[filtroOperadora] || []).filter((id) => infIdsFiltro.length === 0 || infIdsFiltro.includes(id))
+          ? (operadoraInfluencers[filtroOperadora] || []).filter((id) => infIdsFiltro.length === 0 || infIdsFiltro.includes(id))
           : infIdsFiltro;
 
-      const infIdsQuery = infIds.length > 0 ? infIds : (perfisData || []).map((p: InfluencerPerfil) => p.id);
+      const infIdsQuery = infIds.length > 0 ? infIds : perfis.map((p: InfluencerPerfil) => p.id);
+      const influencerIdsAnalytics =
+        filtroInfluencer !== "todos" || filtroOperadora !== "todas" || infIdsFiltro.length > 0
+          ? infIdsQuery
+          : null;
 
-      async function buscaMetricas(ini: string, fim: string): Promise<Metrica[]> {
-        return fetchAllPages(async (from, to) => {
-          let q = supabase.from("influencer_metricas")
-            .select("influencer_id, registration_count, ftd_count, ftd_total, visit_count, deposit_count, deposit_total, withdrawal_count, withdrawal_total, ggr, data")
-            .gte("data", ini).lte("data", fim)
-            .order("data", { ascending: true })
-            .order("influencer_id", { ascending: true })
-            .order("operadora_slug", { ascending: true })
-            .range(from, to);
-          if (infIdsQuery.length > 0) q = q.in("influencer_id", infIdsQuery);
-          if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
-          return q;
-        });
-      }
-
-      async function buscaLives(ini: string, fim: string): Promise<LiveData[]> {
-        return fetchAllPages(async (from, to) => {
-          let q = supabase.from("lives")
-            .select("id, influencer_id, data, plataforma")
-            .eq("status", "realizada").gte("data", ini).lte("data", fim)
-            .order("data", { ascending: true })
-            .order("id", { ascending: true })
-            .range(from, to);
-          if (infIdsQuery.length > 0) q = q.in("influencer_id", infIdsQuery);
-          return q;
-        });
-      }
-
-      async function buscaResultados(lives: LiveData[]) {
-        const ids = lives.map((l) => l.id);
-        return fetchLiveResultadosBatched<LiveResultado>(ids, async (slice) =>
-          await supabase.from("live_resultados").select("live_id, duracao_horas, duracao_min, media_views, max_views").in("live_id", slice)
-        );
-      }
-
-      let metricas = await buscaMetricas(inicio, fim);
+      const operadoraSlugsQuery =
+        filtroOperadora !== "todas"
+          ? [filtroOperadora]
+          : escoposVisiveis.semRestricaoEscopo
+            ? null
+            : escoposVisiveis.operadorasVisiveis;
+      const analytics = await fetchInfluencerAnalyticsPeriodoCached({
+        inicio,
+        fim,
+        operadoraSlugs: operadoraSlugsQuery,
+        influencerIds: influencerIdsAnalytics,
+      });
+      let metricas: Metrica[] = analytics.metricas;
       if (historico) {
         const aliasesSinteticas = await buscarMetricasDeAliases({
           operadora_slug: filtroOperadora !== "todas" ? filtroOperadora : undefined,
@@ -595,8 +575,8 @@ export default function DashboardOverviewInfluencer() {
         metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
       }
 
-      const lives = await buscaLives(inicio, fim);
-      const resultados = await buscaResultados(lives);
+      const lives: LiveData[] = analytics.lives;
+      const resultados: LiveResultado[] = analytics.resultados;
 
       const rows = metricas.filter((m) => podeVerInfluencer(m.influencer_id));
       const liveRows = lives.filter((l) => podeVerInfluencer(l.influencer_id));
@@ -660,7 +640,7 @@ export default function DashboardOverviewInfluencer() {
 
       if (mom) {
         const { inicio: iA, fim: fA } = mom.anterior;
-        const [investAnt, mA, lA] = await Promise.all([
+        const [investAnt, analyticsAnt] = await Promise.all([
           buscarInvestimentoPago(
             { inicio: iA, fim: fA },
             {
@@ -669,10 +649,16 @@ export default function DashboardOverviewInfluencer() {
               includeAgentes: false,
             }
           ),
-          buscaMetricas(iA, fA),
-          buscaLives(iA, fA),
+          fetchInfluencerAnalyticsPeriodoCached({
+            inicio: iA,
+            fim: fA,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsAnalytics,
+          }),
         ]);
-        const rA = await buscaResultados(lA);
+        const mA: Metrica[] = analyticsAnt.metricas;
+        const lA: LiveData[] = analyticsAnt.lives;
+        const rA: LiveResultado[] = analyticsAnt.resultados;
         const rowsA = mA.filter((m) => podeVerInfluencer(m.influencer_id));
         const liveA = lA.filter((l) => podeVerInfluencer(l.influencer_id));
         setTotaisAnt(calcTotais(rowsA, liveA, rA, investAnt.total));
@@ -802,7 +788,21 @@ export default function DashboardOverviewInfluencer() {
       setLoading(false);
     }
     carregar();
-  }, [historico, idxMes, filtroInfluencer, filtroOperadora, podeVerInfluencer, podeVerOperadora, influencersVisiveis, escoposVisiveis.operadorasVisiveis, mesSelecionado]);
+  }, [
+    historico,
+    idxMes,
+    filtroInfluencer,
+    filtroOperadora,
+    podeVerInfluencer,
+    influencersVisiveis,
+    escoposVisiveis.semRestricaoEscopo,
+    escoposVisiveis.operadorasVisiveis,
+    mesSelecionado,
+    catalogosPending,
+    catalogosError,
+    operadoraInfluencers,
+    perfis,
+  ]);
 
   /** Mês civil atual: só exibe dias até ontem (MTD “fechado”); meses passados = mês inteiro. */
   const diasDataComparativoExibicao = useMemo(() => {

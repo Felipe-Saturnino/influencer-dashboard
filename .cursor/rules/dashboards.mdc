@@ -35,6 +35,7 @@ alwaysApply: false
 ## Streamers — página unificada
 
 - Uma permissão/rota; **três abas** (Overview, Conversão, Financeiro) com **filtros partilhados** (mês, Histórico, influencer, operadora). Alterações nos filtros aplicam-se à aba visível e mantêm-se ao mudar de aba.
+- **Catálogos e analytics:** `useDashboardCatalogos` partilha perfis, operadoras ativas e vínculos; `fetchInfluencerAnalyticsPeriodoCached` partilha métricas, lives e resultados por período/escopo entre Overview, Conversão e Overview Influencer. A chave deve incluir período, operadoras e influencers efetivamente permitidos.
 - **Loading na FilterBar (modo embed):** cada aba chama `setIsLoading(true/false)` no `StreamersFiltrosContext` durante o fetch; o container (`Streamers/index.tsx`) mostra o indicador quando `sf.isLoading`.
 - **Tabs:** `role="tablist"` / `role="tab"` / `aria-selected`; `tabIndex={ativo ? 0 : -1}` nas abas inativas; **setas ← →** mudam de aba e devolvem foco ao botão da aba destino.
 - **Imports:** ficheiros dentro de `Streamers/*` usam caminhos `../../../../` para `lib/`, `context/`, `components/`, etc.
@@ -128,6 +129,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Escopo próprios (`canView === "proprios"`):** ocultar filtros Time/Staff; auto-vincular `meuRhFuncionarioId` via e-mail de login (espelho Calendário RH). Default `proprios` para role `prestador` em `AppContext`.
 - **Staff obrigatório (gestores):** sem prestador selecionado → string **Selecione um prestador para visualizar os resultados.** (não a string global de período vazio).
 - **Dados:** RPCs `rh_calendario_grade_escala_mes`, `rh_calendario_ponto_registros_mes`, presença gestão (`carregarPresencaGestaoMes`); turnos via `fetchTurnosPorOperadoraSlugs`. Métricas em `lib/overviewPrestadorMetrics.ts` + helpers calendário em `lib/overviewPrestadorCalendarioHelpers.ts`.
+- **Cache mensal:** grade, ponto e presença usam `overviewPrestadorQueries.ts`, com chave por mês e prestador quando aplicável. Meses do Histórico carregam em paralelo; loading permanece ativo até os três grupos necessários terminarem.
 - **KPIs Consolidados (Escala):** 4× `KpiCard` — Dias Escalado, Dias Realizado, Horas Escaladas, Horas Realizadas — MoM via `getPeriodoComparativoMoM` (exceto Histórico).
 - **Absenteísmo:** cards locais (não `KpiCard`) — Pontualidade, Ponto não Registrado, Atestados — com sublinhas de detalhe.
 - **Gráficos:** Recharts — barras Aproveitamento (dias/horas); pizza Movimentações (Trocas / Vendidos / Comprados). Cores semânticas fixas no pie (`PIE_CORES`), barras com `--brand-action`.
@@ -167,6 +169,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
   Conversão (Funil + Comparativo de funil + Comparativo de taxas),
   **Impulsionamento** (KPIs Meta Ads + tabela por anúncio),
   Alcance (KPIs sociais orgânicos + Posts).
+- **Fetch por aba:** Overview e Conversão carregam somente RPCs de campanha; Impulsionamento carrega somente Meta Ads; Alcance carrega somente KPIs e posts orgânicos. Não voltar a executar os três grupos ao abrir a página.
 - **Filtro operadora:** `FiltroOperadoraSelect` + `useDashboardFiltros()` na barra (padrão Streamers).
   Afeta **Overview** e **Conversão** (RPCs `get_campanha_*` com `p_operadora_slug`).
   Perfil **operador:** escopo fixo via `operadoraSlugsForcado` — sem dropdown.

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, type ReactNode } from "react"
 import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { useDashboardCatalogos } from "../../../hooks/useDashboardCatalogos"
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros"
 import { usePermission } from "../../../hooks/usePermission"
 import { FONT } from "../../../constants/theme"
@@ -86,18 +87,12 @@ export default function SocialMediaDashboard() {
     operadoraSlugsForcado,
   } = useDashboardFiltros();
   const [filtroOperadora, setFiltroOperadora] = useState("todas");
-  const [operadorasList, setOperadorasList] = useState<{ slug: string; nome: string }[]>([]);
+  const { operadoras: operadorasList } = useDashboardCatalogos();
 
   const operadoraParaRpc =
     operadoraSlugsForcado?.[0] ??
     (filtroOperadora !== "todas" ? filtroOperadora : null);
   const showColunaOperadora = showFiltroOperadora && filtroOperadora === "todas";
-
-  useEffect(() => {
-    supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => {
-      setOperadorasList(data ?? []);
-    });
-  }, []);
 
   const operadoraNomePorSlug = useMemo(() => {
     const map = new Map<string, string>();
@@ -159,8 +154,8 @@ export default function SocialMediaDashboard() {
 
   // ── Estados de dados ──────────────────────────────────────────────────────────
   const [carIdx,   setCarIdx]   = useState(0);
-  const [loadingAlcance, setLoadingAlcance] = useState(true);
-  const [loadingCampanhas, setLoadingCampanhas] = useState(true);
+  const [loadingAlcance, setLoadingAlcance] = useState(false);
+  const [loadingCampanhas, setLoadingCampanhas] = useState(false);
   const [kpiData,  setKpiData]  = useState<KpiDaily[]>([]);
   const [kpiAntRows, setKpiAntRows] = useState<KpiDaily[]>([]);
   const [posts,    setPosts]    = useState<PostUnificado[]>([]);
@@ -178,7 +173,7 @@ export default function SocialMediaDashboard() {
   const [sortCampCmp, setSortCampCmp] = useState<{ col: CampCmpSortCol; dir: SortDir }>({ col: "ggr", dir: "desc" });
   const [sortTaxCmp, setSortTaxCmp] = useState<{ col: TaxCmpSortCol; dir: SortDir }>({ col: "ftds", dir: "desc" });
   const [sortBoost, setSortBoost] = useState<{ col: BoostSortCol; dir: SortDir }>({ col: "spend", dir: "desc" });
-  const [loadingImpulsionamento, setLoadingImpulsionamento] = useState(true);
+  const [loadingImpulsionamento, setLoadingImpulsionamento] = useState(false);
   const [metaAdsDaily, setMetaAdsDaily] = useState<MetaAdsDaily[]>([]);
   const [metaAdsDailyPrev, setMetaAdsDailyPrev] = useState<MetaAdsDaily[]>([]);
   const [metaBoostedPosts, setMetaBoostedPosts] = useState<MetaBoostedPost[]>([]);
@@ -200,6 +195,7 @@ export default function SocialMediaDashboard() {
 
   // ── Alcance (redes sociais) — sem filtro operadora ───────────────────────────
   useEffect(() => {
+    if (aba !== "alcance") return;
     let cancelled = false;
     async function loadAlcance() {
       setLoadingAlcance(true);
@@ -337,10 +333,11 @@ export default function SocialMediaDashboard() {
     }
     loadAlcance();
     return () => { cancelled = true; };
-  }, [start, end, startPrev, endPrev, historico]);
+  }, [aba, start, end, startPrev, endPrev, historico]);
 
   // ── Impulsionamento (Meta Ads) — global, sem operadora ───────────────────────
   useEffect(() => {
+    if (aba !== "impulsionamento") return;
     let cancelled = false;
     async function loadImpulsionamento() {
       setLoadingImpulsionamento(true);
@@ -385,10 +382,11 @@ export default function SocialMediaDashboard() {
     }
     loadImpulsionamento();
     return () => { cancelled = true; };
-  }, [start, end, startPrev, endPrev, historico]);
+  }, [aba, start, end, startPrev, endPrev, historico]);
 
   // ── Conversão (campanhas / UTMs) — filtro operadora ──────────────────────────
   useEffect(() => {
+    if (aba !== "overview" && aba !== "conversao") return;
     let cancelled = false;
     async function loadCampanhas() {
       setLoadingCampanhas(true);
@@ -451,7 +449,7 @@ export default function SocialMediaDashboard() {
     }
     loadCampanhas();
     return () => { cancelled = true; };
-  }, [start, end, startPrev, endPrev, historico, operadoraParaRpc]);
+  }, [aba, start, end, startPrev, endPrev, historico, operadoraParaRpc]);
 
   // ── Totais agregados ──────────────────────────────────────────────────────────
   const youtubeEngFallback = useMemo(
@@ -606,7 +604,13 @@ export default function SocialMediaDashboard() {
   const totalFormatos = formatos.reduce((a, f) => a + f.total, 0);
 
   const brand = useDashboardBrand();
-  const loadingOverviewConversao = loadingAlcance || loadingCampanhas;
+  const loadingOverviewConversao = loadingCampanhas;
+  const loadingAbaAtiva =
+    aba === "alcance"
+      ? loadingAlcance
+      : aba === "impulsionamento"
+        ? loadingImpulsionamento
+        : loadingCampanhas;
 
   const labelOperadoraCampanha = (slug: string | null | undefined) =>
     slug ? (operadoraNomePorSlug.get(slug) ?? slug) : "—";
@@ -803,7 +807,7 @@ export default function SocialMediaDashboard() {
               />
             )}
 
-            {(loadingAlcance || loadingCampanhas || loadingImpulsionamento) && (
+            {loadingAbaAtiva && (
               <span style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
                 <Clock size={12} aria-hidden />
                 Carregando…

@@ -137,7 +137,12 @@ export default function GestaoLinks() {
   const carregar = useCallback(async () => {
     setLoading(true);
     const statusFiltro: Record<Aba, string> = { pendentes: "pendente", mapeados: "mapeado", ignorados: "ignorado" };
-    let query = supabase.from("utm_aliases").select("*").eq("status", statusFiltro[aba]).order("total_ftds", { ascending: false });
+    let query = supabase
+      .from("utm_aliases")
+      .select("*")
+      .eq("status", statusFiltro[aba])
+      .order("total_ftds", { ascending: false })
+      .limit(500);
     if (operadoraFiltro !== "todas") query = query.eq("operadora_slug", operadoraFiltro);
     const { data, error } = await query;
     if (error) { console.error("Erro ao carregar utm_aliases:", error.message); setAliases([]); setLoading(false); return; }

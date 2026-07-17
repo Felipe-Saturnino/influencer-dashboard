@@ -10,16 +10,14 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { INFLUENCER_FILTRO_TODOS_VALUE } from "../../../components/FiltroInfluencerSelect";
+import { useDashboardCatalogos } from "../../../hooks/useDashboardCatalogos";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { getMesesDisponiveis, getIdxMesCarrosselPadrao } from "../../../lib/dashboardHelpers";
-import { supabase } from "../../../lib/supabase";
 import {
   buildInfluencerFilterOptions,
   fetchInfluencerIdsComDadosNoPeriodo,
   periodoStreamersFiltro,
-  type PerfilInfluencerMin,
 } from "./streamersInfluencerFilterHelpers";
 
 export type MesRef = { ano: number; mes: number; label: string };
@@ -76,38 +74,11 @@ export function StreamersFiltrosProvider({ children }: { children: ReactNode }) 
     setIsLoadingState(v);
   }, []);
 
-  const catalogosQuery = useQuery({
-    queryKey: ["streamers", "catalogos-filtros"],
-    queryFn: async () => {
-      const [perfisRes, opsRes, infOpsRes] = await Promise.all([
-        supabase.from("influencer_perfil").select("id, nome_artistico").order("nome_artistico"),
-        supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome"),
-        supabase.from("influencer_operadoras").select("influencer_id, operadora_slug"),
-      ]);
-      if (perfisRes.error) throw perfisRes.error;
-      if (opsRes.error) throw opsRes.error;
-      if (infOpsRes.error) throw infOpsRes.error;
-      return {
-        perfis: (perfisRes.data ?? []) as PerfilInfluencerMin[],
-        operadoras: opsRes.data ?? [],
-        vinculos: infOpsRes.data ?? [],
-      };
-    },
-    staleTime: 10 * 60 * 1000,
-  });
-  const perfis = useMemo(() => catalogosQuery.data?.perfis ?? [], [catalogosQuery.data?.perfis]);
-  const operadorasList = useMemo(
-    () => catalogosQuery.data?.operadoras ?? [],
-    [catalogosQuery.data?.operadoras],
-  );
-  const operadoraInfMap = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    for (const o of catalogosQuery.data?.vinculos ?? []) {
-      if (!map[o.operadora_slug]) map[o.operadora_slug] = [];
-      map[o.operadora_slug]!.push(o.influencer_id);
-    }
-    return map;
-  }, [catalogosQuery.data?.vinculos]);
+  const {
+    perfis,
+    operadoras: operadorasList,
+    operadoraInfluencers: operadoraInfMap,
+  } = useDashboardCatalogos();
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
