@@ -1,7 +1,34 @@
--- Calendário RH — escopo pelo Organograma, listas autorizadas e escala sintética de Escritório.
--- Ver = sim: visão global. Ver = próprios: próprio funcionário + ramos liderados.
+-- ============================================================================
+-- Calendário RH — escopo pelo Organograma, listas autorizadas e escala
+-- sintética de Escritório.
+--
+-- Regra de escopo (permissão Ver da página rh_calendario):
+--   Ver = sim      → visão global (todos os funcionários ativos/indisponíveis).
+--   Ver = próprios → o próprio funcionário + cascata dos ramos onde é líder
+--                    explícito no Organograma (diretoria → gerências → times).
+--
+-- Idempotente: pode ser executada mais de uma vez sem erro (recria funções,
+-- triggers e grants; tabela e seed usam IF NOT EXISTS / ON CONFLICT).
+--
+-- Inclui as versões otimizadas de rh_calendario_funcionarios_gerenciaveis e
+-- rh_calendario_reunioes_mes (escopo materializado uma vez por chamada, sem
+-- reavaliação por linha) — a migration 20261003120000 apenas reaplica estas
+-- mesmas definições.
+--
+-- Pré-requisitos (migrations anteriores): rh_funcionarios, rh_org_diretorias,
+-- rh_org_gerencias, rh_org_times, rh_gestao_escala_grade(_status),
+-- rh_calendario_acoes, rh_solicitacoes, rh_calendario_presenca_gestao,
+-- rh_calendario_presenca_aprovacao_mes, prestador_ponto_registros,
+-- _prestador_page_perm, _gestor_page_perm, _dash_escopo_proprios_prestador,
+-- _rh_solicitacao_sync_calendario_atestado.
+-- ============================================================================
 
 BEGIN;
+
+-- ----------------------------------------------------------------------------
+-- 1. Versão do escopo (singleton) — invalida cache do cliente quando o
+--    Organograma ou os vínculos de funcionários mudam.
+-- ----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.rh_calendario_escopo_versao (
   singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
@@ -12,6 +39,7 @@ INSERT INTO public.rh_calendario_escopo_versao (singleton)
 VALUES (true)
 ON CONFLICT (singleton) DO NOTHING;
 
+-- Sem policies: leitura só via função SECURITY DEFINER (rh_calendario_escopo_versao()).
 ALTER TABLE public.rh_calendario_escopo_versao ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.rh_calendario_escopo_versao FROM anon, authenticated;
 
@@ -51,6 +79,12 @@ AFTER INSERT OR UPDATE OF status, org_diretoria_id, org_gerencia_id, org_time_id
 OR DELETE ON public.rh_funcionarios
 FOR EACH STATEMENT EXECUTE FUNCTION public._rh_calendario_marcar_escopo_alterado();
 
+-- ----------------------------------------------------------------------------
+-- 2. Helpers de permissão e identidade do usuário logado.
+-- ----------------------------------------------------------------------------
+
+-- Valor efetivo da permissão da página rh_calendario para o usuário logado
+-- (p_need: view | create | edit | delete → 'sim' | 'proprios' | 'nao').
 CREATE OR REPLACE FUNCTION public._rh_calendario_permissao_valor(p_need text)
 RETURNS text
 LANGUAGE plpgsql
@@ -104,6 +138,7 @@ BEGIN
 END;
 $$;
 
+-- rh_funcionarios.id do usuário logado (match por e-mail pessoal ou Spin).
 CREATE OR REPLACE FUNCTION public._rh_funcionario_login_id()
 RETURNS uuid
 LANGUAGE sql
@@ -127,7 +162,12 @@ AS $$
   LIMIT 1
 $$;
 
-CREATE OR REPLACE FUNCTION public._rh_calendario_funcionarios_escopo_por_permissao(p_need text)
+-- ----------------------------------------------------------------------------
+-- 3. Conjuntos de escopo (materializados uma vez por chamada).
+-- ----------------------------------------------------------------------------
+
+DROP FUNCTION IF EXISTS public._rh_calendario_funcionarios_escopo_por_permissao(text);
+CREATE FUNCTION public._rh_calendario_funcionarios_escopo_por_permissao(p_need text)
 RETURNS TABLE (funcionario_id uuid)
 LANGUAGE sql
 STABLE
@@ -211,7 +251,8 @@ AS $$
     )
 $$;
 
-CREATE OR REPLACE FUNCTION public._rh_calendario_funcionarios_escopo()
+DROP FUNCTION IF EXISTS public._rh_calendario_funcionarios_escopo();
+CREATE FUNCTION public._rh_calendario_funcionarios_escopo()
 RETURNS TABLE (funcionario_id uuid)
 LANGUAGE sql
 STABLE
@@ -236,39 +277,46 @@ AS $$
   )
 $$;
 
-CREATE OR REPLACE FUNCTION public._rh_calendario_funcionario_gerenciavel(p_funcionario_id uuid)
-RETURNS boolean
-LANGUAGE plpgsql
+-- Conjunto de funcionários sobre os quais o usuário pode agir (aprovar/corrigir).
+-- Uma única passada: interseção dos escopos de Ver e Editar, sem reavaliar a
+-- cascata por funcionário (evita custo quadrático no carregamento dos filtros).
+DROP FUNCTION IF EXISTS public.rh_calendario_funcionarios_gerenciaveis();
+CREATE FUNCTION public.rh_calendario_funcionarios_gerenciaveis()
+RETURNS TABLE (funcionario_id uuid)
+LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-  v_perm text := public._rh_calendario_permissao_valor('edit');
-  v_me uuid := public._rh_funcionario_login_id();
-BEGIN
-  IF v_perm = 'sim' THEN
-    RETURN
-      public._rh_calendario_funcionario_no_escopo(p_funcionario_id)
-      AND EXISTS (
-        SELECT 1
-        FROM public._rh_calendario_funcionarios_escopo_por_permissao('edit') e
-        WHERE e.funcionario_id = p_funcionario_id
-      );
-  END IF;
+  WITH
+  perm_edit AS (
+    SELECT public._rh_calendario_permissao_valor('edit') AS valor
+  ),
+  me AS (
+    SELECT public._rh_funcionario_login_id() AS id
+  )
+  SELECT v.funcionario_id
+  FROM public._rh_calendario_funcionarios_escopo_por_permissao('view') v
+  INNER JOIN public._rh_calendario_funcionarios_escopo_por_permissao('edit') e
+    ON e.funcionario_id = v.funcionario_id
+  CROSS JOIN perm_edit
+  CROSS JOIN me
+  WHERE perm_edit.valor = 'sim'
+     OR (perm_edit.valor = 'proprios' AND v.funcionario_id IS DISTINCT FROM me.id)
+$$;
 
-  IF v_perm <> 'proprios' OR v_me IS NULL OR p_funcionario_id = v_me THEN
-    RETURN false;
-  END IF;
-
-  RETURN
-    public._rh_calendario_funcionario_no_escopo(p_funcionario_id)
-    AND EXISTS (
-      SELECT 1
-      FROM public._rh_calendario_funcionarios_escopo_por_permissao('edit') e
-      WHERE e.funcionario_id = p_funcionario_id
-    );
-END;
+CREATE OR REPLACE FUNCTION public._rh_calendario_funcionario_gerenciavel(p_funcionario_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.rh_calendario_funcionarios_gerenciaveis() g
+    WHERE g.funcionario_id = p_funcionario_id
+  )
 $$;
 
 CREATE OR REPLACE FUNCTION public._rh_calendario_pode_editar_funcionario(p_funcionario_id uuid)
@@ -287,6 +335,10 @@ AS $$
       WHERE e.funcionario_id = p_funcionario_id
     )
 $$;
+
+-- ----------------------------------------------------------------------------
+-- 4. RPCs de identidade, versão e listas autorizadas (filtros do Calendário).
+-- ----------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.rh_calendario_meu_funcionario_id()
 RETURNS uuid
@@ -316,7 +368,8 @@ AS $$
   END
 $$;
 
-CREATE OR REPLACE FUNCTION public.rh_calendario_funcionarios_visiveis()
+DROP FUNCTION IF EXISTS public.rh_calendario_funcionarios_visiveis();
+CREATE FUNCTION public.rh_calendario_funcionarios_visiveis()
 RETURNS TABLE (
   id uuid,
   status text,
@@ -353,19 +406,8 @@ AS $$
   ORDER BY f.nome
 $$;
 
-CREATE OR REPLACE FUNCTION public.rh_calendario_funcionarios_gerenciaveis()
-RETURNS TABLE (funcionario_id uuid)
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT e.funcionario_id
-  FROM public._rh_calendario_funcionarios_escopo() e
-  WHERE public._rh_calendario_funcionario_gerenciavel(e.funcionario_id)
-$$;
-
-CREATE OR REPLACE FUNCTION public.rh_calendario_times_visiveis()
+DROP FUNCTION IF EXISTS public.rh_calendario_times_visiveis();
+CREATE FUNCTION public.rh_calendario_times_visiveis()
 RETURNS TABLE (
   id uuid,
   nome text,
@@ -477,9 +519,14 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- 5. RPCs de dados do Calendário (grade, reuniões, ponto, presença).
+-- ----------------------------------------------------------------------------
+
 -- RPC exclusiva do Calendário: grade aprovada do Estúdio + escala sintética
 -- de Escritório (seg–sex Comercial 09h–18h; sáb/dom Folga).
-CREATE OR REPLACE FUNCTION public.rh_calendario_grade_mes(p_ref_mes date)
+DROP FUNCTION IF EXISTS public.rh_calendario_grade_mes(date);
+CREATE FUNCTION public.rh_calendario_grade_mes(p_ref_mes date)
 RETURNS TABLE (funcionario_id uuid, dia_iso date, valor text, area_key text)
 LANGUAGE sql
 STABLE
@@ -529,7 +576,10 @@ AS $$
   ORDER BY funcionario_id, dia_iso
 $$;
 
-CREATE OR REPLACE FUNCTION public.rh_calendario_reunioes_mes(p_ref_mes date)
+-- Reuniões do mês: escopo resolvido por JOIN (esc.funcionario_id IS NOT NULL)
+-- em vez de checagem por linha.
+DROP FUNCTION IF EXISTS public.rh_calendario_reunioes_mes(date);
+CREATE FUNCTION public.rh_calendario_reunioes_mes(p_ref_mes date)
 RETURNS TABLE (
   id uuid,
   solicitante_funcionario_id uuid,
@@ -588,6 +638,8 @@ BEGIN
     ON s.rh_calendario_acao_id = a.id
     AND s.tipo = 'reuniao_rh'
   LEFT JOIN public.profiles pa ON pa.id = s.atendido_por
+  LEFT JOIN public._rh_calendario_funcionarios_escopo() esc
+    ON esc.funcionario_id = a.solicitante_funcionario_id
   WHERE a.tipo_acao = 'agendamento_reuniao'
     AND coalesce(trim(a.payload->>'dia_iso'), '') <> ''
     AND length(trim(a.payload->>'dia_iso')) >= 10
@@ -610,7 +662,7 @@ BEGIN
         trim(coalesce(a.payload->>'reuniao_com', '')) <> 'rh'
         AND a.status = 'Agendado'
         AND (
-          public._rh_calendario_funcionario_no_escopo(a.solicitante_funcionario_id)
+          esc.funcionario_id IS NOT NULL
           OR (
             trim(coalesce(a.payload->>'reuniao_com', '')) = 'shift_lead'
             AND EXISTS (
@@ -657,7 +709,8 @@ END;
 $$;
 
 -- Leitura de ponto respeitando o novo escopo sem quebrar o Overview Prestador.
-CREATE OR REPLACE FUNCTION public.rh_calendario_ponto_registros_mes(
+DROP FUNCTION IF EXISTS public.rh_calendario_ponto_registros_mes(uuid, date);
+CREATE FUNCTION public.rh_calendario_ponto_registros_mes(
   p_funcionario_id uuid,
   p_ref_mes date
 )
@@ -776,7 +829,8 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.rh_calendario_presenca_aprovacao_mes_salvar(
+DROP FUNCTION IF EXISTS public.rh_calendario_presenca_aprovacao_mes_salvar(uuid, date, text);
+CREATE FUNCTION public.rh_calendario_presenca_aprovacao_mes_salvar(
   p_funcionario_id uuid,
   p_ref_mes date,
   p_aprovado_por_nome text
@@ -820,14 +874,19 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- 6. Privilégios — helpers internos sem EXECUTE; RPCs expostas a authenticated.
+-- ----------------------------------------------------------------------------
+
+REVOKE ALL ON FUNCTION public._rh_calendario_marcar_escopo_alterado() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public._rh_calendario_permissao_valor(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public._rh_funcionario_login_id() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public._rh_calendario_marcar_escopo_alterado() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public._rh_calendario_funcionarios_escopo_por_permissao(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public._rh_calendario_funcionarios_escopo() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public._rh_calendario_funcionario_no_escopo(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public._rh_calendario_funcionario_gerenciavel(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public._rh_calendario_pode_editar_funcionario(uuid) FROM PUBLIC;
+
 REVOKE ALL ON FUNCTION public.rh_calendario_meu_funcionario_id() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.rh_calendario_escopo_versao() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.rh_calendario_funcionarios_visiveis() FROM PUBLIC;
@@ -835,6 +894,9 @@ REVOKE ALL ON FUNCTION public.rh_calendario_funcionarios_gerenciaveis() FROM PUB
 REVOKE ALL ON FUNCTION public.rh_calendario_times_visiveis() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.rh_calendario_grade_mes(date) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.rh_calendario_reunioes_mes(date) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.rh_calendario_ponto_registros_mes(uuid, date) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.rh_calendario_presenca_gestao_salvar(uuid, date, text, jsonb, jsonb, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.rh_calendario_presenca_aprovacao_mes_salvar(uuid, date, text) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.rh_calendario_meu_funcionario_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rh_calendario_escopo_versao() TO authenticated;
@@ -847,8 +909,14 @@ GRANT EXECUTE ON FUNCTION public.rh_calendario_ponto_registros_mes(uuid, date) T
 GRANT EXECUTE ON FUNCTION public.rh_calendario_presenca_gestao_salvar(uuid, date, text, jsonb, jsonb, jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rh_calendario_presenca_aprovacao_mes_salvar(uuid, date, text) TO authenticated;
 
+-- ----------------------------------------------------------------------------
+-- 7. Comentários.
+-- ----------------------------------------------------------------------------
+
 COMMENT ON FUNCTION public._rh_calendario_funcionarios_escopo() IS
   'Calendário RH: Ver sim retorna todos; Ver próprios retorna o próprio funcionário e a cascata dos ramos onde é líder explícito.';
+COMMENT ON FUNCTION public.rh_calendario_funcionarios_gerenciaveis() IS
+  'Funcionários sobre os quais o usuário logado pode agir no Calendário (aprovar/corrigir presença). Interseção dos escopos Ver e Editar materializada uma única vez por chamada.';
 COMMENT ON FUNCTION public.rh_calendario_grade_mes(date) IS
   'Calendário RH: grade aprovada do Estúdio e escala sintética de Escritório (seg-sex Comercial; fim de semana Folga).';
 

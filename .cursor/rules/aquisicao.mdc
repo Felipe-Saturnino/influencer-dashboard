@@ -53,11 +53,13 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - **Handoff:** aprovação pagamento, edição manual, consolidado.
 - **Pagamento de agente:** modal grava em `pagamentos_agentes` — **vários agentes por ciclo** (mesma operadora permitida); nome em `descricao` («Nome do agente»). Linha própria na tabela do ciclo (aberto e fechado). Consolidado mantém linha agregada «Agentes».
 - **Carga de dados:** `useFinanceiroCatalogos` (3 queries em `Promise.all`); KPIs + Consolidado via `useFinanceiroMes` → `financeiroMesData.ts` (`loadFinanceiroMesData`, uma rodada de queries partilhada por período/filtros). Ciclos: `carregarCiclos` no `index`; após mutação no ciclo, `onRecarregar` = `recarregarFinanceiro` (ciclos + mês). Expand no Consolidado: histórico por influencer continua fetch local (`toggleExpand`).
+- **Fechar ciclo (`financeiroFecharCiclo.ts`):** `live_resultados` via `fetchLiveResultadosBatched`; `cache_hora` em **um** `.in("id", …)`; **um** `upsert` em lote de `pagamentos` — **proibido** N+1 (perfil + upsert por par influencer×operadora). Fechos expirados no boot: concorrência ≤ 3.
 
 ---
 
 ## Banca de Jogo (`banca_jogo`)
 
+- **Carga de solicitações:** colunas explícitas + filtro SQL na janela de 13 competências (`solicitado_em` **ou** `liberado_em` ≥ início de `getPeriodoHistoricoCompetencias`) — **proibido** `select("*")` all-time no boot. Catálogos (profiles/operadoras/perfis) em `Promise.all`.
 - **Solicitações** e **Consolidado de bancas:** `getPageContentBoxStyle` + **`SectionTitle`**; tabelas no padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); sub-tabela no expand do Consolidado usa `thHeaderSub`.
 - Workflow: Solicitado → Aprovado → Liberado (cores semânticas Global).
 - **CPF** mascarado na tabela (`***.***.***-**`) com `title` no hover para autorizado.

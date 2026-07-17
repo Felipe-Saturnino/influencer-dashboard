@@ -141,7 +141,12 @@ import {
   type PresencaJustificativaMeta,
   type PresencaMesAprovacaoLinha,
 } from "../../../lib/rhCalendarioPresencaGestao";
-import { carregarPresencaGestaoMes, salvarPresencaGestaoDia } from "../../../lib/rhCalendarioPresencaGestaoDb";
+import {
+  carregarPontoRegistrosDiaLote,
+  carregarPresencaGestaoDiaLote,
+  carregarPresencaGestaoMes,
+  salvarPresencaGestaoDia,
+} from "../../../lib/rhCalendarioPresencaGestaoDb";
 import {
   carregarAprovacaoPresencaMes,
   salvarAprovacaoPresencaMes,
@@ -736,15 +741,13 @@ export default function RhCalendarioPage() {
         supabase.rpc("rh_calendario_funcionarios_gerenciaveis"),
         supabase.rpc("rh_calendario_escopo_versao"),
       ]);
-      const versaoFinalRes = await supabase.rpc("rh_calendario_escopo_versao");
       if (cancelled) return;
       if (
         timesRes.error ||
         staffRes.error ||
         meuIdRes.error ||
         gerenciaveisRes.error ||
-        versaoRes.error ||
-        versaoFinalRes.error
+        versaoRes.error
       ) {
         console.error("rh_calendario escopo", {
           times: timesRes.error,
@@ -752,7 +755,6 @@ export default function RhCalendarioPage() {
           meuId: meuIdRes.error,
           gerenciaveis: gerenciaveisRes.error,
           versao: versaoRes.error,
-          versaoFinal: versaoFinalRes.error,
         });
         setTimes([]);
         setPrestadores([]);
@@ -762,14 +764,6 @@ export default function RhCalendarioPage() {
           "Não foi possível carregar os times e prestadores. Se o problema persistir, entre em contato com o suporte.",
         );
       } else {
-        const versaoInicial = versaoRes.data ? String(versaoRes.data) : null;
-        const versaoFinal = versaoFinalRes.data ? String(versaoFinalRes.data) : null;
-        if (versaoInicial && versaoFinal && versaoInicial !== versaoFinal) {
-          setEscopoVersao(versaoFinal);
-          setEscopoRefreshTick((tick) => tick + 1);
-          setLoadingStaff(false);
-          return;
-        }
         setTimes((timesRes.data ?? []) as StaffTimeRow[]);
         setPrestadores(
           ((staffRes.data ?? []) as RhFuncionario[]).sort((a, b) =>
@@ -784,7 +778,7 @@ export default function RhCalendarioPage() {
             ),
           ),
         );
-        setEscopoVersao(versaoFinal);
+        setEscopoVersao(versaoRes.data ? String(versaoRes.data) : null);
       }
       setLoadingStaff(false);
     })();
@@ -811,7 +805,8 @@ export default function RhCalendarioPage() {
     const verificarAoExibir = () => {
       if (document.visibilityState === "visible") void verificarEscopoAtual();
     };
-    const intervalId = window.setInterval(() => void verificarEscopoAtual(), 30_000);
+    // Organograma muda raramente — verificação leve a cada 5 min + ao voltar o foco à aba.
+    const intervalId = window.setInterval(() => void verificarEscopoAtual(), 300_000);
     window.addEventListener("focus", verificarAoFocar);
     document.addEventListener("visibilitychange", verificarAoExibir);
     return () => {
@@ -1265,45 +1260,15 @@ export default function RhCalendarioPage() {
     let cancelled = false;
     setLoadingRelatorioPresenca(true);
     const diaIso = toISO(relatorioDia);
-    const refIso = refMesPrimeiroDiaISO(relatorioDia);
-    const refAnt = refMesPrimeiroDiaISO(
-      new Date(relatorioDia.getFullYear(), relatorioDia.getMonth() - 1, 1),
-    );
     void (async () => {
-      const pontoMap = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
-      const gestaoMap = new Map<string, PresencaDiaGestao>();
-      await Promise.all(
-        fids.map(async (fid) => {
-          const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
-            p_funcionario_id: fid,
-            p_ref_mes: refIso,
-          });
-          if (!error && data) {
-            const rows = data as { dia_sp: string | Date; check_in_at: string | null; check_out_at: string | null }[];
-            for (const r of rows) {
-              const raw = r.dia_sp;
-              const ds =
-                typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw as Date));
-              if (ds === diaIso) {
-                pontoMap.set(fid, { check_in_at: r.check_in_at, check_out_at: r.check_out_at });
-                break;
-              }
-            }
-          }
-          for (const mes of [refIso, refAnt]) {
-            const { mapa, error: gErr } = await carregarPresencaGestaoMes(supabase, fid, mes);
-            if (!gErr) {
-              for (const [k, v] of mapa) {
-                if (k.endsWith(`:${diaIso}`) || k.includes(`:${diaIso}`)) gestaoMap.set(k, v);
-                else if (k.startsWith(`${fid}:`)) gestaoMap.set(k, v);
-              }
-            }
-          }
-        }),
-      );
+      // 2 RPCs em lote (antes: 3N — ponto mês + gestão mês atual + gestão mês anterior por fid).
+      const [pontoRes, gestaoRes] = await Promise.all([
+        carregarPontoRegistrosDiaLote(supabase, fids, diaIso),
+        carregarPresencaGestaoDiaLote(supabase, fids, diaIso),
+      ]);
       if (cancelled) return;
-      setPontoRelatorioPorFid(pontoMap);
-      setGestaoRelatorioPorChave(gestaoMap);
+      setPontoRelatorioPorFid(pontoRes.mapa);
+      setGestaoRelatorioPorChave(gestaoRes.mapa);
       setLoadingRelatorioPresenca(false);
     })();
     return () => {

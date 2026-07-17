@@ -53,6 +53,17 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 
 - **recharts**: isolado em `vendor-charts` e carregado sob demanda no Overview Spin; imports estáticos residuais em dashboards específicos permanecem no backlog.
 
+### Fase 6 — Gargalos críticos de dados (jul/2026)
+
+| Área | Correção |
+|------|----------|
+| **Calendário RH — Relatório diário** | N+1 de `3N` RPCs → **2 RPCs em lote** (`rh_calendario_ponto_registros_dia_lote` + `rh_calendario_presenca_gestao_dia_lote`); migration `20261003140000_…`. |
+| **Financeiro — fechar ciclo** | N+1 perfil+upsert por par → 1× `.in()` de `cache_hora` + **upsert em lote**; `live_resultados` via `fetchLiveResultadosBatched`; fechos expirados com concorrência 3. |
+| **Banca de Jogo** | Dump all-time → janela de 13 competências (`solicitado_em`/`liberado_em`); colunas explícitas; catálogos em `Promise.all`. |
+| **Portal RH / Academy (leitura)** | SQL com `status = publicado` + `published_at` na janela histórica; join de categoria estreito; receipts/participantes/autores em paralelo. |
+
+Pendências conscientes (próximas ondas): paginação server-side no Gerenciamento dos portais; N+1 da aprovação mensal do Calendário; virtualização Escala/Prestadores (Fases 7–8).
+
 ### Carga em duas fases (padrão para janelas históricas pesadas)
 
 Aplicado na aba **Posicionamento** do Overview Spin (`useLobbyPosicionamentoData.ts`) e documentado como padrão transversal em `.cursor/rules/global.mdc` (§ Carga de dados em duas fases):

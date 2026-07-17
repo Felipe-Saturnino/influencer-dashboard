@@ -14,7 +14,10 @@ import {
 import { stripHtmlText, type AcademyPostagemStatus } from "../../../lib/academyPortalWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { normalizarAnexosAcademyPortal, normalizarImagensAcademyPortal } from "../../../lib/academyPortalPostagemFiles";
-import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import {
+  getPeriodoHistoricoCompetencias,
+  isDataNoPeriodoHistoricoCompetencias,
+} from "../../../lib/dashboardHelpers";
 import { normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 import { autorIdPostagem, carregarMetaAutoresPortalAcademy, type AcademyPortalAutorInfo } from "../../../lib/academyPortalAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
@@ -366,12 +369,17 @@ export default function PortalAcademyPage() {
     setErro(null);
     try {
 
+    const { inicio: histInicio } = getPeriodoHistoricoCompetencias();
+    const catJoin = "categoria:academy_portal_categoria(slug,label,accent_hex)";
+
     const [catRes, comData, dicaData, manualData] = await Promise.all([
       supabase.from("academy_portal_categoria").select("*").order("sort_order", { ascending: true }),
       fetchAllPages<PostagemBase>(async (from, to) =>
         await supabase
           .from("academy_portal_comunicado")
-          .select("*, categoria:academy_portal_categoria(*)")
+          .select(`*, ${catJoin}`)
+          .eq("status", "publicado")
+          .gte("published_at", histInicio)
           .order("published_at", { ascending: false })
           .order("id", { ascending: true })
           .range(from, to)
@@ -379,7 +387,9 @@ export default function PortalAcademyPage() {
       fetchAllPages<PostagemBase & { jogo_mesa?: string[] | null }>(async (from, to) =>
         await supabase
           .from("academy_portal_dica")
-          .select("*, categoria:academy_portal_categoria(*)")
+          .select(`*, ${catJoin}`)
+          .eq("status", "publicado")
+          .gte("published_at", histInicio)
           .order("published_at", { ascending: false })
           .order("id", { ascending: true })
           .range(from, to)
@@ -387,7 +397,9 @@ export default function PortalAcademyPage() {
       fetchAllPages<ManualRow>(async (from, to) =>
         await supabase
           .from("academy_portal_manual")
-          .select("*, categoria:academy_portal_categoria(*)")
+          .select(`*, ${catJoin}`)
+          .eq("status", "publicado")
+          .gte("published_at", histInicio)
           .order("published_at", { ascending: false })
           .order("id", { ascending: true })
           .range(from, to)
@@ -404,35 +416,36 @@ export default function PortalAcademyPage() {
     const visivel = (status: AcademyPostagemStatus | null | undefined) => isPostagemPublica(status);
 
     const comRows = comData.filter((c) => visivel(c.status));
-    const dicaRows = dicaData.filter((d) =>
-      visivel(d.status),
-    );
+    const dicaRows = dicaData.filter((d) => visivel(d.status));
     const manualRows = manualData.filter((m) => visivel(m.status));
 
     setComunicados(comRows);
     setDicas(dicaRows);
     setManuais(manualRows);
 
-    const recData = await fetchAllPages<AcademyPortalReadReceiptRow>(async (from, to) =>
-      await supabase
-        .from("academy_portal_read_receipt")
-        .select("content_id, read_at, acknowledged_at")
-        .eq("user_id", user.id)
-        .range(from, to)
-    );
+    const userIds = new Set<string>();
+    for (const row of [...comRows, ...dicaRows, ...manualRows]) {
+      const aid = autorIdPostagem(row);
+      if (aid) userIds.add(aid);
+    }
+
+    const [recData, meta] = await Promise.all([
+      fetchAllPages<AcademyPortalReadReceiptRow>(async (from, to) =>
+        await supabase
+          .from("academy_portal_read_receipt")
+          .select("content_id, read_at, acknowledged_at")
+          .eq("user_id", user.id)
+          .range(from, to)
+      ),
+      carregarMetaAutoresPortalAcademy([...userIds]),
+    ]);
 
     const recMap = new Map<string, AcademyPortalReadReceiptRow>();
     for (const row of recData) {
       recMap.set(academyManualReceiptKey(row.content_id), row);
     }
     setReceipts(recMap);
-
-    const userIds = new Set<string>();
-    for (const row of [...comRows, ...dicaRows, ...manualRows]) {
-      const aid = autorIdPostagem(row);
-      if (aid) userIds.add(aid);
-    }
-    setMetaAutores(await carregarMetaAutoresPortalAcademy([...userIds]));
+    setMetaAutores(meta);
     } catch (error) {
       console.error("[PortalAcademy] carregar:", error);
       setErro(ERRO_CARREGAR);
