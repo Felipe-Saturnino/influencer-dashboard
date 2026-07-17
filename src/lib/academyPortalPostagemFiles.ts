@@ -4,18 +4,47 @@ export const ACADEMY_PORTAL_ASSETS_BUCKET = "academy-portal-assets";
 
 export type AcademyPortalAnexoRef = { path: string; nome: string };
 
+/** MIME aceitos pelo bucket — fallback quando o browser envia vazio ou octet-stream. */
+const MIME_POR_EXTENSAO: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
+export function contentTypeAcademyPortalAsset(file: File): string | undefined {
+  const typed = file.type?.trim();
+  if (typed && typed !== "application/octet-stream") return typed;
+  const ext = file.name.includes(".") ? file.name.split(".").pop()?.toLowerCase() ?? "" : "";
+  return MIME_POR_EXTENSAO[ext];
+}
+
 export async function uploadAcademyPortalAsset(
   file: File,
   pasta: "imagens" | "anexos",
 ): Promise<{ path: string; error: string | null }> {
-  const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
+  const extRaw = file.name.includes(".") ? file.name.split(".").pop() : "bin";
+  const ext = (extRaw ?? "bin").toLowerCase();
   const path = `${pasta}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from(ACADEMY_PORTAL_ASSETS_BUCKET).upload(path, file, {
-    upsert: false,
-    contentType: file.type || undefined,
-  });
-  if (error) return { path: "", error: error.message };
-  return { path, error: null };
+  const contentType = contentTypeAcademyPortalAsset(file);
+  try {
+    const { error } = await supabase.storage.from(ACADEMY_PORTAL_ASSETS_BUCKET).upload(path, file, {
+      upsert: false,
+      contentType,
+    });
+    if (error) return { path: "", error: error.message };
+    return { path, error: null };
+  } catch (e) {
+    console.error("[uploadAcademyPortalAsset]", e);
+    return { path: "", error: "Falha de rede ao enviar o arquivo." };
+  }
 }
 
 export async function uploadAcademyPortalAssets(
