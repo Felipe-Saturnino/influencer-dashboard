@@ -1,4 +1,7 @@
-import { fmtDate, getDatasDoMes } from "../../../lib/dashboardHelpers";
+import {
+  getDatasDoMes,
+  getPeriodoHistoricoCompetencias,
+} from "../../../lib/dashboardHelpers";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { supabase } from "../../../lib/supabase";
 
@@ -8,7 +11,7 @@ export function periodoStreamersFiltro(
   historico: boolean,
   mesSelecionado: { ano: number; mes: number } | undefined,
 ): { inicio: string; fim: string } | null {
-  if (historico) return { inicio: "2020-01-01", fim: fmtDate(new Date()) };
+  if (historico) return getPeriodoHistoricoCompetencias();
   if (!mesSelecionado) return null;
   return getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
 }

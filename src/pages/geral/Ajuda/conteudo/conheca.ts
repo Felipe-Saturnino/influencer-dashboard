@@ -9,7 +9,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período — nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela plataforma. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade com role=\"tablist\").",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores — permitindo comparar futuramente a competência atual com a mesma competência do ano anterior. Nesse modo a navegação de mês fica desativada e os subtítulos dos blocos principais passam a mostrar \"acumulado\" (o comparativo MoM do mês anterior deixa de aparecer nos KPIs Executivos).\n\nO filtro de influencer restringe todas as abas ao influencer selecionado. O filtro de operadora restringe aos influencers vinculados àquela plataforma. Ambos os filtros são aplicados simultaneamente em todas as abas ao trocar de aba.\n\nEnquanto uma aba carrega dados, a barra de filtros pode exibir \"Carregando…\" — os filtros permanecem os mesmos ao mudar entre Overview, Conversão e Financeiro.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro (padrão de acessibilidade com role=\"tablist\").",
       },
       {
         subtitulo: "Aba Overview — KPIs e Ranking",
@@ -43,7 +43,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas laterais para navegar entre o mês atual e os dois meses anteriores. O botão Histórico exibe o acumulado dos últimos 12 meses em vez de um mês específico — nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por operadora. Em Estúdio Dedicado / Estúdio Network a lista contém apenas operadoras com mesas daquele tipo. Com **Todas Operadoras**, os valores financeiros são somados entre operadoras visíveis.",
+          "Use as setas laterais para navegar entre o mês atual e os dois meses anteriores. O botão Histórico exibe 13 competências mensais — a atual e as 12 anteriores — em vez de um mês específico. Nesse modo, a navegação de mês fica desativada.\n\nQuando disponível, o seletor de operadora permite filtrar os dados por operadora. Em Estúdio Dedicado / Estúdio Network a lista contém apenas operadoras com mesas daquele tipo. Com **Todas Operadoras**, os valores financeiros são somados entre operadoras visíveis.",
       },
       {
         subtitulo: "KPIs Consolidados",
@@ -92,7 +92,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe o acumulado de todo o período disponível.\n\nO filtro Operadoras aparece nas abas Overview e Conversão (quando visível para o seu perfil): KPIs, funis e tabelas mostram apenas campanhas da operadora selecionada, conforme cadastro em Marketing → Campanhas. Perfil operador vê automaticamente só a própria operadora, sem dropdown. Nas abas Impulsionamento e Alcance o filtro não é exibido — impulsionamento Meta e alcance orgânico são sempre globais (páginas Spin).\n\nAs quatro abas compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
+          "Use as setas para navegar entre os meses disponíveis desde Janeiro de 2026, quando os dados de mídias sociais passaram a ser registrados. O botão Histórico exibe 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro Operadoras aparece nas abas Overview e Conversão (quando visível para o seu perfil): KPIs, funis e tabelas mostram apenas campanhas da operadora selecionada, conforme cadastro em Marketing → Campanhas. Perfil operador vê automaticamente só a própria operadora, sem dropdown. Nas abas Impulsionamento e Alcance o filtro não é exibido — impulsionamento Meta e alcance orgânico são sempre globais (páginas Spin).\n\nAs quatro abas compartilham o mesmo período. Com o foco em uma aba, use ← → do teclado para alternar (tablist).",
       },
       {
         subtitulo: "Aba Overview — Conversão por Campanha",
@@ -126,7 +126,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de todo o período.\n\nO filtro de influencer restringe a visão a um único influencer — quando selecionado, todos os blocos refletem apenas os dados daquele influencer.\n\nO filtro de operadora restringe aos dados de uma plataforma específica.\n\nSe um influencer selecionado não tiver dados no novo período após trocar de mês, o filtro é removido automaticamente e uma notificação amarela é exibida no topo.",
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro de influencer restringe a visão a um único influencer — quando selecionado, todos os blocos refletem apenas os dados daquele influencer.\n\nO filtro de operadora restringe aos dados de uma plataforma específica.\n\nSe um influencer selecionado não tiver dados no novo período após trocar de mês, o filtro é removido automaticamente e uma notificação amarela é exibida no topo.",
       },
       {
         subtitulo: "KPIs Executivos",
@@ -160,7 +160,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de abril/2026). O botão Histórico exibe o acumulado de todo o período — o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
+          "Use as setas para navegar entre os meses disponíveis (a partir de abril/2026). O botão Histórico exibe 13 competências mensais — a atual e as 12 anteriores —, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
       },
       {
         subtitulo: "Aba Escala — KPIs Consolidados",
@@ -277,7 +277,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Navegação e Período",
         texto:
-          "Use as setas para navegar entre semanas (rótulos acessíveis \"Semana anterior\" / \"Próxima semana\") ou ative o botão Histórico para ver todo o período validado disponível de uma vez — no mesmo espírito do modo Histórico dos dashboards Streamers. No modo Histórico, as setas ficam desabilitadas, os KPIs e a lista refletem o acumulado e o subtítulo dos blocos pode indicar \"acumulado\".\n\nOs filtros de Influencer (multi-seleção; agregadora **Todos Influencers**; pesquisa no painel quando há mais de cinco nomes) e Operadora aparecem na mesma linha da navegação, para perfis com acesso a múltiplos escopos. Enquanto os dados carregam, um indicador de carregamento pode aparecer na área principal.",
+          "Use as setas para navegar entre semanas (rótulos acessíveis \"Semana anterior\" / \"Próxima semana\") ou ative o botão Histórico para ver o acumulado de 13 competências mensais — a atual e as 12 anteriores. No modo Histórico, as setas ficam desabilitadas, os KPIs e a lista refletem o acumulado e o subtítulo dos blocos pode indicar \"acumulado\".\n\nOs filtros de Influencer (multi-seleção; agregadora **Todos Influencers**; pesquisa no painel quando há mais de cinco nomes) e Operadora aparecem na mesma linha da navegação, para perfis com acesso a múltiplos escopos. Enquanto os dados carregam, um indicador de carregamento pode aparecer na área principal.",
       },
       {
         subtitulo: "Filtro de Status",
@@ -519,7 +519,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Período",
         texto:
-          "A página abre com **Histórico** ativo (**Todo o período** — todas as denúncias desde maio/2026). Desligue Histórico para navegar mês a mês pelas setas do carrossel.",
+          "A página abre com **Histórico** ativo (**Todo o período** — competência atual e 12 anteriores). Desligue Histórico para navegar mês a mês pelas setas do carrossel.",
       },
       {
         subtitulo: "Atendimento",
@@ -725,7 +725,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver **Todo o período**. Com escopo amplo, filtre por **Staff** na barra; com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra; com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
       },
       {
         subtitulo: "Status e ações",
@@ -749,7 +749,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas e filtros",
         texto:
-          "**Comunicados** — sub-abas Todos, Treinamentos e Geral.\n\n**Dicas** e **Manuais** — sub-abas Todos, Jogos, Imagem, Comunicação e Geral.\n\nUse o carrossel de mês ou **Histórico** para ver **Todo o período**. A busca ignora acentos e maiúsculas.",
+          "**Comunicados** — sub-abas Todos, Treinamentos e Geral.\n\n**Dicas** e **Manuais** — sub-abas Todos, Jogos, Imagem, Comunicação e Geral.\n\nUse o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). A busca ignora acentos e maiúsculas.",
       },
       {
         subtitulo: "Nova postagem",
@@ -875,7 +875,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Informativos",
         texto:
-          "Lista os informativos já publicados, filtrados por mês (data de postagem), modo Histórico (todo o período) e busca por palavras-chave no assunto ou na descrição.",
+          "Lista os informativos já publicados, filtrados por mês (data de postagem), modo Histórico (competência atual e 12 anteriores) e busca por palavras-chave no assunto ou na descrição.",
       },
       {
         subtitulo: "Gerenciamento de Informativos",
@@ -942,7 +942,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação de Comunicados",
         texto:
-          "Use o carrossel de meses para navegar por período com base na data de publicação. Os pills de categoria (Todos, Urgente, Geral, Pagamento, Eventos) filtram por tipo.\n\nO botão Histórico exibe todas as postagens publicadas de todos os meses (Todo o período) — o carrossel de mês fica desabilitado nesse modo. Postagens arquivadas não aparecem nestas abas de leitura.\n\nA barra de pesquisa filtra por palavras no título ou no corpo do comunicado.\n\nCom o foco na lista de abas do portal, use as setas ← → do teclado para alternar entre Comunicados, Políticas, RH Talks e Gerenciamento (quando disponível).",
+          "Use o carrossel de meses para navegar por período com base na data de publicação. Os pills de categoria (Todos, Urgente, Geral, Pagamento, Eventos) filtram por tipo.\n\nO botão Histórico exibe as postagens publicadas na competência atual e nas 12 anteriores (Todo o período) — o carrossel de mês fica desabilitado nesse modo. Postagens arquivadas não aparecem nestas abas de leitura.\n\nA barra de pesquisa filtra por palavras no título ou no corpo do comunicado.\n\nCom o foco na lista de abas do portal, use as setas ← → do teclado para alternar entre Comunicados, Políticas, RH Talks e Gerenciamento (quando disponível).",
       },
       {
         subtitulo: "Políticas e Normativas",
@@ -957,7 +957,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Postagens (Gestores)",
         texto:
-          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com todas as postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (ícone Archive + pop-up de confirmação)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra todas as postagens de todos os meses; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
+          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (ícone Archive + pop-up de confirmação)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra a competência atual e as 12 anteriores; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
       },
       {
         subtitulo: "Criar e Publicar Postagens",

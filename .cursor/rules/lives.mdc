@@ -71,7 +71,7 @@ Todo bloco de filtros desta seção usa fundo transparente de marca.
 Usar **`src/lib/carouselNavStyles.ts`** (`getCarouselBtnNavStyle`, `getCarouselPeriodLabelStyle`) — ver Brand MDC §7. Não redeclarar `btnNav` local.
 
 - **Agenda:** `aria-label` `Período anterior` / `Próximo período`; rótulo = título da vista (mês/semana/dia).
-- **Feedback:** `Semana anterior` / `Próxima semana`; rótulo da semana ou `Todo o período` em Histórico.
+- **Feedback:** `Semana anterior` / `Próxima semana`; rótulo da semana ou `Todo o período` em Histórico. O acumulado respeita 13 competências mensais inclusivas (atual + 12 anteriores).
 
 ### Barra da Agenda — linha principal (obrigatório)
 
@@ -119,7 +119,7 @@ Usar **`FiltroStatusSemanticoPill`** / **`FiltroPlataformaSemanticoPill`** — o
 
 ### Botão Histórico (páginas com carrossel de semanas)
 
-Usar **`FiltroHistoricoButton`** (`components/dashboard`) — mesmo padrão visual que **Overview Influencer** (Global § Botão Histórico). Em **Feedback:** carrossel de semana; rótulo central **`Todo o período`** quando histórico ativo.
+Usar **`FiltroHistoricoButton`** (`components/dashboard`) — mesmo padrão visual que **Overview Influencer** (Global § Botão Histórico). Em **Feedback:** carrossel de semana; rótulo central **`Todo o período`** quando histórico ativo; dados limitados às 13 competências canônicas.
 
 ```tsx
 import { FiltroHistoricoButton } from "../../../components/dashboard";

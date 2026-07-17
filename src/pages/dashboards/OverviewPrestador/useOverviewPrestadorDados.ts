@@ -16,7 +16,10 @@ import {
   idxMesInicialEscalaCarrossel,
   type MesCarrosselEscalaEntry,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
-import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import {
+  getPeriodoComparativoMoM,
+  HISTORICO_COMPETENCIAS_MESES,
+} from "../../../lib/dashboardHelpers";
 import type { PresencaDiaGestao } from "../../../lib/rhCalendarioPresencaGestao";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
@@ -278,11 +281,15 @@ export function useOverviewPrestadorDados(
   }, [prestadores]);
 
   const staffSelecionadoId = filtroStaffIds[0] ?? null;
+  const mesesHistorico = useMemo(
+    () => mesesDisponiveis.slice(-HISTORICO_COMPETENCIAS_MESES),
+    [mesesDisponiveis],
+  );
 
   const periodoComparativo = useMemo(() => {
     if (historico || !mesSelecionado) {
-      const primeiro = mesesDisponiveis[0];
-      const ultimo = mesesDisponiveis[mesesDisponiveis.length - 1];
+      const primeiro = mesesHistorico[0];
+      const ultimo = mesesHistorico[mesesHistorico.length - 1];
       if (!primeiro || !ultimo) {
         return {
           atual: { inicio: "1970-01-01", fim: "1970-01-01" },
@@ -298,13 +305,13 @@ export function useOverviewPrestadorDados(
       };
     }
     return getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
-  }, [historico, mesSelecionado, mesesDisponiveis]);
+  }, [historico, mesSelecionado, mesesHistorico]);
 
   const mesesMetricasAtual = useMemo(() => {
-    if (historico) return mesesDisponiveis.map((m) => ({ ano: m.ano, mes: m.mes }));
+    if (historico) return mesesHistorico.map((m) => ({ ano: m.ano, mes: m.mes }));
     if (!mesSelecionado) return [];
     return [{ ano: mesSelecionado.ano, mes: mesSelecionado.mes }];
-  }, [historico, mesesDisponiveis, mesSelecionado]);
+  }, [historico, mesesHistorico, mesSelecionado]);
 
   const mesesMetricasAnterior = useMemo(() => {
     if (historico || !mesSelecionado) return [];

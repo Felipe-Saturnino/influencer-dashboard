@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase";
 import { buscarInvestimentoPago } from "../../../lib/investimentoPago";
 import { ROLES_PARIDADE_INFLUENCER } from "../../../lib/staffRoles";
+import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { periodoDoMes, podeVerPagamentosAgenteFinanceiro } from "./financeiroCiclos";
 import type { BlocoFiltros } from "./financeiroFiltros";
 import type {
@@ -152,8 +153,9 @@ export async function loadFinanceiroMesData({
   podeVerInfluencer,
 }: FinanceiroMesLoadParams): Promise<FinanceiroMesData> {
   const { filterInfluencers, filterOperadora, filtroOp, mesFiltro, historico } = filtros;
-  const mes = historico ? "" : mesFiltro;
-  const periodo = periodoDoMes(mes);
+  const periodo = historico
+    ? getPeriodoHistoricoCompetencias()
+    : periodoDoMes(mesFiltro);
   const incluirAgentes = podeVerPagamentosAgenteFinanceiro(userRole);
 
   let cicloIds: string[] = [];

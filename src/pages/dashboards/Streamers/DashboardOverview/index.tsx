@@ -20,12 +20,12 @@ import {
   type StatusLabel,
 } from "../../../../lib/dashboardConstants";
 import {
-  fmt,
   fmtBRL,
   fmtHorasTotal,
   getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
+  getPeriodoHistoricoCompetencias,
   getStatusROI,
 } from "../../../../lib/dashboardHelpers";
 import {
@@ -339,7 +339,7 @@ export default function DashboardOverview() {
       let periodo: { inicio: string; fim: string };
       let mom: ReturnType<typeof getPeriodoComparativoMoM> | null = null;
       if (historico) {
-        periodo = { inicio: "2020-01-01", fim: fmt(new Date()) };
+        periodo = getPeriodoHistoricoCompetencias();
         const analytics = await fetchInfluencerAnalyticsPeriodoCached({
           inicio: periodo.inicio,
           fim: periodo.fim,

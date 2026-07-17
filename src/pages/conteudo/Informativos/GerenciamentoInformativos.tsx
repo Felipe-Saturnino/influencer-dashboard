@@ -33,6 +33,7 @@ import {
   type OperadoraAtivaOption,
 } from "../../../lib/informativosOperadorEscopo";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { ModalCriarInformativo } from "./ModalCriarInformativo";
 import { ModalHistoricoInformativo } from "./ModalHistoricoInformativo";
 
@@ -286,6 +287,12 @@ export function GerenciamentoInformativos({
       }
       if (!modoHistorico && !row.publishedAt && mes && !itemNoMesCarrossel(row.createdAt, mes)) {
         if (row.status === "rascunho" || row.status === "aprovacao") return false;
+      }
+      if (
+        modoHistorico &&
+        !isDataNoPeriodoHistoricoCompetencias(row.publishedAt ?? row.createdAt)
+      ) {
+        return false;
       }
       if (q && !row.textoBusca.includes(q)) return false;
       return true;

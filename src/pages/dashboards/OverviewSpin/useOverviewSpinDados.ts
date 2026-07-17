@@ -100,7 +100,7 @@ export function useOverviewSpinDados(
       "overview-spin",
       "dados",
       canal,
-      historico ? "historico-12m" : `${mesSelecionado?.ano ?? 0}-${mesSelecionado?.mes ?? 0}`,
+      historico ? "historico-13m" : `${mesSelecionado?.ano ?? 0}-${mesSelecionado?.mes ?? 0}`,
       slugList == null ? "sem-restricao" : slugList.join("|"),
       modoAgregadoTodasOperadoras,
     ],

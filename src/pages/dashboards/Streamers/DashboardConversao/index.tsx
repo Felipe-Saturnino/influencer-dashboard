@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { getIdxMesCarrosselPadrao } from "../../../../lib/dashboardHelpers";
+import {
+  getIdxMesCarrosselPadrao,
+  getPeriodoHistoricoCompetencias,
+} from "../../../../lib/dashboardHelpers";
 import { useStreamersFiltrosOptional } from "../StreamersFiltrosContext";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardFiltros } from "../../../../hooks/useDashboardFiltros";
@@ -492,7 +495,7 @@ export default function DashboardConversao() {
       const perfisLista: InfluencerPerfil[] = perfis;
 
       const { inicio, fim } = historico || !mesSelecionado
-        ? { inicio: "2020-01-01", fim: new Date().toISOString().split("T")[0] }
+        ? getPeriodoHistoricoCompetencias()
         : getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
       const operadoraSlugsQuery = operadoraSlugsForcado?.length
         ? operadoraSlugsForcado

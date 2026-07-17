@@ -14,6 +14,7 @@ import {
 import { stripHtmlText, type AcademyPostagemStatus } from "../../../lib/academyPortalWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { normalizarAnexosAcademyPortal, normalizarImagensAcademyPortal } from "../../../lib/academyPortalPostagemFiles";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 import { autorIdPostagem, carregarMetaAutoresPortalAcademy, type AcademyPortalAutorInfo } from "../../../lib/academyPortalAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
@@ -224,6 +225,8 @@ function filtrarListaPortal<T extends PostagemBase>(
   if (!modoHistorico) {
     const mesSel = meses[idxMes];
     out = out.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
+  } else {
+    out = out.filter((c) => isDataNoPeriodoHistoricoCompetencias(c.published_at));
   }
   if (filtroCat !== "todos") {
     const cfg = configs.find((x) => x.key === filtroCat);
@@ -260,6 +263,8 @@ function filtrarManuaisPortal(
   if (!modoHistorico) {
     const mesSel = meses[idxMes];
     out = out.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
+  } else {
+    out = out.filter((c) => isDataNoPeriodoHistoricoCompetencias(c.published_at));
   }
   if (filtroCat !== "todos") {
     const cfg = configs.find((x) => x.key === filtroCat);

@@ -13,6 +13,7 @@ import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 import { getPageContentBoxShadow } from "../../../lib/pageContentBoxStyles";
 import { stripHtmlText } from "../../../lib/informativosWorkflow";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
 import { InformativosBlocoFiltros } from "./InformativosBlocoFiltros";
@@ -141,6 +142,7 @@ export default function InformativosPage() {
     const q = buscaDeb;
     return lista.filter((item) => {
       if (!modoHistorico && mes && !itemNoMesCarrossel(item.published_at, mes)) return false;
+      if (modoHistorico && !isDataNoPeriodoHistoricoCompetencias(item.published_at)) return false;
       if (q) {
         const texto = normalizarTextoBusca(`${item.assunto} ${stripHtmlText(item.descricao)}`);
         if (!texto.includes(q)) return false;

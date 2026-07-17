@@ -1,4 +1,7 @@
-import { getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import {
+  getPeriodoComparativoMoM,
+  getPeriodoHistoricoCompetencias,
+} from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
@@ -32,9 +35,6 @@ type PorTabelaRaw = Parameters<typeof mapPorTabelaV2>[0];
 type MonthlyUapArpu = { uap: number | null; arpu: number | null };
 type MonthlyUapArpuRaw = MonthlyUapArpu & { operadora_slug: string };
 
-/** Histórico de negócio: mês atual + 11 meses anteriores. */
-export const OVERVIEW_SPIN_HISTORICO_MESES = 12;
-
 export type OverviewSpinDadosSnapshot = {
   dailyData: DailyRow[];
   monthlyData: MonthlyRow[];
@@ -61,16 +61,8 @@ export const OVERVIEW_SPIN_DADOS_VAZIO: OverviewSpinDadosSnapshot = {
   monthlyRawUnmerged: [],
 };
 
-function isoLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 export function getOverviewSpinHistoricoPeriodo(ref = new Date()): { inicio: string; fim: string } {
-  const inicio = new Date(ref.getFullYear(), ref.getMonth() - (OVERVIEW_SPIN_HISTORICO_MESES - 1), 1);
-  return { inicio: isoLocal(inicio), fim: isoLocal(ref) };
+  return getPeriodoHistoricoCompetencias(ref);
 }
 
 async function fetchCanalHistorico(

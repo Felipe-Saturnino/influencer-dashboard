@@ -12,6 +12,30 @@ export function fmtDate(d: Date): string {
 /** Alias para compatibilidade */
 export const fmt = fmtDate;
 
+/** Histórico padrão: competência atual + 12 competências anteriores (janela YoY inclusiva). */
+export const HISTORICO_COMPETENCIAS_MESES = 13;
+
+export function getPeriodoHistoricoCompetencias(
+  ref: Date = new Date(),
+): { inicio: string; fim: string } {
+  const inicio = new Date(
+    ref.getFullYear(),
+    ref.getMonth() - (HISTORICO_COMPETENCIAS_MESES - 1),
+    1,
+  );
+  return { inicio: fmtDate(inicio), fim: fmtDate(ref) };
+}
+
+export function isDataNoPeriodoHistoricoCompetencias(
+  value: string | null | undefined,
+  ref: Date = new Date(),
+): boolean {
+  if (!value) return false;
+  const dataIso = value.slice(0, 10);
+  const { inicio, fim } = getPeriodoHistoricoCompetencias(ref);
+  return dataIso >= inicio && dataIso <= fim;
+}
+
 export function fmtBRL(v: number): string {
   const sign = v < 0 ? "-" : "";
   return sign + Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

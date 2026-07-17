@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { stripHtmlText, type RhPostagemStatus, type RhPostagemTipoUi } from "../../../lib/portalRhWorkflow";
 import { normalizarTextoBusca } from "../../../lib/searchText";
+import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
@@ -673,6 +674,8 @@ export default function PortalRhPage() {
     if (!modoHistorico) {
       const mesSel = mesesCom[idxMesCom];
       list = list.filter((c) => itemNoMesCarrossel(c.published_at, mesSel));
+    } else {
+      list = list.filter((c) => isDataNoPeriodoHistoricoCompetencias(c.published_at));
     }
     if (filtroCatCom !== "todos") {
       const cfg = SUBTABS_COMUNICADO.find((x) => x.key === filtroCatCom);
@@ -720,6 +723,8 @@ export default function PortalRhPage() {
     if (!modoHistorico) {
       const mesSel = mesesPol[idxMesPol];
       list = list.filter((d) => itemNoMesCarrossel(d.published_at, mesSel));
+    } else {
+      list = list.filter((d) => isDataNoPeriodoHistoricoCompetencias(d.published_at));
     }
     if (filtroCatPol !== "todos") {
       list = list.filter((d) => itemNoFiltroDocumento(d, filtroCatPol));
@@ -749,6 +754,8 @@ export default function PortalRhPage() {
     if (!modoHistorico) {
       const mesSel = mesesTalksDisponiveis[idxMesTalk];
       list = list.filter((tk) => itemNoMesCarrossel(tk.published_at, mesSel));
+    } else {
+      list = list.filter((tk) => isDataNoPeriodoHistoricoCompetencias(tk.published_at));
     }
     if (buscaDeb) {
       list = list.filter(

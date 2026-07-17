@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BancaRowDb } from "@/pages/aquisicao/BancaJogo/bancaJogoTypes";
 import {
   formatarCPFVisivel,
@@ -63,6 +63,8 @@ describe("periodoDoMes", () => {
 describe("rowNoMesSolicitacao", () => {
   const periodo = { inicio: "2026-03-01", fim: "2026-03-31" };
 
+  afterEach(() => vi.useRealTimers());
+
   it("inclui linha dentro do período", () => {
     expect(rowNoMesSolicitacao(rowBase(), periodo, false)).toBe(true);
   });
@@ -73,10 +75,15 @@ describe("rowNoMesSolicitacao", () => {
     ).toBe(false);
   });
 
-  it("histórico ignora período", () => {
+  it("histórico limita a competência atual e as 12 anteriores", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 16));
     expect(
-      rowNoMesSolicitacao(rowBase({ solicitado_em: "2025-01-01T00:00:00.000Z" }), periodo, true),
+      rowNoMesSolicitacao(rowBase({ solicitado_em: "2025-07-01T00:00:00.000Z" }), periodo, true),
     ).toBe(true);
+    expect(
+      rowNoMesSolicitacao(rowBase({ solicitado_em: "2025-06-30T23:59:59.000Z" }), periodo, true),
+    ).toBe(false);
   });
 });
 

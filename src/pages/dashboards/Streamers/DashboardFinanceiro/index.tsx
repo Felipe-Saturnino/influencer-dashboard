@@ -17,7 +17,13 @@ import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
-import { fmtBRL, getIdxMesCarrosselPadrao, getMesesDisponiveis, getPeriodoComparativoMoM } from "../../../../lib/dashboardHelpers";
+import {
+  fmtBRL,
+  getIdxMesCarrosselPadrao,
+  getMesesDisponiveis,
+  getPeriodoComparativoMoM,
+  getPeriodoHistoricoCompetencias,
+} from "../../../../lib/dashboardHelpers";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -267,9 +273,8 @@ export default function DashboardFinanceiro() {
 
       const perfisLista: InfluencerPerfil[] = perfis;
 
-      const hojeNow = new Date();
       const { inicio: periodoInicio, fim: periodoFim } = historico || !mesSelecionado
-        ? { inicio: "2020-01-01", fim: hojeNow.toISOString().split("T")[0] }
+        ? getPeriodoHistoricoCompetencias()
         : getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).atual;
       const operadoraSlugsQuery = operadoraSlugsForcado?.length
         ? operadoraSlugsForcado

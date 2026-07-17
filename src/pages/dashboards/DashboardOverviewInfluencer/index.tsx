@@ -20,6 +20,7 @@ import {
   getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
   getPeriodoComparativoMoM,
+  getPeriodoHistoricoCompetencias,
   getOntemIsoLocal,
   isCarrosselMesCivilAtual,
 } from "../../../lib/dashboardHelpers";
@@ -536,7 +537,7 @@ export default function DashboardOverviewInfluencer() {
           ? getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes)
           : null;
       const { inicio, fim } = historico
-        ? { inicio: "2020-01-01", fim: fmt(new Date()) }
+        ? getPeriodoHistoricoCompetencias()
         : mom!.atual;
 
       const infIdsFiltro = influencersVisiveis.length === 0 ? [] : influencersVisiveis;

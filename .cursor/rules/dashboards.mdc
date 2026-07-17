@@ -97,7 +97,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Filtro de operadora (referência de produto):** `FiltroOperadoraSelect` na FilterBar — opção agregadora **Todas Operadoras**, ícone Shield no campo (Global + Brand). Não usar como modelo o markup legado de outras páginas.
 - **UAP no Overview consolidado:** soma dos UAP de cada canal (não é UAP único entre Dedicado e Network) — documentar em Ajuda.
 - **Abas financeiras** partilham a mesma FilterBar (mês, Histórico, operadora).
-- **Janela do carrossel:** mês civil atual + **2 meses anteriores** (ordem cronológica crescente). O modo **Histórico** consulta no máximo **12 meses**, incluindo o atual; não voltar a buscar desde o início da base.
+- **Janela do carrossel:** mês civil atual + **2 meses anteriores** (ordem cronológica crescente). O modo **Histórico** consulta **13 competências mensais inclusivas** (competência atual + 12 anteriores), via helper canônico do Global; não voltar a buscar desde o início da base.
 - **Cache de dados:** consultas financeiras e catálogos usam TanStack Query com chave que inclui canal, período, filtro de operadora e slugs efetivamente permitidos pelo escopo. Nunca omitir o escopo da `queryKey`.
 - **Gráficos:** o chunk Recharts de Detalhamento e Comparativo de Jogo é carregado somente quando o usuário alterna para **Gráfico**; a visualização padrão em tabela não deve importar Recharts.
 - **Blocos abaixo da dobra:** conteúdo interativo pesado usa `RenderWhenVisible` com margem antecipada para preservar a rolagem sem montar DOM distante da viewport.
@@ -124,7 +124,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **PageKey:** `dash_overview_prestador` — pasta `OverviewPrestador/`.
 - **Duas abas:** **Escala** (implementada) e **Performance** (placeholder «Conteúdo em desenvolvimento.»). Abas via `FiltroBarTabButton` + `useRouteTab` (`escala` | `performance`).
 - **Carrossel de mês:** `getMesesDisponiveisEscalaCarrossel` (abril/2026+) — mesma janela do Calendário RH / Gestão de Escala.
-- **Histórico:** `FiltroHistoricoButton`; rótulo central **Todo o período**; MoM desligado nos KPIs.
+- **Histórico:** `FiltroHistoricoButton`; rótulo central **Todo o período**; janela de 13 competências inclusivas; MoM desligado nos KPIs.
 - **Filtros Time / Staff:** `FiltroCalendarioTimeSelect` + `FiltroCalendarioStaffSelect` (`mode="single"`) — catálogo e ordem de `rhCalendarioStaffFiltroHelpers.ts`. Staff filtra por time quando time ≠ agregador.
 - **Escopo próprios (`canView === "proprios"`):** ocultar filtros Time/Staff; auto-vincular `meuRhFuncionarioId` via e-mail de login (espelho Calendário RH). Default `proprios` para role `prestador` em `AppContext`.
 - **Staff obrigatório (gestores):** sem prestador selecionado → string **Selecione um prestador para visualizar os resultados.** (não a string global de período vazio).
@@ -594,6 +594,7 @@ O cálculo é o mesmo. O número difere por design — não é inconsistência.
 
 Quando `historico === true`:
 
+- Consultar/filtrar somente **13 competências mensais inclusivas** (atual + 12 anteriores) via `getPeriodoHistoricoCompetencias`
 - Desabilitar botões ← → com `opacity: 0.35` e `cursor: not-allowed`
 - Exibir `"Todo o período"` no lugar do mês
 - Ocultar comparativo MoM nos KpiCards (`isHistorico={true}`)

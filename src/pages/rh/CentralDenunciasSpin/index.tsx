@@ -6,7 +6,10 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { getIdxMesCarrosselPadrao } from "../../../lib/dashboardHelpers";
+import {
+  getIdxMesCarrosselPadrao,
+  getPeriodoHistoricoCompetencias,
+} from "../../../lib/dashboardHelpers";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
@@ -91,6 +94,14 @@ function rangeForMonth(ym: string): { start: string; end: string } {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+function rangeForHistorico(): { start: string; end: string } {
+  const periodo = getPeriodoHistoricoCompetencias();
+  return {
+    start: new Date(`${periodo.inicio}T00:00:00.000`).toISOString(),
+    end: new Date(`${periodo.fim}T23:59:59.999`).toISOString(),
+  };
+}
+
 export default function CentralDenunciasSpin() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -150,10 +161,9 @@ export default function CentralDenunciasSpin() {
     };
     for (const s of stats) {
       let q = supabase.from("canal_denuncias_spin").select("id", { count: "exact", head: true }).eq("status", s);
-      if (filtroPeriodoLista !== "historico") {
-        const { start, end } = rangeForMonth(filtroPeriodoLista);
-        q = q.gte("created_at", start).lte("created_at", end);
-      }
+      const { start, end } =
+        filtroPeriodoLista === "historico" ? rangeForHistorico() : rangeForMonth(filtroPeriodoLista);
+      q = q.gte("created_at", start).lte("created_at", end);
       const { count } = await q;
       next[s] = count ?? 0;
     }
@@ -168,10 +178,9 @@ export default function CentralDenunciasSpin() {
       .order("created_at", { ascending: false })
       .limit(200);
 
-    if (filtroPeriodoLista !== "historico") {
-      const { start, end } = rangeForMonth(filtroPeriodoLista);
-      q = q.gte("created_at", start).lte("created_at", end);
-    }
+    const { start, end } =
+      filtroPeriodoLista === "historico" ? rangeForHistorico() : rangeForMonth(filtroPeriodoLista);
+    q = q.gte("created_at", start).lte("created_at", end);
     if (filtroStatus !== "todos") {
       q = q.eq("status", filtroStatus);
     }

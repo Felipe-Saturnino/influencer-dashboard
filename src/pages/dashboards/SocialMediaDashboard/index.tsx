@@ -13,6 +13,7 @@ import {
   getMesesDisponiveis,
   getOntemIsoLocal,
   getPeriodoComparativoMoM,
+  getPeriodoHistoricoCompetencias,
   isCarrosselMesCivilAtual,
 } from "../../../lib/dashboardHelpers"
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
@@ -123,11 +124,11 @@ export default function SocialMediaDashboard() {
 
   // Datas do período selecionado (atual + janela do mês anterior alinhada ao MTD)
   const { start, end, startPrev, endPrev } = useMemo(() => {
-    const agora = new Date();
     if (historico) {
+      const periodoHistorico = getPeriodoHistoricoCompetencias();
       return {
-        start: `${MES_INICIO.ano}-${String(MES_INICIO.mes + 1).padStart(2, "0")}-01`,
-        end: agora.toISOString().slice(0, 10),
+        start: periodoHistorico.inicio,
+        end: periodoHistorico.fim,
         startPrev: null as string | null,
         endPrev: null as string | null,
       };
@@ -135,7 +136,7 @@ export default function SocialMediaDashboard() {
     if (!mesSelecionado) {
       return {
         start: "2026-01-01",
-        end: agora.toISOString().slice(0, 10),
+        end: getPeriodoHistoricoCompetencias().fim,
         startPrev: null,
         endPrev: null,
       };

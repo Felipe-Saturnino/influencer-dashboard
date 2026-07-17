@@ -6,6 +6,7 @@ import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
+import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
 import { fetchLiveResultadosBatched } from "../../../lib/supabasePaginate";
 import { Live, LiveResultado, LiveStatus } from "../../../types";
@@ -57,7 +58,10 @@ function getSemanasDisponiveis(): { start: Date; end: Date; label: string }[] {
 function getRangeSemana(semana: { start: Date; end: Date } | null, historico: boolean): { start: string; end: string } {
   const toISO = (d: Date) => d.toISOString().split("T")[0];
   const now = new Date();
-  if (historico) return { start: "2000-01-01", end: toISO(now) };
+  if (historico) {
+    const periodo = getPeriodoHistoricoCompetencias(now);
+    return { start: periodo.inicio, end: periodo.fim };
+  }
   if (!semana) return { start: toISO(now), end: toISO(now) };
   return { start: toISO(semana.start), end: toISO(semana.end) };
 }

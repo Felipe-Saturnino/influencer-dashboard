@@ -92,9 +92,9 @@ Status: Rascunho · Publicado · Arquivado. Ações: editar (rascunho), arquivar
 
 ### Filtros
 
-Carrossel mês + Histórico (`Todo o período`) por `published_at`; abas leitura só `status === publicado`.
+Carrossel mês + Histórico (`Todo o período`) por `published_at`; o Histórico usa 13 competências mensais inclusivas; abas leitura só `status === publicado`.
 
-Comunicados, dicas, manuais e recibos de leitura usam paginação interna (`fetchAllPages`) para preservar o histórico completo sem depender do limite padrão do PostgREST. Não aplicar hard cap silencioso ao modo **Todo o período**.
+Comunicados, dicas, manuais e recibos de leitura usam paginação interna (`fetchAllPages`) sem depender do limite padrão do PostgREST. A lista visível em **Todo o período** aplica a janela canônica de 13 competências; paginação server-side por período fica para a fase de otimização de dados.
 
 ### Strings de vazio
 
@@ -213,7 +213,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 ### Filtros
 
-- Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco; sem registros, default = mês corrente.
+- Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco e limitada às 13 competências canônicas; sem registros, default = mês corrente.
 - Time: select obrigatório GP / Shuffler.
 - Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.
