@@ -602,6 +602,17 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
   }
 
   if (situacao === "Folga") {
+    if (
+      temCheckIn &&
+      temCheckOut &&
+      gestao?.statusGestao !== "aprovado"
+    ) {
+      return {
+        acaoPrimaria: "aprovar",
+        mostrarHistorico: temHistorico,
+        mostrarTravessaoAcoes: false,
+      };
+    }
     return {
       acaoPrimaria: null,
       mostrarHistorico: temHistorico,

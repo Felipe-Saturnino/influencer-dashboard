@@ -25,32 +25,42 @@ export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
 }): Promise<string[]> {
   const { inicio, fim, filtroOperadora, operadoraSlugsForcado, podeVerInfluencer } = params;
 
-  const metricas = await fetchAllPages<{ influencer_id: string }>(async (from, to) => {
-    let q = supabase
-      .from("influencer_metricas")
-      .select("influencer_id")
-      .gte("data", inicio)
-      .lte("data", fim)
-      .order("influencer_id", { ascending: true })
-      .range(from, to);
-    if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
-    else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
-    return q;
-  });
-
-  const lives = await fetchAllPages<{ influencer_id: string }>(async (from, to) => {
-    let q = supabase
-      .from("lives")
-      .select("influencer_id")
-      .eq("status", "realizada")
-      .gte("data", inicio)
-      .lte("data", fim)
-      .order("influencer_id", { ascending: true })
-      .range(from, to);
-    if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
-    else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
-    return q;
-  });
+  const [metricas, lives, aliases] = await Promise.all([
+    fetchAllPages<{ influencer_id: string }>(async (from, to) => {
+      let q = supabase
+        .from("influencer_metricas")
+        .select("influencer_id")
+        .gte("data", inicio)
+        .lte("data", fim)
+        .order("influencer_id", { ascending: true })
+        .range(from, to);
+      if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+      else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
+      return q;
+    }),
+    fetchAllPages<{ influencer_id: string }>(async (from, to) => {
+      let q = supabase
+        .from("lives")
+        .select("influencer_id")
+        .eq("status", "realizada")
+        .gte("data", inicio)
+        .lte("data", fim)
+        .order("influencer_id", { ascending: true })
+        .range(from, to);
+      if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+      else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
+      return q;
+    }),
+    fetchAllPages<{ influencer_id: string }>(async (from, to) =>
+      supabase
+        .from("utm_aliases")
+        .select("influencer_id")
+        .eq("status", "mapeado")
+        .not("influencer_id", "is", null)
+        .order("influencer_id", { ascending: true })
+        .range(from, to),
+    ),
+  ]);
 
   const ids = new Set<string>();
   for (const m of metricas) {
@@ -59,16 +69,6 @@ export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
   for (const l of lives) {
     if (podeVerInfluencer(l.influencer_id)) ids.add(l.influencer_id);
   }
-
-  const aliases = await fetchAllPages<{ influencer_id: string }>(async (from, to) =>
-    supabase
-      .from("utm_aliases")
-      .select("influencer_id")
-      .eq("status", "mapeado")
-      .not("influencer_id", "is", null)
-      .order("influencer_id", { ascending: true })
-      .range(from, to),
-  );
   for (const a of aliases) {
     if (podeVerInfluencer(a.influencer_id)) ids.add(a.influencer_id);
   }

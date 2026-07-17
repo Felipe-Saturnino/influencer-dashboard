@@ -855,7 +855,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Calendário (RH)",
         definicao:
-          "Calendário operacional com turnos, trocas e compromissos — visibilidade da rotina de escala para gestores e colaboradores com permissão.",
+          "Calendário operacional com turnos, trocas, compromissos e presença. A visibilidade pode ser global ou seguir a cascata de liderança do Organograma; prestadores de Escritório recebem escala comercial automática.",
         referencia: "Calendário",
       },
       {

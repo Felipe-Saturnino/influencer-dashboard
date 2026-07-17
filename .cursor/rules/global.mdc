@@ -1085,6 +1085,29 @@ Quando não houver skeleton para o bloco principal:
 
 ---
 
+## Carga de dados em duas fases (padrão de eficiência)
+
+**Referência implementada:** aba **Posicionamento** do Overview Spin (`useLobbyPosicionamentoData.ts`) — contrato detalhado em `dashboards.mdc` § Posicionamento.
+
+**Quando aplicar (obrigatório em código novo):** a página/aba busca um **volume grande de dados** (janela histórica, matriz densa, lotes `.in()`) do qual **só uma fração** alimenta o primeiro paint (KPIs, snapshot, lista visível) — e o restante serve a uma vista secundária (heatmap, modo 7d/30d, gráfico expandido, comparativo).
+
+| Fase | Conteúdo | Regra |
+|---|-----|-----|
+| **1 — Essencial** | Só o necessário para o primeiro paint (período curto, colunas completas) | Libera `loading` ao concluir; nunca aguardar a fase 2 |
+| **2 — Secundária** | Janela histórica / dados da vista secundária, em **background** | Estado próprio (`loadingHistorico` ou equivalente); **colunas mínimas** — sem JSON/embeds pesados que a vista não usa |
+
+Regras complementares:
+
+1. **Janela exata** — dimensionar a fase 2 pelo que a UI exibe (ex.: heatmap de 30 colunas ⇒ `refDate − 29`); **sem** margem de segurança que nunca aparece na tela.
+2. **Variante da página sem a vista secundária** (ex.: visão consolidada sem heatmap) recebe opt-out explícito (`{ historico: false }`) — não baixar dados que não renderiza.
+3. **Indicador secundário** enquanto a fase 2 carrega e a vista dependente está ativa: `<Clock size={12} aria-hidden />` + `Carregando…` (ver § Estados de interface).
+4. **Consultas independentes em paralelo** — `Promise.all` para períodos atual/anterior (MoM), múltiplas tabelas do mesmo load; nunca `await` em série sem dependência de dados. Lotes `.in()` grandes em background: `fetchInBatched(ids, chunk, run, concurrency)` (`lib/supabasePaginate.ts`).
+5. **Não aplicar** quando todo o dado buscado alimenta o primeiro paint — duas fases sem ganho real só adicionam estado.
+
+**Anti-patterns:** bloquear o primeiro paint com janela histórica de vista secundária; `select` com colunas/JSON pesados na fase 2; margem de dias além das colunas exibidas; `await` sequencial de consultas independentes.
+
+---
+
 ## Build Vite (Rolldown) e deploy — Cloudflare Pages
 
 **Onde documentar:** este Global + `vite.config.ts` + `docs/SETUP.md` (deploy) + `docs/SAUDE_CODIGO.md` (sintomas). **Não** colocar em `brand-css-variables.mdc` — Brand é UI/whitelabel, não pipeline de build.

@@ -29,13 +29,21 @@ export async function fetchInBatched<T>(
   ids: string[],
   chunkSize: number,
   runChunk: (slice: string[]) => Promise<T[]>,
+  concurrency = 1,
 ): Promise<T[]> {
   if (!ids.length) return [];
-  const out: T[] = [];
+  const slices: string[][] = [];
   for (let i = 0; i < ids.length; i += chunkSize) {
-    const slice = ids.slice(i, i + chunkSize);
-    const rows = await runChunk(slice);
-    if (rows.length) out.push(...rows);
+    slices.push(ids.slice(i, i + chunkSize));
+  }
+  const out: T[] = [];
+  const step = Math.max(1, concurrency);
+  for (let i = 0; i < slices.length; i += step) {
+    const grupo = slices.slice(i, i + step);
+    const resultados = await Promise.all(grupo.map((slice) => runChunk(slice)));
+    for (const rows of resultados) {
+      if (rows.length) out.push(...rows);
+    }
   }
   return out;
 }

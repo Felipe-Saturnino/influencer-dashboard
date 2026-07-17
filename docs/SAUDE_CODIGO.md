@@ -53,6 +53,17 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 
 - **recharts**: isolado em `vendor-charts` e carregado sob demanda no Overview Spin; imports estáticos residuais em dashboards específicos permanecem no backlog.
 
+### Carga em duas fases (padrão para janelas históricas pesadas)
+
+Aplicado na aba **Posicionamento** do Overview Spin (`useLobbyPosicionamentoData.ts`) e documentado como padrão transversal em `.cursor/rules/global.mdc` (§ Carga de dados em duas fases):
+
+- **Fase 1 (essencial):** só hoje + ontem, colunas completas — KPIs, snapshot, alertas e heatmap «Dia» renderizam de imediato.
+- **Fase 2 (background):** janela do heatmap 7d/30d (`refDate − 29`, sem margem extra) com colunas mínimas (`execucao_id, mesa_identificacao, posicao` — sem o JSON `concorrentes_a_frente`), lotes com concorrência 4 (`fetchInBatched`).
+- Visão consolidada («todas»), que não tem heatmap, usa `{ historico: false }` e não baixa a janela histórica.
+- Consultas independentes (período atual vs anterior, tabelas paralelas) sempre em `Promise.all` — aplicado também no Social Media (abas Alcance e Impulsionamento) e no filtro de influencers dos Streamers.
+
+Candidatos futuros: qualquer aba/vista com matriz densa ou janela histórica que hoje bloqueie o primeiro paint.
+
 ### Contrato do modo Histórico
 
 - Janela padrão: **13 competências mensais inclusivas** (competência atual + 12 anteriores), centralizada em `getPeriodoHistoricoCompetencias`.
