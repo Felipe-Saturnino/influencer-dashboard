@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Ordem de Saída · Tech Ops · Data Intelligence</title>
+  <!-- Sem dependências externas: fontes via stack de sistema para o mockup abrir offline. -->
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-action: #7c3aed;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e5e7eb;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --input-bg: #f9fafb;
+      --green: #22c55e;
+      --red: #e84025;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --purple: #a78bfa;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --font-body: "DM Sans", system-ui, sans-serif;
+      --font-title: "Outfit", system-ui, sans-serif;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px; background: #141414; color: #e4e4e4;
+      padding: 20px 0; flex-shrink: 0;
+    }
+    .sidebar-brand {
+      padding: 0 20px 20px; font-family: var(--font-title);
+      font-weight: 800; font-size: 14px; letter-spacing: 0.04em;
+      color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;
+    }
+    .sidebar-section {
+      padding: 8px 20px 4px; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: rgba(228,228,228,0.45);
+    }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px; font-size: 13px; color: rgba(228,228,228,0.75);
+    }
+    .sidebar-item.active {
+      background: rgba(124, 58, 237, 0.18); color: #fff;
+      border-right: 2px solid var(--brand-primary);
+    }
+    .main { flex: 1; padding: 24px 28px 48px; overflow-x: auto; }
+
+    .mockup-banner {
+      background: color-mix(in srgb, var(--brand-primary) 8%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      border-radius: var(--radius-box); padding: 12px 16px; margin-bottom: 18px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .mockup-banner strong { color: var(--brand-primary); }
+
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 8px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary);
+    }
+    .page-header h1 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.02em;
+    }
+    .page-header .subtitle {
+      margin: 5px 0 0 40px; font-size: 13px; color: var(--text-muted);
+    }
+
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 12px 20px; margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .filter-row {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; gap: 10px; width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; }
+
+    .carousel-btn {
+      width: 32px; height: 32px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .carousel-btn:disabled { opacity: 0.35; cursor: default; }
+    .carousel-label {
+      font-size: 18px; font-weight: 800; min-width: 180px; text-align: center;
+      font-family: var(--font-body);
+    }
+
+    .pill-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; color: var(--text); cursor: pointer;
+      font-family: var(--font-body);
+    }
+    .pill-btn.active {
+      border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 15%, #fff);
+      color: var(--brand-primary); font-weight: 600;
+    }
+    .pill-btn svg { opacity: 0.7; flex-shrink: 0; }
+
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); font-family: var(--font-body);
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      font-weight: 700; color: var(--brand-secondary);
+      border-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 12%, #fff);
+    }
+
+    .search-input {
+      flex: 1; min-width: 240px; max-width: 380px;
+      padding: 8px 12px 8px 38px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-family: var(--font-body); color: var(--text);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: 12px center;
+    }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 20px; margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .section-title {
+      display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .section-title h2 {
+      font-family: var(--font-title); font-size: 14px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.04em;
+    }
+    .section-title .sub { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    .section-title .sub::before { content: "— "; }
+    .section-title-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+    }
+    .section-title-row .section-title { margin-bottom: 0; }
+
+    .cta-criar {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: var(--radius-tab); border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font-family: var(--font-body); font-size: 13px;
+      font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .cta-criar:hover { filter: brightness(1.05); }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;
+    }
+    @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 700px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+    .kpi-card {
+      background: var(--input-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 14px 16px;
+      border-left: 3px solid var(--kpi-color, var(--brand-primary));
+      cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
+      text-align: left; font-family: inherit; width: 100%;
+    }
+    .kpi-card:hover { box-shadow: var(--shadow); }
+    .kpi-card.active {
+      border-color: var(--kpi-color, var(--brand-primary));
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-color, var(--brand-primary)) 25%, transparent);
+    }
+    .kpi-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-family: var(--font-title); font-size: 26px; font-weight: 800;
+      color: var(--kpi-color, var(--brand-primary)); margin: 6px 0 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    .table-wrap {
+      overflow-x: auto; border-radius: var(--radius-box);
+      border: 1px solid var(--card-border);
+    }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 820px; }
+    thead th {
+      background: color-mix(in srgb, #fff 86%, var(--brand-action) 14%);
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text); padding: 12px 10px;
+      text-align: center; white-space: nowrap; border-bottom: 1px solid var(--card-border);
+    }
+    tbody td {
+      padding: 11px 10px; font-size: 13px; text-align: center;
+      border-bottom: 1px solid var(--card-border);
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    tbody tr:nth-child(even) { background: color-mix(in srgb, #fff 92%, var(--brand-secondary) 8%); }
+    tbody tr:nth-child(odd) { background: #fff; }
+    tbody tr:hover { background: color-mix(in srgb, #fff 88%, var(--brand-action) 12%) !important; }
+    tbody tr.hidden-row { display: none; }
+    .cod { font-weight: 700; }
+
+    .badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge-solicitada { background: #f59e0b22; color: #d97706; border: 1px solid #f59e0b44; }
+    .badge-aberta { background: #3b82f622; color: #2563eb; border: 1px solid #3b82f644; }
+    .badge-concluida { background: #22c55e22; color: #16a34a; border: 1px solid #22c55e44; }
+    .badge-cancelada { background: #e8402522; color: #e84025; border: 1px solid #e8402544; }
+
+    .itens-tip { position: relative; cursor: help; font-weight: 600; color: var(--brand-secondary); }
+    .itens-tip::after {
+      content: attr(data-itens);
+      position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+      background: #111827; color: #fff; font-size: 11px; font-weight: 500;
+      padding: 8px 12px; border-radius: 8px; white-space: pre; text-align: left;
+      opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 5;
+    }
+    .itens-tip:hover::after { opacity: 1; }
+
+    .btn-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); cursor: pointer; margin: 0 2px;
+    }
+    .btn-icon:hover { color: var(--brand-primary); border-color: color-mix(in srgb, var(--brand-primary) 40%, transparent); }
+
+    .empty-row td { padding: 32px 10px; color: var(--text-muted); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Modal */
+    .overlay {
+      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55);
+      z-index: 1000; align-items: center; justify-content: center; padding: 16px;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg); border-radius: 16px; width: 100%; max-width: 560px;
+      max-height: 90dvh; overflow: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      border: 1px solid var(--card-border);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px; border-bottom: 1px solid var(--card-border);
+    }
+    .modal-header h3 {
+      font-family: var(--font-title); font-size: 16px; font-weight: 800;
+      color: var(--brand-primary); text-transform: uppercase;
+    }
+    .modal-close {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; color: var(--text-muted);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+      padding: 0 20px 20px; display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
+    label.field {
+      display: flex; flex-direction: column; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--text);
+    }
+    label.field .req { color: var(--red); margin-left: 2px; }
+    label.field input, label.field select, label.field textarea {
+      padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-family: var(--font-body); font-size: 13px; color: var(--text);
+    }
+    label.field input:disabled, label.field select:disabled {
+      opacity: 0.75; cursor: not-allowed;
+      background: color-mix(in srgb, var(--input-bg) 80%, var(--card-border));
+    }
+    .field-hint { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    .check-inline {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 500; color: var(--text-muted); cursor: pointer;
+    }
+    .check-inline input { accent-color: var(--brand-primary); }
+
+    .modal-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .modal-tab {
+      padding: 8px 16px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); font-size: 13px; font-weight: 500;
+      color: var(--text-muted); cursor: pointer; font-family: inherit;
+    }
+    .modal-tab.active {
+      font-weight: 700; color: var(--brand-secondary);
+      border-color: color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-secondary) 12%, #fff);
+    }
+    .modal-tab-panel { display: none; }
+    .modal-tab-panel.active { display: block; }
+
+    .item-row {
+      display: grid; grid-template-columns: 1fr 88px 36px; gap: 10px;
+      align-items: end; margin-bottom: 12px;
+    }
+    .item-row .btn-remove {
+      width: 36px; height: 38px; border-radius: 10px;
+      border: 1px solid rgba(232,64,37,0.35); background: none; color: var(--red);
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-add-item {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 2px; padding: 8px 14px; border-radius: 10px;
+      border: 1px dashed color-mix(in srgb, var(--brand-primary) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-primary) 6%, #fff);
+      color: var(--brand-primary); font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">DATA INTELLIGENCE</div>
+      <div class="sidebar-section">Conteúdo</div>
+      <div class="sidebar-item">Spin na Rede</div>
+      <div class="sidebar-item">Informativos</div>
+      <div class="sidebar-section">Tech Ops</div>
+      <div class="sidebar-item">Gestão de Estoque</div>
+      <div class="sidebar-item active">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+        Ordem de Saída
+      </div>
+      <div class="sidebar-section">Plataforma</div>
+      <div class="sidebar-item">Gestão de Usuários</div>
+      <div class="sidebar-item">Gestão de Operadoras</div>
+    </aside>
+
+    <main class="main">
+      <div class="mockup-banner">
+        <strong>Mockup interativo</strong> — Ordem de Saída (Tech Ops). Dados fictícios apenas para visualização.
+        Clique nas abas, nos cards de KPI (filtro de status), nos CTAs de criação e navegue nas abas internas dos modais.
+      </div>
+
+      <div class="page-header">
+        <div class="page-header-row">
+          <div class="page-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+          </div>
+          <h1>Ordem de Saída</h1>
+        </div>
+        <p class="subtitle">Solicite e acompanhe as ordens de saída internas, externas e de manutenção dos ativos Tech Ops.</p>
+      </div>
+
+      <!-- Bloco 1 — Filtros -->
+      <div class="filter-box">
+        <div class="filter-row">
+          <button type="button" class="carousel-btn" id="mesPrev" aria-label="Mês anterior">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <span class="carousel-label" id="mesLabel">Julho 2026</span>
+          <button type="button" class="carousel-btn" id="mesNext" aria-label="Próximo mês" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button type="button" class="pill-btn" id="btnHistorico" aria-pressed="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Histórico
+          </button>
+        </div>
+        <div class="filter-row" role="tablist" aria-label="Tipos de ordem de saída">
+          <button type="button" class="tab-btn active" data-tab="interna" role="tab" aria-selected="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 12l6-6M3 12l6 6"/><path d="M21 5v14"/></svg>
+            O.S. Interna
+          </button>
+          <button type="button" class="tab-btn" data-tab="externa" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 5H19V11"/><path d="M19 5L5 19"/></svg>
+            O.S. Externa
+          </button>
+          <button type="button" class="tab-btn" data-tab="manutencao" role="tab" aria-selected="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            O.S. Manutenção
+          </button>
+        </div>
+        <div class="filter-row">
+          <input type="search" class="search-input" id="busca" placeholder="Pesquisar por código, origem, destino, fornecedor ou solicitante..." aria-label="Buscar ordens de saída" />
+        </div>
+      </div>
+
+      <!-- Bloco 2 — KPIs Consolidados -->
+      <div class="content-box">
+        <div class="section-title">
+          <h2>KPIs Consolidados</h2>
+          <span class="sub" id="kpiSub">Julho 2026 · aba O.S. Interna — clique em um card para filtrar por status</span>
+        </div>
+        <div class="kpi-grid">
+          <button type="button" class="kpi-card active" data-status="todas" style="--kpi-color: var(--brand-primary);">
+            <div class="kpi-label">Total de OS</div>
+            <div class="kpi-value" id="kpiTotal">4</div>
+            <div class="kpi-hint">Todas as ordens do período</div>
+          </button>
+          <button type="button" class="kpi-card" data-status="solicitada" style="--kpi-color: var(--yellow);">
+            <div class="kpi-label">Solicitadas</div>
+            <div class="kpi-value" id="kpiSolicitadas">1</div>
+            <div class="kpi-hint">Aguardando atendimento</div>
+          </button>
+          <button type="button" class="kpi-card" data-status="aberta" style="--kpi-color: var(--blue);">
+            <div class="kpi-label">Abertas</div>
+            <div class="kpi-value" id="kpiAbertas">1</div>
+            <div class="kpi-hint">Saída realizada, sem retorno</div>
+          </button>
+          <button type="button" class="kpi-card" data-status="concluida" style="--kpi-color: var(--green);">
+            <div class="kpi-label">Concluídas</div>
+            <div class="kpi-value" id="kpiConcluidas">1</div>
+            <div class="kpi-hint">Retorno realizado / encerrada</div>
+          </button>
+          <button type="button" class="kpi-card" data-status="cancelada" style="--kpi-color: var(--red);">
+            <div class="kpi-label">Canceladas</div>
+            <div class="kpi-value" id="kpiCanceladas">1</div>
+            <div class="kpi-hint">Ordens canceladas no período</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══════════ Aba O.S. Interna ═══════════ -->
+      <section class="panel active" id="panel-interna">
+        <div class="content-box">
+          <div class="section-title-row">
+            <div class="section-title">
+              <h2>Listagem</h2>
+              <span class="sub">Movimentações internas entre estúdios e áreas</span>
+            </div>
+            <button type="button" class="cta-criar" data-modal="modalNovaInterna">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></svg>
+              Nova O.S. Interna
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table data-filtravel>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Origem</th><th>Saída</th><th>Destino</th><th>Retorno</th>
+                  <th>Itens</th><th>Responsável</th><th>Status</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-status="solicitada">
+                  <td class="cod">OS/INT-0726-0001</td>
+                  <td>Estoque</td><td>21/07/2026</td><td>Estúdio Blaze</td><td>28/07/2026</td>
+                  <td><span class="itens-tip" data-itens="ITM-0001 Cabo HDMI 4K 3m (x4)&#10;EQP-0002 Câmera Sony FR7&#10;JOG-0001 Lote Bolinhas Roleta (x6)">3 itens</span></td>
+                  <td>Carlos Mendes</td>
+                  <td><span class="badge badge-solicitada">Solicitada</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-status="aberta">
+                  <td class="cod">OS/INT-0726-0002</td>
+                  <td>Estúdio Sports Club</td><td>10/07/2026</td><td>Shuffler Room</td><td>Sem retorno</td>
+                  <td><span class="itens-tip" data-itens="EQP-0003 Shuffler Deckmate 2">1 item</span></td>
+                  <td>Renata Lima</td>
+                  <td><span class="badge badge-aberta">Aberta</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-status="concluida">
+                  <td class="cod">OS/INT-0726-0003</td>
+                  <td>OCR</td><td>03/07/2026</td><td>Academy</td><td>08/07/2026</td>
+                  <td><span class="itens-tip" data-itens="ITM-0003 Switch 24 portas (x1)&#10;ITM-0002 Régua de Energia (x2)">2 itens</span></td>
+                  <td>Felipe Torres</td>
+                  <td><span class="badge badge-concluida">Concluída</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-status="cancelada">
+                  <td class="cod">OS/INT-0726-0004</td>
+                  <td>Estúdio Casa de Apostas</td><td>15/07/2026</td><td>Estoque</td><td>—</td>
+                  <td><span class="itens-tip" data-itens="EQP-0001 Roleta Cammegh Mercury 360">1 item</span></td>
+                  <td>Carlos Mendes</td>
+                  <td><span class="badge badge-cancelada">Cancelada</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════ Aba O.S. Externa ═══════════ -->
+      <section class="panel" id="panel-externa">
+        <div class="content-box">
+          <div class="section-title-row">
+            <div class="section-title">
+              <h2>Ordens Futuras</h2>
+              <span class="sub">Saídas externas ainda não realizadas</span>
+            </div>
+            <button type="button" class="cta-criar" data-modal="modalNovaExterna">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></svg>
+              Nova O.S. Externa
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table data-filtravel>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Destino</th><th>Previsão de Saída</th><th>Previsão de Retorno</th>
+                  <th>Itens</th><th>Solicitante</th><th>Status</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-status="solicitada">
+                  <td class="cod">OS/EXT-0726-0001</td>
+                  <td>Evento SiGMA São Paulo</td><td>24/07/2026</td><td>29/07/2026</td>
+                  <td><span class="itens-tip" data-itens="EQP-0002 Câmera Sony FR7&#10;ITM-0001 Cabo HDMI 4K 3m (x6)&#10;ITM-0002 Régua de Energia (x3)&#10;JOG-0002 Lote Cartas Copag (x20)">4 itens</span></td>
+                  <td>Ana Souza — Marketing</td>
+                  <td><span class="badge badge-solicitada">Solicitada</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="content-box">
+          <div class="section-title">
+            <h2>Ordens em Aberto</h2>
+            <span class="sub">Saída realizada — aguardando retorno</span>
+          </div>
+          <div class="table-wrap">
+            <table data-filtravel>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Destino</th><th>Saída Realizada</th><th>Previsão de Retorno</th>
+                  <th>Itens</th><th>Solicitante</th><th>Status</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-status="aberta">
+                  <td class="cod">OS/EXT-0726-0002</td>
+                  <td>Gravação externa — Praia Grande</td><td>12/07/2026</td><td>19/07/2026</td>
+                  <td><span class="itens-tip" data-itens="EQP-0002 Câmera Sony FR7&#10;ITM-0001 Cabo HDMI 4K 3m (x2)">2 itens</span></td>
+                  <td>Bruno Carvalho — Conteúdo</td>
+                  <td><span class="badge badge-aberta">Aberta</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="content-box">
+          <div class="section-title">
+            <h2>Ordens Encerradas</h2>
+            <span class="sub">Retorno realizado ou ordem cancelada</span>
+          </div>
+          <div class="table-wrap">
+            <table data-filtravel>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Saída Realizada</th><th>Retorno Realizado</th>
+                  <th>Solicitante</th><th>Status</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-status="concluida">
+                  <td class="cod">OS/EXT-0726-0003</td>
+                  <td>01/07/2026</td><td>07/07/2026</td>
+                  <td>Ana Souza — Marketing</td>
+                  <td><span class="badge badge-concluida">Concluída</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-status="cancelada">
+                  <td class="cod">OS/EXT-0726-0004</td>
+                  <td>—</td><td>—</td>
+                  <td>Bruno Carvalho — Conteúdo</td>
+                  <td><span class="badge badge-cancelada">Cancelada</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════ Aba O.S. Manutenção ═══════════ -->
+      <section class="panel" id="panel-manutencao">
+        <div class="content-box">
+          <div class="section-title-row">
+            <div class="section-title">
+              <h2>Ordens em Aberto</h2>
+              <span class="sub">Equipamentos enviados a fornecedores para manutenção</span>
+            </div>
+            <button type="button" class="cta-criar" data-modal="modalNovaManutencao">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5v14"/></svg>
+              Nova O.S. Manutenção
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table data-filtravel>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Fornecedor</th><th>Saída</th><th>Previsão de Retorno</th>
+                  <th>Equipamento</th><th>Solicitante</th><th>Status</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-status="solicitada">
+                  <td class="cod">OS/MAN-0726-0001</td>
+                  <td>TechParts Manutenção Ltda</td><td>22/07/2026</td><td>Sem previsão</td>
+                  <td><span class="itens-tip" data-itens="EQP-0001 Roleta Cammegh Mercury 360">EQP-0001</span></td>
+                  <td>Carlos Mendes — Tech Ops</td>
+                  <td><span class="badge badge-solicitada">Registrada</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+                <tr data-status="aberta">
+                  <td class="cod">OS/MAN-0726-0002</td>
+                  <td>CardShred Brasil Ltda</td><td>09/07/2026</td><td>23/07/2026</td>
+                  <td><span class="itens-tip" data-itens="EQP-0003 Shuffler Deckmate 2">EQP-0003</span></td>
+                  <td>Renata Lima — Tech Ops</td>
+                  <td><span class="badge badge-aberta">Aberta</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button class="btn-icon" title="Atualizar O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="content-box">
+          <div class="section-title">
+            <h2>Ordens Encerradas</h2>
+            <span class="sub">Manutenções concluídas ou canceladas</span>
+          </div>
+          <div class="table-wrap">
+            <table data-filtravel>
+              <thead>
+                <tr>
+                  <th>Código</th><th>Equipamento</th><th>Saída Realizada</th><th>Retorno Realizado</th>
+                  <th>Fornecedor</th><th>Status</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-status="concluida">
+                  <td class="cod">OS/MAN-0726-0003</td>
+                  <td><span class="itens-tip" data-itens="EQP-0002 Câmera Sony FR7">EQP-0002</span></td>
+                  <td>01/07/2026</td><td>10/07/2026</td>
+                  <td>TechParts Manutenção Ltda</td>
+                  <td><span class="badge badge-concluida">Concluída</span></td>
+                  <td>
+                    <button class="btn-icon" title="Ver O.S."><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ═══════════ Modal Nova O.S. Interna ═══════════ -->
+  <div class="overlay" id="modalNovaInterna">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloNovaInterna">
+      <div class="modal-header">
+        <h3 id="tituloNovaInterna">Nova O.S. Interna</h3>
+        <button type="button" class="modal-close" data-close title="Fechar modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs">
+          <button type="button" class="modal-tab active" data-mtab="int-dados">Dados da OS</button>
+          <button type="button" class="modal-tab" data-mtab="int-itens">Itens da OS</button>
+          <button type="button" class="modal-tab" data-mtab="int-obs">Observação</button>
+        </div>
+
+        <div class="modal-tab-panel active" id="mtab-int-dados">
+          <div class="form-grid">
+            <label class="field full">Código
+              <input type="text" value="OS/INT-0726-0005" disabled aria-label="Código gerado automaticamente" />
+              <span class="field-hint">Gerado automaticamente — OS/INT-MMAA-#### (mês/ano de abertura + sequencial).</span>
+            </label>
+            <label class="field">Origem<span class="req">*</span>
+              <select class="sel-origem">
+                <option value="">Selecione…</option>
+                <option>Estúdio Blaze</option>
+                <option>Estúdio Casa de Apostas</option>
+                <option>Estúdio Sports Club</option>
+                <option>Estoque</option>
+                <option>Shuffler Room</option>
+                <option>OCR</option>
+                <option>Academy</option>
+              </select>
+            </label>
+            <label class="field">Saída<span class="req">*</span>
+              <input type="date" class="inp-saida" />
+            </label>
+            <label class="field">Destino<span class="req">*</span>
+              <select class="sel-destino">
+                <option value="">Selecione…</option>
+                <option>Estúdio Blaze</option>
+                <option>Estúdio Casa de Apostas</option>
+                <option>Estúdio Sports Club</option>
+                <option>Estoque</option>
+                <option>Shuffler Room</option>
+                <option>OCR</option>
+                <option>Academy</option>
+              </select>
+              <span class="field-hint">Não pode ser o mesmo valor da Origem.</span>
+            </label>
+            <label class="field">Retorno<span class="req">*</span>
+              <input type="date" class="inp-retorno" />
+              <span class="check-inline"><input type="checkbox" class="chk-sem-retorno" /> Sem retorno</span>
+              <span class="field-hint">Deve ser maior que a data de Saída.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-tab-panel" id="mtab-int-itens">
+          <div class="itens-lista">
+            <div class="item-row">
+              <label class="field">Item<span class="req">*</span>
+                <select>
+                  <option value="">Selecione…</option>
+                  <optgroup label="Itens (Estoque &gt; 0)">
+                    <option>ITM-0001 · Cabo HDMI 4K 3m (Estoque: 12)</option>
+                    <option>ITM-0002 · Régua de Energia 8 Tomadas (Estoque: 6)</option>
+                    <option>ITM-0003 · Switch 24 portas (Estoque: 2)</option>
+                  </optgroup>
+                  <optgroup label="Equipamentos (Status: Estoque)">
+                    <option>EQP-0001 · Roleta Cammegh Mercury 360</option>
+                    <option>EQP-0002 · Câmera Sony FR7</option>
+                    <option>EQP-0003 · Shuffler Deckmate 2</option>
+                  </optgroup>
+                  <optgroup label="Jogo (Qtd Atual &gt; 0)">
+                    <option>JOG-0001 · Lote Bolinhas Roleta (Qtd: 48)</option>
+                    <option>JOG-0002 · Lote Cartas Copag (Qtd: 320)</option>
+                    <option>JOG-0003 · Lote Tecido Verde (Qtd: 12)</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label class="field">Qtd<span class="req">*</span>
+                <input type="number" min="1" value="1" />
+              </label>
+              <button type="button" class="btn-remove" title="Remover item">✕</button>
+            </div>
+          </div>
+          <button type="button" class="btn-add-item" data-add-item>+ Adicionar item</button>
+        </div>
+
+        <div class="modal-tab-panel" id="mtab-int-obs">
+          <label class="field">Observação<span class="req">*</span>
+            <textarea rows="6" placeholder="Descreva o motivo da movimentação, cuidados no transporte, ponto de contato no destino..."></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta-criar" style="width: 100%; justify-content: center;">Solicitar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Modal Nova O.S. Externa ═══════════ -->
+  <div class="overlay" id="modalNovaExterna">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloNovaExterna">
+      <div class="modal-header">
+        <h3 id="tituloNovaExterna">Nova O.S. Externa</h3>
+        <button type="button" class="modal-close" data-close title="Fechar modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs">
+          <button type="button" class="modal-tab active" data-mtab="ext-dados">Dados da OS</button>
+          <button type="button" class="modal-tab" data-mtab="ext-itens">Itens da OS</button>
+          <button type="button" class="modal-tab" data-mtab="ext-obs">Observação</button>
+        </div>
+
+        <div class="modal-tab-panel active" id="mtab-ext-dados">
+          <div class="form-grid">
+            <label class="field full">Código
+              <input type="text" value="OS/EXT-0726-0005" disabled aria-label="Código gerado automaticamente" />
+              <span class="field-hint">Gerado automaticamente — OS/EXT-MMAA-#### (mês/ano de abertura + sequencial).</span>
+            </label>
+            <label class="field full">Destino<span class="req">*</span>
+              <input type="text" placeholder="Ex.: Evento SiGMA São Paulo, gravação externa..." />
+            </label>
+            <label class="field">Saída<span class="req">*</span>
+              <input type="date" class="inp-saida" />
+            </label>
+            <label class="field">Retorno<span class="req">*</span>
+              <input type="date" class="inp-retorno" />
+              <span class="field-hint">Deve ser maior que a data de Saída.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-tab-panel" id="mtab-ext-itens">
+          <div class="itens-lista">
+            <div class="item-row">
+              <label class="field">Item<span class="req">*</span>
+                <select>
+                  <option value="">Selecione…</option>
+                  <optgroup label="Itens (Estoque &gt; 0)">
+                    <option>ITM-0001 · Cabo HDMI 4K 3m (Estoque: 12)</option>
+                    <option>ITM-0002 · Régua de Energia 8 Tomadas (Estoque: 6)</option>
+                    <option>ITM-0003 · Switch 24 portas (Estoque: 2)</option>
+                  </optgroup>
+                  <optgroup label="Equipamentos (Status: Estoque)">
+                    <option>EQP-0001 · Roleta Cammegh Mercury 360</option>
+                    <option>EQP-0002 · Câmera Sony FR7</option>
+                    <option>EQP-0003 · Shuffler Deckmate 2</option>
+                  </optgroup>
+                  <optgroup label="Jogo (Qtd Atual &gt; 0)">
+                    <option>JOG-0001 · Lote Bolinhas Roleta (Qtd: 48)</option>
+                    <option>JOG-0002 · Lote Cartas Copag (Qtd: 320)</option>
+                    <option>JOG-0003 · Lote Tecido Verde (Qtd: 12)</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label class="field">Qtd<span class="req">*</span>
+                <input type="number" min="1" value="1" />
+              </label>
+              <button type="button" class="btn-remove" title="Remover item">✕</button>
+            </div>
+          </div>
+          <button type="button" class="btn-add-item" data-add-item>+ Adicionar item</button>
+        </div>
+
+        <div class="modal-tab-panel" id="mtab-ext-obs">
+          <label class="field">Observação<span class="req">*</span>
+            <textarea rows="6" placeholder="Descreva a finalidade da saída externa, endereço, responsável no local..."></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta-criar" style="width: 100%; justify-content: center;">Solicitar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ Modal Nova O.S. Manutenção ═══════════ -->
+  <div class="overlay" id="modalNovaManutencao">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloNovaManutencao">
+      <div class="modal-header">
+        <h3 id="tituloNovaManutencao">Nova O.S. Manutenção</h3>
+        <button type="button" class="modal-close" data-close title="Fechar modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tabs">
+          <button type="button" class="modal-tab active" data-mtab="man-dados">Dados da OS</button>
+          <button type="button" class="modal-tab" data-mtab="man-itens">Itens da OS</button>
+          <button type="button" class="modal-tab" data-mtab="man-obs">Observação</button>
+        </div>
+
+        <div class="modal-tab-panel active" id="mtab-man-dados">
+          <div class="form-grid">
+            <label class="field full">Código
+              <input type="text" value="OS/MAN-0726-0004" disabled aria-label="Código gerado automaticamente" />
+              <span class="field-hint">Gerado automaticamente — OS/MAN-MMAA-#### (mês/ano de abertura + sequencial).</span>
+            </label>
+            <label class="field full">Fornecedor<span class="req">*</span>
+              <select>
+                <option value="">Selecione…</option>
+                <option>CardShred Brasil Ltda — Destruição de cartas</option>
+                <option>TechParts Manutenção Ltda — Manutenção de equipamentos</option>
+                <option>Global Gaming Supplies — Geral</option>
+              </select>
+              <span class="field-hint">Fornecedores cadastrados na Gestão de Estoque → Fornecedores.</span>
+            </label>
+            <label class="field">Saída<span class="req">*</span>
+              <input type="date" class="inp-saida" />
+            </label>
+            <label class="field">Previsão de Retorno<span class="req">*</span>
+              <input type="date" class="inp-retorno" />
+              <span class="check-inline"><input type="checkbox" class="chk-sem-retorno" /> Sem previsão</span>
+              <span class="field-hint">Deve ser maior que a data de Saída.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-tab-panel" id="mtab-man-itens">
+          <div class="itens-lista">
+            <div class="item-row">
+              <label class="field">Item<span class="req">*</span>
+                <select>
+                  <option value="">Selecione…</option>
+                  <optgroup label="Itens">
+                    <option>ITM-0001 · Cabo HDMI 4K 3m</option>
+                    <option>ITM-0002 · Régua de Energia 8 Tomadas</option>
+                    <option>ITM-0003 · Switch 24 portas</option>
+                  </optgroup>
+                  <optgroup label="Equipamentos">
+                    <option>EQP-0001 · Roleta Cammegh Mercury 360</option>
+                    <option>EQP-0002 · Câmera Sony FR7</option>
+                    <option>EQP-0003 · Shuffler Deckmate 2</option>
+                  </optgroup>
+                  <optgroup label="Jogo">
+                    <option>JOG-0001 · Lote Bolinhas Roleta</option>
+                    <option>JOG-0002 · Lote Cartas Copag</option>
+                    <option>JOG-0003 · Lote Tecido Verde</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label class="field">Qtd<span class="req">*</span>
+                <input type="number" min="1" value="1" />
+              </label>
+              <button type="button" class="btn-remove" title="Remover item">✕</button>
+            </div>
+          </div>
+          <button type="button" class="btn-add-item" data-add-item>+ Adicionar item</button>
+        </div>
+
+        <div class="modal-tab-panel" id="mtab-man-obs">
+          <label class="field">Observação<span class="req">*</span>
+            <textarea rows="6" placeholder="Descreva o defeito, o serviço solicitado ao fornecedor, número de orçamento..."></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta-criar" style="width: 100%; justify-content: center;">Solicitar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Abas principais ──────────────────────────────────────────────────────
+    const tabLabels = { interna: "O.S. Interna", externa: "O.S. Externa", manutencao: "O.S. Manutenção" };
+    let abaAtiva = "interna";
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        abaAtiva = btn.dataset.tab;
+        document.querySelectorAll(".tab-btn").forEach((b) => {
+          b.classList.toggle("active", b === btn);
+          b.setAttribute("aria-selected", b === btn ? "true" : "false");
+        });
+        document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + abaAtiva));
+        atualizarKpis();
+      });
+    });
+
+    // ── Carrossel de mês + Histórico ─────────────────────────────────────────
+    const meses = ["Maio 2026", "Junho 2026", "Julho 2026"];
+    let mesIdx = meses.length - 1;
+    let historico = false;
+    const mesLabel = document.getElementById("mesLabel");
+    const mesPrev = document.getElementById("mesPrev");
+    const mesNext = document.getElementById("mesNext");
+    const btnHistorico = document.getElementById("btnHistorico");
+    function renderCarrossel() {
+      mesLabel.textContent = historico ? "Todo o período" : meses[mesIdx];
+      mesPrev.disabled = historico || mesIdx === 0;
+      mesNext.disabled = historico || mesIdx === meses.length - 1;
+      btnHistorico.classList.toggle("active", historico);
+      btnHistorico.setAttribute("aria-pressed", String(historico));
+      atualizarKpis();
+    }
+    mesPrev.addEventListener("click", () => { if (mesIdx > 0) { mesIdx--; renderCarrossel(); } });
+    mesNext.addEventListener("click", () => { if (mesIdx < meses.length - 1) { mesIdx++; renderCarrossel(); } });
+    btnHistorico.addEventListener("click", () => { historico = !historico; if (!historico) mesIdx = meses.length - 1; renderCarrossel(); });
+
+    // ── KPIs clicáveis (filtro de status) ────────────────────────────────────
+    let statusAtivo = "todas";
+    document.querySelectorAll(".kpi-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        statusAtivo = card.dataset.status === statusAtivo && card.dataset.status !== "todas" ? "todas" : card.dataset.status;
+        document.querySelectorAll(".kpi-card").forEach((c) => c.classList.toggle("active", c.dataset.status === statusAtivo));
+        aplicarFiltros();
+      });
+    });
+
+    // ── Busca ────────────────────────────────────────────────────────────────
+    const busca = document.getElementById("busca");
+    busca.addEventListener("input", aplicarFiltros);
+
+    function aplicarFiltros() {
+      const termo = busca.value.trim().toLowerCase();
+      document.querySelectorAll(".panel.active table[data-filtravel] tbody tr").forEach((tr) => {
+        const okStatus = statusAtivo === "todas" || tr.dataset.status === statusAtivo;
+        const okBusca = !termo || tr.textContent.toLowerCase().includes(termo);
+        tr.classList.toggle("hidden-row", !(okStatus && okBusca));
+      });
+    }
+
+    function atualizarKpis() {
+      const painel = document.getElementById("panel-" + abaAtiva);
+      const rows = painel.querySelectorAll("table[data-filtravel] tbody tr[data-status]");
+      const contagem = { solicitada: 0, aberta: 0, concluida: 0, cancelada: 0 };
+      rows.forEach((tr) => { contagem[tr.dataset.status] = (contagem[tr.dataset.status] || 0) + 1; });
+      document.getElementById("kpiTotal").textContent = rows.length;
+      document.getElementById("kpiSolicitadas").textContent = contagem.solicitada;
+      document.getElementById("kpiAbertas").textContent = contagem.aberta;
+      document.getElementById("kpiConcluidas").textContent = contagem.concluida;
+      document.getElementById("kpiCanceladas").textContent = contagem.cancelada;
+      document.getElementById("kpiSub").textContent =
+        (historico ? "Todo o período" : meses[mesIdx]) + " · aba " + tabLabels[abaAtiva] + " — clique em um card para filtrar por status";
+      aplicarFiltros();
+    }
+
+    // ── Modais ───────────────────────────────────────────────────────────────
+    document.querySelectorAll("[data-modal]").forEach((btn) => {
+      btn.addEventListener("click", () => document.getElementById(btn.dataset.modal).classList.add("open"));
+    });
+    document.querySelectorAll(".overlay").forEach((ov) => {
+      ov.addEventListener("click", (e) => { if (e.target === ov) ov.classList.remove("open"); });
+      ov.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => ov.classList.remove("open")));
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") document.querySelectorAll(".overlay.open").forEach((ov) => ov.classList.remove("open"));
+    });
+
+    // ── Abas internas dos modais ─────────────────────────────────────────────
+    document.querySelectorAll(".modal-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const modal = tab.closest(".modal");
+        modal.querySelectorAll(".modal-tab").forEach((t) => t.classList.toggle("active", t === tab));
+        modal.querySelectorAll(".modal-tab-panel").forEach((p) =>
+          p.classList.toggle("active", p.id === "mtab-" + tab.dataset.mtab));
+      });
+    });
+
+    // ── Origem ≠ Destino (O.S. Interna) ─────────────────────────────────────
+    document.querySelectorAll("#modalNovaInterna").forEach((modal) => {
+      const origem = modal.querySelector(".sel-origem");
+      const destino = modal.querySelector(".sel-destino");
+      origem.addEventListener("change", () => {
+        [...destino.options].forEach((opt) => { opt.disabled = opt.value !== "" && opt.value === origem.value; });
+        if (destino.value === origem.value) destino.value = "";
+      });
+    });
+
+    // ── Sem retorno / Sem previsão desabilita a data ─────────────────────────
+    document.querySelectorAll(".chk-sem-retorno").forEach((chk) => {
+      chk.addEventListener("change", () => {
+        const campo = chk.closest("label.field").querySelector(".inp-retorno");
+        campo.disabled = chk.checked;
+        if (chk.checked) campo.value = "";
+      });
+    });
+
+    // ── Retorno > Saída (validação visual simples) ───────────────────────────
+    document.querySelectorAll(".modal").forEach((modal) => {
+      const saida = modal.querySelector(".inp-saida");
+      const retorno = modal.querySelector(".inp-retorno");
+      if (!saida || !retorno) return;
+      saida.addEventListener("change", () => { retorno.min = saida.value; });
+      retorno.addEventListener("change", () => {
+        retorno.style.borderColor = retorno.value && saida.value && retorno.value <= saida.value ? "var(--red)" : "";
+      });
+    });
+
+    // ── Adicionar / remover linhas de item ───────────────────────────────────
+    document.querySelectorAll("[data-add-item]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const lista = btn.previousElementSibling;
+        const nova = lista.querySelector(".item-row").cloneNode(true);
+        nova.querySelector("select").value = "";
+        nova.querySelector("input[type=number]").value = "1";
+        ligarRemover(nova);
+        lista.appendChild(nova);
+      });
+    });
+    function ligarRemover(row) {
+      row.querySelector(".btn-remove").addEventListener("click", () => {
+        const lista = row.parentElement;
+        if (lista.querySelectorAll(".item-row").length > 1) row.remove();
+      });
+    }
+    document.querySelectorAll(".item-row").forEach(ligarRemover);
+
+    renderCarrossel();
+  </script>
+</body>
+</html>
