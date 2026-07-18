@@ -31,13 +31,14 @@ import {
 } from "../../../lib/rhVagasFiltroConstants";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { getPageContentBoxShellStyle, getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
+import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirComTexto } from "../../../components/BtnExcluirComTexto";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { RhVagasFiltroBar } from "../../../components/rh/vagas/RhVagasFiltroBar";
 import { ModalCandidaturaVaga } from "../../../components/rh/vagas/ModalCandidaturaVaga";
 import { ModalNovaVaga } from "../../../components/rh/vagas/ModalNovaVaga";
 import { ModalAtualizarVaga } from "../../../components/rh/vagas/ModalAtualizarVaga";
+import { ModalCompartilharVaga } from "../../../components/rh/vagas/ModalCompartilharVaga";
 import { formatTagsVagaLabel } from "../../../lib/rhVagaTags";
 import { buscarVagaIdsComCandidaturaDoLogin } from "../../../lib/rhVagaCandidaturaInscricao";
 
@@ -65,8 +66,6 @@ function textoMultilinha(s: string): string {
   const t = (s ?? "").trim();
   return t.length ? t : "—";
 }
-
-type ModalStub = { titulo: string; vagaTitulo?: string } | null;
 
 function CampoVaga({ k, v, t }: { k: string; v: string; t: { textMuted: string; text: string } }) {
   return (
@@ -96,7 +95,7 @@ export default function RhVagasPage() {
   const [filtroStatusCand, setFiltroStatusCand] = useState<RhVagaStatus | "todos">(VAGA_FILTRO_TODOS_STATUS_VALUE);
   const [vagaIdFiltroCand, setVagaIdFiltroCand] = useState<string>(VAGA_FILTRO_TODAS_VAGAS_VALUE);
   const [opcoesVagaCandFiltro, setOpcoesVagaCandFiltro] = useState<FiltroBarCampoOption[]>([]);
-  const [modalStub, setModalStub] = useState<ModalStub>(null);
+  const [vagaCompartilharTitulo, setVagaCompartilharTitulo] = useState<string | null>(null);
   const [modalNovaVagaAberto, setModalNovaVagaAberto] = useState(false);
   const [vagaAtualizar, setVagaAtualizar] = useState<RhVagaRow | null>(null);
   const [vagaCandidatura, setVagaCandidatura] = useState<RhVagaRow | null>(null);
@@ -170,10 +169,6 @@ export default function RhVagasPage() {
     if (filtroStatusGestao !== "todos") list = list.filter((v) => statusVagaEfetivo(v) === filtroStatusGestao);
     return list;
   }, [vagas, busca, filtroStatusGestao]);
-
-  const abrirModalStub = (titulo: string, vagaTitulo?: string) => {
-    setModalStub({ titulo, vagaTitulo });
-  };
 
   const executarExclusaoVaga = async () => {
     if (!vagaExcluirConfirm) return;
@@ -438,7 +433,7 @@ export default function RhVagasPage() {
                         : btnPrim("Candidatura", () => setVagaCandidatura(v))
                       : null}
                     {tipoExterna(v.tipo_vaga as RhVagaTipo)
-                      ? btnSec("Compartilhar", () => abrirModalStub("Compartilhar", v.titulo))
+                      ? btnSec("Compartilhar", () => setVagaCompartilharTitulo(v.titulo))
                       : null}
                   </div>,
                 ),
@@ -596,38 +591,11 @@ export default function RhVagasPage() {
         />
       ) : null}
 
-      {modalStub ? (
-        <ModalBase maxWidth={440} onClose={() => setModalStub(null)}>
-          <ModalHeader title={modalStub.titulo} onClose={() => setModalStub(null)} />
-          <p style={{ margin: 0, fontSize: 14, color: t.textMuted, lineHeight: 1.5, fontFamily: FONT.body }}>
-            {modalStub.vagaTitulo ? (
-              <>
-                Vaga: <strong style={{ color: t.text }}>{modalStub.vagaTitulo}</strong>
-                <br />
-                <br />
-              </>
-            ) : null}
-            Conteúdo do modal será implementado na sequência.
-          </p>
-          <button
-            type="button"
-            onClick={() => setModalStub(null)}
-            style={{
-              marginTop: 20,
-              padding: "10px 18px",
-              borderRadius: 10,
-              border: "none",
-              background: getCtaCriarGradient(brand),
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              cursor: "pointer",
-            }}
-          >
-            Fechar
-          </button>
-        </ModalBase>
+      {vagaCompartilharTitulo != null ? (
+        <ModalCompartilharVaga
+          vagaTitulo={vagaCompartilharTitulo}
+          onClose={() => setVagaCompartilharTitulo(null)}
+        />
       ) : null}
     </div>
   );
