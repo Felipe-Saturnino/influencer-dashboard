@@ -257,6 +257,11 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "jogo", slug: "Jogo", label: "Jogo", access: "always" },
     { tabId: "fornecedores", slug: "Fornecedores", label: "Fornecedores", access: "always" },
   ]),
+  page("Ordem de Saída", "tech_ops_ordem_saida", "OrdemDeSaida", [
+    { tabId: "interna", slug: "Interna", label: "O.S. Interna", access: "always" },
+    { tabId: "externa", slug: "Externa", label: "O.S. Externa", access: "always" },
+    { tabId: "manutencao", slug: "Manutencao", label: "O.S. Manutenção", access: "always" },
+  ]),
   page("Gestão de Usuários", "gestao_usuarios", "GestaoDeUsuarios", [
     { tabId: "usuarios", slug: "Usuarios", label: "Usuários", access: "always" },
     { tabId: "permissoes", slug: "Permissoes", label: "Permissões", access: "always" },

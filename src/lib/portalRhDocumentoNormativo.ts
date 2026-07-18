@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos, vinculoParaSelectValue } from "./rhOrganogramaTree";
-import type { Role } from "../types";
+import type { PermissaoValor, Role } from "../types";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgPrestadorVinculoOpcao } from "../types/rhOrganograma";
 import type { ValidacaoPublicar } from "./portalRhWorkflow";
 
@@ -146,11 +146,11 @@ export function fmtDataEmissaoDocumentoPortal(date = new Date()): string {
   return `${meses[date.getMonth()]}/${date.getFullYear()}`;
 }
 
-export function opcoesOrganogramaGerenciaTime(
+export function opcoesOrganogramaAplicavel(
   grupos: RhOrgOrganogramaGrupoPrestador[],
 ): { id: string; label: string }[] {
   return flattenVinculosDeGrupos(grupos)
-    .filter((v) => v.nivel === "gerencia" || v.nivel === "time")
+    .filter((v) => v.nivel === "diretoria" || v.nivel === "gerencia" || v.nivel === "time")
     .map((v) => ({ id: v.setorNome, label: v.label }));
 }
 
@@ -261,8 +261,8 @@ function normalizarSetorAplicavel(nome: string): string {
 }
 
 /**
- * Nomes de gerência/time do usuário que podem coincidir com `aplicavel_a` do documento.
- * Prestador em time inclui também a gerência pai (documento aplicável à gerência vale para o time).
+ * Nomes de diretoria/gerência/time do usuário que podem coincidir com `aplicavel_a`.
+ * Um vínculo filho inclui toda a sua hierarquia pai.
  */
 export function setoresAplicavelDoUsuario(
   funcionario:
@@ -277,6 +277,7 @@ export function setoresAplicavelDoUsuario(
   const setores: string[] = [];
   if (v.setorNome.trim()) setores.push(v.setorNome);
   if (v.nivel === "time" && v.gerenciaNome.trim()) setores.push(v.gerenciaNome);
+  if (v.diretoriaNome.trim()) setores.push(v.diretoriaNome);
   return [...new Set(setores)];
 }
 
@@ -290,6 +291,21 @@ export function documentoAplicavelAoUsuario(
   if (setoresUsuario.length === 0) return false;
   const normUser = new Set(setoresUsuario.map(normalizarSetorAplicavel));
   return aplicavel.some((a) => normUser.has(normalizarSetorAplicavel(a)));
+}
+
+export function podeGerenciarPostagensPortalRh(canEditar: PermissaoValor): boolean {
+  return canEditar === "sim";
+}
+
+export function documentoVisivelPorPermissaoPortalRh(
+  doc: { aplicavel_a?: string[] | null },
+  canView: PermissaoValor,
+  canEditar: PermissaoValor,
+  setoresUsuario: readonly string[],
+): boolean {
+  if (canEditar === "sim" || canView === "sim") return true;
+  if (canView !== "proprios") return false;
+  return documentoAplicavelAoUsuario(doc.aplicavel_a, setoresUsuario);
 }
 
 /** Ciência exigida só para perfis internos/gerenciais, quando o documento pede aceite e o público inclui o usuário. */

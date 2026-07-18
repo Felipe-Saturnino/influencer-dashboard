@@ -34,6 +34,14 @@ export function timeRowPorRotuloCanonica(times: StaffTimeRow[], rotulo: string):
   return times.find((x) => normalizarNomeCalFiltro(x.nome) === target);
 }
 
+/**
+ * Gerência sem times na RPC `rh_calendario_times_visiveis`: `id` = `gerencia_id`
+ * (times reais têm uuid distinto da gerência).
+ */
+export function staffTimeRowEhGerenciaSemTime(row: Pick<StaffTimeRow, "id" | "gerencia_id">): boolean {
+  return Boolean(row.id) && row.id === row.gerencia_id;
+}
+
 export function prestadorAtendeFiltroTime(
   p: RhFuncionario,
   opts: {
@@ -46,6 +54,10 @@ export function prestadorAtendeFiltroTime(
 ): boolean {
   if (!opts.filtroAtivo) return true;
   if (p.org_time_id && opts.filtroTimeIdsReais.has(p.org_time_id)) return true;
+  // Cascata: gerência sem times (ou vínculo só na gerência) — id selecionado = org_gerencia_id.
+  if (p.org_gerencia_id && !p.org_time_id && opts.filtroTimeIdsReais.has(p.org_gerencia_id)) {
+    return true;
+  }
   if (opts.treinamentoSelecionado && opts.treinamentoGerenciaId) {
     if (p.org_gerencia_id === opts.treinamentoGerenciaId) return true;
     if (p.org_time_id && opts.treinamentoTimeIds?.has(p.org_time_id)) return true;

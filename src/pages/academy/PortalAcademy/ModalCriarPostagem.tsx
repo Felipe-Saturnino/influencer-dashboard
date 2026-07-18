@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Loader2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Loader2, Paperclip, Plus, X } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -56,56 +56,161 @@ const ERRO_SALVAR =
   "Não foi possível salvar a postagem. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_UPLOAD = "Não foi possível enviar o arquivo. Tente novamente.";
 
-function ListaArquivosModalCampo({
+type ItemArquivoLista = { key: string; label: string; pendente: boolean };
+
+function CampoArquivosBotao({
+  id,
+  label,
+  buttonLabel,
+  accept,
+  multiple = true,
   items,
+  onAdd,
   onRemove,
+  disabled,
   t,
 }: {
-  items: { key: string; label: string }[];
+  id: string;
+  label: string;
+  buttonLabel: string;
+  accept?: string;
+  multiple?: boolean;
+  items: ItemArquivoLista[];
+  onAdd: (files: File[]) => void;
   onRemove: (key: string) => void;
-  t: { textMuted: string; cardBorder: string; inputBg: string };
+  disabled?: boolean;
+  t: { text: string; textMuted: string; cardBorder: string; inputBg: string };
 }) {
-  if (!items.length) return null;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const Icon = buttonLabel.toLowerCase().includes("anexo") ? Paperclip : Plus;
+
   return (
-    <ul style={{ margin: "8px 0 0", padding: 0, listStyle: "none" }}>
-      {items.map((item) => (
-        <li
-          key={item.key}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: 11,
-            color: t.textMuted,
-            marginTop: 4,
-            fontFamily: FONT.body,
-          }}
-        >
-          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
-          <button
-            type="button"
-            onClick={() => onRemove(item.key)}
-            aria-label={`Remover ${item.label}`}
-            title={`Remover ${item.label}`}
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: 6,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.textMuted,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <X size={12} aria-hidden />
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div>
+      <label htmlFor={id} style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
+        {label}
+      </label>
+      <input
+        ref={inputRef}
+        id={id}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        disabled={disabled}
+        onChange={(e) => {
+          const list = e.target.files;
+          if (!list?.length) return;
+          onAdd(Array.from(list));
+          e.target.value = "";
+        }}
+        style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", border: 0 }}
+        aria-label={buttonLabel}
+      />
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => inputRef.current?.click()}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 16px",
+          borderRadius: 10,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.inputBg,
+          color: t.text,
+          fontFamily: FONT.body,
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: disabled ? "not-allowed" : "pointer",
+          opacity: disabled ? 0.6 : 1,
+        }}
+      >
+        <Icon size={15} aria-hidden />
+        {buttonLabel}
+      </button>
+      {items.length === 0 ? (
+        <p style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>Nenhum arquivo adicionado.</p>
+      ) : (
+        <>
+          <ul style={{ margin: "10px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+            {items.map((item) => (
+              <li
+                key={item.key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  fontFamily: FONT.body,
+                }}
+              >
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontSize: 12,
+                    color: t.text,
+                  }}
+                  title={item.label}
+                >
+                  {item.label}
+                </span>
+                {item.pendente ? (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 20,
+                      background: "rgba(245,158,11,0.15)",
+                      color: "#f59e0b",
+                      border: "1px solid rgba(245,158,11,0.35)",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Pendente
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onRemove(item.key)}
+                  aria-label={`Remover ${item.label}`}
+                  title={`Remover ${item.label}`}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: "transparent",
+                    color: t.textMuted,
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <X size={13} aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+          {items.some((i) => i.pendente) ? (
+            <p style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+              Arquivos serão enviados ao salvar ou publicar.
+            </p>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -180,26 +285,30 @@ export function ModalCriarPostagem({
     [organogramaGrupos],
   );
 
-  const itensImagemLista = useMemo(() => {
+  const itensImagemLista = useMemo((): ItemArquivoLista[] => {
     const saved = imagemPaths.map((path) => ({
       key: `saved:${path}`,
       label: path.split("/").pop() || path,
+      pendente: false,
     }));
     const pending = imagemFiles.map((file, i) => ({
       key: `pending:${i}`,
-      label: `${file.name} (pendente)`,
+      label: file.name,
+      pendente: true,
     }));
     return [...saved, ...pending];
   }, [imagemPaths, imagemFiles]);
 
-  const itensAnexoLista = useMemo(() => {
+  const itensAnexoLista = useMemo((): ItemArquivoLista[] => {
     const saved = anexoRefs.map((a) => ({
       key: `saved:${a.path}`,
       label: a.nome,
+      pendente: false,
     }));
     const pending = anexoFiles.map((file, i) => ({
       key: `pending:${i}`,
-      label: `${file.name} (pendente)`,
+      label: file.name,
+      pendente: true,
     }));
     return [...saved, ...pending];
   }, [anexoRefs, anexoFiles]);
@@ -730,41 +839,27 @@ export function ModalCriarPostagem({
                 />
               </div>
 
-              <div>
-                {lbl("ap-imagem", "Imagem/Vídeo")}
-                <input
-                  id="ap-imagem"
-                  type="file"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={(e) => {
-                    const list = e.target.files;
-                    if (!list?.length) return;
-                    setImagemFiles((prev) => [...prev, ...Array.from(list)]);
-                    e.target.value = "";
-                  }}
-                  style={{ ...inputStyle, padding: 8 }}
-                  aria-label="Imagem ou vídeo"
-                />
-                <ListaArquivosModalCampo items={itensImagemLista} onRemove={removerImagemItem} t={t} />
-              </div>
-              <div>
-                {lbl("ap-anexo", "Anexo")}
-                <input
-                  id="ap-anexo"
-                  type="file"
-                  multiple
-                  onChange={(e) => {
-                    const list = e.target.files;
-                    if (!list?.length) return;
-                    setAnexoFiles((prev) => [...prev, ...Array.from(list)]);
-                    e.target.value = "";
-                  }}
-                  style={{ ...inputStyle, padding: 8 }}
-                  aria-label="Anexo"
-                />
-                <ListaArquivosModalCampo items={itensAnexoLista} onRemove={removerAnexoItem} t={t} />
-              </div>
+              <CampoArquivosBotao
+                id="ap-imagem"
+                label="Imagem/Vídeo"
+                buttonLabel="Adicionar imagem ou vídeo"
+                accept="image/*,video/*"
+                items={itensImagemLista}
+                onAdd={(files) => setImagemFiles((prev) => [...prev, ...files])}
+                onRemove={removerImagemItem}
+                disabled={salvando}
+                t={t}
+              />
+              <CampoArquivosBotao
+                id="ap-anexo"
+                label="Anexo"
+                buttonLabel="Adicionar anexo"
+                items={itensAnexoLista}
+                onAdd={(files) => setAnexoFiles((prev) => [...prev, ...files])}
+                onRemove={removerAnexoItem}
+                disabled={salvando}
+                t={t}
+              />
             </>
           ) : null}
         </div>

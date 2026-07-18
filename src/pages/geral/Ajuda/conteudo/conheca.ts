@@ -507,6 +507,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, **repasse inicial** (valor em reais), descrição e responsabilidades. Em vagas **Externas**, o campo **Tags** é obrigatório — adicione ao menos um rótulo (digite e pressione Enter). Vagas **Internas** não exibem Tags. Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
       },
+      {
+        subtitulo: "Compartilhar vaga externa",
+        texto:
+          "Em vagas **Externas** abertas, use **Compartilhar** para copiar o link da página de Carreiras (`https://spingaming.com.br/carreiras/`). Oriente o candidato a preencher o formulário no site: em **Como chegou até nós?** escolha **Indicação** e em **Quem indicou?** informe o nome do Prestador — necessário para o recebimento do bônus.",
+      },
     ],
   },
   rh_central_denuncias: {
@@ -668,7 +673,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Modos e filtros",
         texto:
-          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda.\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
+          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
       },
       {
         subtitulo: "Check-in e Check-out",
@@ -759,7 +764,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nova postagem",
         texto:
-          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Imagem/Vídeo** e **Anexo** aceitam **vários arquivos** por postagem — selecione de uma vez ou em etapas; remova itens da lista antes de salvar se necessário.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
+          "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Imagem/Vídeo** e **Anexo** usam o botão **Adicionar…** (sem a barra nativa do navegador). Os arquivos aparecem numa lista abaixo, com badge **Pendente** até salvar ou publicar; dá para remover itens antes do envio.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
       },
       {
         subtitulo: "Manuais — tabela e ciência",
@@ -952,7 +957,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Políticas e Normativas",
         texto:
-          "Lista documentos oficiais (políticas RH, procedimentos, códigos de conduta e normas operacionais) em tabela com código, versão, tipo e aplicabilidade.\n\nUse os filtros por família (Políticas RH, Procedimentos, Códigos, Operações) para restringir a lista. Clique em Abrir para visualizar o PDF publicado no modal — metadados da capa, documentos relacionados e botão Li e estou ciente quando a ciência for exigida. Documentos antigos sem código continuam abrindo no formato anterior (texto + anexo opcional).",
+          "Lista documentos oficiais (políticas RH, procedimentos, códigos de conduta e normas operacionais) em tabela com código, versão, tipo e aplicabilidade.\n\nCom permissão de Ver = Sim, você visualiza todas as políticas publicadas. Com Ver = Próprios, visualiza apenas as políticas aplicáveis a Todos os prestadores ou à sua diretoria, gerência ou time. Usuários com Editar = Sim visualizam todas as postagens e também acessam o Gerenciamento de Postagens.\n\nUse os filtros por família (Políticas RH, Procedimentos, Códigos, Operações) para restringir a lista. Clique no ícone de visualização para abrir o PDF e, quando aplicável, registrar sua ciência.",
       },
       {
         subtitulo: "RH Talks",
@@ -962,7 +967,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Postagens (Gestores)",
         texto:
-          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (ícone Archive + pop-up de confirmação)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra a competência atual e as 12 anteriores; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
+          "Disponível apenas para usuários com permissão de Editar = Sim no Portal de RH. Editar = Próprios não libera esta aba.\n\nA aba exibe uma tabela com postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (ícone Archive + pop-up de confirmação)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra a competência atual e as 12 anteriores; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
       },
       {
         subtitulo: "Criar e Publicar Postagens",
@@ -1315,6 +1320,35 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Testes automatizados (CI) vs diagnóstico na plataforma",
         texto:
           "A suíte Vitest no repositório (CI e pre-commit) valida helpers e imports — não substitui o diagnóstico em produção. Use **Executar diagnóstico** quando precisar de um snapshot operacional gravado em Logs Recentes no ambiente atual.",
+      },
+    ],
+  },
+  tech_ops_ordem_saida: {
+    titulo: "Ordem de Saída",
+    blocos: [
+      {
+        texto:
+          "A Ordem de Saída registra movimentações de ativos Tech Ops em três abas: **O.S. Interna** (entre estúdios e áreas), **O.S. Externa** (saídas para fora) e **O.S. Manutenção** (envio a fornecedores). Os itens vêm do cadastro da Gestão de Estoque; os locais internos usam os estúdios de Gestão de Estúdios mais Estoque, Shuffler Room, OCR e Academy.",
+      },
+      {
+        subtitulo: "Filtros e período",
+        texto:
+          "O carrossel cobre o mês atual e os dois anteriores. O botão Histórico mostra todo o período. Ordens ainda Solicitadas ou Abertas de meses anteriores continuam aparecendo no mês seguinte até serem Concluídas ou Canceladas.\n\nOs cards Total, Solicitadas, Abertas, Concluídas e Canceladas filtraram a listagem por status — clique de novo no card ativo (ou em Total) para limpar.",
+      },
+      {
+        subtitulo: "Códigos e solicitação",
+        texto:
+          "Cada OS recebe um código automático no formato OS/INT-MMAA-####, OS/EXT-MMAA-#### ou OS/MAN-MMAA-#### (mês/ano de abertura + sequencial). Ao Solicitar, a ordem entra como Solicitada (na Manutenção o rótulo exibido é Registrada).",
+      },
+      {
+        subtitulo: "Ver, Aprovar e Atualizar",
+        texto:
+          "No Ver, o título é o código da OS e o subtítulo mostra status e responsável (Interna) ou solicitante (Externa/Manutenção). A aba Dados lista os campos do fluxo e o bloco de itens; Cancelada e Concluída podem exibir quadros de cancelamento ou conclusão. Anotações inclui a observação da abertura; Histórico registra as ações.\n\nQuando a OS está Solicitada, Aprovar muda o status para Aberta (ou Concluída quando for Sem retorno). Recusar exige o Motivo do Cancelamento e muda a OS para Cancelada.\n\nNo Atualizar, escolha o tipo: Cancelar OS (motivo → Cancelada), Confirmar Retorno (data de hoje, checkboxes por item e observações → Concluída) ou Alterar OS (edita dados e itens e volta a Solicitada). As opções disponíveis dependem da aba e do status.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Depende da permissão de **Ver** / **Criar** / **Editar** em Gestão de Usuários. Não há exclusão — correções seguem por atualização de status e histórico.",
       },
     ],
   },

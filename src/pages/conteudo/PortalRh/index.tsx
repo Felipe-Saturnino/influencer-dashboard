@@ -37,8 +37,10 @@ import {
   RH_DOCUMENTO_FILTRO_SUBTABS,
   documentoExigeCienciaDoUsuario,
   documentoUsaModeloNormativo,
+  documentoVisivelPorPermissaoPortalRh,
   itemNoFiltroDocumento,
   perfilPortalRhParticipaCiencia,
+  podeGerenciarPostagensPortalRh,
   setoresAplicavelDoUsuario,
   tagTipoDocumentoCor,
   type RhDocumentoClassificacao,
@@ -245,9 +247,9 @@ function receiptKey(ct: string, id: string): string {
 const ERRO_CARREGAR_PORTAL =
   "Não foi possível carregar o portal. Se o problema persistir, entre em contato com o suporte.";
 
-function tabsPortalRhKeys(canEditarOk: boolean): AbaPortal[] {
+function tabsPortalRhKeys(podeGerenciarPostagens: boolean): AbaPortal[] {
   const keys: AbaPortal[] = ["comunicados", "politicas", "rhtalks"];
-  if (canEditarOk) keys.push("gerenciamento");
+  if (podeGerenciarPostagens) keys.push("gerenciamento");
   return keys;
 }
 
@@ -255,9 +257,9 @@ function onPortalRhTabsKeyDown(
   e: KeyboardEvent,
   abaAtiva: AbaPortal,
   setAba: (key: AbaPortal) => void,
-  canEditarOk: boolean,
+  podeGerenciarPostagens: boolean,
 ) {
-  const tabs = tabsPortalRhKeys(canEditarOk);
+  const tabs = tabsPortalRhKeys(podeGerenciarPostagens);
   const idx = tabs.indexOf(abaAtiva);
   if (idx < 0) return;
   if (e.key === "ArrowRight") {
@@ -337,6 +339,7 @@ function FiltroSubtabPills({
 export default function PortalRhPage() {
   const { theme: t, user } = useApp();
   const perm = usePermission("rh_portal");
+  const podeGerenciarPostagens = podeGerenciarPostagensPortalRh(perm.canEditar);
 
   const [aba, setAba] = useRouteTab(
     "rh_portal",
@@ -542,8 +545,8 @@ export default function PortalRhPage() {
 
   useEffect(() => {
     if (perm.loading) return;
-    if (!perm.canEditarOk && aba === "gerenciamento") setAba("comunicados");
-  }, [perm.loading, perm.canEditarOk, aba, setAba]);
+    if (!podeGerenciarPostagens && aba === "gerenciamento") setAba("comunicados");
+  }, [perm.loading, podeGerenciarPostagens, aba, setAba]);
 
   useEffect(() => {
     if (aba === "gerenciamento") return;
@@ -649,7 +652,7 @@ export default function PortalRhPage() {
         <FiltroDocumentoTipoPills filtroAtivo={filtroCatPol} onFiltro={setFiltroCatPol} />
       );
     }
-    if (aba === "gerenciamento" && perm.canEditarOk) {
+    if (aba === "gerenciamento" && podeGerenciarPostagens) {
       return (
         <>
           <GerenciamentoPostagensFiltrosTipoStatus
@@ -665,7 +668,7 @@ export default function PortalRhPage() {
       );
     }
     return null;
-  }, [aba, filtroCatCom, filtroCatPol, categoriasCom, filtroTipoGer, filtroStatusGer, perm.canEditarOk]);
+  }, [aba, filtroCatCom, filtroCatPol, categoriasCom, filtroTipoGer, filtroStatusGer, podeGerenciarPostagens]);
 
   useEffect(() => {
     if (comunicados.length > 0 && mesesCom.length > 0) setIdxMesCom(mesesCom.length - 1);
@@ -737,6 +740,9 @@ export default function PortalRhPage() {
 
   const documentosFiltrados = useMemo(() => {
     let list = documentos.filter((d) => isPostagemPublica(d.status));
+    list = list.filter((d) =>
+      documentoVisivelPorPermissaoPortalRh(d, perm.canView, perm.canEditar, setoresUsuarioAplicavel),
+    );
     if (!modoHistorico) {
       const mesSel = mesesPol[idxMesPol];
       list = list.filter((d) => itemNoMesCarrossel(d.published_at, mesSel));
@@ -764,7 +770,19 @@ export default function PortalRhPage() {
       return codA.localeCompare(codB, "pt-BR", { numeric: true });
     });
     return list;
-  }, [documentos, filtroCatPol, modoHistorico, mesesPol, idxMesPol, buscaDeb, hitBuscaTexto, hitBuscaCorpo]);
+  }, [
+    documentos,
+    perm.canView,
+    perm.canEditar,
+    setoresUsuarioAplicavel,
+    filtroCatPol,
+    modoHistorico,
+    mesesPol,
+    idxMesPol,
+    buscaDeb,
+    hitBuscaTexto,
+    hitBuscaCorpo,
+  ]);
 
   const talksFiltrados = useMemo(() => {
     let list = talks.filter((tk) => isPostagemPublica(tk.status));
@@ -957,14 +975,14 @@ export default function PortalRhPage() {
             role="tablist"
             aria-label="Seções do portal de RH"
             style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
-            onKeyDown={(e) => onPortalRhTabsKeyDown(e, aba, setAba, perm.canEditarOk)}
+            onKeyDown={(e) => onPortalRhTabsKeyDown(e, aba, setAba, podeGerenciarPostagens)}
           >
             {(
               [
                 { key: "comunicados" as const, label: "Comunicados", Icon: Megaphone },
                 { key: "politicas" as const, label: "Políticas e normativas", Icon: FileText },
                 { key: "rhtalks" as const, label: "RH Talks", Icon: MessagesSquare },
-                ...(perm.canEditarOk
+                ...(podeGerenciarPostagens
                   ? [{ key: "gerenciamento" as const, label: "Gerenciamento de Postagens", Icon: SlidersHorizontal }]
                   : []),
               ] as const
@@ -996,7 +1014,7 @@ export default function PortalRhPage() {
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ verticalAlign: "middle", marginRight: 8 }} />
           Carregando…
         </div>
-      ) : aba === "gerenciamento" && perm.canEditarOk ? (
+      ) : aba === "gerenciamento" && podeGerenciarPostagens ? (
         <GerenciamentoPostagens
           categoriasCom={categoriasCom}
           categoriasPol={categoriasPol}

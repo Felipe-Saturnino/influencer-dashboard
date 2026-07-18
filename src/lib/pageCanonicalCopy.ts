@@ -16,6 +16,8 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
   rh_figurinos: "Controle o inventário de peças com retiradas, devoluções e manutenções.",
   tech_ops_estoque:
     "Controle o estoque de itens, equipamentos e insumos de jogo e o cadastro de fornecedores.",
+  tech_ops_ordem_saida:
+    "Solicite e acompanhe as ordens de saída internas, externas e de manutenção dos ativos.",
   galeria_fotos:
     "Faça o Upload das fotos de eventos, publique materiais gerais e vincule imagens individuais aos colaboradores.",
 };
