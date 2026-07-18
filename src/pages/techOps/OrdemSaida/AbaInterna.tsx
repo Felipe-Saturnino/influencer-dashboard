@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Eye, RefreshCw } from "lucide-react";
+import { Check, Eye, RefreshCw } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -21,8 +21,11 @@ import {
   type OrdemSaidaStatus,
   type OsItemDisponivel,
 } from "../../../lib/techOpsOrdemSaida";
+import { getOrdemSaidaPermissoesUi } from "../../../lib/techOpsOrdemSaidaPermissoes";
 import { BadgeOs, CelulaItensOs, VazioOs } from "./ordemSaidaUi";
-import { ModalAtualizarOs, ModalNovaOsInterna, ModalVerOs } from "./ModaisOrdemSaida";
+import { ModalNovaOsInterna } from "./ModaisOrdemSaida";
+import { ModalAprovarOs, ModalVerOs } from "./ModalVerOs";
+import { ModalAtualizarOs } from "./ModalAtualizarOs";
 
 type LocalOption = { chave: string; label: string };
 type StatusFiltro = "" | OrdemSaidaStatus;
@@ -56,13 +59,15 @@ export function AbaInterna({
   onReload: () => void;
   userName: string;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
   const [novoAberto, setNovoAberto] = useState(false);
   const [verRow, setVerRow] = useState<OrdemSaidaRow | null>(null);
+  const [aprovarRow, setAprovarRow] = useState<OrdemSaidaRow | null>(null);
   const [updRow, setUpdRow] = useState<OrdemSaidaRow | null>(null);
+  const permissoesPagina = getOrdemSaidaPermissoesUi(perm, user);
 
   const filtrados = useMemo(() => {
     return rows.filter((r) => {
@@ -89,7 +94,7 @@ export function AbaInterna({
       <div style={pageBox}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <SectionTitle sub="Movimentações internas">Listagem</SectionTitle>
-          {perm.canCriarOk ? (
+          {permissoesPagina.podeNovaOs ? (
             <CtaCriarButton onClick={() => setNovoAberto(true)}>Nova O.S. Interna</CtaCriarButton>
           ) : null}
         </div>
@@ -116,6 +121,7 @@ export function AbaInterna({
                 {filtrados.map((r, i) => {
                   const codigo = formatCodigoOrdemSaida(r.tipo, r.competencia, r.codigo_num);
                   const retorno = r.sem_retorno ? "Sem retorno" : formatDataBrOs(r.data_retorno);
+                  const permissoesRow = getOrdemSaidaPermissoesUi(perm, user, r);
                   return (
                     <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{codigo}</td>
@@ -140,7 +146,14 @@ export function AbaInterna({
                           <BtnIconeAcaoLinha label={tooltipAcao("Ver O.S.")} onClick={() => setVerRow(r)}>
                             <Eye size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
-                          {perm.canEditarOk ? (
+                          {permissoesRow.podeAprovar && r.status === "solicitada" ? (
+                            <BtnIconeAcaoLinha label={tooltipAcao("Aprovar O.S.")} onClick={() => setAprovarRow(r)}>
+                              <Check size={13} aria-hidden />
+                            </BtnIconeAcaoLinha>
+                          ) : null}
+                          {permissoesRow.podeAtualizar &&
+                          r.status !== "concluida" &&
+                          r.status !== "cancelada" ? (
                             <BtnIconeAcaoLinha label={tooltipAcao("Atualizar O.S.")} onClick={() => setUpdRow(r)}>
                               <RefreshCw size={13} aria-hidden />
                             </BtnIconeAcaoLinha>
@@ -170,14 +183,34 @@ export function AbaInterna({
       {verRow ? (
         <ModalVerOs
           row={verRow}
+          contexto="interna"
           estudioNomePorSlug={estudioNomePorSlug}
           onClose={() => setVerRow(null)}
         />
       ) : null}
-      {updRow ? (
+      {aprovarRow &&
+      aprovarRow.status === "solicitada" &&
+      getOrdemSaidaPermissoesUi(perm, user, aprovarRow).podeAprovar ? (
+        <ModalAprovarOs
+          row={aprovarRow}
+          contexto="interna"
+          estudioNomePorSlug={estudioNomePorSlug}
+          userName={userName}
+          onClose={() => setAprovarRow(null)}
+          onAtualizado={onReload}
+        />
+      ) : null}
+      {updRow &&
+      updRow.status !== "concluida" &&
+      updRow.status !== "cancelada" &&
+      getOrdemSaidaPermissoesUi(perm, user, updRow).podeAtualizar ? (
         <ModalAtualizarOs
           row={updRow}
+          contexto="interna"
           userName={userName}
+          estudioNomePorSlug={estudioNomePorSlug}
+          locaisOptions={locaisOptions}
+          itensDisponiveis={itensDisponiveis}
           onClose={() => setUpdRow(null)}
           onAtualizado={onReload}
         />

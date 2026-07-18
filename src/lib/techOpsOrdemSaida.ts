@@ -79,6 +79,7 @@ export interface OrdemSaidaItemRow {
   entidade_id: string;
   quantidade: number;
   label_snapshot: string;
+  retorno_confirmado: boolean;
 }
 
 export interface OrdemSaidaRow {
@@ -97,6 +98,12 @@ export interface OrdemSaidaRow {
   data_saida_realizada: string | null;
   data_retorno_realizada: string | null;
   observacao: string;
+  motivo_cancelamento: string;
+  cancelado_por_nome: string;
+  cancelado_em: string | null;
+  observacoes_retorno: string;
+  concluido_por_nome: string;
+  concluido_em: string | null;
   solicitante_user_id: string | null;
   solicitante_nome: string;
   solicitante_time: string;
@@ -108,12 +115,105 @@ export interface OrdemSaidaRow {
   fornecedor_razao_social?: string | null;
 }
 
+export interface OrdemSaidaAnotacaoRow {
+  id: string;
+  ordem_id: string;
+  texto: string;
+  autor_nome: string;
+  created_at: string;
+}
+
+/** Contexto visual do Modal Ver / Atualizar. */
+export type OsModalContexto =
+  | "interna"
+  | "externa_futuras"
+  | "externa_abertas"
+  | "externa_encerradas"
+  | "manutencao_abertas"
+  | "manutencao_encerradas";
+
+export type OsTipoAtualizacao = "cancelar" | "confirmar_retorno" | "alterar";
+
+export function hojeDataBrOs(ref = new Date()): string {
+  const d = String(ref.getDate()).padStart(2, "0");
+  const m = String(ref.getMonth() + 1).padStart(2, "0");
+  const y = ref.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+export function subtituloModalOs(row: OrdemSaidaRow): string {
+  const status = labelStatusOrdemSaida(row.status, row.tipo);
+  const pessoa =
+    row.tipo === "interna"
+      ? row.responsavel_nome.trim() || row.solicitante_nome.trim() || "—"
+      : formatSolicitanteOs(row.solicitante_nome, row.solicitante_time);
+  return `${status} - ${pessoa}`;
+}
+
+export function opcoesTipoAtualizacaoOs(
+  contexto: OsModalContexto,
+  status: OrdemSaidaStatus,
+): OsTipoAtualizacao[] {
+  if (status === "concluida" || status === "cancelada") return [];
+  if (contexto === "interna") return ["cancelar", "confirmar_retorno", "alterar"];
+  if (contexto === "externa_futuras") return ["cancelar", "alterar"];
+  if (contexto === "externa_abertas") return ["cancelar", "confirmar_retorno"];
+  if (contexto === "manutencao_abertas") {
+    const out: OsTipoAtualizacao[] = ["cancelar"];
+    if (status === "aberta") out.push("confirmar_retorno");
+    if (status === "solicitada") out.push("alterar");
+    return out;
+  }
+  return [];
+}
+
 export interface OsItemDisponivel {
   entidade_tipo: OrdemSaidaItemTipo;
   entidade_id: string;
   label: string;
   /** Para equipamentos, qty sempre 1. */
   maxQtd: number;
+}
+
+export type ItemDraftOs = { key: string; entidadeKey: string; quantidade: string };
+
+export function novaLinhaItemOs(): ItemDraftOs {
+  return { key: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, entidadeKey: "", quantidade: "1" };
+}
+
+export function draftsFromOrdemItens(itens: OrdemSaidaItemRow[]): ItemDraftOs[] {
+  if (!itens.length) return [novaLinhaItemOs()];
+  return itens.map((it) => ({
+    key: it.id,
+    entidadeKey: `${it.entidade_tipo}:${it.entidade_id}`,
+    quantidade: String(it.quantidade),
+  }));
+}
+
+/** Garante que itens já na OS permaneçam no catálogo ao editar (mesmo com estoque 0). */
+export function catalogoComItensDaOs(
+  catalogo: OsItemDisponivel[],
+  itens: OrdemSaidaItemRow[],
+): OsItemDisponivel[] {
+  const map = new Map(catalogo.map((c) => [`${c.entidade_tipo}:${c.entidade_id}`, { ...c }]));
+  for (const it of itens) {
+    const k = `${it.entidade_tipo}:${it.entidade_id}`;
+    const existing = map.get(k);
+    if (existing) {
+      map.set(k, {
+        ...existing,
+        maxQtd: Math.max(existing.maxQtd, it.entidade_tipo === "equipamento" ? 1 : it.quantidade),
+      });
+    } else {
+      map.set(k, {
+        entidade_tipo: it.entidade_tipo,
+        entidade_id: it.entidade_id,
+        label: it.label_snapshot,
+        maxQtd: it.entidade_tipo === "equipamento" ? 1 : Math.max(1, it.quantidade),
+      });
+    }
+  }
+  return [...map.values()];
 }
 
 /* ─── Códigos ─────────────────────────────────────────────────────────────── */
@@ -231,7 +331,7 @@ export async function fetchItensDisponiveisOs(): Promise<OsItemDisponivel[]> {
   return out;
 }
 
-/** Manutenção: lista todas as linhas ativas (sem filtro de estoque), conforme mockup. */
+/** Manutenção: lista linhas ativas; maxQtd = Estoque (itens) / Qtd Atual (jogo) — nunca inflar. */
 export async function fetchItensManutencaoOs(): Promise<OsItemDisponivel[]> {
   const [itens, equips, lotes] = await Promise.all([
     fetchEstoqueItens(),
@@ -240,11 +340,12 @@ export async function fetchItensManutencaoOs(): Promise<OsItemDisponivel[]> {
   ]);
   const out: OsItemDisponivel[] = [];
   for (const r of itens as EstoqueItemRow[]) {
+    const est = estoqueDisponivelItem(r);
     out.push({
       entidade_tipo: "item",
       entidade_id: r.id,
-      label: `${codigoEstoqueItem(r)} · ${r.nome}`,
-      maxQtd: Math.max(1, estoqueDisponivelItem(r) || 1),
+      label: `${codigoEstoqueItem(r)} · ${r.nome} (Estoque: ${est})`,
+      maxQtd: est,
     });
   }
   for (const r of equips as EstoqueEquipamentoRow[]) {
@@ -256,14 +357,27 @@ export async function fetchItensManutencaoOs(): Promise<OsItemDisponivel[]> {
     });
   }
   for (const r of lotes as EstoqueJogoLoteRow[]) {
+    const q = qtdAtualJogoLote(r);
     out.push({
       entidade_tipo: "jogo",
       entidade_id: r.id,
-      label: `${codigoEstoqueJogoLote(r)} · ${r.nome_lote}`,
-      maxQtd: Math.max(1, qtdAtualJogoLote(r) || 1),
+      label: `${codigoEstoqueJogoLote(r)} · ${r.nome_lote} (Qtd: ${q})`,
+      maxQtd: q,
     });
   }
   return out;
+}
+
+/** Limita texto de quantidade ao intervalo 1…maxQtd (equipamentos usam max 1). */
+export function clampQuantidadeOs(raw: string, maxQtd: number): string {
+  const lim = Math.max(0, Math.floor(maxQtd));
+  if (raw.trim() === "") return raw;
+  const n = Number.parseInt(raw.replace(/\D/g, ""), 10);
+  if (!Number.isFinite(n)) return raw;
+  if (lim <= 0) return "0";
+  if (n < 1) return "1";
+  if (n > lim) return String(lim);
+  return String(n);
 }
 
 export async function fetchFornecedoresOs(): Promise<EstoqueFornecedorRow[]> {
@@ -284,10 +398,19 @@ function unwrapEmbed<T>(raw: T | T[] | null | undefined): T | null {
 
 function mapOsRow(raw: OsFetchRow): OrdemSaidaRow {
   const { tech_ops_ordem_saida_itens: itensRaw, tech_ops_estoque_fornecedores: fornRaw, ...resto } = raw;
-  const itens = Array.isArray(itensRaw) ? itensRaw : itensRaw ? [itensRaw] : [];
+  const itens = (Array.isArray(itensRaw) ? itensRaw : itensRaw ? [itensRaw] : []).map((it) => ({
+    ...it,
+    retorno_confirmado: Boolean(it.retorno_confirmado),
+  }));
   const forn = unwrapEmbed(fornRaw);
   return {
     ...resto,
+    motivo_cancelamento: resto.motivo_cancelamento ?? "",
+    cancelado_por_nome: resto.cancelado_por_nome ?? "",
+    cancelado_em: resto.cancelado_em ?? null,
+    observacoes_retorno: resto.observacoes_retorno ?? "",
+    concluido_por_nome: resto.concluido_por_nome ?? "",
+    concluido_em: resto.concluido_em ?? null,
     itens,
     fornecedor_razao_social: forn?.razao_social ?? null,
   };
@@ -322,6 +445,83 @@ export async function fetchHistoricoOrdemSaida(ordemId: string): Promise<
     autor_nome: string;
     created_at: string;
   }[];
+}
+
+export async function fetchAnotacoesOrdemSaida(ordemId: string): Promise<OrdemSaidaAnotacaoRow[]> {
+  const { data, error } = await supabase
+    .from("tech_ops_ordem_saida_anotacoes")
+    .select("id, ordem_id, texto, autor_nome, created_at")
+    .eq("ordem_id", ordemId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return (data ?? []) as OrdemSaidaAnotacaoRow[];
+}
+
+export async function criarAnotacaoOrdemSaida(params: {
+  ordemId: string;
+  texto: string;
+  autorNome: string;
+}): Promise<void> {
+  const texto = params.texto.trim();
+  if (!texto) return;
+  const { error } = await supabase.from("tech_ops_ordem_saida_anotacoes").insert({
+    ordem_id: params.ordemId,
+    texto,
+    autor_nome: params.autorNome,
+  });
+  if (error) throw error;
+  await registrarHistoricoOrdemSaida({
+    ordemId: params.ordemId,
+    acao: "Anotação",
+    detalhe: texto.length > 120 ? `${texto.slice(0, 117)}…` : texto,
+    autorNome: params.autorNome,
+  });
+}
+
+/** Lista para a aba Anotações: observação de abertura + registros da tabela. */
+export function montarTimelineAnotacoesOs(
+  row: OrdemSaidaRow,
+  anotacoes: OrdemSaidaAnotacaoRow[],
+): { id: string; titulo: string; texto: string; autor_nome: string; created_at: string }[] {
+  const out: { id: string; titulo: string; texto: string; autor_nome: string; created_at: string }[] = [];
+  for (const a of anotacoes) {
+    out.push({
+      id: a.id,
+      titulo: "Anotação",
+      texto: a.texto,
+      autor_nome: a.autor_nome,
+      created_at: a.created_at,
+    });
+  }
+  if (row.observacao.trim()) {
+    out.push({
+      id: `abertura-${row.id}`,
+      titulo: "Observação na abertura",
+      texto: row.observacao.trim(),
+      autor_nome: row.solicitante_nome || "—",
+      created_at: row.created_at,
+    });
+  }
+  if (row.motivo_cancelamento.trim() && row.cancelado_em) {
+    out.push({
+      id: `cancel-${row.id}`,
+      titulo: "Motivo do cancelamento",
+      texto: row.motivo_cancelamento.trim(),
+      autor_nome: row.cancelado_por_nome || "—",
+      created_at: row.cancelado_em,
+    });
+  }
+  if (row.observacoes_retorno.trim() && row.concluido_em) {
+    out.push({
+      id: `retorno-${row.id}`,
+      titulo: "Observações do retorno",
+      texto: row.observacoes_retorno.trim(),
+      autor_nome: row.concluido_por_nome || "—",
+      created_at: row.concluido_em,
+    });
+  }
+  return out.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 async function reservarCodigo(tipo: OrdemSaidaTipo): Promise<{ codigo_num: number; competencia: string }> {
@@ -438,6 +638,160 @@ export async function atualizarStatusOrdemSaida(params: {
     ordemId: params.row.id,
     acao: "Atualização de Status",
     detalhe: `${labelStatusOrdemSaida(params.row.status, params.row.tipo)} → ${labelStatusOrdemSaida(params.status, params.row.tipo)}`,
+    autorNome: params.autorNome,
+  });
+}
+
+export async function cancelarOrdemSaida(params: {
+  row: OrdemSaidaRow;
+  motivo: string;
+  autorNome: string;
+}): Promise<void> {
+  const motivo = params.motivo.trim();
+  if (!motivo) throw new Error("motivo obrigatório");
+  const agora = new Date().toISOString();
+  const { error } = await supabase
+    .from("tech_ops_ordem_saida")
+    .update({
+      status: "cancelada",
+      motivo_cancelamento: motivo,
+      cancelado_por_nome: params.autorNome,
+      cancelado_em: agora,
+    })
+    .eq("id", params.row.id);
+  if (error) throw error;
+  await registrarHistoricoOrdemSaida({
+    ordemId: params.row.id,
+    acao: "Cancelamento",
+    detalhe: motivo,
+    autorNome: params.autorNome,
+  });
+}
+
+export async function aprovarOrdemSaida(params: {
+  row: OrdemSaidaRow;
+  autorNome: string;
+}): Promise<OrdemSaidaStatus> {
+  const status: OrdemSaidaStatus = params.row.sem_retorno ? "concluida" : "aberta";
+  const payload: Record<string, unknown> = { status };
+  if (status === "concluida") {
+    payload.concluido_por_nome = params.autorNome;
+    payload.concluido_em = new Date().toISOString();
+  }
+
+  const { error } = await supabase
+    .from("tech_ops_ordem_saida")
+    .update(payload)
+    .eq("id", params.row.id)
+    .eq("status", "solicitada");
+  if (error) throw error;
+
+  await registrarHistoricoOrdemSaida({
+    ordemId: params.row.id,
+    acao: "Aprovação",
+    detalhe: params.row.sem_retorno
+      ? "OS aprovada e concluída — sem retorno"
+      : "OS aprovada — status Aberta",
+    autorNome: params.autorNome,
+  });
+  return status;
+}
+
+export async function confirmarRetornoOrdemSaida(params: {
+  row: OrdemSaidaRow;
+  dataRetornoRealizada: string;
+  itemIdsConfirmados: string[];
+  observacoesRetorno: string;
+  autorNome: string;
+}): Promise<void> {
+  const agora = new Date().toISOString();
+  const obs = params.observacoesRetorno.trim();
+  const payload: Record<string, unknown> = {
+    status: "concluida",
+    data_retorno_realizada: params.dataRetornoRealizada,
+    observacoes_retorno: obs,
+    concluido_por_nome: params.autorNome,
+    concluido_em: agora,
+  };
+  if (!params.row.data_saida_realizada && params.row.data_saida) {
+    payload.data_saida_realizada = params.row.data_saida;
+  }
+  const { error } = await supabase.from("tech_ops_ordem_saida").update(payload).eq("id", params.row.id);
+  if (error) throw error;
+
+  if (params.itemIdsConfirmados.length) {
+    const { error: errItens } = await supabase
+      .from("tech_ops_ordem_saida_itens")
+      .update({ retorno_confirmado: true })
+      .eq("ordem_id", params.row.id)
+      .in("id", params.itemIdsConfirmados);
+    if (errItens) throw errItens;
+  }
+
+  await registrarHistoricoOrdemSaida({
+    ordemId: params.row.id,
+    acao: "Confirmação de Retorno",
+    detalhe: obs || `Retorno em ${formatDataBrOs(params.dataRetornoRealizada)}`,
+    autorNome: params.autorNome,
+  });
+}
+
+export async function alterarOrdemSaida(params: {
+  row: OrdemSaidaRow;
+  origem_chave?: string | null;
+  destino_chave?: string | null;
+  destino_texto?: string | null;
+  fornecedor_id?: string | null;
+  data_saida: string;
+  data_retorno?: string | null;
+  sem_retorno?: boolean;
+  itens: OsItemInput[];
+  autorNome: string;
+}): Promise<void> {
+  const { error } = await supabase
+    .from("tech_ops_ordem_saida")
+    .update({
+      status: "solicitada",
+      origem_chave: params.origem_chave ?? null,
+      destino_chave: params.destino_chave ?? null,
+      destino_texto: params.destino_texto ?? null,
+      fornecedor_id: params.fornecedor_id ?? null,
+      data_saida: params.data_saida,
+      data_retorno: params.sem_retorno ? null : (params.data_retorno ?? null),
+      sem_retorno: params.sem_retorno ?? false,
+      data_saida_realizada: null,
+      data_retorno_realizada: null,
+      motivo_cancelamento: "",
+      cancelado_por_nome: "",
+      cancelado_em: null,
+      observacoes_retorno: "",
+      concluido_por_nome: "",
+      concluido_em: null,
+    })
+    .eq("id", params.row.id);
+  if (error) throw error;
+
+  const { error: errDel } = await supabase.from("tech_ops_ordem_saida_itens").delete().eq("ordem_id", params.row.id);
+  if (errDel) throw errDel;
+
+  if (params.itens.length) {
+    const { error: errItens } = await supabase.from("tech_ops_ordem_saida_itens").insert(
+      params.itens.map((it) => ({
+        ordem_id: params.row.id,
+        entidade_tipo: it.entidade_tipo,
+        entidade_id: it.entidade_id,
+        quantidade: it.quantidade,
+        label_snapshot: it.label_snapshot,
+        retorno_confirmado: false,
+      })),
+    );
+    if (errItens) throw errItens;
+  }
+
+  await registrarHistoricoOrdemSaida({
+    ordemId: params.row.id,
+    acao: "Alteração da OS",
+    detalhe: "Dados e itens atualizados — status Solicitada",
     autorNome: params.autorNome,
   });
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Eye, RefreshCw } from "lucide-react";
+import { Check, Eye, RefreshCw } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -21,9 +21,13 @@ import {
   type OrdemSaidaRow,
   type OrdemSaidaStatus,
   type OsItemDisponivel,
+  type OsModalContexto,
 } from "../../../lib/techOpsOrdemSaida";
+import { getOrdemSaidaPermissoesUi } from "../../../lib/techOpsOrdemSaidaPermissoes";
 import { BadgeOs, CelulaItensOs, VazioOs } from "./ordemSaidaUi";
-import { ModalAtualizarOs, ModalNovaOsManutencao, ModalVerOs } from "./ModaisOrdemSaida";
+import { ModalNovaOsManutencao } from "./ModaisOrdemSaida";
+import { ModalAprovarOs, ModalVerOs } from "./ModalVerOs";
+import { ModalAtualizarOs } from "./ModalAtualizarOs";
 
 type StatusFiltro = "" | OrdemSaidaStatus;
 
@@ -83,13 +87,15 @@ export function AbaManutencao({
   onReload: () => void;
   userName: string;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
   const [novoAberto, setNovoAberto] = useState(false);
-  const [verRow, setVerRow] = useState<OrdemSaidaRow | null>(null);
-  const [updRow, setUpdRow] = useState<OrdemSaidaRow | null>(null);
+  const [verInfo, setVerInfo] = useState<{ row: OrdemSaidaRow; contexto: OsModalContexto } | null>(null);
+  const [aprovarInfo, setAprovarInfo] = useState<{ row: OrdemSaidaRow; contexto: OsModalContexto } | null>(null);
+  const [updInfo, setUpdInfo] = useState<{ row: OrdemSaidaRow; contexto: OsModalContexto } | null>(null);
+  const permissoesPagina = getOrdemSaidaPermissoesUi(perm, user);
 
   const base = useMemo(
     () => rows.filter((r) => passaFiltros(r, mesKey, historico, statusFiltro, busca)),
@@ -105,14 +111,29 @@ export function AbaManutencao({
     [base],
   );
 
-  function acoes(r: OrdemSaidaRow, soVer: boolean) {
+  function acoes(r: OrdemSaidaRow, contexto: OsModalContexto, soVer: boolean) {
+    const permissoesRow = getOrdemSaidaPermissoesUi(perm, user, r);
     return (
       <div style={{ display: "inline-flex", gap: 4, justifyContent: "center" }}>
-        <BtnIconeAcaoLinha label={tooltipAcao("Ver O.S.")} onClick={() => setVerRow(r)}>
+        <BtnIconeAcaoLinha label={tooltipAcao("Ver O.S.")} onClick={() => setVerInfo({ row: r, contexto })}>
           <Eye size={13} aria-hidden />
         </BtnIconeAcaoLinha>
-        {!soVer && perm.canEditarOk ? (
-          <BtnIconeAcaoLinha label={tooltipAcao("Atualizar O.S.")} onClick={() => setUpdRow(r)}>
+        {permissoesRow.podeAprovar && r.status === "solicitada" ? (
+          <BtnIconeAcaoLinha
+            label={tooltipAcao("Aprovar O.S.")}
+            onClick={() => setAprovarInfo({ row: r, contexto })}
+          >
+            <Check size={13} aria-hidden />
+          </BtnIconeAcaoLinha>
+        ) : null}
+        {!soVer &&
+        permissoesRow.podeAtualizar &&
+        r.status !== "concluida" &&
+        r.status !== "cancelada" ? (
+          <BtnIconeAcaoLinha
+            label={tooltipAcao("Atualizar O.S.")}
+            onClick={() => setUpdInfo({ row: r, contexto })}
+          >
             <RefreshCw size={13} aria-hidden />
           </BtnIconeAcaoLinha>
         ) : null}
@@ -127,7 +148,7 @@ export function AbaManutencao({
           <SectionTitle sub="Equipamentos enviados a fornecedores para manutenção">
             Ordens em Aberto
           </SectionTitle>
-          {perm.canCriarOk ? (
+          {permissoesPagina.podeNovaOs ? (
             <CtaCriarButton onClick={() => setNovoAberto(true)}>Nova O.S. Manutenção</CtaCriarButton>
           ) : null}
         </div>
@@ -184,7 +205,7 @@ export function AbaManutencao({
                           />
                         </span>
                       </td>
-                      <td style={dataTable.tdCenter}>{acoes(r, false)}</td>
+                      <td style={dataTable.tdCenter}>{acoes(r, "manutencao_abertas", false)}</td>
                     </tr>
                   );
                 })}
@@ -243,7 +264,7 @@ export function AbaManutencao({
                           />
                         </span>
                       </td>
-                      <td style={dataTable.tdCenter}>{acoes(r, true)}</td>
+                      <td style={dataTable.tdCenter}>{acoes(r, "manutencao_encerradas", true)}</td>
                     </tr>
                   );
                 })}
@@ -264,18 +285,37 @@ export function AbaManutencao({
           onCriado={onReload}
         />
       ) : null}
-      {verRow ? (
+      {verInfo ? (
         <ModalVerOs
-          row={verRow}
+          row={verInfo.row}
+          contexto={verInfo.contexto}
           estudioNomePorSlug={estudioNomePorSlug}
-          onClose={() => setVerRow(null)}
+          onClose={() => setVerInfo(null)}
         />
       ) : null}
-      {updRow ? (
-        <ModalAtualizarOs
-          row={updRow}
+      {aprovarInfo &&
+      aprovarInfo.row.status === "solicitada" &&
+      getOrdemSaidaPermissoesUi(perm, user, aprovarInfo.row).podeAprovar ? (
+        <ModalAprovarOs
+          row={aprovarInfo.row}
+          contexto={aprovarInfo.contexto}
+          estudioNomePorSlug={estudioNomePorSlug}
           userName={userName}
-          onClose={() => setUpdRow(null)}
+          onClose={() => setAprovarInfo(null)}
+          onAtualizado={onReload}
+        />
+      ) : null}
+      {updInfo &&
+      updInfo.row.status !== "concluida" &&
+      updInfo.row.status !== "cancelada" &&
+      getOrdemSaidaPermissoesUi(perm, user, updInfo.row).podeAtualizar ? (
+        <ModalAtualizarOs
+          row={updInfo.row}
+          contexto={updInfo.contexto}
+          userName={userName}
+          fornecedores={fornecedores}
+          itensDisponiveis={itensManutencao}
+          onClose={() => setUpdInfo(null)}
           onAtualizado={onReload}
         />
       ) : null}

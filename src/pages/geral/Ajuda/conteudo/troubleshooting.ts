@@ -739,7 +739,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo ver a aba Gerenciamento de Postagens?",
         texto:
-          "A aba de Gerenciamento aparece apenas para usuários com permissão de Editar no Portal de RH. Se você precisa dessa permissão, contate o administrador para ativá-la em Gestão de Usuários.",
+          "A aba Gerenciamento de Postagens aparece apenas com permissão de Editar = Sim no Portal de RH. Editar = Próprios não libera essa aba. Se você precisa desse acesso, solicite ao administrador o ajuste em Gestão de Usuários → Permissões.",
       },
       {
         subtitulo: "O botão 'Ver Ata' está desabilitado numa RH Talk?",
@@ -1325,6 +1325,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo publicar ou mover candidato?",
         texto:
           "Publicar vaga exige **Criar**; alterar etapa ou status do candidato exige **Editar**. Confirme a matriz em Gestão de Usuários → Permissões.",
+      },
+      {
+        subtitulo: "Onde fica o link para compartilhar a vaga?",
+        texto:
+          "Em vagas **Externas** na aba **Abertas**, o botão **Compartilhar** abre o modal com o link da página de Carreiras. Use **Copiar** e envie ao candidato. Vagas internas não têm compartilhamento para o site.",
       },
     ],
   },

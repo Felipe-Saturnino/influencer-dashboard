@@ -507,6 +507,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, **repasse inicial** (valor em reais), descrição e responsabilidades. Em vagas **Externas**, o campo **Tags** é obrigatório — adicione ao menos um rótulo (digite e pressione Enter). Vagas **Internas** não exibem Tags. Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
       },
+      {
+        subtitulo: "Compartilhar vaga externa",
+        texto:
+          "Em vagas **Externas** abertas, use **Compartilhar** para copiar o link da página de Carreiras (`https://spingaming.com.br/carreiras/`). Oriente o candidato a preencher o formulário no site: em **Como chegou até nós?** escolha **Indicação** e em **Quem indicou?** informe o nome do Prestador — necessário para o recebimento do bônus.",
+      },
     ],
   },
   rh_central_denuncias: {
@@ -952,7 +957,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Políticas e Normativas",
         texto:
-          "Lista documentos oficiais (políticas RH, procedimentos, códigos de conduta e normas operacionais) em tabela com código, versão, tipo e aplicabilidade.\n\nUse os filtros por família (Políticas RH, Procedimentos, Códigos, Operações) para restringir a lista. Clique em Abrir para visualizar o PDF publicado no modal — metadados da capa, documentos relacionados e botão Li e estou ciente quando a ciência for exigida. Documentos antigos sem código continuam abrindo no formato anterior (texto + anexo opcional).",
+          "Lista documentos oficiais (políticas RH, procedimentos, códigos de conduta e normas operacionais) em tabela com código, versão, tipo e aplicabilidade.\n\nCom permissão de Ver = Sim, você visualiza todas as políticas publicadas. Com Ver = Próprios, visualiza apenas as políticas aplicáveis a Todos os prestadores ou à sua diretoria, gerência ou time. Usuários com Editar = Sim visualizam todas as postagens e também acessam o Gerenciamento de Postagens.\n\nUse os filtros por família (Políticas RH, Procedimentos, Códigos, Operações) para restringir a lista. Clique no ícone de visualização para abrir o PDF e, quando aplicável, registrar sua ciência.",
       },
       {
         subtitulo: "RH Talks",
@@ -962,7 +967,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Postagens (Gestores)",
         texto:
-          "Disponível apenas para usuários com permissão de editar no Portal de RH.\n\nA aba exibe uma tabela com postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (ícone Archive + pop-up de confirmação)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra a competência atual e as 12 anteriores; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
+          "Disponível apenas para usuários com permissão de Editar = Sim no Portal de RH. Editar = Próprios não libera esta aba.\n\nA aba exibe uma tabela com postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar\n— Em aprovação: Editar, Aprovar\n— Publicado: Arquivar (ícone Archive + pop-up de confirmação)\n— Qualquer status: ver Histórico de alterações (registro de alterações da postagem, na linha da tabela)\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra a competência atual e as 12 anteriores; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
       },
       {
         subtitulo: "Criar e Publicar Postagens",
@@ -1333,7 +1338,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Códigos e solicitação",
         texto:
-          "Cada OS recebe um código automático no formato OS/INT-MMAA-####, OS/EXT-MMAA-#### ou OS/MAN-MMAA-#### (mês/ano de abertura + sequencial). Ao Solicitar, a ordem entra como Solicitada (na Manutenção o rótulo exibido é Registrada). Use Atualizar para avançar o status e registrar datas realizadas.",
+          "Cada OS recebe um código automático no formato OS/INT-MMAA-####, OS/EXT-MMAA-#### ou OS/MAN-MMAA-#### (mês/ano de abertura + sequencial). Ao Solicitar, a ordem entra como Solicitada (na Manutenção o rótulo exibido é Registrada).",
+      },
+      {
+        subtitulo: "Ver, Aprovar e Atualizar",
+        texto:
+          "No Ver, o título é o código da OS e o subtítulo mostra status e responsável (Interna) ou solicitante (Externa/Manutenção). A aba Dados lista os campos do fluxo e o bloco de itens; Cancelada e Concluída podem exibir quadros de cancelamento ou conclusão. Anotações inclui a observação da abertura; Histórico registra as ações.\n\nQuando a OS está Solicitada, Aprovar muda o status para Aberta (ou Concluída quando for Sem retorno). Recusar exige o Motivo do Cancelamento e muda a OS para Cancelada.\n\nNo Atualizar, escolha o tipo: Cancelar OS (motivo → Cancelada), Confirmar Retorno (data de hoje, checkboxes por item e observações → Concluída) ou Alterar OS (edita dados e itens e volta a Solicitada). As opções disponíveis dependem da aba e do status.",
       },
       {
         subtitulo: "Permissões",

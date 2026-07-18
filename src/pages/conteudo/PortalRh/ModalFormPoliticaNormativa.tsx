@@ -14,7 +14,7 @@ import {
   extrairSufixoNumericoCodigo,
   labelTipoDocumentoSelect,
   montarCodigoDocumento,
-  opcoesOrganogramaGerenciaTime,
+  opcoesOrganogramaAplicavel,
   prefixoCodigoDocumento,
   proximoCodigoSugerido,
   setorNomeDeVinculo,
@@ -59,7 +59,7 @@ export function ModalFormPoliticaNormativa({
 }) {
   const { theme: t } = useApp();
 
-  const opcoesAplicavel = useMemo(() => opcoesOrganogramaGerenciaTime(organogramaGrupos), [organogramaGrupos]);
+  const opcoesAplicavel = useMemo(() => opcoesOrganogramaAplicavel(organogramaGrupos), [organogramaGrupos]);
 
   const handleTipoChange = (tipo: RhDocumentoTipo | "") => {
     if (!tipo) {

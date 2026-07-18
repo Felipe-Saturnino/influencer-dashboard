@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ClipboardList, FileText, History, ListOrdered, MessageSquareText, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { ClipboardList, ListOrdered, MessageSquareText, Plus, Trash2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -10,28 +10,17 @@ import {
   FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
 } from "../../../components/dashboard";
-import { formatDataHoraEstoque, type EstoqueFornecedorRow } from "../../../lib/techOpsEstoque";
+import type { EstoqueFornecedorRow } from "../../../lib/techOpsEstoque";
 import {
-  atualizarStatusOrdemSaida,
   criarOrdemSaida,
-  fetchHistoricoOrdemSaida,
-  formatCodigoOrdemSaida,
-  formatDataBrOs,
-  formatSolicitanteOs,
-  labelLocalOs,
-  labelStatusOrdemSaida,
-  OS_STATUS_COLOR,
-  OS_STATUS_LABEL,
   parseDataBrOs,
   type OrdemSaidaRow,
-  type OrdemSaidaStatus,
+  clampQuantidadeOs,
   type OsItemDisponivel,
   type OsItemInput,
 } from "../../../lib/techOpsOrdemSaida";
 import {
-  BadgeOs,
   BotaoPrimario,
-  CampoLeitura,
   ErroInline,
   getOsHintStyle,
   getOsInputStyle,
@@ -50,12 +39,12 @@ const ERRO_RETORNO = "A data de Retorno deve ser maior que a data de Saída.";
 const ERRO_PREVISAO = "A data de Previsão de Retorno deve ser maior que a data de Saída.";
 const ERRO_ORIGEM_DESTINO = "Não pode ser o mesmo valor da Origem.";
 const ERRO_ITENS = "Adicione ao menos um item válido.";
+const ERRO_QTD_ESTOQUE =
+  "A quantidade não pode ser maior que o disponível no estoque (Itens: Estoque; Jogo: Qtd Atual).";
+const ERRO_QTD_INDISPONIVEL =
+  "Não há quantidade disponível no estoque para o item ou lote selecionado.";
 const ERRO_SOLICITAR =
   "Não foi possível solicitar a ordem. Se o problema persistir, entre em contato com o suporte.";
-const ERRO_ATUALIZAR =
-  "Não foi possível atualizar a ordem. Se o problema persistir, entre em contato com o suporte.";
-const ERRO_CARREGAR =
-  "Não foi possível carregar as informações. Se o problema persistir, entre em contato com o suporte.";
 
 type ItemDraft = { key: string; entidadeKey: string; quantidade: string };
 
@@ -75,17 +64,31 @@ function entidadeKeyOf(it: OsItemDisponivel): string {
   return `${it.entidade_tipo}:${it.entidade_id}`;
 }
 
-function montarItensInput(drafts: ItemDraft[], catalogo: OsItemDisponivel[]): OsItemInput[] | null {
+type MontarItensResult =
+  | { ok: true; itens: OsItemInput[] }
+  | { ok: false; erro: string };
+
+function montarItensInput(drafts: ItemDraft[], catalogo: OsItemDisponivel[]): MontarItensResult {
   const out: OsItemInput[] = [];
   for (const d of drafts) {
-    if (!d.entidadeKey) return null;
+    if (!d.entidadeKey) return { ok: false, erro: ERRO_ITENS };
     const parsed = parseEntidadeKey(d.entidadeKey);
-    if (!parsed) return null;
+    if (!parsed) return { ok: false, erro: ERRO_ITENS };
     const cat = catalogo.find((c) => c.entidade_tipo === parsed.entidade_tipo && c.entidade_id === parsed.entidade_id);
-    if (!cat) return null;
-    const qtd =
-      parsed.entidade_tipo === "equipamento" ? 1 : Number.parseInt(d.quantidade.trim(), 10);
-    if (!Number.isInteger(qtd) || qtd < 1 || qtd > cat.maxQtd) return null;
+    if (!cat) return { ok: false, erro: ERRO_ITENS };
+    if (parsed.entidade_tipo === "equipamento") {
+      out.push({
+        entidade_tipo: "equipamento",
+        entidade_id: parsed.entidade_id,
+        quantidade: 1,
+        label_snapshot: cat.label,
+      });
+      continue;
+    }
+    if (cat.maxQtd < 1) return { ok: false, erro: ERRO_QTD_INDISPONIVEL };
+    const qtd = Number.parseInt(d.quantidade.trim(), 10);
+    if (!Number.isInteger(qtd) || qtd < 1) return { ok: false, erro: ERRO_ITENS };
+    if (qtd > cat.maxQtd) return { ok: false, erro: ERRO_QTD_ESTOQUE };
     out.push({
       entidade_tipo: parsed.entidade_tipo,
       entidade_id: parsed.entidade_id,
@@ -93,7 +96,7 @@ function montarItensInput(drafts: ItemDraft[], catalogo: OsItemDisponivel[]): Os
       label_snapshot: cat.label,
     });
   }
-  return out.length ? out : null;
+  return out.length ? { ok: true, itens: out } : { ok: false, erro: ERRO_ITENS };
 }
 
 function CampoCodigoTravado({ codigo }: { codigo: string }) {
@@ -210,16 +213,23 @@ function PainelItensOs({
                   onChange={(e) => {
                     const key = e.target.value;
                     const p = parseEntidadeKey(key);
+                    const selected = p
+                      ? catalogo.find((c) => c.entidade_tipo === p.entidade_tipo && c.entidade_id === p.entidade_id)
+                      : null;
                     setDrafts((prev) =>
-                      prev.map((row) =>
-                        row.key === d.key
-                          ? {
-                              ...row,
-                              entidadeKey: key,
-                              quantidade: p?.entidade_tipo === "equipamento" ? "1" : row.quantidade || "1",
-                            }
-                          : row,
-                      ),
+                      prev.map((row) => {
+                        if (row.key !== d.key) return row;
+                        if (!p || p.entidade_tipo === "equipamento") {
+                          return { ...row, entidadeKey: key, quantidade: "1" };
+                        }
+                        const max = selected?.maxQtd ?? 0;
+                        const base = row.quantidade.trim() ? row.quantidade : "1";
+                        return {
+                          ...row,
+                          entidadeKey: key,
+                          quantidade: clampQuantidadeOs(base, max),
+                        };
+                      }),
                     );
                   }}
                   style={inputStyle}
@@ -261,19 +271,38 @@ function PainelItensOs({
                 </label>
                 <input
                   type="number"
-                  min={1}
-                  max={cat?.maxQtd ?? undefined}
+                  min={cat && !isEquip ? (cat.maxQtd < 1 ? 0 : 1) : 1}
+                  max={isEquip ? 1 : (cat?.maxQtd ?? undefined)}
                   value={isEquip ? "1" : d.quantidade}
-                  disabled={isEquip}
-                  title={isEquip ? "Equipamentos são únicos — quantidade fixa em 1" : undefined}
-                  aria-label="Quantidade"
-                  onChange={(e) =>
-                    setDrafts((prev) =>
-                      prev.map((row) => (row.key === d.key ? { ...row, quantidade: e.target.value } : row)),
-                    )
+                  disabled={isEquip || !parsed}
+                  title={
+                    isEquip
+                      ? "Equipamentos são únicos — quantidade fixa em 1"
+                      : cat
+                        ? `Máximo disponível: ${cat.maxQtd}`
+                        : "Selecione um item ou lote de jogo"
                   }
-                  style={{ ...inputStyle, opacity: isEquip ? 0.65 : 1 }}
+                  aria-label="Quantidade"
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const max = cat?.maxQtd ?? 0;
+                    setDrafts((prev) =>
+                      prev.map((row) =>
+                        row.key === d.key
+                          ? { ...row, quantidade: clampQuantidadeOs(raw, max) }
+                          : row,
+                      ),
+                    );
+                  }}
+                  style={{ ...inputStyle, opacity: isEquip || !parsed ? 0.65 : 1 }}
                 />
+                {cat && !isEquip ? (
+                  <div style={{ ...getOsHintStyle(t), marginTop: 4 }}>
+                    Máx.: {cat.maxQtd}
+                    {parsed?.entidade_tipo === "item" ? " (Estoque)" : null}
+                    {parsed?.entidade_tipo === "jogo" ? " (Qtd Atual)" : null}
+                  </div>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -427,9 +456,9 @@ export function ModalNovaOsInterna({
         return;
       }
     }
-    const itens = montarItensInput(drafts, itensDisponiveis);
-    if (!itens) {
-      setErr(ERRO_ITENS);
+    const montados = montarItensInput(drafts, itensDisponiveis);
+    if (!montados.ok) {
+      setErr(montados.erro);
       setAba("itens");
       return;
     }
@@ -445,7 +474,7 @@ export function ModalNovaOsInterna({
         sem_retorno: semRetorno,
         observacao,
         solicitante_nome: userName,
-        itens,
+        itens: montados.itens,
         autorNome: userName,
       });
       onCriado();
@@ -637,9 +666,9 @@ export function ModalNovaOsExterna({
       setAba("dados");
       return;
     }
-    const itens = montarItensInput(drafts, itensDisponiveis);
-    if (!itens) {
-      setErr(ERRO_ITENS);
+    const montados = montarItensInput(drafts, itensDisponiveis);
+    if (!montados.ok) {
+      setErr(montados.erro);
       setAba("itens");
       return;
     }
@@ -653,7 +682,7 @@ export function ModalNovaOsExterna({
         data_retorno: isoRetorno,
         observacao,
         solicitante_nome: userName,
-        itens,
+        itens: montados.itens,
         autorNome: userName,
       });
       onCriado();
@@ -809,9 +838,9 @@ export function ModalNovaOsManutencao({
         return;
       }
     }
-    const itens = montarItensInput(drafts, itensDisponiveis);
-    if (!itens) {
-      setErr(ERRO_ITENS);
+    const montados = montarItensInput(drafts, itensDisponiveis);
+    if (!montados.ok) {
+      setErr(montados.erro);
       setAba("itens");
       return;
     }
@@ -826,7 +855,7 @@ export function ModalNovaOsManutencao({
         sem_retorno: semPrevisao,
         observacao,
         solicitante_nome: userName,
-        itens,
+        itens: montados.itens,
         autorNome: userName,
       });
       onCriado();
@@ -952,355 +981,7 @@ export function ModalNovaOsManutencao({
   );
 }
 
-/* ─── Ver O.S. ────────────────────────────────────────────────────────────── */
+/* ─── Ver / Atualizar O.S. — movidos para arquivos próprios ──────────────── */
 
-type AbaVer = "dados" | "itens" | "historico";
-
-export function ModalVerOs({
-  row,
-  estudioNomePorSlug,
-  onClose,
-}: {
-  row: OrdemSaidaRow;
-  estudioNomePorSlug: Record<string, string>;
-  onClose: () => void;
-}) {
-  const { theme: t } = useApp();
-  const [aba, setAba] = useState<AbaVer>("dados");
-  const [historico, setHistorico] = useState<
-    { id: string; acao: string; detalhe: string | null; autor_nome: string; created_at: string }[]
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancel = false;
-    void (async () => {
-      setLoading(true);
-      setErro(null);
-      try {
-        const hi = await fetchHistoricoOrdemSaida(row.id);
-        if (!cancel) setHistorico(hi);
-      } catch (e) {
-        console.error("Ordem de Saída: falha ao carregar histórico", e);
-        if (!cancel) setErro(ERRO_CARREGAR);
-      } finally {
-        if (!cancel) setLoading(false);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [row.id]);
-
-  const codigo = formatCodigoOrdemSaida(row.tipo, row.competencia, row.codigo_num);
-  const tabs: { id: AbaVer; label: string; icon: ReactNode }[] = [
-    { id: "dados", label: "Dados da OS", icon: <FileText {...FILTRO_BAR_TAB_ICON_PROPS} /> },
-    { id: "itens", label: "Itens", icon: <ListOrdered {...FILTRO_BAR_TAB_ICON_PROPS} /> },
-    { id: "historico", label: "Histórico", icon: <History {...FILTRO_BAR_TAB_ICON_PROPS} /> },
-  ];
-
-  const retornoLabel =
-    row.tipo === "manutencao"
-      ? row.sem_retorno
-        ? "Sem previsão"
-        : formatDataBrOs(row.data_retorno)
-      : row.sem_retorno
-        ? "Sem retorno"
-        : formatDataBrOs(row.data_retorno);
-
-  const cardItemStyle = {
-    border: `1px solid ${t.cardBorder}`,
-    borderRadius: 12,
-    padding: "12px 14px",
-    fontFamily: FONT.body,
-  } as const;
-
-  return (
-    <ModalBase onClose={onClose} maxWidth={620}>
-      <ModalHeader title="Ver O.S." onClose={onClose} />
-      <p style={{ margin: "-12px 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{codigo}</p>
-
-      <div
-        role="tablist"
-        aria-label="Detalhes da ordem"
-        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}
-        onKeyDown={(e) =>
-          onFiltroBarTabsKeyDown(
-            e,
-            tabs.map((tb) => tb.id),
-            setAba,
-            (k) => `tab-ver-os-${k}`,
-          )
-        }
-      >
-        {tabs.map((tb) => (
-          <FiltroBarTabButton
-            key={tb.id}
-            id={`tab-ver-os-${tb.id}`}
-            active={aba === tb.id}
-            aria-controls={`panel-ver-os-${tb.id}`}
-            onClick={() => setAba(tb.id)}
-            icon={tb.icon}
-          >
-            {tb.label}
-          </FiltroBarTabButton>
-        ))}
-      </div>
-
-      <ModalTabPanel active={aba === "dados"} id="panel-ver-os-dados" labelledBy="tab-ver-os-dados">
-        <div style={OS_FORM_GRID}>
-          <CampoLeitura label="Código" valor={codigo} />
-          <CampoLeitura
-            label="Status"
-            valor={
-              <BadgeOs
-                label={labelStatusOrdemSaida(row.status, row.tipo)}
-                cor={OS_STATUS_COLOR[row.status]}
-              />
-            }
-          />
-          {row.tipo === "interna" ? (
-            <>
-              <CampoLeitura label="Origem" valor={labelLocalOs(row.origem_chave, estudioNomePorSlug)} />
-              <CampoLeitura label="Destino" valor={labelLocalOs(row.destino_chave, estudioNomePorSlug)} />
-            </>
-          ) : null}
-          {row.tipo === "externa" ? (
-            <CampoLeitura label="Destino" valor={row.destino_texto || "—"} />
-          ) : null}
-          {row.tipo === "manutencao" ? (
-            <CampoLeitura label="Fornecedor" valor={row.fornecedor_razao_social || "—"} />
-          ) : null}
-          <CampoLeitura label="Saída" valor={formatDataBrOs(row.data_saida)} />
-          <CampoLeitura
-            label={row.tipo === "manutencao" ? "Previsão de Retorno" : "Retorno"}
-            valor={retornoLabel}
-          />
-          <CampoLeitura label="Saída realizada" valor={formatDataBrOs(row.data_saida_realizada)} />
-          <CampoLeitura label="Retorno realizado" valor={formatDataBrOs(row.data_retorno_realizada)} />
-          <CampoLeitura
-            label="Solicitante"
-            valor={formatSolicitanteOs(row.solicitante_nome, row.solicitante_time)}
-          />
-          <CampoLeitura label="Responsável" valor={row.responsavel_nome || "—"} />
-          <div style={{ gridColumn: "1 / -1" }}>
-            <CampoLeitura label="Observação" valor={row.observacao || "—"} />
-          </div>
-        </div>
-      </ModalTabPanel>
-
-      <ModalTabPanel active={aba === "itens"} id="panel-ver-os-itens" labelledBy="tab-ver-os-itens">
-        {row.itens.length === 0 ? (
-          <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, textAlign: "center", padding: "20px 0" }}>
-            Nenhum item nesta ordem.
-          </div>
-        ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {row.itens.map((it) => (
-              <div key={it.id} style={cardItemStyle}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{it.label_snapshot}</div>
-                <div style={{ fontSize: 12, color: t.textMuted, marginTop: 4 }}>
-                  Quantidade: {it.quantidade}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </ModalTabPanel>
-
-      <ModalTabPanel active={aba === "historico"} id="panel-ver-os-historico" labelledBy="tab-ver-os-historico">
-        {erro ? (
-          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body }}>
-            {erro}
-          </div>
-        ) : loading ? (
-          <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>Carregando…</div>
-        ) : historico.length === 0 ? (
-          <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, padding: "20px 0", textAlign: "center" }}>
-            Nenhuma ação registrada.
-          </div>
-        ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {historico.map((h) => (
-              <div key={h.id} style={cardItemStyle}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 4 }}>{h.acao}</div>
-                {h.detalhe ? (
-                  <div style={{ fontSize: 12, color: t.textMuted, whiteSpace: "pre-wrap", marginBottom: 8 }}>
-                    {h.detalhe}
-                  </div>
-                ) : null}
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: t.textMuted,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span>{h.autor_nome || "—"}</span>
-                  <span>{formatDataHoraEstoque(h.created_at)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </ModalTabPanel>
-    </ModalBase>
-  );
-}
-
-/* ─── Atualizar O.S. ──────────────────────────────────────────────────────── */
-
-function statusOpcoesPara(atual: OrdemSaidaStatus): OrdemSaidaStatus[] {
-  if (atual === "solicitada") return ["solicitada", "aberta", "cancelada"];
-  if (atual === "aberta") return ["aberta", "concluida", "cancelada"];
-  return [atual];
-}
-
-export function ModalAtualizarOs({
-  row,
-  userName,
-  onClose,
-  onAtualizado,
-}: {
-  row: OrdemSaidaRow;
-  userName: string;
-  onClose: () => void;
-  onAtualizado: () => void;
-}) {
-  const { theme: t } = useApp();
-  const [status, setStatus] = useState<OrdemSaidaStatus>(row.status);
-  const [saidaReal, setSaidaReal] = useState(
-    row.data_saida_realizada ? formatDataBrOs(row.data_saida_realizada) : "",
-  );
-  const [retornoReal, setRetornoReal] = useState(
-    row.data_retorno_realizada ? formatDataBrOs(row.data_retorno_realizada) : "",
-  );
-  const [err, setErr] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const labelStyle = getOsLabelStyle(t);
-  const inputStyle = getOsInputStyle(t);
-  const codigo = formatCodigoOrdemSaida(row.tipo, row.competencia, row.codigo_num);
-  const opcoes = statusOpcoesPara(row.status);
-
-  async function salvar() {
-    if (status === row.status && !saidaReal.trim() && !retornoReal.trim()) {
-      onClose();
-      return;
-    }
-    let isoSaida: string | null | undefined;
-    let isoRetorno: string | null | undefined;
-    if (status === "aberta" || status === "concluida") {
-      if (saidaReal.trim()) {
-        isoSaida = parseDataBrOs(saidaReal);
-        if (!isoSaida) {
-          setErr(ERRO_DATAS);
-          return;
-        }
-      } else if (status === "aberta" && !row.data_saida_realizada) {
-        isoSaida = row.data_saida;
-      }
-    }
-    if (status === "concluida") {
-      if (retornoReal.trim()) {
-        isoRetorno = parseDataBrOs(retornoReal);
-        if (!isoRetorno) {
-          setErr(ERRO_DATAS);
-          return;
-        }
-      }
-    }
-    setErr(null);
-    setSaving(true);
-    try {
-      await atualizarStatusOrdemSaida({
-        row,
-        status,
-        data_saida_realizada: isoSaida,
-        data_retorno_realizada: isoRetorno,
-        autorNome: userName,
-      });
-      onAtualizado();
-      onClose();
-    } catch (e) {
-      console.error("Ordem de Saída: falha ao atualizar status", e);
-      setErr(ERRO_ATUALIZAR);
-      setSaving(false);
-    }
-  }
-
-  return (
-    <ModalBase onClose={onClose} maxWidth={480}>
-      <ModalHeader title="Atualizar O.S." onClose={onClose} />
-      <p style={{ margin: "-12px 0 16px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{codigo}</p>
-      <ErroInline>{err}</ErroInline>
-      <div style={{ display: "grid", gap: 14 }}>
-        <div>
-          <label htmlFor="os-upd-status" style={labelStyle}>
-            Status
-            <CampoObrigatorioMark />
-          </label>
-          <select
-            id="os-upd-status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as OrdemSaidaStatus)}
-            style={inputStyle}
-          >
-            {opcoes.map((s) => (
-              <option key={s} value={s}>
-                {labelStatusOrdemSaida(s, row.tipo)}
-              </option>
-            ))}
-          </select>
-          <div style={getOsHintStyle(t)}>
-            Fluxo: {OS_STATUS_LABEL.solicitada} → {OS_STATUS_LABEL.aberta} → {OS_STATUS_LABEL.concluida} /{" "}
-            {OS_STATUS_LABEL.cancelada}
-          </div>
-        </div>
-        {(status === "aberta" || status === "concluida") && (
-          <div>
-            <label htmlFor="os-upd-saida-real" style={labelStyle}>
-              Data de saída realizada
-            </label>
-            <input
-              id="os-upd-saida-real"
-              type="text"
-              inputMode="numeric"
-              placeholder="DD/MM/AAAA"
-              maxLength={10}
-              autoComplete="off"
-              value={saidaReal === "—" ? "" : saidaReal}
-              onChange={(e) => setSaidaReal(mascaraDataBrOs(e.target.value))}
-              style={inputStyle}
-            />
-          </div>
-        )}
-        {status === "concluida" && (
-          <div>
-            <label htmlFor="os-upd-retorno-real" style={labelStyle}>
-              Data de retorno realizada
-            </label>
-            <input
-              id="os-upd-retorno-real"
-              type="text"
-              inputMode="numeric"
-              placeholder="DD/MM/AAAA"
-              maxLength={10}
-              autoComplete="off"
-              value={retornoReal === "—" ? "" : retornoReal}
-              onChange={(e) => setRetornoReal(mascaraDataBrOs(e.target.value))}
-              style={inputStyle}
-            />
-          </div>
-        )}
-      </div>
-      <BotaoPrimario onClick={() => void salvar()} loading={saving} loadingLabel="Salvando…">
-        Salvar
-      </BotaoPrimario>
-    </ModalBase>
-  );
-}
+export { ModalVerOs } from "./ModalVerOs";
+export { ModalAtualizarOs } from "./ModalAtualizarOs";
