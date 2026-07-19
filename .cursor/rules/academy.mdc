@@ -98,6 +98,10 @@ Carrossel mês + Histórico (`Todo o período`) por `published_at`; o Histórico
 
 Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências**; join de categoria estreito (`slug,label,accent_hex`). Receipts e autores em **`Promise.all`**. **Proibido** baixar rascunhos/arquivados no portal de leitura ou filtrar só no cliente o status/período da listagem pública.
 
+### Cards Comunicados e Dicas (leitura)
+
+Mesmo formato: descrição **completa** no card (sem truncar 200 caracteres); link de anexo só **Ver anexo** (sem nome do arquivo). Dicas mantêm tags de jogo quando houver.
+
 ### Strings de vazio
 
 - Período sem dados: **`Sem dados para o período selecionado.`**
