@@ -711,17 +711,36 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Registre a passagem de turno e o relatório de estúdio de forma estruturada — substitui o fluxo informal de mensagens. Duas abas: **Relatório do Turno** (escalados e absenteísmo por estúdio e Shufflers) e **Relatório de Estúdio** (SOS, sinais e checklist de manutenção).",
+          "Registre a passagem de turno e o relatório de estúdio de forma estruturada — substitui o fluxo informal de mensagens. Duas abas: **Relatório do Turno** (escalados e absenteísmo por estúdio e Shufflers) e **Relatório de Estúdio** (SOS, sinais, payout e checklist de manutenção).",
       },
       {
         subtitulo: "Relatório do Turno",
         texto:
-          "Com permissão de **Criar**, use **Novo Relatório**. Data e responsável ficam travados no dia e no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados, atrasos/faltas/atestados e resumo), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
+          "Com permissão de **Criar**, use **Novo Relatório**. A **Data do turno** é o dia em que o turno começou (ontem ou hoje) — não a data da publicação; o responsável fica travado no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados, atrasos/faltas/atestados e resumo), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
       },
       {
         subtitulo: "Relatório de Estúdio",
         texto:
-          "Turno apenas Manhã ou Noite. Campos obrigatórios: SOSs, Sinais e Resumo. O checklist de Manutenção (Roletas, Mesas, CC Machine, Cartas Contadas) é opcional. Roletas usam o formato estúdio + número da mesa cadastrado em Gestão de Estúdios.",
+          "Turno Manhã ou Noite. Campos obrigatórios numéricos: SOSs, Sinais e Payout, além do Resumo. A **Data do turno** é o dia em que o turno começou (não a data da publicação) — útil no turno noturno que fecha na manhã seguinte. Manutenção (Roletas, Mesas, CC Machine, Cartas Contadas) é checklist opcional.",
+      },
+    ],
+  },
+  escala_rotacao: {
+    titulo: "Rotação",
+    blocos: [
+      {
+        texto:
+          "Gere e publique a grade de **rotação** dos Game Presenters nas mesas do estúdio por dia e turno — substitui o fluxo em planilha. Duas abas: **Gerar Rotação** (pool, modelo e prévia) e **Rotação Atual** (consulta da publicada).",
+      },
+      {
+        subtitulo: "Gerar Rotação",
+        texto:
+          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na Gestão de Escala **aprovada**, com escala **4×2** e turno compatível no Staff. Marque faltas nos chips, escolha o modelo (5 a 8 GPs) e o intervalo de slot (20 ou 30 min — 7 e 8 só 30 min). **Gerar** monta a prévia; com permissão de **Criar**, **Publicar** grava a rotação e arquiva a anterior do mesmo dia/turno/estúdio.",
+      },
+      {
+        subtitulo: "Rotação Atual",
+        texto:
+          "Consulta a rotação **publicada** para o mesmo dia, turno e estúdio. Células: ID da mesa, **B** (break) ou **F** (falta). Sem publicação, a mensagem de vazio indica ausência de rotação no período.",
       },
     ],
   },

@@ -6,10 +6,11 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { hojeIsoBrasil } from "../../../lib/dateBrasil";
 import {
+  dataPadraoRelatorioTurno,
   fetchOpcoesManutencao,
-  formatDataBr,
+  HINT_DATA_TURNO,
+  opcoesDataTurnoRelatorio,
   publicarRelatorioEstudio,
   TURNO_ESTUDIO_OPCOES,
   type EstudioAtivoOpt,
@@ -21,6 +22,13 @@ import {
 const ERRO_PUBLICAR =
   "Não foi possível publicar o relatório. Se o problema persistir, entre em contato com o suporte.";
 
+function parseInteiroNaoNegativo(raw: string): number | null {
+  const s = raw.trim();
+  if (s === "") return null;
+  if (!/^\d+$/.test(s)) return null;
+  return Number(s);
+}
+
 export function ModalRelatorioEstudio({
   onClose,
   onPublicado,
@@ -30,13 +38,15 @@ export function ModalRelatorioEstudio({
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const hoje = hojeIsoBrasil();
+  const opcoesData = useMemo(() => opcoesDataTurnoRelatorio(), []);
+  const [dataTurno, setDataTurno] = useState(dataPadraoRelatorioTurno);
   const [loading, setLoading] = useState(true);
   const [estudios, setEstudios] = useState<EstudioAtivoOpt[]>([]);
   const [roletas, setRoletas] = useState<RoletaOpt[]>([]);
   const [turno, setTurno] = useState<TurnoRelatorioEstudio | "">("");
   const [sos, setSos] = useState("");
   const [sinais, setSinais] = useState("");
+  const [payout, setPayout] = useState("");
   const [resumo, setResumo] = useState("");
   const [roletaFeito, setRoletaFeito] = useState<Record<string, boolean>>({});
   const [mesaFeito, setMesaFeito] = useState<Record<string, boolean>>({});
@@ -77,12 +87,23 @@ export function ModalRelatorioEstudio({
 
   const publicar = async () => {
     setErro(null);
+    if (!dataTurno) {
+      setErro("Selecione a data do turno.");
+      return;
+    }
     if (!turno) {
       setErro("Selecione o turno.");
       return;
     }
-    if (!sos.trim() || !sinais.trim() || !resumo.trim()) {
-      setErro("Preencha SOSs, Sinais e Resumo.");
+    const sosN = parseInteiroNaoNegativo(sos);
+    const sinaisN = parseInteiroNaoNegativo(sinais);
+    const payoutN = parseInteiroNaoNegativo(payout);
+    if (sosN == null || sinaisN == null || payoutN == null) {
+      setErro("SOSs, Sinais e Payout devem ser números inteiros (0 ou maior).");
+      return;
+    }
+    if (!resumo.trim()) {
+      setErro("Preencha o Resumo.");
       return;
     }
 
@@ -103,10 +124,12 @@ export function ModalRelatorioEstudio({
 
     setSalvando(true);
     const res = await publicarRelatorioEstudio({
+      data: dataTurno,
       turno,
       relatorNome: user?.name?.trim() || user?.email || "Usuário",
-      sos,
-      sinais,
+      sos: sosN,
+      sinais: sinaisN,
+      payout: payoutN,
       resumo,
       manutencao,
     });
@@ -147,14 +170,25 @@ export function ModalRelatorioEstudio({
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             gap: 12,
-            marginBottom: 16,
+            marginBottom: 6,
           }}
         >
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-              Data <CampoObrigatorioMark />
+              Data do turno <CampoObrigatorioMark />
             </label>
-            <input style={fieldStyle} value={`${formatDataBr(hoje)} (hoje)`} disabled />
+            <select
+              style={fieldStyle}
+              value={dataTurno}
+              onChange={(e) => setDataTurno(e.target.value)}
+              aria-label="Data do turno"
+            >
+              {opcoesData.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
@@ -181,26 +215,53 @@ export function ModalRelatorioEstudio({
             </select>
           </div>
         </div>
+        <p style={{ margin: "0 0 16px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+          {HINT_DATA_TURNO}
+        </p>
 
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-            SOSs <CampoObrigatorioMark />
-          </label>
-          <textarea
-            style={{ ...fieldStyle, minHeight: 72, resize: "vertical" }}
-            value={sos}
-            onChange={(e) => setSos(e.target.value)}
-          />
-        </div>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-            Sinais <CampoObrigatorioMark />
-          </label>
-          <textarea
-            style={{ ...fieldStyle, minHeight: 72, resize: "vertical" }}
-            value={sinais}
-            onChange={(e) => setSinais(e.target.value)}
-          />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginBottom: 12 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+              SOSs <CampoObrigatorioMark />
+            </label>
+            <input
+              style={fieldStyle}
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={sos}
+              onChange={(e) => setSos(e.target.value)}
+              aria-label="SOSs"
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+              Sinais <CampoObrigatorioMark />
+            </label>
+            <input
+              style={fieldStyle}
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={sinais}
+              onChange={(e) => setSinais(e.target.value)}
+              aria-label="Sinais"
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+              Payout <CampoObrigatorioMark />
+            </label>
+            <input
+              style={fieldStyle}
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={payout}
+              onChange={(e) => setPayout(e.target.value)}
+              aria-label="Payout"
+            />
+          </div>
         </div>
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
@@ -231,10 +292,7 @@ export function ModalRelatorioEstudio({
               marginBottom: 12,
             }}
           >
-            Manutenção{" "}
-            <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: t.textMuted }}>
-              (checklist — opcional)
-            </span>
+            Manutenção
           </div>
 
           {loading ? (
@@ -246,9 +304,6 @@ export function ModalRelatorioEstudio({
             <>
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Roletas</div>
-                <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 6 }}>
-                  Formato: [ESTÚDIO] - [NÚMERO DA MESA]
-                </div>
                 {roletas.length === 0 ? (
                   <div style={{ fontSize: 12, color: t.textMuted }}>Nenhuma roleta cadastrada.</div>
                 ) : (
@@ -280,9 +335,6 @@ export function ModalRelatorioEstudio({
 
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Mesas</div>
-                <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 6 }}>
-                  Estúdios ativos
-                </div>
                 {estudios.map((e) => (
                   <label
                     key={e.slug}

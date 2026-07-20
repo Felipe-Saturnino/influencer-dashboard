@@ -78,14 +78,8 @@ export function ModalVerRelatorioEstudio({
           data={formatDataBr(row.data)}
           turno={labelTurno(row.turno)}
           relator={row.relator_nome}
-          extra={`Manutenções: ${cnt.feitos} / ${cnt.total}`}
+          extra={`SOS: ${row.sos} · Sinais: ${row.sinais} · Payout: ${row.payout} · Manutenções: ${cnt.feitos} / ${cnt.total}`}
         />
-        <Bloco titulo="SOSs">
-          <p style={{ margin: 0, fontSize: 13, whiteSpace: "pre-wrap" }}>{row.sos}</p>
-        </Bloco>
-        <Bloco titulo="Sinais">
-          <p style={{ margin: 0, fontSize: 13, whiteSpace: "pre-wrap" }}>{row.sinais}</p>
-        </Bloco>
         <Bloco titulo="Resumo">
           <p style={{ margin: 0, fontSize: 13, whiteSpace: "pre-wrap" }}>{row.resumo}</p>
         </Bloco>

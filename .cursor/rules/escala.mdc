@@ -29,6 +29,7 @@ alwaysApply: false
 | `rh_gestao_escala` | Gestão de Escala | `rh/GestaoEscala/` |
 | `escala_relatorio_turno` | Relatório de Turno | `escala/RelatorioTurno/` |
 | `rh_staff` | Gestão de Staff | `rh/GestaoStaff/` |
+| `escala_rotacao` | Rotação | `escala/Rotacao/` |
 | `rh_calendario` | Calendário | `rh/Calendario/` |
 | `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
 | `escala_solicitacoes` | Solicitações | `escala/Solicitacoes/` |
@@ -51,10 +52,24 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Menu:** Escala, acima de Gestão de Staff. **h1** = Relatório de Turno. **Subtítulo:** «Registre e consulte os relatórios de turno e de estúdio da operação.»
 - **Abas (`useRouteTab`):** Relatório do Turno | Relatório de Estúdio (`FiltroBarTabButton`).
 - **Filtros:** carrossel de mês (`getMesesDisponiveisEscalaCarrossel`) + `FiltroHistoricoButton` + busca (`BarraPesquisaPagina`).
-- **Relatório do Turno:** tabela Data / Turno / Relator / Escalados / Absenteísmo / Ver. Escalados = soma GP de todos os blocos de estúdio + Shuffler Escalados. Absenteísmo = soma Atrasos/Faltas/Atestados. Modal Novo: Data e Responsável travados; Turno Manhã/Tarde/Noite; um bloco por estúdio ativo (`estudios_spin`); bloco Shufflers; Geral; **Publicar**.
-- **Relatório de Estúdio:** tabela Data / Turno / Relator / SOS / Sinais / Manutenções / Ver. Modal: Data/Responsável travados; Turno Manhã/Noite; SOSs, Sinais, Resumo; checklist Manutenção opcional (Roletas `[ESTÚDIO] - Roleta [N]`, Mesas = estúdios ativos, CC Machine, Cartas Contadas). RPC `escala_relatorio_turno_opcoes_manutencao`.
+- **Relatório do Turno:** tabela Data / Turno / Relator / Escalados / Absenteísmo / Ver. Escalados = soma GP de todos os blocos de estúdio + Shuffler Escalados. Absenteísmo = soma Atrasos/Faltas/Atestados. Modal Novo: **Data do turno** (ontem/hoje, default inteligente antes de 12h SP) + hint; Responsável travado; Turno Manhã/Tarde/Noite; um bloco por estúdio ativo (`estudios_spin`); bloco Shufflers; Geral; **Publicar**.
+- **Relatório de Estúdio:** tabela Data / Turno / Relator / SOS / Sinais / Payout / Manutenções / Ver. Modal: **Data do turno** (mesmo critério); Responsável travado; Turno Manhã/Noite; SOSs, Sinais e Payout **numéricos**; Resumo; checklist Manutenção (Roletas, Mesas, CC Machine, Cartas Contadas). RPC `escala_relatorio_turno_opcoes_manutencao` (roletas com match flexível em `tipo_jogo`/`nome_mesa`, incl. Sports Club).
 - **Permissões:** seed Ver/Criar/Editar/Excluir = Não (exceto Admin). Tabelas `escala_relatorio_turno*` / `escala_relatorio_estudio`.
 - **Handoff:** passagem de turno estruturada (substitui Teams); presença permanece no Calendário.
+
+---
+
+## Rotação (`escala_rotacao`)
+
+- **Menu:** Escala, entre Gestão de Staff e Calendário. **h1** = Rotação. **Subtítulo:** «Gere e consulte a rotação de Game Presenters nas mesas por turno e estúdio.»
+- **Abas (`useRouteTab`):** Gerar Rotação | Rotação Atual (`FiltroBarTabButton`).
+- **Filtros:** carrossel de **dia** + `FiltroTurnoSelect` (Manhã/Tarde/Noite) + `FiltroEstudioSelect` (obrigatório escolher estúdio — agregadora Todos Estúdios não gera/consulta).
+- **Pool:** RPC `escala_rotacao_contexto_dia` — GPs escalados na grade **aprovada** (`area_key=game_presenter`, células MRN/AFT/NGT/Comercial) ∩ Staff **4×2** ∩ `staff_turno` do turno ∩ estúdio (`staff_estudio_slugs` / slug). Mesas: `mesas_spin_cadastro` do `estudio_slug` (ID = `mesa_identificacao`; cor por `tipo_jogo` via `gameIdentityColors`).
+- **Horário:** início em `estudios_spin.turno_*_inicio` + jornada **8h** (regra 4×2). Slots 20 ou 30 min: modelos **5–6** permitem ambos; **7–8** só **30** min. Modelos permitidos: **5, 6, 7, 8**.
+- **UI Gerar:** chips do pool (toggle falta); modelo N; Gerar prévia (grade Nome|Nickname × slots; **B**=break, **F**=falta, IDs de mesa); **Publicar** (`escala_rotacao_publicar`) arquiva a publicada anterior do mesmo (dia, turno, estúdio).
+- **Rotação Atual:** leitura da publicada em `escala_rotacao` + `escala_rotacao_celula`.
+- **Permissões:** seed Ver/Criar/Editar/Excluir = Não (exceto Admin). Shufflers fora do v1.
+- **Handoff:** substitui o Excel Month Shift and Rotation para GPs 4×2.
 
 ---
 

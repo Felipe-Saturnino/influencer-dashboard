@@ -6,10 +6,11 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { hojeIsoBrasil } from "../../../lib/dateBrasil";
 import {
+  dataPadraoRelatorioTurno,
   fetchEstudiosAtivosRelatorio,
-  formatDataBr,
+  HINT_DATA_TURNO,
+  opcoesDataTurnoRelatorio,
   publicarRelatorioTurno,
   TURNO_TURNO_OPCOES,
   type EstudioAtivoOpt,
@@ -36,7 +37,8 @@ export function ModalRelatorioTurno({
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
-  const hoje = hojeIsoBrasil();
+  const opcoesData = useMemo(() => opcoesDataTurnoRelatorio(), []);
+  const [dataTurno, setDataTurno] = useState(dataPadraoRelatorioTurno);
   const [estudios, setEstudios] = useState<EstudioAtivoOpt[]>([]);
   const [loadingEst, setLoadingEst] = useState(true);
   const [turno, setTurno] = useState<TurnoRelatorioTurno | "">("");
@@ -92,6 +94,10 @@ export function ModalRelatorioTurno({
 
   const publicar = async () => {
     setErro(null);
+    if (!dataTurno) {
+      setErro("Selecione a data do turno.");
+      return;
+    }
     if (!turno) {
       setErro("Selecione o turno.");
       return;
@@ -121,6 +127,7 @@ export function ModalRelatorioTurno({
 
     setSalvando(true);
     const res = await publicarRelatorioTurno({
+      data: dataTurno,
       turno,
       relatorNome: user?.name?.trim() || user?.email || "Usuário",
       geral,
@@ -174,14 +181,25 @@ export function ModalRelatorioTurno({
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             gap: 12,
-            marginBottom: 16,
+            marginBottom: 6,
           }}
         >
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT.body }}>
-              Data <CampoObrigatorioMark />
+              Data do turno <CampoObrigatorioMark />
             </label>
-            <input style={fieldStyle} value={`${formatDataBr(hoje)} (hoje)`} disabled />
+            <select
+              style={fieldStyle}
+              value={dataTurno}
+              onChange={(e) => setDataTurno(e.target.value)}
+              aria-label="Data do turno"
+            >
+              {opcoesData.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6, fontFamily: FONT.body }}>
@@ -212,6 +230,9 @@ export function ModalRelatorioTurno({
             </select>
           </div>
         </div>
+        <p style={{ margin: "0 0 16px", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+          {HINT_DATA_TURNO}
+        </p>
 
         {loadingEst ? (
           <div style={{ textAlign: "center", color: t.textMuted, padding: 24 }}>

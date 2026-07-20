@@ -171,6 +171,10 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "turno", slug: "RelatorioDoTurno", label: "Relatório do Turno", access: "always" },
     { tabId: "estudio", slug: "RelatorioDeEstudio", label: "Relatório de Estúdio", access: "always" },
   ]),
+  page("Rotação", "escala_rotacao", "Rotacao", [
+    { tabId: "gerar", slug: "GerarRotacao", label: "Gerar Rotação", access: "always" },
+    { tabId: "atual", slug: "RotacaoAtual", label: "Rotação Atual", access: "always" },
+  ]),
   page("Gestão de Prestadores", "rh_funcionarios", "GestaoDePrestadores", [
     { tabId: "headcount", slug: "HeadCount", label: "Head Count", access: "always" },
     { tabId: "acoes_rh", slug: "AcoesDeRH", label: "Ações de RH", access: "always" },

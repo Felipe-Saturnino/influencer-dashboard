@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { hojeIsoBrasil } from "./dateBrasil";
+import { horaAtualBrasil, hojeIsoBrasil, subDiasIso } from "./dateBrasil";
 
 export type TurnoRelatorioTurno = "manha" | "tarde" | "noite";
 export type TurnoRelatorioEstudio = "manha" | "noite";
@@ -28,6 +28,29 @@ export function formatDataBr(iso: string): string {
   if (!y || !m || !d) return iso;
   return `${d}/${m}/${y}`;
 }
+
+/**
+ * Data do turno = dia civil em que o turno começou (não a data da publicação).
+ * Antes de 12h SP, default = ontem (relatório noturno costuma fechar de manhã).
+ */
+export function dataPadraoRelatorioTurno(): string {
+  const hoje = hojeIsoBrasil();
+  return horaAtualBrasil() < 12 ? subDiasIso(hoje, 1) : hoje;
+}
+
+/** Opções de Data do turno: ontem e hoje (fuso SP). */
+export function opcoesDataTurnoRelatorio(): { value: string; label: string }[] {
+  const hoje = hojeIsoBrasil();
+  const ontem = subDiasIso(hoje, 1);
+  return [
+    { value: ontem, label: `${formatDataBr(ontem)} (ontem)` },
+    { value: hoje, label: `${formatDataBr(hoje)} (hoje)` },
+  ];
+}
+
+export const HINT_DATA_TURNO =
+  "Data em que o turno começou (ex.: Noite que começa às 20h/23h = data desse dia, mesmo se publicar na manhã seguinte).";
+
 
 export type EstudioAtivoOpt = { slug: string; nome: string };
 
@@ -72,8 +95,9 @@ export type RelatorioEstudioRow = {
   turno: TurnoRelatorioEstudio;
   relator_user_id: string;
   relator_nome: string;
-  sos: string;
-  sinais: string;
+  sos: number;
+  sinais: number;
+  payout: number;
   resumo: string;
   manutencao: ManutencaoPayload;
   publicado_em: string;
@@ -191,7 +215,9 @@ export async function listarRelatoriosEstudio(opts: {
 }): Promise<RelatorioEstudioRow[]> {
   let q = supabase
     .from("escala_relatorio_estudio")
-    .select("id, data, turno, relator_user_id, relator_nome, sos, sinais, resumo, manutencao, publicado_em")
+    .select(
+      "id, data, turno, relator_user_id, relator_nome, sos, sinais, payout, resumo, manutencao, publicado_em",
+    )
     .order("data", { ascending: false })
     .order("publicado_em", { ascending: false })
     .limit(500);
@@ -202,10 +228,16 @@ export async function listarRelatoriosEstudio(opts: {
     console.error(error);
     throw error;
   }
-  return (data ?? []).map((r) => ({
-    ...(r as RelatorioEstudioRow),
-    manutencao: normalizarManutencao((r as RelatorioEstudioRow).manutencao),
-  }));
+  return (data ?? []).map((r) => {
+    const row = r as RelatorioEstudioRow & { sos: unknown; sinais: unknown; payout?: unknown };
+    return {
+      ...row,
+      sos: Number(row.sos) || 0,
+      sinais: Number(row.sinais) || 0,
+      payout: Number(row.payout) || 0,
+      manutencao: normalizarManutencao(row.manutencao),
+    };
+  });
 }
 
 function normalizarManutencao(raw: unknown): ManutencaoPayload {
@@ -219,7 +251,7 @@ function normalizarManutencao(raw: unknown): ManutencaoPayload {
 }
 
 export async function publicarRelatorioTurno(input: {
-  data?: string;
+  data: string;
   turno: TurnoRelatorioTurno;
   relatorNome: string;
   geral: string;
@@ -231,7 +263,7 @@ export async function publicarRelatorioTurno(input: {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false };
 
-  const dataIso = input.data ?? hojeIsoBrasil();
+  const dataIso = input.data.slice(0, 10);
   const { data: rel, error } = await supabase
     .from("escala_relatorio_turno")
     .insert({
@@ -279,11 +311,12 @@ export async function publicarRelatorioTurno(input: {
 }
 
 export async function publicarRelatorioEstudio(input: {
-  data?: string;
+  data: string;
   turno: TurnoRelatorioEstudio;
   relatorNome: string;
-  sos: string;
-  sinais: string;
+  sos: number;
+  sinais: number;
+  payout: number;
   resumo: string;
   manutencao: ManutencaoPayload;
 }): Promise<{ ok: true } | { ok: false }> {
@@ -293,12 +326,13 @@ export async function publicarRelatorioEstudio(input: {
   if (!user) return { ok: false };
 
   const { error } = await supabase.from("escala_relatorio_estudio").insert({
-    data: input.data ?? hojeIsoBrasil(),
+    data: input.data.slice(0, 10),
     turno: input.turno,
     relator_user_id: user.id,
     relator_nome: input.relatorNome.trim() || user.email || "Usuário",
-    sos: input.sos.trim(),
-    sinais: input.sinais.trim(),
+    sos: input.sos,
+    sinais: input.sinais,
+    payout: input.payout,
     resumo: input.resumo.trim(),
     manutencao: input.manutencao,
   });

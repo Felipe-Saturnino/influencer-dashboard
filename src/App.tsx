@@ -94,6 +94,7 @@ const RhCalendario = lazyWithRetry(() => import("./pages/rh/Calendario"));
 const EscalaMarketplaceTurnos = lazyWithRetry(() => import("./pages/escala/MarketplaceTurnos"));
 const EscalaSolicitacoes = lazyWithRetry(() => import("./pages/escala/Solicitacoes"));
 const EscalaRelatorioTurno = lazyWithRetry(() => import("./pages/escala/RelatorioTurno"));
+const EscalaRotacao = lazyWithRetry(() => import("./pages/escala/Rotacao"));
 const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunciasSpin"));
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
@@ -150,6 +151,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   escala_marketplace_turnos: EscalaMarketplaceTurnos,
   escala_solicitacoes: EscalaSolicitacoes,
   escala_relatorio_turno: EscalaRelatorioTurno,
+  escala_rotacao: EscalaRotacao,
   rh_central_denuncias: RhCentralDenuncias,
   rh_portal:         RhPortal,
   informativos:      Informativos,

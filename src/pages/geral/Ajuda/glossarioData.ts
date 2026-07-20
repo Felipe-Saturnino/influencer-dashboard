@@ -853,6 +853,12 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Gestão de Staff",
       },
       {
+        termo: "Rotação",
+        definicao:
+          "Grade que posiciona Game Presenters nas mesas do estúdio ao longo do turno, em intervalos de 20 ou 30 minutos. O pool vem da escala aprovada (somente GPs 4×2); a publicação arquiva a rotação anterior do mesmo dia, turno e estúdio.",
+        referencia: "Rotação",
+      },
+      {
         termo: "Calendário (RH)",
         definicao:
           "Calendário operacional com turnos, trocas, compromissos e presença. A visibilidade pode ser global ou seguir a cascata de liderança do Organograma; prestadores de Escritório recebem escala comercial automática.",
@@ -1249,6 +1255,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
     "rh_gestao_escala",
     "escala_relatorio_turno",
     "rh_staff",
+    "escala_rotacao",
     "rh_calendario",
     "escala_marketplace_turnos",
     "escala_solicitacoes",

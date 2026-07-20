@@ -67,6 +67,7 @@ const ALL_PAGE_KEYS: PageKey[] = [
   "rh_solicitacoes",
   "rh_gestao_escala",
   "escala_relatorio_turno",
+  "escala_rotacao",
   "rh_staff",
   "rh_calendario",
   "escala_marketplace_turnos",

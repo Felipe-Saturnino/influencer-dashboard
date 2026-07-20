@@ -1,0 +1,395 @@
+/**
+ * Escala → Rotação: contexto do dia (RPC), geração de grade e publicação.
+ */
+import { supabase } from "./supabase";
+import { primeiroUltimoNome } from "./rhGamePresenterDealerSync";
+import {
+  GAME_IDENTITY_HEX,
+  type GameIdentityKey,
+} from "./gameIdentityColors";
+
+export type RotacaoTurnoKey = "manha" | "tarde" | "noite";
+
+export type RotacaoGpPool = {
+  funcionarioId: string;
+  nomeCompleto: string;
+  nomeExibicao: string;
+  nickname: string;
+  falta: boolean;
+};
+
+export type RotacaoMesa = {
+  id: string;
+  mesaIdentificacao: string;
+  nomeMesa: string;
+  tipoJogo: string;
+};
+
+export type RotacaoContextoDia = {
+  dia: string;
+  turno: RotacaoTurnoKey;
+  turnoLabel: string;
+  estudioSlug: string;
+  estudioNome: string;
+  escalaAprovada: boolean;
+  turnoInicio: string;
+  turnoFim: string;
+  horarioTexto: string;
+  gps: RotacaoGpPool[];
+  mesas: RotacaoMesa[];
+};
+
+export type RotacaoCelulaPayload = {
+  funcionario_id: string;
+  nome_exibicao: string;
+  nickname: string;
+  linha_ordem: number;
+  slot_inicio: string;
+  valor: string;
+};
+
+export type RotacaoPublicada = {
+  id: string;
+  dia: string;
+  turno: RotacaoTurnoKey;
+  estudioSlug: string;
+  estudioNome: string;
+  modeloN: number;
+  slotMinutos: number;
+  turnoInicio: string;
+  turnoFim: string;
+  publicadoEm: string | null;
+  slots: string[];
+  gps: { funcionarioId: string; nomeExibicao: string; nickname: string }[];
+  /** matrix[gpIndex][slotIndex] */
+  matrix: string[][];
+  faltosos: { funcionarioId: string; nomeExibicao: string; nickname: string }[];
+};
+
+export const ROTACAO_MODELOS = [5, 6, 7, 8] as const;
+export type RotacaoModeloN = (typeof ROTACAO_MODELOS)[number];
+
+export const ROTACAO_TURNO_OPCOES: { value: RotacaoTurnoKey; label: string }[] = [
+  { value: "manha", label: "Manhã" },
+  { value: "tarde", label: "Tarde" },
+  { value: "noite", label: "Noite" },
+];
+
+const MSG_ERRO =
+  "Não foi possível carregar a rotação. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_PUB =
+  "Não foi possível publicar a rotação. Se o problema persistir, entre em contato com o suporte.";
+
+function tipoJogoParaIdentityKey(tipo: string): GameIdentityKey | null {
+  const t = tipo.trim().toLowerCase();
+  if (t === "baccarat") return "baccarat";
+  if (t === "blackjack") return "blackjack";
+  if (t === "roleta") return "roleta";
+  if (t === "futebol brasileiro" || t === "futebol_brasileiro") return "futebol_brasileiro";
+  return null;
+}
+
+export function corMesaPorTipoJogo(tipoJogo: string): string {
+  const key = tipoJogoParaIdentityKey(tipoJogo);
+  if (!key) return "#6b7280";
+  return GAME_IDENTITY_HEX[key];
+}
+
+export function minutosDesdeMeiaNoite(hhmm: string): number {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim());
+  if (!m) return 0;
+  return parseInt(m[1]!, 10) * 60 + parseInt(m[2]!, 10);
+}
+
+export function gerarSlotsRotacao(inicio: string, fim: string, stepMin: number): string[] {
+  let cur = minutosDesdeMeiaNoite(inicio);
+  const end = minutosDesdeMeiaNoite(fim);
+  const start = cur;
+  const overnight = start > end || (start === end && stepMin > 0);
+  const out: string[] = [];
+  let guard = 0;
+  while (guard++ < 200) {
+    const h = Math.floor(cur / 60) % 24;
+    const mi = cur % 60;
+    out.push(`${String(h).padStart(2, "0")}:${String(mi).padStart(2, "0")}`);
+    cur += stepMin;
+    if (cur >= 24 * 60) cur -= 24 * 60;
+    if (!overnight) {
+      if (cur >= end) break;
+    } else if (cur < start && cur >= end) {
+      break;
+    }
+  }
+  return out;
+}
+
+export function slotMinutosPermitido(modeloN: number, slotEscolhido: number): number {
+  if (modeloN === 5 || modeloN === 6) {
+    return slotEscolhido === 20 ? 20 : 30;
+  }
+  return 30;
+}
+
+export function sugerirModeloN(elegiveis: number): RotacaoModeloN {
+  if (elegiveis >= 8) return 8;
+  if (elegiveis >= 7) return 7;
+  if (elegiveis >= 6) return 6;
+  return 5;
+}
+
+/** Matriz N × slots a partir das mesas do estúdio (ciclo + breaks). */
+export function gerarPatternRotacao(
+  mesasIds: string[],
+  nPeople: number,
+  nSlots: number,
+): string[][] {
+  if (mesasIds.length === 0 || nPeople <= 0 || nSlots <= 0) return [];
+  const breakEvery = Math.max(2, Math.ceil(mesasIds.length / Math.max(1, nPeople - 1)));
+  const rows: string[][] = [];
+  for (let p = 0; p < nPeople; p++) {
+    const row: string[] = [];
+    for (let s = 0; s < nSlots; s++) {
+      const phase = s + p;
+      if (phase % (breakEvery + 1) === breakEvery) row.push("B");
+      else row.push(mesasIds[phase % mesasIds.length]!);
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function mapContexto(raw: Record<string, unknown>): RotacaoContextoDia {
+  const gpsRaw = Array.isArray(raw.gps) ? raw.gps : [];
+  const mesasRaw = Array.isArray(raw.mesas) ? raw.mesas : [];
+  return {
+    dia: String(raw.dia ?? "").slice(0, 10),
+    turno: (String(raw.turno ?? "noite") as RotacaoTurnoKey),
+    turnoLabel: String(raw.turno_label ?? ""),
+    estudioSlug: String(raw.estudio_slug ?? ""),
+    estudioNome: String(raw.estudio_nome ?? ""),
+    escalaAprovada: Boolean(raw.escala_aprovada),
+    turnoInicio: String(raw.turno_inicio ?? "06:00"),
+    turnoFim: String(raw.turno_fim ?? "14:00"),
+    horarioTexto: String(raw.horario_texto ?? "—"),
+    gps: gpsRaw.map((g) => {
+      const row = g as Record<string, unknown>;
+      const nome = String(row.nome ?? "").trim();
+      const nick = String(row.nickname ?? "").trim();
+      return {
+        funcionarioId: String(row.funcionario_id ?? ""),
+        nomeCompleto: nome,
+        nomeExibicao: primeiroUltimoNome(nome) || nome || "—",
+        nickname: nick || "—",
+        falta: false,
+      };
+    }),
+    mesas: mesasRaw.map((m) => {
+      const row = m as Record<string, unknown>;
+      return {
+        id: String(row.id ?? ""),
+        mesaIdentificacao: String(row.mesa_identificacao ?? "").trim(),
+        nomeMesa: String(row.nome_mesa ?? "").trim(),
+        tipoJogo: String(row.tipo_jogo ?? "").trim(),
+      };
+    }),
+  };
+}
+
+export async function carregarContextoRotacaoDia(opts: {
+  diaIso: string;
+  turno: RotacaoTurnoKey;
+  estudioSlug: string;
+}): Promise<{ ok: true; data: RotacaoContextoDia } | { ok: false; erro: string }> {
+  const { data, error } = await supabase.rpc("escala_rotacao_contexto_dia", {
+    p_dia: opts.diaIso,
+    p_turno: opts.turno,
+    p_estudio_slug: opts.estudioSlug,
+  });
+  if (error) {
+    console.error(error);
+    return { ok: false, erro: MSG_ERRO };
+  }
+  if (!data || typeof data !== "object") {
+    return { ok: false, erro: MSG_ERRO };
+  }
+  return { ok: true, data: mapContexto(data as Record<string, unknown>) };
+}
+
+export async function listarEstudiosAtivosRotacao(): Promise<{ slug: string; nome: string }[]> {
+  const { data, error } = await supabase
+    .from("estudios_spin")
+    .select("slug, nome")
+    .eq("ativo", true)
+    .order("nome", { ascending: true });
+  if (error) {
+    console.error(error);
+    return [];
+  }
+  return (data ?? []).map((e) => ({
+    slug: String(e.slug),
+    nome: (e.nome ?? "").trim() || String(e.slug),
+  }));
+}
+
+export async function carregarRotacaoPublicada(opts: {
+  diaIso: string;
+  turno: RotacaoTurnoKey;
+  estudioSlug: string;
+}): Promise<{ ok: true; data: RotacaoPublicada | null } | { ok: false; erro: string }> {
+  const { data: cab, error } = await supabase
+    .from("escala_rotacao")
+    .select(
+      "id, dia, turno, estudio_slug, estudio_nome, modelo_n, slot_minutos, turno_inicio, turno_fim, publicado_em",
+    )
+    .eq("dia", opts.diaIso)
+    .eq("turno", opts.turno)
+    .eq("estudio_slug", opts.estudioSlug)
+    .eq("status", "publicada")
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return { ok: false, erro: MSG_ERRO };
+  }
+  if (!cab) return { ok: true, data: null };
+
+  const { data: cells, error: errC } = await supabase
+    .from("escala_rotacao_celula")
+    .select("funcionario_id, nome_exibicao, nickname, linha_ordem, slot_inicio, valor")
+    .eq("rotacao_id", cab.id)
+    .order("linha_ordem", { ascending: true })
+    .order("slot_inicio", { ascending: true });
+
+  if (errC) {
+    console.error(errC);
+    return { ok: false, erro: MSG_ERRO };
+  }
+
+  const rows = cells ?? [];
+  const slotsUnicos = [...new Set(rows.map((r) => String(r.slot_inicio)))];
+  const startMin = minutosDesdeMeiaNoite(String(cab.turno_inicio ?? "00:00"));
+  const slots = slotsUnicos.sort((a, b) => {
+    let ma = minutosDesdeMeiaNoite(a) - startMin;
+    let mb = minutosDesdeMeiaNoite(b) - startMin;
+    if (ma < 0) ma += 24 * 60;
+    if (mb < 0) mb += 24 * 60;
+    return ma - mb;
+  });
+
+  const byFunc = new Map<
+    string,
+    { nomeExibicao: string; nickname: string; ordem: number; slots: Map<string, string> }
+  >();
+  for (const r of rows) {
+    const fid = String(r.funcionario_id);
+    let entry = byFunc.get(fid);
+    if (!entry) {
+      entry = {
+        nomeExibicao: String(r.nome_exibicao ?? "—"),
+        nickname: String(r.nickname ?? "—"),
+        ordem: Number(r.linha_ordem ?? 0),
+        slots: new Map(),
+      };
+      byFunc.set(fid, entry);
+    }
+    entry.slots.set(String(r.slot_inicio), String(r.valor ?? ""));
+  }
+
+  const ordenados = [...byFunc.entries()].sort((a, b) => a[1].ordem - b[1].ordem);
+  const gps: RotacaoPublicada["gps"] = [];
+  const faltosos: RotacaoPublicada["faltosos"] = [];
+  const matrix: string[][] = [];
+
+  for (const [fid, entry] of ordenados) {
+    const vals = slots.map((s) => entry.slots.get(s) ?? "—");
+    const soFalta = vals.length > 0 && vals.every((v) => v === "F");
+    if (soFalta) {
+      faltosos.push({
+        funcionarioId: fid,
+        nomeExibicao: entry.nomeExibicao,
+        nickname: entry.nickname,
+      });
+    } else {
+      gps.push({
+        funcionarioId: fid,
+        nomeExibicao: entry.nomeExibicao,
+        nickname: entry.nickname,
+      });
+      matrix.push(vals);
+    }
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: String(cab.id),
+      dia: String(cab.dia).slice(0, 10),
+      turno: cab.turno as RotacaoTurnoKey,
+      estudioSlug: String(cab.estudio_slug),
+      estudioNome: String(cab.estudio_nome),
+      modeloN: Number(cab.modelo_n),
+      slotMinutos: Number(cab.slot_minutos),
+      turnoInicio: String(cab.turno_inicio),
+      turnoFim: String(cab.turno_fim),
+      publicadoEm: cab.publicado_em ? String(cab.publicado_em) : null,
+      slots,
+      gps,
+      matrix,
+      faltosos,
+    },
+  };
+}
+
+export async function publicarRotacao(opts: {
+  diaIso: string;
+  turno: RotacaoTurnoKey;
+  estudioSlug: string;
+  estudioNome: string;
+  modeloN: number;
+  slotMinutos: number;
+  turnoInicio: string;
+  turnoFim: string;
+  celulas: RotacaoCelulaPayload[];
+}): Promise<{ ok: true; id: string } | { ok: false; erro: string }> {
+  const { data, error } = await supabase.rpc("escala_rotacao_publicar", {
+    p_payload: {
+      dia: opts.diaIso,
+      turno: opts.turno,
+      estudio_slug: opts.estudioSlug,
+      estudio_nome: opts.estudioNome,
+      modelo_n: opts.modeloN,
+      slot_minutos: opts.slotMinutos,
+      turno_inicio: opts.turnoInicio,
+      turno_fim: opts.turnoFim,
+      celulas: opts.celulas,
+    },
+  });
+  if (error) {
+    console.error(error);
+    return { ok: false, erro: MSG_ERRO_PUB };
+  }
+  return { ok: true, id: String(data) };
+}
+
+export function diaIsoLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function formatDiaRotacaoLabel(diaIso: string): string {
+  const [y, m, d] = diaIso.split("-").map(Number);
+  if (!y || !m || !d) return diaIso;
+  const dt = new Date(y, m - 1, d);
+  return dt
+    .toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+    .replace(".", "");
+}
+
+export function shiftDiaIso(diaIso: string, delta: number): string {
+  const [y, m, d] = diaIso.split("-").map(Number);
+  const dt = new Date(y!, m! - 1, d!);
+  dt.setDate(dt.getDate() + delta);
+  return diaIsoLocal(dt);
+}

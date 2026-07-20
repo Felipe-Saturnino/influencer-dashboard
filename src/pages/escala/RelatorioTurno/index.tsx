@@ -52,7 +52,7 @@ const SUBTITULO =
   "Registre e consulte os relatórios de turno e de estúdio da operação.";
 
 type SortColTurno = "data" | "turno" | "relator" | "escalados" | "absenteismo";
-type SortColEstudio = "data" | "turno" | "relator" | "sos" | "sinais" | "manutencoes";
+type SortColEstudio = "data" | "turno" | "relator" | "sos" | "sinais" | "payout" | "manutencoes";
 
 function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
@@ -162,7 +162,15 @@ export default function EscalaRelatorioTurnoPage() {
     let rows = filtrarPeriodo(rowsEstudio);
     if (busca.trim()) {
       rows = rows.filter((r) =>
-        textoContemBuscaEmAlgum(busca, r.relator_nome, labelTurno(r.turno), formatDataBr(r.data), r.sos, r.sinais),
+        textoContemBuscaEmAlgum(
+          busca,
+          r.relator_nome,
+          labelTurno(r.turno),
+          formatDataBr(r.data),
+          String(r.sos),
+          String(r.sinais),
+          String(r.payout),
+        ),
       );
     }
     const sorted = [...rows];
@@ -175,8 +183,9 @@ export default function EscalaRelatorioTurnoPage() {
         c = compareLocaleTexto(labelTurno(a.turno), labelTurno(b.turno), sortEstudio.dir);
       else if (sortEstudio.col === "relator")
         c = compareLocaleTexto(a.relator_nome, b.relator_nome, sortEstudio.dir);
-      else if (sortEstudio.col === "sos") c = compareLocaleTexto(a.sos, b.sos, sortEstudio.dir);
-      else if (sortEstudio.col === "sinais") c = compareLocaleTexto(a.sinais, b.sinais, sortEstudio.dir);
+      else if (sortEstudio.col === "sos") c = compareNumber(a.sos, b.sos, sortEstudio.dir);
+      else if (sortEstudio.col === "sinais") c = compareNumber(a.sinais, b.sinais, sortEstudio.dir);
+      else if (sortEstudio.col === "payout") c = compareNumber(a.payout, b.payout, sortEstudio.dir);
       else c = compareNumber(ca.feitos, cb.feitos, sortEstudio.dir);
       if (c !== 0) return c;
       return compareLocaleTexto(b.publicado_em, a.publicado_em, "asc");
@@ -472,7 +481,7 @@ export default function EscalaRelatorioTurnoPage() {
               marginBottom: 16,
             }}
           >
-            <SectionTitle sub="SOS, sinais e manutenções do estúdio">Relatórios</SectionTitle>
+            <SectionTitle sub="SOS, sinais, payout e manutenções do estúdio">Relatórios</SectionTitle>
             {perm.canCriarOk ? (
               <CtaCriarButton onClick={() => setModalNovo("estudio")}>Novo Relatório</CtaCriarButton>
             ) : null}
@@ -489,7 +498,7 @@ export default function EscalaRelatorioTurnoPage() {
             </div>
           ) : (
             <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-              <table style={getDataTableStyle({ minWidth: 780 })}>
+              <table style={getDataTableStyle({ minWidth: 860 })}>
                 <caption style={{ display: "none" }}>Relatórios de estúdio</caption>
                 <thead>
                   <tr>
@@ -500,6 +509,7 @@ export default function EscalaRelatorioTurnoPage() {
                         ["relator", "Relator"],
                         ["sos", "SOS"],
                         ["sinais", "Sinais"],
+                        ["payout", "Payout"],
                         ["manutencoes", "Manutenções"],
                       ] as const
                     ).map(([col, label]) => (
@@ -539,16 +549,9 @@ export default function EscalaRelatorioTurnoPage() {
                         <td style={dataTable.tdCenter}>{formatDataBr(r.data)}</td>
                         <td style={dataTable.tdCenter}>{labelTurno(r.turno)}</td>
                         <td style={dataTable.tdCenter}>{r.relator_nome}</td>
-                        <td style={dataTable.tdCenter} title={r.sos}>
-                          {r.sos.trim() ? (r.sos.length > 40 ? `${r.sos.slice(0, 40)}…` : r.sos) : "—"}
-                        </td>
-                        <td style={dataTable.tdCenter} title={r.sinais}>
-                          {r.sinais.trim()
-                            ? r.sinais.length > 40
-                              ? `${r.sinais.slice(0, 40)}…`
-                              : r.sinais
-                            : "—"}
-                        </td>
+                        <td style={dataTable.tdCenter}>{r.sos.toLocaleString("pt-BR")}</td>
+                        <td style={dataTable.tdCenter}>{r.sinais.toLocaleString("pt-BR")}</td>
+                        <td style={dataTable.tdCenter}>{r.payout.toLocaleString("pt-BR")}</td>
                         <td style={dataTable.tdCenter}>
                           {cnt.total === 0 ? "—" : `${cnt.feitos} / ${cnt.total}`}
                         </td>

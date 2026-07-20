@@ -1299,12 +1299,42 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo criar um novo relatório?",
         texto:
-          "É necessária permissão de **Criar** na mesma linha. Sem ela, o botão **Novo Relatório** não aparece. Data e responsável não são editáveis — sempre o dia de hoje e o usuário logado.",
+          "É necessária permissão de **Criar** na mesma linha. Sem ela, o botão **Novo Relatório** não aparece. O responsável fica travado no usuário logado; a **Data do turno** pode ser ontem ou hoje (dia em que o turno começou).",
+      },
+      {
+        subtitulo: "Qual data usar no turno noturno?",
+        texto:
+          "Use a data em que o turno **começou**. Ex.: Noite que começa às 20h ou 23h de segunda e fecha na manhã de terça → selecione a data de **segunda**. Antes do meio-dia, o sistema já sugere **ontem** por padrão.",
+      },
+      {
+        subtitulo: "Falta a roleta do Sports Club no checklist?",
+        texto:
+          "A lista vem das mesas cadastradas com tipo ou nome de Roleta em Gestão de Estúdios / Mesas. Confirme o vínculo da mesa ao estúdio Sports Club e o tipo de jogo. Se a migração recente ainda não foi aplicada no banco, a listagem antiga pode omitir algumas roletas.",
       },
       {
         subtitulo: "Faltam blocos de estúdio no modal?",
         texto:
           "Os blocos seguem os estúdios **ativos** em Gestão de Estúdios. Cadastre ou reative o estúdio para ele aparecer automaticamente no próximo relatório.",
+      },
+    ],
+  },
+  escala_rotacao: {
+    titulo: "Rotação",
+    blocos: [
+      {
+        subtitulo: "Não vejo Rotação no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Rotação**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+      },
+      {
+        subtitulo: "Pool vazio ou sem escala aprovada?",
+        texto:
+          "A rotação usa só Game Presenters **escalados** na Gestão de Escala **aprovada** do mês, com escala **4×2**, turno e estúdio corretos em Gestão de Staff. Sem aprovação ou sem GPs no turno, o pool fica vazio — aprove a escala e confira o cadastro operacional.",
+      },
+      {
+        subtitulo: "Não consigo publicar a rotação?",
+        texto:
+          "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com elegíveis suficientes para o modelo e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
       },
     ],
   },
