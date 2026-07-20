@@ -100,7 +100,7 @@ Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **
 
 ### Cards Comunicados e Dicas (leitura)
 
-Mesmo formato: descrição **completa** no card (sem truncar 200 caracteres); link de anexo só **Ver anexo** (sem nome do arquivo). Dicas mantêm tags de jogo quando houver.
+Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do texto — se houver anexo de arquivo, abre o arquivo; se só houver imagem/vídeo no campo de mídia (sem anexo), o mesmo link abre a mídia. Thumbnail lateral **cresce com a altura do texto** (`app-academy-portal-card--with-media` em grid; coluna ~42% até 400px); ≤1100px coluna mais estreita; ≤720px mídia abaixo do texto em faixa 16:9 responsiva. Tags de jogo nas Dicas quando houver.
 
 ### Strings de vazio
 
