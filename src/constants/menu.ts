@@ -67,6 +67,7 @@ export const MENU: MenuSection[] = [
       { key: "streamers", label: "Streamers", icon: Tv },
       { key: "dash_midias_sociais", label: "Mídias Sociais", icon: Share2 },
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: Mic },
+      { key: "comercial_overview", label: "Overview Comercial", icon: LineChart },
       { key: "dash_overview_prestador", label: "Overview Prestador", icon: UserRound },
     ],
   },
@@ -105,7 +106,6 @@ export const MENU: MenuSection[] = [
   {
     section: "Comercial",
     items: [
-      { key: "comercial_overview", label: "Overview Comercial", icon: LineChart },
       { key: "comercial_integracao", label: "Integração", icon: Plug },
       { key: "comercial_pipeline_b2b", label: "Pipeline B2B", icon: Briefcase },
       { key: "comercial_pipeline_agregadoras", label: "Pipeline Agregadoras", icon: Layers },
@@ -136,13 +136,13 @@ export const MENU: MenuSection[] = [
   {
     section: "Escala",
     items: [
-      { key: "rh_gestao_escala", label: "Gestão de Escala", icon: Calendar },
-      { key: "escala_relatorio_turno", label: "Relatório de Turno", icon: ClipboardPen },
       { key: "rh_staff", label: "Gestão de Staff", icon: UsersRound },
+      { key: "escala_relatorio_turno", label: "Relatório de Turno", icon: ClipboardPen },
+      { key: "escala_solicitacoes", label: "Solicitações", icon: ClipboardList },
+      { key: "rh_gestao_escala", label: "Gestão de Escala", icon: Calendar },
       { key: "escala_rotacao", label: "Rotação", icon: RotateCw },
       { key: "rh_calendario", label: "Calendário", icon: CalendarRange },
       { key: "escala_marketplace_turnos", label: "Marketplace", icon: ShoppingCart },
-      { key: "escala_solicitacoes", label: "Solicitações", icon: ClipboardList },
     ],
   },
   {

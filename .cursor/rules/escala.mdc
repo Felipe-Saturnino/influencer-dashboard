@@ -26,13 +26,13 @@ alwaysApply: false
 
 | PageKey | Label menu | Caminho atual |
 |---------|------------|---------------|
-| `rh_gestao_escala` | Gestão de Escala | `rh/GestaoEscala/` |
-| `escala_relatorio_turno` | Relatório de Turno | `escala/RelatorioTurno/` |
 | `rh_staff` | Gestão de Staff | `rh/GestaoStaff/` |
+| `escala_relatorio_turno` | Relatório de Turno | `escala/RelatorioTurno/` |
+| `escala_solicitacoes` | Solicitações | `escala/Solicitacoes/` |
+| `rh_gestao_escala` | Gestão de Escala | `rh/GestaoEscala/` |
 | `escala_rotacao` | Rotação | `escala/Rotacao/` |
 | `rh_calendario` | Calendário | `rh/Calendario/` |
 | `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
-| `escala_solicitacoes` | Solicitações | `escala/Solicitacoes/` |
 
 Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel via `lib/carouselNavStyles.ts`; exceção Brand: card com `blockBg` quando isolado (não strip transparente).
 
@@ -49,7 +49,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 ## Relatório de Turno (`escala_relatorio_turno`)
 
-- **Menu:** Escala, acima de Gestão de Staff. **h1** = Relatório de Turno. **Subtítulo:** «Registre e consulte os relatórios de turno e de estúdio da operação.»
+- **Menu:** Escala, após Gestão de Staff. **h1** = Relatório de Turno. **Subtítulo:** «Registre e consulte os relatórios de turno e de estúdio da operação.»
 - **Abas (`useRouteTab`):** Relatório do Turno | Relatório de Estúdio (`FiltroBarTabButton`).
 - **Filtros:** carrossel de mês (`getMesesDisponiveisEscalaCarrossel`) + `FiltroHistoricoButton` + busca (`BarraPesquisaPagina`).
 - **Relatório do Turno:** tabela Data / Turno / Relator / Escalados / Absenteísmo / Ver. Escalados = soma GP de todos os blocos de estúdio + Shuffler Escalados. Absenteísmo = soma Atrasos/Faltas/Atestados. Modal Novo: **Data do turno** (ontem/hoje, default inteligente antes de 12h SP) + hint; Responsável travado; Turno Manhã/Tarde/Noite; um bloco por estúdio ativo (`estudios_spin`); bloco Shufflers; Geral; **Publicar**.

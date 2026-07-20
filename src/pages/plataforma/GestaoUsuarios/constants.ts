@@ -88,6 +88,7 @@ const PAGES_META: {
   { key: "streamers", label: "Streamers", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "comercial_overview", label: "Overview Comercial", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_prestador", label: "Overview Prestador", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   // Lives
   { key: "agenda", label: "Agenda", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },
@@ -105,8 +106,7 @@ const PAGES_META: {
   { key: "campanhas", label: "Campanhas", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "galeria_fotos", label: "Galeria de Fotos", secao: "Marketing", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_links", label: "Gestão de Links", secao: "Marketing", hasCriar: false, hasEditar: true, hasExcluir: false },
-  // Comercial
-  { key: "comercial_overview", label: "Overview Comercial", secao: "Comercial", hasCriar: false, hasEditar: false, hasExcluir: false },
+  // Comercial (Overview Comercial fica em Dashboards — menu + PAGES)
   { key: "comercial_integracao", label: "Integração", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "comercial_pipeline_b2b", label: "Pipeline B2B", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "comercial_pipeline_agregadoras", label: "Pipeline Agregadoras", secao: "Comercial", hasCriar: true, hasEditar: true, hasExcluir: false },
@@ -141,10 +141,11 @@ const PAGES_META: {
     hasEditar: true,
     hasExcluir: false,
   },
-  // Escala
-  { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
-  { key: "escala_relatorio_turno", label: "Relatório de Turno", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
+  // Escala (ordem = menu.ts)
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "escala_relatorio_turno", label: "Relatório de Turno", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "escala_solicitacoes", label: "Solicitações", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "rh_gestao_escala", label: "Gestão de Escala", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "escala_rotacao", label: "Rotação", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_calendario", label: "Calendário", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
@@ -155,7 +156,6 @@ const PAGES_META: {
     hasEditar: true,
     hasExcluir: false,
   },
-  { key: "escala_solicitacoes", label: "Solicitações", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   // RH
   { key: "rh_funcionarios", label: "Gestão de Prestadores", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_dados_cadastro", label: "Dados de Cadastro", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },

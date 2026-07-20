@@ -1221,8 +1221,8 @@ const DASHBOARD_PAGE_KEYS: PageKey[] = [
   "streamers",
   "dash_midias_sociais",
   "dash_overview_influencer",
-  "dash_overview_prestador",
   "comercial_overview",
+  "dash_overview_prestador",
 ];
 
 /** Páginas que liberam cada categoria do glossário (Ver ou Próprios em Gestão de Usuários). */
@@ -1252,13 +1252,13 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   customer_success: ["cs_atendimento"],
   rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
   escala: [
-    "rh_gestao_escala",
-    "escala_relatorio_turno",
     "rh_staff",
+    "escala_relatorio_turno",
+    "escala_solicitacoes",
+    "rh_gestao_escala",
     "escala_rotacao",
     "rh_calendario",
     "escala_marketplace_turnos",
-    "escala_solicitacoes",
     "dash_overview_prestador",
   ],
   rh_prestadores: ["rh_funcionarios", "rh_dados_cadastro", "rh_vagas", "rh_organograma", "rh_solicitacoes"],

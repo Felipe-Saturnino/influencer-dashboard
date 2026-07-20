@@ -18,6 +18,7 @@ alwaysApply: false
 |---|---|
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
+| Overview Comercial | Menu em **Dashboards** (abaixo de Overview Influencer); código em `src/pages/comercial/OverviewComercial/` — regras de domínio em `comercial.mdc` |
 | Overview Prestador | `src/pages/dashboards/OverviewPrestador/` — `index.tsx`, `useOverviewPrestadorDados.ts`, `OverviewPrestadorFiltroBar.tsx`, `OverviewPrestadorAbaEscala.tsx`; métricas em `lib/overviewPrestadorMetrics.ts` |
 | Overview Spin | `src/pages/dashboards/OverviewSpin/` — shell + abas Overview / Estúdio Dedicado / Estúdio Network / Posicionamento; `useOverviewSpinDados.ts` (canal consolidado|dedicado|network), `overviewSpinCanal.ts`, `overviewSpinCatalogo.ts`, `useOverviewSpinCatalogo.ts`, `useOverviewSpinFiltrosAcesso.ts`, FilterBar/AbaNav, KPIs/comparativos, `DashboardPosicionamento/` lazy (`mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |

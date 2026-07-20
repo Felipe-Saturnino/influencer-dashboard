@@ -984,7 +984,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Overview Comercial no menu?",
         texto:
-          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para **Overview Comercial** (página distinta do Pipeline B2B). Administradores têm acesso total.",
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para **Overview Comercial** (página na seção **Dashboards**, distinta do Pipeline B2B). Administradores têm acesso total.",
       },
       {
         subtitulo: "Mapa ou lista de UF vazios?",

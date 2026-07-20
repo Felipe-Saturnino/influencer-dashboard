@@ -1193,7 +1193,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O **Overview Comercial** consolida a visão de **Operadoras** (Pipeline B2B), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração.",
+          "O **Overview Comercial** (menu **Dashboards**, abaixo de Overview Influencer) consolida a visão de **Operadoras** (Pipeline B2B), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração na seção Comercial.",
       },
       {
         subtitulo: "Abas e filtros",
