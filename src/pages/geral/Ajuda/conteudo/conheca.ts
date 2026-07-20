@@ -706,6 +706,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  escala_relatorio_turno: {
+    titulo: "Relatório de Turno",
+    blocos: [
+      {
+        texto:
+          "Registre a passagem de turno e o relatório de estúdio de forma estruturada — substitui o fluxo informal de mensagens. Duas abas: **Relatório do Turno** (escalados e absenteísmo por estúdio e Shufflers) e **Relatório de Estúdio** (SOS, sinais e checklist de manutenção).",
+      },
+      {
+        subtitulo: "Relatório do Turno",
+        texto:
+          "Com permissão de **Criar**, use **Novo Relatório**. Data e responsável ficam travados no dia e no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados, atrasos/faltas/atestados e resumo), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
+      },
+      {
+        subtitulo: "Relatório de Estúdio",
+        texto:
+          "Turno apenas Manhã ou Noite. Campos obrigatórios: SOSs, Sinais e Resumo. O checklist de Manutenção (Roletas, Mesas, CC Machine, Cartas Contadas) é opcional. Roletas usam o formato estúdio + número da mesa cadastrado em Gestão de Estúdios.",
+      },
+    ],
+  },
   escala_solicitacoes: {
     titulo: "Solicitações",
     blocos: [

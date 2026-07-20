@@ -1288,6 +1288,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  escala_relatorio_turno: {
+    titulo: "Relatório de Turno",
+    blocos: [
+      {
+        subtitulo: "Não vejo Relatório de Turno no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Relatório de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+      },
+      {
+        subtitulo: "Não consigo criar um novo relatório?",
+        texto:
+          "É necessária permissão de **Criar** na mesma linha. Sem ela, o botão **Novo Relatório** não aparece. Data e responsável não são editáveis — sempre o dia de hoje e o usuário logado.",
+      },
+      {
+        subtitulo: "Faltam blocos de estúdio no modal?",
+        texto:
+          "Os blocos seguem os estúdios **ativos** em Gestão de Estúdios. Cadastre ou reative o estúdio para ele aparecer automaticamente no próximo relatório.",
+      },
+    ],
+  },
   escala_solicitacoes: {
     titulo: "Solicitações",
     blocos: [

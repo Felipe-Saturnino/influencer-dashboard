@@ -27,6 +27,7 @@ alwaysApply: false
 | PageKey | Label menu | Caminho atual |
 |---------|------------|---------------|
 | `rh_gestao_escala` | Gestão de Escala | `rh/GestaoEscala/` |
+| `escala_relatorio_turno` | Relatório de Turno | `escala/RelatorioTurno/` |
 | `rh_staff` | Gestão de Staff | `rh/GestaoStaff/` |
 | `rh_calendario` | Calendário | `rh/Calendario/` |
 | `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
@@ -42,6 +43,18 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Marketplace** e **Solicitações:** listas em tabela usam padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
 - **Barra de filtros Gestão de Escala:** em refactor, migrar para `primaryTransparentBg/Border` (hoje legado com `blockBg` — ver auditoria Brand).
 - Carrossel de mês: integrar na barra de filtros quando possível; `aria-label` Mês anterior / Próximo mês.
+
+---
+
+## Relatório de Turno (`escala_relatorio_turno`)
+
+- **Menu:** Escala, acima de Gestão de Staff. **h1** = Relatório de Turno. **Subtítulo:** «Registre e consulte os relatórios de turno e de estúdio da operação.»
+- **Abas (`useRouteTab`):** Relatório do Turno | Relatório de Estúdio (`FiltroBarTabButton`).
+- **Filtros:** carrossel de mês (`getMesesDisponiveisEscalaCarrossel`) + `FiltroHistoricoButton` + busca (`BarraPesquisaPagina`).
+- **Relatório do Turno:** tabela Data / Turno / Relator / Escalados / Absenteísmo / Ver. Escalados = soma GP de todos os blocos de estúdio + Shuffler Escalados. Absenteísmo = soma Atrasos/Faltas/Atestados. Modal Novo: Data e Responsável travados; Turno Manhã/Tarde/Noite; um bloco por estúdio ativo (`estudios_spin`); bloco Shufflers; Geral; **Publicar**.
+- **Relatório de Estúdio:** tabela Data / Turno / Relator / SOS / Sinais / Manutenções / Ver. Modal: Data/Responsável travados; Turno Manhã/Noite; SOSs, Sinais, Resumo; checklist Manutenção opcional (Roletas `[ESTÚDIO] - Roleta [N]`, Mesas = estúdios ativos, CC Machine, Cartas Contadas). RPC `escala_relatorio_turno_opcoes_manutencao`.
+- **Permissões:** seed Ver/Criar/Editar/Excluir = Não (exceto Admin). Tabelas `escala_relatorio_turno*` / `escala_relatorio_estudio`.
+- **Handoff:** passagem de turno estruturada (substitui Teams); presença permanece no Calendário.
 
 ---
 

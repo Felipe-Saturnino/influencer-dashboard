@@ -1247,6 +1247,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
   escala: [
     "rh_gestao_escala",
+    "escala_relatorio_turno",
     "rh_staff",
     "rh_calendario",
     "escala_marketplace_turnos",

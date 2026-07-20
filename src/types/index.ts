@@ -83,6 +83,7 @@ export type PageKey =
   | "rh_calendario"
   | "escala_marketplace_turnos"
   | "escala_solicitacoes"
+  | "escala_relatorio_turno"
   | "rh_central_denuncias"
   | "rh_portal"
   | "informativos"

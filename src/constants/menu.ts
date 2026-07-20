@@ -8,6 +8,7 @@ import {
   Calendar,
   CalendarRange,
   ClipboardList,
+  ClipboardPen,
   Dices,
   Factory,
   Files,
@@ -135,6 +136,7 @@ export const MENU: MenuSection[] = [
     section: "Escala",
     items: [
       { key: "rh_gestao_escala", label: "Gestão de Escala", icon: Calendar },
+      { key: "escala_relatorio_turno", label: "Relatório de Turno", icon: ClipboardPen },
       { key: "rh_staff", label: "Gestão de Staff", icon: UsersRound },
       { key: "rh_calendario", label: "Calendário", icon: CalendarRange },
       { key: "escala_marketplace_turnos", label: "Marketplace", icon: ShoppingCart },
