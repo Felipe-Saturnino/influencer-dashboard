@@ -453,9 +453,9 @@ const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
 
 /** Larguras fixas das 4 colunas fixas (sticky) — soma usada em `left`. */
 const STICKY_W_NOME = 180;
-const STICKY_W_NICK = 130;
+const STICKY_W_NICK = 156;
 /** Largura mínima para caber rótulo «Escala» + ícone de ordenação sem sobrepor a coluna Turno. */
-const STICKY_W_ESCALA = 92;
+const STICKY_W_ESCALA = 112;
 const STICKY_W_TURNO_STAFF = 112;
 const STICKY_LEFT_NICK = STICKY_W_NOME;
 const STICKY_LEFT_ESCALA = STICKY_W_NOME + STICKY_W_NICK;
