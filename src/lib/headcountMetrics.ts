@@ -355,7 +355,10 @@ export function computarOverviewHistorico(
   const ativosFim = funcionarios.filter((r) => estavaAtivoNoFim(r, periodoTotal.fim));
   const hcAtivo = ativosFim.length;
   const distrato = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_desligamento), periodoTotal)).length;
-  const turnoverPct = turnoverDoPeriodo(funcionarios, periodoTotal, distrato);
+  /** HC médio = média dos Headcounts mês a mês (não só extremos da janela — evita inflar o % se o HC cresceu). */
+  const hcMedioHistorico =
+    mesAMes.length > 0 ? mesAMes.reduce((s, m) => s + m.headcount, 0) / mesAMes.length : 0;
+  const turnoverPct = hcMedioHistorico > 0 ? (distrato / hcMedioHistorico) * 100 : null;
   const tenures = ativosFim
     .map((r) => tenureMesesAte(r.data_inicio, periodoTotal.fim))
     .filter((n): n is number => n != null && n >= 0);
