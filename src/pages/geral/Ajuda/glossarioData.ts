@@ -897,6 +897,21 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Solicitações",
       },
       {
+        termo: "Headcount",
+        definicao:
+          "Dashboard executivo de pessoas: HC ativo, movimentação (admissões e desligamentos), turnover, custo estimado de pessoas e pipeline de vagas — visão para diretoria e investidores.",
+        nota:
+          "Distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual). O HC histórico é reconstruído pelas datas de vínculo.",
+        referencia: "Headcount",
+      },
+      {
+        termo: "Turnover (pessoas)",
+        definicao:
+          "Percentual de desligamentos no período em relação ao headcount médio estimado (média entre o HC no fim do mês anterior e o HC no fim do período).",
+        nota: "Não confundir com Turnover de apostas no Overview Spin.",
+        referencia: "Headcount",
+      },
+      {
         termo: "Gestão de Prestadores",
         definicao:
           "Cadastro central de colaboradores (prestadores): head count, contratação, organograma, remuneração, ações de RH e anotações.",
@@ -1222,6 +1237,7 @@ const DASHBOARD_PAGE_KEYS: PageKey[] = [
   "dash_midias_sociais",
   "dash_overview_influencer",
   "comercial_overview",
+  "dash_headcount",
   "dash_overview_prestador",
 ];
 
@@ -1261,7 +1277,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
     "escala_marketplace_turnos",
     "dash_overview_prestador",
   ],
-  rh_prestadores: ["rh_funcionarios", "rh_dados_cadastro", "rh_vagas", "rh_organograma", "rh_solicitacoes"],
+  rh_prestadores: ["rh_funcionarios", "rh_dados_cadastro", "rh_vagas", "rh_organograma", "rh_solicitacoes", "dash_headcount"],
   denuncias: ["rh_central_denuncias"],
   permissoes_plataforma: ["gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico"],
   home_perfis: ["informativos", "mesas_spin", "streamers", "gestao_operadoras"],

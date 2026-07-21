@@ -89,6 +89,7 @@ const PAGES_META: {
   { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "comercial_overview", label: "Overview Comercial", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_headcount", label: "Headcount", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_prestador", label: "Overview Prestador", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   // Lives
   { key: "agenda", label: "Agenda", secao: "Lives", hasCriar: true, hasEditar: true, hasExcluir: true },

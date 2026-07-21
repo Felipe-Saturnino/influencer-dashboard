@@ -56,6 +56,7 @@ function page(label: string, pageKey: PageKey, pageSlug: string, tabs?: AppRoute
 export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Home", "home", ROUTE_SLUG_HOME),
   page("Overview Influencer", "dash_overview_influencer", "OverviewInfluencer"),
+  page("Headcount", "dash_headcount", "Headcount"),
   page("Overview Prestador", "dash_overview_prestador", "OverviewPrestador", [
     { tabId: "escala", slug: "Escala", label: "Escala", access: "always" },
     { tabId: "performance", slug: "Performance", label: "Performance", access: "always" },

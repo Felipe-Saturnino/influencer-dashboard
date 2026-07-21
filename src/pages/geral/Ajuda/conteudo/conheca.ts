@@ -189,6 +189,35 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_headcount: {
+    titulo: "Headcount",
+    blocos: [
+      {
+        texto:
+          "O Headcount é o dashboard executivo de pessoas da Spin: tamanho da força de trabalho, movimentação (admissões e saídas), custo estimado e pipeline de vagas. Serve diretoria, conselho e investidores — distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Navegue pelos meses com as setas ou ative o **Histórico** para ver 13 competências (rótulo **Todo o período**). Filtre por **diretoria**, **área** (Estúdio ou Escritório) e **tipo de contrato** (CLT, PJ, Estágio, Temporário). A agregadora de cada filtro mostra o universo completo.",
+      },
+      {
+        subtitulo: "KPIs Consolidados",
+        texto:
+          "HC ativo e indisponíveis no fim do período; variação líquida (admissões menos desligamentos); tenure médio; admissões; desligamentos; turnover percentual; percentual de saídas voluntárias (quando o histórico de término informa o tipo). No modo mês, os cards comparam com o mesmo intervalo do mês anterior.",
+      },
+      {
+        subtitulo: "Custo de Pessoas",
+        texto:
+          "Visível apenas para perfis com permissão de **Ver** em **Sim**. Mostra massa salarial estimada, custo médio por HC e participação do Estúdio no custo. No Estúdio, a remuneração por hora é convertida com carga estimada de 180 horas/mês.",
+      },
+      {
+        subtitulo: "Pipeline e Detalhamento",
+        texto:
+          "Contagem de vagas abertas e em andamento. Gráficos de mix por diretoria e contrato, evolução mensal reconstruída e origem das contratações no período. A tabela consolida métricas por diretoria. O HC histórico é aproximado pelas datas de início e desligamento — não é um snapshot mensal auditável.",
+      },
+    ],
+  },
   agenda: {
     titulo: "Agenda",
     blocos: [
@@ -645,7 +674,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Customer Service, Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Preencha ou gere células de turno, salve rascunhos e envie para aprovação quando o fluxo exigir. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Preencha ou gere células de turno, salve rascunhos e envie para aprovação quando o fluxo exigir. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
     ],
   },
@@ -961,12 +990,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Gerencia chamados do formulário de contato do site Spin, e-mails recebidos em **contato@spingaming.com.br** e interações do Instagram (**@spingamingbrasil**). A equipe de Customer Service acompanha protocolo, registra anotações e altera o status conforme o atendimento avança.",
+          "Gerencia chamados do formulário de contato do site Spin, e-mails recebidos em **contato@spingaming.com.br** e interações do Instagram (**@spingamingbrasil**). A equipe acompanha protocolo, registra anotações e altera o status conforme o atendimento avança.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Staff** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time Customer Service no organograma.\n\nAs abas **Site Spin**, **E-mail** e **Instagram** separam a origem dos chamados. Na aba **E-mail**, o solicitante é o endereço do remetente e a tabela inclui a coluna **Assunto**. Na aba **Instagram**, dois blocos — **Mensagens** (DM) e **Comentários** — compartilham os mesmos filtros de status e Staff.",
+          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Staff** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time **Service Manager** no organograma.\n\nAs abas **Site Spin**, **E-mail** e **Instagram** separam a origem dos chamados. Na aba **E-mail**, o solicitante é o endereço do remetente e a tabela inclui a coluna **Assunto**. Na aba **Instagram**, dois blocos — **Mensagens** (DM) e **Comentários** — compartilham os mesmos filtros de status e Staff.",
       },
       {
         subtitulo: "Tabela e ações",

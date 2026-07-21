@@ -40,6 +40,7 @@ export type PageKey =
   | "home"
   | "streamers"
   | "dash_overview_influencer"
+  | "dash_headcount"
   | "dash_overview_prestador"
   | "academy_performance_hub"
   | "academy_portal"

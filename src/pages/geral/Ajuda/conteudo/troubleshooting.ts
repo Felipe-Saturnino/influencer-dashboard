@@ -168,6 +168,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_headcount: {
+    titulo: "Headcount",
+    blocos: [
+      {
+        subtitulo: "Não vejo Headcount no menu?",
+        texto:
+          "Confirme em Gestão de Usuários → Permissões se o perfil tem permissão de **Ver** para **Headcount**. Por padrão a página nasce bloqueada (Não) até liberação explícita. Administradores veem a página automaticamente.",
+      },
+      {
+        subtitulo: "Não aparecem os cards de custo?",
+        texto:
+          "Massa salarial e custo médio só são exibidos com permissão de **Ver** em **Sim**. Com **Próprios** ou sem liberação de custo, os demais KPIs e gráficos continuam disponíveis.",
+      },
+      {
+        subtitulo: "O HC do Histórico parece diferente do cadastro atual?",
+        texto:
+          "A evolução mensal é reconstruída pelas datas de início e desligamento dos prestadores. Não existe snapshot mensal auditável na base — use o número como tendência, não como fechamento contábil de headcount.",
+      },
+    ],
+  },
   agenda: {
     titulo: "Agenda",
     blocos: [

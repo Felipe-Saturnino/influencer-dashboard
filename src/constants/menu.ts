@@ -68,6 +68,7 @@ export const MENU: MenuSection[] = [
       { key: "dash_midias_sociais", label: "Mídias Sociais", icon: Share2 },
       { key: "dash_overview_influencer", label: "Overview Influencer", icon: Mic },
       { key: "comercial_overview", label: "Overview Comercial", icon: LineChart },
+      { key: "dash_headcount", label: "Headcount", icon: UsersRound },
       { key: "dash_overview_prestador", label: "Overview Prestador", icon: UserRound },
     ],
   },

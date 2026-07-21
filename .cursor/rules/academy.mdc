@@ -232,6 +232,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 | Go-live | `rh_funcionarios.staff_live_no_estudio` (fallback `data_inicio`) | Coluna Go-live na agenda |
 | Avaliações | `academy_performance_hub_avaliacao` | Abas Avaliações e Analisar; vazio até carga histórica |
 | Mesas / estúdios | `mesas_spin_cadastro`, `estudios_spin` | Modal Dados (GP) |
+| Vídeo da avaliação | bucket Storage `academy-performance-hub-videos` | Path em `video_url`; **Assistir** gera URL assinada |
 
 **RLS mesas/estúdios:** leitura de `mesas_spin_cadastro` e `estudios_spin` inclui quem tem **Ver** em `academy_performance_hub` (`_academy_performance_hub_perm` — migração `20261017120000`); sem isso, os selects Estúdio/Jogo/Mesa do modal ficam vazios para Performance Coach.
 

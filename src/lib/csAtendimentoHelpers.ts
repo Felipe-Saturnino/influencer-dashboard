@@ -10,12 +10,14 @@ function normNomeTime(nome: string): string {
     .replace(/\s+/g, " ");
 }
 
-export function isCustomerServiceTimeNome(nome: string | null | undefined): boolean {
-  return normNomeTime(nome ?? "") === "customer service";
+/** Time do organograma cujos prestadores alimentam o filtro Staff do Atendimento. */
+export function isAtendimentoStaffTimeNome(nome: string | null | undefined): boolean {
+  return normNomeTime(nome ?? "") === "service manager";
 }
 
 type CsAtendenteRpcRow = { profile_id: string; nome: string | null };
 
+/** Prestadores do time Service Manager (RPC) para o filtro Staff do Atendimento. */
 export async function carregarAtendentesCustomerService(): Promise<CsAtendenteFiltroOption[]> {
   const { data, error } = await supabase.rpc("cs_atendimento_atendentes_listar");
 

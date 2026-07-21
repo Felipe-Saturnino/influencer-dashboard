@@ -19,6 +19,7 @@ alwaysApply: false
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
 | Overview Comercial | Menu em **Dashboards** (abaixo de Overview Influencer); código em `src/pages/comercial/OverviewComercial/` — regras de domínio em `comercial.mdc` |
+| Headcount | `src/pages/dashboards/Headcount/` — KPIs executivos de HC, movimento, custo e vagas; métricas em `lib/headcountMetrics.ts` |
 | Overview Prestador | `src/pages/dashboards/OverviewPrestador/` — `index.tsx`, `useOverviewPrestadorDados.ts`, `OverviewPrestadorFiltroBar.tsx`, `OverviewPrestadorAbaEscala.tsx`; métricas em `lib/overviewPrestadorMetrics.ts` |
 | Overview Spin | `src/pages/dashboards/OverviewSpin/` — shell + abas Overview / Estúdio Dedicado / Estúdio Network / Posicionamento; `useOverviewSpinDados.ts` (canal consolidado|dedicado|network), `overviewSpinCanal.ts`, `overviewSpinCatalogo.ts`, `useOverviewSpinCatalogo.ts`, `useOverviewSpinFiltrosAcesso.ts`, FilterBar/AbaNav, KPIs/comparativos, `DashboardPosicionamento/` lazy (`mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
@@ -54,6 +55,7 @@ alwaysApply: false
 | Overview Spin (`mesas_spin`) | Gerente de Operações; Operador (escopo mesa) | KPIs Consolidados das Mesas |
 | Overview Influencer | Influencer; Agência; Executivo (escopo); Admin / Gestor | KPIs Executivos (GGR, Investimento, ROI) |
 | Overview Prestador (`dash_overview_prestador`) | Prestador (próprios); Shift Leader / RH / Gestor (escopo time/staff) | KPIs Consolidados (Escala) |
+| Headcount (`dash_headcount`) | Diretoria / RH / Executivo / Investidor (escopo Ver) | KPIs Consolidados (HC, movimento) |
 
 ---
 
@@ -83,6 +85,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 | `mesas_spin` | Overview Spin | Resultados financeiros e operacionais das mesas ao vivo por operadora. |
 | `dash_midias_sociais` | Mídias Sociais | Monitore alcance orgânico, impulsionamento Meta e a conversão das campanhas rastreadas. |
 | `dash_overview_influencer` | Overview Influencer | Resumo executivo de financeiro, operação e conversão do canal de influencers. |
+| `dash_headcount` | Headcount | Visão executiva de headcount, movimentação, custo de pessoas e pipeline de contratação. |
 | `dash_overview_prestador` | Overview Prestador | Acompanhe escala, presença, absenteísmo e movimentações de turno dos prestadores. |
 
 **Páginas novas nesta secção:** copiar o padrão acima (ícone Lucide + `h1` + `<p>` subtítulo). Regras completas de tipografia e famílias: **Brand MDC §4**. Ao mudar subtítulo, atualizar esta tabela e `geral/Ajuda` (`titulo` = nome do menu).
@@ -118,6 +121,29 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 ### Exceções — identidade de jogo (Overview Spin)
 
 Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados por mesa usam `gameIdentityColors.ts`.
+
+---
+
+## Headcount — Padrões Específicos
+
+- **PageKey:** `dash_headcount` — pasta `Headcount/`; menu Dashboards entre Overview Comercial e Overview Prestador.
+- **Persona:** diretoria, RH, executivo e investidor — agregados de pessoas (não substitui a aba Head Count operacional em Gestão de Prestadores).
+- **Carrossel de mês:** `getMesesDisponiveis` + `getIdxMesCarrosselPadrao`; **Histórico** = 13 competências inclusivas; rótulo **Todo o período**.
+- **Filtros:** Diretoria (`FiltroBarCampoSelect` + `FilterBarIcons.diretoria`), Área (Estúdio/Escritório), Contrato (CLT/PJ/Estágio/Temporário).
+- **Dados:** `rh_funcionarios` (colunas enxutas), `rh_funcionario_historico` (`termino_prestacao`), `rh_vagas`, `rh_org_diretorias`. Agregações em `lib/headcountMetrics.ts` via `useHeadcountDados`.
+- **KPIs:** HC ativo, indisponíveis, variação líquida, tenure médio, admissões, desligamentos, turnover %, saídas voluntárias; pipeline (vagas abertas / em andamento).
+- **Custo:** massa salarial estimada, custo médio/HC, % estúdio — só com `canView === "sim"` (não busca `salario` / hora se Ver ≠ Sim). Estúdio: `remuneracao_hora_centavos` × `HEADCOUNT_HORAS_MES_ESTIMADAS` (180 h).
+- **HC histórico:** reconstruído por `data_inicio` / `data_desligamento` — subtítulo do bloco Mix avisa que não é snapshot auditável.
+- **Gráficos:** Recharts em `HeadcountCharts.tsx` — HC por diretoria, mix contrato, evolução 13 meses, origem de contratação.
+- **Tabela:** `useDataTableBlock` + `SortTableTh` — consolidado por diretoria (default sort HC desc).
+- **Migration:** `20261023120000_dash_headcount_page.sql` — seeds `nao` + RLS SELECT via `_dash_headcount_perm`.
+
+### Strings de vazio (Headcount)
+
+| Contexto | String |
+|----------|--------|
+| Sem dados no período/filtros | Sem dados para o período selecionado. |
+| Sem permissão | Você não tem permissão para visualizar este dashboard. |
 
 ---
 

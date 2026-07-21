@@ -254,7 +254,6 @@ type AreaEscalaKey =
   | "game_presenter"
   | "shift_leader"
   | "shuffler"
-  | "customer_service"
   | "service_manager";
 
 /** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
@@ -284,14 +283,13 @@ function linhaColaboradorNoFiltroTurnoConsolidado(
 
 /** Ordem dos botões de área abaixo do carrossel do mês. */
 const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaKey[] = [
-  "customer_service",
   "service_manager",
   "shift_leader",
   "game_presenter",
   "shuffler",
 ];
 
-const DEFAULT_AREA_ESCALA: AreaEscalaKey = "customer_service";
+const DEFAULT_AREA_ESCALA: AreaEscalaKey = "service_manager";
 
 function normalizarNomeTimeRh(s: string | null | undefined): string {
   return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -307,8 +305,6 @@ function nomeTimePassaNaArea(nomeTimeRaw: string | null | undefined, area: AreaE
       return nt.includes("shift leader");
     case "shuffler":
       return nt.includes("shuffler");
-    case "customer_service":
-      return nt.includes("customer service");
     case "service_manager":
       return nt.includes("service manager");
     default:
@@ -321,7 +317,6 @@ function labelAreaEscala(area: AreaEscalaKey): string {
     game_presenter: "Game Presenter",
     shift_leader: "Shift Leader",
     shuffler: "Shuffler",
-    customer_service: "Customer Service",
     service_manager: "Service Manager",
   };
   return m[area];
@@ -355,7 +350,7 @@ function contarCelulasComSigla(
   );
 }
 
-/** Consolidado Customer Service: pessoas com turno Comercial (5x2) em célula «Comercial». */
+/** Consolidado (ex.: Shift Leader): pessoas com turno Comercial (5x2) em célula «Comercial». */
 function contarHorarioComercialPorDia(
   linhas: LinhaColaborador[],
   dias: DiaMes[],
@@ -461,7 +456,7 @@ const STICKY_LEFT_NICK = STICKY_W_NOME;
 const STICKY_LEFT_ESCALA = STICKY_W_NOME + STICKY_W_NICK;
 const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA;
 
-/** Colunas fixas quando a coluna Nome está oculta (Customer Service, Service Manager, Shift Leader). */
+/** Colunas fixas quando a coluna Nome está oculta (Service Manager, Shift Leader). */
 const STICKY_LEFT_NICK_SEM_NOME = 0;
 const STICKY_LEFT_ESCALA_SEM_NOME = STICKY_W_NICK;
 const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK + STICKY_W_ESCALA;
@@ -1387,14 +1382,11 @@ export default function RhGestaoEscalaPage() {
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
     const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
-    /** Customer Service e Shift Leader: linha Comercial no consolidado (5×2 em célula «Comercial»). */
-    const temLinhaComercialConsolidado =
-      filtroArea === "customer_service" || filtroArea === "shift_leader";
+    /** Shift Leader: linha Comercial no consolidado (5×2 em célula «Comercial»). */
+    const temLinhaComercialConsolidado = filtroArea === "shift_leader";
     /** Sem pessoal de tarde na operação destas áreas — não exibir linha «Turno da Tarde». */
     const temLinhaTardeConsolidado =
-      filtroArea !== "customer_service" &&
-      filtroArea !== "service_manager" &&
-      filtroArea !== "shift_leader";
+      filtroArea !== "service_manager" && filtroArea !== "shift_leader";
     const horarioComercial = temLinhaComercialConsolidado
       ? contarHorarioComercialPorDia(linhasF, dias, celulas)
       : null;
@@ -1512,11 +1504,9 @@ export default function RhGestaoEscalaPage() {
     },
     [filtroArea, prestadoresRaw, dias, ano, mes],
   );
-  /** Oculta coluna Nome na Escala Diária (layout tipo Customer Service). */
+  /** Oculta coluna Nome na Escala Diária (Service Manager / Shift Leader). */
   const semColunaNome =
-    filtroArea === "customer_service" ||
-    filtroArea === "service_manager" ||
-    filtroArea === "shift_leader";
+    filtroArea === "service_manager" || filtroArea === "shift_leader";
 
   if (perm.loading) {
     return (

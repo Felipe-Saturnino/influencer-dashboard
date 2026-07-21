@@ -28,6 +28,7 @@ import {
 import { PERFORMANCE_HUB_JOGOS_META } from "../../../lib/academyPerformanceHubDadosCatalog";
 import type { PerformanceHubEstudioCadastro } from "../../../lib/academyPerformanceHubCadastroPrefill";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { LinkAssistirVideoPerformanceHub } from "../../../components/LinkAssistirVideoPerformanceHub";
 
 type ModalTab = "dados" | "comunicacao" | "imagem" | "mesa" | "procedimentos";
 
@@ -176,19 +177,7 @@ export function ModalAnalisarFeedbackPerformanceHub({
               </>
             ) : null}
             {" · "}
-            <strong>Vídeo:</strong>{" "}
-            {avaliacao.videoUrl ? (
-              <a
-                href={avaliacao.videoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: brand.primary, fontWeight: 600 }}
-              >
-                Assistir
-              </a>
-            ) : (
-              "—"
-            )}
+            <strong>Vídeo:</strong> <LinkAssistirVideoPerformanceHub videoUrl={avaliacao.videoUrl} />
           </LinhaTexto>
           <LinhaTexto t={t}>
             <strong>Notas:</strong> Total {formatNotaPerformanceHub(avaliacao.notaTotal)} · Imagem{" "}

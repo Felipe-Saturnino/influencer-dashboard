@@ -30,7 +30,6 @@ export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: EscalaAcaoFiltro; label: s
 
 export type EscalaTimeFiltro =
   | "todos"
-  | "customer_service"
   | "service_manager"
   | "game_presenter"
   | "performance_coach"
@@ -40,7 +39,6 @@ export type EscalaTimeFiltro =
 
 export const ESCALA_TIME_OPCOES: { value: EscalaTimeFiltro; label: string }[] = [
   { value: "todos", label: "Todos" },
-  { value: "customer_service", label: "Customer Service" },
   { value: "service_manager", label: "Service Manager" },
   { value: "game_presenter", label: "Game Presenter" },
   { value: "performance_coach", label: "Performance Coach" },
@@ -51,7 +49,6 @@ export const ESCALA_TIME_OPCOES: { value: EscalaTimeFiltro; label: string }[] = 
 
 /** Alinha o slug do filtro «Time» às strings do Calendário / `CALENDARIO_TIMES_FILTRO_ORDEM`. */
 export const ESCALA_TIME_SLUG_PARA_ROTULO_CALENDARIO: Record<Exclude<EscalaTimeFiltro, "todos">, string> = {
-  customer_service: "Customer Service",
   service_manager: "Service Manager",
   game_presenter: "Game Presenter",
   performance_coach: "Performance Coach",
