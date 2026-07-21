@@ -6,8 +6,10 @@ import {
   Pencil,
   StickyNote,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
 import { tooltipExcluir } from "../../../lib/excluirItemUi";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import type { CSSProperties } from "react";
@@ -17,6 +19,7 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTable
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { nomeLiderPrimeiroUltimoParaTabela } from "../../../lib/rhOrganogramaLiderImediato";
 import { revisaoCadastralPendenteParaFuncionario } from "../../../lib/rhCadastroRevisao";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_PRESTADORES } from "../../../lib/tablePagination";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
 import {
@@ -92,6 +95,17 @@ export function PrestadorTabelaColaboradores({
   onConfirmarExclusao,
 }: Props) {
   const dataTable = useDataTableBlock();
+  const [pagina, setPagina] = useState(0);
+
+  useEffect(() => {
+    setPagina(0);
+  }, [filtradaOrdenada, sortPrestadores.col, sortPrestadores.dir]);
+
+  const paginaSafe = clampPageIndex(pagina, filtradaOrdenada.length, TABELA_PAGE_SIZE_PRESTADORES);
+  const linhasPagina = useMemo(
+    () => slicePage(filtradaOrdenada, paginaSafe, TABELA_PAGE_SIZE_PRESTADORES),
+    [filtradaOrdenada, paginaSafe],
+  );
 
   const btnIconTabela: CSSProperties = {
     padding: "6px 10px",
@@ -231,13 +245,13 @@ export function PrestadorTabelaColaboradores({
                 </td>
               </tr>
             ) : (
-              filtradaOrdenada.map((row, i) => {
+              linhasPagina.map((row, i) => {
                 const nomeExibicao = row.nome.trim() || "—";
                 const liderCompleto = liderImediatoLinha(row);
                 const lider = nomeLiderPrimeiroUltimoParaTabela(liderCompleto);
                 const remCol = textoRemuneracaoColunaTabela(row);
                 const dataFuncaoTxt = textoDataFuncaoColunaTabela(row);
-                const zebraBg = dataTable.zebraRow(i);
+                const zebraBg = dataTable.zebraRow(paginaSafe * TABELA_PAGE_SIZE_PRESTADORES + i);
                 return (
                   <tr
                     key={row.id}
@@ -393,6 +407,15 @@ export function PrestadorTabelaColaboradores({
           </tbody>
         </table>
       </div>
+      {!loading && filtrada.length > 0 ? (
+        <TabelaPaginacaoBar
+          t={t}
+          page={paginaSafe}
+          pageSize={TABELA_PAGE_SIZE_PRESTADORES}
+          totalItems={filtradaOrdenada.length}
+          onPageChange={setPagina}
+        />
+      ) : null}
     </div>
   );
 }

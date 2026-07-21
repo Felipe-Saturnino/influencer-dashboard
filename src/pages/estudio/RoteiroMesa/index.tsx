@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useId, useMemo } from "react";
+import { useState, useEffect, useCallback, useId, useMemo, type CSSProperties } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -6,8 +6,9 @@ import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
-import { BookOpen, Megaphone, FileText, Info, AlertTriangle, Plus, Check, Loader2 } from "lucide-react";
+import { BookOpen, Megaphone, FileText, Info, AlertTriangle, Plus, Check, Loader2, Pencil } from "lucide-react";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -35,7 +36,8 @@ import { BannerPendencias } from "../solicitacoes/BannerPendencias";
 import { ModalThreadSolicitacao } from "../solicitacoes/ModalThreadSolicitacao";
 import type { Role } from "../../../types";
 import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
-import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
+import { descricaoModalExcluirItem, tooltipExcluir } from "../../../lib/excluirItemUi";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 
 function podeEscolherEstudioNoRoteiro(role: string | undefined): boolean {
@@ -222,7 +224,7 @@ function TagChip({ label, bg, color, border }: { label: string; bg: string; colo
 }
 
 // ─── MODAL ROTEIRO (+ Roteiro) ───────────────────────────────────────────────
-function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opParaEstudio, operadorasPorEstudio, operadoraSlugsForcado }: {
+function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opParaEstudio, operadorasPorEstudio, operadoraSlugsForcado, editando = null }: {
   estudioSlug: string;
   estudiosList: { slug: string; nome: string }[];
   bloco: BlocoRoteiro;
@@ -231,30 +233,38 @@ function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opPa
   opParaEstudio: Record<string, string>;
   operadorasPorEstudio: Record<string, readonly string[]>;
   operadoraSlugsForcado: string[] | null;
+  /** Quando definido, o modal atualiza a sugestão (sem abrir nova solicitação). */
+  editando?: RoteiroSugestao | null;
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const dark = t.isDark;
   const labelTipoId = useId();
   const labelJogosId = useId();
-  const mostraCampoEstudio = podeEscolherEstudioNoRoteiro(user?.role);
-  const [tipo, setTipo] = useState<TipoSugestao>("script");
-  const [jogos, setJogos] = useState<JogoTag[]>(["todos"]);
-  const [texto, setTexto] = useState("");
+  const isEdit = !!editando;
+  const mostraCampoEstudio = podeEscolherEstudioNoRoteiro(user?.role) && !isEdit;
+  const [tipo, setTipo] = useState<TipoSugestao>(editando?.tipo ?? "script");
+  const [jogos, setJogos] = useState<JogoTag[]>(() => (editando?.jogos?.length ? [...editando.jogos] : ["todos"]));
+  const [texto, setTexto] = useState(editando?.texto ?? "");
   const [estudioSlugModal, setEstudioSlugModal] = useState(
-    estudioSlug === FILTRO_STAFF_ESTUDIO_TODOS ? "" : estudioSlug,
+    editando?.estudio_slug
+      ?? (estudioSlug === FILTRO_STAFF_ESTUDIO_TODOS ? "" : estudioSlug),
   );
   const [saving, setSaving] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
-  const estudioFinal = mostraCampoEstudio
-    ? estudioSlugModal
-    : estudioSlug !== FILTRO_STAFF_ESTUDIO_TODOS
-      ? estudioSlug
-      : "";
-  const operadoraFinal = estudioFinal
-    ? operadoraSlugParaRoteiroInsert(estudioFinal, operadoraSlugsForcado, opParaEstudio, operadorasPorEstudio)
-    : null;
+  const estudioFinal = isEdit
+    ? (editando?.estudio_slug ?? "")
+    : mostraCampoEstudio
+      ? estudioSlugModal
+      : estudioSlug !== FILTRO_STAFF_ESTUDIO_TODOS
+        ? estudioSlug
+        : "";
+  const operadoraFinal = isEdit
+    ? (editando?.operadora_slug ?? null)
+    : estudioFinal
+      ? operadoraSlugParaRoteiroInsert(estudioFinal, operadoraSlugsForcado, opParaEstudio, operadorasPorEstudio)
+      : null;
 
   const toggleJogo = (jogo: JogoTag) => {
     if (jogo === "todos") { setJogos(["todos"]); return; }
@@ -266,7 +276,32 @@ function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opPa
   };
 
   const handleSalvar = async () => {
-    if (!texto.trim() || !estudioFinal || !operadoraFinal) return;
+    if (!texto.trim()) return;
+    if (isEdit && editando) {
+      setSaving(true);
+      setErroSalvar(null);
+      const { error } = await supabase
+        .from("roteiro_mesa_sugestoes")
+        .update({
+          texto: texto.trim(),
+          tipo,
+          jogos,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editando.id);
+      if (error) {
+        console.error("[RoteiroMesa] Erro ao editar roteiro:", error);
+        setErroSalvar(MSG_ERRO_SALVAR_ROTEIRO);
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+      onSalvo();
+      onClose();
+      return;
+    }
+
+    if (!estudioFinal || !operadoraFinal) return;
     setSaving(true);
     setErroSalvar(null);
     const payload = { texto: texto.trim(), tipo, jogos, updated_at: new Date().toISOString() };
@@ -284,15 +319,15 @@ function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opPa
 
     const isOperador = user?.role === "operador";
     if (isOperador) {
-      const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
+      const blocoLabelSol = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
       const tipoLabel = TIPO_CONFIG[tipo].label;
       const aguarda = "gestor";
-      const tituloSol = `Novo roteiro (${tipoLabel}) — ${blocoLabel}`;
+      const tituloSol = `Novo roteiro (${tipoLabel}) — ${blocoLabelSol}`;
       const jogosLabel = jogos.map((j) => JOGOS.find((x) => x.key === j)?.label ?? j).join(", ");
       const corpoMsg = [
         "Nova sugestão de roteiro cadastrada no roteiro de mesa.",
         "",
-        `Bloco: ${blocoLabel}`,
+        `Bloco: ${blocoLabelSol}`,
         `Tipo: ${tipoLabel}`,
         `Jogos: ${jogosLabel}`,
         "",
@@ -343,8 +378,10 @@ function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opPa
     onClose();
   };
 
-  const podeSalvar = texto.trim().length > 0 && !!estudioFinal && !!operadoraFinal;
-  const blocoLabel = BLOCOS.find((b) => b.key === bloco)?.label ?? bloco;
+  const podeSalvar = isEdit
+    ? texto.trim().length > 0
+    : texto.trim().length > 0 && !!estudioFinal && !!operadoraFinal;
+  const blocoLabel = BLOCOS.find((b) => b.key === (editando?.bloco ?? bloco))?.label ?? bloco;
 
   const salvarBg = brand.useBrand
     ? "var(--brand-primary)"
@@ -352,7 +389,7 @@ function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opPa
 
   return (
     <ModalBase onClose={onClose} maxWidth={500}>
-      <ModalHeader title={`Novo Roteiro — ${blocoLabel}`} onClose={onClose} />
+      <ModalHeader title={isEdit ? `Editar Roteiro — ${blocoLabel}` : `Novo Roteiro — ${blocoLabel}`} onClose={onClose} />
 
         {mostraCampoEstudio && estudiosList.length > 0 && (
           <>
@@ -434,7 +471,7 @@ function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opPa
             {saving ? (
               <>
                 <Loader2 size={14} className="app-lucide-spin" color="#fff" aria-hidden />
-                Salvando...
+                Salvando…
               </>
             ) : (
               "Salvar"
@@ -692,8 +729,11 @@ function estudioTagChipStyle(isDark: boolean): { bg: string; color: string; bord
 }
 
 // ─── ITEM DE SUGESTÃO ─────────────────────────────────────────────────────────
-function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, estudioNome }: {
-  sugestao: RoteiroSugestao; podeExcluir: boolean;
+function SugestaoItem({ sugestao, podeEditar, podeExcluir, onPedirEditar, onPedirExcluir, dark, estudioNome }: {
+  sugestao: RoteiroSugestao;
+  podeEditar: boolean;
+  podeExcluir: boolean;
+  onPedirEditar: (s: RoteiroSugestao) => void;
   onPedirExcluir: (s: RoteiroSugestao) => void;
   dark: boolean; estudioNome?: string;
 }) {
@@ -707,7 +747,7 @@ function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, estudioNome
     : cfg.bgColor(dark);
   const borderRightOrientacao = isOrientacao ? `3px solid ${dark ? "rgba(150,150,170,0.40)" : "rgba(107,114,128,0.35)"}` : undefined;
 
-  const identCol: React.CSSProperties = {
+  const identCol: CSSProperties = {
     width: ROTEIRO_IDENT_COL,
     minWidth: ROTEIRO_IDENT_COL,
     maxWidth: ROTEIRO_IDENT_COL,
@@ -754,11 +794,23 @@ function SugestaoItem({ sugestao, podeExcluir, onPedirExcluir, dark, estudioNome
           })}
         </div>
       </div>
-      {podeExcluir && (
-        <BtnExcluirLinha
-          labelAcao={tooltipExcluir("sugestão")}
-          onClick={() => onPedirExcluir(sugestao)}
-        />
+      {(podeEditar || podeExcluir) && (
+        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
+          {podeEditar && (
+            <BtnIconeAcaoLinha
+              label={tooltipAcao("Editar sugestão")}
+              onClick={() => onPedirEditar(sugestao)}
+            >
+              <Pencil size={13} aria-hidden />
+            </BtnIconeAcaoLinha>
+          )}
+          {podeExcluir && (
+            <BtnExcluirLinha
+              labelAcao={tooltipExcluir("sugestão")}
+              onClick={() => onPedirExcluir(sugestao)}
+            />
+          )}
+        </div>
       )}
     </div>
   );
@@ -831,9 +883,12 @@ function CampanhaItem({ campanha, podeExcluir, onPedirExcluir, dark, estudioNome
 }
 
 // ─── BLOCO DE SUGESTÕES ───────────────────────────────────────────────────────
-function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeExcluir, podeCriar, onCarregar, dark, estudiosNome, opParaEstudio, estudiosList, operadorasPorEstudio, operadoraSlugsForcado }: {
+function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeEditar, podeExcluir, podeCriar, onCarregar, dark, estudiosNome, opParaEstudio, estudiosList, operadorasPorEstudio, operadoraSlugsForcado }: {
   bloco: BlocoRoteiro; estudioSlug: string | null;
-  sugestoes: RoteiroSugestao[]; podeExcluir: boolean; podeCriar: boolean;
+  sugestoes: RoteiroSugestao[];
+  podeEditar: boolean;
+  podeExcluir: boolean;
+  podeCriar: boolean;
   onCarregar: () => void; dark: boolean;
   estudiosNome: Record<string, string>;
   opParaEstudio: Record<string, string>;
@@ -843,8 +898,22 @@ function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeExcluir, podeCriar,
 }) {
   const { theme: t } = useApp();
   const [modalAberto, setModalAberto] = useState(false);
+  const [editando, setEditando] = useState<RoteiroSugestao | null>(null);
   const [excluirTarget, setExcluirTarget] = useState<RoteiroSugestao | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+
+  const abrirCriar = () => {
+    setEditando(null);
+    setModalAberto(true);
+  };
+  const abrirEditar = (s: RoteiroSugestao) => {
+    setEditando(s);
+    setModalAberto(true);
+  };
+  const fecharModal = () => {
+    setModalAberto(false);
+    setEditando(null);
+  };
 
   const confirmarExcluir = async () => {
     if (!excluirTarget) return;
@@ -873,7 +942,7 @@ function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeExcluir, podeCriar,
             </span>
           </div>
           {podeCriar && (
-            <button type="button" onClick={() => setModalAberto(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: cfg.btnBg, color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
+            <button type="button" onClick={abrirCriar} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", background: cfg.btnBg, color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer", letterSpacing: "0.02em" }}>
               <Plus size={12} aria-hidden /> Roteiro
             </button>
           )}
@@ -892,7 +961,16 @@ function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeExcluir, podeCriar,
               ? roteiroEstudioLabelFromRow(s, estudiosNome, opParaEstudio)
               : undefined;
             return (
-              <SugestaoItem key={s.id} sugestao={s} podeExcluir={podeExcluir} onPedirExcluir={setExcluirTarget} dark={dark} estudioNome={estLabel !== "—" ? estLabel : undefined} />
+              <SugestaoItem
+                key={s.id}
+                sugestao={s}
+                podeEditar={podeEditar}
+                podeExcluir={podeExcluir}
+                onPedirEditar={abrirEditar}
+                onPedirExcluir={setExcluirTarget}
+                dark={dark}
+                estudioNome={estLabel !== "—" ? estLabel : undefined}
+              />
             );
           })
         )}
@@ -903,8 +981,9 @@ function BlocoSugestoes({ bloco, estudioSlug, sugestoes, podeExcluir, podeCriar,
         estudioSlug={estudioSlug}
         estudiosList={estudiosList}
         bloco={bloco}
-        onClose={() => setModalAberto(false)}
-        onSalvo={() => { setModalAberto(false); onCarregar(); }}
+        editando={editando}
+        onClose={fecharModal}
+        onSalvo={() => { fecharModal(); onCarregar(); }}
         opParaEstudio={opParaEstudio}
         operadorasPorEstudio={operadorasPorEstudio}
         operadoraSlugsForcado={operadoraSlugsForcado}
@@ -1409,6 +1488,7 @@ export default function RoteiroMesa() {
                 key={key} bloco={key}
                 estudioSlug={estudioSlugSelecionada}
                 sugestoes={sugestoesPorBloco(key)}
+                podeEditar={perm.canEditarOk}
                 podeExcluir={perm.canExcluirOk}
                 podeCriar={perm.canCriarOk}
                 onCarregar={carregarDados}

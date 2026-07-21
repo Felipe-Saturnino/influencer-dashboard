@@ -114,11 +114,14 @@ alwaysApply: false
 
 Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § Identidade visual por jogo). Nova exceção **somente** com pedido explícito de produto — registrar aqui antes de implementar.
 - Conteúdo após estúdio selecionado (ou **Todos Estúdios** para gestores com escopo amplo).
-- Blocos: Campanhas + Abertura / Durante / Fechamento; `+ Roteiro` com `type="button"`.
+- Blocos: Campanhas + Abertura / Durante / Fechamento; `+ Roteiro` com `type="button"` — gated por **`canCriarOk`**.
+- **Editar sugestão:** `BtnIconeAcaoLinha` + `Pencil` ao lado de `BtnExcluirLinha` — gated por **`canEditarOk`**; modal `ModalRoteiro` com `editando` (UPDATE tipo/jogos/texto; **não** muda estúdio; **não** abre solicitação nova).
+- Exclusão: `BtnExcluirLinha` + `ModalConfirmExcluirPadrao` — gated por **`canExcluirOk`**.
 - Cadastro grava **`estudio_slug`** em `roteiro_mesa_sugestoes` / `roteiro_mesa_campanhas`; **`operadora_slug`** mantido para solicitações (`roteiro_mesa_solicitacoes`, `roteiro_campanha_solicitacoes`) e RLS legado — resolvido via `operadoraSlugParaRoteiroInsert` em `roteiroMesaEstudioHelpers.ts`.
 - Tag de estúdio nos itens quando filtro = **Todos Estúdios** (`roteiroEstudioLabelFromRow` com fallback operadora→estúdio).
 - `BannerPendencias` + `ModalThreadSolicitacao` continuam por **operadora** (escopo do operador).
-- **Handoff:** CRUD campanhas de mesa, exclusão 2 cliques.
+- Gestão de Usuários: `roteiro_mesa` com `hasCriar` / `hasEditar` / `hasExcluir` = true (matriz Ver/Criar/Editar/Excluir).
+- **Handoff:** edição de campanhas de mesa (ainda só criar/excluir na UI).
 
 ---
 

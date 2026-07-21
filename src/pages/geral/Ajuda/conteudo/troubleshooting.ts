@@ -577,6 +577,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Verifique campos obrigatórios (título, texto, estúdio, datas em campanhas) e conexão. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.\n\nSe o problema persistir, valide no Supabase (RLS, policies e tabelas roteiro_mesa_*) com o administrador.",
       },
       {
+        subtitulo: "Não consigo editar uma sugestão de roteiro?",
+        texto:
+          "A edição exige permissão de Editar na página Roteiro de Mesa (Gestão de Usuários → Permissões). Sem ela, o ícone de lápis não aparece. Com a permissão, o modal permite alterar tipo, jogos e texto; o estúdio do registro permanece o mesmo.",
+      },
+      {
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
         texto:
           "A exclusão exige permissão de Excluir na página Roteiro de Mesa. Sem ela, os ícones de exclusão não aparecem. Ao clicar, o pop-up padrão pede confirmação. Confirme também que o estúdio do item está dentro do escopo do usuário.",

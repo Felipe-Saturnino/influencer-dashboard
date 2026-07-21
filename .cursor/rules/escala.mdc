@@ -77,6 +77,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Gestão de Escala (`rh_gestao_escala`)
 
 - Blocos **Consolidado** e **Escala Diária** (todas as áreas): **`SectionTitle`** sem ícone + `sub` em linha (padrão Global § Blocos de página).
+- **Escala Diária — performance (Fase 8):** paginação de **linhas** na vista (40/página, `TabelaPaginacaoBar`); save/sugestão/aprovação operam sobre **todas** as linhas; opções do `<select>` cacheadas por tipo de turno (Global § Eficiência de fetch §6).
 - **Barra de filtros:** carrossel de mês + **`FiltroEstudioSelect`** (Todos Estúdios + extra «Nenhum») + chips de **área (time)** — Service Manager, Shift Leader, Game Presenter, Shuffler; filtram Consolidado e Escala Diária. **Estúdio:** travado em **Todos Estúdios** em todas as áreas exceto **Game Presenter** (`disabled` no select; filtro efetivo força `todos` fora dessa aba).
 - Tabela **Consolidado:** coluna **Turno** com `position: sticky; left: 0` e sombra lateral ao rolar horizontalmente (dias do mês).
 - Grade mensal por área (time): chips de área na barra de filtros, **`FiltroEstudioSelect`** (opção **Todos Estúdios** + `extraOptions` “Nenhum” se aplicável), carrossel de mês.

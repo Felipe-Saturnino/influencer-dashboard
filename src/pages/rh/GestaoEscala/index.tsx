@@ -14,9 +14,11 @@ import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_ESCALA } from "../../../lib/tablePagination";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
 import {
@@ -375,14 +377,20 @@ function valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff: string, turnoStaffN
   return "";
 }
 
+/** Opções do `<select>` por tipo de turno — reutiliza o mesmo array (evita N×dias alocações). */
+const OPCOES_SELECT_CELULA_CACHE = new Map<string, { value: string; label: string }[]>();
+
 function opcoesSelectCelulaGerar(
   row: Pick<LinhaColaborador, "siglaTurnoStaff" | "turnoStaffNome">,
 ): { value: string; label: string }[] {
+  const work = valorTurnoTrabalhoInternoParaLinha(row.siglaTurnoStaff, row.turnoStaffNome);
+  const cacheKey = work || "__none__";
+  const cached = OPCOES_SELECT_CELULA_CACHE.get(cacheKey);
+  if (cached) return cached;
   const out: { value: string; label: string }[] = [
     { value: "", label: "—" },
     { value: "Folga", label: "Folga" },
   ];
-  const work = valorTurnoTrabalhoInternoParaLinha(row.siglaTurnoStaff, row.turnoStaffNome);
   if (work) {
     out.push({ value: work, label: "Escalado" });
   }
@@ -391,6 +399,7 @@ function opcoesSelectCelulaGerar(
     { value: "Venda", label: "Venda" },
     { value: "Troca", label: "Troca" },
   );
+  OPCOES_SELECT_CELULA_CACHE.set(cacheKey, out);
   return out;
 }
 
@@ -651,6 +660,8 @@ export default function RhGestaoEscalaPage() {
     col: "turno",
     dir: "asc",
   });
+  /** Página da grade Escala Diária (só a vista — save/sugestão usam todas as linhas). */
+  const [paginaEscalaDiaria, setPaginaEscalaDiaria] = useState(0);
   /** Por área: células do mês e baseline após aprovação. */
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
 
@@ -658,10 +669,12 @@ export default function RhGestaoEscalaPage() {
     setFiltroNicknameEscala("");
     setFiltroTurnoConsolidado(null);
     setSortEscalaDiaria({ col: "turno", dir: "asc" });
+    setPaginaEscalaDiaria(0);
   }, [filtroArea]);
 
   useEffect(() => {
     setFiltroTurnoConsolidado(null);
+    setPaginaEscalaDiaria(0);
   }, [ano, mes]);
 
   const carregarPrestadores = useCallback(async () => {
@@ -1007,6 +1020,26 @@ export default function RhGestaoEscalaPage() {
     });
     return rows;
   }, [linhasFiltradasEscalaDiaria, sortEscalaDiaria]);
+
+  useEffect(() => {
+    setPaginaEscalaDiaria(0);
+  }, [
+    filtroNicknameEscala,
+    filtroTurnoConsolidado,
+    sortEscalaDiaria.col,
+    sortEscalaDiaria.dir,
+    filtroEstudioEscala,
+  ]);
+
+  const paginaEscalaSafe = clampPageIndex(
+    paginaEscalaDiaria,
+    linhasOrdenadasEscalaDiaria.length,
+    TABELA_PAGE_SIZE_ESCALA,
+  );
+  const linhasPaginaEscalaDiaria = useMemo(
+    () => slicePage(linhasOrdenadasEscalaDiaria, paginaEscalaSafe, TABELA_PAGE_SIZE_ESCALA),
+    [linhasOrdenadasEscalaDiaria, paginaEscalaSafe],
+  );
 
   const linhasPorFiltroGerar = useCallback(
     (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresFiltradosEstudio, areaKey).map(mapLinhaPrestador),
@@ -2270,8 +2303,8 @@ export default function RhGestaoEscalaPage() {
                     </td>
                   </tr>
                 ) : (
-                  linhasOrdenadasEscalaDiaria.map((row, i) => {
-                    const bg = zebraBgLinha(i);
+                  linhasPaginaEscalaDiaria.map((row, i) => {
+                    const bg = zebraBgLinha(paginaEscalaSafe * TABELA_PAGE_SIZE_ESCALA + i);
                     return (
                       <tr key={row.id} style={{ isolation: "isolate" }}>
                         {!semColunaNome ? (
@@ -2408,6 +2441,15 @@ export default function RhGestaoEscalaPage() {
               </tbody>
             </table>
               </div>
+              {linhasOrdenadasEscalaDiaria.length > 0 ? (
+                <TabelaPaginacaoBar
+                  t={t}
+                  page={paginaEscalaSafe}
+                  pageSize={TABELA_PAGE_SIZE_ESCALA}
+                  totalItems={linhasOrdenadasEscalaDiaria.length}
+                  onPageChange={setPaginaEscalaDiaria}
+                />
+              ) : null}
             </section>
           </>
         )}

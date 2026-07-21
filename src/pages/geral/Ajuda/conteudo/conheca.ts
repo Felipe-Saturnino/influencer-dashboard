@@ -650,17 +650,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Campanhas",
         texto:
-          "O bloco Campanhas no topo reúne ações promocionais com título, texto, jogos aplicáveis e período de início/fim. Campanhas ativas no período aparecem para operadores na Central (badge VIGENTE). Gestores com permissão de criação usam '+ Campanha' para cadastrar; exclusão exige permissão de exclusão.\n\nAo criar ou editar, é possível abrir uma thread de solicitação com o estúdio — o fluxo segue o mesmo padrão da Central de Notificações.",
+          "O bloco Campanhas no topo reúne ações promocionais com título, texto, jogos aplicáveis e período de início/fim. Campanhas ativas no período aparecem para operadores na Central (badge VIGENTE). Gestores com permissão de Criar usam '+ Campanha' para cadastrar; exclusão exige permissão de Excluir.\n\nAo criar, é possível abrir uma thread de solicitação com o estúdio — o fluxo segue o mesmo padrão da Central de Notificações.",
       },
       {
         subtitulo: "Blocos de roteiro",
         texto:
-          "Três blocos fixos organizam o material:\n\n— Abertura: scripts e orientações de boas-vindas e aquecimento da mesa.\n— Durante o jogo: conteúdo para o miolo da sessão (tendências, foco no jogo, dicas).\n— Fechamento: encerramento, ultimato e mensagens de despedida.\n\nEm cada bloco, '+ Roteiro' abre o formulário de nova sugestão. Tipos Script, Orientação e Alerta definem o estilo visual do card. Tags de jogo indicam em quais mesas o material se aplica.\n\nOperadores com pendências de campanha podem ver o banner amarelo (quando aplicável) e abrir a conversa diretamente.",
+          "Três blocos fixos organizam o material:\n\n— Abertura: scripts e orientações de boas-vindas e aquecimento da mesa.\n— Durante o jogo: conteúdo para o miolo da sessão (tendências, foco no jogo, dicas).\n— Fechamento: encerramento, ultimato e mensagens de despedida.\n\nEm cada bloco, '+ Roteiro' (permissão de Criar) abre o formulário de nova sugestão. O ícone de lápis ao lado de Excluir (permissão de Editar) abre o modal para alterar tipo, jogos e texto — o estúdio do item não muda na edição. Tipos Script, Orientação e Alerta definem o estilo visual do card. Tags de jogo indicam em quais mesas o material se aplica.\n\nOperadores com pendências de campanha podem ver o banner amarelo (quando aplicável) e abrir a conversa diretamente.",
       },
       {
         subtitulo: "Permissões",
         texto:
-          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas do estúdio no escopo.",
+          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa:\n\n— Ver = Sim: consulta os roteiros e campanhas do escopo (operador: filtro de Estúdio limitado aos estúdios das suas operadoras).\n— Criar = Sim: botões '+ Roteiro' e '+ Campanha'.\n— Editar = Sim: botão Editar (lápis) nos cards de sugestão de roteiro.\n— Excluir = Sim: botão Excluir nos cards.\n\nSem Criar/Editar/Excluir, a página fica em modo consulta.",
       },
     ],
   },
