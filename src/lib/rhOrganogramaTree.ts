@@ -30,10 +30,13 @@ export function montarArvoreOrganograma(
   const ordenarNome = <T extends { nome: string }>(a: T, b: T) => a.nome.localeCompare(b.nome, "pt-BR");
 
   return [...diretorias].sort(ordenarNome).map((d) => {
-    const gList = (gPorD.get(d.id) ?? []).sort(ordenarNome).map((g): RhOrgGerenciaComFilhos => {
-      const tList = (tPorG.get(g.id) ?? []).sort(ordenarNome);
-      return { ...g, times: tList };
-    });
+    const gList = (gPorD.get(d.id) ?? [])
+      .filter((g) => g.status === "ativo")
+      .sort(ordenarNome)
+      .map((g): RhOrgGerenciaComFilhos => {
+        const tList = (tPorG.get(g.id) ?? []).filter((ti) => ti.status === "ativo").sort(ordenarNome);
+        return { ...g, times: tList };
+      });
     return { ...d, gerencias: gList };
   });
 }

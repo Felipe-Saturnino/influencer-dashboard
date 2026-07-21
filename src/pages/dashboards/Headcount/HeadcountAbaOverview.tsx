@@ -59,6 +59,7 @@ function GerenciaListaItem({
   cardBg: string;
 }) {
   const [hover, setHover] = useState(false);
+  const temTimes = g.times.length > 0;
   return (
     <div
       style={{
@@ -69,7 +70,9 @@ function GerenciaListaItem({
         padding: "6px 0",
         borderBottom: `1px solid ${borderColor}`,
       }}
-      onMouseEnter={() => setHover(true)}
+      onMouseEnter={() => {
+        if (temTimes) setHover(true);
+      }}
       onMouseLeave={() => setHover(false)}
     >
       <span style={{ display: "flex", alignItems: "center", gap: 8, color: textColor }}>
@@ -86,7 +89,7 @@ function GerenciaListaItem({
         {g.label}
       </span>
       <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{g.valor}</span>
-      {hover && g.times.length > 0 ? (
+      {hover && temTimes ? (
         <div
           role="tooltip"
           style={{

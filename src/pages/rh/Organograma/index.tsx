@@ -7,8 +7,6 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import {
-  coletarIdsTimesDaGerencia,
-  coletarIdsTimesEGerenciasDaDiretoria,
   contarGerenciasAtivasFilhasDeDiretoria,
   contarTimesAtivosFilhosDeGerencia,
   contarTimesAtivosSobDiretoria,
@@ -68,6 +66,17 @@ async function deleteIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", id
   for (let i = 0; i < ids.length; i += DELETE_CHUNK) {
     const slice = ids.slice(i, i + DELETE_CHUNK);
     const { error } = await supabase.from(tabela).delete().in("id", slice);
+    if (error) return error.message;
+  }
+  return null;
+}
+
+/** Soft-delete em lote — gerência/time saem da UI sem apagar o registro. */
+async function inativarIdsInChunks(tabela: "rh_org_times" | "rh_org_gerencias", ids: string[]): Promise<string | null> {
+  if (ids.length === 0) return null;
+  for (let i = 0; i < ids.length; i += DELETE_CHUNK) {
+    const slice = ids.slice(i, i + DELETE_CHUNK);
+    const { error } = await supabase.from(tabela).update({ status: "inativo" }).in("id", slice);
     if (error) return error.message;
   }
   return null;
@@ -612,38 +621,31 @@ export default function RhOrganogramaPage() {
   };
 
   const prepararExcluirTime = (ti: RhOrgTime) => {
-    const q = countsMap[ti.id] ?? 0;
     setModalExcluir({
       tipo: "time",
       row: ti,
-      descricaoItem: `o time «${ti.nome}» do organograma${
-        q > 0 ? ` (${q} prestador(es) ficarão sem time)` : ""
-      }`,
+      descricaoItem: `o time «${ti.nome}» do organograma (ele deixa de aparecer; o registro permanece no sistema)`,
     });
   };
 
   const prepararExcluirGerencia = (g: RhOrgGerenciaComFilhos) => {
     const nTimes = g.times.length;
-    let nFunc = 0;
-    g.times.forEach((ti) => {
-      nFunc += countsMap[ti.id] ?? 0;
-    });
     setModalExcluir({
       tipo: "gerencia",
       row: g,
-      descricaoItem: `a gerência «${g.nome}» e ${nTimes} time(s) vinculados${
-        nFunc > 0 ? ` (${nFunc} prestador(es) perderão o vínculo de time)` : ""
-      }`,
+      descricaoItem: `a gerência «${g.nome}»${
+        nTimes > 0 ? ` e ${nTimes} time(s) vinculados` : ""
+      } do organograma (deixam de aparecer; os registros permanecem no sistema)`,
     });
   };
 
   const prepararExcluirDiretoria = (d: RhOrgDiretoriaComFilhos) => {
-    const { timeIds, gerenciaIds } = coletarIdsTimesEGerenciasDaDiretoria(arvore, d.id);
+    const gerenciaIds = gerencias.filter((g) => g.diretoria_id === d.id).map((g) => g.id);
+    const gerenciaIdSet = new Set(gerenciaIds);
+    const timeIds = times.filter((ti) => gerenciaIdSet.has(ti.gerencia_id)).map((ti) => ti.id);
     let nFunc = 0;
-    d.gerencias.forEach((g) => {
-      g.times.forEach((ti) => {
-        nFunc += countsMap[ti.id] ?? 0;
-      });
+    timeIds.forEach((id) => {
+      nFunc += countsMap[id] ?? 0;
     });
     setModalExcluir({
       tipo: "diretoria",
@@ -661,34 +663,36 @@ export default function RhOrganogramaPage() {
     const { tipo, row } = modalExcluir;
     try {
       if (tipo === "time") {
-        const { error } = await supabase.from("rh_org_times").delete().eq("id", row.id);
+        const { error } = await supabase.from("rh_org_times").update({ status: "inativo" }).eq("id", row.id);
         if (error) {
           setErroGlobal(error.message);
           return;
         }
-        setSucessoMsg("Time excluído.");
+        setSucessoMsg("Time removido do organograma.");
         setModalExcluir(null);
         await carregar();
         return;
       }
       if (tipo === "gerencia") {
-        const timeIds = coletarIdsTimesDaGerencia(arvore, row.id);
-        const errT = await deleteIdsInChunks("rh_org_times", timeIds);
+        const timeIds = times.filter((ti) => ti.gerencia_id === row.id).map((ti) => ti.id);
+        const errT = await inativarIdsInChunks("rh_org_times", timeIds);
         if (errT) {
           setErroGlobal(errT);
           return;
         }
-        const { error } = await supabase.from("rh_org_gerencias").delete().eq("id", row.id);
+        const { error } = await supabase.from("rh_org_gerencias").update({ status: "inativo" }).eq("id", row.id);
         if (error) {
           setErroGlobal(error.message);
           return;
         }
-        setSucessoMsg("Gerência excluída.");
+        setSucessoMsg("Gerência removida do organograma.");
         setModalExcluir(null);
         await carregar();
         return;
       }
-      const { timeIds, gerenciaIds } = coletarIdsTimesEGerenciasDaDiretoria(arvore, row.id);
+      const gerenciaIds = gerencias.filter((g) => g.diretoria_id === row.id).map((g) => g.id);
+      const gerenciaIdSet = new Set(gerenciaIds);
+      const timeIds = times.filter((ti) => gerenciaIdSet.has(ti.gerencia_id)).map((ti) => ti.id);
       const errT = await deleteIdsInChunks("rh_org_times", timeIds);
       if (errT) {
         setErroGlobal(errT);

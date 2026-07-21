@@ -242,7 +242,12 @@ export function computarOverview(
       key,
       label: key,
       valor: rows.length,
-      times: contarPor(rows, (r) => r.timeNome || "Sem time", (k) => k),
+      /** Só times reais — sem bucket «Sem time»; lista vazia = sem helper na UI. */
+      times: contarPor(
+        rows.filter((r) => Boolean(r.timeNome?.trim())),
+        (r) => r.timeNome.trim(),
+        (k) => k,
+      ),
     }))
     .sort((a, b) => b.valor - a.valor || a.label.localeCompare(b.label, "pt-BR"));
   const mixContrato = contarPor(
