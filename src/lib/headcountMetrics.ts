@@ -1,8 +1,7 @@
 import type { RhAreaAtuacao, RhFuncionarioTipoContrato, RhOrigemContratacao } from "../types/rhFuncionario";
-import type { RhVagaStatus } from "../types/rhVaga";
-
-/** Carga horária mensal estimada para converter remuneração/hora (estúdio) em massa salarial. */
-export const HEADCOUNT_HORAS_MES_ESTIMADAS = 180;
+import type { RhVagaCandidaturaEtapa } from "../types/rhVagaCandidatura";
+import type { RhVagaStatus, RhVagaTipo } from "../types/rhVaga";
+import { RH_VAGA_CANDIDATURA_ETAPAS } from "./rhVagasFormat";
 
 export type HeadcountFuncionarioRow = {
   id: string;
@@ -15,10 +14,10 @@ export type HeadcountFuncionarioRow = {
   org_time_id: string | null;
   data_inicio: string | null;
   data_desligamento: string | null;
-  data_funcao: string | null;
-  origem_contratacao: RhOrigemContratacao | string | null;
-  salario?: number | null;
-  remuneracao_hora_centavos?: number | null;
+  /** Nome do menor nível org (time › gerência › diretoria). */
+  orgLabelMenor: string;
+  /** Nome da gerência (para pizza Overview). */
+  gerenciaNome: string;
 };
 
 export type HeadcountTerminoRow = {
@@ -29,62 +28,103 @@ export type HeadcountTerminoRow = {
 
 export type HeadcountVagaRow = {
   id: string;
+  titulo: string;
+  tipo_vaga: RhVagaTipo | string;
   status: RhVagaStatus | string;
+  data_abertura: string | null;
   data_fim_inscricoes: string | null;
   org_diretoria_id: string | null;
-  data_abertura: string | null;
+  org_gerencia_id: string | null;
+  org_time_id: string | null;
+  organogramaLabel: string;
+  repasse_inicial_centavos: number | null;
+};
+
+export type HeadcountCandidaturaRow = {
+  id: string;
+  vaga_id: string;
+  etapa: RhVagaCandidaturaEtapa | string;
+  origem: RhOrigemContratacao | string | null;
 };
 
 export type HeadcountDiretoriaRef = { id: string; nome: string };
 
 export type HeadcountPeriodo = { inicio: string; fim: string };
 
-export type HeadcountSerieMensal = {
-  ano: number;
-  mes: number;
-  label: string;
-  hcAtivoFim: number;
-  admissoes: number;
-  desligamentos: number;
-};
-
 export type HeadcountMixItem = { key: string; label: string; valor: number };
 
-export type HeadcountDiretoriaRow = {
-  diretoriaId: string;
-  diretoriaNome: string;
+export type HeadcountOverviewMetricas = {
   hcAtivo: number;
-  indisponiveis: number;
-  admissoes: number;
-  desligamentos: number;
-  turnoverPct: number | null;
-  massaSalarial: number | null;
-  vagasAbertas: number;
-};
-
-export type HeadcountMetricas = {
-  hcAtivo: number;
-  indisponiveis: number;
+  contratacao: number;
+  distrato: number;
   variacaoLiquida: number;
-  tenureMedioMeses: number | null;
-  admissoes: number;
-  desligamentos: number;
   turnoverPct: number | null;
-  saidasVoluntariasPct: number | null;
-  massaSalarial: number | null;
-  custoMedioHc: number | null;
-  pctCustoEstudio: number | null;
-  vagasAbertas: number;
-  vagasEmAndamento: number;
+  tenureMedioMeses: number | null;
+  hcPorGerencia: HeadcountMixItem[];
   mixContrato: HeadcountMixItem[];
-  mixArea: HeadcountMixItem[];
-  hcPorDiretoria: HeadcountMixItem[];
-  origemContratacao: HeadcountMixItem[];
-  serieMensal: HeadcountSerieMensal[];
-  porDiretoria: HeadcountDiretoriaRow[];
 };
 
-function isoDia(v: string | null | undefined): string | null {
+export type HeadcountVagasMetricas = {
+  abertas: number;
+  emAndamento: number;
+  fechadas: number;
+  origemCandidaturas: HeadcountMixItem[];
+  pipeline: { id: string; label: string; count: number; color: string }[];
+  tabela: {
+    id: string;
+    titulo: string;
+    tipoLabel: string;
+    organograma: string;
+    dataAbertura: string | null;
+    dataEncerramento: string | null;
+    repasseCentavos: number | null;
+    candidatos: number;
+    statusLabel: string;
+    status: string;
+  }[];
+};
+
+export type HeadcountDistratoLinha = {
+  id: string;
+  nome: string;
+  timeLabel: string;
+  dataAdmissao: string | null;
+  dataTermino: string | null;
+  tipoTermino: "voluntario" | "nao_voluntario" | null;
+  tipoTerminoLabel: string;
+  tempoDias: number | null;
+  tipoContrato: string;
+  tipoContratoLabel: string;
+};
+
+export type HeadcountDistratoMetricas = {
+  distratos: number;
+  voluntarios: number;
+  naoVoluntarios: number;
+  tempoMedioDias: number | null;
+  porTime: HeadcountMixItem[];
+  porContrato: HeadcountMixItem[];
+  tabela: HeadcountDistratoLinha[];
+};
+
+const LABEL_CONTRATO: Record<string, string> = {
+  CLT: "CLT",
+  PJ: "PJ",
+  Estagio: "Estágio",
+  Temporario: "Temporário",
+};
+
+const LABEL_ORIGEM: Record<string, string> = {
+  linkedin: "LinkedIn",
+  indicacao: "Indicação",
+  site_vagas: "Site de Vagas",
+  instagram: "Instagram",
+  site_spin: "Site Spin",
+};
+
+const PIPELINE_COLORS = ["#1e36f8", "#6366f1", "#a78bfa", "#22c55e", "#f59e0b", "#14b8a6", "#e84025"] as const;
+
+export function isoDia(v: string | null | undefined): string | null {
   if (!v) return null;
   const s = v.slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
@@ -95,24 +135,12 @@ function dentroPeriodo(iso: string | null, periodo: HeadcountPeriodo): boolean {
   return iso >= periodo.inicio && iso <= periodo.fim;
 }
 
-/** Prestador ativo no fim do período (aproximação por datas de vínculo). */
-export function estavaAtivoNoFim(row: HeadcountFuncionarioRow, fimIso: string): boolean {
+export function estavaAtivoNoFim(row: Pick<HeadcountFuncionarioRow, "data_inicio" | "data_desligamento">, fimIso: string): boolean {
   const ini = isoDia(row.data_inicio);
   if (!ini || ini > fimIso) return false;
   const desl = isoDia(row.data_desligamento);
   if (desl && desl <= fimIso) return false;
   return true;
-}
-
-export function custoMensalEstimado(row: HeadcountFuncionarioRow): number {
-  const area = row.area_atuacao;
-  if (area === "estudio") {
-    const cent = Number(row.remuneracao_hora_centavos ?? 0);
-    if (!(cent > 0)) return 0;
-    return (cent / 100) * HEADCOUNT_HORAS_MES_ESTIMADAS;
-  }
-  const sal = Number(row.salario ?? 0);
-  return sal > 0 ? sal : 0;
 }
 
 function tenureMesesAte(dataInicio: string | null, refIso: string): number | null {
@@ -123,25 +151,13 @@ function tenureMesesAte(dataInicio: string | null, refIso: string): number | nul
   return (y2 - y1) * 12 + (m2 - m1);
 }
 
-const LABEL_CONTRATO: Record<string, string> = {
-  CLT: "CLT",
-  PJ: "PJ",
-  Estagio: "Estágio",
-  Temporario: "Temporário",
-};
-
-const LABEL_AREA: Record<string, string> = {
-  estudio: "Estúdio",
-  escritorio: "Escritório",
-};
-
-const LABEL_ORIGEM: Record<string, string> = {
-  linkedin: "LinkedIn",
-  indicacao: "Indicação",
-  site_vagas: "Site de Vagas",
-  instagram: "Instagram",
-  site_spin: "Site Spin",
-};
+function diasEntre(inicio: string | null, fim: string | null): number | null {
+  const a = isoDia(inicio);
+  const b = isoDia(fim);
+  if (!a || !b || b < a) return null;
+  const ms = Date.parse(`${b}T12:00:00`) - Date.parse(`${a}T12:00:00`);
+  return Math.round(ms / 86_400_000);
+}
 
 function contarPor<T>(items: T[], keyFn: (x: T) => string, labelFn: (key: string) => string): HeadcountMixItem[] {
   const map = new Map<string, number>();
@@ -154,175 +170,207 @@ function contarPor<T>(items: T[], keyFn: (x: T) => string, labelFn: (key: string
     .sort((a, b) => b.valor - a.valor || a.label.localeCompare(b.label, "pt-BR"));
 }
 
-export function filtrarFuncionarios(
-  rows: HeadcountFuncionarioRow[],
-  opts: {
-    diretoriaId: string;
-    area: RhAreaAtuacao | "todas";
-    contrato: RhFuncionarioTipoContrato | "todos";
-  },
-): HeadcountFuncionarioRow[] {
-  return rows.filter((r) => {
-    if (opts.diretoriaId && opts.diretoriaId !== "todas" && r.org_diretoria_id !== opts.diretoriaId) return false;
-    if (opts.area !== "todas" && r.area_atuacao !== opts.area) return false;
-    if (opts.contrato !== "todos" && r.tipo_contrato !== opts.contrato) return false;
-    return true;
-  });
+function fimMesAnterior(periodo: HeadcountPeriodo): string {
+  const d = new Date(`${periodo.inicio}T12:00:00`);
+  d.setMonth(d.getMonth() - 1);
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  const fim = new Date(y, m + 1, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${fim.getFullYear()}-${pad(fim.getMonth() + 1)}-${pad(fim.getDate())}`;
 }
 
-export function computarMetricasHeadcount(params: {
-  funcionarios: HeadcountFuncionarioRow[];
-  terminos: HeadcountTerminoRow[];
-  vagas: HeadcountVagaRow[];
-  diretorias: HeadcountDiretoriaRef[];
-  periodo: HeadcountPeriodo;
-  mesesSerie: { ano: number; mes: number; label: string; inicio: string; fim: string }[];
-  statusVagaEfetivo: (v: Pick<HeadcountVagaRow, "status" | "data_fim_inscricoes">) => string;
-  incluirCusto: boolean;
-}): HeadcountMetricas {
-  const { funcionarios, terminos, vagas, diretorias, periodo, mesesSerie, statusVagaEfetivo, incluirCusto } = params;
-  const nomeDir = new Map(diretorias.map((d) => [d.id, d.nome]));
-  const labelDir = (id: string | null) => (id ? nomeDir.get(id) ?? "Sem diretoria" : "Sem diretoria");
+export function filtrarPorDiretoria<T extends { org_diretoria_id: string | null }>(
+  rows: T[],
+  diretoriaId: string,
+): T[] {
+  if (!diretoriaId || diretoriaId === "todas") return rows;
+  return rows.filter((r) => r.org_diretoria_id === diretoriaId);
+}
 
+export function labelTipoContrato(k: string | null | undefined): string {
+  if (!k) return "—";
+  return LABEL_CONTRATO[k] ?? k;
+}
+
+export function labelOrigem(k: string | null | undefined): string {
+  if (!k) return "Sem origem";
+  return LABEL_ORIGEM[k] ?? k;
+}
+
+export function labelTipoTermino(t: "voluntario" | "nao_voluntario" | null): string {
+  if (t === "voluntario") return "Voluntário";
+  if (t === "nao_voluntario") return "Não voluntário";
+  return "—";
+}
+
+export function computarOverview(
+  funcionarios: HeadcountFuncionarioRow[],
+  periodo: HeadcountPeriodo,
+): HeadcountOverviewMetricas {
   const ativosFim = funcionarios.filter((r) => estavaAtivoNoFim(r, periodo.fim));
   const hcAtivo = ativosFim.length;
-  const indisponiveis = ativosFim.filter((r) => r.status === "indisponivel").length;
-
-  const admissoes = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_inicio), periodo)).length;
-  const desligamentos = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_desligamento), periodo)).length;
-  const variacaoLiquida = admissoes - desligamentos;
+  const contratacao = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_inicio), periodo)).length;
+  const distrato = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_desligamento), periodo)).length;
+  const variacaoLiquida = contratacao - distrato;
 
   const tenures = ativosFim
     .map((r) => tenureMesesAte(r.data_inicio, periodo.fim))
     .filter((n): n is number => n != null && n >= 0);
   const tenureMedioMeses = tenures.length ? tenures.reduce((a, b) => a + b, 0) / tenures.length : null;
 
-  const inicioAnterior = (() => {
-    const d = new Date(`${periodo.inicio}T12:00:00`);
-    d.setMonth(d.getMonth() - 1);
-    const y = d.getFullYear();
-    const m = d.getMonth();
-    const fimAnt = new Date(y, m + 1, 0);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return {
-      fim: `${fimAnt.getFullYear()}-${pad(fimAnt.getMonth() + 1)}-${pad(fimAnt.getDate())}`,
-    };
-  })();
-  const hcInicio = funcionarios.filter((r) => estavaAtivoNoFim(r, inicioAnterior.fim)).length;
+  const hcInicio = funcionarios.filter((r) => estavaAtivoNoFim(r, fimMesAnterior(periodo))).length;
   const hcMedio = (hcInicio + hcAtivo) / 2;
-  const turnoverPct = hcMedio > 0 ? (desligamentos / hcMedio) * 100 : null;
+  const turnoverPct = hcMedio > 0 ? (distrato / hcMedio) * 100 : null;
 
-  const terminosPeriodo = terminos.filter((t) => dentroPeriodo(t.data_termino, periodo));
-  const vol = terminosPeriodo.filter((t) => t.tipo_termino === "voluntario").length;
-  const saidasVoluntariasPct = terminosPeriodo.length > 0 ? (vol / terminosPeriodo.length) * 100 : null;
-
-  let massaSalarial: number | null = null;
-  let custoMedioHc: number | null = null;
-  let pctCustoEstudio: number | null = null;
-  if (incluirCusto) {
-    let total = 0;
-    let est = 0;
-    for (const r of ativosFim) {
-      const c = custoMensalEstimado(r);
-      total += c;
-      if (r.area_atuacao === "estudio") est += c;
-    }
-    massaSalarial = total;
-    custoMedioHc = hcAtivo > 0 ? total / hcAtivo : null;
-    pctCustoEstudio = total > 0 ? (est / total) * 100 : null;
-  }
-
-  const vagasAbertas = vagas.filter((v) => statusVagaEfetivo(v) === "aberta").length;
-  const vagasEmAndamento = vagas.filter((v) => statusVagaEfetivo(v) === "em_andamento").length;
-
+  const hcPorGerencia = contarPor(
+    ativosFim,
+    (r) => r.gerenciaNome || "Sem gerência",
+    (k) => k,
+  );
   const mixContrato = contarPor(
     ativosFim,
     (r) => String(r.tipo_contrato || "—"),
-    (k) => LABEL_CONTRATO[k] ?? k,
+    (k) => labelTipoContrato(k),
   );
-  const mixArea = contarPor(
-    ativosFim,
-    (r) => String(r.area_atuacao || "—"),
-    (k) => LABEL_AREA[k] ?? k,
-  );
-  const hcPorDiretoria = contarPor(
-    ativosFim,
-    (r) => r.org_diretoria_id ?? "sem",
-    (k) => (k === "sem" ? "Sem diretoria" : labelDir(k)),
-  );
-
-  const contratadosPeriodo = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_inicio), periodo));
-  const origemContratacao = contarPor(
-    contratadosPeriodo.filter((r) => r.origem_contratacao),
-    (r) => String(r.origem_contratacao),
-    (k) => LABEL_ORIGEM[k] ?? k,
-  );
-
-  const serieMensal: HeadcountSerieMensal[] = mesesSerie.map((m) => ({
-    ano: m.ano,
-    mes: m.mes,
-    label: m.label,
-    hcAtivoFim: funcionarios.filter((r) => estavaAtivoNoFim(r, m.fim)).length,
-    admissoes: funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_inicio), { inicio: m.inicio, fim: m.fim })).length,
-    desligamentos: funcionarios.filter((r) =>
-      dentroPeriodo(isoDia(r.data_desligamento), { inicio: m.inicio, fim: m.fim }),
-    ).length,
-  }));
-
-  const dirIds = new Set<string>();
-  for (const r of funcionarios) {
-    if (r.org_diretoria_id) dirIds.add(r.org_diretoria_id);
-  }
-  for (const d of diretorias) dirIds.add(d.id);
-
-  const porDiretoria: HeadcountDiretoriaRow[] = [...dirIds]
-    .map((diretoriaId) => {
-      const rowsDir = funcionarios.filter((r) => r.org_diretoria_id === diretoriaId);
-      const ativos = rowsDir.filter((r) => estavaAtivoNoFim(r, periodo.fim));
-      const adm = rowsDir.filter((r) => dentroPeriodo(isoDia(r.data_inicio), periodo)).length;
-      const des = rowsDir.filter((r) => dentroPeriodo(isoDia(r.data_desligamento), periodo)).length;
-      const hcIni = rowsDir.filter((r) => estavaAtivoNoFim(r, inicioAnterior.fim)).length;
-      const medio = (hcIni + ativos.length) / 2;
-      const turn = medio > 0 ? (des / medio) * 100 : null;
-      let massa: number | null = null;
-      if (incluirCusto) {
-        massa = ativos.reduce((acc, r) => acc + custoMensalEstimado(r), 0);
-      }
-      const vagasDir = vagas.filter((v) => v.org_diretoria_id === diretoriaId);
-      return {
-        diretoriaId,
-        diretoriaNome: labelDir(diretoriaId),
-        hcAtivo: ativos.length,
-        indisponiveis: ativos.filter((r) => r.status === "indisponivel").length,
-        admissoes: adm,
-        desligamentos: des,
-        turnoverPct: turn,
-        massaSalarial: massa,
-        vagasAbertas: vagasDir.filter((v) => statusVagaEfetivo(v) === "aberta").length,
-      };
-    })
-    .filter((r) => r.hcAtivo > 0 || r.admissoes > 0 || r.desligamentos > 0 || r.vagasAbertas > 0)
-    .sort((a, b) => b.hcAtivo - a.hcAtivo || a.diretoriaNome.localeCompare(b.diretoriaNome, "pt-BR"));
 
   return {
     hcAtivo,
-    indisponiveis,
+    contratacao,
+    distrato,
     variacaoLiquida,
-    tenureMedioMeses,
-    admissoes,
-    desligamentos,
     turnoverPct,
-    saidasVoluntariasPct,
-    massaSalarial,
-    custoMedioHc,
-    pctCustoEstudio,
-    vagasAbertas,
-    vagasEmAndamento,
+    tenureMedioMeses,
+    hcPorGerencia,
     mixContrato,
-    mixArea,
-    hcPorDiretoria,
-    origemContratacao,
-    serieMensal,
-    porDiretoria,
+  };
+}
+
+export function computarVagas(params: {
+  vagas: HeadcountVagaRow[];
+  candidaturas: HeadcountCandidaturaRow[];
+  periodo: HeadcountPeriodo;
+  statusVagaEfetivo: (v: Pick<HeadcountVagaRow, "status" | "data_fim_inscricoes">) => string;
+  labelStatusVaga: (s: string) => string;
+  labelTipoVaga: (t: string) => string;
+}): HeadcountVagasMetricas {
+  const { vagas, candidaturas, periodo, statusVagaEfetivo, labelStatusVaga, labelTipoVaga } = params;
+
+  const vagasNoMes = vagas.filter((v) => {
+    const ab = isoDia(v.data_abertura);
+    if (ab && ab > periodo.fim) return false;
+    return true;
+  });
+
+  let abertas = 0;
+  let emAndamento = 0;
+  let fechadas = 0;
+  for (const v of vagasNoMes) {
+    const st = statusVagaEfetivo(v);
+    if (st === "aberta") abertas += 1;
+    else if (st === "em_andamento") emAndamento += 1;
+    else if (st === "concluida" || st === "cancelada") fechadas += 1;
+  }
+
+  const vagaIds = new Set(vagasNoMes.map((v) => v.id));
+  const cands = candidaturas.filter((c) => vagaIds.has(c.vaga_id));
+
+  const origemCandidaturas = contarPor(
+    cands,
+    (c) => (c.origem ? String(c.origem) : "sem"),
+    (k) => (k === "sem" ? "Sem origem" : labelOrigem(k)),
+  );
+
+  const etapaCount = new Map<string, number>();
+  for (const e of RH_VAGA_CANDIDATURA_ETAPAS) etapaCount.set(e.id, 0);
+  for (const c of cands) {
+    let etapa = String(c.etapa);
+    if (etapa === "aprovado") etapa = "stand_by";
+    if (!etapaCount.has(etapa)) continue;
+    etapaCount.set(etapa, (etapaCount.get(etapa) ?? 0) + 1);
+  }
+  const pipeline = RH_VAGA_CANDIDATURA_ETAPAS.map((e, i) => ({
+    id: e.id,
+    label: e.label,
+    count: etapaCount.get(e.id) ?? 0,
+    color: PIPELINE_COLORS[i % PIPELINE_COLORS.length],
+  }));
+
+  const countPorVaga = new Map<string, number>();
+  for (const c of candidaturas) {
+    countPorVaga.set(c.vaga_id, (countPorVaga.get(c.vaga_id) ?? 0) + 1);
+  }
+
+  const tabela = vagasNoMes
+    .filter((v) => statusVagaEfetivo(v) === "em_andamento")
+    .filter((v) => {
+      const ab = isoDia(v.data_abertura);
+      if (ab && ab > periodo.fim) return false;
+      const fim = isoDia(v.data_fim_inscricoes);
+      if (fim && fim < periodo.inicio) return false;
+      return true;
+    })
+    .map((v) => ({
+      id: v.id,
+      titulo: v.titulo,
+      tipoLabel: labelTipoVaga(String(v.tipo_vaga)),
+      organograma: v.organogramaLabel || "—",
+      dataAbertura: isoDia(v.data_abertura),
+      dataEncerramento: isoDia(v.data_fim_inscricoes),
+      repasseCentavos: v.repasse_inicial_centavos,
+      candidatos: countPorVaga.get(v.id) ?? 0,
+      statusLabel: labelStatusVaga(statusVagaEfetivo(v)),
+      status: statusVagaEfetivo(v),
+    }))
+    .sort((a, b) => (b.dataAbertura ?? "").localeCompare(a.dataAbertura ?? "") || a.titulo.localeCompare(b.titulo, "pt-BR"));
+
+  return { abertas, emAndamento, fechadas, origemCandidaturas, pipeline, tabela };
+}
+
+export function computarDistrato(params: {
+  funcionarios: HeadcountFuncionarioRow[];
+  terminos: HeadcountTerminoRow[];
+  periodo: HeadcountPeriodo;
+}): HeadcountDistratoMetricas {
+  const { funcionarios, terminos, periodo } = params;
+  const terminoById = new Map(terminos.map((t) => [t.rh_funcionario_id, t]));
+
+  const linhas: HeadcountDistratoLinha[] = funcionarios
+    .filter((r) => dentroPeriodo(isoDia(r.data_desligamento), periodo))
+    .map((r) => {
+      const term = terminoById.get(r.id);
+      const tipo = term?.tipo_termino ?? null;
+      const dataTermino = isoDia(r.data_desligamento) ?? term?.data_termino ?? null;
+      return {
+        id: r.id,
+        nome: r.nome,
+        timeLabel: r.orgLabelMenor || "—",
+        dataAdmissao: isoDia(r.data_inicio),
+        dataTermino,
+        tipoTermino: tipo,
+        tipoTerminoLabel: labelTipoTermino(tipo),
+        tempoDias: diasEntre(r.data_inicio, dataTermino),
+        tipoContrato: String(r.tipo_contrato || "—"),
+        tipoContratoLabel: labelTipoContrato(String(r.tipo_contrato || "—")),
+      };
+    })
+    .sort((a, b) => (b.dataTermino ?? "").localeCompare(a.dataTermino ?? "") || a.nome.localeCompare(b.nome, "pt-BR"));
+
+  const voluntarios = linhas.filter((l) => l.tipoTermino === "voluntario").length;
+  const naoVoluntarios = linhas.filter((l) => l.tipoTermino === "nao_voluntario").length;
+  const tempos = linhas.map((l) => l.tempoDias).filter((n): n is number => n != null);
+  const tempoMedioDias = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : null;
+
+  const porTime = contarPor(linhas, (l) => l.timeLabel, (k) => k);
+  const porContrato = contarPor(linhas, (l) => l.tipoContrato, (k) => labelTipoContrato(k));
+
+  return {
+    distratos: linhas.length,
+    voluntarios,
+    naoVoluntarios,
+    tempoMedioDias,
+    porTime,
+    porContrato,
+    tabela: linhas,
   };
 }

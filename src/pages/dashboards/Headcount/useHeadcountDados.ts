@@ -1,33 +1,35 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PermissaoValor } from "../../../types";
-import type { RhAreaAtuacao, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
-import type { RhVagaStatus } from "../../../types/rhVaga";
-import { MESES_PT } from "../../../lib/dashboardConstants";
 import {
   getDatasDoMes,
   getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
-  getPeriodoHistoricoCompetencias,
-  HISTORICO_COMPETENCIAS_MESES,
 } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
-import { statusVagaEfetivo } from "../../../lib/rhVagasFormat";
+import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
+import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import {
-  computarMetricasHeadcount,
-  filtrarFuncionarios,
+  labelStatusVaga,
+  labelTipoVaga,
+  statusVagaEfetivo,
+} from "../../../lib/rhVagasFormat";
+import {
+  computarDistrato,
+  computarOverview,
+  computarVagas,
+  filtrarPorDiretoria,
+  isoDia,
+  type HeadcountCandidaturaRow,
   type HeadcountDiretoriaRef,
+  type HeadcountDistratoMetricas,
   type HeadcountFuncionarioRow,
-  type HeadcountMetricas,
+  type HeadcountOverviewMetricas,
   type HeadcountTerminoRow,
   type HeadcountVagaRow,
+  type HeadcountVagasMetricas,
 } from "../../../lib/headcountMetrics";
 
-function statusVagaHeadcount(v: Pick<HeadcountVagaRow, "status" | "data_fim_inscricoes">): string {
-  return statusVagaEfetivo({
-    status: v.status as RhVagaStatus,
-    data_fim_inscricoes: v.data_fim_inscricoes ?? "",
-  });
-}
+export type HeadcountTab = "overview" | "vagas" | "distrato";
 
 function parseTerminos(
   rows: { rh_funcionario_id: string; detalhes: Record<string, unknown> | null }[],
@@ -42,20 +44,37 @@ function parseTerminos(
   });
 }
 
-export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean) {
-  const incluirCusto = canView === "sim";
+function organogramaLabelDeEmbed(v: {
+  org_time?: { nome?: string; gerencia?: { nome?: string; diretoria?: { nome?: string } } } | null;
+  org_gerencia?: { nome?: string; diretoria?: { nome?: string } } | null;
+  org_diretoria?: { nome?: string } | null;
+}): string {
+  const t = v.org_time;
+  if (t?.nome) {
+    const g = t.gerencia?.nome?.trim();
+    const d = t.gerencia?.diretoria?.nome?.trim();
+    if (d && g) return `${d} › ${g} › ${t.nome}`;
+    if (g) return `${g} › ${t.nome}`;
+    return t.nome;
+  }
+  const ger = v.org_gerencia;
+  if (ger?.nome) {
+    const d = ger.diretoria?.nome?.trim();
+    return d ? `${d} › ${ger.nome}` : ger.nome;
+  }
+  return v.org_diretoria?.nome?.trim() || "—";
+}
 
+export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean) {
   const meses = useMemo(() => getMesesDisponiveis(), []);
   const [idxMes, setIdxMes] = useState(() => getIdxMesCarrosselPadrao(meses));
   const [historico, setHistorico] = useState(false);
-
   const [filtroDiretoria, setFiltroDiretoria] = useState("todas");
-  const [filtroArea, setFiltroArea] = useState<RhAreaAtuacao | "todas">("todas");
-  const [filtroContrato, setFiltroContrato] = useState<RhFuncionarioTipoContrato | "todos">("todos");
 
   const [funcionarios, setFuncionarios] = useState<HeadcountFuncionarioRow[]>([]);
   const [terminos, setTerminos] = useState<HeadcountTerminoRow[]>([]);
   const [vagas, setVagas] = useState<HeadcountVagaRow[]>([]);
+  const [candidaturas, setCandidaturas] = useState<HeadcountCandidaturaRow[]>([]);
   const [diretorias, setDiretorias] = useState<HeadcountDiretoriaRef[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -67,23 +86,14 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
     setLoading(true);
     setErro(null);
     try {
-      const fr = incluirCusto
-        ? await supabase
-            .from("rh_funcionarios")
-            .select(
-              "id, status, nome, tipo_contrato, area_atuacao, org_diretoria_id, org_gerencia_id, org_time_id, data_inicio, data_desligamento, data_funcao, origem_contratacao, salario, remuneracao_hora_centavos",
-            )
-            .order("nome")
-            .limit(5000)
-        : await supabase
-            .from("rh_funcionarios")
-            .select(
-              "id, status, nome, tipo_contrato, area_atuacao, org_diretoria_id, org_gerencia_id, org_time_id, data_inicio, data_desligamento, data_funcao, origem_contratacao",
-            )
-            .order("nome")
-            .limit(5000);
-
-      const [hr, vr, dr] = await Promise.all([
+      const [fr, hr, vr, cr, org] = await Promise.all([
+        supabase
+          .from("rh_funcionarios")
+          .select(
+            "id, status, nome, tipo_contrato, area_atuacao, org_diretoria_id, org_gerencia_id, org_time_id, data_inicio, data_desligamento",
+          )
+          .order("nome")
+          .limit(5000),
         supabase
           .from("rh_funcionario_historico")
           .select("rh_funcionario_id, detalhes")
@@ -91,116 +101,171 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
           .limit(5000),
         supabase
           .from("rh_vagas")
-          .select("id, status, data_fim_inscricoes, org_diretoria_id, data_abertura")
+          .select(
+            `
+            id, titulo, tipo_vaga, status, data_abertura, data_fim_inscricoes,
+            org_diretoria_id, org_gerencia_id, org_time_id, repasse_inicial_centavos,
+            org_time:rh_org_times (
+              id, nome,
+              gerencia:rh_org_gerencias (
+                id, nome,
+                diretoria:rh_org_diretorias ( id, nome )
+              )
+            ),
+            org_gerencia:rh_org_gerencias (
+              id, nome,
+              diretoria:rh_org_diretorias ( id, nome )
+            ),
+            org_diretoria:rh_org_diretorias ( id, nome )
+          `,
+          )
           .order("data_abertura", { ascending: false })
           .limit(200),
-        supabase.from("rh_org_diretorias").select("id, nome").eq("status", "ativo").order("nome"),
+        supabase.from("rh_vaga_candidaturas").select("id, vaga_id, etapa, origem").limit(5000),
+        carregarOpcoesTimesOrganograma(),
       ]);
 
-      if (fr.error || hr.error || vr.error || dr.error) {
-        console.error(fr.error ?? hr.error ?? vr.error ?? dr.error);
+      if (fr.error || hr.error || vr.error || cr.error || org.error) {
+        console.error(fr.error ?? hr.error ?? vr.error ?? cr.error ?? org.error);
         setErro("Não foi possível carregar o Headcount. Se o problema persistir, entre em contato com o suporte.");
         setFuncionarios([]);
         setTerminos([]);
         setVagas([]);
+        setCandidaturas([]);
         setDiretorias([]);
         return;
       }
 
-      setFuncionarios((fr.data ?? []) as unknown as HeadcountFuncionarioRow[]);
+      const vinculos = flattenVinculosDeGrupos(org.grupos);
+      const dirsMap = new Map<string, string>();
+      for (const v of vinculos) {
+        if (v.diretoriaId && v.diretoriaNome) dirsMap.set(v.diretoriaId, v.diretoriaNome);
+      }
+      const dirs: HeadcountDiretoriaRef[] = [...dirsMap.entries()]
+        .map(([id, nome]) => ({ id, nome }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+      setDiretorias(dirs);
+
+      const funcs = ((fr.data ?? []) as Omit<HeadcountFuncionarioRow, "orgLabelMenor" | "gerenciaNome">[]).map(
+        (r) => {
+          const v = encontrarVinculoParaFuncionarioRow(r, vinculos);
+          const orgLabelMenor =
+            v?.timeNome?.trim() ||
+            v?.gerenciaNome?.trim() ||
+            v?.diretoriaNome?.trim() ||
+            "—";
+          const gerenciaNome = v?.gerenciaNome?.trim() || "Sem gerência";
+          return { ...r, orgLabelMenor, gerenciaNome };
+        },
+      );
+      setFuncionarios(funcs);
       setTerminos(parseTerminos((hr.data ?? []) as { rh_funcionario_id: string; detalhes: Record<string, unknown> | null }[]));
-      setVagas((vr.data ?? []) as unknown as HeadcountVagaRow[]);
-      setDiretorias((dr.data ?? []) as HeadcountDiretoriaRef[]);
+
+      const vagasMapped: HeadcountVagaRow[] = ((vr.data ?? []) as Record<string, unknown>[]).map((raw) => {
+        const row = raw as HeadcountVagaRow & {
+          org_time?: HeadcountVagaRow extends never ? never : unknown;
+          org_gerencia?: unknown;
+          org_diretoria?: unknown;
+        };
+        return {
+          id: String(raw.id),
+          titulo: String(raw.titulo ?? ""),
+          tipo_vaga: String(raw.tipo_vaga ?? ""),
+          status: String(raw.status ?? ""),
+          data_abertura: isoDia(raw.data_abertura as string | null),
+          data_fim_inscricoes: isoDia(raw.data_fim_inscricoes as string | null),
+          org_diretoria_id: (raw.org_diretoria_id as string | null) ?? null,
+          org_gerencia_id: (raw.org_gerencia_id as string | null) ?? null,
+          org_time_id: (raw.org_time_id as string | null) ?? null,
+          organogramaLabel: organogramaLabelDeEmbed(row as Parameters<typeof organogramaLabelDeEmbed>[0]),
+          repasse_inicial_centavos:
+            raw.repasse_inicial_centavos == null ? null : Number(raw.repasse_inicial_centavos),
+        };
+      });
+      setVagas(vagasMapped);
+      setCandidaturas((cr.data ?? []) as HeadcountCandidaturaRow[]);
     } finally {
       setLoading(false);
     }
-  }, [canView, incluirCusto, permLoading]);
+  }, [canView, permLoading]);
 
   useEffect(() => {
     void carregar();
   }, [carregar]);
 
   const periodo = useMemo(() => {
-    if (historico) {
-      const { inicio, fim } = getPeriodoHistoricoCompetencias();
-      return { inicio, fim };
-    }
     if (!mesSelecionado) {
       const hoje = new Date();
       return getDatasDoMes(hoje.getFullYear(), hoje.getMonth());
     }
     return getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
-  }, [historico, mesSelecionado]);
-
-  const funcionariosFiltrados = useMemo(
-    () =>
-      filtrarFuncionarios(funcionarios, {
-        diretoriaId: filtroDiretoria,
-        area: filtroArea,
-        contrato: filtroContrato,
-      }),
-    [funcionarios, filtroDiretoria, filtroArea, filtroContrato],
-  );
-
-  const vagasFiltradas = useMemo(() => {
-    if (filtroDiretoria === "todas") return vagas;
-    return vagas.filter((v) => v.org_diretoria_id === filtroDiretoria);
-  }, [vagas, filtroDiretoria]);
-
-  const mesesSerie = useMemo(() => {
-    const ref = new Date();
-    const lista: { ano: number; mes: number; label: string; inicio: string; fim: string }[] = [];
-    for (let i = HISTORICO_COMPETENCIAS_MESES - 1; i >= 0; i--) {
-      const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
-      const ano = d.getFullYear();
-      const mes = d.getMonth();
-      const { inicio, fim } = getDatasDoMes(ano, mes);
-      lista.push({
-        ano,
-        mes,
-        label: `${MESES_PT[mes].slice(0, 3)}/${String(ano).slice(2)}`,
-        inicio,
-        fim,
-      });
-    }
-    return lista;
-  }, []);
-
-  const metricas: HeadcountMetricas = useMemo(
-    () =>
-      computarMetricasHeadcount({
-        funcionarios: funcionariosFiltrados,
-        terminos,
-        vagas: vagasFiltradas,
-        diretorias,
-        periodo,
-        mesesSerie,
-        statusVagaEfetivo: statusVagaHeadcount,
-        incluirCusto,
-      }),
-    [funcionariosFiltrados, terminos, vagasFiltradas, diretorias, periodo, mesesSerie, incluirCusto],
-  );
+  }, [mesSelecionado]);
 
   const periodoAnterior = useMemo(() => {
-    if (historico) return null;
     const d = new Date(`${periodo.inicio}T12:00:00`);
     d.setMonth(d.getMonth() - 1);
     return getDatasDoMes(d.getFullYear(), d.getMonth());
-  }, [historico, periodo.inicio]);
+  }, [periodo.inicio]);
 
-  const metricasAnterior: HeadcountMetricas | null = useMemo(() => {
-    if (!periodoAnterior) return null;
-    return computarMetricasHeadcount({
-      funcionarios: funcionariosFiltrados,
-      terminos,
-      vagas: vagasFiltradas,
-      diretorias,
-      periodo: periodoAnterior,
-      mesesSerie,
-      statusVagaEfetivo: statusVagaHeadcount,
-      incluirCusto,
-    });
-  }, [periodoAnterior, funcionariosFiltrados, terminos, vagasFiltradas, diretorias, mesesSerie, incluirCusto]);
+  const funcionariosFiltrados = useMemo(
+    () => filtrarPorDiretoria(funcionarios, filtroDiretoria),
+    [funcionarios, filtroDiretoria],
+  );
+  const vagasFiltradas = useMemo(
+    () => filtrarPorDiretoria(vagas, filtroDiretoria),
+    [vagas, filtroDiretoria],
+  );
+
+  const overview: HeadcountOverviewMetricas = useMemo(
+    () => computarOverview(funcionariosFiltrados, periodo),
+    [funcionariosFiltrados, periodo],
+  );
+  const overviewAnt: HeadcountOverviewMetricas = useMemo(
+    () => computarOverview(funcionariosFiltrados, periodoAnterior),
+    [funcionariosFiltrados, periodoAnterior],
+  );
+
+  const vagasMetricas: HeadcountVagasMetricas = useMemo(
+    () =>
+      computarVagas({
+        vagas: vagasFiltradas,
+        candidaturas,
+        periodo,
+        statusVagaEfetivo: (v) =>
+          statusVagaEfetivo({
+            status: v.status as "aberta" | "em_andamento" | "concluida" | "cancelada",
+            data_fim_inscricoes: v.data_fim_inscricoes ?? "",
+          }),
+        labelStatusVaga: (s) => labelStatusVaga(s as "aberta" | "em_andamento" | "concluida" | "cancelada"),
+        labelTipoVaga: (t) => labelTipoVaga(t as "interna" | "externa" | "mista"),
+      }),
+    [vagasFiltradas, candidaturas, periodo],
+  );
+  const vagasAnt: HeadcountVagasMetricas = useMemo(
+    () =>
+      computarVagas({
+        vagas: vagasFiltradas,
+        candidaturas,
+        periodo: periodoAnterior,
+        statusVagaEfetivo: (v) =>
+          statusVagaEfetivo({
+            status: v.status as "aberta" | "em_andamento" | "concluida" | "cancelada",
+            data_fim_inscricoes: v.data_fim_inscricoes ?? "",
+          }),
+        labelStatusVaga: (s) => labelStatusVaga(s as "aberta" | "em_andamento" | "concluida" | "cancelada"),
+        labelTipoVaga: (t) => labelTipoVaga(t as "interna" | "externa" | "mista"),
+      }),
+    [vagasFiltradas, candidaturas, periodoAnterior],
+  );
+
+  const distrato: HeadcountDistratoMetricas = useMemo(
+    () => computarDistrato({ funcionarios: funcionariosFiltrados, terminos, periodo }),
+    [funcionariosFiltrados, terminos, periodo],
+  );
+  const distratoAnt: HeadcountDistratoMetricas = useMemo(
+    () => computarDistrato({ funcionarios: funcionariosFiltrados, terminos, periodo: periodoAnterior }),
+    [funcionariosFiltrados, terminos, periodoAnterior],
+  );
 
   const toggleHistorico = () => {
     setHistorico((h) => {
@@ -212,7 +277,6 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
   return {
     loading,
     erro,
-    incluirCusto,
     historico,
     toggleHistorico,
     meses,
@@ -224,14 +288,12 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
     irMesProximo: () => setIdxMes((i) => Math.min(meses.length - 1, i + 1)),
     filtroDiretoria,
     setFiltroDiretoria,
-    filtroArea,
-    setFiltroArea,
-    filtroContrato,
-    setFiltroContrato,
     diretorias,
-    metricas,
-    metricasAnterior,
-    periodo,
-    recarregar: carregar,
+    overview,
+    overviewAnt,
+    vagasMetricas,
+    vagasAnt,
+    distrato,
+    distratoAnt,
   };
 }

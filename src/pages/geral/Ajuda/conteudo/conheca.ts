@@ -194,27 +194,27 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Headcount é o dashboard executivo de pessoas da Spin: tamanho da força de trabalho, movimentação (admissões e saídas), custo estimado e pipeline de vagas. Serve diretoria, conselho e investidores — distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
+          "O Headcount é o dashboard executivo de pessoas da Spin, com três abas — Overview, Vagas e Distrato. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Navegue pelos meses com as setas ou ative o **Histórico** para ver 13 competências (rótulo **Todo o período**). Filtre por **diretoria**, **área** (Estúdio ou Escritório) e **tipo de contrato** (CLT, PJ, Estágio, Temporário). A agregadora de cada filtro mostra o universo completo.",
+          "Navegue pelos meses com as setas. O botão **Histórico** fica disponível, mas a visualização acumulada ainda será liberada. Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Vagas e Distrato.",
       },
       {
-        subtitulo: "KPIs Consolidados",
+        subtitulo: "Aba Overview",
         texto:
-          "HC ativo e indisponíveis no fim do período; variação líquida (admissões menos desligamentos); tenure médio; admissões; desligamentos; turnover percentual; percentual de saídas voluntárias (quando o histórico de término informa o tipo). No modo mês, os cards comparam com o mesmo intervalo do mês anterior.",
+          "KPIs: HC Ativo, Contratação e Distrato na primeira linha; Variação Líquida, Turnover e Tenure Médio na segunda. Cada card compara com o mês anterior mostrando só o valor (sem percentual). Gráfico de pizza do HC por gerência (com lista ao lado) e barras por tipo de contrato.",
       },
       {
-        subtitulo: "Custo de Pessoas",
+        subtitulo: "Aba Vagas",
         texto:
-          "Visível apenas para perfis com permissão de **Ver** em **Sim**. Mostra massa salarial estimada, custo médio por HC e participação do Estúdio no custo. No Estúdio, a remuneração por hora é convertida com carga estimada de 180 horas/mês.",
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas da aba Candidaturas. Tabela com vagas ainda em andamento no mês do carrossel — título, tipo, organograma, datas, repasse, quantidade de candidatos e status.",
       },
       {
-        subtitulo: "Pipeline e Detalhamento",
+        subtitulo: "Aba Distrato",
         texto:
-          "Contagem de vagas abertas e em andamento. Gráficos de mix por diretoria e contrato, evolução mensal reconstruída e origem das contratações no período. A tabela consolida métricas por diretoria. O HC histórico é aproximado pelas datas de início e desligamento — não é um snapshot mensal auditável.",
+          "KPIs de distratos, voluntários, não voluntários e tempo médio (dias entre admissão e término). Pizzas por time e por tipo de contrato. Tabela com nome, time (menor nível do organograma), datas, tipo de término e tempo em dias.",
       },
     ],
   },

@@ -1,9 +1,11 @@
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, LayoutDashboard, Briefcase, UserMinus } from "lucide-react";
 import type { Theme } from "../../../constants/theme";
-import type { RhAreaAtuacao, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
 import {
   FiltroBarCampoSelect,
+  FiltroBarTabButton,
   FiltroHistoricoButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
 } from "../../../components/dashboard";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
@@ -11,13 +13,21 @@ import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { HeadcountDiretoriaRef } from "../../../lib/headcountMetrics";
-import { TIPOS_CONTRATO } from "../../rh/GestaoPrestador/gestaoPrestadorHelpers";
+import type { HeadcountTab } from "./useHeadcountDados";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
+
+const TABS: { key: HeadcountTab; label: string; icon: typeof LayoutDashboard }[] = [
+  { key: "overview", label: "Overview", icon: LayoutDashboard },
+  { key: "vagas", label: "Vagas", icon: Briefcase },
+  { key: "distrato", label: "Distrato", icon: UserMinus },
+];
 
 type Props = {
   brand: Brand;
   t: Theme;
+  aba: HeadcountTab;
+  onSelectAba: (tab: HeadcountTab) => void;
   historico: boolean;
   onToggleHistorico: () => void;
   labelCarrossel: string;
@@ -28,16 +38,14 @@ type Props = {
   filtroDiretoria: string;
   onFiltroDiretoria: (v: string) => void;
   diretorias: HeadcountDiretoriaRef[];
-  filtroArea: RhAreaAtuacao | "todas";
-  onFiltroArea: (v: RhAreaAtuacao | "todas") => void;
-  filtroContrato: RhFuncionarioTipoContrato | "todos";
-  onFiltroContrato: (v: RhFuncionarioTipoContrato | "todos") => void;
   loading: boolean;
 };
 
 export function HeadcountFiltroBar({
   brand,
   t,
+  aba,
+  onSelectAba,
   historico,
   onToggleHistorico,
   labelCarrossel,
@@ -48,10 +56,6 @@ export function HeadcountFiltroBar({
   filtroDiretoria,
   onFiltroDiretoria,
   diretorias,
-  filtroArea,
-  onFiltroArea,
-  filtroContrato,
-  onFiltroContrato,
   loading,
 }: Props) {
   return (
@@ -94,31 +98,6 @@ export function HeadcountFiltroBar({
           minWidth={200}
         />
 
-        <FiltroBarCampoSelect
-          value={filtroArea}
-          onChange={(v) => onFiltroArea(v as RhAreaAtuacao | "todas")}
-          options={[
-            { value: "estudio", label: "Estúdio" },
-            { value: "escritorio", label: "Escritório" },
-          ]}
-          icon={FilterBarIcons.estudio}
-          ariaLabel="Área de atuação"
-          todasValue="todas"
-          todasLabel="Todas as áreas"
-          minWidth={180}
-        />
-
-        <FiltroBarCampoSelect
-          value={filtroContrato}
-          onChange={(v) => onFiltroContrato(v as RhFuncionarioTipoContrato | "todos")}
-          options={TIPOS_CONTRATO.map((c) => ({ value: c.value, label: c.label }))}
-          icon={FilterBarIcons.status}
-          ariaLabel="Tipos de contrato"
-          todasValue="todos"
-          todasLabel="Todos os contratos"
-          minWidth={180}
-        />
-
         {loading && (
           <span
             style={{ fontSize: 12, color: t.textMuted, display: "flex", alignItems: "center", gap: 4 }}
@@ -128,6 +107,45 @@ export function HeadcountFiltroBar({
             Carregando…
           </span>
         )}
+      </div>
+
+      <div
+        style={{
+          ...getFilterBarRowStyle(),
+          paddingTop: 12,
+          marginTop: 12,
+          borderTop: `1px solid ${t.cardBorder}`,
+        }}
+      >
+        <div
+          role="tablist"
+          aria-label="Abas do Headcount"
+          style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", width: "100%" }}
+          onKeyDown={(e) =>
+            onFiltroBarTabsKeyDown(
+              e,
+              TABS.map((x) => x.key),
+              onSelectAba,
+              (k) => `tab-headcount-${k}`,
+            )
+          }
+        >
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <FiltroBarTabButton
+                key={tab.key}
+                id={`tab-headcount-${tab.key}`}
+                active={aba === tab.key}
+                aria-controls={`panel-headcount-${tab.key}`}
+                onClick={() => onSelectAba(tab.key)}
+                icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              >
+                {tab.label}
+              </FiltroBarTabButton>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

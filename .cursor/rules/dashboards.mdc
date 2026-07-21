@@ -127,22 +127,22 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 ## Headcount — Padrões Específicos
 
 - **PageKey:** `dash_headcount` — pasta `Headcount/`; menu Dashboards entre Overview Comercial e Overview Prestador.
-- **Persona:** diretoria, RH, executivo e investidor — agregados de pessoas (não substitui a aba Head Count operacional em Gestão de Prestadores).
-- **Carrossel de mês:** `getMesesDisponiveis` + `getIdxMesCarrosselPadrao`; **Histórico** = 13 competências inclusivas; rótulo **Todo o período**.
-- **Filtros:** Diretoria (`FiltroBarCampoSelect` + `FilterBarIcons.diretoria`), Área (Estúdio/Escritório), Contrato (CLT/PJ/Estágio/Temporário).
-- **Dados:** `rh_funcionarios` (colunas enxutas), `rh_funcionario_historico` (`termino_prestacao`), `rh_vagas`, `rh_org_diretorias`. Agregações em `lib/headcountMetrics.ts` via `useHeadcountDados`.
-- **KPIs:** HC ativo, indisponíveis, variação líquida, tenure médio, admissões, desligamentos, turnover %, saídas voluntárias; pipeline (vagas abertas / em andamento).
-- **Custo:** massa salarial estimada, custo médio/HC, % estúdio — só com `canView === "sim"` (não busca `salario` / hora se Ver ≠ Sim). Estúdio: `remuneracao_hora_centavos` × `HEADCOUNT_HORAS_MES_ESTIMADAS` (180 h).
-- **HC histórico:** reconstruído por `data_inicio` / `data_desligamento` — subtítulo do bloco Mix avisa que não é snapshot auditável.
-- **Gráficos:** Recharts em `HeadcountCharts.tsx` — HC por diretoria, mix contrato, evolução 13 meses, origem de contratação.
-- **Tabela:** `useDataTableBlock` + `SortTableTh` — consolidado por diretoria (default sort HC desc).
-- **Migration:** `20261023120000_dash_headcount_page.sql` — seeds `nao` + RLS SELECT via `_dash_headcount_perm`.
+- **Abas:** Overview · Vagas · Distrato (`FiltroBarTabButton` + `useRouteTab`; URLs em `appRoutes.ts`).
+- **Filtros (linha 1):** carrossel de mês + `FiltroHistoricoButton` + Diretoria. Linha 2: abas.
+- **Histórico:** placeholder por agora («visualização será liberada em breve») — layout das abas só no modo mês.
+- **KPIs:** `HeadcountKpiCard` — MoM com seta + valor do mês anterior **sem** percentual.
+- **Overview:** KPIs HC Ativo / Contratação / Distrato + Variação / Turnover / Tenure; pizza HC por gerência + lista; barras por tipo de contrato.
+- **Vagas:** KPIs Abertas / Em andamento / Fechadas; pizza origem (`rh_vaga_candidaturas.origem`); funil `OverviewGenericFunnel` com `showTaxas={false}`; tabela só `em_andamento` no mês.
+- **Distrato:** KPIs Distratos / Voluntários / Não voluntário / Tempo médio (dias); pizzas por time e contrato; tabela Nome · Time · Admissão · Término · Tipo · Tempo.
+- **Dados:** `lib/headcountMetrics.ts` + `useHeadcountDados` — organograma via `carregarOpcoesTimesOrganograma`.
+- **Migrations:** `20261023120000_dash_headcount_page.sql`, `20261023130000_dash_headcount_candidaturas_rls.sql`.
 
 ### Strings de vazio (Headcount)
 
 | Contexto | String |
 |----------|--------|
 | Sem dados no período/filtros | Sem dados para o período selecionado. |
+| Modo Histórico | A visualização do Histórico será liberada em breve. Selecione um mês no carrossel para ver o Headcount. |
 | Sem permissão | Você não tem permissão para visualizar este dashboard. |
 
 ---

@@ -1,19 +1,26 @@
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { DashboardPageHeader } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
-import { HeadcountConteudo } from "./HeadcountConteudo";
+import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { HeadcountAbaDistrato } from "./HeadcountAbaDistrato";
+import { HeadcountAbaOverview } from "./HeadcountAbaOverview";
+import { HeadcountAbaVagas } from "./HeadcountAbaVagas";
 import { HeadcountFiltroBar } from "./HeadcountFiltroBar";
-import { useHeadcountDados } from "./useHeadcountDados";
+import { useHeadcountDados, type HeadcountTab } from "./useHeadcountDados";
+
+const HEADCOUNT_TABS = ["overview", "vagas", "distrato"] as const;
 
 export default function Headcount() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("dash_headcount");
+  const [aba, setAba] = useRouteTab("dash_headcount", "overview", HEADCOUNT_TABS);
   const dados = useHeadcountDados(perm.canView, perm.loading);
 
   if (perm.loading) {
@@ -39,6 +46,7 @@ export default function Headcount() {
   }
 
   const labelCarrossel = dados.historico ? "Todo o período" : (dados.mesSelecionado?.label ?? "—");
+  const pageBox = getPageContentBoxStyle(brand, t);
 
   return (
     <div
@@ -56,6 +64,8 @@ export default function Headcount() {
       <HeadcountFiltroBar
         brand={brand}
         t={t}
+        aba={aba}
+        onSelectAba={(tab: HeadcountTab) => setAba(tab)}
         historico={dados.historico}
         onToggleHistorico={dados.toggleHistorico}
         labelCarrossel={labelCarrossel}
@@ -66,21 +76,46 @@ export default function Headcount() {
         filtroDiretoria={dados.filtroDiretoria}
         onFiltroDiretoria={dados.setFiltroDiretoria}
         diretorias={dados.diretorias}
-        filtroArea={dados.filtroArea}
-        onFiltroArea={dados.setFiltroArea}
-        filtroContrato={dados.filtroContrato}
-        onFiltroContrato={dados.setFiltroContrato}
         loading={dados.loading}
       />
 
-      <HeadcountConteudo
-        metricas={dados.metricas}
-        metricasAnterior={dados.metricasAnterior}
-        loading={dados.loading}
-        incluirCusto={dados.incluirCusto}
-        historico={dados.historico}
-        erro={dados.erro}
-      />
+      {dados.erro ? (
+        <div style={pageBox}>
+          <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, textAlign: "center", padding: 40 }}>
+            {dados.erro}
+          </div>
+        </div>
+      ) : dados.historico ? (
+        <div style={pageBox}>
+          <div style={{ padding: "48px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            A visualização do Histórico será liberada em breve. Selecione um mês no carrossel para ver o Headcount.
+          </div>
+        </div>
+      ) : (
+        <div role="tabpanel" id={`panel-headcount-${aba}`} aria-labelledby={`tab-headcount-${aba}`}>
+          {aba === "overview" && (
+            <HeadcountAbaOverview
+              metricas={dados.overview}
+              anterior={dados.overviewAnt}
+              loading={dados.loading}
+            />
+          )}
+          {aba === "vagas" && (
+            <HeadcountAbaVagas
+              metricas={dados.vagasMetricas}
+              anterior={dados.vagasAnt}
+              loading={dados.loading}
+            />
+          )}
+          {aba === "distrato" && (
+            <HeadcountAbaDistrato
+              metricas={dados.distrato}
+              anterior={dados.distratoAnt}
+              loading={dados.loading}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
