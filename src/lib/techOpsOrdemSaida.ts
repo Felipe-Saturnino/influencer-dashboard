@@ -1,13 +1,12 @@
+import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
 import { supabase } from "./supabase";
+import { fetchAllPages } from "./supabasePaginate";
 import {
   codigoEstoqueEquipamento,
   codigoEstoqueItem,
   codigoEstoqueJogoLote,
   estoqueDisponivelItem,
-  fetchEstoqueEquipamentos,
   fetchEstoqueFornecedores,
-  fetchEstoqueItens,
-  fetchEstoqueJogoLotes,
   qtdAtualJogoLote,
   type EstoqueEquipamentoRow,
   type EstoqueFornecedorRow,
@@ -291,12 +290,42 @@ export function ordemVisivelNoMes(row: OrdemSaidaRow, mesKey: string, historico:
 
 /* ─── Catálogo de itens disponíveis (Gestão de Estoque) ───────────────────── */
 
-export async function fetchItensDisponiveisOs(): Promise<OsItemDisponivel[]> {
-  const [itens, equips, lotes] = await Promise.all([
-    fetchEstoqueItens(),
-    fetchEstoqueEquipamentos(),
-    fetchEstoqueJogoLotes(),
+/** Catálogo enxuto para o seletor de itens da OS (sem `select("*")` do estoque completo). */
+async function fetchCatalogoItensOsLean(): Promise<{
+  itens: EstoqueItemRow[];
+  equips: EstoqueEquipamentoRow[];
+  lotes: EstoqueJogoLoteRow[];
+}> {
+  const [it, eq, jl] = await Promise.all([
+    supabase
+      .from("tech_ops_estoque_itens")
+      .select("id, codigo_num, nome, quantidade_total, quantidade_em_uso, quantidade_manutencao")
+      .eq("ativo", true)
+      .order("codigo_num", { ascending: true }),
+    supabase
+      .from("tech_ops_estoque_equipamentos")
+      .select("id, codigo_num, nome, status")
+      .eq("ativo", true)
+      .eq("status", "estoque")
+      .order("codigo_num", { ascending: true }),
+    supabase
+      .from("tech_ops_estoque_jogo_lotes")
+      .select("id, codigo_num, nome_lote, qtd_inicial, qtd_consumida, qtd_descartada")
+      .eq("ativo", true)
+      .order("codigo_num", { ascending: true }),
   ]);
+  if (it.error) throw it.error;
+  if (eq.error) throw eq.error;
+  if (jl.error) throw jl.error;
+  return {
+    itens: (it.data ?? []) as EstoqueItemRow[],
+    equips: (eq.data ?? []) as EstoqueEquipamentoRow[],
+    lotes: (jl.data ?? []) as EstoqueJogoLoteRow[],
+  };
+}
+
+export async function fetchItensDisponiveisOs(): Promise<OsItemDisponivel[]> {
+  const { itens, equips, lotes } = await fetchCatalogoItensOsLean();
   const out: OsItemDisponivel[] = [];
 
   for (const r of itens) {
@@ -333,13 +362,31 @@ export async function fetchItensDisponiveisOs(): Promise<OsItemDisponivel[]> {
 
 /** Manutenção: lista linhas ativas; maxQtd = Estoque (itens) / Qtd Atual (jogo) — nunca inflar. */
 export async function fetchItensManutencaoOs(): Promise<OsItemDisponivel[]> {
-  const [itens, equips, lotes] = await Promise.all([
-    fetchEstoqueItens(),
-    fetchEstoqueEquipamentos(),
-    fetchEstoqueJogoLotes(),
+  const [it, eq, jl] = await Promise.all([
+    supabase
+      .from("tech_ops_estoque_itens")
+      .select("id, codigo_num, nome, quantidade_total, quantidade_em_uso, quantidade_manutencao")
+      .eq("ativo", true)
+      .order("codigo_num", { ascending: true }),
+    supabase
+      .from("tech_ops_estoque_equipamentos")
+      .select("id, codigo_num, nome, status")
+      .eq("ativo", true)
+      .order("codigo_num", { ascending: true }),
+    supabase
+      .from("tech_ops_estoque_jogo_lotes")
+      .select("id, codigo_num, nome_lote, qtd_inicial, qtd_consumida, qtd_descartada")
+      .eq("ativo", true)
+      .order("codigo_num", { ascending: true }),
   ]);
+  if (it.error) throw it.error;
+  if (eq.error) throw eq.error;
+  if (jl.error) throw jl.error;
+  const itens = (it.data ?? []) as EstoqueItemRow[];
+  const equips = (eq.data ?? []) as EstoqueEquipamentoRow[];
+  const lotes = (jl.data ?? []) as EstoqueJogoLoteRow[];
   const out: OsItemDisponivel[] = [];
-  for (const r of itens as EstoqueItemRow[]) {
+  for (const r of itens) {
     const est = estoqueDisponivelItem(r);
     out.push({
       entidade_tipo: "item",
@@ -348,7 +395,7 @@ export async function fetchItensManutencaoOs(): Promise<OsItemDisponivel[]> {
       maxQtd: est,
     });
   }
-  for (const r of equips as EstoqueEquipamentoRow[]) {
+  for (const r of equips) {
     out.push({
       entidade_tipo: "equipamento",
       entidade_id: r.id,
@@ -356,7 +403,7 @@ export async function fetchItensManutencaoOs(): Promise<OsItemDisponivel[]> {
       maxQtd: 1,
     });
   }
-  for (const r of lotes as EstoqueJogoLoteRow[]) {
+  for (const r of lotes) {
     const q = qtdAtualJogoLote(r);
     out.push({
       entidade_tipo: "jogo",
@@ -416,17 +463,39 @@ function mapOsRow(raw: OsFetchRow): OrdemSaidaRow {
   };
 }
 
+const OS_SELECT = `
+  id, tipo, competencia, codigo_num, status,
+  origem_chave, destino_chave, destino_texto, fornecedor_id,
+  data_saida, data_retorno, sem_retorno,
+  data_saida_realizada, data_retorno_realizada,
+  observacao, motivo_cancelamento, cancelado_por_nome, cancelado_em,
+  observacoes_retorno, concluido_por_nome, concluido_em,
+  solicitante_user_id, solicitante_nome, solicitante_time, responsavel_nome,
+  ativo, created_at, updated_at,
+  tech_ops_ordem_saida_itens(id, ordem_id, entidade_tipo, entidade_id, quantidade, label_snapshot, retorno_confirmado),
+  tech_ops_estoque_fornecedores(razao_social)
+`;
+
+/**
+ * Lista OS ativas na janela de 13 competências + qualquer OS ainda aberta
+ * (solicitada/aberta) de competências anteriores — cobre carrossel, multi-mês e Histórico.
+ */
 export async function fetchOrdensSaida(tipo?: OrdemSaidaTipo): Promise<OrdemSaidaRow[]> {
-  let q = supabase
-    .from("tech_ops_ordem_saida")
-    .select("*, tech_ops_ordem_saida_itens(*), tech_ops_estoque_fornecedores(razao_social)")
-    .eq("ativo", true)
-    .order("competencia", { ascending: false })
-    .order("codigo_num", { ascending: false });
-  if (tipo) q = q.eq("tipo", tipo);
-  const { data, error } = await q;
-  if (error) throw error;
-  return ((data ?? []) as OsFetchRow[]).map(mapOsRow);
+  const { inicio } = getPeriodoHistoricoCompetencias();
+  const competenciaInicio = `${inicio.slice(0, 7)}-01`;
+  const rows = await fetchAllPages<OsFetchRow>(async (from, to) => {
+    let q = supabase
+      .from("tech_ops_ordem_saida")
+      .select(OS_SELECT)
+      .eq("ativo", true)
+      .or(`competencia.gte.${competenciaInicio},status.in.(solicitada,aberta)`);
+    if (tipo) q = q.eq("tipo", tipo);
+    return q
+      .order("competencia", { ascending: false })
+      .order("codigo_num", { ascending: false })
+      .range(from, to);
+  });
+  return rows.map(mapOsRow);
 }
 
 export async function fetchHistoricoOrdemSaida(ordemId: string): Promise<
@@ -436,7 +505,8 @@ export async function fetchHistoricoOrdemSaida(ordemId: string): Promise<
     .from("tech_ops_ordem_saida_historico")
     .select("id, acao, detalhe, autor_nome, created_at")
     .eq("ordem_id", ordemId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (error) throw error;
   return (data ?? []) as {
     id: string;

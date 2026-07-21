@@ -60,7 +60,7 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 
 ## Regras
 
-- **Carrossel:** mês corrente + 2 anteriores (`buildMesesOrdemSaida`). Histórico = todo o período.
+- **Carrossel:** mês corrente + 2 anteriores (`buildMesesOrdemSaida`). **Histórico** = 13 competências (`getPeriodoHistoricoCompetencias`); o fetch inclui também OS `solicitada`/`aberta` de competências anteriores (multi-mês).
 - **KPIs:** Total / Solicitadas / Abertas / Concluídas / Canceladas (clicáveis). Sub fixo: `— clique em um card para filtrar por status`.
 - **Multi-mês:** OS `solicitada`/`aberta` de competências anteriores aparecem no mês seguinte até Concluída/Cancelada (`ordemVisivelNoMes`).
 - **Status:** `solicitada` → `aberta` → `concluida` \| `cancelada`. Manutenção: `solicitada` exibe **Registrada**.

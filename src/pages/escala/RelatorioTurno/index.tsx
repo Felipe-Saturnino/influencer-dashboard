@@ -22,7 +22,7 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { getPeriodoHistoricoCompetencias, isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -102,9 +102,10 @@ export default function EscalaRelatorioTurnoPage() {
     setLoading(true);
     setErroLoad(null);
     try {
+      const { inicio, fim } = getPeriodoHistoricoCompetencias();
       const [tRows, eRows] = await Promise.all([
-        listarRelatoriosTurno({}),
-        listarRelatoriosEstudio({}),
+        listarRelatoriosTurno({ dataIni: inicio, dataFim: fim }),
+        listarRelatoriosEstudio({ dataIni: inicio, dataFim: fim }),
       ]);
       setRowsTurno(tRows);
       setRowsEstudio(eRows);

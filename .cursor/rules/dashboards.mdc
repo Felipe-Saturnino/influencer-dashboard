@@ -135,7 +135,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Overview (histórico):** KPIs snapshot + tabela Mês a Mês (Data, Headcount, Contratação, Distrato, Turnover).
 - **Contratação:** KPIs Abertas / Em andamento / Fechadas; pizza origem (`rh_vaga_candidaturas.origem`); funil `OverviewGenericFunnel` com `showTaxas={false}`; tabela vagas **abertas + em andamento**.
 - **Distratos:** KPIs Distratos / Voluntário / Não voluntário / Permanência (só no modo mês; dias ≤30 ou meses se >30); lista por área + pizza contrato; tabela ordenada por Data de Término desc.
-- **Dados:** `lib/headcountMetrics.ts` + `useHeadcountDados` — organograma via `carregarOpcoesTimesOrganograma`.
+- **Dados:** `lib/headcountMetrics.ts` + `useHeadcountDados` — organograma via `carregarOpcoesTimesOrganograma`; listagens com **`fetchAllPages`** (evitar truncamento PostgREST ~1000); vagas na janela 13 competências + abertas; candidaturas filtradas aos IDs carregados.
 - **Migrations:** `20261023120000_dash_headcount_page.sql`, `20261023130000_dash_headcount_candidaturas_rls.sql`.
 
 ### Strings de vazio (Headcount)

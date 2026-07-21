@@ -4,8 +4,10 @@ import {
   getDatasDoMes,
   getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
+  getPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import {
@@ -89,23 +91,30 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
     setLoading(true);
     setErro(null);
     try {
-      const [fr, hr, vr, cr, org] = await Promise.all([
-        supabase
-          .from("rh_funcionarios")
-          .select(
-            "id, status, nome, tipo_contrato, area_atuacao, org_diretoria_id, org_gerencia_id, org_time_id, data_inicio, data_desligamento",
-          )
-          .order("nome")
-          .limit(5000),
-        supabase
-          .from("rh_funcionario_historico")
-          .select("rh_funcionario_id, detalhes")
-          .eq("tipo", "termino_prestacao")
-          .limit(5000),
-        supabase
-          .from("rh_vagas")
-          .select(
-            `
+      const { inicio: histInicio } = getPeriodoHistoricoCompetencias();
+      const [funcsRows, histRows, vagasRows, candRows, org] = await Promise.all([
+        fetchAllPages(async (from, to) =>
+          supabase
+            .from("rh_funcionarios")
+            .select(
+              "id, status, nome, tipo_contrato, area_atuacao, org_diretoria_id, org_gerencia_id, org_time_id, data_inicio, data_desligamento",
+            )
+            .order("nome")
+            .range(from, to),
+        ),
+        fetchAllPages(async (from, to) =>
+          supabase
+            .from("rh_funcionario_historico")
+            .select("rh_funcionario_id, detalhes")
+            .eq("tipo", "termino_prestacao")
+            .order("created_at", { ascending: false })
+            .range(from, to),
+        ),
+        fetchAllPages(async (from, to) =>
+          supabase
+            .from("rh_vagas")
+            .select(
+              `
             id, titulo, tipo_vaga, status, data_abertura, data_fim_inscricoes,
             org_diretoria_id, org_gerencia_id, org_time_id, repasse_inicial_centavos,
             org_time:rh_org_times (
@@ -121,15 +130,23 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
             ),
             org_diretoria:rh_org_diretorias ( id, nome )
           `,
-          )
-          .order("data_abertura", { ascending: false })
-          .limit(200),
-        supabase.from("rh_vaga_candidaturas").select("id, vaga_id, etapa, origem").limit(5000),
+            )
+            .or(`data_abertura.gte.${histInicio},status.in.(aberta,em_andamento)`)
+            .order("data_abertura", { ascending: false })
+            .range(from, to),
+        ),
+        fetchAllPages(async (from, to) =>
+          supabase
+            .from("rh_vaga_candidaturas")
+            .select("id, vaga_id, etapa, origem")
+            .order("id")
+            .range(from, to),
+        ),
         carregarOpcoesTimesOrganograma(),
       ]);
 
-      if (fr.error || hr.error || vr.error || cr.error || org.error) {
-        console.error(fr.error ?? hr.error ?? vr.error ?? cr.error ?? org.error);
+      if (org.error) {
+        console.error(org.error);
         setErro("Não foi possível carregar o Headcount. Se o problema persistir, entre em contato com o suporte.");
         setFuncionarios([]);
         setTerminos([]);
@@ -149,10 +166,9 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
         .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
       setDiretorias(dirs);
 
-      const funcs = ((fr.data ?? []) as Omit<
-        HeadcountFuncionarioRow,
-        "orgLabelMenor" | "gerenciaNome" | "timeNome"
-      >[]).map((r) => {
+      const funcs = (
+        funcsRows as Omit<HeadcountFuncionarioRow, "orgLabelMenor" | "gerenciaNome" | "timeNome">[]
+      ).map((r) => {
         const v = encontrarVinculoParaFuncionarioRow(r, vinculos);
         const orgLabelMenor =
           v?.timeNome?.trim() ||
@@ -164,11 +180,13 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
         return { ...r, orgLabelMenor, gerenciaNome, timeNome };
       });
       setFuncionarios(funcs);
-      setTerminos(parseTerminos((hr.data ?? []) as { rh_funcionario_id: string; detalhes: Record<string, unknown> | null }[]));
+      setTerminos(
+        parseTerminos(histRows as { rh_funcionario_id: string; detalhes: Record<string, unknown> | null }[]),
+      );
 
-      const vagasMapped: HeadcountVagaRow[] = ((vr.data ?? []) as Record<string, unknown>[]).map((raw) => {
+      const vagasMapped: HeadcountVagaRow[] = (vagasRows as Record<string, unknown>[]).map((raw) => {
         const row = raw as HeadcountVagaRow & {
-          org_time?: HeadcountVagaRow extends never ? never : unknown;
+          org_time?: unknown;
           org_gerencia?: unknown;
           org_diretoria?: unknown;
         };
@@ -188,7 +206,18 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
         };
       });
       setVagas(vagasMapped);
-      setCandidaturas((cr.data ?? []) as HeadcountCandidaturaRow[]);
+      const vagaIds = new Set(vagasMapped.map((v) => v.id));
+      setCandidaturas(
+        (candRows as HeadcountCandidaturaRow[]).filter((c) => vagaIds.has(c.vaga_id)),
+      );
+    } catch (err) {
+      console.error(err);
+      setErro("Não foi possível carregar o Headcount. Se o problema persistir, entre em contato com o suporte.");
+      setFuncionarios([]);
+      setTerminos([]);
+      setVagas([]);
+      setCandidaturas([]);
+      setDiretorias([]);
     } finally {
       setLoading(false);
     }

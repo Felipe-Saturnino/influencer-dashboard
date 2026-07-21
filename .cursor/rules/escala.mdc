@@ -52,6 +52,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Menu:** Escala, após Gestão de Staff. **h1** = Relatório de Turno. **Subtítulo:** «Registre e consulte os relatórios de turno e de estúdio da operação.»
 - **Abas (`useRouteTab`):** Relatório do Turno | Relatório de Estúdio (`FiltroBarTabButton`).
 - **Filtros:** carrossel de mês (`getMesesDisponiveisEscalaCarrossel`) + `FiltroHistoricoButton` + busca (`BarraPesquisaPagina`).
+- **Carga:** `listarRelatoriosTurno/Estudio` com `dataIni`/`dataFim` = `getPeriodoHistoricoCompetencias()` (não `limit` sem janela).
 - **Relatório do Turno:** tabela Data / Turno / Relator / Escalados / Absenteísmo / Ver. Escalados = soma GP de todos os blocos de estúdio + Shuffler Escalados. Absenteísmo = soma Atrasos/Faltas/Atestados. Modal Novo: **Data do turno** (ontem/hoje, default inteligente antes de 12h SP) + hint; Responsável travado; Turno Manhã/Tarde/Noite; um bloco por estúdio ativo (`estudios_spin`); bloco Shufflers; Geral; **Publicar**.
 - **Relatório de Estúdio:** tabela Data / Turno / Relator / SOS / Sinais / Payout / Manutenções / Ver. Modal: **Data do turno** (mesmo critério); Responsável travado; Turno Manhã/Noite; SOSs, Sinais e Payout **numéricos**; Resumo; checklist Manutenção (Roletas, Mesas, CC Machine, Cartas Contadas). RPC `escala_relatorio_turno_opcoes_manutencao` (roletas com match flexível em `tipo_jogo`/`nome_mesa`, incl. Sports Club).
 - **Permissões:** seed Ver/Criar/Editar/Excluir = Não (exceto Admin). Tabelas `escala_relatorio_turno*` / `escala_relatorio_estudio`.

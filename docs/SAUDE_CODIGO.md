@@ -1,6 +1,6 @@
 # Relatório de Saúde do Código — Data Intelligence (Spin Gaming)
 
-*Última verificação: julho 2026 (Fase 5 eficiência pré-i18n)*
+*Última verificação: julho 2026 (Fase 7 — eficiência das features novas)*
 
 ---
 
@@ -13,6 +13,7 @@
 | **Mobile readiness** | ⚠️ Parcial | Layout fixo; 1 breakpoint em CSS |
 | **Otimizações de rede** | ✅ OK | Preconnect para fonts |
 | **Build TypeScript** | ✅ OK | `npm run typecheck` no pre-commit; ver Global § TypeScript pré-deploy |
+| **Fetch (features novas)** | ✅ Fase 7 | Janela SQL + `fetchAllPages` + colunas explícitas — ver Global § Eficiência de fetch |
 
 ---
 
@@ -62,7 +63,19 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 | **Banca de Jogo** | Dump all-time → janela de 13 competências (`solicitado_em`/`liberado_em`); colunas explícitas; catálogos em `Promise.all`. |
 | **Portal RH / Academy (leitura)** | SQL com `status = publicado` + `published_at` na janela histórica; join de categoria estreito; receipts/participantes/autores em paralelo. |
 
-Pendências conscientes (próximas ondas): paginação server-side no Gerenciamento dos portais; N+1 da aprovação mensal do Calendário; virtualização Escala/Prestadores (Fases 7–8).
+Pendências conscientes (próximas ondas): paginação server-side no Gerenciamento dos portais; N+1 da aprovação mensal do Calendário; virtualização Escala/Prestadores (Fases 8–9).
+
+### Fase 7 — Features novas (jul/2026)
+
+| Área | Correção |
+|------|----------|
+| **Ordem de Saída** | Fetch com janela 13 competências + OS abertas; colunas explícitas; catálogo lean para Nova OS; estúdios no `Promise.all`; histórico de ações com `.limit(200)`. Histórico alinhado ao Global (13 competências). |
+| **Relatório de Turno** | `dataIni`/`dataFim` = `getPeriodoHistoricoCompetencias()` no load. |
+| **Performance Hub** | Avaliações com janela 13 competências + `fetchAllPages`. |
+| **Headcount** | `fetchAllPages` (evita truncamento ~1000); vagas na janela + abertas; candidaturas filtradas aos IDs; organograma com colunas explícitas. |
+| **Portal Academy / Portal RH** | Colunas explícitas; receipts via `.in(content_id)` do conjunto carregado. |
+
+Padrão transversal documentado em **`.cursor/rules/global.mdc` § Eficiência de fetch**.
 
 ### Carga em duas fases (padrão para janelas históricas pesadas)
 
