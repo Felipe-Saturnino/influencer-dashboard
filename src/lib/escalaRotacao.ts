@@ -21,6 +21,7 @@ export type RotacaoGpPool = {
 export type RotacaoMesa = {
   id: string;
   mesaIdentificacao: string;
+  numeroMesa: string;
   nomeMesa: string;
   tipoJogo: string;
 };
@@ -95,6 +96,70 @@ export function corMesaPorTipoJogo(tipoJogo: string): string {
   return GAME_IDENTITY_HEX[key];
 }
 
+/** Hash estável para variar tom por mesa (mesmo jogo, mesas distintas). */
+function hashRotacaoSeed(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Cor da célula na grade: base = identidade do jogo;
+ * tonalidades distintas por Número da Mesa (evita confusão entre mesas do mesmo jogo).
+ */
+export function tomVarianteJogo(baseHex: string, index: number): string {
+  if (baseHex === "#6b7280") return baseHex;
+  const mixes = [
+    baseHex,
+    `color-mix(in srgb, ${baseHex} 72%, white)`,
+    `color-mix(in srgb, ${baseHex} 68%, black)`,
+    `color-mix(in srgb, ${baseHex} 52%, white)`,
+    `color-mix(in srgb, ${baseHex} 48%, black)`,
+    `color-mix(in srgb, ${baseHex} 60%, white)`,
+    `color-mix(in srgb, ${baseHex} 58%, black)`,
+    `color-mix(in srgb, ${baseHex} 40%, white)`,
+  ];
+  return mixes[index % mixes.length]!;
+}
+
+/** Mapa Número da Mesa → cor (mesmas família por jogo, tons distintos entre mesas). */
+export function mapaCoresMesasRotacao(
+  mesas: { numeroMesa: string; tipoJogo: string }[],
+): Record<string, string> {
+  const porTipo = new Map<string, string[]>();
+  for (const m of mesas) {
+    const n = m.numeroMesa.trim();
+    if (!n) continue;
+    const list = porTipo.get(m.tipoJogo) ?? [];
+    if (!list.includes(n)) list.push(n);
+    porTipo.set(m.tipoJogo, list);
+  }
+  const out: Record<string, string> = {};
+  for (const [tipo, numeros] of porTipo) {
+    const base = corMesaPorTipoJogo(tipo);
+    const ordenados = [...numeros].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
+    ordenados.forEach((n, i) => {
+      out[n] = tomVarianteJogo(base, i);
+    });
+  }
+  return out;
+}
+
+/** Fallback estável quando só há o rótulo da célula (ex.: rotação publicada sem catálogo). */
+export function corMesaRotacao(tipoJogo: string, numeroMesa: string): string {
+  const base = corMesaPorTipoJogo(tipoJogo);
+  if (base === "#6b7280" || !numeroMesa.trim()) return base;
+  return tomVarianteJogo(base, hashRotacaoSeed(numeroMesa.trim()) % 8);
+}
+
+/** True se a linha inteira é falta (legado F ou X). */
+export function celulaEhFalta(valor: string): boolean {
+  return valor === "X" || valor === "F";
+}
+
 export function minutosDesdeMeiaNoite(hhmm: string): number {
   const m = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim());
   if (!m) return 0;
@@ -139,19 +204,19 @@ export function sugerirModeloN(elegiveis: number): RotacaoModeloN {
 
 /** Matriz N × slots a partir das mesas do estúdio (ciclo + breaks). */
 export function gerarPatternRotacao(
-  mesasIds: string[],
+  mesasLabels: string[],
   nPeople: number,
   nSlots: number,
 ): string[][] {
-  if (mesasIds.length === 0 || nPeople <= 0 || nSlots <= 0) return [];
-  const breakEvery = Math.max(2, Math.ceil(mesasIds.length / Math.max(1, nPeople - 1)));
+  if (mesasLabels.length === 0 || nPeople <= 0 || nSlots <= 0) return [];
+  const breakEvery = Math.max(2, Math.ceil(mesasLabels.length / Math.max(1, nPeople - 1)));
   const rows: string[][] = [];
   for (let p = 0; p < nPeople; p++) {
     const row: string[] = [];
     for (let s = 0; s < nSlots; s++) {
       const phase = s + p;
-      if (phase % (breakEvery + 1) === breakEvery) row.push("B");
-      else row.push(mesasIds[phase % mesasIds.length]!);
+      if (phase % (breakEvery + 1) === breakEvery) row.push("Break");
+      else row.push(mesasLabels[phase % mesasLabels.length]!);
     }
     rows.push(row);
   }
@@ -188,6 +253,7 @@ function mapContexto(raw: Record<string, unknown>): RotacaoContextoDia {
       return {
         id: String(row.id ?? ""),
         mesaIdentificacao: String(row.mesa_identificacao ?? "").trim(),
+        numeroMesa: String(row.numero_mesa ?? "").trim(),
         nomeMesa: String(row.nome_mesa ?? "").trim(),
         tipoJogo: String(row.tipo_jogo ?? "").trim(),
       };
@@ -302,7 +368,7 @@ export async function carregarRotacaoPublicada(opts: {
 
   for (const [fid, entry] of ordenados) {
     const vals = slots.map((s) => entry.slots.get(s) ?? "—");
-    const soFalta = vals.length > 0 && vals.every((v) => v === "F");
+    const soFalta = vals.length > 0 && vals.every((v) => celulaEhFalta(v));
     if (soFalta) {
       faltosos.push({
         funcionarioId: fid,

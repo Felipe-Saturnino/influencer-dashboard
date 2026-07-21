@@ -855,7 +855,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Rotação",
         definicao:
-          "Grade que posiciona Game Presenters nas mesas do estúdio ao longo do turno, em intervalos de 20 ou 30 minutos. O pool vem da escala aprovada (somente GPs 4×2); a publicação arquiva a rotação anterior do mesmo dia, turno e estúdio.",
+          "Grade que posiciona Game Presenters nas mesas do estúdio ao longo do turno, em intervalos de 20 ou 30 minutos. O pool vem da escala aprovada (somente GPs 4×2); as células usam o Número da Mesa, Break ou X (falta). A publicação arquiva a rotação anterior do mesmo dia, turno e estúdio.",
         referencia: "Rotação",
       },
       {

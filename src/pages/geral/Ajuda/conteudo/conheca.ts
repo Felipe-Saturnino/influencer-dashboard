@@ -769,7 +769,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Rotação Atual",
         texto:
-          "Consulta a rotação **publicada** para o mesmo dia, turno e estúdio. Células: ID da mesa, **B** (break) ou **F** (falta). Sem publicação, a mensagem de vazio indica ausência de rotação no período.",
+          "Consulta a rotação **publicada** para o mesmo dia, turno e estúdio. Células: **Número da Mesa**, **Break** ou **X** (falta). Sem publicação, a mensagem de vazio indica ausência de rotação no período.",
       },
     ],
   },

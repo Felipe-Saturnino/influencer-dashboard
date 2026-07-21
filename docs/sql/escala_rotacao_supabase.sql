@@ -1,11 +1,14 @@
 -- =============================================================================
--- HISTORICO NO REPO (supabase/migrations)
--- Este ficheiro existe so para versionamento no Git. O Supabase CLI nao esta
--- plugado ao deploy — NAO e a fonte operacional.
+-- COPIAR E COLAR NO SUPABASE SQL BROWSER
+-- Pagina: Escala -> Rotacao (page_key escala_rotacao)
 --
--- Para aplicar no projeto: copie e cole
---   docs/sql/escala_rotacao_supabase.sql
--- no SQL Editor do Supabase (Dashboard -> SQL -> New query -> Run).
+-- Como usar:
+--   1. Abra o Dashboard Supabase -> SQL Editor -> New query
+--   2. Cole ESTE arquivo inteiro
+--   3. Run
+--
+-- Idempotente: pode rodar mais de uma vez sem erro.
+-- Espelho no Git (so historico): supabase/migrations/20261021120000_escala_rotacao.sql
 -- =============================================================================
 
 -- ─── 1) Permissão ────────────────────────────────────────────────────────────

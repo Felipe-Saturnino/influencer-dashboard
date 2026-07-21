@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Sparkles, Table2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -27,12 +27,13 @@ import { ESTUDIO_FILTRO_TODOS_VALUE } from "../../../components/FiltroEstudioSel
 import {
   carregarContextoRotacaoDia,
   carregarRotacaoPublicada,
-  corMesaPorTipoJogo,
+  corMesaRotacao,
   diaIsoLocal,
   formatDiaRotacaoLabel,
   gerarPatternRotacao,
   gerarSlotsRotacao,
   listarEstudiosAtivosRotacao,
+  mapaCoresMesasRotacao,
   publicarRotacao,
   ROTACAO_MODELOS,
   ROTACAO_TURNO_OPCOES,
@@ -62,11 +63,13 @@ type PreviaState = {
 function CellValor({
   valor,
   mesaTipo,
+  mesaCores,
 }: {
   valor: string;
   mesaTipo: Record<string, string>;
+  mesaCores: Record<string, string>;
 }) {
-  if (valor === "B") {
+  if (valor === "Break" || valor === "B") {
     return (
       <span
         style={{
@@ -80,11 +83,11 @@ function CellValor({
           border: "1px solid color-mix(in srgb, #f59e0b 40%, transparent)",
         }}
       >
-        B
+        Break
       </span>
     );
   }
-  if (valor === "F") {
+  if (valor === "X" || valor === "F") {
     return (
       <span
         style={{
@@ -98,12 +101,12 @@ function CellValor({
           border: "1px solid color-mix(in srgb, #e84025 35%, transparent)",
         }}
       >
-        F
+        X
       </span>
     );
   }
   if (!valor || valor === "—") return <span style={{ color: "#6b7280" }}>—</span>;
-  const cor = corMesaPorTipoJogo(mesaTipo[valor] ?? "");
+  const cor = mesaCores[valor] ?? corMesaRotacao(mesaTipo[valor] ?? "", valor);
   return (
     <span
       title={valor}
@@ -113,13 +116,66 @@ function CellValor({
         borderRadius: 8,
         fontWeight: 700,
         fontSize: 11,
-        background: `color-mix(in srgb, ${cor} 15%, transparent)`,
+        background: `color-mix(in srgb, ${cor} 18%, transparent)`,
         color: cor,
-        border: `1px solid color-mix(in srgb, ${cor} 35%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${cor} 40%, transparent)`,
       }}
     >
       {valor}
     </span>
+  );
+}
+
+const STICKY_GP_W = 168;
+
+function CelulaGpIdentidade({
+  nome,
+  nickname,
+  textMuted,
+  style,
+}: {
+  nome: string;
+  nickname: string;
+  textMuted: string;
+  style: CSSProperties;
+}) {
+  const nick = nickname.trim() && nickname !== "—" ? nickname : null;
+  return (
+    <td style={style} title={nick ? `${nome} · ${nick}` : nome}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-start", minWidth: 0 }}>
+        <span
+          style={{
+            fontWeight: 600,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            lineHeight: 1.25,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: "100%",
+          }}
+        >
+          {nome}
+        </span>
+        {nick ? (
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 500,
+              fontFamily: FONT.body,
+              color: textMuted,
+              lineHeight: 1.2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "100%",
+            }}
+          >
+            {nick}
+          </span>
+        ) : null}
+      </div>
+    </td>
   );
 }
 
@@ -129,6 +185,7 @@ function GradeRotacao({
   faltosos,
   matrix,
   mesaTipo,
+  mesaCores,
   dataTable,
   t,
 }: {
@@ -137,9 +194,21 @@ function GradeRotacao({
   faltosos: { nomeExibicao: string; nickname: string }[];
   matrix: string[][];
   mesaTipo: Record<string, string>;
+  mesaCores: Record<string, string>;
   dataTable: ReturnType<typeof useDataTableBlock>;
-  t: { cardBorder: string };
+  t: { textMuted: string };
 }) {
+  const estiloStickyGp = (rowIndex: number): CSSProperties => ({
+    ...dataTable.tdSticky({ rowIndex, minWidth: STICKY_GP_W }),
+    left: 0,
+    width: STICKY_GP_W,
+    maxWidth: STICKY_GP_W,
+    textAlign: "left",
+    verticalAlign: "middle",
+    padding: "8px 12px",
+    zIndex: 3,
+  });
+
   return (
     <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
       <table style={getDataTableStyle({ minWidth: 720 })}>
@@ -147,81 +216,63 @@ function GradeRotacao({
         <thead>
           <tr>
             <th
-              scope="colgroup"
-              colSpan={2}
-              style={{ ...dataTable.thHeaderSticky, textAlign: "center", left: 0 }}
+              scope="col"
+              style={{
+                ...dataTable.thHeaderSticky,
+                left: 0,
+                width: STICKY_GP_W,
+                minWidth: STICKY_GP_W,
+                maxWidth: STICKY_GP_W,
+                textAlign: "left",
+                zIndex: 5,
+                padding: "10px 12px",
+              }}
             >
               Game Presenter
             </th>
             {slots.map((s) => (
-              <th key={s} scope="col" style={dataTable.thHeader} rowSpan={2}>
+              <th key={s} scope="col" style={dataTable.thHeader}>
                 {s}
               </th>
             ))}
-          </tr>
-          <tr>
-            <th scope="col" style={{ ...dataTable.thHeaderSticky, left: 0, minWidth: 140 }}>
-              Nome
-            </th>
-            <th
-              scope="col"
-              style={{
-                ...dataTable.thHeaderSticky,
-                left: 140,
-                minWidth: 100,
-                boxShadow: "2px 0 4px rgba(0,0,0,.06)",
-              }}
-            >
-              Nickname
-            </th>
           </tr>
         </thead>
         <tbody>
           {gps.map((g, i) => (
             <tr key={`gp-${i}`} style={{ background: dataTable.zebraRow(i) }}>
-              <td style={{ ...dataTable.tdSticky, textAlign: "left", left: 0 }} title={g.nomeExibicao}>
-                {g.nomeExibicao}
-              </td>
-              <td
-                style={{
-                  ...dataTable.tdSticky,
-                  left: 140,
-                  boxShadow: "2px 0 4px rgba(0,0,0,.06)",
-                }}
-              >
-                {g.nickname}
-              </td>
+              <CelulaGpIdentidade
+                nome={g.nomeExibicao}
+                nickname={g.nickname}
+                textMuted={t.textMuted}
+                style={estiloStickyGp(i)}
+              />
               {(matrix[i] ?? []).map((v, si) => (
                 <td key={si} style={dataTable.tdCenter}>
-                  <CellValor valor={v} mesaTipo={mesaTipo} />
+                  <CellValor valor={v} mesaTipo={mesaTipo} mesaCores={mesaCores} />
                 </td>
               ))}
             </tr>
           ))}
-          {faltosos.map((g, i) => (
-            <tr key={`f-${i}`} style={{ background: dataTable.zebraRow(gps.length + i) }}>
-              <td style={{ ...dataTable.tdSticky, textAlign: "left", left: 0 }}>{g.nomeExibicao}</td>
-              <td
-                style={{
-                  ...dataTable.tdSticky,
-                  left: 140,
-                  boxShadow: "2px 0 4px rgba(0,0,0,.06)",
-                }}
-              >
-                {g.nickname}
-              </td>
-              {slots.map((s) => (
-                <td key={s} style={dataTable.tdCenter}>
-                  <CellValor valor="F" mesaTipo={mesaTipo} />
-                </td>
-              ))}
-            </tr>
-          ))}
+          {faltosos.map((g, i) => {
+            const rowIndex = gps.length + i;
+            return (
+              <tr key={`f-${i}`} style={{ background: dataTable.zebraRow(rowIndex) }}>
+                <CelulaGpIdentidade
+                  nome={g.nomeExibicao}
+                  nickname={g.nickname}
+                  textMuted={t.textMuted}
+                  style={estiloStickyGp(rowIndex)}
+                />
+                {slots.map((s) => (
+                  <td key={s} style={dataTable.tdCenter}>
+                    <CellValor valor="X" mesaTipo={mesaTipo} mesaCores={mesaCores} />
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
-      <div style={{ fontSize: 11, color: "#6b7280", marginTop: 10, borderTop: `1px solid ${t.cardBorder}`, paddingTop: 10 }}>
-        B = Break · F = Falta · IDs = mesa_identificacao (Gestão de Mesas)
-      </div>
     </div>
   );
 }
@@ -334,10 +385,15 @@ export default function EscalaRotacaoPage() {
   const mesaTipoMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const mesa of ctx?.mesas ?? []) {
-      if (mesa.mesaIdentificacao) m[mesa.mesaIdentificacao] = mesa.tipoJogo;
+      if (mesa.numeroMesa) m[mesa.numeroMesa] = mesa.tipoJogo;
     }
     return m;
   }, [ctx]);
+
+  const mesaCoresMap = useMemo(
+    () => mapaCoresMesasRotacao(ctx?.mesas ?? []),
+    [ctx],
+  );
 
   const onModeloChange = (n: RotacaoModeloN) => {
     setModeloN(n);
@@ -354,15 +410,17 @@ export default function EscalaRotacaoPage() {
       );
       return;
     }
-    if (!ctx.mesas.length) {
-      setErroPub("Este estúdio não tem mesas cadastradas em Gestão de Mesas.");
+    const numeros = ctx.mesas.map((m) => m.numeroMesa).filter(Boolean);
+    if (!numeros.length) {
+      setErroPub(
+        "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.",
+      );
       return;
     }
     const step = slotMinutosPermitido(modeloN, slotMin);
     const slots = gerarSlotsRotacao(ctx.turnoInicio, ctx.turnoFim, step);
     const used = elegiveis.slice(0, modeloN);
-    const ids = ctx.mesas.map((m) => m.mesaIdentificacao).filter(Boolean);
-    const matrix = gerarPatternRotacao(ids, modeloN, slots.length);
+    const matrix = gerarPatternRotacao(numeros, modeloN, slots.length);
     setPrevia({
       slots,
       gps: used,
@@ -407,7 +465,7 @@ export default function EscalaRotacaoPage() {
           nickname: g.nickname === "—" ? "" : g.nickname,
           linha_ordem: previa.gps.length + i,
           slot_inicio: slot,
-          valor: "F",
+          valor: "X",
         });
       });
     });
@@ -567,7 +625,7 @@ export default function EscalaRotacaoPage() {
             <>
               <div style={pageBox}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-                  <SectionTitle sub="Escala aprovada 4×2 + Staff + Gestão de Mesas">
+                  <SectionTitle sub="Escala aprovada">
                     Pool do turno
                   </SectionTitle>
                   {perm.canCriarOk && (
@@ -615,7 +673,7 @@ export default function EscalaRotacaoPage() {
                     { l: "Escalados", v: String(pool.length) },
                     { l: "Faltas", v: String(faltasCount), c: "#e84025" },
                     { l: "Elegíveis (N)", v: String(elegiveis.length) },
-                    { l: "Horário 4×2", v: ctx?.horarioTexto ?? "—", sm: true },
+                    { l: "Horário", v: ctx?.horarioTexto ?? "—", sm: true },
                   ].map((k) => (
                     <div
                       key={k.l}
@@ -813,6 +871,7 @@ export default function EscalaRotacaoPage() {
                     faltosos={previa.faltosos}
                     matrix={previa.matrix}
                     mesaTipo={previa.mesaTipo}
+                    mesaCores={mesaCoresMap}
                     dataTable={dataTable}
                     t={t}
                   />
@@ -855,6 +914,7 @@ export default function EscalaRotacaoPage() {
                 faltosos={publicada.faltosos}
                 matrix={publicada.matrix}
                 mesaTipo={mesaTipoMap}
+                mesaCores={mesaCoresMap}
                 dataTable={dataTable}
                 t={t}
               />
