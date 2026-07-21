@@ -184,7 +184,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O HC do Histórico parece diferente do cadastro atual?",
         texto:
-          "A evolução mensal é reconstruída pelas datas de início e desligamento dos prestadores. Não existe snapshot mensal auditável na base — use o número como tendência, não como fechamento contábil de headcount. A visualização acumulada do botão Histórico ainda será liberada.",
+          "A evolução mensal é reconstruída pelas datas de início e desligamento dos prestadores. Não existe snapshot mensal auditável na base — use o número como tendência, não como fechamento contábil de headcount. No **Histórico**, a Overview mostra a tabela Mês a Mês dos últimos 13 meses; Contratação e Distratos agregam o mesmo intervalo.",
       },
     ],
   },

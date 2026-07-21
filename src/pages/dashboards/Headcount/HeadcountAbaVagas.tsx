@@ -24,12 +24,13 @@ import { HeadcountKpiCard } from "./HeadcountKpiCard";
 const PIE_CORES = ["#1e36f8", "#22c55e", "#f59e0b", "#a78bfa", "#14b8a6", "#e84025", "#6b7280"] as const;
 
 type Props = {
+  historico: boolean;
   metricas: HeadcountVagasMetricas;
   anterior: HeadcountVagasMetricas;
   loading: boolean;
 };
 
-type SortCol = "titulo" | "tipo" | "org" | "abertura" | "encerramento" | "repasse" | "candidatos" | "status";
+type SortCol = "titulo" | "tipo" | "abertura" | "encerramento" | "repasse" | "candidatos" | "status";
 
 function fmtData(iso: string | null): string {
   if (!iso) return "—";
@@ -38,7 +39,7 @@ function fmtData(iso: string | null): string {
   return `${d}/${m}/${y}`;
 }
 
-export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
+export function HeadcountAbaVagas({ historico, metricas, anterior, loading }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
@@ -53,8 +54,6 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
           return compareLocaleTexto(a.titulo, b.titulo, sort.dir);
         case "tipo":
           return compareLocaleTexto(a.tipoLabel, b.tipoLabel, sort.dir);
-        case "org":
-          return compareLocaleTexto(a.organograma, b.organograma, sort.dir);
         case "abertura":
           return compareLocaleTexto(a.dataAbertura ?? "", b.dataAbertura ?? "", sort.dir);
         case "encerramento":
@@ -96,7 +95,9 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle sub="status das vagas e candidaturas no mês">KPIs Consolidados</SectionTitle>
+        <SectionTitle sub={historico ? "status das vagas e candidaturas no período" : "status das vagas e candidaturas no mês"}>
+          KPIs Consolidados
+        </SectionTitle>
         <div className="app-grid-kpi-3" style={{ gap: 12 }}>
           <HeadcountKpiCard
             label="Vagas Abertas"
@@ -104,7 +105,7 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
             icon={<Briefcase size={16} aria-hidden />}
             accentVar="--brand-action"
             accentColor={brand.primary}
-            anteriorLabel={String(anterior.abertas)}
+            anteriorLabel={historico ? undefined : String(anterior.abertas)}
           />
           <HeadcountKpiCard
             label="Vagas Em Andamento"
@@ -112,7 +113,7 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
             icon={<Briefcase size={16} aria-hidden />}
             accentVar="--brand-contrast"
             accentColor={brand.accent}
-            anteriorLabel={String(anterior.emAndamento)}
+            anteriorLabel={historico ? undefined : String(anterior.emAndamento)}
           />
           <HeadcountKpiCard
             label="Vagas Fechadas"
@@ -120,7 +121,7 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
             icon={<CheckCircle2 size={16} aria-hidden />}
             accentVar="--brand-action"
             accentColor={brand.primary}
-            anteriorLabel={String(anterior.fechadas)}
+            anteriorLabel={historico ? undefined : String(anterior.fechadas)}
           />
         </div>
       </div>
@@ -191,7 +192,6 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
                 <tr>
                   <SortTableTh label="Título da Vaga" col="titulo" sortCol={sort.col} sortDir={sort.dir} onSort={toggleSort} thStyle={dataTable.thHeaderSticky} align="center" />
                   <SortTableTh label="Tipo da Vaga" col="tipo" sortCol={sort.col} sortDir={sort.dir} onSort={toggleSort} thStyle={dataTable.thHeader} align="center" />
-                  <SortTableTh label="Organograma" col="org" sortCol={sort.col} sortDir={sort.dir} onSort={toggleSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Data de Abertura" col="abertura" sortCol={sort.col} sortDir={sort.dir} onSort={toggleSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Data de Encerramento" col="encerramento" sortCol={sort.col} sortDir={sort.dir} onSort={toggleSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Repasse Inicial" col="repasse" sortCol={sort.col} sortDir={sort.dir} onSort={toggleSort} thStyle={dataTable.thHeader} align="center" />
@@ -204,7 +204,6 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
                   <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
                     <td style={dataTable.tdSticky()}>{row.titulo}</td>
                     <td style={dataTable.tdCenter}>{row.tipoLabel}</td>
-                    <td style={dataTable.tdCenter}>{row.organograma}</td>
                     <td style={dataTable.tdCenter}>{fmtData(row.dataAbertura)}</td>
                     <td style={dataTable.tdCenter}>{fmtData(row.dataEncerramento)}</td>
                     <td style={dataTable.tdCenter}>

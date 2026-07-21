@@ -10,8 +10,8 @@ type Props = {
   icon: ReactNode;
   accentVar?: string;
   accentColor: string;
-  /** Valor do mês anterior (linha inferior, sem seta e sem %). */
-  anteriorLabel: string;
+  /** Valor do mês anterior (linha inferior). Omitir no modo Histórico. */
+  anteriorLabel?: string;
 };
 
 /** KPI do Headcount: MoM só com «vs valor · mês ant.» (sem seta e sem percentual). */
@@ -76,15 +76,17 @@ export function HeadcountKpiCard({ label, value, icon, accentVar, accentColor, a
             fontWeight: 800,
             color: t.text,
             fontFamily: FONT.body,
-            marginBottom: 6,
+            marginBottom: anteriorLabel != null ? 6 : 0,
             lineHeight: 1.1,
           }}
         >
           {value}
         </div>
-        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
-          vs {anteriorLabel} · mês ant.
-        </div>
+        {anteriorLabel != null ? (
+          <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
+            vs {anteriorLabel} · mês ant.
+          </div>
+        ) : null}
       </div>
     </div>
   );

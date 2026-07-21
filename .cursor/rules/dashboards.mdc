@@ -129,11 +129,12 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **PageKey:** `dash_headcount` — pasta `Headcount/`; menu Dashboards entre Overview Comercial e Overview Prestador.
 - **Abas:** Overview · Contratação · Distratos (`FiltroBarTabButton` + `useRouteTab`; URLs em `appRoutes.ts`; tabIds `overview` / `vagas` / `distrato`).
 - **Filtros (linha 1):** carrossel de mês + `FiltroHistoricoButton` + Diretoria. Linha 2: abas.
-- **Histórico:** placeholder por agora («visualização será liberada em breve») — layout das abas só no modo mês.
-- **KPIs:** `HeadcountKpiCard` — MoM só com «vs valor · mês ant.» (sem seta e sem percentual).
-- **Overview:** KPIs HC Ativo / Contratação / Distrato + Variação / Turnover / Permanência; pizza HC por gerência (centro = HC Total) + lista com hover por time; barras por tipo de contrato.
+- **Histórico:** Overview com KPIs (HC Ativo, Distrato, Turnover, Permanência Média) + tabela Mês a Mês (13 competências); Contratação e Distratos usam a janela de 13 meses nos mesmos blocos (Distratos sem card Permanência).
+- **KPIs:** `HeadcountKpiCard` — MoM só com «vs valor · mês ant.» no modo mês (sem seta e sem percentual); no Histórico sem linha MoM.
+- **Overview (mês):** KPIs HC Ativo / Contratação / Distrato + Variação / Turnover / Permanência; pizza HC por gerência (centro = HC Total) + lista com hover por time; barras por tipo de contrato.
+- **Overview (histórico):** KPIs snapshot + tabela Mês a Mês (Data, Headcount, Contratação, Distrato, Turnover).
 - **Contratação:** KPIs Abertas / Em andamento / Fechadas; pizza origem (`rh_vaga_candidaturas.origem`); funil `OverviewGenericFunnel` com `showTaxas={false}`; tabela vagas **abertas + em andamento**.
-- **Distratos:** KPIs Distratos / Voluntário / Não voluntário / Permanência (dias ≤30; meses se >30); lista por área + pizza contrato; tabela ordenada por Data de Término desc.
+- **Distratos:** KPIs Distratos / Voluntário / Não voluntário / Permanência (só no modo mês; dias ≤30 ou meses se >30); lista por área + pizza contrato; tabela ordenada por Data de Término desc.
 - **Dados:** `lib/headcountMetrics.ts` + `useHeadcountDados` — organograma via `carregarOpcoesTimesOrganograma`.
 - **Migrations:** `20261023120000_dash_headcount_page.sql`, `20261023130000_dash_headcount_candidaturas_rls.sql`.
 
@@ -142,7 +143,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 | Contexto | String |
 |----------|--------|
 | Sem dados no período/filtros | Sem dados para o período selecionado. |
-| Modo Histórico | A visualização do Histórico será liberada em breve. Selecione um mês no carrossel para ver o Headcount. |
+| Modo Histórico | Overview: snapshot + Mês a Mês (13 meses). Contratação/Distratos: mesmos blocos na janela de 13 meses. |
 | Sem permissão | Você não tem permissão para visualizar este dashboard. |
 
 ---

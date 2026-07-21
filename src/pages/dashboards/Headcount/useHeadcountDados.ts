@@ -16,13 +16,16 @@ import {
 import {
   computarDistrato,
   computarOverview,
+  computarOverviewHistorico,
   computarVagas,
   filtrarPorDiretoria,
   isoDia,
+  periodoHeadcountHistorico,
   type HeadcountCandidaturaRow,
   type HeadcountDiretoriaRef,
   type HeadcountDistratoMetricas,
   type HeadcountFuncionarioRow,
+  type HeadcountOverviewHistoricoMetricas,
   type HeadcountOverviewMetricas,
   type HeadcountTerminoRow,
   type HeadcountVagaRow,
@@ -203,6 +206,18 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
     return getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
   }, [mesSelecionado]);
 
+  const mesRefHistorico = useMemo(() => {
+    const idx = getIdxMesCarrosselPadrao(meses);
+    return meses[idx] ?? meses[meses.length - 1] ?? { ano: new Date().getFullYear(), mes: new Date().getMonth() };
+  }, [meses]);
+
+  const periodoHistorico = useMemo(
+    () => periodoHeadcountHistorico(mesRefHistorico.ano, mesRefHistorico.mes),
+    [mesRefHistorico.ano, mesRefHistorico.mes],
+  );
+
+  const periodoAtivo = historico ? periodoHistorico : periodo;
+
   const periodoAnterior = useMemo(() => {
     const d = new Date(`${periodo.inicio}T12:00:00`);
     d.setMonth(d.getMonth() - 1);
@@ -226,13 +241,17 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
     () => computarOverview(funcionariosFiltrados, periodoAnterior),
     [funcionariosFiltrados, periodoAnterior],
   );
+  const overviewHistorico: HeadcountOverviewHistoricoMetricas = useMemo(
+    () => computarOverviewHistorico(funcionariosFiltrados, mesRefHistorico.ano, mesRefHistorico.mes),
+    [funcionariosFiltrados, mesRefHistorico.ano, mesRefHistorico.mes],
+  );
 
   const vagasMetricas: HeadcountVagasMetricas = useMemo(
     () =>
       computarVagas({
         vagas: vagasFiltradas,
         candidaturas,
-        periodo,
+        periodo: periodoAtivo,
         statusVagaEfetivo: (v) =>
           statusVagaEfetivo({
             status: v.status as "aberta" | "em_andamento" | "concluida" | "cancelada",
@@ -241,7 +260,7 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
         labelStatusVaga: (s) => labelStatusVaga(s as "aberta" | "em_andamento" | "concluida" | "cancelada"),
         labelTipoVaga: (t) => labelTipoVaga(t as "interna" | "externa" | "mista"),
       }),
-    [vagasFiltradas, candidaturas, periodo],
+    [vagasFiltradas, candidaturas, periodoAtivo],
   );
   const vagasAnt: HeadcountVagasMetricas = useMemo(
     () =>
@@ -261,8 +280,8 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
   );
 
   const distrato: HeadcountDistratoMetricas = useMemo(
-    () => computarDistrato({ funcionarios: funcionariosFiltrados, terminos, periodo }),
-    [funcionariosFiltrados, terminos, periodo],
+    () => computarDistrato({ funcionarios: funcionariosFiltrados, terminos, periodo: periodoAtivo }),
+    [funcionariosFiltrados, terminos, periodoAtivo],
   );
   const distratoAnt: HeadcountDistratoMetricas = useMemo(
     () => computarDistrato({ funcionarios: funcionariosFiltrados, terminos, periodo: periodoAnterior }),
@@ -293,6 +312,7 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
     diretorias,
     overview,
     overviewAnt,
+    overviewHistorico,
     vagasMetricas,
     vagasAnt,
     distrato,

@@ -22,6 +22,7 @@ import { HeadcountKpiCard } from "./HeadcountKpiCard";
 const PIE_CORES = ["#1e36f8", "#22c55e", "#f59e0b", "#a78bfa", "#14b8a6", "#e84025", "#6b7280"] as const;
 
 type Props = {
+  historico: boolean;
   metricas: HeadcountDistratoMetricas;
   anterior: HeadcountDistratoMetricas;
   loading: boolean;
@@ -47,7 +48,7 @@ function fmtPermanencia(dias: number | null): string {
   return `${d.toLocaleString("pt-BR")} dias`;
 }
 
-export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
+export function HeadcountAbaDistrato({ historico, metricas, anterior, loading }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
@@ -84,8 +85,8 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
   if (loading) {
     return (
       <div style={pageBox}>
-        <div className="app-grid-kpi-4" style={{ gap: 12 }}>
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className={historico ? "app-grid-kpi-3" : "app-grid-kpi-4"} style={{ gap: 12 }}>
+          {Array.from({ length: historico ? 3 : 4 }).map((_, i) => (
             <SkeletonKpiCard key={i} />
           ))}
         </div>
@@ -108,15 +109,17 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle sub="desligamentos no mês selecionado">KPIs Consolidados</SectionTitle>
-        <div className="app-grid-kpi-4" style={{ gap: 12 }}>
+        <SectionTitle sub={historico ? "desligamentos no período histórico" : "desligamentos no mês selecionado"}>
+          KPIs Consolidados
+        </SectionTitle>
+        <div className={historico ? "app-grid-kpi-3" : "app-grid-kpi-4"} style={{ gap: 12 }}>
           <HeadcountKpiCard
             label="Distratos"
             value={String(metricas.distratos)}
             icon={<UserMinus size={16} aria-hidden />}
             accentVar="--brand-action"
             accentColor={brand.primary}
-            anteriorLabel={String(anterior.distratos)}
+            anteriorLabel={historico ? undefined : String(anterior.distratos)}
           />
           <HeadcountKpiCard
             label="Voluntário"
@@ -124,7 +127,7 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
             icon={<Users size={16} aria-hidden />}
             accentVar="--brand-contrast"
             accentColor={brand.accent}
-            anteriorLabel={String(anterior.voluntarios)}
+            anteriorLabel={historico ? undefined : String(anterior.voluntarios)}
           />
           <HeadcountKpiCard
             label="Não Voluntário"
@@ -132,16 +135,18 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
             icon={<UserMinus size={16} aria-hidden />}
             accentVar="--brand-action"
             accentColor={brand.primary}
-            anteriorLabel={String(anterior.naoVoluntarios)}
+            anteriorLabel={historico ? undefined : String(anterior.naoVoluntarios)}
           />
-          <HeadcountKpiCard
-            label="Permanência"
-            value={fmtPermanencia(metricas.tempoMedioDias)}
-            icon={<Clock size={16} aria-hidden />}
-            accentVar="--brand-contrast"
-            accentColor={brand.accent}
-            anteriorLabel={fmtPermanencia(anterior.tempoMedioDias)}
-          />
+          {!historico ? (
+            <HeadcountKpiCard
+              label="Permanência"
+              value={fmtPermanencia(metricas.tempoMedioDias)}
+              icon={<Clock size={16} aria-hidden />}
+              accentVar="--brand-contrast"
+              accentColor={brand.accent}
+              anteriorLabel={fmtPermanencia(anterior.tempoMedioDias)}
+            />
+          ) : null}
         </div>
       </div>
 

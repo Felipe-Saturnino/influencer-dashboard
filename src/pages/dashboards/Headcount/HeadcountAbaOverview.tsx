@@ -11,23 +11,34 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowDownUp, CalendarPlus, UserCheck, UserMinus, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
-import { SectionTitle, SkeletonKpiCard } from "../../../components/dashboard";
+import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
+import { SectionTitle, SkeletonKpiCard, SortTableTh } from "../../../components/dashboard";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
-import type { HeadcountGerenciaMix, HeadcountOverviewMetricas } from "../../../lib/headcountMetrics";
+import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import type {
+  HeadcountGerenciaMix,
+  HeadcountOverviewHistoricoMetricas,
+  HeadcountOverviewMetricas,
+} from "../../../lib/headcountMetrics";
 import { HeadcountKpiCard } from "./HeadcountKpiCard";
 
 const PIE_CORES = ["#1e36f8", "#22c55e", "#f59e0b", "#a78bfa", "#14b8a6", "#e84025", "#6b7280"] as const;
 
 type Props = {
+  historico: boolean;
   metricas: HeadcountOverviewMetricas;
   anterior: HeadcountOverviewMetricas;
+  historicoMetricas: HeadcountOverviewHistoricoMetricas;
   loading: boolean;
 };
+
+type SortMesCol = "data" | "headcount" | "contratacao" | "distrato" | "turnover";
 
 function fmtPct(v: number | null): string {
   if (v == null || Number.isNaN(v)) return "—";
@@ -133,10 +144,186 @@ function GerenciaListaItem({
   );
 }
 
-export function HeadcountAbaOverview({ metricas, anterior, loading }: Props) {
+function OverviewHistorico({
+  metricas,
+  loading,
+}: {
+  metricas: HeadcountOverviewHistoricoMetricas;
+  loading: boolean;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const dataTable = useDataTableBlock();
+  const pageBox = getPageContentBoxStyle(brand, t);
+  const [sort, setSort] = useState<{ col: SortMesCol; dir: "asc" | "desc" }>({ col: "data", dir: "desc" });
+
+  const rows = useMemo(() => {
+    const list = [...metricas.mesAMes];
+    list.sort((a, b) => {
+      switch (sort.col) {
+        case "data":
+          return compareLocaleTexto(a.competencia, b.competencia, sort.dir);
+        case "headcount":
+          return compareNumber(a.headcount, b.headcount, sort.dir);
+        case "contratacao":
+          return compareNumber(a.contratacao, b.contratacao, sort.dir);
+        case "distrato":
+          return compareNumber(a.distrato, b.distrato, sort.dir);
+        case "turnover":
+          return compareNumber(a.turnoverPct ?? -1, b.turnoverPct ?? -1, sort.dir);
+        default:
+          return 0;
+      }
+    });
+    return list;
+  }, [metricas.mesAMes, sort]);
+
+  const toggleSort = (col: SortMesCol) => {
+    setSort((s) => (s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" }));
+  };
+
+  if (loading) {
+    return (
+      <div style={pageBox}>
+        <div className="app-grid-kpi-4" style={{ gap: 12 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonKpiCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const vazio =
+    metricas.hcAtivo === 0 &&
+    metricas.distrato === 0 &&
+    metricas.mesAMes.every((m) => m.headcount === 0 && m.contratacao === 0 && m.distrato === 0);
+  if (vazio) {
+    return (
+      <div style={pageBox}>
+        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+          Sem dados para o período selecionado.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div style={pageBox}>
+        <SectionTitle sub="snapshot histórico">KPIs Consolidados</SectionTitle>
+        <div className="app-grid-kpi-4" style={{ gap: 12 }}>
+          <HeadcountKpiCard
+            label="HC Ativo"
+            value={String(metricas.hcAtivo)}
+            icon={<Users size={16} aria-hidden />}
+            accentVar="--brand-action"
+            accentColor={brand.primary}
+          />
+          <HeadcountKpiCard
+            label="Distrato"
+            value={String(metricas.distrato)}
+            icon={<UserMinus size={16} aria-hidden />}
+            accentVar="--brand-contrast"
+            accentColor={brand.accent}
+          />
+          <HeadcountKpiCard
+            label="Turnover"
+            value={fmtPct(metricas.turnoverPct)}
+            icon={<ArrowDownUp size={16} aria-hidden />}
+            accentVar="--brand-action"
+            accentColor={brand.primary}
+          />
+          <HeadcountKpiCard
+            label="Permanência Média"
+            value={fmtTenure(metricas.permanenciaMediaMeses)}
+            icon={<UserCheck size={16} aria-hidden />}
+            accentVar="--brand-contrast"
+            accentColor={brand.accent}
+          />
+        </div>
+      </div>
+
+      <div style={pageBox}>
+        <SectionTitle sub="comparativo dos últimos 13 meses">Mês a Mês</SectionTitle>
+        <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ minWidth: 720 })}>
+            <caption style={{ display: "none" }}>Comparativo mês a mês do Headcount</caption>
+            <thead>
+              <tr>
+                <SortTableTh
+                  label="Data"
+                  col="data"
+                  sortCol={sort.col}
+                  sortDir={sort.dir}
+                  onSort={toggleSort}
+                  thStyle={dataTable.thHeaderSticky}
+                  align="center"
+                />
+                <SortTableTh
+                  label="Headcount"
+                  col="headcount"
+                  sortCol={sort.col}
+                  sortDir={sort.dir}
+                  onSort={toggleSort}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                <SortTableTh
+                  label="Contratação"
+                  col="contratacao"
+                  sortCol={sort.col}
+                  sortDir={sort.dir}
+                  onSort={toggleSort}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                <SortTableTh
+                  label="Distrato"
+                  col="distrato"
+                  sortCol={sort.col}
+                  sortDir={sort.dir}
+                  onSort={toggleSort}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                <SortTableTh
+                  label="Turnover"
+                  col="turnover"
+                  sortCol={sort.col}
+                  sortDir={sort.dir}
+                  onSort={toggleSort}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={row.competencia} style={{ background: dataTable.zebraRow(i) }}>
+                  <td style={dataTable.tdSticky()}>{row.label}</td>
+                  <td style={dataTable.tdCenter}>{row.headcount}</td>
+                  <td style={dataTable.tdCenter}>{row.contratacao}</td>
+                  <td style={dataTable.tdCenter}>{row.distrato}</td>
+                  <td style={dataTable.tdCenter}>{fmtPct(row.turnoverPct)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export function HeadcountAbaOverview({ historico, metricas, anterior, historicoMetricas, loading }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const pageBox = getPageContentBoxStyle(brand, t);
+
+  if (historico) {
+    return <OverviewHistorico metricas={historicoMetricas} loading={loading} />;
+  }
 
   if (loading) {
     return (
@@ -274,7 +461,16 @@ export function HeadcountAbaOverview({ metricas, anterior, loading }: Props) {
                 <div style={{ fontSize: 22, fontWeight: 800, color: t.text, lineHeight: 1.1 }}>
                   {metricas.hcAtivo}
                 </div>
-                <div style={{ fontSize: 10, fontWeight: 600, color: t.textMuted, letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 4 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: t.textMuted,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    marginTop: 4,
+                  }}
+                >
                   HC Total
                 </div>
               </div>

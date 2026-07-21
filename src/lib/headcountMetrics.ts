@@ -1,6 +1,8 @@
 import type { RhAreaAtuacao, RhFuncionarioTipoContrato, RhOrigemContratacao } from "../types/rhFuncionario";
 import type { RhVagaCandidaturaEtapa } from "../types/rhVagaCandidatura";
 import type { RhVagaStatus, RhVagaTipo } from "../types/rhVaga";
+import { MESES_PT } from "./dashboardConstants";
+import { HISTORICO_COMPETENCIAS_MESES, getDatasDoMes } from "./dashboardHelpers";
 import { RH_VAGA_CANDIDATURA_ETAPAS } from "./rhVagasFormat";
 
 export type HeadcountFuncionarioRow = {
@@ -69,6 +71,24 @@ export type HeadcountOverviewMetricas = {
   tenureMedioMeses: number | null;
   hcPorGerencia: HeadcountGerenciaMix[];
   mixContrato: HeadcountMixItem[];
+};
+
+export type HeadcountMesAMesLinha = {
+  /** YYYY-MM — ordenação. */
+  competencia: string;
+  label: string;
+  headcount: number;
+  contratacao: number;
+  distrato: number;
+  turnoverPct: number | null;
+};
+
+export type HeadcountOverviewHistoricoMetricas = {
+  hcAtivo: number;
+  distrato: number;
+  turnoverPct: number | null;
+  permanenciaMediaMeses: number | null;
+  mesAMes: HeadcountMesAMesLinha[];
 };
 
 export type HeadcountVagasMetricas = {
@@ -187,6 +207,47 @@ function fimMesAnterior(periodo: HeadcountPeriodo): string {
   return `${fim.getFullYear()}-${pad(fim.getMonth() + 1)}-${pad(fim.getDate())}`;
 }
 
+function turnoverDoPeriodo(
+  funcionarios: HeadcountFuncionarioRow[],
+  periodo: HeadcountPeriodo,
+  distrato: number,
+): number | null {
+  const hcAtivo = funcionarios.filter((r) => estavaAtivoNoFim(r, periodo.fim)).length;
+  const hcInicio = funcionarios.filter((r) => estavaAtivoNoFim(r, fimMesAnterior(periodo))).length;
+  const hcMedio = (hcInicio + hcAtivo) / 2;
+  return hcMedio > 0 ? (distrato / hcMedio) * 100 : null;
+}
+
+/** Janela canónica do Histórico: competência de referência + 12 anteriores (fim = último dia do mês ref). */
+export function periodoHeadcountHistorico(refAno: number, refMes: number): HeadcountPeriodo {
+  const fimMes = getDatasDoMes(refAno, refMes);
+  const inicioDate = new Date(refAno, refMes - (HISTORICO_COMPETENCIAS_MESES - 1), 1);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    inicio: `${inicioDate.getFullYear()}-${pad(inicioDate.getMonth() + 1)}-01`,
+    fim: fimMes.fim,
+  };
+}
+
+export function listarCompetenciasHeadcountHistorico(
+  refAno: number,
+  refMes: number,
+): { ano: number; mes: number; label: string; periodo: HeadcountPeriodo }[] {
+  const out: { ano: number; mes: number; label: string; periodo: HeadcountPeriodo }[] = [];
+  for (let i = HISTORICO_COMPETENCIAS_MESES - 1; i >= 0; i--) {
+    const d = new Date(refAno, refMes - i, 1);
+    const ano = d.getFullYear();
+    const mes = d.getMonth();
+    out.push({
+      ano,
+      mes,
+      label: `${MESES_PT[mes]} ${ano}`,
+      periodo: getDatasDoMes(ano, mes),
+    });
+  }
+  return out;
+}
+
 export function filtrarPorDiretoria<T extends { org_diretoria_id: string | null }>(
   rows: T[],
   diretoriaId: string,
@@ -265,6 +326,47 @@ export function computarOverview(
     tenureMedioMeses,
     hcPorGerencia,
     mixContrato,
+  };
+}
+
+export function computarOverviewHistorico(
+  funcionarios: HeadcountFuncionarioRow[],
+  refAno: number,
+  refMes: number,
+): HeadcountOverviewHistoricoMetricas {
+  const competencias = listarCompetenciasHeadcountHistorico(refAno, refMes);
+  const periodoTotal = periodoHeadcountHistorico(refAno, refMes);
+
+  const mesAMes: HeadcountMesAMesLinha[] = competencias.map((c) => {
+    const headcount = funcionarios.filter((r) => estavaAtivoNoFim(r, c.periodo.fim)).length;
+    const contratacao = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_inicio), c.periodo)).length;
+    const distrato = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_desligamento), c.periodo)).length;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return {
+      competencia: `${c.ano}-${pad(c.mes + 1)}`,
+      label: c.label,
+      headcount,
+      contratacao,
+      distrato,
+      turnoverPct: turnoverDoPeriodo(funcionarios, c.periodo, distrato),
+    };
+  });
+
+  const ativosFim = funcionarios.filter((r) => estavaAtivoNoFim(r, periodoTotal.fim));
+  const hcAtivo = ativosFim.length;
+  const distrato = funcionarios.filter((r) => dentroPeriodo(isoDia(r.data_desligamento), periodoTotal)).length;
+  const turnoverPct = turnoverDoPeriodo(funcionarios, periodoTotal, distrato);
+  const tenures = ativosFim
+    .map((r) => tenureMesesAte(r.data_inicio, periodoTotal.fim))
+    .filter((n): n is number => n != null && n >= 0);
+  const permanenciaMediaMeses = tenures.length ? tenures.reduce((a, b) => a + b, 0) / tenures.length : null;
+
+  return {
+    hcAtivo,
+    distrato,
+    turnoverPct,
+    permanenciaMediaMeses,
+    mesAMes,
   };
 }
 

@@ -199,22 +199,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "Navegue pelos meses com as setas. O botão **Histórico** fica disponível, mas a visualização acumulada ainda será liberada. Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
+          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela dos últimos 13 meses (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
       },
       {
         subtitulo: "Aba Overview",
         texto:
-          "KPIs: HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda. Cada card compara com o mês anterior mostrando só o valor (sem seta e sem percentual). Gráfico de pizza do HC por gerência (total no centro; na lista, o hover mostra o HC por time) e barras por tipo de contrato.",
+          "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses.",
       },
       {
         subtitulo: "Aba Contratação",
         texto:
-          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, tipo, organograma, datas, repasse, quantidade de candidatos e status.",
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, tipo, datas, repasse, quantidade de candidatos e status. No Histórico, os mesmos blocos consideram os 13 meses.",
       },
       {
         subtitulo: "Aba Distratos",
         texto:
-          "KPIs de distratos, voluntário, não voluntário e permanência (até 30 dias em dias; acima disso em meses). Lista de áreas com quantidade de distratos e pizza por tipo de contrato. Tabela ordenada por data de término (mais recente primeiro), com nome, time, datas, tipo de término e tempo.",
+          "KPIs de distratos, voluntário, não voluntário e permanência (até 30 dias em dias; acima disso em meses — o card de Permanência não aparece no Histórico). Lista de áreas com quantidade de distratos e pizza por tipo de contrato. Tabela ordenada por data de término (mais recente primeiro). No Histórico, os blocos usam os 13 meses.",
       },
     ],
   },

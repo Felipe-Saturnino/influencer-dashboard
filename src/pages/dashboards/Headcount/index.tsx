@@ -85,23 +85,20 @@ export default function Headcount() {
             {dados.erro}
           </div>
         </div>
-      ) : dados.historico ? (
-        <div style={pageBox}>
-          <div style={{ padding: "48px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            A visualização do Histórico será liberada em breve. Selecione um mês no carrossel para ver o Headcount.
-          </div>
-        </div>
       ) : (
         <div role="tabpanel" id={`panel-headcount-${aba}`} aria-labelledby={`tab-headcount-${aba}`}>
           {aba === "overview" && (
             <HeadcountAbaOverview
+              historico={dados.historico}
               metricas={dados.overview}
               anterior={dados.overviewAnt}
+              historicoMetricas={dados.overviewHistorico}
               loading={dados.loading}
             />
           )}
           {aba === "vagas" && (
             <HeadcountAbaVagas
+              historico={dados.historico}
               metricas={dados.vagasMetricas}
               anterior={dados.vagasAnt}
               loading={dados.loading}
@@ -109,6 +106,7 @@ export default function Headcount() {
           )}
           {aba === "distrato" && (
             <HeadcountAbaDistrato
+              historico={dados.historico}
               metricas={dados.distrato}
               anterior={dados.distratoAnt}
               loading={dados.loading}
