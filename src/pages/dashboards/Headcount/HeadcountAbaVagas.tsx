@@ -96,7 +96,7 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle sub="status efetivo das vagas no mês">KPIs Consolidados</SectionTitle>
+        <SectionTitle sub="status das vagas e candidaturas no mês">KPIs Consolidados</SectionTitle>
         <div className="app-grid-kpi-3" style={{ gap: 12 }}>
           <HeadcountKpiCard
             label="Vagas Abertas"
@@ -104,8 +104,6 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
             icon={<Briefcase size={16} aria-hidden />}
             accentVar="--brand-action"
             accentColor={brand.primary}
-            atual={metricas.abertas}
-            anterior={anterior.abertas}
             anteriorLabel={String(anterior.abertas)}
           />
           <HeadcountKpiCard
@@ -114,8 +112,6 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
             icon={<Briefcase size={16} aria-hidden />}
             accentVar="--brand-contrast"
             accentColor={brand.accent}
-            atual={metricas.emAndamento}
-            anterior={anterior.emAndamento}
             anteriorLabel={String(anterior.emAndamento)}
           />
           <HeadcountKpiCard
@@ -124,8 +120,6 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
             icon={<CheckCircle2 size={16} aria-hidden />}
             accentVar="--brand-action"
             accentColor={brand.primary}
-            atual={metricas.fechadas}
-            anterior={anterior.fechadas}
             anteriorLabel={String(anterior.fechadas)}
           />
         </div>
@@ -173,7 +167,7 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
         </div>
 
         <div style={pageBox}>
-          <SectionTitle sub="etapas da aba Candidaturas">Pipeline</SectionTitle>
+          <SectionTitle sub="etapas das candidaturas">Pipeline</SectionTitle>
           <OverviewGenericFunnel
             levels={metricas.pipeline}
             taxas={[]}
@@ -184,7 +178,7 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub="vagas em andamento no mês do carrossel">Vagas</SectionTitle>
+        <SectionTitle sub="vagas em andamento">Vagas</SectionTitle>
         {rows.length === 0 ? (
           <div style={{ padding: 32, textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             Sem dados para o período selecionado.
@@ -192,7 +186,7 @@ export function HeadcountAbaVagas({ metricas, anterior, loading }: Props) {
         ) : (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 960 })}>
-              <caption style={{ display: "none" }}>Vagas em andamento no mês</caption>
+              <caption style={{ display: "none" }}>Vagas em andamento</caption>
               <thead>
                 <tr>
                   <SortTableTh label="Título da Vaga" col="titulo" sortCol={sort.col} sortDir={sort.dir} onSort={toggleSort} thStyle={dataTable.thHeaderSticky} align="center" />

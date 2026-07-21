@@ -19,7 +19,7 @@ alwaysApply: false
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
 | Overview Comercial | Menu em **Dashboards** (abaixo de Overview Influencer); código em `src/pages/comercial/OverviewComercial/` — regras de domínio em `comercial.mdc` |
-| Headcount | `src/pages/dashboards/Headcount/` — KPIs executivos de HC, movimento, custo e vagas; métricas em `lib/headcountMetrics.ts` |
+| Headcount | `src/pages/dashboards/Headcount/` — KPIs executivos de HC, movimento e pipeline de contratação; métricas em `lib/headcountMetrics.ts` |
 | Overview Prestador | `src/pages/dashboards/OverviewPrestador/` — `index.tsx`, `useOverviewPrestadorDados.ts`, `OverviewPrestadorFiltroBar.tsx`, `OverviewPrestadorAbaEscala.tsx`; métricas em `lib/overviewPrestadorMetrics.ts` |
 | Overview Spin | `src/pages/dashboards/OverviewSpin/` — shell + abas Overview / Estúdio Dedicado / Estúdio Network / Posicionamento; `useOverviewSpinDados.ts` (canal consolidado|dedicado|network), `overviewSpinCanal.ts`, `overviewSpinCatalogo.ts`, `useOverviewSpinCatalogo.ts`, `useOverviewSpinFiltrosAcesso.ts`, FilterBar/AbaNav, KPIs/comparativos, `DashboardPosicionamento/` lazy (`mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
@@ -85,7 +85,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 | `mesas_spin` | Overview Spin | Resultados financeiros e operacionais das mesas ao vivo por operadora. |
 | `dash_midias_sociais` | Mídias Sociais | Monitore alcance orgânico, impulsionamento Meta e a conversão das campanhas rastreadas. |
 | `dash_overview_influencer` | Overview Influencer | Resumo executivo de financeiro, operação e conversão do canal de influencers. |
-| `dash_headcount` | Headcount | Visão executiva de headcount, movimentação, custo de pessoas e pipeline de contratação. |
+| `dash_headcount` | Headcount | Visão executiva de headcount, movimentação e pipeline de contratação. |
 | `dash_overview_prestador` | Overview Prestador | Acompanhe escala, presença, absenteísmo e movimentações de turno dos prestadores. |
 
 **Páginas novas nesta secção:** copiar o padrão acima (ícone Lucide + `h1` + `<p>` subtítulo). Regras completas de tipografia e famílias: **Brand MDC §4**. Ao mudar subtítulo, atualizar esta tabela e `geral/Ajuda` (`titulo` = nome do menu).
@@ -127,13 +127,13 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 ## Headcount — Padrões Específicos
 
 - **PageKey:** `dash_headcount` — pasta `Headcount/`; menu Dashboards entre Overview Comercial e Overview Prestador.
-- **Abas:** Overview · Vagas · Distrato (`FiltroBarTabButton` + `useRouteTab`; URLs em `appRoutes.ts`).
+- **Abas:** Overview · Contratação · Distratos (`FiltroBarTabButton` + `useRouteTab`; URLs em `appRoutes.ts`; tabIds `overview` / `vagas` / `distrato`).
 - **Filtros (linha 1):** carrossel de mês + `FiltroHistoricoButton` + Diretoria. Linha 2: abas.
 - **Histórico:** placeholder por agora («visualização será liberada em breve») — layout das abas só no modo mês.
-- **KPIs:** `HeadcountKpiCard` — MoM com seta + valor do mês anterior **sem** percentual.
-- **Overview:** KPIs HC Ativo / Contratação / Distrato + Variação / Turnover / Tenure; pizza HC por gerência + lista; barras por tipo de contrato.
-- **Vagas:** KPIs Abertas / Em andamento / Fechadas; pizza origem (`rh_vaga_candidaturas.origem`); funil `OverviewGenericFunnel` com `showTaxas={false}`; tabela só `em_andamento` no mês.
-- **Distrato:** KPIs Distratos / Voluntários / Não voluntário / Tempo médio (dias); pizzas por time e contrato; tabela Nome · Time · Admissão · Término · Tipo · Tempo.
+- **KPIs:** `HeadcountKpiCard` — MoM só com «vs valor · mês ant.» (sem seta e sem percentual).
+- **Overview:** KPIs HC Ativo / Contratação / Distrato + Variação / Turnover / Permanência; pizza HC por gerência (centro = HC Total) + lista com hover por time; barras por tipo de contrato.
+- **Contratação:** KPIs Abertas / Em andamento / Fechadas; pizza origem (`rh_vaga_candidaturas.origem`); funil `OverviewGenericFunnel` com `showTaxas={false}`; tabela vagas **abertas + em andamento**.
+- **Distratos:** KPIs Distratos / Voluntário / Não voluntário / Permanência (dias ≤30; meses se >30); lista por área + pizza contrato; tabela ordenada por Data de Término desc.
 - **Dados:** `lib/headcountMetrics.ts` + `useHeadcountDados` — organograma via `carregarOpcoesTimesOrganograma`.
 - **Migrations:** `20261023120000_dash_headcount_page.sql`, `20261023130000_dash_headcount_candidaturas_rls.sql`.
 

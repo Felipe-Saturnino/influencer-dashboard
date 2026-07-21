@@ -146,18 +146,20 @@ export function useHeadcountDados(canView: PermissaoValor, permLoading: boolean)
         .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
       setDiretorias(dirs);
 
-      const funcs = ((fr.data ?? []) as Omit<HeadcountFuncionarioRow, "orgLabelMenor" | "gerenciaNome">[]).map(
-        (r) => {
-          const v = encontrarVinculoParaFuncionarioRow(r, vinculos);
-          const orgLabelMenor =
-            v?.timeNome?.trim() ||
-            v?.gerenciaNome?.trim() ||
-            v?.diretoriaNome?.trim() ||
-            "—";
-          const gerenciaNome = v?.gerenciaNome?.trim() || "Sem gerência";
-          return { ...r, orgLabelMenor, gerenciaNome };
-        },
-      );
+      const funcs = ((fr.data ?? []) as Omit<
+        HeadcountFuncionarioRow,
+        "orgLabelMenor" | "gerenciaNome" | "timeNome"
+      >[]).map((r) => {
+        const v = encontrarVinculoParaFuncionarioRow(r, vinculos);
+        const orgLabelMenor =
+          v?.timeNome?.trim() ||
+          v?.gerenciaNome?.trim() ||
+          v?.diretoriaNome?.trim() ||
+          "—";
+        const gerenciaNome = v?.gerenciaNome?.trim() || "Sem gerência";
+        const timeNome = v?.timeNome?.trim() || "";
+        return { ...r, orgLabelMenor, gerenciaNome, timeNome };
+      });
       setFuncionarios(funcs);
       setTerminos(parseTerminos((hr.data ?? []) as { rh_funcionario_id: string; detalhes: Record<string, unknown> | null }[]));
 

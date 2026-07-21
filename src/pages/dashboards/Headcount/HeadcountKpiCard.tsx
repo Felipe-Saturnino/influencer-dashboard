@@ -10,36 +10,18 @@ type Props = {
   icon: ReactNode;
   accentVar?: string;
   accentColor: string;
-  /** Valor do mês anterior (linha inferior, sem %). */
+  /** Valor do mês anterior (linha inferior, sem seta e sem %). */
   anteriorLabel: string;
-  isInverso?: boolean;
-  atual: number;
-  anterior: number;
 };
 
-/** KPI do Headcount: MoM só com seta + valor do mês anterior (sem percentual). */
-export function HeadcountKpiCard({
-  label,
-  value,
-  icon,
-  accentVar,
-  accentColor,
-  anteriorLabel,
-  isInverso,
-  atual,
-  anterior,
-}: Props) {
+/** KPI do Headcount: MoM só com «vs valor · mês ant.» (sem seta e sem percentual). */
+export function HeadcountKpiCard({ label, value, icon, accentVar, accentColor, anteriorLabel }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const diff = atual - anterior;
-  const up = diff >= 0;
-  const positivo = isInverso === true ? !up : up;
-  const corSeta = positivo ? "var(--brand-success)" : "var(--brand-danger)";
 
   const useBrandToken = brand.useBrand && accentVar != null && accentVar !== "";
   const tokenOrAccent = useBrandToken ? resolveWhitelabelAccentCss(accentVar) : accentColor;
-  const barColor = tokenOrAccent;
-  const barBg = `linear-gradient(90deg, ${barColor}, transparent)`;
+  const barBg = `linear-gradient(90deg, ${tokenOrAccent}, transparent)`;
   const iconBoxBg = useBrandToken
     ? `color-mix(in srgb, ${tokenOrAccent} 10%, transparent)`
     : `${accentColor}18`;
@@ -100,13 +82,8 @@ export function HeadcountKpiCard({
         >
           {value}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontFamily: FONT.body }}>
-          <span style={{ color: corSeta, fontWeight: 700, fontSize: 12, lineHeight: 1 }}>
-            {up ? "↑" : "↓"}
-          </span>
-          <span style={{ color: t.textMuted, fontSize: 10 }}>
-            vs {anteriorLabel} · mês ant.
-          </span>
+        <div style={{ fontSize: 10, color: t.textMuted, fontFamily: FONT.body }}>
+          vs {anteriorLabel} · mês ant.
         </div>
       </div>
     </div>

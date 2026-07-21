@@ -177,14 +177,14 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Confirme em Gestão de Usuários → Permissões se o perfil tem permissão de **Ver** para **Headcount**. Por padrão a página nasce bloqueada (Não) até liberação explícita. Administradores veem a página automaticamente.",
       },
       {
-        subtitulo: "Não aparecem os cards de custo?",
+        subtitulo: "A tabela de vagas na aba Contratação está vazia?",
         texto:
-          "Massa salarial e custo médio só são exibidos com permissão de **Ver** em **Sim**. Com **Próprios** ou sem liberação de custo, os demais KPIs e gráficos continuam disponíveis.",
+          "A lista mostra apenas vagas com status efetivo **Aberta** ou **Em andamento**. Vagas concluídas ou canceladas entram só nos KPIs de fechadas. Confirme também a diretoria selecionada na barra de filtros.",
       },
       {
         subtitulo: "O HC do Histórico parece diferente do cadastro atual?",
         texto:
-          "A evolução mensal é reconstruída pelas datas de início e desligamento dos prestadores. Não existe snapshot mensal auditável na base — use o número como tendência, não como fechamento contábil de headcount.",
+          "A evolução mensal é reconstruída pelas datas de início e desligamento dos prestadores. Não existe snapshot mensal auditável na base — use o número como tendência, não como fechamento contábil de headcount. A visualização acumulada do botão Histórico ainda será liberada.",
       },
     ],
   },

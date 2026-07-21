@@ -194,27 +194,27 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Headcount é o dashboard executivo de pessoas da Spin, com três abas — Overview, Vagas e Distrato. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
+          "O Headcount é o dashboard executivo de pessoas da Spin, com três abas — Overview, Contratação e Distratos. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Navegue pelos meses com as setas. O botão **Histórico** fica disponível, mas a visualização acumulada ainda será liberada. Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Vagas e Distrato.",
+          "Navegue pelos meses com as setas. O botão **Histórico** fica disponível, mas a visualização acumulada ainda será liberada. Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
       },
       {
         subtitulo: "Aba Overview",
         texto:
-          "KPIs: HC Ativo, Contratação e Distrato na primeira linha; Variação Líquida, Turnover e Tenure Médio na segunda. Cada card compara com o mês anterior mostrando só o valor (sem percentual). Gráfico de pizza do HC por gerência (com lista ao lado) e barras por tipo de contrato.",
+          "KPIs: HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda. Cada card compara com o mês anterior mostrando só o valor (sem seta e sem percentual). Gráfico de pizza do HC por gerência (total no centro; na lista, o hover mostra o HC por time) e barras por tipo de contrato.",
       },
       {
-        subtitulo: "Aba Vagas",
+        subtitulo: "Aba Contratação",
         texto:
-          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas da aba Candidaturas. Tabela com vagas ainda em andamento no mês do carrossel — título, tipo, organograma, datas, repasse, quantidade de candidatos e status.",
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, tipo, organograma, datas, repasse, quantidade de candidatos e status.",
       },
       {
-        subtitulo: "Aba Distrato",
+        subtitulo: "Aba Distratos",
         texto:
-          "KPIs de distratos, voluntários, não voluntários e tempo médio (dias entre admissão e término). Pizzas por time e por tipo de contrato. Tabela com nome, time (menor nível do organograma), datas, tipo de término e tempo em dias.",
+          "KPIs de distratos, voluntário, não voluntário e permanência (até 30 dias em dias; acima disso em meses). Lista de áreas com quantidade de distratos e pizza por tipo de contrato. Tabela ordenada por data de término (mais recente primeiro), com nome, time, datas, tipo de término e tempo.",
       },
     ],
   },

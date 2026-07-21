@@ -9,7 +9,7 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
   mesas_spin: "Resultados financeiros e operacionais das mesas ao vivo por operadora.",
   streamers: "Acompanhe performance, conversão e financeiro do canal de influencers.",
   dash_headcount:
-    "Visão executiva de headcount, movimentação, custo de pessoas e pipeline de contratação.",
+    "Visão executiva de headcount, movimentação e pipeline de contratação.",
   dash_overview_prestador:
     "Acompanhe escala, presença, absenteísmo e movimentações de turno dos prestadores.",
   ajuda: "Conheça as funcionalidades da plataforma, o glossário de métricas e soluções para problemas comuns.",

@@ -18,6 +18,8 @@ export type HeadcountFuncionarioRow = {
   orgLabelMenor: string;
   /** Nome da gerência (para pizza Overview). */
   gerenciaNome: string;
+  /** Nome do time (quando houver) — detalhe no hover da gerência. */
+  timeNome: string;
 };
 
 export type HeadcountTerminoRow = {
@@ -53,6 +55,11 @@ export type HeadcountPeriodo = { inicio: string; fim: string };
 
 export type HeadcountMixItem = { key: string; label: string; valor: number };
 
+export type HeadcountGerenciaMix = HeadcountMixItem & {
+  /** Distribuição de HC ativo por time dentro da gerência. */
+  times: HeadcountMixItem[];
+};
+
 export type HeadcountOverviewMetricas = {
   hcAtivo: number;
   contratacao: number;
@@ -60,7 +67,7 @@ export type HeadcountOverviewMetricas = {
   variacaoLiquida: number;
   turnoverPct: number | null;
   tenureMedioMeses: number | null;
-  hcPorGerencia: HeadcountMixItem[];
+  hcPorGerencia: HeadcountGerenciaMix[];
   mixContrato: HeadcountMixItem[];
 };
 
@@ -223,11 +230,21 @@ export function computarOverview(
   const hcMedio = (hcInicio + hcAtivo) / 2;
   const turnoverPct = hcMedio > 0 ? (distrato / hcMedio) * 100 : null;
 
-  const hcPorGerencia = contarPor(
-    ativosFim,
-    (r) => r.gerenciaNome || "Sem gerência",
-    (k) => k,
-  );
+  const porGerencia = new Map<string, HeadcountFuncionarioRow[]>();
+  for (const r of ativosFim) {
+    const g = r.gerenciaNome || "Sem gerência";
+    const list = porGerencia.get(g);
+    if (list) list.push(r);
+    else porGerencia.set(g, [r]);
+  }
+  const hcPorGerencia: HeadcountGerenciaMix[] = [...porGerencia.entries()]
+    .map(([key, rows]) => ({
+      key,
+      label: key,
+      valor: rows.length,
+      times: contarPor(rows, (r) => r.timeNome || "Sem time", (k) => k),
+    }))
+    .sort((a, b) => b.valor - a.valor || a.label.localeCompare(b.label, "pt-BR"));
   const mixContrato = contarPor(
     ativosFim,
     (r) => String(r.tipo_contrato || "—"),
@@ -301,14 +318,11 @@ export function computarVagas(params: {
     countPorVaga.set(c.vaga_id, (countPorVaga.get(c.vaga_id) ?? 0) + 1);
   }
 
+  /** Vagas ativas (abertas + em andamento) — não só `em_andamento`. */
   const tabela = vagasNoMes
-    .filter((v) => statusVagaEfetivo(v) === "em_andamento")
     .filter((v) => {
-      const ab = isoDia(v.data_abertura);
-      if (ab && ab > periodo.fim) return false;
-      const fim = isoDia(v.data_fim_inscricoes);
-      if (fim && fim < periodo.inicio) return false;
-      return true;
+      const st = statusVagaEfetivo(v);
+      return st === "aberta" || st === "em_andamento";
     })
     .map((v) => ({
       id: v.id,

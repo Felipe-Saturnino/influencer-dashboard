@@ -19,8 +19,8 @@ type Brand = ReturnType<typeof useDashboardBrand>;
 
 const TABS: { key: HeadcountTab; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
-  { key: "vagas", label: "Vagas", icon: Briefcase },
-  { key: "distrato", label: "Distrato", icon: UserMinus },
+  { key: "vagas", label: "Contratação", icon: Briefcase },
+  { key: "distrato", label: "Distratos", icon: UserMinus },
 ];
 
 type Props = {

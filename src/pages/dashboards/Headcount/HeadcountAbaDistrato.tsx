@@ -36,9 +36,15 @@ function fmtData(iso: string | null): string {
   return `${d}/${m}/${y}`;
 }
 
-function fmtDias(n: number | null): string {
-  if (n == null || Number.isNaN(n)) return "—";
-  return `${Math.round(n).toLocaleString("pt-BR")} dias`;
+/** Até 30 dias em dias; acima disso em meses. */
+function fmtPermanencia(dias: number | null): string {
+  if (dias == null || Number.isNaN(dias)) return "—";
+  const d = Math.round(dias);
+  if (d > 30) {
+    const meses = dias / 30;
+    return `${meses.toFixed(1)} meses`;
+  }
+  return `${d.toLocaleString("pt-BR")} dias`;
 }
 
 export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
@@ -97,7 +103,6 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
     );
   }
 
-  const pieTime = metricas.porTime.map((x) => ({ name: x.label, value: x.valor }));
   const pieContrato = metricas.porContrato.map((x) => ({ name: x.label, value: x.valor }));
 
   return (
@@ -111,19 +116,14 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
             icon={<UserMinus size={16} aria-hidden />}
             accentVar="--brand-action"
             accentColor={brand.primary}
-            atual={metricas.distratos}
-            anterior={anterior.distratos}
             anteriorLabel={String(anterior.distratos)}
-            isInverso
           />
           <HeadcountKpiCard
-            label="Voluntários"
+            label="Voluntário"
             value={String(metricas.voluntarios)}
             icon={<Users size={16} aria-hidden />}
             accentVar="--brand-contrast"
             accentColor={brand.accent}
-            atual={metricas.voluntarios}
-            anterior={anterior.voluntarios}
             anteriorLabel={String(anterior.voluntarios)}
           />
           <HeadcountKpiCard
@@ -132,20 +132,15 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
             icon={<UserMinus size={16} aria-hidden />}
             accentVar="--brand-action"
             accentColor={brand.primary}
-            atual={metricas.naoVoluntarios}
-            anterior={anterior.naoVoluntarios}
             anteriorLabel={String(anterior.naoVoluntarios)}
-            isInverso
           />
           <HeadcountKpiCard
-            label="Tempo Médio"
-            value={fmtDias(metricas.tempoMedioDias)}
+            label="Permanência"
+            value={fmtPermanencia(metricas.tempoMedioDias)}
             icon={<Clock size={16} aria-hidden />}
             accentVar="--brand-contrast"
             accentColor={brand.accent}
-            atual={metricas.tempoMedioDias ?? 0}
-            anterior={anterior.tempoMedioDias ?? 0}
-            anteriorLabel={fmtDias(anterior.tempoMedioDias)}
+            anteriorLabel={fmtPermanencia(anterior.tempoMedioDias)}
           />
         </div>
       </div>
@@ -153,36 +148,43 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
       <div className="app-grid-2" style={{ gap: 14 }}>
         <div style={pageBox}>
           <SectionTitle sub="menor nível orgânico do prestador">Áreas</SectionTitle>
-          <div style={{ minHeight: 240 }} role="img" aria-label="Distratos por time">
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie
-                  data={pieTime}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={48}
-                  outerRadius={80}
-                  paddingAngle={2}
-                >
-                  {pieTime.map((_, i) => (
-                    <Cell key={pieTime[i]?.name ?? i} fill={PIE_CORES[i % PIE_CORES.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: t.cardBg,
-                    border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 8,
-                    fontSize: 12,
-                    fontFamily: FONT.body,
+          {metricas.porTime.length === 0 ? (
+            <div style={{ padding: 32, textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Sem dados para o período selecionado.
+            </div>
+          ) : (
+            <div style={{ fontFamily: FONT.body, fontSize: 13 }}>
+              {metricas.porTime.map((area, i) => (
+                <div
+                  key={area.key}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "8px 0",
+                    borderBottom: `1px solid ${t.cardBorder}`,
                   }}
-                />
-                <Legend wrapperStyle={{ fontSize: 12, fontFamily: FONT.body }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, color: t.text }}>
+                    <span
+                      aria-hidden
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 99,
+                        background: PIE_CORES[i % PIE_CORES.length],
+                        flexShrink: 0,
+                      }}
+                    />
+                    {area.label}
+                  </span>
+                  <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: t.text }}>
+                    {area.valor}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={pageBox}>
@@ -243,7 +245,7 @@ export function HeadcountAbaDistrato({ metricas, anterior, loading }: Props) {
                   <td style={dataTable.tdCenter}>{fmtData(row.dataAdmissao)}</td>
                   <td style={dataTable.tdCenter}>{fmtData(row.dataTermino)}</td>
                   <td style={dataTable.tdCenter}>{row.tipoTerminoLabel}</td>
-                  <td style={dataTable.tdCenter}>{fmtDias(row.tempoDias)}</td>
+                  <td style={dataTable.tdCenter}>{fmtPermanencia(row.tempoDias)}</td>
                 </tr>
               ))}
             </tbody>
