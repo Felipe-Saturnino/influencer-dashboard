@@ -51,7 +51,7 @@ import {
 // Todas as PageKeys existentes — usadas para liberar tudo ao admin
 const ALL_PAGE_KEYS: PageKey[] = [
   "home",
-  "mesas_spin", "streamers", "dash_midias_sociais", "dash_overview_influencer", "comercial_overview", "dash_headcount", "dash_overview_prestador",
+  "mesas_spin", "streamers", "dash_afiliados", "dash_midias_sociais", "dash_overview_influencer", "dash_overview_afiliado", "comercial_overview", "dash_headcount", "dash_overview_prestador",
   "agenda", "resultados", "feedback",
   "influencers", "scout", "afiliados", "afiliados_network", "financeiro", "banca_jogo", "gestao_links", "campanhas", "galeria_fotos",
   "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras", "cs_atendimento",

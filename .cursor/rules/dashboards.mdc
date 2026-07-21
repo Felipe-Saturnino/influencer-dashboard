@@ -17,7 +17,9 @@ alwaysApply: false
 | Área | Caminho principal |
 |---|---|
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
+| Afiliados (3 abas) | `src/pages/dashboards/AfiliadosDash/index.tsx` — espelho Streamers para canal afiliados; `FiltroAfiliadoSelect`; funil 3 etapas (sem Views); layout até integração de métricas |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
+| Overview Afiliado | `src/pages/dashboards/DashboardOverviewAfiliado/index.tsx` — espelho Overview Influencer sem Lives/Views/FTD/Hora; funil 3 etapas |
 | Overview Comercial | Menu em **Dashboards** (abaixo de Overview Influencer); código em `src/pages/comercial/OverviewComercial/` — regras de domínio em `comercial.mdc` |
 | Headcount | `src/pages/dashboards/Headcount/` — KPIs executivos de HC, movimento e pipeline de contratação; métricas em `lib/headcountMetrics.ts` |
 | Overview Prestador | `src/pages/dashboards/OverviewPrestador/` — `index.tsx`, `useOverviewPrestadorDados.ts`, `OverviewPrestadorFiltroBar.tsx`, `OverviewPrestadorAbaEscala.tsx`; métricas em `lib/overviewPrestadorMetrics.ts` |
@@ -82,9 +84,11 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 | PageKey | h1 | Subtítulo |
 |---|---|---|
 | `streamers` | Streamers | Acompanhe performance, conversão e financeiro do canal de influencers. |
+| `dash_afiliados` | Afiliados | Acompanhe performance, conversão e financeiro do canal de afiliados. |
 | `mesas_spin` | Overview Spin | Resultados financeiros e operacionais das mesas ao vivo por operadora. |
 | `dash_midias_sociais` | Mídias Sociais | Monitore alcance orgânico, impulsionamento Meta e a conversão das campanhas rastreadas. |
 | `dash_overview_influencer` | Overview Influencer | Resumo executivo de financeiro, operação e conversão do canal de influencers. |
+| `dash_overview_afiliado` | Overview Afiliado | Resumo executivo de financeiro e conversão do canal de afiliados. |
 | `dash_headcount` | Headcount | Visão executiva de headcount, movimentação e pipeline de contratação. |
 | `dash_overview_prestador` | Overview Prestador | Acompanhe escala, presença, absenteísmo e movimentações de turno dos prestadores. |
 

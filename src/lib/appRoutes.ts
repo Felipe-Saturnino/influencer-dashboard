@@ -56,6 +56,7 @@ function page(label: string, pageKey: PageKey, pageSlug: string, tabs?: AppRoute
 export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Home", "home", ROUTE_SLUG_HOME),
   page("Overview Influencer", "dash_overview_influencer", "OverviewInfluencer"),
+  page("Overview Afiliado", "dash_overview_afiliado", "OverviewAfiliado"),
   page("Headcount", "dash_headcount", "Headcount", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
     { tabId: "vagas", slug: "Contratacao", label: "Contratação", access: "always" },
@@ -113,7 +114,10 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Gestão de Staff", "rh_staff", "GestaoDeStaff"),
   page("Central de Denúncias", "rh_central_denuncias", "CentralDeDenuncias"),
   page("Solicitações", "rh_solicitacoes", "RhSolicitacoes"),
-  page("Links e Materiais", "links_materiais", "LinksEMateriais"),
+  page("Links e Materiais", "links_materiais", "LinksEMateriais", [
+    { tabId: "influencer", slug: "Influencers", label: "Influencers", access: "always" },
+    { tabId: "afiliado", slug: "Afiliados", label: "Afiliados", access: "always" },
+  ]),
   page("Spin na Rede", "spin_na_rede", "SpinNaRede"),
   page("Gestão de Operadoras", "gestao_operadoras", "GestaoDeOperadoras"),
   page("Gestão de Estúdios", "gestao_mesas", "GestaoDeMesas"),
@@ -127,6 +131,11 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "posicionamento", slug: "Posicionamento", label: "Posicionamento", access: "always" },
   ]),
   page("Streamers", "streamers", "Streamers", [
+    { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
+    { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
+    { tabId: "financeiro", slug: "Financeiro", label: "Financeiro", access: "always" },
+  ]),
+  page("Afiliados", "dash_afiliados", "DashAfiliados", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
     { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
     { tabId: "financeiro", slug: "Financeiro", label: "Financeiro", access: "always" },

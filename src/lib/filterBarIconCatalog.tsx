@@ -15,6 +15,7 @@ import {
   Shirt,
   Tags,
   User,
+  Users,
   UsersRound,
 } from "lucide-react";
 
@@ -32,6 +33,8 @@ export const FILTRO_BAR_ICON_PROPS = {
 export const FilterBarIcons = {
   operadora: <Shield {...FILTRO_BAR_ICON_PROPS} />,
   influencer: <User {...FILTRO_BAR_ICON_PROPS} />,
+  /** Afiliado na barra (dashboards analíticos) — agregadora «Todos Afiliados». */
+  afiliado: <Users {...FILTRO_BAR_ICON_PROPS} />,
   /** Status em `<select>` pill (`FiltroBarCampoSelect`) — agregadora «Todos Status». */
   status: <ShieldAlert {...FILTRO_BAR_ICON_PROPS} />,
   time: <UsersRound {...FILTRO_BAR_ICON_PROPS} />,

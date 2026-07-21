@@ -71,11 +71,12 @@ Perfis: Gestor (operação interna).
 - Abas `pendentes | mapeados | ignorados`: ARIA completo (tablist, tab, tabpanel, teclado).
 - **Busca:** `BarraPesquisaPagina` abaixo das abas, no mesmo bloco de filtros — filtra por **UTM Source** (`textoContemBusca`, insensível a acentos); placeholder `PAGE_SEARCH.utmSource`. Vazio com busca: `Nenhum link encontrado para a busca.`
 - Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
-- Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal).
+- Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal). Coluna **Proprietário** = influencer (nome artístico), afiliado (nome) ou campanha.
+- **Modal Mapear:** tipos **Influencer** | **Afiliado** | **Campanha**. Afiliado e Influencer gravam em `influencer_id` (mesma FK; papel vem de `profiles.role`). Listas separadas por role; exibição via `nomeExibicaoLinksEntidade`.
 - **Proteção de volume:** cada aba consulta no máximo 500 aliases, mantendo primeiro os maiores valores de `total_ftds`.
 - `SortTableTh` + default em coluna de data quando existir (Global).
 - Vazios por aba: ver tabela em estados abaixo.
-- **Handoff:** mapear UTM, ignorar, sincronização métricas.
+- **Handoff:** mapear UTM (influencer/afiliado/campanha), ignorar, sincronização métricas.
 
 ---
 

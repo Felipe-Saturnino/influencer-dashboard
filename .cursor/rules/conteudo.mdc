@@ -352,6 +352,10 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 ### LinksMateriais (`src/pages/conteudo/LinksMateriais/index.tsx`)
 
 - Header: `PageHeader` + subtítulo canónico.
+- **Abas** (`useRouteTab` + `FiltroBarTabButton`): **Influencers** | **Afiliados** — bases em `lib/linksMateriaisCanal.ts` (`TRACKING_BASE_INFLUENCER` / `TRACKING_BASE_AFILIADO`).
+- **Visibilidade por perfil:** Influencer/Agência → só Influencers; Afiliado → só Afiliados; demais → ambas (`linksMateriaisAbasVisiveis`).
+- **Self-emit:** Influencer na aba Influencers; Afiliado na aba Afiliados (`linksMateriaisIsSelfCanal`). Gestores escolhem na lista filtrada por `profiles.role`.
+- **Nome de exibição:** Influencer = nome artístico; Afiliado = nome (`nomeExibicaoLinksEntidade`) — sem “Nome Artístico” para afiliado.
 - Bloco **Link de rastreamento:** `getPageContentBoxStyle` + `SectionTitle` (sem ícone no título de bloco).
 - Header legado doc: `Share2` (Lucide), `h1` **18px** — migrado para `PageHeader` Família B onde aplicável.
 - Botão **Emitir:** gradiente `brand.useBrand ? linear-gradient(var(--brand-primary), var(--brand-secondary)) : linear-gradient(135deg, #4a2082, #1e36f8)`; `aria-disabled` + `title` contextual; `Loader2` branco em `salvando` / `verificandoGateEmissao`.
@@ -359,8 +363,8 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Aviso parcial (canView sem editar): manter bloco amarelo com `AlertCircle` — não confundir com sem permissão total.
 - **Previews QR:** `aspectRatio: "600 / 760"`; skeleton com `app-skeleton-pulse`; `aria-label` específico por variante de download; `Loader2` em "Gerando…".
 - **Strip URL:** `brand.primaryTransparentBorder/Bg`; input UTM `aria-label="Valor do utm_source"`.
-- Gate `verificarElegibilidadeAgendaLive`: manter antes do RPC para `roleParidadeInfluencer` — não remover por permissão.
-- **Emissão → Gestão de Links:** RPC `registrar_utm_alias_tracking_casa_apostas` grava `utm_aliases` com `status = mapeado`, `influencer_id` do alvo e espelha `influencer_perfil.utm_source`; payload do influencer envia `p_influencer_id: user.id`. Sync CDA **não** rebaixa alias com `mapeado_por` / `influencer_id` para pendente.
+- Gate `verificarElegibilidadeAgendaLive`: manter antes do RPC na aba Influencers para `roleParidadeInfluencer` — não remover por permissão.
+- **Emissão → Gestão de Links:** RPC `registrar_utm_alias_tracking_casa_apostas` grava `utm_aliases` com `status = mapeado`, `influencer_id` do alvo (influencer **ou** afiliado) e espelha `influencer_perfil.utm_source`; payload self envia `p_influencer_id: user.id`. Sync CDA **não** rebaixa alias com `mapeado_por` / `influencer_id` para pendente.
 
 ### PlaybookInfluencers (`src/pages/conteudo/PlaybookInfluencers/index.tsx`)
 

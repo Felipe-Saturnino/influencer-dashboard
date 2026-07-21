@@ -51,7 +51,9 @@ const Configuracoes          = lazyWithRetry(() => import("./pages/geral/Configu
 const SimuladorLogin         = lazyWithRetry(() => import("./pages/geral/SimuladorLogin"));
 const Ajuda                  = lazyWithRetry(() => import("./pages/geral/Ajuda"));
 const Streamers                  = lazyWithRetry(() => import("./pages/dashboards/Streamers"));
+const AfiliadosDash              = lazyWithRetry(() => import("./pages/dashboards/AfiliadosDash"));
 const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
+const DashboardOverviewAfiliado  = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewAfiliado"));
 const Headcount                   = lazyWithRetry(() => import("./pages/dashboards/Headcount"));
 const OverviewPrestador           = lazyWithRetry(() => import("./pages/dashboards/OverviewPrestador"));
 const OverviewSpin              = lazyWithRetry(() => import("./pages/dashboards/OverviewSpin"));
@@ -109,7 +111,9 @@ const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
 const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   home:                     Home,
   streamers:                 Streamers,
+  dash_afiliados:            AfiliadosDash,
   dash_overview_influencer:  DashboardOverviewInfluencer,
+  dash_overview_afiliado:    DashboardOverviewAfiliado,
   dash_headcount:            Headcount,
   dash_overview_prestador:   OverviewPrestador,
   mesas_spin:               OverviewSpin,

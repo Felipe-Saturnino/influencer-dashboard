@@ -95,6 +95,16 @@ export {
   type FiltroInfluencerSelectSingleProps,
   type InfluencerFiltroOption,
 } from "../FiltroInfluencerSelect";
+export {
+  FiltroAfiliadoSelect,
+  AFILIADO_FILTRO_ARIA_LABEL,
+  AFILIADO_FILTRO_TODOS_LABEL,
+  AFILIADO_FILTRO_TODOS_VALUE,
+  type FiltroAfiliadoSelectProps,
+  type FiltroAfiliadoSelectMultipleProps,
+  type FiltroAfiliadoSelectSingleProps,
+  type AfiliadoFiltroOption,
+} from "../FiltroAfiliadoSelect";
 export { FiltroTurnoSelect, type FiltroTurnoSelectProps } from "../FiltroTurnoSelect";
 export {
   FiltroStatusSemanticoPill,

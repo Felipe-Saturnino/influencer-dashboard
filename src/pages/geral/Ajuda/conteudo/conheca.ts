@@ -82,6 +82,35 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_afiliados: {
+    titulo: "Afiliados",
+    blocos: [
+      {
+        texto:
+          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. A integração com a base de métricas será disponibilizada em etapa seguinte — por enquanto a estrutura de KPIs e tabelas já está disponível para navegação.",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro de afiliado restringe todas as abas ao afiliado selecionado. O filtro de operadora restringe aos afiliados vinculados àquela plataforma.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro.",
+      },
+      {
+        subtitulo: "Aba Overview",
+        texto:
+          "Apresenta os KPIs executivos em Financeiro (GGR, Investimento, ROI) e Conversão (Registros, Custo por Registro, FTDs, Custo por FTD) — sem o bloco de Operação de lives.\n\nO Funil de Conversão usa três etapas: Acessos → Registros → FTDs (sem Views).\n\nO Ranking de Afiliados lista Afiliado, Acessos, Registros, FTDs, GGR, Investimento e Performance.",
+      },
+      {
+        subtitulo: "Aba Conversão",
+        texto:
+          "Comparativo de Funil lado a lado (sem Views) e Comparativo de Taxas com colunas Afiliado, Acessos, Acesso→Reg, Registros, Reg→FTD, FTD e Ação. O bloco Ranking FTD/Hora não se aplica a este canal.",
+      },
+      {
+        subtitulo: "Aba Financeiro",
+        texto:
+          "KPIs Financeiros (FTD, Depósitos, Saques, WD Ratio, GGR por Jogador, PVI), Investimento por Afiliado e Ranking Financeiro com coluna Afiliado e perfis de jogador (Whales, Core, Recreativos, Caçadores de Bônus).",
+      },
+    ],
+  },
   dash_midias_sociais: {
     titulo: "Mídias Sociais",
     blocos: [
@@ -147,6 +176,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Detalhamento Diário / Mensal",
         texto:
           "Tabela com os dados dia a dia (subtítulo por mês corrente) ou mês a mês no Histórico. As colunas incluem duração de live, métricas de audiência, acessos, registros, FTDs, depósitos, saques e GGR por período.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito. No modo gráfico, escolha o KPI a exibir pelos botões acima do gráfico. Estado vazio: \"Sem dados para o período selecionado.\"",
+      },
+    ],
+  },
+  dash_overview_afiliado: {
+    titulo: "Overview Afiliado",
+    blocos: [
+      {
+        texto:
+          "O Overview Afiliado oferece uma visão executiva da performance do canal de afiliados — consolidando KPIs financeiros e de conversão em uma única página sem abas. A integração com a base de métricas será disponibilizada em etapa seguinte.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Carrossel de mês, Histórico (13 competências), filtro de afiliado (Todos Afiliados) e filtro de operadora.",
+      },
+      {
+        subtitulo: "Blocos",
+        texto:
+          "KPIs Executivos (sem Lives, Horas Realizadas e Média de Views), Funil de Conversão em três etapas (Acessos → Registros → FTDs), Eficiência (sem FTD/Hora) e Detalhamento Diário/Mensal com colunas Afiliado, Acessos, Registros, # FTDs, R$ FTDs, # Depósitos, R$ Depósitos, # Saques, R$ Saques e R$ GGR.",
       },
     ],
   },
@@ -889,12 +937,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Links e Materiais é onde o influencer gera o seu link de rastreamento exclusivo para a Casa de Apostas. O link é único por influencer e deve ser usado em todas as divulgações, pois é ele que registra o desempenho de aquisição.",
+          "A página Links e Materiais é onde influencers e afiliados geram o link de rastreamento exclusivo para a Casa de Apostas. O link é único por pessoa e deve ser usado em todas as divulgações, pois é ele que registra o desempenho de aquisição.",
+      },
+      {
+        subtitulo: "Abas Influencers e Afiliados",
+        texto:
+          "A página tem duas abas com a mesma experiência de emissão, cada uma com URL base própria:\n— Influencers: link de rastreamento do canal de influencers.\n— Afiliados: link de rastreamento do canal de afiliados.\n\nQuem tem perfil de Influencer ou Agência vê apenas a aba Influencers. Quem tem perfil de Afiliado vê apenas a aba Afiliados. Gestores e administradores veem as duas abas.",
       },
       {
         subtitulo: "Link de Rastreamento",
         texto:
-          "O link é formado por uma URL base fixa seguida de um parâmetro UTM personalizado com o nome artístico do influencer.\n\nPara gerar:\n— O campo UTM é preenchido automaticamente com o nome artístico cadastrado no perfil.\n— Edite o UTM se desejar um identificador diferente — apenas letras sem acento, números e _ (underscore) são permitidos, sem espaços.\n— Clique em Emitir para registrar o link. Uma vez emitido, o link não pode ser alterado.\n— Após a emissão, o link completo aparece na tela com um botão Copiar.",
+          "O link é formado por uma URL base fixa (conforme a aba) seguida de um parâmetro UTM personalizado.\n\nPara Influencers, o UTM usa o nome artístico do perfil. Para Afiliados, o UTM usa o nome (não há nome artístico).\n\nPara gerar:\n— O campo UTM é preenchido automaticamente com o identificador do perfil na aba ativa.\n— Edite o UTM se desejar um identificador diferente — apenas letras sem acento, números e _ (underscore) são permitidos, sem espaços.\n— Clique em Emitir para registrar o link. Uma vez emitido, o link não pode ser alterado.\n— Após a emissão, o link completo aparece na tela com um botão Copiar.",
       },
       {
         subtitulo: "QR Code do Link",
@@ -904,12 +957,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Emissão por Gestores",
         texto:
-          "Gestores e administradores com permissão de editar podem emitir o link em nome de um influencer. Para isso, selecione o influencer no campo que aparece acima do UTM antes de clicar em Emitir.\n\nSe o influencer já tiver um link emitido, ele será exibido automaticamente ao selecionar o nome na lista.",
+          "Gestores e administradores com permissão de editar podem emitir o link em nome de um influencer ou afiliado. Na aba ativa, selecione a pessoa no campo acima do UTM antes de clicar em Emitir.\n\nSe a pessoa já tiver um link emitido naquele canal, ele será exibido automaticamente ao selecionar o nome na lista.",
       },
       {
         subtitulo: "Requisitos para Emissão",
         texto:
-          "O influencer precisa ter o perfil completo e o Playbook confirmado para emitir o link. Se algum desses requisitos não estiver atendido, a plataforma exibirá um aviso indicando o que falta e oferecerá um atalho direto para a página correspondente.",
+          "Na aba Influencers, o influencer precisa ter o perfil completo e o Playbook confirmado para emitir o link. Se algum desses requisitos não estiver atendido, a plataforma exibirá um aviso indicando o que falta e oferecerá um atalho direto para a página correspondente.",
       },
     ],
   },
@@ -1492,12 +1545,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Gestão de Links centraliza o mapeamento dos UTM Sources detectados nas operadoras que ainda não estão associados a nenhum influencer ou campanha. Ao mapear um link, os dados históricos de FTDs, depósitos e GGR são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.",
+          "A página Gestão de Links centraliza o mapeamento dos UTM Sources detectados nas operadoras que ainda não estão associados a nenhum influencer, afiliado ou campanha. Ao mapear um link, os dados históricos de FTDs, depósitos e GGR são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.",
       },
       {
         subtitulo: "Abas de Status",
         texto:
-          "Os links são organizados em três abas:\n— Pendentes: links detectados sem associação — precisam ser mapeados ou ignorados\n— Mapeados: links já associados a um influencer ou campanha\n— Ignorados: links descartados, que não serão mapeados\n\nO contador em vermelho na aba Pendentes indica quantos links aguardam ação. Use as setas ← → do teclado com o foco na tablist para alternar entre as abas.",
+          "Os links são organizados em três abas:\n— Pendentes: links detectados sem associação — precisam ser mapeados ou ignorados\n— Mapeados: links já associados a um influencer, afiliado ou campanha\n— Ignorados: links descartados, que não serão mapeados\n\nO contador em vermelho na aba Pendentes indica quantos links aguardam ação. Use as setas ← → do teclado com o foco na tablist para alternar entre as abas.",
       },
       {
         subtitulo: "Filtro de Operadora",
@@ -1512,12 +1565,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela de Links",
         texto:
-          "Cada linha mostra o UTM Source detectado, o status do influencer associado (quando aplicável), a operadora de origem, as datas de primeiro e último registro, FTDs, depósitos e GGR acumulados.\n\nNa aba Pendentes, as ações disponíveis são Mapear (abre o modal de associação) e Ignorar (descarta o link sem mapeamento). Nas demais abas, a ação Reabrir devolve o link para Pendentes, permitindo remapeamento.",
+          "Cada linha mostra o UTM Source detectado, o status do proprietário associado (quando aplicável), a operadora de origem, as datas de primeiro e último registro, FTDs, depósitos e GGR acumulados. A coluna Proprietário exibe o nome artístico do influencer, o nome do afiliado ou o nome da campanha.\n\nNa aba Pendentes, as ações disponíveis são Mapear (abre o modal de associação) e Ignorar (descarta o link sem mapeamento). Nas demais abas, a ação Reabrir devolve o link para Pendentes, permitindo remapeamento.",
       },
       {
         subtitulo: "Mapeando um Link",
         texto:
-          "Clique em Mapear para abrir o modal com os dados do UTM Source. Escolha o tipo de associação:\n— Influencer: vincula o link ao perfil do influencer nos dashboards\n— Campanha: vincula a uma campanha de marketing\n\nApós confirmar, os dados históricos são sincronizados automaticamente. O processo pode levar alguns segundos dependendo do volume de dados.",
+          "Clique em Mapear para abrir o modal com os dados do UTM Source. Escolha o tipo de associação:\n— Influencer: vincula o link ao perfil do influencer (exibe nome artístico)\n— Afiliado: vincula o link ao perfil do afiliado (exibe o nome)\n— Campanha: vincula a uma campanha de marketing\n\nApós confirmar, os dados históricos são sincronizados automaticamente. O processo pode levar alguns segundos dependendo do volume de dados.",
       },
     ],
   },

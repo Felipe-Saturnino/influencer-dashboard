@@ -39,7 +39,9 @@ export interface User {
 export type PageKey =
   | "home"
   | "streamers"
+  | "dash_afiliados"
   | "dash_overview_influencer"
+  | "dash_overview_afiliado"
   | "dash_headcount"
   | "dash_overview_prestador"
   | "academy_performance_hub"

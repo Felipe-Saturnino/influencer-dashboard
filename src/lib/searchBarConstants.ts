@@ -10,6 +10,7 @@ export function placeholderPesquisaFiltro(nomeFiltro: string): string {
 }
 
 export const FILTER_SEARCH_INFLUENCER = placeholderPesquisaFiltro("Influencer");
+export const FILTER_SEARCH_AFILIADO = placeholderPesquisaFiltro("Afiliado");
 export const FILTER_SEARCH_STAFF = placeholderPesquisaFiltro("Staff");
 
 /** Barra de pesquisa na página (lista / strip de filtros). */

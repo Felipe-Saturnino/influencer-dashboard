@@ -48,6 +48,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_afiliados: {
+    titulo: "Afiliados",
+    blocos: [
+      {
+        subtitulo: "Por que vejo 'Sem dados para o filtro selecionado' em todos os blocos?",
+        texto:
+          "Nesta fase o dashboard exibe a estrutura de layout (KPIs, funil e tabelas). A integração com a base de métricas de afiliados ainda não está ativa — os blocos permanecerão vazios até a próxima entrega de dados.",
+      },
+      {
+        subtitulo: "Não vejo Afiliados no menu de Dashboards?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para a página Afiliados na seção Dashboards. Administradores têm acesso total. Não confunda com a página Afiliados da seção de cadastro.",
+      },
+    ],
+  },
   mesas_spin: {
     titulo: "Overview Spin",
     blocos: [
@@ -150,6 +165,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "A Média de Views parece muito baixa ou '—' mesmo com lives realizadas?",
         texto:
           "A Média de Views é calculada como a média das médias de espectadores das lives com resultado registrado. Se as lives foram realizadas mas os resultados (duração, média de views) não foram preenchidos na agenda, a métrica aparece como '—'. Verifique se os resultados das lives estão cadastrados em Lives → Resultados.",
+      },
+    ],
+  },
+  dash_overview_afiliado: {
+    titulo: "Overview Afiliado",
+    blocos: [
+      {
+        subtitulo: "Por que os KPIs e o detalhamento estão vazios?",
+        texto:
+          "O layout do Overview Afiliado já está disponível; a carga de métricas será integrada em etapa seguinte. Até lá, a mensagem 'Sem dados para o filtro selecionado' é esperada.",
+      },
+      {
+        subtitulo: "Não vejo Overview Afiliado no menu?",
+        texto:
+          "Libere a permissão de Ver em Gestão de Usuários → Permissões para o perfil desejado. Administradores veem a página automaticamente após o deploy.",
       },
     ],
   },
@@ -674,22 +704,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Emitir está desabilitado?",
         texto:
-          "O botão fica inativo em três situações:\n— Você não tem permissão de editar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você é gestor e não selecionou um influencer na lista.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de editar, contate o administrador e peça que ative Editar em Links e Materiais na Gestão de Usuários.",
+          "O botão fica inativo em três situações:\n— Você não tem permissão de editar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você é gestor e não selecionou um influencer ou afiliado na lista da aba ativa.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de editar, entre em contato com o administrador e peça que ative Editar em Links e Materiais na Gestão de Usuários.",
       },
       {
         subtitulo: "Apareceu um aviso de perfil incompleto ou Playbook pendente ao tentar emitir?",
         texto:
-          "O link só pode ser emitido quando o perfil do influencer está completo e o Playbook foi confirmado. O aviso indica qual requisito está faltando e oferece um botão para ir direto à página correspondente. Complete o requisito indicado e volte para emitir o link.",
+          "Na aba Influencers, o link só pode ser emitido quando o perfil do influencer está completo e o Playbook foi confirmado. O aviso indica qual requisito está faltando e oferece um botão para ir direto à página correspondente. Complete o requisito indicado e volte para emitir o link.",
       },
       {
         subtitulo: "O UTM foi preenchido automaticamente com um nome errado?",
         texto:
-          "O UTM é gerado a partir do nome artístico cadastrado no perfil do influencer. Se o nome artístico estiver desatualizado, atualize-o em Influencers (área de perfil) e volte para emitir. Você também pode editar o campo UTM manualmente antes de emitir — use apenas letras sem acento, números e _.",
+          "Na aba Influencers, o UTM vem do nome artístico do perfil. Na aba Afiliados, vem do nome (afiliado não usa nome artístico). Atualize o cadastro correspondente e volte para emitir, ou edite o campo UTM manualmente antes de emitir — use apenas letras sem acento, números e _.",
       },
       {
         subtitulo: "O link já foi emitido mas não aparece na tela?",
         texto:
-          "Se você acabou de entrar na página e o link não carregou, aguarde o indicador de carregamento desaparecer. Se demorar mais de alguns segundos, recarregue a página. Se o link já foi emitido anteriormente por outro gestor, ele será carregado automaticamente ao selecionar o influencer na lista.",
+          "Se você acabou de entrar na página e o link não carregou, aguarde o indicador de carregamento desaparecer. Se demorar mais de alguns segundos, recarregue a página. Se o link já foi emitido anteriormente por outro gestor, ele será carregado automaticamente ao selecionar a pessoa na lista da aba ativa.",
       },
       {
         subtitulo: "O QR Code não aparece após emitir?",
@@ -702,9 +732,14 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Verifique se o seu navegador está bloqueando downloads automáticos. Na maioria dos navegadores, um ícone aparece na barra de endereço quando um download é bloqueado — clique nele e permita o download desta página. Se o botão mostrar Gerando… por mais de 15 segundos sem baixar, recarregue a página e tente novamente.",
       },
       {
-        subtitulo: "Como gestor, não vejo nenhum influencer na lista?",
+        subtitulo: "Como gestor, não vejo ninguém na lista?",
         texto:
-          "A lista exibe apenas influencers dentro do seu escopo de visibilidade configurado na Gestão de Usuários. Se a lista estiver vazia, o seu escopo pode não incluir nenhum influencer ativo. Contate o administrador para revisar o seu escopo de acesso.",
+          "A lista exibe influencers ou afiliados conforme a aba ativa e o seu escopo de visibilidade em Gestão de Usuários. Se a lista estiver vazia, o escopo pode não incluir nenhum perfil ativo nesse canal. Entre em contato com o administrador para revisar o acesso.",
+      },
+      {
+        subtitulo: "Só vejo uma das abas (Influencers ou Afiliados)?",
+        texto:
+          "Isso é esperado: perfil Influencer ou Agência vê apenas Influencers; perfil Afiliado vê apenas Afiliados. Gestores e administradores veem as duas abas.",
       },
     ],
   },
@@ -1454,7 +1489,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um link mapeado não aparece nos dashboards?",
         texto:
-          "Após o mapeamento, a sincronização histórica ocorre automaticamente mas pode levar alguns minutos. Novos dados chegam diariamente até as 4h. Se após 24h o link ainda não reflete nos dashboards, verifique: (1) o link foi mapeado para o influencer correto? Na aba Mapeados, a coluna Influencer / Campanha confirma a associação. (2) O influencer tem perfil ativo e está presente no dashboard? Perfis Cancelados podem não aparecer nos relatórios.",
+          "Após o mapeamento, a sincronização histórica ocorre automaticamente mas pode levar alguns minutos. Novos dados chegam diariamente até as 4h. Se após 24h o link ainda não reflete nos dashboards, verifique: (1) o link foi mapeado para o influencer, afiliado ou campanha corretos? Na aba Mapeados, a coluna Proprietário confirma a associação. (2) O perfil associado está ativo e presente no dashboard? Perfis cancelados podem não aparecer nos relatórios.",
       },
       {
         subtitulo: "O botão Mapear não aparece na aba Pendentes?",
@@ -1464,7 +1499,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Quero remapear um link que já foi mapeado incorretamente?",
         texto:
-          "Na aba Mapeados, clique em Reabrir na linha correspondente. O link volta para Pendentes e pode ser mapeado novamente para o influencer ou campanha corretos.",
+          "Na aba Mapeados, clique em Reabrir na linha correspondente. O link volta para Pendentes e pode ser mapeado novamente para o influencer, afiliado ou campanha corretos.",
       },
       {
         subtitulo: "Um UTM Source tem dados históricos mas mostra R$ 0,00 em GGR?",
