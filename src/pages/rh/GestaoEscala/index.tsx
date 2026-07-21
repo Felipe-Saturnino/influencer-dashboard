@@ -88,7 +88,7 @@ type EscalaGerarEstadoFiltro = {
   baseline: Record<string, string> | null;
   /** Grade sanitizada igual à última carga/salvamento no Supabase (para exibir «Salvar» só se houver diferença). */
   celulasSincronizadasComDb?: Record<string, string> | null;
-  /** Após «Sugestão de Escala» (regras completas + sequência) — mostra Nova Escala / Salvar / Aprovar. */
+  /** Após «Sugestão de Escala» ou primeira edição manual — mostra Nova Escala / Salvar / Aprovar. */
   posSugestao?: boolean;
   /** Legado (localStorage): tratar como `posSugestao`. */
   posSugestaoCs?: boolean;
@@ -259,7 +259,7 @@ type AreaEscalaKey =
 /** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
 type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
 
-type EscalaDiariaSortCol = "nome" | "nickname" | "escala" | "turno";
+type EscalaDiariaSortCol = "nome" | "nickname" | "turno";
 
 function linhaColaboradorNoFiltroTurnoConsolidado(
   row: LinhaColaborador,
@@ -446,20 +446,16 @@ function labelExibicaoCelulaEscala(
 
 const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
 
-/** Larguras fixas das 4 colunas fixas (sticky) — soma usada em `left`. */
+/** Larguras fixas das colunas sticky (Nome / Nickname / Turno) — soma usada em `left`. */
 const STICKY_W_NOME = 180;
 const STICKY_W_NICK = 156;
-/** Largura mínima para caber rótulo «Escala» + ícone de ordenação sem sobrepor a coluna Turno. */
-const STICKY_W_ESCALA = 112;
 const STICKY_W_TURNO_STAFF = 112;
 const STICKY_LEFT_NICK = STICKY_W_NOME;
-const STICKY_LEFT_ESCALA = STICKY_W_NOME + STICKY_W_NICK;
-const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK + STICKY_W_ESCALA;
+const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK;
 
 /** Colunas fixas quando a coluna Nome está oculta (Service Manager, Shift Leader). */
 const STICKY_LEFT_NICK_SEM_NOME = 0;
-const STICKY_LEFT_ESCALA_SEM_NOME = STICKY_W_NICK;
-const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK + STICKY_W_ESCALA;
+const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK;
 
 /** Consolidado: coluna Turno fixa ao rolar horizontalmente. */
 const CONSOLIDADO_COL_TURNO_W = 168;
@@ -1007,9 +1003,6 @@ export default function RhGestaoEscalaPage() {
       if (col === "nickname") {
         return compareLocaleTexto(a.nickname, b.nickname, dir);
       }
-      if (col === "escala") {
-        return compareLocaleTexto(a.escalaCadastro || "—", b.escalaCadastro || "—", dir);
-      }
       return compareLocaleTexto(a.turnoStaffNome || "—", b.turnoStaffNome || "—", dir);
     });
     return rows;
@@ -1199,11 +1192,17 @@ export default function RhGestaoEscalaPage() {
       setGerarPorFiltro((prev) => {
         const cur = prev[areaKey] ?? { celulas: {}, baseline: null };
         if (escalaGradeAprovadaNaBase(cur)) return prev;
+        const prevOk = sanitizarValorCelulaGerar(siglaTurnoStaff, cur.celulas[k] ?? "", turnoStaffNome);
+        if (prevOk === ok) return prev;
         return {
           ...prev,
           [areaKey]: {
             ...cur,
             celulas: { ...cur.celulas, [k]: ok },
+            /** Edição manual entra no mesmo fluxo da sugestão (Salvar / Aprovar / Nova Escala). */
+            posSugestao: true,
+            /** Invalida sync com a BD para «Salvar Alterações» voltar após nova mudança. */
+            celulasSincronizadasComDb: null,
           },
         };
       });
@@ -1247,14 +1246,12 @@ export default function RhGestaoEscalaPage() {
   /** Cabeçalhos fixos à esquerda ficam acima das colunas de dia ao rolar horizontalmente. */
   const Z_STICKY_HEAD = 30;
   /** Colunas sticky à esquerda: z decrescente à direita para o ícone de ordenação não ficar sob a coluna seguinte. */
-  const Z_STICKY_HEAD_NOME = 34;
-  const Z_STICKY_HEAD_NICK = 33;
-  const Z_STICKY_HEAD_ESCALA = 32;
+  const Z_STICKY_HEAD_NOME = 33;
+  const Z_STICKY_HEAD_NICK = 32;
   const Z_STICKY_HEAD_TURNO = 31;
-  /** Corpo: colunas fixas com z maior que as de dia; ordem Nome > Nick > Escala > Turno (staff). */
-  const Z_BODY_NOME = 31;
-  const Z_BODY_NICK = 30;
-  const Z_BODY_ESCALA = 29;
+  /** Corpo: colunas fixas com z maior que as de dia; ordem Nome > Nick > Turno (staff). */
+  const Z_BODY_NOME = 30;
+  const Z_BODY_NICK = 29;
   const Z_BODY_TURNO_STAFF = 28;
   const Z_DIA = 0;
 
@@ -2160,7 +2157,6 @@ export default function RhGestaoEscalaPage() {
                 minWidth:
                   (semColunaNome ? 0 : STICKY_W_NOME) +
                   STICKY_W_NICK +
-                  STICKY_W_ESCALA +
                   STICKY_W_TURNO_STAFF +
                   dias.length * 80,
                 borderCollapse: "separate",
@@ -2171,7 +2167,7 @@ export default function RhGestaoEscalaPage() {
               <caption style={{ display: "none" }}>
                 Escala Diária - Definição de status diário por Prestador.{" "}
                 {semColunaNome
-                  ? "Grade por nickname, escala, turno e dia do mês (coluna Nome oculta nesta área)."
+                  ? "Grade por nickname, turno e dia do mês (coluna Nome oculta nesta área)."
                   : "Grade mensal por colaborador e dia do mês."}
               </caption>
               <thead>
@@ -2208,21 +2204,6 @@ export default function RhGestaoEscalaPage() {
                     align="center"
                   />
                   <SortTableTh<EscalaDiariaSortCol>
-                    label="Escala"
-                    col="escala"
-                    sortCol={sortEscalaDiaria.col}
-                    sortDir={sortEscalaDiaria.dir}
-                    onSort={onSortEscalaDiaria}
-                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA, {
-                      minWidth: STICKY_W_ESCALA,
-                      maxWidth: STICKY_W_ESCALA,
-                      width: STICKY_W_ESCALA,
-                      verticalAlign: "middle",
-                      zIndex: semColunaNome ? Z_STICKY_HEAD_NICK : Z_STICKY_HEAD_ESCALA,
-                    })}
-                    align="center"
-                  />
-                  <SortTableTh<EscalaDiariaSortCol>
                     label="Turno"
                     col="turno"
                     sortCol={sortEscalaDiaria.col}
@@ -2236,7 +2217,7 @@ export default function RhGestaoEscalaPage() {
                       verticalAlign: "middle",
                       borderRight: `1px solid ${t.cardBorder}`,
                       boxShadow: sombraColFixa,
-                      zIndex: semColunaNome ? Z_STICKY_HEAD_ESCALA : Z_STICKY_HEAD_TURNO,
+                      zIndex: semColunaNome ? Z_STICKY_HEAD_NICK : Z_STICKY_HEAD_TURNO,
                     })}
                     align="center"
                   />
@@ -2257,7 +2238,7 @@ export default function RhGestaoEscalaPage() {
                 {linhas.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={(semColunaNome ? 3 : 4) + dias.length}
+                      colSpan={(semColunaNome ? 2 : 3) + dias.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -2271,7 +2252,7 @@ export default function RhGestaoEscalaPage() {
                 ) : linhasFiltradasEscalaDiaria.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={(semColunaNome ? 3 : 4) + dias.length}
+                      colSpan={(semColunaNome ? 2 : 3) + dias.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -2324,24 +2305,9 @@ export default function RhGestaoEscalaPage() {
                         </td>
                         <td
                           style={tdSticky(
-                            semColunaNome ? STICKY_LEFT_ESCALA_SEM_NOME : STICKY_LEFT_ESCALA,
-                            bg,
-                            semColunaNome ? Z_BODY_NICK : Z_BODY_ESCALA,
-                            {
-                              minWidth: STICKY_W_ESCALA,
-                              width: STICKY_W_ESCALA,
-                              maxWidth: STICKY_W_ESCALA,
-                            },
-                          )}
-                          title={row.escalaCadastro}
-                        >
-                          {row.escalaCadastro}
-                        </td>
-                        <td
-                          style={tdSticky(
                             semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF,
                             bg,
-                            semColunaNome ? Z_BODY_ESCALA : Z_BODY_TURNO_STAFF,
+                            semColunaNome ? Z_BODY_NICK : Z_BODY_TURNO_STAFF,
                             {
                               minWidth: STICKY_W_TURNO_STAFF,
                               width: STICKY_W_TURNO_STAFF,
