@@ -94,7 +94,7 @@ Status: Rascunho · Publicado · Arquivado. Ações: **Editar** (rascunho e publ
 
 ### Filtros
 
-Carrossel mês + Histórico (`Todo o período`) por `published_at`; o Histórico usa 13 competências mensais inclusivas; abas leitura só `status === publicado`.
+Carrossel mês + Histórico (`Todo o período`) por `published_at`; o Histórico usa 13 competências mensais inclusivas e inicia **ativo** ao abrir a página; abas leitura só `status === publicado`.
 
 Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências**; colunas e join de categoria **explícitos**. Receipts com `.in("content_id", ids)` do conjunto carregado + autores em **`Promise.all`**. **Proibido** baixar rascunhos/arquivados no portal de leitura, dump all-time de receipts, ou filtrar só no cliente o status/período da listagem pública.
 

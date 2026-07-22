@@ -325,7 +325,7 @@ export default function PortalAcademyPage() {
   const [mesesGer, setMesesGer] = useState<MesCarrosselEntry[]>(() => buildMesesCarrossel([]));
   const [filtroTipoGer, setFiltroTipoGer] = useState<"todos" | AcademyPostagemTipoUi>("todos");
   const [filtroStatusGer, setFiltroStatusGer] = useState<"todos" | AcademyPostagemStatus>("todos");
-  const [modoHistorico, setModoHistorico] = useState(false);
+  const [modoHistorico, setModoHistorico] = useState(true);
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalManual, setModalManual] = useState<ManualRow | null>(null);
@@ -480,7 +480,6 @@ export default function PortalAcademyPage() {
 
   useEffect(() => {
     if (aba === "gerenciamento") return;
-    setModoHistorico(false);
     setBusca("");
     setBuscaDeb("");
   }, [aba]);
