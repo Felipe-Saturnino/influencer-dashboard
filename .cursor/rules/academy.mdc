@@ -76,7 +76,7 @@ URL: `appRoutes.ts` — segmentos `Comunicados`, `Dicas`, `Manuais`, `Gerenciame
 
 - **Comunicados:** Tipo (Treinamentos/Geral)*, Título*, Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi)
 - **Dicas:** Tipo (Jogos/Imagem/Comunicação/Geral)*, **Qual Jogo?** (se Jogos — **multi-seleção**; lista `tipo_jogo` distinto de `mesas_spin_cadastro`), Título*, Descrição*, Imagem/Vídeo (multi), Anexo (multi)
-- **Manuais:** Tipo*, **Qual Jogo?** (se Jogos — multi-seleção), **Versão*** (default 1.0), **Exige ciência do colaborador?***, **Aplicável a*** (multi-seleção — **somente** quando ciência = Sim; times ativos das gerências **Game Floor** e **Operation Management**, mesma regra de Gestão de Staff; sem «Todos os prestadores»), Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi) — **sem** campo Código no modal (gerado no primeiro salvamento).
+- **Manuais:** Tipo*, **Qual Jogo?** (somente se tipo = Jogos — multi-seleção; demais tipos gravam automaticamente **`Todos os Jogos`** em `jogo_mesa`, sem mostrar o campo no modal — valor aparece na tabela Manuais), **Versão*** (default 1.0), **Exige ciência do colaborador?***, **Aplicável a*** (multi-seleção — **somente** quando ciência = Sim; times ativos das gerências **Game Floor** e **Operation Management**, mesma regra de Gestão de Staff; sem «Todos os prestadores»), Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi) — **sem** campo Código no modal (gerado no primeiro salvamento).
 
 **Imagem/Vídeo** e **Anexo:** botão customizado («Adicionar imagem ou vídeo» / «Adicionar anexo») + lista de arquivos (badge **Pendente** até salvar); input nativo oculto — sem «Nenhum arquivo selecionado».
 

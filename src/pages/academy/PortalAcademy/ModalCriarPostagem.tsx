@@ -17,7 +17,11 @@ import {
   type AcademyPortalAnexoRef,
 } from "../../../lib/academyPortalPostagemFiles";
 import { opcoesTimesAplicavelAcademyManuais } from "../../../lib/academyPortalAplicavel";
-import { carregarJogosMesasEstudio, normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
+import {
+  carregarJogosMesasEstudio,
+  jogoMesaParaPersistirManual,
+  normalizarJogosMesa,
+} from "../../../lib/academyPortalJogosMesa";
 import { reservarCodigoManual } from "../../../lib/academyPortalManualCodigo";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
@@ -262,13 +266,17 @@ export function ModalCriarPostagem({
   const buildSnapshot = useCallback(
     (paths: { imagens: string[]; anexos: AcademyPortalAnexoRef[] }): SnapshotPostagemEdicaoAcademy | null => {
       if (!tipoPostagem) return null;
+      const jogosSnapshot =
+        tipoPostagem === "manual"
+          ? (jogoMesaParaPersistirManual(tipoSubcategoria, jogosMesa) ?? [])
+          : jogosMesa;
       return {
         tipoPostagem,
         tipoSubcategoria,
         titulo,
         introducao,
         descricao,
-        jogoMesa: jogosMesa,
+        jogoMesa: jogosSnapshot,
         codigo: codigoManual,
         versao: versaoManual,
         exigeCiencia,
@@ -626,10 +634,11 @@ export function ModalCriarPostagem({
           codigoFinal = reserva.codigo;
         }
 
+        const jogosManual = jogoMesaParaPersistirManual(tipoSubcategoria, jogosMesa);
         const payload = {
           ...basePayload,
           introducao: introducao.trim() || "—",
-          jogo_mesa: tipoSubcategoria === "Jogos" && jogosMesa.length > 0 ? jogosMesa : null,
+          jogo_mesa: jogosManual,
           codigo: codigoFinal,
           versao: versaoManual.trim() || "1.0",
           requires_acknowledgment: exigeCiencia === "sim",

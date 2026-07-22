@@ -1,5 +1,23 @@
 import { supabase } from "./supabase";
 
+/** Valor automático de `jogo_mesa` em Manuais cujo tipo não é Jogos. */
+export const ACADEMY_MANUAL_JOGO_TODOS = "Todos os Jogos";
+
+/**
+ * Persistência de jogos em Manuais:
+ * - Tipo Jogos → seleção do modal (ou null se vazio)
+ * - Demais tipos → `["Todos os Jogos"]` (campo oculto no modal)
+ */
+export function jogoMesaParaPersistirManual(
+  tipoManual: string,
+  jogosSelecionados: string[],
+): string[] | null {
+  if (tipoManual === "Jogos") {
+    return jogosSelecionados.length > 0 ? jogosSelecionados : null;
+  }
+  return [ACADEMY_MANUAL_JOGO_TODOS];
+}
+
 /** Jogos distintos da coluna tipo_jogo em mesas_spin_cadastro (Gestão de Estúdios). */
 export async function carregarJogosMesasEstudio(): Promise<string[]> {
   const { data, error } = await supabase
