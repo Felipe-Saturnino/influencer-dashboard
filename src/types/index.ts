@@ -188,10 +188,14 @@ export interface CampanhaLink {
 // ─── UTM ALIAS ───────────────────────────────────────────────────────────────
 export type UtmAliasStatus = "pendente" | "mapeado" | "ignorado";
 
+export type UtmAliasCdaConta = "influencers" | "afiliados";
+
 export interface UtmAlias {
   id:               string;
   utm_source:       string;
   operadora_slug?:  string;
+  /** Conta TAP CDA que detectou o órfão (sync-metricas-cda). */
+  cda_conta?:       UtmAliasCdaConta | null;
   influencer_id:    string | null;
   campanha_id:      string | null;
   influencer_name?: string;

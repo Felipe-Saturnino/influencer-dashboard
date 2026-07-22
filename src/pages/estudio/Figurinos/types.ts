@@ -1,5 +1,8 @@
 export type RhFigurinoStatus = "available" | "borrowed" | "maintenance" | "discarded";
 
+/** Aba de UI — `fixed` filtra status `borrowed` com withdrawal_type = fixo. */
+export type FigurinosAba = RhFigurinoStatus | "fixed";
+
 export type RhFigurinoCondition = "good" | "damaged" | "needs_cleaning";
 
 export type RhEmprestimoStatus = "active" | "returned";

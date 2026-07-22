@@ -89,11 +89,6 @@ function dataAcaoIso(aba: Aba, alias: UtmAlias): string | null | undefined {
   return aba === "mapeados" ? alias.mapeado_em : alias.atualizado_em;
 }
 
-function colunasPorAba(aba: Aba): number {
-  if (aba === "pendentes") return 4;
-  return 7;
-}
-
 interface InfluencerOpcao {
   id: string;
   nome: string;
@@ -103,6 +98,17 @@ interface InfluencerOpcao {
 interface CampanhaOpcao { id: string; nome: string; ativo: boolean; }
 type Aba = "pendentes" | "mapeados" | "ignorados";
 type TipoMapeamento = "influencer" | "campanha" | "afiliado";
+
+function labelOrigemCda(conta: UtmAlias["cda_conta"]): string {
+  if (conta === "afiliados") return "TAP Afiliados";
+  if (conta === "influencers") return "TAP Influencers";
+  return "—";
+}
+
+function colunasPorAba(aba: Aba): number {
+  if (aba === "pendentes") return 6;
+  return 7;
+}
 
 const ABAS_LIST: Aba[] = ["pendentes", "mapeados", "ignorados"];
 
@@ -140,13 +146,14 @@ export default function GestaoLinks() {
   type LinkSortCol =
     | "utm"
     | "operadora"
+    | "origem"
     | "primeiro"
     | "acao"
     | "proprietario"
     | "status"
     | "visitas"
     | "registros";
-  const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "primeiro", dir: "desc" });
+  const [sortLinks, setSortLinks] = useState<{ col: LinkSortCol; dir: SortDir }>({ col: "visitas", dir: "desc" });
   const [buscaUtm, setBuscaUtm] = useState("");
 
   function fecharModalLimpo() {
@@ -174,7 +181,7 @@ export default function GestaoLinks() {
       .from("utm_aliases")
       .select("*")
       .eq("status", statusFiltro[aba])
-      .order("total_ftds", { ascending: false })
+      .order(aba === "pendentes" ? "total_visits" : "total_ftds", { ascending: false })
       .limit(500);
     if (operadoraFiltro !== "todas") query = query.eq("operadora_slug", operadoraFiltro);
     const { data, error } = await query;
@@ -298,7 +305,7 @@ export default function GestaoLinks() {
     setInfluencerSelecionado("");
     setAfiliadoSelecionado("");
     setCampanhaSelecionada("");
-    setTipoMapeamento("influencer");
+    setTipoMapeamento(alias.cda_conta === "afiliados" ? "afiliado" : "influencer");
     setErroModal(null);
     setConfirmFechar(false);
     setModalAberto(true);
@@ -395,8 +402,9 @@ export default function GestaoLinks() {
   };
 
   const emptyMessages: Record<Aba, string> = {
-    pendentes: "Nenhum link pendente. Tudo mapeado!",
-    mapeados:  "Nenhum link mapeado ainda.",
+    pendentes:
+      "Nenhum link pendente. UTMs detectados nas contas TAP Influencers e TAP Afiliados aparecem aqui após o sync.",
+    mapeados: "Nenhum link mapeado ainda.",
     ignorados: "Nenhum link ignorado.",
   };
   const MSG_VAZIO_BUSCA = "Nenhum link encontrado para a busca.";
@@ -447,6 +455,9 @@ export default function GestaoLinks() {
         case "operadora":
           c = compareLocaleTexto(nomeOp(a), nomeOp(b), dir);
           break;
+        case "origem":
+          c = compareLocaleTexto(labelOrigemCda(a.cda_conta), labelOrigemCda(b.cda_conta), dir);
+          break;
         case "primeiro":
           c = compareLocaleTexto(a.primeiro_visto, b.primeiro_visto, dir);
           break;
@@ -492,7 +503,7 @@ export default function GestaoLinks() {
 
   useEffect(() => {
     const defaults: Record<Aba, { col: LinkSortCol; dir: SortDir }> = {
-      pendentes: { col: "primeiro", dir: "desc" },
+      pendentes: { col: "visitas", dir: "desc" },
       mapeados: { col: "acao", dir: "desc" },
       ignorados: { col: "visitas", dir: "desc" },
     };
@@ -706,8 +717,14 @@ export default function GestaoLinks() {
           <table style={getDataTableStyle({ fontSize: 13, tableLayout: "fixed" })}>
             <caption style={{ display: "none" }}>Links por status</caption>
             <colgroup>
-              <col style={{ width: aba === "pendentes" ? "32%" : "22%" }} />
-              <col style={{ width: "14%" }} />
+              <col style={{ width: aba === "pendentes" ? "28%" : "22%" }} />
+              <col style={{ width: "12%" }} />
+              {aba === "pendentes" && (
+                <>
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "10%" }} />
+                </>
+              )}
               <col style={{ width: "11%" }} />
               {aba !== "pendentes" && <col style={{ width: "11%" }} />}
               {aba === "mapeados" && (
@@ -744,6 +761,28 @@ export default function GestaoLinks() {
                   align="center"
                   onSort={onSortLinks}
                 />
+                {aba === "pendentes" && (
+                  <>
+                    <SortTableTh<LinkSortCol>
+                      label="Origem"
+                      col="origem"
+                      sortCol={sortLinks.col}
+                      sortDir={sortLinks.dir}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                      onSort={onSortLinks}
+                    />
+                    <SortTableTh<LinkSortCol>
+                      label="Visitas"
+                      col="visitas"
+                      sortCol={sortLinks.col}
+                      sortDir={sortLinks.dir}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                      onSort={onSortLinks}
+                    />
+                  </>
+                )}
                 <SortTableTh<LinkSortCol>
                   label="1 Visto"
                   col="primeiro"
@@ -854,6 +893,12 @@ export default function GestaoLinks() {
                       </span>
                     </td>
                     <td style={dataTable.tdCenter} title={nomeOperadora}>{nomeOperadora}</td>
+                    {aba === "pendentes" && (
+                      <>
+                        <td style={dataTable.tdCenter}>{labelOrigemCda(alias.cda_conta)}</td>
+                        <td style={dataTable.tdCenter}>{(alias.total_visits ?? 0).toLocaleString("pt-BR")}</td>
+                      </>
+                    )}
                     <td style={tdMuted}>{fmtData(alias.primeiro_visto)}</td>
                     {aba !== "pendentes" && (
                       <td style={tdMuted}>{fmtData(dataAcaoIso(aba, alias))}</td>
@@ -910,13 +955,19 @@ export default function GestaoLinks() {
           <ModalHeader title="Mapear link órfão" onClose={solicitarFecharModal} />
             <p style={{ fontSize: 12, color: t.textMuted, marginBottom: 22, fontFamily: FONT.body }}>
               Associe o UTM <strong style={{ color: brand.accent }}>{aliasSelecionado.utm_source}</strong> a um influencer, afiliado ou campanha.
+              {aliasSelecionado.cda_conta ? (
+                <>
+                  {" "}
+                  Origem: <strong style={{ color: t.text }}>{labelOrigemCda(aliasSelecionado.cda_conta)}</strong>.
+                </>
+              ) : null}
             </p>
 
             <div className="app-grid-3" style={{ background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 12, padding: "14px 18px", marginBottom: 20 }}>
               {[
-                { label: "FTDs",      value: String(aliasSelecionado.total_ftds) },
-                { label: "Depósitos", value: fmtBRL(aliasSelecionado.total_deposit ?? 0) },
-                { label: "GGR",       value: fmtBRL(calcGgr(aliasSelecionado)) },
+                { label: "Visitas", value: String(aliasSelecionado.total_visits ?? 0) },
+                { label: "FTDs", value: String(aliasSelecionado.total_ftds) },
+                { label: "GGR", value: fmtBRL(calcGgr(aliasSelecionado)) },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <div style={{ fontSize: 10, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: FONT.body }}>{label}</div>

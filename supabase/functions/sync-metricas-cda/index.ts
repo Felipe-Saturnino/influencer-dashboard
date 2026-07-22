@@ -331,7 +331,8 @@ type UtmAliasOrfaoRow = {
 async function detectarERegistrarOrfaos(
   supabase: ReturnType<typeof createClient>,
   todosUtmsCda: UtmTotais[],
-  utmsMapeados: Set<string>
+  utmsMapeados: Set<string>,
+  conta: 'influencers' | 'afiliados',
 ): Promise<{ novos: string[]; atualizados: string[]; erros: string[] }> {
   const novos: string[] = []
   const atualizados: string[] = []
@@ -342,10 +343,14 @@ async function detectarERegistrarOrfaos(
   const aliasesMap = new Map<string, UtmAliasOrfaoRow>(
     (aliasesExistentes ?? []).map((a: UtmAliasOrfaoRow) => [a.utm_source, a]),
   )
-  const orfaos = todosUtmsCda.filter(u => !utmsMapeados.has(u.utm_source))
-  console.log(`[sync-metricas-cda] Órfãos: ${orfaos.length} (total CDA: ${todosUtmsCda.length})`)
+  const mapeadosLower = new Set([...utmsMapeados].map((u) => u.toLowerCase()))
+  const orfaos = todosUtmsCda.filter(
+    (u) => !utmsMapeados.has(u.utm_source) && !mapeadosLower.has(u.utm_source.toLowerCase()),
+  )
+  console.log(`[sync-metricas-cda] Órfãos (${conta}): ${orfaos.length} (total CDA: ${todosUtmsCda.length})`)
   for (const utm of orfaos) {
     const aliasAtual = aliasesMap.get(utm.utm_source)
+      ?? [...aliasesMap.entries()].find(([k]) => k.toLowerCase() === utm.utm_source.toLowerCase())?.[1]
     const statusAtual = aliasAtual?.status
     if (statusAtual === 'mapeado' || statusAtual === 'ignorado') continue
 
@@ -358,6 +363,7 @@ async function detectarERegistrarOrfaos(
       primeiro_visto: utm.primeiro_visto,
       ultimo_visto: utm.ultimo_visto,
       atualizado_em: new Date().toISOString(),
+      cda_conta: conta,
     }
 
     // Link emitido em Links e Materiais: nunca rebaixar para pendente (corrige race com sync)
@@ -368,7 +374,7 @@ async function detectarERegistrarOrfaos(
         status: 'mapeado',
         influencer_id: influencerEmitido,
         operadora_slug: 'casa_apostas',
-      }).eq('utm_source', utm.utm_source)
+      }).eq('utm_source', aliasAtual?.utm_source ?? utm.utm_source)
       if (error) {
         erros.push(`Falha órfão emitido ${utm.utm_source}: ${error.message}`)
       } else {
@@ -584,7 +590,7 @@ serve(async (req: Request) => {
       throw new Error(`Reporting API exige ${secretNameApiKey}.`)
     }
 
-    console.log(`[sync-metricas-cda] v2.1.1 CDA conta=${conta} | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Período: ${dataInicio} → ${dataFim}`)
+    console.log(`[sync-metricas-cda] v2.1.2 CDA conta=${conta} | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
@@ -727,7 +733,7 @@ serve(async (req: Request) => {
           ? reportingDataToUtmTotais(reportingCache, dataInicio, dataFim)
           : await fetchTodosUtms(dataInicio, dataFim, cdaAuth, labelId)
         totalUtmsCda = todosUtmsCda.length
-        const resultado = await detectarERegistrarOrfaos(supabase, todosUtmsCda, utmsMapeados)
+        const resultado = await detectarERegistrarOrfaos(supabase, todosUtmsCda, utmsMapeados, conta)
         orfaosNovos = resultado.novos
         orfaosAtualizados = resultado.atualizados
       } catch (err) {
@@ -756,7 +762,7 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify({
       ok: true,
-      versao: 'v2.1.1',
+      versao: 'v2.1.2',
       integracao: integracaoSlug,
       conta,
       api_usada: useReportingApi ? 'Reporting API' : 'Plywood',

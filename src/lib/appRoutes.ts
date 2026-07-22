@@ -160,6 +160,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Figurinos", "rh_figurinos", "Figurinos", [
     { tabId: "available", slug: "Disponiveis", label: "Disponíveis", access: "always" },
     { tabId: "borrowed", slug: "Emprestada", label: "Emprestada", access: "always" },
+    { tabId: "fixed", slug: "Fixo", label: "Fixo", access: "always" },
     { tabId: "maintenance", slug: "Manutencao", label: "Manutenção", access: "always" },
     { tabId: "discarded", slug: "Descartada", label: "Descartada", access: "always" },
   ]),

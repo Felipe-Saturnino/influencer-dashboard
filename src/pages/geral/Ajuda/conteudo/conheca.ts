@@ -654,12 +654,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas de Inventário",
         texto:
-          "O inventário é dividido em quatro abas:\n— Disponíveis: peças prontas para retirada (colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação e Ações)\n— Emprestada: peças com retirada ativa (empréstimo ou uso fixo)\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nO campo de Pesquisa localiza peças por código, código de barras, categoria, estúdio ou nome de quem realizou a retirada.",
+          "O inventário é dividido em cinco abas:\n— Disponíveis: peças prontas para retirada (colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação e Ações)\n— Emprestada: peças com retirada ativa do tipo Emprestada\n— Fixo: peças com retirada ativa do tipo Fixo\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nNas abas Emprestada e Fixo não há coluna Tipo de retirada — o tipo já é definido pela aba.\n\nO campo de Pesquisa localiza peças por código, código de barras, categoria, estúdio ou nome de quem realizou a retirada.",
       },
       {
         subtitulo: "Bipar Código",
         texto:
-          "O botão **Bipar código** abre um modal pronto para leitores USB que funcionam como teclado (modo teclado): aponte o leitor para a etiqueta e bipe — o número aparece no campo automaticamente e a busca é feita ao pressionar Enter (ou ao clicar em Buscar). Também é possível digitar o código manualmente. Para usar a câmera do dispositivo, expanda **Usar câmera (opcional)**. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver emprestada, abre o fluxo de Devolução.",
+          "O botão **Bipar código** abre um modal pronto para leitores USB que funcionam como teclado (modo teclado): aponte o leitor para a etiqueta e bipe — o número aparece no campo automaticamente e a busca é feita ao pressionar Enter (ou ao clicar em Buscar). Também é possível digitar o código manualmente. Para usar a câmera do dispositivo, expanda **Usar câmera (opcional)**. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver com retirada ativa (Emprestada ou Fixo), abre o fluxo de Devolução.",
       },
       {
         subtitulo: "Cadastrar Peça",
@@ -669,7 +669,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Retirada e Devolução",
         texto:
-          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: Emprestar (temporário) ou Fixo (uso contínuo).\n\nNa devolução, informe a condição da peça: Boa condição, Possível descarte ou Manutenção. Peças devolvidas para manutenção exigem tipo e motivo.",
+          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: Emprestada (temporário) ou Fixo (uso contínuo). A peça passa a aparecer na aba correspondente.\n\nNa devolução, informe a condição da peça: Boa condição, Possível descarte ou Manutenção. Peças devolvidas para manutenção exigem tipo e motivo.",
       },
       {
         subtitulo: "Manutenção e Descarte",
@@ -1545,7 +1545,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Gestão de Links centraliza o mapeamento dos UTM Sources detectados nas operadoras que ainda não estão associados a nenhum influencer, afiliado ou campanha. Ao mapear um link, os dados históricos de FTDs, depósitos e GGR são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.",
+          "A página Gestão de Links centraliza o mapeamento dos UTM Sources detectados nas contas TAP da Casa de Apostas (Influencers e Afiliados) que ainda não estão associados a nenhum influencer, afiliado ou campanha. Na aba Pendentes, a coluna **Origem** indica se o link veio da TAP Influencers ou da TAP Afiliados. Ao mapear um link, os dados históricos são sincronizados nos dashboards. Novos dados chegam diariamente até as 4h.",
       },
       {
         subtitulo: "Abas de Status",
@@ -1565,7 +1565,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela de Links",
         texto:
-          "Cada linha mostra o UTM Source detectado, o status do proprietário associado (quando aplicável), a operadora de origem, as datas de primeiro e último registro, FTDs, depósitos e GGR acumulados. A coluna Proprietário exibe o nome artístico do influencer, o nome do afiliado ou o nome da campanha.\n\nNa aba Pendentes, as ações disponíveis são Mapear (abre o modal de associação) e Ignorar (descarta o link sem mapeamento). Nas demais abas, a ação Reabrir devolve o link para Pendentes, permitindo remapeamento.",
+          "Cada linha mostra o UTM Source detectado, o status do proprietário associado (quando aplicável), a operadora, as datas de primeiro e último registro e métricas acumuladas. A coluna Proprietário exibe o nome artístico do influencer, o nome do afiliado ou o nome da campanha.\n\nNa aba **Pendentes**, as colunas **Origem** (TAP Influencers ou TAP Afiliados) e **Visitas** identificam de qual conta TAP o link veio e o volume detectado. As ações são Mapear e Ignorar. Nas demais abas, Reabrir devolve o link para Pendentes.",
       },
       {
         subtitulo: "Mapeando um Link",

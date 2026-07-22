@@ -54,7 +54,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Por que vejo 'Sem dados para o filtro selecionado' em todos os blocos?",
         texto:
-          "Confirme o período no carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links) e o sync precisa ter rodado após o mapeamento. Se o filtro de afiliados estiver vazio, verifique se existem cadastros com perfil Afiliado na página Afiliados.",
+          "Confirme o período no carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links → Mapear como Afiliado) e o sync precisa ter rodado após o mapeamento. Links só com visita na TAP e ainda não mapeados aparecem em Gestão de Links → Pendentes (Origem = TAP Afiliados). Se o filtro de afiliados estiver vazio, verifique cadastros na página Afiliados.",
       },
       {
         subtitulo: "Não vejo Afiliados no menu de Dashboards?",
@@ -569,7 +569,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A peça está na aba errada ou não aparece?",
         texto:
-          "Verifique se os filtros de operadora, categoria ou tamanho estão ativos — eles restringem o que aparece em todas as abas. Clique em **Todas Operadoras**, **Todas as categorias** e **Todos os tamanhos** para ver o inventário completo. Cada aba exibe apenas peças com o status correspondente.",
+          "Verifique se os filtros de estúdio, categoria, tamanho, cor ou gênero estão ativos — eles restringem o que aparece em todas as abas. Use as opções agregadoras (**Todos Estúdios**, **Todas Categorias**, etc.) para ver o inventário completo.\n\nPeças com retirada ativa do tipo Emprestada ficam na aba Emprestada; as do tipo Fixo ficam na aba Fixo. Manutenção e Descartada seguem o status da peça.",
       },
       {
         subtitulo: "A etiqueta PDF não baixou depois de cadastrar a peça?",
@@ -1500,6 +1500,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Quero remapear um link que já foi mapeado incorretamente?",
         texto:
           "Na aba Mapeados, clique em Reabrir na linha correspondente. O link volta para Pendentes e pode ser mapeado novamente para o influencer, afiliado ou campanha corretos.",
+      },
+      {
+        subtitulo: "Como saber se o link pendente veio da TAP Influencers ou da TAP Afiliados?",
+        texto:
+          "Na aba Pendentes, use a coluna **Origem**: **TAP Influencers** ou **TAP Afiliados**. Se aparecer traço (—), o registro é anterior à coluna de origem — rode o sync CDA das duas contas em Status Técnico (após aplicar a atualização do banco) para preencher a origem nos próximos ciclos.",
       },
       {
         subtitulo: "Um UTM Source tem dados históricos mas mostra R$ 0,00 em GGR?",

@@ -689,7 +689,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Retirada (Figurino)",
         definicao:
-          "Registro de saída de uma peça do estoque para uso por um prestador. Pode ser Emprestar (temporário, com previsão de devolução) ou Fixo (uso contínuo sem data definida).",
+          "Registro de saída de uma peça do estoque para uso por um prestador. Pode ser Emprestada (temporário, com previsão de devolução) ou Fixo (uso contínuo sem data definida). Na listagem, cada tipo aparece na aba homônima.",
         referencia: "Figurinos",
       },
       {
