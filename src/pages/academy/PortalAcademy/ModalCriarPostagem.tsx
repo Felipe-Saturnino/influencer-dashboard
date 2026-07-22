@@ -565,16 +565,26 @@ export function ModalCriarPostagem({
         return;
       }
 
-      const basePayload = {
+      const basePayload: Record<string, unknown> = {
         titulo: titulo.trim() || "Rascunho",
         corpo: descricao,
         categoria_id: catId,
         status: novoStatus,
         ...payloadMidiaAcademyPortal(up.imagens, up.anexos),
-        created_by: user.id,
-        published_at: novoStatus === "publicado" ? now : null,
-        published_by: novoStatus === "publicado" ? user.id : null,
       };
+      if (modo !== "editar") {
+        basePayload.created_by = user.id;
+      }
+      if (novoStatus === "publicado") {
+        // Re-publicar sem alterar data/autor originais da publicação.
+        if (statusAnterior !== "publicado") {
+          basePayload.published_at = now;
+          basePayload.published_by = user.id;
+        }
+      } else {
+        basePayload.published_at = null;
+        basePayload.published_by = null;
+      }
 
       if (tipoPostagem === "comunicado") {
         if (modo === "editar" && editRef) {

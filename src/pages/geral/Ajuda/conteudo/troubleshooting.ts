@@ -657,6 +657,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A aba **Gerenciamento** exige permissão de **Editar** na página Portal da Academy. Com apenas **Ver**, só as abas Comunicados, Dicas e Manuais ficam disponíveis.",
       },
       {
+        subtitulo: "Não vejo o botão Editar em algumas postagens?",
+        texto:
+          "O botão **Editar** aparece em rascunhos e publicações quando há permissão de **Editar**. Com Editar = **Próprios**, só nas postagens criadas por você. Postagens **Arquivadas** não têm Editar — só Histórico.",
+      },
+      {
         subtitulo: "Qual Jogo? está vazio no modal?",
         texto:
           "A lista vem de **Gestão de Estúdios → Mesas** (coluna Jogo). Cadastre ou edite mesas com tipo de jogo preenchido; novos valores passam a aparecer automaticamente no Portal da Academy.",

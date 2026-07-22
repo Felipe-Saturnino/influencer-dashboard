@@ -882,6 +882,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Imagem/Vídeo** e **Anexo** usam o botão **Adicionar…** (sem a barra nativa do navegador). Os arquivos aparecem numa lista abaixo, com badge **Pendente** até salvar ou publicar; dá para remover itens antes do envio.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
       },
       {
+        subtitulo: "Editar postagem",
+        texto:
+          "Na aba **Gerenciamento**, cada rascunho ou publicação tem o botão **Editar** (ícone de lápis), liberado pela permissão de **Editar**. Com Editar = **Próprios**, só aparece nas postagens criadas por você. Salvar volta a **Rascunho**; Publicar mantém ou publica o conteúdo.",
+      },
+      {
         subtitulo: "Manuais — tabela e ciência",
         texto:
           "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nClique no ícone de visualizar para abrir o manual. Quando a postagem exige ciência **e** você pertence a um dos times selecionados em **Aplicável a**, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",

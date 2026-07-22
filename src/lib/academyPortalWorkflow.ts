@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PermissaoValor } from "../types";
 import { anexosIguais } from "./academyPortalPostagemFiles";
 
 export type AcademyPostagemTipoUi = "comunicado" | "dica" | "manual";
@@ -72,6 +73,20 @@ export function fmtDataColunaGerenciamento(iso: string | null | undefined): stri
 
 export function stripHtmlText(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Editar na aba Gerenciamento — respeita Gestão de Usuários (sim / próprios). */
+export function podeEditarPostagemAcademyGerenciamento(
+  canEditar: PermissaoValor | null,
+  canEditarOk: boolean,
+  userId: string | undefined | null,
+  createdBy: string | null | undefined,
+): boolean {
+  if (!canEditarOk) return false;
+  if (canEditar === "proprios") {
+    return !!userId && !!createdBy && createdBy === userId;
+  }
+  return canEditar === "sim";
 }
 
 export function truncPreviewHtml(html: string, maxLen: number): string {
