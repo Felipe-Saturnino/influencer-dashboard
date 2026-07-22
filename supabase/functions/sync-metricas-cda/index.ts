@@ -13,6 +13,13 @@ interface SyncRequest {
   data_fim?: string
   utm_source?: string
   skip_orfaos?: boolean
+  /**
+   * Conta TAP na CDA:
+   * — influencers (default): CDA_INFLUENCERS_API_KEY → sync_logs casa_apostas
+   * — afiliados: CDA_AFILIADOS_API_KEY → sync_logs casa_apostas_afiliados
+   * Métricas gravam sempre com operadora_slug = casa_apostas.
+   */
+  conta?: 'influencers' | 'afiliados'
 }
 
 interface DailyMetric {
@@ -478,15 +485,21 @@ function agregarMetricasPorData(metricasArrays: DailyMetric[][]): Map<string, Da
   return byData
 }
 
-async function gravarTechLog(supabase: ReturnType<typeof createClient>, tipo: string, descricao: string): Promise<void> {
+async function gravarTechLog(
+  supabase: ReturnType<typeof createClient>,
+  tipo: string,
+  descricao: string,
+  integracaoSlug: string,
+): Promise<void> {
   try {
-    await supabase.from('tech_logs').insert({ integracao_slug: 'casa_apostas', tipo, descricao })
+    await supabase.from('tech_logs').insert({ integracao_slug: integracaoSlug, tipo, descricao })
   } catch (e) {
     console.error('[sync-metricas-cda] Falha tech_log:', e)
   }
 }
 
 async function gravarSyncLog(supabase: ReturnType<typeof createClient>, opts: {
+  integracaoSlug: string
   status: 'ok' | 'falha'
   registros_inseridos: number
   registros_atualizados?: number
@@ -497,7 +510,7 @@ async function gravarSyncLog(supabase: ReturnType<typeof createClient>, opts: {
   periodo_fim: string
 }): Promise<void> {
   const { error } = await supabase.from('sync_logs').insert({
-    integracao_slug: 'casa_apostas',
+    integracao_slug: opts.integracaoSlug,
     status: opts.status,
     registros_inseridos: opts.registros_inseridos,
     registros_atualizados: opts.registros_atualizados ?? 0,
@@ -528,28 +541,50 @@ serve(async (req: Request) => {
     const dataInicio = params.data_inicio ?? defaultInicio
     const inicioMs = Date.now()
 
-    const cdaApiKey = Deno.env.get('CDA_INFLUENCERS_API_KEY')
-    const smaticoToken = Deno.env.get('SMARTICO_TOKEN')
-    const labelId = Deno.env.get('SMARTICO_LABEL_ID') ?? '573703'
-    const authFormat = (Deno.env.get('CDA_AUTH_FORMAT') ?? 'Bearer').toLowerCase() === 'direct' ? 'direct' as const : 'Bearer' as const
-    const smarticoUsername = Deno.env.get('SMARTICO_USERNAME')
-    const smarticoPassword = Deno.env.get('SMARTICO_PASSWORD')
-    const cdaAuth: CdaAuth = (smarticoUsername && smarticoPassword)
-      ? { basicAuth: { username: smarticoUsername, password: smarticoPassword } }
-      : cdaApiKey ? { apiKey: cdaApiKey, authFormat }
-      : smaticoToken ? { token: smaticoToken }
-      : (() => { throw new Error('Configure CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD no Supabase Secrets.') })()
+    const conta = params.conta === 'afiliados' ? 'afiliados' as const : 'influencers' as const
+    const integracaoSlug = conta === 'afiliados' ? 'casa_apostas_afiliados' : 'casa_apostas'
+    const secretNameApiKey = conta === 'afiliados' ? 'CDA_AFILIADOS_API_KEY' : 'CDA_INFLUENCERS_API_KEY'
 
-    const useReportingApi = Deno.env.get('CDA_USE_REPORTING_API') === 'true'
+    const cdaApiKey = Deno.env.get(secretNameApiKey)
+    const smaticoToken = conta === 'influencers' ? Deno.env.get('SMARTICO_TOKEN') : undefined
+    const labelId =
+      (conta === 'afiliados' ? Deno.env.get('SMARTICO_LABEL_ID_AFILIADOS') : null)
+      ?? Deno.env.get('SMARTICO_LABEL_ID')
+      ?? '573703'
+    const authFormat = (Deno.env.get('CDA_AUTH_FORMAT') ?? 'Bearer').toLowerCase() === 'direct' ? 'direct' as const : 'Bearer' as const
+    const smarticoUsername = conta === 'influencers' ? Deno.env.get('SMARTICO_USERNAME') : undefined
+    const smarticoPassword = conta === 'influencers' ? Deno.env.get('SMARTICO_PASSWORD') : undefined
+
+    let cdaAuth: CdaAuth
+    if (conta === 'afiliados') {
+      if (!cdaApiKey) {
+        throw new Error('Configure CDA_AFILIADOS_API_KEY no Supabase → Edge Functions → Secrets.')
+      }
+      cdaAuth = { apiKey: cdaApiKey, authFormat }
+    } else if (smarticoUsername && smarticoPassword) {
+      cdaAuth = { basicAuth: { username: smarticoUsername, password: smarticoPassword } }
+    } else if (cdaApiKey) {
+      cdaAuth = { apiKey: cdaApiKey, authFormat }
+    } else if (smaticoToken) {
+      cdaAuth = { token: smaticoToken }
+    } else {
+      throw new Error('Configure CDA_INFLUENCERS_API_KEY ou SMARTICO_USERNAME+SMARTICO_PASSWORD no Supabase Secrets.')
+    }
+
+    const useReportingApi = Deno.env.get('CDA_USE_REPORTING_API') === 'true' || conta === 'afiliados'
     const reportingBaseUrl = Deno.env.get('SMARTICO_REPORTING_API_URL') ?? 'https://boapi3.smartico.ai'
-    const reportingEndpoint = (Deno.env.get('CDA_REPORTING_ENDPOINT') ?? 'af2_media_report_af').toLowerCase()
+    const reportingEndpointEnv =
+      (conta === 'afiliados' ? Deno.env.get('CDA_AFILIADOS_REPORTING_ENDPOINT') : null)
+      ?? Deno.env.get('CDA_REPORTING_ENDPOINT')
+      ?? 'af2_media_report_af'
+    const reportingEndpoint = reportingEndpointEnv.toLowerCase()
     const endpoint = reportingEndpoint.includes('_op') ? 'af2_media_report_op' as const : 'af2_media_report_af' as const
 
     if (useReportingApi && !cdaApiKey) {
-      throw new Error('Reporting API exige CDA_INFLUENCERS_API_KEY.')
+      throw new Error(`Reporting API exige ${secretNameApiKey}.`)
     }
 
-    console.log(`[sync-metricas-cda] v2.0.0 CDA | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Período: ${dataInicio} → ${dataFim}`)
+    console.log(`[sync-metricas-cda] v2.1.0 CDA conta=${conta} | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
@@ -563,17 +598,17 @@ serve(async (req: Request) => {
       for (const { ep, omitLabel } of strategies) {
         try {
           reportingCache = await fetchMetricasReportingAPI(dataInicio, dataFim, cdaApiKey, reportingBaseUrl, authFormat, ep, labelId, omitLabel)
-          console.log(`[sync-metricas-cda] Reporting API: ${reportingCache.size} UTMs`)
+          console.log(`[sync-metricas-cda] Reporting API (${conta}): ${reportingCache.size} UTMs`)
           lastErr = null
           break
         } catch (err) {
           lastErr = err instanceof Error ? err : new Error(String(err))
           if (String(lastErr.message).includes('Access to this label')) continue
           if (err instanceof TokenExpiradoError) {
-            logAlertaAuthCda('403 na Reporting API')
-            await gravarTechLog(supabase, 'auth', '403 na Reporting API')
-            await gravarSyncLog(supabase, { status: 'falha', registros_inseridos: 0, erros_count: 1, mensagem_erro: '403', duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
-            return new Response(JSON.stringify({ ok: false, erro: '403 - Verifique CDA_INFLUENCERS_API_KEY' }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+            logAlertaAuthCda(`403 na Reporting API (${conta})`)
+            await gravarTechLog(supabase, 'auth', `403 na Reporting API (${conta})`, integracaoSlug)
+            await gravarSyncLog(supabase, { integracaoSlug, status: 'falha', registros_inseridos: 0, erros_count: 1, mensagem_erro: '403', duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
+            return new Response(JSON.stringify({ ok: false, erro: `403 - Verifique ${secretNameApiKey}` }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
           }
           throw err
         }
@@ -645,8 +680,8 @@ serve(async (req: Request) => {
         const msg = err instanceof Error ? err.message : String(err)
         if (err instanceof TokenExpiradoError) {
           logAlertaAuthCda(msg)
-          await gravarTechLog(supabase, 'auth', msg)
-          await gravarSyncLog(supabase, { status: 'falha', registros_inseridos: totalInseridos, erros_count: 1, mensagem_erro: msg, duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
+          await gravarTechLog(supabase, 'auth', msg, integracaoSlug)
+          await gravarSyncLog(supabase, { integracaoSlug, status: 'falha', registros_inseridos: totalInseridos, erros_count: 1, mensagem_erro: msg, duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
           return new Response(JSON.stringify({ ok: false, erro: msg }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
         }
         todosErros.push(msg)
@@ -671,7 +706,7 @@ serve(async (req: Request) => {
       } catch (err) {
         if (err instanceof TokenExpiradoError) {
           logAlertaAuthCda('403 na varredura de UTMs')
-          await gravarSyncLog(supabase, { status: 'falha', registros_inseridos: totalInseridos, erros_count: 1, mensagem_erro: '403 varredura', duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
+          await gravarSyncLog(supabase, { integracaoSlug, status: 'falha', registros_inseridos: totalInseridos, erros_count: 1, mensagem_erro: '403 varredura', duracao_ms: Date.now() - inicioMs, periodo_inicio: dataInicio, periodo_fim: dataFim })
           return new Response(JSON.stringify({ ok: false, erro: '403 na varredura' }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
         }
         todosErros.push(String(err))
@@ -680,6 +715,7 @@ serve(async (req: Request) => {
 
     const duracaoMs = Date.now() - inicioMs
     await gravarSyncLog(supabase, {
+      integracaoSlug,
       status: 'ok',
       registros_inseridos: totalInseridos,
       erros_count: todosErros.length,
@@ -689,18 +725,20 @@ serve(async (req: Request) => {
       periodo_fim: dataFim,
     })
 
-    console.log(`[sync-metricas-cda] Concluído: ${totalInseridos} registros | ${orfaosNovos.length} novos órfãos`)
+    console.log(`[sync-metricas-cda] Concluído (${conta}): ${totalInseridos} registros | ${orfaosNovos.length} novos órfãos`)
 
     return new Response(JSON.stringify({
       ok: true,
-      versao: 'v2.0.0',
-      integracao: 'casa_apostas',
+      versao: 'v2.1.0',
+      integracao: integracaoSlug,
+      conta,
       api_usada: useReportingApi ? 'Reporting API' : 'Plywood',
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
       fase1_influencers: {
         total: infToUtms.size,
         registros_upserted: totalInseridos,
         erros: todosErros.length,
+        aliases_mapeados: (aliasesMapeados ?? []).length,
         detalhes: resultados,
       },
       fase2_orfaos: (params.utm_source || params.skip_orfaos) ? 'pulada' : {

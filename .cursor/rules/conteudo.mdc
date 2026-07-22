@@ -353,8 +353,8 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 
 - Header: `PageHeader` + subtítulo canónico.
 - **Abas** (`useRouteTab` + `FiltroBarTabButton`): **Influencers** | **Afiliados** — bases em `lib/linksMateriaisCanal.ts` (`TRACKING_BASE_INFLUENCER` / `TRACKING_BASE_AFILIADO`).
-- **Ver = Sim:** ambas as abas + select com **todos** influencers/afiliados da aba (sem filtrar por `podeVerInfluencer`).
-- **Ver = Próprios:** só o próprio link (`linksMateriaisIsSelfMode`) + aba do perfil (Influencer/Agência → Influencers; Afiliado → Afiliados). Agência mantém select do escopo.
+- **Ver = Sim / Admin / Criar = Sim:** ambas as abas + select com **todos** influencers/afiliados da aba. **Escopo só para Agência.**
+- **Ver = Próprios:** só o próprio link (`linksMateriaisIsSelfMode`) + aba do perfil. Agência: select filtrado por `podeVerInfluencer`.
 - **Criar = Sim:** emitir para qualquer um da lista. **Criar = Próprios:** só o próprio link (RPC `can_criar`). Matriz: `hasCriar: true`, `hasEditar: false`.
 - **Nome de exibição:** Influencer = nome artístico; Afiliado = nome (`nomeExibicaoLinksEntidade`).
 - Bloco **Link de rastreamento:** `getPageContentBoxStyle` + `SectionTitle` (sem ícone no título de bloco).

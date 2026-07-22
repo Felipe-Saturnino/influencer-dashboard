@@ -14,13 +14,14 @@ export function trackingBasePorCanal(canal: LinksMateriaisCanal): string {
 
 /**
  * Abas visíveis conforme Ver:
- * — Sim → Influencers e Afiliados
+ * — Sim (ou Admin) → Influencers e Afiliados
  * — Próprios → só a aba do canal do perfil (Influencer/Agência → Influencers; Afiliado → Afiliados)
  */
 export function linksMateriaisAbasVisiveis(
   role: Role | undefined | null,
   canView: PermissaoValor,
 ): LinksMateriaisCanal[] {
+  if (role === "admin") return ["influencer", "afiliado"];
   if (canView === "proprios") {
     if (role === "afiliado") return ["afiliado"];
     if (role === "influencer" || role === "agencia") return ["influencer"];
@@ -30,14 +31,38 @@ export function linksMateriaisAbasVisiveis(
 
 /**
  * Modo “só o próprio link” (sem select): Ver = Próprios + perfil Influencer ou Afiliado.
- * Agência com Próprios mantém select filtrado pelo escopo (não é self).
+ * Agência com Próprios mantém select filtrado pelo escopo.
  */
 export function linksMateriaisIsSelfMode(
   role: Role | undefined | null,
   canView: PermissaoValor,
 ): boolean {
+  if (role === "admin") return false;
   if (canView !== "proprios") return false;
   return role === "influencer" || role === "afiliado";
+}
+
+/**
+ * Mostra o select de influencer/afiliado para emitir em nome de terceiros.
+ * Admin, Ver=Sim ou Criar=Sim → lista completa; Agência+Próprios → escopo.
+ */
+export function linksMateriaisPrecisaSelect(
+  role: Role | undefined | null,
+  canView: PermissaoValor,
+  canCriar: PermissaoValor,
+): boolean {
+  if (linksMateriaisIsSelfMode(role, canView)) return false;
+  if (role === "admin") return true;
+  if (canView === "sim" || canCriar === "sim") return true;
+  if (role === "agencia" && canView === "proprios") return true;
+  return false;
+}
+
+/** Único perfil que filtra a lista por escopo de influencers. */
+export function linksMateriaisFiltrarPorEscopoAgencia(
+  role: Role | undefined | null,
+): boolean {
+  return role === "agencia";
 }
 
 /** @deprecated Preferir linksMateriaisIsSelfMode(role, canView). */

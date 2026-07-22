@@ -24,6 +24,7 @@ export const HORARIO_AGENDADO_BR = {
  */
 export const SYNC_LOG_SLUGS_GARANTIDOS = [
   "casa_apostas",
+  "casa_apostas_afiliados",
   "spin_na_rede_rss",
   "comercial_spa_lista",
   "comercial_dominio_validacao",
@@ -89,6 +90,8 @@ export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): strin
 
 export const ERRO_SYNC_CDA =
   "Não foi possível sincronizar os dados CDA. Verifique a Edge Function e tente novamente.";
+export const ERRO_SYNC_CDA_AFILIADOS =
+  "Não foi possível sincronizar os dados CDA Afiliados. Verifique CDA_AFILIADOS_API_KEY e a Edge Function.";
 export const ERRO_SYNC_SOCIAL =
   "Não foi possível disparar o sync de Social Media. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_SPIN_RSS =
