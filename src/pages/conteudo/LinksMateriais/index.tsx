@@ -296,7 +296,7 @@ export default function LinksMateriais() {
     return () => {
       cancelled = true;
     };
-  }, [influencerSelecionado, influenciadores, user?.role, canal]);
+  }, [influencerSelecionado, influenciadores, user?.role, canal, isSelfMode]);
 
   useEffect(() => {
     if (!linkCompleto) {
