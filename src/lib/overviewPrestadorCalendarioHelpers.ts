@@ -48,6 +48,12 @@ export function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
   const raw = row.dia_iso as string | Date | undefined;
   if (raw == null) return "";
   if (typeof raw === "string") return raw.slice(0, 10);
+  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
+    const y = raw.getFullYear();
+    const m = String(raw.getMonth() + 1).padStart(2, "0");
+    const d = String(raw.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
   try {
     return new Date(raw).toISOString().slice(0, 10);
   } catch {
@@ -77,6 +83,67 @@ export function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | unde
 
 export function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
   return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca";
+}
+
+/**
+ * Escala sintética de Escritório (seg–sex Comercial, sáb/dom Folga).
+ * Fonte de verdade no cliente — a RPC não deve gerar N×31 linhas (limite PostgREST ~1000).
+ */
+export function valorCelulaEscritorioSintetico(diaIso: string): "Comercial" | "Folga" {
+  const [ys, ms, ds] = diaIso.slice(0, 10).split("-");
+  const y = Number(ys);
+  const m = Number(ms);
+  const d = Number(ds);
+  if (!y || !m || !d) return "Folga";
+  const dt = new Date(y, m - 1, d);
+  const dow = dt.getDay(); // 0=dom … 6=sáb
+  return dow === 0 || dow === 6 ? "Folga" : "Comercial";
+}
+
+/** Remove linhas `escritorio` da RPC (podem vir truncadas) e regenera o mês completo no cliente. */
+export function mesclarGradeComEscritorioSintetico(
+  rows: RpcGradeCalendarioRow[],
+  prestadores: Pick<RhFuncionario, "id" | "area_atuacao">[],
+  refsMesIso: string[],
+): RpcGradeCalendarioRow[] {
+  const semEscritorioRpc = rows.filter((r) => (r.area_key ?? "").trim().toLowerCase() !== "escritorio");
+  const escritorioIds = prestadores.filter((p) => p.area_atuacao === "escritorio").map((p) => p.id);
+  if (escritorioIds.length === 0) return semEscritorioRpc;
+
+  const extra: RpcGradeCalendarioRow[] = [];
+  for (const ref of refsMesIso) {
+    const [ys, ms] = ref.slice(0, 10).split("-");
+    const y = Number(ys);
+    const m = Number(ms);
+    if (!y || !m) continue;
+    const last = new Date(y, m, 0).getDate();
+    const mm = String(m).padStart(2, "0");
+    for (const fid of escritorioIds) {
+      for (let day = 1; day <= last; day++) {
+        const iso = `${y}-${mm}-${String(day).padStart(2, "0")}`;
+        extra.push({
+          funcionario_id: fid,
+          dia_iso: iso,
+          valor: valorCelulaEscritorioSintetico(iso),
+          area_key: "escritorio",
+        });
+      }
+    }
+  }
+  return [...semEscritorioRpc, ...extra];
+}
+
+/**
+ * Valor da grade do dia; para Escritório usa sempre a regra sintética (mês completo).
+ */
+export function primeiroValorGradeDiaParaPrestador(
+  rows: RpcGradeCalendarioRow[],
+  funcionarioId: string,
+  iso: string,
+  p?: Pick<RhFuncionario, "area_atuacao"> | null,
+): string | null {
+  if (p?.area_atuacao === "escritorio") return valorCelulaEscritorioSintetico(iso);
+  return primeiroValorGradeDia(rows, funcionarioId, iso);
 }
 
 export function primeiroValorGradeDia(

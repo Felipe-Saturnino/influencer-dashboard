@@ -88,6 +88,8 @@ import {
   prestadorAtendeFiltroTime,
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
+import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
+import { mesclarGradeComEscritorioSintetico } from "../../../lib/overviewPrestadorCalendarioHelpers";
 import { ModalAprovarPresencaMesCalendario } from "./ModalAprovarPresencaMesCalendario";
 import {
   RelatorioPresencaPainel,
@@ -366,6 +368,12 @@ function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
   const raw = row.dia_iso as string | Date | undefined;
   if (raw == null) return "";
   if (typeof raw === "string") return raw.slice(0, 10);
+  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
+    const y = raw.getFullYear();
+    const m = String(raw.getMonth() + 1).padStart(2, "0");
+    const d = String(raw.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
   try {
     return new Date(raw).toISOString().slice(0, 10);
   } catch {
@@ -717,8 +725,9 @@ export default function RhCalendarioPage() {
   const [loadingRelatorioPresenca, setLoadingRelatorioPresenca] = useState(false);
   const [sortRelatorioNomeDir, setSortRelatorioNomeDir] = useState<SortDir>("asc");
 
-  const [rawGradeRows, setRawGradeRows] = useState<RpcGradeCalendarioRow[]>([]);
+  const [rawGradeRowsRpc, setRawGradeRowsRpc] = useState<RpcGradeCalendarioRow[]>([]);
   const [loadingEscala, setLoadingEscala] = useState(false);
+  const [erroEscala, setErroEscala] = useState<string | null>(null);
   /** Funcionário ligado ao login atual (e-mail / e-mail Spin). */
   const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
   const [funcionariosGerenciaveisIds, setFuncionariosGerenciaveisIds] = useState<Set<string>>(() => new Set());
@@ -1032,17 +1041,29 @@ export default function RhCalendarioPage() {
     if (perm.loading || perm.canView === "nao") return;
     let cancelled = false;
     setLoadingEscala(true);
+    setErroEscala(null);
     void (async () => {
       const merged: RpcGradeCalendarioRow[] = [];
+      let teveErro = false;
       try {
         for (const refIso of mesesRefISOConsulta) {
           if (cancelled) return;
-          const { data, error } = await supabase.rpc("rh_calendario_grade_mes", { p_ref_mes: refIso });
+          const { rows, error } = await carregarRhCalendarioGradeMes(refIso);
           if (cancelled) return;
-          if (error || !data) continue;
-          merged.push(...(data as RpcGradeCalendarioRow[]));
+          if (error) {
+            teveErro = true;
+            continue;
+          }
+          merged.push(...rows);
         }
-        if (!cancelled) setRawGradeRows(merged);
+        if (!cancelled) {
+          setRawGradeRowsRpc(merged);
+          setErroEscala(
+            teveErro && merged.length === 0
+              ? "Não foi possível carregar a escala do calendário. Se o problema persistir, entre em contato com o suporte."
+              : null,
+          );
+        }
       } finally {
         if (!cancelled) setLoadingEscala(false);
       }
@@ -1051,6 +1072,12 @@ export default function RhCalendarioPage() {
       cancelled = true;
     };
   }, [mesesRefISOConsulta, perm.loading, perm.canView]);
+
+  /** Escritório: mês completo no cliente (RPC truncava em ~1000 linhas). */
+  const rawGradeRows = useMemo(
+    () => mesclarGradeComEscritorioSintetico(rawGradeRowsRpc, prestadores, mesesRefISOConsulta),
+    [rawGradeRowsRpc, prestadores, mesesRefISOConsulta],
+  );
 
   useEffect(() => {
     if (perm.loading) return;
@@ -1103,12 +1130,6 @@ export default function RhCalendarioPage() {
     }
     return m;
   }, [prestadores, soPropriosCal, meuRhFuncionarioId, user?.name]);
-
-  const orgTimeIdPorPrestadorId = useMemo(() => {
-    const m = new Map<string, string | null>();
-    prestadores.forEach((p) => m.set(p.id, p.org_time_id ?? null));
-    return m;
-  }, [prestadores]);
 
   const prestadorPorId = useMemo(() => {
     const m = new Map<string, RhFuncionario>();
@@ -1352,12 +1373,16 @@ export default function RhCalendarioPage() {
 
   const compromissosPorDiaIso = useMemo(() => {
     const filtroStaff = compFilterStaffIds.length > 0 ? new Set(compFilterStaffIds) : null;
+    const optsTime = {
+      filtroAtivo: filtroTimeAtivo,
+      filtroTimeIdsReais,
+    };
     const mapa = new Map<string, CompromissoEscalaCal[]>();
     for (const r of rawGradeRowsFiltrados) {
       if (filtroStaff && !filtroStaff.has(r.funcionario_id)) continue;
       if (filtroTimeAtivo) {
-        const tid = orgTimeIdPorPrestadorId.get(r.funcionario_id) ?? null;
-        if (!tid || !filtroTimeIdsReais.has(tid)) continue;
+        const p = prestadorPorId.get(r.funcionario_id);
+        if (!p || !prestadorAtendeFiltroTime(p, optsTime)) continue;
       }
       const turno = turnoExibicaoDeValorCelulaEscala(r.valor ?? "");
       if (!turno) continue;
@@ -1374,7 +1399,7 @@ export default function RhCalendarioPage() {
     rawGradeRowsFiltrados,
     compFilterStaffIds,
     nomePrestadorPorId,
-    orgTimeIdPorPrestadorId,
+    prestadorPorId,
     filtroTimeAtivo,
     filtroTimeIdsReais,
   ]);
@@ -1404,8 +1429,8 @@ export default function RhCalendarioPage() {
     for (const row of reunioesMesRaw) {
       if (compFilterStaffIds.length > 0 && !compFilterStaffIds.includes(row.solicitante_funcionario_id)) continue;
       if (filtroTimeAtivo) {
-        const tid = orgTimeIdPorPrestadorId.get(row.solicitante_funcionario_id) ?? null;
-        if (!tid || !filtroTimeIdsReais.has(tid)) continue;
+        const p = prestadorPorId.get(row.solicitante_funcionario_id);
+        if (!p || !prestadorAtendeFiltroTime(p, { filtroAtivo: true, filtroTimeIdsReais })) continue;
       }
       const iso = isoChaveDiaReuniaoRpc(row.dia_iso as string | Date | undefined);
       if (!iso) continue;
@@ -1448,7 +1473,7 @@ export default function RhCalendarioPage() {
     compFilterStaffIds,
     filtroTimeAtivo,
     filtroTimeIdsReais,
-    orgTimeIdPorPrestadorId,
+    prestadorPorId,
   ]);
 
   const obterReunioesDiaIso = useCallback(
@@ -2098,6 +2123,12 @@ export default function RhCalendarioPage() {
       setPontoSubmitting(false);
     }
   }, [pontoEstado?.proximoTipo, mapaPontoPorDiaIso]);
+
+  const gradeEstudioAusenteNoMes =
+    !loadingEscala &&
+    !erroEscala &&
+    prestadores.some((p) => p.area_atuacao !== "escritorio") &&
+    !rawGradeRows.some((r) => (r.area_key ?? "").trim().toLowerCase() !== "escritorio");
 
   const mostrarBotaoPontoCalendario =
     !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
@@ -3180,6 +3211,46 @@ export default function RhCalendarioPage() {
           Não encontramos um cadastro de colaborador (RH) associado ao seu e-mail de login. As escalas só aparecem após essa associação — fale com o RH se precisar de ajuda.
         </div>
       )}
+
+      {erroEscala ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            marginBottom: 14,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: isDark ? "rgba(232,64,37,0.12)" : "rgba(232,64,37,0.08)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            lineHeight: 1.45,
+          }}
+        >
+          {erroEscala}
+        </div>
+      ) : null}
+
+      {!erroEscala && gradeEstudioAusenteNoMes && (abaPrincipal === "compromissos" || abaPrincipal === "presenca") ? (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "12px 16px",
+            borderRadius: 12,
+            border: `1px solid ${t.cardBorder}`,
+            background: isDark ? "rgba(245,158,11,0.12)" : "rgba(245,158,11,0.1)",
+            color: t.text,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            lineHeight: 1.45,
+          }}
+          role="status"
+        >
+          Não há escala de estúdio <strong>aprovada</strong> para este mês. A Escala Diária em rascunho ou só no navegador não aparece no Calendário — em{" "}
+          <strong>Gestão de Escala</strong>, salve e use <strong>Aprovar Escala</strong> em cada área (Game Presenter, Shuffler, etc.). Depois disso, Situação (Escalado/Folga) e os turnos passam a refletir aqui.
+        </div>
+      ) : null}
 
       {abaPrincipal === "relatorio" && podeVerAbaRelatorioPresenca ? (
         <RelatorioPresencaPainel

@@ -750,7 +750,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Modos e filtros",
         texto:
-          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
+          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nA Situação (Escalado/Folga) e os turnos de estúdio vêm só da Escala Diária **aprovada** em Gestão de Escala — rascunho, sugestão ou dados só no navegador não aparecem no Calendário. Cada área (Game Presenter, Service Manager, etc.) precisa ser aprovada à parte. Se a Situação estiver em branco (—) mesmo após aprovar, atualize a plataforma (carga completa da grade).\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
       },
       {
         subtitulo: "Check-in e Check-out",
@@ -760,7 +760,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Prestadores de Escritório",
         texto:
-          "Prestadores com área de atuação **Escritório** não dependem da Gestão de Escala. De segunda a sexta-feira, o Calendário gera automaticamente a situação **Escalado**, com Entrada programada às 09:00 e Saída programada às 18:00. Sábados e domingos aparecem como Folga.\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
+          "Prestadores com área de atuação **Escritório** não dependem da Gestão de Escala. De segunda a sexta-feira, o Calendário gera automaticamente a situação **Escalado**, com Entrada programada às 09:00 e Saída programada às 18:00. Sábados e domingos aparecem como Folga. Essa regra vale para **todos** os dias do mês (não só o início).\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
       },
       {
         subtitulo: "Relatório de Presença",

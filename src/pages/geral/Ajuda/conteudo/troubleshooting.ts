@@ -1314,7 +1314,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Turnos não aparecem no calendário?",
         texto:
-          "Para prestadores do Estúdio, confirme se a escala do período foi publicada em Gestão de Escala e se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, verifique se a área de atuação está cadastrada corretamente; a escala de segunda a sexta-feira é gerada automaticamente.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
+          "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da Escala Diária **aprovada** em Gestão de Escala. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, verifique se a área de atuação está cadastrada corretamente; a escala de segunda a sexta-feira é gerada automaticamente.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
+      },
+      {
+        subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
+        texto:
+          "Para **Escritório**, a Situação deve preencher o mês inteiro (úteis Escalado 09:00–18:00; fins de semana Folga). Se faltar dias no meio do mês, atualize a plataforma. Para **Estúdio**, Situação `—` com a Escala Diária já **Aprovada** podia ser um limite técnico na carga da grade (corrigido) — atualize a plataforma, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador (Game Presenter, Service Manager, etc.) aprovada (cada área aprova à parte); célula preenchida na grade daquela área.",
       },
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
