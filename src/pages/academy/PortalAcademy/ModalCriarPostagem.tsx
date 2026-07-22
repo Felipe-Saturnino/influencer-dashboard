@@ -31,6 +31,7 @@ import {
   diffEdicaoRascunho,
   labelComunicadoFromSlug,
   labelDicaManualFromSlug,
+  proximaVersaoMajorManual,
   registrarHistoricoEdicoesRascunho,
   registrarHistoricoStatus,
   slugComunicadoFromLabel,
@@ -434,7 +435,9 @@ export function ModalCriarPostagem({
       setDescricao(row.corpo);
       setJogosMesa(normalizarJogosMesa(row.jogo_mesa));
       setCodigoManual(row.codigo?.trim() ?? "");
-      setVersaoManual(row.versao?.trim() || "1.0");
+      const versaoSalva = row.versao?.trim() || "1.0";
+      // Manual em edição: sobe a major (1.0 → 2.0). Snapshot guarda a versão anterior p/ histórico.
+      setVersaoManual(tipoUi === "manual" ? proximaVersaoMajorManual(versaoSalva) : versaoSalva);
       setExigeCiencia(row.requires_acknowledgment === false ? "nao" : "sim");
       setAplicavelA(row.aplicavel_a?.length ? [...row.aplicavel_a] : []);
       setImagemPaths(normalizarImagensAcademyPortal(row));
@@ -453,7 +456,7 @@ export function ModalCriarPostagem({
         descricao: row.corpo,
         jogoMesa: normalizarJogosMesa(row.jogo_mesa),
         codigo: row.codigo?.trim() ?? "",
-        versao: row.versao?.trim() || "1.0",
+        versao: versaoSalva,
         exigeCiencia: row.requires_acknowledgment === false ? "nao" : "sim",
         aplicavelA: row.aplicavel_a?.length ? [...row.aplicavel_a] : [],
         imagemPaths: normalizarImagensAcademyPortal(row),

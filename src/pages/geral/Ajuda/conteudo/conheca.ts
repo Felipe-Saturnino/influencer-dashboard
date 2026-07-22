@@ -884,7 +884,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Editar postagem",
         texto:
-          "Na aba **Gerenciamento**, cada rascunho ou publicação tem o botão **Editar** (ícone de lápis), liberado pela permissão de **Editar**. Com Editar = **Próprios**, só aparece nas postagens criadas por você. Salvar volta a **Rascunho**; Publicar mantém ou publica o conteúdo.",
+          "Na aba **Gerenciamento**, cada rascunho ou publicação tem o botão **Editar** (ícone de lápis), liberado pela permissão de **Editar**. Com Editar = **Próprios**, só aparece nas postagens criadas por você. Salvar volta a **Rascunho**; Publicar mantém ou publica o conteúdo.\n\nEm **Manuais**, ao abrir a edição a **Versão** sobe automaticamente (ex.: 1.0 → 2.0).",
       },
       {
         subtitulo: "Manuais — tabela e ciência",
