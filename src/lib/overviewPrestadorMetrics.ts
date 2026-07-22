@@ -15,7 +15,7 @@ import {
   isoEstaNoPeriodo,
   obterEntradaSaidaEscaladasPrestadorDia,
   areaKeyGradeDia,
-  primeiroValorGradeDia,
+  primeiroValorGradeDiaParaPrestador,
   saidaAntecipadaMais5Min,
   situacaoGestaoEscalaParaDia,
   statusPresencaNoDia,
@@ -164,13 +164,15 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
       const iso = toIsoLocal(dia);
       if (!isoEstaNoPeriodo(iso, periodoInicio, periodoFim)) continue;
 
-      const valorG = primeiroValorGradeDia(gradeRows, funcionarioId, iso);
+      const valorG = primeiroValorGradeDiaParaPrestador(gradeRows, funcionarioId, iso, prestador);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
       const esc = obterEntradaSaidaEscaladasPrestadorDia(
         prestador,
         valorG,
         opTurnos,
-        areaKeyGradeDia(gradeRows, funcionarioId, iso),
+        prestador?.area_atuacao === "escritorio"
+          ? "escritorio"
+          : areaKeyGradeDia(gradeRows, funcionarioId, iso),
       );
       const pt = mapaPonto.get(iso);
       const gestao = presencaGestao.get(chavePresencaGestao(funcionarioId, iso));

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { usePermission } from "../../../hooks/usePermission";
 import type { RhFuncionario, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
 import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../types/rhOrganograma";
@@ -91,14 +92,28 @@ export function usePrestadorLista({
       "cadastro_revisado_em", "cadastro_revisao_tipo",
       "created_at", "updated_at", "created_by", "updated_by",
     ].join(", ");
-    const { data, error } = await supabase
-      .from("rh_funcionarios")
-      .select(PRESTADOR_LISTA_COLS)
-      .order("nome", { ascending: true })
-      .limit(5000);
-    if (error) setErroCarregar(error.message);
-    setLista((data ?? []) as unknown as RhFuncionario[]);
-    setLoading(false);
+    try {
+      const rows = await fetchAllPages(async (from, to) => {
+        const res = await supabase
+          .from("rh_funcionarios")
+          .select(PRESTADOR_LISTA_COLS)
+          .order("nome", { ascending: true })
+          .range(from, to);
+        return {
+          data: (res.data ?? null) as unknown as RhFuncionario[] | null,
+          error: res.error,
+        };
+      });
+      setLista(rows);
+    } catch (e) {
+      console.error("[GestaoPrestador] carregar lista:", e);
+      setErroCarregar(
+        "Não foi possível carregar os prestadores. Se o problema persistir, entre em contato com o suporte.",
+      );
+      setLista([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

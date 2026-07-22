@@ -51,7 +51,10 @@ const Configuracoes          = lazyWithRetry(() => import("./pages/geral/Configu
 const SimuladorLogin         = lazyWithRetry(() => import("./pages/geral/SimuladorLogin"));
 const Ajuda                  = lazyWithRetry(() => import("./pages/geral/Ajuda"));
 const Streamers                  = lazyWithRetry(() => import("./pages/dashboards/Streamers"));
+const AfiliadosDash              = lazyWithRetry(() => import("./pages/dashboards/AfiliadosDash"));
 const DashboardOverviewInfluencer = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewInfluencer"));
+const DashboardOverviewAfiliado  = lazyWithRetry(() => import("./pages/dashboards/DashboardOverviewAfiliado"));
+const Headcount                   = lazyWithRetry(() => import("./pages/dashboards/Headcount"));
 const OverviewPrestador           = lazyWithRetry(() => import("./pages/dashboards/OverviewPrestador"));
 const OverviewSpin              = lazyWithRetry(() => import("./pages/dashboards/OverviewSpin"));
 const SocialMediaDashboard      = lazyWithRetry(() => import("./pages/dashboards/SocialMediaDashboard"));
@@ -93,6 +96,8 @@ const RhGestaoStaff = lazyWithRetry(() => import("./pages/rh/GestaoStaff"));
 const RhCalendario = lazyWithRetry(() => import("./pages/rh/Calendario"));
 const EscalaMarketplaceTurnos = lazyWithRetry(() => import("./pages/escala/MarketplaceTurnos"));
 const EscalaSolicitacoes = lazyWithRetry(() => import("./pages/escala/Solicitacoes"));
+const EscalaRelatorioTurno = lazyWithRetry(() => import("./pages/escala/RelatorioTurno"));
+const EscalaRotacao = lazyWithRetry(() => import("./pages/escala/Rotacao"));
 const RhCentralDenuncias = lazyWithRetry(() => import("./pages/rh/CentralDenunciasSpin"));
 const RhPortal = lazyWithRetry(() => import("./pages/conteudo/PortalRh"));
 const Informativos = lazyWithRetry(() => import("./pages/conteudo/Informativos"));
@@ -106,7 +111,10 @@ const SemAcesso = lazyWithRetry(() => import("./pages/geral/SemAcesso"));
 const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   home:                     Home,
   streamers:                 Streamers,
+  dash_afiliados:            AfiliadosDash,
   dash_overview_influencer:  DashboardOverviewInfluencer,
+  dash_overview_afiliado:    DashboardOverviewAfiliado,
+  dash_headcount:            Headcount,
   dash_overview_prestador:   OverviewPrestador,
   mesas_spin:               OverviewSpin,
   dash_midias_sociais:      SocialMediaDashboard,
@@ -148,6 +156,8 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   rh_calendario:     RhCalendario,
   escala_marketplace_turnos: EscalaMarketplaceTurnos,
   escala_solicitacoes: EscalaSolicitacoes,
+  escala_relatorio_turno: EscalaRelatorioTurno,
+  escala_rotacao: EscalaRotacao,
   rh_central_denuncias: RhCentralDenuncias,
   rh_portal:         RhPortal,
   informativos:      Informativos,

@@ -5,6 +5,7 @@ export type IntegracaoSortCol = "integracao" | "ultimoSync" | "registros" | "err
 
 export type StatusIntegracaoSyncTipo =
   | "cda"
+  | "cda_afiliados"
   | "social"
   | "spin_rss"
   | "cs_outlook"

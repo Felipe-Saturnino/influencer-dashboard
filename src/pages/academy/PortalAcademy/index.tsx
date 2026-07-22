@@ -37,7 +37,7 @@ import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionari
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { supabase } from "../../../lib/supabase";
-import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
@@ -325,7 +325,7 @@ export default function PortalAcademyPage() {
   const [mesesGer, setMesesGer] = useState<MesCarrosselEntry[]>(() => buildMesesCarrossel([]));
   const [filtroTipoGer, setFiltroTipoGer] = useState<"todos" | AcademyPostagemTipoUi>("todos");
   const [filtroStatusGer, setFiltroStatusGer] = useState<"todos" | AcademyPostagemStatus>("todos");
-  const [modoHistorico, setModoHistorico] = useState(false);
+  const [modoHistorico, setModoHistorico] = useState(true);
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalManual, setModalManual] = useState<ManualRow | null>(null);
@@ -370,40 +370,48 @@ export default function PortalAcademyPage() {
     try {
 
     const { inicio: histInicio } = getPeriodoHistoricoCompetencias();
+    const catCols = "id, slug, label, scope, accent_hex, sort_order";
+    const postCols =
+      "id, titulo, corpo, categoria_id, published_at, published_by, created_by, imagem_storage_path, anexo_storage_path, anexo_nome, status";
     const catJoin = "categoria:academy_portal_categoria(slug,label,accent_hex)";
 
     const [catRes, comData, dicaData, manualData] = await Promise.all([
-      supabase.from("academy_portal_categoria").select("*").order("sort_order", { ascending: true }),
-      fetchAllPages<PostagemBase>(async (from, to) =>
-        await supabase
+      supabase.from("academy_portal_categoria").select(catCols).order("sort_order", { ascending: true }),
+      fetchAllPages<PostagemBase>(async (from, to) => {
+        const { data, error } = await supabase
           .from("academy_portal_comunicado")
-          .select(`*, ${catJoin}`)
+          .select(`${postCols}, ${catJoin}`)
           .eq("status", "publicado")
           .gte("published_at", histInicio)
           .order("published_at", { ascending: false })
           .order("id", { ascending: true })
-          .range(from, to)
-      ),
-      fetchAllPages<PostagemBase & { jogo_mesa?: string[] | null }>(async (from, to) =>
-        await supabase
+          .range(from, to);
+        return { data: (data ?? []) as unknown as PostagemBase[], error };
+      }),
+      fetchAllPages<PostagemBase & { jogo_mesa?: string[] | null }>(async (from, to) => {
+        const { data, error } = await supabase
           .from("academy_portal_dica")
-          .select(`*, ${catJoin}`)
+          .select(`${postCols}, jogo_mesa, ${catJoin}`)
           .eq("status", "publicado")
           .gte("published_at", histInicio)
           .order("published_at", { ascending: false })
           .order("id", { ascending: true })
-          .range(from, to)
-      ),
-      fetchAllPages<ManualRow>(async (from, to) =>
-        await supabase
+          .range(from, to);
+        return { data: (data ?? []) as unknown as (PostagemBase & { jogo_mesa?: string[] | null })[], error };
+      }),
+      fetchAllPages<ManualRow>(async (from, to) => {
+        const { data, error } = await supabase
           .from("academy_portal_manual")
-          .select(`*, ${catJoin}`)
+          .select(
+            `${postCols}, introducao, codigo, versao, requires_acknowledgment, aplicavel_a, updated_at, jogo_mesa, ${catJoin}`,
+          )
           .eq("status", "publicado")
           .gte("published_at", histInicio)
           .order("published_at", { ascending: false })
           .order("id", { ascending: true })
-          .range(from, to)
-      ),
+          .range(from, to);
+        return { data: (data ?? []) as unknown as ManualRow[], error };
+      }),
     ]);
 
     if (catRes.error) throw catRes.error;
@@ -429,14 +437,20 @@ export default function PortalAcademyPage() {
       if (aid) userIds.add(aid);
     }
 
+    const contentIds = [...comRows, ...dicaRows, ...manualRows].map((r) => r.id);
+
     const [recData, meta] = await Promise.all([
-      fetchAllPages<AcademyPortalReadReceiptRow>(async (from, to) =>
-        await supabase
-          .from("academy_portal_read_receipt")
-          .select("content_id, read_at, acknowledged_at")
-          .eq("user_id", user.id)
-          .range(from, to)
-      ),
+      contentIds.length > 0
+        ? fetchInBatched(contentIds, 100, async (ids) => {
+            const { data, error } = await supabase
+              .from("academy_portal_read_receipt")
+              .select("content_id, read_at, acknowledged_at")
+              .eq("user_id", user.id)
+              .in("content_id", ids);
+            if (error) throw error;
+            return (data ?? []) as AcademyPortalReadReceiptRow[];
+          }, 3)
+        : Promise.resolve([] as AcademyPortalReadReceiptRow[]),
       carregarMetaAutoresPortalAcademy([...userIds]),
     ]);
 
@@ -466,7 +480,6 @@ export default function PortalAcademyPage() {
 
   useEffect(() => {
     if (aba === "gerenciamento") return;
-    setModoHistorico(false);
     setBusca("");
     setBuscaDeb("");
   }, [aba]);
@@ -832,6 +845,8 @@ export default function PortalAcademyPage() {
                   autorInfo={metaAutores[autorIdPostagem(d) ?? ""]}
                   dataPublicacao={d.published_at}
                   cardShadow={cardShadow}
+                  descricaoCompleta
+                  mostrarNomeAnexo={false}
                 />
               ))}
             </div>

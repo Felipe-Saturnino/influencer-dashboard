@@ -87,7 +87,7 @@ Dois blocos empilhados na mesma aba — filtros globais (status + Staff) aplicam
 
 ## Filtros
 
-**Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Staff** (`FiltroBarCampoSelect`, `FilterBarIcons.staff`): ordem **Todos** → **Nenhum** (`extraOptions`) → prestadores do time **Customer Service** (A–Z, via RPC `cs_atendimento_atendentes_listar`).
+**Linha 1:** carrossel Aberto → Em Andamento → Arquivado (default Aberto) + pill **Todos Status** + **Staff** (`FiltroBarCampoSelect`, `FilterBarIcons.staff`): ordem **Todos** → **Nenhum** (`extraOptions`) → prestadores do time **Service Manager** (A–Z, via RPC `cs_atendimento_atendentes_listar`).
 
 **Linha 2:** abas **Site Spin** (`Globe`), **E-mail** (`Mail`) e **Instagram** (`Instagram` 16px, `activeColor` `#e1306c`) — `FiltroBarTabButton` + `onFiltroBarTabsKeyDown`.
 

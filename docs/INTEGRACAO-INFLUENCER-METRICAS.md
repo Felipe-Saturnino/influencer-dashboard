@@ -26,19 +26,30 @@ As tabelas `influencer_metricas` e `utm_aliases` **não são preenchidas pelo ap
 
 ### Pré-requisitos para o Sync funcionar
 
-**Opção A — Plywood (padrão):**
+**Duas contas TAP (CDA):** a Edge `sync-metricas-cda` aceita `conta: "influencers"` (default) ou `"afiliados"`.
+
+| Conta | Secret | `sync_logs.integracao_slug` | Status Técnico |
+|-------|--------|-----------------------------|----------------|
+| Influencers | `CDA_INFLUENCERS_API_KEY` (ou Basic / token) | `casa_apostas` | Casa de Apostas (CDA) — Influencers |
+| Afiliados | `CDA_AFILIADOS_API_KEY` (obrigatório; força Reporting API) | `casa_apostas_afiliados` | Casa de Apostas (CDA) — Afiliados |
+
+Métricas e UTMs gravam sempre com `operadora_slug = casa_apostas`. Cron diário (4h BRT) dispara as duas contas.
+
+**Opção A — Plywood (padrão, só Influencers):**
 - **SMARTICO_USERNAME** + **SMARTICO_PASSWORD** (recomendado): Autenticação Basic — prioridade quando ambos configurados.
 - **CDA_INFLUENCERS_API_KEY:** Chave API da plataforma CDA. Alternativa se Basic auth não funcionar.
 - **SMARTICO_TOKEN** (fallback): Token de sessão (expira). Use apenas se Basic e API key não estiverem disponíveis.
 - **SMARTICO_LABEL_ID:** (opcional, default 573703)
 
-**Opção B — Reporting API (recomendado se Plywood retorna 403):**
-- **CDA_USE_REPORTING_API:** `true` — ativa a [Reporting API](https://help.theaffiliateplatform.com/apis-and-configurations/reporting-api).
-- **CDA_INFLUENCERS_API_KEY:** Obrigatório. Chave obtida em Account Settings no perfil CDA.
+**Opção B — Reporting API (recomendado se Plywood retorna 403; obrigatório para Afiliados):**
+- **CDA_USE_REPORTING_API:** `true` — ativa a [Reporting API](https://help.theaffiliateplatform.com/apis-and-configurations/reporting-api) (Influencers). Conta Afiliados já força Reporting.
+- **CDA_INFLUENCERS_API_KEY** / **CDA_AFILIADOS_API_KEY:** Chave em Account Settings do perfil TAP correspondente.
 - **SMARTICO_REPORTING_API_URL:** (opcional) URL base. Default: `https://boapi.smartico.ai`. Para CDA, verificar em Account Settings — pode ser `https://boapi.aff.casadeapostas.bet.br`.
+- **SMARTICO_LABEL_ID_AFILIADOS:** (opcional) label da conta Afiliados; senão usa `SMARTICO_LABEL_ID`.
+- **CDA_AFILIADOS_REPORTING_ENDPOINT:** (opcional) endpoint da conta Afiliados; senão `CDA_REPORTING_ENDPOINT` / default.
 - **CDA_AUTH_FORMAT:** (opcional) `Bearer` (default) ou `direct` — para API key (vale para Plywood e Reporting API).
 
-- Edge Function `sync-metricas` implantada (v1.8.0+)
+- Edge Function `sync-metricas-cda` implantada (v2.1.0+)
 
 ### Erro "Edge Function returned a non-2xx status code"
 
@@ -47,9 +58,10 @@ Significa que a função falhou. Possíveis causas:
 | Causa | Solução |
 |-------|---------|
 | CDA_INFLUENCERS_API_KEY ou SMARTICO_TOKEN não configurado | Supabase → Edge Functions → Secrets → adicionar CDA_INFLUENCERS_API_KEY (recomendado) ou SMARTICO_TOKEN |
+| CDA_AFILIADOS_API_KEY não configurado (sync Afiliados) | Adicionar CDA_AFILIADOS_API_KEY no mesmo painel de Secrets |
 | Erro 403 (credencial inválida) na Plywood | Usar **Reporting API**: CDA_USE_REPORTING_API=true + CDA_INFLUENCERS_API_KEY (chave em Account Settings no perfil CDA) |
-| Erro 403 na Reporting API | Verificar CDA_INFLUENCERS_API_KEY; conferir SMARTICO_REPORTING_API_URL se CDA usar domínio próprio |
-| Outros erros | Ver logs em Supabase → Edge Functions → sync-metricas → Logs |
+| Erro 403 na Reporting API | Verificar a chave da conta (Influencers ou Afiliados); conferir SMARTICO_REPORTING_API_URL se CDA usar domínio próprio |
+| Outros erros | Ver logs em Supabase → Edge Functions → sync-metricas-cda → Logs |
 
 ---
 

@@ -16,7 +16,6 @@ export const TREINAMENTO_FILTRO_ID = "rh-cal-filtro-treinamento";
 
 /** Ordem e rótulos exibidos no filtro (nome do time; Treinamento = gerência Treinamento). */
 export const CALENDARIO_TIMES_FILTRO_ORDEM = [
-  "Customer Service",
   "Service Manager",
   "Game Presenter",
   "Performance Coach",

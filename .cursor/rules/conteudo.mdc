@@ -352,15 +352,19 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 ### LinksMateriais (`src/pages/conteudo/LinksMateriais/index.tsx`)
 
 - Header: `PageHeader` + subtítulo canónico.
+- **Abas** (`useRouteTab` + `FiltroBarTabButton`): **Influencers** | **Afiliados** — bases em `lib/linksMateriaisCanal.ts` (`TRACKING_BASE_INFLUENCER` / `TRACKING_BASE_AFILIADO`).
+- **Ver = Sim / Admin / Criar = Sim:** ambas as abas + select com **todos** influencers/afiliados da aba. **Escopo só para Agência.**
+- **Ver = Próprios:** só o próprio link (`linksMateriaisIsSelfMode`) + aba do perfil. Agência: select filtrado por `podeVerInfluencer`.
+- **Criar = Sim:** emitir para qualquer um da lista. **Criar = Próprios:** só o próprio link (RPC `can_criar`). Matriz: `hasCriar: true`, `hasEditar: false`.
+- **Nome de exibição:** Influencer = nome artístico; Afiliado = nome (`nomeExibicaoLinksEntidade`).
 - Bloco **Link de rastreamento:** `getPageContentBoxStyle` + `SectionTitle` (sem ícone no título de bloco).
-- Header legado doc: `Share2` (Lucide), `h1` **18px** — migrado para `PageHeader` Família B onde aplicável.
-- Botão **Emitir:** gradiente `brand.useBrand ? linear-gradient(var(--brand-primary), var(--brand-secondary)) : linear-gradient(135deg, #4a2082, #1e36f8)`; `aria-disabled` + `title` contextual; `Loader2` branco em `salvando` / `verificandoGateEmissao`.
+- Botão **Emitir:** gradiente canónico; `aria-disabled` + `title` contextual; `Loader2` branco em `salvando` / `verificandoGateEmissao`.
 - Erro de emissão ao usuário: `"Não foi possível emitir o link. Se o problema persistir, entre em contato com o suporte."`
-- Aviso parcial (canView sem editar): manter bloco amarelo com `AlertCircle` — não confundir com sem permissão total.
+- Aviso parcial (canView sem Criar): bloco amarelo — pedir ativar **Criar** em Gestão de Usuários.
 - **Previews QR:** `aspectRatio: "600 / 760"`; skeleton com `app-skeleton-pulse`; `aria-label` específico por variante de download; `Loader2` em "Gerando…".
 - **Strip URL:** `brand.primaryTransparentBorder/Bg`; input UTM `aria-label="Valor do utm_source"`.
-- Gate `verificarElegibilidadeAgendaLive`: manter antes do RPC para `roleParidadeInfluencer` — não remover por permissão.
-- **Emissão → Gestão de Links:** RPC `registrar_utm_alias_tracking_casa_apostas` grava `utm_aliases` com `status = mapeado`, `influencer_id` do alvo e espelha `influencer_perfil.utm_source`; payload do influencer envia `p_influencer_id: user.id`. Sync CDA **não** rebaixa alias com `mapeado_por` / `influencer_id` para pendente.
+- Gate `verificarElegibilidadeAgendaLive`: só no modo self da aba Influencers.
+- **Emissão → Gestão de Links:** RPC `registrar_utm_alias_tracking_casa_apostas` exige `can_criar`; grava `utm_aliases` mapeado + `influencer_id` (influencer ou afiliado).
 
 ### PlaybookInfluencers (`src/pages/conteudo/PlaybookInfluencers/index.tsx`)
 
@@ -405,7 +409,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**; ações só ícone = **`BtnIconeAcaoLinha`** + **`tooltipModal(tituloModalHeader)`** (Editar postagem, Aprovar, `` Histórico — ${assunto} ``).
 - **PortalRhBlocoFiltros:** carrossel + **`FiltroHistoricoButton`** por **data de publicação** (`published_at`); modo histórico = rótulo **`Todo o período`** e janela de 13 competências mensais inclusivas.
 - **Abas Comunicados / Políticas / RH Talks:** listar só `status === "publicado"` — **nunca** arquivados.
-- **Carga (leitura pública):** `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências** (`getPeriodoHistoricoCompetencias`) — comunicados ainda incluem `is_pinned = true` fora da janela. Join de categoria estreito (`slug,label,accent_hex`). Participantes, receipts e autores em **`Promise.all`** após a carga principal. **Proibido** baixar rascunhos/arquivados no portal de leitura ou filtrar só no cliente o status/período da listagem pública.
+- **Carga (leitura pública):** `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências** (`getPeriodoHistoricoCompetencias`) — comunicados ainda incluem `is_pinned = true` fora da janela. Join de categoria e colunas de postagem **explícitos** (sem `select("*")`). Participantes, receipts (`.in("content_id", ids)` do conjunto carregado) e autores em **`Promise.all`** após a carga principal. **Proibido** baixar rascunhos/arquivados no portal de leitura, dump all-time de receipts, ou filtrar só no cliente o status/período da listagem pública.
 - **Aba Políticas — modelo normativo (novo):** documentos com `codigo` + `tipo_documento` + PDF canónico (`anexo_storage_path` ou `storage_path` em pasta `pdfs`). Lista em **`PortalRhDocumentosTabela`** (`useDataTableBlock`, `SortTableTh` por código/versão/ciência). Filtros por família: **Todos · Políticas RH · Procedimentos · Códigos · Operações** (`FiltroSemanticoTabPill` + `portalRhDocumentoNormativo.ts`). Leitura: **`ModalVisualizarDocumento`** — iframe PDF + «Li e estou ciente». Cadastro/edição: **`ModalFormPoliticaNormativa`** dentro de **`ModalCriarPostagem`** — PDF obrigatório; `aplicavel_a` aceita **diretoria, gerência e time**, além de **Todos os prestadores**. **Ciência:** só **Perfis Gerenciais + Perfis Internos** (`perfilPortalRhParticipaCiencia`); **Perfis Externos** não veem coluna nem botão. Exige `requires_acknowledgment` **e** público em `aplicavel_a`: diretoria/gerência/time selecionados → só prestadores daquele vínculo/hierarquia no organograma; demais perfis elegíveis só visualizam (`—` na coluna). **Todos os prestadores** → todos com cadastro ativo em **Gestão de Prestadores**. Helpers em `portalRhDocumentoNormativo.ts`.
 - **Legado Políticas:** posts sem `codigo`/`tipo_documento` mantêm **`ModalLerPolitica`** (HTML + anexo opcional); novos cadastros de Política/Normativa usam sempre o modelo normativo.
 - **Tipo RH (legado categoria):** slug `rh` em `TIPOS_POLITICA` / filtro Gerenciamento — distinto de família «Políticas RH» no filtro normativo.

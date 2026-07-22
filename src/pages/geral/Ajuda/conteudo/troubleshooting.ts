@@ -48,6 +48,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_afiliados: {
+    titulo: "Afiliados",
+    blocos: [
+      {
+        subtitulo: "Por que vejo 'Sem dados para o filtro selecionado' em todos os blocos?",
+        texto:
+          "Confirme o período no carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links → Mapear como Afiliado) e o sync precisa ter rodado após o mapeamento. Links só com visita na TAP e ainda não mapeados aparecem em Gestão de Links → Pendentes (Origem = TAP Afiliados). Se o filtro de afiliados estiver vazio, verifique cadastros na página Afiliados.",
+      },
+      {
+        subtitulo: "Não vejo Afiliados no menu de Dashboards?",
+        texto:
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para a página Afiliados na seção Dashboards. Administradores têm acesso total. Não confunda com a página Afiliados da seção de cadastro.",
+      },
+    ],
+  },
   mesas_spin: {
     titulo: "Overview Spin",
     blocos: [
@@ -153,6 +168,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_overview_afiliado: {
+    titulo: "Overview Afiliado",
+    blocos: [
+      {
+        subtitulo: "Por que os KPIs e o detalhamento estão vazios?",
+        texto:
+          "O layout do Overview Afiliado já está disponível; a carga de métricas será integrada em etapa seguinte. Até lá, a mensagem 'Sem dados para o filtro selecionado' é esperada.",
+      },
+      {
+        subtitulo: "Não vejo Overview Afiliado no menu?",
+        texto:
+          "Libere a permissão de Ver em Gestão de Usuários → Permissões para o perfil desejado. Administradores veem a página automaticamente após o deploy.",
+      },
+    ],
+  },
   dash_overview_prestador: {
     titulo: "Overview Prestador",
     blocos: [
@@ -165,6 +195,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "KPIs de presença ou absenteísmo vazios?",
         texto:
           "Métricas de escala e presença dependem de escala publicada e registros no Calendário. Verifique se o prestador ou time selecionado tem turnos no período e se justificativas pendentes não estão bloqueando o fechamento.",
+      },
+    ],
+  },
+  dash_headcount: {
+    titulo: "Headcount",
+    blocos: [
+      {
+        subtitulo: "Não vejo Headcount no menu?",
+        texto:
+          "Confirme em Gestão de Usuários → Permissões se o perfil tem permissão de **Ver** para **Headcount**. Por padrão a página nasce bloqueada (Não) até liberação explícita. Administradores veem a página automaticamente.",
+      },
+      {
+        subtitulo: "A tabela de vagas na aba Contratação está vazia?",
+        texto:
+          "A lista mostra apenas vagas com status efetivo **Aberta** ou **Em andamento**. Vagas concluídas ou canceladas entram só nos KPIs de fechadas. Confirme também a diretoria selecionada na barra de filtros.",
+      },
+      {
+        subtitulo: "O HC do Histórico parece diferente do cadastro atual?",
+        texto:
+          "A evolução mensal é reconstruída pelas datas de início e desligamento dos prestadores. Não existe snapshot mensal auditável na base — use o número como tendência, não como fechamento contábil de headcount. No **Histórico**, a Overview mostra a tabela Mês a Mês dos últimos 13 meses; Contratação e Distratos agregam o mesmo intervalo.",
       },
     ],
   },
@@ -519,7 +569,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A peça está na aba errada ou não aparece?",
         texto:
-          "Verifique se os filtros de operadora, categoria ou tamanho estão ativos — eles restringem o que aparece em todas as abas. Clique em **Todas Operadoras**, **Todas as categorias** e **Todos os tamanhos** para ver o inventário completo. Cada aba exibe apenas peças com o status correspondente.",
+          "Verifique se os filtros de estúdio, categoria, tamanho, cor ou gênero estão ativos — eles restringem o que aparece em todas as abas. Use as opções agregadoras (**Todos Estúdios**, **Todas Categorias**, etc.) para ver o inventário completo.\n\nPeças com retirada ativa do tipo Emprestada ficam na aba Emprestada; as do tipo Fixo ficam na aba Fixo. Manutenção e Descartada seguem o status da peça.",
       },
       {
         subtitulo: "A etiqueta PDF não baixou depois de cadastrar a peça?",
@@ -555,6 +605,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Erro ao salvar bloco ou campanha?",
         texto:
           "Verifique campos obrigatórios (título, texto, estúdio, datas em campanhas) e conexão. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.\n\nSe o problema persistir, valide no Supabase (RLS, policies e tabelas roteiro_mesa_*) com o administrador.",
+      },
+      {
+        subtitulo: "Não consigo editar uma sugestão de roteiro?",
+        texto:
+          "A edição exige permissão de Editar na página Roteiro de Mesa (Gestão de Usuários → Permissões). Sem ela, o ícone de lápis não aparece. Com a permissão, o modal permite alterar tipo, jogos e texto; o estúdio do registro permanece o mesmo.",
       },
       {
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
@@ -600,6 +655,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não aparece a aba Gerenciamento?",
         texto:
           "A aba **Gerenciamento** exige permissão de **Editar** na página Portal da Academy. Com apenas **Ver**, só as abas Comunicados, Dicas e Manuais ficam disponíveis.",
+      },
+      {
+        subtitulo: "Não vejo o botão Editar em algumas postagens?",
+        texto:
+          "O botão **Editar** aparece em rascunhos e publicações quando há permissão de **Editar**. Com Editar = **Próprios**, só nas postagens criadas por você. Postagens **Arquivadas** não têm Editar — só Histórico.",
       },
       {
         subtitulo: "Qual Jogo? está vazio no modal?",
@@ -649,22 +709,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Emitir está desabilitado?",
         texto:
-          "O botão fica inativo em três situações:\n— Você não tem permissão de editar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você é gestor e não selecionou um influencer na lista.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de editar, contate o administrador e peça que ative Editar em Links e Materiais na Gestão de Usuários.",
+          "O botão fica inativo em três situações:\n— Você não tem permissão de Criar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você tem Ver = Sim e não selecionou um influencer ou afiliado na lista da aba ativa.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de Criar, entre em contato com o administrador e peça que ative Criar em Links e Materiais na Gestão de Usuários.",
       },
       {
         subtitulo: "Apareceu um aviso de perfil incompleto ou Playbook pendente ao tentar emitir?",
         texto:
-          "O link só pode ser emitido quando o perfil do influencer está completo e o Playbook foi confirmado. O aviso indica qual requisito está faltando e oferece um botão para ir direto à página correspondente. Complete o requisito indicado e volte para emitir o link.",
+          "Na aba Influencers, o link só pode ser emitido quando o perfil do influencer está completo e o Playbook foi confirmado. O aviso indica qual requisito está faltando e oferece um botão para ir direto à página correspondente. Complete o requisito indicado e volte para emitir o link.",
       },
       {
         subtitulo: "O UTM foi preenchido automaticamente com um nome errado?",
         texto:
-          "O UTM é gerado a partir do nome artístico cadastrado no perfil do influencer. Se o nome artístico estiver desatualizado, atualize-o em Influencers (área de perfil) e volte para emitir. Você também pode editar o campo UTM manualmente antes de emitir — use apenas letras sem acento, números e _.",
+          "Na aba Influencers, o UTM vem do nome artístico do perfil. Na aba Afiliados, vem do nome (afiliado não usa nome artístico). Atualize o cadastro correspondente e volte para emitir, ou edite o campo UTM manualmente antes de emitir — use apenas letras sem acento, números e _.",
       },
       {
         subtitulo: "O link já foi emitido mas não aparece na tela?",
         texto:
-          "Se você acabou de entrar na página e o link não carregou, aguarde o indicador de carregamento desaparecer. Se demorar mais de alguns segundos, recarregue a página. Se o link já foi emitido anteriormente por outro gestor, ele será carregado automaticamente ao selecionar o influencer na lista.",
+          "Se você acabou de entrar na página e o link não carregou, aguarde o indicador de carregamento desaparecer. Se demorar mais de alguns segundos, recarregue a página. Se o link já foi emitido anteriormente por outro gestor, ele será carregado automaticamente ao selecionar a pessoa na lista da aba ativa.",
       },
       {
         subtitulo: "O QR Code não aparece após emitir?",
@@ -677,9 +737,14 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Verifique se o seu navegador está bloqueando downloads automáticos. Na maioria dos navegadores, um ícone aparece na barra de endereço quando um download é bloqueado — clique nele e permita o download desta página. Se o botão mostrar Gerando… por mais de 15 segundos sem baixar, recarregue a página e tente novamente.",
       },
       {
-        subtitulo: "Como gestor, não vejo nenhum influencer na lista?",
+        subtitulo: "Como gestor, não vejo ninguém na lista?",
         texto:
-          "A lista exibe apenas influencers dentro do seu escopo de visibilidade configurado na Gestão de Usuários. Se a lista estiver vazia, o seu escopo pode não incluir nenhum influencer ativo. Contate o administrador para revisar o seu escopo de acesso.",
+          "A lista exibe influencers ou afiliados conforme a aba ativa. Com Ver = Sim, a lista inclui todos os perfis daquele canal. Com Ver = Próprios (ex.: Agência), só entram os do seu escopo. Se a lista estiver vazia, confirme a permissão de Ver e o escopo em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Só vejo uma das abas (Influencers ou Afiliados)?",
+        texto:
+          "Com Ver = Próprios, isso é esperado: Influencer ou Agência vê apenas Influencers; Afiliado vê apenas Afiliados. Com Ver = Sim, as duas abas aparecem.",
       },
     ],
   },
@@ -984,7 +1049,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Overview Comercial no menu?",
         texto:
-          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para **Overview Comercial** (página distinta do Pipeline B2B). Administradores têm acesso total.",
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para **Overview Comercial** (página na seção **Dashboards**, distinta do Pipeline B2B). Administradores têm acesso total.",
       },
       {
         subtitulo: "Mapa ou lista de UF vazios?",
@@ -1114,7 +1179,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações CDA, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
+          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
@@ -1249,7 +1314,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Turnos não aparecem no calendário?",
         texto:
-          "Para prestadores do Estúdio, confirme se a escala do período foi publicada em Gestão de Escala e se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, verifique se a área de atuação está cadastrada corretamente; a escala de segunda a sexta-feira é gerada automaticamente.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
+          "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da Escala Diária **aprovada** em Gestão de Escala. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, verifique se a área de atuação está cadastrada corretamente; a escala de segunda a sexta-feira é gerada automaticamente.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
+      },
+      {
+        subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
+        texto:
+          "Para **Escritório**, a Situação deve preencher o mês inteiro (úteis Escalado 09:00–18:00; fins de semana Folga). Se faltar dias no meio do mês, atualize a plataforma. Para **Estúdio**, Situação `—` com a Escala Diária já **Aprovada** podia ser um limite técnico na carga da grade (corrigido) — atualize a plataforma, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador (Game Presenter, Service Manager, etc.) aprovada (cada área aprova à parte); célula preenchida na grade daquela área.",
       },
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
@@ -1285,6 +1355,56 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo publicar oferta de turno?",
         texto:
           "Publicar oferta exige permissão de **Criar** no Marketplace. Verifique também se o turno de origem pertence ao seu escopo (time/staff).",
+      },
+    ],
+  },
+  escala_relatorio_turno: {
+    titulo: "Relatório de Turno",
+    blocos: [
+      {
+        subtitulo: "Não vejo Relatório de Turno no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Relatório de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+      },
+      {
+        subtitulo: "Não consigo criar um novo relatório?",
+        texto:
+          "É necessária permissão de **Criar** na mesma linha. Sem ela, o botão **Novo Relatório** não aparece. O responsável fica travado no usuário logado; a **Data do turno** pode ser ontem ou hoje (dia em que o turno começou).",
+      },
+      {
+        subtitulo: "Qual data usar no turno noturno?",
+        texto:
+          "Use a data em que o turno **começou**. Ex.: Noite que começa às 20h ou 23h de segunda e fecha na manhã de terça → selecione a data de **segunda**. Antes do meio-dia, o sistema já sugere **ontem** por padrão.",
+      },
+      {
+        subtitulo: "Falta a roleta do Sports Club no checklist?",
+        texto:
+          "A lista vem das mesas cadastradas com tipo ou nome de Roleta em Gestão de Estúdios / Mesas. Confirme o vínculo da mesa ao estúdio Sports Club e o tipo de jogo. Se a migração recente ainda não foi aplicada no banco, a listagem antiga pode omitir algumas roletas.",
+      },
+      {
+        subtitulo: "Faltam blocos de estúdio no modal?",
+        texto:
+          "Os blocos seguem os estúdios **ativos** em Gestão de Estúdios. Cadastre ou reative o estúdio para ele aparecer automaticamente no próximo relatório.",
+      },
+    ],
+  },
+  escala_rotacao: {
+    titulo: "Rotação",
+    blocos: [
+      {
+        subtitulo: "Não vejo Rotação no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Rotação**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+      },
+      {
+        subtitulo: "Pool vazio ou sem escala aprovada?",
+        texto:
+          "A rotação usa só Game Presenters **escalados** na Gestão de Escala **aprovada** do mês, com escala **4×2**, turno e estúdio corretos em Gestão de Staff. Sem aprovação ou sem GPs no turno, o pool fica vazio — aprove a escala e confira o cadastro operacional.",
+      },
+      {
+        subtitulo: "Não consigo publicar a rotação?",
+        texto:
+          "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com elegíveis suficientes para o modelo e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
       },
     ],
   },
@@ -1379,7 +1499,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um link mapeado não aparece nos dashboards?",
         texto:
-          "Após o mapeamento, a sincronização histórica ocorre automaticamente mas pode levar alguns minutos. Novos dados chegam diariamente até as 4h. Se após 24h o link ainda não reflete nos dashboards, verifique: (1) o link foi mapeado para o influencer correto? Na aba Mapeados, a coluna Influencer / Campanha confirma a associação. (2) O influencer tem perfil ativo e está presente no dashboard? Perfis Cancelados podem não aparecer nos relatórios.",
+          "Após o mapeamento, a sincronização histórica ocorre automaticamente mas pode levar alguns minutos. Novos dados chegam diariamente até as 4h. Se após 24h o link ainda não reflete nos dashboards, verifique: (1) o link foi mapeado para o influencer, afiliado ou campanha corretos? Na aba Mapeados, a coluna Proprietário confirma a associação. (2) O perfil associado está ativo e presente no dashboard? Perfis cancelados podem não aparecer nos relatórios.",
       },
       {
         subtitulo: "O botão Mapear não aparece na aba Pendentes?",
@@ -1389,7 +1509,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Quero remapear um link que já foi mapeado incorretamente?",
         texto:
-          "Na aba Mapeados, clique em Reabrir na linha correspondente. O link volta para Pendentes e pode ser mapeado novamente para o influencer ou campanha corretos.",
+          "Na aba Mapeados, clique em Reabrir na linha correspondente. O link volta para Pendentes e pode ser mapeado novamente para o influencer, afiliado ou campanha corretos.",
+      },
+      {
+        subtitulo: "Como saber se o link pendente veio da TAP Influencers ou da TAP Afiliados?",
+        texto:
+          "Na aba Pendentes, use a coluna **Origem**: **TAP Influencers** ou **TAP Afiliados**. Se aparecer traço (—), o registro é anterior à coluna de origem — rode o sync CDA das duas contas em Status Técnico (após aplicar a atualização do banco) para preencher a origem nos próximos ciclos.",
       },
       {
         subtitulo: "Um UTM Source tem dados históricos mas mostra R$ 0,00 em GGR?",

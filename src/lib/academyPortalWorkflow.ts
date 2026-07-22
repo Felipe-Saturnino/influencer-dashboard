@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PermissaoValor } from "../types";
 import { anexosIguais } from "./academyPortalPostagemFiles";
 
 export type AcademyPostagemTipoUi = "comunicado" | "dica" | "manual";
@@ -72,6 +73,32 @@ export function fmtDataColunaGerenciamento(iso: string | null | undefined): stri
 
 export function stripHtmlText(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Próxima versão major de Manual ao editar (ex.: 1.0 → 2.0, 1,5 → 2.0).
+ * Aceita vírgula ou ponto; se inválida, volta para 1.0.
+ */
+export function proximaVersaoMajorManual(versaoAtual: string | null | undefined): string {
+  const raw = (versaoAtual ?? "").trim().replace(/^v/i, "").trim().replace(",", ".");
+  if (!raw) return "1.0";
+  const n = Number.parseFloat(raw);
+  if (!Number.isFinite(n) || n < 0) return "1.0";
+  return `${Math.floor(n) + 1}.0`;
+}
+
+/** Editar na aba Gerenciamento — respeita Gestão de Usuários (sim / próprios). */
+export function podeEditarPostagemAcademyGerenciamento(
+  canEditar: PermissaoValor | null,
+  canEditarOk: boolean,
+  userId: string | undefined | null,
+  createdBy: string | null | undefined,
+): boolean {
+  if (!canEditarOk) return false;
+  if (canEditar === "proprios") {
+    return !!userId && !!createdBy && createdBy === userId;
+  }
+  return canEditar === "sim";
 }
 
 export function truncPreviewHtml(html: string, maxLen: number): string {

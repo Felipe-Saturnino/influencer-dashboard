@@ -1,6 +1,6 @@
 # Relatório de Saúde do Código — Data Intelligence (Spin Gaming)
 
-*Última verificação: julho 2026 (Fase 5 eficiência pré-i18n)*
+*Última verificação: julho 2026 (Fase 8 — listas/grades densas)*
 
 ---
 
@@ -13,6 +13,8 @@
 | **Mobile readiness** | ⚠️ Parcial | Layout fixo; 1 breakpoint em CSS |
 | **Otimizações de rede** | ✅ OK | Preconnect para fonts |
 | **Build TypeScript** | ✅ OK | `npm run typecheck` no pre-commit; ver Global § TypeScript pré-deploy |
+| **Fetch (features novas)** | ✅ Fase 7 | Janela SQL + `fetchAllPages` + colunas explícitas — ver Global § Eficiência de fetch |
+| **Listas densas** | ✅ Fase 8 | Prestadores + Escala: paginação de vista + cache de opções — ver Global §6 |
 
 ---
 
@@ -62,7 +64,28 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 | **Banca de Jogo** | Dump all-time → janela de 13 competências (`solicitado_em`/`liberado_em`); colunas explícitas; catálogos em `Promise.all`. |
 | **Portal RH / Academy (leitura)** | SQL com `status = publicado` + `published_at` na janela histórica; join de categoria estreito; receipts/participantes/autores em paralelo. |
 
-Pendências conscientes (próximas ondas): paginação server-side no Gerenciamento dos portais; N+1 da aprovação mensal do Calendário; virtualização Escala/Prestadores (Fases 7–8).
+Pendências conscientes (próximas ondas): paginação server-side no Gerenciamento dos portais; N+1 da aprovação mensal do Calendário; split AppContext / monólitos restantes (Fase 9).
+
+### Fase 7 — Features novas (jul/2026)
+
+| Área | Correção |
+|------|----------|
+| **Ordem de Saída** | Fetch com janela 13 competências + OS abertas; colunas explícitas; catálogo lean para Nova OS; estúdios no `Promise.all`; histórico de ações com `.limit(200)`. Histórico alinhado ao Global (13 competências). |
+| **Relatório de Turno** | `dataIni`/`dataFim` = `getPeriodoHistoricoCompetencias()` no load. |
+| **Performance Hub** | Avaliações com janela 13 competências + `fetchAllPages`. |
+| **Headcount** | `fetchAllPages` (evita truncamento ~1000); vagas na janela + abertas; candidaturas filtradas aos IDs; organograma com colunas explícitas. |
+| **Portal Academy / Portal RH** | Colunas explícitas; receipts via `.in(content_id)` do conjunto carregado. |
+
+Padrão transversal documentado em **`.cursor/rules/global.mdc` § Eficiência de fetch**.
+
+### Fase 8 — Listas e grades densas (jul/2026)
+
+| Área | Correção |
+|------|----------|
+| **Gestão de Prestadores** | `fetchAllPages` (substitui `.limit(5000)` truncado); tabela com paginação client-side 50/página (`TabelaPaginacaoBar`); KPIs/filtros no conjunto completo. |
+| **Gestão de Escala** | Escala Diária pagina 40 linhas na vista (save/sugestão inalterados); cache de opções do `<select>` por tipo de turno. |
+
+Helpers: `lib/tablePagination.ts`, `components/TabelaPaginacaoBar.tsx`. Contrato em Global § Eficiência de fetch §6.
 
 ### Carga em duas fases (padrão para janelas históricas pesadas)
 

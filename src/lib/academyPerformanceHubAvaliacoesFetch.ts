@@ -1,4 +1,6 @@
+import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
 import { supabase } from "./supabase";
+import { fetchAllPages } from "./supabasePaginate";
 import type {
   PerformanceHubAvaliacao,
   PerformanceHubCriterioResposta,
@@ -133,17 +135,22 @@ const SELECT_AVALIACAO = `
 `;
 
 export async function fetchPerformanceHubAvaliacoes(): Promise<PerformanceHubAvaliacao[]> {
-  const { data, error } = await supabase
-    .from("academy_performance_hub_avaliacao")
-    .select(SELECT_AVALIACAO)
-    .order("data_avaliacao", { ascending: false });
-
-  if (error) {
+  try {
+    const { inicio, fim } = getPeriodoHistoricoCompetencias();
+    const rows = await fetchAllPages<AvaliacaoRow>(async (from, to) =>
+      supabase
+        .from("academy_performance_hub_avaliacao")
+        .select(SELECT_AVALIACAO)
+        .gte("data_avaliacao", inicio)
+        .lte("data_avaliacao", fim)
+        .order("data_avaliacao", { ascending: false })
+        .range(from, to),
+    );
+    return rows.map(mapRowParaAvaliacao);
+  } catch (error) {
     console.error("Performance Hub: falha ao carregar avaliações", error);
     return [];
   }
-
-  return ((data ?? []) as AvaliacaoRow[]).map(mapRowParaAvaliacao);
 }
 
 export async function upsertPerformanceHubAvaliacao(

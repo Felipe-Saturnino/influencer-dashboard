@@ -1,6 +1,7 @@
 import { queryClient } from "../../../lib/queryClient";
 import { carregarPresencaGestaoMes } from "../../../lib/rhCalendarioPresencaGestaoDb";
 import type { PresencaDiaGestao } from "../../../lib/rhCalendarioPresencaGestao";
+import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
 import { supabase } from "../../../lib/supabase";
 import type {
   RpcGradeCalendarioRow,
@@ -14,11 +15,9 @@ export function fetchOverviewPrestadorGradeMes(refMes: string): Promise<RpcGrade
     queryKey: ["overview-prestador", "grade", refMes],
     staleTime: STALE_TIME_MENSAL,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("rh_calendario_grade_escala_mes", {
-        p_ref_mes: refMes,
-      });
+      const { rows, error } = await carregarRhCalendarioGradeMes(refMes);
       if (error) throw error;
-      return (data ?? []) as RpcGradeCalendarioRow[];
+      return rows;
     },
   });
 }

@@ -76,7 +76,7 @@ URL: `appRoutes.ts` — segmentos `Comunicados`, `Dicas`, `Manuais`, `Gerenciame
 
 - **Comunicados:** Tipo (Treinamentos/Geral)*, Título*, Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi)
 - **Dicas:** Tipo (Jogos/Imagem/Comunicação/Geral)*, **Qual Jogo?** (se Jogos — **multi-seleção**; lista `tipo_jogo` distinto de `mesas_spin_cadastro`), Título*, Descrição*, Imagem/Vídeo (multi), Anexo (multi)
-- **Manuais:** Tipo*, **Qual Jogo?** (se Jogos — multi-seleção), **Versão*** (default 1.0), **Exige ciência do colaborador?***, **Aplicável a*** (multi-seleção — **somente** quando ciência = Sim; times ativos das gerências **Game Floor** e **Operation Management**, mesma regra de Gestão de Staff; sem «Todos os prestadores»), Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi) — **sem** campo Código no modal (gerado no primeiro salvamento).
+- **Manuais:** Tipo*, **Qual Jogo?** (somente se tipo = Jogos — multi-seleção; demais tipos gravam automaticamente **`Todos os Jogos`** em `jogo_mesa`, sem mostrar o campo no modal — valor aparece na tabela Manuais), **Versão*** (default 1.0; ao **editar**, sobe automaticamente a major — ex. 1.0 → 2.0 via `proximaVersaoMajorManual`), **Exige ciência do colaborador?***, **Aplicável a*** (multi-seleção — **somente** quando ciência = Sim; times ativos das gerências **Game Floor** e **Operation Management**, mesma regra de Gestão de Staff; sem «Todos os prestadores»), Título*, Introdução* (texto plano), Descrição* (rich text), Imagem/Vídeo (multi), Anexo (multi) — **sem** campo Código no modal (gerado no primeiro salvamento).
 
 **Imagem/Vídeo** e **Anexo:** botão customizado («Adicionar imagem ou vídeo» / «Adicionar anexo») + lista de arquivos (badge **Pendente** até salvar); input nativo oculto — sem «Nenhum arquivo selecionado».
 
@@ -90,13 +90,17 @@ Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valo
 
 ### Workflow Gerenciamento
 
-Status: Rascunho · Publicado · Arquivado. Ações: editar (rascunho), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`).
+Status: Rascunho · Publicado · Arquivado. Ações: **Editar** (rascunho e publicado — `podeEditarPostagemAcademyGerenciamento` / permissão de Editar sim ou próprios × `created_by`), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`).
 
 ### Filtros
 
-Carrossel mês + Histórico (`Todo o período`) por `published_at`; o Histórico usa 13 competências mensais inclusivas; abas leitura só `status === publicado`.
+Carrossel mês + Histórico (`Todo o período`) por `published_at`; o Histórico usa 13 competências mensais inclusivas e inicia **ativo** ao abrir a página; abas leitura só `status === publicado`.
 
-Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências**; join de categoria estreito (`slug,label,accent_hex`). Receipts e autores em **`Promise.all`**. **Proibido** baixar rascunhos/arquivados no portal de leitura ou filtrar só no cliente o status/período da listagem pública.
+Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências**; colunas e join de categoria **explícitos**. Receipts com `.in("content_id", ids)` do conjunto carregado + autores em **`Promise.all`**. **Proibido** baixar rascunhos/arquivados no portal de leitura, dump all-time de receipts, ou filtrar só no cliente o status/período da listagem pública.
+
+### Cards Comunicados e Dicas (leitura)
+
+Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do texto — se houver anexo de arquivo, abre o arquivo; se só houver imagem/vídeo no campo de mídia (sem anexo), o mesmo link abre a mídia. Thumbnail lateral **cresce com a altura do texto** (`app-academy-portal-card--with-media` em grid; coluna ~42% até 400px); ≤1100px coluna mais estreita; ≤720px mídia abaixo do texto em faixa 16:9 responsiva. Tags de jogo nas Dicas quando houver.
 
 ### Strings de vazio
 
@@ -116,6 +120,8 @@ Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **
 | **Prestador** | Com **Ver = Próprios**: só avaliações **Concluída** — Ver minha avaliação + Histórico |
 
 Times avaliados: **Game Presenter** e **Shuffler**. Filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**.
+
+**Carga:** `fetchPerformanceHubAvaliacoes` — janela 13 competências no SQL (`data_avaliacao`) + `fetchAllPages` (Global § Eficiência de fetch).
 
 ### Permissões iniciais
 
@@ -228,6 +234,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 | Go-live | `rh_funcionarios.staff_live_no_estudio` (fallback `data_inicio`) | Coluna Go-live na agenda |
 | Avaliações | `academy_performance_hub_avaliacao` | Abas Avaliações e Analisar; vazio até carga histórica |
 | Mesas / estúdios | `mesas_spin_cadastro`, `estudios_spin` | Modal Dados (GP) |
+| Vídeo da avaliação | bucket Storage `academy-performance-hub-videos` | Path em `video_url`; **Assistir** gera URL assinada |
 
 **RLS mesas/estúdios:** leitura de `mesas_spin_cadastro` e `estudios_spin` inclui quem tem **Ver** em `academy_performance_hub` (`_academy_performance_hub_perm` — migração `20261017120000`); sem isso, os selects Estúdio/Jogo/Mesa do modal ficam vazios para Performance Coach.
 

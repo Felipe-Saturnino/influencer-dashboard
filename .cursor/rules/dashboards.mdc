@@ -17,7 +17,11 @@ alwaysApply: false
 | Área | Caminho principal |
 |---|---|
 | Streamers (3 abas) | `src/pages/dashboards/Streamers/index.tsx` — container, FilterBar partilhada e tabs; conteúdo lazy em `Streamers/DashboardOverview`, `Streamers/DashboardConversao`, `Streamers/DashboardFinanceiro`; estado partilhado em `Streamers/StreamersFiltrosContext.tsx` |
+| Afiliados (3 abas) | `src/pages/dashboards/AfiliadosDash/index.tsx` — métricas CDA conta afiliados; `FiltroAfiliadoSelect` com cadastro `role=afiliado`; funil 3 etapas (sem Views) |
 | Overview Influencer | `src/pages/dashboards/DashboardOverviewInfluencer/index.tsx` |
+| Overview Afiliado | `src/pages/dashboards/DashboardOverviewAfiliado/index.tsx` — métricas CDA afiliados; sem Lives/Views; catálogo + `useAfiliadosDashboardData` |
+| Overview Comercial | Menu em **Dashboards** (abaixo de Overview Influencer); código em `src/pages/comercial/OverviewComercial/` — regras de domínio em `comercial.mdc` |
+| Headcount | `src/pages/dashboards/Headcount/` — KPIs executivos de HC, movimento e pipeline de contratação; métricas em `lib/headcountMetrics.ts` |
 | Overview Prestador | `src/pages/dashboards/OverviewPrestador/` — `index.tsx`, `useOverviewPrestadorDados.ts`, `OverviewPrestadorFiltroBar.tsx`, `OverviewPrestadorAbaEscala.tsx`; métricas em `lib/overviewPrestadorMetrics.ts` |
 | Overview Spin | `src/pages/dashboards/OverviewSpin/` — shell + abas Overview / Estúdio Dedicado / Estúdio Network / Posicionamento; `useOverviewSpinDados.ts` (canal consolidado|dedicado|network), `overviewSpinCanal.ts`, `overviewSpinCatalogo.ts`, `useOverviewSpinCatalogo.ts`, `useOverviewSpinFiltrosAcesso.ts`, FilterBar/AbaNav, KPIs/comparativos, `DashboardPosicionamento/` lazy (`mesas_spin`) |
 | Mídias Sociais | `src/pages/dashboards/SocialMediaDashboard/` |
@@ -53,6 +57,7 @@ alwaysApply: false
 | Overview Spin (`mesas_spin`) | Gerente de Operações; Operador (escopo mesa) | KPIs Consolidados das Mesas |
 | Overview Influencer | Influencer; Agência; Executivo (escopo); Admin / Gestor | KPIs Executivos (GGR, Investimento, ROI) |
 | Overview Prestador (`dash_overview_prestador`) | Prestador (próprios); Shift Leader / RH / Gestor (escopo time/staff) | KPIs Consolidados (Escala) |
+| Headcount (`dash_headcount`) | Diretoria / RH / Executivo / Investidor (escopo Ver) | KPIs Consolidados (HC, movimento) |
 
 ---
 
@@ -79,9 +84,12 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 | PageKey | h1 | Subtítulo |
 |---|---|---|
 | `streamers` | Streamers | Acompanhe performance, conversão e financeiro do canal de influencers. |
+| `dash_afiliados` | Afiliados | Acompanhe performance, conversão e financeiro do canal de afiliados. |
 | `mesas_spin` | Overview Spin | Resultados financeiros e operacionais das mesas ao vivo por operadora. |
 | `dash_midias_sociais` | Mídias Sociais | Monitore alcance orgânico, impulsionamento Meta e a conversão das campanhas rastreadas. |
 | `dash_overview_influencer` | Overview Influencer | Resumo executivo de financeiro, operação e conversão do canal de influencers. |
+| `dash_overview_afiliado` | Overview Afiliado | Resumo executivo de financeiro e conversão do canal de afiliados. |
+| `dash_headcount` | Headcount | Visão executiva de headcount, movimentação e pipeline de contratação. |
 | `dash_overview_prestador` | Overview Prestador | Acompanhe escala, presença, absenteísmo e movimentações de turno dos prestadores. |
 
 **Páginas novas nesta secção:** copiar o padrão acima (ícone Lucide + `h1` + `<p>` subtítulo). Regras completas de tipografia e famílias: **Brand MDC §4**. Ao mudar subtítulo, atualizar esta tabela e `geral/Ajuda` (`titulo` = nome do menu).
@@ -108,15 +116,39 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.
 - **Heatmap:** coluna **Mesa** sticky + `thHeader` nas colunas de período; sort só em Mesa. Pills de posição mantêm cores semânticas de `lobbyMonitorHelpers`.
 - **`renderMesaDiaTabela`:** linha Total no **topo** do `<tbody>` com `totalRowBgStrong` — exceção documentada.
-- **Comparativo de mesa** (só Blackjack): faixas de título e bordas dos selects — **`getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)`** para mesa A e B (mesma cor verde).
+- **Comparativo de mesa** (só Blackjack): faixas de título e bordas dos selects — **`getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)`** para mesa A e B (mesma cor verde). **Não exibir** na aba **Estúdio Network** (não há par de mesas BJ para comparar) — carrossel e Histórico.
 - **Comparativo de Jogo:** colunas, células e séries de gráfico — **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`).
-- **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / ouro / laranja); **não** tokens whitelabel.
+- **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / ouro / laranja); **não** tokens whitelabel. Na aba **Estúdio Network**: ordem **Blackjack | Roleta** (linha 1) e **Speed Baccarat | Futebol Brasileiro** (linha 2); componente `OverviewSpinDadosPorMesa` (`layoutNetwork`).
 
 **Identidade por jogo (regra global):** paleta canónica **obrigatória** em todo bloco que distingue os quatro jogos — Global § Identidade visual por jogo + Brand §1.5. **Exceção:** somente com pedido explícito de produto — registrar em «Exceções — identidade de jogo» neste MDC antes de codar.
 
 ### Exceções — identidade de jogo (Overview Spin)
 
 Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados por mesa usam `gameIdentityColors.ts`.
+
+---
+
+## Headcount — Padrões Específicos
+
+- **PageKey:** `dash_headcount` — pasta `Headcount/`; menu Dashboards entre Overview Comercial e Overview Prestador.
+- **Abas:** Overview · Contratação · Distratos (`FiltroBarTabButton` + `useRouteTab`; URLs em `appRoutes.ts`; tabIds `overview` / `vagas` / `distrato`).
+- **Filtros (linha 1):** carrossel de mês + `FiltroHistoricoButton` + Diretoria. Linha 2: abas.
+- **Histórico:** Overview com KPIs (HC Ativo, Distrato, Turnover, Permanência Média) + tabela Mês a Mês (13 competências); Contratação e Distratos usam a janela de 13 meses nos mesmos blocos (Distratos sem card Permanência).
+- **KPIs:** `HeadcountKpiCard` — MoM só com «vs valor · mês ant.» no modo mês (sem seta e sem percentual); no Histórico sem linha MoM.
+- **Overview (mês):** KPIs HC Ativo / Contratação / Distrato + Variação / Turnover / Permanência; pizza HC por gerência (centro = HC Total) + lista com hover por time; barras por tipo de contrato.
+- **Overview (histórico):** KPIs snapshot + tabela Mês a Mês (Data, Headcount, Contratação, Distrato, Turnover). Turnover consolidado = distratos da janela ÷ média dos HC mensais (não extremos início/fim da janela).
+- **Contratação:** KPIs Abertas / Em andamento / Fechadas; pizza origem (`rh_vaga_candidaturas.origem`); funil `OverviewGenericFunnel` com `showTaxas={false}`; tabela vagas **abertas + em andamento**.
+- **Distratos:** KPIs Distratos / Voluntário / Não voluntário / Permanência (só no modo mês; dias ≤30 ou meses se >30); lista por área + pizza contrato; tabela ordenada por Data de Término desc.
+- **Dados:** `lib/headcountMetrics.ts` + `useHeadcountDados` — organograma via `carregarOpcoesTimesOrganograma`; listagens com **`fetchAllPages`** (evitar truncamento PostgREST ~1000); vagas na janela 13 competências + abertas; candidaturas filtradas aos IDs carregados.
+- **Migrations:** `20261023120000_dash_headcount_page.sql`, `20261023130000_dash_headcount_candidaturas_rls.sql`.
+
+### Strings de vazio (Headcount)
+
+| Contexto | String |
+|----------|--------|
+| Sem dados no período/filtros | Sem dados para o período selecionado. |
+| Modo Histórico | Overview: snapshot + Mês a Mês (13 meses). Contratação/Distratos: mesmos blocos na janela de 13 meses. |
+| Sem permissão | Você não tem permissão para visualizar este dashboard. |
 
 ---
 

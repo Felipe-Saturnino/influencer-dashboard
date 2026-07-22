@@ -1,5 +1,6 @@
 # Sync de métricas CDA - Execução diária às 4h (horário de Brasília)
 # 4h BRT = 7h UTC
+# Duas contas TAP: Influencers (default) e Afiliados (conta=afiliados)
 name: Sync Métricas CDA (4h)
 
 on:
@@ -11,7 +12,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Executar sync-metricas
+      - name: Sync CDA Influencers
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -21,7 +22,7 @@ jobs:
             exit 1
           fi
           ONTEM=$(date -u -d "yesterday" +%Y-%m-%d)
-          BODY="{\"data_inicio\":\"2025-12-01\",\"data_fim\":\"$ONTEM\",\"skip_orfaos\":false}"
+          BODY="{\"data_inicio\":\"2025-12-01\",\"data_fim\":\"$ONTEM\",\"skip_orfaos\":false,\"conta\":\"influencers\"}"
           RES=$(curl -s -w "\n%{http_code}" -X POST \
             "$SUPABASE_URL/functions/v1/sync-metricas-cda" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
@@ -36,6 +37,35 @@ jobs:
           fi
           OK=$(echo "$BODY_RES" | grep -o '"ok":[^,]*' | cut -d: -f2)
           if [ "$OK" = "false" ]; then
-            echo "Sync retornou ok:false"
+            echo "Sync Influencers retornou ok:false"
+            exit 1
+          fi
+
+      - name: Sync CDA Afiliados
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Secrets SUPABASE_URL e SUPABASE_ANON_KEY devem estar configurados em Settings > Secrets"
+            exit 1
+          fi
+          ONTEM=$(date -u -d "yesterday" +%Y-%m-%d)
+          BODY="{\"data_inicio\":\"2025-12-01\",\"data_fim\":\"$ONTEM\",\"skip_orfaos\":false,\"conta\":\"afiliados\"}"
+          RES=$(curl -s -w "\n%{http_code}" -X POST \
+            "$SUPABASE_URL/functions/v1/sync-metricas-cda" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$BODY")
+          HTTP=$(echo "$RES" | tail -n1)
+          BODY_RES=$(echo "$RES" | head -n-1)
+          echo "HTTP $HTTP"
+          echo "$BODY_RES" | head -c 500
+          if [ "$HTTP" != "200" ]; then
+            exit 1
+          fi
+          OK=$(echo "$BODY_RES" | grep -o '"ok":[^,]*' | cut -d: -f2)
+          if [ "$OK" = "false" ]; then
+            echo "Sync Afiliados retornou ok:false"
             exit 1
           fi

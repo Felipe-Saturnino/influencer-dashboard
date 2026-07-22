@@ -20,6 +20,8 @@ export interface TechLogInsertRow {
 /** Secrets e flags lidos do ambiente (Edge Functions → Secrets). */
 export interface PlatformHealthSecretsSnapshot {
   cdaConfigurado: boolean;
+  /** Conta TAP Afiliados — `CDA_AFILIADOS_API_KEY`. */
+  cdaAfiliadosConfigurado: boolean;
   githubSocialConfigurado: boolean;
   /** `RESEND_API_KEY` — obrigatória para qualquer envio Resend. */
   resendApiKeyConfigurado: boolean;
@@ -86,6 +88,7 @@ export function readPlatformHealthSecrets(
       trimEnv(get, "CDA_INFLUENCERS_API_KEY") ||
       trimEnv(get, "CDA_USE_REPORTING_API") === "true"
     ),
+    cdaAfiliadosConfigurado: !!trimEnv(get, "CDA_AFILIADOS_API_KEY"),
     githubSocialConfigurado: !!(
       trimEnv(get, "GITHUB_TOKEN") && trimEnv(get, "GITHUB_REPO")
     ),
@@ -180,6 +183,15 @@ export function buildPlatformHealthTechLogs(snapshot: PlatformHealthSnapshot): T
     descricaoFail: "Credencial da API CDA não configurada nos secrets do projeto.",
     integracaoSlugFk: "casa_apostas",
     ok: s.cdaConfigurado,
+  });
+
+  probeSecret(out, counters, {
+    nome: "Configuração CDA Afiliados",
+    severidade: "erro",
+    descricaoOk: "CDA_AFILIADOS_API_KEY presente.",
+    descricaoFail: "CDA_AFILIADOS_API_KEY ausente — sync da conta Afiliados falhará.",
+    integracaoSlugFk: "casa_apostas_afiliados",
+    ok: s.cdaAfiliadosConfigurado,
   });
 
   probeSecret(out, counters, {

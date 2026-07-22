@@ -56,6 +56,12 @@ function page(label: string, pageKey: PageKey, pageSlug: string, tabs?: AppRoute
 export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Home", "home", ROUTE_SLUG_HOME),
   page("Overview Influencer", "dash_overview_influencer", "OverviewInfluencer"),
+  page("Overview Afiliado", "dash_overview_afiliado", "OverviewAfiliado"),
+  page("Headcount", "dash_headcount", "Headcount", [
+    { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
+    { tabId: "vagas", slug: "Contratacao", label: "Contratação", access: "always" },
+    { tabId: "distrato", slug: "Distratos", label: "Distratos", access: "always" },
+  ]),
   page("Overview Prestador", "dash_overview_prestador", "OverviewPrestador", [
     { tabId: "escala", slug: "Escala", label: "Escala", access: "always" },
     { tabId: "performance", slug: "Performance", label: "Performance", access: "always" },
@@ -108,7 +114,10 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Gestão de Staff", "rh_staff", "GestaoDeStaff"),
   page("Central de Denúncias", "rh_central_denuncias", "CentralDeDenuncias"),
   page("Solicitações", "rh_solicitacoes", "RhSolicitacoes"),
-  page("Links e Materiais", "links_materiais", "LinksEMateriais"),
+  page("Links e Materiais", "links_materiais", "LinksEMateriais", [
+    { tabId: "influencer", slug: "Influencers", label: "Influencers", access: "always" },
+    { tabId: "afiliado", slug: "Afiliados", label: "Afiliados", access: "always" },
+  ]),
   page("Spin na Rede", "spin_na_rede", "SpinNaRede"),
   page("Gestão de Operadoras", "gestao_operadoras", "GestaoDeOperadoras"),
   page("Gestão de Estúdios", "gestao_mesas", "GestaoDeMesas"),
@@ -122,6 +131,11 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "posicionamento", slug: "Posicionamento", label: "Posicionamento", access: "always" },
   ]),
   page("Streamers", "streamers", "Streamers", [
+    { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
+    { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
+    { tabId: "financeiro", slug: "Financeiro", label: "Financeiro", access: "always" },
+  ]),
+  page("Afiliados", "dash_afiliados", "DashAfiliados", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
     { tabId: "conversao", slug: "Conversao", label: "Conversão", access: "always" },
     { tabId: "financeiro", slug: "Financeiro", label: "Financeiro", access: "always" },
@@ -146,6 +160,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Figurinos", "rh_figurinos", "Figurinos", [
     { tabId: "available", slug: "Disponiveis", label: "Disponíveis", access: "always" },
     { tabId: "borrowed", slug: "Emprestada", label: "Emprestada", access: "always" },
+    { tabId: "fixed", slug: "Fixo", label: "Fixo", access: "always" },
     { tabId: "maintenance", slug: "Manutencao", label: "Manutenção", access: "always" },
     { tabId: "discarded", slug: "Descartada", label: "Descartada", access: "always" },
   ]),
@@ -166,6 +181,14 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Solicitações", "escala_solicitacoes", "Solicitacoes", [
     { tabId: "aberto", slug: "SolicitacoesEmAberto", label: "Solicitações em Aberto", access: "always" },
     { tabId: "arquivadas", slug: "SolicitacoesArquivadas", label: "Solicitações Arquivadas", access: "always" },
+  ]),
+  page("Relatório de Turno", "escala_relatorio_turno", "RelatorioDeTurno", [
+    { tabId: "turno", slug: "RelatorioDoTurno", label: "Relatório do Turno", access: "always" },
+    { tabId: "estudio", slug: "RelatorioDeEstudio", label: "Relatório de Estúdio", access: "always" },
+  ]),
+  page("Rotação", "escala_rotacao", "Rotacao", [
+    { tabId: "gerar", slug: "GerarRotacao", label: "Gerar Rotação", access: "always" },
+    { tabId: "atual", slug: "RotacaoAtual", label: "Rotação Atual", access: "always" },
   ]),
   page("Gestão de Prestadores", "rh_funcionarios", "GestaoDePrestadores", [
     { tabId: "headcount", slug: "HeadCount", label: "Head Count", access: "always" },

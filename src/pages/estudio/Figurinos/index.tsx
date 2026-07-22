@@ -38,7 +38,7 @@ import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/p
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { compareCondicaoPeca, compareLocaleTexto } from "../../../lib/classificacaoSort"
 import { type RhFigurinoEmprestimo, type RhFigurinoPeca, type RhFigurinoStatusHist } from "./types"
-import { CATEGORIAS, TAMANHOS, CORES, GENEROS, COR_PADRAO, GENERO_PADRAO, emptyMsgAba, labelAba, labelStatusPeca, labelTipoRetirada, FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL, FIGURINO_FILTRO_STAFF } from "./figurinosConstants";
+import { CATEGORIAS, TAMANHOS, CORES, GENEROS, COR_PADRAO, GENERO_PADRAO, emptyMsgAba, labelAba, labelStatusPeca, labelTipoRetirada, pecaPertenceAbaFigurino, FIGURINO_ESTUDIO_CADASTRO_STAFF_LABEL, FIGURINO_FILTRO_STAFF } from "./figurinosConstants";
 import { FIGURINOS_ABAS, FIGURINOS_TAB_ICONS } from "./figurinosTabConfig";
 import {
   actorLabel,
@@ -80,7 +80,7 @@ export default function FigurinosPage() {
   const [aba, setAba] = useRouteTab(
     "rh_figurinos",
     "available",
-    ["available", "borrowed", "maintenance", "discarded"] as const,
+    ["available", "borrowed", "fixed", "maintenance", "discarded"] as const,
   );
   const [filtroEstudio, setFiltroEstudio] = useState(FILTRO_STAFF_ESTUDIO_TODOS);
   const [busca, setBusca] = useState("");
@@ -97,7 +97,6 @@ export default function FigurinosPage() {
     | "genero"
     | "data_aqui"
     | "cond"
-    | "tipo_ret"
     | "loaned_at"
     | "borrower"
     | "loaned_by"
@@ -287,9 +286,9 @@ export default function FigurinosPage() {
 
   const pecasFiltradas = useMemo(() => {
     return pecasVisiveisPermissao.filter((p) => {
-      if (p.status !== aba) return false;
-      if (!busca.trim()) return true;
       const emp = empPorItem[p.id];
+      if (!pecaPertenceAbaFigurino(p.status, aba, emp?.withdrawal_type)) return false;
+      if (!busca.trim()) return true;
       const estNames = labelEstudiosPeca(p, estudioNome, opParaEstudio);
       const hay = `${p.code} ${p.barcode} ${p.category} ${estNames} ${emp?.borrower_name ?? ""} ${emp?.borrower_ref ?? ""} ${labelTipoRetirada(emp?.withdrawal_type)}`;
       return textoContemBusca(hay, busca);
@@ -331,13 +330,6 @@ export default function FigurinosPage() {
         case "cond":
           c = compareCondicaoPeca(a.condition, b.condition, dir);
           break;
-        case "tipo_ret":
-          c = compareLocaleTexto(
-            labelTipoRetirada(empPorItem[a.id]?.withdrawal_type),
-            labelTipoRetirada(empPorItem[b.id]?.withdrawal_type),
-            dir,
-          );
-          break;
         case "loaned_at":
           c = compareLocaleTexto(empPorItem[a.id]?.loaned_at ?? "", empPorItem[b.id]?.loaned_at ?? "", dir);
           break;
@@ -375,8 +367,11 @@ export default function FigurinosPage() {
   }, [pecasFiltradas, sortFig, empPorItem, estudioNome, opParaEstudio]);
 
   const pecasNaAbaComFiltroTopo = useMemo(
-    () => pecasVisiveisPermissao.filter((p) => p.status === aba),
-    [pecasVisiveisPermissao, aba],
+    () =>
+      pecasVisiveisPermissao.filter((p) =>
+        pecaPertenceAbaFigurino(p.status, aba, empPorItem[p.id]?.withdrawal_type),
+      ),
+    [pecasVisiveisPermissao, aba, empPorItem],
   );
 
   const sortHeader = useCallback(
@@ -737,13 +732,12 @@ export default function FigurinosPage() {
                       </th>
                     </>
                   ) : null}
-                  {aba === "borrowed" ? (
+                  {aba === "borrowed" || aba === "fixed" ? (
                     <>
                       {sortHeader("Código", "codigo")}
                       {sortHeader("Estúdio", "estudio")}
                       {sortHeader("Categoria", "categoria")}
                       {sortHeader("Tamanho", "tamanho")}
-                      {sortHeader("Tipo de retirada", "tipo_ret")}
                       {sortHeader("Data de empréstimo", "loaned_at")}
                       {sortHeader("Emprestado para", "borrower")}
                       {sortHeader("Registrado por", "loaned_by")}
@@ -853,7 +847,7 @@ export default function FigurinosPage() {
                           </td>
                         </>
                       ) : null}
-                      {aba === "borrowed" ? (
+                      {aba === "borrowed" || aba === "fixed" ? (
                         <>
                           <td style={dataTable.tdCenter}>{renderCodigoClicavel(p)}</td>
                           <td style={{ ...dataTable.tdCenter, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }} title={labelEstudiosPeca(p, estudioNome, opParaEstudio)}>
@@ -861,7 +855,6 @@ export default function FigurinosPage() {
                           </td>
                           <td style={dataTable.tdCenter}>{p.category}</td>
                           <td style={dataTable.tdCenter}>{p.size}</td>
-                          <td style={dataTable.tdCenter}>{labelTipoRetirada(emp?.withdrawal_type)}</td>
                           <td style={dataTable.tdCenter}>{fmtDataHora(emp?.loaned_at)}</td>
                           <td
                             style={{ ...dataTable.tdCenter, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}

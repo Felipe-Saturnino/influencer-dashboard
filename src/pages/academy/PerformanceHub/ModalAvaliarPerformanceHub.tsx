@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, ClipboardList, Image, ListChecks, MessageSquare, NotebookPen, TableProperties } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
-import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -48,6 +47,11 @@ import {
 } from "../../../lib/academyPerformanceHubCadastroPrefill";
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
+import { LinkAssistirVideoPerformanceHub } from "../../../components/LinkAssistirVideoPerformanceHub";
+import {
+  uploadVideoPerformanceHub,
+  videoPerformanceHubPodeAssistir,
+} from "../../../lib/academyPerformanceHubVideoFiles";
 
 type ModalTab = "dados" | "comunicacao" | "imagem" | "mesa" | "procedimentos" | "consideracoes";
 
@@ -130,7 +134,6 @@ export function ModalAvaliarPerformanceHub({
   onConcluir,
 }: Props) {
   const { theme: t, isDark } = useApp();
-  const brand = useDashboardBrand();
   const somenteLeitura = modo === "ver";
   const videoInputRef = useRef<HTMLInputElement>(null);
   const isShuffler = variantTime === "shuffler";
@@ -153,7 +156,11 @@ export function ModalAvaliarPerformanceHub({
   const [jogo, setJogo] = useState<PerformanceHubJogoKey | "">(avaliacao.jogo ?? prefillAtual?.jogo ?? "");
   const [mesaId, setMesaId] = useState<string>(avaliacao.mesaId ?? prefillAtual?.mesaId ?? "");
   const [videoNome, setVideoNome] = useState(avaliacao.videoNome ?? "");
-  const [videoUrlLocal, setVideoUrlLocal] = useState(avaliacao.videoUrl ?? "");
+  const [videoPathSalvo, setVideoPathSalvo] = useState(
+    videoPerformanceHubPodeAssistir(avaliacao.videoUrl) ? (avaliacao.videoUrl ?? "") : "",
+  );
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [enviandoVideo, setEnviandoVideo] = useState(false);
   const [pontosFortes, setPontosFortes] = useState(avaliacao.pontosFortes ?? "");
   const [pontosDesenvolver, setPontosDesenvolver] = useState(avaliacao.pontosDesenvolver ?? "");
   const [respostasComunicacao, setRespostasComunicacao] = useState<RespostasPorSlug>(() =>
@@ -202,6 +209,14 @@ export function ModalAvaliarPerformanceHub({
     if (prefill.jogo) setJogo(prefill.jogo);
     if (prefill.mesaId) setMesaId(prefill.mesaId);
   }, [avaliacao, getPrefill]);
+
+  useEffect(() => {
+    setVideoNome(avaliacao.videoNome ?? "");
+    setVideoPathSalvo(
+      videoPerformanceHubPodeAssistir(avaliacao.videoUrl) ? (avaliacao.videoUrl ?? "") : "",
+    );
+    setVideoFile(null);
+  }, [avaliacao.id, avaliacao.videoUrl, avaliacao.videoNome]);
 
   useEffect(() => {
     if (isShuffler) return;
@@ -291,7 +306,7 @@ export function ModalAvaliarPerformanceHub({
     respostasProcedimentos,
   ]);
 
-  function montarPayload(): PerformanceHubAvaliacaoFormPayload {
+  function montarPayload(videoUrl: string | null): PerformanceHubAvaliacaoFormPayload {
     const criterios: Record<string, PerformanceHubCriterioResposta> = {
       ...respostasComunicacao,
       ...respostasImagem,
@@ -307,9 +322,23 @@ export function ModalAvaliarPerformanceHub({
       pontosDesenvolver: pontosDesenvolver.trim(),
       criterios,
       ...resultado,
-      videoUrl: videoUrlLocal || null,
+      videoUrl,
       videoNome: videoNome || null,
     };
+  }
+
+  async function resolverVideoParaSalvar(): Promise<{ url: string | null; error: string | null }> {
+    if (videoFile) {
+      const up = await uploadVideoPerformanceHub(videoFile, avaliacao.id);
+      if (up.error) return { url: null, error: up.error };
+      setVideoPathSalvo(up.path);
+      setVideoFile(null);
+      return { url: up.path, error: null };
+    }
+    if (videoPerformanceHubPodeAssistir(videoPathSalvo)) {
+      return { url: videoPathSalvo, error: null };
+    }
+    return { url: null, error: null };
   }
 
   function validarConcluir(): string[] {
@@ -341,7 +370,7 @@ export function ModalAvaliarPerformanceHub({
         invalid.add("mesaId");
       }
     }
-    if (!videoNome && !videoUrlLocal) {
+    if (!videoNome && !videoFile && !videoPerformanceHubPodeAssistir(videoPathSalvo)) {
       lista.push("Envie o vídeo da avaliação.");
       invalid.add("video");
     }
@@ -380,14 +409,25 @@ export function ModalAvaliarPerformanceHub({
     return [...new Set(lista)];
   }
 
-  function handleSalvarRascunho() {
+  async function handleSalvarRascunho() {
     setErros([]);
     setInvalidFields(new Set());
-    onSalvar(montarPayload());
-    setStatusRascunho(`Rascunho salvo às ${horaFormatada()} — você pode continuar depois.`);
+    setEnviandoVideo(true);
+    try {
+      const resolved = await resolverVideoParaSalvar();
+      if (resolved.error) {
+        setErros([resolved.error]);
+        setStatusRascunho("");
+        return;
+      }
+      onSalvar(montarPayload(resolved.url));
+      setStatusRascunho(`Rascunho salvo às ${horaFormatada()} — você pode continuar depois.`);
+    } finally {
+      setEnviandoVideo(false);
+    }
   }
 
-  function handleConcluir() {
+  async function handleConcluir() {
     const lista = validarConcluir();
     if (lista.length > 0) {
       setErros(lista);
@@ -395,17 +435,32 @@ export function ModalAvaliarPerformanceHub({
       return;
     }
     setErros([]);
-    onConcluir(montarPayload());
+    setEnviandoVideo(true);
+    try {
+      const resolved = await resolverVideoParaSalvar();
+      if (resolved.error) {
+        setErros([resolved.error]);
+        return;
+      }
+      if (!resolved.url) {
+        setErros(["Envie o vídeo da avaliação."]);
+        setInvalidFields(new Set(["video"]));
+        return;
+      }
+      onConcluir(montarPayload(resolved.url));
+    } finally {
+      setEnviandoVideo(false);
+    }
   }
 
   function handleVideoChange(file: File | null) {
     if (!file) {
       setVideoNome("");
-      setVideoUrlLocal("");
+      setVideoFile(null);
       return;
     }
     setVideoNome(file.name);
-    setVideoUrlLocal(URL.createObjectURL(file));
+    setVideoFile(file);
     setInvalidFields((prev) => {
       const next = new Set(prev);
       next.delete("video");
@@ -722,15 +777,8 @@ export function ModalAvaliarPerformanceHub({
                 Vídeo da avaliação
                 {!somenteLeitura ? <CampoObrigatorioMark /> : null}
               </label>
-              {somenteLeitura && videoUrlLocal ? (
-                <a
-                  href={videoUrlLocal}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: brand.primary, fontSize: 13, fontWeight: 600, fontFamily: FONT.body }}
-                >
-                  Assistir
-                </a>
+              {somenteLeitura ? (
+                <LinkAssistirVideoPerformanceHub videoUrl={videoPathSalvo || avaliacao.videoUrl} />
               ) : (
                 <>
                   <input
@@ -738,18 +786,24 @@ export function ModalAvaliarPerformanceHub({
                     id="modalVideo"
                     type="file"
                     accept="video/*"
-                    disabled={somenteLeitura}
+                    disabled={somenteLeitura || enviandoVideo}
                     onChange={(e) => handleVideoChange(e.target.files?.[0] ?? null)}
                     style={{
                       width: "100%",
                       fontSize: 13,
                       fontFamily: FONT.body,
                       color: t.text,
+                      borderColor: invalidFields.has("video") ? "#e84025" : undefined,
                     }}
                     aria-label="Enviar vídeo da avaliação"
                   />
                   {videoNome ? (
                     <p style={{ fontSize: 12, color: t.text, marginTop: 6, fontFamily: FONT.body }}>{videoNome}</p>
+                  ) : null}
+                  {!videoFile && videoPerformanceHubPodeAssistir(videoPathSalvo) ? (
+                    <div style={{ marginTop: 8 }}>
+                      <LinkAssistirVideoPerformanceHub videoUrl={videoPathSalvo} />
+                    </div>
                   ) : null}
                 </>
               )}
@@ -885,11 +939,21 @@ export function ModalAvaliarPerformanceHub({
             </button>
             {!somenteLeitura && tipoAvaliacao === "performance_coach" ? (
               <>
-                <button type="button" onClick={handleSalvarRascunho} style={btnSecundario(t)}>
-                  Salvar
+                <button
+                  type="button"
+                  onClick={() => void handleSalvarRascunho()}
+                  disabled={enviandoVideo}
+                  style={btnSecundario(t)}
+                >
+                  {enviandoVideo ? "Enviando…" : "Salvar"}
                 </button>
-                <button type="button" onClick={handleConcluir} style={btnPrimario()}>
-                  Concluir
+                <button
+                  type="button"
+                  onClick={() => void handleConcluir()}
+                  disabled={enviandoVideo}
+                  style={btnPrimario()}
+                >
+                  {enviandoVideo ? "Enviando…" : "Concluir"}
                 </button>
               </>
             ) : null}

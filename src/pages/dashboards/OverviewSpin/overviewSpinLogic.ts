@@ -877,6 +877,36 @@ export function linhasMesaAgregadasPorMes(
     });
 }
 
+/** Agrega `relatorio_por_tabela` por dia (ex.: uma ou mais mesas Blackjack no mesmo dia). */
+export function linhasMesaAgregadasPorDia(
+  rows: PorTabelaRow[],
+  pred: (r: PorTabelaRow) => boolean,
+): LinhaMesaPorDia[] {
+  const filtro = rows.filter(pred);
+  const byDay = new Map<string, PorTabelaRow[]>();
+  for (const r of filtro) {
+    const d = normalizeMesasYmd(r.data_relatorio);
+    if (!byDay.has(d)) byDay.set(d, []);
+    byDay.get(d)!.push(r);
+  }
+  return [...byDay.keys()]
+    .sort((a, b) => b.localeCompare(a))
+    .map((d) => {
+      const bucket = byDay.get(d)!;
+      if (bucket.length === 1) return linhaMesaPorDiaFromRow(bucket[0]!);
+      const agg = aggregateCellFromPorTabelaRows(bucket);
+      return {
+        dataIso: d,
+        labelData: fmtDiaMesPtBr(d),
+        ggr: agg.ggr,
+        turnover: agg.turnover,
+        bets: agg.bets,
+        margin_pct: agg.margin_pct,
+        bet_size: agg.bet_size,
+      };
+    });
+}
+
 /** Mesmos totais do bloco Detalhamento Diário (`relatorio_daily_summary` / mensal). A coluna Total do comparativo usa isto; as células por jogo somam mesas BJ/Roleta/Speed Baccarat/Futebol Brasileiro em `por_tabela` (alinhadas ao `data` do daily com deslocamento automático de ±1 dia quando necessário). */
 export type TotaisOficiaisComparativo = {
   ggr: number | null;

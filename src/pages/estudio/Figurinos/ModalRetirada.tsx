@@ -258,7 +258,7 @@ export function ModalRetirada({
             fontFamily: FONT.body,
           }}
         >
-          <option value="emprestar">Emprestar</option>
+          <option value="emprestar">Emprestada</option>
           <option value="fixo">Fixo</option>
         </select>
       </label>

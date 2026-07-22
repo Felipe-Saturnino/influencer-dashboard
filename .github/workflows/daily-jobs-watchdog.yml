@@ -23,7 +23,7 @@ jobs:
             const hojeBr = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
 
             const workflows = [
-              { id: "sync-metricas-daily.yml", label: "Sync Métricas CDA" },
+              { id: "sync-metricas-daily.yml", label: "Sync Métricas CDA (Influencers + Afiliados)" },
               { id: "relatorio-diario-diretoria.yml", label: "Relatório Diretoria" },
               { id: "email-agenda-diaria.yml", label: "E-mail Agenda" },
               { id: "sync-spin-na-rede-rss-daily.yml", label: "Spin RSS" },

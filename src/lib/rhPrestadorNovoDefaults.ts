@@ -55,7 +55,6 @@ const REMUNERACAO_HORA_CENTAVOS_POR_TIME: Readonly<Record<string, number>> = {
   "shift leader": 2222,
   "performance coach": 2111,
   "service manager": 2222,
-  "customer service": 1777,
 };
 
 export function remuneracaoHoraCentavosDefaultDeTimeNome(timeNome: string | null | undefined): string {

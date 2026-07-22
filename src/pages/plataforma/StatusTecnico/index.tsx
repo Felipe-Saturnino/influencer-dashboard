@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, type Dispatch, type SetStateAction } from "react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -34,6 +34,7 @@ import {
   ERRO_DIAGNOSTICO_PLATAFORMA,
   ERRO_REDE_EDGE,
   ERRO_SYNC_CDA,
+  ERRO_SYNC_CDA_AFILIADOS,
   ERRO_SYNC_COMERCIAL_SPA,
   LABEL_UI_COMERCIAL_SPA_LISTA,
   LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
@@ -153,6 +154,8 @@ export default function StatusTecnico() {
   const [loading, setLoading] = useState(true);
   const [syncExecutando, setSyncExecutando] = useState(false);
   const [syncMensagem, setSyncMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncAfiliadosExecutando, setSyncAfiliadosExecutando] = useState(false);
+  const [syncAfiliadosMensagem, setSyncAfiliadosMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncSocialExecutando, setSyncSocialExecutando] = useState(false);
   const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncSpinRssExecutando, setSyncSpinRssExecutando] = useState(false);
@@ -182,7 +185,15 @@ export default function StatusTecnico() {
   const [emailUltimoBoasVindas, setEmailUltimoBoasVindas] = useState<string | null>(null);
   const [emailUltimoReset, setEmailUltimoReset] = useState<string | null>(null);
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
-  const [sortIntegracao, setSortIntegracao] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
+  const [sortOperadoras, setSortOperadoras] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
+    col: "ultimoSync",
+    dir: "desc",
+  });
+  const [sortExternas, setSortExternas] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
+    col: "ultimoSync",
+    dir: "desc",
+  });
+  const [sortEmails, setSortEmails] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
     col: "ultimoSync",
     dir: "desc",
   });
@@ -190,7 +201,7 @@ export default function StatusTecnico() {
   type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [confirmarSync, setConfirmarSync] = useState<"cda" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "lobby_blaze" | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "cda_afiliados" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "lobby_blaze" | null>(null);
   const [confirmarDiagnostico, setConfirmarDiagnostico] = useState(false);
   const [diagnosticoExecutando, setDiagnosticoExecutando] = useState(false);
   const [diagnosticoMensagem, setDiagnosticoMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
@@ -441,23 +452,32 @@ export default function StatusTecnico() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const executarSync = async () => {
-    if (syncExecutando || !perm.canEditarOk) return;
-    setSyncExecutando(true);
-    setSyncMensagem(null);
+  const executarSync = async (conta: "influencers" | "afiliados" = "influencers") => {
+    const isAfiliados = conta === "afiliados";
+    if (isAfiliados) {
+      if (syncAfiliadosExecutando || !perm.canEditarOk) return;
+      setSyncAfiliadosExecutando(true);
+      setSyncAfiliadosMensagem(null);
+    } else {
+      if (syncExecutando || !perm.canEditarOk) return;
+      setSyncExecutando(true);
+      setSyncMensagem(null);
+    }
+    const setMsg = isAfiliados ? setSyncAfiliadosMensagem : setSyncMensagem;
+    const setExec = isAfiliados ? setSyncAfiliadosExecutando : setSyncExecutando;
+    const erroPadrao = isAfiliados ? ERRO_SYNC_CDA_AFILIADOS : ERRO_SYNC_CDA;
     try {
       if (!supabaseUrl || !supabaseAnonKey) {
-        setSyncMensagem({ tipo: "erro", texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env." });
-        setSyncExecutando(false);
+        setMsg({ tipo: "erro", texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env." });
+        setExec(false);
         return;
       }
       const hoje = new Date();
       const dataFim = hoje.toISOString().split("T")[0];
       const dataInicio = "2025-12-01";
 
-      // Usa supabase.functions.invoke — gerencia URL, CORS e auth automaticamente
       const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("sync-metricas-cda", {
-        body: { data_inicio: dataInicio, data_fim: dataFim },
+        body: { data_inicio: dataInicio, data_fim: dataFim, conta },
       });
 
       const resData = (resDataRaw ?? {}) as {
@@ -468,11 +488,10 @@ export default function StatusTecnico() {
         fase1_influencers?: { registros_upserted?: number; aliases_mapeados?: number };
       };
 
-      // invokeError = problema de rede ou função retornou 4xx/5xx
       if (invokeError) {
         const im = invokeError.message ?? "";
         let texto =
-          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_CDA;
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : erroPadrao;
         if (im.includes("Failed to fetch") || im.includes("fetch")) {
           texto = ERRO_REDE_EDGE;
         } else if (im.includes("401") || im.includes("unauthorized")) {
@@ -480,35 +499,36 @@ export default function StatusTecnico() {
         } else if (im.includes("404") || im.includes("not found")) {
           texto = "Edge Function sync-metricas-cda não encontrada. Execute: supabase functions deploy sync-metricas-cda";
         }
-        setSyncMensagem({ tipo: "erro", texto });
-        setSyncExecutando(false);
+        setMsg({ tipo: "erro", texto });
+        setExec(false);
         return;
       }
 
-      // Função retornou 200 mas pode ter ok: false no payload
       if (!resData?.ok) {
         let textoErro = resData?.erro ?? resData?.error ?? "Erro desconhecido";
         if (resData?.auth_usado) textoErro += ` (Auth: ${resData.auth_usado})`;
         if (textoErro.includes("403") || textoErro.includes("CDA")) {
-          textoErro += " Configure CDA_INFLUENCERS_API_KEY ou CDA_USE_REPORTING_API=true em Supabase → Edge Functions → Secrets.";
+          textoErro += isAfiliados
+            ? " Configure CDA_AFILIADOS_API_KEY em Supabase → Edge Functions → Secrets."
+            : " Configure CDA_INFLUENCERS_API_KEY ou CDA_USE_REPORTING_API=true em Supabase → Edge Functions → Secrets.";
         }
-        setSyncMensagem({ tipo: "erro", texto: textoErro });
-        setSyncExecutando(false);
+        setMsg({ tipo: "erro", texto: textoErro });
+        setExec(false);
         return;
       }
 
       const regs = resData?.fase1_influencers?.registros_upserted ?? 0;
       const aliases = resData?.fase1_influencers?.aliases_mapeados ?? 0;
-      setSyncMensagem({
+      setMsg({
         tipo: "ok",
-        texto: `Sync concluído: ${regs} registros sincronizados${aliases > 0 ? ` (${aliases} aliases mapeados)` : ""}. Atualize os dashboards. Se não aparecer, selecione o mês correto no filtro do relatório (ex.: Mar 2026).`,
+        texto: `Sync concluído${isAfiliados ? " (Afiliados)" : ""}: ${regs} registros sincronizados${aliases > 0 ? ` (${aliases} aliases mapeados)` : ""}. Atualize os dashboards. Se não aparecer, selecione o mês correto no filtro do relatório (ex.: Mar 2026).`,
       });
       carregar();
     } catch (e) {
       console.error(e);
-      setSyncMensagem({ tipo: "erro", texto: ERRO_SYNC_CDA });
+      setMsg({ tipo: "erro", texto: erroPadrao });
     } finally {
-      setSyncExecutando(false);
+      setExec(false);
     }
   };
 
@@ -1253,6 +1273,12 @@ export default function StatusTecnico() {
   const cdaStatusOk =
     cdaOkHoje || (!passouHorarioCda && ultimoSyncCdaLog?.status === "ok");
 
+  const syncLogsCdaAfiliadosKpi = syncLogs.filter((l) => l.integracao_slug === "casa_apostas_afiliados");
+  const ultimoSyncCdaAfiliadosLog = syncLogsCdaAfiliadosKpi[0];
+  const cdaAfiliadosOkHoje = syncLogOkNoDia(syncLogsCdaAfiliadosKpi, hojeIsoKpi);
+  const cdaAfiliadosStatusOk =
+    cdaAfiliadosOkHoje || (!passouHorarioCda && ultimoSyncCdaAfiliadosLog?.status === "ok");
+
   const syncLogsSpinRssKpi = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss");
   const ultimoSyncSpinRssLog = syncLogsSpinRssKpi[0];
   const spinRssOkHoje = syncLogOkNoDia(syncLogsSpinRssKpi, hojeIsoKpi);
@@ -1326,6 +1352,7 @@ export default function StatusTecnico() {
 
   const integracoesAtivasCount = [
     cdaStatusOk,
+    cdaAfiliadosStatusOk,
     socialStatusOk,
     spinNaRedeRssStatusOk,
     comercialSpaStatusOk,
@@ -1336,11 +1363,14 @@ export default function StatusTecnico() {
     emailStatusDiretoriaOk,
     emailStatusAgendaOk,
   ].filter(Boolean).length;
-  const totalIntegracoes = 10;
+  const totalIntegracoes = 11;
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
-  if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA" });
+  if (ultimoSyncCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncCdaLog.executado_em, label: "CDA Influencers" });
+  if (ultimoSyncCdaAfiliadosLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncCdaAfiliadosLog.executado_em, label: "CDA Afiliados" });
+  }
   if (ultimoPipelineRun?.created_at) timestamps.push({ ts: ultimoPipelineRun.created_at, label: "Social" });
   if (ultimoSyncSpinRssLog?.executado_em) timestamps.push({ ts: ultimoSyncSpinRssLog.executado_em, label: "Spin na Rede RSS" });
   if (ultimoSyncComercialSpaLog?.executado_em) {
@@ -1371,6 +1401,10 @@ export default function StatusTecnico() {
   // Taxa de Erro: falhas / total de tentativas (CDA, Social, e-mails)
   const cdaTotal = syncLogs.filter((l) => l.integracao_slug === "casa_apostas").length;
   const cdaFalhas = syncLogs.filter((l) => l.integracao_slug === "casa_apostas" && l.status === "falha").length;
+  const cdaAfiliadosTotal = syncLogs.filter((l) => l.integracao_slug === "casa_apostas_afiliados").length;
+  const cdaAfiliadosFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "casa_apostas_afiliados" && l.status === "falha",
+  ).length;
   const spinRssTotal = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss").length;
   const spinRssFalhas = syncLogs.filter((l) => l.integracao_slug === "spin_na_rede_rss" && l.status === "falha").length;
   const comercialSpaTotal = syncLogs.filter((l) => l.integracao_slug === "comercial_spa_lista").length;
@@ -1398,6 +1432,7 @@ export default function StatusTecnico() {
   const emailTotal = emailEnviosCount + emailFalhas;
   const totalTentativas =
     cdaTotal +
+    cdaAfiliadosTotal +
     spinRssTotal +
     comercialSpaTotal +
     comercialDominioTotal +
@@ -1408,6 +1443,7 @@ export default function StatusTecnico() {
     Math.max(emailTotal, 1);
   const totalFalhas =
     cdaFalhas +
+    cdaAfiliadosFalhas +
     spinRssFalhas +
     comercialSpaFalhas +
     comercialDominioFalhas +
@@ -1425,7 +1461,7 @@ export default function StatusTecnico() {
   const vinteQuatroHoras = new Date();
   vinteQuatroHoras.setHours(vinteQuatroHoras.getHours() - 24);
 
-  // ── Sync CDA (Casa de Apostas) — Actions 4h BRT ──
+  // ── Sync CDA (Casa de Apostas) — Influencers — Actions 4h BRT ──
   const syncLogsCda = syncLogsCdaKpi;
   const ultimoSyncCdaOk = syncLogsCda.find((l) => l.status === "ok");
   const ultimoSyncCdaFalha = syncLogsCda.find((l) => l.status === "falha");
@@ -1435,18 +1471,37 @@ export default function StatusTecnico() {
     : "0";
 
   if (!ultimoSyncCdaOk && ultimoSyncCdaFalha) {
-    alertas.push({ nivel: "erro", msg: "Nenhum Sync CDA com sucesso" });
+    alertas.push({ nivel: "erro", msg: "Nenhum Sync CDA Influencers com sucesso" });
   }
   if (passouHorarioCda && !cdaOkHoje && cdaTeveHistorico) {
-    alertas.push({ nivel: "erro", msg: "Sync CDA não executou hoje (agendado 4h)" });
+    alertas.push({ nivel: "erro", msg: "Sync CDA Influencers não executou hoje (agendado 4h)" });
   }
   if (parseFloat(taxaErroCda) > 5) {
-    alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Sync CDA (${taxaErroCda}%)` });
+    alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Sync CDA Influencers (${taxaErroCda}%)` });
   }
   // Métricas CDA são D-1: o sync de hoje grava em influencer_metricas com data = ontem (SP).
   const cdaMetricasOntem = fluxoDados.find((f) => f.data === ontemIso)?.cda ?? 0;
   if (passouHorarioCda && cdaMetricasOntem === 0 && fluxoDados.some((f) => f.cda > 0)) {
     alertas.push({ nivel: "aviso", msg: "Sync CDA sem dados recentes" });
+  }
+
+  // ── Sync CDA Afiliados — mesma janela 4h BRT ──
+  const syncLogsCdaAfiliados = syncLogsCdaAfiliadosKpi;
+  const ultimoSyncCdaAfiliadosOk = syncLogsCdaAfiliados.find((l) => l.status === "ok");
+  const ultimoSyncCdaAfiliadosFalha = syncLogsCdaAfiliados.find((l) => l.status === "falha");
+  const cdaAfiliadosTeveHistorico = syncLogsCdaAfiliados.some((l) => l.status === "ok");
+  const taxaErroCdaAfiliados = syncLogsCdaAfiliados.length > 0
+    ? ((syncLogsCdaAfiliados.filter((l) => l.status === "falha").length / syncLogsCdaAfiliados.length) * 100).toFixed(1)
+    : "0";
+
+  if (!ultimoSyncCdaAfiliadosOk && ultimoSyncCdaAfiliadosFalha) {
+    alertas.push({ nivel: "erro", msg: "Nenhum Sync CDA Afiliados com sucesso" });
+  }
+  if (passouHorarioCda && !cdaAfiliadosOkHoje && cdaAfiliadosTeveHistorico) {
+    alertas.push({ nivel: "erro", msg: "Sync CDA Afiliados não executou hoje (agendado 4h)" });
+  }
+  if (parseFloat(taxaErroCdaAfiliados) > 5) {
+    alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Sync CDA Afiliados (${taxaErroCdaAfiliados}%)` });
   }
 
   // ── Sync Social Media ──
@@ -1688,6 +1743,8 @@ export default function StatusTecnico() {
         const syncTipo =
           int.slug === "casa_apostas"
             ? ("cda" as const)
+            : int.slug === "casa_apostas_afiliados"
+              ? ("cda_afiliados" as const)
             : int.slug === "spin_na_rede_rss"
               ? ("spin_rss" as const)
               : int.slug === "cs_atendimento_outlook"
@@ -1849,12 +1906,12 @@ export default function StatusTecnico() {
   const linhasOperadoras = useMemo(
     () =>
       ordenarLinhasIntegracao(
-        (["casa_apostas", "lobby_blaze", "lobby_cda"] as const)
+        (["casa_apostas", "casa_apostas_afiliados", "lobby_blaze", "lobby_cda"] as const)
           .map((slug) => pickIntegracaoRow(slug))
           .filter(Boolean) as StatusIntegracaoRow[],
-        sortIntegracao,
+        sortOperadoras,
       ),
-    [pickIntegracaoRow, sortIntegracao],
+    [pickIntegracaoRow, sortOperadoras],
   );
 
   const linhasExternas = useMemo(
@@ -1877,26 +1934,43 @@ export default function StatusTecnico() {
             syncTipo: "social" as const,
           },
         ].filter(Boolean) as StatusIntegracaoRow[],
-        sortIntegracao,
+        sortExternas,
       ),
-    [csAtendimentoOutlookRow, pickIntegracaoRow, socialKpisRow, sortIntegracao],
+    [csAtendimentoOutlookRow, pickIntegracaoRow, socialKpisRow, sortExternas],
   );
 
   const linhasEmails = useMemo(
     () =>
       ordenarLinhasIntegracao(
         [emailResetRow, emailDiretoriaRow, emailBoasVindasRow, emailAgendaRow] as StatusIntegracaoRow[],
-        sortIntegracao,
+        sortEmails,
       ),
-    [emailResetRow, emailDiretoriaRow, emailBoasVindasRow, emailAgendaRow, sortIntegracao],
+    [emailResetRow, emailDiretoriaRow, emailBoasVindasRow, emailAgendaRow, sortEmails],
   );
 
-  const handleSortIntegracao = useCallback((col: IntegracaoSortCol) => {
-    setSortIntegracao((s) => ({
-      col,
-      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
-    }));
-  }, []);
+  const toggleSortIntegracao = useCallback(
+    (setSort: Dispatch<SetStateAction<{ col: IntegracaoSortCol; dir: SortDir }>>) =>
+      (col: IntegracaoSortCol) => {
+        setSort((s) => ({
+          col,
+          dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+        }));
+      },
+    [],
+  );
+
+  const handleSortOperadoras = useMemo(
+    () => toggleSortIntegracao(setSortOperadoras),
+    [toggleSortIntegracao],
+  );
+  const handleSortExternas = useMemo(
+    () => toggleSortIntegracao(setSortExternas),
+    [toggleSortIntegracao],
+  );
+  const handleSortEmails = useMemo(
+    () => toggleSortIntegracao(setSortEmails),
+    [toggleSortIntegracao],
+  );
 
   const techLogsFiltrados = useMemo(() => {
     const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
@@ -2033,9 +2107,7 @@ export default function StatusTecnico() {
     return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   };
 
-  const tabelaIntegracaoProps = {
-    sortIntegracao,
-    onSortChange: handleSortIntegracao,
+  const tabelaIntegracaoBase = {
     mostrarColunaAcao,
     dataTable,
     t,
@@ -2043,6 +2115,7 @@ export default function StatusTecnico() {
     tableRowHoverBg,
     btnAcao,
     syncExecutando,
+    syncAfiliadosExecutando,
     syncSocialExecutando,
     syncSpinRssExecutando,
     syncCsOutlookExecutando,
@@ -2052,7 +2125,7 @@ export default function StatusTecnico() {
     emailEnviando,
     emailAgendaEnviando,
     canEditarOk: perm.canEditarOk,
-    onConfirmarSync: (tipo: "cda" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") =>
+    onConfirmarSync: (tipo: "cda" | "cda_afiliados" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") =>
       setConfirmarSync(tipo),
     onConfirmarEmail: (tipo: "diretoria" | "agenda") => setConfirmarEmail(tipo),
   };
@@ -2210,6 +2283,7 @@ export default function StatusTecnico() {
       {/* ── Mensagens de sync / e-mail / diagnóstico ── */}
       {(diagnosticoMensagem ||
         syncMensagem ||
+        syncAfiliadosMensagem ||
         syncSocialMensagem ||
         syncSpinRssMensagem ||
         syncCsOutlookMensagem ||
@@ -2223,7 +2297,8 @@ export default function StatusTecnico() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
               diagnosticoMensagem && { prefix: "Diagnóstico", msg: diagnosticoMensagem },
-              syncMensagem && { prefix: "Sync CDA", msg: syncMensagem },
+              syncMensagem && { prefix: "Sync CDA Influencers", msg: syncMensagem },
+              syncAfiliadosMensagem && { prefix: "Sync CDA Afiliados", msg: syncAfiliadosMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
               syncCsOutlookMensagem && { prefix: LABEL_UI_CS_ATENDIMENTO_OUTLOOK, msg: syncCsOutlookMensagem },
@@ -2281,7 +2356,9 @@ export default function StatusTecnico() {
               col2: "Último Sync",
               col3: "Registros Hoje",
             }}
-            {...tabelaIntegracaoProps}
+            sortIntegracao={sortOperadoras}
+            onSortChange={handleSortOperadoras}
+            {...tabelaIntegracaoBase}
           />
         )}
       </div>
@@ -2299,7 +2376,9 @@ export default function StatusTecnico() {
               col2: "Último Sync",
               col3: "Registros Hoje",
             }}
-            {...tabelaIntegracaoProps}
+            sortIntegracao={sortExternas}
+            onSortChange={handleSortExternas}
+            {...tabelaIntegracaoBase}
           />
         )}
       </div>
@@ -2317,7 +2396,9 @@ export default function StatusTecnico() {
               col2: "Último envio",
               col3: "Envios Hoje",
             }}
-            {...tabelaIntegracaoProps}
+            sortIntegracao={sortEmails}
+            onSortChange={handleSortEmails}
+            {...tabelaIntegracaoBase}
           />
         )}
       </div>
@@ -2764,9 +2845,12 @@ export default function StatusTecnico() {
               </thead>
               <tbody>
                 {[
-                  ["Nenhum Sync CDA com sucesso", "Último sync com falha, nenhum OK"],
-                  ["Sync CDA não executou hoje (agendado 4h)", "Após 8h BRT, sem sync_logs OK na data civil de hoje (SP); cron 4h — atraso do GitHub Actions é comum"],
-                  ["Taxa de erro alta no Sync CDA", "> 5%"],
+                  ["Nenhum Sync CDA Influencers com sucesso", "Último sync com falha, nenhum OK (slug casa_apostas)"],
+                  ["Sync CDA Influencers não executou hoje (agendado 4h)", "Após 8h BRT, sem sync_logs OK na data civil de hoje (SP); cron 4h"],
+                  ["Taxa de erro alta no Sync CDA Influencers", "> 5% (slug casa_apostas)"],
+                  ["Nenhum Sync CDA Afiliados com sucesso", "Último sync com falha, nenhum OK (slug casa_apostas_afiliados)"],
+                  ["Sync CDA Afiliados não executou hoje (agendado 4h)", "Após 8h BRT, sem sync_logs OK na data civil de hoje (SP); cron 4h"],
+                  ["Taxa de erro alta no Sync CDA Afiliados", "> 5% (slug casa_apostas_afiliados)"],
                   ["Sync CDA sem dados recentes", "Após 8h BRT, sem influencer_metricas com data = ontem (D-1), com histórico"],
                   ["Erro no Sync Social Media", "pipeline_runs status=error (24h)"],
                   ["Sync Social Media com erro", "tech_logs canal (24h)"],
@@ -2867,7 +2951,8 @@ export default function StatusTecnico() {
             }}
           >
             <h2 id="status-tecnico-confirm-title" style={{ marginTop: 0, fontFamily: FONT_TITLE, fontSize: 17, color: t.text }}>
-              {confirmarSync === "cda" && "Confirmar Sync CDA"}
+              {confirmarSync === "cda" && "Confirmar Sync CDA — Influencers"}
+              {confirmarSync === "cda_afiliados" && "Confirmar Sync CDA — Afiliados"}
               {confirmarSync === "social" && "Confirmar Sync Social"}
               {confirmarSync === "spin_rss" && "Confirmar ingestão Spin na Rede (RSS)"}
               {confirmarSync === "cs_outlook" && `Confirmar ingestão ${LABEL_UI_CS_ATENDIMENTO_OUTLOOK}`}
@@ -2917,7 +3002,10 @@ export default function StatusTecnico() {
                     void executarDiagnosticoPlataforma();
                   } else if (confirmarSync === "cda") {
                     setConfirmarSync(null);
-                    void executarSync();
+                    void executarSync("influencers");
+                  } else if (confirmarSync === "cda_afiliados") {
+                    setConfirmarSync(null);
+                    void executarSync("afiliados");
                   } else if (confirmarSync === "social") {
                     setConfirmarSync(null);
                     void executarSyncSocial();

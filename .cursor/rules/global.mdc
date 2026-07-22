@@ -1108,6 +1108,61 @@ Regras complementares:
 
 ---
 
+## Eficiência de fetch — regras obrigatórias em código novo
+
+Contrato para **qualquer** página/lib nova ou alteração relevante de carga (dashboards, inventário, portais, RH, Tech Ops, Escala). Aplicar **na construção** — não esperar onda de otimização depois.
+
+### 1. Janela no servidor (nunca só no cliente)
+
+| Situação | Regra |
+|----------|-------|
+| Página com carrossel + **Histórico** | Filtrar no SQL com `getPeriodoHistoricoCompetencias()` (13 competências). O rótulo permanece **Todo o período**. |
+| Inventário operacional com OS/itens **abertos** multi-mês | Janela 13 competências **ou** status ainda aberto (`solicitada`/`aberta`/equivalente) — ver Ordem de Saída. |
+| Lista com `limit(N)` sem `dataIni`/`dataFim` | **Proibido** se a UI tiver período/Histórico — o `limit` trunca o histórico em silêncio. |
+
+Helpers: `getPeriodoHistoricoCompetencias`, `isDataNoPeriodoHistoricoCompetencias` (`lib/dashboardHelpers.ts`).
+
+### 2. Paginação PostgREST (`fetchAllPages`)
+
+PostgREST devolve **no máximo ~1000 linhas** por request. `.limit(5000)` **não** pagina — KPIs e listas ficam **subcontados sem erro**.
+
+| Volume esperado | Regra |
+|-----------------|-------|
+| Pode ultrapassar ~800–1000 linhas | **Obrigatório** `fetchAllPages` (`lib/supabasePaginate.ts`) ou RPC agregadora |
+| Lotes `.in(ids)` grandes | `fetchInBatched` (com `concurrency` quando independente) |
+
+### 3. Colunas explícitas — proibido `select("*")` em código novo
+
+| Contexto | Regra |
+|----------|-------|
+| Listagens, KPIs, catálogos de seletor | Colunas explícitas (só o que a UI/mapper usa) |
+| Embeds | Nomear colunas do join (ex.: `categoria:…(slug,label,accent_hex)`) |
+| Modais de edição full-row | Preferir colunas do formulário; `select("*")` só se documentado na MDC da secção como legado |
+
+### 4. Receipts / filhos só do conjunto carregado
+
+Leituras secundárias (`*_read_receipt`, participantes, anotações) devem filtrar por `.in("content_id", ids)` (ou equivalente) dos registros **já** carregados — **proibido** dump all-time do usuário e filtrar no cliente.
+
+### 5. Catálogos de formulário
+
+Quando o boot da página só precisa do catálogo para **abrir modal depois** (Nova OS, etc.), preferir **colunas mínimas** no seletor (id, código, nome, qty/status). Não reutilizar o `select("*")` da página de cadastro do inventário.
+
+### 6. Listas e grades densas (DOM)
+
+Quando a UI pode renderizar **dezenas/centenas de linhas** (ou linha × muitas colunas com controlos), **não** montar o DOM inteiro de uma vez.
+
+| Situação | Regra |
+|----------|-------|
+| Tabela de inventário/lista (Prestadores, etc.) | Paginação client-side da **vista** (`TabelaPaginacaoBar` + `lib/tablePagination.ts`) após `fetchAllPages` / filtros — KPIs e totais usam o conjunto filtrado completo |
+| Grade editável densa (Escala Diária) | Paginar **linhas** na vista; save/sugestão/aprovação continuam sobre **todas** as linhas; cachear opções de `<select>` por tipo de turno (não alocar array novo por célula) |
+| Virtualização (`react-virtual` etc.) | Só com pedido explícito — risco alto em tabela editável (foco, sticky, campos desmontados) |
+
+Constantes: `TABELA_PAGE_SIZE_PRESTADORES` (50), `TABELA_PAGE_SIZE_ESCALA` (40).
+
+**Referências:** Fase 7 (fetch) — Ordem de Saída, Relatório de Turno, Performance Hub, Headcount, Portais. Fase 8 (DOM) — Gestão de Prestadores, Gestão de Escala.
+
+---
+
 ## Build Vite (Rolldown) e deploy — Cloudflare Pages
 
 **Onde documentar:** este Global + `vite.config.ts` + `docs/SETUP.md` (deploy) + `docs/SAUDE_CODIGO.md` (sintomas). **Não** colocar em `brand-css-variables.mdc` — Brand é UI/whitelabel, não pipeline de build.
@@ -1194,6 +1249,12 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 
 ## Anti-patterns (global)
 
+- Consultas independentes em série (`await` A depois `await` B) em vez de `Promise.all`.
+- Lista/KPI com `.limit(N)` ou um único `.range` quando o volume pode passar ~1000 linhas — usar `fetchAllPages` (§ Eficiência de fetch).
+- `select("*")` em listagens, KPIs ou catálogos de seletor em código novo (§ Eficiência de fetch).
+- Fetch sem janela de período no SQL quando a página tem carrossel/Histórico — filtrar só no cliente (§ Eficiência de fetch / Histórico 13 competências).
+- Tabela/grade densa com centenas de linhas (ou linha × dias com `<select>`) sem paginação de vista ou windowing (§ Eficiência de fetch §6).
+- Receipts / filhos com dump all-time do usuário em vez de `.in(content_id, ids)` do conjunto carregado.
 - Concluir alterações em `src/**` sem **`npm run typecheck`** ou **`npm run build`** — o deploy Cloudflare corre `tsc` e falha com erros que o ESLint não vê.
 - Concluir alterações em `src/**/*.tsx` sem correr `npm run lint` na raiz (o pre-commit só linta ficheiros em stage; variáveis órfãs após refactor bloqueiam o commit).
 - Hook em `src/hooks/` importando de `./` um módulo que vive em `src/lib/` (caminho relativo errado — `TS2307`).

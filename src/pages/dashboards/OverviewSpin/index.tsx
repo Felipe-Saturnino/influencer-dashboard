@@ -12,6 +12,7 @@ import { useOverviewSpinKpiExibir } from "./useOverviewSpinKpiExibir";
 import { useOverviewSpinTabelaRows } from "./useOverviewSpinTabelaRows";
 import { useOverviewSpinComparativos } from "./useOverviewSpinComparativos";
 import { OverviewSpinMesaDiaTabela } from "./OverviewSpinMesaDiaTabela";
+import { OverviewSpinDadosPorMesa } from "./OverviewSpinDadosPorMesa";
 import { OverviewSpinDetalhamentoInterativo } from "./OverviewSpinDetalhamentoInterativo";
 import { OverviewSpinComparativoJogoInterativo } from "./OverviewSpinComparativoJogoInterativo";
 import { useOverviewSpinCatalogo } from "./useOverviewSpinCatalogo";
@@ -29,10 +30,8 @@ import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import {
   GAME_IDENTITY_HEX,
   getGameMesaTituloMix,
-  getGameMesaTituloStripStyle,
 } from "../../../lib/gameIdentityColors";
 import {
-  LABEL_FUTEBOL_BRASILEIRO,
   type KpiJogoKey,
 } from "./overviewSpinLogic";
 
@@ -178,6 +177,7 @@ export default function OverviewSpin() {
 
   const {
     mesasOpcoesBlackjack,
+    linhasBlackjack,
     linhasSpeedBaccarat,
     linhasRoleta,
     linhasFutebolBrasileiro,
@@ -262,24 +262,25 @@ export default function OverviewSpin() {
 
   const contentBox = getPageContentBoxStyle(brand, t);
 
-  const tituloMesaSpeedBaccarat = useMemo(
-    () => getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.baccarat, { fontFamily: FONT.body }),
-    [],
-  );
-  const tituloMesaRoleta = useMemo(
-    () => getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.roleta, { fontFamily: FONT.body }),
-    [],
-  );
-  const tituloMesaFutebolBrasileiro = useMemo(
-    () =>
-      getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.futebol_brasileiro, {
-        fontFamily: FONT.body,
-        marginTop: 14,
-      }),
-    [],
-  );
-
   const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]);
+
+  const isAbaNetwork = aba === "estudio_network";
+  /** Comparativo A/B de Blackjack só faz sentido com ≥2 mesas (Dedicado / Overview). */
+  const exibirComparativoMesa = !isAbaNetwork;
+
+  const dadosPorMesaCommon = {
+    layoutNetwork: isAbaNetwork,
+    mesSelecionadoLabel: mesSelecionado?.label ?? "",
+    linhasBlackjack,
+    linhasSpeedBaccarat,
+    linhasRoleta,
+    linhasFutebolBrasileiro,
+    exibirFutebol: exibirBlocoDadosPorMesaFutebol,
+    contentBox,
+    dataTable,
+    brand,
+    t,
+  } as const;
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -494,6 +495,7 @@ export default function OverviewSpin() {
               </div>
               {!modoAgregadoTodasOperadoras && (
                 <>
+                  {exibirComparativoMesa && (
                   <div style={contentBox}>
                     <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
@@ -513,25 +515,8 @@ export default function OverviewSpin() {
                       <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
-                  <div style={contentBox}>
-                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
-                      Dados por mesa
-                    </SectionTitle>
-                    <div
-                      style={{
-                        padding: 24,
-                        textAlign: "center",
-                        color: t.textMuted,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 10,
-                      }}
-                    >
-                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
-                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
-                    </div>
-                  </div>
+                  )}
+                  <OverviewSpinDadosPorMesa {...dadosPorMesaCommon} state="loading" colTempo="Data" />
                 </>
               )}
             </>
@@ -547,6 +532,7 @@ export default function OverviewSpin() {
               </div>
               {!modoAgregadoTodasOperadoras && (
                 <>
+                  {exibirComparativoMesa && (
                   <div style={contentBox}>
                     <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
@@ -557,16 +543,8 @@ export default function OverviewSpin() {
                       {MSG_SEM_DADOS_FILTRO}
                     </div>
                   </div>
-                  <div style={contentBox}>
-                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
-                      Dados por mesa
-                    </SectionTitle>
-                    <div
-                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
-                    >
-                      {MSG_SEM_DADOS_FILTRO}
-                    </div>
-                  </div>
+                  )}
+                  <OverviewSpinDadosPorMesa {...dadosPorMesaCommon} state="empty" colTempo="Data" />
                 </>
               )}
             </>
@@ -612,6 +590,7 @@ export default function OverviewSpin() {
 
               {!modoAgregadoTodasOperadoras && (
                 <>
+                  {exibirComparativoMesa && (
                   <div style={contentBox}>
                     <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
@@ -725,37 +704,8 @@ export default function OverviewSpin() {
                   </>
                 )}
               </div>
-
-              <div style={contentBox}>
-                <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
-                  Dados por mesa
-                </SectionTitle>
-
-                <div className="app-conversao-funil-duo">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={tituloMesaSpeedBaccarat}>
-                      Speed Baccarat
-                    </div>
-                    <OverviewSpinMesaDiaTabela linhas={linhasSpeedBaccarat} colTempo="Data" tituloTabela={"Speed Baccarat"} mesSelecionadoLabel={mesSelecionado?.label ?? ""} dataTable={dataTable} brand={brand} t={t} />
-                  </div>
-                  <div
-                    className="app-conversao-funil-divider"
-                    style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={tituloMesaRoleta}>
-                      Roleta
-                    </div>
-                    <OverviewSpinMesaDiaTabela linhas={linhasRoleta} colTempo="Data" tituloTabela={"Roleta"} mesSelecionadoLabel={mesSelecionado?.label ?? ""} dataTable={dataTable} brand={brand} t={t} />
-                  </div>
-                </div>
-                {exibirBlocoDadosPorMesaFutebol && (
-                  <div style={{ marginTop: 4 }}>
-                    <div style={tituloMesaFutebolBrasileiro}>{LABEL_FUTEBOL_BRASILEIRO}</div>
-                    <OverviewSpinMesaDiaTabela linhas={linhasFutebolBrasileiro} colTempo="Data" tituloTabela={LABEL_FUTEBOL_BRASILEIRO} mesSelecionadoLabel={mesSelecionado?.label ?? ""} dataTable={dataTable} brand={brand} t={t} />
-                  </div>
-                )}
-              </div>
+                  )}
+                  <OverviewSpinDadosPorMesa {...dadosPorMesaCommon} state="ready" colTempo="Data" />
                 </>
               )}
             </>
@@ -788,6 +738,7 @@ export default function OverviewSpin() {
               </div>
               {!modoAgregadoTodasOperadoras && (
                 <>
+                  {exibirComparativoMesa && (
                   <div style={contentBox}>
                     <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
@@ -807,25 +758,8 @@ export default function OverviewSpin() {
                       <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                     </div>
                   </div>
-                  <div style={contentBox}>
-                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
-                      Dados por mesa
-                    </SectionTitle>
-                    <div
-                      style={{
-                        padding: 24,
-                        textAlign: "center",
-                        color: t.textMuted,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 10,
-                      }}
-                    >
-                      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
-                      <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
-                    </div>
-                  </div>
+                  )}
+                  <OverviewSpinDadosPorMesa {...dadosPorMesaCommon} state="loading" colTempo="Mês" />
                 </>
               )}
             </>
@@ -841,6 +775,7 @@ export default function OverviewSpin() {
               </div>
               {!modoAgregadoTodasOperadoras && (
                 <>
+                  {exibirComparativoMesa && (
                   <div style={contentBox}>
                     <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
@@ -851,16 +786,8 @@ export default function OverviewSpin() {
                       {MSG_SEM_DADOS_FILTRO}
                     </div>
                   </div>
-                  <div style={contentBox}>
-                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
-                      Dados por mesa
-                    </SectionTitle>
-                    <div
-                      style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
-                    >
-                      {MSG_SEM_DADOS_FILTRO}
-                    </div>
-                  </div>
+                  )}
+                  <OverviewSpinDadosPorMesa {...dadosPorMesaCommon} state="empty" colTempo="Mês" />
                 </>
               )}
             </>
@@ -906,6 +833,7 @@ export default function OverviewSpin() {
 
               {!modoAgregadoTodasOperadoras && (
                 <>
+                  {exibirComparativoMesa && (
                   <div style={contentBox}>
                     <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
                       Comparativo de mesa
@@ -1021,37 +949,8 @@ export default function OverviewSpin() {
                       </>
                     )}
                   </div>
-
-                  <div style={contentBox}>
-                    <SectionTitle sub="Baccarat, Roleta e Futebol Brasileiro">
-                      Dados por mesa
-                    </SectionTitle>
-
-                    <div className="app-conversao-funil-duo">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={tituloMesaSpeedBaccarat}>
-                          Speed Baccarat
-                        </div>
-                        <OverviewSpinMesaDiaTabela linhas={linhasSpeedBaccarat} colTempo="Mês" tituloTabela={"Speed Baccarat"} mesSelecionadoLabel={mesSelecionado?.label ?? ""} dataTable={dataTable} brand={brand} t={t} />
-                      </div>
-                      <div
-                        className="app-conversao-funil-divider"
-                        style={{ width: 1, background: t.cardBorder, flexShrink: 0 }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={tituloMesaRoleta}>
-                          Roleta
-                        </div>
-                        <OverviewSpinMesaDiaTabela linhas={linhasRoleta} colTempo="Mês" tituloTabela={"Roleta"} mesSelecionadoLabel={mesSelecionado?.label ?? ""} dataTable={dataTable} brand={brand} t={t} />
-                      </div>
-                    </div>
-                    {exibirBlocoDadosPorMesaFutebol && (
-                      <div style={{ marginTop: 4 }}>
-                        <div style={tituloMesaFutebolBrasileiro}>{LABEL_FUTEBOL_BRASILEIRO}</div>
-                        <OverviewSpinMesaDiaTabela linhas={linhasFutebolBrasileiro} colTempo="Mês" tituloTabela={LABEL_FUTEBOL_BRASILEIRO} mesSelecionadoLabel={mesSelecionado?.label ?? ""} dataTable={dataTable} brand={brand} t={t} />
-                      </div>
-                    )}
-                  </div>
+                  )}
+                  <OverviewSpinDadosPorMesa {...dadosPorMesaCommon} state="ready" colTempo="Mês" />
                 </>
               )}
             </>

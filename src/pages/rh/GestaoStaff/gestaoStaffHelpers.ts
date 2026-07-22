@@ -24,7 +24,6 @@ export function staffUiTimeSemOperadoraHorarioModaisRestritos(nomeTime: string):
   const n = normStaffNomeTimeUi(nomeTime);
   return (
     n === "service manager" ||
-    n === "customer service" ||
     n === "shift leader" ||
     n === "performance coach"
   );

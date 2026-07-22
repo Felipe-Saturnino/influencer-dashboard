@@ -17,7 +17,11 @@ import {
   type AcademyPortalAnexoRef,
 } from "../../../lib/academyPortalPostagemFiles";
 import { opcoesTimesAplicavelAcademyManuais } from "../../../lib/academyPortalAplicavel";
-import { carregarJogosMesasEstudio, normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
+import {
+  carregarJogosMesasEstudio,
+  jogoMesaParaPersistirManual,
+  normalizarJogosMesa,
+} from "../../../lib/academyPortalJogosMesa";
 import { reservarCodigoManual } from "../../../lib/academyPortalManualCodigo";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
@@ -27,6 +31,7 @@ import {
   diffEdicaoRascunho,
   labelComunicadoFromSlug,
   labelDicaManualFromSlug,
+  proximaVersaoMajorManual,
   registrarHistoricoEdicoesRascunho,
   registrarHistoricoStatus,
   slugComunicadoFromLabel,
@@ -262,13 +267,17 @@ export function ModalCriarPostagem({
   const buildSnapshot = useCallback(
     (paths: { imagens: string[]; anexos: AcademyPortalAnexoRef[] }): SnapshotPostagemEdicaoAcademy | null => {
       if (!tipoPostagem) return null;
+      const jogosSnapshot =
+        tipoPostagem === "manual"
+          ? (jogoMesaParaPersistirManual(tipoSubcategoria, jogosMesa) ?? [])
+          : jogosMesa;
       return {
         tipoPostagem,
         tipoSubcategoria,
         titulo,
         introducao,
         descricao,
-        jogoMesa: jogosMesa,
+        jogoMesa: jogosSnapshot,
         codigo: codigoManual,
         versao: versaoManual,
         exigeCiencia,
@@ -426,7 +435,9 @@ export function ModalCriarPostagem({
       setDescricao(row.corpo);
       setJogosMesa(normalizarJogosMesa(row.jogo_mesa));
       setCodigoManual(row.codigo?.trim() ?? "");
-      setVersaoManual(row.versao?.trim() || "1.0");
+      const versaoSalva = row.versao?.trim() || "1.0";
+      // Manual em edição: sobe a major (1.0 → 2.0). Snapshot guarda a versão anterior p/ histórico.
+      setVersaoManual(tipoUi === "manual" ? proximaVersaoMajorManual(versaoSalva) : versaoSalva);
       setExigeCiencia(row.requires_acknowledgment === false ? "nao" : "sim");
       setAplicavelA(row.aplicavel_a?.length ? [...row.aplicavel_a] : []);
       setImagemPaths(normalizarImagensAcademyPortal(row));
@@ -445,7 +456,7 @@ export function ModalCriarPostagem({
         descricao: row.corpo,
         jogoMesa: normalizarJogosMesa(row.jogo_mesa),
         codigo: row.codigo?.trim() ?? "",
-        versao: row.versao?.trim() || "1.0",
+        versao: versaoSalva,
         exigeCiencia: row.requires_acknowledgment === false ? "nao" : "sim",
         aplicavelA: row.aplicavel_a?.length ? [...row.aplicavel_a] : [],
         imagemPaths: normalizarImagensAcademyPortal(row),
@@ -565,16 +576,26 @@ export function ModalCriarPostagem({
         return;
       }
 
-      const basePayload = {
+      const basePayload: Record<string, unknown> = {
         titulo: titulo.trim() || "Rascunho",
         corpo: descricao,
         categoria_id: catId,
         status: novoStatus,
         ...payloadMidiaAcademyPortal(up.imagens, up.anexos),
-        created_by: user.id,
-        published_at: novoStatus === "publicado" ? now : null,
-        published_by: novoStatus === "publicado" ? user.id : null,
       };
+      if (modo !== "editar") {
+        basePayload.created_by = user.id;
+      }
+      if (novoStatus === "publicado") {
+        // Re-publicar sem alterar data/autor originais da publicação.
+        if (statusAnterior !== "publicado") {
+          basePayload.published_at = now;
+          basePayload.published_by = user.id;
+        }
+      } else {
+        basePayload.published_at = null;
+        basePayload.published_by = null;
+      }
 
       if (tipoPostagem === "comunicado") {
         if (modo === "editar" && editRef) {
@@ -616,10 +637,11 @@ export function ModalCriarPostagem({
           codigoFinal = reserva.codigo;
         }
 
+        const jogosManual = jogoMesaParaPersistirManual(tipoSubcategoria, jogosMesa);
         const payload = {
           ...basePayload,
           introducao: introducao.trim() || "—",
-          jogo_mesa: tipoSubcategoria === "Jogos" && jogosMesa.length > 0 ? jogosMesa : null,
+          jogo_mesa: jogosManual,
           codigo: codigoFinal,
           versao: versaoManual.trim() || "1.0",
           requires_acknowledgment: exigeCiencia === "sim",

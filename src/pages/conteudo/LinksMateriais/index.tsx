@@ -2,23 +2,37 @@ import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
-import { roleParidadeInfluencer } from "../../../lib/staffRoles";
+import {
+  trackingBasePorCanal,
+  linksMateriaisAbasVisiveis,
+  linksMateriaisIsSelfMode,
+  linksMateriaisPrecisaSelect,
+  linksMateriaisFiltrarPorEscopoAgencia,
+  nomeExibicaoLinksEntidade,
+  type LinksMateriaisCanal,
+} from "../../../lib/linksMateriaisCanal";
 import {
   buildSpinBrandedQrPngBlob,
   buildSpinBrandedQrPreviewDataUrl,
   type SpinQrFrameVariant,
 } from "../../../lib/spinQrFrameExport";
 import ModalBloqueioAgendaLive from "../../lives/Agenda/ModalBloqueioAgendaLive";
-import { Copy, Check, AlertCircle, QrCode, Download, Loader2 } from "lucide-react";
+import { Copy, Check, AlertCircle, QrCode, Download, Loader2, User, Users } from "lucide-react";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
+import {
+  FiltroBarTabButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
+} from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { QRCodeCanvas } from "qrcode.react";
 import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import type { ReactNode } from "react";
@@ -39,7 +53,6 @@ function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): Reac
   );
 }
 
-const TRACKING_BASE = "https://go.aff.casadeapostas.bet.br/lkp84bia?utm_source=";
 const PREVIA_QUADRO_MAX_W = 280;
 /** Bitmap interno nítido; a escala visual vem do CSS (igual proporção aos PNG 600×760). */
 const QR_SOLO_CANVAS_PX = 520;
@@ -80,20 +93,45 @@ async function fetchCdaUtmEmitidoParaInfluencer(pInfluencerId: string | null): P
 
 type RpcResult = { ok: boolean; error?: string; utm_source?: string };
 
-interface InfluencerOpcao {
+interface EntidadeOpcao {
   id: string;
-  nome_artistico: string | null;
+  nome: string;
 }
 
+type PerfilEmbed = {
+  nome_artistico?: string | null;
+  nome_completo?: string | null;
+} | null;
+
 export default function LinksMateriais() {
-  const { theme: t, user, podeVerInfluencer, setActivePage } = useApp();
+  const { theme: t, user, effectiveRole, podeVerInfluencer, setActivePage } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("links_materiais");
   const dark = t.isDark ?? false;
   const narrowMobile = useMediaQuery("(max-width: 479px)");
 
-  const precisaSelecionarInfluencer = !!user && !roleParidadeInfluencer(user.role);
-  const podeEmitir = perm.canEditarOk && !perm.loading;
+  const roleEfetivo = effectiveRole ?? user?.role ?? null;
+  const abasVisiveis = linksMateriaisAbasVisiveis(roleEfetivo, perm.canView);
+  const [canal, setCanal] = useRouteTab(
+    "links_materiais",
+    abasVisiveis[0] ?? "influencer",
+    abasVisiveis,
+  );
+  const trackingBase = trackingBasePorCanal(canal);
+  /** Ver = Próprios + Influencer/Afiliado → só o próprio link. */
+  const isSelfMode = linksMateriaisIsSelfMode(roleEfetivo, perm.canView);
+  /** Admin / Ver=Sim / Criar=Sim → select completo; Agência+Próprios → select do escopo. */
+  const precisaSelecionarInfluencer = linksMateriaisPrecisaSelect(
+    roleEfetivo,
+    perm.canView,
+    perm.canCriar ?? perm.canEditar,
+  );
+  const filtrarEscopoAgencia = linksMateriaisFiltrarPorEscopoAgencia(roleEfetivo);
+  /** Criar libera emissão; fallback temporário a Editar até a migration de can_criar. */
+  const podeEmitir = (perm.canCriarOk || perm.canEditarOk) && !perm.loading;
+  const labelEntidade = canal === "afiliado" ? "Afiliado" : "Influencer";
+  const labelEntidadeLower = canal === "afiliado" ? "afiliado" : "influencer";
+  const hintNomeCampo = canal === "afiliado" ? "nome" : "nome artístico";
 
   const [nomeArtistico, setNomeArtistico] = useState("");
   const [utmInput, setUtmInput] = useState("");
@@ -102,7 +140,7 @@ export default function LinksMateriais() {
   const [loadingPerfil, setLoadingPerfil] = useState(true);
   const [loadingAliasInfluencer, setLoadingAliasInfluencer] = useState(false);
   const [loadingInfluenciadores, setLoadingInfluenciadores] = useState(false);
-  const [influenciadores, setInfluenciadores] = useState<InfluencerOpcao[]>([]);
+  const [influenciadores, setInfluenciadores] = useState<EntidadeOpcao[]>([]);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -118,8 +156,17 @@ export default function LinksMateriais() {
   } | null>(null);
   const [verificandoGateEmissao, setVerificandoGateEmissao] = useState(false);
 
+  useEffect(() => {
+    setEmitido(false);
+    setLinkCompleto("");
+    setUtmInput("");
+    setErro(null);
+    setInfluencerSelecionado("");
+    // Não zerar a lista aqui — o effect de carga substitui ao trocar a aba.
+  }, [canal]);
+
   const carregarMeuPerfil = useCallback(async () => {
-    if (!user?.id || !roleParidadeInfluencer(user.role)) {
+    if (!user?.id || !linksMateriaisIsSelfMode(roleEfetivo, perm.canView)) {
       setLoadingPerfil(false);
       setNomeArtistico("");
       setUtmInput("");
@@ -130,7 +177,7 @@ export default function LinksMateriais() {
     setLoadingPerfil(true);
     const { data, error } = await supabase
       .from("influencer_perfil")
-      .select("nome_artistico")
+      .select("nome_artistico, nome_completo")
       .eq("id", user.id)
       .maybeSingle();
     if (error) {
@@ -142,28 +189,34 @@ export default function LinksMateriais() {
       setLoadingPerfil(false);
       return;
     }
-    const nome = (data?.nome_artistico ?? "").trim();
-    setNomeArtistico(nome);
+    const nome = nomeExibicaoLinksEntidade({
+      role: roleEfetivo,
+      nome_artistico: data?.nome_artistico,
+      nome_completo: data?.nome_completo,
+      name: user.name,
+    });
+    setNomeArtistico(nome === "—" ? "" : nome);
 
     const existente = await fetchCdaUtmEmitidoParaInfluencer(null);
     if (existente) {
       setEmitido(true);
       setUtmInput(existente);
-      setLinkCompleto(`${TRACKING_BASE}${encodeURIComponent(existente)}`);
+      setLinkCompleto(`${trackingBasePorCanal(canal)}${encodeURIComponent(existente)}`);
     } else {
       setEmitido(false);
       setLinkCompleto("");
-      setUtmInput(sanitizarUtm(nome));
+      setUtmInput(sanitizarUtm(nome === "—" ? "" : nome));
     }
     setLoadingPerfil(false);
-  }, [user?.id, user?.role]);
+  }, [user?.id, user?.name, roleEfetivo, canal, perm.canView]);
 
   useEffect(() => {
     void carregarMeuPerfil();
   }, [carregarMeuPerfil]);
 
   useEffect(() => {
-    if (!user || roleParidadeInfluencer(user.role) || perm.canView === "nao") {
+    if (perm.loading) return;
+    if (!user || isSelfMode || perm.canView === "nao" || !precisaSelecionarInfluencer) {
       setInfluenciadores([]);
       setInfluencerSelecionado("");
       setLoadingInfluenciadores(false);
@@ -172,19 +225,59 @@ export default function LinksMateriais() {
     let cancelled = false;
     setLoadingInfluenciadores(true);
     void (async () => {
-      const { data, error } = await supabase
-        .from("influencer_perfil")
-        .select("id, nome_artistico")
-        .order("nome_artistico");
+      const roleFiltro = canal === "afiliado" ? "afiliado" : "influencer";
+      // Mesmo padrão da página Influencers: profiles + perfil em duas queries (evita falha do embed).
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("id, name, role")
+        .eq("role", roleFiltro)
+        .order("name");
       if (cancelled) return;
       if (error) {
-        console.error("[LinksMateriais] lista influencers:", error.message);
+        console.error("[LinksMateriais] lista entidades:", error.message);
         setInfluenciadores([]);
         setInfluencerSelecionado("");
         setLoadingInfluenciadores(false);
         return;
       }
-      const rows = (data ?? []).filter((r: InfluencerOpcao) => podeVerInfluencer(r.id));
+      type ProfileRow = { id: string; name: string | null; role: string | null };
+      let lista = (profiles ?? []) as ProfileRow[];
+      // Escopo só para Agência — Admin / Ver=Sim / Criar=Sim veem todos.
+      if (filtrarEscopoAgencia) {
+        lista = lista.filter((r) => podeVerInfluencer(r.id));
+      }
+      const ids = lista.map((r) => r.id);
+      const perfilById = new Map<string, PerfilEmbed>();
+      if (ids.length > 0) {
+        const { data: perfis, error: errPerfil } = await supabase
+          .from("influencer_perfil")
+          .select("id, nome_artistico, nome_completo")
+          .in("id", ids);
+        if (cancelled) return;
+        if (errPerfil) {
+          console.error("[LinksMateriais] perfis:", errPerfil.message);
+        } else {
+          for (const p of perfis ?? []) {
+            perfilById.set(p.id, {
+              nome_artistico: p.nome_artistico,
+              nome_completo: p.nome_completo,
+            });
+          }
+        }
+      }
+      if (cancelled) return;
+      const rows: EntidadeOpcao[] = lista.map((r) => {
+        const perfil = perfilById.get(r.id) ?? null;
+        return {
+          id: r.id,
+          nome: nomeExibicaoLinksEntidade({
+            role: r.role,
+            nome_artistico: perfil?.nome_artistico,
+            nome_completo: perfil?.nome_completo,
+            name: r.name,
+          }),
+        };
+      });
       setInfluenciadores(rows);
       if (rows.length === 1) setInfluencerSelecionado(rows[0].id);
       else setInfluencerSelecionado("");
@@ -193,10 +286,19 @@ export default function LinksMateriais() {
     return () => {
       cancelled = true;
     };
-  }, [user, perm.canView, podeVerInfluencer]);
+  }, [
+    user,
+    perm.loading,
+    perm.canView,
+    podeVerInfluencer,
+    canal,
+    isSelfMode,
+    precisaSelecionarInfluencer,
+    filtrarEscopoAgencia,
+  ]);
 
   useEffect(() => {
-    if (roleParidadeInfluencer(user?.role)) return;
+    if (isSelfMode) return;
     if (!influencerSelecionado) {
       setEmitido(false);
       setLinkCompleto("");
@@ -214,17 +316,17 @@ export default function LinksMateriais() {
       if (existente) {
         setEmitido(true);
         setUtmInput(existente);
-        setLinkCompleto(`${TRACKING_BASE}${encodeURIComponent(existente)}`);
+        setLinkCompleto(`${trackingBasePorCanal(canal)}${encodeURIComponent(existente)}`);
       } else {
         const row = influenciadores.find((i) => i.id === influencerSelecionado);
-        setUtmInput(sanitizarUtm((row?.nome_artistico ?? "").trim()));
+        setUtmInput(sanitizarUtm((row?.nome ?? "").trim()));
       }
       setLoadingAliasInfluencer(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [influencerSelecionado, influenciadores, user?.role]);
+  }, [influencerSelecionado, influenciadores, user?.role, canal, isSelfMode]);
 
   useEffect(() => {
     if (!linkCompleto) {
@@ -259,7 +361,7 @@ export default function LinksMateriais() {
   }, [linkCompleto]);
 
   const aguardandoOpcoes =
-    roleParidadeInfluencer(user?.role)
+    isSelfMode
       ? loadingPerfil
       : precisaSelecionarInfluencer &&
           (loadingInfluenciadores || (!!influencerSelecionado && loadingAliasInfluencer));
@@ -272,11 +374,11 @@ export default function LinksMateriais() {
       return;
     }
     if (precisaSelecionarInfluencer && !influencerSelecionado) {
-      setErro("Selecione o influencer.");
+      setErro(`Selecione o ${labelEntidadeLower}.`);
       return;
     }
 
-    if (roleParidadeInfluencer(user.role)) {
+    if (isSelfMode && canal === "influencer") {
       setVerificandoGateEmissao(true);
       try {
         const gate = await verificarElegibilidadeAgendaLive(user.id);
@@ -292,10 +394,9 @@ export default function LinksMateriais() {
     setErro(null);
     setSalvando(true);
     try {
-      const payload =
-        roleParidadeInfluencer(user.role)
-          ? { p_utm_source: raw, p_influencer_id: user.id }
-          : { p_utm_source: raw, p_influencer_id: influencerSelecionado };
+      const payload = isSelfMode
+        ? { p_utm_source: raw, p_influencer_id: user.id }
+        : { p_utm_source: raw, p_influencer_id: influencerSelecionado };
       const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", payload);
       if (error) {
         console.error("[LinksMateriais] emitir:", error);
@@ -311,7 +412,7 @@ export default function LinksMateriais() {
         return;
       }
       const finalSource = (res.utm_source ?? raw).trim();
-      setLinkCompleto(`${TRACKING_BASE}${encodeURIComponent(finalSource)}`);
+      setLinkCompleto(`${trackingBase}${encodeURIComponent(finalSource)}`);
       setEmitido(true);
     } catch (e) {
       console.error("[LinksMateriais] emitir inesperado:", e);
@@ -421,12 +522,19 @@ export default function LinksMateriais() {
           : aguardandoOpcoes
             ? "Carregando opções…"
             : precisaSelecionarInfluencer && influenciadores.length === 0
-              ? "Nenhum influencer disponível no seu escopo"
+              ? filtrarEscopoAgencia
+                ? `Nenhum ${labelEntidadeLower} disponível no seu escopo`
+                : `Nenhum ${labelEntidadeLower} cadastrado`
               : precisaSelecionarInfluencer && !influencerSelecionado
-                ? "Selecione um influencer primeiro"
+                ? `Selecione um ${labelEntidadeLower} primeiro`
                 : !utmInput.trim()
                   ? "Preencha o valor do UTM antes de emitir"
                   : undefined;
+
+  const canalTabs: { id: LinksMateriaisCanal; label: string; icon: typeof User }[] = [
+    { id: "influencer", label: "Influencers", icon: User },
+    { id: "afiliado", label: "Afiliados", icon: Users },
+  ];
 
   return (
     <div className="app-page-shell">
@@ -436,10 +544,54 @@ export default function LinksMateriais() {
         subtitle="Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação."
       />
 
-      <div style={getPageContentBoxStyle(brand, t)} role="region" aria-label="Link de rastreamento">
+      {abasVisiveis.length > 1 && (
+        <div style={getPageFilterBoxStyle(brand, t)}>
+          <div
+            role="tablist"
+            aria-label="Canal de links"
+            onKeyDown={(e) =>
+              onFiltroBarTabsKeyDown(e, abasVisiveis, setCanal, (k) => `tab-links-materiais-${k}`)
+            }
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              flexWrap: "wrap",
+              width: "100%",
+            }}
+          >
+            {canalTabs
+              .filter((tab) => abasVisiveis.includes(tab.id))
+              .map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <FiltroBarTabButton
+                    key={tab.id}
+                    id={`tab-links-materiais-${tab.id}`}
+                    active={canal === tab.id}
+                    aria-controls="panel-links-materiais"
+                    onClick={() => setCanal(tab.id)}
+                    icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                  >
+                    {tab.label}
+                  </FiltroBarTabButton>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      <div
+        id="panel-links-materiais"
+        role={abasVisiveis.length > 1 ? "tabpanel" : "region"}
+        aria-labelledby={abasVisiveis.length > 1 ? `tab-links-materiais-${canal}` : undefined}
+        style={getPageContentBoxStyle(brand, t)}
+        aria-label="Link de rastreamento"
+      >
         <SectionTitle>Link de rastreamento</SectionTitle>
 
-        {!perm.loading && !perm.canEditarOk && (
+        {!perm.loading && !perm.canCriarOk && !perm.canEditarOk && (
           <div style={{
             display: "flex",
             alignItems: "flex-start",
@@ -455,12 +607,16 @@ export default function LinksMateriais() {
           }}>
             <AlertCircle size={18} aria-hidden style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
             <span>
-              Você pode ver esta página, mas <strong>não tem permissão para emitir</strong> o link. Peça a um administrador para ativar <strong>Editar</strong> em Links e Materiais na Gestão de Usuários.
+              Você pode ver esta página, mas <strong>não tem permissão para emitir</strong> o link. Peça a um administrador para ativar <strong>Criar</strong> em Links e Materiais na Gestão de Usuários.
             </span>
           </div>
         )}
 
-        {precisaSelecionarInfluencer && podeEmitir && !loadingInfluenciadores && influenciadores.length === 0 && (
+        {precisaSelecionarInfluencer &&
+          podeEmitir &&
+          !loadingInfluenciadores &&
+          !perm.loading &&
+          influenciadores.length === 0 && (
           <div style={{
             display: "flex",
             alignItems: "flex-start",
@@ -475,7 +631,11 @@ export default function LinksMateriais() {
             marginBottom: 16,
           }}>
             <AlertCircle size={18} aria-hidden style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
-            <span>Nenhum influencer disponível no seu escopo para emitir o link.</span>
+            <span>
+              {filtrarEscopoAgencia
+                ? `Nenhum ${labelEntidadeLower} disponível no seu escopo para emitir o link.`
+                : `Nenhum ${labelEntidadeLower} cadastrado para emitir o link.`}
+            </span>
           </div>
         )}
 
@@ -502,23 +662,24 @@ export default function LinksMateriais() {
           </div>
         )}
 
-        {(roleParidadeInfluencer(user?.role) && loadingPerfil) ||
-        (!roleParidadeInfluencer(user?.role) && !!influencerSelecionado && loadingAliasInfluencer) ? (
+        {(isSelfMode && loadingPerfil) ||
+        (!isSelfMode && !!influencerSelecionado && loadingAliasInfluencer) ? (
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: 0, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
             <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             Carregando link salvo…
           </div>
         ) : !emitido ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {precisaSelecionarInfluencer && podeEmitir && influenciadores.length > 0 && (
+            {precisaSelecionarInfluencer && podeEmitir && (
               <div>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Influencer
+                  {labelEntidade}
                 </label>
                 <select
                   value={influencerSelecionado}
                   onChange={(e) => setInfluencerSelecionado(e.target.value)}
-                  disabled={!podeEmitir || loadingInfluenciadores || salvando}
+                  disabled={!podeEmitir || loadingInfluenciadores || salvando || influenciadores.length === 0}
+                  aria-label={labelEntidade}
                   style={{
                     width: "100%",
                     boxSizing: "border-box",
@@ -529,13 +690,19 @@ export default function LinksMateriais() {
                     color: t.text,
                     fontSize: 14,
                     fontFamily: FONT.body,
-                    cursor: "pointer",
+                    cursor: loadingInfluenciadores || influenciadores.length === 0 ? "not-allowed" : "pointer",
                   }}
                 >
-                  <option value="">Selecione…</option>
+                  <option value="">
+                    {loadingInfluenciadores
+                      ? "Carregando…"
+                      : influenciadores.length === 0
+                        ? `Nenhum ${labelEntidadeLower} encontrado`
+                        : "Selecione…"}
+                  </option>
                   {influenciadores.map((inf) => (
                     <option key={inf.id} value={inf.id}>
-                      {(inf.nome_artistico ?? "").trim() || inf.id.slice(0, 8)}
+                      {inf.nome.trim() || inf.id.slice(0, 8)}
                     </option>
                   ))}
                 </select>
@@ -569,7 +736,7 @@ export default function LinksMateriais() {
                       background: linkStripBg,
                     }}
                   >
-                    {TRACKING_BASE}
+                    {trackingBase}
                   </span>
                   <div
                     style={{
@@ -607,7 +774,7 @@ export default function LinksMateriais() {
                 </div>
               </div>
               <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                O trecho à direita é o utm_source (a partir do nome artístico cadastrado), você pode editar caso deseje, mas este não pode conter espaços (usar _ no lugar) e nem caracteres especiais (~, ^, ç, etc.).
+                O trecho à direita é o utm_source (a partir do {hintNomeCampo} cadastrado), você pode editar caso deseje, mas este não pode conter espaços (usar _ no lugar) e nem caracteres especiais (~, ^, ç, etc.).
               </p>
             </div>
 
@@ -1012,7 +1179,7 @@ export default function LinksMateriais() {
         contexto="emitir_link"
         onIrInfluencers={() => {
           setBloqueioEmissao(null);
-          setActivePage("influencers");
+          setActivePage(canal === "afiliado" ? "afiliados" : "influencers");
         }}
         onIrPlaybook={() => {
           setBloqueioEmissao(null);

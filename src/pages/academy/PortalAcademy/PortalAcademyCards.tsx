@@ -13,6 +13,7 @@ import {
   type AcademyPortalAutorInfo,
 } from "../../../lib/academyPortalAutorMeta";
 import { PortalAcademyAnexosLista } from "./PortalAcademyAnexosLista";
+import { PortalAcademyAssetLink } from "./PortalAcademyAssetLink";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -189,8 +190,8 @@ export function PostagemAcademyCard({
         fontFamily: FONT.body,
       }}
     >
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div className={`app-academy-portal-card${mediaUrl ? " app-academy-portal-card--with-media" : ""}`}>
+        <div className="app-academy-portal-card__body">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
             {categoria ? <span style={tagStyle(accent)}>{categoria.label}</span> : null}
             {jogosTags.map((jogo) => (
@@ -210,7 +211,13 @@ export function PostagemAcademyCard({
               <CorpoHtmlPortalRh html={preview} color={t.textMuted} />
             )}
           </div>
-          <PortalAcademyAnexosLista anexos={anexos} color={t.text} mostrarNomeAnexo={mostrarNomeAnexo} />
+          {anexos.length > 0 ? (
+            <PortalAcademyAnexosLista anexos={anexos} color={t.text} mostrarNomeAnexo={mostrarNomeAnexo} />
+          ) : capaPath ? (
+            <div style={{ marginTop: 10, fontFamily: FONT.body }}>
+              <PortalAcademyAssetLink storagePath={capaPath} label="Ver anexo" color={t.text} />
+            </div>
+          ) : null}
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginTop: 14 }}>
             {mostrarBotaoVer && onVerCompleto ? (
               <button type="button" onClick={onVerCompleto} style={btnCtaPrimario(brand)}>
@@ -225,52 +232,18 @@ export function PostagemAcademyCard({
         {mediaUrl ? (
           <button
             type="button"
+            className="app-academy-portal-card__media"
             onClick={() => setMediaAmpliada(true)}
             aria-label={tooltipAcao("Ampliar mídia")}
             title={tooltipAcao("Ampliar mídia")}
-            style={{
-              padding: 0,
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: 10,
-              background: "transparent",
-              cursor: "zoom-in",
-              flexShrink: 0,
-              overflow: "hidden",
-              position: "relative",
-            }}
+            style={{ border: `1px solid ${t.cardBorder}` }}
           >
             {isVideo ? (
-              <video
-                src={mediaUrl}
-                aria-hidden
-                style={{ width: 96, height: 96, objectFit: "cover", display: "block" }}
-                muted
-              />
+              <video src={mediaUrl} aria-hidden className="app-academy-portal-card__media-asset" muted />
             ) : (
-              <img
-                src={mediaUrl}
-                alt=""
-                aria-hidden
-                style={{ width: 96, height: 96, objectFit: "cover", display: "block" }}
-              />
+              <img src={mediaUrl} alt="" aria-hidden className="app-academy-portal-card__media-asset" />
             )}
-            {midiaExtra > 0 ? (
-              <span
-                style={{
-                  position: "absolute",
-                  right: 4,
-                  bottom: 4,
-                  fontSize: 10,
-                  fontWeight: 800,
-                  padding: "2px 6px",
-                  borderRadius: 6,
-                  background: "rgba(0,0,0,0.65)",
-                  color: "#fff",
-                }}
-              >
-                +{midiaExtra}
-              </span>
-            ) : null}
+            {midiaExtra > 0 ? <span className="app-academy-portal-card__media-badge">+{midiaExtra}</span> : null}
           </button>
         ) : null}
       </div>

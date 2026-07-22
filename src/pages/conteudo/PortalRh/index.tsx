@@ -418,40 +418,50 @@ export default function PortalRhPage() {
     try {
 
     const { inicio: histInicio } = getPeriodoHistoricoCompetencias();
+    const catCols = "id, slug, label, scope, accent_hex, sort_order";
     const catJoin = "categoria:rh_portal_categoria(slug,label,accent_hex)";
+    const comCols =
+      "id, titulo, corpo, categoria_id, is_pinned, requires_acknowledgment, published_at, published_by, created_by, imagem_storage_path, anexo_storage_path, anexo_nome, approved_at, approved_by, status";
+    const docCols =
+      "id, titulo, corpo, categoria_id, paginas, requires_acknowledgment, storage_path, updated_at, status, published_at, introducao, resumo, imagem_storage_path, anexo_storage_path, anexo_nome, created_by, approved_at, approved_by, codigo, versao, tipo_documento, area_responsavel, classificacao, aplicavel_a, data_emissao, elaborado_por, revisado_por, aprovado_por_doc";
+    const talkCols =
+      "id, numero, titulo, data_reuniao, duracao_min, resumo, corpo, introducao, storage_path, imagem_storage_path, anexo_storage_path, anexo_nome, created_by, status, published_at";
 
     const [catRes, comData, docData, talkData] = await Promise.all([
-      supabase.from("rh_portal_categoria").select("*").order("sort_order", { ascending: true }),
-      fetchAllPages<RhPortalComunicado>(async (from, to) =>
-        await supabase
+      supabase.from("rh_portal_categoria").select(catCols).order("sort_order", { ascending: true }),
+      fetchAllPages<RhPortalComunicado>(async (from, to) => {
+        const { data, error } = await supabase
           .from("rh_portal_comunicado")
-          .select(`*, ${catJoin}`)
+          .select(`${comCols}, ${catJoin}`)
           .eq("status", "publicado")
           .or(`is_pinned.eq.true,published_at.gte.${histInicio}`)
           .order("published_at", { ascending: false })
           .order("id", { ascending: true })
-          .range(from, to)
-      ),
-      fetchAllPages<RhPortalDocumento>(async (from, to) =>
-        await supabase
+          .range(from, to);
+        return { data: (data ?? []) as unknown as RhPortalComunicado[], error };
+      }),
+      fetchAllPages<RhPortalDocumento>(async (from, to) => {
+        const { data, error } = await supabase
           .from("rh_portal_documento")
-          .select(`*, ${catJoin}`)
+          .select(`${docCols}, ${catJoin}`)
           .eq("status", "publicado")
           .gte("published_at", histInicio)
           .order("updated_at", { ascending: false })
           .order("id", { ascending: true })
-          .range(from, to)
-      ),
-      fetchAllPages<RhPortalRhTalk>(async (from, to) =>
-        await supabase
+          .range(from, to);
+        return { data: (data ?? []) as unknown as RhPortalDocumento[], error };
+      }),
+      fetchAllPages<RhPortalRhTalk>(async (from, to) => {
+        const { data, error } = await supabase
           .from("rh_portal_rh_talk")
-          .select("*")
+          .select(talkCols)
           .eq("status", "publicado")
           .gte("published_at", histInicio)
           .order("data_reuniao", { ascending: false })
           .order("id", { ascending: true })
-          .range(from, to)
-      ),
+          .range(from, to);
+        return { data: (data ?? []) as unknown as RhPortalRhTalk[], error };
+      }),
     ]);
 
     if (catRes.error) throw catRes.error;
@@ -498,13 +508,23 @@ export default function PortalRhPage() {
             return data ?? [];
           }, 3)
         : Promise.resolve([] as { talk_id: string; user_id: string }[]),
-      fetchAllPages<ReadReceiptRow>(async (from, to) =>
-        await supabase
-          .from("rh_portal_read_receipt")
-          .select("content_type, content_id, read_at, acknowledged_at")
-          .eq("user_id", user.id)
-          .range(from, to)
-      ),
+      (() => {
+        const contentIds = [
+          ...comRows.map((c) => c.id),
+          ...docRows.map((d) => d.id),
+          ...talkRows.map((t) => t.id),
+        ];
+        if (contentIds.length === 0) return Promise.resolve([] as ReadReceiptRow[]);
+        return fetchInBatched(contentIds, 100, async (ids) => {
+          const { data, error } = await supabase
+            .from("rh_portal_read_receipt")
+            .select("content_type, content_id, read_at, acknowledged_at")
+            .eq("user_id", user.id)
+            .in("content_id", ids);
+          if (error) throw error;
+          return (data ?? []) as ReadReceiptRow[];
+        }, 3);
+      })(),
       carregarMetaAutoresPortalRh([...userIds]),
     ]);
 

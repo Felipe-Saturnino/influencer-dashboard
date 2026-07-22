@@ -12,6 +12,7 @@ import type { PlatformHealthSnapshot } from "../../../src/lib/platformHealthDiag
 
 const secretsOk = (): PlatformHealthSnapshot["secrets"] => ({
   cdaConfigurado: true,
+  cdaAfiliadosConfigurado: true,
   githubSocialConfigurado: true,
   resendApiKeyConfigurado: true,
   resendFromSistemaConfigurado: true,

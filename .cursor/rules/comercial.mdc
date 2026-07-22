@@ -23,16 +23,18 @@ alwaysApply: false
 | `comercial_pipeline_b2b` | Pipeline B2B | Organize empresas, marcas e oportunidades de Live Cassino no mercado B2B. |
 | `comercial_pipeline_agregadoras` | Pipeline Agregadoras | Organize agregadoras de jogos e oportunidades comerciais no funil B2B. |
 
+**Menu:** `comercial_overview` fica na seção **Dashboards** (abaixo de Overview Influencer). Integração e Pipelines permanecem em **Comercial**.
+
 ---
 
 ## Identificação
 
-| PageKey | Página | Caminho |
-|---------|--------|---------|
-| `comercial_overview` | Overview Comercial | `comercial/OverviewComercial/` |
-| `comercial_integracao` | Integração | `comercial/Integracao/` |
-| `comercial_pipeline_b2b` | Pipeline B2B | `comercial/PipelineB2B/` |
-| `comercial_pipeline_agregadoras` | Pipeline Agregadoras | `comercial/PipelineAgregadoras/` |
+| PageKey | Página | Caminho | Seção no menu |
+|---------|--------|---------|---------------|
+| `comercial_overview` | Overview Comercial | `comercial/OverviewComercial/` | **Dashboards** |
+| `comercial_integracao` | Integração | `comercial/Integracao/` | Comercial |
+| `comercial_pipeline_b2b` | Pipeline B2B | `comercial/PipelineB2B/` | Comercial |
+| `comercial_pipeline_agregadoras` | Pipeline Agregadoras | `comercial/PipelineAgregadoras/` | Comercial |
 
 Perfis: Gestor (operação interna). Permissões iniciais **`Não`** para todos exceto Admin — liberar em Gestão de Usuários.
 
@@ -71,7 +73,7 @@ Operadoras: `comercial_marcas` (+ empresa/contatos/produtos) e `comercial_marca_
 
 ## Integração (`comercial_integracao`)
 
-Acompanhamento técnico das marcas na aba **Fechado** do Pipeline B2B (Dedicada/Network em **Contrato Assinado** ou **Ativo**). Menu entre Overview Comercial e Pipeline B2B.
+Acompanhamento técnico das marcas na aba **Fechado** do Pipeline B2B (Dedicada/Network em **Contrato Assinado** ou **Ativo**). No menu Comercial, fica entre Integração e Pipeline B2B (Overview Comercial está em Dashboards).
 
 ### Filtros (bloco nível 2)
 

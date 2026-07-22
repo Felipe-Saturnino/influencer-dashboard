@@ -63,12 +63,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Comparativo de Mesa (Blackjack)",
         texto:
-          "Disponível apenas quando uma operadora específica está selecionada. Permite comparar duas mesas de Blackjack lado a lado. Use os seletores acima da tabela para escolher as mesas A e B.",
+          "Disponível nas abas Overview e Estúdio Dedicado quando uma operadora específica está selecionada. Permite comparar duas mesas de Blackjack lado a lado. Use os seletores acima da tabela para escolher as mesas A e B.\n\nNa aba Estúdio Network o bloco não aparece — o inventário network não tem par de mesas Blackjack para comparar.",
       },
       {
         subtitulo: "Dados por Mesa",
         texto:
-          "Exibe o desempenho diário (ou mensal no Histórico) das mesas Speed Baccarat e Roleta em dois painéis paralelos. Na Casa de Apostas, uma segunda linha mostra Futebol Brasileiro em largura total.",
+          "Exibe o desempenho diário (ou mensal no Histórico) das mesas em painéis paralelos. Nas abas Overview e Estúdio Dedicado: Speed Baccarat e Roleta na primeira linha; Futebol Brasileiro abaixo quando aplicável.\n\nNa aba Estúdio Network a ordem é Blackjack e Roleta na primeira linha, e Speed Baccarat e Futebol Brasileiro na segunda.",
       },
       {
         subtitulo: "Aba Posicionamento",
@@ -79,6 +79,35 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Navegação entre abas",
         texto:
           "As abas compartilham a FilterBar de mês/operadora nas seções financeiras. Com o foco em uma aba, use ← → do teclado para alternar entre as abas visíveis (padrão tablist).",
+      },
+    ],
+  },
+  dash_afiliados: {
+    titulo: "Afiliados",
+    blocos: [
+      {
+        texto:
+          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. As métricas vêm da integração TAP CDA — conta Afiliados (`influencer_metricas` dos perfis com role afiliado).",
+      },
+      {
+        subtitulo: "Filtros e Navegação",
+        texto:
+          "Use as setas para navegar entre os meses disponíveis. O botão Histórico exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores.\n\nO filtro de afiliado restringe todas as abas ao afiliado selecionado. O filtro de operadora restringe aos afiliados vinculados àquela plataforma.\n\nCom o foco em uma aba, use as setas ← → do teclado para alternar entre Overview, Conversão e Financeiro.",
+      },
+      {
+        subtitulo: "Aba Overview",
+        texto:
+          "Apresenta os KPIs executivos em Financeiro (GGR, Investimento, ROI) e Conversão (Registros, Custo por Registro, FTDs, Custo por FTD) — sem o bloco de Operação de lives.\n\nO Funil de Conversão usa três etapas: Acessos → Registros → FTDs (sem Views).\n\nO Ranking de Afiliados lista Afiliado, Acessos, Registros, FTDs, GGR, Investimento e Performance.",
+      },
+      {
+        subtitulo: "Aba Conversão",
+        texto:
+          "Comparativo de Funil lado a lado (sem Views) e Comparativo de Taxas com colunas Afiliado, Acessos, Acesso→Reg, Registros, Reg→FTD, FTD e Ação. O bloco Ranking FTD/Hora não se aplica a este canal.",
+      },
+      {
+        subtitulo: "Aba Financeiro",
+        texto:
+          "KPIs Financeiros (FTD, Depósitos, Saques, WD Ratio, GGR por Jogador, PVI), Investimento por Afiliado e Ranking Financeiro com coluna Afiliado e perfis de jogador (Whales, Core, Recreativos, Caçadores de Bônus).",
       },
     ],
   },
@@ -150,6 +179,25 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  dash_overview_afiliado: {
+    titulo: "Overview Afiliado",
+    blocos: [
+      {
+        texto:
+          "O Overview Afiliado oferece uma visão executiva da performance do canal de afiliados — consolidando KPIs financeiros e de conversão em uma única página sem abas. As métricas vêm da integração TAP CDA (conta Afiliados); o filtro lista os afiliados cadastrados na página Afiliados.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Carrossel de mês, Histórico (13 competências), filtro de afiliado (Todos Afiliados) e filtro de operadora.",
+      },
+      {
+        subtitulo: "Blocos",
+        texto:
+          "KPIs Executivos (sem Lives, Horas Realizadas e Média de Views), Funil de Conversão em três etapas (Acessos → Registros → FTDs), Eficiência (sem FTD/Hora) e Detalhamento Diário/Mensal com colunas Afiliado, Acessos, Registros, # FTDs, R$ FTDs, # Depósitos, R$ Depósitos, # Saques, R$ Saques e R$ GGR.",
+      },
+    ],
+  },
   dash_overview_prestador: {
     titulo: "Overview Prestador",
     blocos: [
@@ -186,6 +234,35 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Aba Performance",
         texto:
           "Conteúdo em desenvolvimento — será liberado em versão futura.",
+      },
+    ],
+  },
+  dash_headcount: {
+    titulo: "Headcount",
+    blocos: [
+      {
+        texto:
+          "O Headcount é o dashboard executivo de pessoas da Spin, com três abas — Overview, Contratação e Distratos. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela dos últimos 13 meses (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
+      },
+      {
+        subtitulo: "Aba Overview",
+        texto:
+          "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses.",
+      },
+      {
+        subtitulo: "Aba Contratação",
+        texto:
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, tipo, datas, repasse, quantidade de candidatos e status. No Histórico, os mesmos blocos consideram os 13 meses.",
+      },
+      {
+        subtitulo: "Aba Distratos",
+        texto:
+          "KPIs de distratos, voluntário, não voluntário e permanência (até 30 dias em dias; acima disso em meses — o card de Permanência não aparece no Histórico). Lista de áreas com quantidade de distratos e pizza por tipo de contrato. Tabela ordenada por data de término (mais recente primeiro). No Histórico, os blocos usam os 13 meses.",
       },
     ],
   },
@@ -577,12 +654,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas de Inventário",
         texto:
-          "O inventário é dividido em quatro abas:\n— Disponíveis: peças prontas para retirada (colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação e Ações)\n— Emprestada: peças com retirada ativa (empréstimo ou uso fixo)\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nO campo de Pesquisa localiza peças por código, código de barras, categoria, estúdio ou nome de quem realizou a retirada.",
+          "O inventário é dividido em cinco abas:\n— Disponíveis: peças prontas para retirada (colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação e Ações)\n— Emprestada: peças com retirada ativa do tipo Emprestada\n— Fixo: peças com retirada ativa do tipo Fixo\n— Manutenção: peças em costura, lavagem ou processo de descarte\n— Descartada: peças retiradas definitivamente do acervo\n\nNas abas Emprestada e Fixo não há coluna Tipo de retirada — o tipo já é definido pela aba.\n\nO campo de Pesquisa localiza peças por código, código de barras, categoria, estúdio ou nome de quem realizou a retirada.",
       },
       {
         subtitulo: "Bipar Código",
         texto:
-          "O botão **Bipar código** abre um modal pronto para leitores USB que funcionam como teclado (modo teclado): aponte o leitor para a etiqueta e bipe — o número aparece no campo automaticamente e a busca é feita ao pressionar Enter (ou ao clicar em Buscar). Também é possível digitar o código manualmente. Para usar a câmera do dispositivo, expanda **Usar câmera (opcional)**. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver emprestada, abre o fluxo de Devolução.",
+          "O botão **Bipar código** abre um modal pronto para leitores USB que funcionam como teclado (modo teclado): aponte o leitor para a etiqueta e bipe — o número aparece no campo automaticamente e a busca é feita ao pressionar Enter (ou ao clicar em Buscar). Também é possível digitar o código manualmente. Para usar a câmera do dispositivo, expanda **Usar câmera (opcional)**. Se a peça estiver disponível, o sistema abre o fluxo de Retirada; se estiver com retirada ativa (Emprestada ou Fixo), abre o fluxo de Devolução.",
       },
       {
         subtitulo: "Cadastrar Peça",
@@ -592,7 +669,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Retirada e Devolução",
         texto:
-          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: Emprestar (temporário) ou Fixo (uso contínuo).\n\nNa devolução, informe a condição da peça: Boa condição, Possível descarte ou Manutenção. Peças devolvidas para manutenção exigem tipo e motivo.",
+          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: Emprestada (temporário) ou Fixo (uso contínuo). A peça passa a aparecer na aba correspondente.\n\nNa devolução, informe a condição da peça: Boa condição, Possível descarte ou Manutenção. Peças devolvidas para manutenção exigem tipo e motivo.",
       },
       {
         subtitulo: "Manutenção e Descarte",
@@ -621,17 +698,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Campanhas",
         texto:
-          "O bloco Campanhas no topo reúne ações promocionais com título, texto, jogos aplicáveis e período de início/fim. Campanhas ativas no período aparecem para operadores na Central (badge VIGENTE). Gestores com permissão de criação usam '+ Campanha' para cadastrar; exclusão exige permissão de exclusão.\n\nAo criar ou editar, é possível abrir uma thread de solicitação com o estúdio — o fluxo segue o mesmo padrão da Central de Notificações.",
+          "O bloco Campanhas no topo reúne ações promocionais com título, texto, jogos aplicáveis e período de início/fim. Campanhas ativas no período aparecem para operadores na Central (badge VIGENTE). Gestores com permissão de Criar usam '+ Campanha' para cadastrar; exclusão exige permissão de Excluir.\n\nAo criar, é possível abrir uma thread de solicitação com o estúdio — o fluxo segue o mesmo padrão da Central de Notificações.",
       },
       {
         subtitulo: "Blocos de roteiro",
         texto:
-          "Três blocos fixos organizam o material:\n\n— Abertura: scripts e orientações de boas-vindas e aquecimento da mesa.\n— Durante o jogo: conteúdo para o miolo da sessão (tendências, foco no jogo, dicas).\n— Fechamento: encerramento, ultimato e mensagens de despedida.\n\nEm cada bloco, '+ Roteiro' abre o formulário de nova sugestão. Tipos Script, Orientação e Alerta definem o estilo visual do card. Tags de jogo indicam em quais mesas o material se aplica.\n\nOperadores com pendências de campanha podem ver o banner amarelo (quando aplicável) e abrir a conversa diretamente.",
+          "Três blocos fixos organizam o material:\n\n— Abertura: scripts e orientações de boas-vindas e aquecimento da mesa.\n— Durante o jogo: conteúdo para o miolo da sessão (tendências, foco no jogo, dicas).\n— Fechamento: encerramento, ultimato e mensagens de despedida.\n\nEm cada bloco, '+ Roteiro' (permissão de Criar) abre o formulário de nova sugestão. O ícone de lápis ao lado de Excluir (permissão de Editar) abre o modal para alterar tipo, jogos e texto — o estúdio do item não muda na edição. Tipos Script, Orientação e Alerta definem o estilo visual do card. Tags de jogo indicam em quais mesas o material se aplica.\n\nOperadores com pendências de campanha podem ver o banner amarelo (quando aplicável) e abrir a conversa diretamente.",
       },
       {
         subtitulo: "Permissões",
         texto:
-          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa. Criação, edição e exclusão dependem das permissões de Criar, Editar e Excluir. Sem permissão de edição, a página funciona em modo consulta — visualização dos blocos e campanhas do estúdio no escopo.",
+          "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa:\n\n— Ver = Sim: consulta os roteiros e campanhas do escopo (operador: filtro de Estúdio limitado aos estúdios das suas operadoras).\n— Criar = Sim: botões '+ Roteiro' e '+ Campanha'.\n— Editar = Sim: botão Editar (lápis) nos cards de sugestão de roteiro.\n— Excluir = Sim: botão Excluir nos cards.\n\nSem Criar/Editar/Excluir, a página fica em modo consulta.",
       },
     ],
   },
@@ -645,7 +722,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Customer Service, Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Preencha ou gere células de turno, salve rascunhos e envie para aprovação quando o fluxo exigir. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
     ],
   },
@@ -673,7 +750,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Modos e filtros",
         texto:
-          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
+          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nA Situação (Escalado/Folga) e os turnos de estúdio vêm só da Escala Diária **aprovada** em Gestão de Escala — rascunho, sugestão ou dados só no navegador não aparecem no Calendário. Cada área (Game Presenter, Service Manager, etc.) precisa ser aprovada à parte. Se a Situação estiver em branco (—) mesmo após aprovar, atualize a plataforma (carga completa da grade).\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
       },
       {
         subtitulo: "Check-in e Check-out",
@@ -683,7 +760,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Prestadores de Escritório",
         texto:
-          "Prestadores com área de atuação **Escritório** não dependem da Gestão de Escala. De segunda a sexta-feira, o Calendário gera automaticamente a situação **Escalado**, com Entrada programada às 09:00 e Saída programada às 18:00. Sábados e domingos aparecem como Folga.\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
+          "Prestadores com área de atuação **Escritório** não dependem da Gestão de Escala. De segunda a sexta-feira, o Calendário gera automaticamente a situação **Escalado**, com Entrada programada às 09:00 e Saída programada às 18:00. Sábados e domingos aparecem como Folga. Essa regra vale para **todos** os dias do mês (não só o início).\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
       },
       {
         subtitulo: "Relatório de Presença",
@@ -703,6 +780,44 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Ofertas e candidaturas",
         texto:
           "Crie oferta informando turno e tipo (venda ou troca) quando tiver permissão de Criar. Acompanhe candidatos, aceite ou recuse propostas conforme regras do time. Ofertas encerradas ou expiradas saem da lista ativa.",
+      },
+    ],
+  },
+  escala_relatorio_turno: {
+    titulo: "Relatório de Turno",
+    blocos: [
+      {
+        texto:
+          "Registre a passagem de turno e o relatório de estúdio de forma estruturada — substitui o fluxo informal de mensagens. Duas abas: **Relatório do Turno** (escalados e absenteísmo por estúdio e Shufflers) e **Relatório de Estúdio** (SOS, sinais, payout e checklist de manutenção).",
+      },
+      {
+        subtitulo: "Relatório do Turno",
+        texto:
+          "Com permissão de **Criar**, use **Novo Relatório**. A **Data do turno** é o dia em que o turno começou (ontem ou hoje) — não a data da publicação; o responsável fica travado no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados, atrasos/faltas/atestados e resumo), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
+      },
+      {
+        subtitulo: "Relatório de Estúdio",
+        texto:
+          "Turno Manhã ou Noite. Campos obrigatórios numéricos: SOSs, Sinais e Payout, além do Resumo. A **Data do turno** é o dia em que o turno começou (não a data da publicação) — útil no turno noturno que fecha na manhã seguinte. Manutenção (Roletas, Mesas, CC Machine, Cartas Contadas) é checklist opcional.",
+      },
+    ],
+  },
+  escala_rotacao: {
+    titulo: "Rotação",
+    blocos: [
+      {
+        texto:
+          "Gere e publique a grade de **rotação** dos Game Presenters nas mesas do estúdio por dia e turno — substitui o fluxo em planilha. Duas abas: **Gerar Rotação** (pool, modelo e prévia) e **Rotação Atual** (consulta da publicada).",
+      },
+      {
+        subtitulo: "Gerar Rotação",
+        texto:
+          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na Gestão de Escala **aprovada**, com escala **4×2** e turno compatível no Staff. Marque faltas nos chips, escolha o modelo (5 a 8 GPs) e o intervalo de slot (20 ou 30 min — 7 e 8 só 30 min). **Gerar** monta a prévia; com permissão de **Criar**, **Publicar** grava a rotação e arquiva a anterior do mesmo dia/turno/estúdio.",
+      },
+      {
+        subtitulo: "Rotação Atual",
+        texto:
+          "Consulta a rotação **publicada** para o mesmo dia, turno e estúdio. Células: **Número da Mesa**, **Break** ou **X** (falta). Sem publicação, a mensagem de vazio indica ausência de rotação no período.",
       },
     ],
   },
@@ -767,9 +882,14 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Imagem/Vídeo** e **Anexo** usam o botão **Adicionar…** (sem a barra nativa do navegador). Os arquivos aparecem numa lista abaixo, com badge **Pendente** até salvar ou publicar; dá para remover itens antes do envio.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
       },
       {
+        subtitulo: "Editar postagem",
+        texto:
+          "Na aba **Gerenciamento**, cada rascunho ou publicação tem o botão **Editar** (ícone de lápis), liberado pela permissão de **Editar**. Com Editar = **Próprios**, só aparece nas postagens criadas por você. Salvar volta a **Rascunho**; Publicar mantém ou publica o conteúdo.\n\nEm **Manuais**, ao abrir a edição a **Versão** sobe automaticamente (ex.: 1.0 → 2.0).",
+      },
+      {
         subtitulo: "Manuais — tabela e ciência",
         texto:
-          "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nClique no ícone de visualizar para abrir o manual. Quando a postagem exige ciência **e** você pertence a um dos times selecionados em **Aplicável a**, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",
+          "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nQuando o tipo do manual **não** é **Jogos**, a coluna de jogos mostra **Todos os Jogos** (preenchido automaticamente ao salvar — o campo **Qual Jogo?** não aparece no modal).\n\nClique no ícone de visualizar para abrir o manual. Quando a postagem exige ciência **e** você pertence a um dos times selecionados em **Aplicável a**, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",
       },
     ],
   },
@@ -822,12 +942,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Links e Materiais é onde o influencer gera o seu link de rastreamento exclusivo para a Casa de Apostas. O link é único por influencer e deve ser usado em todas as divulgações, pois é ele que registra o desempenho de aquisição.",
+          "A página Links e Materiais é onde influencers e afiliados geram o link de rastreamento exclusivo para a Casa de Apostas. O link é único por pessoa e deve ser usado em todas as divulgações, pois é ele que registra o desempenho de aquisição.",
+      },
+      {
+        subtitulo: "Abas Influencers e Afiliados",
+        texto:
+          "A página tem duas abas com a mesma experiência de emissão, cada uma com URL base própria:\n— Influencers: link de rastreamento do canal de influencers.\n— Afiliados: link de rastreamento do canal de afiliados.\n\nA visibilidade depende da permissão de Ver em Gestão de Usuários:\n— Ver = Sim: as duas abas e o filtro com todos os influencers ou afiliados da aba.\n— Ver = Próprios: apenas o próprio link; Influencer ou Agência vê só a aba Influencers; Afiliado vê só a aba Afiliados.",
       },
       {
         subtitulo: "Link de Rastreamento",
         texto:
-          "O link é formado por uma URL base fixa seguida de um parâmetro UTM personalizado com o nome artístico do influencer.\n\nPara gerar:\n— O campo UTM é preenchido automaticamente com o nome artístico cadastrado no perfil.\n— Edite o UTM se desejar um identificador diferente — apenas letras sem acento, números e _ (underscore) são permitidos, sem espaços.\n— Clique em Emitir para registrar o link. Uma vez emitido, o link não pode ser alterado.\n— Após a emissão, o link completo aparece na tela com um botão Copiar.",
+          "O link é formado por uma URL base fixa (conforme a aba) seguida de um parâmetro UTM personalizado.\n\nPara Influencers, o UTM usa o nome artístico do perfil. Para Afiliados, o UTM usa o nome (não há nome artístico).\n\nPara gerar:\n— O campo UTM é preenchido automaticamente com o identificador do perfil na aba ativa.\n— Edite o UTM se desejar um identificador diferente — apenas letras sem acento, números e _ (underscore) são permitidos, sem espaços.\n— Clique em Emitir para registrar o link. Uma vez emitido, o link não pode ser alterado.\n— Após a emissão, o link completo aparece na tela com um botão Copiar.",
       },
       {
         subtitulo: "QR Code do Link",
@@ -837,12 +962,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Emissão por Gestores",
         texto:
-          "Gestores e administradores com permissão de editar podem emitir o link em nome de um influencer. Para isso, selecione o influencer no campo que aparece acima do UTM antes de clicar em Emitir.\n\nSe o influencer já tiver um link emitido, ele será exibido automaticamente ao selecionar o nome na lista.",
+          "Quem tem permissão de Criar = Sim pode emitir o link em nome de qualquer influencer ou afiliado. Na aba ativa, selecione a pessoa no campo acima do UTM antes de clicar em Emitir.\n\nCom Criar = Próprios, só é possível emitir o próprio link (Influencer/Afiliado) ou, no caso de Agência, para influencers do próprio escopo.\n\nSe a pessoa já tiver um link emitido naquele canal, ele será exibido automaticamente ao selecionar o nome na lista.",
       },
       {
         subtitulo: "Requisitos para Emissão",
         texto:
-          "O influencer precisa ter o perfil completo e o Playbook confirmado para emitir o link. Se algum desses requisitos não estiver atendido, a plataforma exibirá um aviso indicando o que falta e oferecerá um atalho direto para a página correspondente.",
+          "Na aba Influencers, o influencer precisa ter o perfil completo e o Playbook confirmado para emitir o link. Se algum desses requisitos não estiver atendido, a plataforma exibirá um aviso indicando o que falta e oferecerá um atalho direto para a página correspondente.",
       },
     ],
   },
@@ -923,12 +1048,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Gerencia chamados do formulário de contato do site Spin, e-mails recebidos em **contato@spingaming.com.br** e interações do Instagram (**@spingamingbrasil**). A equipe de Customer Service acompanha protocolo, registra anotações e altera o status conforme o atendimento avança.",
+          "Gerencia chamados do formulário de contato do site Spin, e-mails recebidos em **contato@spingaming.com.br** e interações do Instagram (**@spingamingbrasil**). A equipe acompanha protocolo, registra anotações e altera o status conforme o atendimento avança.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Staff** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time Customer Service no organograma.\n\nAs abas **Site Spin**, **E-mail** e **Instagram** separam a origem dos chamados. Na aba **E-mail**, o solicitante é o endereço do remetente e a tabela inclui a coluna **Assunto**. Na aba **Instagram**, dois blocos — **Mensagens** (DM) e **Comentários** — compartilham os mesmos filtros de status e Staff.",
+          "O carrossel de status navega entre **Aberto**, **Em Andamento** e **Arquivado** (padrão ao abrir: Aberto). **Todos Status** amplia a lista. O filtro **Staff** restringe por responsável, **Nenhum** (sem atendente atribuído) ou prestadores do time **Service Manager** no organograma.\n\nAs abas **Site Spin**, **E-mail** e **Instagram** separam a origem dos chamados. Na aba **E-mail**, o solicitante é o endereço do remetente e a tabela inclui a coluna **Assunto**. Na aba **Instagram**, dois blocos — **Mensagens** (DM) e **Comentários** — compartilham os mesmos filtros de status e Staff.",
       },
       {
         subtitulo: "Tabela e ações",
@@ -1155,7 +1280,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O **Overview Comercial** consolida a visão de **Operadoras** (Pipeline B2B), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração.",
+          "O **Overview Comercial** (menu **Dashboards**, abaixo de Overview Influencer) consolida a visão de **Operadoras** (Pipeline B2B), **Agregadoras** e **Integrações** em abas no topo. É **somente leitura** — a edição permanece nas páginas de pipeline e Integração na seção Comercial.",
       },
       {
         subtitulo: "Abas e filtros",
@@ -1294,7 +1419,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (CDA, Social Media, Spin na Rede RSS, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e grava município/UF em `comercial_empresas` (cron diário ~8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos/falhas de secrets ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.",
+          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e grava município/UF em `comercial_empresas` (cron diário ~8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos/falhas de secrets ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.",
       },
       {
         subtitulo: "Logs Recentes",
@@ -1425,12 +1550,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "A página Gestão de Links centraliza o mapeamento dos UTM Sources detectados nas operadoras que ainda não estão associados a nenhum influencer ou campanha. Ao mapear um link, os dados históricos de FTDs, depósitos e GGR são sincronizados automaticamente nos dashboards. Novos dados chegam diariamente até as 4h.",
+          "A página Gestão de Links centraliza o mapeamento dos UTM Sources detectados nas contas TAP da Casa de Apostas (Influencers e Afiliados) que ainda não estão associados a nenhum influencer, afiliado ou campanha. Na aba Pendentes, a coluna **Origem** indica se o link veio da TAP Influencers ou da TAP Afiliados. Ao mapear um link, os dados históricos são sincronizados nos dashboards. Novos dados chegam diariamente até as 4h.",
       },
       {
         subtitulo: "Abas de Status",
         texto:
-          "Os links são organizados em três abas:\n— Pendentes: links detectados sem associação — precisam ser mapeados ou ignorados\n— Mapeados: links já associados a um influencer ou campanha\n— Ignorados: links descartados, que não serão mapeados\n\nO contador em vermelho na aba Pendentes indica quantos links aguardam ação. Use as setas ← → do teclado com o foco na tablist para alternar entre as abas.",
+          "Os links são organizados em três abas:\n— Pendentes: links detectados sem associação — precisam ser mapeados ou ignorados\n— Mapeados: links já associados a um influencer, afiliado ou campanha\n— Ignorados: links descartados, que não serão mapeados\n\nO contador em vermelho na aba Pendentes indica quantos links aguardam ação. Use as setas ← → do teclado com o foco na tablist para alternar entre as abas.",
       },
       {
         subtitulo: "Filtro de Operadora",
@@ -1445,12 +1570,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela de Links",
         texto:
-          "Cada linha mostra o UTM Source detectado, o status do influencer associado (quando aplicável), a operadora de origem, as datas de primeiro e último registro, FTDs, depósitos e GGR acumulados.\n\nNa aba Pendentes, as ações disponíveis são Mapear (abre o modal de associação) e Ignorar (descarta o link sem mapeamento). Nas demais abas, a ação Reabrir devolve o link para Pendentes, permitindo remapeamento.",
+          "Cada linha mostra o UTM Source detectado, o status do proprietário associado (quando aplicável), a operadora, as datas de primeiro e último registro e métricas acumuladas. A coluna Proprietário exibe o nome artístico do influencer, o nome do afiliado ou o nome da campanha.\n\nNa aba **Pendentes**, as colunas **Origem** (TAP Influencers ou TAP Afiliados) e **Visitas** identificam de qual conta TAP o link veio e o volume detectado. As ações são Mapear e Ignorar. Nas demais abas, Reabrir devolve o link para Pendentes.",
       },
       {
         subtitulo: "Mapeando um Link",
         texto:
-          "Clique em Mapear para abrir o modal com os dados do UTM Source. Escolha o tipo de associação:\n— Influencer: vincula o link ao perfil do influencer nos dashboards\n— Campanha: vincula a uma campanha de marketing\n\nApós confirmar, os dados históricos são sincronizados automaticamente. O processo pode levar alguns segundos dependendo do volume de dados.",
+          "Clique em Mapear para abrir o modal com os dados do UTM Source. Escolha o tipo de associação:\n— Influencer: vincula o link ao perfil do influencer (exibe nome artístico)\n— Afiliado: vincula o link ao perfil do afiliado (exibe o nome)\n— Campanha: vincula a uma campanha de marketing\n\nApós confirmar, os dados históricos são sincronizados automaticamente. O processo pode levar alguns segundos dependendo do volume de dados.",
       },
     ],
   },

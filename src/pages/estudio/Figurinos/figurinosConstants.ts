@@ -1,4 +1,4 @@
-import type { RhFigurinoStatus, RhWithdrawalType } from "./types"
+import type { FigurinosAba, RhFigurinoStatus, RhWithdrawalType } from "./types";
 
 export const CATEGORIAS = ["Camisa", "Calça", "Colete", "Vestido", "Gravata", "Acessório"] as const;
 
@@ -43,12 +43,14 @@ export function prefixoCodigoFigurinoCategoria(categoria: string): string {
   return base.slice(0, 3).toUpperCase();
 }
 
-export function labelAba(s: RhFigurinoStatus): string {
+export function labelAba(s: FigurinosAba): string {
   switch (s) {
     case "available":
       return "Disponíveis";
     case "borrowed":
       return "Emprestada";
+    case "fixed":
+      return "Fixo";
     case "maintenance":
       return "Manutenção";
     case "discarded":
@@ -73,12 +75,14 @@ export function labelStatusPeca(s: RhFigurinoStatus): string {
   }
 }
 
-export function emptyMsgAba(s: RhFigurinoStatus): string {
+export function emptyMsgAba(s: FigurinosAba): string {
   switch (s) {
     case "available":
       return "Nenhuma peça disponível no momento. Cadastre novas peças para começar.";
     case "borrowed":
       return "Nenhuma peça emprestada no momento.";
+    case "fixed":
+      return "Nenhuma peça com retirada fixa no momento.";
     case "maintenance":
       return "Nenhuma peça em manutenção.";
     case "discarded":
@@ -98,10 +102,25 @@ export const TIPOS_MANUTENCAO: { value: RhFigurinoTipoManutencao; label: string 
   { value: "descarte", label: "Descarte" },
 ];
 
-/** Rótulos em português para linhas do histórico de status (valores gravados em inglês). */
+/** Rótulos em português para tipo de retirada (valor interno `emprestar` | `fixo`). */
 export function labelTipoRetirada(w: RhWithdrawalType | null | undefined): string {
   if (w === "fixo") return "Fixo";
-  return "Emprestar";
+  return "Emprestada";
+}
+
+/** Peça na aba atual — Emprestada/Fixo compartilham status `borrowed` e separam por `withdrawal_type`. */
+export function pecaPertenceAbaFigurino(
+  status: RhFigurinoStatus,
+  aba: FigurinosAba,
+  withdrawalType: RhWithdrawalType | null | undefined,
+): boolean {
+  if (aba === "borrowed") {
+    return status === "borrowed" && (withdrawalType ?? "emprestar") === "emprestar";
+  }
+  if (aba === "fixed") {
+    return status === "borrowed" && withdrawalType === "fixo";
+  }
+  return status === aba;
 }
 
 export function labelStatusHistorico(s: string | null | undefined): string {

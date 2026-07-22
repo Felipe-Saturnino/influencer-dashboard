@@ -17,6 +17,7 @@ import {
   fmtDataColunaGerenciamento,
   labelComunicadoFromSlug,
   labelDicaManualFromSlug,
+  podeEditarPostagemAcademyGerenciamento,
   registrarHistoricoStatus,
   stripHtmlText,
   type AcademyPostagemContentType,
@@ -26,6 +27,7 @@ import {
 import { carregarMetaAutoresPortalAcademy } from "../../../lib/academyPortalAutorMeta";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
+import { usePermission } from "../../../hooks/usePermission";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalAcademyCarrossel";
@@ -44,6 +46,7 @@ export type PostagemGerenciamentoRow = {
   createdAt: string;
   status: AcademyPostagemStatus;
   publishedAt: string | null;
+  createdBy: string | null;
   textoBusca: string;
 };
 
@@ -125,7 +128,7 @@ export function GerenciamentoPostagensFiltrosTipoStatus({
 function acoesPorStatus(status: AcademyPostagemStatus): ("editar" | "arquivar" | "historico")[] {
   switch (status) {
     case "publicado":
-      return ["arquivar", "historico"];
+      return ["editar", "arquivar", "historico"];
     case "rascunho":
       return ["editar", "historico"];
     case "arquivado":
@@ -163,6 +166,7 @@ export function GerenciamentoPostagens({
   onRegisterAbrirCriar?: (abrir: () => void) => void;
 }) {
   const { theme: t, user } = useApp();
+  const perm = usePermission("academy_portal");
   const dataTable = useDataTableBlock();
 
   const [loading, setLoading] = useState(true);
@@ -225,7 +229,7 @@ export function GerenciamentoPostagens({
     }
 
     const userIds = new Set<string>();
-    const built: (PostagemGerenciamentoRow & { _autorId?: string | null })[] = [];
+    const built: PostagemGerenciamentoRow[] = [];
 
     const pushRow = (
       row: {
@@ -256,8 +260,8 @@ export function GerenciamentoPostagens({
         createdAt: row.created_at,
         status: row.status ?? "rascunho",
         publishedAt: row.published_at,
+        createdBy: row.created_by,
         textoBusca: normalizarTextoBusca(`${row.titulo} ${stripHtmlText(row.corpo)} ${extraBusca}`),
-        _autorId: row.created_by,
       });
     };
 
@@ -275,7 +279,7 @@ export function GerenciamentoPostagens({
     const meta = await carregarMetaAutoresPortalAcademy([...userIds]);
     const withAutor = built.map((r) => ({
       ...r,
-      autorNome: meta[r._autorId ?? ""]?.nome ?? "—",
+      autorNome: meta[r.createdBy ?? ""]?.nome ?? "—",
     }));
 
     setRows(withAutor);
@@ -447,7 +451,17 @@ export function GerenciamentoPostagens({
             </thead>
             <tbody>
               {rowsFiltradas.map((row, i) => {
-                const acoes = acoesPorStatus(row.status);
+                const acoes = acoesPorStatus(row.status).filter((a) => {
+                  if (a === "editar") {
+                    return podeEditarPostagemAcademyGerenciamento(
+                      perm.canEditar,
+                      perm.canEditarOk,
+                      user?.id,
+                      row.createdBy,
+                    );
+                  }
+                  return true;
+                });
                 return (
                   <tr
                     key={`${row.contentType}-${row.id}`}

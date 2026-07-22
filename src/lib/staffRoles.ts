@@ -7,6 +7,15 @@ export function roleParidadeInfluencer(role: Role | undefined | null): boolean {
   return !!role && ROLES_PARIDADE_INFLUENCER.includes(role);
 }
 
+export {
+  linksMateriaisAbasVisiveis,
+  linksMateriaisIsSelfMode,
+  linksMateriaisPrecisaSelect,
+  linksMateriaisFiltrarPorEscopoAgencia,
+  linksMateriaisIsSelfCanal,
+  type LinksMateriaisCanal,
+} from "./linksMateriaisCanal";
+
 /** Gestores de departamento — perfil próprio, atribuição manual, só `role_permissions` (sem `gestor_tipo`). */
 export const ROLES_GESTOR_DEPARTAMENTO: readonly Role[] = [
   "gestor_aquisicao",

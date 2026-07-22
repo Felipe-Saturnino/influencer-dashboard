@@ -90,16 +90,26 @@ export default function TechOpsOrdemSaida() {
   const carregar = useCallback(async () => {
     setErro(null);
     try {
-      const [os, itens, itensMan, forn] = await Promise.all([
+      const [os, itens, itensMan, forn, est] = await Promise.all([
         fetchOrdensSaida(),
         fetchItensDisponiveisOs(),
         fetchItensManutencaoOs(),
         fetchFornecedoresOs(),
+        supabase
+          .from("estudios_spin")
+          .select("slug, nome")
+          .eq("ativo", true)
+          .order("nome", { ascending: true }),
       ]);
       setRows(os);
       setItensDisponiveis(itens);
       setItensManutencao(itensMan);
       setFornecedores(forn);
+      if (est.error) {
+        console.error("Ordem de Saída: falha ao carregar estúdios", est.error);
+      } else {
+        setEstudios((est.data ?? []).map((e: { slug: string; nome: string }) => ({ slug: e.slug, nome: e.nome })));
+      }
     } catch (e) {
       console.error("Ordem de Saída: falha ao carregar dados", e);
       setErro(ERRO_CARREGAR);
@@ -111,18 +121,6 @@ export default function TechOpsOrdemSaida() {
   useEffect(() => {
     if (perm.loading || !podeVer) return;
     void carregar();
-    void supabase
-      .from("estudios_spin")
-      .select("slug, nome")
-      .eq("ativo", true)
-      .order("nome", { ascending: true })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Ordem de Saída: falha ao carregar estúdios", error);
-          return;
-        }
-        setEstudios((data ?? []).map((e: { slug: string; nome: string }) => ({ slug: e.slug, nome: e.nome })));
-      });
   }, [perm.loading, podeVer, carregar]);
 
   const estudioNomePorSlug = useMemo(

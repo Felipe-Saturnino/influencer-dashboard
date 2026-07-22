@@ -29,6 +29,7 @@ supabase functions deploy platform-health-check
 | Probe nos logs | Secret(s) | Severidade se falhar |
 |----------------|-----------|----------------------|
 | Configuração CDA | `CDA_INFLUENCERS_API_KEY` ou `CDA_USE_REPORTING_API` | Erro |
+| Configuração CDA Afiliados | `CDA_AFILIADOS_API_KEY` | Erro |
 | Configuração Social Media | `GITHUB_TOKEN` + `GITHUB_REPO` | Aviso |
 | Resend — API Key | `RESEND_API_KEY` | Erro |
 | E-mail transacional — remetente | `RESEND_FROM_SISTEMA` | Aviso (fallback no código) |

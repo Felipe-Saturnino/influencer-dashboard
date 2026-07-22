@@ -689,7 +689,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Retirada (Figurino)",
         definicao:
-          "Registro de saída de uma peça do estoque para uso por um prestador. Pode ser Emprestar (temporário, com previsão de devolução) ou Fixo (uso contínuo sem data definida).",
+          "Registro de saída de uma peça do estoque para uso por um prestador. Pode ser Emprestada (temporário, com previsão de devolução) ou Fixo (uso contínuo sem data definida). Na listagem, cada tipo aparece na aba homônima.",
         referencia: "Figurinos",
       },
       {
@@ -853,6 +853,12 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Gestão de Staff",
       },
       {
+        termo: "Rotação",
+        definicao:
+          "Grade que posiciona Game Presenters nas mesas do estúdio ao longo do turno, em intervalos de 20 ou 30 minutos. O pool vem da escala aprovada (somente GPs 4×2); as células usam o Número da Mesa, Break ou X (falta). A publicação arquiva a rotação anterior do mesmo dia, turno e estúdio.",
+        referencia: "Rotação",
+      },
+      {
         termo: "Calendário (RH)",
         definicao:
           "Calendário operacional com turnos, trocas, compromissos e presença. A visibilidade pode ser global ou seguir a cascata de liderança do Organograma; prestadores de Escritório recebem escala comercial automática.",
@@ -889,6 +895,21 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Fila de pedidos de prestadores ao RH — atestados, reuniões com RH e vagas internas — com status Em análise, Aprovado ou Rejeitado. Atestados podem ser gerados automaticamente a partir de justificativa Médico no Calendário; reuniões com RH, ao agendar no Calendário (só visíveis no calendário após aprovação).",
         nota: "Distinto de Solicitações na seção Escala (ofertas e trocas de turno).",
         referencia: "Solicitações",
+      },
+      {
+        termo: "Headcount",
+        definicao:
+          "Dashboard executivo de pessoas: HC ativo, movimentação (admissões e desligamentos), turnover, custo estimado de pessoas e pipeline de vagas — visão para diretoria e investidores.",
+        nota:
+          "Distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual). O HC histórico é reconstruído pelas datas de vínculo.",
+        referencia: "Headcount",
+      },
+      {
+        termo: "Turnover (pessoas)",
+        definicao:
+          "Percentual de desligamentos no período em relação ao headcount médio estimado (média entre o HC no fim do mês anterior e o HC no fim do período).",
+        nota: "Não confundir com Turnover de apostas no Overview Spin.",
+        referencia: "Headcount",
       },
       {
         termo: "Gestão de Prestadores",
@@ -1213,10 +1234,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
 const DASHBOARD_PAGE_KEYS: PageKey[] = [
   "mesas_spin",
   "streamers",
+  "dash_afiliados",
   "dash_midias_sociais",
   "dash_overview_influencer",
-  "dash_overview_prestador",
+  "dash_overview_afiliado",
   "comercial_overview",
+  "dash_headcount",
+  "dash_overview_prestador",
 ];
 
 /** Páginas que liberam cada categoria do glossário (Ver ou Próprios em Gestão de Usuários). */
@@ -1233,12 +1257,12 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   ],
   cadastro_influencers: ["influencers"],
   prospeccao_scout: ["scout"],
-  funil_conversao: ["streamers", "dash_overview_influencer"],
-  financeiro: ["streamers", "financeiro"],
+  funil_conversao: ["streamers", "dash_overview_influencer", "dash_afiliados", "dash_overview_afiliado"],
+  financeiro: ["streamers", "dash_afiliados", "financeiro"],
   indices: DASHBOARD_PAGE_KEYS,
   mesas: ["mesas_spin"],
   midias_sociais: ["dash_midias_sociais"],
-  afiliados: ["afiliados", "afiliados_network"],
+  afiliados: ["afiliados", "afiliados_network", "dash_afiliados", "dash_overview_afiliado"],
   financeiro_operacional: ["financeiro", "banca_jogo"],
   estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa"],
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
@@ -1246,14 +1270,16 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   customer_success: ["cs_atendimento"],
   rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
   escala: [
-    "rh_gestao_escala",
     "rh_staff",
+    "escala_relatorio_turno",
+    "escala_solicitacoes",
+    "rh_gestao_escala",
+    "escala_rotacao",
     "rh_calendario",
     "escala_marketplace_turnos",
-    "escala_solicitacoes",
     "dash_overview_prestador",
   ],
-  rh_prestadores: ["rh_funcionarios", "rh_dados_cadastro", "rh_vagas", "rh_organograma", "rh_solicitacoes"],
+  rh_prestadores: ["rh_funcionarios", "rh_dados_cadastro", "rh_vagas", "rh_organograma", "rh_solicitacoes", "dash_headcount"],
   denuncias: ["rh_central_denuncias"],
   permissoes_plataforma: ["gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico"],
   home_perfis: ["informativos", "mesas_spin", "streamers", "gestao_operadoras"],

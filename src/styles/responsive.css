@@ -543,3 +543,87 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Portal Academy — card Comunicados/Dicas: mídia lateral cresce com a altura do texto */
+.app-academy-portal-card {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.app-academy-portal-card--with-media {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, min(42%, 400px));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.app-academy-portal-card__body {
+  min-width: 0;
+}
+
+.app-academy-portal-card__media {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: zoom-in;
+  background: transparent;
+  align-self: stretch;
+}
+
+.app-academy-portal-card__media-asset {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.app-academy-portal-card__media-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  z-index: 1;
+}
+
+@media (max-width: 1100px) {
+  .app-academy-portal-card--with-media {
+    grid-template-columns: minmax(0, 1fr) minmax(160px, min(38%, 320px));
+  }
+}
+
+@media (max-width: 720px) {
+  .app-academy-portal-card,
+  .app-academy-portal-card--with-media {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-academy-portal-card__media {
+    flex: none;
+    width: 100%;
+    height: auto;
+    min-height: 200px;
+    max-height: min(42vw, 280px);
+    aspect-ratio: 16 / 9;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-academy-portal-card__media {
+    min-height: 168px;
+    max-height: min(48vw, 220px);
+  }
+}

@@ -22,6 +22,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { LinkAssistirVideoPerformanceHub } from "../../../components/LinkAssistirVideoPerformanceHub";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca } from "../../../lib/searchText";
@@ -281,18 +282,7 @@ export function PerformanceHubAbaAvaliacoes({
                         </span>
                       </td>
                       <td style={dataTable.tdCenter}>
-                        {row.videoUrl ? (
-                          <a
-                            href={row.videoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: brand.primary, fontSize: 13, fontWeight: 600, fontFamily: FONT.body }}
-                          >
-                            Assistir
-                          </a>
-                        ) : (
-                          "—"
-                        )}
+                        <LinkAssistirVideoPerformanceHub videoUrl={row.videoUrl} />
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
