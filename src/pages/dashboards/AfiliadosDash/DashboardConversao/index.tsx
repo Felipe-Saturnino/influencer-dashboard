@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useAfiliadosFiltrosOptional } from "../AfiliadosFiltrosContext";
 import { FunilAfiliados } from "../FunilAfiliados";
 import { useApp } from "../../../../context/AppContext";
@@ -11,7 +11,7 @@ import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { FilterBarIcons } from "../../../../lib/filterBarIconCatalog";
 
-type TaxasSortCol = "nome" | "acessos" | "acessoReg" | "registros" | "regFtd" | "ftds" | "acao";
+type TaxasSortCol = "nome" | "acessos" | "acessoReg" | "registros" | "regFtd" | "ftds";
 
 function TaxasThSort({
   col,
@@ -44,22 +44,64 @@ function TaxasThSort({
   );
 }
 
+function fmtPct(num: number, den: number): string {
+  if (den <= 0) return "—";
+  return `${((num / den) * 100).toFixed(1)}%`;
+}
+
 export default function DashboardConversao() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const sf = useAfiliadosFiltrosOptional();
   const historico = sf?.historico ?? false;
+  const ranking = sf?.ranking ?? [];
+  const metricasPorAfiliado = sf?.metricasPorAfiliado ?? {};
   const dataTable = useDataTableBlock();
   const [sort, setSort] = useState<{ col: TaxasSortCol; dir: SortDir }>({ col: "ftds", dir: "desc" });
   const [ladoA, setLadoA] = useState("");
   const [ladoB, setLadoB] = useState("");
 
-  useEffect(() => {
-    sf?.setIsLoading(false);
-  }, [sf]);
-
   const card = getPageContentBoxStyle(brand, t);
   const afiliadoOpts = (sf?.afiliadoOptions ?? []).map((a) => ({ value: a.id, label: a.nome }));
+
+  const metA = ladoA ? metricasPorAfiliado[ladoA] : undefined;
+  const metB = ladoB ? metricasPorAfiliado[ladoB] : undefined;
+
+  const taxasOrdenadas = useMemo(() => {
+    const list = ranking.map((r) => ({
+      ...r,
+      acessoReg: r.acessos > 0 ? (r.registros / r.acessos) * 100 : -1,
+      regFtd: r.registros > 0 ? (r.ftds / r.registros) * 100 : -1,
+    }));
+    const dir = sort.dir === "asc" ? 1 : -1;
+    list.sort((a, b) => {
+      let cmp = 0;
+      switch (sort.col) {
+        case "nome":
+          cmp = a.nome.localeCompare(b.nome, "pt-BR");
+          break;
+        case "acessos":
+          cmp = a.acessos - b.acessos;
+          break;
+        case "acessoReg":
+          cmp = a.acessoReg - b.acessoReg;
+          break;
+        case "registros":
+          cmp = a.registros - b.registros;
+          break;
+        case "regFtd":
+          cmp = a.regFtd - b.regFtd;
+          break;
+        case "ftds":
+          cmp = a.ftds - b.ftds;
+          break;
+        default:
+          cmp = 0;
+      }
+      return cmp * dir;
+    });
+    return list;
+  }, [ranking, sort]);
 
   return (
     <div className="app-page-shell" style={{ paddingTop: 0 }}>
@@ -131,38 +173,60 @@ export default function DashboardConversao() {
             <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 8, textAlign: "center", fontFamily: FONT.body }}>
               Afiliado A
             </div>
-            <FunilAfiliados />
+            <FunilAfiliados
+              acessos={metA?.acessos ?? 0}
+              registros={metA?.registros ?? 0}
+              ftds={metA?.ftds ?? 0}
+            />
           </div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 8, textAlign: "center", fontFamily: FONT.body }}>
               Afiliado B
             </div>
-            <FunilAfiliados />
+            <FunilAfiliados
+              acessos={metB?.acessos ?? 0}
+              registros={metB?.registros ?? 0}
+              ftds={metB?.ftds ?? 0}
+            />
           </div>
         </div>
       </div>
 
       <div style={{ ...card, marginBottom: 0 }}>
         <SectionTitle sub={historico ? "acumulado" : undefined}>Comparativo de Taxas</SectionTitle>
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          {MSG_SEM_DADOS_FILTRO}
-        </div>
-        <div className="app-table-wrap" style={{ ...getDataTableWrapStyle(), opacity: 0.55, pointerEvents: "none" }} aria-hidden>
-          <table style={getDataTableStyle({ minWidth: 720 })}>
-            <caption style={{ display: "none" }}>Comparativo de taxas por afiliado — estrutura de colunas</caption>
-            <thead>
-              <tr>
-                <TaxasThSort col="nome" label="Afiliado" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
-                <TaxasThSort col="acessos" label="Acessos" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
-                <TaxasThSort col="acessoReg" label="Acesso→Reg" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
-                <TaxasThSort col="registros" label="Registros" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
-                <TaxasThSort col="regFtd" label="Reg→FTD" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
-                <TaxasThSort col="ftds" label="FTD" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
-                <TaxasThSort col="acao" label="Ação" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
-              </tr>
-            </thead>
-          </table>
-        </div>
+        {taxasOrdenadas.length === 0 ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            {MSG_SEM_DADOS_FILTRO}
+          </div>
+        ) : (
+          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 720 })}>
+              <caption style={{ display: "none" }}>Comparativo de taxas por afiliado</caption>
+              <thead>
+                <tr>
+                  <TaxasThSort col="nome" label="Afiliado" sort={sort} setSort={setSort} thStyle={dataTable.thHeaderSticky} />
+                  <TaxasThSort col="acessos" label="Acessos" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
+                  <TaxasThSort col="acessoReg" label="Acesso→Reg" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
+                  <TaxasThSort col="registros" label="Registros" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
+                  <TaxasThSort col="regFtd" label="Reg→FTD" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
+                  <TaxasThSort col="ftds" label="FTD" sort={sort} setSort={setSort} thStyle={dataTable.thHeader} />
+                </tr>
+              </thead>
+              <tbody>
+                {taxasOrdenadas.map((r, i) => (
+                  <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(i) }}>
+                    <td style={dataTable.tdSticky({ rowIndex: i })}>{r.nome}</td>
+                    <td style={dataTable.tdCenter}>{r.acessos.toLocaleString("pt-BR")}</td>
+                    <td style={dataTable.tdCenter}>{fmtPct(r.registros, r.acessos)}</td>
+                    <td style={dataTable.tdCenter}>{r.registros.toLocaleString("pt-BR")}</td>
+                    <td style={dataTable.tdCenter}>{fmtPct(r.ftds, r.registros)}</td>
+                    <td style={dataTable.tdCenter}>{r.ftds.toLocaleString("pt-BR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

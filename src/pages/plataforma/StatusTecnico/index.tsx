@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, type Dispatch, type SetStateAction } from "react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
@@ -185,7 +185,15 @@ export default function StatusTecnico() {
   const [emailUltimoBoasVindas, setEmailUltimoBoasVindas] = useState<string | null>(null);
   const [emailUltimoReset, setEmailUltimoReset] = useState<string | null>(null);
   const [emailEnviosCount, setEmailEnviosCount] = useState(0);
-  const [sortIntegracao, setSortIntegracao] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
+  const [sortOperadoras, setSortOperadoras] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
+    col: "ultimoSync",
+    dir: "desc",
+  });
+  const [sortExternas, setSortExternas] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
+    col: "ultimoSync",
+    dir: "desc",
+  });
+  const [sortEmails, setSortEmails] = useState<{ col: IntegracaoSortCol; dir: SortDir }>({
     col: "ultimoSync",
     dir: "desc",
   });
@@ -1901,9 +1909,9 @@ export default function StatusTecnico() {
         (["casa_apostas", "casa_apostas_afiliados", "lobby_blaze", "lobby_cda"] as const)
           .map((slug) => pickIntegracaoRow(slug))
           .filter(Boolean) as StatusIntegracaoRow[],
-        sortIntegracao,
+        sortOperadoras,
       ),
-    [pickIntegracaoRow, sortIntegracao],
+    [pickIntegracaoRow, sortOperadoras],
   );
 
   const linhasExternas = useMemo(
@@ -1926,26 +1934,43 @@ export default function StatusTecnico() {
             syncTipo: "social" as const,
           },
         ].filter(Boolean) as StatusIntegracaoRow[],
-        sortIntegracao,
+        sortExternas,
       ),
-    [csAtendimentoOutlookRow, pickIntegracaoRow, socialKpisRow, sortIntegracao],
+    [csAtendimentoOutlookRow, pickIntegracaoRow, socialKpisRow, sortExternas],
   );
 
   const linhasEmails = useMemo(
     () =>
       ordenarLinhasIntegracao(
         [emailResetRow, emailDiretoriaRow, emailBoasVindasRow, emailAgendaRow] as StatusIntegracaoRow[],
-        sortIntegracao,
+        sortEmails,
       ),
-    [emailResetRow, emailDiretoriaRow, emailBoasVindasRow, emailAgendaRow, sortIntegracao],
+    [emailResetRow, emailDiretoriaRow, emailBoasVindasRow, emailAgendaRow, sortEmails],
   );
 
-  const handleSortIntegracao = useCallback((col: IntegracaoSortCol) => {
-    setSortIntegracao((s) => ({
-      col,
-      dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
-    }));
-  }, []);
+  const toggleSortIntegracao = useCallback(
+    (setSort: Dispatch<SetStateAction<{ col: IntegracaoSortCol; dir: SortDir }>>) =>
+      (col: IntegracaoSortCol) => {
+        setSort((s) => ({
+          col,
+          dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
+        }));
+      },
+    [],
+  );
+
+  const handleSortOperadoras = useMemo(
+    () => toggleSortIntegracao(setSortOperadoras),
+    [toggleSortIntegracao],
+  );
+  const handleSortExternas = useMemo(
+    () => toggleSortIntegracao(setSortExternas),
+    [toggleSortIntegracao],
+  );
+  const handleSortEmails = useMemo(
+    () => toggleSortIntegracao(setSortEmails),
+    [toggleSortIntegracao],
+  );
 
   const techLogsFiltrados = useMemo(() => {
     const horasDisplay = logFiltro === "1h" ? 1 : logFiltro === "24h" ? 24 : 48;
@@ -2082,9 +2107,7 @@ export default function StatusTecnico() {
     return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   };
 
-  const tabelaIntegracaoProps = {
-    sortIntegracao,
-    onSortChange: handleSortIntegracao,
+  const tabelaIntegracaoBase = {
     mostrarColunaAcao,
     dataTable,
     t,
@@ -2333,7 +2356,9 @@ export default function StatusTecnico() {
               col2: "Último Sync",
               col3: "Registros Hoje",
             }}
-            {...tabelaIntegracaoProps}
+            sortIntegracao={sortOperadoras}
+            onSortChange={handleSortOperadoras}
+            {...tabelaIntegracaoBase}
           />
         )}
       </div>
@@ -2351,7 +2376,9 @@ export default function StatusTecnico() {
               col2: "Último Sync",
               col3: "Registros Hoje",
             }}
-            {...tabelaIntegracaoProps}
+            sortIntegracao={sortExternas}
+            onSortChange={handleSortExternas}
+            {...tabelaIntegracaoBase}
           />
         )}
       </div>
@@ -2369,7 +2396,9 @@ export default function StatusTecnico() {
               col2: "Último envio",
               col3: "Envios Hoje",
             }}
-            {...tabelaIntegracaoProps}
+            sortIntegracao={sortEmails}
+            onSortChange={handleSortEmails}
+            {...tabelaIntegracaoBase}
           />
         )}
       </div>

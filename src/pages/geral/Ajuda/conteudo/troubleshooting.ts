@@ -54,7 +54,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Por que vejo 'Sem dados para o filtro selecionado' em todos os blocos?",
         texto:
-          "Nesta fase o dashboard exibe a estrutura de layout (KPIs, funil e tabelas). A integração com a base de métricas de afiliados ainda não está ativa — os blocos permanecerão vazios até a próxima entrega de dados.",
+          "Confirme o período no carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links) e o sync precisa ter rodado após o mapeamento. Se o filtro de afiliados estiver vazio, verifique se existem cadastros com perfil Afiliado na página Afiliados.",
       },
       {
         subtitulo: "Não vejo Afiliados no menu de Dashboards?",

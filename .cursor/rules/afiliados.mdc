@@ -21,6 +21,7 @@ alwaysApply: false
 - Páginas: Afiliados · Network
 - Banco: `profiles` (role = `afiliado`); `influencer_perfil`; prospecção em `afiliados_network`
 - Edge: `criar-afiliado-network` — disparada no **Salvar** de prospecto **sem** usuário na plataforma (e-mail + operadora obrigatórios; **qualquer** status do funil)
+- **Dashboards** (`dash_afiliados`, `dash_overview_afiliado`): catálogo do filtro = estes cadastros; métricas = `influencer_metricas` via sync CDA `conta=afiliados` (ver `dashboards.mdc`)
 
 > Fora de `src/pages/dashboards/`. Tokens `--brand-action`, `--brand-contrast`, `--brand-action-12`, `--brand-action-border` são **proibidos** como acento de UI. Cor por operadora: hex de `operadoras.brand_action` ou fallback `var(--brand-primary, #7c3aed)` — nunca `--brand-action` como fallback CSS.
 

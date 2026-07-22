@@ -50,6 +50,29 @@ function ctaGradient(useBrand: boolean): string {
 const MSG_ERRO_MAPEAR =
   "Não foi possível mapear o link. Se o problema persistir, entre em contato com o suporte.";
 
+/** Rótulo da coluna Proprietário — mesmo nome exibido no select do modal Mapear. */
+function labelProprietarioAlias(
+  alias: UtmAlias,
+  nomePorInfluencerId: Map<string, string>,
+  nomePorCampanhaId: Map<string, string>,
+): string {
+  if (alias.influencer_id) {
+    const doCatalogo = nomePorInfluencerId.get(alias.influencer_id)?.trim();
+    if (doCatalogo) return doCatalogo;
+    const doAlias = (alias.influencer_name ?? "").trim();
+    if (doAlias && doAlias !== "—") return doAlias;
+    return "—";
+  }
+  if (alias.campanha_id) {
+    const doCatalogo = nomePorCampanhaId.get(alias.campanha_id)?.trim();
+    if (doCatalogo) return doCatalogo;
+    const doAlias = (alias.campanha_nome ?? "").trim();
+    if (doAlias && doAlias !== "—") return doAlias;
+    return "—";
+  }
+  return "—";
+}
+
 function calcGgr(alias: { total_deposit?: number; total_withdrawal?: number; ggr?: number }): number {
   if (alias.ggr != null) return alias.ggr;
   return (alias.total_deposit ?? 0) - (alias.total_withdrawal ?? 0);
@@ -160,37 +183,45 @@ export default function GestaoLinks() {
     let infNomeMap = new Map<string, string>();
     let campanhaNomeMap = new Map<string, string>();
     if (aba === "mapeados") {
-      const influencerIds = aliasData.map((r: UtmAlias) => r.influencer_id).filter(Boolean) as string[];
+      const influencerIds = [
+        ...new Set(aliasData.map((r: UtmAlias) => r.influencer_id).filter(Boolean) as string[]),
+      ];
       if (influencerIds.length > 0) {
-        const { data: infData } = await supabase
-          .from("profiles")
-          .select("id, name, role, influencer_perfil(nome_artistico, nome_completo)")
-          .in("id", influencerIds);
-        type Row = {
+        // Fonte canónica do nome (igual Links/Materiais e sync CDA): influencer_perfil.id = profiles.id
+        const [{ data: perfilData, error: perfilErr }, { data: profData, error: profErr }] =
+          await Promise.all([
+            supabase
+              .from("influencer_perfil")
+              .select("id, nome_artistico, nome_completo")
+              .in("id", influencerIds),
+            supabase.from("profiles").select("id, name, role").in("id", influencerIds),
+          ]);
+        if (perfilErr) console.error("[GestaoLinks] nomes influencer_perfil:", perfilErr.message);
+        if (profErr) console.error("[GestaoLinks] nomes profiles:", profErr.message);
+
+        type PerfilRow = {
           id: string;
-          name: string | null;
-          role: string;
-          influencer_perfil:
-            | { nome_artistico: string | null; nome_completo: string | null }
-            | { nome_artistico: string | null; nome_completo: string | null }[]
-            | null;
+          nome_artistico: string | null;
+          nome_completo: string | null;
         };
-        infNomeMap = new Map(
-          ((infData ?? []) as Row[]).map((i) => {
-            const perfil = Array.isArray(i.influencer_perfil)
-              ? i.influencer_perfil[0]
-              : i.influencer_perfil;
-            return [
-              i.id,
-              nomeExibicaoLinksEntidade({
-                role: i.role,
-                nome_artistico: perfil?.nome_artistico,
-                nome_completo: perfil?.nome_completo,
-                name: i.name,
-              }),
-            ];
-          }),
-        );
+        type ProfRow = { id: string; name: string | null; role: string };
+        const perfilById = new Map(((perfilData ?? []) as PerfilRow[]).map((p) => [p.id, p]));
+        const profById = new Map(((profData ?? []) as ProfRow[]).map((p) => [p.id, p]));
+
+        infNomeMap = new Map();
+        for (const id of influencerIds) {
+          const perfil = perfilById.get(id);
+          const prof = profById.get(id);
+          infNomeMap.set(
+            id,
+            nomeExibicaoLinksEntidade({
+              role: prof?.role,
+              nome_artistico: perfil?.nome_artistico,
+              nome_completo: perfil?.nome_completo,
+              name: prof?.name,
+            }),
+          );
+        }
       }
       const campanhaIds = aliasData.map((r: UtmAlias) => r.campanha_id).filter(Boolean) as string[];
       let campanhaAtivoMap = new Map<string, boolean>();
@@ -318,7 +349,13 @@ export default function GestaoLinks() {
         const dataFim = (aliasSelecionado.ultimo_visto ?? new Date().toISOString().split("T")[0]).split("T")[0];
         try {
           await supabase.functions.invoke("sync-metricas-cda", {
-            body: { data_inicio: dataInicio, data_fim: dataFim, utm_source: aliasSelecionado.utm_source, skip_orfaos: true },
+            body: {
+              data_inicio: dataInicio,
+              data_fim: dataFim,
+              utm_source: aliasSelecionado.utm_source,
+              skip_orfaos: true,
+              conta: tipoMapeamento === "afiliado" ? "afiliados" : "influencers",
+            },
           });
         } catch (e) {
           console.warn("[GestaoLinks] Sync fallback:", e);
@@ -371,6 +408,20 @@ export default function GestaoLinks() {
     return m;
   }, [influencers, afiliados]);
 
+  /** Mesmos nomes do select do modal Mapear (Influencer / Afiliado / Campanha). */
+  const nomePorInfluencerId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const i of influencers) m.set(i.id, i.nome);
+    for (const i of afiliados) m.set(i.id, i.nome);
+    return m;
+  }, [influencers, afiliados]);
+
+  const nomePorCampanhaId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of campanhas) m.set(c.id, c.nome);
+    return m;
+  }, [campanhas]);
+
   const statusDoLink = useCallback(
     (a: UtmAlias): string | null => {
       if (a.influencer_id) return statusInfluencerPorId.get(a.influencer_id) ?? "ativo";
@@ -386,7 +437,7 @@ export default function GestaoLinks() {
     const nomeOp = (a: UtmAlias) =>
       (operadorasList.find((o) => o.slug === a.operadora_slug)?.nome ?? a.operadora_slug ?? "").toLowerCase();
     const proprietarioLabel = (a: UtmAlias) =>
-      (a.influencer_id ? (a.influencer_name ?? "") : (a.campanha_nome ?? "")).trim().toLowerCase();
+      labelProprietarioAlias(a, nomePorInfluencerId, nomePorCampanhaId).trim().toLowerCase();
     arr.sort((a, b) => {
       let c = 0;
       switch (col) {
@@ -421,7 +472,16 @@ export default function GestaoLinks() {
       return compareLocaleTexto(a.primeiro_visto, b.primeiro_visto, "desc");
     });
     return arr;
-  }, [aliases, buscaUtm, sortLinks, statusDoLink, operadorasList, aba]);
+  }, [
+    aliases,
+    buscaUtm,
+    sortLinks,
+    operadorasList,
+    aba,
+    statusDoLink,
+    nomePorInfluencerId,
+    nomePorCampanhaId,
+  ]);
 
   const mensagemVazia =
     aliases.length === 0
@@ -763,8 +823,11 @@ export default function GestaoLinks() {
                 const utmAccent = brand.accent;
                 const nomeOperadora =
                   operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—";
-                const proprietario =
-                  alias.influencer_id ? (alias.influencer_name ?? "—") : (alias.campanha_nome ?? "—");
+                const proprietario = labelProprietarioAlias(
+                  alias,
+                  nomePorInfluencerId,
+                  nomePorCampanhaId,
+                );
                 return (
                   <tr
                     key={alias.id}

@@ -617,12 +617,39 @@ serve(async (req: Request) => {
     }
 
     const OPERADORA_CDA = 'casa_apostas'
-    let query = supabase.from('influencer_perfil').select('id, nome_artistico, utm_source').not('utm_source', 'is', null)
+    let query = supabase
+      .from('influencer_perfil')
+      .select('id, nome_artistico, utm_source, profiles!inner(role)')
+      .not('utm_source', 'is', null)
+    if (conta === 'afiliados') {
+      query = query.eq('profiles.role', 'afiliado')
+    } else {
+      query = query.neq('profiles.role', 'afiliado')
+    }
     if (params.utm_source) query = query.eq('utm_source', params.utm_source)
-    const { data: influencers, error: errInfluencers } = await query
+    const { data: influencersRaw, error: errInfluencers } = await query
     if (errInfluencers) throw new Error(`Erro influencers: ${errInfluencers.message}`)
+    const influencers = (influencersRaw ?? []) as InfluencerPerfil[]
 
-    const { data: aliasesMapeados } = await supabase.from('utm_aliases').select('utm_source, influencer_id').eq('status', 'mapeado').or('operadora_slug.eq.casa_apostas,operadora_slug.is.null').not('influencer_id', 'is', null)
+    // IDs no escopo da conta (afiliado vs não-afiliado) — aliases mapeados seguem o mesmo corte
+    let idsEscopoConta: Set<string>
+    if (conta === 'afiliados') {
+      const { data: afiliadosRows } = await supabase.from('profiles').select('id').eq('role', 'afiliado')
+      idsEscopoConta = new Set((afiliadosRows ?? []).map((r: { id: string }) => r.id))
+    } else {
+      const { data: naoAfiliados } = await supabase.from('profiles').select('id').neq('role', 'afiliado')
+      idsEscopoConta = new Set((naoAfiliados ?? []).map((r: { id: string }) => r.id))
+    }
+
+    const { data: aliasesMapeadosRaw } = await supabase
+      .from('utm_aliases')
+      .select('utm_source, influencer_id')
+      .eq('status', 'mapeado')
+      .or('operadora_slug.eq.casa_apostas,operadora_slug.is.null')
+      .not('influencer_id', 'is', null)
+    const aliasesMapeados = (aliasesMapeadosRaw ?? []).filter((a: { influencer_id: string }) =>
+      idsEscopoConta.has(a.influencer_id),
+    )
     const utmsMapeados = new Set<string>([
       ...(influencers ?? []).map((i: InfluencerPerfil) => i.utm_source),
       ...(aliasesMapeados ?? []).map((a: { utm_source: string }) => a.utm_source),

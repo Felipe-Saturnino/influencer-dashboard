@@ -87,7 +87,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. A integração com a base de métricas será disponibilizada em etapa seguinte — por enquanto a estrutura de KPIs e tabelas já está disponível para navegação.",
+          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. As métricas vêm da integração TAP CDA — conta Afiliados (`influencer_metricas` dos perfis com role afiliado).",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -184,7 +184,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Overview Afiliado oferece uma visão executiva da performance do canal de afiliados — consolidando KPIs financeiros e de conversão em uma única página sem abas. A integração com a base de métricas será disponibilizada em etapa seguinte.",
+          "O Overview Afiliado oferece uma visão executiva da performance do canal de afiliados — consolidando KPIs financeiros e de conversão em uma única página sem abas. As métricas vêm da integração TAP CDA (conta Afiliados); o filtro lista os afiliados cadastrados na página Afiliados.",
       },
       {
         subtitulo: "Filtros",

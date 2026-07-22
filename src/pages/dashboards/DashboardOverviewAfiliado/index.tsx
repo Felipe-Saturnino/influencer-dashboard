@@ -14,6 +14,7 @@ import {
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDashboardCatalogos } from "../../../hooks/useDashboardCatalogos";
+import { useAfiliadosDashboardData } from "../../../hooks/useAfiliadosDashboardData";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
@@ -24,6 +25,7 @@ import {
 } from "../../../lib/pageContentBoxStyles";
 import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
 import {
+  fmtBRL,
   getIdxMesCarrosselPadrao,
   getMesesDisponiveis,
 } from "../../../lib/dashboardHelpers";
@@ -35,6 +37,7 @@ import {
   FiltroOperadoraSelect,
   KpiCard,
   SectionTitle,
+  SkeletonKpiCard,
   SortTableTh,
   type SortDir,
 } from "../../../components/dashboard";
@@ -47,6 +50,7 @@ import { FunilAfiliados } from "../AfiliadosDash/FunilAfiliados";
 
 type DetalheSortCol =
   | "afiliado"
+  | "periodo"
   | "acessos"
   | "registros"
   | "ftds"
@@ -101,6 +105,72 @@ export default function DashboardOverviewAfiliado() {
   );
   const mesSelecionado = mesesDisponiveis[idxMes];
   const card = getPageContentBoxStyle(brand, t);
+
+  const {
+    loading,
+    totais,
+    totaisAnt,
+    detalhe,
+    afiliadoOptions,
+  } = useAfiliadosDashboardData({
+    historico,
+    mesSelecionado,
+    filtroAfiliado,
+    filtroOperadora,
+    detalhePorAfiliado: true,
+  });
+
+  const detalheOrdenado = useMemo(() => {
+    const list = [...detalhe];
+    const dir = sort.dir === "asc" ? 1 : -1;
+    list.sort((a, b) => {
+      let cmp = 0;
+      switch (sort.col) {
+        case "afiliado":
+          cmp = (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR");
+          break;
+        case "periodo":
+          cmp = (a.data ?? "").localeCompare(b.data ?? "");
+          break;
+        case "acessos":
+          cmp = a.acessos - b.acessos;
+          break;
+        case "registros":
+          cmp = a.registros - b.registros;
+          break;
+        case "ftds":
+          cmp = a.ftd_count - b.ftd_count;
+          break;
+        case "ftdValor":
+          cmp = a.ftd_total - b.ftd_total;
+          break;
+        case "depositos":
+          cmp = a.deposit_count - b.deposit_count;
+          break;
+        case "depositosValor":
+          cmp = a.deposit_total - b.deposit_total;
+          break;
+        case "saques":
+          cmp = a.withdrawal_count - b.withdrawal_count;
+          break;
+        case "saquesValor":
+          cmp = a.withdrawal_total - b.withdrawal_total;
+          break;
+        case "ggr":
+          cmp = a.ggr - b.ggr;
+          break;
+        default:
+          cmp = 0;
+      }
+      return cmp * dir;
+    });
+    return list;
+  }, [detalhe, sort]);
+
+  const ticketFTD = totais.ftds > 0 ? fmtBRL(totais.ftd_total / totais.ftds) : "—";
+  const ticketDep = totais.depositos_qtd > 0 ? fmtBRL(totais.depositos_valor / totais.depositos_qtd) : "—";
+  const ticketSaque = totais.saques_qtd > 0 ? fmtBRL(totais.saques_valor / totais.saques_qtd) : "—";
+  const ggrPorJogador = totais.ftds > 0 ? fmtBRL(totais.ggr / totais.ftds) : "—";
 
   if (perm.loading) {
     return (
@@ -211,7 +281,7 @@ export default function DashboardOverviewAfiliado() {
               mode="single"
               value={filtroAfiliado}
               onChange={setFiltroAfiliado}
-              afiliados={[]}
+              afiliados={afiliadoOptions.map((a) => ({ id: a.id, name: a.nome }))}
             />
 
             {showFiltroOperadora && (
@@ -227,166 +297,213 @@ export default function DashboardOverviewAfiliado() {
           </div>
         </div>
 
-        {/* KPIs Executivos — sem Lives / Horas / Média de Views */}
         <div style={card}>
           <SectionTitle
             sub={historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"}
           >
             KPIs Executivos
           </SectionTitle>
-          <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-            <KpiCard
-              label="GGR"
-              value="—"
-              icon={<TrendingUp size={16} aria-hidden />}
-              accentColor={BRAND.verde}
-              atual={0}
-              anterior={0}
-              isBRL
-              isHistorico={historico}
-            />
-            <KpiCard
-              label="Investimento"
-              value="—"
-              icon={<Coins size={16} aria-hidden />}
-              accentVar="--brand-contrast"
-              accentColor={BRAND.azul}
-              atual={0}
-              anterior={0}
-              isBRL
-              isHistorico={historico}
-            />
-            <KpiCard
-              label="ROI"
-              value="—"
-              icon={<BarChart2 size={16} aria-hidden />}
-              accentColor={BRAND.verde}
-              atual={0}
-              anterior={0}
-              isHistorico={historico}
-            />
-          </div>
-          <div className="app-grid-kpi-4">
-            <KpiCard
-              label="Registros"
-              value="—"
-              icon={<UserPlus size={16} aria-hidden />}
-              accentVar="--brand-action"
-              accentColor={BRAND.roxo}
-              atual={0}
-              anterior={0}
-              isHistorico={historico}
-            />
-            <KpiCard
-              label="FTDs"
-              value="—"
-              icon={<Trophy size={16} aria-hidden />}
-              accentVar="--brand-action"
-              accentColor={BRAND.roxo}
-              atual={0}
-              anterior={0}
-              isHistorico={historico}
-            />
-            <KpiCard
-              label="Depósitos"
-              value="—"
-              icon={<ArrowDownToLine size={16} aria-hidden />}
-              accentVar="--brand-icon-color"
-              accentColor={BRAND.ciano}
-              atual={0}
-              anterior={0}
-              isBRL
-              isHistorico={historico}
-            />
-            <KpiCard
-              label="Saques"
-              value="—"
-              icon={<ArrowUpFromLine size={16} aria-hidden />}
-              accentColor={BRAND.vermelho}
-              atual={0}
-              anterior={0}
-              isBRL
-              isHistorico={historico}
-              isInverso
-            />
-          </div>
+          {loading ? (
+            <>
+              <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+                <SkeletonKpiCard />
+                <SkeletonKpiCard />
+                <SkeletonKpiCard />
+              </div>
+              <div className="app-grid-kpi-4">
+                <SkeletonKpiCard />
+                <SkeletonKpiCard />
+                <SkeletonKpiCard />
+                <SkeletonKpiCard />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
+                <KpiCard
+                  label="GGR"
+                  value={fmtBRL(totais.ggr)}
+                  icon={<TrendingUp size={16} aria-hidden />}
+                  accentColor={totais.ggr >= 0 ? BRAND.verde : BRAND.vermelho}
+                  atual={totais.ggr}
+                  anterior={totaisAnt.ggr}
+                  isBRL
+                  isHistorico={historico}
+                />
+                <KpiCard
+                  label="Investimento"
+                  value={fmtBRL(totais.investimento)}
+                  icon={<Coins size={16} aria-hidden />}
+                  accentVar="--brand-contrast"
+                  accentColor={BRAND.azul}
+                  atual={totais.investimento}
+                  anterior={totaisAnt.investimento}
+                  isBRL
+                  isHistorico={historico}
+                />
+                <KpiCard
+                  label="ROI"
+                  value={
+                    totais.investimento > 0
+                      ? `${totais.roi >= 0 ? "+" : ""}${totais.roi.toFixed(1)}%`
+                      : "—"
+                  }
+                  icon={<BarChart2 size={16} aria-hidden />}
+                  accentColor={
+                    totais.investimento > 0
+                      ? totais.roi >= 0
+                        ? BRAND.verde
+                        : BRAND.vermelho
+                      : BRAND.verde
+                  }
+                  atual={totais.roi}
+                  anterior={totaisAnt.roi}
+                  isHistorico={historico}
+                />
+              </div>
+              <div className="app-grid-kpi-4">
+                <KpiCard
+                  label="Registros"
+                  value={totais.registros.toLocaleString("pt-BR")}
+                  icon={<UserPlus size={16} aria-hidden />}
+                  accentVar="--brand-action"
+                  accentColor={BRAND.roxo}
+                  atual={totais.registros}
+                  anterior={totaisAnt.registros}
+                  isHistorico={historico}
+                />
+                <KpiCard
+                  label="FTDs"
+                  value={totais.ftds.toLocaleString("pt-BR")}
+                  icon={<Trophy size={16} aria-hidden />}
+                  accentVar="--brand-action"
+                  accentColor={BRAND.roxo}
+                  atual={totais.ftds}
+                  anterior={totaisAnt.ftds}
+                  isHistorico={historico}
+                  subValue={{ label: "valor", value: fmtBRL(totais.ftd_total) }}
+                />
+                <KpiCard
+                  label="Depósitos"
+                  value={fmtBRL(totais.depositos_valor)}
+                  icon={<ArrowDownToLine size={16} aria-hidden />}
+                  accentVar="--brand-icon-color"
+                  accentColor={BRAND.ciano}
+                  atual={totais.depositos_valor}
+                  anterior={totaisAnt.depositos_valor}
+                  isBRL
+                  isHistorico={historico}
+                />
+                <KpiCard
+                  label="Saques"
+                  value={fmtBRL(totais.saques_valor)}
+                  icon={<ArrowUpFromLine size={16} aria-hidden />}
+                  accentColor={BRAND.vermelho}
+                  atual={totais.saques_valor}
+                  anterior={totaisAnt.saques_valor}
+                  isBRL
+                  isHistorico={historico}
+                  isInverso
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <div style={card}>
           <SectionTitle sub={historico ? "acumulado" : undefined}>Funil de Conversão</SectionTitle>
-          <FunilAfiliados />
+          <FunilAfiliados
+            acessos={totais.acessos}
+            registros={totais.registros}
+            ftds={totais.ftds}
+          />
         </div>
 
         <div style={card}>
           <SectionTitle sub={historico ? "acumulado" : undefined}>Eficiência</SectionTitle>
           <div className="app-grid-kpi-4">
-            <RateCard label="Ticket Médio FTD" value="—" />
-            <RateCard label="Ticket Médio Depósito" value="—" />
-            <RateCard label="Ticket Médio Saque" value="—" />
-            <RateCard label="GGR por Jogador" value="—" />
+            <RateCard label="Ticket Médio FTD" value={ticketFTD} />
+            <RateCard label="Ticket Médio Depósito" value={ticketDep} />
+            <RateCard label="Ticket Médio Saque" value={ticketSaque} />
+            <RateCard label="GGR por Jogador" value={ggrPorJogador} />
           </div>
         </div>
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle sub={historico ? "mês a mês" : "dia a dia"}>
-            {historico ? "Detalhamento Mensal" : "Detalhamento Diário"}
+          <SectionTitle sub={historico ? "por afiliado (acumulado)" : "por afiliado"}>
+            Detalhamento por Afiliado
           </SectionTitle>
-          <div
-            style={{
-              padding: "40px 0",
-              textAlign: "center",
-              color: t.textMuted,
-              fontSize: 13,
-              fontFamily: FONT.body,
-            }}
-          >
-            {MSG_SEM_DADOS_FILTRO}
-          </div>
-          <div
-            className="app-table-wrap"
-            style={{ ...getDataTableWrapStyle(), opacity: 0.55, pointerEvents: "none" }}
-            aria-hidden
-          >
-            <table style={getDataTableStyle({ minWidth: 960 })}>
-              <caption style={{ display: "none" }}>
-                Detalhamento de afiliados — estrutura de colunas
-              </caption>
-              <thead>
-                <tr>
-                  {(
-                    [
-                      ["afiliado", "Afiliado"],
-                      ["acessos", "Acessos"],
-                      ["registros", "Registros"],
-                      ["ftds", "# FTDs"],
-                      ["ftdValor", "R$ FTDs"],
-                      ["depositos", "# Depósitos"],
-                      ["depositosValor", "R$ Depósitos"],
-                      ["saques", "# Saques"],
-                      ["saquesValor", "R$ Saques"],
-                      ["ggr", "R$ GGR"],
-                    ] as const
-                  ).map(([col, label]) => (
-                    <SortTableTh
-                      key={col}
-                      col={col}
-                      label={label}
-                      sortCol={sort.col}
-                      sortDir={sort.dir}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                      onSort={(c) =>
-                        setSort((s) => ({
-                          col: c,
-                          dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
-                        }))
-                      }
-                    />
-                  ))}
-                </tr>
-              </thead>
-            </table>
-          </div>
+          {!loading && detalheOrdenado.length === 0 ? (
+            <div
+              style={{
+                padding: "40px 0",
+                textAlign: "center",
+                color: t.textMuted,
+                fontSize: 13,
+                fontFamily: FONT.body,
+              }}
+            >
+              {MSG_SEM_DADOS_FILTRO}
+            </div>
+          ) : (
+            <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle({ minWidth: 960 })}>
+                <caption style={{ display: "none" }}>Detalhamento de métricas por afiliado</caption>
+                <thead>
+                  <tr>
+                    {(
+                      [
+                        ["afiliado", "Afiliado"],
+                        ["acessos", "Acessos"],
+                        ["registros", "Registros"],
+                        ["ftds", "# FTDs"],
+                        ["ftdValor", "R$ FTDs"],
+                        ["depositos", "# Depósitos"],
+                        ["depositosValor", "R$ Depósitos"],
+                        ["saques", "# Saques"],
+                        ["saquesValor", "R$ Saques"],
+                        ["ggr", "R$ GGR"],
+                      ] as const
+                    ).map(([col, label]) => (
+                      <SortTableTh
+                        key={col}
+                        col={col}
+                        label={label}
+                        sortCol={sort.col}
+                        sortDir={sort.dir}
+                        thStyle={col === "afiliado" ? dataTable.thHeaderSticky : dataTable.thHeader}
+                        align="center"
+                        onSort={(c) =>
+                          setSort((s) => ({
+                            col: c,
+                            dir: s.col === c && s.dir === "desc" ? "asc" : "desc",
+                          }))
+                        }
+                      />
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading
+                    ? null
+                    : detalheOrdenado.map((r, i) => (
+                        <tr key={r.afiliado_id ?? `${r.nome}-${i}`} style={{ background: dataTable.zebraRow(i) }}>
+                          <td style={dataTable.tdSticky({ rowIndex: i })}>{r.nome ?? "—"}</td>
+                          <td style={dataTable.tdCenter}>{r.acessos.toLocaleString("pt-BR")}</td>
+                          <td style={dataTable.tdCenter}>{r.registros.toLocaleString("pt-BR")}</td>
+                          <td style={dataTable.tdCenter}>{r.ftd_count.toLocaleString("pt-BR")}</td>
+                          <td style={dataTable.tdCenter}>{fmtBRL(r.ftd_total)}</td>
+                          <td style={dataTable.tdCenter}>{r.deposit_count.toLocaleString("pt-BR")}</td>
+                          <td style={dataTable.tdCenter}>{fmtBRL(r.deposit_total)}</td>
+                          <td style={dataTable.tdCenter}>{r.withdrawal_count.toLocaleString("pt-BR")}</td>
+                          <td style={dataTable.tdCenter}>{fmtBRL(r.withdrawal_total)}</td>
+                          <td style={dataTable.tdCenter}>{fmtBRL(r.ggr)}</td>
+                        </tr>
+                      ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type Dispatch,
@@ -11,8 +12,14 @@ import {
 } from "react";
 import { AFILIADO_FILTRO_TODOS_VALUE } from "../../../components/FiltroAfiliadoSelect";
 import { useDashboardCatalogos } from "../../../hooks/useDashboardCatalogos";
+import { useAfiliadosDashboardData } from "../../../hooks/useAfiliadosDashboardData";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { getMesesDisponiveis, getIdxMesCarrosselPadrao } from "../../../lib/dashboardHelpers";
+import type {
+  AfiliadoDiaRow,
+  AfiliadoRankingRow,
+  AfiliadoTotais,
+} from "../../../lib/afiliadosAnalytics";
 
 export type MesRef = { ano: number; mes: number; label: string };
 
@@ -27,7 +34,7 @@ export type AfiliadosFiltrosContextValue = {
   filtroOperadora: string;
   setFiltroOperadora: Dispatch<SetStateAction<string>>;
   operadorasList: { slug: string; nome: string }[];
-  /** Catálogo de afiliados — vazio até integração de dados. */
+  /** Afiliados cadastrados (role=afiliado) no escopo do usuário. */
   afiliadoOptions: { id: string; nome: string }[];
   idxInicial: number;
   mesSelecionado: MesRef | undefined;
@@ -38,6 +45,11 @@ export type AfiliadosFiltrosContextValue = {
   toggleHistorico: () => void;
   isLoading: boolean;
   setIsLoading: (v: boolean) => void;
+  totais: AfiliadoTotais;
+  totaisAnt: AfiliadoTotais;
+  ranking: AfiliadoRankingRow[];
+  detalhe: AfiliadoDiaRow[];
+  metricasPorAfiliado: Record<string, { acessos: number; registros: number; ftds: number }>;
 };
 
 const AfiliadosFiltrosCtx = createContext<AfiliadosFiltrosContextValue | null>(null);
@@ -61,7 +73,7 @@ export function AfiliadosFiltrosProvider({ children }: { children: ReactNode }) 
   const [historico, setHistorico] = useState(false);
   const [filtroAfiliado, setFiltroAfiliado] = useState(AFILIADO_FILTRO_TODOS_VALUE);
   const [filtroOperadora, setFiltroOperadora] = useState("todas");
-  const [isLoading, setIsLoadingState] = useState(false);
+  const [isLoadingManual, setIsLoadingState] = useState(false);
   const setIsLoading = useCallback((v: boolean) => {
     setIsLoadingState(v);
   }, []);
@@ -72,12 +84,21 @@ export function AfiliadosFiltrosProvider({ children }: { children: ReactNode }) 
     [operadoras, podeVerOperadora],
   );
 
-  /** Placeholder até a integração de métricas de afiliados. */
-  const afiliadoOptions = useMemo(() => [] as { id: string; nome: string }[], []);
-
   const mesSelecionado = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
+
+  const data = useAfiliadosDashboardData({
+    historico,
+    mesSelecionado,
+    filtroAfiliado,
+    filtroOperadora,
+    detalhePorAfiliado: false,
+  });
+
+  useEffect(() => {
+    setIsLoadingState(data.loading || data.catalogPending);
+  }, [data.loading, data.catalogPending]);
 
   const irMesAnterior = useCallback(() => {
     setHistorico(false);
@@ -109,7 +130,7 @@ export function AfiliadosFiltrosProvider({ children }: { children: ReactNode }) 
       filtroOperadora,
       setFiltroOperadora,
       operadorasList,
-      afiliadoOptions,
+      afiliadoOptions: data.afiliadoOptions,
       idxInicial,
       mesSelecionado,
       isPrimeiro,
@@ -117,8 +138,13 @@ export function AfiliadosFiltrosProvider({ children }: { children: ReactNode }) 
       irMesAnterior,
       irMesProximo,
       toggleHistorico,
-      isLoading,
+      isLoading: isLoadingManual || data.loading || data.catalogPending,
       setIsLoading,
+      totais: data.totais,
+      totaisAnt: data.totaisAnt,
+      ranking: data.ranking,
+      detalhe: data.detalhe,
+      metricasPorAfiliado: data.metricasPorAfiliado,
     }),
     [
       mesesDisponiveis,
@@ -127,7 +153,14 @@ export function AfiliadosFiltrosProvider({ children }: { children: ReactNode }) 
       filtroAfiliado,
       filtroOperadora,
       operadorasList,
-      afiliadoOptions,
+      data.afiliadoOptions,
+      data.totais,
+      data.totaisAnt,
+      data.ranking,
+      data.detalhe,
+      data.metricasPorAfiliado,
+      data.loading,
+      data.catalogPending,
       idxInicial,
       mesSelecionado,
       isPrimeiro,
@@ -135,7 +168,7 @@ export function AfiliadosFiltrosProvider({ children }: { children: ReactNode }) 
       irMesAnterior,
       irMesProximo,
       toggleHistorico,
-      isLoading,
+      isLoadingManual,
       setIsLoading,
     ],
   );
