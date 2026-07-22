@@ -63,12 +63,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Comparativo de Mesa (Blackjack)",
         texto:
-          "Disponível apenas quando uma operadora específica está selecionada. Permite comparar duas mesas de Blackjack lado a lado. Use os seletores acima da tabela para escolher as mesas A e B.",
+          "Disponível nas abas Overview e Estúdio Dedicado quando uma operadora específica está selecionada. Permite comparar duas mesas de Blackjack lado a lado. Use os seletores acima da tabela para escolher as mesas A e B.\n\nNa aba Estúdio Network o bloco não aparece — o inventário network não tem par de mesas Blackjack para comparar.",
       },
       {
         subtitulo: "Dados por Mesa",
         texto:
-          "Exibe o desempenho diário (ou mensal no Histórico) das mesas Speed Baccarat e Roleta em dois painéis paralelos. Na Casa de Apostas, uma segunda linha mostra Futebol Brasileiro em largura total.",
+          "Exibe o desempenho diário (ou mensal no Histórico) das mesas em painéis paralelos. Nas abas Overview e Estúdio Dedicado: Speed Baccarat e Roleta na primeira linha; Futebol Brasileiro abaixo quando aplicável.\n\nNa aba Estúdio Network a ordem é Blackjack e Roleta na primeira linha, e Speed Baccarat e Futebol Brasileiro na segunda.",
       },
       {
         subtitulo: "Aba Posicionamento",

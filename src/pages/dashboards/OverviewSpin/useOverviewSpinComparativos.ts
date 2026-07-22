@@ -19,6 +19,7 @@ import {
   labelMesaCda,
   linhaComparativoJogoAgregadaMes,
   linhaMesaPorDiaFromRow,
+  linhasMesaAgregadasPorDia,
   linhasMesaAgregadasPorMes,
   normalizeMesasYmd,
   pickKpiMetricaDetalhe,
@@ -126,6 +127,14 @@ export function useOverviewSpinComparativos(p: Params) {
       .filter((r) => labelMesaCda(r, operadorasListFmt) === "Speed Baccarat")
       .sort((a, b) => b.data_relatorio.localeCompare(a.data_relatorio))
       .map(linhaMesaPorDiaFromRow);
+  }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
+
+  /** Uma tabela Blackjack (aba Network em Dados por mesa) — agrega BJ 1/2/VIP se houver. */
+  const linhasBlackjack = useMemo(() => {
+    const src = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
+    const pred = (r: PorTabelaRow) => isMesaBlackjackComparativo(r, operadorasListFmt);
+    if (historico) return linhasMesaAgregadasPorMes(src, pred);
+    return linhasMesaAgregadasPorDia(src, pred);
   }, [historico, porTabelaFiltradasHist, porTabelaFiltradas, operadorasListFmt]);
 
   const linhasRoleta = useMemo(() => {
@@ -479,6 +488,7 @@ export function useOverviewSpinComparativos(p: Params) {
 
   return {
     mesasOpcoesBlackjack,
+    linhasBlackjack,
     linhasSpeedBaccarat,
     linhasRoleta,
     linhasFutebolBrasileiro,

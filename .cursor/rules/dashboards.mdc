@@ -116,9 +116,9 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.
 - **Heatmap:** coluna **Mesa** sticky + `thHeader` nas colunas de período; sort só em Mesa. Pills de posição mantêm cores semânticas de `lobbyMonitorHelpers`.
 - **`renderMesaDiaTabela`:** linha Total no **topo** do `<tbody>` com `totalRowBgStrong` — exceção documentada.
-- **Comparativo de mesa** (só Blackjack): faixas de título e bordas dos selects — **`getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)`** para mesa A e B (mesma cor verde).
+- **Comparativo de mesa** (só Blackjack): faixas de título e bordas dos selects — **`getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)`** para mesa A e B (mesma cor verde). **Não exibir** na aba **Estúdio Network** (não há par de mesas BJ para comparar) — carrossel e Histórico.
 - **Comparativo de Jogo:** colunas, células e séries de gráfico — **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`).
-- **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / ouro / laranja); **não** tokens whitelabel.
+- **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / ouro / laranja); **não** tokens whitelabel. Na aba **Estúdio Network**: ordem **Blackjack | Roleta** (linha 1) e **Speed Baccarat | Futebol Brasileiro** (linha 2); componente `OverviewSpinDadosPorMesa` (`layoutNetwork`).
 
 **Identidade por jogo (regra global):** paleta canónica **obrigatória** em todo bloco que distingue os quatro jogos — Global § Identidade visual por jogo + Brand §1.5. **Exceção:** somente com pedido explícito de produto — registrar em «Exceções — identidade de jogo» neste MDC antes de codar.
 

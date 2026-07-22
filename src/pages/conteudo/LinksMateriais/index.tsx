@@ -6,6 +6,7 @@ import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
 import {
   trackingBasePorCanal,
@@ -96,10 +97,20 @@ interface EntidadeOpcao {
   nome: string;
 }
 
-type PerfilEmbed = {
-  nome_artistico?: string | null;
-  nome_completo?: string | null;
-} | null;
+type ProfileListaRow = {
+  id: string;
+  name: string | null;
+  role: string | null;
+};
+
+type PerfilNomeRow = {
+  id: string;
+  nome_artistico: string | null;
+  nome_completo: string | null;
+};
+
+/** Lote seguro para `.in("id", …)` em influencer_perfil. */
+const PERFIL_NOME_IN_CHUNK = 150;
 
 export default function LinksMateriais() {
   const { theme: t, user, podeVerInfluencer, setActivePage } = useApp();
@@ -136,6 +147,7 @@ export default function LinksMateriais() {
   const [loadingAliasInfluencer, setLoadingAliasInfluencer] = useState(false);
   const [loadingInfluenciadores, setLoadingInfluenciadores] = useState(false);
   const [influenciadores, setInfluenciadores] = useState<EntidadeOpcao[]>([]);
+  const [erroListaEntidades, setErroListaEntidades] = useState(false);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -156,6 +168,7 @@ export default function LinksMateriais() {
     setLinkCompleto("");
     setUtmInput("");
     setErro(null);
+    setErroListaEntidades(false);
     setInfluencerSelecionado("");
     setInfluenciadores([]);
   }, [canal]);
@@ -210,62 +223,100 @@ export default function LinksMateriais() {
   }, [carregarMeuPerfil]);
 
   useEffect(() => {
+    /** Evita limpar a lista enquanto as permissões ainda carregam (canView null). */
+    if (perm.loading) {
+      setLoadingInfluenciadores(true);
+      return;
+    }
     if (!user || isSelfMode || perm.canView === "nao" || !precisaSelecionarInfluencer) {
       setInfluenciadores([]);
       setInfluencerSelecionado("");
+      setErroListaEntidades(false);
       setLoadingInfluenciadores(false);
       return;
     }
     let cancelled = false;
     setLoadingInfluenciadores(true);
+    setErroListaEntidades(false);
     void (async () => {
-      const roleFiltro = canal === "afiliado" ? "afiliado" : "influencer";
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, name, role, influencer_perfil(nome_artistico, nome_completo)")
-        .eq("role", roleFiltro)
-        .order("name");
-      if (cancelled) return;
-      if (error) {
-        console.error("[LinksMateriais] lista entidades:", error.message);
-        setInfluenciadores([]);
-        setInfluencerSelecionado("");
-        setLoadingInfluenciadores(false);
-        return;
+      try {
+        const roleFiltro = canal === "afiliado" ? "afiliado" : "influencer";
+        /**
+         * Mesmo padrão de Influencers/Afiliados: profiles sem embed, depois influencer_perfil.
+         * O select com embed em profiles costuma falhar/esvaziar sob RLS e gerava lista vazia
+         * (mensagem enganosa de “escopo”) mesmo para Admin / Ver = Sim.
+         */
+        const profiles = await fetchAllPages<ProfileListaRow>(async (from, to) =>
+          supabase
+            .from("profiles")
+            .select("id, name, role")
+            .eq("role", roleFiltro)
+            .order("name")
+            .range(from, to),
+        );
+        if (cancelled) return;
+
+        const ids = profiles.map((p) => p.id);
+        const perfis = await fetchInBatched<PerfilNomeRow>(
+          ids,
+          PERFIL_NOME_IN_CHUNK,
+          async (slice) => {
+            const { data, error } = await supabase
+              .from("influencer_perfil")
+              .select("id, nome_artistico, nome_completo")
+              .in("id", slice);
+            if (error) throw new Error(error.message);
+            return (data ?? []) as PerfilNomeRow[];
+          },
+        );
+        if (cancelled) return;
+
+        const perfisMap = new Map(perfis.map((p) => [p.id, p]));
+        /** Ver = Sim → lista completa; Ver = Próprios (ex.: Agência) → escopo. */
+        const filtrarEscopo = perm.canView === "proprios";
+        const rows: EntidadeOpcao[] = profiles
+          .filter((r) => (filtrarEscopo ? podeVerInfluencer(r.id) : true))
+          .map((r) => {
+            const perfil = perfisMap.get(r.id);
+            return {
+              id: r.id,
+              nome: nomeExibicaoLinksEntidade({
+                role: r.role,
+                nome_artistico: perfil?.nome_artistico,
+                nome_completo: perfil?.nome_completo,
+                name: r.name,
+              }),
+            };
+          });
+        setInfluenciadores(rows);
+        if (rows.length === 1) setInfluencerSelecionado(rows[0].id);
+        else setInfluencerSelecionado("");
+      } catch (err) {
+        console.error(
+          "[LinksMateriais] lista entidades:",
+          err instanceof Error ? err.message : err,
+        );
+        if (!cancelled) {
+          setInfluenciadores([]);
+          setInfluencerSelecionado("");
+          setErroListaEntidades(true);
+        }
+      } finally {
+        if (!cancelled) setLoadingInfluenciadores(false);
       }
-      type ProfileRow = {
-        id: string;
-        name: string | null;
-        role: string | null;
-        influencer_perfil: PerfilEmbed | PerfilEmbed[];
-      };
-      /** Ver = Sim → lista completa; Ver = Próprios (ex.: Agência) → escopo. */
-      const filtrarEscopo = perm.canView === "proprios";
-      const rows: EntidadeOpcao[] = ((data ?? []) as ProfileRow[])
-        .filter((r) => (filtrarEscopo ? podeVerInfluencer(r.id) : true))
-        .map((r) => {
-          const perfil = Array.isArray(r.influencer_perfil)
-            ? r.influencer_perfil[0] ?? null
-            : r.influencer_perfil;
-          return {
-            id: r.id,
-            nome: nomeExibicaoLinksEntidade({
-              role: r.role,
-              nome_artistico: perfil?.nome_artistico,
-              nome_completo: perfil?.nome_completo,
-              name: r.name,
-            }),
-          };
-        });
-      setInfluenciadores(rows);
-      if (rows.length === 1) setInfluencerSelecionado(rows[0].id);
-      else setInfluencerSelecionado("");
-      setLoadingInfluenciadores(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [user, perm.canView, podeVerInfluencer, canal, isSelfMode, precisaSelecionarInfluencer]);
+  }, [
+    user,
+    perm.loading,
+    perm.canView,
+    podeVerInfluencer,
+    canal,
+    isSelfMode,
+    precisaSelecionarInfluencer,
+  ]);
 
   useEffect(() => {
     if (isSelfMode) return;
