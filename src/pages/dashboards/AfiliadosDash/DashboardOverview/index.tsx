@@ -69,7 +69,7 @@ export default function DashboardOverview() {
   const loading = sf?.isLoading ?? false;
   const totais = sf?.totais;
   const totaisAnt = sf?.totaisAnt;
-  const ranking = sf?.ranking ?? [];
+  const ranking = useMemo(() => sf?.ranking ?? [], [sf?.ranking]);
   const dataTable = useDataTableBlock();
   const [sortRanking, setSortRanking] = useState<{ col: RankingSortCol; dir: SortDir }>({
     col: "ggr",

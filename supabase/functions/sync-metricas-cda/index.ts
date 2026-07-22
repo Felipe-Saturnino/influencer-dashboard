@@ -584,7 +584,7 @@ serve(async (req: Request) => {
       throw new Error(`Reporting API exige ${secretNameApiKey}.`)
     }
 
-    console.log(`[sync-metricas-cda] v2.1.0 CDA conta=${conta} | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Período: ${dataInicio} → ${dataFim}`)
+    console.log(`[sync-metricas-cda] v2.1.1 CDA conta=${conta} | ${useReportingApi ? 'Reporting API' : 'Plywood'} | Período: ${dataInicio} → ${dataFim}`)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
 
@@ -617,29 +617,29 @@ serve(async (req: Request) => {
     }
 
     const OPERADORA_CDA = 'casa_apostas'
+
+    // Escopo por role via profiles (sem embed — não há FK PostgREST influencer_perfil↔profiles)
+    let idsEscopoConta: Set<string>
+    if (conta === 'afiliados') {
+      const { data: afiliadosRows, error: errAf } = await supabase.from('profiles').select('id').eq('role', 'afiliado')
+      if (errAf) throw new Error(`Erro profiles (afiliados): ${errAf.message}`)
+      idsEscopoConta = new Set((afiliadosRows ?? []).map((r: { id: string }) => r.id))
+    } else {
+      const { data: naoAfiliados, error: errInf } = await supabase.from('profiles').select('id').neq('role', 'afiliado')
+      if (errInf) throw new Error(`Erro profiles (influencers): ${errInf.message}`)
+      idsEscopoConta = new Set((naoAfiliados ?? []).map((r: { id: string }) => r.id))
+    }
+
     let query = supabase
       .from('influencer_perfil')
-      .select('id, nome_artistico, utm_source, profiles!inner(role)')
+      .select('id, nome_artistico, utm_source')
       .not('utm_source', 'is', null)
-    if (conta === 'afiliados') {
-      query = query.eq('profiles.role', 'afiliado')
-    } else {
-      query = query.neq('profiles.role', 'afiliado')
-    }
     if (params.utm_source) query = query.eq('utm_source', params.utm_source)
     const { data: influencersRaw, error: errInfluencers } = await query
     if (errInfluencers) throw new Error(`Erro influencers: ${errInfluencers.message}`)
-    const influencers = (influencersRaw ?? []) as InfluencerPerfil[]
-
-    // IDs no escopo da conta (afiliado vs não-afiliado) — aliases mapeados seguem o mesmo corte
-    let idsEscopoConta: Set<string>
-    if (conta === 'afiliados') {
-      const { data: afiliadosRows } = await supabase.from('profiles').select('id').eq('role', 'afiliado')
-      idsEscopoConta = new Set((afiliadosRows ?? []).map((r: { id: string }) => r.id))
-    } else {
-      const { data: naoAfiliados } = await supabase.from('profiles').select('id').neq('role', 'afiliado')
-      idsEscopoConta = new Set((naoAfiliados ?? []).map((r: { id: string }) => r.id))
-    }
+    const influencers = ((influencersRaw ?? []) as InfluencerPerfil[]).filter((i) =>
+      idsEscopoConta.has(i.id),
+    )
 
     const { data: aliasesMapeadosRaw } = await supabase
       .from('utm_aliases')
@@ -756,7 +756,7 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify({
       ok: true,
-      versao: 'v2.1.0',
+      versao: 'v2.1.1',
       integracao: integracaoSlug,
       conta,
       api_usada: useReportingApi ? 'Reporting API' : 'Plywood',

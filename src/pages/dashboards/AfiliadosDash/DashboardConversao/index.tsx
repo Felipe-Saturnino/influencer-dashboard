@@ -54,7 +54,7 @@ export default function DashboardConversao() {
   const brand = useDashboardBrand();
   const sf = useAfiliadosFiltrosOptional();
   const historico = sf?.historico ?? false;
-  const ranking = sf?.ranking ?? [];
+  const ranking = useMemo(() => sf?.ranking ?? [], [sf?.ranking]);
   const metricasPorAfiliado = sf?.metricasPorAfiliado ?? {};
   const dataTable = useDataTableBlock();
   const [sort, setSort] = useState<{ col: TaxasSortCol; dir: SortDir }>({ col: "ftds", dir: "desc" });
