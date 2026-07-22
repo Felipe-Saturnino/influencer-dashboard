@@ -1,4 +1,4 @@
-import type { Role } from "../types";
+import type { PermissaoValor, Role } from "../types";
 
 export type LinksMateriaisCanal = "influencer" | "afiliado";
 
@@ -12,16 +12,35 @@ export function trackingBasePorCanal(canal: LinksMateriaisCanal): string {
   return canal === "afiliado" ? TRACKING_BASE_AFILIADO : TRACKING_BASE_INFLUENCER;
 }
 
-/** Abas visíveis em Links e Materiais conforme o perfil. */
+/**
+ * Abas visíveis conforme Ver:
+ * — Sim → Influencers e Afiliados
+ * — Próprios → só a aba do canal do perfil (Influencer/Agência → Influencers; Afiliado → Afiliados)
+ */
 export function linksMateriaisAbasVisiveis(
   role: Role | undefined | null,
+  canView: PermissaoValor,
 ): LinksMateriaisCanal[] {
-  if (role === "afiliado") return ["afiliado"];
-  if (role === "influencer" || role === "agencia") return ["influencer"];
+  if (canView === "proprios") {
+    if (role === "afiliado") return ["afiliado"];
+    if (role === "influencer" || role === "agencia") return ["influencer"];
+  }
   return ["influencer", "afiliado"];
 }
 
-/** Emissão no próprio perfil (sem select de lista). */
+/**
+ * Modo “só o próprio link” (sem select): Ver = Próprios + perfil Influencer ou Afiliado.
+ * Agência com Próprios mantém select filtrado pelo escopo (não é self).
+ */
+export function linksMateriaisIsSelfMode(
+  role: Role | undefined | null,
+  canView: PermissaoValor,
+): boolean {
+  if (canView !== "proprios") return false;
+  return role === "influencer" || role === "afiliado";
+}
+
+/** @deprecated Preferir linksMateriaisIsSelfMode(role, canView). */
 export function linksMateriaisIsSelfCanal(
   canal: LinksMateriaisCanal,
   role: Role | undefined | null,

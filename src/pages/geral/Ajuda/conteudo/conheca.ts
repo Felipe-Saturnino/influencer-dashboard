@@ -942,7 +942,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas Influencers e Afiliados",
         texto:
-          "A página tem duas abas com a mesma experiência de emissão, cada uma com URL base própria:\n— Influencers: link de rastreamento do canal de influencers.\n— Afiliados: link de rastreamento do canal de afiliados.\n\nQuem tem perfil de Influencer ou Agência vê apenas a aba Influencers. Quem tem perfil de Afiliado vê apenas a aba Afiliados. Gestores e administradores veem as duas abas.",
+          "A página tem duas abas com a mesma experiência de emissão, cada uma com URL base própria:\n— Influencers: link de rastreamento do canal de influencers.\n— Afiliados: link de rastreamento do canal de afiliados.\n\nA visibilidade depende da permissão de Ver em Gestão de Usuários:\n— Ver = Sim: as duas abas e o filtro com todos os influencers ou afiliados da aba.\n— Ver = Próprios: apenas o próprio link; Influencer ou Agência vê só a aba Influencers; Afiliado vê só a aba Afiliados.",
       },
       {
         subtitulo: "Link de Rastreamento",
@@ -957,7 +957,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Emissão por Gestores",
         texto:
-          "Gestores e administradores com permissão de editar podem emitir o link em nome de um influencer ou afiliado. Na aba ativa, selecione a pessoa no campo acima do UTM antes de clicar em Emitir.\n\nSe a pessoa já tiver um link emitido naquele canal, ele será exibido automaticamente ao selecionar o nome na lista.",
+          "Quem tem permissão de Criar = Sim pode emitir o link em nome de qualquer influencer ou afiliado. Na aba ativa, selecione a pessoa no campo acima do UTM antes de clicar em Emitir.\n\nCom Criar = Próprios, só é possível emitir o próprio link (Influencer/Afiliado) ou, no caso de Agência, para influencers do próprio escopo.\n\nSe a pessoa já tiver um link emitido naquele canal, ele será exibido automaticamente ao selecionar o nome na lista.",
       },
       {
         subtitulo: "Requisitos para Emissão",

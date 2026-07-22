@@ -175,7 +175,7 @@ const PAGES_META: {
   },
   // Conteúdo
   { key: "playbook_influencers", label: "Playbook Influencers", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "links_materiais", label: "Links e Materiais", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "links_materiais", label: "Links e Materiais", secao: "Conteúdo", hasCriar: true, hasEditar: false, hasExcluir: false },
   { key: "spin_na_rede", label: "Spin na Rede", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "rh_portal", label: "Portal de RH", secao: "Conteúdo", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "informativos", label: "Informativos", secao: "Conteúdo", hasCriar: true, hasEditar: true, hasExcluir: true },

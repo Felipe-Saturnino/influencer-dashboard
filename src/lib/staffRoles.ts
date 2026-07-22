@@ -9,6 +9,7 @@ export function roleParidadeInfluencer(role: Role | undefined | null): boolean {
 
 export {
   linksMateriaisAbasVisiveis,
+  linksMateriaisIsSelfMode,
   linksMateriaisIsSelfCanal,
   type LinksMateriaisCanal,
 } from "./linksMateriaisCanal";

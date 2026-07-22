@@ -10,7 +10,7 @@ import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaG
 import {
   trackingBasePorCanal,
   linksMateriaisAbasVisiveis,
-  linksMateriaisIsSelfCanal,
+  linksMateriaisIsSelfMode,
   nomeExibicaoLinksEntidade,
   type LinksMateriaisCanal,
 } from "../../../lib/linksMateriaisCanal";
@@ -108,16 +108,22 @@ export default function LinksMateriais() {
   const dark = t.isDark ?? false;
   const narrowMobile = useMediaQuery("(max-width: 479px)");
 
-  const abasVisiveis = linksMateriaisAbasVisiveis(user?.role);
+  const abasVisiveis = linksMateriaisAbasVisiveis(user?.role, perm.canView);
   const [canal, setCanal] = useRouteTab(
     "links_materiais",
     abasVisiveis[0] ?? "influencer",
     abasVisiveis,
   );
   const trackingBase = trackingBasePorCanal(canal);
-  const isSelfCanal = linksMateriaisIsSelfCanal(canal, user?.role);
-  const precisaSelecionarInfluencer = !!user && !isSelfCanal;
-  const podeEmitir = perm.canEditarOk && !perm.loading;
+  /** Ver = Próprios + Influencer/Afiliado → só o próprio link. Ver = Sim → filtro de todos. */
+  const isSelfMode = linksMateriaisIsSelfMode(user?.role, perm.canView);
+  const precisaSelecionarEntidade = !!user && !isSelfMode && perm.canView === "sim";
+  /** Agência com Ver = Próprios: select só do escopo (não self, não lista total). */
+  const precisaSelectEscopoProprios =
+    !!user && !isSelfMode && perm.canView === "proprios";
+  const precisaSelecionarInfluencer = precisaSelecionarEntidade || precisaSelectEscopoProprios;
+  /** Criar libera emissão; fallback temporário a Editar até a migration de can_criar. */
+  const podeEmitir = (perm.canCriarOk || perm.canEditarOk) && !perm.loading;
   const labelEntidade = canal === "afiliado" ? "Afiliado" : "Influencer";
   const labelEntidadeLower = canal === "afiliado" ? "afiliado" : "influencer";
   const hintNomeCampo = canal === "afiliado" ? "nome" : "nome artístico";
@@ -155,7 +161,7 @@ export default function LinksMateriais() {
   }, [canal]);
 
   const carregarMeuPerfil = useCallback(async () => {
-    if (!user?.id || !linksMateriaisIsSelfCanal(canal, user.role)) {
+    if (!user?.id || !linksMateriaisIsSelfMode(user.role, perm.canView)) {
       setLoadingPerfil(false);
       setNomeArtistico("");
       setUtmInput("");
@@ -197,14 +203,14 @@ export default function LinksMateriais() {
       setUtmInput(sanitizarUtm(nome === "—" ? "" : nome));
     }
     setLoadingPerfil(false);
-  }, [user?.id, user?.role, user?.name, canal]);
+  }, [user?.id, user?.role, user?.name, canal, perm.canView]);
 
   useEffect(() => {
     void carregarMeuPerfil();
   }, [carregarMeuPerfil]);
 
   useEffect(() => {
-    if (!user || linksMateriaisIsSelfCanal(canal, user.role) || perm.canView === "nao") {
+    if (!user || isSelfMode || perm.canView === "nao" || !precisaSelecionarInfluencer) {
       setInfluenciadores([]);
       setInfluencerSelecionado("");
       setLoadingInfluenciadores(false);
@@ -233,8 +239,10 @@ export default function LinksMateriais() {
         role: string | null;
         influencer_perfil: PerfilEmbed | PerfilEmbed[];
       };
+      /** Ver = Sim → lista completa; Ver = Próprios (ex.: Agência) → escopo. */
+      const filtrarEscopo = perm.canView === "proprios";
       const rows: EntidadeOpcao[] = ((data ?? []) as ProfileRow[])
-        .filter((r) => podeVerInfluencer(r.id))
+        .filter((r) => (filtrarEscopo ? podeVerInfluencer(r.id) : true))
         .map((r) => {
           const perfil = Array.isArray(r.influencer_perfil)
             ? r.influencer_perfil[0] ?? null
@@ -257,10 +265,10 @@ export default function LinksMateriais() {
     return () => {
       cancelled = true;
     };
-  }, [user, perm.canView, podeVerInfluencer, canal]);
+  }, [user, perm.canView, podeVerInfluencer, canal, isSelfMode, precisaSelecionarInfluencer]);
 
   useEffect(() => {
-    if (linksMateriaisIsSelfCanal(canal, user?.role)) return;
+    if (isSelfMode) return;
     if (!influencerSelecionado) {
       setEmitido(false);
       setLinkCompleto("");
@@ -323,7 +331,7 @@ export default function LinksMateriais() {
   }, [linkCompleto]);
 
   const aguardandoOpcoes =
-    isSelfCanal
+    isSelfMode
       ? loadingPerfil
       : precisaSelecionarInfluencer &&
           (loadingInfluenciadores || (!!influencerSelecionado && loadingAliasInfluencer));
@@ -340,7 +348,7 @@ export default function LinksMateriais() {
       return;
     }
 
-    if (isSelfCanal) {
+    if (isSelfMode && canal === "influencer") {
       setVerificandoGateEmissao(true);
       try {
         const gate = await verificarElegibilidadeAgendaLive(user.id);
@@ -356,7 +364,7 @@ export default function LinksMateriais() {
     setErro(null);
     setSalvando(true);
     try {
-      const payload = isSelfCanal
+      const payload = isSelfMode
         ? { p_utm_source: raw, p_influencer_id: user.id }
         : { p_utm_source: raw, p_influencer_id: influencerSelecionado };
       const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", payload);
@@ -551,7 +559,7 @@ export default function LinksMateriais() {
       >
         <SectionTitle>Link de rastreamento</SectionTitle>
 
-        {!perm.loading && !perm.canEditarOk && (
+        {!perm.loading && !perm.canCriarOk && !perm.canEditarOk && (
           <div style={{
             display: "flex",
             alignItems: "flex-start",
@@ -567,7 +575,7 @@ export default function LinksMateriais() {
           }}>
             <AlertCircle size={18} aria-hidden style={{ flexShrink: 0, marginTop: 2, color: "#f59e0b" }} />
             <span>
-              Você pode ver esta página, mas <strong>não tem permissão para emitir</strong> o link. Peça a um administrador para ativar <strong>Editar</strong> em Links e Materiais na Gestão de Usuários.
+              Você pode ver esta página, mas <strong>não tem permissão para emitir</strong> o link. Peça a um administrador para ativar <strong>Criar</strong> em Links e Materiais na Gestão de Usuários.
             </span>
           </div>
         )}
@@ -614,8 +622,8 @@ export default function LinksMateriais() {
           </div>
         )}
 
-        {(isSelfCanal && loadingPerfil) ||
-        (!isSelfCanal && !!influencerSelecionado && loadingAliasInfluencer) ? (
+        {(isSelfMode && loadingPerfil) ||
+        (!isSelfMode && !!influencerSelecionado && loadingAliasInfluencer) ? (
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: 0, color: t.textMuted, fontFamily: FONT.body, fontSize: 13 }}>
             <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
             Carregando link salvo…

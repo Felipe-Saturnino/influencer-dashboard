@@ -704,7 +704,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Emitir está desabilitado?",
         texto:
-          "O botão fica inativo em três situações:\n— Você não tem permissão de editar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você é gestor e não selecionou um influencer ou afiliado na lista da aba ativa.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de editar, entre em contato com o administrador e peça que ative Editar em Links e Materiais na Gestão de Usuários.",
+          "O botão fica inativo em três situações:\n— Você não tem permissão de Criar nesta página (um aviso amarelo aparece explicando o motivo).\n— O campo UTM está vazio — preencha antes de emitir.\n— Você tem Ver = Sim e não selecionou um influencer ou afiliado na lista da aba ativa.\n\nVerifique qual situação se aplica e siga a instrução correspondente. Se precisar de permissão de Criar, entre em contato com o administrador e peça que ative Criar em Links e Materiais na Gestão de Usuários.",
       },
       {
         subtitulo: "Apareceu um aviso de perfil incompleto ou Playbook pendente ao tentar emitir?",
@@ -734,12 +734,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Como gestor, não vejo ninguém na lista?",
         texto:
-          "A lista exibe influencers ou afiliados conforme a aba ativa e o seu escopo de visibilidade em Gestão de Usuários. Se a lista estiver vazia, o escopo pode não incluir nenhum perfil ativo nesse canal. Entre em contato com o administrador para revisar o acesso.",
+          "A lista exibe influencers ou afiliados conforme a aba ativa. Com Ver = Sim, a lista inclui todos os perfis daquele canal. Com Ver = Próprios (ex.: Agência), só entram os do seu escopo. Se a lista estiver vazia, confirme a permissão de Ver e o escopo em Gestão de Usuários.",
       },
       {
         subtitulo: "Só vejo uma das abas (Influencers ou Afiliados)?",
         texto:
-          "Isso é esperado: perfil Influencer ou Agência vê apenas Influencers; perfil Afiliado vê apenas Afiliados. Gestores e administradores veem as duas abas.",
+          "Com Ver = Próprios, isso é esperado: Influencer ou Agência vê apenas Influencers; Afiliado vê apenas Afiliados. Com Ver = Sim, as duas abas aparecem.",
       },
     ],
   },
