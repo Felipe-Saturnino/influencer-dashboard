@@ -889,7 +889,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Manuais — tabela e ciência",
         texto:
-          "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nQuando o tipo do manual **não** é **Jogos**, a coluna de jogos mostra **Todos os Jogos** (preenchido automaticamente ao salvar — o campo **Qual Jogo?** não aparece no modal).\n\nClique no ícone de visualizar para abrir o manual. Quando a postagem exige ciência **e** você pertence a um dos times selecionados em **Aplicável a**, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",
+          "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nQuando o tipo do manual **não** é **Jogos**, a coluna de jogos mostra **Todos os Jogos** (preenchido automaticamente ao salvar — o campo **Qual Jogo?** não aparece no modal).\n\nClique no ícone de visualizar para abrir o manual — o modal mostra introdução, descrição, **imagens/vídeos** e **anexos** cadastrados no Gerenciamento. Quando a postagem exige ciência **e** você pertence a um dos times selecionados em **Aplicável a**, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",
       },
     ],
   },

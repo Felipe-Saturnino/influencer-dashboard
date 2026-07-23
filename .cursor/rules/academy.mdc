@@ -84,7 +84,7 @@ Código de manual: prefixo das **3 primeiras letras** da categoria (sem acento, 
 
 ### Aba Manuais (leitura)
 
-Espelha **Políticas e normativas** do Portal de RH: tabela canónica (`AcademyPortalManuaisTabela`) com colunas Manual (código + título), Versão, Tipo, Jogos, **Sua Ciência** e Ação (visualizar). Modal **Ler manual** com botão **Lido e Ciente** quando `requires_acknowledgment = true` **e** o time/gerência do usuário estiver em `aplicavel_a` (legado sem `aplicavel_a`: todos os leitores). Registro em `academy_portal_read_receipt`.
+Espelha **Políticas e normativas** do Portal de RH: tabela canónica (`AcademyPortalManuaisTabela`) com colunas Manual (código + título), Versão, Tipo, Jogos, **Sua Ciência** e Ação (visualizar). Modal **Ler manual** (`ModalLerConteudo`) exibe introdução, descrição, **imagens/vídeos** (`imagem_storage_paths`) e **anexos**; botão **Lido e Ciente** quando `requires_acknowledgment = true` **e** o time/gerência do usuário estiver em `aplicavel_a` (legado sem `aplicavel_a`: todos os leitores). Registro em `academy_portal_read_receipt`. Lista pública carrega colunas de mídia single + array.
 
 Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valores distintos da coluna Jogo (tipo_jogo) em Gestão de Estúdios; sem duplicar; novos jogos cadastrados aparecem automaticamente. Persistência em `jogo_mesa text[]` (dica/manual).
 

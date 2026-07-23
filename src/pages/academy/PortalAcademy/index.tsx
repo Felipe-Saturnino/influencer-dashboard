@@ -77,8 +77,11 @@ type PostagemBase = {
   published_by: string | null;
   created_by?: string | null;
   imagem_storage_path?: string | null;
+  imagem_storage_paths?: string[] | null;
   anexo_storage_path?: string | null;
   anexo_nome?: string | null;
+  anexo_storage_paths?: string[] | null;
+  anexo_nomes?: string[] | null;
   status?: AcademyPostagemStatus | null;
   categoria?: AcademyPortalCategoria | null;
 };
@@ -372,7 +375,7 @@ export default function PortalAcademyPage() {
     const { inicio: histInicio } = getPeriodoHistoricoCompetencias();
     const catCols = "id, slug, label, scope, accent_hex, sort_order";
     const postCols =
-      "id, titulo, corpo, categoria_id, published_at, published_by, created_by, imagem_storage_path, anexo_storage_path, anexo_nome, status";
+      "id, titulo, corpo, categoria_id, published_at, published_by, created_by, imagem_storage_path, imagem_storage_paths, anexo_storage_path, anexo_nome, anexo_storage_paths, anexo_nomes, status";
     const catJoin = "categoria:academy_portal_categoria(slug,label,accent_hex)";
 
     const [catRes, comData, dicaData, manualData] = await Promise.all([
@@ -907,6 +910,7 @@ export default function PortalAcademyPage() {
           titulo={modalManual.titulo}
           introducao={modalManual.introducao}
           corpo={modalManual.corpo}
+          imagemStoragePaths={normalizarImagensAcademyPortal(modalManual)}
           anexos={normalizarAnexosAcademyPortal(modalManual)}
           exigeCiencia={manualExigeCienciaDoUsuario(modalManual, setoresUsuarioAplicavel)}
           jaCiente={Boolean(receipts.get(academyManualReceiptKey(modalManual.id))?.acknowledged_at)}
