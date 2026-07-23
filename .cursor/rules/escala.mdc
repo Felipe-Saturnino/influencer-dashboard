@@ -37,7 +37,7 @@ alwaysApply: false
 | `rh_calendario` | Calendário | `rh/Calendario/` |
 | `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
 
-**Motor partilhado:** `rh/GestaoEscala/` (`index.tsx` + `gestaoEscalaHelpers.ts`) — prop `modo: EscalaGradeModo` (`"estudio"` \| `"escritorio"`). PageKey, pool de times/prestadores (`rh_escala_*_por_area_atuacao`), células e storage local diferem por modo; RPCs de grade (`rh_gestao_escala_grade_*`) servem ambos (`area_key` legado / `t_*` / `g_*` no Estúdio; `eo_*` / `eog_*` no Escritório). **Abas:** times do Organograma **e** gerências **sem times ativos** (cascata — prestadores com `org_gerencia_id` e `org_time_id` null), filtrados por `area_atuacao`.
+**Motor partilhado:** `rh/GestaoEscala/` (`index.tsx` + `gestaoEscalaHelpers.ts`) — prop `modo: EscalaGradeModo` (`"estudio"` \| `"escritorio"`). PageKey, pool de times/prestadores (`rh_escala_*_por_area_atuacao`), células e storage local diferem por modo; RPCs de grade (`rh_gestao_escala_grade_*`) servem ambos (`area_key` legado / `t_*` / `g_*` / `academy` no Estúdio; `eo_*` / `eog_*` no Escritório). **Abas:** times do Organograma **e** gerências **sem times ativos** (cascata — prestadores com `org_gerencia_id` e `org_time_id` null), filtrados por `area_atuacao`. **Escala Estúdio:** Performance Coach + Treinamento unificados na aba **Academy** (`area_key = academy`). **Escala Escritório:** time **Arte** excluído das abas.
 
 Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel via `lib/carouselNavStyles.ts`; exceção Brand: card com `blockBg` quando isolado (não strip transparente).
 

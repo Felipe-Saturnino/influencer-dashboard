@@ -722,7 +722,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Monta e mantém a escala operacional do **estúdio** por área (time ou gerência sem times), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio. As abas seguem o Organograma: times com prestadores de Estúdio e **gerências sem times ativos** (pessoas vinculadas só à gerência).",
+          "Monta e mantém a escala operacional do **estúdio** por área (time ou gerência sem times), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio. As abas seguem o Organograma: times com prestadores de Estúdio e **gerências sem times ativos** (pessoas vinculadas só à gerência). A aba **Academy** reúne **Performance Coach** e **Treinamento**.",
       },
       {
         subtitulo: "Fluxo da escala",
@@ -736,7 +736,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (`area_atuacao` Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
+          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (`area_atuacao` Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. O time **Arte** não aparece nesta página. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
       },
       {
         subtitulo: "Fluxo e Calendário",

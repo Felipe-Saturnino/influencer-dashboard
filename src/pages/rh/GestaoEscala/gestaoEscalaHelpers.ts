@@ -254,7 +254,9 @@ export type AreaEscalaLegada =
   | "shift_leader"
   | "shuffler"
   | "service_manager"
-  | "customer_service";
+  | "customer_service"
+  /** Aba unificada: Performance Coach + Treinamento (rótulo Academy). */
+  | "academy";
 
 export type AbaEscalaTipo = "time" | "gerencia";
 
@@ -296,6 +298,7 @@ export const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaLegada[] = [
   "service_manager",
   "shift_leader",
   "game_presenter",
+  "academy",
   "shuffler",
 ];
 
@@ -307,8 +310,28 @@ export function isAreaEscalaLegada(area: string): area is AreaEscalaLegada {
     area === "shift_leader" ||
     area === "shuffler" ||
     area === "service_manager" ||
-    area === "customer_service"
+    area === "customer_service" ||
+    area === "academy"
   );
+}
+
+export function normalizarNomeTimeRh(s: string | null | undefined): string {
+  return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** Performance Coach + Treinamento → aba Academy (Escala Estúdio). */
+export function nomeOrganogramaEhGrupoAcademy(nome: string | null | undefined): boolean {
+  const nt = normalizarNomeTimeRh(nome);
+  if (!nt) return false;
+  if (nt.includes("performance coach")) return true;
+  if (nt === "academy") return true;
+  if (nt === "treinamento" || nt.startsWith("treinamento ")) return true;
+  return false;
+}
+
+/** Time Arte não entra na Escala Escritório. */
+export function nomeOrganogramaExcluidoEscalaEscritorio(nome: string | null | undefined): boolean {
+  return normalizarNomeTimeRh(nome) === "arte";
 }
 
 export function uuidFromHex32(hex: string): string | null {
@@ -340,6 +363,7 @@ export function orgGerenciaIdFromAreaKey(area: AreaEscalaKey): string | null {
 export function areaKeyLegadoFromNomeTime(nomeTimeRaw: string | null | undefined): AreaEscalaLegada | null {
   const nt = normalizarNomeTimeRh(nomeTimeRaw);
   if (!nt) return null;
+  if (nomeOrganogramaEhGrupoAcademy(nomeTimeRaw)) return "academy";
   if (nt.includes("game presenter")) return "game_presenter";
   if (nt.includes("shift leader")) return "shift_leader";
   if (nt.includes("shuffler")) return "shuffler";
@@ -359,8 +383,13 @@ export function areaKeyFromOrgTime(modo: EscalaGradeModo, timeId: string, nomeTi
   return `eo_${id.replace(/-/g, "")}`;
 }
 
-/** Mapeia gerência sem times → `area_key` (`g_` / `eog_`). */
-export function areaKeyFromOrgGerencia(modo: EscalaGradeModo, gerenciaId: string): AreaEscalaKey {
+/** Mapeia gerência sem times → `area_key` (`g_` / `eog_`). Treinamento (Estúdio) → `academy`. */
+export function areaKeyFromOrgGerencia(
+  modo: EscalaGradeModo,
+  gerenciaId: string,
+  nomeGerencia?: string,
+): AreaEscalaKey {
+  if (modo === "estudio" && nomeOrganogramaEhGrupoAcademy(nomeGerencia)) return "academy";
   const id = (gerenciaId ?? "").trim().toLowerCase().replace(/-/g, "");
   if (!id) return modo === "escritorio" ? "eog_unknown" : "g_unknown";
   return modo === "escritorio" ? `eog_${id}` : `g_${id}`;
@@ -370,21 +399,44 @@ export function buildAbasEscalaFromTimes(
   modo: EscalaGradeModo,
   times: { id: string; nome: string; tipo?: AbaEscalaTipo | string | null }[],
 ): AbaEscalaTime[] {
-  const abas: AbaEscalaTime[] = times
-    .map((t) => {
-      const timeId = String(t.id ?? "").trim();
-      const label = (t.nome ?? "").trim() || (t.tipo === "gerencia" ? "Gerência" : "Time");
-      if (!timeId) return null;
-      const tipo: AbaEscalaTipo = t.tipo === "gerencia" ? "gerencia" : "time";
-      return {
-        areaKey:
-          tipo === "gerencia" ? areaKeyFromOrgGerencia(modo, timeId) : areaKeyFromOrgTime(modo, timeId, label),
-        timeId,
-        label,
-        tipo,
-      };
-    })
-    .filter((x): x is AbaEscalaTime => x != null);
+  const abasBrutas: AbaEscalaTime[] = [];
+  for (const t of times) {
+    const timeId = String(t.id ?? "").trim();
+    const labelRaw = (t.nome ?? "").trim() || (t.tipo === "gerencia" ? "Gerência" : "Time");
+    if (!timeId) continue;
+    if (modo === "escritorio" && nomeOrganogramaExcluidoEscalaEscritorio(labelRaw)) continue;
+    const tipo: AbaEscalaTipo = t.tipo === "gerencia" ? "gerencia" : "time";
+    const areaKey =
+      tipo === "gerencia"
+        ? areaKeyFromOrgGerencia(modo, timeId, labelRaw)
+        : areaKeyFromOrgTime(modo, timeId, labelRaw);
+    abasBrutas.push({
+      areaKey,
+      timeId,
+      label: labelRaw,
+      tipo: areaKey === "academy" ? "time" : tipo,
+    });
+  }
+
+  // Unifica Performance Coach + Treinamento numa única aba Academy.
+  const porChave = new Map<string, AbaEscalaTime>();
+  for (const aba of abasBrutas) {
+    const prev = porChave.get(aba.areaKey);
+    if (!prev) {
+      porChave.set(aba.areaKey, aba);
+      continue;
+    }
+    if (aba.areaKey !== "academy") continue;
+    const prevEhPc = normalizarNomeTimeRh(prev.label).includes("performance coach");
+    const novoEhPc = normalizarNomeTimeRh(aba.label).includes("performance coach");
+    if (novoEhPc && !prevEhPc) {
+      porChave.set(aba.areaKey, aba);
+    }
+  }
+
+  const abas = [...porChave.values()].map((a) =>
+    a.areaKey === "academy" ? { ...a, label: "Academy", tipo: "time" as const } : a,
+  );
 
   if (modo === "estudio") {
     abas.sort((a, b) => {
@@ -405,10 +457,6 @@ export function buildAbasEscalaFromTimes(
   return abas;
 }
 
-export function normalizarNomeTimeRh(s: string | null | undefined): string {
-  return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
 export function nomeTimePassaNaArea(nomeTimeRaw: string | null | undefined, area: AreaEscalaKey): boolean {
   if (!isAreaEscalaLegada(area)) return false;
   const nt = normalizarNomeTimeRh(nomeTimeRaw);
@@ -424,6 +472,8 @@ export function nomeTimePassaNaArea(nomeTimeRaw: string | null | undefined, area
       return nt.includes("service manager");
     case "customer_service":
       return nt.includes("customer service");
+    case "academy":
+      return nomeOrganogramaEhGrupoAcademy(nomeTimeRaw);
     default:
       return false;
   }
@@ -438,6 +488,7 @@ export function labelAreaEscala(area: AreaEscalaKey, abas?: AbaEscalaTime[]): st
     shuffler: "Shuffler",
     service_manager: "Service Manager",
     customer_service: "Customer Service",
+    academy: "Academy",
   };
   if (isAreaEscalaLegada(area)) return m[area];
   return area;
