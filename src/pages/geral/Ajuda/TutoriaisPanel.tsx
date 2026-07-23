@@ -8,7 +8,7 @@ import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 import { buildTutoriaisNav } from "./tutoriais/catalog";
 import type { TutorialDef } from "./tutoriais/types";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, TriangleAlert } from "lucide-react";
 
 type Props = {
   t: Theme;
@@ -270,32 +270,16 @@ export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
 
             <div
               style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
                 marginBottom: 24,
-                fontSize: 13,
+                fontSize: 14,
                 lineHeight: 1.65,
                 color: t.textMuted,
                 fontFamily: FONT.body,
               }}
             >
               <p style={{ margin: 0 }}>
-                <strong style={{ color: t.text }}>Público:</strong> {tutorial.publico}
-              </p>
-              <p style={{ margin: 0 }}>
                 <strong style={{ color: t.text }}>Objetivo:</strong> {tutorial.objetivo}
               </p>
-              {tutorial.preRequisitos ? (
-                <p style={{ margin: 0 }}>
-                  <strong style={{ color: t.text }}>Pré-requisitos:</strong> {tutorial.preRequisitos}
-                </p>
-              ) : null}
-              {tutorial.tempoEstimado ? (
-                <p style={{ margin: 0 }}>
-                  <strong style={{ color: t.text }}>Tempo estimado:</strong> {tutorial.tempoEstimado}
-                </p>
-              ) : null}
             </div>
 
             {tutorial.relatedPageKey ? (
@@ -307,19 +291,18 @@ export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
             <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
               {tutorial.passos.map((passo, i) => (
                 <div key={passo.titulo}>
-                  <p
+                  <h3
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      color: brand.accent,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      margin: "0 0 8px",
+                      fontSize: 18,
+                      fontWeight: 800,
+                      fontFamily: FONT_TITLE,
+                      color: t.text,
+                      letterSpacing: "0.02em",
+                      margin: "0 0 10px",
                     }}
                   >
                     {passo.titulo}
-                  </p>
+                  </h3>
                   <p
                     style={{
                       fontSize: 14,
@@ -332,6 +315,46 @@ export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
                   >
                     {passo.texto}
                   </p>
+                  {passo.aviso ? (
+                    <div
+                      role="note"
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "flex-start",
+                        marginTop: 14,
+                        padding: "12px 14px",
+                        borderRadius: 8,
+                        borderLeft: "4px solid #f59e0b",
+                        background: t.isDark
+                          ? "color-mix(in srgb, #f59e0b 14%, transparent)"
+                          : "color-mix(in srgb, #f59e0b 12%, #fffbeb)",
+                        color: t.text,
+                        fontFamily: FONT.body,
+                        fontSize: 13,
+                        lineHeight: 1.55,
+                      }}
+                    >
+                      <TriangleAlert
+                        size={18}
+                        color="#f59e0b"
+                        aria-hidden
+                        style={{ flexShrink: 0, marginTop: 1 }}
+                      />
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: 4,
+                            color: t.isDark ? "#fbbf24" : "#b45309",
+                          }}
+                        >
+                          Observação
+                        </div>
+                        <div>{passo.aviso}</div>
+                      </div>
+                    </div>
+                  ) : null}
                   {passo.imagens?.length ? (
                     <div
                       style={{
@@ -342,29 +365,18 @@ export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
                       }}
                     >
                       {passo.imagens.map((img) => (
-                        <figure key={img.src} style={{ margin: 0 }}>
-                          <img
-                            src={img.src}
-                            alt={img.alt}
-                            style={{
-                              display: "block",
-                              width: "100%",
-                              maxWidth: 720,
-                              borderRadius: 12,
-                              border: `1px solid ${t.cardBorder}`,
-                            }}
-                          />
-                          <figcaption
-                            style={{
-                              marginTop: 6,
-                              fontSize: 12,
-                              color: t.textMuted,
-                              fontFamily: FONT.body,
-                            }}
-                          >
-                            {img.alt}
-                          </figcaption>
-                        </figure>
+                        <img
+                          key={img.src}
+                          src={img.src}
+                          alt={img.alt}
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            maxWidth: 720,
+                            borderRadius: 12,
+                            border: `1px solid ${t.cardBorder}`,
+                          }}
+                        />
                       ))}
                     </div>
                   ) : null}
@@ -383,19 +395,18 @@ export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
 
             {tutorial.notasFinais ? (
               <div style={{ marginTop: 8 }}>
-                <p
+                <h3
                   style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    fontFamily: FONT.body,
-                    color: brand.accent,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    margin: "0 0 8px",
+                    fontSize: 18,
+                    fontWeight: 800,
+                    fontFamily: FONT_TITLE,
+                    color: t.text,
+                    letterSpacing: "0.02em",
+                    margin: "0 0 10px",
                   }}
                 >
                   Observações finais
-                </p>
+                </h3>
                 <p
                   style={{
                     fontSize: 14,

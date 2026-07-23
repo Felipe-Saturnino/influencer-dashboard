@@ -10,17 +10,12 @@ export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
   section: "Escala",
   icon: CalendarClock,
   relatedPageKey: "rh_calendario",
-  publico:
-    "Colaborador com permissão de Ver = Próprios no Calendário, que vê apenas o próprio calendário (sem filtros Time/Staff de equipe).",
-  objetivo: "Registrar ponto (Check-in / Check-out) e justificar faltas ou pendências.",
-  preRequisitos:
-    "Rede Spin (IP permitido), vínculo ativo no RH e permissão de Editar no Calendário para o botão Justificar.",
-  tempoEstimado: "~10 minutos",
+  objetivo: "Realizar o Check-in / Check-out e justificar faltas ou pendências.",
   passos: [
     {
       titulo: "1. Abrir o Calendário",
       texto:
-        "1. No menu, seção Escala, clique em Calendário.\n2. A aba padrão é Compromissos: grade do mês com turnos publicados (ex.: Noite 18h–06h).\n3. Quem tem só visão própria não vê filtros de Time/Staff nem «Meu Controle».",
+        "1. No menu, seção Escala, clique em Calendário.\n2. A aba padrão é Compromissos: grade do mês com turnos publicados (ex.: Noite 18h–06h).",
       imagens: [{ src: `${IMG}/01-calendario-compromissos.png`, alt: "Aba Compromissos do próprio mês" }],
     },
     {
@@ -32,11 +27,11 @@ export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
     {
       titulo: "3. Check-in",
       texto:
-        "1. Com o mês atual selecionado, use o botão Fazer Check-in (canto direito da barra).\n2. Confirme o modal Check-in Realizado (horário e mensagem «Turno iniciado, bom turno.»).\n3. Clique em Fechar.\n4. Após o check-in: o botão passa a Fazer Check-out; na linha do turno, o status fica Em aberto e a Entrada realizada é preenchida.\n\nObservações:\n— O ponto não depende de estar Escalado no dia (coberturas / plantão); a Situação pode continuar Folga.\n— Se aparecer aviso de rede, conecte-se à rede Spin e tente de novo.",
+        "1. Com o mês atual selecionado, use o botão Fazer Check-in (canto direito da barra).\n2. Confirme o modal Check-in Realizado (horário e mensagem «Turno iniciado, bom turno.»).\n3. Clique em Fechar.\n4. Após o check-in: o botão passa a Fazer Check-out; na linha do turno, o status fica Em aberto e a Entrada realizada é preenchida.",
+      aviso: "Se aparecer aviso de rede, conecte-se à rede Spin e tente de novo.",
       imagens: [
         { src: `${IMG}/03-cta-check-in.png`, alt: "Botão Fazer Check-in" },
         { src: `${IMG}/04-modal-check-in-realizado.png`, alt: "Modal Check-in Realizado" },
-        { src: `${IMG}/05-apos-check-in-tabela.png`, alt: "Tabela com turno Em aberto" },
       ],
     },
     {
@@ -58,5 +53,5 @@ export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
     },
   ],
   notasFinais:
-    "O que este perfil normalmente não faz:\n— Aprovar presença da equipe ou Aprovar Presença do mês → papel do líder.\n— Analisar correção no tooltip do líder → papel do líder.\n\nEm alguns dias Registrado pode aparecer ícone de Aprovação de Turno no próprio calendário; o fluxo de aprovação de equipe é outro tutorial (líder).",
+    "— Realize a aprovação ou justificativa dos dias até o último dia do mês, pois as datas serão consideradas no cálculo do pagamento de horas trabalhadas.\n— Após justificar ou realizar a correção do dia, o líder imediato terá de aprovar para confirmar que aquele foi o horário realizado.",
 };

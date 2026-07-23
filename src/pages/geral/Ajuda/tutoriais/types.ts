@@ -6,6 +6,8 @@ export type TutorialPasso = {
   titulo: string;
   /** Parágrafos / listas em texto simples (quebras com \n). */
   texto: string;
+  /** Aviso estilo Confluence (caixa amarela) abaixo do texto. */
+  aviso?: string;
   imagens?: { src: string; alt: string }[];
 };
 
@@ -18,12 +20,10 @@ export type TutorialDef = {
   icon: LucideIcon;
   /** Se definido, o tutorial só aparece com Ver sim|próprios nesta página. */
   relatedPageKey?: PageKey;
-  publico: string;
+  /** Uma linha sob o título do tutorial. */
   objetivo: string;
-  preRequisitos?: string;
-  tempoEstimado?: string;
   passos: TutorialPasso[];
-  /** Notas finais / o que este perfil não faz */
+  /** Notas finais */
   notasFinais?: string;
 };
 
