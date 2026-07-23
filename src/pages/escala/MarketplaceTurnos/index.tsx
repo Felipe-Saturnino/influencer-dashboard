@@ -202,7 +202,7 @@ export default function EscalaMarketplaceTurnosPage() {
     return () => {
       cancelled = true;
     };
-  }, [historico, mesSelecionado?.ano, mesSelecionado?.mes]);
+  }, [historico, mesSelecionado]);
 
   const linhasMes = useMemo(() => {
     if (historico) {

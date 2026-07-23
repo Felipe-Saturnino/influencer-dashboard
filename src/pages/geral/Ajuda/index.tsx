@@ -7,7 +7,7 @@ import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { buildMenuAjudaVisivel } from "../../../lib/ajudaVisibilidade";
 import { AbaGlossario } from "./GlossarioPanel";
 import type { PageKey } from "../../../types";
-import { HelpCircle, BookOpen, LifeBuoy, BookMarked } from "lucide-react";
+import { HelpCircle, BookOpen, LifeBuoy, BookMarked, GraduationCap } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
@@ -19,33 +19,36 @@ import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
 import { CONTEUDO_CONHECA } from "./conteudo/conheca";
 import { CONTEUDO_TROUBLE, TROUBLESHOOTING_TRANSVERSAL } from "./conteudo/troubleshooting";
+import { TutoriaisPanel } from "./TutoriaisPanel";
 
-type Aba = "conheca" | "troubleshooting" | "glossario";
+type Aba = "conheca" | "troubleshooting" | "glossario" | "tutoriais";
 
 // ─── Conteúdo: Conheça a Plataforma ──────────────────────────────────────────
 // Handoffs de seção (ex.: Dashboards, Lives): fundir aqui texto legado útil + itens novos do handoff,
 // estendendo subtítulos existentes — evitar blocos duplicados; não descartar o handoff só porque Ajuda é antiga.
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-const ABAS: Aba[] = ["conheca", "troubleshooting", "glossario"];
+const ABAS: Aba[] = ["conheca", "troubleshooting", "glossario", "tutoriais"];
 
 const LABELS_ABA: Record<Aba, string> = {
   conheca: "Conheça a Plataforma",
   troubleshooting: "Troubleshooting",
   glossario: "Glossário",
+  tutoriais: "Tutoriais",
 };
 
 const AJUDA_TAB_ICONS: Record<Aba, ReactNode> = {
   conheca: <BookOpen {...FILTRO_BAR_TAB_ICON_PROPS} />,
   troubleshooting: <LifeBuoy {...FILTRO_BAR_TAB_ICON_PROPS} />,
   glossario: <BookMarked {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  tutoriais: <GraduationCap {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
 
 export default function Ajuda() {
   const { theme: t, isDark, permissions } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
-  const [aba, setAba] = useRouteTab("ajuda", "conheca", ["conheca", "troubleshooting", "glossario"] as const);
+  const [aba, setAba] = useRouteTab("ajuda", "conheca", ["conheca", "troubleshooting", "glossario", "tutoriais"] as const);
   const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
   const [buscaPagina, setBuscaPagina] = useState("");
 
@@ -205,6 +208,14 @@ export default function Ajuda() {
           >
             <AbaGlossario dark={isDark} t={t} permissions={permissions} />
           </div>
+        </div>
+      ) : aba === "tutoriais" ? (
+        <div
+          role="tabpanel"
+          id="panel-ajuda-tutoriais"
+          aria-labelledby="tab-ajuda-tutoriais"
+        >
+          <TutoriaisPanel t={t} permissions={permissions} cardShadow={cardShadow} />
         </div>
       ) : menuAjudaVisivel.length === 0 ? (
         <div

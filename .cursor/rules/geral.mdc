@@ -34,7 +34,16 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 
 ## Ajuda e glossário
 
-**Ficheiros:** `geral/Ajuda/index.tsx`, `geral/Ajuda/glossarioData.ts`, painéis por `pageKey`.
+**Ficheiros:** `geral/Ajuda/index.tsx`, `geral/Ajuda/glossarioData.ts`, `geral/Ajuda/TutoriaisPanel.tsx`, `geral/Ajuda/tutoriais/`, painéis por `pageKey`.
+
+**Abas:** Conheça a Plataforma · Troubleshooting · Glossário · **Tutoriais**.
+
+### Tutoriais
+
+- Catálogo em `tutoriais/catalog.ts` + um ficheiro por tutorial (ex.: `controlePresenca.ts`).
+- UI: menu lateral **por secção do menu** (ex.: Escala → Controle de Presença); busca no painel; conteúdo com passos + imagens em `public/tutoriais/`.
+- Visibilidade: se o tutorial tiver `relatedPageKey`, só aparece com permissão de Ver **sim** ou **próprios** nessa página (igual à lógica do glossário por página).
+- Ao gravar novo tutorial: adicionar ao catálogo, imagens em `public/tutoriais/<secao>/<id>/`, entrada no MDC se houver regra nova.
 
 **Regra (também no Global):** qualquer alteração de produto em **qualquer secção** deve revisar se Ajuda/glossário precisa de entrada nova, atualização ou remoção.
 

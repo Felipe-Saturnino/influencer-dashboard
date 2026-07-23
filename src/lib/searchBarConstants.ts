@@ -15,6 +15,7 @@ export const FILTER_SEARCH_STAFF = placeholderPesquisaFiltro("Staff");
 
 /** Barra de pesquisa na página (lista / strip de filtros). */
 export const PAGE_SEARCH = {
+  nome: `Buscar por nome${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   nomeEmail: `Buscar por nome ou e-mail${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   nomeNickname: `Buscar por nome ou nickname${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   nomeCpfEmail: `Buscar por Nome, CPF ou e-mail${SEARCH_PLACEHOLDER_ELLIPSIS}`,

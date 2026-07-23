@@ -151,7 +151,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   /** Filtro da Escala Diária por turno (clique no Consolidado). */
   const [filtroTurnoConsolidado, setFiltroTurnoConsolidado] = useState<FiltroTurnoConsolidadoRh | null>(null);
   const [sortEscalaDiaria, setSortEscalaDiaria] = useState<{ col: EscalaDiariaSortCol; dir: SortDir }>({
-    col: "turno",
+    col: modo === "escritorio" ? "nome" : "turno",
     dir: "asc",
   });
   /** Página da grade Escala Diária (só a vista — save/sugestão usam todas as linhas). */
@@ -164,9 +164,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   useEffect(() => {
     setFiltroNicknameEscala("");
     setFiltroTurnoConsolidado(null);
-    setSortEscalaDiaria({ col: "turno", dir: "asc" });
+    setSortEscalaDiaria({ col: modo === "escritorio" ? "nome" : "turno", dir: "asc" });
     setPaginaEscalaDiaria(0);
-  }, [filtroArea]);
+  }, [filtroArea, modo]);
 
   useEffect(() => {
     setFiltroTurnoConsolidado(null);
@@ -1104,9 +1104,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     },
     [filtroArea, prestadoresRaw, dias, ano, mes, turnoMesMap, modo],
   );
-  /** Oculta coluna Nome na Escala Diária (Service Manager / Shift Leader). */
+  /** Oculta coluna Nome na Escala Diária (Service Manager / Shift Leader) — só Estúdio. */
   const semColunaNome =
-    filtroArea === "service_manager" || filtroArea === "shift_leader";
+    modo !== "escritorio" && (filtroArea === "service_manager" || filtroArea === "shift_leader");
+  /** Escala Escritório: só Nome + dias (sem Nickname / Turno). */
+  const semColunasNickTurno = modo === "escritorio";
+  const colunasFixasEscalaDiaria = (semColunaNome ? 0 : 1) + (semColunasNickTurno ? 0 : 2);
 
   if (perm.loading) {
     return (
@@ -1758,8 +1761,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   <BarraPesquisaPagina
                     value={filtroNicknameEscala}
                     onChange={setFiltroNicknameEscala}
-                    placeholder={PAGE_SEARCH.nomeNickname}
-                    aria-label="Filtrar tabela de escala por nome ou nickname"
+                    placeholder={semColunasNickTurno ? PAGE_SEARCH.nome : PAGE_SEARCH.nomeNickname}
+                    aria-label={
+                      semColunasNickTurno
+                        ? "Filtrar tabela de escala por nome"
+                        : "Filtrar tabela de escala por nome ou nickname"
+                    }
                     wrapperStyle={{ flex: 1, minWidth: 0, width: "100%" }}
                   />
                 </div>
@@ -1770,8 +1777,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 width: "100%",
                 minWidth:
                   (semColunaNome ? 0 : STICKY_W_NOME) +
-                  STICKY_W_NICK +
-                  STICKY_W_TURNO_STAFF +
+                  (semColunasNickTurno ? 0 : STICKY_W_NICK + STICKY_W_TURNO_STAFF) +
                   dias.length * 80,
                 borderCollapse: "separate",
                 borderSpacing: 0,
@@ -1780,9 +1786,11 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             >
               <caption style={{ display: "none" }}>
                 Escala Diária - Definição de status diário por Prestador.{" "}
-                {semColunaNome
-                  ? "Grade por nickname, turno e dia do mês (coluna Nome oculta nesta área)."
-                  : "Grade mensal por colaborador e dia do mês."}
+                {semColunasNickTurno
+                  ? "Grade mensal por colaborador e dia do mês (sem nickname e turno)."
+                  : semColunaNome
+                    ? "Grade por nickname, turno e dia do mês (coluna Nome oculta nesta área)."
+                    : "Grade mensal por colaborador e dia do mês."}
               </caption>
               <thead>
                 <tr>
@@ -1799,42 +1807,52 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                         width: STICKY_W_NOME,
                         verticalAlign: "middle",
                         zIndex: Z_STICKY_HEAD_NOME,
+                        ...(semColunasNickTurno
+                          ? {
+                              borderRight: `1px solid ${t.cardBorder}`,
+                              boxShadow: sombraColFixa,
+                            }
+                          : {}),
                       })}
                     />
                   ) : null}
-                  <SortTableTh<EscalaDiariaSortCol>
-                    label="Nickname"
-                    col="nickname"
-                    sortCol={sortEscalaDiaria.col}
-                    sortDir={sortEscalaDiaria.dir}
-                    onSort={onSortEscalaDiaria}
-                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
-                      minWidth: STICKY_W_NICK,
-                      maxWidth: STICKY_W_NICK,
-                      width: STICKY_W_NICK,
-                      verticalAlign: "middle",
-                      zIndex: semColunaNome ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_NICK,
-                    })}
-                    align="center"
-                  />
-                  <SortTableTh<EscalaDiariaSortCol>
-                    label="Turno"
-                    col="turno"
-                    sortCol={sortEscalaDiaria.col}
-                    sortDir={sortEscalaDiaria.dir}
-                    onSort={onSortEscalaDiaria}
-                    title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
-                    thStyle={thSticky(semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
-                      minWidth: STICKY_W_TURNO_STAFF,
-                      maxWidth: STICKY_W_TURNO_STAFF,
-                      width: STICKY_W_TURNO_STAFF,
-                      verticalAlign: "middle",
-                      borderRight: `1px solid ${t.cardBorder}`,
-                      boxShadow: sombraColFixa,
-                      zIndex: semColunaNome ? Z_STICKY_HEAD_NICK : Z_STICKY_HEAD_TURNO,
-                    })}
-                    align="center"
-                  />
+                  {!semColunasNickTurno ? (
+                    <>
+                      <SortTableTh<EscalaDiariaSortCol>
+                        label="Nickname"
+                        col="nickname"
+                        sortCol={sortEscalaDiaria.col}
+                        sortDir={sortEscalaDiaria.dir}
+                        onSort={onSortEscalaDiaria}
+                        thStyle={thSticky(semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
+                          minWidth: STICKY_W_NICK,
+                          maxWidth: STICKY_W_NICK,
+                          width: STICKY_W_NICK,
+                          verticalAlign: "middle",
+                          zIndex: semColunaNome ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_NICK,
+                        })}
+                        align="center"
+                      />
+                      <SortTableTh<EscalaDiariaSortCol>
+                        label="Turno"
+                        col="turno"
+                        sortCol={sortEscalaDiaria.col}
+                        sortDir={sortEscalaDiaria.dir}
+                        onSort={onSortEscalaDiaria}
+                        title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
+                        thStyle={thSticky(semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
+                          minWidth: STICKY_W_TURNO_STAFF,
+                          maxWidth: STICKY_W_TURNO_STAFF,
+                          width: STICKY_W_TURNO_STAFF,
+                          verticalAlign: "middle",
+                          borderRight: `1px solid ${t.cardBorder}`,
+                          boxShadow: sombraColFixa,
+                          zIndex: semColunaNome ? Z_STICKY_HEAD_NICK : Z_STICKY_HEAD_TURNO,
+                        })}
+                        align="center"
+                      />
+                    </>
+                  ) : null}
                   {dias.map((dia) => (
                     <th
                       key={dia.iso}
@@ -1852,7 +1870,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 {linhas.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={(semColunaNome ? 2 : 3) + dias.length}
+                      colSpan={colunasFixasEscalaDiaria + dias.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -1866,7 +1884,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 ) : linhasFiltradasEscalaDiaria.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={(semColunaNome ? 2 : 3) + dias.length}
+                      colSpan={colunasFixasEscalaDiaria + dias.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -1877,7 +1895,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                       }}
                     >
                       {linhasAposNickname.length === 0 && filtroNicknameEscala.trim()
-                        ? "Nenhum colaborador corresponde à pesquisa por nome ou nickname."
+                        ? semColunasNickTurno
+                          ? "Nenhum colaborador corresponde à pesquisa por nome."
+                          : "Nenhum colaborador corresponde à pesquisa por nome ou nickname."
                         : filtroTurnoConsolidado != null && linhasAposNickname.length > 0
                           ? "Nenhum colaborador com o turno selecionado."
                           : "Nenhum colaborador corresponde aos filtros aplicados."}
@@ -1896,46 +1916,56 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                               minWidth: STICKY_W_NOME,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
+                              ...(semColunasNickTurno
+                                ? {
+                                    borderRight: `1px solid ${t.cardBorder}`,
+                                    boxShadow: sombraColFixa,
+                                  }
+                                : {}),
                             })}
                             title={row.nomeCompletoCadastro}
                           >
                             {row.nome}
                           </td>
                         ) : null}
-                        <td
-                          style={tdSticky(
-                            semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK,
-                            bg,
-                            semColunaNome ? Z_BODY_NOME : Z_BODY_NICK,
-                            {
-                              minWidth: STICKY_W_NICK,
-                              width: STICKY_W_NICK,
-                              maxWidth: STICKY_W_NICK,
-                            },
-                          )}
-                          title={semColunaNome ? row.nomeCompletoCadastro : undefined}
-                        >
-                          {row.nickname}
-                        </td>
-                        <td
-                          style={tdSticky(
-                            semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF,
-                            bg,
-                            semColunaNome ? Z_BODY_NICK : Z_BODY_TURNO_STAFF,
-                            {
-                              minWidth: STICKY_W_TURNO_STAFF,
-                              width: STICKY_W_TURNO_STAFF,
-                              maxWidth: STICKY_W_TURNO_STAFF,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              borderRight: `1px solid ${t.cardBorder}`,
-                              boxShadow: sombraColFixa,
-                            },
-                          )}
-                          title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
-                        >
-                          {row.turnoStaffNome || "—"}
-                        </td>
+                        {!semColunasNickTurno ? (
+                          <>
+                            <td
+                              style={tdSticky(
+                                semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK,
+                                bg,
+                                semColunaNome ? Z_BODY_NOME : Z_BODY_NICK,
+                                {
+                                  minWidth: STICKY_W_NICK,
+                                  width: STICKY_W_NICK,
+                                  maxWidth: STICKY_W_NICK,
+                                },
+                              )}
+                              title={semColunaNome ? row.nomeCompletoCadastro : undefined}
+                            >
+                              {row.nickname}
+                            </td>
+                            <td
+                              style={tdSticky(
+                                semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF,
+                                bg,
+                                semColunaNome ? Z_BODY_NICK : Z_BODY_TURNO_STAFF,
+                                {
+                                  minWidth: STICKY_W_TURNO_STAFF,
+                                  width: STICKY_W_TURNO_STAFF,
+                                  maxWidth: STICKY_W_TURNO_STAFF,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  borderRight: `1px solid ${t.cardBorder}`,
+                                  boxShadow: sombraColFixa,
+                                },
+                              )}
+                              title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
+                            >
+                              {row.turnoStaffNome || "—"}
+                            </td>
+                          </>
+                        ) : null}
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
                           const bruto = celulasGerarAtivas?.[ck] ?? "";

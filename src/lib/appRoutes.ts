@@ -297,6 +297,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "conheca", slug: "ConhecaAPlataforma", label: "Conheça a Plataforma", access: "always" },
     { tabId: "troubleshooting", slug: "Troubleshooting", label: "Troubleshooting", access: "always" },
     { tabId: "glossario", slug: "Glossario", label: "Glossário", access: "always" },
+    { tabId: "tutoriais", slug: "Tutoriais", label: "Tutoriais", access: "always" },
   ]),
 ];
 
