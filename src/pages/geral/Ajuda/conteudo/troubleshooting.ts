@@ -1289,12 +1289,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   rh_gestao_escala: {
-    titulo: "Gestão de Escala",
+    titulo: "Escala Estúdio",
     blocos: [
       {
-        subtitulo: "Não vejo Gestão de Escala no menu?",
+        subtitulo: "Não vejo Escala Estúdio no menu?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários e, se o seu perfil usar escopo, liberação da página nas abas Operadora ou Prestadores. Gestores de departamento usam só a matriz de Permissões.",
+          "Confirme permissão de **Ver** em Gestão de Usuários e, se o seu perfil usar escopo, liberação da página nas abas Operadora ou Prestadores. Gestores de departamento usam só a matriz de Permissões. O item aparece na seção **Escala** do menu.",
       },
       {
         subtitulo: "Não consigo salvar ou aprovar a escala?",
@@ -1305,6 +1305,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",
         texto:
           "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um dia pontual no mês já aprovado, use **Alterar Escala** (escolhe o turno do dia + observação).",
+      },
+    ],
+  },
+  escala_escritorio: {
+    titulo: "Escala Escritório",
+    blocos: [
+      {
+        subtitulo: "Não vejo Escala Escritório no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Escala Escritório**. A página nasce bloqueada para todos os perfis exceto Administrador e aparece na seção **RH**. Após liberar, faça logout e login (ou atualize a sessão).",
+      },
+      {
+        subtitulo: "Não consigo salvar ou aprovar a escala de escritório?",
+        texto:
+          "Salvar e aprovar exigem permissão de **Criar** na linha **Escala Escritório** (distinta da Escala Estúdio). Confirme também se o time selecionado tem prestadores com área de atuação **Escritório**.",
+      },
+      {
+        subtitulo: "A Situação no Calendário não acompanha a Escala Escritório?",
+        texto:
+          "Só a grade **aprovada** alimenta o Calendário. Use **Salvar Alterações** e **Aprovar Escala**. Enquanto não houver aprovação, o Calendário usa a escala comercial automática (úteis 09:00–18:00).",
       },
     ],
   },
@@ -1324,12 +1344,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Turnos não aparecem no calendário?",
         texto:
-          "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da Escala Diária **aprovada** em Gestão de Escala. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, verifique se a área de atuação está cadastrada corretamente; a escala de segunda a sexta-feira é gerada automaticamente.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
+          "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da Escala Diária **aprovada** em **Escala Estúdio**. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, se existir **Escala Escritório** aprovada, essa grade prevalece; caso contrário, verifique se a área de atuação está cadastrada corretamente e use a escala automática de segunda a sexta-feira.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
       },
       {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
         texto:
-          "Para **Escritório** e **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** podia ser um limite técnico na carga da grade — atualize, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
+          "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** em Escala Estúdio podia ser um limite técnico na carga da grade — atualize, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
       },
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
@@ -1364,7 +1384,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo publicar oferta de turno?",
         texto:
-          "Publicar oferta exige permissão de **Criar** no Marketplace. Verifique também se o turno de origem pertence ao seu escopo (time/staff).",
+          "Publicar oferta exige permissão de **Criar** no Marketplace. Verifique também se o turno de origem pertence ao seu escopo (time/staff) e se o seu cadastro está como área **Estúdio**.",
+      },
+      {
+        subtitulo: "Não consigo aceitar uma oferta?",
+        texto:
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma. Confirme se a Escala Estúdio do mês/área está **aprovada** e se a oferta ainda está aberta. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },
@@ -1409,7 +1434,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Pool vazio ou sem escala aprovada?",
         texto:
-          "A rotação usa Game Presenters com célula **Escalado** (Manhã/Tarde/Noite) na Gestão de Escala **aprovada** do dia, escala **4×2** e estúdio correto em Gestão de Staff. O pool segue o **valor da célula do dia**, não o turno vivo do cadastro — se alguém mudou de turno na Staff após a aprovação, use **Alterar Escala** no dia ou reaprouve a grade. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio.",
+          "A rotação usa Game Presenters com célula **Escalado** (Manhã/Tarde/Noite) na **Escala Estúdio** **aprovada** do dia, escala **4×2** e estúdio correto em Gestão de Staff. O pool segue o **valor da célula do dia**, não o turno vivo do cadastro — se alguém mudou de turno na Staff após a aprovação, use **Alterar Escala** no dia ou reaprouve a grade. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio.",
       },
       {
         subtitulo: "Não consigo publicar a rotação?",

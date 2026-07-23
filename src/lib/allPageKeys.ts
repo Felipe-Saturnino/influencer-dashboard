@@ -14,7 +14,7 @@ export const ALL_PAGE_KEYS: PageKey[] = [
   "gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa",
   "academy_performance_hub", "academy_portal",
   "rh_staff", "escala_relatorio_turno", "escala_solicitacoes", "rh_gestao_escala", "escala_rotacao", "rh_calendario", "escala_marketplace_turnos",
-  "rh_funcionarios", "rh_dados_cadastro", "rh_organograma", "rh_vagas", "rh_solicitacoes", "rh_central_denuncias",
+  "rh_funcionarios", "rh_dados_cadastro", "rh_organograma", "escala_escritorio", "rh_vagas", "rh_solicitacoes", "rh_central_denuncias",
   "playbook_influencers", "links_materiais", "spin_na_rede", "rh_portal", "informativos",
   "tech_ops_estoque", "tech_ops_ordem_saida",
   "gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico",

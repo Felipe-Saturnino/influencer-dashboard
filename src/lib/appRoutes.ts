@@ -59,6 +59,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Overview Afiliado", "dash_overview_afiliado", "OverviewAfiliado"),
   page("Headcount", "dash_headcount", "Headcount", [
     { tabId: "overview", slug: "Overview", label: "Overview", access: "always" },
+    { tabId: "plano_carreira", slug: "PlanoDeCarreira", label: "Plano de Carreira", access: "always" },
     { tabId: "vagas", slug: "Contratacao", label: "Contratação", access: "always" },
     { tabId: "distrato", slug: "Distratos", label: "Distratos", access: "always" },
   ]),
@@ -110,7 +111,8 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Atendimento", "cs_atendimento", "Atendimento"),
   page("Gestão de Dealers", "gestao_dealers", "GestaoDeDealers"),
   page("Roteiro de Mesa", "roteiro_mesa", "RoteiroDeMesa"),
-  page("Gestão de Escala", "rh_gestao_escala", "GestaoDeEscala"),
+  page("Escala Estúdio", "rh_gestao_escala", "EscalaEstudio"),
+  page("Escala Escritório", "escala_escritorio", "EscalaEscritorio"),
   page("Gestão de Staff", "rh_staff", "GestaoDeStaff"),
   page("Central de Denúncias", "rh_central_denuncias", "CentralDeDenuncias"),
   page("Solicitações", "rh_solicitacoes", "RhSolicitacoes"),

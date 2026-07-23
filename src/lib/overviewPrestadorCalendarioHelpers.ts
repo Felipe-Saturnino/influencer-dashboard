@@ -136,7 +136,9 @@ function areaKeySinteticaHorarioComercial(
 
 /**
  * Remove linhas sintéticas/legado `escritorio` da RPC e regenera mês completo no cliente
- * para Escritório + Estúdio Comercial (5×2). Preserva Compra/Venda/Troca da grade aprovada.
+ * para Escritório + Estúdio Comercial (5×2), **exceto** quando já existir grade aprovada
+ * Escala Escritório (`eo_*`) — aí a grade real prevalece.
+ * Preserva Compra/Venda/Troca da grade aprovada no ramo sintético.
  */
 export function mesclarGradeComHorarioComercialSintetico(
   rows: RpcGradeCalendarioRow[],
@@ -148,16 +150,30 @@ export function mesclarGradeComHorarioComercialSintetico(
     if (prestadorUsaHorarioComercialSintetico(p)) sinteticoPorId.set(p.id, p);
   }
 
+  /** Prestadores com pelo menos uma célula `eo_*` (Escala Escritório aprovada). */
+  const comGradeEscritorio = new Set<string>();
+  for (const r of rows) {
+    const ak = (r.area_key ?? "").trim().toLowerCase();
+    if (ak.startsWith("eo_")) comGradeEscritorio.add(r.funcionario_id);
+  }
+
   const movimentosPorChave = new Map<string, string>();
   const baseSemSintetico: RpcGradeCalendarioRow[] = [];
   for (const r of rows) {
     const ak = (r.area_key ?? "").trim().toLowerCase();
     if (ak === "escritorio" || ak === AREA_KEY_HORARIO_COMERCIAL_SINTETICO) continue;
-    if (sinteticoPorId.has(r.funcionario_id)) {
+    if (ak.startsWith("eo_")) {
+      baseSemSintetico.push(r);
+      continue;
+    }
+    if (sinteticoPorId.has(r.funcionario_id) && !comGradeEscritorio.has(r.funcionario_id)) {
       const v = (r.valor ?? "").trim();
       if (v === "Compra" || v === "Venda" || v === "Troca") {
         movimentosPorChave.set(`${r.funcionario_id}|${diaIsoChaveGrade(r)}`, v);
       }
+      continue;
+    }
+    if (sinteticoPorId.has(r.funcionario_id) && comGradeEscritorio.has(r.funcionario_id)) {
       continue;
     }
     baseSemSintetico.push(r);
@@ -174,6 +190,7 @@ export function mesclarGradeComHorarioComercialSintetico(
     const last = new Date(y, m, 0).getDate();
     const mm = String(m).padStart(2, "0");
     for (const p of sinteticoPorId.values()) {
+      if (comGradeEscritorio.has(p.id)) continue;
       const areaKey = areaKeySinteticaHorarioComercial(p);
       for (let day = 1; day <= last; day++) {
         const iso = `${y}-${mm}-${String(day).padStart(2, "0")}`;

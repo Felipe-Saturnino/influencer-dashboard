@@ -841,10 +841,16 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     accentColor: "#f59e0b",
     termos: [
       {
-        termo: "Gestão de Escala",
+        termo: "Escala Estúdio",
         definicao:
-          "Planejamento da escala diária por área (time), colaborador e dia do mês — alocação de turnos, aprovação (com turno congelado no mês) e alteração pontual após aprovação.",
-        referencia: "Gestão de Escala",
+          "Planejamento da escala diária do estúdio por área (time), colaborador e dia do mês — alocação de turnos (Manhã/Tarde/Noite), aprovação (com turno congelado no mês) e alteração pontual após aprovação. Compartilha o motor de grade com a Escala Escritório.",
+        referencia: "Escala Estúdio",
+      },
+      {
+        termo: "Escala Escritório",
+        definicao:
+          "Grade mensal dos times de escritório (área de atuação Escritório) — células Comercial, Folga, Compra, Venda e Troca. Aprovada, espelha a Situação no Calendário e prevalece sobre a escala comercial automática. Não altera a Gestão de Prestadores.",
+        referencia: "Escala Escritório",
       },
       {
         termo: "Gestão de Staff",
@@ -855,13 +861,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Rotação",
         definicao:
-          "Grade que posiciona Game Presenters nas mesas do estúdio ao longo do turno, em intervalos de 20 ou 30 minutos. O pool vem da escala aprovada (somente GPs 4×2); as células usam o Número da Mesa, Break ou X (falta). A publicação arquiva a rotação anterior do mesmo dia, turno e estúdio.",
+          "Grade que posiciona Game Presenters nas mesas do estúdio ao longo do turno, em intervalos de 20 ou 30 minutos. O pool vem da Escala Estúdio aprovada (somente GPs 4×2); as células usam o Número da Mesa, Break ou X (falta). A publicação arquiva a rotação anterior do mesmo dia, turno e estúdio.",
         referencia: "Rotação",
       },
       {
         termo: "Calendário (RH)",
         definicao:
-          "Calendário operacional com turnos, trocas, compromissos e presença. A visibilidade pode ser global ou seguir a cascata de liderança do Organograma; prestadores de Escritório recebem escala comercial automática.",
+          "Calendário operacional com turnos, trocas, compromissos e presença. Espelha as grades **aprovadas** de Escala Estúdio e Escala Escritório; sem Escala Escritório aprovada, prestadores de Escritório (e Estúdio Comercial 5×2) recebem escala comercial automática.",
         referencia: "Calendário",
       },
       {
@@ -873,7 +879,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Marketplace",
         definicao:
-          "Área de ofertas de venda e troca de turnos entre colaboradores — publicações abertas e as do próprio usuário.",
+          "Área de ofertas de venda e troca de turnos entre colaboradores — ofertas **persistidas** na plataforma; aceite só entre prestadores do **mesmo time**, sincronizando a Escala Estúdio aprovada.",
         referencia: "Marketplace",
       },
       {
@@ -1274,6 +1280,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
     "escala_relatorio_turno",
     "escala_solicitacoes",
     "rh_gestao_escala",
+    "escala_escritorio",
     "escala_rotacao",
     "rh_calendario",
     "escala_marketplace_turnos",

@@ -84,13 +84,21 @@ export function posSugestaoAtiva(est: EscalaGerarEstadoFiltro | undefined): bool
   return Boolean(est?.posSugestao ?? est?.posSugestaoCs);
 }
 
-export function chaveStorageEscalaMes(ano: number, mes0: number): string {
-  return `rh_gestao_escala_v1_${ano}-${String(mes0 + 1).padStart(2, "0")}`;
+/** Escala Estúdio (`rh_gestao_escala`) vs Escala Escritório (`escala_escritorio`). */
+export type EscalaGradeModo = "estudio" | "escritorio";
+
+export function chaveStorageEscalaMes(ano: number, mes0: number, modo: EscalaGradeModo = "estudio"): string {
+  const suffix = modo === "escritorio" ? "escritorio_" : "";
+  return `rh_gestao_escala_v1_${suffix}${ano}-${String(mes0 + 1).padStart(2, "0")}`;
 }
 
-export function carregarEscalaMesGravada(ano: number, mes0: number): Record<string, EscalaGerarEstadoFiltro> {
+export function carregarEscalaMesGravada(
+  ano: number,
+  mes0: number,
+  modo: EscalaGradeModo = "estudio",
+): Record<string, EscalaGerarEstadoFiltro> {
   try {
-    const r = localStorage.getItem(chaveStorageEscalaMes(ano, mes0));
+    const r = localStorage.getItem(chaveStorageEscalaMes(ano, mes0, modo));
     if (!r) return {};
     const p = JSON.parse(r) as Record<string, EscalaGerarEstadoFiltro & { aprovado?: boolean }>;
     if (!p || typeof p !== "object") return {};
@@ -106,14 +114,19 @@ export function carregarEscalaMesGravada(ano: number, mes0: number): Record<stri
   }
 }
 
-export function gravarEscalaMes(ano: number, mes0: number, est: Record<string, EscalaGerarEstadoFiltro>): void {
+export function gravarEscalaMes(
+  ano: number,
+  mes0: number,
+  est: Record<string, EscalaGerarEstadoFiltro>,
+  modo: EscalaGradeModo = "estudio",
+): void {
   try {
     const stripped: Record<string, EscalaGerarEstadoFiltro> = {};
     for (const [k, v] of Object.entries(est)) {
       const { alteracoesPorCelula: _omit, ...rest } = v;
       stripped[k] = rest;
     }
-    localStorage.setItem(chaveStorageEscalaMes(ano, mes0), JSON.stringify(stripped));
+    localStorage.setItem(chaveStorageEscalaMes(ano, mes0, modo), JSON.stringify(stripped));
   } catch {
     /* quota / privado */
   }
@@ -228,16 +241,27 @@ export type RpcPrestadorEscala = {
   staff_operadora_slug?: string | null;
   /** Data da live no estúdio — ancoragem do padrão de escala (Gestão de Staff). */
   staff_live_no_estudio?: string | null;
+  area_atuacao?: string | null;
 };
 
-export type AreaEscalaKey =
+/** Chave da aba/time na grade (`service_manager`, `eo_<uuid32>`, `t_<uuid32>`, …). */
+export type AreaEscalaKey = string;
+
+export type AreaEscalaLegada =
   | "game_presenter"
   | "shift_leader"
   | "shuffler"
-  | "service_manager";
+  | "service_manager"
+  | "customer_service";
+
+export type AbaEscalaTime = {
+  areaKey: AreaEscalaKey;
+  timeId: string;
+  label: string;
+};
 
 /** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
-export type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite";
+export type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
 
 export type EscalaDiariaSortCol = "nome" | "nickname" | "turno";
 
@@ -254,13 +278,15 @@ export function linhaColaboradorNoFiltroTurnoConsolidado(
       return nome === "Tarde";
     case "noite":
       return nome === "Noite";
+    case "comercial":
+      return nome === "Comercial" || nome === TURNO_ESCALA_5x2 || !row.siglaTurnoStaff.trim();
     default:
       return true;
   }
 }
 
-/** Ordem dos botões de área abaixo do carrossel do mês. */
-export const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaKey[] = [
+/** Ordem dos botões de área abaixo do carrossel do mês (legado Estúdio). */
+export const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaLegada[] = [
   "service_manager",
   "shift_leader",
   "game_presenter",
@@ -269,11 +295,91 @@ export const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaKey[] = [
 
 export const DEFAULT_AREA_ESCALA: AreaEscalaKey = "service_manager";
 
+export function isAreaEscalaLegada(area: string): area is AreaEscalaLegada {
+  return (
+    area === "game_presenter" ||
+    area === "shift_leader" ||
+    area === "shuffler" ||
+    area === "service_manager" ||
+    area === "customer_service"
+  );
+}
+
+export function uuidFromHex32(hex: string): string | null {
+  const s = hex.replace(/-/g, "").toLowerCase();
+  if (!/^[0-9a-f]{32}$/.test(s)) return null;
+  return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
+}
+
+/** Extrai `org_time_id` de `eo_<hex32>` / `t_<hex32>`. */
+export function orgTimeIdFromAreaKey(area: AreaEscalaKey): string | null {
+  const a = (area ?? "").trim().toLowerCase();
+  if (a.startsWith("eo_") || a.startsWith("t_")) {
+    return uuidFromHex32(a.slice(a.indexOf("_") + 1));
+  }
+  return null;
+}
+
+export function areaKeyLegadoFromNomeTime(nomeTimeRaw: string | null | undefined): AreaEscalaLegada | null {
+  const nt = normalizarNomeTimeRh(nomeTimeRaw);
+  if (!nt) return null;
+  if (nt.includes("game presenter")) return "game_presenter";
+  if (nt.includes("shift leader")) return "shift_leader";
+  if (nt.includes("shuffler")) return "shuffler";
+  if (nt.includes("service manager")) return "service_manager";
+  return null;
+}
+
+/** Mapeia time do Organograma → `area_key` persistida na grade. */
+export function areaKeyFromOrgTime(modo: EscalaGradeModo, timeId: string, nomeTime: string): AreaEscalaKey {
+  const id = (timeId ?? "").trim().toLowerCase();
+  if (!id) return modo === "escritorio" ? "eo_unknown" : "t_unknown";
+  if (modo === "estudio") {
+    const legado = areaKeyLegadoFromNomeTime(nomeTime);
+    if (legado) return legado;
+    return `t_${id.replace(/-/g, "")}`;
+  }
+  return `eo_${id.replace(/-/g, "")}`;
+}
+
+export function buildAbasEscalaFromTimes(
+  modo: EscalaGradeModo,
+  times: { id: string; nome: string }[],
+): AbaEscalaTime[] {
+  const abas: AbaEscalaTime[] = times
+    .map((t) => {
+      const timeId = String(t.id ?? "").trim();
+      const label = (t.nome ?? "").trim() || "Time";
+      if (!timeId) return null;
+      return {
+        areaKey: areaKeyFromOrgTime(modo, timeId, label),
+        timeId,
+        label,
+      };
+    })
+    .filter((x): x is AbaEscalaTime => x != null);
+
+  if (modo === "estudio") {
+    abas.sort((a, b) => {
+      const ia = AREA_ESCALA_ORDEM_BOTOES.indexOf(a.areaKey as AreaEscalaLegada);
+      const ib = AREA_ESCALA_ORDEM_BOTOES.indexOf(b.areaKey as AreaEscalaLegada);
+      const ra = ia >= 0 ? ia : 1000;
+      const rb = ib >= 0 ? ib : 1000;
+      if (ra !== rb) return ra - rb;
+      return a.label.localeCompare(b.label, "pt-BR");
+    });
+  } else {
+    abas.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }
+  return abas;
+}
+
 export function normalizarNomeTimeRh(s: string | null | undefined): string {
   return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 export function nomeTimePassaNaArea(nomeTimeRaw: string | null | undefined, area: AreaEscalaKey): boolean {
+  if (!isAreaEscalaLegada(area)) return false;
   const nt = normalizarNomeTimeRh(nomeTimeRaw);
   if (!nt) return false;
   switch (area) {
@@ -285,23 +391,34 @@ export function nomeTimePassaNaArea(nomeTimeRaw: string | null | undefined, area
       return nt.includes("shuffler");
     case "service_manager":
       return nt.includes("service manager");
+    case "customer_service":
+      return nt.includes("customer service");
     default:
       return false;
   }
 }
 
-export function labelAreaEscala(area: AreaEscalaKey): string {
-  const m: Record<AreaEscalaKey, string> = {
+export function labelAreaEscala(area: AreaEscalaKey, abas?: AbaEscalaTime[]): string {
+  const fromAba = abas?.find((a) => a.areaKey === area)?.label;
+  if (fromAba) return fromAba;
+  const m: Record<AreaEscalaLegada, string> = {
     game_presenter: "Game Presenter",
     shift_leader: "Shift Leader",
     shuffler: "Shuffler",
     service_manager: "Service Manager",
+    customer_service: "Customer Service",
   };
-  return m[area];
+  if (isAreaEscalaLegada(area)) return m[area];
+  return area;
 }
 
 export function filtrarPorArea(rows: RpcPrestadorEscala[], area: AreaEscalaKey): RpcPrestadorEscala[] {
-  return rows.filter((p) => nomeTimePassaNaArea(p.nome_time, area));
+  if (isAreaEscalaLegada(area)) {
+    return rows.filter((p) => nomeTimePassaNaArea(p.nome_time, area));
+  }
+  const timeId = orgTimeIdFromAreaKey(area);
+  if (!timeId) return [];
+  return rows.filter((p) => (p.org_time_id ?? "").trim().toLowerCase() === timeId.toLowerCase());
 }
 
 /** Filtro global por estúdio da Staff (`todos` | `nenhum` | slug ativo). */
@@ -317,7 +434,7 @@ export function contarCelulasComSigla(
   linhas: LinhaColaborador[],
   dias: DiaMes[],
   celulas: Record<string, string> | undefined,
-  sigla: "MRN" | "AFT" | "NGT",
+  sigla: "MRN" | "AFT" | "NGT" | "Comercial" | "Folga",
 ): number[] {
   return dias.map((dia) =>
     linhas.reduce((acc, row) => {
@@ -346,9 +463,20 @@ function labelTurnoOperacionalCelula(work: string): string {
 /** Opções do `<select>` por tipo de turno — reutiliza o mesmo array (evita N×dias alocações). */
 export const OPCOES_SELECT_CELULA_CACHE = new Map<string, { value: string; label: string }[]>();
 
+const OPCOES_CELULA_ESCRITORIO: { value: string; label: string }[] = [
+  { value: "", label: "—" },
+  { value: "Folga", label: "Folga" },
+  { value: "Comercial", label: "Comercial" },
+  { value: "Compra", label: "Compra" },
+  { value: "Venda", label: "Venda" },
+  { value: "Troca", label: "Troca" },
+];
+
 export function opcoesSelectCelulaGerar(
   row: Pick<LinhaColaborador, "siglaTurnoStaff" | "turnoStaffNome">,
+  modo: EscalaGradeModo = "estudio",
 ): { value: string; label: string }[] {
+  if (modo === "escritorio") return OPCOES_CELULA_ESCRITORIO;
   const work = valorTurnoTrabalhoInternoParaLinha(row.siglaTurnoStaff, row.turnoStaffNome);
   const cacheKey = work || "__none__";
   const cached = OPCOES_SELECT_CELULA_CACHE.get(cacheKey);
@@ -374,8 +502,20 @@ export function opcoesSelectCelulaGerar(
  * Garante valor coerente: Folga; Compra/Venda/Troca; sigla/Comercial de trabalho da linha; vazio.
  * Aceita legado Manhã/Tarde/Noite se coincidir com a sigla permitida.
  */
-export function sanitizarValorCelulaGerar(siglaTurnoStaff: string, valorArmazenado: string, turnoStaffNome: string): string {
+export function sanitizarValorCelulaGerar(
+  siglaTurnoStaff: string,
+  valorArmazenado: string,
+  turnoStaffNome: string,
+  modo: EscalaGradeModo = "estudio",
+): string {
   const v = (valorArmazenado ?? "").trim();
+  if (modo === "escritorio") {
+    if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+    if (v === "F" || v.toLowerCase() === "folga") return "Folga";
+    if (v === "Comercial" || v.toLowerCase() === "comercial") return "Comercial";
+    if (!v) return "";
+    return "";
+  }
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   if (v === "F" || v.toLowerCase() === "folga") return "Folga";
   const work = valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff, turnoStaffNome);
@@ -398,6 +538,7 @@ export function buildCelulasSnapshotGrade(
   celulas: Record<string, string>,
   /** Grade aprovada: preserva MRN/AFT/NGT/Comercial sem amarrar ao Staff vivo. */
   celulasLivres = false,
+  modo: EscalaGradeModo = "estudio",
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const row of linhasF) {
@@ -405,8 +546,8 @@ export function buildCelulasSnapshotGrade(
       const k = chaveCelulaGerar(row.id, d.iso);
       const bruto = celulas[k] ?? "";
       out[k] = celulasLivres
-        ? sanitizarValorCelulaAlterarEscala(bruto)
-        : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome);
+        ? sanitizarValorCelulaAlterarEscala(bruto, modo)
+        : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome, modo);
     }
   }
   return out;
@@ -444,15 +585,17 @@ export function linhaComTurnoMesArea(
   return aplicarTurnoSnapshotNaLinha(base, aprovada, turnoMes[chaveTurnoMes(areaKey, r.id)], HELPERS_TURNO_SNAPSHOT);
 }
 
-/** Texto exibido na célula (grade ou somente leitura): Manhã / Tarde / Noite. */
+/** Texto exibido na célula (grade ou somente leitura): Manhã / Tarde / Noite / Comercial. */
 export function labelExibicaoCelulaEscala(
   siglaTurnoStaff: string,
   valorArmazenado: string | undefined,
   turnoStaffNome: string,
+  modo: EscalaGradeModo = "estudio",
 ): string {
-  const v = sanitizarValorCelulaGerar(siglaTurnoStaff, valorArmazenado ?? "", turnoStaffNome);
+  const v = sanitizarValorCelulaGerar(siglaTurnoStaff, valorArmazenado ?? "", turnoStaffNome, modo);
   if (!v) return "—";
   if (v === "Folga") return "Folga";
+  if (v === "Comercial") return "Comercial";
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   if (v === "MRN") return "Manhã";
   if (v === "AFT") return "Tarde";

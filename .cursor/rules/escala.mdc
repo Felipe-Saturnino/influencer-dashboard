@@ -5,6 +5,8 @@ globs:
   - src/pages/escala/**/*.ts
   - src/pages/rh/GestaoEscala/**/*.tsx
   - src/pages/rh/GestaoEscala/**/*.ts
+  - src/pages/rh/EscalaEscritorio/**/*.tsx
+  - src/pages/rh/EscalaEscritorio/**/*.ts
   - src/pages/rh/GestaoStaff/**/*.tsx
   - src/pages/rh/GestaoStaff/**/*.ts
   - src/pages/rh/Calendario/**/*.tsx
@@ -18,7 +20,7 @@ alwaysApply: false
 
 **Marca / filtros / headers:** Brand MDC. **`PageHeader`:** `title` = `menu.ts` + `subtitle` obrigatório (Brand §4). **Toolbar** de escala (Nova Escala, Salvar, Aprovar): botões com **texto** (Brand sec. 8).
 
-**Nota de repo:** pastas `rh/GestaoEscala`, `rh/GestaoStaff`, `rh/Calendario` serão renomeadas para `escala/` num refactor futuro (incl. GestaoStaff). `PageKey` pode manter prefixo `rh_`.
+**Nota de repo:** pastas `rh/GestaoEscala`, `rh/GestaoStaff`, `rh/Calendario` serão renomeadas para `escala/` num refactor futuro (incl. GestaoStaff). `PageKey` pode manter prefixo `rh_`. **Escala Escritório** vive em `rh/EscalaEscritorio/` (menu **RH**) e reutiliza o motor de `GestaoEscala` — **não** alterar **Gestão de Prestadores** por esta feature.
 
 ---
 
@@ -29,10 +31,13 @@ alwaysApply: false
 | `rh_staff` | Gestão de Staff | `rh/GestaoStaff/` |
 | `escala_relatorio_turno` | Relatório de Turno | `escala/RelatorioTurno/` |
 | `escala_solicitacoes` | Solicitações | `escala/Solicitacoes/` |
-| `rh_gestao_escala` | Gestão de Escala | `rh/GestaoEscala/` |
+| `rh_gestao_escala` | Escala Estúdio | `rh/GestaoEscala/` (`modo="estudio"`, default) |
+| `escala_escritorio` | Escala Escritório | `rh/EscalaEscritorio/` → `GestaoEscala` com `modo="escritorio"` (menu **RH**) |
 | `escala_rotacao` | Rotação | `escala/Rotacao/` |
 | `rh_calendario` | Calendário | `rh/Calendario/` |
 | `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
+
+**Motor partilhado:** `rh/GestaoEscala/` (`index.tsx` + `gestaoEscalaHelpers.ts`) — prop `modo: EscalaGradeModo` (`"estudio"` \| `"escritorio"`). PageKey, pool de times/prestadores (`rh_escala_*_por_area_atuacao`), células e storage local diferem por modo; RPCs de grade (`rh_gestao_escala_grade_*`) servem ambos (`area_key` legado / `t_*` no Estúdio; `eo_*` no Escritório).
 
 Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel via `lib/carouselNavStyles.ts`; exceção Brand: card com `blockBg` quando isolado (não strip transparente).
 
@@ -40,9 +45,9 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 ## Exceções globais nesta secção
 
-- **Grade calendário** (Gestão de Escala): tabela dia × colaborador — **sem** `SortTableTh` na grelha Consolidado; estilos mistos (`getThStyle`/`getTdStyle` + `dataTable.totalRowBgStrong` na linha Total). **Não** é o padrão canónico completo — ver Global § exceções. Cabeçalhos da **Escala Diária** com o mesmo tamanho do **Consolidado** (`CONSOLIDADO_FONT_HEADER` / `CONSOLIDADO_FONT_DIA_HEADER`); `app-table-wrap` + `getDataTableWrapStyle()`. **Escala Diária:** `SortTableTh` em **Nome** (Game Presenter e Shuffler), **Nickname** e **Turno** (sem coluna de tipo de escala cadastrada); z-index decrescente nas colunas sticky do cabeçalho para o ícone não ficar sob a coluna seguinte; ordenação inicial **`turno` asc**; coluna **Nome** fixa quando visível.
+- **Grade calendário** (Escala Estúdio / Escala Escritório): tabela dia × colaborador — **sem** `SortTableTh` na grelha Consolidado; estilos mistos (`getThStyle`/`getTdStyle` + `dataTable.totalRowBgStrong` na linha Total). **Não** é o padrão canónico completo — ver Global § exceções. Cabeçalhos da **Escala Diária** com o mesmo tamanho do **Consolidado** (`CONSOLIDADO_FONT_HEADER` / `CONSOLIDADO_FONT_DIA_HEADER`); `app-table-wrap` + `getDataTableWrapStyle()`. **Escala Diária:** `SortTableTh` em **Nome** (Game Presenter e Shuffler), **Nickname** e **Turno** (sem coluna de tipo de escala cadastrada); z-index decrescente nas colunas sticky do cabeçalho para o ícone não ficar sob a coluna seguinte; ordenação inicial **`turno` asc**; coluna **Nome** fixa quando visível.
 - **Marketplace** e **Solicitações:** listas em tabela usam padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
-- **Barra de filtros Gestão de Escala:** em refactor, migrar para `primaryTransparentBg/Border` (hoje legado com `blockBg` — ver auditoria Brand).
+- **Barra de filtros Escala Estúdio / Escala Escritório:** em refactor, migrar para `primaryTransparentBg/Border` (hoje legado com `blockBg` — ver auditoria Brand).
 - Carrossel de mês: integrar na barra de filtros quando possível; `aria-label` Mês anterior / Próximo mês.
 
 ---
@@ -74,9 +79,10 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 ---
 
-## Gestão de Escala (`rh_gestao_escala`)
+## Escala Estúdio (`rh_gestao_escala`)
 
-- **Arquivos:** `index.tsx` + `gestaoEscalaHelpers.ts` (tipos, storage local, filtros de área/estúdio, sanitização de célula, sticky/toolbar styles) + `ModalAlterarEscala` / `ModalHistoricoEscala` / `CelulaIndicadorAlteracaoEscala`.
+- **Menu:** Escala. **h1** = Escala Estúdio. **Subtítulo:** «Gere a escala por área (time), colaborador e dia do mês.»
+- **Arquivos:** `GestaoEscala/index.tsx` com `modo="estudio"` (default) + `gestaoEscalaHelpers.ts` (tipos, storage local, filtros de área/estúdio, sanitização de célula, sticky/toolbar styles) + `ModalAlterarEscala` / `ModalHistoricoEscala` / `CelulaIndicadorAlteracaoEscala`.
 - Blocos **Consolidado** e **Escala Diária** (todas as áreas): **`SectionTitle`** sem ícone + `sub` em linha (padrão Global § Blocos de página).
 - **Escala Diária — performance (Fase 8):** paginação de **linhas** na vista (40/página, `TabelaPaginacaoBar`); save/sugestão/aprovação operam sobre **todas** as linhas; opções do `<select>` cacheadas por tipo de turno (Global § Eficiência de fetch §6).
 - **Barra de filtros:** carrossel de mês + **`FiltroEstudioSelect`** (Todos Estúdios + extra «Nenhum») + chips de **área (time)** — Service Manager, Shift Leader, Game Presenter, Shuffler; filtram Consolidado e Escala Diária. **Estúdio:** travado em **Todos Estúdios** em todas as áreas exceto **Game Presenter** (`disabled` no select; filtro efetivo força `todos` fora dessa aba).
@@ -89,6 +95,25 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Modal Alterar Escala** (escala aprovada, `canEditarOk`): busca prestador → dia (≥ hoje) → status (Folga / Manhã|Tarde|Noite / Compra|Venda|Troca) → **Observação** (**obrigatória**, máx. 500, `CampoObrigatorioMark`). Permite **trocar o turno do dia** (célula `MRN`/`AFT`/`NGT` — **sem** Comercial); Calendário e Rotação leem o valor da célula. Na **Escala Diária**, células de trabalho exibem **Manhã**, **Tarde** ou **Noite** (não «Escalado»). Ao salvar, célula exibe ícone `MessageSquare` (canto superior direito, estilo comentário Excel); hover mostra autor, data/hora, valor anterior e observação (se houver). Componente `CelulaIndicadorAlteracaoEscala`; log em `rh_gestao_escala_grade_alteracao` (apagado em **Nova Escala** / `rh_gestao_escala_grade_resetar`).
 - **Histórico de ações:** ícone `History` na barra de filtros (direita, mesma linha do carrossel e Estúdio) abre `ModalHistoricoEscala` — registros do **mês do carrossel** e **área ativa**, ordem **mais novo → mais antigo**. Ações: Sugestão de Escala, Salvar Alterações, Aprovar Escala, Nova Escala (data/hora, usuário, ação); **Alterar Escala** (data/hora, usuário, prestador, dia, observação). Tabela `rh_gestao_escala_historico`; RPCs `rh_gestao_escala_historico_listar` e `rh_gestao_escala_historico_registrar` (sugestão e nova escala em rascunho no cliente); demais ações gravadas nas RPCs de grade.
 - **Handoff:** regras de sugestão, aprovação, áreas (`service_manager`, `shift_leader`, `game_presenter`, `shuffler`). **Live no Estúdio** (`staff_live_no_estudio`, Gestão de Staff): dia 0 do ciclo na **Sugestão de Escala** — dias anteriores = Folga; a partir da live aplica escala cadastrada (3×3, 4×2, 5×1, 5×2). Sem live, offset legado desde 2000-01-01.
+
+---
+
+## Escala Escritório (`escala_escritorio`)
+
+- **Menu:** RH (não Escala). **h1** = Escala Escritório. **Subtítulo:** «Gere a escala mensal dos times de escritório por colaborador e dia.»
+- **Implementação:** `rh/EscalaEscritorio/index.tsx` — thin wrapper: `<GestaoEscalaPage modo="escritorio" />`. Mesma UI/engine que Escala Estúdio; **não** duplicar grade nem toolbar.
+- **Pool:** prestadores com `area_atuacao = escritorio`; abas de time via Organograma (`rh_escala_times_por_area_atuacao` / `rh_escala_prestadores_por_area_atuacao` com `p_area_atuacao = escritorio`). `area_key` = `eo_<uuid32>` do time.
+- **Células:** Folga / **Comercial** / Compra / Venda / Troca (sem Manhã/Tarde/Noite nem filtro de estúdio).
+- **Permissões:** seed Ver/Criar/Editar = Não (exceto Admin); PageKey distinto de `rh_gestao_escala`.
+- **Calendário:** grade **aprovada** (`eo_*`) espelha Situação no Calendário e prevalece sobre a escala sintética de horário comercial; sem aprovação, Escritório continua com a regra sintética (úteis Escalado 09:00–18:00).
+- **Gestão de Prestadores:** **inalterada** — cadastro de `area_atuacao`, Organograma e dados RH **não** mudam por esta página; só a grade operacional de escritório.
+
+---
+
+## Escala Estúdio e Escala Escritório — regras comuns do motor
+
+- Storage local de rascunho separado por `modo` (`chaveStorageEscalaMes`).
+- Mesmas RPCs de grade/status/histórico/turno_mês; `_rh_escala_page_for_area` mapeia `eo_*` → `escala_escritorio` e demais → `rh_gestao_escala` para checagem de permissão.
 
 ---
 
@@ -112,8 +137,8 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Escopo do Organograma (todas as abas):** `can_view = nao` sem acesso; `can_view = sim` vê todos os funcionários ativos/indisponíveis; `can_view = proprios` vê o próprio funcionário e, quando ele for líder explícito, a união deduplicada dos ramos ativos que lidera (Diretoria → Gerências → Times → membros; Gerência → Times → membros; Time → membros). Não líder vê só o próprio. A permissão decide o escopo global — **não** hardcodar cargos de Diretor/RH. Fonte de verdade server-side: `_rh_calendario_funcionarios_escopo`; filtros usam `rh_calendario_times_visiveis` / `rh_calendario_funcionarios_visiveis`. **Filtro Time:** times ativos + **gerências sem times ativos** (cascata — a gerência entra como opção de Time com `id = gerencia_id`; staff com `org_gerencia_id` e sem `org_time_id` casa nesse filtro via `prestadorAtendeFiltroTime`). Escritas exigem Editar e funcionário dentro do escopo.
 - **Organograma vivo:** o escopo é calculado diretamente das tabelas `rh_org_*` e `rh_funcionarios` em cada RPC — sem snapshot de membros. Triggers atualizam `rh_calendario_escopo_versao`; o Calendário verifica a versão a cada 5 minutos e ao recuperar foco/visibilidade, recarregando Time, Staff e ações autorizadas quando houver alteração. Não introduzir cache persistente da árvore sem invalidação por essa versão. **Performance:** RPCs de conjunto (`rh_calendario_funcionarios_gerenciaveis`, `rh_calendario_reunioes_mes`) devem materializar o escopo **uma vez** (JOIN com `_rh_calendario_funcionarios_escopo*`) — proibido chamar `_rh_calendario_funcionario_no_escopo` / `_rh_calendario_funcionario_gerenciavel` por linha (custo quadrático).
 - **Todos os membros do Organograma:** filtros de Time e Staff usam todos os times ativos e funcionários ativos/indisponíveis autorizados, mesmo sem escala ou ponto; estes aparecem com calendário vazio. Não voltar a limitar o Calendário à lista operacional de `rh_staff_times_filtrados`.
-- **Escritório e Estúdio com Horário Comercial (5×2):** escala sintética **no cliente** (`mesclarGradeComHorarioComercialSintetico` / `valorCelulaHorarioComercialSintetico`): segunda a sexta = **Comercial / Escalado**, Entrada **09:00**, Saída **18:00**; sábado, domingo e **feriados nacionais + SP capital** (`feriadosSaoPauloCapital`) = **Folga**. Identificação: `area_atuacao = escritorio` **ou** `staff_turno` Comercial / «Horário Comercial» **ou** escala **5x2**. Compra/Venda/Troca da grade aprovada prevalecem no dia. Horários são referência visual e **não** limitam Check-in/Check-out. Pontos facultativos (Carnaval, Corpus Christi) **não** entram como feriado.
-- **Grade Estúdio operacional (Manhã/Tarde/Noite) no Calendário:** RPC `rh_calendario_grade_mes` devolve **jsonb** (células aprovadas) — **não** `RETURNS TABLE` (PostgREST ~1000 linhas truncava N×31). Escritório / horário comercial **não** dependem dessa RPC para Situação. Parser: `parseRhCalendarioGradeMesPayload` / `carregarRhCalendarioGradeMes`.
+- **Espelho das duas escalas:** RPC `rh_calendario_grade_mes` devolve células **aprovadas** de **Escala Estúdio** e **Escala Escritório** (`eo_*`) em **jsonb** — **não** `RETURNS TABLE` (PostgREST ~1000 linhas truncava N×31). Parser: `parseRhCalendarioGradeMesPayload` / `carregarRhCalendarioGradeMes`.
+- **Escritório e Estúdio com Horário Comercial (5×2):** escala sintética **no cliente** (`mesclarGradeComHorarioComercialSintetico` / `valorCelulaHorarioComercialSintetico`) **só** quando **não** houver grade aprovada de Escala Escritório (`eo_*`) para o prestador: segunda a sexta = **Comercial / Escalado**, Entrada **09:00**, Saída **18:00**; sábado, domingo e **feriados nacionais + SP capital** (`feriadosSaoPauloCapital`) = **Folga**. Identificação sintética: `area_atuacao = escritorio` **ou** `staff_turno` Comercial / «Horário Comercial» **ou** escala **5x2**. Com grade `eo_*` aprovada, as células reais prevalecem. Compra/Venda/Troca da grade aprovada prevalecem no dia no ramo sintético. Horários são referência visual e **não** limitam Check-in/Check-out. Pontos facultativos (Carnaval, Corpus Christi) **não** entram como feriado.
 - Aba **Controle de Presença:** KPIs consolidados em grelha `app-grid-kpi-4` + `getPageKpiSectionGapStyle()` — formato Financeiro (rótulo em caixa alta acima do valor; sem caixa pai): **ESCALADOS**, **TROCAS**, **VENDA**, **COMPRA** (totais por Situação no mês do carrossel). Valores derivados do mês carregado e staff selecionado (`computePresencaKpisConsolidados` + grade/ponto/gestão do mês). Bloco da tabela: **`SectionTitle`** **Controle de Presença** (sem ícone). Tabela de presença: padrão canónico (`useDataTableBlock`); **linha do dia de saída do turno** com fundo em tint verde semântico (`PRESENCA_DESTAQUE_VERDE_HEX`). Coluna **Situação** em branco (`—`) → coluna **Status** também `—` (sem **Folga**, **Pendente** nem outro rótulo derivado do ponto).
 - **Correção de presença (aba Controle de Presença):** após salvar correção no modal de aprovação, status **Em análise**; coluna **Realizado** mantém o ponto original até aprovação. Ícone **`MessageSquare`** só na coluna **Entrada** ou **Saída** cujo horário corrigido difere do realizado (`presencaCorrecaoCampoAlterado`). Tooltip com fundo amarelo (pendente), verde (aprovada) ou vermelho (recusada) — **`CelulaIndicadorCorrecaoPresencaCalendario`**. Líderes na cadeia do Organograma (time → gerência → diretoria) e **admin** podem **Aprovar** / **Rejeitar** no tooltip (`Check` / `X`). Aprovada: valores corrigidos substituem **Realizado** (só campos alterados) e status **Aprovado**; recusada: mantém ponto original. Persistência: tabela **`rh_calendario_presenca_gestao`** + RPCs **`rh_calendario_presenca_gestao_mes`** / **`rh_calendario_presenca_gestao_salvar`** (`src/lib/rhCalendarioPresencaGestaoDb.ts`).
 - **Justificativa (aba Controle de Presença):** botão **Justificar** (Falta / Pendente após limite) abre **`ModalJustificarPresencaCalendario`** — **Motivo** obrigatório: **Médico** (início/fim do atestado + anexo + observação opcional), **Esquecimento** (entrada e saída HH:MM obrigatórias com máscara fixa `HH:MM` — dois dígitos, «:», dois dígitos; ex.: digitar `0800` → `08:00`; vazias no início → fluxo **Em análise** igual correção), **Outro** (observação obrigatória). Dados em **`justificativa`** jsonb + bucket **`rh-calendario-presenca-atestados`**. Após registrar, o botão Justificar some na linha. **Médico:** status da linha **Em análise** até atendimento em **Solicitações** (RH); após **Aprovado** na solicitação com **Abono remunerado?** **SIM** → status **Abonado**; **NÃO** → **Atestado** (todos os dias Escalado do período). **Rejeitado** → status **Falta**. Ícone **`MessageSquare`** amarelo (pendente), verde (aprovado) ou vermelho (rejeitado) nas colunas **Entrada** e **Saída** — **`CelulaIndicadorJustificativaMedicoPresencaCalendario`** (tooltip somente leitura, **sem** Aprovar/Rejeitar no Calendário). Tooltip: «Justificativa - Médico», alterado por, data/hora, **Status do Atestado** espelhando a solicitação (**Abonado**, **Atestado**, **Em análise** ou **Rejeitado**). Status **Atestado** ou **Abonado:** botão **Histórico** (`ModalHistoricoPresencaCalendario`, título **Histórico**, subtítulo «Quinta, 18 de Junho», tabela Ação / Data/hora / Usuário com linhas **Justificativa** e **Aprovação** ou **Rejeição**). **Período multi-dia** (fim ≠ início): status e ícone aplicam-se a **todas** as linhas com Situação **Escalado** entre início e fim do atestado (`atestadoDiaRegistro` = dia do registro; propagação via RPC + índice client-side). Ao salvar, cria/atualiza solicitação **Atestado** (`presenca_dia_iso` = dia do registro); aprovação/rejeição em Solicitações sincroniza todas as linhas do período (incl. `abonoRemunerado` em `justificativa` jsonb).
@@ -135,6 +160,10 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Marketplace (`escala_marketplace_turnos`)
 
 - Turnos disponíveis / candidaturas.
+- **Persistência:** tabela `escala_marketplace_oferta` + RPCs `escala_marketplace_ofertas_listar` / `escala_marketplace_oferta_criar` / `escala_marketplace_oferta_aceitar` (não só estado no cliente). Aceite atualiza células em `rh_gestao_escala_grade` (Venda/Compra/Troca) na Escala Estúdio **aprovada** do mês.
+- **Cliente:** `lib/escalaMarketplace.ts` — `carregarOfertasMarketplace(refMesIso | null)` (mês = `YYYY-MM-01`; Histórico = `null` + filtro 13 competências no client); mapeia DB → `LinhaOfertaMarketplace` (status `aberta`→`aberto`, `aceita`→`aprovada`, `expirada`→`cancelada`); nomes via `rh_funcionarios` / `rh_org_times`. Exports `criarOfertaMarketplace` / `aceitarOfertaMarketplace`. Gap ≥12h: stub `MS_12H` + `gapMinimoMarketplaceOk` (TODO — referência `rhCalendarioGap8hFolga`). UI: listagem + loading; modal Ofertar / aceitar ainda stub.
+- **Mesmo time:** aceite exige ofertante e aceitante no **mesmo** `org_time_id` (`_escala_marketplace_mesmo_time`); times diferentes → erro `times_diferentes`. Oferta grava `org_time_id` do ofertante.
+- **Escopo atual:** criação limitada a prestadores de **Estúdio** (`area_atuacao = estudio`); Escala Escritório não oferta no Marketplace v1.
 - **Barra de filtros:** linha 1 — carrossel + **`FiltroHistoricoButton`** + **`FiltroSolicitacoesTipoAcaoSelect`** (**Todas as Ações**) na mesma fileira; em «Todas as Ofertas» acrescentar **`FiltroCalendarioTimeSelect`**; em «Minhas Ofertas» usar grid **`app-marketplace-filtro-minhas`** (`responsive.css`) — carrossel/Histórico/tipo **centrados** na coluna do meio; CTA **Ofertar** à direita (desktop) ou centrado abaixo (`≤720px`). Linha 2 — tablist «Todas as Ofertas» / «Minhas Ofertas». Período por `dataOfertaIso`; Histórico = 13 competências mensais inclusivas.
 - **Blocos de conteúdo:** `getPageContentBoxStyle` + **`SectionTitle`** sem ícone nem `sub` de status. **Todas:** Ofertas de Vendas · Ofertas de Troca. **Minhas:** Ofertas em análise · Ofertas em aprovação · Ofertas abertas · Ofertas encerradas.
 - **Handoff:** fluxo marketplace, permissões prestador.
@@ -153,6 +182,9 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Anti-patterns (Escala)
 
 - Converter toolbar de escala para só ícone.
-- Aplicar `SortTableTh` na grade dia-a-dia da Gestão de Escala.
+- Aplicar `SortTableTh` na grade dia-a-dia da Escala Estúdio / Escala Escritório.
 - Filtro de estúdio sem `FiltroEstudioSelect`, sem ícone Building2 no campo, label lateral “Estúdio” ou agregadora diferente de **Todos Estúdios**.
-- Ignorar atualização de Ajuda ao mudar fluxo de aprovação de escala.
+- Duplicar a UI de grade em `EscalaEscritorio` em vez de `modo="escritorio"` no motor `GestaoEscala`.
+- Alterar **Gestão de Prestadores** para “suportar” Escala Escritório — a página de prestadores permanece independente.
+- Aceitar oferta de Marketplace entre times diferentes ou sem persistir em `escala_marketplace_oferta` / sync na grade aprovada.
+- Ignorar atualização de Ajuda ao mudar fluxo de aprovação de escala (nomes de menu: **Escala Estúdio** / **Escala Escritório**).

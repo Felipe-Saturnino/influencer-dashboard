@@ -82,6 +82,7 @@ export type PageKey =
   | "rh_vagas"
   | "rh_solicitacoes"
   | "rh_gestao_escala"
+  | "escala_escritorio"
   | "rh_staff"
   | "rh_calendario"
   | "escala_marketplace_turnos"

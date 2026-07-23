@@ -43,7 +43,6 @@ import {
   type EscalaAlteracaoCelulaMeta,
 } from "./CelulaIndicadorAlteracaoEscala";
 import {
-  AREA_ESCALA_ORDEM_BOTOES,
   CONSOLIDADO_COL_TURNO_W,
   CONSOLIDADO_FONT_DIA_HEADER,
   CONSOLIDADO_FONT_HEADER,
@@ -62,6 +61,7 @@ import {
   STICKY_W_TURNO_STAFF,
   Z_CONSOLIDADO_STICKY_HEAD,
   Z_CONSOLIDADO_STICKY_ROW,
+  buildAbasEscalaFromTimes,
   buildCelulasSnapshotGrade,
   carregarEscalaMesGravada,
   celulasIguais,
@@ -94,10 +94,12 @@ import {
   refMesISO,
   registrarHistoricoEscalaAcao,
   sanitizarValorCelulaGerar,
+  type AbaEscalaTime,
   type AreaEscalaKey,
   type DiaMes,
   type EscalaDiariaSortCol,
   type EscalaGerarEstadoFiltro,
+  type EscalaGradeModo,
   type FiltroTurnoConsolidadoRh,
   type GradeStatusMetaDb,
   type RpcAlteracaoUltimaRow,
@@ -110,12 +112,16 @@ import {
   type RpcTurnoMesListarRow,
 } from "./gestaoEscalaHelpers";
 
+export type GestaoEscalaPageProps = {
+  modo?: EscalaGradeModo;
+};
 
-export default function RhGestaoEscalaPage() {
+export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPageProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
-  const perm = usePermission("rh_gestao_escala");
+  const pageKey = modo === "escritorio" ? "escala_escritorio" : "rh_gestao_escala";
+  const perm = usePermission(pageKey);
 
   const hoje = useMemo(() => new Date(), []);
   const inicial = useMemo(() => mesReferenciaInicial(), []);
@@ -125,6 +131,8 @@ export default function RhGestaoEscalaPage() {
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
   const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
+  /** Abas de time (Organograma) conforme área de atuação / modo. */
+  const [abasTimes, setAbasTimes] = useState<AbaEscalaTime[]>([]);
   /** Estúdios ativos para o select ao lado do período. */
   const [estudiosAtivosEscala, setEstudiosAtivosEscala] = useState<{ slug: string; nome: string }[]>([]);
   const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
@@ -168,17 +176,35 @@ export default function RhGestaoEscalaPage() {
   const carregarPrestadores = useCallback(async () => {
     setLoadingPrestadores(true);
     setErroPrestadores(null);
-    const { data, error } = await supabase.rpc("rh_escala_prestadores_times");
-    if (error) {
+    const pAreaAtuacao = modo === "escritorio" ? "escritorio" : "estudio";
+    const [timesRes, prestRes] = await Promise.all([
+      supabase.rpc("rh_escala_times_por_area_atuacao", { p_area_atuacao: pAreaAtuacao }),
+      supabase.rpc("rh_escala_prestadores_por_area_atuacao", { p_area_atuacao: pAreaAtuacao }),
+    ]);
+    if (prestRes.error) {
       setErroPrestadores(
         "Não foi possível carregar o staff para a gestão de escala. Verifique permissões e se as migrations foram aplicadas.",
       );
       setPrestadoresRaw([]);
+      setAbasTimes([]);
     } else {
-      setPrestadoresRaw((data ?? []) as RpcPrestadorEscala[]);
+      setPrestadoresRaw((prestRes.data ?? []) as RpcPrestadorEscala[]);
+      const times = timesRes.error
+        ? []
+        : ((timesRes.data ?? []) as { id: string; nome: string }[]).map((row) => ({
+            id: String(row.id ?? ""),
+            nome: String(row.nome ?? ""),
+          }));
+      const abas = buildAbasEscalaFromTimes(modo, times);
+      setAbasTimes(abas);
+      setFiltroArea((prev) => {
+        if (abas.some((a) => a.areaKey === prev)) return prev;
+        if (abas[0]) return abas[0].areaKey;
+        return modo === "estudio" ? DEFAULT_AREA_ESCALA : prev;
+      });
     }
     setLoadingPrestadores(false);
-  }, []);
+  }, [modo]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -242,8 +268,11 @@ export default function RhGestaoEscalaPage() {
   );
 
   const prestadoresFiltradosEstudio = useMemo(
-    () => filtrarPrestadoresPorEstudio(prestadoresRaw, filtroEstudioEscalaEfetivo, opParaEstudio),
-    [prestadoresRaw, filtroEstudioEscalaEfetivo, opParaEstudio],
+    () =>
+      modo === "escritorio"
+        ? prestadoresRaw
+        : filtrarPrestadoresPorEstudio(prestadoresRaw, filtroEstudioEscalaEfetivo, opParaEstudio),
+    [modo, prestadoresRaw, filtroEstudioEscalaEfetivo, opParaEstudio],
   );
 
   const dias = useMemo(() => diasDoMes(ano, mes), [ano, mes]);
@@ -304,24 +333,25 @@ export default function RhGestaoEscalaPage() {
   useEffect(() => {
     setErroSalvarGrade(null);
     mesHydratingRef.current = true;
-    setGerarPorFiltro(carregarEscalaMesGravada(ano, mes));
-  }, [ano, mes]);
+    setGerarPorFiltro(carregarEscalaMesGravada(ano, mes, modo));
+  }, [ano, mes, modo]);
 
   useEffect(() => {
     if (mesHydratingRef.current) {
       mesHydratingRef.current = false;
       return;
     }
-    gravarEscalaMes(ano, mes, gerarPorFiltro);
-  }, [gerarPorFiltro, ano, mes]);
+    gravarEscalaMes(ano, mes, gerarPorFiltro, modo);
+  }, [gerarPorFiltro, ano, mes, modo]);
 
   /** Mescla na grade de cada área os valores persistidos na base e o status (`rh_gestao_escala_grade_status`). */
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || loadingPrestadores) return;
+    const areas = abasTimes.map((a) => a.areaKey);
+    if (areas.length === 0) return;
     let cancelled = false;
     const ref = refMesISO(ano, mes);
     void (async () => {
-      const areas = [...AREA_ESCALA_ORDEM_BOTOES] as AreaEscalaKey[];
       const [{ data: metaData, error: metaError }, { data: turnoMesData }, ...results] = await Promise.all([
         supabase.rpc("rh_gestao_escala_grade_meta_listar", { p_ref_mes: ref }),
         supabase.rpc("rh_gestao_escala_turno_mes_listar", { p_ref_mes: ref }),
@@ -345,15 +375,15 @@ export default function RhGestaoEscalaPage() {
       } else {
         setTurnoMesMap({});
       }
-      const metaPorArea: Partial<Record<AreaEscalaKey, RpcGradeMetaRow>> = {};
+      const metaPorArea: Record<string, RpcGradeMetaRow> = {};
       if (!metaError && metaData) {
         for (const row of metaData as RpcGradeMetaRow[]) {
-          const ak = row.area_key as AreaEscalaKey;
-          if (areas.includes(ak)) metaPorArea[ak] = row;
+          const ak = (row.area_key ?? "").trim();
+          if (ak && areas.includes(ak)) metaPorArea[ak] = row;
         }
       }
-      const fromDbPorArea: Partial<Record<AreaEscalaKey, Record<string, string>>> = {};
-      const alteracoesPorArea: Partial<Record<AreaEscalaKey, Record<string, EscalaAlteracaoCelulaMeta>>> = {};
+      const fromDbPorArea: Record<string, Record<string, string>> = {};
+      const alteracoesPorArea: Record<string, Record<string, EscalaAlteracaoCelulaMeta>> = {};
       for (const { areaKey, gradeRes, alterRes } of results) {
         if (!gradeRes.error) {
           const rows = (gradeRes.data ?? []) as RpcGradeCarregarRow[];
@@ -388,7 +418,7 @@ export default function RhGestaoEscalaPage() {
           const linhasF = filtrarPorArea(prestadoresRaw, ak).map((r) =>
             linhaComTurnoMesArea(r, ak, aprovadaNaBase, turnoMapAtual),
           );
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, aprovadaNaBase);
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, aprovadaNaBase, modo);
           const aprovadoEmIso =
             meta?.aprovado_em == null
               ? null
@@ -414,7 +444,7 @@ export default function RhGestaoEscalaPage() {
     return () => {
       cancelled = true;
     };
-  }, [ano, mes, dias, perm.loading, perm.canView, loadingPrestadores, prestadoresRaw]);
+  }, [ano, mes, dias, perm.loading, perm.canView, loadingPrestadores, prestadoresRaw, abasTimes, modo]);
 
   const salvarGradeEscalaDb = useCallback(
     async (areaKey: AreaEscalaKey, celulasOverride?: Record<string, string>): Promise<boolean> => {
@@ -443,7 +473,7 @@ export default function RhGestaoEscalaPage() {
               : code === "escala_aprovada"
                 ? "Esta escala já está aprovada. Use «Nova Escala» para refazer (os compromissos saem do calendário até nova aprovação)."
                 : code === "prestador_fora_area"
-                  ? `Um ou mais colaboradores não pertencem ao time ${labelAreaEscala(areaKey)}.`
+                  ? `Um ou mais colaboradores não pertencem ao time ${labelAreaEscala(areaKey, abasTimes)}.`
                   : code
                     ? `Não foi possível salvar: ${code}.`
                     : "Não foi possível salvar a grade.",
@@ -457,7 +487,7 @@ export default function RhGestaoEscalaPage() {
             linhaComTurnoMesArea(r, areaKey, false, turnoMesMap),
           );
           const celulasFinais = celulasOverride !== undefined ? celulasOverride : estAtual.celulas;
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulasFinais, false);
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulasFinais, false, modo);
           const next = {
             ...prev,
             [areaKey]: {
@@ -467,7 +497,7 @@ export default function RhGestaoEscalaPage() {
               celulasSincronizadasComDb: snap,
             },
           };
-          gravarEscalaMes(ano, mes, next);
+          gravarEscalaMes(ano, mes, next, modo);
           return next;
         });
         return true;
@@ -480,7 +510,7 @@ export default function RhGestaoEscalaPage() {
         setSalvandoGrade(false);
       }
     },
-    [ano, mes, dias, gerarPorFiltro, prestadoresRaw, turnoMesMap],
+    [ano, mes, dias, gerarPorFiltro, prestadoresRaw, turnoMesMap, abasTimes, modo],
   );
 
   const linhas = useMemo(() => {
@@ -617,7 +647,7 @@ export default function RhGestaoEscalaPage() {
       for (const row of linhasF) {
         for (const d of dias) {
           const k = chaveCelulaGerar(row.id, d.iso);
-          merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "", row.turnoStaffNome);
+          merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "", row.turnoStaffNome, modo);
         }
       }
       const baseline = { ...merged };
@@ -674,10 +704,10 @@ export default function RhGestaoEscalaPage() {
               aprovadoPorDb,
               baseline,
               posSugestao: true,
-              celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasAposSnap, dias, merged, true),
+              celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasAposSnap, dias, merged, true, modo),
             },
           };
-          gravarEscalaMes(ano, mes, next);
+          gravarEscalaMes(ano, mes, next, modo);
           return next;
         });
       } catch (e) {
@@ -686,7 +716,7 @@ export default function RhGestaoEscalaPage() {
         );
       }
     },
-    [ano, mes, dias, gerarPorFiltro, linhasPorFiltroGerar, salvarGradeEscalaDb, prestadoresRaw, turnoMesMap],
+    [ano, mes, dias, gerarPorFiltro, linhasPorFiltroGerar, salvarGradeEscalaDb, prestadoresRaw, turnoMesMap, modo],
   );
 
   const resetarGradeEscalaDb = useCallback(
@@ -726,7 +756,7 @@ export default function RhGestaoEscalaPage() {
               alteracoesPorCelula: undefined,
             },
           };
-          gravarEscalaMes(ano, mes, next);
+          gravarEscalaMes(ano, mes, next, modo);
           return next;
         });
         setTurnoMesMap((prev) => {
@@ -746,17 +776,17 @@ export default function RhGestaoEscalaPage() {
         setResetandoGrade(false);
       }
     },
-    [ano, mes],
+    [ano, mes, modo],
   );
 
   const atualizarCelulaGerar = useCallback(
     (areaKey: AreaEscalaKey, rowId: string, iso: string, siglaTurnoStaff: string, turnoStaffNome: string, valor: string) => {
       const k = chaveCelulaGerar(rowId, iso);
-      const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor, turnoStaffNome);
+      const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor, turnoStaffNome, modo);
       setGerarPorFiltro((prev) => {
         const cur = prev[areaKey] ?? { celulas: {}, baseline: null };
         if (escalaGradeAprovadaNaBase(cur)) return prev;
-        const prevOk = sanitizarValorCelulaGerar(siglaTurnoStaff, cur.celulas[k] ?? "", turnoStaffNome);
+        const prevOk = sanitizarValorCelulaGerar(siglaTurnoStaff, cur.celulas[k] ?? "", turnoStaffNome, modo);
         if (prevOk === ok) return prev;
         return {
           ...prev,
@@ -771,7 +801,7 @@ export default function RhGestaoEscalaPage() {
         };
       });
     },
-    [],
+    [modo],
   );
 
   const acaoBotaoGerar = useCallback(
@@ -784,7 +814,7 @@ export default function RhGestaoEscalaPage() {
       const allFilled = linhasF.every((row) =>
         dias.every((d) => {
           const k = chaveCelulaGerar(row.id, d.iso);
-          return sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome).trim() !== "";
+          return sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome, modo).trim() !== "";
         }),
       );
       if (escalaGradeAprovadaNaBase(estado) && estado.baseline) {
@@ -792,7 +822,7 @@ export default function RhGestaoEscalaPage() {
         for (const row of linhasF) {
           for (const d of dias) {
             const k = chaveCelulaGerar(row.id, d.iso);
-            celSan[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome);
+            celSan[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome, modo);
           }
         }
         if (celulasIguais(celSan, estado.baseline)) return null;
@@ -800,7 +830,7 @@ export default function RhGestaoEscalaPage() {
       if (allFilled) return "aprovar";
       return "sugestao";
     },
-    [gerarPorFiltro, linhasPorFiltroGerar, dias],
+    [gerarPorFiltro, linhasPorFiltroGerar, dias, modo],
   );
 
   const contentBox = getPageContentBoxStyle(brand, t);
@@ -940,6 +970,18 @@ export default function RhGestaoEscalaPage() {
     if (!mostrarFiltroArea) return null;
     const linhasF = filtrarPorArea(prestadoresFiltradosEstudio, filtroArea).map(mapLinhaPrestador);
     const celulas = gerarPorFiltro[filtroArea]?.celulas;
+    if (modo === "escritorio") {
+      const comercial = contarCelulasComSigla(linhasF, dias, celulas, "Comercial");
+      return {
+        modoEscritorio: true as const,
+        manha: [] as number[],
+        tarde: [] as number[],
+        noite: [] as number[],
+        comercial,
+        total: comercial,
+        temLinhaTardeConsolidado: false,
+      };
+    }
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
     const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
@@ -953,13 +995,15 @@ export default function RhGestaoEscalaPage() {
       return (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0);
     });
     return {
+      modoEscritorio: false as const,
       manha,
       tarde,
       noite,
+      comercial: [] as number[],
       total,
       temLinhaTardeConsolidado,
     };
-  }, [mostrarFiltroArea, filtroArea, prestadoresFiltradosEstudio, dias, gerarPorFiltro]);
+  }, [mostrarFiltroArea, filtroArea, prestadoresFiltradosEstudio, dias, gerarPorFiltro, modo]);
 
   const mostrarSalvarAlteracoes = useMemo(() => {
     const est = gerarPorFiltro[filtroArea];
@@ -968,13 +1012,13 @@ export default function RhGestaoEscalaPage() {
       linhaComTurnoMesArea(r, filtroArea, false, turnoMesMap),
     );
     if (linhasF.length === 0) return false;
-    const atual = buildCelulasSnapshotGrade(linhasF, dias, est?.celulas ?? {}, false);
+    const atual = buildCelulasSnapshotGrade(linhasF, dias, est?.celulas ?? {}, false, modo);
     const temAlguma = Object.values(atual).some((v) => v.trim() !== "");
     if (!temAlguma) return false;
     const snapDb = est?.celulasSincronizadasComDb ?? null;
     if (snapDb === null) return true;
     return !celulasIguais(atual, snapDb);
-  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro, turnoMesMap]);
+  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro, turnoMesMap, modo]);
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
 
@@ -1042,7 +1086,7 @@ export default function RhGestaoEscalaPage() {
         const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
           linhaComTurnoMesArea(r, areaKey, true, turnoMesMap),
         );
-        const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, true);
+        const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, true, modo);
         const next = {
           ...prev,
           [areaKey]: {
@@ -1053,11 +1097,11 @@ export default function RhGestaoEscalaPage() {
             alteracoesPorCelula: alteracoes,
           },
         };
-        gravarEscalaMes(ano, mes, next);
+        gravarEscalaMes(ano, mes, next, modo);
         return next;
       });
     },
-    [filtroArea, prestadoresRaw, dias, ano, mes, turnoMesMap],
+    [filtroArea, prestadoresRaw, dias, ano, mes, turnoMesMap, modo],
   );
   /** Oculta coluna Nome na Escala Diária (Service Manager / Shift Leader). */
   const semColunaNome =
@@ -1082,9 +1126,13 @@ export default function RhGestaoEscalaPage() {
   return (
     <div className="app-page-shell" style={{ fontFamily: FONT.body }}>
       <PageHeader
-        icon={<PageMenuIcon pageKey="rh_gestao_escala" />}
-        title={getPageMenuLabel("rh_gestao_escala")}
-        subtitle="Gere a escala por área (time), colaborador e dia do mês."
+        icon={<PageMenuIcon pageKey={pageKey} />}
+        title={getPageMenuLabel(pageKey)}
+        subtitle={
+          modo === "escritorio"
+            ? "Gere a escala mensal dos times de escritório por colaborador e dia."
+            : "Gere a escala por área (time), colaborador e dia do mês."
+        }
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
@@ -1130,16 +1178,18 @@ export default function RhGestaoEscalaPage() {
                   <ChevronRight size={14} aria-hidden="true" />
                 </button>
               </div>
-              <FiltroEstudioSelect
-                id="rh-gestao-escala-filtro-estudio"
-                value={filtroEstudioEscalaEfetivo}
-                onChange={setFiltroEstudioEscala}
-                estudios={estudiosAtivosEscala}
-                todosValue={FILTRO_STAFF_ESTUDIO_TODOS}
-                extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum" }]}
-                minWidth={200}
-                disabled={filtroArea !== "game_presenter"}
-              />
+              {modo !== "escritorio" ? (
+                <FiltroEstudioSelect
+                  id="rh-gestao-escala-filtro-estudio"
+                  value={filtroEstudioEscalaEfetivo}
+                  onChange={setFiltroEstudioEscala}
+                  estudios={estudiosAtivosEscala}
+                  todosValue={FILTRO_STAFF_ESTUDIO_TODOS}
+                  extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum" }]}
+                  minWidth={200}
+                  disabled={filtroArea !== "game_presenter"}
+                />
+              ) : null}
             </div>
             <button
               type="button"
@@ -1176,7 +1226,8 @@ export default function RhGestaoEscalaPage() {
                 width: "100%",
               }}
             >
-              {AREA_ESCALA_ORDEM_BOTOES.map((key) => {
+              {abasTimes.map((aba) => {
+                const key = aba.areaKey;
                 const ativo = filtroArea === key;
                 return (
                   <button
@@ -1202,7 +1253,7 @@ export default function RhGestaoEscalaPage() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {labelAreaEscala(key)}
+                    {labelAreaEscala(key, abasTimes)}
                   </button>
                 );
               })}
@@ -1275,9 +1326,11 @@ export default function RhGestaoEscalaPage() {
                   <caption style={{ display: "none" }}>
                     Consolidado - quantidade de Prestadores no dia por turno. Linhas de turno são clicáveis para filtrar a
                     tabela Escala Diária.{" "}
-                    {resumoTurnoDias.temLinhaTardeConsolidado
-                      ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
-                      : "Totais por turno Manhã, Noite e TOTAL por dia."}
+                    {resumoTurnoDias.modoEscritorio
+                      ? "Totais por turno Comercial e TOTAL por dia."
+                      : resumoTurnoDias.temLinhaTardeConsolidado
+                        ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
+                        : "Totais por turno Manhã, Noite e TOTAL por dia."}
                   </caption>
                   <thead>
                     <tr>
@@ -1305,6 +1358,50 @@ export default function RhGestaoEscalaPage() {
                     </tr>
                   </thead>
                   <tbody>
+                    {resumoTurnoDias.modoEscritorio ? (
+                      <tr>
+                        <th
+                          scope="row"
+                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                            fontWeight: 700,
+                            fontSize: CONSOLIDADO_FONT_TURNO,
+                            padding: 0,
+                          })}
+                        >
+                          <button
+                            type="button"
+                            aria-pressed={filtroTurnoConsolidado === "comercial"}
+                            aria-label="Filtrar Escala Diária pelo turno comercial"
+                            onClick={() => alternarFiltroTurnoConsolidado("comercial")}
+                            style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "comercial")}
+                          >
+                            Comercial
+                          </button>
+                        </th>
+                        {resumoTurnoDias.comercial.map((n, idx) => {
+                          const d = dias[idx]!;
+                          return (
+                            <td
+                              key={`resumo-c-${d.iso}`}
+                              style={getTdStyle(t, {
+                                textAlign: "center",
+                                fontVariantNumeric: "tabular-nums",
+                                fontWeight: 700,
+                                ...(diaComDestaqueCalendario(d)
+                                  ? {
+                                      background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+                                      color: "#f59e0b",
+                                    }
+                                  : {}),
+                              })}
+                            >
+                              {n}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ) : (
+                      <>
                     <tr>
                       <th
                         scope="row"
@@ -1429,6 +1526,8 @@ export default function RhGestaoEscalaPage() {
                         );
                       })}
                     </tr>
+                      </>
+                    )}
                     <tr>
                       <th
                         scope="row"
@@ -1841,24 +1940,26 @@ export default function RhGestaoEscalaPage() {
                           const bruto = celulasGerarAtivas?.[ck] ?? "";
                           const gradeAprovada = escalaGradeAprovadaNaBase(estGradeFiltro);
                           const val = gradeAprovada
-                            ? sanitizarValorCelulaAlterarEscala(bruto)
-                            : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome);
-                          const opts = opcoesSelectCelulaGerar(row);
+                            ? sanitizarValorCelulaAlterarEscala(bruto, modo)
+                            : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome, modo);
+                          const opts = opcoesSelectCelulaGerar(row, modo);
                           const textoCelula = gradeAprovada
-                            ? labelExibicaoCelulaAlterarEscala(celulasGerarAtivas?.[ck])
+                            ? labelExibicaoCelulaAlterarEscala(celulasGerarAtivas?.[ck], modo)
                             : labelExibicaoCelulaEscala(
                                 row.siglaTurnoStaff,
                                 celulasGerarAtivas?.[ck],
                                 row.turnoStaffNome,
+                                modo,
                               );
                           const alteracaoMeta = alteracoesPorCelulaAtivas?.[ck];
                           const valorAnteriorLabel = alteracaoMeta
                             ? gradeAprovada
-                              ? labelExibicaoCelulaAlterarEscala(alteracaoMeta.valorAnterior)
+                              ? labelExibicaoCelulaAlterarEscala(alteracaoMeta.valorAnterior, modo)
                               : labelExibicaoCelulaEscala(
                                   row.siglaTurnoStaff,
                                   alteracaoMeta.valorAnterior,
                                   row.turnoStaffNome,
+                                  modo,
                                 )
                             : "";
                           return (
@@ -1947,7 +2048,7 @@ export default function RhGestaoEscalaPage() {
         <ModalHistoricoEscala
           refMesIso={refMesISO(ano, mes)}
           areaKey={filtroArea}
-          areaLabel={labelAreaEscala(filtroArea)}
+          areaLabel={labelAreaEscala(filtroArea, abasTimes)}
           tituloMes={tituloMes}
           onClose={() => setHistoricoModalAberto(false)}
         />
@@ -1962,9 +2063,9 @@ export default function RhGestaoEscalaPage() {
           prestadores={linhas}
           celulas={gerarPorFiltro[filtroArea]?.celulas ?? {}}
           canEditar={podeAlterarEscalaAprovada}
-          sanitizarValor={(_sigla, valor) => sanitizarValorCelulaAlterarEscala(valor)}
-          opcoesSelectCelula={() => opcoesSelectCelulaAlterarEscala()}
-          labelExibicaoCelula={(_sigla, valor) => labelExibicaoCelulaAlterarEscala(valor)}
+          sanitizarValor={(_sigla, valor) => sanitizarValorCelulaAlterarEscala(valor, modo)}
+          opcoesSelectCelula={() => opcoesSelectCelulaAlterarEscala(modo)}
+          labelExibicaoCelula={(_sigla, valor) => labelExibicaoCelulaAlterarEscala(valor, modo)}
           chaveCelula={chaveCelulaGerar}
           onClose={() => setAlterarEscalaModalAberto(false)}
           onCelulaAlterada={confirmarAlteracaoCelulaAprovada}
