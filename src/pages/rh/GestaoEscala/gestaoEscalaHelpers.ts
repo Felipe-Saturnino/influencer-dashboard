@@ -328,11 +328,18 @@ export function contarCelulasComSigla(
   );
 }
 
-/** Valor interno gravado na célula para «dia de trabalho» (exibição: «Escalado»). */
+/** Valor interno gravado na célula para dia de trabalho (MRN / AFT / NGT). */
 export function valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff: string, turnoStaffNome: string): string {
-  if (turnoStaffNome.trim() === TURNO_ESCALA_5x2) return "Comercial";
+  if (turnoStaffNome.trim() === TURNO_ESCALA_5x2) return "";
   const sigla = siglaTurnoStaff.trim();
   if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") return sigla;
+  return "";
+}
+
+function labelTurnoOperacionalCelula(work: string): string {
+  if (work === "MRN") return "Manhã";
+  if (work === "AFT") return "Tarde";
+  if (work === "NGT") return "Noite";
   return "";
 }
 
@@ -350,8 +357,9 @@ export function opcoesSelectCelulaGerar(
     { value: "", label: "—" },
     { value: "Folga", label: "Folga" },
   ];
-  if (work) {
-    out.push({ value: work, label: "Escalado" });
+  const labelWork = labelTurnoOperacionalCelula(work);
+  if (work && labelWork) {
+    out.push({ value: work, label: labelWork });
   }
   out.push(
     { value: "Compra", label: "Compra" },
@@ -436,7 +444,7 @@ export function linhaComTurnoMesArea(
   return aplicarTurnoSnapshotNaLinha(base, aprovada, turnoMes[chaveTurnoMes(areaKey, r.id)], HELPERS_TURNO_SNAPSHOT);
 }
 
-/** Texto exibido na célula (grade ou somente leitura). */
+/** Texto exibido na célula (grade ou somente leitura): Manhã / Tarde / Noite. */
 export function labelExibicaoCelulaEscala(
   siglaTurnoStaff: string,
   valorArmazenado: string | undefined,
@@ -446,7 +454,10 @@ export function labelExibicaoCelulaEscala(
   if (!v) return "—";
   if (v === "Folga") return "Folga";
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
-  return "Escalado";
+  if (v === "MRN") return "Manhã";
+  if (v === "AFT") return "Tarde";
+  if (v === "NGT") return "Noite";
+  return "—";
 }
 
 export const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;

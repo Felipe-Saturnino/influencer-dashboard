@@ -8,7 +8,7 @@ import {
   escalaComHorarioTurnoEditavelNaStaff,
   escalaComHorarioTurnoSomenteOperadora,
   formatarHoraInicioOperadora,
-  opcoesHorarioTurnoStaff,
+  staffHorarioResolvidoParaTurnoDoDia,
 } from "./rhStaffHorarioTurno";
 import { turnoExibicaoValorGrade, valorCelulaEhFolga, turnosBaseOfertaNaFolga } from "./rhCalendarioAcaoHelpers";
 
@@ -82,19 +82,6 @@ function parseIntervaloStaffValor(iso: string, valorKey: string): { start: Date;
   return { start, end };
 }
 
-function staffHorarioResolvidoParaTurnoDoDia(
-  escalaRaw: string,
-  turnoDoDiaNome: string,
-  staffTurnoCadastro: string | null | undefined,
-  staffHorarioValor: string | null | undefined,
-): string | null {
-  const opcoes = opcoesHorarioTurnoStaff(escalaRaw, turnoDoDiaNome);
-  if (opcoes.length === 0) return null;
-  const key = (staffHorarioValor ?? "").trim();
-  if (key && opcoes.some((o) => o.value === key)) return key;
-  return opcoes[0]!.value;
-}
-
 /** Início do turno no dia (folga) para o nome de turno ofertado. */
 export function instanteInicioTurnoOfertadoNaFolga(
   diaFolgaIso: string,
@@ -104,7 +91,7 @@ export function instanteInicioTurnoOfertadoNaFolga(
 ): Date | null {
   const escala = ctx.escala ?? "";
   if (turnoNomeOferta === "Comercial" && turnoStaffEhComercial5x2(ctx.staff_turno)) {
-    const key = staffHorarioResolvidoParaTurnoDoDia(escala, "Comercial", ctx.staff_turno, ctx.staff_horario_turno);
+    const key = staffHorarioResolvidoParaTurnoDoDia(escala, "Comercial", ctx.staff_horario_turno);
     if (!key) return null;
     const iv = parseIntervaloStaffValor(diaFolgaIso, key);
     return iv?.start ?? null;
@@ -114,7 +101,7 @@ export function instanteInicioTurnoOfertadoNaFolga(
     return instanteInicioOperadoraNoDia(diaFolgaIso, turnoNomeOferta, op);
   }
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
-    const key = staffHorarioResolvidoParaTurnoDoDia(escala, turnoNomeOferta, ctx.staff_turno, ctx.staff_horario_turno);
+    const key = staffHorarioResolvidoParaTurnoDoDia(escala, turnoNomeOferta, ctx.staff_horario_turno);
     if (!key) return null;
     const iv = parseIntervaloStaffValor(diaFolgaIso, key);
     return iv?.start ?? null;
@@ -137,7 +124,7 @@ export function instanteFimTurnoTrabalhadoNoDia(
   const escala = ctx.escala ?? "";
 
   if (turnoDoDia === "Comercial" && turnoStaffEhComercial5x2(ctx.staff_turno)) {
-    const key = staffHorarioResolvidoParaTurnoDoDia(escala, "Comercial", ctx.staff_turno, ctx.staff_horario_turno);
+    const key = staffHorarioResolvidoParaTurnoDoDia(escala, "Comercial", ctx.staff_horario_turno);
     if (!key) return null;
     const iv = parseIntervaloStaffValor(diaIso, key);
     return iv?.end ?? null;
@@ -147,7 +134,7 @@ export function instanteFimTurnoTrabalhadoNoDia(
     return instanteFimOperadoraNoDia(diaIso, turnoDoDia, escala, op);
   }
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
-    const key = staffHorarioResolvidoParaTurnoDoDia(escala, turnoDoDia, ctx.staff_turno, ctx.staff_horario_turno);
+    const key = staffHorarioResolvidoParaTurnoDoDia(escala, turnoDoDia, ctx.staff_horario_turno);
     if (!key) return null;
     const iv = parseIntervaloStaffValor(diaIso, key);
     return iv?.end ?? null;

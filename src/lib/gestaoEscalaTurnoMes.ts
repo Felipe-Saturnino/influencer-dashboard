@@ -39,43 +39,43 @@ export function aplicarTurnoSnapshotNaLinha<
   return { ...row, turnoStaffNome, siglaTurnoStaff };
 }
 
-/** Opções do modal Alterar Escala: permite trocar o turno do dia. */
+/** Opções do modal Alterar Escala: permite trocar o turno do dia (sem horário Comercial). */
 export function opcoesSelectCelulaAlterarEscala(): { value: string; label: string }[] {
   return [
     { value: "", label: "—" },
     { value: "Folga", label: "Folga" },
-    { value: "MRN", label: "Escalado — Manhã" },
-    { value: "AFT", label: "Escalado — Tarde" },
-    { value: "NGT", label: "Escalado — Noite" },
-    { value: "Comercial", label: "Escalado — Comercial" },
+    { value: "MRN", label: "Manhã" },
+    { value: "AFT", label: "Tarde" },
+    { value: "NGT", label: "Noite" },
     { value: "Compra", label: "Compra" },
     { value: "Venda", label: "Venda" },
     { value: "Troca", label: "Troca" },
   ];
 }
 
-/** Sanitiza valor do Alterar Escala (aceita qualquer turno operacional). */
+/** Sanitiza valor do Alterar Escala / grade aprovada (turnos operacionais Manhã/Tarde/Noite). */
 export function sanitizarValorCelulaAlterarEscala(valorArmazenado: string): string {
   const v = (valorArmazenado ?? "").trim();
   if (!v) return "";
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   if (v === "F" || v.toLowerCase() === "folga") return "Folga";
-  if (v === "MRN" || v === "AFT" || v === "NGT" || v === "Comercial") return v;
+  if (v === "MRN" || v === "AFT" || v === "NGT") return v;
   if (v === "Manhã" || v.toLowerCase() === "manha") return "MRN";
   if (v === "Tarde") return "AFT";
   if (v === "Noite") return "NGT";
+  /** Legado: Comercial não é mais opção de alteração — trata como vazio. */
+  if (v === "Comercial") return "";
   return "";
 }
 
-/** Rótulo de exibição no modal / tooltip com turno explícito. */
+/** Rótulo na Escala Diária / modal: Manhã, Tarde ou Noite (não «Escalado — …»). */
 export function labelExibicaoCelulaAlterarEscala(valorArmazenado: string | undefined): string {
   const v = sanitizarValorCelulaAlterarEscala(valorArmazenado ?? "");
   if (!v) return "—";
   if (v === "Folga") return "Folga";
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
-  if (v === "MRN") return "Escalado — Manhã";
-  if (v === "AFT") return "Escalado — Tarde";
-  if (v === "NGT") return "Escalado — Noite";
-  if (v === "Comercial") return "Escalado — Comercial";
-  return "Escalado";
+  if (v === "MRN") return "Manhã";
+  if (v === "AFT") return "Tarde";
+  if (v === "NGT") return "Noite";
+  return "—";
 }

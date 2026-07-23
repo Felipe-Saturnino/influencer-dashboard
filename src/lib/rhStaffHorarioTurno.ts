@@ -156,3 +156,21 @@ export function horarioTurnoStaffValorPermitido(
   const opts = opcoesHorarioTurnoStaff(escalaRaw, turnoStaffNome);
   return opts.some((o) => o.value === v);
 }
+
+/**
+ * Horário efetivo para o **turno do dia** (célula da grade / Alterar Escala).
+ * Se o `staff_horario_turno` cadastrado (ou snapshot) ainda for válido para esse turno, reutiliza;
+ * senão usa a 1.ª opção do turno do dia (ex.: Manhã→`08-20`, Noite→`18-06`).
+ * Assim um dia pontual Noite com cadastro Manhã não herda 08h–20h.
+ */
+export function staffHorarioResolvidoParaTurnoDoDia(
+  escalaRaw: string,
+  turnoDoDiaNome: string,
+  staffHorarioValor: string | null | undefined,
+): string | null {
+  const opcoes = opcoesHorarioTurnoStaff(escalaRaw, turnoDoDiaNome);
+  if (opcoes.length === 0) return null;
+  const key = (staffHorarioValor ?? "").trim();
+  if (key && opcoes.some((o) => o.value === key)) return key;
+  return opcoes[0]!.value;
+}

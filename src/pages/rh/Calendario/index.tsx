@@ -42,6 +42,7 @@ import {
   escalaComHorarioTurnoSomenteOperadora,
   formatarHoraInicioOperadora,
   labelHorarioTurnoStaffPorValor,
+  staffHorarioResolvidoParaTurnoDoDia,
 } from "../../../lib/rhStaffHorarioTurno";
 import {
   CtaCriarButton,
@@ -425,7 +426,11 @@ function resumoHorarioTurnoModalCalendario(
   if (turnoNomeExibicao !== "Manhã" && turnoNomeExibicao !== "Tarde" && turnoNomeExibicao !== "Noite") return null;
 
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
-    const hor = (horarioStaffOverride ?? p.staff_horario_turno) || null;
+    const hor = staffHorarioResolvidoParaTurnoDoDia(
+      escala,
+      turnoNomeExibicao,
+      horarioStaffOverride ?? p.staff_horario_turno,
+    );
     const lbl = labelHorarioTurnoStaffPorValor(hor);
     return lbl !== "—" ? lbl : null;
   }
@@ -522,7 +527,11 @@ function obterEntradaSaidaEscaladasPrestadorDia(
   }
 
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
-    const hor = (horarioStaffOverride ?? p.staff_horario_turno) || null;
+    const hor = staffHorarioResolvidoParaTurnoDoDia(
+      escala,
+      turnoNome,
+      horarioStaffOverride ?? p.staff_horario_turno,
+    );
     const parsed = parseHorarioStaffValorParaHHMM(hor);
     return parsed ?? { entrada: "—", saida: "—" };
   }

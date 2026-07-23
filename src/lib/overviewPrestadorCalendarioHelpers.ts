@@ -13,6 +13,7 @@ import {
   escalaComHorarioTurnoEditavelNaStaff,
   escalaComHorarioTurnoSomenteOperadora,
   formatarHoraInicioOperadora,
+  staffHorarioResolvidoParaTurnoDoDia,
 } from "./rhStaffHorarioTurno";
 import type { RhFuncionario } from "../types/rhFuncionario";
 import type { TurnosDealersPick } from "./turnosDealers";
@@ -289,7 +290,8 @@ export function obterEntradaSaidaEscaladasPrestadorDia(
   }
 
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
-    const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
+    const hor = staffHorarioResolvidoParaTurnoDoDia(escala, turnoNome, p.staff_horario_turno);
+    const parsed = parseHorarioStaffValorParaHHMM(hor);
     return parsed ?? { entrada: "—", saida: "—" };
   }
 
