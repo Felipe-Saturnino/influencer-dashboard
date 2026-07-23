@@ -666,6 +666,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "A lista vem de **Gestão de Estúdios → Mesas** (coluna Jogo). Cadastre ou edite mesas com tipo de jogo preenchido; novos valores passam a aparecer automaticamente no Portal da Academy.",
       },
+      {
+        subtitulo: "Imagem ou vídeo do Manual não aparece ao visualizar?",
+        texto:
+          "No **Gerenciamento**, use o campo **Imagem/Vídeo** (não só Anexo) e publique a postagem. Ao abrir **Visualizar** na aba Manuais, a mídia deve aparecer abaixo da descrição. Se o arquivo não subir ao salvar, tente outro formato (JPG, PNG, MP4, WebM) ou entre em contato com o suporte.",
+      },
     ],
   },
   playbook_influencers: {
