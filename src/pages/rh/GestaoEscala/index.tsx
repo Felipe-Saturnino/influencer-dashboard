@@ -191,9 +191,10 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       setPrestadoresRaw((prestRes.data ?? []) as RpcPrestadorEscala[]);
       const times = timesRes.error
         ? []
-        : ((timesRes.data ?? []) as { id: string; nome: string }[]).map((row) => ({
+        : ((timesRes.data ?? []) as { id: string; nome: string; tipo?: string }[]).map((row) => ({
             id: String(row.id ?? ""),
             nome: String(row.nome ?? ""),
+            tipo: row.tipo === "gerencia" ? ("gerencia" as const) : ("time" as const),
           }));
       const abas = buildAbasEscalaFromTimes(modo, times);
       setAbasTimes(abas);

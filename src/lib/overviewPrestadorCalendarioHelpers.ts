@@ -150,11 +150,11 @@ export function mesclarGradeComHorarioComercialSintetico(
     if (prestadorUsaHorarioComercialSintetico(p)) sinteticoPorId.set(p.id, p);
   }
 
-  /** Prestadores com pelo menos uma célula `eo_*` (Escala Escritório aprovada). */
+  /** Prestadores com pelo menos uma célula `eo_*` / `eog_*` (Escala Escritório aprovada). */
   const comGradeEscritorio = new Set<string>();
   for (const r of rows) {
     const ak = (r.area_key ?? "").trim().toLowerCase();
-    if (ak.startsWith("eo_")) comGradeEscritorio.add(r.funcionario_id);
+    if (ak.startsWith("eo_") || ak.startsWith("eog_")) comGradeEscritorio.add(r.funcionario_id);
   }
 
   const movimentosPorChave = new Map<string, string>();
@@ -162,7 +162,7 @@ export function mesclarGradeComHorarioComercialSintetico(
   for (const r of rows) {
     const ak = (r.area_key ?? "").trim().toLowerCase();
     if (ak === "escritorio" || ak === AREA_KEY_HORARIO_COMERCIAL_SINTETICO) continue;
-    if (ak.startsWith("eo_")) {
+    if (ak.startsWith("eo_") || ak.startsWith("eog_")) {
       baseSemSintetico.push(r);
       continue;
     }

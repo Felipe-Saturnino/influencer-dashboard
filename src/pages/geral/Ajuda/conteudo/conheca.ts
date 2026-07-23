@@ -722,12 +722,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Monta e mantém a escala operacional do **estúdio** por área (time), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio.",
+          "Monta e mantém a escala operacional do **estúdio** por área (time ou gerência sem times), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio. As abas seguem o Organograma: times com prestadores de Estúdio e **gerências sem times ativos** (pessoas vinculadas só à gerência).",
       },
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
     ],
   },
@@ -736,12 +736,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Monta e mantém a escala mensal dos times de **escritório** (`area_atuacao` Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
+          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (`area_atuacao` Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
       },
       {
         subtitulo: "Fluxo e Calendário",
         texto:
-          "Selecione o time (Organograma) e o mês no carrossel. Use sugestão ou edição manual, depois **Salvar Alterações** e **Aprovar Escala** (permissão de Criar). Só a grade **aprovada** aparece no **Calendário**; enquanto não houver aprovação, o Calendário continua com a escala comercial automática (úteis Escalado 09:00–18:00). Com a Escala Escritório aprovada, as células da grade prevalecem sobre essa regra sintética.",
+          "Selecione o time ou a gerência sem times (Organograma) e o mês no carrossel. Use sugestão ou edição manual, depois **Salvar Alterações** e **Aprovar Escala** (permissão de Criar). Só a grade **aprovada** aparece no **Calendário**; enquanto não houver aprovação, o Calendário continua com a escala comercial automática (úteis Escalado 09:00–18:00). Com a Escala Escritório aprovada, as células da grade prevalecem sobre essa regra sintética.",
       },
     ],
   },

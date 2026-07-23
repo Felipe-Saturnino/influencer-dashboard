@@ -231,6 +231,8 @@ export type RpcPrestadorEscala = {
   staff_turno?: string | null;
   email: string;
   org_time_id: string | null;
+  /** Gerência do Organograma (prestador só na gerência quando `org_time_id` é null). */
+  org_gerencia_id?: string | null;
   nome_time: string;
   staff_nickname: string | null;
   /** Slug do estúdio primário (legado). */
@@ -244,7 +246,7 @@ export type RpcPrestadorEscala = {
   area_atuacao?: string | null;
 };
 
-/** Chave da aba/time na grade (`service_manager`, `eo_<uuid32>`, `t_<uuid32>`, …). */
+/** Chave da aba/time na grade (`service_manager`, `eo_<uuid32>`, `g_<uuid32>`, …). */
 export type AreaEscalaKey = string;
 
 export type AreaEscalaLegada =
@@ -254,10 +256,14 @@ export type AreaEscalaLegada =
   | "service_manager"
   | "customer_service";
 
+export type AbaEscalaTipo = "time" | "gerencia";
+
 export type AbaEscalaTime = {
   areaKey: AreaEscalaKey;
+  /** Id do time ou da gerência (quando `tipo === "gerencia"`). */
   timeId: string;
   label: string;
+  tipo: AbaEscalaTipo;
 };
 
 /** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
@@ -314,9 +320,20 @@ export function uuidFromHex32(hex: string): string | null {
 /** Extrai `org_time_id` de `eo_<hex32>` / `t_<hex32>`. */
 export function orgTimeIdFromAreaKey(area: AreaEscalaKey): string | null {
   const a = (area ?? "").trim().toLowerCase();
-  if (a.startsWith("eo_") || a.startsWith("t_")) {
-    return uuidFromHex32(a.slice(a.indexOf("_") + 1));
+  if (a.startsWith("eo_") && !a.startsWith("eog_")) {
+    return uuidFromHex32(a.slice(3));
   }
+  if (a.startsWith("t_")) {
+    return uuidFromHex32(a.slice(2));
+  }
+  return null;
+}
+
+/** Extrai `org_gerencia_id` de `g_<hex32>` (Estúdio) / `eog_<hex32>` (Escritório). */
+export function orgGerenciaIdFromAreaKey(area: AreaEscalaKey): string | null {
+  const a = (area ?? "").trim().toLowerCase();
+  if (a.startsWith("eog_")) return uuidFromHex32(a.slice(4));
+  if (a.startsWith("g_")) return uuidFromHex32(a.slice(2));
   return null;
 }
 
@@ -342,19 +359,29 @@ export function areaKeyFromOrgTime(modo: EscalaGradeModo, timeId: string, nomeTi
   return `eo_${id.replace(/-/g, "")}`;
 }
 
+/** Mapeia gerência sem times → `area_key` (`g_` / `eog_`). */
+export function areaKeyFromOrgGerencia(modo: EscalaGradeModo, gerenciaId: string): AreaEscalaKey {
+  const id = (gerenciaId ?? "").trim().toLowerCase().replace(/-/g, "");
+  if (!id) return modo === "escritorio" ? "eog_unknown" : "g_unknown";
+  return modo === "escritorio" ? `eog_${id}` : `g_${id}`;
+}
+
 export function buildAbasEscalaFromTimes(
   modo: EscalaGradeModo,
-  times: { id: string; nome: string }[],
+  times: { id: string; nome: string; tipo?: AbaEscalaTipo | string | null }[],
 ): AbaEscalaTime[] {
   const abas: AbaEscalaTime[] = times
     .map((t) => {
       const timeId = String(t.id ?? "").trim();
-      const label = (t.nome ?? "").trim() || "Time";
+      const label = (t.nome ?? "").trim() || (t.tipo === "gerencia" ? "Gerência" : "Time");
       if (!timeId) return null;
+      const tipo: AbaEscalaTipo = t.tipo === "gerencia" ? "gerencia" : "time";
       return {
-        areaKey: areaKeyFromOrgTime(modo, timeId, label),
+        areaKey:
+          tipo === "gerencia" ? areaKeyFromOrgGerencia(modo, timeId) : areaKeyFromOrgTime(modo, timeId, label),
         timeId,
         label,
+        tipo,
       };
     })
     .filter((x): x is AbaEscalaTime => x != null);
@@ -366,10 +393,14 @@ export function buildAbasEscalaFromTimes(
       const ra = ia >= 0 ? ia : 1000;
       const rb = ib >= 0 ? ib : 1000;
       if (ra !== rb) return ra - rb;
+      if (a.tipo !== b.tipo) return a.tipo === "time" ? -1 : 1;
       return a.label.localeCompare(b.label, "pt-BR");
     });
   } else {
-    abas.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    abas.sort((a, b) => {
+      if (a.tipo !== b.tipo) return a.tipo === "time" ? -1 : 1;
+      return a.label.localeCompare(b.label, "pt-BR");
+    });
   }
   return abas;
 }
@@ -415,6 +446,14 @@ export function labelAreaEscala(area: AreaEscalaKey, abas?: AbaEscalaTime[]): st
 export function filtrarPorArea(rows: RpcPrestadorEscala[], area: AreaEscalaKey): RpcPrestadorEscala[] {
   if (isAreaEscalaLegada(area)) {
     return rows.filter((p) => nomeTimePassaNaArea(p.nome_time, area));
+  }
+  const gerenciaId = orgGerenciaIdFromAreaKey(area);
+  if (gerenciaId) {
+    return rows.filter(
+      (p) =>
+        !(p.org_time_id ?? "").trim() &&
+        (p.org_gerencia_id ?? "").trim().toLowerCase() === gerenciaId.toLowerCase(),
+    );
   }
   const timeId = orgTimeIdFromAreaKey(area);
   if (!timeId) return [];
