@@ -564,7 +564,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Os botões Retirada e Manutenção não aparecem na tabela?",
         texto:
-          "Esses botões exigem permissão de edição na página Figurinos. Se você não os vê, sua conta está configurada apenas para visualização. Solicite ao administrador a liberação de permissão de edição.",
+          "O botão **Retirada** exige permissão de **Editar** = Sim. O botão **Manutenção** (e, na aba Manutenção, **Disponibilizar** e **Descartar**) exige permissão de **Criar** = Sim. Se você não vê um deles, solicite ao administrador a liberação correspondente em Gestão de Usuários → Permissões → Figurinos.",
       },
       {
         subtitulo: "A peça está na aba errada ou não aparece?",
@@ -1299,7 +1299,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo salvar ou aprovar a escala?",
         texto:
-          "Salvar e aprovar exigem permissão de **Editar** (e criar células exige **Criar**). Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+          "Salvar e aprovar exigem permissão de **Criar**. **Alterar Escala** (após aprovada) exige **Editar**. Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+      },
+      {
+        subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",
+        texto:
+          "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um dia pontual no mês já aprovado, use **Alterar Escala** (escolhe o turno do dia + observação).",
       },
     ],
   },
@@ -1404,7 +1409,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Pool vazio ou sem escala aprovada?",
         texto:
-          "A rotação usa só Game Presenters **escalados** na Gestão de Escala **aprovada** do mês, com escala **4×2**, turno e estúdio corretos em Gestão de Staff. Sem aprovação ou sem GPs no turno, o pool fica vazio — aprove a escala e confira o cadastro operacional.",
+          "A rotação usa Game Presenters com célula **Escalado** (Manhã/Tarde/Noite) na Gestão de Escala **aprovada** do dia, escala **4×2** e estúdio correto em Gestão de Staff. O pool segue o **valor da célula do dia**, não o turno vivo do cadastro — se alguém mudou de turno na Staff após a aprovação, use **Alterar Escala** no dia ou reaprouve a grade. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio.",
       },
       {
         subtitulo: "Não consigo publicar a rotação?",

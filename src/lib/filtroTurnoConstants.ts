@@ -17,3 +17,10 @@ export const GESTAO_STAFF_TURNO_FILTRO_OPCOES: TurnoFiltroOption[] = [
   { value: "noite", label: "Noite" },
   { value: "comercial", label: "Comercial" },
 ];
+
+/** Manhã / Tarde / Noite (após «Todos Turnos») — Relatório de Turno e similares. */
+export const TURNO_FILTRO_MANHA_TARDE_NOITE: TurnoFiltroOption[] = [
+  { value: "manha", label: "Manhã" },
+  { value: "tarde", label: "Tarde" },
+  { value: "noite", label: "Noite" },
+];

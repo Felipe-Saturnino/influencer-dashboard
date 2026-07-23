@@ -25,585 +25,91 @@ import {
   buildOperadoraParaEstudioMap,
   FILTRO_STAFF_ESTUDIO_NENHUM,
   FILTRO_STAFF_ESTUDIO_TODOS,
-  staffRowPassaFiltroEstudio,
 } from "../GestaoStaff/gestaoStaffEstudioHelpers";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
-import {
-  escalaPrestadorTemTurnosOperacionais,
-  staffTurnoCoerenteComEscala,
-  TURNO_ESCALA_5x2,
-  turnoOperacionalParaSiglaGrade,
-  turnoRhCoerenteComEscala,
-} from "../../../lib/rhEscalaTurnos";
-import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 import { gerarCelulasSugestaoCustomerService } from "../../../lib/gestaoEscalaSugestaoCustomerService";
+import {
+  labelExibicaoCelulaAlterarEscala,
+  opcoesSelectCelulaAlterarEscala,
+  sanitizarValorCelulaAlterarEscala,
+  type EscalaTurnoMesMap,
+} from "../../../lib/gestaoEscalaTurnoMes";
 import { ModalAlterarEscala } from "./ModalAlterarEscala";
 import { ModalHistoricoEscala } from "./ModalHistoricoEscala";
 import {
   CelulaIndicadorAlteracaoEscala,
   type EscalaAlteracaoCelulaMeta,
 } from "./CelulaIndicadorAlteracaoEscala";
+import {
+  AREA_ESCALA_ORDEM_BOTOES,
+  CONSOLIDADO_COL_TURNO_W,
+  CONSOLIDADO_FONT_DIA_HEADER,
+  CONSOLIDADO_FONT_HEADER,
+  CONSOLIDADO_FONT_TURNO,
+  DEFAULT_AREA_ESCALA,
+  ESCALA_ANO_MIN,
+  ESCALA_MES0_MIN,
+  ESCALA_TOOLBAR_AZUL,
+  ESCALA_TOOLBAR_VERDE,
+  STICKY_LEFT_NICK,
+  STICKY_LEFT_NICK_SEM_NOME,
+  STICKY_LEFT_TURNO_SEM_NOME,
+  STICKY_LEFT_TURNO_STAFF,
+  STICKY_W_NICK,
+  STICKY_W_NOME,
+  STICKY_W_TURNO_STAFF,
+  Z_CONSOLIDADO_STICKY_HEAD,
+  Z_CONSOLIDADO_STICKY_ROW,
+  buildCelulasSnapshotGrade,
+  carregarEscalaMesGravada,
+  celulasIguais,
+  chaveCelulaGerar,
+  contarCelulasComSigla,
+  dataMaximaEscalaCarrossel,
+  dataMinimaEscalaCarrossel,
+  diaComDestaqueCalendario,
+  diasDoMes,
+  escalaGradeAprovadaNaBase,
+  escalaToolbarBtnAzul,
+  escalaToolbarBtnNeutro,
+  escalaToolbarBtnVerde,
+  escalaToolbarBtnVermelho,
+  filtrarPorArea,
+  filtrarPrestadoresPorEstudio,
+  gravarEscalaMes,
+  labelAreaEscala,
+  labelExibicaoCelulaEscala,
+  labelMesAno,
+  linhaColaboradorNoFiltroTurnoConsolidado,
+  linhaComTurnoMesArea,
+  mapAlteracoesUltimasPorCelula,
+  mapLinhaPrestador,
+  mapTurnoMesRowsParaEstado,
+  mesReferenciaInicial,
+  opcoesSelectCelulaGerar,
+  posSugestaoAtiva,
+  primeiroDiaMes,
+  refMesISO,
+  registrarHistoricoEscalaAcao,
+  sanitizarValorCelulaGerar,
+  type AreaEscalaKey,
+  type DiaMes,
+  type EscalaDiariaSortCol,
+  type EscalaGerarEstadoFiltro,
+  type FiltroTurnoConsolidadoRh,
+  type GradeStatusMetaDb,
+  type RpcAlteracaoUltimaRow,
+  type RpcGradeAprovarResult,
+  type RpcGradeCarregarRow,
+  type RpcGradeMetaRow,
+  type RpcGradeResetarResult,
+  type RpcGradeSalvarResult,
+  type RpcPrestadorEscala,
+  type RpcTurnoMesListarRow,
+} from "./gestaoEscalaHelpers";
 
-type DiaMes = {
-  dia: number;
-  dowShort: string;
-  isWeekend: boolean;
-  /** Feriado nacional/municipal usual em São Paulo (capital) — mesma identificação visual do fim de semana. */
-  isFeriadoSP: boolean;
-  feriadoNome: string | null;
-  iso: string;
-};
-
-/** Sábado, domingo ou feriado em SP (capital) para cor de cabeçalho / células. */
-function diaComDestaqueCalendario(dia: DiaMes): boolean {
-  return dia.isWeekend || dia.isFeriadoSP;
-}
-
-type LinhaColaborador = {
-  id: string;
-  nome: string;
-  /** Nome completo do cadastro (Gestão de Prestadores) — título/aria-label. */
-  nomeCompletoCadastro: string;
-  nickname: string;
-  /** Padrão 4x2/3x3 etc. (Gestão de Prestadores) — define opções na grade de geração. */
-  escalaCadastro: string;
-  /** Sigla do turno na Staff (MRN/AFT/NGT) para a grade; vazio se sem turno aplicável. */
-  siglaTurnoStaff: string;
-  /** Turno na Gestão de Staff (Manhã, Tarde ou Noite) — coluna fixa da tabela. */
-  turnoStaffNome: string;
-  /** Live no Estúdio (Gestão de Staff) — primeiro dia do ciclo de escala na sugestão. */
-  liveNoEstudioIso: string | null;
-};
-
-/** Estado persistido em `rh_gestao_escala_grade_status` (null = sem linha na BD ainda). */
-type GradeStatusMetaDb = "rascunho" | "aprovada";
-
-/** Estado da geração de escala por área (time). */
-type EscalaGerarEstadoFiltro = {
-  celulas: Record<string, string>;
-  statusGradeDb?: GradeStatusMetaDb | null;
-  aprovadoEmDb?: string | null;
-  aprovadoPorDb?: string | null;
-  baseline: Record<string, string> | null;
-  /** Grade sanitizada igual à última carga/salvamento no Supabase (para exibir «Salvar» só se houver diferença). */
-  celulasSincronizadasComDb?: Record<string, string> | null;
-  /** Após «Sugestão de Escala» ou primeira edição manual — mostra Nova Escala / Salvar / Aprovar. */
-  posSugestao?: boolean;
-  /** Legado (localStorage): tratar como `posSugestao`. */
-  posSugestaoCs?: boolean;
-  /** Última alteração pontual por célula (`prestadorId|YYYY-MM-DD`) — modal Alterar Escala. */
-  alteracoesPorCelula?: Record<string, EscalaAlteracaoCelulaMeta>;
-};
-
-function escalaGradeAprovadaNaBase(est: EscalaGerarEstadoFiltro | undefined): boolean {
-  return est?.statusGradeDb === "aprovada";
-}
-
-function posSugestaoAtiva(est: EscalaGerarEstadoFiltro | undefined): boolean {
-  return Boolean(est?.posSugestao ?? est?.posSugestaoCs);
-}
-
-function chaveStorageEscalaMes(ano: number, mes0: number): string {
-  return `rh_gestao_escala_v1_${ano}-${String(mes0 + 1).padStart(2, "0")}`;
-}
-
-function carregarEscalaMesGravada(ano: number, mes0: number): Record<string, EscalaGerarEstadoFiltro> {
-  try {
-    const r = localStorage.getItem(chaveStorageEscalaMes(ano, mes0));
-    if (!r) return {};
-    const p = JSON.parse(r) as Record<string, EscalaGerarEstadoFiltro & { aprovado?: boolean }>;
-    if (!p || typeof p !== "object") return {};
-    for (const k of Object.keys(p)) {
-      const v = p[k];
-      if (v && typeof v === "object" && "aprovado" in v) {
-        delete (v as { aprovado?: boolean }).aprovado;
-      }
-    }
-    return p;
-  } catch {
-    return {};
-  }
-}
-
-function gravarEscalaMes(ano: number, mes0: number, est: Record<string, EscalaGerarEstadoFiltro>): void {
-  try {
-    const stripped: Record<string, EscalaGerarEstadoFiltro> = {};
-    for (const [k, v] of Object.entries(est)) {
-      const { alteracoesPorCelula: _omit, ...rest } = v;
-      stripped[k] = rest;
-    }
-    localStorage.setItem(chaveStorageEscalaMes(ano, mes0), JSON.stringify(stripped));
-  } catch {
-    /* quota / privado */
-  }
-}
-
-/** Registra ações apenas no cliente (sugestão / nova escala em rascunho). */
-async function registrarHistoricoEscalaAcao(
-  refMesIso: string,
-  areaKey: string,
-  acao: "sugestao" | "nova_escala",
-): Promise<void> {
-  try {
-    await supabase.rpc("rh_gestao_escala_historico_registrar", {
-      p_ref_mes: refMesIso,
-      p_area_key: areaKey,
-      p_acao: acao,
-      p_detalhes: {},
-    });
-  } catch {
-    /* histórico não bloqueia o fluxo principal */
-  }
-}
-
-/** Primeiro dia do mês (YYYY-MM-DD) para RPC `date`. */
-function refMesISO(ano: number, mes0: number): string {
-  return `${ano}-${String(mes0 + 1).padStart(2, "0")}-01`;
-}
-
-type RpcGradeCarregarRow = {
-  funcionario_id: string;
-  dia_iso: string;
-  valor: string | null;
-};
-
-type RpcGradeSalvarResult = {
-  ok?: boolean;
-  error?: string;
-};
-
-type RpcGradeMetaRow = {
-  area_key: string;
-  status: string;
-  aprovado_em: string | null;
-  aprovado_por: string | null;
-};
-
-type RpcGradeAprovarResult = {
-  ok?: boolean;
-  error?: string;
-  aprovado_em?: string;
-  aprovado_por?: string | null;
-};
-
-type RpcGradeResetarResult = {
-  ok?: boolean;
-  error?: string;
-};
-
-type RpcAlteracaoUltimaRow = {
-  funcionario_id: string;
-  dia_iso: string;
-  valor_anterior: string | null;
-  valor_novo: string | null;
-  observacao: string | null;
-  alterado_em: string;
-  alterado_por_nome: string | null;
-};
-
-function mapAlteracoesUltimasPorCelula(rows: RpcAlteracaoUltimaRow[]): Record<string, EscalaAlteracaoCelulaMeta> {
-  const out: Record<string, EscalaAlteracaoCelulaMeta> = {};
-  for (const row of rows) {
-    const isoRaw = row.dia_iso;
-    const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
-    const k = chaveCelulaGerar(row.funcionario_id, iso);
-    out[k] = {
-      valorAnterior: (row.valor_anterior ?? "").trim(),
-      alteradoPorNome: (row.alterado_por_nome ?? "").trim() || "Usuário",
-      alteradoEm: row.alterado_em,
-      observacao: row.observacao,
-    };
-  }
-  return out;
-}
-
-function chaveCelulaGerar(rowId: string, iso: string): string {
-  return `${rowId}|${iso}`;
-}
-
-function celulasIguais(a: Record<string, string>, b: Record<string, string>): boolean {
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  for (const k of keys) {
-    if ((a[k] ?? "").trim() !== (b[k] ?? "").trim()) return false;
-  }
-  return true;
-}
-
-type RpcPrestadorEscala = {
-  id: string;
-  nome: string;
-  cargo: string | null;
-  escala: string;
-  staff_turno?: string | null;
-  email: string;
-  org_time_id: string | null;
-  nome_time: string;
-  staff_nickname: string | null;
-  /** Slug do estúdio primário (legado). */
-  staff_estudio_slug?: string | null;
-  /** Slugs específicos ou {todos} — filtro multi-estúdio na UI. */
-  staff_estudio_slugs?: string[] | null;
-  /** Legado — fallback de estúdio quando staff_estudio_slug ausente. */
-  staff_operadora_slug?: string | null;
-  /** Data da live no estúdio — ancoragem do padrão de escala (Gestão de Staff). */
-  staff_live_no_estudio?: string | null;
-};
-
-type AreaEscalaKey =
-  | "game_presenter"
-  | "shift_leader"
-  | "shuffler"
-  | "service_manager";
-
-/** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
-type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite";
-
-type EscalaDiariaSortCol = "nome" | "nickname" | "turno";
-
-function linhaColaboradorNoFiltroTurnoConsolidado(
-  row: LinhaColaborador,
-  filtro: FiltroTurnoConsolidadoRh | null,
-): boolean {
-  if (filtro == null) return true;
-  const nome = (row.turnoStaffNome ?? "").trim();
-  switch (filtro) {
-    case "manha":
-      return nome === "Manhã";
-    case "tarde":
-      return nome === "Tarde";
-    case "noite":
-      return nome === "Noite";
-    default:
-      return true;
-  }
-}
-
-/** Ordem dos botões de área abaixo do carrossel do mês. */
-const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaKey[] = [
-  "service_manager",
-  "shift_leader",
-  "game_presenter",
-  "shuffler",
-];
-
-const DEFAULT_AREA_ESCALA: AreaEscalaKey = "service_manager";
-
-function normalizarNomeTimeRh(s: string | null | undefined): string {
-  return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function nomeTimePassaNaArea(nomeTimeRaw: string | null | undefined, area: AreaEscalaKey): boolean {
-  const nt = normalizarNomeTimeRh(nomeTimeRaw);
-  if (!nt) return false;
-  switch (area) {
-    case "game_presenter":
-      return nt.includes("game presenter");
-    case "shift_leader":
-      return nt.includes("shift leader");
-    case "shuffler":
-      return nt.includes("shuffler");
-    case "service_manager":
-      return nt.includes("service manager");
-    default:
-      return false;
-  }
-}
-
-function labelAreaEscala(area: AreaEscalaKey): string {
-  const m: Record<AreaEscalaKey, string> = {
-    game_presenter: "Game Presenter",
-    shift_leader: "Shift Leader",
-    shuffler: "Shuffler",
-    service_manager: "Service Manager",
-  };
-  return m[area];
-}
-
-function filtrarPorArea(rows: RpcPrestadorEscala[], area: AreaEscalaKey): RpcPrestadorEscala[] {
-  return rows.filter((p) => nomeTimePassaNaArea(p.nome_time, area));
-}
-
-/** Filtro global por estúdio da Staff (`todos` | `nenhum` | slug ativo). */
-function filtrarPrestadoresPorEstudio(
-  rows: RpcPrestadorEscala[],
-  filtroEstudio: string,
-  opParaEstudio: Record<string, string>,
-): RpcPrestadorEscala[] {
-  return rows.filter((p) => staffRowPassaFiltroEstudio(p, filtroEstudio, opParaEstudio));
-}
-
-function contarCelulasComSigla(
-  linhas: LinhaColaborador[],
-  dias: DiaMes[],
-  celulas: Record<string, string> | undefined,
-  sigla: "MRN" | "AFT" | "NGT",
-): number[] {
-  return dias.map((dia) =>
-    linhas.reduce((acc, row) => {
-      const k = chaveCelulaGerar(row.id, dia.iso);
-      const v = (celulas?.[k] ?? "").trim();
-      return acc + (v === sigla ? 1 : 0);
-    }, 0),
-  );
-}
-
-/** Valor interno gravado na célula para «dia de trabalho» (exibição: «Escalado»). */
-function valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff: string, turnoStaffNome: string): string {
-  if (turnoStaffNome.trim() === TURNO_ESCALA_5x2) return "Comercial";
-  const sigla = siglaTurnoStaff.trim();
-  if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") return sigla;
-  return "";
-}
-
-/** Opções do `<select>` por tipo de turno — reutiliza o mesmo array (evita N×dias alocações). */
-const OPCOES_SELECT_CELULA_CACHE = new Map<string, { value: string; label: string }[]>();
-
-function opcoesSelectCelulaGerar(
-  row: Pick<LinhaColaborador, "siglaTurnoStaff" | "turnoStaffNome">,
-): { value: string; label: string }[] {
-  const work = valorTurnoTrabalhoInternoParaLinha(row.siglaTurnoStaff, row.turnoStaffNome);
-  const cacheKey = work || "__none__";
-  const cached = OPCOES_SELECT_CELULA_CACHE.get(cacheKey);
-  if (cached) return cached;
-  const out: { value: string; label: string }[] = [
-    { value: "", label: "—" },
-    { value: "Folga", label: "Folga" },
-  ];
-  if (work) {
-    out.push({ value: work, label: "Escalado" });
-  }
-  out.push(
-    { value: "Compra", label: "Compra" },
-    { value: "Venda", label: "Venda" },
-    { value: "Troca", label: "Troca" },
-  );
-  OPCOES_SELECT_CELULA_CACHE.set(cacheKey, out);
-  return out;
-}
-
-/**
- * Garante valor coerente: Folga; Compra/Venda/Troca; sigla/Comercial de trabalho da linha; vazio.
- * Aceita legado Manhã/Tarde/Noite se coincidir com a sigla permitida.
- */
-function sanitizarValorCelulaGerar(siglaTurnoStaff: string, valorArmazenado: string, turnoStaffNome: string): string {
-  const v = (valorArmazenado ?? "").trim();
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
-  if (v === "F" || v.toLowerCase() === "folga") return "Folga";
-  const work = valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff, turnoStaffNome);
-  const permit = new Set<string>(["", "Folga", "Compra", "Venda", "Troca"]);
-  if (work) permit.add(work);
-  if (permit.has(v)) return v;
-  const comoSigla = turnoOperacionalParaSiglaGrade(v);
-  if (comoSigla && permit.has(comoSigla)) return comoSigla;
-  if (v === "T") {
-    const mrn = turnoOperacionalParaSiglaGrade("Manhã");
-    if (mrn && permit.has(mrn)) return mrn;
-  }
-  return "";
-}
-
-/** Snapshot completo (todas as chaves linha×dia) para comparar com a base. */
-function buildCelulasSnapshotGrade(
-  linhasF: LinhaColaborador[],
-  dias: DiaMes[],
-  celulas: Record<string, string>,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const row of linhasF) {
-    for (const d of dias) {
-      const k = chaveCelulaGerar(row.id, d.iso);
-      out[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome);
-    }
-  }
-  return out;
-}
-
-/** Texto exibido na célula (grade ou somente leitura). */
-function labelExibicaoCelulaEscala(
-  siglaTurnoStaff: string,
-  valorArmazenado: string | undefined,
-  turnoStaffNome: string,
-): string {
-  const v = sanitizarValorCelulaGerar(siglaTurnoStaff, valorArmazenado ?? "", turnoStaffNome);
-  if (!v) return "—";
-  if (v === "Folga") return "Folga";
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
-  return "Escalado";
-}
-
-const DOW_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"] as const;
-
-/** Larguras fixas das colunas sticky (Nome / Nickname / Turno) — soma usada em `left`. */
-const STICKY_W_NOME = 180;
-const STICKY_W_NICK = 156;
-const STICKY_W_TURNO_STAFF = 112;
-const STICKY_LEFT_NICK = STICKY_W_NOME;
-const STICKY_LEFT_TURNO_STAFF = STICKY_W_NOME + STICKY_W_NICK;
-
-/** Colunas fixas quando a coluna Nome está oculta (Service Manager, Shift Leader). */
-const STICKY_LEFT_NICK_SEM_NOME = 0;
-const STICKY_LEFT_TURNO_SEM_NOME = STICKY_W_NICK;
-
-/** Consolidado: coluna Turno fixa ao rolar horizontalmente. */
-const CONSOLIDADO_COL_TURNO_W = 168;
-const CONSOLIDADO_FONT_HEADER = 12;
-const CONSOLIDADO_FONT_TURNO = 13;
-const CONSOLIDADO_FONT_DIA_HEADER = 11;
-const Z_CONSOLIDADO_STICKY_HEAD = 25;
-const Z_CONSOLIDADO_STICKY_ROW = 24;
-
-/** Toolbar Escala Diária — fundos transparentes com tint semântico (Global § paleta de dados). */
-const ESCALA_TOOLBAR_AZUL = "#1e36f8";
-const ESCALA_TOOLBAR_VERDE = "#22c55e";
-const ESCALA_TOOLBAR_VERMELHO = "#e84025";
-
-function escalaToolbarBtnBase(extra?: CSSProperties): CSSProperties {
-  return {
-    padding: "10px 16px",
-    borderRadius: 10,
-    fontFamily: FONT.body,
-    fontSize: 13,
-    fontWeight: 700,
-    whiteSpace: "nowrap",
-    ...extra,
-  };
-}
-
-function escalaToolbarBtnAzul(extra?: CSSProperties): CSSProperties {
-  return escalaToolbarBtnBase({
-    border: `1px solid ${ESCALA_TOOLBAR_AZUL}`,
-    background: `color-mix(in srgb, ${ESCALA_TOOLBAR_AZUL} 22%, transparent)`,
-    color: ESCALA_TOOLBAR_AZUL,
-    ...extra,
-  });
-}
-
-function escalaToolbarBtnVerde(extra?: CSSProperties): CSSProperties {
-  return escalaToolbarBtnBase({
-    border: `1px solid ${ESCALA_TOOLBAR_VERDE}`,
-    background: `color-mix(in srgb, ${ESCALA_TOOLBAR_VERDE} 22%, transparent)`,
-    color: ESCALA_TOOLBAR_VERDE,
-    ...extra,
-  });
-}
-
-function escalaToolbarBtnVermelho(extra?: CSSProperties): CSSProperties {
-  return escalaToolbarBtnBase({
-    border: `1px solid ${ESCALA_TOOLBAR_VERMELHO}`,
-    background: `color-mix(in srgb, ${ESCALA_TOOLBAR_VERMELHO} 22%, transparent)`,
-    color: ESCALA_TOOLBAR_VERMELHO,
-    ...extra,
-  });
-}
-
-function escalaToolbarBtnNeutro(
-  t: { cardBorder: string; inputBg?: string; cardBg?: string; text: string },
-  extra?: CSSProperties,
-): CSSProperties {
-  return escalaToolbarBtnBase({
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg ?? t.cardBg ?? "transparent",
-    color: t.text,
-    ...extra,
-  });
-}
-
-/** Navegação e escala consideram a partir de abril de 2026 (sem escala antes). */
-const ESCALA_ANO_MIN = 2026;
-/** Abril (0-indexado). */
-const ESCALA_MES0_MIN = 3;
-
-function primeiroDiaMes(ano: number, mes0: number): Date {
-  return new Date(ano, mes0, 1);
-}
-
-function dataMinimaEscalaCarrossel(): Date {
-  return primeiroDiaMes(ESCALA_ANO_MIN, ESCALA_MES0_MIN);
-}
-
-/** Último mês permitido no carrossel: o mês civil seguinte ao de hoje (não listar meses além disso). */
-function dataMaximaEscalaCarrossel(diaReferencia: Date): Date {
-  const min = dataMinimaEscalaCarrossel();
-  const cand = primeiroDiaMes(diaReferencia.getFullYear(), diaReferencia.getMonth() + 1);
-  return cand < min ? min : cand;
-}
-
-function mesReferenciaInicial(): { ano: number; mes: number } {
-  const hoje = new Date();
-  const min = dataMinimaEscalaCarrossel();
-  const max = dataMaximaEscalaCarrossel(hoje);
-  let d = primeiroDiaMes(hoje.getFullYear(), hoje.getMonth());
-  if (d < min) d = min;
-  if (d > max) d = max;
-  return { ano: d.getFullYear(), mes: d.getMonth() };
-}
-
-function diasDoMes(ano: number, mes0: number): DiaMes[] {
-  const ultimo = new Date(ano, mes0 + 1, 0).getDate();
-  const out: DiaMes[] = [];
-  for (let day = 1; day <= ultimo; day++) {
-    const dt = new Date(ano, mes0, day);
-    const dow = dt.getDay();
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth() + 1).padStart(2, "0");
-    const dd = String(day).padStart(2, "0");
-    const iso = `${y}-${m}-${dd}`;
-    const feriadoNome = feriadoLabelSaoPauloCapital(iso) ?? null;
-    out.push({
-      dia: day,
-      dowShort: DOW_SHORT[dow] ?? "",
-      isWeekend: dow === 0 || dow === 6,
-      isFeriadoSP: feriadoNome !== null,
-      feriadoNome,
-      iso,
-    });
-  }
-  return out;
-}
-
-/** Formato: "Janeiro 2026" (nome do mês em pt-BR + ano). */
-function labelMesAno(ano: number, mes0: number): string {
-  const nomeMes = new Date(ano, mes0, 1).toLocaleDateString("pt-BR", { month: "long" });
-  const capitalizado = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
-  return `${capitalizado} ${ano}`;
-}
-
-/** Nome cadastrado na Gestão de Prestadores: apenas primeiro e último token (ex.: "Ana Paula Costa" → "Ana Costa"). */
-function primeiroEUltimoNomePrestador(nomeCompleto: string): string {
-  const partes = nomeCompleto.trim().split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return "—";
-  if (partes.length === 1) return partes[0]!;
-  return `${partes[0]!} ${partes[partes.length - 1]!}`;
-}
-
-function mapLinhaPrestador(r: RpcPrestadorEscala): LinhaColaborador {
-  const nick = (r.staff_nickname ?? "").trim();
-  const esc = (r.escala ?? "").trim();
-  const coOp = staffTurnoCoerenteComEscala(r.escala, r.staff_turno);
-  const turnoRh = turnoRhCoerenteComEscala(r.escala, r.staff_turno);
-  const siglaTurnoStaff = escalaPrestadorTemTurnosOperacionais(r.escala) ? turnoOperacionalParaSiglaGrade(coOp) : "";
-  const turnoStaffNome = escalaPrestadorTemTurnosOperacionais(r.escala) ? coOp : turnoRh;
-  const nomeCadastro = (r.nome ?? "").trim();
-  const liveRaw = r.staff_live_no_estudio;
-  const liveIso =
-    liveRaw == null
-      ? null
-      : typeof liveRaw === "string"
-        ? liveRaw.trim().slice(0, 10) || null
-        : String(liveRaw).slice(0, 10) || null;
-  return {
-    id: r.id,
-    nome: nomeCadastro ? primeiroEUltimoNomePrestador(nomeCadastro) : "—",
-    nomeCompletoCadastro: nomeCadastro || "—",
-    nickname: nick || "—",
-    escalaCadastro: esc || "—",
-    siglaTurnoStaff,
-    turnoStaffNome,
-    liveNoEstudioIso: liveIso,
-  };
-}
 
 export default function RhGestaoEscalaPage() {
   const { theme: t } = useApp();
@@ -644,6 +150,8 @@ export default function RhGestaoEscalaPage() {
   const [paginaEscalaDiaria, setPaginaEscalaDiaria] = useState(0);
   /** Por área: células do mês e baseline após aprovação. */
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
+  /** Turno/horário congelados na aprovação (`rh_gestao_escala_turno_mes`). */
+  const [turnoMesMap, setTurnoMesMap] = useState<EscalaTurnoMesMap>({});
 
   useEffect(() => {
     setFiltroNicknameEscala("");
@@ -814,8 +322,9 @@ export default function RhGestaoEscalaPage() {
     const ref = refMesISO(ano, mes);
     void (async () => {
       const areas = [...AREA_ESCALA_ORDEM_BOTOES] as AreaEscalaKey[];
-      const [{ data: metaData, error: metaError }, ...results] = await Promise.all([
+      const [{ data: metaData, error: metaError }, { data: turnoMesData }, ...results] = await Promise.all([
         supabase.rpc("rh_gestao_escala_grade_meta_listar", { p_ref_mes: ref }),
+        supabase.rpc("rh_gestao_escala_turno_mes_listar", { p_ref_mes: ref }),
         ...areas.map(async (areaKey) => {
           const [gradeRes, alterRes] = await Promise.all([
             supabase.rpc("rh_gestao_escala_grade_carregar", {
@@ -831,6 +340,11 @@ export default function RhGestaoEscalaPage() {
         }),
       ]);
       if (cancelled) return;
+      if (turnoMesData) {
+        setTurnoMesMap(mapTurnoMesRowsParaEstado(turnoMesData as RpcTurnoMesListarRow[]));
+      } else {
+        setTurnoMesMap({});
+      }
       const metaPorArea: Partial<Record<AreaEscalaKey, RpcGradeMetaRow>> = {};
       if (!metaError && metaData) {
         for (const row of metaData as RpcGradeMetaRow[]) {
@@ -856,6 +370,9 @@ export default function RhGestaoEscalaPage() {
         }
       }
       if (Object.keys(fromDbPorArea).length === 0 && Object.keys(metaPorArea).length === 0) return;
+      const turnoMapAtual = turnoMesData
+        ? mapTurnoMesRowsParaEstado(turnoMesData as RpcTurnoMesListarRow[])
+        : {};
       setGerarPorFiltro((prev) => {
         const next = { ...prev };
         for (const ak of areas) {
@@ -868,8 +385,10 @@ export default function RhGestaoEscalaPage() {
           const cur = next[ak];
           if (!fromDb && !meta) continue;
           const merged = { ...(cur?.celulas ?? {}), ...(fromDb ?? {}) };
-          const linhasF = filtrarPorArea(prestadoresRaw, ak).map(mapLinhaPrestador);
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, merged);
+          const linhasF = filtrarPorArea(prestadoresRaw, ak).map((r) =>
+            linhaComTurnoMesArea(r, ak, aprovadaNaBase, turnoMapAtual),
+          );
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, aprovadaNaBase);
           const aprovadoEmIso =
             meta?.aprovado_em == null
               ? null
@@ -934,9 +453,11 @@ export default function RhGestaoEscalaPage() {
         setGerarPorFiltro((prev) => {
           const estAtual = prev[areaKey];
           if (!estAtual) return prev;
-          const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
+          const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
+            linhaComTurnoMesArea(r, areaKey, false, turnoMesMap),
+          );
           const celulasFinais = celulasOverride !== undefined ? celulasOverride : estAtual.celulas;
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulasFinais);
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulasFinais, false);
           const next = {
             ...prev,
             [areaKey]: {
@@ -959,12 +480,15 @@ export default function RhGestaoEscalaPage() {
         setSalvandoGrade(false);
       }
     },
-    [ano, mes, dias, gerarPorFiltro, prestadoresRaw],
+    [ano, mes, dias, gerarPorFiltro, prestadoresRaw, turnoMesMap],
   );
 
   const linhas = useMemo(() => {
-    return filtrarPorArea(prestadoresFiltradosEstudio, filtroArea).map(mapLinhaPrestador);
-  }, [prestadoresFiltradosEstudio, filtroArea]);
+    const aprovada = escalaGradeAprovadaNaBase(gerarPorFiltro[filtroArea]);
+    return filtrarPorArea(prestadoresFiltradosEstudio, filtroArea).map((r) =>
+      linhaComTurnoMesArea(r, filtroArea, aprovada, turnoMesMap),
+    );
+  }, [prestadoresFiltradosEstudio, filtroArea, gerarPorFiltro, turnoMesMap]);
 
   const linhasAposNickname = useMemo(() => {
     const q = filtroNicknameEscala.trim();
@@ -1022,8 +546,13 @@ export default function RhGestaoEscalaPage() {
   );
 
   const linhasPorFiltroGerar = useCallback(
-    (areaKey: AreaEscalaKey) => filtrarPorArea(prestadoresFiltradosEstudio, areaKey).map(mapLinhaPrestador),
-    [prestadoresFiltradosEstudio],
+    (areaKey: AreaEscalaKey) => {
+      const aprovada = escalaGradeAprovadaNaBase(gerarPorFiltro[areaKey]);
+      return filtrarPorArea(prestadoresFiltradosEstudio, areaKey).map((r) =>
+        linhaComTurnoMesArea(r, areaKey, aprovada, turnoMesMap),
+      );
+    },
+    [prestadoresFiltradosEstudio, gerarPorFiltro, turnoMesMap],
   );
 
   /**
@@ -1117,6 +646,21 @@ export default function RhGestaoEscalaPage() {
         }
         const aprovadoEmDb = typeof ap.aprovado_em === "string" ? ap.aprovado_em : null;
         const aprovadoPorDb = typeof ap.aprovado_por === "string" ? ap.aprovado_por : null;
+        const { data: turnoAreaData } = await supabase.rpc("rh_gestao_escala_turno_mes_listar", {
+          p_ref_mes: ref,
+          p_area_key: areaKey,
+        });
+        const snapsArea = mapTurnoMesRowsParaEstado((turnoAreaData ?? []) as RpcTurnoMesListarRow[]);
+        setTurnoMesMap((prev) => {
+          const next = { ...prev };
+          for (const k of Object.keys(next)) {
+            if (k.startsWith(`${areaKey}|`)) delete next[k];
+          }
+          return { ...next, ...snapsArea };
+        });
+        const linhasAposSnap = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
+          linhaComTurnoMesArea(r, areaKey, true, { ...turnoMesMap, ...snapsArea }),
+        );
         setGerarPorFiltro((prev) => {
           const estAtual = prev[areaKey];
           if (!estAtual) return prev;
@@ -1130,7 +674,7 @@ export default function RhGestaoEscalaPage() {
               aprovadoPorDb,
               baseline,
               posSugestao: true,
-              celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasF, dias, merged),
+              celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasAposSnap, dias, merged, true),
             },
           };
           gravarEscalaMes(ano, mes, next);
@@ -1142,7 +686,7 @@ export default function RhGestaoEscalaPage() {
         );
       }
     },
-    [ano, mes, dias, gerarPorFiltro, linhasPorFiltroGerar, salvarGradeEscalaDb],
+    [ano, mes, dias, gerarPorFiltro, linhasPorFiltroGerar, salvarGradeEscalaDb, prestadoresRaw, turnoMesMap],
   );
 
   const resetarGradeEscalaDb = useCallback(
@@ -1183,6 +727,13 @@ export default function RhGestaoEscalaPage() {
             },
           };
           gravarEscalaMes(ano, mes, next);
+          return next;
+        });
+        setTurnoMesMap((prev) => {
+          const next = { ...prev };
+          for (const k of Object.keys(next)) {
+            if (k.startsWith(`${areaKey}|`)) delete next[k];
+          }
           return next;
         });
         return true;
@@ -1413,15 +964,17 @@ export default function RhGestaoEscalaPage() {
   const mostrarSalvarAlteracoes = useMemo(() => {
     const est = gerarPorFiltro[filtroArea];
     if (!mostrarFiltroArea || !posSugestaoAtiva(est) || escalaGradeAprovadaNaBase(est)) return false;
-    const linhasF = filtrarPorArea(prestadoresRaw, filtroArea).map(mapLinhaPrestador);
+    const linhasF = filtrarPorArea(prestadoresRaw, filtroArea).map((r) =>
+      linhaComTurnoMesArea(r, filtroArea, false, turnoMesMap),
+    );
     if (linhasF.length === 0) return false;
-    const atual = buildCelulasSnapshotGrade(linhasF, dias, est?.celulas ?? {});
+    const atual = buildCelulasSnapshotGrade(linhasF, dias, est?.celulas ?? {}, false);
     const temAlguma = Object.values(atual).some((v) => v.trim() !== "");
     if (!temAlguma) return false;
     const snapDb = est?.celulasSincronizadasComDb ?? null;
     if (snapDb === null) return true;
     return !celulasIguais(atual, snapDb);
-  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro]);
+  }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro, turnoMesMap]);
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
 
@@ -1486,8 +1039,10 @@ export default function RhGestaoEscalaPage() {
         const k = chaveCelulaGerar(funcionarioId, diaIso);
         const merged = { ...cur.celulas, [k]: valor };
         const alteracoes = { ...(cur.alteracoesPorCelula ?? {}), [k]: metaAlteracao };
-        const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map(mapLinhaPrestador);
-        const snap = buildCelulasSnapshotGrade(linhasF, dias, merged);
+        const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
+          linhaComTurnoMesArea(r, areaKey, true, turnoMesMap),
+        );
+        const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, true);
         const next = {
           ...prev,
           [areaKey]: {
@@ -1502,7 +1057,7 @@ export default function RhGestaoEscalaPage() {
         return next;
       });
     },
-    [filtroArea, prestadoresRaw, dias, ano, mes],
+    [filtroArea, prestadoresRaw, dias, ano, mes, turnoMesMap],
   );
   /** Oculta coluna Nome na Escala Diária (Service Manager / Shift Leader). */
   const semColunaNome =
@@ -2284,20 +1839,27 @@ export default function RhGestaoEscalaPage() {
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
                           const bruto = celulasGerarAtivas?.[ck] ?? "";
-                          const val = sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome);
+                          const gradeAprovada = escalaGradeAprovadaNaBase(estGradeFiltro);
+                          const val = gradeAprovada
+                            ? sanitizarValorCelulaAlterarEscala(bruto)
+                            : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome);
                           const opts = opcoesSelectCelulaGerar(row);
-                          const textoCelula = labelExibicaoCelulaEscala(
-                            row.siglaTurnoStaff,
-                            celulasGerarAtivas?.[ck],
-                            row.turnoStaffNome,
-                          );
+                          const textoCelula = gradeAprovada
+                            ? labelExibicaoCelulaAlterarEscala(celulasGerarAtivas?.[ck])
+                            : labelExibicaoCelulaEscala(
+                                row.siglaTurnoStaff,
+                                celulasGerarAtivas?.[ck],
+                                row.turnoStaffNome,
+                              );
                           const alteracaoMeta = alteracoesPorCelulaAtivas?.[ck];
                           const valorAnteriorLabel = alteracaoMeta
-                            ? labelExibicaoCelulaEscala(
-                                row.siglaTurnoStaff,
-                                alteracaoMeta.valorAnterior,
-                                row.turnoStaffNome,
-                              )
+                            ? gradeAprovada
+                              ? labelExibicaoCelulaAlterarEscala(alteracaoMeta.valorAnterior)
+                              : labelExibicaoCelulaEscala(
+                                  row.siglaTurnoStaff,
+                                  alteracaoMeta.valorAnterior,
+                                  row.turnoStaffNome,
+                                )
                             : "";
                           return (
                             <td
@@ -2400,9 +1962,9 @@ export default function RhGestaoEscalaPage() {
           prestadores={linhas}
           celulas={gerarPorFiltro[filtroArea]?.celulas ?? {}}
           canEditar={podeAlterarEscalaAprovada}
-          sanitizarValor={sanitizarValorCelulaGerar}
-          opcoesSelectCelula={opcoesSelectCelulaGerar}
-          labelExibicaoCelula={labelExibicaoCelulaEscala}
+          sanitizarValor={(_sigla, valor) => sanitizarValorCelulaAlterarEscala(valor)}
+          opcoesSelectCelula={() => opcoesSelectCelulaAlterarEscala()}
+          labelExibicaoCelula={(_sigla, valor) => labelExibicaoCelulaAlterarEscala(valor)}
           chaveCelula={chaveCelulaGerar}
           onClose={() => setAlterarEscalaModalAberto(false)}
           onCelulaAlterada={confirmarAlteracaoCelulaAprovada}

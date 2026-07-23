@@ -843,7 +843,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Gestão de Escala",
         definicao:
-          "Planejamento da escala diária por área (time), colaborador e dia do mês — alocação de turnos e aprovação de grades operacionais.",
+          "Planejamento da escala diária por área (time), colaborador e dia do mês — alocação de turnos, aprovação (com turno congelado no mês) e alteração pontual após aprovação.",
         referencia: "Gestão de Escala",
       },
       {

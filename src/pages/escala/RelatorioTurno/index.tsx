@@ -10,10 +10,13 @@ import {
   DashboardPageHeader,
   FiltroBarTabButton,
   FiltroHistoricoButton,
+  FiltroTurnoSelect,
   FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
   SectionTitle,
   SortTableTh,
+  TURNO_FILTRO_MANHA_TARDE_NOITE,
+  TURNO_FILTRO_TODOS_VALUE,
   type SortDir,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -74,6 +77,7 @@ export default function EscalaRelatorioTurnoPage() {
   const [historico, setHistorico] = useState(false);
   const [aba, setAba] = useRouteTab("escala_relatorio_turno", "turno", ["turno", "estudio"] as const);
   const [busca, setBusca] = useState("");
+  const [filtroTurno, setFiltroTurno] = useState(TURNO_FILTRO_TODOS_VALUE);
 
   const [rowsTurno, setRowsTurno] = useState<RelatorioTurnoRow[]>([]);
   const [rowsEstudio, setRowsEstudio] = useState<RelatorioEstudioRow[]>([]);
@@ -138,6 +142,9 @@ export default function EscalaRelatorioTurnoPage() {
 
   const turnoFiltrado = useMemo(() => {
     let rows = filtrarPeriodo(rowsTurno);
+    if (filtroTurno !== TURNO_FILTRO_TODOS_VALUE) {
+      rows = rows.filter((r) => r.turno === filtroTurno);
+    }
     if (busca.trim()) {
       rows = rows.filter((r) =>
         textoContemBuscaEmAlgum(busca, r.relator_nome, labelTurno(r.turno), formatDataBr(r.data)),
@@ -157,10 +164,13 @@ export default function EscalaRelatorioTurnoPage() {
       return compareLocaleTexto(b.publicado_em, a.publicado_em, "asc");
     });
     return sorted;
-  }, [rowsTurno, filtrarPeriodo, busca, sortTurno]);
+  }, [rowsTurno, filtrarPeriodo, filtroTurno, busca, sortTurno]);
 
   const estudioFiltrado = useMemo(() => {
     let rows = filtrarPeriodo(rowsEstudio);
+    if (filtroTurno !== TURNO_FILTRO_TODOS_VALUE) {
+      rows = rows.filter((r) => r.turno === filtroTurno);
+    }
     if (busca.trim()) {
       rows = rows.filter((r) =>
         textoContemBuscaEmAlgum(
@@ -192,7 +202,7 @@ export default function EscalaRelatorioTurnoPage() {
       return compareLocaleTexto(b.publicado_em, a.publicado_em, "asc");
     });
     return sorted;
-  }, [rowsEstudio, filtrarPeriodo, busca, sortEstudio]);
+  }, [rowsEstudio, filtrarPeriodo, filtroTurno, busca, sortEstudio]);
 
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
     ...getFilterBarRowStyle(),
@@ -307,6 +317,12 @@ export default function EscalaRelatorioTurnoPage() {
             placeholder="Pesquisar relator, turno..."
             aria-label="Pesquisar relatórios"
             wrapperStyle={{ width: "100%", maxWidth: 480 }}
+          />
+          <FiltroTurnoSelect
+            value={filtroTurno}
+            onChange={setFiltroTurno}
+            options={TURNO_FILTRO_MANHA_TARDE_NOITE}
+            pill
           />
         </div>
       </div>

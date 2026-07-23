@@ -1,6 +1,6 @@
 # Relatório de Saúde do Código — Data Intelligence (Spin Gaming)
 
-*Última verificação: julho 2026 (Fase 9 — arquitetura pré-i18n + leftovers)*
+*Última verificação: julho 2026 (Fase 10 — split incremental de monólitos)*
 
 ---
 
@@ -16,6 +16,7 @@
 | **Fetch (features novas)** | ✅ Fase 7 | Janela SQL + `fetchAllPages` + colunas explícitas — ver Global § Eficiência de fetch |
 | **Listas densas** | ✅ Fase 8 | Prestadores + Escala: paginação de vista + cache de opções — ver Global §6 |
 | **Arquitetura / leftovers** | ✅ Fase 9 | Calendário lote; portais Gerenciamento; AppContext split parcial; `npm run check:dead` (knip) |
+| **Split monólitos** | ✅ Fase 10 (onda 1) | CIDR Status Técnico; hook mutações Calendário; helpers Escala; modal Histórico Prestadores |
 
 ---
 
@@ -99,7 +100,16 @@ Helpers: `lib/tablePagination.ts`, `components/TabelaPaginacaoBar.tsx`. Contrato
 
 Residual consciente: partir ficheiros >2k linhas (Calendário, Prestadores `index`, Status Técnico, Escala) em ondas dedicadas pré-i18n; extrair modal CIDR do Status Técnico.
 
-### Carga em duas fases (padrão para janelas históricas pesadas)
+### Fase 10 — Split incremental de monólitos (jul/2026)
+
+| Área | Correção |
+|------|----------|
+| **Status Técnico** | Modal «Adicionar CIDR» → `ModalCidrAdicionarStatusTecnico.tsx`. |
+| **Calendário RH** | Mutações de presença (aprovar / corrigir / justificar / aprovar mês) → `useCalendarioPresencaGestaoMutacoes.ts` (estado/load ficam na página). |
+| **Gestão de Escala** | Tipos + helpers puros + estilos de toolbar sticky → `gestaoEscalaHelpers.ts` (~600 LOC). |
+| **Gestão de Prestadores** | Modal Histórico → `ModalHistoricoPrestador.tsx`. |
+
+Residual: Calendário ainda ~3,7k (loads + UI); Prestadores — modais Ação/RH Talks/abas form; Escala — Consolidado + grade Diária; Status Técnico — restantes modais/painéis.
 
 Aplicado na aba **Posicionamento** do Overview Spin (`useLobbyPosicionamentoData.ts`) e documentado como padrão transversal em `.cursor/rules/global.mdc` (§ Carga de dados em duas fases):
 

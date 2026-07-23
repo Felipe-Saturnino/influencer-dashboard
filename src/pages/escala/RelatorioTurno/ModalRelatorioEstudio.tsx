@@ -50,6 +50,7 @@ export function ModalRelatorioEstudio({
   const [resumo, setResumo] = useState("");
   const [roletaFeito, setRoletaFeito] = useState<Record<string, boolean>>({});
   const [mesaFeito, setMesaFeito] = useState<Record<string, boolean>>({});
+  const [trocaCartasFeito, setTrocaCartasFeito] = useState<Record<string, boolean>>({});
   const [ccMachine, setCcMachine] = useState(false);
   const [cartas, setCartas] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -117,6 +118,11 @@ export function ModalRelatorioEstudio({
         slug: e.slug,
         nome: e.nome,
         feito: Boolean(mesaFeito[e.slug]),
+      })),
+      troca_cartas: estudios.map((e) => ({
+        slug: e.slug,
+        nome: e.nome,
+        feito: Boolean(trocaCartasFeito[e.slug]),
       })),
       cc_machine: ccMachine,
       cartas_contadas: cartas,
@@ -352,6 +358,32 @@ export function ModalRelatorioEstudio({
                       checked={Boolean(mesaFeito[e.slug])}
                       onChange={(ev) =>
                         setMesaFeito((prev) => ({ ...prev, [e.slug]: ev.target.checked }))
+                      }
+                    />
+                    {e.nome}
+                  </label>
+                ))}
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Troca de Cartas</div>
+                {estudios.map((e) => (
+                  <label
+                    key={e.slug}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "5px 0",
+                      fontSize: 13,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(trocaCartasFeito[e.slug])}
+                      onChange={(ev) =>
+                        setTrocaCartasFeito((prev) => ({ ...prev, [e.slug]: ev.target.checked }))
                       }
                     />
                     {e.nome}

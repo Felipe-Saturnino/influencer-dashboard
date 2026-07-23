@@ -803,42 +803,46 @@ export default function FigurinosPage() {
                           <td style={dataTable.tdCenter}>{labelCondicaoPeca(p.condition)}</td>
                           <td style={dataTable.tdCenter}>
                             <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, whiteSpace: "nowrap" }}>
-                            {podeEditar ? (
+                            {podeEditar || podeCriar ? (
                               <>
-                                <button
-                                  type="button"
-                                  onClick={() => setEmpPeca(p)}
-                                  style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 8,
-                                    border: `1px solid rgba(34,197,94,0.35)`,
-                                    background: "rgba(34,197,94,0.12)",
-                                    color: "#22c55e",
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    fontFamily: FONT.body,
-                                  }}
-                                >
-                                  Retirada
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setManutPeca(p)}
-                                  style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 8,
-                                    border: `1px solid rgba(167,139,250,0.4)`,
-                                    background: "rgba(167,139,250,0.12)",
-                                    color: "#a78bfa",
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    fontFamily: FONT.body,
-                                  }}
-                                >
-                                  Manutenção
-                                </button>
+                                {podeEditar ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEmpPeca(p)}
+                                    style={{
+                                      padding: "4px 10px",
+                                      borderRadius: 8,
+                                      border: `1px solid rgba(34,197,94,0.35)`,
+                                      background: "rgba(34,197,94,0.12)",
+                                      color: "#22c55e",
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      fontFamily: FONT.body,
+                                    }}
+                                  >
+                                    Retirada
+                                  </button>
+                                ) : null}
+                                {podeCriar ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setManutPeca(p)}
+                                    style={{
+                                      padding: "4px 10px",
+                                      borderRadius: 8,
+                                      border: `1px solid rgba(167,139,250,0.4)`,
+                                      background: "rgba(167,139,250,0.12)",
+                                      color: "#a78bfa",
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      fontFamily: FONT.body,
+                                    }}
+                                  >
+                                    Manutenção
+                                  </button>
+                                ) : null}
                               </>
                             ) : (
                               "—"
@@ -905,7 +909,7 @@ export default function FigurinosPage() {
                           <td style={dataTable.tdCenter}>{p.maintenance_entered_by?.trim() ? p.maintenance_entered_by : "—"}</td>
                           <td style={dataTable.tdCenter}>
                             <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 6, whiteSpace: "nowrap" }}>
-                            {podeEditar ? (
+                            {podeCriar ? (
                               <>
                                 <button
                                   type="button"
@@ -1063,7 +1067,7 @@ export default function FigurinosPage() {
         </ModalBase>
       ) : null}
 
-      {manutPeca ? (
+      {manutPeca && podeCriar ? (
         <ModalManutencaoPeca
           peca={manutPeca}
           resumoEstudios={labelEstudiosPeca(manutPeca, estudioNome, opParaEstudio)}
@@ -1076,7 +1080,7 @@ export default function FigurinosPage() {
         />
       ) : null}
 
-      {descPeca ? (
+      {descPeca && podeCriar ? (
         <ModalDescartarPeca
           peca={descPeca}
           resumoEstudios={labelEstudiosPeca(descPeca, estudioNome, opParaEstudio)}
@@ -1089,7 +1093,7 @@ export default function FigurinosPage() {
         />
       ) : null}
 
-      {concluirManutPeca ? (
+      {concluirManutPeca && podeCriar ? (
         <ModalBase onClose={() => setConcluirManutPeca(null)} maxWidth={400}>
           <ModalHeader title="Disponibilizar peça" onClose={() => setConcluirManutPeca(null)} />
           <p style={{ fontFamily: FONT.body, fontSize: 14, color: t.text, marginBottom: 16 }}>
@@ -1160,6 +1164,7 @@ export default function FigurinosPage() {
           loadingHist={loadingHist}
           empAtivo={empPorItem[detalhe.id]}
           podeEditar={podeEditar}
+          podeCriar={podeCriar}
           onClose={() => setDetalhe(null)}
           onRetirada={() => {
             setDetalhe(null);

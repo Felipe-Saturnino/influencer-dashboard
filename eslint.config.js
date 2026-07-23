@@ -15,6 +15,7 @@ export default tseslint.config(
       'scripts/split-*.mjs',
       'scripts/fix-*.mjs',
       'scripts/prune-*.mjs',
+      '.cursor/hooks/**',
     ],
   },
   eslint.configs.recommended,

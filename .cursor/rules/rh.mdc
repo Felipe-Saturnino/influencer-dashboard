@@ -43,7 +43,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 
 ## Gestão de Prestadores (`rh_funcionarios`)
 
-- Pasta `rh/GestaoPrestador/`: `index.tsx` (página + modais), `gestaoPrestadorHelpers.ts`, `usePrestadorLista.ts` (carga via `fetchAllPages`, organograma, filtros, ordenação, KPIs de resumo), `RhFuncModalHeaderDetalhes.tsx`, `PrestadorKpiResumo.tsx`, `PrestadorFiltroBar.tsx`, `PrestadorTabelaColaboradores.tsx`.
+- Pasta `rh/GestaoPrestador/`: `index.tsx` (página + modais), `gestaoPrestadorHelpers.ts`, `usePrestadorLista.ts` (carga via `fetchAllPages`, organograma, filtros, ordenação, KPIs de resumo), `RhFuncModalHeaderDetalhes.tsx`, `PrestadorKpiResumo.tsx`, `PrestadorFiltroBar.tsx`, `PrestadorTabelaColaboradores.tsx`, `ModalHistoricoPrestador.tsx`.
 - `PageHeader` (`rh/GestaoPrestador/index.tsx`); subtítulo obrigatório.
 - **Ordem do topo:** alertas globais → **cards consolidado** (`app-grid-3`: Total, Cadastro incompleto, Revisão cadastral pendente) → barra de filtros → conteúdo da aba.
 - **Barra de filtros:** componente `PrestadorFiltroBar.tsx` — mesma estrutura (`getFilterBarWrapperStyle` + três fileiras): Diretoria/Gerência/Setor/Contrato/Status; busca; abas + CTAs (`Novo Prestador` / `RH Talks` conforme aba e permissão).

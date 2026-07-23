@@ -674,12 +674,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Manutenção e Descarte",
         texto:
-          "Peças disponíveis podem ser enviadas para manutenção diretamente, sem passar por retirada. Tipos disponíveis: Costura, Lavagem, Perda e Descarte. Costura e Lavagem mantêm o status de manutenção; Perda e Descarte movem a peça para Descartada.\n\nPeças em manutenção podem ser Disponibilizadas (voltam ao estoque) ou Descartadas.",
+          "Peças disponíveis podem ser enviadas para manutenção diretamente, sem passar por retirada. Tipos disponíveis: Costura, Lavagem, Perda e Descarte. Costura e Lavagem mantêm o status de manutenção; Perda e Descarte movem a peça para Descartada.\n\nPeças em manutenção podem ser Disponibilizadas (voltam ao estoque) ou Descartadas.\n\nEssas ações (**Manutenção**, **Disponibilizar** e **Descartar**) exigem permissão de **Criar** = Sim na página Figurinos.",
       },
       {
         subtitulo: "Permissões",
         texto:
-          "O acesso é definido em Gestão de Usuários → Permissões para a página Figurinos. Sem permissão de edição, a área funciona em modo consulta — visualização de listagens e detalhes, sem alterar dados.",
+          "O acesso é definido em Gestão de Usuários → Permissões para a página Figurinos:\n— **Ver**: consulta inventário, detalhes e histórico.\n— **Editar**: Retirada e Devolução.\n— **Criar**: Cadastrar peça, enviar para Manutenção, Disponibilizar e Descartar.\n\nSem Criar/Editar, a área fica em modo consulta.",
       },
     ],
   },
@@ -722,7 +722,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde, Noite ou Comercial) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
     ],
   },
@@ -793,12 +793,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Relatório do Turno",
         texto:
-          "Com permissão de **Criar**, use **Novo Relatório**. A **Data do turno** é o dia em que o turno começou (ontem ou hoje) — não a data da publicação; o responsável fica travado no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados, atrasos/faltas/atestados e resumo), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
+          "Com permissão de **Criar**, use **Novo Relatório**. A **Data do turno** é o dia em que o turno começou (ontem ou hoje) — não a data da publicação; o responsável fica travado no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados e atrasos/faltas/atestados; Resumo é opcional), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
       },
       {
         subtitulo: "Relatório de Estúdio",
         texto:
-          "Turno Manhã ou Noite. Campos obrigatórios numéricos: SOSs, Sinais e Payout, além do Resumo. A **Data do turno** é o dia em que o turno começou (não a data da publicação) — útil no turno noturno que fecha na manhã seguinte. Manutenção (Roletas, Mesas, CC Machine, Cartas Contadas) é checklist opcional.",
+          "Turno Manhã ou Noite. Campos obrigatórios numéricos: SOSs, Sinais e Payout, além do Resumo. A **Data do turno** é o dia em que o turno começou (não a data da publicação) — útil no turno noturno que fecha na manhã seguinte. Manutenção (Roletas, Mesas, Troca de Cartas por estúdio, CC Machine, Cartas Contadas) é checklist opcional.",
       },
     ],
   },

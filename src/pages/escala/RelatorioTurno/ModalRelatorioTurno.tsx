@@ -107,7 +107,7 @@ export function ModalRelatorioTurno({
       return;
     }
     for (const b of blocos) {
-      if (b.gp.trim() === "" || b.abs.trim() === "" || !b.resumo.trim()) {
+      if (b.gp.trim() === "" || b.abs.trim() === "") {
         setErro(`Preencha todos os campos obrigatórios do estúdio ${b.nome}.`);
         return;
       }
@@ -116,7 +116,7 @@ export function ModalRelatorioTurno({
         return;
       }
     }
-    if (shufEsc.trim() === "" || shufAbs.trim() === "" || !shufResumo.trim()) {
+    if (shufEsc.trim() === "" || shufAbs.trim() === "") {
       setErro("Preencha todos os campos do bloco Shufflers.");
       return;
     }
@@ -295,7 +295,7 @@ export function ModalRelatorioTurno({
                 </div>
                 <div style={{ marginTop: 12 }}>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-                    Resumo <CampoObrigatorioMark />
+                    Resumo
                   </label>
                   <textarea
                     style={{ ...fieldStyle, minHeight: 72, resize: "vertical" }}
@@ -357,7 +357,7 @@ export function ModalRelatorioTurno({
               </div>
               <div style={{ marginTop: 12 }}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
-                  Resumo <CampoObrigatorioMark />
+                  Resumo
                 </label>
                 <textarea
                   style={{ ...fieldStyle, minHeight: 72, resize: "vertical" }}
