@@ -758,9 +758,9 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "O ponto pode ser registrado mesmo quando o dia estiver como **Folga**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. O vínculo do login com o cadastro RH e a conexão à rede Spin Colaboradores continuam obrigatórios.\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.",
       },
       {
-        subtitulo: "Prestadores de Escritório",
+        subtitulo: "Escritório e Horário Comercial",
         texto:
-          "Prestadores com área de atuação **Escritório** não dependem da Gestão de Escala. De segunda a sexta-feira, o Calendário gera automaticamente a situação **Escalado**, com Entrada programada às 09:00 e Saída programada às 18:00. Sábados e domingos aparecem como Folga. Essa regra vale para **todos** os dias do mês (não só o início).\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
+          "Prestadores com área de atuação **Escritório** e prestadores de **Estúdio** com turno **Comercial** (escala 5×2 / Horário Comercial) usam a mesma regra no Calendário: de segunda a sexta-feira, Situação **Escalado**, Entrada programada às 09:00 e Saída às 18:00; sábados, domingos e feriados nacionais ou da cidade de São Paulo aparecem como **Folga**. Essa regra vale para **todos** os dias do mês e não depende da Gestão de Escala (exceto Compra, Venda ou Troca lançadas na Escala Diária aprovada).\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
       },
       {
         subtitulo: "Relatório de Presença",

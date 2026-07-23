@@ -9,6 +9,7 @@
  */
 
 import { normalizarEscalaCadastro, turnoStaffEhComercial5x2 } from "./rhEscalaTurnos";
+import { valorCelulaHorarioComercialSintetico } from "./overviewPrestadorCalendarioHelpers";
 
 export type DiaMesLite = {
   iso: string;
@@ -137,8 +138,7 @@ function inferirKMod6(
 }
 
 function celulaHorarioComercial(dia: DiaMesLite): "Comercial" | "Folga" {
-  if (dia.isWeekend || dia.isFeriadoSP) return "Folga";
-  return "Comercial";
+  return valorCelulaHorarioComercialSintetico(dia.iso);
 }
 
 function predMrn33FaseA(off: number, K: number): "MRN" | "Folga" {

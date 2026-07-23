@@ -36,7 +36,6 @@ import {
   TURNO_ESCALA_5x2,
   turnoOperacionalParaSiglaGrade,
   turnoRhCoerenteComEscala,
-  turnoStaffEhComercial5x2,
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 import { gerarCelulasSugestaoCustomerService } from "../../../lib/gestaoEscalaSugestaoCustomerService";
@@ -259,7 +258,7 @@ type AreaEscalaKey =
   | "service_manager";
 
 /** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
-type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
+type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite";
 
 type EscalaDiariaSortCol = "nome" | "nickname" | "turno";
 
@@ -276,8 +275,6 @@ function linhaColaboradorNoFiltroTurnoConsolidado(
       return nome === "Tarde";
     case "noite":
       return nome === "Noite";
-    case "comercial":
-      return turnoStaffEhComercial5x2(row.turnoStaffNome);
     default:
       return true;
   }
@@ -348,23 +345,6 @@ function contarCelulasComSigla(
       const k = chaveCelulaGerar(row.id, dia.iso);
       const v = (celulas?.[k] ?? "").trim();
       return acc + (v === sigla ? 1 : 0);
-    }, 0),
-  );
-}
-
-/** Consolidado (ex.: Shift Leader): pessoas com turno Comercial (5x2) em célula «Comercial». */
-function contarHorarioComercialPorDia(
-  linhas: LinhaColaborador[],
-  dias: DiaMes[],
-  celulas: Record<string, string> | undefined,
-): number[] {
-  return dias.map((dia) =>
-    linhas.reduce((acc, row) => {
-      if (row.turnoStaffNome !== TURNO_ESCALA_5x2) return acc;
-      const k = chaveCelulaGerar(row.id, dia.iso);
-      const v = (celulas?.[k] ?? "").trim();
-      if (v === "Comercial") return acc + 1;
-      return acc;
     }, 0),
   );
 }
@@ -1412,18 +1392,10 @@ export default function RhGestaoEscalaPage() {
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
     const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
-    /** Shift Leader: linha Comercial no consolidado (5×2 em célula «Comercial»). */
-    const temLinhaComercialConsolidado = filtroArea === "shift_leader";
     /** Sem pessoal de tarde na operação destas áreas — não exibir linha «Turno da Tarde». */
     const temLinhaTardeConsolidado =
       filtroArea !== "service_manager" && filtroArea !== "shift_leader";
-    const horarioComercial = temLinhaComercialConsolidado
-      ? contarHorarioComercialPorDia(linhasF, dias, celulas)
-      : null;
     const total = dias.map((_, i) => {
-      if (temLinhaComercialConsolidado) {
-        return (manha[i] ?? 0) + (noite[i] ?? 0) + (horarioComercial?.[i] ?? 0);
-      }
       if (!temLinhaTardeConsolidado) {
         return (manha[i] ?? 0) + (noite[i] ?? 0);
       }
@@ -1433,9 +1405,7 @@ export default function RhGestaoEscalaPage() {
       manha,
       tarde,
       noite,
-      horarioComercial,
       total,
-      temLinhaComercialConsolidado,
       temLinhaTardeConsolidado,
     };
   }, [mostrarFiltroArea, filtroArea, prestadoresFiltradosEstudio, dias, gerarPorFiltro]);
@@ -1752,9 +1722,7 @@ export default function RhGestaoEscalaPage() {
                     tabela Escala Diária.{" "}
                     {resumoTurnoDias.temLinhaTardeConsolidado
                       ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
-                      : resumoTurnoDias.temLinhaComercialConsolidado
-                        ? "Totais por turno Manhã, Noite, Comercial e TOTAL por dia."
-                        : "Totais por turno Manhã, Noite e TOTAL por dia."}
+                      : "Totais por turno Manhã, Noite e TOTAL por dia."}
                   </caption>
                   <thead>
                     <tr>
@@ -1906,48 +1874,6 @@ export default function RhGestaoEscalaPage() {
                         );
                       })}
                     </tr>
-                    {resumoTurnoDias.temLinhaComercialConsolidado && resumoTurnoDias.horarioComercial ? (
-                      <tr>
-                        <th
-                          scope="row"
-                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
-                            fontWeight: 700,
-                            padding: 0,
-                          })}
-                        >
-                          <button
-                            type="button"
-                            aria-pressed={filtroTurnoConsolidado === "comercial"}
-                            aria-label="Filtrar Escala Diária pelo turno comercial"
-                            onClick={() => alternarFiltroTurnoConsolidado("comercial")}
-                            style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "comercial")}
-                          >
-                            Comercial
-                          </button>
-                        </th>
-                        {resumoTurnoDias.horarioComercial.map((n, idx) => {
-                          const d = dias[idx]!;
-                          return (
-                            <td
-                              key={`resumo-hc-${d.iso}`}
-                              style={getTdStyle(t, {
-                                textAlign: "center",
-                                fontVariantNumeric: "tabular-nums",
-                                fontWeight: 700,
-                                ...(diaComDestaqueCalendario(d)
-                                  ? {
-                                      background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                      color: "#f59e0b",
-                                    }
-                                  : {}),
-                              })}
-                            >
-                              {n}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ) : null}
                     <tr>
                       <th
                         scope="row"

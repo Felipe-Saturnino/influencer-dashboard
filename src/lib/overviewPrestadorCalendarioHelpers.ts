@@ -2,6 +2,7 @@
  * Helpers partilhados entre Calendário RH e Overview Prestador (escala / presença).
  */
 import { fmtHorasTotal } from "./dashboardHelpers";
+import { ehFeriadoSaoPauloCapital } from "./feriadosSaoPauloCapital";
 import {
   normalizarEscalaCadastro,
   siglaGradeParaNomeTurno,
@@ -15,6 +16,11 @@ import {
 } from "./rhStaffHorarioTurno";
 import type { RhFuncionario } from "../types/rhFuncionario";
 import type { TurnosDealersPick } from "./turnosDealers";
+
+/** `area_key` das células sintéticas de horário comercial (Estúdio 5×2 / Comercial). */
+export const AREA_KEY_HORARIO_COMERCIAL_SINTETICO = "horario_comercial";
+
+type PrestadorHorarioComercialPick = Pick<RhFuncionario, "id" | "area_atuacao" | "staff_turno" | "escala">;
 
 export type RpcGradeCalendarioRow = {
   funcionario_id: string;
@@ -86,29 +92,77 @@ export function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
 }
 
 /**
- * Escala sintética de Escritório (seg–sex Comercial, sáb/dom Folga).
+ * Escritório **ou** Estúdio com turno/escala Comercial (5×2).
+ * Mesma regra de Situação no Calendário (sintético no cliente).
+ */
+export function prestadorUsaHorarioComercialSintetico(
+  p: Pick<RhFuncionario, "area_atuacao" | "staff_turno" | "escala"> | null | undefined,
+): boolean {
+  if (!p) return false;
+  if (p.area_atuacao === "escritorio") return true;
+  if (turnoStaffEhComercial5x2(p.staff_turno)) return true;
+  return normalizarEscalaCadastro(p.escala ?? "") === "5x2";
+}
+
+/**
+ * Escala sintética de horário comercial (Escritório e Estúdio Comercial/5×2):
+ * seg–sex = Comercial; sáb/dom + feriados nacionais e de SP capital = Folga.
  * Fonte de verdade no cliente — a RPC não deve gerar N×31 linhas (limite PostgREST ~1000).
  */
-export function valorCelulaEscritorioSintetico(diaIso: string): "Comercial" | "Folga" {
-  const [ys, ms, ds] = diaIso.slice(0, 10).split("-");
+export function valorCelulaHorarioComercialSintetico(diaIso: string): "Comercial" | "Folga" {
+  const iso = diaIso.slice(0, 10);
+  const [ys, ms, ds] = iso.split("-");
   const y = Number(ys);
   const m = Number(ms);
   const d = Number(ds);
   if (!y || !m || !d) return "Folga";
+  if (ehFeriadoSaoPauloCapital(iso)) return "Folga";
   const dt = new Date(y, m - 1, d);
   const dow = dt.getDay(); // 0=dom … 6=sáb
   return dow === 0 || dow === 6 ? "Folga" : "Comercial";
 }
 
-/** Remove linhas `escritorio` da RPC (podem vir truncadas) e regenera o mês completo no cliente. */
-export function mesclarGradeComEscritorioSintetico(
+/** @deprecated Use `valorCelulaHorarioComercialSintetico` (inclui feriados). */
+export function valorCelulaEscritorioSintetico(diaIso: string): "Comercial" | "Folga" {
+  return valorCelulaHorarioComercialSintetico(diaIso);
+}
+
+function areaKeySinteticaHorarioComercial(
+  p: Pick<RhFuncionario, "area_atuacao">,
+): string {
+  return p.area_atuacao === "escritorio" ? "escritorio" : AREA_KEY_HORARIO_COMERCIAL_SINTETICO;
+}
+
+/**
+ * Remove linhas sintéticas/legado `escritorio` da RPC e regenera mês completo no cliente
+ * para Escritório + Estúdio Comercial (5×2). Preserva Compra/Venda/Troca da grade aprovada.
+ */
+export function mesclarGradeComHorarioComercialSintetico(
   rows: RpcGradeCalendarioRow[],
-  prestadores: Pick<RhFuncionario, "id" | "area_atuacao">[],
+  prestadores: PrestadorHorarioComercialPick[],
   refsMesIso: string[],
 ): RpcGradeCalendarioRow[] {
-  const semEscritorioRpc = rows.filter((r) => (r.area_key ?? "").trim().toLowerCase() !== "escritorio");
-  const escritorioIds = prestadores.filter((p) => p.area_atuacao === "escritorio").map((p) => p.id);
-  if (escritorioIds.length === 0) return semEscritorioRpc;
+  const sinteticoPorId = new Map<string, PrestadorHorarioComercialPick>();
+  for (const p of prestadores) {
+    if (prestadorUsaHorarioComercialSintetico(p)) sinteticoPorId.set(p.id, p);
+  }
+
+  const movimentosPorChave = new Map<string, string>();
+  const baseSemSintetico: RpcGradeCalendarioRow[] = [];
+  for (const r of rows) {
+    const ak = (r.area_key ?? "").trim().toLowerCase();
+    if (ak === "escritorio" || ak === AREA_KEY_HORARIO_COMERCIAL_SINTETICO) continue;
+    if (sinteticoPorId.has(r.funcionario_id)) {
+      const v = (r.valor ?? "").trim();
+      if (v === "Compra" || v === "Venda" || v === "Troca") {
+        movimentosPorChave.set(`${r.funcionario_id}|${diaIsoChaveGrade(r)}`, v);
+      }
+      continue;
+    }
+    baseSemSintetico.push(r);
+  }
+
+  if (sinteticoPorId.size === 0) return baseSemSintetico;
 
   const extra: RpcGradeCalendarioRow[] = [];
   for (const ref of refsMesIso) {
@@ -118,32 +172,48 @@ export function mesclarGradeComEscritorioSintetico(
     if (!y || !m) continue;
     const last = new Date(y, m, 0).getDate();
     const mm = String(m).padStart(2, "0");
-    for (const fid of escritorioIds) {
+    for (const p of sinteticoPorId.values()) {
+      const areaKey = areaKeySinteticaHorarioComercial(p);
       for (let day = 1; day <= last; day++) {
         const iso = `${y}-${mm}-${String(day).padStart(2, "0")}`;
+        const movimento = movimentosPorChave.get(`${p.id}|${iso}`);
         extra.push({
-          funcionario_id: fid,
+          funcionario_id: p.id,
           dia_iso: iso,
-          valor: valorCelulaEscritorioSintetico(iso),
-          area_key: "escritorio",
+          valor: movimento ?? valorCelulaHorarioComercialSintetico(iso),
+          area_key: areaKey,
         });
       }
     }
   }
-  return [...semEscritorioRpc, ...extra];
+  return [...baseSemSintetico, ...extra];
+}
+
+/** Alias — mesmo comportamento de `mesclarGradeComHorarioComercialSintetico`. */
+export function mesclarGradeComEscritorioSintetico(
+  rows: RpcGradeCalendarioRow[],
+  prestadores: PrestadorHorarioComercialPick[],
+  refsMesIso: string[],
+): RpcGradeCalendarioRow[] {
+  return mesclarGradeComHorarioComercialSintetico(rows, prestadores, refsMesIso);
 }
 
 /**
- * Valor da grade do dia; para Escritório usa sempre a regra sintética (mês completo).
+ * Valor da grade do dia; Escritório / Estúdio Comercial usam a regra sintética (mês completo).
+ * Compra/Venda/Troca da grade aprovada prevalecem sobre o sintético.
  */
 export function primeiroValorGradeDiaParaPrestador(
   rows: RpcGradeCalendarioRow[],
   funcionarioId: string,
   iso: string,
-  p?: Pick<RhFuncionario, "area_atuacao"> | null,
+  p?: Pick<RhFuncionario, "area_atuacao" | "staff_turno" | "escala"> | null,
 ): string | null {
-  if (p?.area_atuacao === "escritorio") return valorCelulaEscritorioSintetico(iso);
-  return primeiroValorGradeDia(rows, funcionarioId, iso);
+  if (!prestadorUsaHorarioComercialSintetico(p)) {
+    return primeiroValorGradeDia(rows, funcionarioId, iso);
+  }
+  const fromRows = primeiroValorGradeDia(rows, funcionarioId, iso);
+  if (fromRows === "Compra" || fromRows === "Venda" || fromRows === "Troca") return fromRows;
+  return valorCelulaHorarioComercialSintetico(iso);
 }
 
 export function primeiroValorGradeDia(
@@ -161,7 +231,7 @@ export function primeiroValorGradeDia(
   return v0 || null;
 }
 
-/** Referência visual da grade sintética de Escritório (seg–sex Comercial). */
+/** Referência visual da grade sintética de horário comercial (seg–sex 09:00–18:00). */
 export const HORARIO_ESCRITORIO_COMERCIAL = { entrada: "09:00", saida: "18:00" } as const;
 
 function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { entrada: string; saida: string } | null {
@@ -174,14 +244,6 @@ function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { ent
     entrada: `${String(h1).padStart(2, "0")}:00`,
     saida: `${String(h2).padStart(2, "0")}:00`,
   };
-}
-
-function ehCadastroOuGradeEscritorio(
-  p: RhFuncionario | undefined,
-  areaKey?: string | null,
-): boolean {
-  if (p?.area_atuacao === "escritorio") return true;
-  return (areaKey ?? "").trim().toLowerCase() === "escritorio";
 }
 
 /** `area_key` da célula da grade usada em `primeiroValorGradeDia` (mesmo dia / funcionário). */
@@ -201,28 +263,20 @@ export function areaKeyGradeDia(
 
 /**
  * Entrada / saída programadas (HH:mm).
- * Escritório (cadastro ou `area_key` da grade sintética) + Comercial → 09:00–18:00.
- * Estúdio Comercial 5x2 → `staff_horario_turno`. Demais turnos → escala/operadora.
+ * Horário comercial (Escritório ou Estúdio Comercial/5×2) → sempre 09:00–18:00.
+ * Demais turnos → escala/operadora / `staff_horario_turno`.
  */
 export function obterEntradaSaidaEscaladasPrestadorDia(
   p: RhFuncionario | undefined,
   valorCelula: string | null | undefined,
   op: OpTurnosHorarioPick | null | undefined,
-  areaKey?: string | null,
+  _areaKey?: string | null,
 ): { entrada: string; saida: string } | null {
   const turnoNome = turnoExibicaoDeValorCelulaEscala(valorCelula ?? "");
   if (!turnoNome) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNome)) return { entrada: "—", saida: "—" };
 
   if (turnoNome === "Comercial") {
-    if (ehCadastroOuGradeEscritorio(p, areaKey)) {
-      return { ...HORARIO_ESCRITORIO_COMERCIAL };
-    }
-    if (p && turnoStaffEhComercial5x2(p.staff_turno)) {
-      const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
-      return parsed ?? { entrada: "—", saida: "—" };
-    }
-    // Grade sintética / cadastro incompleto: Comercial sem 5x2 → referência Escritório.
     return { ...HORARIO_ESCRITORIO_COMERCIAL };
   }
 

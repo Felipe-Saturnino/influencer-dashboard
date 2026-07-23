@@ -1,6 +1,6 @@
 # Relatório de Saúde do Código — Data Intelligence (Spin Gaming)
 
-*Última verificação: julho 2026 (Fase 8 — listas/grades densas)*
+*Última verificação: julho 2026 (Fase 9 — arquitetura pré-i18n + leftovers)*
 
 ---
 
@@ -15,6 +15,7 @@
 | **Build TypeScript** | ✅ OK | `npm run typecheck` no pre-commit; ver Global § TypeScript pré-deploy |
 | **Fetch (features novas)** | ✅ Fase 7 | Janela SQL + `fetchAllPages` + colunas explícitas — ver Global § Eficiência de fetch |
 | **Listas densas** | ✅ Fase 8 | Prestadores + Escala: paginação de vista + cache de opções — ver Global §6 |
+| **Arquitetura / leftovers** | ✅ Fase 9 | Calendário lote; portais Gerenciamento; AppContext split parcial; `npm run check:dead` (knip) |
 
 ---
 
@@ -64,7 +65,7 @@ Sintoma típico: **só** um `.js` em `/assets/` (histórico: `vendor-icons-*.js`
 | **Banca de Jogo** | Dump all-time → janela de 13 competências (`solicitado_em`/`liberado_em`); colunas explícitas; catálogos em `Promise.all`. |
 | **Portal RH / Academy (leitura)** | SQL com `status = publicado` + `published_at` na janela histórica; join de categoria estreito; receipts/participantes/autores em paralelo. |
 
-Pendências conscientes (próximas ondas): paginação server-side no Gerenciamento dos portais; N+1 da aprovação mensal do Calendário; split AppContext / monólitos restantes (Fase 9).
+Pendências conscientes (ondas futuras): split completo de monólitos restantes (Calendário ~4k, Prestadores index, Status Técnico, Escala); AppContext ainda concentra escopos/auth; knip ainda **não** bloqueia CI (usar `npm run check:dead` localmente).
 
 ### Fase 7 — Features novas (jul/2026)
 
@@ -86,6 +87,17 @@ Padrão transversal documentado em **`.cursor/rules/global.mdc` § Eficiência d
 | **Gestão de Escala** | Escala Diária pagina 40 linhas na vista (save/sugestão inalterados); cache de opções do `<select>` por tipo de turno. |
 
 Helpers: `lib/tablePagination.ts`, `components/TabelaPaginacaoBar.tsx`. Contrato em Global § Eficiência de fetch §6.
+
+### Fase 9 — Arquitetura pré-i18n + leftovers (jul/2026)
+
+| Área | Correção |
+|------|----------|
+| **Calendário — aprovação mensal** | N+1 de `salvarPresencaGestaoDia` → RPC `rh_calendario_presenca_gestao_salvar_lote` (migration `20261025120000_…`) + `salvarPresencaGestaoDiaLote`. |
+| **Portal RH / Academy Gerenciamento** | `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página. |
+| **AppContext** | `ALL_PAGE_KEYS` → `lib/allPageKeys.ts`; brand CSS/sync → `lib/operadoraBrandApply.ts` (`useApp` API inalterada). |
+| **Código morto** | `knip` + `npm run check:dead` (não falha o CI ainda); removidos shims órfãos Overview Spin + `useHomeInvestidorInformativos`. |
+
+Residual consciente: partir ficheiros >2k linhas (Calendário, Prestadores `index`, Status Técnico, Escala) em ondas dedicadas pré-i18n; extrair modal CIDR do Status Técnico.
 
 ### Carga em duas fases (padrão para janelas históricas pesadas)
 

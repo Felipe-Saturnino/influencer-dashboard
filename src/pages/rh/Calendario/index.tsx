@@ -34,7 +34,6 @@ import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
   normalizarEscalaCadastro,
   siglaGradeParaNomeTurno,
-  turnoStaffEhComercial5x2,
 } from "../../../lib/rhEscalaTurnos";
 import {
   adicionarMinutosAoRelogioHHMM,
@@ -89,7 +88,7 @@ import {
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
-import { mesclarGradeComEscritorioSintetico } from "../../../lib/overviewPrestadorCalendarioHelpers";
+import { mesclarGradeComHorarioComercialSintetico, prestadorUsaHorarioComercialSintetico, AREA_KEY_HORARIO_COMERCIAL_SINTETICO } from "../../../lib/overviewPrestadorCalendarioHelpers";
 import { ModalAprovarPresencaMesCalendario } from "./ModalAprovarPresencaMesCalendario";
 import {
   RelatorioPresencaPainel,
@@ -148,6 +147,7 @@ import {
   carregarPresencaGestaoDiaLote,
   carregarPresencaGestaoMes,
   salvarPresencaGestaoDia,
+  salvarPresencaGestaoDiaLote,
 } from "../../../lib/rhCalendarioPresencaGestaoDb";
 import {
   carregarAprovacaoPresencaMes,
@@ -418,20 +418,11 @@ function resumoHorarioTurnoModalCalendario(
 ): string | null {
   if (!p) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNomeExibicao)) return null;
-  if (p.area_atuacao === "escritorio" && turnoNomeExibicao === "Comercial") {
+  if (turnoNomeExibicao === "Comercial") {
     return "Início 09:00 · Fim 18:00";
   }
 
   const escala = p.escala ?? "";
-
-  if (turnoNomeExibicao === "Comercial") {
-    if (turnoStaffEhComercial5x2(p.staff_turno)) {
-      const lbl = labelHorarioTurnoStaffPorValor(p.staff_horario_turno);
-      return lbl !== "—" ? lbl : null;
-    }
-    // Comercial sem 5x2 (ex.: Escritório com area_atuacao ausente no cliente) → 09h–18h.
-    return "Início 09:00 · Fim 18:00";
-  }
 
   if (turnoNomeExibicao !== "Manhã" && turnoNomeExibicao !== "Tarde" && turnoNomeExibicao !== "Noite") return null;
 
@@ -488,14 +479,6 @@ function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { ent
   };
 }
 
-function ehCadastroOuGradeEscritorio(
-  p: RhFuncionario | undefined,
-  areaKey?: string | null,
-): boolean {
-  if (p?.area_atuacao === "escritorio") return true;
-  return (areaKey ?? "").trim().toLowerCase() === "escritorio";
-}
-
 /** `area_key` da célula usada em `primeiroValorGradeDia`. */
 function areaKeyGradeDia(
   rows: RpcGradeCalendarioRow[],
@@ -513,27 +496,20 @@ function areaKeyGradeDia(
 
 /**
  * Entrada / saída programadas (HH:mm).
- * Escritório (cadastro ou grade sintética) + Comercial → 09:00–18:00.
+ * Horário comercial (Escritório ou Estúdio Comercial/5×2) → sempre 09:00–18:00.
  * Não depender só de `area_atuacao` no cliente (pode vir vazio com Ver=Próprios).
  */
 function obterEntradaSaidaEscaladasPrestadorDia(
   p: RhFuncionario | undefined,
   valorCelula: string | null | undefined,
   op: OpTurnosHorarioPick | null | undefined,
-  areaKey?: string | null,
+  _areaKey?: string | null,
 ): { entrada: string; saida: string } | null {
   const turnoNome = turnoExibicaoDeValorCelulaEscala(valorCelula ?? "");
   if (!turnoNome) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNome)) return { entrada: "—", saida: "—" };
 
   if (turnoNome === "Comercial") {
-    if (ehCadastroOuGradeEscritorio(p, areaKey)) {
-      return { ...HORARIO_ESCRITORIO_COMERCIAL };
-    }
-    if (p && turnoStaffEhComercial5x2(p.staff_turno)) {
-      const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
-      return parsed ?? { entrada: "—", saida: "—" };
-    }
     return { ...HORARIO_ESCRITORIO_COMERCIAL };
   }
 
@@ -1075,7 +1051,7 @@ export default function RhCalendarioPage() {
 
   /** Escritório: mês completo no cliente (RPC truncava em ~1000 linhas). */
   const rawGradeRows = useMemo(
-    () => mesclarGradeComEscritorioSintetico(rawGradeRowsRpc, prestadores, mesesRefISOConsulta),
+    () => mesclarGradeComHorarioComercialSintetico(rawGradeRowsRpc, prestadores, mesesRefISOConsulta),
     [rawGradeRowsRpc, prestadores, mesesRefISOConsulta],
   );
 
@@ -1710,7 +1686,7 @@ export default function RhCalendarioPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <Clock size={14} color={BRAND.azul} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+          <Clock size={14} color={BRAND.azul} aria-hidden="true" style={{ flexShrink: 0, width: 14, height: 14, marginTop: 2 }} />
           <div style={{ fontSize: 13, fontWeight: 700, color: BRAND.azul, lineHeight: 1.4, minWidth: 0 }}>
             Turno de {comp.turno}
           </div>
@@ -1770,9 +1746,26 @@ export default function RhCalendarioPage() {
           lineHeight: 1.2,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-          <Icon size={11} color={cor} aria-hidden="true" />
-          <span style={{ fontSize: 11, fontWeight: 700, color: cor, fontFamily: FONT.body, flexShrink: 0 }}>{etiqueta}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, width: "100%" }}>
+          <Icon
+            size={11}
+            color={cor}
+            aria-hidden="true"
+            style={{ flexShrink: 0, width: 11, height: 11 }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: cor,
+              fontFamily: FONT.body,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+              lineHeight: 1.2,
+            }}
+          >
+            {etiqueta}
+          </span>
           <span
             style={{
               fontSize: 11,
@@ -1783,6 +1776,7 @@ export default function RhCalendarioPage() {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               minWidth: 0,
+              lineHeight: 1.2,
             }}
             title={temSubtitulo ? `${item.titulo}\n${item.subtituloChip}` : `${etiqueta} — ${item.titulo}`}
           >
@@ -1800,6 +1794,7 @@ export default function RhCalendarioPage() {
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
+              lineHeight: 1.2,
             }}
             title={item.subtituloChip}
           >
@@ -1846,8 +1841,25 @@ export default function RhCalendarioPage() {
             width: "100%",
           }}
         >
-          <Clock size={11} color={BRAND.azul} aria-hidden="true" />
-          <span style={{ fontSize: 11, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body, flexShrink: 0 }}>{comp.turno}</span>
+          <Clock
+            size={11}
+            color={BRAND.azul}
+            aria-hidden="true"
+            style={{ flexShrink: 0, width: 11, height: 11 }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: BRAND.azul,
+              fontFamily: FONT.body,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+              lineHeight: 1.2,
+            }}
+          >
+            {comp.turno}
+          </span>
           <span
             style={{
               fontSize: 11,
@@ -1858,6 +1870,7 @@ export default function RhCalendarioPage() {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               minWidth: 0,
+              lineHeight: 1.2,
             }}
             title={`${comp.turno} — ${comp.nome}`}
           >
@@ -2127,8 +2140,11 @@ export default function RhCalendarioPage() {
   const gradeEstudioAusenteNoMes =
     !loadingEscala &&
     !erroEscala &&
-    prestadores.some((p) => p.area_atuacao !== "escritorio") &&
-    !rawGradeRows.some((r) => (r.area_key ?? "").trim().toLowerCase() !== "escritorio");
+    prestadores.some((p) => p.area_atuacao !== "escritorio" && !prestadorUsaHorarioComercialSintetico(p)) &&
+    !rawGradeRows.some((r) => {
+      const ak = (r.area_key ?? "").trim().toLowerCase();
+      return ak !== "escritorio" && ak !== AREA_KEY_HORARIO_COMERCIAL_SINTETICO;
+    });
 
   const mostrarBotaoPontoCalendario =
     !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
@@ -2583,6 +2599,7 @@ export default function RhCalendarioPage() {
     if (!fid || !mesPresencaFechado) return false;
     const em = new Date().toISOString();
     const nextMap = new Map(presencaGestaoPorChave);
+    const lote: Array<{ diaIso: string; gestao: PresencaDiaGestao }> = [];
 
     for (const linha of linhasAprovacaoPresencaMes) {
       if (linha.status !== "Registrado") continue;
@@ -2599,9 +2616,13 @@ export default function RhCalendarioPage() {
         correcao: atual?.correcao,
         justificativa: atual?.justificativa,
       };
-      const ok = await persistirPresencaGestao(fid, linha.diaIso, novo);
-      if (!ok) return false;
+      lote.push({ diaIso: linha.diaIso, gestao: novo });
       nextMap.set(chave, novo);
+    }
+
+    if (lote.length > 0) {
+      const { ok: okLote } = await salvarPresencaGestaoDiaLote(supabase, fid, lote);
+      if (!okLote) return false;
     }
 
     const { ok, aprovacao } = await salvarAprovacaoPresencaMes(
@@ -2623,7 +2644,6 @@ export default function RhCalendarioPage() {
     linhasAprovacaoPresencaMes,
     presencaGestaoPorChave,
     nomeUsuarioPresencaGestao,
-    persistirPresencaGestao,
     current,
   ]);
 

@@ -1319,7 +1319,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
         texto:
-          "Para **Escritório**, a Situação deve preencher o mês inteiro (úteis Escalado 09:00–18:00; fins de semana Folga). Se faltar dias no meio do mês, atualize a plataforma. Para **Estúdio**, Situação `—` com a Escala Diária já **Aprovada** podia ser um limite técnico na carga da grade (corrigido) — atualize a plataforma, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador (Game Presenter, Service Manager, etc.) aprovada (cada área aprova à parte); célula preenchida na grade daquela área.",
+          "Para **Escritório** e **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** podia ser um limite técnico na carga da grade — atualize, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
       },
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",

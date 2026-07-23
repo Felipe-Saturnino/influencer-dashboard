@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/main.tsx", "src/App.tsx", "vite.config.ts"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,ts}"],
+  "ignore": [
+    "src/**/*.test.{ts,tsx}",
+    "supabase/**",
+    "docs/**",
+    "**/*.canvas.tsx"
+  ],
+  "ignoreDependencies": [
+    "@vitest/coverage-v8",
+    "rollup-plugin-visualizer"
+  ],
+  "ignoreBinaries": ["supabase"]
+}

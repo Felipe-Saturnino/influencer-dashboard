@@ -90,7 +90,7 @@ Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valo
 
 ### Workflow Gerenciamento
 
-Status: Rascunho · Publicado · Arquivado. Ações: **Editar** (rascunho e publicado — `podeEditarPostagemAcademyGerenciamento` / permissão de Editar sim ou próprios × `created_by`), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`).
+Status: Rascunho · Publicado · Arquivado. Ações: **Editar** (rascunho e publicado — `podeEditarPostagemAcademyGerenciamento` / permissão de Editar sim ou próprios × `created_by`), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página (`TabelaPaginacaoBar`).
 
 ### Filtros
 

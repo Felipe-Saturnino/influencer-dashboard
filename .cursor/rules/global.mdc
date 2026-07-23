@@ -46,7 +46,7 @@ Sempre que criar ou alterar de forma relevante uma página em `src/pages/**`:
 1. Atualizar o **MDC da secção** correspondente (nova subsecção por `PageKey`, personas, fluxos, exceções, strings de vazio específicas).
 2. Se a UI distinguir **jogos Spin** com cor/ícone e houver **exceção** à paleta canónica, documentar em **«Exceções — identidade de jogo»** no MDC da secção (Global § Identidade visual por jogo).
 3. Se a secção ainda não tiver MDC, **criar** o ficheiro `.cursor/rules/<secao>.mdc` com `globs` das pastas reais antes de considerar a feature fechada.
-4. Alinhar `menu.ts`, `PageKey`, `PAGES` (Gestão de Usuários), **`ALL_PAGE_KEYS`** (`AppContext.tsx`), `App.tsx` e, se aplicável, `appRoutes.ts` — ver Permissões.
+4. Alinhar `menu.ts`, `PageKey`, `PAGES` (Gestão de Usuários), **`ALL_PAGE_KEYS`** (`src/lib/allPageKeys.ts`), `App.tsx` e, se aplicável, `appRoutes.ts` — ver Permissões.
 
 ### Ajuda e glossário (qualquer secção)
 
@@ -166,7 +166,7 @@ styles/         # global.css, responsive.css
 types/          # PageKey, Role, PermissaoValor, …
 ```
 
-Ao criar página nova: alinhar `types` (`PageKey`), `constants/menu.ts`, `App.tsx`, `GestaoUsuarios/constants.ts` (`PAGES`), **`ALL_PAGE_KEYS`** em `context/AppContext.tsx` e `lib/appRoutes.ts` quando houver abas/URL — ver secção Permissões.
+Ao criar página nova: alinhar `types` (`PageKey`), `constants/menu.ts`, `App.tsx`, `GestaoUsuarios/constants.ts` (`PAGES`), **`ALL_PAGE_KEYS`** em `src/lib/allPageKeys.ts` e `lib/appRoutes.ts` quando houver abas/URL — ver secção Permissões.
 
 ---
 
@@ -262,7 +262,7 @@ Se faltar helper em `tableStyles` ou `classificacaoSort`, estender lá — não 
 ### Administrador
 
 - Perfil **`admin`**: acesso **irrestrito** em todas as páginas — `usePermission` devolve `sim` em Ver/Criar/Editar/Excluir **sem consultar** a matriz em Gestão de Usuários (implementado em `usePermission.ts`). O perfil **admin não aparece** na aba Permissões — isso é intencional.
-- **Menu lateral (admin incluído):** o Sidebar só mostra itens cujo `permissions[pageKey]` é `"sim"` ou `"proprios"`. Esse mapa vem de `carregarPermissoes` em **`src/context/AppContext.tsx`**. Para **admin**, todas as entradas são `"sim"`, mas **somente** para chaves listadas em **`ALL_PAGE_KEYS`** (mesmo ficheiro). **Omitir uma `PageKey` nova nesse array faz a página sumir do menu mesmo para administrador** — a matriz `role_permissions` e `PAGES` não compensam essa omissão.
+- **Menu lateral (admin incluído):** o Sidebar só mostra itens cujo `permissions[pageKey]` é `"sim"` ou `"proprios"`. Esse mapa vem de `carregarPermissoes` em **`src/context/AppContext.tsx`**. Para **admin**, todas as entradas são `"sim"`, mas **somente** para chaves listadas em **`ALL_PAGE_KEYS`** (`src/lib/allPageKeys.ts`). **Omitir uma `PageKey` nova nesse array faz a página sumir do menu mesmo para administrador** — a matriz `role_permissions` e `PAGES` não compensam essa omissão.
 - Demais perfis: **somente** o que estiver liberado em Gestão de Usuários (e escopo operadora/influencer / gestor_tipo / prestador_tipo quando aplicável).
 
 ### Página nova — checklist obrigatório
@@ -270,7 +270,7 @@ Se faltar helper em `tableStyles` ou `classificacaoSort`, estender lá — não 
 1. Adicionar `PageKey` em `src/types/index.ts`.
 2. Registrar em `PAGES` (`GestaoUsuarios/constants.ts`) com `hasCriar` / `hasEditar` / `hasExcluir` corretos.
 3. Item no menu (`constants/menu.ts`), lazy import + entrada no `PAGE_MAP` de `App.tsx`.
-4. **Incluir a mesma chave em `ALL_PAGE_KEYS`** (`src/context/AppContext.tsx`) — obrigatório para o item aparecer no menu (admin e universo de permissões no contexto). Verificar após implementação: admin deve ver o item na secção correta do menu sem alterar Gestão de Usuários.
+4. **Incluir a mesma chave em `ALL_PAGE_KEYS`** (`src/lib/allPageKeys.ts`) — obrigatório para o item aparecer no menu (admin e universo de permissões no contexto). Verificar após implementação: admin deve ver o item na secção correta do menu sem alterar Gestão de Usuários.
 5. Se a página tiver abas ou segmento de URL: registrar em **`APP_ROUTE_CATALOG`** (`src/lib/appRoutes.ts`); sincronizar com `useRouteTab` quando aplicável.
 6. **Permissões iniciais (demais perfis):** migração SQL ou seed em `role_permissions` — para **todos os perfis exceto Admin**, Ver/Criar/Editar/Excluir **`Não`** (ou `null` onde a coluna não existir) até liberação explícita na aba **Permissões** (ou abas Gestores / Prestadores / Operadora, conforme o perfil). Replicar em `gestor_tipo_pages` / `prestador_tipo_pages` quando a secção usar essas matrizes.
 7. **Não** pré-conceder `sim` em seeds ou defaults de código para roles não-admin.
@@ -1264,7 +1264,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - Implementar página sem ler Brand + MDC da secção.
 - Ignorar matriz de Gestão de Usuários (exceto admin).
 - **`usePermission` com query Supabase por página** — usar só `permissions` / `permissionsAcoes` do `AppContext` (§ Permissões).
-- **`PageKey` nova em `menu.ts` / `App.tsx` / `PAGES` sem entrada em `ALL_PAGE_KEYS` (`AppContext.tsx`)** — item não aparece no menu lateral (inclusive para admin).
+- **`PageKey` nova em `menu.ts` / `App.tsx` / `PAGES` sem entrada em `ALL_PAGE_KEYS` (`src/lib/allPageKeys.ts`)** — item não aparece no menu lateral (inclusive para admin).
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por defeito.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
