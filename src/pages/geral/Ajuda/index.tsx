@@ -6,7 +6,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { buildMenuAjudaVisivel } from "../../../lib/ajudaVisibilidade";
 import { AbaGlossario } from "./GlossarioPanel";
-import type { PageKey } from "../../../types";
+import type { PageKey, Role } from "../../../types";
 import { HelpCircle, BookOpen, LifeBuoy, BookMarked, GraduationCap } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
@@ -17,6 +17,11 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBusca } from "../../../lib/searchText";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
+import {
+  carregarTutorialVisibilidade,
+  type TutorialVisibilidadeMap,
+} from "../../../lib/ajudaTutorialVisibilidade";
+import { temAlgumTutorialVisivel } from "./tutoriais/catalog";
 import { CONTEUDO_CONHECA } from "./conteudo/conheca";
 import { CONTEUDO_TROUBLE, TROUBLESHOOTING_TRANSVERSAL } from "./conteudo/troubleshooting";
 import { TutoriaisPanel } from "./TutoriaisPanel";
@@ -45,12 +50,49 @@ const AJUDA_TAB_ICONS: Record<Aba, ReactNode> = {
 };
 
 export default function Ajuda() {
-  const { theme: t, isDark, permissions } = useApp();
+  const { theme: t, isDark, permissions, user, effectiveRole } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
-  const [aba, setAba] = useRouteTab("ajuda", "conheca", ["conheca", "troubleshooting", "glossario", "tutoriais"] as const);
+  const isAdmin = user?.role === "admin";
+  const roleEfetivo = (effectiveRole ?? user?.role) as Role | null | undefined;
+
+  const [visibility, setVisibility] = useState<TutorialVisibilidadeMap>({});
+  const [visibilityLoaded, setVisibilityLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const map = await carregarTutorialVisibilidade();
+      if (cancelled) return;
+      setVisibility(map);
+      setVisibilityLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const podeVerAbaTutoriais = useMemo(
+    () =>
+      isAdmin ||
+      (visibilityLoaded && temAlgumTutorialVisivel(roleEfetivo, visibility, false)),
+    [isAdmin, visibilityLoaded, roleEfetivo, visibility],
+  );
+
+  const abasVisiveis = useMemo(
+    (): Aba[] => (podeVerAbaTutoriais ? ABAS : ABAS.filter((a) => a !== "tutoriais")),
+    [podeVerAbaTutoriais],
+  );
+
+  const [aba, setAba] = useRouteTab("ajuda", "conheca", abasVisiveis);
   const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
   const [buscaPagina, setBuscaPagina] = useState("");
+
+  useEffect(() => {
+    if (aba === "tutoriais" && visibilityLoaded && !podeVerAbaTutoriais) {
+      setAba("conheca");
+    }
+  }, [aba, visibilityLoaded, podeVerAbaTutoriais, setAba]);
 
   const menuAjudaVisivel = useMemo(
     () => buildMenuAjudaVisivel(permissions),
@@ -175,9 +217,9 @@ export default function Ajuda() {
         role="tablist"
         aria-label="Seções de ajuda"
         style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}
-        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS, setAba, (k) => `tab-ajuda-${k}`)}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abasVisiveis, setAba, (k) => `tab-ajuda-${k}`)}
       >
-        {ABAS.map((a) => (
+        {abasVisiveis.map((a) => (
           <FiltroBarTabButton
             key={a}
             id={`tab-ajuda-${a}`}
@@ -215,7 +257,16 @@ export default function Ajuda() {
           id="panel-ajuda-tutoriais"
           aria-labelledby="tab-ajuda-tutoriais"
         >
-          <TutoriaisPanel t={t} permissions={permissions} cardShadow={cardShadow} />
+          <TutoriaisPanel
+            t={t}
+            cardShadow={cardShadow}
+            role={roleEfetivo}
+            isAdmin={isAdmin}
+            visibility={visibility}
+            onVisibilityChange={(tutorialId, roles) => {
+              setVisibility((prev) => ({ ...prev, [tutorialId]: roles }));
+            }}
+          />
         </div>
       ) : menuAjudaVisivel.length === 0 ? (
         <div

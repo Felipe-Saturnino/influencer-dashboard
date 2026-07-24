@@ -1,27 +1,45 @@
 import { useEffect, useMemo, useState } from "react";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE, type Theme } from "../../../constants/theme";
-import type { PermissaoValor } from "../../../types";
+import type { Role } from "../../../types";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { textoContemBusca } from "../../../lib/searchText";
 import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import type { TutorialVisibilidadeMap } from "../../../lib/ajudaTutorialVisibilidade";
 import { buildTutoriaisNav } from "./tutoriais/catalog";
 import type { TutorialDef } from "./tutoriais/types";
-import { GraduationCap, TriangleAlert } from "lucide-react";
+import { ModalEditarVisibilidadeTutorial } from "./ModalEditarVisibilidadeTutorial";
+import { GraduationCap, Pencil, TriangleAlert } from "lucide-react";
 
 type Props = {
   t: Theme;
-  permissions: Partial<Record<string, PermissaoValor | null | undefined>>;
   cardShadow: string;
+  role: Role | null | undefined;
+  isAdmin: boolean;
+  visibility: TutorialVisibilidadeMap;
+  onVisibilityChange: (tutorialId: string, roles: Role[]) => void;
 };
 
-export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
+export function TutoriaisPanel({
+  t,
+  cardShadow,
+  role,
+  isAdmin,
+  visibility,
+  onVisibilityChange,
+}: Props) {
   const brand = useDashboardBrand();
   const [busca, setBusca] = useState("");
   const [tutorialId, setTutorialId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
-  const nav = useMemo(() => buildTutoriaisNav(permissions), [permissions]);
+  const nav = useMemo(
+    () => buildTutoriaisNav(role, visibility, isAdmin),
+    [role, visibility, isAdmin],
+  );
 
   const navFiltrado = useMemo(() => {
     const q = busca.trim();
@@ -118,7 +136,7 @@ export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
             maxWidth: 420,
           }}
         >
-          Os tutoriais aparecem conforme as páginas a que você tem permissão de Ver.
+          Os tutoriais aparecem conforme os perfis liberados pelo administrador.
         </p>
       </div>
     );
@@ -244,28 +262,46 @@ export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
       >
         {tutorial ? (
           <>
-            <div style={{ marginBottom: 20 }}>
-              <h2
-                style={{
-                  fontSize: 16,
-                  fontWeight: 800,
-                  color: t.text,
-                  fontFamily: FONT_TITLE,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                  margin: "0 0 8px",
-                }}
-              >
-                {tutorial.titulo}
-              </h2>
-              <div
-                style={{
-                  height: 2,
-                  width: 40,
-                  background: tituloGradient,
-                  borderRadius: 2,
-                }}
-              />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <h2
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color: t.text,
+                    fontFamily: FONT_TITLE,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    margin: "0 0 8px",
+                  }}
+                >
+                  {tutorial.titulo}
+                </h2>
+                <div
+                  style={{
+                    height: 2,
+                    width: 40,
+                    background: tituloGradient,
+                    borderRadius: 2,
+                  }}
+                />
+              </div>
+              {isAdmin ? (
+                <BtnIconeAcaoLinha
+                  label={tooltipAcao("Editar visibilidade do tutorial")}
+                  onClick={() => setEditOpen(true)}
+                >
+                  <Pencil size={14} aria-hidden />
+                </BtnIconeAcaoLinha>
+              ) : null}
             </div>
 
             <div
@@ -424,6 +460,16 @@ export function TutoriaisPanel({ t, permissions, cardShadow }: Props) {
           </>
         ) : null}
       </div>
+
+      {editOpen && tutorial && isAdmin ? (
+        <ModalEditarVisibilidadeTutorial
+          tutorialId={tutorial.id}
+          tutorialTitulo={tutorial.titulo}
+          rolesIniciais={visibility[tutorial.id] ?? []}
+          onClose={() => setEditOpen(false)}
+          onSaved={(roles) => onVisibilityChange(tutorial.id, roles)}
+        />
+      ) : null}
     </div>
   );
 }
