@@ -104,9 +104,10 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Menu:** RH (não Escala). **h1** = Escala Escritório. **Subtítulo:** «Gere a escala mensal dos times de escritório por colaborador e dia.»
 - **Implementação:** `rh/EscalaEscritorio/index.tsx` — thin wrapper: `<GestaoEscalaPage modo="escritorio" />`. Mesma UI/engine que Escala Estúdio; **não** duplicar grade nem toolbar.
 - **Pool:** prestadores com `area_atuacao = escritorio`; abas via Organograma (`rh_escala_times_por_area_atuacao` / `rh_escala_prestadores_por_area_atuacao` com `p_area_atuacao = escritorio`) — **times** (`area_key` = `eo_<uuid32>`) **e gerências sem times** (`eog_<uuid32>`).
-- **Células:** Folga / **Comercial** / Compra / Venda / Troca (sem Manhã/Tarde/Noite nem filtro de estúdio).
+- **Células:** Folga / **Comercial** apenas (**sem** Compra / Venda / Troca; **sem** Manhã/Tarde/Noite nem filtro de estúdio).
+- **Sem fluxo de rascunho:** ao carregar o mês, cada aba recebe grade padrão (úteis **Comercial**, fim de semana/feriado SP **Folga**) e é **aprovada** automaticamente se ainda não estiver. Toolbar **não** exibe Sugestão / Salvar / Nova Escala / Aprovar — só **Alterar Escala** (`canEditarOk`, grade aprovada). Células da Escala Diária **não** são editáveis inline.
 - **Permissões:** seed Ver/Criar/Editar = Não (exceto Admin); PageKey distinto de `rh_gestao_escala`.
-- **Calendário:** grade **aprovada** (`eo_*`) espelha Situação no Calendário e prevalece sobre a escala sintética de horário comercial; sem aprovação, Escritório continua com a regra sintética (úteis Escalado 09:00–18:00).
+- **Calendário:** grade **aprovada** (`eo_*` / `eog_*`) espelha Situação no Calendário e prevalece sobre a escala sintética de horário comercial; sem aprovação, Escritório continua com a regra sintética (úteis Escalado 09:00–18:00).
 - **Gestão de Prestadores:** **inalterada** — cadastro de `area_atuacao`, Organograma e dados RH **não** mudam por esta página; só a grade operacional de escritório.
 
 ---

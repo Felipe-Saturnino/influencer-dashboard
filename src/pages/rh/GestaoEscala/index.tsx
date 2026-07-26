@@ -87,6 +87,7 @@ import {
   mapAlteracoesUltimasPorCelula,
   mapLinhaPrestador,
   mapTurnoMesRowsParaEstado,
+  mesclarCelulasEscritorioComPadrao,
   mesReferenciaInicial,
   opcoesSelectCelulaGerar,
   posSugestaoAtiva,
@@ -400,10 +401,65 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           alteracoesPorArea[areaKey] = mapAlteracoesUltimasPorCelula(alterRes.data as RpcAlteracaoUltimaRow[]);
         }
       }
-      if (Object.keys(fromDbPorArea).length === 0 && Object.keys(metaPorArea).length === 0) return;
+      if (modo !== "escritorio" && Object.keys(fromDbPorArea).length === 0 && Object.keys(metaPorArea).length === 0) {
+        return;
+      }
       const turnoMapAtual = turnoMesData
         ? mapTurnoMesRowsParaEstado(turnoMesData as RpcTurnoMesListarRow[])
         : {};
+
+      /** Escala Escritório: grade padrão Comercial/Folga e status aprovado (sem fluxo de rascunho). */
+      if (modo === "escritorio") {
+        const nextEscritorio: Record<string, EscalaGerarEstadoFiltro> = {};
+        for (const ak of areas) {
+          const fromDb = fromDbPorArea[ak] ?? {};
+          const meta = metaPorArea[ak];
+          const statusRaw = (meta?.status ?? "").trim().toLowerCase();
+          let aprovadaEfetiva = statusRaw === "aprovada";
+          const linhasF = filtrarPorArea(prestadoresRaw, ak).map((r) =>
+            linhaComTurnoMesArea(r, ak, true, turnoMapAtual),
+          );
+          const celulas = mesclarCelulasEscritorioComPadrao(linhasF, dias, fromDb);
+          if (!aprovadaEfetiva && linhasF.length > 0 && Object.keys(celulas).length > 0) {
+            const { data: saveData, error: saveErr } = await supabase.rpc("rh_gestao_escala_grade_salvar", {
+              p_ref_mes: ref,
+              p_area_key: ak,
+              p_celulas: celulas,
+            });
+            if (!cancelled && !saveErr && (saveData as RpcGradeSalvarResult | null)?.ok) {
+              const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
+                p_ref_mes: ref,
+                p_area_key: ak,
+              });
+              if (!aprovErr && (aprovData as RpcGradeAprovarResult | null)?.ok) {
+                aprovadaEfetiva = true;
+              }
+            }
+          }
+          if (cancelled) return;
+          const aprovadoEmIso =
+            meta?.aprovado_em == null
+              ? null
+              : typeof meta.aprovado_em === "string"
+                ? meta.aprovado_em.slice(0, 25)
+                : String(meta.aprovado_em);
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulas, true, modo, ak);
+          nextEscritorio[ak] = {
+            celulas,
+            statusGradeDb: aprovadaEfetiva ? "aprovada" : "rascunho",
+            aprovadoEmDb: aprovadaEfetiva ? aprovadoEmIso : null,
+            aprovadoPorDb: aprovadaEfetiva ? meta?.aprovado_por ?? null : null,
+            baseline: aprovadaEfetiva ? { ...celulas } : null,
+            posSugestao: true,
+            celulasSincronizadasComDb: snap,
+            alteracoesPorCelula: aprovadaEfetiva ? (alteracoesPorArea[ak] ?? {}) : undefined,
+          };
+        }
+        if (cancelled) return;
+        setGerarPorFiltro((prev) => ({ ...prev, ...nextEscritorio }));
+        return;
+      }
+
       setGerarPorFiltro((prev) => {
         const next = { ...prev };
         for (const ak of areas) {
@@ -959,12 +1015,15 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const estGradeFiltro = gerarPorFiltro[filtroArea];
   const celulasGerarAtivas = estGradeFiltro?.celulas;
   const alteracoesPorCelulaAtivas = estGradeFiltro?.alteracoesPorCelula;
-  const podeEditarCelulasDia = Boolean(podeEditarGrade && !escalaGradeAprovadaNaBase(estGradeFiltro));
+  const podeEditarCelulasDia = Boolean(
+    modo !== "escritorio" && podeEditarGrade && !escalaGradeAprovadaNaBase(estGradeFiltro),
+  );
   const mostrarBotaoAlterarEscala = Boolean(
     mostrarFiltroArea &&
       podeAlterarEscalaAprovada &&
-      posSugestaoAtiva(estGradeFiltro) &&
-      escalaGradeAprovadaNaBase(estGradeFiltro),
+      (modo === "escritorio"
+        ? escalaGradeAprovadaNaBase(estGradeFiltro)
+        : posSugestaoAtiva(estGradeFiltro) && escalaGradeAprovadaNaBase(estGradeFiltro)),
   );
 
   const resumoTurnoDias = useMemo(() => {
@@ -1013,6 +1072,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   }, [mostrarFiltroArea, filtroArea, prestadoresFiltradosEstudio, dias, gerarPorFiltro, modo]);
 
   const mostrarSalvarAlteracoes = useMemo(() => {
+    if (modo === "escritorio") return false;
     const est = gerarPorFiltro[filtroArea];
     if (!mostrarFiltroArea || !posSugestaoAtiva(est) || escalaGradeAprovadaNaBase(est)) return false;
     const linhasF = filtrarPorArea(prestadoresRaw, filtroArea).map((r) =>
@@ -1074,7 +1134,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     cursor: "pointer",
   };
 
-  const acaoGerarNoFiltroSelecionado = podeEditarGrade ? acaoBotaoGerar(filtroArea) : null;
+  const acaoGerarNoFiltroSelecionado =
+    modo === "escritorio" ? null : podeEditarGrade ? acaoBotaoGerar(filtroArea) : null;
 
   const confirmarAlteracaoCelulaAprovada = useCallback(
     (
@@ -1668,7 +1729,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     gap: 8,
                   }}
                 >
-                  {mostrarFiltroArea && podeEditarGrade ? (
+                  {mostrarFiltroArea && podeEditarGrade && modo !== "escritorio" ? (
                     <>
                       {posSugestaoAtiva(gerarPorFiltro[filtroArea]) ? (
                         <>

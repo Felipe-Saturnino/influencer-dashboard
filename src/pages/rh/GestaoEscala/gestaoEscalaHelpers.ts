@@ -10,6 +10,7 @@ import {
   turnoStaffEhComercial5x2,
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
+import { valorCelulaHorarioComercialSintetico } from "../../../lib/overviewPrestadorCalendarioHelpers";
 import {
   aplicarTurnoSnapshotNaLinha,
   chaveTurnoMes,
@@ -568,10 +569,28 @@ const OPCOES_CELULA_ESCRITORIO: { value: string; label: string }[] = [
   { value: "", label: "—" },
   { value: "Folga", label: "Folga" },
   { value: "Comercial", label: "Comercial" },
-  { value: "Compra", label: "Compra" },
-  { value: "Venda", label: "Venda" },
-  { value: "Troca", label: "Troca" },
 ];
+
+/**
+ * Grade padrão Escala Escritório: dias úteis = Comercial; fim de semana / feriado SP = Folga.
+ * Valores existentes válidos (Comercial / Folga) prevalecem sobre o padrão.
+ */
+export function mesclarCelulasEscritorioComPadrao(
+  linhas: { id: string }[],
+  dias: { iso: string }[],
+  existentes?: Record<string, string> | null,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const row of linhas) {
+    for (const d of dias) {
+      const k = chaveCelulaGerar(row.id, d.iso);
+      const bruto = (existentes?.[k] ?? "").trim();
+      const v = sanitizarValorCelulaGerar("", bruto, "", "escritorio");
+      out[k] = v || valorCelulaHorarioComercialSintetico(d.iso);
+    }
+  }
+  return out;
+}
 
 export function opcoesSelectCelulaGerar(
   row: Pick<LinhaColaborador, "siglaTurnoStaff" | "turnoStaffNome">,
@@ -621,7 +640,6 @@ export function sanitizarValorCelulaGerar(
 ): string {
   const v = (valorArmazenado ?? "").trim();
   if (modo === "escritorio") {
-    if (v === "Compra" || v === "Venda" || v === "Troca") return v;
     if (v === "F" || v.toLowerCase() === "folga") return "Folga";
     if (v === "Comercial" || v.toLowerCase() === "comercial") return "Comercial";
     if (!v) return "";

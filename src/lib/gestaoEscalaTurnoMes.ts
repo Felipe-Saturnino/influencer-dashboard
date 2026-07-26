@@ -49,9 +49,6 @@ export function opcoesSelectCelulaAlterarEscala(
       { value: "", label: "—" },
       { value: "Folga", label: "Folga" },
       { value: "Comercial", label: "Comercial" },
-      { value: "Compra", label: "Compra" },
-      { value: "Venda", label: "Venda" },
-      { value: "Troca", label: "Troca" },
     ];
   }
   const out: { value: string; label: string }[] = [
@@ -80,11 +77,11 @@ export function sanitizarValorCelulaAlterarEscala(
 ): string {
   const v = (valorArmazenado ?? "").trim();
   if (!v) return "";
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   if (v === "F" || v.toLowerCase() === "folga") return "Folga";
   const permiteComercial = modo === "escritorio" || areaKey === "academy";
   if (permiteComercial && (v === "Comercial" || v.toLowerCase() === "comercial")) return "Comercial";
   if (modo === "escritorio") return "";
+  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   if (v === "MRN" || v === "AFT" || v === "NGT") return v;
   if (v === "Manhã" || v.toLowerCase() === "manha") return "MRN";
   if (v === "Tarde") return "AFT";
