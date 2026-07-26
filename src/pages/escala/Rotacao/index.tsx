@@ -24,6 +24,7 @@ import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/page
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { ESTUDIO_FILTRO_TODOS_VALUE } from "../../../components/FiltroEstudioSelect";
+import { labelHorarioTurnoStaffPorValor } from "../../../lib/rhStaffHorarioTurno";
 import {
   alocarEstudioRotacao,
   anexarCheckinRotacao,
@@ -33,9 +34,11 @@ import {
   diaIsoLocal,
   formatDiaRotacaoLabel,
   gerarGradeRotacao,
+  labelCargoLiderancaRotacao,
   labelsMesasRotacao,
   gerarSlotsRotacao,
   indiceProximoSlotRotacao,
+  liderancaCompativelComTurnoRotacao,
   limparAlocacaoRotacao,
   listarEstudiosAtivosRotacao,
   mapaCoresMesasRotacao,
@@ -376,6 +379,8 @@ export default function EscalaRotacaoPage() {
   const [pool, setPool] = useState<RotacaoGpPool[]>([]);
   const [poolSl, setPoolSl] = useState<RotacaoGpPool[]>([]);
   const [poolOutros, setPoolOutros] = useState<RotacaoGpPool[]>([]);
+  const [liderancasDia, setLiderancasDia] = useState<RotacaoGpPool[]>([]);
+  const [painelLiderancaAberto, setPainelLiderancaAberto] = useState(false);
   const [loadingCtx, setLoadingCtx] = useState(false);
   const [erroCtx, setErroCtx] = useState<string | null>(null);
   const [movendoId, setMovendoId] = useState<string | null>(null);
@@ -407,12 +412,15 @@ export default function EscalaRotacaoPage() {
       setPool([]);
       setPoolSl([]);
       setPoolOutros([]);
+      setLiderancasDia([]);
+      setPainelLiderancaAberto(false);
       setPrevia(null);
       return;
     }
     setLoadingCtx(true);
     setErroCtx(null);
     setPrevia(null);
+    setPainelLiderancaAberto(false);
     const res = await carregarContextoRotacaoDia({
       diaIso,
       turno,
@@ -425,15 +433,24 @@ export default function EscalaRotacaoPage() {
       setPool([]);
       setPoolSl([]);
       setPoolOutros([]);
+      setLiderancasDia([]);
       return;
     }
-    const todos = [...res.data.gps, ...res.data.shiftLeads, ...res.data.gpsOutros];
+    const todos = [
+      ...res.data.gps,
+      ...res.data.shiftLeads,
+      ...res.data.gpsOutros,
+      ...res.data.liderancas,
+    ];
     const comCheckin = await anexarCheckinRotacao(diaIso, todos);
     const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
     setCtx(res.data);
     setPool(res.data.gps.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: false })));
     setPoolSl(res.data.shiftLeads.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })));
     setPoolOutros(res.data.gpsOutros.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: false })));
+    setLiderancasDia(
+      res.data.liderancas.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })),
+    );
     setSlotMin(30);
     setLoadingCtx(false);
   }, [diaIso, turno, estudio, estudioOk]);
@@ -471,13 +488,23 @@ export default function EscalaRotacaoPage() {
     return () => window.clearTimeout(id);
   }, [toast]);
 
-  const elegiveis = useMemo(() => pool.filter((g) => !g.falta), [pool]);
-  const elegiveisSl = useMemo(() => poolSl.filter((g) => !g.falta), [poolSl]);
-  const faltasCount = pool.length - elegiveis.length + (poolSl.length - elegiveisSl.length);
-  const naoChegaram = useMemo(
-    () => elegiveis.filter((g) => g.chegou === false).length + elegiveisSl.filter((g) => g.chegou === false).length,
-    [elegiveis, elegiveisSl],
-  );
+  const naoChegaram = useMemo(() => pool.filter((g) => g.chegou === false).length, [pool]);
+  const disponiveis = useMemo(() => pool.filter((g) => g.chegou === true).length, [pool]);
+
+  const liderancasCompativeis = useMemo(() => {
+    const idsNoPool = new Set(poolSl.map((g) => g.funcionarioId));
+    return liderancasDia.filter(
+      (g) =>
+        !idsNoPool.has(g.funcionarioId) &&
+        liderancaCompativelComTurnoRotacao(turno, {
+          horarioTurno: g.horarioTurno,
+          gradeValor: g.gradeValor,
+        }),
+    );
+  }, [liderancasDia, poolSl, turno]);
+
+  const turnoLabelFiltro =
+    ROTACAO_TURNO_OPCOES.find((x) => x.value === turno)?.label ?? ctx?.turnoLabel ?? "—";
 
   const mesaTipoMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -488,14 +515,6 @@ export default function EscalaRotacaoPage() {
   }, [ctx]);
 
   const mesaCoresMap = useMemo(() => mapaCoresMesasRotacao(ctx?.mesas ?? []), [ctx]);
-
-  const slSlotsEmMesa = useMemo(() => {
-    if (!previa) return 0;
-    return previa.gps.reduce((acc, g, i) => {
-      if (!g.isShiftLead) return acc;
-      return acc + (previa.matrix[i] ?? []).filter((v) => v !== "Break" && v !== "X" && v !== "F").length;
-    }, 0);
-  }, [previa]);
 
   const estudiosDestino = useMemo(
     () => estudios.filter((e) => e.slug !== estudio),
@@ -657,19 +676,34 @@ export default function EscalaRotacaoPage() {
     setToast("Aviso aplicado: intervalo de 20 min.");
   };
 
-  const handleAvisoSl = () => {
-    const nextSl = poolSl.map((g) => ({ ...g, falta: false }));
+  const handleIncluirLideranca = (pessoa: RotacaoGpPool) => {
+    if (poolSl.some((g) => g.funcionarioId === pessoa.funcionarioId)) {
+      setToast("Esta liderança já está na reserva.");
+      return;
+    }
+    const nextSl = [
+      ...poolSl,
+      {
+        ...pessoa,
+        falta: false,
+        isShiftLead: true,
+      },
+    ];
     setPoolSl(nextSl);
+    setPainelLiderancaAberto(false);
     const state = montarGrade({
       slot: slotMin,
       gpsPool: pool,
       slPool: nextSl,
       preservarPassado: Boolean(previa),
     });
-    if (!state) return;
+    if (!state) {
+      setToast("Liderança incluída na reserva. Ajuste o pool e gere a prévia.");
+      return;
+    }
     setPrevia(state);
     persistirRascunho(state);
-    setToast("Aviso aplicado: Shift Lead incluído na reserva.");
+    setToast(`${labelCargoLiderancaRotacao(pessoa.cargoLideranca)} incluída na rotação.`);
   };
 
   const handleIncluirReingresso = (fid: string) => {
@@ -937,11 +971,27 @@ export default function EscalaRotacaoPage() {
           ) : (
             <>
               <div style={pageBox}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-                  <SectionTitle sub="Escala aprovada · check-in · alocação do dia">Pool do turno</SectionTitle>
-                  {perm.canCriarOk && (
-                    <CtaCriarButton onClick={() => handleGerar(false)}>Gerar prévia</CtaCriarButton>
-                  )}
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14, alignItems: "flex-start" }}>
+                  <SectionTitle sub={`Escala Aprovada e Check-in do turno ${turnoLabelFiltro}`}>
+                    Pool do turno
+                  </SectionTitle>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {(perm.canCriarOk || perm.canEditarOk) && (
+                      <button
+                        type="button"
+                        aria-expanded={painelLiderancaAberto}
+                        aria-controls="painel-incluir-lideranca"
+                        disabled={!ctx}
+                        onClick={() => setPainelLiderancaAberto((v) => !v)}
+                        style={avisoBtnStyle(t, !ctx)}
+                      >
+                        Incluir Liderança
+                      </button>
+                    )}
+                    {perm.canCriarOk && (
+                      <CtaCriarButton onClick={() => handleGerar(false)}>Gerar prévia</CtaCriarButton>
+                    )}
+                  </div>
                 </div>
 
                 {erroCtx && (
@@ -967,26 +1017,71 @@ export default function EscalaRotacaoPage() {
                   </div>
                 )}
 
-                {ctx && (
-                  <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
-                    {ctx.turnoLabel} · <strong style={{ color: t.text }}>{ctx.horarioTexto}</strong>
-                    {" · "}
-                    {ctx.estudioNome}
-                    {" · "}
-                    Intervalo {slotMin} min
+                {painelLiderancaAberto && (
+                  <div
+                    id="painel-incluir-lideranca"
+                    role="region"
+                    aria-label="Incluir liderança na rotação"
+                    style={{
+                      marginBottom: 14,
+                      padding: 14,
+                      borderRadius: 12,
+                      border: "1px solid color-mix(in srgb, #f59e0b 40%, transparent)",
+                      background: "color-mix(in srgb, #f59e0b 8%, transparent)",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, fontFamily: FONT.body, color: "#92400e" }}>
+                      Shift Leaders e Service Managers escalados no dia · horário compatível com {turnoLabelFiltro} (08h–20h / 20h–08h)
+                    </div>
+                    {liderancasCompativeis.length === 0 ? (
+                      <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                        Nenhuma liderança disponível para este turno. Confira a Escala Estúdio (Shift Leader / Service Manager) e o horário cadastrado.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {liderancasCompativeis.map((g) => (
+                          <button
+                            key={`lid-${g.funcionarioId}`}
+                            type="button"
+                            onClick={() => handleIncluirLideranca(g)}
+                            style={{
+                              display: "inline-flex",
+                              flexDirection: "column",
+                              alignItems: "flex-start",
+                              gap: 4,
+                              padding: "8px 12px",
+                              borderRadius: 12,
+                              border: "1px solid #a78bfa66",
+                              background: t.cardBg,
+                              cursor: "pointer",
+                              fontFamily: FONT.body,
+                              color: t.text,
+                              textAlign: "left",
+                            }}
+                          >
+                            <span style={{ fontSize: 12, fontWeight: 700 }}>
+                              {g.nickname} <span style={{ opacity: 0.65, fontWeight: 500 }}>({g.nomeExibicao})</span>
+                            </span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                              {labelCargoLiderancaRotacao(g.cargoLideranca)}
+                              {g.horarioTurno ? ` · ${labelHorarioTurnoStaffPorValor(g.horarioTurno)}` : ""}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                <div className="app-grid-kpi-5" style={{ gap: 12, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))" }}>
+                <div
+                  className="app-grid-kpi-4"
+                  style={{ gap: 12, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))" }}
+                >
                   {[
-                    { l: "Escalados GP", v: String(pool.length) },
-                    { l: "Shift Lead", v: String(poolSl.length) },
-                    { l: "Faltas", v: String(faltasCount), c: "#e84025" },
-                    { l: "Não chegaram", v: String(naoChegaram), c: naoChegaram > 0 ? "#e84025" : undefined },
                     { l: "Mesas", v: String(ctx?.mesas.length ?? 0) },
-                    ...(previa && slSlotsEmMesa > 0
-                      ? [{ l: "SL em mesa", v: String(slSlotsEmMesa), c: "#a78bfa" }]
-                      : []),
+                    { l: "Escalados", v: String(pool.length) },
+                    { l: "Não chegaram", v: String(naoChegaram), c: naoChegaram > 0 ? "#e84025" : undefined },
+                    { l: "Disponíveis", v: String(disponiveis), c: disponiveis > 0 ? "#22c55e" : undefined },
                   ].map((k) => (
                     <div
                       key={k.l}
@@ -1210,9 +1305,6 @@ export default function EscalaRotacaoPage() {
                         </div>
                       ))}
                     </div>
-                    <p style={{ fontSize: 11, color: t.textMuted, marginTop: 8, fontFamily: FONT.body }}>
-                      O prestador passa o turno inteiro no estúdio de destino (figurino).
-                    </p>
                   </div>
                 ) : null}
               </div>
@@ -1236,14 +1328,6 @@ export default function EscalaRotacaoPage() {
                       style={avisoBtnStyle(t, !ctx)}
                     >
                       Aviso — intervalo 20 min
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!ctx || poolSl.length === 0}
-                      onClick={handleAvisoSl}
-                      style={avisoBtnStyle(t, !ctx || poolSl.length === 0)}
-                    >
-                      Aviso — incluir Shift Lead
                     </button>
                     <button
                       type="button"

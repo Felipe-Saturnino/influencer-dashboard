@@ -1,139 +1,9 @@
--- Rotação cockpit: alocação do dia, pool com estúdio efetivo, prévias rascunho.
--- Aplicar no SQL Editor do Supabase (Git ≠ migrations não faz deploy automático).
+-- Incremental: Incluir Liderança (SL + SM) em escala_rotacao_contexto_dia.
+-- Pré-requisito: cockpit já aplicado (20261028120000 / escala_rotacao_cockpit.sql).
+-- Idempotente: só CREATE OR REPLACE da RPC + GRANT.
+-- Colar no SQL Editor do Supabase.
 
 BEGIN;
-
--- Modelo mais flexível (time folgado / enxuto)
-ALTER TABLE public.escala_rotacao
-  DROP CONSTRAINT IF EXISTS escala_rotacao_modelo_n_check;
-ALTER TABLE public.escala_rotacao
-  ADD CONSTRAINT escala_rotacao_modelo_n_check CHECK (modelo_n BETWEEN 1 AND 24);
-
--- ─── Alocação do dia (só Rotação; não altera Staff) ───────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.escala_rotacao_alocacao (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  dia             date NOT NULL,
-  turno           text NOT NULL CHECK (turno IN ('manha', 'tarde', 'noite')),
-  funcionario_id  uuid NOT NULL REFERENCES public.rh_funcionarios (id) ON DELETE CASCADE,
-  estudio_slug    text NOT NULL,
-  origem          text NOT NULL DEFAULT 'manual'
-                    CHECK (origem IN ('staff', 'manual')),
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  updated_at      timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (dia, turno, funcionario_id)
-);
-
-CREATE INDEX IF NOT EXISTS escala_rotacao_alocacao_dia_turno_idx
-  ON public.escala_rotacao_alocacao (dia, turno);
-CREATE INDEX IF NOT EXISTS escala_rotacao_alocacao_estudio_idx
-  ON public.escala_rotacao_alocacao (estudio_slug);
-
-ALTER TABLE public.escala_rotacao_alocacao ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS escala_rotacao_alocacao_select ON public.escala_rotacao_alocacao;
-CREATE POLICY escala_rotacao_alocacao_select
-  ON public.escala_rotacao_alocacao FOR SELECT TO authenticated
-  USING (public._escala_rotacao_perm('view') OR public._escala_rotacao_perm('create'));
-
-DROP POLICY IF EXISTS escala_rotacao_alocacao_write ON public.escala_rotacao_alocacao;
-CREATE POLICY escala_rotacao_alocacao_write
-  ON public.escala_rotacao_alocacao FOR ALL TO authenticated
-  USING (public._escala_rotacao_perm('create') OR public._escala_rotacao_perm('edit'))
-  WITH CHECK (public._escala_rotacao_perm('create') OR public._escala_rotacao_perm('edit'));
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.escala_rotacao_alocacao TO authenticated;
-
-COMMENT ON TABLE public.escala_rotacao_alocacao IS
-  'Override de estúdio por dia/turno na Rotação (figurino: 1 GP = 1 estúdio por turno).';
-
--- Helper: estúdio staff “primário”
-CREATE OR REPLACE FUNCTION public._escala_rotacao_estudio_staff(p_f public.rh_funcionarios)
-RETURNS text
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT COALESCE(
-    NULLIF(btrim(
-      CASE
-        WHEN p_f.staff_estudio_slugs IS NOT NULL
-             AND cardinality(p_f.staff_estudio_slugs) > 0
-             AND NOT ('todos' = ANY (p_f.staff_estudio_slugs))
-          THEN p_f.staff_estudio_slugs[1]
-        ELSE NULL
-      END
-    ), ''),
-    NULLIF(btrim(COALESCE(p_f.staff_estudio_slug, '')), ''),
-    ''
-  );
-$$;
-
--- ─── Alocar / remover override ───────────────────────────────────────────────
-
-CREATE OR REPLACE FUNCTION public.escala_rotacao_alocar_estudio(
-  p_dia date,
-  p_turno text,
-  p_funcionario_id uuid,
-  p_estudio_slug text
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_turno text := lower(btrim(p_turno));
-  v_est text := btrim(p_estudio_slug);
-BEGIN
-  IF NOT public._escala_rotacao_perm('create') AND NOT public._escala_rotacao_perm('edit') THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'sem_permissao');
-  END IF;
-  IF v_turno NOT IN ('manha', 'tarde', 'noite') THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'turno_invalido');
-  END IF;
-  IF v_est = '' OR v_est = 'todos' THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'estudio_obrigatorio');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.estudios_spin e WHERE e.slug = v_est AND e.ativo IS TRUE) THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'estudio_nao_encontrado');
-  END IF;
-
-  INSERT INTO public.escala_rotacao_alocacao (dia, turno, funcionario_id, estudio_slug, origem, updated_at)
-  VALUES (p_dia, v_turno, p_funcionario_id, v_est, 'manual', now())
-  ON CONFLICT (dia, turno, funcionario_id)
-  DO UPDATE SET estudio_slug = EXCLUDED.estudio_slug, origem = 'manual', updated_at = now();
-
-  RETURN jsonb_build_object('ok', true);
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.escala_rotacao_alocar_estudio(date, text, uuid, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.escala_rotacao_alocar_estudio(date, text, uuid, text) TO authenticated;
-
-CREATE OR REPLACE FUNCTION public.escala_rotacao_limpar_alocacao(
-  p_dia date,
-  p_turno text,
-  p_funcionario_id uuid
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF NOT public._escala_rotacao_perm('create') AND NOT public._escala_rotacao_perm('edit') THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'sem_permissao');
-  END IF;
-  DELETE FROM public.escala_rotacao_alocacao
-  WHERE dia = p_dia AND turno = lower(btrim(p_turno)) AND funcionario_id = p_funcionario_id;
-  RETURN jsonb_build_object('ok', true);
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.escala_rotacao_limpar_alocacao(date, text, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.escala_rotacao_limpar_alocacao(date, text, uuid) TO authenticated;
-
--- ─── Contexto do dia (pool com estúdio efetivo + todos GPs do turno) ─────────
 
 CREATE OR REPLACE FUNCTION public.escala_rotacao_contexto_dia(
   p_dia date,
@@ -456,9 +326,7 @@ $$;
 COMMENT ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) IS
   'Pool GPs/SL + liderancas (SL/SM do dia) + gps_outros + mesas.';
 
--- Index rascunho único por dia/turno/estudo (além da publicada)
-CREATE UNIQUE INDEX IF NOT EXISTS escala_rotacao_rascunho_uk
-  ON public.escala_rotacao (dia, turno, estudio_slug)
-  WHERE status = 'rascunho';
+REVOKE ALL ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) TO authenticated;
 
 COMMIT;

@@ -89,7 +89,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 3. GP **não** repete a **mesma mesa** no slot seguinte — deve **intercalar** com outras mesas (com 2+ mesas no estúdio a regra é rígida; com 1 mesa é inevitável).
 4. Tempo contínuo em mesa **≤ 2h** antes do Break → com slot **30 min** = máx. **4** slots; com slot **20 min** = máx. **6** slots (por isso o 20 min “encaixa” mais mesas antes da pausa quando o time está enxuto).
 5. **Shift Lead** só entra para cobrir cobertura impossível só com GPs; deve fazer o **mínimo** de mesas (função dele é coordenar fora da mesa).
-6. Slot padrão **30 min**; **Aviso — intervalo 20 min** força 20 min e regenera a partir do ponto de corte (ou o draft inteiro se ainda não iniciado).
+6. Slot padrão **30 min**; **Aviso — intervalo 20 min** força 20 min e regenera. **Incluir Liderança** (ao lado de Gerar prévia) lista Shift Leaders e Service Managers escalados no dia cujo horário (08h–20h / 20h–08h) cobre o turno da rotação.
 
 ### Check-in e reingresso (atraso / chega no meio do turno)
 
@@ -112,7 +112,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 |------|---------|
 | **A** | Alocação do dia (move só na Rotação) + regenerar automática + bloqueio 2 estúdios/turno |
 | **B** | Check-in Chegou/Não chegou + reingresso a partir de slot futuro |
-| **C** | Regra ≤ 2h; botões **Aviso — intervalo 20 min** e **Aviso — incluir Shift Lead** |
+| **C** | Regra ≤ 2h; **Aviso — intervalo 20 min**; **Incluir Liderança** (SL + SM por horário) |
 | **D** | Prévia de todos os dias ao aprovar Escala Estúdio do mês |
 | **E** | Painel de risco de cobertura (faltas / não chegaram / SL em mesa) |
 

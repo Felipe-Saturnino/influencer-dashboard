@@ -11,6 +11,8 @@ import { carregarPontoRegistrosDiaLote } from "./rhCalendarioPresencaGestaoDb";
 
 export type RotacaoTurnoKey = "manha" | "tarde" | "noite";
 
+export type RotacaoCargoLideranca = "shift_leader" | "service_manager";
+
 export type RotacaoGpPool = {
   funcionarioId: string;
   nomeCompleto: string;
@@ -24,6 +26,12 @@ export type RotacaoGpPool = {
   alocacaoOrigem?: "staff" | "manual";
   /** true = check-in no dia; false = sem check-in; null = ainda não carregado */
   chegou?: boolean | null;
+  /** Quando vem da lista de liderança (SL / SM). */
+  cargoLideranca?: RotacaoCargoLideranca;
+  /** Chave staff_horario_turno (ex.: 08-20, 20-08). */
+  horarioTurno?: string;
+  /** Célula da Escala Estúdio no dia (MRN / AFT / NGT). */
+  gradeValor?: string;
 };
 
 export type RotacaoMesa = {
@@ -47,8 +55,13 @@ export type RotacaoContextoDia = {
   gps: RotacaoGpPool[];
   /** GPs do mesmo turno em outro estúdio efetivo (para mover). */
   gpsOutros: RotacaoGpPool[];
-  /** Shift Leads escalados (reserva para cobrir mesas). */
+  /** Shift Leads escalados (reserva automática do mesmo turno). */
   shiftLeads: RotacaoGpPool[];
+  /**
+   * Shift Leaders + Service Managers escalados no dia (qualquer célula MRN/AFT/NGT),
+   * para o seletor «Incluir Liderança» — filtrar com `liderancaCompativelComTurnoRotacao`.
+   */
+  liderancas: RotacaoGpPool[];
   mesas: RotacaoMesa[];
 };
 
@@ -590,6 +603,15 @@ function mapPessoaPool(row: Record<string, unknown>, isShiftLead: boolean): Rota
   const nome = String(row.nome ?? "").trim();
   const nick = String(row.nickname ?? "").trim();
   const origem = String(row.alocacao_origem ?? "staff");
+  const cargoRaw = String(row.cargo ?? row.area_key ?? "").trim().toLowerCase();
+  let cargoLideranca: RotacaoCargoLideranca | undefined;
+  if (cargoRaw === "shift_leader" || cargoRaw.includes("shift leader")) {
+    cargoLideranca = "shift_leader";
+  } else if (cargoRaw === "service_manager" || cargoRaw.includes("service manager")) {
+    cargoLideranca = "service_manager";
+  } else if (isShiftLead) {
+    cargoLideranca = "shift_leader";
+  }
   return {
     funcionarioId: String(row.funcionario_id ?? ""),
     nomeCompleto: nome,
@@ -601,14 +623,69 @@ function mapPessoaPool(row: Record<string, unknown>, isShiftLead: boolean): Rota
     estudioEfetivo: String(row.estudio_efetivo ?? "").trim(),
     alocacaoOrigem: origem === "manual" ? "manual" : "staff",
     chegou: null,
+    cargoLideranca,
+    horarioTurno: String(row.staff_horario_turno ?? row.horario_turno ?? "").trim() || undefined,
+    gradeValor: String(row.grade_valor ?? row.valor ?? "").trim() || undefined,
   };
+}
+
+/**
+ * Liderança 08h–20h cobre Manhã/Tarde; 20h–08h (ou 18h–06h) cobre Tarde/Noite.
+ * Fallback pela célula da Escala (MRN / AFT / NGT) quando o horário não veio no cadastro.
+ */
+export function liderancaCompativelComTurnoRotacao(
+  turno: RotacaoTurnoKey,
+  opts: { horarioTurno?: string | null; gradeValor?: string | null },
+): boolean {
+  const h = (opts.horarioTurno ?? "").trim().toLowerCase().replace(/\s/g, "");
+  const g = (opts.gradeValor ?? "").trim().toUpperCase();
+
+  const janelaDia =
+    h === "08-20" ||
+    h === "08:00-20:00" ||
+    h.startsWith("08-") ||
+    (h.includes("08h") && h.includes("20"));
+  const janelaNoite =
+    h === "20-08" ||
+    h === "18-06" ||
+    h === "20:00-08:00" ||
+    h === "18:00-06:00" ||
+    h.startsWith("20-") ||
+    h.startsWith("18-") ||
+    (h.includes("20h") && h.includes("08")) ||
+    (h.includes("18h") && h.includes("06"));
+
+  if (janelaDia && !janelaNoite) {
+    return turno === "manha" || turno === "tarde";
+  }
+  if (janelaNoite && !janelaDia) {
+    return turno === "noite" || turno === "tarde";
+  }
+
+  if (g === "MRN") return turno === "manha" || turno === "tarde";
+  if (g === "NGT") return turno === "noite" || turno === "tarde";
+  if (g === "AFT") return turno === "tarde" || turno === "manha";
+
+  // Sem horário/célula: não esconder — deixa a liderança escolher
+  if (!h && !g) return true;
+  return turno === "manha" || turno === "tarde" || turno === "noite";
+}
+
+export function labelCargoLiderancaRotacao(cargo?: RotacaoCargoLideranca): string {
+  if (cargo === "service_manager") return "Service Manager";
+  return "Shift Leader";
 }
 
 function mapContexto(raw: Record<string, unknown>): RotacaoContextoDia {
   const gpsRaw = Array.isArray(raw.gps) ? raw.gps : [];
   const gpsOutrosRaw = Array.isArray(raw.gps_outros) ? raw.gps_outros : [];
   const slRaw = Array.isArray(raw.shift_leads) ? raw.shift_leads : [];
+  const lidRaw = Array.isArray(raw.liderancas) ? raw.liderancas : [];
   const mesasRaw = Array.isArray(raw.mesas) ? raw.mesas : [];
+  const liderancas =
+    lidRaw.length > 0
+      ? lidRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, true))
+      : slRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, true));
   return {
     dia: String(raw.dia ?? "").slice(0, 10),
     turno: (String(raw.turno ?? "noite") as RotacaoTurnoKey),
@@ -622,6 +699,7 @@ function mapContexto(raw: Record<string, unknown>): RotacaoContextoDia {
     gps: gpsRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, false)),
     gpsOutros: gpsOutrosRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, false)),
     shiftLeads: slRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, true)),
+    liderancas,
     mesas: mesasRaw.map((m) => {
       const row = m as Record<string, unknown>;
       return {

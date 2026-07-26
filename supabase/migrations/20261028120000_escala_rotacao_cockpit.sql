@@ -160,6 +160,7 @@ DECLARE
   v_gps jsonb := '[]'::jsonb;
   v_gps_outros jsonb := '[]'::jsonb;
   v_shift_leads jsonb := '[]'::jsonb;
+  v_liderancas jsonb := '[]'::jsonb;
   v_mesas jsonb := '[]'::jsonb;
   v_turno_label text;
 BEGIN
@@ -370,6 +371,64 @@ BEGIN
       );
   END IF;
 
+  -- Liderança do dia (SL + SM) para «Incluir Liderança» — filtro de horário no client
+  IF v_aprovada THEN
+    SELECT COALESCE(jsonb_agg(
+      jsonb_build_object(
+        'funcionario_id', x.funcionario_id,
+        'nome', x.nome,
+        'nickname', x.nickname,
+        'staff_turno', x.staff_turno,
+        'staff_horario_turno', x.staff_horario_turno,
+        'grade_valor', x.grade_valor,
+        'cargo', x.cargo,
+        'escala', x.escala,
+        'estudio_staff', x.estudio_staff,
+        'estudio_efetivo', x.estudio_efetivo,
+        'alocacao_origem', x.alocacao_origem
+      )
+      ORDER BY x.cargo, x.nome
+    ), '[]'::jsonb)
+    INTO v_liderancas
+    FROM (
+      SELECT DISTINCT ON (f.id)
+        f.id AS funcionario_id,
+        f.nome,
+        COALESCE(NULLIF(btrim(f.staff_nickname), ''), '') AS nickname,
+        COALESCE(tm.staff_turno, f.staff_turno) AS staff_turno,
+        COALESCE(NULLIF(btrim(tm.staff_horario_turno), ''), NULLIF(btrim(f.staff_horario_turno), ''), '') AS staff_horario_turno,
+        btrim(COALESCE(gr.valor, '')) AS grade_valor,
+        gr.area_key AS cargo,
+        f.escala,
+        public._escala_rotacao_estudio_staff(f) AS estudio_staff,
+        COALESCE(
+          NULLIF(btrim(a.estudio_slug), ''),
+          public._escala_rotacao_estudio_staff(f)
+        ) AS estudio_efetivo,
+        COALESCE(a.origem, 'staff') AS alocacao_origem
+      FROM public.rh_funcionarios f
+      INNER JOIN public.rh_org_times t ON t.id = f.org_time_id AND t.status = 'ativo'
+      INNER JOIN public.rh_gestao_escala_grade gr
+        ON gr.funcionario_id = f.id
+       AND gr.ref_mes = v_ref
+       AND gr.dia_iso = p_dia
+       AND gr.area_key IN ('shift_leader', 'service_manager')
+       AND btrim(COALESCE(gr.valor, '')) IN ('MRN', 'AFT', 'NGT')
+      LEFT JOIN public.rh_gestao_escala_turno_mes tm
+        ON tm.ref_mes = v_ref
+       AND tm.area_key = gr.area_key
+       AND tm.funcionario_id = f.id
+      LEFT JOIN public.escala_rotacao_alocacao a
+        ON a.dia = p_dia AND a.turno = v_turno AND a.funcionario_id = f.id
+      WHERE f.status IN ('ativo', 'indisponivel')
+        AND (
+          (gr.area_key = 'shift_leader' AND lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%shift leader%')
+          OR (gr.area_key = 'service_manager' AND lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%service manager%')
+        )
+      ORDER BY f.id, gr.area_key
+    ) x;
+  END IF;
+
   RETURN jsonb_build_object(
     'dia', p_dia,
     'turno', v_turno,
@@ -388,13 +447,14 @@ BEGIN
     'gps', COALESCE(v_gps, '[]'::jsonb),
     'gps_outros', COALESCE(v_gps_outros, '[]'::jsonb),
     'shift_leads', COALESCE(v_shift_leads, '[]'::jsonb),
+    'liderancas', COALESCE(v_liderancas, '[]'::jsonb),
     'mesas', COALESCE(v_mesas, '[]'::jsonb)
   );
 END;
 $$;
 
 COMMENT ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) IS
-  'Pool GPs/SL do estúdio efetivo (alocação Rotação) + gps_outros para mover + mesas.';
+  'Pool GPs/SL + liderancas (SL/SM do dia) + gps_outros + mesas.';
 
 -- Index rascunho único por dia/turno/estudo (além da publicada)
 CREATE UNIQUE INDEX IF NOT EXISTS escala_rotacao_rascunho_uk
