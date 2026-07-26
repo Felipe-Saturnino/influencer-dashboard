@@ -217,12 +217,59 @@ export function labelsMesasRotacao(mesas: { numeroMesa: string }[]): string[] {
   return out;
 }
 
+/** Máximo de slots seguidos em mesa antes do Break ideal. */
+export const ROTACAO_MAX_MESAS_SEGUIDAS = 4;
+const ROTACAO_CICLO = ROTACAO_MAX_MESAS_SEGUIDAS + 1; // 4 mesas + 1 Break
+
+/**
+ * Escolhe quem fica em Break neste slot.
+ * Prioridade: não repetir Break seguido → quem já fez 4 mesas → alinhamento ao ciclo 4+1 → mais tempo em mesa.
+ */
+function escolherBreakersRotacao(
+  nPeople: number,
+  breaksTarget: number,
+  consecutiveWork: number[],
+  lastWasBreak: boolean[],
+  slotIndex: number,
+): Set<number> {
+  if (breaksTarget <= 0) return new Set();
+  const scored = Array.from({ length: nPeople }, (_, p) => p).sort((a, b) => {
+    const la = lastWasBreak[a] ? 1 : 0;
+    const lb = lastWasBreak[b] ? 1 : 0;
+    if (la !== lb) return la - lb;
+    const oa = consecutiveWork[a]! >= ROTACAO_MAX_MESAS_SEGUIDAS ? 1 : 0;
+    const ob = consecutiveWork[b]! >= ROTACAO_MAX_MESAS_SEGUIDAS ? 1 : 0;
+    if (oa !== ob) return ob - oa;
+    if (consecutiveWork[a]! !== consecutiveWork[b]!) {
+      return consecutiveWork[b]! - consecutiveWork[a]!;
+    }
+    const ca = (slotIndex + a) % ROTACAO_CICLO === ROTACAO_MAX_MESAS_SEGUIDAS ? 1 : 0;
+    const cb = (slotIndex + b) % ROTACAO_CICLO === ROTACAO_MAX_MESAS_SEGUIDAS ? 1 : 0;
+    if (ca !== cb) return cb - ca;
+    return a - b;
+  });
+  const onBreak = new Set(scored.slice(0, breaksTarget));
+  const livre = scored.filter((p) => !onBreak.has(p));
+
+  // Repara Break seguido quando ainda há alternativa que não quebrou no slot anterior
+  for (const p of [...onBreak]) {
+    if (!lastWasBreak[p]) continue;
+    const alt = livre.find((q) => !lastWasBreak[q]);
+    if (alt === undefined) continue;
+    onBreak.delete(p);
+    onBreak.add(alt);
+    livre.splice(livre.indexOf(alt), 1);
+    livre.push(p);
+  }
+  return onBreak;
+}
+
 /**
  * Matriz N × slots a partir das mesas do estúdio.
  * Regras:
  * — em cada slot, no máximo 1 GP por mesa;
- * — se N ≥ M, todas as mesas ficam cobertas e (N − M) GPs em Break (rodízio);
- * — se N < M, cobre N mesas por slot com offset rotativo (ao longo do turno todas entram).
+ * — se N ≥ M, prioriza cobrir mesas; se o ritmo 4+1 exigir mais Breaks, pode ficar mesa descoberta;
+ * — ritmo: até 4 mesas seguidas e 1 Break (sem dois Breaks seguidos); ~ceil(N/5) em Break por slot.
  */
 export function gerarPatternRotacao(
   mesasLabels: string[],
@@ -232,27 +279,48 @@ export function gerarPatternRotacao(
   if (mesasLabels.length === 0 || nPeople <= 0 || nSlots <= 0) return [];
   const M = mesasLabels.length;
   const N = nPeople;
-  const breaksPerSlot = Math.max(0, N - M);
+  const consecutiveWork = Array.from({ length: N }, () => 0);
+  const lastWasBreak = Array.from({ length: N }, () => false);
   const rows: string[][] = Array.from({ length: N }, () => []);
 
   for (let s = 0; s < nSlots; s++) {
-    const assignment: string[] = Array.from({ length: N }, () => "Break");
-    const onBreak = new Set<number>();
-    for (let b = 0; b < breaksPerSlot; b++) {
-      onBreak.add((s + b) % N);
-    }
+    /** Cobertura: GPs a mais que mesas. Ritmo 4+1: ~1/5 do pool em Break. */
+    const breaksCobertura = Math.max(0, N - M);
+    const breaksRitmo = Math.ceil(N / ROTACAO_CICLO);
+    let breaksTarget = Math.max(breaksCobertura, breaksRitmo);
+    // Sempre deixa pelo menos 1 GP em mesa quando há mesas
+    breaksTarget = Math.min(breaksTarget, Math.max(0, N - 1));
+
+    const onBreak = escolherBreakersRotacao(
+      N,
+      breaksTarget,
+      consecutiveWork,
+      lastWasBreak,
+      s,
+    );
     const workers: number[] = [];
     for (let p = 0; p < N; p++) {
       if (!onBreak.has(p)) workers.push(p);
     }
+
+    const assignment: string[] = Array.from({ length: N }, () => "Break");
     const mesaOffset = s % M;
     const cover = Math.min(workers.length, M);
     for (let i = 0; i < cover; i++) {
       const p = workers[i]!;
       assignment[p] = mesasLabels[(mesaOffset + i) % M]!;
     }
+
     for (let p = 0; p < N; p++) {
-      rows[p]!.push(assignment[p]!);
+      const v = assignment[p]!;
+      rows[p]!.push(v);
+      if (v === "Break") {
+        consecutiveWork[p] = 0;
+        lastWasBreak[p] = true;
+      } else {
+        consecutiveWork[p]! += 1;
+        lastWasBreak[p] = false;
+      }
     }
   }
   return rows;

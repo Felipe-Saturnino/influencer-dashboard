@@ -1444,7 +1444,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A prévia mostra mesas a menos ou dois GPs na mesma mesa?",
         texto:
-          "A sugestão deve cobrir todas as mesas do estúdio com Número da Mesa cadastrado e colocar só **um** Game Presenter por mesa em cada horário. Clique de novo em **Gerar prévia** após atualizar a página. Se ainda faltar mesa, confira em Gestão de Mesas se todas as mesas do estúdio têm **Número da Mesa** preenchido.",
+          "A sugestão deve cobrir as mesas do estúdio com Número da Mesa, com só **um** Game Presenter por mesa em cada horário, e ritmo de **até 4 mesas seguidas e 1 Break** (sem dois Breaks seguidos). Clique de novo em **Gerar prévia** após atualizar a página. Se ainda faltar mesa, confira em Gestão de Mesas se todas as mesas do estúdio têm **Número da Mesa** preenchido.",
       },
     ],
   },
