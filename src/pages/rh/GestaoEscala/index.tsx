@@ -419,7 +419,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           const linhasF = filtrarPorArea(prestadoresRaw, ak).map((r) =>
             linhaComTurnoMesArea(r, ak, aprovadaNaBase, turnoMapAtual),
           );
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, aprovadaNaBase, modo);
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, aprovadaNaBase, modo, ak);
           const aprovadoEmIso =
             meta?.aprovado_em == null
               ? null
@@ -488,7 +488,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             linhaComTurnoMesArea(r, areaKey, false, turnoMesMap),
           );
           const celulasFinais = celulasOverride !== undefined ? celulasOverride : estAtual.celulas;
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulasFinais, false, modo);
+          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulasFinais, false, modo, areaKey);
           const next = {
             ...prev,
             [areaKey]: {
@@ -648,7 +648,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       for (const row of linhasF) {
         for (const d of dias) {
           const k = chaveCelulaGerar(row.id, d.iso);
-          merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "", row.turnoStaffNome, modo);
+          merged[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, cur.celulas[k] ?? "", row.turnoStaffNome, modo, areaKey);
         }
       }
       const baseline = { ...merged };
@@ -705,7 +705,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               aprovadoPorDb,
               baseline,
               posSugestao: true,
-              celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasAposSnap, dias, merged, true, modo),
+              celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasAposSnap, dias, merged, true, modo, areaKey),
             },
           };
           gravarEscalaMes(ano, mes, next, modo);
@@ -783,11 +783,11 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const atualizarCelulaGerar = useCallback(
     (areaKey: AreaEscalaKey, rowId: string, iso: string, siglaTurnoStaff: string, turnoStaffNome: string, valor: string) => {
       const k = chaveCelulaGerar(rowId, iso);
-      const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor, turnoStaffNome, modo);
+      const ok = sanitizarValorCelulaGerar(siglaTurnoStaff, valor, turnoStaffNome, modo, areaKey);
       setGerarPorFiltro((prev) => {
         const cur = prev[areaKey] ?? { celulas: {}, baseline: null };
         if (escalaGradeAprovadaNaBase(cur)) return prev;
-        const prevOk = sanitizarValorCelulaGerar(siglaTurnoStaff, cur.celulas[k] ?? "", turnoStaffNome, modo);
+        const prevOk = sanitizarValorCelulaGerar(siglaTurnoStaff, cur.celulas[k] ?? "", turnoStaffNome, modo, areaKey);
         if (prevOk === ok) return prev;
         return {
           ...prev,
@@ -815,7 +815,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       const allFilled = linhasF.every((row) =>
         dias.every((d) => {
           const k = chaveCelulaGerar(row.id, d.iso);
-          return sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome, modo).trim() !== "";
+          return sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome, modo, areaKey).trim() !== "";
         }),
       );
       if (escalaGradeAprovadaNaBase(estado) && estado.baseline) {
@@ -823,7 +823,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         for (const row of linhasF) {
           for (const d of dias) {
             const k = chaveCelulaGerar(row.id, d.iso);
-            celSan[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome, modo);
+            celSan[k] = sanitizarValorCelulaGerar(row.siglaTurnoStaff, celulas[k] ?? "", row.turnoStaffNome, modo, areaKey);
           }
         }
         if (celulasIguais(celSan, estado.baseline)) return null;
@@ -975,6 +975,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       const comercial = contarCelulasComSigla(linhasF, dias, celulas, "Comercial");
       return {
         modoEscritorio: true as const,
+        mostrarLinhaComercial: true as const,
         manha: [] as number[],
         tarde: [] as number[],
         noite: [] as number[],
@@ -986,21 +987,26 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
     const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
     const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
+    const ehAcademy = filtroArea === "academy";
+    const comercial = ehAcademy
+      ? contarCelulasComSigla(linhasF, dias, celulas, "Comercial")
+      : ([] as number[]);
     /** Sem pessoal de tarde na operação destas áreas — não exibir linha «Turno da Tarde». */
     const temLinhaTardeConsolidado =
       filtroArea !== "service_manager" && filtroArea !== "shift_leader";
     const total = dias.map((_, i) => {
-      if (!temLinhaTardeConsolidado) {
-        return (manha[i] ?? 0) + (noite[i] ?? 0);
-      }
-      return (manha[i] ?? 0) + (tarde[i] ?? 0) + (noite[i] ?? 0);
+      let s = (manha[i] ?? 0) + (noite[i] ?? 0);
+      if (temLinhaTardeConsolidado) s += tarde[i] ?? 0;
+      if (ehAcademy) s += comercial[i] ?? 0;
+      return s;
     });
     return {
       modoEscritorio: false as const,
+      mostrarLinhaComercial: ehAcademy,
       manha,
       tarde,
       noite,
-      comercial: [] as number[],
+      comercial,
       total,
       temLinhaTardeConsolidado,
     };
@@ -1013,7 +1019,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       linhaComTurnoMesArea(r, filtroArea, false, turnoMesMap),
     );
     if (linhasF.length === 0) return false;
-    const atual = buildCelulasSnapshotGrade(linhasF, dias, est?.celulas ?? {}, false, modo);
+    const atual = buildCelulasSnapshotGrade(linhasF, dias, est?.celulas ?? {}, false, modo, filtroArea);
     const temAlguma = Object.values(atual).some((v) => v.trim() !== "");
     if (!temAlguma) return false;
     const snapDb = est?.celulasSincronizadasComDb ?? null;
@@ -1087,7 +1093,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
           linhaComTurnoMesArea(r, areaKey, true, turnoMesMap),
         );
-        const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, true, modo);
+        const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, true, modo, areaKey);
         const next = {
           ...prev,
           [areaKey]: {
@@ -1332,9 +1338,13 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     tabela Escala Diária.{" "}
                     {resumoTurnoDias.modoEscritorio
                       ? "Totais por turno Comercial e TOTAL por dia."
-                      : resumoTurnoDias.temLinhaTardeConsolidado
-                        ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
-                        : "Totais por turno Manhã, Noite e TOTAL por dia."}
+                      : resumoTurnoDias.mostrarLinhaComercial
+                        ? resumoTurnoDias.temLinhaTardeConsolidado
+                          ? "Totais por turno Comercial, Manhã, Tarde, Noite e TOTAL por dia."
+                          : "Totais por turno Comercial, Manhã, Noite e TOTAL por dia."
+                        : resumoTurnoDias.temLinhaTardeConsolidado
+                          ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
+                          : "Totais por turno Manhã, Noite e TOTAL por dia."}
                   </caption>
                   <thead>
                     <tr>
@@ -1406,6 +1416,49 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                       </tr>
                     ) : (
                       <>
+                    {resumoTurnoDias.mostrarLinhaComercial ? (
+                      <tr>
+                        <th
+                          scope="row"
+                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                            fontWeight: 700,
+                            fontSize: CONSOLIDADO_FONT_TURNO,
+                            padding: 0,
+                          })}
+                        >
+                          <button
+                            type="button"
+                            aria-pressed={filtroTurnoConsolidado === "comercial"}
+                            aria-label="Filtrar Escala Diária pelo turno comercial"
+                            onClick={() => alternarFiltroTurnoConsolidado("comercial")}
+                            style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "comercial")}
+                          >
+                            Comercial
+                          </button>
+                        </th>
+                        {resumoTurnoDias.comercial.map((n, idx) => {
+                          const d = dias[idx]!;
+                          return (
+                            <td
+                              key={`resumo-c-ac-${d.iso}`}
+                              style={getTdStyle(t, {
+                                textAlign: "center",
+                                fontVariantNumeric: "tabular-nums",
+                                fontWeight: 700,
+                                ...(diaComDestaqueCalendario(d)
+                                  ? {
+                                      background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+                                      color: "#f59e0b",
+                                    }
+                                  : {}),
+                              })}
+                            >
+                              {n}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ) : null}
                     <tr>
                       <th
                         scope="row"
@@ -1971,26 +2024,28 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           const bruto = celulasGerarAtivas?.[ck] ?? "";
                           const gradeAprovada = escalaGradeAprovadaNaBase(estGradeFiltro);
                           const val = gradeAprovada
-                            ? sanitizarValorCelulaAlterarEscala(bruto, modo)
-                            : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome, modo);
-                          const opts = opcoesSelectCelulaGerar(row, modo);
+                            ? sanitizarValorCelulaAlterarEscala(bruto, modo, filtroArea)
+                            : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome, modo, filtroArea);
+                          const opts = opcoesSelectCelulaGerar(row, modo, filtroArea);
                           const textoCelula = gradeAprovada
-                            ? labelExibicaoCelulaAlterarEscala(celulasGerarAtivas?.[ck], modo)
+                            ? labelExibicaoCelulaAlterarEscala(celulasGerarAtivas?.[ck], modo, filtroArea)
                             : labelExibicaoCelulaEscala(
                                 row.siglaTurnoStaff,
                                 celulasGerarAtivas?.[ck],
                                 row.turnoStaffNome,
                                 modo,
+                                filtroArea,
                               );
                           const alteracaoMeta = alteracoesPorCelulaAtivas?.[ck];
                           const valorAnteriorLabel = alteracaoMeta
                             ? gradeAprovada
-                              ? labelExibicaoCelulaAlterarEscala(alteracaoMeta.valorAnterior, modo)
+                              ? labelExibicaoCelulaAlterarEscala(alteracaoMeta.valorAnterior, modo, filtroArea)
                               : labelExibicaoCelulaEscala(
                                   row.siglaTurnoStaff,
                                   alteracaoMeta.valorAnterior,
                                   row.turnoStaffNome,
                                   modo,
+                                  filtroArea,
                                 )
                             : "";
                           return (
@@ -2094,9 +2149,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           prestadores={linhas}
           celulas={gerarPorFiltro[filtroArea]?.celulas ?? {}}
           canEditar={podeAlterarEscalaAprovada}
-          sanitizarValor={(_sigla, valor) => sanitizarValorCelulaAlterarEscala(valor, modo)}
-          opcoesSelectCelula={() => opcoesSelectCelulaAlterarEscala(modo)}
-          labelExibicaoCelula={(_sigla, valor) => labelExibicaoCelulaAlterarEscala(valor, modo)}
+          sanitizarValor={(_sigla, valor) => sanitizarValorCelulaAlterarEscala(valor, modo, filtroArea)}
+          opcoesSelectCelula={() => opcoesSelectCelulaAlterarEscala(modo, filtroArea)}
+          labelExibicaoCelula={(_sigla, valor) => labelExibicaoCelulaAlterarEscala(valor, modo, filtroArea)}
           chaveCelula={chaveCelulaGerar}
           onClose={() => setAlterarEscalaModalAberto(false)}
           onCelulaAlterada={confirmarAlteracaoCelulaAprovada}

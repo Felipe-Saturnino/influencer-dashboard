@@ -39,9 +39,10 @@ export function aplicarTurnoSnapshotNaLinha<
   return { ...row, turnoStaffNome, siglaTurnoStaff };
 }
 
-/** Opções do modal Alterar Escala: permite trocar o turno do dia (sem horário Comercial). */
+/** Opções do modal Alterar Escala. Academy (Estúdio) inclui Comercial além de Manhã/Tarde/Noite. */
 export function opcoesSelectCelulaAlterarEscala(
   modo: "estudio" | "escritorio" = "estudio",
+  areaKey?: string | null,
 ): { value: string; label: string }[] {
   if (modo === "escritorio") {
     return [
@@ -53,37 +54,41 @@ export function opcoesSelectCelulaAlterarEscala(
       { value: "Troca", label: "Troca" },
     ];
   }
-  return [
+  const out: { value: string; label: string }[] = [
     { value: "", label: "—" },
     { value: "Folga", label: "Folga" },
     { value: "MRN", label: "Manhã" },
     { value: "AFT", label: "Tarde" },
     { value: "NGT", label: "Noite" },
+  ];
+  if (areaKey === "academy") {
+    out.push({ value: "Comercial", label: "Comercial" });
+  }
+  out.push(
     { value: "Compra", label: "Compra" },
     { value: "Venda", label: "Venda" },
     { value: "Troca", label: "Troca" },
-  ];
+  );
+  return out;
 }
 
-/** Sanitiza valor do Alterar Escala / grade aprovada (turnos operacionais Manhã/Tarde/Noite). */
+/** Sanitiza valor do Alterar Escala / grade aprovada. Comercial só em Escritório ou aba Academy. */
 export function sanitizarValorCelulaAlterarEscala(
   valorArmazenado: string,
   modo: "estudio" | "escritorio" = "estudio",
+  areaKey?: string | null,
 ): string {
   const v = (valorArmazenado ?? "").trim();
   if (!v) return "";
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   if (v === "F" || v.toLowerCase() === "folga") return "Folga";
-  if (modo === "escritorio") {
-    if (v === "Comercial" || v.toLowerCase() === "comercial") return "Comercial";
-    return "";
-  }
+  const permiteComercial = modo === "escritorio" || areaKey === "academy";
+  if (permiteComercial && (v === "Comercial" || v.toLowerCase() === "comercial")) return "Comercial";
+  if (modo === "escritorio") return "";
   if (v === "MRN" || v === "AFT" || v === "NGT") return v;
   if (v === "Manhã" || v.toLowerCase() === "manha") return "MRN";
   if (v === "Tarde") return "AFT";
   if (v === "Noite") return "NGT";
-  /** Legado: Comercial não é mais opção de alteração no Estúdio — trata como vazio. */
-  if (v === "Comercial") return "";
   return "";
 }
 
@@ -91,8 +96,9 @@ export function sanitizarValorCelulaAlterarEscala(
 export function labelExibicaoCelulaAlterarEscala(
   valorArmazenado: string | undefined,
   modo: "estudio" | "escritorio" = "estudio",
+  areaKey?: string | null,
 ): string {
-  const v = sanitizarValorCelulaAlterarEscala(valorArmazenado ?? "", modo);
+  const v = sanitizarValorCelulaAlterarEscala(valorArmazenado ?? "", modo, areaKey);
   if (!v) return "—";
   if (v === "Folga") return "Folga";
   if (v === "Comercial") return "Comercial";

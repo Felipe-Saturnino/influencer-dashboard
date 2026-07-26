@@ -16,6 +16,21 @@ import type { FinanceiroHistoricoPagRow } from "./financeiroTypes"
 import type { FinanceiroMesData } from "./financeiroMesData"
 import { Badge } from "./financeiroUi"
 
+/** Drilldown do consolidado: ciclos do mais novo → mais antigo (`data_inicio`). */
+function ordenarHistoricoPorCicloDesc(rows: FinanceiroHistoricoPagRow[]): FinanceiroHistoricoPagRow[] {
+  return [...rows].sort((a, b) => {
+    const ai = a.ciclos_pagamento?.data_inicio ?? "";
+    const bi = b.ciclos_pagamento?.data_inicio ?? "";
+    const byInicio = bi.localeCompare(ai);
+    if (byInicio !== 0) return byInicio;
+    const af = a.ciclos_pagamento?.data_fim ?? "";
+    const bf = b.ciclos_pagamento?.data_fim ?? "";
+    const byFim = bf.localeCompare(af);
+    if (byFim !== 0) return byFim;
+    return (b.pago_em ?? "").localeCompare(a.pago_em ?? "");
+  });
+}
+
 export function BlocoConsolidado({
   mesData,
   loadingMes,
@@ -51,7 +66,12 @@ export function BlocoConsolidado({
       .eq("influencer_id", id)
       .order("criado_em", { ascending: false })
       .limit(12);
-    if (data) setHistoricoPagamentos(prev => ({ ...prev, [id]: data as FinanceiroHistoricoPagRow[] }));
+    if (data) {
+      setHistoricoPagamentos((prev) => ({
+        ...prev,
+        [id]: ordenarHistoricoPorCicloDesc(data as FinanceiroHistoricoPagRow[]),
+      }));
+    }
     setLoadingHist(null);
   }
 
@@ -229,7 +249,7 @@ export function BlocoConsolidado({
                 </tr>
               ) : ordenados.map((row, i) => {
                 const isOpen = expandido === row.influencer_id;
-                const hist = historicoPagamentos[row.influencer_id] ?? [];
+                const hist = ordenarHistoricoPorCicloDesc(historicoPagamentos[row.influencer_id] ?? []);
                 const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };
                 const zebraBg = dataTable.zebraRow(i);
 

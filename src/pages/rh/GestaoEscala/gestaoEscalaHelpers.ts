@@ -7,6 +7,7 @@ import {
   TURNO_ESCALA_5x2,
   turnoOperacionalParaSiglaGrade,
   turnoRhCoerenteComEscala,
+  turnoStaffEhComercial5x2,
 } from "../../../lib/rhEscalaTurnos";
 import { feriadoLabelSaoPauloCapital } from "../../../lib/feriadosSaoPauloCapital";
 import {
@@ -537,10 +538,20 @@ export function contarCelulasComSigla(
 
 /** Valor interno gravado na célula para dia de trabalho (MRN / AFT / NGT). */
 export function valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff: string, turnoStaffNome: string): string {
-  if (turnoStaffNome.trim() === TURNO_ESCALA_5x2) return "";
+  if (turnoStaffEhComercial5x2(turnoStaffNome)) return "";
   const sigla = siglaTurnoStaff.trim();
   if (sigla === "MRN" || sigla === "AFT" || sigla === "NGT") return sigla;
   return "";
+}
+
+/**
+ * Células Comercial: Escala Escritório (todas as abas) ou Escala Estúdio só na aba Academy.
+ */
+export function areaEscalaPermiteCelulaComercial(
+  modo: EscalaGradeModo,
+  areaKey?: string | null,
+): boolean {
+  return modo === "escritorio" || areaKey === "academy";
 }
 
 function labelTurnoOperacionalCelula(work: string): string {
@@ -565,10 +576,15 @@ const OPCOES_CELULA_ESCRITORIO: { value: string; label: string }[] = [
 export function opcoesSelectCelulaGerar(
   row: Pick<LinhaColaborador, "siglaTurnoStaff" | "turnoStaffNome">,
   modo: EscalaGradeModo = "estudio",
+  areaKey?: string | null,
 ): { value: string; label: string }[] {
   if (modo === "escritorio") return OPCOES_CELULA_ESCRITORIO;
+  /** Academy + turno Comercial (5×2): mesmas opções do Escritório. */
+  if (areaKey === "academy" && turnoStaffEhComercial5x2(row.turnoStaffNome)) {
+    return OPCOES_CELULA_ESCRITORIO;
+  }
   const work = valorTurnoTrabalhoInternoParaLinha(row.siglaTurnoStaff, row.turnoStaffNome);
-  const cacheKey = work || "__none__";
+  const cacheKey = `${areaKey === "academy" ? "academy|" : ""}${work || "__none__"}`;
   const cached = OPCOES_SELECT_CELULA_CACHE.get(cacheKey);
   if (cached) return cached;
   const out: { value: string; label: string }[] = [
@@ -578,6 +594,9 @@ export function opcoesSelectCelulaGerar(
   const labelWork = labelTurnoOperacionalCelula(work);
   if (work && labelWork) {
     out.push({ value: work, label: labelWork });
+  }
+  if (areaKey === "academy") {
+    out.push({ value: "Comercial", label: "Comercial" });
   }
   out.push(
     { value: "Compra", label: "Compra" },
@@ -591,12 +610,14 @@ export function opcoesSelectCelulaGerar(
 /**
  * Garante valor coerente: Folga; Compra/Venda/Troca; sigla/Comercial de trabalho da linha; vazio.
  * Aceita legado Manhã/Tarde/Noite se coincidir com a sigla permitida.
+ * Comercial no Estúdio: somente aba Academy.
  */
 export function sanitizarValorCelulaGerar(
   siglaTurnoStaff: string,
   valorArmazenado: string,
   turnoStaffNome: string,
   modo: EscalaGradeModo = "estudio",
+  areaKey?: string | null,
 ): string {
   const v = (valorArmazenado ?? "").trim();
   if (modo === "escritorio") {
@@ -611,6 +632,12 @@ export function sanitizarValorCelulaGerar(
   const work = valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff, turnoStaffNome);
   const permit = new Set<string>(["", "Folga", "Compra", "Venda", "Troca"]);
   if (work) permit.add(work);
+  if (areaEscalaPermiteCelulaComercial(modo, areaKey)) {
+    permit.add("Comercial");
+  }
+  if (v === "Comercial" || v.toLowerCase() === "comercial") {
+    return permit.has("Comercial") ? "Comercial" : "";
+  }
   if (permit.has(v)) return v;
   const comoSigla = turnoOperacionalParaSiglaGrade(v);
   if (comoSigla && permit.has(comoSigla)) return comoSigla;
@@ -629,6 +656,7 @@ export function buildCelulasSnapshotGrade(
   /** Grade aprovada: preserva MRN/AFT/NGT/Comercial sem amarrar ao Staff vivo. */
   celulasLivres = false,
   modo: EscalaGradeModo = "estudio",
+  areaKey?: string | null,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const row of linhasF) {
@@ -636,8 +664,8 @@ export function buildCelulasSnapshotGrade(
       const k = chaveCelulaGerar(row.id, d.iso);
       const bruto = celulas[k] ?? "";
       out[k] = celulasLivres
-        ? sanitizarValorCelulaAlterarEscala(bruto, modo)
-        : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome, modo);
+        ? sanitizarValorCelulaAlterarEscala(bruto, modo, areaKey)
+        : sanitizarValorCelulaGerar(row.siglaTurnoStaff, bruto, row.turnoStaffNome, modo, areaKey);
     }
   }
   return out;
@@ -681,8 +709,9 @@ export function labelExibicaoCelulaEscala(
   valorArmazenado: string | undefined,
   turnoStaffNome: string,
   modo: EscalaGradeModo = "estudio",
+  areaKey?: string | null,
 ): string {
-  const v = sanitizarValorCelulaGerar(siglaTurnoStaff, valorArmazenado ?? "", turnoStaffNome, modo);
+  const v = sanitizarValorCelulaGerar(siglaTurnoStaff, valorArmazenado ?? "", turnoStaffNome, modo, areaKey);
   if (!v) return "—";
   if (v === "Folga") return "Folga";
   if (v === "Comercial") return "Comercial";
