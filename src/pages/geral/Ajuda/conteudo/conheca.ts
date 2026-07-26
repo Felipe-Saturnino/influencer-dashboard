@@ -831,7 +831,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerar Rotação",
         texto:
-          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na **Escala Estúdio** **aprovada**, com escala **4×2** e turno compatível no Staff. Marque faltas nos chips, escolha o modelo (5 a 8 GPs) e o intervalo de slot (20 ou 30 min — 7 e 8 só 30 min). **Gerar** monta a prévia com **todas** as mesas do estúdio, **1 GP por mesa** por horário e ritmo de **até 4 mesas e 1 Break** (sem Breaks seguidos). Com permissão de **Criar**, **Publicar** grava a rotação e arquiva a anterior do mesmo dia/turno/estúdio.",
+          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na **Escala Estúdio** **aprovada** (4×2) e, como reserva, dos **Shift Leads** do mesmo dia/turno/estúdio. Marque faltas nos chips, escolha o modelo (5 a 8 GPs) e o intervalo de slot. **Gerar** monta a prévia com: todas as mesas cobertas; 1 pessoa por mesa; sem repetir a mesma mesa no horário seguinte; no máximo 4 mesas seguidas por GP antes do Break; Shift Lead só para cobrir e com o mínimo de mesas. Com permissão de **Criar**, **Publicar** grava a rotação.",
       },
       {
         subtitulo: "Rotação Atual",

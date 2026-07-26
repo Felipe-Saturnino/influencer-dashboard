@@ -30,7 +30,7 @@ import {
   corMesaRotacao,
   diaIsoLocal,
   formatDiaRotacaoLabel,
-  gerarPatternRotacao,
+  gerarGradeRotacao,
   labelsMesasRotacao,
   gerarSlotsRotacao,
   listarEstudiosAtivosRotacao,
@@ -134,30 +134,52 @@ function CelulaGpIdentidade({
   nickname,
   textMuted,
   style,
+  isShiftLead,
 }: {
   nome: string;
   nickname: string;
   textMuted: string;
   style: CSSProperties;
+  isShiftLead?: boolean;
 }) {
   const nick = nickname.trim() && nickname !== "—" ? nickname : null;
   return (
     <td style={style} title={nick ? `${nome} · ${nick}` : nome}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-start", minWidth: 0 }}>
-        <span
-          style={{
-            fontWeight: 600,
-            fontSize: 13,
-            fontFamily: FONT.body,
-            lineHeight: 1.25,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            maxWidth: "100%",
-          }}
-        >
-          {nome}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, maxWidth: "100%" }}>
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: 13,
+              fontFamily: FONT.body,
+              lineHeight: 1.25,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              minWidth: 0,
+            }}
+          >
+            {nome}
+          </span>
+          {isShiftLead ? (
+            <span
+              style={{
+                flexShrink: 0,
+                fontSize: 9,
+                fontWeight: 800,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                padding: "2px 6px",
+                borderRadius: 6,
+                background: "color-mix(in srgb, #a78bfa 18%, transparent)",
+                color: "#7c3aed",
+                border: "1px solid #a78bfa55",
+              }}
+            >
+              SL
+            </span>
+          ) : null}
+        </div>
         {nick ? (
           <span
             style={{
@@ -191,7 +213,7 @@ function GradeRotacao({
   t,
 }: {
   slots: string[];
-  gps: { nomeExibicao: string; nickname: string }[];
+  gps: { nomeExibicao: string; nickname: string; isShiftLead?: boolean }[];
   faltosos: { nomeExibicao: string; nickname: string }[];
   matrix: string[][];
   mesaTipo: Record<string, string>;
@@ -229,7 +251,7 @@ function GradeRotacao({
                 padding: "10px 12px",
               }}
             >
-              Game Presenter
+              Equipe
             </th>
             {slots.map((s) => (
               <th key={s} scope="col" style={dataTable.thHeader}>
@@ -246,6 +268,7 @@ function GradeRotacao({
                 nickname={g.nickname}
                 textMuted={t.textMuted}
                 style={estiloStickyGp(i)}
+                isShiftLead={g.isShiftLead}
               />
               {(matrix[i] ?? []).map((v, si) => (
                 <td key={si} style={dataTable.tdCenter}>
@@ -293,6 +316,7 @@ export default function EscalaRotacaoPage() {
 
   const [ctx, setCtx] = useState<RotacaoContextoDia | null>(null);
   const [pool, setPool] = useState<RotacaoGpPool[]>([]);
+  const [poolSl, setPoolSl] = useState<RotacaoGpPool[]>([]);
   const [loadingCtx, setLoadingCtx] = useState(false);
   const [erroCtx, setErroCtx] = useState<string | null>(null);
 
@@ -322,6 +346,7 @@ export default function EscalaRotacaoPage() {
     if (!estudioOk) {
       setCtx(null);
       setPool([]);
+      setPoolSl([]);
       setPrevia(null);
       return;
     }
@@ -338,10 +363,12 @@ export default function EscalaRotacaoPage() {
       setErroCtx(res.erro);
       setCtx(null);
       setPool([]);
+      setPoolSl([]);
       return;
     }
     setCtx(res.data);
-    setPool(res.data.gps.map((g) => ({ ...g })));
+    setPool(res.data.gps.map((g) => ({ ...g, isShiftLead: false })));
+    setPoolSl(res.data.shiftLeads.map((g) => ({ ...g, isShiftLead: true })));
     const sug = sugerirModeloN(res.data.gps.length);
     setModeloN(sug);
     setSlotMin(slotMinutosPermitido(sug, 30));
@@ -381,7 +408,8 @@ export default function EscalaRotacaoPage() {
   }, [toast]);
 
   const elegiveis = useMemo(() => pool.filter((g) => !g.falta), [pool]);
-  const faltasCount = pool.length - elegiveis.length;
+  const elegiveisSl = useMemo(() => poolSl.filter((g) => !g.falta), [poolSl]);
+  const faltasCount = pool.length - elegiveis.length + (poolSl.length - elegiveisSl.length);
 
   const mesaTipoMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -420,18 +448,57 @@ export default function EscalaRotacaoPage() {
     }
     const step = slotMinutosPermitido(modeloN, slotMin);
     const slots = gerarSlotsRotacao(ctx.turnoInicio, ctx.turnoFim, step);
-    const used = elegiveis.slice(0, modeloN);
-    const matrix = gerarPatternRotacao(numeros, modeloN, slots.length);
+    const usedGps = elegiveis.slice(0, modeloN);
+    const usedSl = elegiveisSl;
+    if (usedGps.length + usedSl.length < numeros.length) {
+      setErroPub(
+        `Pessoas insuficientes (${usedGps.length} GPs + ${usedSl.length} Shift Lead) para cobrir ${numeros.length} mesa(s).`,
+      );
+      return;
+    }
+    const gerado = gerarGradeRotacao({
+      mesasLabels: numeros,
+      gps: usedGps.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: false })),
+      shiftLeads: usedSl.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: true })),
+      nSlots: slots.length,
+    });
+    if (!gerado.ok) {
+      setErroPub(gerado.erro);
+      return;
+    }
+    const porId = new Map<string, RotacaoGpPool>();
+    for (const g of usedGps) porId.set(g.funcionarioId, g);
+    for (const g of usedSl) porId.set(g.funcionarioId, g);
+    const linhas = gerado.pessoas.map((p) => {
+      const base = porId.get(p.funcionarioId);
+      return (
+        base ?? {
+          funcionarioId: p.funcionarioId,
+          nomeCompleto: "—",
+          nomeExibicao: "—",
+          nickname: "—",
+          falta: false,
+          isShiftLead: p.isShiftLead,
+        }
+      );
+    });
     setPrevia({
       slots,
-      gps: used,
-      faltosos: pool.filter((g) => g.falta),
-      matrix,
+      gps: linhas,
+      faltosos: [...pool.filter((g) => g.falta), ...poolSl.filter((g) => g.falta)],
+      matrix: gerado.matrix,
       modeloN,
       slotMin: step,
       mesaTipo: mesaTipoMap,
     });
-    setToast(`Prévia gerada · ${used.length} GPs · ${slots.length} slots de ${step} min`);
+    const slEmMesa = gerado.matrix
+      .slice(usedGps.length)
+      .reduce((acc, row) => acc + row.filter((v) => v !== "Break").length, 0);
+    setToast(
+      slEmMesa > 0
+        ? `Prévia gerada · ${usedGps.length} GPs · Shift Lead cobriu ${slEmMesa} slot(s) · ${slots.length} horários`
+        : `Prévia gerada · ${usedGps.length} GPs · ${slots.length} slots de ${step} min`,
+    );
   };
 
   const handlePublicar = async () => {
@@ -672,9 +739,9 @@ export default function EscalaRotacaoPage() {
                 <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 14 }}>
                   {[
                     { l: "Escalados", v: String(pool.length) },
+                    { l: "Shift Lead", v: String(poolSl.length) },
                     { l: "Faltas", v: String(faltasCount), c: "#e84025" },
-                    { l: "Elegíveis (N)", v: String(elegiveis.length) },
-                    { l: "Horário", v: ctx?.horarioTexto ?? "—", sm: true },
+                    { l: "Elegíveis GP", v: String(elegiveis.length) },
                   ].map((k) => (
                     <div
                       key={k.l}
@@ -689,7 +756,7 @@ export default function EscalaRotacaoPage() {
                       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: t.textMuted, marginBottom: 4 }}>
                         {k.l}
                       </div>
-                      <div style={{ fontSize: k.sm ? 13 : 22, fontWeight: 800, color: k.c ?? brand.primary, fontFamily: FONT.body }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: k.c ?? brand.primary, fontFamily: FONT.body }}>
                         {k.v}
                       </div>
                     </div>
@@ -746,6 +813,49 @@ export default function EscalaRotacaoPage() {
                       </button>
                     ))
                   )}
+                  {poolSl.map((g) => (
+                    <button
+                      key={`sl-${g.funcionarioId}`}
+                      type="button"
+                      title={g.falta ? "Clique para incluir Shift Lead na reserva" : "Clique para tirar Shift Lead da reserva"}
+                      onClick={() => {
+                        setPoolSl((prev) =>
+                          prev.map((x) =>
+                            x.funcionarioId === g.funcionarioId ? { ...x, falta: !x.falta } : x,
+                          ),
+                        );
+                        setPrevia(null);
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "6px 12px",
+                        borderRadius: 999,
+                        border: `1px solid ${g.falta ? "rgba(232,64,37,0.4)" : "#a78bfa66"}`,
+                        background: g.falta ? t.inputBg : "color-mix(in srgb, #a78bfa 12%, transparent)",
+                        fontSize: 12,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                        opacity: g.falta ? 0.55 : 1,
+                        textDecoration: g.falta ? "line-through" : "none",
+                        color: t.text,
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: g.falta ? "#e84025" : "#a78bfa",
+                        }}
+                      />
+                      SL · {g.nickname}
+                      <span style={{ opacity: 0.65 }}>({g.nomeExibicao})</span>
+                      {g.falta ? " · Fora" : " · Reserva"}
+                    </button>
+                  ))}
                 </div>
 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>

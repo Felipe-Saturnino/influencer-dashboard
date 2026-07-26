@@ -1444,7 +1444,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A prévia mostra mesas a menos ou dois GPs na mesma mesa?",
         texto:
-          "A sugestão deve cobrir as mesas do estúdio com Número da Mesa, com só **um** Game Presenter por mesa em cada horário, e ritmo de **até 4 mesas seguidas e 1 Break** (sem dois Breaks seguidos). Clique de novo em **Gerar prévia** após atualizar a página. Se ainda faltar mesa, confira em Gestão de Mesas se todas as mesas do estúdio têm **Número da Mesa** preenchido.",
+          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte para a mesma pessoa; limitar o GP a **4 mesas** seguidas antes do Break; usar o **Shift Lead** só como reserva (mínimo de mesas). Clique de novo em **Gerar prévia** após atualizar a página. Se faltar gente para cobrir as mesas, confira GPs elegíveis, faltas e se há Shift Lead escalado no mesmo turno/estúdio. Aplique também o SQL `docs/sql/escala_rotacao_contexto_shift_lead.sql` se o pool de Shift Lead estiver vazio.",
       },
     ],
   },

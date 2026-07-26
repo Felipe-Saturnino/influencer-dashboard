@@ -16,6 +16,8 @@ export type RotacaoGpPool = {
   nomeExibicao: string;
   nickname: string;
   falta: boolean;
+  /** Reserva operacional — só entra na grade para cobrir mesas. */
+  isShiftLead: boolean;
 };
 
 export type RotacaoMesa = {
@@ -37,6 +39,8 @@ export type RotacaoContextoDia = {
   turnoFim: string;
   horarioTexto: string;
   gps: RotacaoGpPool[];
+  /** Shift Leads escalados (reserva para cobrir mesas). */
+  shiftLeads: RotacaoGpPool[];
   mesas: RotacaoMesa[];
 };
 
@@ -217,117 +221,271 @@ export function labelsMesasRotacao(mesas: { numeroMesa: string }[]): string[] {
   return out;
 }
 
-/** Máximo de slots seguidos em mesa antes do Break ideal. */
+/** Máximo de slots seguidos em mesa antes do Break (Game Presenters). */
 export const ROTACAO_MAX_MESAS_SEGUIDAS = 4;
-const ROTACAO_CICLO = ROTACAO_MAX_MESAS_SEGUIDAS + 1; // 4 mesas + 1 Break
+
+type EstadoPessoaRotacao = {
+  isShiftLead: boolean;
+  consecutiveWork: number;
+  lastMesa: string | null;
+  totalMesas: number;
+};
 
 /**
- * Escolhe quem fica em Break neste slot.
- * Prioridade: não repetir Break seguido → quem já fez 4 mesas → alinhamento ao ciclo 4+1 → mais tempo em mesa.
+ * Atribui mesas 1:1 aos workers sem repetir a mesa do slot anterior (quando possível).
  */
-function escolherBreakersRotacao(
-  nPeople: number,
-  breaksTarget: number,
-  consecutiveWork: number[],
-  lastWasBreak: boolean[],
-  slotIndex: number,
-): Set<number> {
-  if (breaksTarget <= 0) return new Set();
-  const scored = Array.from({ length: nPeople }, (_, p) => p).sort((a, b) => {
-    const la = lastWasBreak[a] ? 1 : 0;
-    const lb = lastWasBreak[b] ? 1 : 0;
-    if (la !== lb) return la - lb;
-    const oa = consecutiveWork[a]! >= ROTACAO_MAX_MESAS_SEGUIDAS ? 1 : 0;
-    const ob = consecutiveWork[b]! >= ROTACAO_MAX_MESAS_SEGUIDAS ? 1 : 0;
-    if (oa !== ob) return ob - oa;
-    if (consecutiveWork[a]! !== consecutiveWork[b]!) {
-      return consecutiveWork[b]! - consecutiveWork[a]!;
+function atribuirMesasSemRepeticao(
+  workers: number[],
+  mesas: string[],
+  estado: EstadoPessoaRotacao[],
+): string[] {
+  const n = workers.length;
+  const result: (string | null)[] = Array.from({ length: n }, () => null);
+  const used = new Set<string>();
+
+  const ordem = workers
+    .map((wi, idx) => {
+      const last = estado[wi]!.lastMesa;
+      const opts = mesas.filter((m) => m !== last);
+      return { idx, wi, opts: opts.length > 0 ? opts : mesas };
+    })
+    .sort((a, b) => a.opts.length - b.opts.length || a.idx - b.idx);
+
+  function bt(k: number): boolean {
+    if (k >= ordem.length) return true;
+    const { idx, wi, opts } = ordem[k]!;
+    const preferidos = opts.filter((m) => m !== estado[wi]!.lastMesa);
+    const tentativas = preferidos.length > 0 ? [...preferidos, ...mesas.filter((m) => !preferidos.includes(m))] : mesas;
+    for (const m of tentativas) {
+      if (used.has(m)) continue;
+      used.add(m);
+      result[idx] = m;
+      if (bt(k + 1)) return true;
+      used.delete(m);
+      result[idx] = null;
     }
-    const ca = (slotIndex + a) % ROTACAO_CICLO === ROTACAO_MAX_MESAS_SEGUIDAS ? 1 : 0;
-    const cb = (slotIndex + b) % ROTACAO_CICLO === ROTACAO_MAX_MESAS_SEGUIDAS ? 1 : 0;
-    if (ca !== cb) return cb - ca;
+    return false;
+  }
+
+  if (!bt(0)) {
+    // Fallback determinístico
+    for (let i = 0; i < n; i++) {
+      result[i] = mesas[i % mesas.length]!;
+    }
+  }
+  return result.map((m, i) => m ?? mesas[i % mesas.length]!);
+}
+
+function escolherWorkersSlot(
+  estado: EstadoPessoaRotacao[],
+  mesasCount: number,
+): number[] {
+  const M = mesasCount;
+  const gpOk: number[] = [];
+  const gpMustRest: number[] = [];
+  const slIdx: number[] = [];
+
+  for (let i = 0; i < estado.length; i++) {
+    const e = estado[i]!;
+    if (e.isShiftLead) {
+      slIdx.push(i);
+      continue;
+    }
+    if (e.consecutiveWork >= ROTACAO_MAX_MESAS_SEGUIDAS) gpMustRest.push(i);
+    else gpOk.push(i);
+  }
+
+  const nGp = gpOk.length + gpMustRest.length;
+
+  // Preferir GPs frescos (saíram de Break) e com menor streak
+  gpOk.sort((a, b) => {
+    const ea = estado[a]!;
+    const eb = estado[b]!;
+    const freshA = ea.consecutiveWork === 0 ? 0 : 1;
+    const freshB = eb.consecutiveWork === 0 ? 0 : 1;
+    if (freshA !== freshB) return freshA - freshB;
+    if (ea.consecutiveWork !== eb.consecutiveWork) return ea.consecutiveWork - eb.consecutiveWork;
     return a - b;
   });
-  const onBreak = new Set(scored.slice(0, breaksTarget));
-  const livre = scored.filter((p) => !onBreak.has(p));
 
-  // Repara Break seguido quando ainda há alternativa que não quebrou no slot anterior
-  for (const p of [...onBreak]) {
-    if (!lastWasBreak[p]) continue;
-    const alt = livre.find((q) => !lastWasBreak[q]);
-    if (alt === undefined) continue;
-    onBreak.delete(p);
-    onBreak.add(alt);
-    livre.splice(livre.indexOf(alt), 1);
-    livre.push(p);
+  /**
+   * Quantos GPs colocar em mesa neste slot.
+   * Se N_GP ≤ M e há Shift Lead, deixa 1 vaga ao SL para os GPs poderem Break (ritmo 4+1).
+   * Se vários GPs estão perto do limite (3/4), também abre 1 vaga ao SL.
+   */
+  let gpTarget = Math.min(gpOk.length, M);
+  if (slIdx.length > 0 && gpOk.length >= M) {
+    const nearLimit = gpOk.filter(
+      (i) => estado[i]!.consecutiveWork >= ROTACAO_MAX_MESAS_SEGUIDAS - 1,
+    ).length;
+    if (nGp <= M || nearLimit >= 2) {
+      gpTarget = Math.min(gpOk.length, M - 1);
+    }
   }
-  return onBreak;
+
+  const workers: number[] = [];
+  for (const i of gpOk) {
+    if (workers.length >= gpTarget) break;
+    workers.push(i);
+  }
+
+  // Cobertura: Shift Lead só o mínimo (quem menos fez mesa)
+  if (workers.length < M) {
+    const slSorted = [...slIdx].sort((a, b) => {
+      const ea = estado[a]!;
+      const eb = estado[b]!;
+      if (ea.totalMesas !== eb.totalMesas) return ea.totalMesas - eb.totalMesas;
+      return a - b;
+    });
+    for (const i of slSorted) {
+      if (workers.length >= M) break;
+      workers.push(i);
+    }
+  }
+
+  // Último recurso: GP que já fez 4 (melhor que mesa vazia)
+  if (workers.length < M) {
+    gpMustRest.sort((a, b) => estado[a]!.totalMesas - estado[b]!.totalMesas || a - b);
+    for (const i of gpMustRest) {
+      if (workers.length >= M) break;
+      workers.push(i);
+    }
+  }
+
+  // Ainda faltou GP “ok” que sobrou e não usamos (ex.: gpTarget < disponíveis) — só se ainda faltar mesa
+  if (workers.length < M) {
+    for (const i of gpOk) {
+      if (workers.length >= M) break;
+      if (workers.includes(i)) continue;
+      workers.push(i);
+    }
+  }
+
+  return workers.slice(0, M);
+}
+
+export type RotacaoGeracaoPessoa = {
+  funcionarioId: string;
+  isShiftLead: boolean;
+};
+
+export type RotacaoGeracaoResultado = {
+  ok: true;
+  pessoas: RotacaoGeracaoPessoa[];
+  matrix: string[][];
+} | {
+  ok: false;
+  erro: string;
+};
+
+/**
+ * Gera a grade de rotação com as regras de produto:
+ * — todas as mesas cobertas em todo slot;
+ * — 1 GP/SL por mesa;
+ * — GP não repete a mesma mesa no slot seguinte;
+ * — GP faz no máximo 4 mesas seguidas e depois Break;
+ * — Shift Lead entra só para cobrir falta de gente e faz o mínimo de mesas.
+ */
+export function gerarGradeRotacao(opts: {
+  mesasLabels: string[];
+  gps: RotacaoGeracaoPessoa[];
+  shiftLeads: RotacaoGeracaoPessoa[];
+  nSlots: number;
+}): RotacaoGeracaoResultado {
+  const mesas = opts.mesasLabels.filter((m) => m.trim());
+  const gps = opts.gps.filter((p) => !p.isShiftLead);
+  const shiftLeads = opts.shiftLeads.filter((p) => p.isShiftLead);
+  const nSlots = opts.nSlots;
+
+  if (mesas.length === 0) {
+    return { ok: false, erro: "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas." };
+  }
+  if (nSlots <= 0) {
+    return { ok: false, erro: "Não foi possível montar os horários do turno." };
+  }
+  if (gps.length + shiftLeads.length < mesas.length) {
+    return {
+      ok: false,
+      erro: `Pessoas insuficientes (${gps.length} GPs + ${shiftLeads.length} Shift Lead) para cobrir ${mesas.length} mesa(s).`,
+    };
+  }
+
+  const pessoas: RotacaoGeracaoPessoa[] = [
+    ...gps.map((p) => ({ ...p, isShiftLead: false })),
+    ...shiftLeads.map((p) => ({ ...p, isShiftLead: true })),
+  ];
+  const estado: EstadoPessoaRotacao[] = pessoas.map((p) => ({
+    isShiftLead: p.isShiftLead,
+    consecutiveWork: 0,
+    lastMesa: null,
+    totalMesas: 0,
+  }));
+  const rows: string[][] = Array.from({ length: pessoas.length }, () => []);
+
+  for (let s = 0; s < nSlots; s++) {
+    const workers = escolherWorkersSlot(estado, mesas.length);
+    if (workers.length < mesas.length) {
+      return {
+        ok: false,
+        erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Inclua mais GPs elegíveis ou Shift Lead na escala.`,
+      };
+    }
+    const mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado);
+    const assignment = Array.from({ length: pessoas.length }, () => "Break");
+    for (let w = 0; w < workers.length; w++) {
+      assignment[workers[w]!] = mesasAttr[w]!;
+    }
+
+    for (let p = 0; p < pessoas.length; p++) {
+      const v = assignment[p]!;
+      rows[p]!.push(v);
+      const e = estado[p]!;
+      if (v === "Break") {
+        e.consecutiveWork = 0;
+        e.lastMesa = null;
+      } else {
+        e.consecutiveWork += 1;
+        e.lastMesa = v;
+        e.totalMesas += 1;
+      }
+    }
+  }
+
+  return { ok: true, pessoas, matrix: rows };
 }
 
 /**
- * Matriz N × slots a partir das mesas do estúdio.
- * Regras:
- * — em cada slot, no máximo 1 GP por mesa;
- * — se N ≥ M, prioriza cobrir mesas; se o ritmo 4+1 exigir mais Breaks, pode ficar mesa descoberta;
- * — ritmo: até 4 mesas seguidas e 1 Break (sem dois Breaks seguidos); ~ceil(N/5) em Break por slot.
+ * Compat: só GPs (sem Shift Lead). Prefira `gerarGradeRotacao`.
  */
 export function gerarPatternRotacao(
   mesasLabels: string[],
   nPeople: number,
   nSlots: number,
 ): string[][] {
-  if (mesasLabels.length === 0 || nPeople <= 0 || nSlots <= 0) return [];
-  const M = mesasLabels.length;
-  const N = nPeople;
-  const consecutiveWork = Array.from({ length: N }, () => 0);
-  const lastWasBreak = Array.from({ length: N }, () => false);
-  const rows: string[][] = Array.from({ length: N }, () => []);
+  const gps: RotacaoGeracaoPessoa[] = Array.from({ length: nPeople }, (_, i) => ({
+    funcionarioId: `gp-${i}`,
+    isShiftLead: false,
+  }));
+  const res = gerarGradeRotacao({ mesasLabels, gps, shiftLeads: [], nSlots });
+  return res.ok ? res.matrix : [];
+}
 
-  for (let s = 0; s < nSlots; s++) {
-    /** Cobertura: GPs a mais que mesas. Ritmo 4+1: ~1/5 do pool em Break. */
-    const breaksCobertura = Math.max(0, N - M);
-    const breaksRitmo = Math.ceil(N / ROTACAO_CICLO);
-    let breaksTarget = Math.max(breaksCobertura, breaksRitmo);
-    // Sempre deixa pelo menos 1 GP em mesa quando há mesas
-    breaksTarget = Math.min(breaksTarget, Math.max(0, N - 1));
-
-    const onBreak = escolherBreakersRotacao(
-      N,
-      breaksTarget,
-      consecutiveWork,
-      lastWasBreak,
-      s,
-    );
-    const workers: number[] = [];
-    for (let p = 0; p < N; p++) {
-      if (!onBreak.has(p)) workers.push(p);
-    }
-
-    const assignment: string[] = Array.from({ length: N }, () => "Break");
-    const mesaOffset = s % M;
-    const cover = Math.min(workers.length, M);
-    for (let i = 0; i < cover; i++) {
-      const p = workers[i]!;
-      assignment[p] = mesasLabels[(mesaOffset + i) % M]!;
-    }
-
-    for (let p = 0; p < N; p++) {
-      const v = assignment[p]!;
-      rows[p]!.push(v);
-      if (v === "Break") {
-        consecutiveWork[p] = 0;
-        lastWasBreak[p] = true;
-      } else {
-        consecutiveWork[p]! += 1;
-        lastWasBreak[p] = false;
-      }
-    }
-  }
-  return rows;
+function mapPessoaPool(row: Record<string, unknown>, isShiftLead: boolean): RotacaoGpPool {
+  const nome = String(row.nome ?? "").trim();
+  const nick = String(row.nickname ?? "").trim();
+  return {
+    funcionarioId: String(row.funcionario_id ?? ""),
+    nomeCompleto: nome,
+    nomeExibicao: primeiroUltimoNome(nome) || nome || "—",
+    nickname: nick || "—",
+    falta: false,
+    isShiftLead,
+  };
 }
 
 function mapContexto(raw: Record<string, unknown>): RotacaoContextoDia {
   const gpsRaw = Array.isArray(raw.gps) ? raw.gps : [];
+  const slRaw = Array.isArray(raw.shift_leads) ? raw.shift_leads : [];
   const mesasRaw = Array.isArray(raw.mesas) ? raw.mesas : [];
   return {
     dia: String(raw.dia ?? "").slice(0, 10),
@@ -339,18 +497,8 @@ function mapContexto(raw: Record<string, unknown>): RotacaoContextoDia {
     turnoInicio: String(raw.turno_inicio ?? "06:00"),
     turnoFim: String(raw.turno_fim ?? "14:00"),
     horarioTexto: String(raw.horario_texto ?? "—"),
-    gps: gpsRaw.map((g) => {
-      const row = g as Record<string, unknown>;
-      const nome = String(row.nome ?? "").trim();
-      const nick = String(row.nickname ?? "").trim();
-      return {
-        funcionarioId: String(row.funcionario_id ?? ""),
-        nomeCompleto: nome,
-        nomeExibicao: primeiroUltimoNome(nome) || nome || "—",
-        nickname: nick || "—",
-        falta: false,
-      };
-    }),
+    gps: gpsRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, false)),
+    shiftLeads: slRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, true)),
     mesas: mesasRaw.map((m) => {
       const row = m as Record<string, unknown>;
       return {
