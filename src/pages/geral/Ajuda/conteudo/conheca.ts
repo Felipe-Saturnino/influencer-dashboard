@@ -826,12 +826,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Gere e publique a grade de **rotação** dos Game Presenters nas mesas do estúdio por dia e turno — substitui o fluxo em planilha. Duas abas: **Gerar Rotação** (pool, modelo e prévia) e **Rotação Atual** (consulta da publicada).",
+          "Cockpit operacional da **rotação** dos Game Presenters nas mesas — use ~30 min antes do turno. Substitui o Excel de Month Shift and Rotation. Duas abas: **Gerar Rotação** (pool, check-in, avisos e prévia) e **Rotação Atual** (consulta da publicada). Ao **aprovar** a Escala Estúdio na aba Game Presenter, a plataforma pode gerar **prévias** de todos os dias do mês.",
       },
       {
         subtitulo: "Gerar Rotação",
         texto:
-          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na **Escala Estúdio** **aprovada** (4×2) e, como reserva, dos **Shift Leads** do mesmo dia/turno/estúdio. Marque faltas nos chips, escolha o modelo (5 a 8 GPs) e o intervalo de slot. **Gerar** monta a prévia com: todas as mesas cobertas; 1 pessoa por mesa; sem repetir a mesma mesa no horário seguinte; no máximo 4 mesas seguidas por GP antes do Break; Shift Lead só para cobrir e com o mínimo de mesas. Com permissão de **Criar**, **Publicar** grava a rotação.",
+          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na **Escala Estúdio** **aprovada** e, como reserva, dos **Shift Leads** do mesmo dia/turno. Cada chip mostra **Chegou** / **Não chegou** (ponto do Calendário). Marque faltas, **mova** um GP para outro estúdio só neste turno (figurino: 1 GP = 1 estúdio no turno) ou traga alguém de outro estúdio. **Gerar prévia** usa todos os GPs elegíveis: cobre **todas** as mesas; 1 pessoa por mesa; sem repetir a mesma mesa no horário seguinte; no máximo **2h** contínuas em mesa antes do Break (4×30 min ou 6×20 min); Shift Lead só para cobrir, com o mínimo de mesas. Intervalo padrão **30 min**. Se a cobertura ficar apertada, use **Aviso — intervalo 20 min** ou **Aviso — incluir Shift Lead** (nunca «emergência»). Chegada no meio do turno: **Incluir na rotação** redistribui só os slots futuros. Com permissão de **Criar**, **Publicar** grava a rotação.",
       },
       {
         subtitulo: "Rotação Atual",

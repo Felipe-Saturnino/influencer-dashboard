@@ -767,6 +767,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           gravarEscalaMes(ano, mes, next, modo);
           return next;
         });
+        // Escala Estúdio GP aprovada → prévias de Rotação do mês (melhor esforço; não bloqueia)
+        if (modo === "estudio" && areaKey === "game_presenter") {
+          void import("../../../lib/escalaRotacao")
+            .then(({ gerarPreviewsMesRotacao }) => gerarPreviewsMesRotacao(ref))
+            .catch((err) => console.error(err));
+        }
       } catch (e) {
         setErroSalvarGrade(
           e instanceof Error ? e.message : "Erro ao aprovar na base de dados. Verifique se a migration foi aplicada.",

@@ -25,6 +25,8 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTable
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { ESTUDIO_FILTRO_TODOS_VALUE } from "../../../components/FiltroEstudioSelect";
 import {
+  alocarEstudioRotacao,
+  anexarCheckinRotacao,
   carregarContextoRotacaoDia,
   carregarRotacaoPublicada,
   corMesaRotacao,
@@ -33,17 +35,16 @@ import {
   gerarGradeRotacao,
   labelsMesasRotacao,
   gerarSlotsRotacao,
+  indiceProximoSlotRotacao,
+  limparAlocacaoRotacao,
   listarEstudiosAtivosRotacao,
   mapaCoresMesasRotacao,
   publicarRotacao,
-  ROTACAO_MODELOS,
   ROTACAO_TURNO_OPCOES,
+  salvarRascunhoRotacao,
   shiftDiaIso,
-  slotMinutosPermitido,
-  sugerirModeloN,
   type RotacaoContextoDia,
   type RotacaoGpPool,
-  type RotacaoModeloN,
   type RotacaoPublicada,
   type RotacaoTurnoKey,
 } from "../../../lib/escalaRotacao";
@@ -60,6 +61,19 @@ type PreviaState = {
   slotMin: number;
   mesaTipo: Record<string, string>;
 };
+
+const avisoBtnStyle = (t: { cardBorder: string; inputBg: string; text: string }, disabled?: boolean): CSSProperties => ({
+  padding: "10px 16px",
+  borderRadius: 10,
+  border: "1px solid color-mix(in srgb, #f59e0b 45%, transparent)",
+  background: "color-mix(in srgb, #f59e0b 12%, transparent)",
+  color: "#92400e",
+  fontWeight: 700,
+  fontSize: 12,
+  fontFamily: FONT.body,
+  cursor: disabled ? "not-allowed" : "pointer",
+  opacity: disabled ? 0.5 : 1,
+});
 
 function CellValor({
   valor,
@@ -128,6 +142,50 @@ function CellValor({
 }
 
 const STICKY_GP_W = 168;
+
+function BadgeCheckin({ chegou }: { chegou?: boolean | null }) {
+  if (chegou === true) {
+    return (
+      <span
+        style={{
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.03em",
+          textTransform: "uppercase",
+          padding: "2px 6px",
+          borderRadius: 6,
+          background: "color-mix(in srgb, #22c55e 18%, transparent)",
+          color: "#15803d",
+          border: "1px solid #22c55e55",
+          flexShrink: 0,
+        }}
+      >
+        Chegou
+      </span>
+    );
+  }
+  if (chegou === false) {
+    return (
+      <span
+        style={{
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.03em",
+          textTransform: "uppercase",
+          padding: "2px 6px",
+          borderRadius: 6,
+          background: "color-mix(in srgb, #e84025 15%, transparent)",
+          color: "#e84025",
+          border: "1px solid #e8402544",
+          flexShrink: 0,
+        }}
+      >
+        Não chegou
+      </span>
+    );
+  }
+  return null;
+}
 
 function CelulaGpIdentidade({
   nome,
@@ -317,10 +375,11 @@ export default function EscalaRotacaoPage() {
   const [ctx, setCtx] = useState<RotacaoContextoDia | null>(null);
   const [pool, setPool] = useState<RotacaoGpPool[]>([]);
   const [poolSl, setPoolSl] = useState<RotacaoGpPool[]>([]);
+  const [poolOutros, setPoolOutros] = useState<RotacaoGpPool[]>([]);
   const [loadingCtx, setLoadingCtx] = useState(false);
   const [erroCtx, setErroCtx] = useState<string | null>(null);
+  const [movendoId, setMovendoId] = useState<string | null>(null);
 
-  const [modeloN, setModeloN] = useState<RotacaoModeloN>(7);
   const [slotMin, setSlotMin] = useState(30);
   const [previa, setPrevia] = useState<PreviaState | null>(null);
   const [publicando, setPublicando] = useState(false);
@@ -347,6 +406,7 @@ export default function EscalaRotacaoPage() {
       setCtx(null);
       setPool([]);
       setPoolSl([]);
+      setPoolOutros([]);
       setPrevia(null);
       return;
     }
@@ -358,20 +418,24 @@ export default function EscalaRotacaoPage() {
       turno,
       estudioSlug: estudio,
     });
-    setLoadingCtx(false);
     if (!res.ok) {
+      setLoadingCtx(false);
       setErroCtx(res.erro);
       setCtx(null);
       setPool([]);
       setPoolSl([]);
+      setPoolOutros([]);
       return;
     }
+    const todos = [...res.data.gps, ...res.data.shiftLeads, ...res.data.gpsOutros];
+    const comCheckin = await anexarCheckinRotacao(diaIso, todos);
+    const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
     setCtx(res.data);
-    setPool(res.data.gps.map((g) => ({ ...g, isShiftLead: false })));
-    setPoolSl(res.data.shiftLeads.map((g) => ({ ...g, isShiftLead: true })));
-    const sug = sugerirModeloN(res.data.gps.length);
-    setModeloN(sug);
-    setSlotMin(slotMinutosPermitido(sug, 30));
+    setPool(res.data.gps.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: false })));
+    setPoolSl(res.data.shiftLeads.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })));
+    setPoolOutros(res.data.gpsOutros.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: false })));
+    setSlotMin(30);
+    setLoadingCtx(false);
   }, [diaIso, turno, estudio, estudioOk]);
 
   const carregarPub = useCallback(async () => {
@@ -403,13 +467,17 @@ export default function EscalaRotacaoPage() {
 
   useEffect(() => {
     if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 2800);
+    const id = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(id);
   }, [toast]);
 
   const elegiveis = useMemo(() => pool.filter((g) => !g.falta), [pool]);
   const elegiveisSl = useMemo(() => poolSl.filter((g) => !g.falta), [poolSl]);
   const faltasCount = pool.length - elegiveis.length + (poolSl.length - elegiveisSl.length);
+  const naoChegaram = useMemo(
+    () => elegiveis.filter((g) => g.chegou === false).length + elegiveisSl.filter((g) => g.chegou === false).length,
+    [elegiveis, elegiveisSl],
+  );
 
   const mesaTipoMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -419,86 +487,252 @@ export default function EscalaRotacaoPage() {
     return m;
   }, [ctx]);
 
-  const mesaCoresMap = useMemo(
-    () => mapaCoresMesasRotacao(ctx?.mesas ?? []),
-    [ctx],
+  const mesaCoresMap = useMemo(() => mapaCoresMesasRotacao(ctx?.mesas ?? []), [ctx]);
+
+  const slSlotsEmMesa = useMemo(() => {
+    if (!previa) return 0;
+    return previa.gps.reduce((acc, g, i) => {
+      if (!g.isShiftLead) return acc;
+      return acc + (previa.matrix[i] ?? []).filter((v) => v !== "Break" && v !== "X" && v !== "F").length;
+    }, 0);
+  }, [previa]);
+
+  const estudiosDestino = useMemo(
+    () => estudios.filter((e) => e.slug !== estudio),
+    [estudios, estudio],
   );
 
-  const onModeloChange = (n: RotacaoModeloN) => {
-    setModeloN(n);
-    setSlotMin(slotMinutosPermitido(n, slotMin));
-    setPrevia(null);
+  const candidatosReingresso = useMemo(() => {
+    if (!previa) return [];
+    const idsNaGrade = new Set(previa.gps.map((g) => g.funcionarioId));
+    return pool.filter(
+      (g) => g.chegou === true && (g.falta || !idsNaGrade.has(g.funcionarioId)),
+    );
+  }, [previa, pool]);
+
+  const montarGrade = useCallback(
+    (opts: {
+      slot: number;
+      gpsPool: RotacaoGpPool[];
+      slPool: RotacaoGpPool[];
+      preservarPassado: boolean;
+    }): PreviaState | null => {
+      if (!ctx || !estudioOk) return null;
+      setErroPub(null);
+      const usedGps = opts.gpsPool.filter((g) => !g.falta);
+      const usedSl = opts.slPool.filter((g) => !g.falta);
+      const numeros = labelsMesasRotacao(ctx.mesas);
+      if (!numeros.length) {
+        setErroPub("Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.");
+        return null;
+      }
+      if (usedGps.length + usedSl.length < numeros.length) {
+        setErroPub(
+          `Pessoas insuficientes (${usedGps.length} GPs + ${usedSl.length} Shift Lead) para cobrir ${numeros.length} mesa(s).`,
+        );
+        return null;
+      }
+      const step = opts.slot === 20 ? 20 : 30;
+      const slots = gerarSlotsRotacao(ctx.turnoInicio, ctx.turnoFim, step);
+      let fromSlot = 0;
+      let matrixBase: string[][] | undefined;
+      if (opts.preservarPassado && previa && diaIso === hojeIso && previa.slots.length === slots.length) {
+        fromSlot = indiceProximoSlotRotacao(slots);
+        if (fromSlot > 0) {
+          // Alinha linhas da matrixBase aos ids atuais
+          const baseById = new Map(previa.gps.map((g, i) => [g.funcionarioId, previa.matrix[i] ?? []]));
+          const pessoasOrdem = [
+            ...usedGps.map((g) => g.funcionarioId),
+            ...usedSl.map((g) => g.funcionarioId),
+          ];
+          matrixBase = pessoasOrdem.map((id) => {
+            const row = baseById.get(id);
+            if (row) return [...row];
+            return Array.from({ length: slots.length }, () => "Break");
+          });
+        }
+      }
+      const gerado = gerarGradeRotacao({
+        mesasLabels: numeros,
+        gps: usedGps.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: false })),
+        shiftLeads: usedSl.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: true })),
+        nSlots: slots.length,
+        slotMinutos: step,
+        fromSlotIndex: fromSlot > 0 ? fromSlot : undefined,
+        matrixBase,
+      });
+      if (!gerado.ok) {
+        setErroPub(gerado.erro);
+        return null;
+      }
+      const porId = new Map<string, RotacaoGpPool>();
+      for (const g of usedGps) porId.set(g.funcionarioId, g);
+      for (const g of usedSl) porId.set(g.funcionarioId, g);
+      const linhas = gerado.pessoas.map((p) => {
+        const base = porId.get(p.funcionarioId);
+        return (
+          base ?? {
+            funcionarioId: p.funcionarioId,
+            nomeCompleto: "—",
+            nomeExibicao: "—",
+            nickname: "—",
+            falta: false,
+            isShiftLead: p.isShiftLead,
+          }
+        );
+      });
+      return {
+        slots,
+        gps: linhas,
+        faltosos: [...opts.gpsPool.filter((g) => g.falta), ...opts.slPool.filter((g) => g.falta)],
+        matrix: gerado.matrix,
+        modeloN: usedGps.length,
+        slotMin: step,
+        mesaTipo: mesaTipoMap,
+      };
+    },
+    [ctx, estudioOk, previa, diaIso, hojeIso, mesaTipoMap],
+  );
+
+  const persistirRascunho = (state: PreviaState) => {
+    if (!ctx) return;
+    const celulas = state.gps.flatMap((g, i) =>
+      state.slots.map((slot, si) => ({
+        funcionario_id: g.funcionarioId,
+        nome_exibicao: g.nomeExibicao,
+        nickname: g.nickname === "—" ? "" : g.nickname,
+        linha_ordem: i,
+        slot_inicio: slot,
+        valor: state.matrix[i]?.[si] ?? "Break",
+      })),
+    );
+    void salvarRascunhoRotacao({
+      diaIso,
+      turno,
+      estudioSlug: ctx.estudioSlug,
+      estudioNome: ctx.estudioNome,
+      modeloN: state.modeloN,
+      slotMinutos: state.slotMin,
+      turnoInicio: ctx.turnoInicio,
+      turnoFim: ctx.turnoFim,
+      celulas,
+    }).then((r) => {
+      if (!r.ok) setToast("Prévia gerada, mas não foi possível salvar o rascunho.");
+    });
   };
 
-  const handleGerar = () => {
-    if (!ctx || !estudioOk) return;
-    setErroPub(null);
-    if (elegiveis.length < modeloN) {
-      setErroPub(
-        `Elegíveis (${elegiveis.length}) insuficientes para o modelo de ${modeloN} Game Presenters.`,
-      );
-      return;
-    }
-    const numeros = labelsMesasRotacao(ctx.mesas);
-    if (!numeros.length) {
-      setErroPub(
-        "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.",
-      );
-      return;
-    }
-    const step = slotMinutosPermitido(modeloN, slotMin);
-    const slots = gerarSlotsRotacao(ctx.turnoInicio, ctx.turnoFim, step);
-    const usedGps = elegiveis.slice(0, modeloN);
-    const usedSl = elegiveisSl;
-    if (usedGps.length + usedSl.length < numeros.length) {
-      setErroPub(
-        `Pessoas insuficientes (${usedGps.length} GPs + ${usedSl.length} Shift Lead) para cobrir ${numeros.length} mesa(s).`,
-      );
-      return;
-    }
-    const gerado = gerarGradeRotacao({
-      mesasLabels: numeros,
-      gps: usedGps.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: false })),
-      shiftLeads: usedSl.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: true })),
-      nSlots: slots.length,
+  const handleGerar = (preservarPassado = false) => {
+    const state = montarGrade({
+      slot: slotMin,
+      gpsPool: pool,
+      slPool: poolSl,
+      preservarPassado,
     });
-    if (!gerado.ok) {
-      setErroPub(gerado.erro);
-      return;
-    }
-    const porId = new Map<string, RotacaoGpPool>();
-    for (const g of usedGps) porId.set(g.funcionarioId, g);
-    for (const g of usedSl) porId.set(g.funcionarioId, g);
-    const linhas = gerado.pessoas.map((p) => {
-      const base = porId.get(p.funcionarioId);
-      return (
-        base ?? {
-          funcionarioId: p.funcionarioId,
-          nomeCompleto: "—",
-          nomeExibicao: "—",
-          nickname: "—",
-          falta: false,
-          isShiftLead: p.isShiftLead,
-        }
-      );
-    });
-    setPrevia({
-      slots,
-      gps: linhas,
-      faltosos: [...pool.filter((g) => g.falta), ...poolSl.filter((g) => g.falta)],
-      matrix: gerado.matrix,
-      modeloN,
-      slotMin: step,
-      mesaTipo: mesaTipoMap,
-    });
-    const slEmMesa = gerado.matrix
-      .slice(usedGps.length)
-      .reduce((acc, row) => acc + row.filter((v) => v !== "Break").length, 0);
+    if (!state) return;
+    setPrevia(state);
+    setSlotMin(state.slotMin);
+    persistirRascunho(state);
+    const slEmMesa = state.gps.reduce((acc, g, i) => {
+      if (!g.isShiftLead) return acc;
+      return acc + (state.matrix[i] ?? []).filter((v) => v !== "Break").length;
+    }, 0);
     setToast(
       slEmMesa > 0
-        ? `Prévia gerada · ${usedGps.length} GPs · Shift Lead cobriu ${slEmMesa} slot(s) · ${slots.length} horários`
-        : `Prévia gerada · ${usedGps.length} GPs · ${slots.length} slots de ${step} min`,
+        ? `Prévia gerada · ${state.modeloN} GPs · Shift Lead cobriu ${slEmMesa} slot(s) · ${state.slots.length} horários · ${state.slotMin} min`
+        : `Prévia gerada · ${state.modeloN} GPs · ${state.slots.length} slots de ${state.slotMin} min`,
     );
+  };
+
+  const handleAviso20 = () => {
+    setSlotMin(20);
+    const state = montarGrade({
+      slot: 20,
+      gpsPool: pool,
+      slPool: poolSl,
+      preservarPassado: Boolean(previa),
+    });
+    if (!state) return;
+    setPrevia(state);
+    persistirRascunho(state);
+    setToast("Aviso aplicado: intervalo de 20 min.");
+  };
+
+  const handleAvisoSl = () => {
+    const nextSl = poolSl.map((g) => ({ ...g, falta: false }));
+    setPoolSl(nextSl);
+    const state = montarGrade({
+      slot: slotMin,
+      gpsPool: pool,
+      slPool: nextSl,
+      preservarPassado: Boolean(previa),
+    });
+    if (!state) return;
+    setPrevia(state);
+    persistirRascunho(state);
+    setToast("Aviso aplicado: Shift Lead incluído na reserva.");
+  };
+
+  const handleIncluirReingresso = (fid: string) => {
+    const nextPool = pool.map((g) => (g.funcionarioId === fid ? { ...g, falta: false } : g));
+    setPool(nextPool);
+    const state = montarGrade({
+      slot: slotMin,
+      gpsPool: nextPool,
+      slPool: poolSl,
+      preservarPassado: true,
+    });
+    if (!state) return;
+    setPrevia(state);
+    persistirRascunho(state);
+    setToast("Prestador incluído a partir do próximo slot.");
+  };
+
+  const handleMover = async (funcionarioId: string, destinoSlug: string) => {
+    if (!destinoSlug) return;
+    setMovendoId(funcionarioId);
+    const res = await alocarEstudioRotacao({
+      diaIso,
+      turno,
+      funcionarioId,
+      estudioSlug: destinoSlug,
+    });
+    setMovendoId(null);
+    if (!res.ok) {
+      setErroPub(res.erro);
+      return;
+    }
+    setToast("Alocação atualizada — o prestador passa o turno inteiro no estúdio de destino.");
+    void carregarCtx();
+  };
+
+  const handleTrazer = async (funcionarioId: string) => {
+    if (!estudioOk) return;
+    setMovendoId(funcionarioId);
+    const res = await alocarEstudioRotacao({
+      diaIso,
+      turno,
+      funcionarioId,
+      estudioSlug: estudio,
+    });
+    setMovendoId(null);
+    if (!res.ok) {
+      setErroPub(res.erro);
+      return;
+    }
+    setToast("Prestador trazido para este estúdio no turno.");
+    void carregarCtx();
+  };
+
+  const handleRestaurar = async (funcionarioId: string) => {
+    setMovendoId(funcionarioId);
+    const res = await limparAlocacaoRotacao({ diaIso, turno, funcionarioId });
+    setMovendoId(null);
+    if (!res.ok) {
+      setErroPub(res.erro);
+      return;
+    }
+    setToast("Estúdio restaurado conforme a Staff.");
+    void carregarCtx();
   };
 
   const handlePublicar = async () => {
@@ -588,6 +822,22 @@ export default function EscalaRotacaoPage() {
     { id: "atual" as const, label: "Rotação Atual" },
   ];
 
+  const chipBase = (falta: boolean, accent?: string): CSSProperties => ({
+    display: "inline-flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 6,
+    padding: "8px 12px",
+    borderRadius: 12,
+    border: `1px solid ${falta ? "rgba(232,64,37,0.4)" : accent ?? t.cardBorder}`,
+    background: accent && !falta ? `color-mix(in srgb, ${accent} 12%, transparent)` : t.inputBg,
+    fontSize: 12,
+    fontFamily: FONT.body,
+    color: t.text,
+    opacity: falta ? 0.55 : 1,
+    maxWidth: 280,
+  });
+
   return (
     <div className="app-page-shell app-page-shell--pb64">
       <DashboardPageHeader
@@ -629,12 +879,7 @@ export default function EscalaRotacaoPage() {
             showTodasOption={false}
             pill
           />
-          <FiltroEstudioSelect
-            value={estudio}
-            onChange={setEstudio}
-            estudios={estudios}
-            pill
-          />
+          <FiltroEstudioSelect value={estudio} onChange={setEstudio} estudios={estudios} pill />
         </div>
         <div
           role="tablist"
@@ -693,11 +938,9 @@ export default function EscalaRotacaoPage() {
             <>
               <div style={pageBox}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-                  <SectionTitle sub="Escala aprovada">
-                    Pool do turno
-                  </SectionTitle>
+                  <SectionTitle sub="Escala aprovada · check-in · alocação do dia">Pool do turno</SectionTitle>
                   {perm.canCriarOk && (
-                    <CtaCriarButton onClick={handleGerar}>Gerar prévia</CtaCriarButton>
+                    <CtaCriarButton onClick={() => handleGerar(false)}>Gerar prévia</CtaCriarButton>
                   )}
                 </div>
 
@@ -720,28 +963,30 @@ export default function EscalaRotacaoPage() {
                       fontFamily: FONT.body,
                     }}
                   >
-                    A escala de Game Presenter do mês ainda não está aprovada em Gestão de Escala. O pool fica vazio até a aprovação.
+                    A escala de Game Presenter do mês ainda não está aprovada em Escala Estúdio. O pool fica vazio até a aprovação.
                   </div>
                 )}
 
                 {ctx && (
                   <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
-                    Escala GP <strong style={{ color: t.text }}>4×2</strong>
-                    {" · "}
                     {ctx.turnoLabel} · <strong style={{ color: t.text }}>{ctx.horarioTexto}</strong>
                     {" · "}
                     {ctx.estudioNome}
                     {" · "}
-                    {ctx.mesas.length} mesa(s)
+                    Intervalo {slotMin} min
                   </div>
                 )}
 
-                <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 14 }}>
+                <div className="app-grid-kpi-5" style={{ gap: 12, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))" }}>
                   {[
-                    { l: "Escalados", v: String(pool.length) },
+                    { l: "Escalados GP", v: String(pool.length) },
                     { l: "Shift Lead", v: String(poolSl.length) },
                     { l: "Faltas", v: String(faltasCount), c: "#e84025" },
-                    { l: "Elegíveis GP", v: String(elegiveis.length) },
+                    { l: "Não chegaram", v: String(naoChegaram), c: naoChegaram > 0 ? "#e84025" : undefined },
+                    { l: "Mesas", v: String(ctx?.mesas.length ?? 0) },
+                    ...(previa && slSlotsEmMesa > 0
+                      ? [{ l: "SL em mesa", v: String(slSlotsEmMesa), c: "#a78bfa" }]
+                      : []),
                   ].map((k) => (
                     <div
                       key={k.l}
@@ -753,7 +998,16 @@ export default function EscalaRotacaoPage() {
                         textAlign: "center",
                       }}
                     >
-                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: t.textMuted, marginBottom: 4 }}>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          color: t.textMuted,
+                          marginBottom: 4,
+                        }}
+                      >
                         {k.l}
                       </div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: k.c ?? brand.primary, fontFamily: FONT.body }}>
@@ -763,153 +1017,204 @@ export default function EscalaRotacaoPage() {
                   ))}
                 </div>
 
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
                   {pool.length === 0 ? (
                     <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
                       Nenhum Game Presenter escalado neste turno/estúdio.
                     </span>
                   ) : (
                     pool.map((g) => (
-                      <button
-                        key={g.funcionarioId}
-                        type="button"
-                        title={g.falta ? "Clique para marcar como elegível" : "Clique para marcar falta"}
-                        onClick={() => {
-                          setPool((prev) =>
-                            prev.map((x) =>
-                              x.funcionarioId === g.funcionarioId ? { ...x, falta: !x.falta } : x,
-                            ),
-                          );
-                          setPrevia(null);
-                        }}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          padding: "6px 12px",
-                          borderRadius: 999,
-                          border: `1px solid ${g.falta ? "rgba(232,64,37,0.4)" : t.cardBorder}`,
-                          background: t.inputBg,
-                          fontSize: 12,
-                          fontFamily: FONT.body,
-                          cursor: "pointer",
-                          opacity: g.falta ? 0.55 : 1,
-                          textDecoration: g.falta ? "line-through" : "none",
-                          color: t.text,
-                        }}
-                      >
-                        <span
-                          aria-hidden
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: "50%",
-                            background: g.falta ? "#e84025" : "#22c55e",
-                          }}
-                        />
-                        {g.nickname}
-                        <span style={{ opacity: 0.65 }}>({g.nomeExibicao})</span>
-                        {g.falta ? " · Falta" : ""}
-                      </button>
+                      <div key={g.funcionarioId} style={chipBase(g.falta)}>
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                          <button
+                            type="button"
+                            title={g.falta ? "Marcar como elegível" : "Marcar falta"}
+                            onClick={() => {
+                              setPool((prev) =>
+                                prev.map((x) =>
+                                  x.funcionarioId === g.funcionarioId ? { ...x, falta: !x.falta } : x,
+                                ),
+                              );
+                              setPrevia(null);
+                            }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              border: 0,
+                              background: "transparent",
+                              padding: 0,
+                              cursor: "pointer",
+                              fontFamily: FONT.body,
+                              fontSize: 12,
+                              color: t.text,
+                              textDecoration: g.falta ? "line-through" : "none",
+                            }}
+                          >
+                            <span
+                              aria-hidden
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                background: g.falta ? "#e84025" : "#22c55e",
+                              }}
+                            />
+                            {g.nickname}
+                            <span style={{ opacity: 0.65 }}>({g.nomeExibicao})</span>
+                            {g.falta ? " · Falta" : ""}
+                          </button>
+                          <BadgeCheckin chegou={g.chegou} />
+                        </div>
+                        {perm.canEditarOk || perm.canCriarOk ? (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                            <select
+                              aria-label={`Mover ${g.nomeExibicao} de estúdio`}
+                              disabled={movendoId === g.funcionarioId || estudiosDestino.length === 0}
+                              defaultValue=""
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                e.target.value = "";
+                                if (v) void handleMover(g.funcionarioId, v);
+                              }}
+                              style={{
+                                fontSize: 11,
+                                padding: "4px 8px",
+                                borderRadius: 8,
+                                border: `1px solid ${t.cardBorder}`,
+                                background: t.cardBg,
+                                color: t.text,
+                                fontFamily: FONT.body,
+                                maxWidth: 160,
+                              }}
+                            >
+                              <option value="">Mover estúdio…</option>
+                              {estudiosDestino.map((e) => (
+                                <option key={e.slug} value={e.slug}>
+                                  {e.nome}
+                                </option>
+                              ))}
+                            </select>
+                            {g.alocacaoOrigem === "manual" ? (
+                              <button
+                                type="button"
+                                disabled={movendoId === g.funcionarioId}
+                                onClick={() => void handleRestaurar(g.funcionarioId)}
+                                style={{
+                                  fontSize: 11,
+                                  border: 0,
+                                  background: "transparent",
+                                  color: brand.primary,
+                                  cursor: "pointer",
+                                  fontFamily: FONT.body,
+                                  fontWeight: 600,
+                                  padding: 0,
+                                }}
+                              >
+                                Restaurar estúdio
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
                     ))
                   )}
                   {poolSl.map((g) => (
-                    <button
-                      key={`sl-${g.funcionarioId}`}
-                      type="button"
-                      title={g.falta ? "Clique para incluir Shift Lead na reserva" : "Clique para tirar Shift Lead da reserva"}
-                      onClick={() => {
-                        setPoolSl((prev) =>
-                          prev.map((x) =>
-                            x.funcionarioId === g.funcionarioId ? { ...x, falta: !x.falta } : x,
-                          ),
-                        );
-                        setPrevia(null);
-                      }}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "6px 12px",
-                        borderRadius: 999,
-                        border: `1px solid ${g.falta ? "rgba(232,64,37,0.4)" : "#a78bfa66"}`,
-                        background: g.falta ? t.inputBg : "color-mix(in srgb, #a78bfa 12%, transparent)",
-                        fontSize: 12,
-                        fontFamily: FONT.body,
-                        cursor: "pointer",
-                        opacity: g.falta ? 0.55 : 1,
-                        textDecoration: g.falta ? "line-through" : "none",
-                        color: t.text,
-                      }}
-                    >
-                      <span
-                        aria-hidden
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: g.falta ? "#e84025" : "#a78bfa",
-                        }}
-                      />
-                      SL · {g.nickname}
-                      <span style={{ opacity: 0.65 }}>({g.nomeExibicao})</span>
-                      {g.falta ? " · Fora" : " · Reserva"}
-                    </button>
+                    <div key={`sl-${g.funcionarioId}`} style={chipBase(g.falta, "#a78bfa")}>
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                        <button
+                          type="button"
+                          title={g.falta ? "Incluir Shift Lead na reserva" : "Tirar Shift Lead da reserva"}
+                          onClick={() => {
+                            setPoolSl((prev) =>
+                              prev.map((x) =>
+                                x.funcionarioId === g.funcionarioId ? { ...x, falta: !x.falta } : x,
+                              ),
+                            );
+                            setPrevia(null);
+                          }}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            border: 0,
+                            background: "transparent",
+                            padding: 0,
+                            cursor: "pointer",
+                            fontFamily: FONT.body,
+                            fontSize: 12,
+                            color: t.text,
+                            textDecoration: g.falta ? "line-through" : "none",
+                          }}
+                        >
+                          <span
+                            aria-hidden
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              background: g.falta ? "#e84025" : "#a78bfa",
+                            }}
+                          />
+                          SL · {g.nickname}
+                          <span style={{ opacity: 0.65 }}>({g.nomeExibicao})</span>
+                          {g.falta ? " · Fora" : " · Reserva"}
+                        </button>
+                        <BadgeCheckin chegou={g.chegou} />
+                      </div>
+                    </div>
                   ))}
                 </div>
 
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>
-                  <div style={{ minWidth: 180 }}>
-                    <label style={{ display: "block", fontWeight: 700, fontSize: 12, marginBottom: 4, fontFamily: FONT.body }}>
-                      Modelo de rotação <span style={{ color: "#e84025" }}>*</span>
-                    </label>
-                    <select
-                      value={modeloN}
-                      onChange={(e) => onModeloChange(Number(e.target.value) as RotacaoModeloN)}
-                      style={{
-                        width: "100%",
-                        padding: "9px 10px",
-                        borderRadius: 8,
-                        border: `1px solid ${t.cardBorder}`,
-                        background: t.inputBg,
-                        fontFamily: FONT.body,
-                        color: t.text,
-                      }}
-                    >
-                      {ROTACAO_MODELOS.map((n) => (
-                        <option key={n} value={n}>
-                          {n} Game Presenters
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {(modeloN === 5 || modeloN === 6) && (
-                    <div style={{ minWidth: 180 }}>
-                      <label style={{ display: "block", fontWeight: 700, fontSize: 12, marginBottom: 4, fontFamily: FONT.body }}>
-                        Duração por mesa <span style={{ color: "#e84025" }}>*</span>
-                      </label>
-                      <select
-                        value={slotMin}
-                        onChange={(e) => {
-                          setSlotMin(Number(e.target.value));
-                          setPrevia(null);
-                        }}
-                        style={{
-                          width: "100%",
-                          padding: "9px 10px",
-                          borderRadius: 8,
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
-                          fontFamily: FONT.body,
-                          color: t.text,
-                        }}
-                      >
-                        <option value={20}>20 minutos</option>
-                        <option value={30}>30 minutos</option>
-                      </select>
+                {poolOutros.length > 0 && (perm.canCriarOk || perm.canEditarOk) ? (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, fontFamily: FONT.body, color: t.textMuted }}>
+                      Trazer de outro estúdio
                     </div>
-                  )}
-                </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {poolOutros.map((g) => (
+                        <div
+                          key={`out-${g.funcionarioId}`}
+                          style={{
+                            ...chipBase(false),
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <span>
+                            {g.nickname} <span style={{ opacity: 0.65 }}>({g.nomeExibicao})</span>
+                            {g.estudioEfetivo ? (
+                              <span style={{ opacity: 0.55, marginLeft: 4 }}>· {g.estudioEfetivo}</span>
+                            ) : null}
+                          </span>
+                          <BadgeCheckin chegou={g.chegou} />
+                          <button
+                            type="button"
+                            disabled={movendoId === g.funcionarioId}
+                            onClick={() => void handleTrazer(g.funcionarioId)}
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "4px 10px",
+                              borderRadius: 8,
+                              border: `1px solid ${t.cardBorder}`,
+                              background: t.cardBg,
+                              color: brand.primary,
+                              cursor: "pointer",
+                              fontFamily: FONT.body,
+                            }}
+                          >
+                            Trazer
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 11, color: t.textMuted, marginTop: 8, fontFamily: FONT.body }}>
+                      O prestador passa o turno inteiro no estúdio de destino (figurino).
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               <div style={pageBox}>
@@ -926,8 +1231,24 @@ export default function EscalaRotacaoPage() {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button
                       type="button"
+                      disabled={!ctx}
+                      onClick={handleAviso20}
+                      style={avisoBtnStyle(t, !ctx)}
+                    >
+                      Aviso — intervalo 20 min
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!ctx || poolSl.length === 0}
+                      onClick={handleAvisoSl}
+                      style={avisoBtnStyle(t, !ctx || poolSl.length === 0)}
+                    >
+                      Aviso — incluir Shift Lead
+                    </button>
+                    <button
+                      type="button"
                       disabled={!previa}
-                      onClick={handleGerar}
+                      onClick={() => handleGerar(true)}
                       style={{
                         padding: "10px 20px",
                         borderRadius: 10,
@@ -964,6 +1285,44 @@ export default function EscalaRotacaoPage() {
                     )}
                   </div>
                 </div>
+
+                {candidatosReingresso.length > 0 ? (
+                  <div
+                    style={{
+                      background: "color-mix(in srgb, #22c55e 10%, transparent)",
+                      border: "1px solid #22c55e44",
+                      borderRadius: 10,
+                      padding: "10px 14px",
+                      marginBottom: 12,
+                      fontSize: 12,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    Chegada no meio do turno — incluir a partir do próximo slot:
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      {candidatosReingresso.map((g) => (
+                        <button
+                          key={`re-${g.funcionarioId}`}
+                          type="button"
+                          onClick={() => handleIncluirReingresso(g.funcionarioId)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            border: "1px solid #22c55e66",
+                            background: t.cardBg,
+                            color: "#15803d",
+                            fontWeight: 700,
+                            fontSize: 12,
+                            cursor: "pointer",
+                            fontFamily: FONT.body,
+                          }}
+                        >
+                          Incluir na rotação · {g.nickname}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {erroPub && (
                   <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, marginBottom: 12, fontFamily: FONT.body }}>
@@ -1048,7 +1407,7 @@ export default function EscalaRotacaoPage() {
             fontSize: 13,
             fontFamily: FONT.body,
             zIndex: 30,
-            maxWidth: 340,
+            maxWidth: 360,
           }}
         >
           {toast}

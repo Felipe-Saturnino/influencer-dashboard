@@ -1434,17 +1434,27 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Pool vazio ou sem escala aprovada?",
         texto:
-          "A rotação usa Game Presenters com célula **Escalado** (Manhã/Tarde/Noite) na **Escala Estúdio** **aprovada** do dia, escala **4×2** e estúdio correto em Gestão de Staff. O pool segue o **valor da célula do dia**, não o turno vivo do cadastro — se alguém mudou de turno na Staff após a aprovação, use **Alterar Escala** no dia ou reaprouve a grade. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio.",
+          "A rotação usa Game Presenters com célula de trabalho (Manhã/Tarde/Noite) na **Escala Estúdio** **aprovada** do dia e estúdio efetivo (Staff ou override na própria Rotação). O pool segue o **valor da célula do dia**. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio. Se o SQL de cockpit ainda não foi aplicado, rode `docs/sql/escala_rotacao_cockpit.sql` (e, se necessário, `docs/sql/escala_rotacao_contexto_shift_lead.sql`) no Supabase.",
       },
       {
         subtitulo: "Não consigo publicar a rotação?",
         texto:
-          "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com elegíveis suficientes para o modelo e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
+          "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com gente suficiente para cobrir as mesas e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
       },
       {
         subtitulo: "A prévia mostra mesas a menos ou dois GPs na mesma mesa?",
         texto:
-          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte para a mesma pessoa; limitar o GP a **4 mesas** seguidas antes do Break; usar o **Shift Lead** só como reserva (mínimo de mesas). Clique de novo em **Gerar prévia** após atualizar a página. Se faltar gente para cobrir as mesas, confira GPs elegíveis, faltas e se há Shift Lead escalado no mesmo turno/estúdio. Aplique também o SQL `docs/sql/escala_rotacao_contexto_shift_lead.sql` se o pool de Shift Lead estiver vazio.",
+          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar o **Shift Lead** só como reserva. Se a cobertura falhar, use **Aviso — intervalo 20 min** ou **Aviso — incluir Shift Lead**. Clique de novo em **Gerar prévia** após atualizar a página.",
+      },
+      {
+        subtitulo: "Chegou no meio do turno — como incluir?",
+        texto:
+          "Não recalcule slots já passados. Com check-in (**Chegou**) use **Incluir na rotação**: a grade redistribui só a partir do **próximo slot**. Se ainda faltar cobertura, use os botões de **Aviso** (20 min ou Shift Lead).",
+      },
+      {
+        subtitulo: "Mover entre estúdios não funciona?",
+        texto:
+          "O move é **só na Rotação** (turno inteiro) e exige o SQL de alocação (`escala_rotacao_cockpit.sql`). Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
       },
     ],
   },

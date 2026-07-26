@@ -68,15 +68,61 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ## Rotação (`escala_rotacao`)
 
 - **Menu:** Escala, entre Gestão de Staff e Calendário. **h1** = Rotação. **Subtítulo:** «Gere e consulte a rotação de Game Presenters nas mesas por turno e estúdio.»
-- **Abas (`useRouteTab`):** Gerar Rotação | Rotação Atual (`FiltroBarTabButton`).
-- **Filtros:** carrossel de **dia** + `FiltroTurnoSelect` (Manhã/Tarde/Noite) + `FiltroEstudioSelect` (obrigatório escolher estúdio — agregadora Todos Estúdios não gera/consulta).
-- **Pool:** RPC `escala_rotacao_contexto_dia` — GPs escalados na grade **aprovada** (`area_key=game_presenter`, células **MRN/AFT/NGT** conforme o turno do filtro — **não** o `staff_turno` vivo do Staff) ∩ Staff **4×2** ∩ estúdio (`staff_estudio_slugs` / slug). Também retorna **Shift Leads** (`area_key=shift_leader`, mesmo dia/turno/estúdio) como **reserva**. Snapshot `rh_gestao_escala_turno_mes` só informa metadados. Mesas: `mesas_spin_cadastro` do `estudio_slug` (célula = **Número da Mesa**; cor base por `tipo_jogo` via `gameIdentityColors`, com **tonalidades distintas** por mesa — `corMesaRotacao`). Break = **Break**; falta = **X**.
-- **Horário:** início em `estudios_spin.turno_*_inicio` + jornada **8h** (regra 4×2). Slots 20 ou 30 min: modelos **5–6** permitem ambos; **7–8** só **30** min. Modelos permitidos: **5, 6, 7, 8**.
-- **Sugestão (`gerarGradeRotacao`):** (1) **todas** as mesas cobertas em todo slot; (2) **1 pessoa por mesa**; (3) ninguém repete a **mesma mesa** no slot seguinte; (4) GP faz **no máximo 4 mesas** seguidas e depois Break; (5) **Shift Lead** entra só para cobrir e faz o **mínimo** de mesas.
-- **UI Gerar:** chips do pool GP + chips SL (reserva); modelo N; Gerar prévia (coluna sticky **Equipe** com badge **SL**); **Publicar** (`escala_rotacao_publicar`) arquiva a publicada anterior do mesmo (dia, turno, estúdio). Bloco Pool: `SectionTitle` sub «Escala aprovada». Sem legenda sob a grade.
-- **Rotação Atual:** leitura da publicada em `escala_rotacao` + `escala_rotacao_celula`.
-- **Permissões:** seed Ver/Criar/Editar/Excluir = Não (exceto Admin). Shufflers fora do v1.
-- **Handoff:** substitui o Excel Month Shift and Rotation para GPs 4×2.
+- **Papel:** cockpit operacional (~30 min antes do turno) + prévias do mês — **não** é só gerador de grade. Substitui o Excel Month Shift and Rotation.
+
+### Decisões de produto (acordadas)
+
+| Tema | Decisão |
+|------|---------|
+| **Move entre estúdios** | **Só na Rotação** (override do dia/turno). Escala Estúdio continua “quem trabalha”; Staff continua cadastro permanente. |
+| **Prévia do mês** | Ao **aprovar / gerar** a Escala Estúdio do mês, pode materializar prévias de **todos os dias** (turno × estúdio) para ajuste fino depois. |
+| **Check-in** | Exibir **Chegou** / **Não chegou** (fonte: ponto do Calendário). Sem métrica de atraso na v1 do indicador. |
+| **Chegada no meio do turno** | Ver § Reingresso abaixo — a rotação já publicada continua; o GP entra a partir de um **slot futuro**, sem reescrever o passado. |
+| **Protocolo 20 min / SL** | Botões de ação com copy de **Aviso** (nunca «emergência» na UI). |
+| **Headcount ideal** | **Não** fixar CDA 8 / Blaze 7 / Sports Club 6. Ideal = mínimo de GPs para cobrir **todas** as mesas do estúdio com **≤ 2h contínuas** em mesa antes do Break (função de nº de mesas + duração do slot). |
+| **Figurino** | Cada estúdio exige figurino diferente. **Evitar** o mesmo GP em **2 estúdios no mesmo turno** (perda de tempo na troca). Move entre estúdios = troca de alocação **inteira** do turno, não split. |
+
+### Regras de geração (motor)
+
+1. **Todas** as mesas do estúdio cobertas em todo slot (estúdio 24h — mesa vazia = risco de multa / gravação vazia).
+2. **1** pessoa por mesa por slot.
+3. GP **não** repete a **mesma mesa** no slot seguinte.
+4. Tempo contínuo em mesa **≤ 2h** antes do Break → com slot **30 min** = máx. **4** slots; com slot **20 min** = máx. **6** slots (por isso o 20 min “encaixa” mais mesas antes da pausa quando o time está enxuto).
+5. **Shift Lead** só entra para cobrir cobertura impossível só com GPs; deve fazer o **mínimo** de mesas (função dele é coordenar fora da mesa).
+6. Slot padrão **30 min**; **Aviso — intervalo 20 min** força 20 min e regenera a partir do ponto de corte (ou o draft inteiro se ainda não iniciado).
+
+### Check-in e reingresso (atraso / chega no meio do turno)
+
+- Antes do início: linhas com **Não chegou** podem ser marcadas falta / excluídas do pool e a prévia **regenerada**.
+- **Depois** da rotação em vigor (publicada / turno andando):
+  - **Não** recalcular slots já passados (quem já está na mesa mantém o histórico).
+  - Ao GP fazer Check-in (ou liderança marcar «Chegou»): ação **Incluir na rotação** → entra a partir do **próximo slot** (ou slot escolhido ≥ agora), redistribuindo só o **futuro** (breaks/mesas restantes) e preferindo preencher buracos / reduzir carga do SL.
+  - Se a cobertura futura ainda falhar: sugerir **Aviso — incluir Shift Lead** ou **Aviso — intervalo 20 min** (sem alarmismo).
+
+### Alocação do dia (estúdio efetivo)
+
+- Tabela/override: `(dia, turno, funcionario_id) → estudio_slug_efetivo` (origem `staff` \| `manual`).
+- Default: estúdio do Staff (`staff_estudio_slugs` / primário).
+- UI: mover GP para outro estúdio **no turno inteiro** → remove do pool/origem, entra no destino, **regenera** ambos os drafts; aviso se figurino/troca for relevante.
+- **Proibido** no modelo alvo: mesmo `funcionario_id` alocado a dois `estudio_slug` no mesmo `(dia, turno)`.
+
+### Capacidades UI alvo (fases)
+
+| Fase | Entrega |
+|------|---------|
+| **A** | Alocação do dia (move só na Rotação) + regenerar automática + bloqueio 2 estúdios/turno |
+| **B** | Check-in Chegou/Não chegou + reingresso a partir de slot futuro |
+| **C** | Regra ≤ 2h; botões **Aviso — intervalo 20 min** e **Aviso — incluir Shift Lead** |
+| **D** | Prévia de todos os dias ao aprovar Escala Estúdio do mês |
+| **E** | Painel de risco de cobertura (faltas / não chegaram / SL em mesa) |
+
+### Implementação atual (cockpit)
+
+- Abas: Gerar Rotação \| Rotação Atual. Filtros: dia + turno + estúdio.
+- Pool via `escala_rotacao_contexto_dia` (GP + SL reserva + `gps_outros`); check-in Chegou/Não chegou; alocação do dia (`escala_rotacao_alocacao`); falta manual; `gerarGradeRotacao` (cobertura, 1/mesa, sem repetir mesa, ≤2h, SL mínimo, reingresso `fromSlotIndex`).
+- Slot padrão 30 min; **Aviso — intervalo 20 min** / **Aviso — incluir Shift Lead**. Sem headcount fixo por estúdio.
+- Ao aprovar Escala Estúdio (Game Presenter): `gerarPreviewsMesRotacao` (rascunhos do mês).
+- SQL: `docs/sql/escala_rotacao_cockpit.sql` (+ shift lead se ainda não aplicado). **Permissões:** seed Não (exceto Admin). Shufflers fora do v1. **Não** alterar Gestão de Estúdios nesta entrega.
 
 ---
 
