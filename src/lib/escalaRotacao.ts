@@ -249,13 +249,16 @@ type EstadoPessoaRotacao = {
 };
 
 /**
- * Atribui mesas 1:1 aos workers sem repetir a mesa do slot anterior (quando possível).
+ * Atribui mesas 1:1 aos workers.
+ * Com `forcarSemRepeticao`: ninguém recebe a mesma mesa do slot anterior.
+ * Retorna null se for impossível com este conjunto.
  */
 function atribuirMesasSemRepeticao(
   workers: number[],
   mesas: string[],
   estado: EstadoPessoaRotacao[],
-): string[] {
+  forcarSemRepeticao: boolean,
+): string[] | null {
   const n = workers.length;
   const result: (string | null)[] = Array.from({ length: n }, () => null);
   const used = new Set<string>();
@@ -263,17 +266,18 @@ function atribuirMesasSemRepeticao(
   const ordem = workers
     .map((wi, idx) => {
       const last = estado[wi]!.lastMesa;
-      const opts = mesas.filter((m) => m !== last);
-      return { idx, wi, opts: opts.length > 0 ? opts : mesas };
+      const opts =
+        forcarSemRepeticao && last ? mesas.filter((m) => m !== last) : [...mesas];
+      return { idx, wi, opts };
     })
     .sort((a, b) => a.opts.length - b.opts.length || a.idx - b.idx);
 
+  if (ordem.some((o) => o.opts.length === 0)) return null;
+
   function bt(k: number): boolean {
     if (k >= ordem.length) return true;
-    const { idx, wi, opts } = ordem[k]!;
-    const preferidos = opts.filter((m) => m !== estado[wi]!.lastMesa);
-    const tentativas = preferidos.length > 0 ? [...preferidos, ...mesas.filter((m) => !preferidos.includes(m))] : mesas;
-    for (const m of tentativas) {
+    const { idx, opts } = ordem[k]!;
+    for (const m of opts) {
       if (used.has(m)) continue;
       used.add(m);
       result[idx] = m;
@@ -284,13 +288,88 @@ function atribuirMesasSemRepeticao(
     return false;
   }
 
-  if (!bt(0)) {
-    // Fallback determinístico
-    for (let i = 0; i < n; i++) {
-      result[i] = mesas[i % mesas.length]!;
-    }
-  }
+  if (!bt(0)) return null;
   return result.map((m, i) => m ?? mesas[i % mesas.length]!);
+}
+
+/**
+ * Escolhe M workers e atribui mesas intercalando (sem mesma mesa seguida) quando há 2+ mesas.
+ * Se o time inicial não admite derangement, troca quem está em mesa por quem está em Break.
+ */
+function alocarSlotRotacao(
+  estado: EstadoPessoaRotacao[],
+  mesas: string[],
+  maxConsec: number,
+): { workers: number[]; mesasAttr: string[] } | null {
+  const M = mesas.length;
+  const forcar = mesas.length >= 2;
+  let workers = escolherWorkersSlot(estado, M, maxConsec);
+  if (workers.length < M) return null;
+
+  let mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado, forcar);
+  if (mesasAttr) return { workers, mesasAttr };
+
+  if (!forcar) {
+    mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado, false);
+    return mesasAttr ? { workers, mesasAttr } : null;
+  }
+
+  const resting = estado.map((_, i) => i).filter((i) => !workers.includes(i));
+  const workerSet = new Set(workers);
+
+  for (let round = 0; round < resting.length + 3; round++) {
+    let resolved = false;
+    for (const wi of [...workers]) {
+      if (!estado[wi]!.lastMesa) continue;
+      for (let r = 0; r < resting.length; r++) {
+        const ri = resting[r]!;
+        if (workerSet.has(ri)) continue;
+        const trial = workers.map((w) => (w === wi ? ri : w));
+        const attr = atribuirMesasSemRepeticao(trial, mesas, estado, true);
+        if (attr) {
+          workers = trial;
+          mesasAttr = attr;
+          workerSet.delete(wi);
+          workerSet.add(ri);
+          resting.splice(r, 1);
+          resting.push(wi);
+          resolved = true;
+          break;
+        }
+      }
+      if (resolved) break;
+    }
+    if (mesasAttr) return { workers, mesasAttr };
+    if (!resolved) break;
+  }
+
+  // Busca exaustiva só em pools pequenos (evita explosão combinatória)
+  if (estado.length <= 12) {
+    const todos = estado.map((_, i) => i);
+    const escolha: number[] = [];
+    const comb = (start: number): boolean => {
+      if (escolha.length === M) {
+        const attr = atribuirMesasSemRepeticao(escolha, mesas, estado, true);
+        if (attr) {
+          workers = [...escolha];
+          mesasAttr = attr;
+          return true;
+        }
+        return false;
+      }
+      for (let i = start; i < todos.length; i++) {
+        escolha.push(todos[i]!);
+        if (comb(i + 1)) return true;
+        escolha.pop();
+      }
+      return false;
+    };
+    if (comb(0) && mesasAttr) return { workers, mesasAttr };
+  }
+
+  // Último recurso: cobre mesas mesmo com repetição (só se derangement for impossível)
+  mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado, false);
+  return mesasAttr ? { workers, mesasAttr } : null;
 }
 
 function escolherWorkersSlot(
@@ -389,7 +468,7 @@ export type RotacaoGeracaoResultado = {
  * Gera a grade de rotação com as regras de produto:
  * — todas as mesas cobertas em todo slot;
  * — 1 GP/SL por mesa;
- * — GP não repete a mesma mesa no slot seguinte;
+ * — GP não repete a mesma mesa no slot seguinte (intercala com outras; com 2+ mesas é regra rígida);
  * — GP no máximo ~2h contínuas (4×30 min ou 6×20 min) antes do Break;
  * — Shift Lead entra só para cobrir e faz o mínimo de mesas.
  */
@@ -460,14 +539,14 @@ export function gerarGradeRotacao(opts: {
   }
 
   for (let s = fromSlot; s < nSlots; s++) {
-    const workers = escolherWorkersSlot(estado, mesas.length, maxConsec);
-    if (workers.length < mesas.length) {
+    const aloc = alocarSlotRotacao(estado, mesas, maxConsec);
+    if (!aloc) {
       return {
         ok: false,
         erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Use o aviso para incluir Shift Lead ou intervalo de 20 min.`,
       };
     }
-    const mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado);
+    const { workers, mesasAttr } = aloc;
     const assignment = Array.from({ length: pessoas.length }, () => "Break");
     for (let w = 0; w < workers.length; w++) {
       assignment[workers[w]!] = mesasAttr[w]!;

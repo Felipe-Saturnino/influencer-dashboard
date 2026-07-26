@@ -181,6 +181,47 @@ describe("gerarGradeRotacao", () => {
     assertCoberturaTotal(again.matrix, mesas, 4, 4);
   });
 
+  it("nunca repete a mesma mesa seguida com 2+ mesas (pool folgado e enxuto)", () => {
+    const cases: { mesas: string[]; nGp: number; nSl: number; nSlots: number }[] = [
+      { mesas: ["A", "B", "C", "D", "E"], nGp: 7, nSl: 0, nSlots: 20 },
+      { mesas: ["A", "B", "C", "D", "E", "F"], nGp: 7, nSl: 1, nSlots: 16 },
+      { mesas: ["A", "B", "C", "D"], nGp: 5, nSl: 0, nSlots: 12 },
+      { mesas: ["A", "B"], nGp: 3, nSl: 0, nSlots: 10 },
+    ];
+    for (const c of cases) {
+      const res = gerarGradeRotacao({
+        mesasLabels: c.mesas,
+        gps: gpsFake(c.nGp),
+        shiftLeads: slFake(c.nSl),
+        nSlots: c.nSlots,
+        slotMinutos: 30,
+      });
+      expect(res.ok, JSON.stringify(c)).toBe(true);
+      if (!res.ok) continue;
+      assertSemMesaConsecutiva(res.matrix);
+      assertCoberturaTotal(res.matrix, c.mesas, c.nGp, 4);
+    }
+  });
+
+  it("4 GP × 4 mesas: intercala mesmo sem Break (derangement)", () => {
+    const mesas = ["A", "B", "C", "D"];
+    const res = gerarGradeRotacao({
+      mesasLabels: mesas,
+      gps: gpsFake(4),
+      shiftLeads: [],
+      nSlots: 8,
+      slotMinutos: 30,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    assertSemMesaConsecutiva(res.matrix);
+    // Cobertura total sem checar teto 2h — sem reserva não há Break possível
+    for (let s = 0; s < 8; s++) {
+      const working = res.matrix.map((row) => row[s]!).filter((v) => v !== "Break");
+      expect(new Set(working).size).toBe(4);
+    }
+  });
+
   it("falha se pessoas < mesas", () => {
     const res = gerarGradeRotacao({
       mesasLabels: ["1", "2", "3"],
