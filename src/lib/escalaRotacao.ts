@@ -202,23 +202,58 @@ export function sugerirModeloN(elegiveis: number): RotacaoModeloN {
   return 5;
 }
 
-/** Matriz N × slots a partir das mesas do estúdio (ciclo + breaks). */
+/**
+ * Labels de mesa para a grade (Número da Mesa), únicos e na ordem do contexto.
+ */
+export function labelsMesasRotacao(mesas: { numeroMesa: string }[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const m of mesas) {
+    const n = m.numeroMesa.trim();
+    if (!n || seen.has(n)) continue;
+    seen.add(n);
+    out.push(n);
+  }
+  return out;
+}
+
+/**
+ * Matriz N × slots a partir das mesas do estúdio.
+ * Regras:
+ * — em cada slot, no máximo 1 GP por mesa;
+ * — se N ≥ M, todas as mesas ficam cobertas e (N − M) GPs em Break (rodízio);
+ * — se N < M, cobre N mesas por slot com offset rotativo (ao longo do turno todas entram).
+ */
 export function gerarPatternRotacao(
   mesasLabels: string[],
   nPeople: number,
   nSlots: number,
 ): string[][] {
   if (mesasLabels.length === 0 || nPeople <= 0 || nSlots <= 0) return [];
-  const breakEvery = Math.max(2, Math.ceil(mesasLabels.length / Math.max(1, nPeople - 1)));
-  const rows: string[][] = [];
-  for (let p = 0; p < nPeople; p++) {
-    const row: string[] = [];
-    for (let s = 0; s < nSlots; s++) {
-      const phase = s + p;
-      if (phase % (breakEvery + 1) === breakEvery) row.push("Break");
-      else row.push(mesasLabels[phase % mesasLabels.length]!);
+  const M = mesasLabels.length;
+  const N = nPeople;
+  const breaksPerSlot = Math.max(0, N - M);
+  const rows: string[][] = Array.from({ length: N }, () => []);
+
+  for (let s = 0; s < nSlots; s++) {
+    const assignment: string[] = Array.from({ length: N }, () => "Break");
+    const onBreak = new Set<number>();
+    for (let b = 0; b < breaksPerSlot; b++) {
+      onBreak.add((s + b) % N);
     }
-    rows.push(row);
+    const workers: number[] = [];
+    for (let p = 0; p < N; p++) {
+      if (!onBreak.has(p)) workers.push(p);
+    }
+    const mesaOffset = s % M;
+    const cover = Math.min(workers.length, M);
+    for (let i = 0; i < cover; i++) {
+      const p = workers[i]!;
+      assignment[p] = mesasLabels[(mesaOffset + i) % M]!;
+    }
+    for (let p = 0; p < N; p++) {
+      rows[p]!.push(assignment[p]!);
+    }
   }
   return rows;
 }

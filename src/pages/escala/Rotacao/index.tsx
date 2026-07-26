@@ -31,6 +31,7 @@ import {
   diaIsoLocal,
   formatDiaRotacaoLabel,
   gerarPatternRotacao,
+  labelsMesasRotacao,
   gerarSlotsRotacao,
   listarEstudiosAtivosRotacao,
   mapaCoresMesasRotacao,
@@ -410,7 +411,7 @@ export default function EscalaRotacaoPage() {
       );
       return;
     }
-    const numeros = ctx.mesas.map((m) => m.numeroMesa).filter(Boolean);
+    const numeros = labelsMesasRotacao(ctx.mesas);
     if (!numeros.length) {
       setErroPub(
         "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.",

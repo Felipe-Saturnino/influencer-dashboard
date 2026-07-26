@@ -1441,6 +1441,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com elegíveis suficientes para o modelo e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
       },
+      {
+        subtitulo: "A prévia mostra mesas a menos ou dois GPs na mesma mesa?",
+        texto:
+          "A sugestão deve cobrir todas as mesas do estúdio com Número da Mesa cadastrado e colocar só **um** Game Presenter por mesa em cada horário. Clique de novo em **Gerar prévia** após atualizar a página. Se ainda faltar mesa, confira em Gestão de Mesas se todas as mesas do estúdio têm **Número da Mesa** preenchido.",
+      },
     ],
   },
   escala_solicitacoes: {
