@@ -224,7 +224,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Uma live não aparece no calendário?",
         texto:
-          "Verifique se os filtros de status, plataforma, influencer ou operadora não estão ocultando a live. Com qualquer filtro ativo, apenas as lives que atendem a todos os critérios são exibidas. O botão Limpar filtros aparece automaticamente — use-o para ver a agenda completa.\n\nInfluencers e agências só visualizam as próprias lives. Se você tem esse perfil e não encontra uma live, ela pode ter sido cadastrada com outro influencer.",
+          "Verifique se os filtros de status, plataforma, influencer ou operadora não estão ocultando a live. Com qualquer filtro ativo, apenas as lives que atendem a todos os critérios são exibidas. O botão Limpar filtros aparece automaticamente — use-o para ver a agenda completa.\n\nA Agenda carrega as lives da janela visível (mês, semana ou dia). Confirme que o carrossel está no período da data agendada.\n\nInfluencers e agências só visualizam as próprias lives. Se você tem esse perfil e não encontra uma live, ela pode ter sido cadastrada com outro influencer.",
+      },
+      {
+        subtitulo: "Salvei uma Nova Live e o modal fechou, mas ela não aparece?",
+        texto:
+          "Se o modal fechou sem mensagem de erro, a live costuma ter sido gravada. Atualize a página e confira se o calendário está no mês/semana/dia da data escolhida. Se um filtro de operadora estiver ativo e o influencer não tiver vínculo ativo em Influencers → Operadoras, a live pode ficar oculta — use **Todas Operadoras** ou ajuste o vínculo.\n\nSe ainda não aparecer, entre em contato com o suporte.",
       },
       {
         subtitulo: "Não consigo salvar uma nova live?",
@@ -360,6 +365,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Nenhum influencer aparece na lista?",
         texto:
           "Verifique se os filtros de status, plataforma, operadora, cachê ou busca estão limitando a lista. O botão Limpar filtros aparece automaticamente quando há filtros ativos. Se a lista continuar vazia, pode ser que nenhum influencer tenha sido cadastrado ou que o escopo do seu perfil não inclua influencers ativos.",
+      },
+      {
+        subtitulo: "Um afiliado do Network aparece em Influencers?",
+        texto:
+          "Não deve. A página Influencers lista apenas o perfil Influencer. Cadastros vindos do Network (página Afiliados) ficam em **Afiliados**. Se ainda vir um afiliado em Influencers, recarregue a página após a atualização da plataforma; se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Não consigo alterar o status ou o cachê de um influencer?",

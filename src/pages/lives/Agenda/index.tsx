@@ -10,6 +10,7 @@ import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/fil
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
@@ -62,12 +63,37 @@ function getWeekDays(date: Date): Date[] {
   });
 }
 
-function toISO(d: Date) {
-  return d.toISOString().split("T")[0];
+/** Data civil local (YYYY-MM-DD) — evita deslocar o dia via UTC (`toISOString`). */
+function dateToISOLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function isSameCalendarDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/** Janela de datas do calendário visível (mês inclui células do grid adjacente). */
+function agendaJanelaDatas(current: Date, view: ViewMode): { start: string; end: string } {
+  if (view === "dia") {
+    const iso = dateToISOLocal(current);
+    return { start: iso, end: iso };
+  }
+  if (view === "semana") {
+    const w = getWeekDays(current);
+    return { start: dateToISOLocal(w[0]), end: dateToISOLocal(w[6]) };
+  }
+  const y = current.getFullYear();
+  const m = current.getMonth();
+  const first = new Date(y, m, 1);
+  const last = new Date(y, m + 1, 0);
+  const start = new Date(first);
+  start.setDate(first.getDate() - first.getDay());
+  const end = new Date(last);
+  end.setDate(last.getDate() + (6 - last.getDay()));
+  return { start: dateToISOLocal(start), end: dateToISOLocal(end) };
 }
 
 const AGENDA_MODO_VISUALIZACAO_OPTIONS = [
@@ -80,13 +106,14 @@ const AGENDA_MODO_VISUALIZACAO_OPTIONS = [
 export default function Agenda() {
   const { theme: t, isDark, user, setActivePage } = useApp();
   const brand = useDashboardBrand();
-  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis: _escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
+  const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("agenda");
 
   const [view,    setView]    = useState<ViewMode>("mes");
   const [current, setCurrent] = useState(new Date());
   const [lives,   setLives]   = useState<Live[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [modal,   setModal]   = useState<{ open: boolean; live?: Live }>({ open: false });
   const [bloqueioNovaLive, setBloqueioNovaLive] = useState<{
     perfilIncompleto: boolean;
@@ -109,16 +136,41 @@ export default function Agenda() {
   );
   const loadLives = useCallback(async () => {
     setLoading(true);
-    let q = supabase.from("lives").select("*, profiles!lives_influencer_id_fkey(name)").order("data", { ascending: true }).order("horario", { ascending: true });
-    if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
-    const { data, error } = await q;
-    if (!error && data) {
-      type LiveRowDb = Live & { profiles?: { name?: string | null } | null };
-      const mapped = (data as LiveRowDb[]).map((l) => ({ ...l, influencer_name: l.profiles?.name ?? undefined }));
+    setLoadError(null);
+    const { start, end } = agendaJanelaDatas(current, view);
+    type LiveRowDb = Live & { profiles?: { name?: string | null } | null };
+    try {
+      const data = await fetchAllPages<LiveRowDb>(async (from, to) => {
+        let q = supabase
+          .from("lives")
+          .select("*, profiles!lives_influencer_id_fkey(name)")
+          .gte("data", start)
+          .lte("data", end)
+          .order("data", { ascending: true })
+          .order("horario", { ascending: true })
+          .range(from, to);
+        if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
+        // Influencer/agência: restringir no servidor (evita truncar ~1000 lives globais antigas)
+        if (
+          !escoposVisiveis.semRestricaoEscopo &&
+          !escoposVisiveis.vêTodosInfluencers &&
+          escoposVisiveis.influencersVisiveis.length > 0
+        ) {
+          q = q.in("influencer_id", escoposVisiveis.influencersVisiveis);
+        }
+        return await q;
+      });
+      const mapped = data.map((l) => ({ ...l, influencer_name: l.profiles?.name ?? undefined }));
       setLives(mapped.filter((l) => podeVerInfluencer(l.influencer_id)));
+    } catch (err) {
+      console.error("Agenda loadLives:", err);
+      setLoadError(
+        "Não foi possível carregar as lives. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [podeVerInfluencer, operadoraSlugsForcado]);
+  }, [podeVerInfluencer, operadoraSlugsForcado, current, view, escoposVisiveis]);
 
   useEffect(() => { void loadLives(); }, [loadLives]);
 
@@ -136,7 +188,7 @@ export default function Agenda() {
 
   const operadoraEfetiva = operadoraSlugsForcado ?? (filterOperadora !== "todas" ? [filterOperadora] : null);
   function livesForDay(date: Date): Live[] {
-    const iso = toISO(date);
+    const iso = dateToISOLocal(date);
     return lives.filter(l => {
       if (l.data !== iso) return false;
       if (filterStatus && l.status !== filterStatus) return false;
@@ -226,6 +278,25 @@ export default function Agenda() {
         brand={brand}
         t={t}
       />
+
+      {loadError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            marginBottom: 14,
+            padding: "12px 16px",
+            borderRadius: 10,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "rgba(232,64,37,0.08)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+          }}
+        >
+          {loadError}
+        </div>
+      ) : null}
 
       {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
       <div style={getFilterBarWrapperStyle(brand, t)}>
