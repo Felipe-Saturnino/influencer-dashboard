@@ -15,6 +15,7 @@ export const FILTER_SEARCH_STAFF = placeholderPesquisaFiltro("Staff");
 
 /** Barra de pesquisa na página (lista / strip de filtros). */
 export const PAGE_SEARCH = {
+  nome: `Buscar por nome${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   nomeEmail: `Buscar por nome ou e-mail${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   nomeNickname: `Buscar por nome ou nickname${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   nomeCpfEmail: `Buscar por Nome, CPF ou e-mail${SEARCH_PLACEHOLDER_ELLIPSIS}`,
@@ -27,6 +28,7 @@ export const PAGE_SEARCH = {
   portalAcademy: `Buscar por palavras-chave na postagem${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   informativos: `Buscar por palavras-chave no informativo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   glossario: `Buscar por termo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
+  ajudaPagina: `Buscar página${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   operadoraNome: `Buscar por nome de operadora${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   mesaNomeOuId: `Buscar por nome da mesa ou ID da mesa${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   pipelineB2b: `Buscar por CNPJ, razão social ou marca${SEARCH_PLACEHOLDER_ELLIPSIS}`,

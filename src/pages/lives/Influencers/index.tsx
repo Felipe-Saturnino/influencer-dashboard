@@ -29,7 +29,7 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
-import { ROLES_PARIDADE_INFLUENCER, ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
+import { ROLES_STAFF_OPERACOES_LIVES } from "../../../lib/staffRoles";
 import {
   getPageContentBoxStyle,
   getPageFilterBoxStyle,
@@ -101,7 +101,7 @@ export default function Influencers() {
 
     if (showManagementUI) {
       const { data: profiles } = await supabase
-        .from("profiles").select("id, name, email, ativo").in("role", [...ROLES_PARIDADE_INFLUENCER]).order("name");
+        .from("profiles").select("id, name, email, ativo").eq("role", "influencer").order("name");
       if (profiles) {
         const ids = profiles.map((p: { id: string }) => p.id);
         const [perfisRes, opsRes] = await Promise.all([

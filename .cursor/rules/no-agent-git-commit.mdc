@@ -1,0 +1,15 @@
+---
+description: PROIBIDO Agent fazer commit ou push — só o usuário humano
+alwaysApply: true
+---
+
+# Git — só o usuário commita
+
+**PROIBIÇÃO ABSOLUTA para qualquer Agent (local ou cloud) neste repositório:**
+
+- **NUNCA** `git commit`, `git push`, `git rebase`, `git merge` (exceto leitura), `gh pr create`, `gh pr merge`.
+- **NUNCA** botão/fluxo "Commit and push" do Agent.
+- Após editar código: deixar alterações **uncommitted**; informar o usuário para commit/push manual.
+- Cloud Agents / Background Agents **não** devem ser usados neste projeto para publicar código — o autor `Cursor Agent <cursoragent@cursor.com>` já violou o fluxo staging.
+
+Se o usuário pedir commit sem a frase explícita **"pode fazer o commit"**, recusar e lembrar esta regra.

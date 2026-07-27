@@ -35,20 +35,24 @@ export function ModalVerRelatorioTurno({
         />
         {blocos.map((b) => (
           <Bloco key={b.estudio_slug} titulo={b.estudio_nome}>
-            <p style={{ margin: "0 0 6px", fontSize: 13 }}>
+            <p style={{ margin: b.resumo?.trim() ? "0 0 6px" : 0, fontSize: 13 }}>
               GP Escalados: <strong>{b.gp_escalados}</strong> · Absenteísmo:{" "}
               <strong>{b.absenteismo}</strong>
             </p>
-            <p style={{ margin: 0, fontSize: 13, whiteSpace: "pre-wrap", color: t.text }}>{b.resumo}</p>
+            {b.resumo?.trim() ? (
+              <p style={{ margin: 0, fontSize: 13, whiteSpace: "pre-wrap", color: t.text }}>{b.resumo}</p>
+            ) : null}
           </Bloco>
         ))}
         {shuf ? (
           <Bloco titulo="Shufflers">
-            <p style={{ margin: "0 0 6px", fontSize: 13 }}>
+            <p style={{ margin: shuf.resumo?.trim() ? "0 0 6px" : 0, fontSize: 13 }}>
               Shuffler Escalados: <strong>{shuf.shuffler_escalados}</strong> · Absenteísmo:{" "}
               <strong>{shuf.absenteismo}</strong>
             </p>
-            <p style={{ margin: 0, fontSize: 13, whiteSpace: "pre-wrap" }}>{shuf.resumo}</p>
+            {shuf.resumo?.trim() ? (
+              <p style={{ margin: 0, fontSize: 13, whiteSpace: "pre-wrap" }}>{shuf.resumo}</p>
+            ) : null}
           </Bloco>
         ) : null}
         <Bloco titulo="Geral">
@@ -100,11 +104,23 @@ export function ModalVerRelatorioEstudio({
               {x.feito ? "✓" : "○"} {x.nome}
             </p>
           ))}
+          <div style={{ fontSize: 12, fontWeight: 700, margin: "10px 0 6px", color: t.textMuted }}>
+            Troca de Cartas
+          </div>
+          {(m.troca_cartas ?? []).length === 0 ? (
+            <p style={{ margin: "0 0 10px", fontSize: 13, color: t.textMuted }}>—</p>
+          ) : (
+            (m.troca_cartas ?? []).map((x) => (
+              <p key={x.slug} style={{ margin: "0 0 4px", fontSize: 13 }}>
+                {x.feito ? "✓" : "○"} {x.nome}
+              </p>
+            ))
+          )}
           <p style={{ margin: "10px 0 4px", fontSize: 13 }}>
-            CC Machine: <strong>{m.cc_machine ? "Concluído" : "Pendente"}</strong>
+            CC Machine: <strong>{m.cc_machine ? "Realizado" : "Não Realizado"}</strong>
           </p>
           <p style={{ margin: 0, fontSize: 13 }}>
-            Cartas Contadas: <strong>{m.cartas_contadas ? "Concluído" : "Pendente"}</strong>
+            Cartas Contadas: <strong>{m.cartas_contadas ? "Realizado" : "Não Realizado"}</strong>
           </p>
         </Bloco>
       </div>

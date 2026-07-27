@@ -59,6 +59,7 @@ export type RoletaOpt = { key: string; label: string };
 export type ManutencaoPayload = {
   roletas: { key: string; label: string; feito: boolean }[];
   mesas: { slug: string; nome: string; feito: boolean }[];
+  troca_cartas: { slug: string; nome: string; feito: boolean }[];
   cc_machine: boolean;
   cartas_contadas: boolean;
 };
@@ -142,6 +143,7 @@ export function contagemManutencoes(m: ManutencaoPayload | null | undefined): {
   const itens: boolean[] = [
     ...(m.roletas ?? []).map((r) => r.feito),
     ...(m.mesas ?? []).map((x) => x.feito),
+    ...(m.troca_cartas ?? []).map((x) => x.feito),
     Boolean(m.cc_machine),
     Boolean(m.cartas_contadas),
   ];
@@ -245,6 +247,7 @@ function normalizarManutencao(raw: unknown): ManutencaoPayload {
   return {
     roletas: Array.isArray(m.roletas) ? m.roletas : [],
     mesas: Array.isArray(m.mesas) ? m.mesas : [],
+    troca_cartas: Array.isArray(m.troca_cartas) ? m.troca_cartas : [],
     cc_machine: Boolean(m.cc_machine),
     cartas_contadas: Boolean(m.cartas_contadas),
   };

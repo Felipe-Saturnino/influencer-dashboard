@@ -242,12 +242,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Headcount é o dashboard executivo de pessoas da Spin, com três abas — Overview, Contratação e Distratos. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
+          "O Headcount é o dashboard executivo de pessoas da Spin, com quatro abas — Overview, Plano de Carreira, Contratação e Distratos. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela dos últimos 13 meses (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
+          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela dos últimos 13 meses (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Plano de Carreira, Contratação e Distratos.",
       },
       {
         subtitulo: "Aba Overview",
@@ -255,9 +255,14 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses.",
       },
       {
+        subtitulo: "Aba Plano de Carreira",
+        texto:
+          "Mesmos blocos da aba Contratação (KPIs, origem das candidaturas, funil e tabela de vagas), restritos a vagas **internas** e **mistas**. No Histórico, considera os 13 meses.",
+      },
+      {
         subtitulo: "Aba Contratação",
         texto:
-          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, tipo, datas, repasse, quantidade de candidatos e status. No Histórico, os mesmos blocos consideram os 13 meses.",
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse, quantidade de candidatos e status. Contempla vagas **externas** e **mistas**. No Histórico, os mesmos blocos consideram os 13 meses.",
       },
       {
         subtitulo: "Aba Distratos",
@@ -393,7 +398,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Cadastro central dos parceiros da operação. Reúne todos os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para os módulos de Agenda, Resultados, Feedback e Financeiro.\n\nPara gestores e administradores, o subtítulo da página é 'Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro.' Para o próprio influencer logado, a página exibe apenas o próprio perfil com a mensagem 'Seu perfil completo na plataforma.'",
+          "Cadastro central dos parceiros de **lives** (perfil Influencer). Reúne os dados necessários para ativar, acompanhar e pagar cada influencer — e serve de base para Agenda, Resultados, Feedback e Financeiro. Afiliados criados pelo Network ficam na página **Afiliados**, não nesta lista.\n\nPara gestores e administradores, o subtítulo da página é 'Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro.' Para o próprio influencer logado, a página exibe apenas o próprio perfil com a mensagem 'Seu perfil completo na plataforma.'",
       },
       {
         subtitulo: "Quadros de Resumo",
@@ -674,12 +679,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Manutenção e Descarte",
         texto:
-          "Peças disponíveis podem ser enviadas para manutenção diretamente, sem passar por retirada. Tipos disponíveis: Costura, Lavagem, Perda e Descarte. Costura e Lavagem mantêm o status de manutenção; Perda e Descarte movem a peça para Descartada.\n\nPeças em manutenção podem ser Disponibilizadas (voltam ao estoque) ou Descartadas.",
+          "Peças disponíveis podem ser enviadas para manutenção diretamente, sem passar por retirada. Tipos disponíveis: Costura, Lavagem, Perda e Descarte. Costura e Lavagem mantêm o status de manutenção; Perda e Descarte movem a peça para Descartada.\n\nPeças em manutenção podem ser Disponibilizadas (voltam ao estoque) ou Descartadas.\n\nEssas ações (**Manutenção**, **Disponibilizar** e **Descartar**) exigem permissão de **Criar** = Sim na página Figurinos.",
       },
       {
         subtitulo: "Permissões",
         texto:
-          "O acesso é definido em Gestão de Usuários → Permissões para a página Figurinos. Sem permissão de edição, a área funciona em modo consulta — visualização de listagens e detalhes, sem alterar dados.",
+          "O acesso é definido em Gestão de Usuários → Permissões para a página Figurinos:\n— **Ver**: consulta inventário, detalhes e histórico.\n— **Editar**: Retirada e Devolução.\n— **Criar**: Cadastrar peça, enviar para Manutenção, Disponibilizar e Descartar.\n\nSem Criar/Editar, a área fica em modo consulta.",
       },
     ],
   },
@@ -713,16 +718,30 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   rh_gestao_escala: {
-    titulo: "Gestão de Escala",
+    titulo: "Escala Estúdio",
     blocos: [
       {
         texto:
-          "Monta e mantém a escala operacional por área (time), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar.",
+          "Monta e mantém a escala operacional do **estúdio** por área (time ou gerência sem times), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio. As abas seguem o Organograma: times com prestadores de Estúdio e **gerências sem times ativos** (pessoas vinculadas só à gerência). A aba **Academy** reúne **Performance Coach** e **Treinamento**.",
       },
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+      },
+    ],
+  },
+  escala_escritorio: {
+    titulo: "Escala Escritório",
+    blocos: [
+      {
+        texto:
+          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (`area_atuacao` Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. O time **Arte** não aparece nesta página. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
+      },
+      {
+        subtitulo: "Fluxo e Calendário",
+        texto:
+          "Selecione o time ou a gerência sem times (Organograma) e o mês no carrossel. Use sugestão ou edição manual, depois **Salvar Alterações** e **Aprovar Escala** (permissão de Criar). Só a grade **aprovada** aparece no **Calendário**; enquanto não houver aprovação, o Calendário continua com a escala comercial automática (úteis Escalado 09:00–18:00). Com a Escala Escritório aprovada, as células da grade prevalecem sobre essa regra sintética.",
       },
     ],
   },
@@ -750,7 +769,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Modos e filtros",
         texto:
-          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nA Situação (Escalado/Folga) e os turnos de estúdio vêm só da Escala Diária **aprovada** em Gestão de Escala — rascunho, sugestão ou dados só no navegador não aparecem no Calendário. Cada área (Game Presenter, Service Manager, etc.) precisa ser aprovada à parte. Se a Situação estiver em branco (—) mesmo após aprovar, atualize a plataforma (carga completa da grade).\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
+          "Alterne entre Compromissos, Controle de Presença e Relatório de Presença. Os filtros de Time e Staff usam os vínculos ativos do Organograma e são atualizados automaticamente quando a estrutura muda. Gerências **sem times** aparecem no filtro Time (efeito cascata): ao selecioná-las, o Staff lista quem está vinculado diretamente à gerência.\n\nA Situação (Escalado/Folga) e os turnos de **estúdio** vêm só da Escala Diária **aprovada** em **Escala Estúdio** — rascunho, sugestão ou dados só no navegador não aparecem no Calendário. Cada área (Game Presenter, Service Manager, etc.) precisa ser aprovada à parte. A Situação de **escritório** espelha a **Escala Escritório** aprovada quando existir; senão, aplica a regra comercial automática (ver abaixo). Se a Situação estiver em branco (—) mesmo após aprovar, atualize a plataforma (carga completa da grade).\n\nCom permissão de **Ver = Sim**, a visão inclui toda a empresa. Com **Ver = Próprios**, quem é líder imediato vê o próprio calendário e toda a cascata dos times, gerências ou diretorias que lidera; quem não é líder vê somente o próprio calendário. Ações de presença e justificativa também respeitam esse escopo e dependem da permissão de Editar.",
       },
       {
         subtitulo: "Check-in e Check-out",
@@ -758,9 +777,9 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "O ponto pode ser registrado mesmo quando o dia estiver como **Folga**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. O vínculo do login com o cadastro RH e a conexão à rede Spin Colaboradores continuam obrigatórios.\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.",
       },
       {
-        subtitulo: "Prestadores de Escritório",
+        subtitulo: "Escritório e Horário Comercial",
         texto:
-          "Prestadores com área de atuação **Escritório** não dependem da Gestão de Escala. De segunda a sexta-feira, o Calendário gera automaticamente a situação **Escalado**, com Entrada programada às 09:00 e Saída programada às 18:00. Sábados e domingos aparecem como Folga. Essa regra vale para **todos** os dias do mês (não só o início).\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
+          "Prestadores com área de atuação **Escritório** e prestadores de **Estúdio** com turno **Comercial** (escala 5×2 / Horário Comercial) usam, por padrão, a mesma regra sintética no Calendário: de segunda a sexta-feira, Situação **Escalado**, Entrada programada às 09:00 e Saída às 18:00; sábados, domingos e feriados nacionais ou da cidade de São Paulo aparecem como **Folga**.\n\nQuando existir **Escala Escritório** **aprovada** para o prestador, essa grade (Comercial / Folga / Compra / Venda / Troca) **prevalece** sobre a regra sintética. Compra, Venda ou Troca na Escala Estúdio aprovada também prevalecem no dia.\n\nOs horários programados são referência para o controle: não limitam o momento do Check-in ou Check-out. Casos de adicional noturno serão tratados em uma evolução futura.",
       },
       {
         subtitulo: "Relatório de Presença",
@@ -774,12 +793,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Marketplace de turnos: publicação de ofertas de venda ou troca entre prestadores e candidatura a vagas abertas. Todas as ofertas visíveis e as suas ofertas aparecem em abas distintas.",
+          "Marketplace de turnos: publicação de ofertas de venda ou troca entre prestadores e candidatura a vagas abertas. As ofertas ficam **persistidas** na plataforma. Todas as ofertas visíveis e as suas ofertas aparecem em abas distintas.",
       },
       {
         subtitulo: "Ofertas e candidaturas",
         texto:
-          "Crie oferta informando turno e tipo (venda ou troca) quando tiver permissão de Criar. Acompanhe candidatos, aceite ou recuse propostas conforme regras do time. Ofertas encerradas ou expiradas saem da lista ativa.",
+          "Crie oferta informando turno e tipo (venda ou troca) quando tiver permissão de Criar. Acompanhe candidatos, aceite ou recuse propostas conforme regras do time. **Aceitar** só é permitido entre prestadores do **mesmo time** do Organograma; o aceite atualiza a Escala Estúdio **aprovada** (Compra/Venda/Troca). Ofertas encerradas ou expiradas saem da lista ativa.",
       },
     ],
   },
@@ -793,12 +812,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Relatório do Turno",
         texto:
-          "Com permissão de **Criar**, use **Novo Relatório**. A **Data do turno** é o dia em que o turno começou (ontem ou hoje) — não a data da publicação; o responsável fica travado no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados, atrasos/faltas/atestados e resumo), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
+          "Com permissão de **Criar**, use **Novo Relatório**. A **Data do turno** é o dia em que o turno começou (ontem ou hoje) — não a data da publicação; o responsável fica travado no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados e atrasos/faltas/atestados; Resumo é opcional), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
       },
       {
         subtitulo: "Relatório de Estúdio",
         texto:
-          "Turno Manhã ou Noite. Campos obrigatórios numéricos: SOSs, Sinais e Payout, além do Resumo. A **Data do turno** é o dia em que o turno começou (não a data da publicação) — útil no turno noturno que fecha na manhã seguinte. Manutenção (Roletas, Mesas, CC Machine, Cartas Contadas) é checklist opcional.",
+          "Turno Manhã ou Noite. Campos obrigatórios numéricos: SOSs, Sinais e Payout, além do Resumo. A **Data do turno** é o dia em que o turno começou (não a data da publicação) — útil no turno noturno que fecha na manhã seguinte. Manutenção (Roletas, Mesas, Troca de Cartas por estúdio, CC Machine, Cartas Contadas) é checklist opcional.",
       },
     ],
   },
@@ -807,12 +826,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Gere e publique a grade de **rotação** dos Game Presenters nas mesas do estúdio por dia e turno — substitui o fluxo em planilha. Duas abas: **Gerar Rotação** (pool, modelo e prévia) e **Rotação Atual** (consulta da publicada).",
+          "Cockpit operacional da **rotação** dos Game Presenters nas mesas — use ~30 min antes do turno. Substitui o Excel de Month Shift and Rotation. Duas abas: **Gerar Rotação** (pool, check-in, avisos e prévia) e **Rotação Atual** (consulta da publicada). Ao **aprovar** a Escala Estúdio na aba Game Presenter, a plataforma pode gerar **prévias** de todos os dias do mês.",
       },
       {
         subtitulo: "Gerar Rotação",
         texto:
-          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na Gestão de Escala **aprovada**, com escala **4×2** e turno compatível no Staff. Marque faltas nos chips, escolha o modelo (5 a 8 GPs) e o intervalo de slot (20 ou 30 min — 7 e 8 só 30 min). **Gerar** monta a prévia; com permissão de **Criar**, **Publicar** grava a rotação e arquiva a anterior do mesmo dia/turno/estúdio.",
+          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na **Escala Estúdio** **aprovada** e, como reserva, dos **Shift Leads** do mesmo dia/turno. Cada chip mostra **Chegou** / **Não chegou** (ponto do Calendário). Marque faltas, **mova** um GP para outro estúdio só neste turno (figurino: 1 GP = 1 estúdio no turno) ou traga alguém de outro estúdio. **Gerar prévia** usa todos os GPs elegíveis: cobre **todas** as mesas; 1 pessoa por mesa; **intercala** mesas (não repete a mesma no horário seguinte); no máximo **2h** contínuas em mesa antes do Break (4×30 min ou 6×20 min); Shift Lead só para cobrir, com o mínimo de mesas. Intervalo padrão **30 min**. Se a cobertura ficar apertada, use **Aviso — intervalo 20 min** ou **Aviso — incluir Shift Lead** (nunca «emergência»). Chegada no meio do turno: **Incluir na rotação** redistribui só os slots futuros. Com permissão de **Criar**, **Publicar** grava a rotação.",
       },
       {
         subtitulo: "Rotação Atual",
@@ -889,7 +908,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Manuais — tabela e ciência",
         texto:
-          "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nQuando o tipo do manual **não** é **Jogos**, a coluna de jogos mostra **Todos os Jogos** (preenchido automaticamente ao salvar — o campo **Qual Jogo?** não aparece no modal).\n\nClique no ícone de visualizar para abrir o manual. Quando a postagem exige ciência **e** você pertence a um dos times selecionados em **Aplicável a**, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",
+          "A aba **Manuais** lista os documentos em **tabela** (como **Políticas e normativas** no Portal de RH): código, título, versão, tipo, jogos, coluna **Sua Ciência** e botão para visualizar.\n\nQuando o tipo do manual **não** é **Jogos**, a coluna de jogos mostra **Todos os Jogos** (preenchido automaticamente ao salvar — o campo **Qual Jogo?** não aparece no modal).\n\nClique no ícone de visualizar para abrir o manual — o modal mostra introdução, descrição, **imagens/vídeos** e **anexos** cadastrados no Gerenciamento. Quando a postagem exige ciência **e** você pertence a um dos times selecionados em **Aplicável a**, confirme com **Lido e Ciente** — o registro fica com data e hora na coluna **Sua Ciência**.",
       },
     ],
   },

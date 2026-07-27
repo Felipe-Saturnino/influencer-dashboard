@@ -7,8 +7,11 @@ import {
   GAME_IDENTITY_HEX,
   type GameIdentityKey,
 } from "./gameIdentityColors";
+import { carregarPontoRegistrosDiaLote } from "./rhCalendarioPresencaGestaoDb";
 
 export type RotacaoTurnoKey = "manha" | "tarde" | "noite";
+
+export type RotacaoCargoLideranca = "shift_leader" | "service_manager";
 
 export type RotacaoGpPool = {
   funcionarioId: string;
@@ -16,6 +19,19 @@ export type RotacaoGpPool = {
   nomeExibicao: string;
   nickname: string;
   falta: boolean;
+  /** Reserva operacional — só entra na grade para cobrir mesas. */
+  isShiftLead: boolean;
+  estudioStaff?: string;
+  estudioEfetivo?: string;
+  alocacaoOrigem?: "staff" | "manual";
+  /** true = check-in no dia; false = sem check-in; null = ainda não carregado */
+  chegou?: boolean | null;
+  /** Quando vem da lista de liderança (SL / SM). */
+  cargoLideranca?: RotacaoCargoLideranca;
+  /** Chave staff_horario_turno (ex.: 08-20, 20-08). */
+  horarioTurno?: string;
+  /** Célula da Escala Estúdio no dia (MRN / AFT / NGT). */
+  gradeValor?: string;
 };
 
 export type RotacaoMesa = {
@@ -37,6 +53,15 @@ export type RotacaoContextoDia = {
   turnoFim: string;
   horarioTexto: string;
   gps: RotacaoGpPool[];
+  /** GPs do mesmo turno em outro estúdio efetivo (para mover). */
+  gpsOutros: RotacaoGpPool[];
+  /** Shift Leads escalados (reserva automática do mesmo turno). */
+  shiftLeads: RotacaoGpPool[];
+  /**
+   * Shift Leaders + Service Managers escalados no dia (qualquer célula MRN/AFT/NGT),
+   * para o seletor «Incluir Liderança» — filtrar com `liderancaCompativelComTurnoRotacao`.
+   */
+  liderancas: RotacaoGpPool[];
   mesas: RotacaoMesa[];
 };
 
@@ -202,30 +227,465 @@ export function sugerirModeloN(elegiveis: number): RotacaoModeloN {
   return 5;
 }
 
-/** Matriz N × slots a partir das mesas do estúdio (ciclo + breaks). */
+/**
+ * Labels de mesa para a grade (Número da Mesa), únicos e na ordem do contexto.
+ */
+export function labelsMesasRotacao(mesas: { numeroMesa: string }[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const m of mesas) {
+    const n = m.numeroMesa.trim();
+    if (!n || seen.has(n)) continue;
+    seen.add(n);
+    out.push(n);
+  }
+  return out;
+}
+
+/** Máximo de minutos contínuos em mesa antes do Break (regra de produto). */
+export const ROTACAO_MAX_MINUTOS_CONTINUOS = 120;
+
+/** Quantos slots seguidos cabem em 2h para o intervalo escolhido. */
+export function maxSlotsSeguidosAntesBreak(slotMinutos: number): number {
+  const step = slotMinutos === 20 ? 20 : 30;
+  return Math.max(1, Math.floor(ROTACAO_MAX_MINUTOS_CONTINUOS / step));
+}
+
+/** @deprecated Use maxSlotsSeguidosAntesBreak(30) — mantido por compat. */
+export const ROTACAO_MAX_MESAS_SEGUIDAS = 4;
+
+type EstadoPessoaRotacao = {
+  isShiftLead: boolean;
+  consecutiveWork: number;
+  lastMesa: string | null;
+  totalMesas: number;
+};
+
+/**
+ * Atribui mesas 1:1 aos workers.
+ * Com `forcarSemRepeticao`: ninguém recebe a mesma mesa do slot anterior.
+ * Retorna null se for impossível com este conjunto.
+ */
+function atribuirMesasSemRepeticao(
+  workers: number[],
+  mesas: string[],
+  estado: EstadoPessoaRotacao[],
+  forcarSemRepeticao: boolean,
+): string[] | null {
+  const n = workers.length;
+  const result: (string | null)[] = Array.from({ length: n }, () => null);
+  const used = new Set<string>();
+
+  const ordem = workers
+    .map((wi, idx) => {
+      const last = estado[wi]!.lastMesa;
+      const opts =
+        forcarSemRepeticao && last ? mesas.filter((m) => m !== last) : [...mesas];
+      return { idx, wi, opts };
+    })
+    .sort((a, b) => a.opts.length - b.opts.length || a.idx - b.idx);
+
+  if (ordem.some((o) => o.opts.length === 0)) return null;
+
+  function bt(k: number): boolean {
+    if (k >= ordem.length) return true;
+    const { idx, opts } = ordem[k]!;
+    for (const m of opts) {
+      if (used.has(m)) continue;
+      used.add(m);
+      result[idx] = m;
+      if (bt(k + 1)) return true;
+      used.delete(m);
+      result[idx] = null;
+    }
+    return false;
+  }
+
+  if (!bt(0)) return null;
+  return result.map((m, i) => m ?? mesas[i % mesas.length]!);
+}
+
+/**
+ * Escolhe M workers e atribui mesas intercalando (sem mesma mesa seguida) quando há 2+ mesas.
+ * Se o time inicial não admite derangement, troca quem está em mesa por quem está em Break.
+ */
+function alocarSlotRotacao(
+  estado: EstadoPessoaRotacao[],
+  mesas: string[],
+  maxConsec: number,
+): { workers: number[]; mesasAttr: string[] } | null {
+  const M = mesas.length;
+  const forcar = mesas.length >= 2;
+  let workers = escolherWorkersSlot(estado, M, maxConsec);
+  if (workers.length < M) return null;
+
+  let mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado, forcar);
+  if (mesasAttr) return { workers, mesasAttr };
+
+  if (!forcar) {
+    mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado, false);
+    return mesasAttr ? { workers, mesasAttr } : null;
+  }
+
+  const resting = estado.map((_, i) => i).filter((i) => !workers.includes(i));
+  const workerSet = new Set(workers);
+
+  for (let round = 0; round < resting.length + 3; round++) {
+    let resolved = false;
+    for (const wi of [...workers]) {
+      if (!estado[wi]!.lastMesa) continue;
+      for (let r = 0; r < resting.length; r++) {
+        const ri = resting[r]!;
+        if (workerSet.has(ri)) continue;
+        const trial = workers.map((w) => (w === wi ? ri : w));
+        const attr = atribuirMesasSemRepeticao(trial, mesas, estado, true);
+        if (attr) {
+          workers = trial;
+          mesasAttr = attr;
+          workerSet.delete(wi);
+          workerSet.add(ri);
+          resting.splice(r, 1);
+          resting.push(wi);
+          resolved = true;
+          break;
+        }
+      }
+      if (resolved) break;
+    }
+    if (mesasAttr) return { workers, mesasAttr };
+    if (!resolved) break;
+  }
+
+  // Busca exaustiva só em pools pequenos (evita explosão combinatória)
+  if (estado.length <= 12) {
+    const todos = estado.map((_, i) => i);
+    const escolha: number[] = [];
+    const comb = (start: number): boolean => {
+      if (escolha.length === M) {
+        const attr = atribuirMesasSemRepeticao(escolha, mesas, estado, true);
+        if (attr) {
+          workers = [...escolha];
+          mesasAttr = attr;
+          return true;
+        }
+        return false;
+      }
+      for (let i = start; i < todos.length; i++) {
+        escolha.push(todos[i]!);
+        if (comb(i + 1)) return true;
+        escolha.pop();
+      }
+      return false;
+    };
+    if (comb(0) && mesasAttr) return { workers, mesasAttr };
+  }
+
+  // Último recurso: cobre mesas mesmo com repetição (só se derangement for impossível)
+  mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado, false);
+  return mesasAttr ? { workers, mesasAttr } : null;
+}
+
+function escolherWorkersSlot(
+  estado: EstadoPessoaRotacao[],
+  mesasCount: number,
+  maxConsec: number,
+): number[] {
+  const M = mesasCount;
+  const gpOk: number[] = [];
+  const gpMustRest: number[] = [];
+  const slIdx: number[] = [];
+
+  for (let i = 0; i < estado.length; i++) {
+    const e = estado[i]!;
+    if (e.isShiftLead) {
+      slIdx.push(i);
+      continue;
+    }
+    if (e.consecutiveWork >= maxConsec) gpMustRest.push(i);
+    else gpOk.push(i);
+  }
+
+  const nGp = gpOk.length + gpMustRest.length;
+
+  gpOk.sort((a, b) => {
+    const ea = estado[a]!;
+    const eb = estado[b]!;
+    const freshA = ea.consecutiveWork === 0 ? 0 : 1;
+    const freshB = eb.consecutiveWork === 0 ? 0 : 1;
+    if (freshA !== freshB) return freshA - freshB;
+    if (ea.consecutiveWork !== eb.consecutiveWork) return ea.consecutiveWork - eb.consecutiveWork;
+    return a - b;
+  });
+
+  let gpTarget = Math.min(gpOk.length, M);
+  if (slIdx.length > 0 && gpOk.length >= M) {
+    const nearLimit = gpOk.filter((i) => estado[i]!.consecutiveWork >= maxConsec - 1).length;
+    if (nGp <= M || nearLimit >= 2) {
+      gpTarget = Math.min(gpOk.length, M - 1);
+    }
+  }
+
+  const workers: number[] = [];
+  for (const i of gpOk) {
+    if (workers.length >= gpTarget) break;
+    workers.push(i);
+  }
+
+  if (workers.length < M) {
+    const slSorted = [...slIdx].sort((a, b) => {
+      const ea = estado[a]!;
+      const eb = estado[b]!;
+      if (ea.totalMesas !== eb.totalMesas) return ea.totalMesas - eb.totalMesas;
+      return a - b;
+    });
+    for (const i of slSorted) {
+      if (workers.length >= M) break;
+      workers.push(i);
+    }
+  }
+
+  if (workers.length < M) {
+    gpMustRest.sort((a, b) => estado[a]!.totalMesas - estado[b]!.totalMesas || a - b);
+    for (const i of gpMustRest) {
+      if (workers.length >= M) break;
+      workers.push(i);
+    }
+  }
+
+  if (workers.length < M) {
+    for (const i of gpOk) {
+      if (workers.length >= M) break;
+      if (workers.includes(i)) continue;
+      workers.push(i);
+    }
+  }
+
+  return workers.slice(0, M);
+}
+
+export type RotacaoGeracaoPessoa = {
+  funcionarioId: string;
+  isShiftLead: boolean;
+};
+
+export type RotacaoGeracaoResultado = {
+  ok: true;
+  pessoas: RotacaoGeracaoPessoa[];
+  matrix: string[][];
+} | {
+  ok: false;
+  erro: string;
+};
+
+/**
+ * Gera a grade de rotação com as regras de produto:
+ * — todas as mesas cobertas em todo slot;
+ * — 1 GP/SL por mesa;
+ * — GP não repete a mesma mesa no slot seguinte (intercala com outras; com 2+ mesas é regra rígida);
+ * — GP no máximo ~2h contínuas (4×30 min ou 6×20 min) antes do Break;
+ * — Shift Lead entra só para cobrir e faz o mínimo de mesas.
+ */
+export function gerarGradeRotacao(opts: {
+  mesasLabels: string[];
+  gps: RotacaoGeracaoPessoa[];
+  shiftLeads: RotacaoGeracaoPessoa[];
+  nSlots: number;
+  /** Default 30. Define o teto de slots seguidos (2h). */
+  slotMinutos?: number;
+  /**
+   * Se definido, preserva slots [0..fromSlot) da matrixBase e regenera só o futuro
+   * (chegada atrasada / reingresso).
+   */
+  fromSlotIndex?: number;
+  matrixBase?: string[][];
+}): RotacaoGeracaoResultado {
+  const mesas = opts.mesasLabels.filter((m) => m.trim());
+  const gps = opts.gps.filter((p) => !p.isShiftLead);
+  const shiftLeads = opts.shiftLeads.filter((p) => p.isShiftLead);
+  const nSlots = opts.nSlots;
+  const slotMin = opts.slotMinutos === 20 ? 20 : 30;
+  const maxConsec = maxSlotsSeguidosAntesBreak(slotMin);
+  const fromSlot = Math.max(0, Math.min(opts.fromSlotIndex ?? 0, nSlots));
+
+  if (mesas.length === 0) {
+    return { ok: false, erro: "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas." };
+  }
+  if (nSlots <= 0) {
+    return { ok: false, erro: "Não foi possível montar os horários do turno." };
+  }
+  if (gps.length + shiftLeads.length < mesas.length) {
+    return {
+      ok: false,
+      erro: `Pessoas insuficientes (${gps.length} GPs + ${shiftLeads.length} Shift Lead) para cobrir ${mesas.length} mesa(s).`,
+    };
+  }
+
+  const pessoas: RotacaoGeracaoPessoa[] = [
+    ...gps.map((p) => ({ ...p, isShiftLead: false })),
+    ...shiftLeads.map((p) => ({ ...p, isShiftLead: true })),
+  ];
+  const estado: EstadoPessoaRotacao[] = pessoas.map((p) => ({
+    isShiftLead: p.isShiftLead,
+    consecutiveWork: 0,
+    lastMesa: null,
+    totalMesas: 0,
+  }));
+  const rows: string[][] = Array.from({ length: pessoas.length }, () => []);
+
+  // Replay slots passados para restaurar estado (reingresso)
+  if (fromSlot > 0 && opts.matrixBase) {
+    for (let s = 0; s < fromSlot; s++) {
+      for (let p = 0; p < pessoas.length; p++) {
+        const v = opts.matrixBase[p]?.[s] ?? "Break";
+        rows[p]!.push(v);
+        const e = estado[p]!;
+        if (v === "Break" || v === "X" || v === "F") {
+          e.consecutiveWork = 0;
+          e.lastMesa = null;
+        } else {
+          e.consecutiveWork += 1;
+          e.lastMesa = v;
+          e.totalMesas += 1;
+        }
+      }
+    }
+  }
+
+  for (let s = fromSlot; s < nSlots; s++) {
+    const aloc = alocarSlotRotacao(estado, mesas, maxConsec);
+    if (!aloc) {
+      return {
+        ok: false,
+        erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Use o aviso para incluir Shift Lead ou intervalo de 20 min.`,
+      };
+    }
+    const { workers, mesasAttr } = aloc;
+    const assignment = Array.from({ length: pessoas.length }, () => "Break");
+    for (let w = 0; w < workers.length; w++) {
+      assignment[workers[w]!] = mesasAttr[w]!;
+    }
+
+    for (let p = 0; p < pessoas.length; p++) {
+      const v = assignment[p]!;
+      rows[p]!.push(v);
+      const e = estado[p]!;
+      if (v === "Break") {
+        e.consecutiveWork = 0;
+        e.lastMesa = null;
+      } else {
+        e.consecutiveWork += 1;
+        e.lastMesa = v;
+        e.totalMesas += 1;
+      }
+    }
+  }
+
+  return { ok: true, pessoas, matrix: rows };
+}
+
+/**
+ * Compat: só GPs (sem Shift Lead). Prefira `gerarGradeRotacao`.
+ */
 export function gerarPatternRotacao(
   mesasLabels: string[],
   nPeople: number,
   nSlots: number,
 ): string[][] {
-  if (mesasLabels.length === 0 || nPeople <= 0 || nSlots <= 0) return [];
-  const breakEvery = Math.max(2, Math.ceil(mesasLabels.length / Math.max(1, nPeople - 1)));
-  const rows: string[][] = [];
-  for (let p = 0; p < nPeople; p++) {
-    const row: string[] = [];
-    for (let s = 0; s < nSlots; s++) {
-      const phase = s + p;
-      if (phase % (breakEvery + 1) === breakEvery) row.push("Break");
-      else row.push(mesasLabels[phase % mesasLabels.length]!);
-    }
-    rows.push(row);
+  const gps: RotacaoGeracaoPessoa[] = Array.from({ length: nPeople }, (_, i) => ({
+    funcionarioId: `gp-${i}`,
+    isShiftLead: false,
+  }));
+  const res = gerarGradeRotacao({ mesasLabels, gps, shiftLeads: [], nSlots });
+  return res.ok ? res.matrix : [];
+}
+
+function mapPessoaPool(row: Record<string, unknown>, isShiftLead: boolean): RotacaoGpPool {
+  const nome = String(row.nome ?? "").trim();
+  const nick = String(row.nickname ?? "").trim();
+  const origem = String(row.alocacao_origem ?? "staff");
+  const cargoRaw = String(row.cargo ?? row.area_key ?? "").trim().toLowerCase();
+  let cargoLideranca: RotacaoCargoLideranca | undefined;
+  if (cargoRaw === "shift_leader" || cargoRaw.includes("shift leader")) {
+    cargoLideranca = "shift_leader";
+  } else if (cargoRaw === "service_manager" || cargoRaw.includes("service manager")) {
+    cargoLideranca = "service_manager";
+  } else if (isShiftLead) {
+    cargoLideranca = "shift_leader";
   }
-  return rows;
+  return {
+    funcionarioId: String(row.funcionario_id ?? ""),
+    nomeCompleto: nome,
+    nomeExibicao: primeiroUltimoNome(nome) || nome || "—",
+    nickname: nick || "—",
+    falta: false,
+    isShiftLead,
+    estudioStaff: String(row.estudio_staff ?? "").trim(),
+    estudioEfetivo: String(row.estudio_efetivo ?? "").trim(),
+    alocacaoOrigem: origem === "manual" ? "manual" : "staff",
+    chegou: null,
+    cargoLideranca,
+    horarioTurno: String(row.staff_horario_turno ?? row.horario_turno ?? "").trim() || undefined,
+    gradeValor: String(row.grade_valor ?? row.valor ?? "").trim() || undefined,
+  };
+}
+
+/**
+ * Liderança 08h–20h cobre Manhã/Tarde; 20h–08h (ou 18h–06h) cobre Tarde/Noite.
+ * Fallback pela célula da Escala (MRN / AFT / NGT) quando o horário não veio no cadastro.
+ */
+export function liderancaCompativelComTurnoRotacao(
+  turno: RotacaoTurnoKey,
+  opts: { horarioTurno?: string | null; gradeValor?: string | null },
+): boolean {
+  const h = (opts.horarioTurno ?? "").trim().toLowerCase().replace(/\s/g, "");
+  const g = (opts.gradeValor ?? "").trim().toUpperCase();
+
+  const janelaDia =
+    h === "08-20" ||
+    h === "08:00-20:00" ||
+    h.startsWith("08-") ||
+    (h.includes("08h") && h.includes("20"));
+  const janelaNoite =
+    h === "20-08" ||
+    h === "18-06" ||
+    h === "20:00-08:00" ||
+    h === "18:00-06:00" ||
+    h.startsWith("20-") ||
+    h.startsWith("18-") ||
+    (h.includes("20h") && h.includes("08")) ||
+    (h.includes("18h") && h.includes("06"));
+
+  if (janelaDia && !janelaNoite) {
+    return turno === "manha" || turno === "tarde";
+  }
+  if (janelaNoite && !janelaDia) {
+    return turno === "noite" || turno === "tarde";
+  }
+
+  if (g === "MRN") return turno === "manha" || turno === "tarde";
+  if (g === "NGT") return turno === "noite" || turno === "tarde";
+  if (g === "AFT") return turno === "tarde" || turno === "manha";
+
+  // Sem horário/célula: não esconder — deixa a liderança escolher
+  if (!h && !g) return true;
+  return turno === "manha" || turno === "tarde" || turno === "noite";
+}
+
+export function labelCargoLiderancaRotacao(cargo?: RotacaoCargoLideranca): string {
+  if (cargo === "service_manager") return "Service Manager";
+  return "Shift Leader";
 }
 
 function mapContexto(raw: Record<string, unknown>): RotacaoContextoDia {
   const gpsRaw = Array.isArray(raw.gps) ? raw.gps : [];
+  const gpsOutrosRaw = Array.isArray(raw.gps_outros) ? raw.gps_outros : [];
+  const slRaw = Array.isArray(raw.shift_leads) ? raw.shift_leads : [];
+  const lidRaw = Array.isArray(raw.liderancas) ? raw.liderancas : [];
   const mesasRaw = Array.isArray(raw.mesas) ? raw.mesas : [];
+  const liderancas =
+    lidRaw.length > 0
+      ? lidRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, true))
+      : slRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, true));
   return {
     dia: String(raw.dia ?? "").slice(0, 10),
     turno: (String(raw.turno ?? "noite") as RotacaoTurnoKey),
@@ -236,18 +696,10 @@ function mapContexto(raw: Record<string, unknown>): RotacaoContextoDia {
     turnoInicio: String(raw.turno_inicio ?? "06:00"),
     turnoFim: String(raw.turno_fim ?? "14:00"),
     horarioTexto: String(raw.horario_texto ?? "—"),
-    gps: gpsRaw.map((g) => {
-      const row = g as Record<string, unknown>;
-      const nome = String(row.nome ?? "").trim();
-      const nick = String(row.nickname ?? "").trim();
-      return {
-        funcionarioId: String(row.funcionario_id ?? ""),
-        nomeCompleto: nome,
-        nomeExibicao: primeiroUltimoNome(nome) || nome || "—",
-        nickname: nick || "—",
-        falta: false,
-      };
-    }),
+    gps: gpsRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, false)),
+    gpsOutros: gpsOutrosRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, false)),
+    shiftLeads: slRaw.map((g) => mapPessoaPool(g as Record<string, unknown>, true)),
+    liderancas,
     mesas: mesasRaw.map((m) => {
       const row = m as Record<string, unknown>;
       return {
@@ -458,4 +910,249 @@ export function shiftDiaIso(diaIso: string, delta: number): string {
   const dt = new Date(y!, m! - 1, d!);
   dt.setDate(dt.getDate() + delta);
   return diaIsoLocal(dt);
+}
+
+/** Índice do próximo slot ≥ agora (HH:MM local), ou 0 se o turno ainda não começou. */
+export function indiceProximoSlotRotacao(slots: string[], agora = new Date()): number {
+  const nowMin = agora.getHours() * 60 + agora.getMinutes();
+  for (let i = 0; i < slots.length; i++) {
+    const sm = minutosDesdeMeiaNoite(slots[i]!);
+    // Turno overnight: slots após meia-noite têm sm < início — comparar de forma simples
+    if (sm >= nowMin || (i > 0 && sm < minutosDesdeMeiaNoite(slots[0]!) && nowMin < sm + 24 * 60)) {
+      // Preferir slot cujo início ainda não passou no mesmo “ciclo”
+      if (sm >= nowMin) return i;
+    }
+  }
+  // Fallback: primeiro slot com início >= agora no dia civil
+  for (let i = 0; i < slots.length; i++) {
+    if (minutosDesdeMeiaNoite(slots[i]!) >= nowMin) return i;
+  }
+  return Math.max(0, slots.length - 1);
+}
+
+export async function alocarEstudioRotacao(opts: {
+  diaIso: string;
+  turno: RotacaoTurnoKey;
+  funcionarioId: string;
+  estudioSlug: string;
+}): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const { data, error } = await supabase.rpc("escala_rotacao_alocar_estudio", {
+    p_dia: opts.diaIso,
+    p_turno: opts.turno,
+    p_funcionario_id: opts.funcionarioId,
+    p_estudio_slug: opts.estudioSlug,
+  });
+  if (error) {
+    console.error(error);
+    return { ok: false, erro: "Não foi possível mover o prestador. Se o problema persistir, entre em contato com o suporte." };
+  }
+  const res = data as { ok?: boolean; error?: string } | null;
+  if (!res?.ok) {
+    return { ok: false, erro: "Não foi possível mover o prestador. Verifique o estúdio de destino." };
+  }
+  return { ok: true };
+}
+
+export async function limparAlocacaoRotacao(opts: {
+  diaIso: string;
+  turno: RotacaoTurnoKey;
+  funcionarioId: string;
+}): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const { data, error } = await supabase.rpc("escala_rotacao_limpar_alocacao", {
+    p_dia: opts.diaIso,
+    p_turno: opts.turno,
+    p_funcionario_id: opts.funcionarioId,
+  });
+  if (error) {
+    console.error(error);
+    return { ok: false, erro: "Não foi possível restaurar a alocação. Se o problema persistir, entre em contato com o suporte." };
+  }
+  const res = data as { ok?: boolean } | null;
+  if (!res?.ok) return { ok: false, erro: "Não foi possível restaurar a alocação." };
+  return { ok: true };
+}
+
+/** Enriquece o pool com Chegou / Não chegou (ponto do dia). */
+export async function anexarCheckinRotacao(
+  diaIso: string,
+  pessoas: RotacaoGpPool[],
+): Promise<RotacaoGpPool[]> {
+  if (!pessoas.length) return pessoas;
+  const ids = [...new Set(pessoas.map((p) => p.funcionarioId).filter(Boolean))];
+  const { mapa, error } = await carregarPontoRegistrosDiaLote(supabase, ids, diaIso);
+  if (error) {
+    return pessoas.map((p) => ({ ...p, chegou: null }));
+  }
+  return pessoas.map((p) => {
+    const pt = mapa.get(p.funcionarioId);
+    return { ...p, chegou: Boolean(pt?.check_in_at) };
+  });
+}
+
+/** Salva (ou atualiza) rascunho da rotação para o dia/turno/estúdio. */
+export async function salvarRascunhoRotacao(opts: {
+  diaIso: string;
+  turno: RotacaoTurnoKey;
+  estudioSlug: string;
+  estudioNome: string;
+  modeloN: number;
+  slotMinutos: number;
+  turnoInicio: string;
+  turnoFim: string;
+  celulas: RotacaoCelulaPayload[];
+}): Promise<{ ok: true; id: string } | { ok: false; erro: string }> {
+  const modelo = Math.min(24, Math.max(1, opts.modeloN));
+  const { data: existente, error: errEx } = await supabase
+    .from("escala_rotacao")
+    .select("id")
+    .eq("dia", opts.diaIso)
+    .eq("turno", opts.turno)
+    .eq("estudio_slug", opts.estudioSlug)
+    .eq("status", "rascunho")
+    .maybeSingle();
+  if (errEx) {
+    console.error(errEx);
+    return { ok: false, erro: MSG_ERRO_PUB };
+  }
+
+  let rotId = existente?.id ? String(existente.id) : "";
+  if (rotId) {
+    const { error: upErr } = await supabase
+      .from("escala_rotacao")
+      .update({
+        estudio_nome: opts.estudioNome,
+        modelo_n: modelo,
+        slot_minutos: opts.slotMinutos,
+        turno_inicio: opts.turnoInicio,
+        turno_fim: opts.turnoFim,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", rotId);
+    if (upErr) {
+      console.error(upErr);
+      return { ok: false, erro: MSG_ERRO_PUB };
+    }
+    await supabase.from("escala_rotacao_celula").delete().eq("rotacao_id", rotId);
+  } else {
+    const { data: ins, error: insErr } = await supabase
+      .from("escala_rotacao")
+      .insert({
+        dia: opts.diaIso,
+        turno: opts.turno,
+        estudio_slug: opts.estudioSlug,
+        estudio_nome: opts.estudioNome,
+        status: "rascunho",
+        modelo_n: modelo,
+        slot_minutos: opts.slotMinutos,
+        turno_inicio: opts.turnoInicio,
+        turno_fim: opts.turnoFim,
+      })
+      .select("id")
+      .single();
+    if (insErr || !ins) {
+      console.error(insErr);
+      return { ok: false, erro: MSG_ERRO_PUB };
+    }
+    rotId = String(ins.id);
+  }
+
+  if (opts.celulas.length) {
+    const rows = opts.celulas.map((c) => ({
+      rotacao_id: rotId,
+      funcionario_id: c.funcionario_id,
+      nome_exibicao: c.nome_exibicao,
+      nickname: c.nickname,
+      linha_ordem: c.linha_ordem,
+      slot_inicio: c.slot_inicio,
+      valor: c.valor,
+    }));
+    const { error: celErr } = await supabase.from("escala_rotacao_celula").insert(rows);
+    if (celErr) {
+      console.error(celErr);
+      return { ok: false, erro: MSG_ERRO_PUB };
+    }
+  }
+  return { ok: true, id: rotId };
+}
+
+/**
+ * Gera prévias (rascunho) para todos os dias do mês × turnos × estúdios ativos.
+ * Chamado após aprovar Escala Estúdio (Game Presenter). Melhor esforço — não bloqueia a aprovação.
+ */
+export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ geradas: number; erros: number }> {
+  const [y, m] = refMesIso.slice(0, 10).split("-").map(Number);
+  if (!y || !m) return { geradas: 0, erros: 0 };
+  const diasNoMes = new Date(y, m, 0).getDate();
+  const estudos = await listarEstudiosAtivosRotacao();
+  const turnos: RotacaoTurnoKey[] = ["manha", "tarde", "noite"];
+  let geradas = 0;
+  let erros = 0;
+
+  for (let d = 1; d <= diasNoMes; d++) {
+    const diaIso = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    for (const turno of turnos) {
+      for (const est of estudos) {
+        try {
+          const ctxRes = await carregarContextoRotacaoDia({
+            diaIso,
+            turno,
+            estudioSlug: est.slug,
+          });
+          if (!ctxRes.ok || !ctxRes.data.escalaAprovada) continue;
+          const ctx = ctxRes.data;
+          const mesas = labelsMesasRotacao(ctx.mesas);
+          const gps = ctx.gps.filter((g) => !g.falta);
+          if (!mesas.length || !gps.length) continue;
+          const slotMin = 30;
+          const slots = gerarSlotsRotacao(ctx.turnoInicio, ctx.turnoFim, slotMin);
+          const gerado = gerarGradeRotacao({
+            mesasLabels: mesas,
+            gps: gps.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: false })),
+            shiftLeads: ctx.shiftLeads.map((g) => ({
+              funcionarioId: g.funcionarioId,
+              isShiftLead: true,
+            })),
+            nSlots: slots.length,
+            slotMinutos: slotMin,
+          });
+          if (!gerado.ok) {
+            erros += 1;
+            continue;
+          }
+          const porId = new Map(gps.concat(ctx.shiftLeads).map((g) => [g.funcionarioId, g]));
+          const celulas: RotacaoCelulaPayload[] = [];
+          gerado.pessoas.forEach((p, i) => {
+            const g = porId.get(p.funcionarioId);
+            slots.forEach((slot, si) => {
+              celulas.push({
+                funcionario_id: p.funcionarioId,
+                nome_exibicao: g?.nomeExibicao ?? "—",
+                nickname: g?.nickname === "—" ? "" : (g?.nickname ?? ""),
+                linha_ordem: i,
+                slot_inicio: slot,
+                valor: gerado.matrix[i]?.[si] ?? "Break",
+              });
+            });
+          });
+          const salv = await salvarRascunhoRotacao({
+            diaIso,
+            turno,
+            estudioSlug: ctx.estudioSlug,
+            estudioNome: ctx.estudioNome,
+            modeloN: gps.length,
+            slotMinutos: slotMin,
+            turnoInicio: ctx.turnoInicio,
+            turnoFim: ctx.turnoFim,
+            celulas,
+          });
+          if (salv.ok) geradas += 1;
+          else erros += 1;
+        } catch (e) {
+          console.error(e);
+          erros += 1;
+        }
+      }
+    }
+  }
+  return { geradas, erros };
 }

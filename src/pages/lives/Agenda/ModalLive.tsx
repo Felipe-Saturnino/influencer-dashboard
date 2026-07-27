@@ -171,11 +171,11 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
     let operadoraSlugInfluencer: string | null = null;
-    if (!isEdit && isInfluencer && user?.id) {
+    if (!isEdit && targetInfluencerId) {
       const { data: opRows } = await supabase
         .from("influencer_operadoras")
         .select("operadora_slug")
-        .eq("influencer_id", user.id)
+        .eq("influencer_id", targetInfluencerId)
         .eq("ativo", true)
         .order("operadora_slug");
       if (opRows?.length) operadoraSlugInfluencer = (opRows[0] as { operadora_slug: string }).operadora_slug;
@@ -198,10 +198,20 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
     if (isEdit) {
       const { error: err } = await supabase.from("lives").update(payload).eq("id", live!.id);
-      if (err) { setSaving(false); setError(err.message); return; }
+      if (err) {
+        console.error("Agenda update live:", err);
+        setSaving(false);
+        setError("Não foi possível salvar a live. Se o problema persistir, entre em contato com o suporte.");
+        return;
+      }
     } else {
       const { error: err } = await supabase.from("lives").insert(payload).select("id").single();
-      if (err) { setSaving(false); setError(err.message); return; }
+      if (err) {
+        console.error("Agenda insert live:", err);
+        setSaving(false);
+        setError("Não foi possível salvar a live. Se o problema persistir, entre em contato com o suporte.");
+        return;
+      }
     }
 
     setSaving(false);

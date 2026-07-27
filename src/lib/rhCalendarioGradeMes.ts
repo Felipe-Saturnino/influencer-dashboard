@@ -5,7 +5,7 @@ import type { RpcGradeCalendarioRow } from "./overviewPrestadorCalendarioHelpers
  * Grade do Calendário: `rh_calendario_grade_mes` (Estúdio aprovado).
  * A RPC devolve jsonb (array completo) — evita o limite PostgREST ~1000 linhas
  * de `RETURNS TABLE` (N prestadores × 31 dias).
- * Escritório é mesclado no cliente via `mesclarGradeComEscritorioSintetico`.
+ * Escritório / horário comercial é mesclado no cliente via `mesclarGradeComHorarioComercialSintetico`.
  * Fallback para `rh_calendario_grade_escala_mes` se a RPC nova falhar.
  */
 

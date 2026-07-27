@@ -353,6 +353,12 @@ Toda string visível ao usuário deve estar em português do Brasil. Padrão com
 
 ### Agenda
 
+**Carga de lives:** janela da vista atual (mês = grid completo; semana; dia) via `gte`/`lte` em `data` + **`fetchAllPages`** (`lib/supabasePaginate.ts`). Influencer/agência com lista finita: também `.in("influencer_id", …)` no servidor. **Proibido** carregar `lives` sem corte de data com `order data ASC` (PostgREST ~1000 → lives novas somem após Nova Live).
+
+**Nova Live — `operadora_slug`:** no create, preencher com o primeiro vínculo ativo em `influencer_operadoras` do **influencer da live** (selecionado ou logado) — gestores inclusos, não só perfil influencer.
+
+**Datas no calendário:** `YYYY-MM-DD` em fuso **local** (não `toISOString().slice(0,10)` UTC).
+
 **Filtros:** ver secção “Barra da Agenda” acima. Views: `AgendaCalendarViews.tsx` (`ViewMes`, `ViewSemana`, `ViewDia`).
 
 **Bloco do calendário (nível 2 — `getPageContentBoxStyle`):** toolbar na mesma linha com `justifyContent: space-between` — à esquerda `SectionTitle` com `compact`, título **Calendário**, `sub` **Data e hora das lives dos influencers** (sem ícone; padrão Global § Blocos de página); à direita **`CtaCriarButton`** **Nova Live** quando `perm.canCriarOk` (fora da barra de filtros).
@@ -484,6 +490,8 @@ const [idxSemana, setIdxSemana] = useState(
 ---
 
 ### Influencers
+
+**Lista:** carregar `profiles` só com `role = influencer`. **Não** usar `ROLES_PARIDADE_INFLUENCER` nesta página — afiliados (Network / página Afiliados) compartilham `influencer_perfil`, mas **não** devem aparecer em Influencers. A constante de paridade permanece para Financeiro, Agenda, escopos, etc.
 
 **`StatusBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
 

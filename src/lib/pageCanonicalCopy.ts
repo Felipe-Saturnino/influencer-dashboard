@@ -15,7 +15,7 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
     "Visão executiva de headcount, movimentação e pipeline de contratação.",
   dash_overview_prestador:
     "Acompanhe escala, presença, absenteísmo e movimentações de turno dos prestadores.",
-  ajuda: "Conheça as funcionalidades da plataforma, o glossário de métricas e soluções para problemas comuns.",
+  ajuda: "Conheça as funcionalidades da plataforma, o glossário, tutoriais passo a passo e soluções para problemas comuns.",
   rh_organograma:
     "Conheça a empresa, saiba mais sobre os times e pessoas que fazem a operação acontecer.",
   rh_figurinos: "Controle o inventário de peças com retiradas, devoluções e manutenções.",

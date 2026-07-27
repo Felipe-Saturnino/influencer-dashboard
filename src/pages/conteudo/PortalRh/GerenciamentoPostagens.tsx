@@ -29,7 +29,10 @@ import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
-import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { getPeriodoHistoricoCompetencias, isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_PRESTADORES } from "../../../lib/tablePagination";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
 
@@ -189,6 +192,7 @@ export function GerenciamentoPostagens({
   const [histRef, setHistRef] = useState<{ contentType: RhPostagemContentType; id: string; assunto: string } | null>(null);
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
   const [alvoArquivar, setAlvoArquivar] = useState<PostagemGerenciamentoRow | null>(null);
+  const [pagina, setPagina] = useState(0);
   const [erroArquivar, setErroArquivar] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<PostagemSortCol>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -207,30 +211,52 @@ export function GerenciamentoPostagens({
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
+    const { inicio } = getPeriodoHistoricoCompetencias();
 
-    const [comRes, docRes, talkRes] = await Promise.all([
-      supabase
-        .from("rh_portal_comunicado")
-        .select("id, titulo, corpo, status, created_at, published_at, approved_at, approved_by, created_by, published_by, categoria:rh_portal_categoria(slug)")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("rh_portal_documento")
-        .select("id, titulo, corpo, introducao, resumo, status, created_at, published_at, approved_at, approved_by, created_by, codigo, versao, tipo_documento, categoria:rh_portal_categoria(slug)")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("rh_portal_rh_talk")
-        .select("id, titulo, corpo, resumo, introducao, status, created_at, published_at, approved_at, approved_by, created_by")
-        .order("created_at", { ascending: false }),
-    ]);
-
-    if (comRes.error || docRes.error || talkRes.error) {
-      const err = comRes.error ?? docRes.error ?? talkRes.error;
-      console.error("[GerenciamentoPostagens] carregar:", err);
+    let coms: unknown[] = [];
+    let docs: unknown[] = [];
+    let talks: unknown[] = [];
+    try {
+      [coms, docs, talks] = await Promise.all([
+        fetchAllPages(async (from, to) => {
+          const res = await supabase
+            .from("rh_portal_comunicado")
+            .select("id, titulo, corpo, status, created_at, published_at, approved_at, approved_by, created_by, published_by, categoria:rh_portal_categoria(slug)")
+            .gte("created_at", inicio)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
+        }),
+        fetchAllPages(async (from, to) => {
+          const res = await supabase
+            .from("rh_portal_documento")
+            .select("id, titulo, corpo, introducao, resumo, status, created_at, published_at, approved_at, approved_by, created_by, codigo, versao, tipo_documento, categoria:rh_portal_categoria(slug)")
+            .gte("created_at", inicio)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
+        }),
+        fetchAllPages(async (from, to) => {
+          const res = await supabase
+            .from("rh_portal_rh_talk")
+            .select("id, titulo, corpo, resumo, introducao, status, created_at, published_at, approved_at, approved_by, created_by")
+            .gte("created_at", inicio)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
+        }),
+      ]);
+    } catch (e) {
+      console.error("[GerenciamentoPostagens] carregar:", e);
       setErro(ERRO_CARREGAR_GERENCIAMENTO);
       setRows([]);
       setLoading(false);
       return;
     }
+
+    const comRes = { data: coms };
+    const docRes = { data: docs };
+    const talkRes = { data: talks };
 
     const userIds = new Set<string>();
     const built: PostagemGerenciamentoRow[] = [];
@@ -463,6 +489,16 @@ export function GerenciamentoPostagens({
     return list;
   }, [rowsFiltradas, sortCol, sortDir]);
 
+  useEffect(() => {
+    setPagina(0);
+  }, [rowsFiltradas, sortCol, sortDir]);
+
+  const paginaSafe = clampPageIndex(pagina, rowsOrdenadas.length, TABELA_PAGE_SIZE_PRESTADORES);
+  const rowsPagina = useMemo(
+    () => slicePage(rowsOrdenadas, paginaSafe, TABELA_PAGE_SIZE_PRESTADORES),
+    [rowsOrdenadas, paginaSafe],
+  );
+
   async function aprovarPostagem(row: PostagemGerenciamentoRow) {
     if (!user?.id) return;
     setAcaoLoading(row.id);
@@ -547,6 +583,7 @@ export function GerenciamentoPostagens({
           Sem dados para o período selecionado.
         </div>
       ) : (
+        <>
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ minWidth: 960 })}>
             <caption style={{ display: "none" }}>Gerenciamento de postagens do Portal de RH</caption>
@@ -630,7 +667,7 @@ export function GerenciamentoPostagens({
               </tr>
             </thead>
             <tbody>
-              {rowsOrdenadas.map((row, i) => {
+              {rowsPagina.map((row, i) => {
                 const acoes = acoesPorStatus(row.status);
                 const busy = acaoLoading === row.id;
                 const zebraBg = dataTable.zebraRow(i);
@@ -716,6 +753,16 @@ export function GerenciamentoPostagens({
             </tbody>
           </table>
         </div>
+        {!loading && rowsOrdenadas.length > 0 ? (
+          <TabelaPaginacaoBar
+            t={t}
+            page={paginaSafe}
+            pageSize={TABELA_PAGE_SIZE_PRESTADORES}
+            totalItems={rowsOrdenadas.length}
+            onPageChange={setPagina}
+          />
+        ) : null}
+        </>
       )}
 
       <ModalCriarPostagem

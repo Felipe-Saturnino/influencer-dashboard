@@ -31,7 +31,10 @@ import { usePermission } from "../../../hooks/usePermission";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
 import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalAcademyCarrossel";
-import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { getPeriodoHistoricoCompetencias, isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_PRESTADORES } from "../../../lib/tablePagination";
 
 type Categoria = { id: string; slug: string; label: string; scope: string };
 
@@ -180,6 +183,7 @@ export function GerenciamentoPostagens({
   const [alvoArquivar, setAlvoArquivar] = useState<PostagemGerenciamentoRow | null>(null);
   const [sortCol, setSortCol] = useState<PostagemSortCol>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [pagina, setPagina] = useState(0);
 
   const abrirCriar = useCallback(() => {
     setEditRef(null);
@@ -204,29 +208,52 @@ export function GerenciamentoPostagens({
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
+    const { inicio } = getPeriodoHistoricoCompetencias();
 
-    const [comRes, dicaRes, manualRes] = await Promise.all([
-      supabase
-        .from("academy_portal_comunicado")
-        .select("id, titulo, corpo, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("academy_portal_dica")
-        .select("id, titulo, corpo, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("academy_portal_manual")
-        .select("id, titulo, corpo, introducao, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
-        .order("created_at", { ascending: false }),
-    ]);
-
-    if (comRes.error || dicaRes.error || manualRes.error) {
-      console.error("[GerenciamentoPostagens Academy]", comRes.error ?? dicaRes.error ?? manualRes.error);
+    let coms: unknown[] = [];
+    let dicas: unknown[] = [];
+    let manuais: unknown[] = [];
+    try {
+      [coms, dicas, manuais] = await Promise.all([
+        fetchAllPages(async (from, to) => {
+          const res = await supabase
+            .from("academy_portal_comunicado")
+            .select("id, titulo, corpo, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
+            .gte("created_at", inicio)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
+        }),
+        fetchAllPages(async (from, to) => {
+          const res = await supabase
+            .from("academy_portal_dica")
+            .select("id, titulo, corpo, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
+            .gte("created_at", inicio)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
+        }),
+        fetchAllPages(async (from, to) => {
+          const res = await supabase
+            .from("academy_portal_manual")
+            .select("id, titulo, corpo, introducao, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
+            .gte("created_at", inicio)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
+        }),
+      ]);
+    } catch (e) {
+      console.error("[GerenciamentoPostagens Academy]", e);
       setErro(ERRO_CARREGAR);
       setRows([]);
       setLoading(false);
       return;
     }
+
+    const comRes = { data: coms };
+    const dicaRes = { data: dicas };
+    const manualRes = { data: manuais };
 
     const userIds = new Set<string>();
     const built: PostagemGerenciamentoRow[] = [];
@@ -327,6 +354,16 @@ export function GerenciamentoPostagens({
     return list;
   }, [rows, modoHistorico, mesesDisponiveis, idxMes, filtroTipo, filtroStatus, buscaDeb, sortCol, sortDir]);
 
+  useEffect(() => {
+    setPagina(0);
+  }, [rowsFiltradas]);
+
+  const paginaSafe = clampPageIndex(pagina, rowsFiltradas.length, TABELA_PAGE_SIZE_PRESTADORES);
+  const rowsPagina = useMemo(
+    () => slicePage(rowsFiltradas, paginaSafe, TABELA_PAGE_SIZE_PRESTADORES),
+    [rowsFiltradas, paginaSafe],
+  );
+
   const confirmarArquivar = async () => {
     if (!alvoArquivar || !user?.id) return;
     setAcaoLoading(alvoArquivar.id);
@@ -376,6 +413,7 @@ export function GerenciamentoPostagens({
           Nenhuma postagem encontrada.
         </div>
       ) : (
+        <>
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ minWidth: 900 })}>
             <caption style={{ display: "none" }}>Gerenciamento de postagens do Portal da Academy</caption>
@@ -450,7 +488,7 @@ export function GerenciamentoPostagens({
               </tr>
             </thead>
             <tbody>
-              {rowsFiltradas.map((row, i) => {
+              {rowsPagina.map((row, i) => {
                 const acoes = acoesPorStatus(row.status).filter((a) => {
                   if (a === "editar") {
                     return podeEditarPostagemAcademyGerenciamento(
@@ -518,6 +556,16 @@ export function GerenciamentoPostagens({
             </tbody>
           </table>
         </div>
+        {!loading && rowsFiltradas.length > 0 ? (
+          <TabelaPaginacaoBar
+            t={t}
+            page={paginaSafe}
+            pageSize={TABELA_PAGE_SIZE_PRESTADORES}
+            totalItems={rowsFiltradas.length}
+            onPageChange={setPagina}
+          />
+        ) : null}
+        </>
       )}
 
       {modalCriar ? (

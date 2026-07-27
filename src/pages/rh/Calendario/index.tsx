@@ -34,14 +34,15 @@ import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
   normalizarEscalaCadastro,
   siglaGradeParaNomeTurno,
-  turnoStaffEhComercial5x2,
 } from "../../../lib/rhEscalaTurnos";
+import { chaveTurnoMes, type EscalaTurnoMesMap } from "../../../lib/gestaoEscalaTurnoMes";
 import {
   adicionarMinutosAoRelogioHHMM,
   escalaComHorarioTurnoEditavelNaStaff,
   escalaComHorarioTurnoSomenteOperadora,
   formatarHoraInicioOperadora,
   labelHorarioTurnoStaffPorValor,
+  staffHorarioResolvidoParaTurnoDoDia,
 } from "../../../lib/rhStaffHorarioTurno";
 import {
   CtaCriarButton,
@@ -89,7 +90,7 @@ import {
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
-import { mesclarGradeComEscritorioSintetico } from "../../../lib/overviewPrestadorCalendarioHelpers";
+import { mesclarGradeComHorarioComercialSintetico, prestadorUsaHorarioComercialSintetico, AREA_KEY_HORARIO_COMERCIAL_SINTETICO } from "../../../lib/overviewPrestadorCalendarioHelpers";
 import { ModalAprovarPresencaMesCalendario } from "./ModalAprovarPresencaMesCalendario";
 import {
   RelatorioPresencaPainel,
@@ -111,13 +112,11 @@ import {
 import { ModalHistoricoPresencaCalendario } from "./ModalHistoricoPresencaCalendario";
 import {
   ModalJustificarPresencaCalendario,
-  type PresencaJustificativaSubmitPayload,
   type PresencaJustificarAlvo,
 } from "./ModalJustificarPresencaCalendario";
 import { CelulaIndicadorCorrecaoPresencaCalendario } from "./CelulaIndicadorCorrecaoPresencaCalendario";
 import { CelulaIndicadorJustificativaMedicoPresencaCalendario } from "./CelulaIndicadorJustificativaMedicoPresencaCalendario";
 import {
-  appendHistoricoPresenca,
   chavePresencaGestao,
   computePresencaKpisConsolidados,
   deveExibirCheckInMesFechadoPresenca,
@@ -147,14 +146,12 @@ import {
   carregarPontoRegistrosDiaLote,
   carregarPresencaGestaoDiaLote,
   carregarPresencaGestaoMes,
-  salvarPresencaGestaoDia,
 } from "../../../lib/rhCalendarioPresencaGestaoDb";
 import {
   carregarAprovacaoPresencaMes,
-  salvarAprovacaoPresencaMes,
   type PresencaAprovacaoMes,
 } from "../../../lib/rhCalendarioPresencaAprovacaoMesDb";
-import { uploadAtestadoPresencaCalendario } from "../../../lib/rhCalendarioPresencaAtestadoFiles";
+import { useCalendarioPresencaGestaoMutacoes } from "./useCalendarioPresencaGestaoMutacoes";
 
 const MONTHS = [
   "Janeiro",
@@ -415,28 +412,26 @@ function resumoHorarioTurnoModalCalendario(
   p: RhFuncionario | undefined,
   turnoNomeExibicao: string,
   op: OpTurnosHorarioPick | null | undefined,
+  /** Horário congelado na aprovação da escala (quando existir). */
+  horarioStaffOverride?: string | null,
 ): string | null {
   if (!p) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNomeExibicao)) return null;
-  if (p.area_atuacao === "escritorio" && turnoNomeExibicao === "Comercial") {
+  if (turnoNomeExibicao === "Comercial") {
     return "Início 09:00 · Fim 18:00";
   }
 
   const escala = p.escala ?? "";
 
-  if (turnoNomeExibicao === "Comercial") {
-    if (turnoStaffEhComercial5x2(p.staff_turno)) {
-      const lbl = labelHorarioTurnoStaffPorValor(p.staff_horario_turno);
-      return lbl !== "—" ? lbl : null;
-    }
-    // Comercial sem 5x2 (ex.: Escritório com area_atuacao ausente no cliente) → 09h–18h.
-    return "Início 09:00 · Fim 18:00";
-  }
-
   if (turnoNomeExibicao !== "Manhã" && turnoNomeExibicao !== "Tarde" && turnoNomeExibicao !== "Noite") return null;
 
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
-    const lbl = labelHorarioTurnoStaffPorValor(p.staff_horario_turno);
+    const hor = staffHorarioResolvidoParaTurnoDoDia(
+      escala,
+      turnoNomeExibicao,
+      horarioStaffOverride ?? p.staff_horario_turno,
+    );
+    const lbl = labelHorarioTurnoStaffPorValor(hor);
     return lbl !== "—" ? lbl : null;
   }
 
@@ -488,14 +483,6 @@ function parseHorarioStaffValorParaHHMM(valor: string | null | undefined): { ent
   };
 }
 
-function ehCadastroOuGradeEscritorio(
-  p: RhFuncionario | undefined,
-  areaKey?: string | null,
-): boolean {
-  if (p?.area_atuacao === "escritorio") return true;
-  return (areaKey ?? "").trim().toLowerCase() === "escritorio";
-}
-
 /** `area_key` da célula usada em `primeiroValorGradeDia`. */
 function areaKeyGradeDia(
   rows: RpcGradeCalendarioRow[],
@@ -513,27 +500,21 @@ function areaKeyGradeDia(
 
 /**
  * Entrada / saída programadas (HH:mm).
- * Escritório (cadastro ou grade sintética) + Comercial → 09:00–18:00.
+ * Horário comercial (Escritório ou Estúdio Comercial/5×2) → sempre 09:00–18:00.
  * Não depender só de `area_atuacao` no cliente (pode vir vazio com Ver=Próprios).
  */
 function obterEntradaSaidaEscaladasPrestadorDia(
   p: RhFuncionario | undefined,
   valorCelula: string | null | undefined,
   op: OpTurnosHorarioPick | null | undefined,
-  areaKey?: string | null,
+  _areaKey?: string | null,
+  horarioStaffOverride?: string | null,
 ): { entrada: string; saida: string } | null {
   const turnoNome = turnoExibicaoDeValorCelulaEscala(valorCelula ?? "");
   if (!turnoNome) return null;
   if (turnoCalendarioEhCompraVendaTroca(turnoNome)) return { entrada: "—", saida: "—" };
 
   if (turnoNome === "Comercial") {
-    if (ehCadastroOuGradeEscritorio(p, areaKey)) {
-      return { ...HORARIO_ESCRITORIO_COMERCIAL };
-    }
-    if (p && turnoStaffEhComercial5x2(p.staff_turno)) {
-      const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
-      return parsed ?? { entrada: "—", saida: "—" };
-    }
     return { ...HORARIO_ESCRITORIO_COMERCIAL };
   }
 
@@ -546,7 +527,12 @@ function obterEntradaSaidaEscaladasPrestadorDia(
   }
 
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
-    const parsed = parseHorarioStaffValorParaHHMM(p.staff_horario_turno);
+    const hor = staffHorarioResolvidoParaTurnoDoDia(
+      escala,
+      turnoNome,
+      horarioStaffOverride ?? p.staff_horario_turno,
+    );
+    const parsed = parseHorarioStaffValorParaHHMM(hor);
     return parsed ?? { entrada: "—", saida: "—" };
   }
 
@@ -726,6 +712,8 @@ export default function RhCalendarioPage() {
   const [sortRelatorioNomeDir, setSortRelatorioNomeDir] = useState<SortDir>("asc");
 
   const [rawGradeRowsRpc, setRawGradeRowsRpc] = useState<RpcGradeCalendarioRow[]>([]);
+  /** Horário/turno congelados na aprovação da Gestão de Escala (mês da grade). */
+  const [turnoMesMap, setTurnoMesMap] = useState<EscalaTurnoMesMap>({});
   const [loadingEscala, setLoadingEscala] = useState(false);
   const [erroEscala, setErroEscala] = useState<string | null>(null);
   /** Funcionário ligado ao login atual (e-mail / e-mail Spin). */
@@ -1044,20 +1032,40 @@ export default function RhCalendarioPage() {
     setErroEscala(null);
     void (async () => {
       const merged: RpcGradeCalendarioRow[] = [];
+      const turnoMapMerged: EscalaTurnoMesMap = {};
       let teveErro = false;
       try {
         for (const refIso of mesesRefISOConsulta) {
           if (cancelled) return;
-          const { rows, error } = await carregarRhCalendarioGradeMes(refIso);
+          const [{ rows, error }, turnoRes] = await Promise.all([
+            carregarRhCalendarioGradeMes(refIso),
+            supabase.rpc("rh_gestao_escala_turno_mes_listar", { p_ref_mes: refIso }),
+          ]);
           if (cancelled) return;
           if (error) {
             teveErro = true;
             continue;
           }
           merged.push(...rows);
+          for (const row of (turnoRes.data ?? []) as {
+            area_key: string;
+            funcionario_id: string;
+            staff_turno: string;
+            staff_horario_turno: string | null;
+          }[]) {
+            const area = (row.area_key ?? "").trim();
+            const fid = (row.funcionario_id ?? "").trim();
+            const turno = (row.staff_turno ?? "").trim();
+            if (!area || !fid || !turno) continue;
+            turnoMapMerged[chaveTurnoMes(area, fid)] = {
+              staff_turno: turno,
+              staff_horario_turno: row.staff_horario_turno?.trim() || null,
+            };
+          }
         }
         if (!cancelled) {
           setRawGradeRowsRpc(merged);
+          setTurnoMesMap(turnoMapMerged);
           setErroEscala(
             teveErro && merged.length === 0
               ? "Não foi possível carregar a escala do calendário. Se o problema persistir, entre em contato com o suporte."
@@ -1075,7 +1083,7 @@ export default function RhCalendarioPage() {
 
   /** Escritório: mês completo no cliente (RPC truncava em ~1000 linhas). */
   const rawGradeRows = useMemo(
-    () => mesclarGradeComEscritorioSintetico(rawGradeRowsRpc, prestadores, mesesRefISOConsulta),
+    () => mesclarGradeComHorarioComercialSintetico(rawGradeRowsRpc, prestadores, mesesRefISOConsulta),
     [rawGradeRowsRpc, prestadores, mesesRefISOConsulta],
   );
 
@@ -1603,13 +1611,42 @@ export default function RhCalendarioPage() {
   const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
 
   /** Início/fim do turno (ou "—"); `undefined` para Compra/Venda/Troca. */
-  function horarioSubtituloParaCompromissoCal(comp: CompromissoEscalaCal): string | undefined {
+  function horarioStaffTurnoMesSnap(funcionarioId: string, areaKey: string | null | undefined): string | null {
+    const a = (areaKey ?? "").trim();
+    if (!a) return null;
+    return turnoMesMap[chaveTurnoMes(a, funcionarioId)]?.staff_horario_turno ?? null;
+  }
+
+  function horarioSubtituloParaCompromissoCal(comp: CompromissoEscalaCal, diaIso?: string): string | undefined {
     if (turnoCalendarioEhCompraVendaTroca(comp.turno)) return undefined;
     const pRow = prestadorPorId.get(comp.prestadorId);
     const slug = (pRow?.staff_operadora_slug ?? "").trim();
     const opRow = slug ? mapOpTurnos.get(slug) : undefined;
-    const horario = resumoHorarioTurnoModalCalendario(pRow, comp.turno, opRow ?? null);
+    const area = diaIso ? areaKeyGradeDia(rawGradeRows, comp.prestadorId, diaIso) : null;
+    const horario = resumoHorarioTurnoModalCalendario(
+      pRow,
+      comp.turno,
+      opRow ?? null,
+      horarioStaffTurnoMesSnap(comp.prestadorId, area),
+    );
     return horario ?? "—";
+  }
+
+  function obterEntradaSaidaDiaCal(
+    pRow: RhFuncionario | undefined,
+    valorG: string | null | undefined,
+    opRow: OpTurnosHorarioPick | null | undefined,
+    funcionarioId: string,
+    iso: string,
+  ) {
+    const area = areaKeyGradeDia(rawGradeRows, funcionarioId, iso);
+    return obterEntradaSaidaEscaladasPrestadorDia(
+      pRow,
+      valorG,
+      opRow,
+      area,
+      horarioStaffTurnoMesSnap(funcionarioId, area),
+    );
   }
 
   /** Situação (coluna Controle de Presença) para o dia do prestador em modo «Próprios». */
@@ -1692,7 +1729,7 @@ export default function RhCalendarioPage() {
   }
 
   function ModalDiaTurnoCardProprio({ comp, iso }: { comp: CompromissoEscalaCal; iso: string }) {
-    const horario = horarioSubtituloParaCompromissoCal(comp);
+    const horario = horarioSubtituloParaCompromissoCal(comp, iso);
     const situacao = situacaoPresencaControleModalProprio(iso);
     const linhaHorario = horario !== undefined ? `${horario} - ${situacao}` : situacao;
     return (
@@ -1710,7 +1747,7 @@ export default function RhCalendarioPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-          <Clock size={14} color={BRAND.azul} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+          <Clock size={14} color={BRAND.azul} aria-hidden="true" style={{ flexShrink: 0, width: 14, height: 14, marginTop: 2 }} />
           <div style={{ fontSize: 13, fontWeight: 700, color: BRAND.azul, lineHeight: 1.4, minWidth: 0 }}>
             Turno de {comp.turno}
           </div>
@@ -1770,9 +1807,26 @@ export default function RhCalendarioPage() {
           lineHeight: 1.2,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-          <Icon size={11} color={cor} aria-hidden="true" />
-          <span style={{ fontSize: 11, fontWeight: 700, color: cor, fontFamily: FONT.body, flexShrink: 0 }}>{etiqueta}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, width: "100%" }}>
+          <Icon
+            size={11}
+            color={cor}
+            aria-hidden="true"
+            style={{ flexShrink: 0, width: 11, height: 11 }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: cor,
+              fontFamily: FONT.body,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+              lineHeight: 1.2,
+            }}
+          >
+            {etiqueta}
+          </span>
           <span
             style={{
               fontSize: 11,
@@ -1783,6 +1837,7 @@ export default function RhCalendarioPage() {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               minWidth: 0,
+              lineHeight: 1.2,
             }}
             title={temSubtitulo ? `${item.titulo}\n${item.subtituloChip}` : `${etiqueta} — ${item.titulo}`}
           >
@@ -1800,6 +1855,7 @@ export default function RhCalendarioPage() {
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
+              lineHeight: 1.2,
             }}
             title={item.subtituloChip}
           >
@@ -1846,8 +1902,25 @@ export default function RhCalendarioPage() {
             width: "100%",
           }}
         >
-          <Clock size={11} color={BRAND.azul} aria-hidden="true" />
-          <span style={{ fontSize: 11, fontWeight: 700, color: BRAND.azul, fontFamily: FONT.body, flexShrink: 0 }}>{comp.turno}</span>
+          <Clock
+            size={11}
+            color={BRAND.azul}
+            aria-hidden="true"
+            style={{ flexShrink: 0, width: 11, height: 11 }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: BRAND.azul,
+              fontFamily: FONT.body,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+              lineHeight: 1.2,
+            }}
+          >
+            {comp.turno}
+          </span>
           <span
             style={{
               fontSize: 11,
@@ -1858,6 +1931,7 @@ export default function RhCalendarioPage() {
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               minWidth: 0,
+              lineHeight: 1.2,
             }}
             title={`${comp.turno} — ${comp.nome}`}
           >
@@ -1985,7 +2059,7 @@ export default function RhCalendarioPage() {
                         <EscalaCompromissoChip
                           key={`${linha.comp.prestadorId}-${linha.comp.turno}`}
                           comp={linha.comp}
-                          subtituloModal={soPropriosCal ? horarioSubtituloParaCompromissoCal(linha.comp) : undefined}
+                          subtituloModal={soPropriosCal ? horarioSubtituloParaCompromissoCal(linha.comp, toISO(date)) : undefined}
                         />
                       ) : (
                         <AgendaExtraDiaChip key={`${linha.tipo}-${linha.item.id}`} linha={linha} />
@@ -2127,8 +2201,11 @@ export default function RhCalendarioPage() {
   const gradeEstudioAusenteNoMes =
     !loadingEscala &&
     !erroEscala &&
-    prestadores.some((p) => p.area_atuacao !== "escritorio") &&
-    !rawGradeRows.some((r) => (r.area_key ?? "").trim().toLowerCase() !== "escritorio");
+    prestadores.some((p) => p.area_atuacao !== "escritorio" && !prestadorUsaHorarioComercialSintetico(p)) &&
+    !rawGradeRows.some((r) => {
+      const ak = (r.area_key ?? "").trim().toLowerCase();
+      return ak !== "escritorio" && ak !== AREA_KEY_HORARIO_COMERCIAL_SINTETICO;
+    });
 
   const mostrarBotaoPontoCalendario =
     !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
@@ -2221,13 +2298,9 @@ export default function RhCalendarioPage() {
     const slug = (pRow?.staff_operadora_slug ?? "").trim();
     const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
     const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
-    return obterEntradaSaidaEscaladasPrestadorDia(
-      pRow,
-      valorG,
-      opRow,
-      areaKeyGradeDia(rawGradeRows, fid, iso),
-    );
-  }, [mesPresencaFechado, diasDoMesPresenca, presencaFilterStaffIds, prestadorPorId, mapOpTurnos, rawGradeRows]);
+    return obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- helper local do render (rawGradeRows/turnoMesMap já nas deps)
+  }, [mesPresencaFechado, diasDoMesPresenca, presencaFilterStaffIds, prestadorPorId, mapOpTurnos, rawGradeRows, turnoMesMap]);
 
   const exibirCheckInMesFechadoExcecao = useMemo(() => {
     if (!mesPresencaFechado) return false;
@@ -2280,12 +2353,7 @@ export default function RhCalendarioPage() {
       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
       if (situacao !== "Escalado") continue;
-      const esc = obterEntradaSaidaEscaladasPrestadorDia(
-        pRow,
-        valorG,
-        opRow,
-        areaKeyGradeDia(rawGradeRows, fid, iso),
-      );
+      const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
       const pt = mapaPontoPorDiaIso.get(iso);
       const entEsc = esc ? esc.entrada : "—";
       const saiEsc = esc ? esc.saida : "—";
@@ -2328,6 +2396,7 @@ export default function RhCalendarioPage() {
       });
     }
     return out;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal helper local do render
   }, [
     presencaFilterStaffIds,
     diasDoMesPresenca,
@@ -2350,12 +2419,7 @@ export default function RhCalendarioPage() {
         const iso = toISO(dia);
         const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
         const situacao = situacaoGestaoEscalaParaDia(valorG);
-        const esc = obterEntradaSaidaEscaladasPrestadorDia(
-          pRow,
-          valorG,
-          opRow,
-          areaKeyGradeDia(rawGradeRows, fid, iso),
-        );
+        const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
         const pt = mapaPontoPorDiaIso.get(iso);
         const entEsc = esc ? esc.entrada : "—";
         const saiEsc = esc ? esc.saida : "—";
@@ -2382,6 +2446,7 @@ export default function RhCalendarioPage() {
       });
       return computePresencaKpisConsolidados(diasInput);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal helper local do render
     [
       presencaFilterStaffIds,
       rawGradeRows,
@@ -2410,12 +2475,7 @@ export default function RhCalendarioPage() {
       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
       const slug = (pRow.staff_operadora_slug ?? "").trim();
       const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
-      const esc = obterEntradaSaidaEscaladasPrestadorDia(
-        pRow,
-        valorG,
-        opRow,
-        areaKeyGradeDia(rawGradeRows, fid, iso),
-      );
+      const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
       const pt = pontoRelatorioPorFid.get(fid);
       const entEsc = esc ? esc.entrada : "—";
       const saiEsc = esc ? esc.saida : "—";
@@ -2511,6 +2571,7 @@ export default function RhCalendarioPage() {
       });
     }
     return out;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal helper local do render
   }, [
     relatorioFiltroTimeAtivo,
     relatorioFiltroStaffAtivo,
@@ -2545,309 +2606,32 @@ export default function RhCalendarioPage() {
     return "Usuário";
   }, [user?.name, user?.email]);
 
-  const persistirPresencaGestao = useCallback(
-    async (funcionarioId: string, diaIso: string, gestao: PresencaDiaGestao): Promise<boolean> => {
-      const { ok } = await salvarPresencaGestaoDia(supabase, funcionarioId, diaIso, gestao);
-      if (!ok) {
-        console.error("Não foi possível salvar a gestão de presença.");
-        setPresencaGestaoTick((x) => x + 1);
-      }
-      return ok;
-    },
-    [],
-  );
-
-  const confirmarAprovacaoPresenca = useCallback(() => {
-    if (!presencaAlvoModal) return;
-    const diaIso = toISO(presencaAlvoModal.dia);
-    const fid = presencaAlvoModal.funcionarioId;
-    const chave = chavePresencaGestao(fid, diaIso);
-    setPresencaGestaoPorChave((prev) => {
-      const next = new Map(prev);
-      const atual = next.get(chave);
-      const comHistorico = appendHistoricoPresenca(atual, {
-        tipo: "aprovacao",
-        em: new Date().toISOString(),
-        por: nomeUsuarioPresencaGestao,
-      });
-      const novo: PresencaDiaGestao = { ...comHistorico, statusGestao: "aprovado", correcao: atual?.correcao };
-      next.set(chave, novo);
-      void persistirPresencaGestao(fid, diaIso, novo);
-      return next;
-    });
-    setPresencaAlvoModal(null);
-  }, [presencaAlvoModal, nomeUsuarioPresencaGestao, persistirPresencaGestao]);
-
-  const aprovarPresencaMesTodos = useCallback(async (): Promise<boolean> => {
-    const fid = presencaFilterStaffIds[0];
-    if (!fid || !mesPresencaFechado) return false;
-    const em = new Date().toISOString();
-    const nextMap = new Map(presencaGestaoPorChave);
-
-    for (const linha of linhasAprovacaoPresencaMes) {
-      if (linha.status !== "Registrado") continue;
-      const chave = chavePresencaGestao(fid, linha.diaIso);
-      const atual = nextMap.get(chave);
-      const comHistorico = appendHistoricoPresenca(atual, {
-        tipo: "aprovacao",
-        em,
-        por: nomeUsuarioPresencaGestao,
-      });
-      const novo: PresencaDiaGestao = {
-        ...comHistorico,
-        statusGestao: "aprovado",
-        correcao: atual?.correcao,
-        justificativa: atual?.justificativa,
-      };
-      const ok = await persistirPresencaGestao(fid, linha.diaIso, novo);
-      if (!ok) return false;
-      nextMap.set(chave, novo);
-    }
-
-    const { ok, aprovacao } = await salvarAprovacaoPresencaMes(
-      supabase,
-      fid,
-      current,
-      nomeUsuarioPresencaGestao,
-    );
-    if (!ok || !aprovacao) return false;
-
-    setPresencaGestaoPorChave(nextMap);
-    setAprovacaoPresencaMes(aprovacao);
-    setModalAprovarPresencaMesAberto(false);
-    setPresencaGestaoTick((x) => x + 1);
-    return true;
-  }, [
+  const {
+    confirmarAprovacaoPresenca,
+    aprovarPresencaMesTodos,
+    salvarCorrecaoPresenca,
+    analisarCorrecaoPresenca,
+    salvarJustificativaPresenca,
+  } = useCalendarioPresencaGestaoMutacoes({
+    nomeUsuarioPresencaGestao,
+    mapaPontoPorDiaIso,
+    pontoRelatorioPorFid,
     presencaFilterStaffIds,
     mesPresencaFechado,
     linhasAprovacaoPresencaMes,
-    presencaGestaoPorChave,
-    nomeUsuarioPresencaGestao,
-    persistirPresencaGestao,
     current,
-  ]);
-
-  const salvarCorrecaoPresenca = useCallback(
-    (payload: { entrada: string; saida: string; observacao: string }) => {
-      if (!presencaAlvoModal) return;
-      const diaIso = toISO(presencaAlvoModal.dia);
-      const fid = presencaAlvoModal.funcionarioId;
-      const chave = chavePresencaGestao(fid, diaIso);
-      const pt = mapaPontoPorDiaIso.get(diaIso);
-      const entradaRealAnterior = horaRegistoSP(pt?.check_in_at);
-      const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
-      setPresencaGestaoPorChave((prev) => {
-        const next = new Map(prev);
-        const atual = next.get(chave);
-        const comHistorico = appendHistoricoPresenca(atual, {
-          tipo: "correcao",
-          em: new Date().toISOString(),
-          por: nomeUsuarioPresencaGestao,
-        });
-        const novo: PresencaDiaGestao = {
-          ...comHistorico,
-          statusGestao: "em_analise",
-          correcao: {
-            entradaRealAnterior,
-            saidaRealAnterior,
-            entradaCorrigida: payload.entrada,
-            saidaCorrigida: payload.saida,
-            observacao: payload.observacao.trim() || null,
-            corrigidoPorNome: nomeUsuarioPresencaGestao,
-            corrigidoEm: new Date().toISOString(),
-            analiseStatus: "pendente",
-          },
-        };
-        next.set(chave, novo);
-        void persistirPresencaGestao(fid, diaIso, novo);
-        return next;
-      });
-      setPresencaAlvoModal(null);
-    },
-    [presencaAlvoModal, mapaPontoPorDiaIso, nomeUsuarioPresencaGestao, persistirPresencaGestao],
-  );
-
-  const analisarCorrecaoPresenca = useCallback(
-    (funcionarioId: string, diaIso: string, decisao: "aprovada" | "recusada") => {
-      const chave = chavePresencaGestao(funcionarioId, diaIso);
-      const em = new Date().toISOString();
-      const aplicar = (prev: Map<string, PresencaDiaGestao>) => {
-        const next = new Map(prev);
-        const atual = next.get(chave);
-        if (!atual?.correcao) return prev;
-        if (presencaCorrecaoAnaliseStatusEfetivo(atual.correcao) !== "pendente") return prev;
-
-        let novo: PresencaDiaGestao;
-        if (decisao === "aprovada") {
-          const comHistorico = appendHistoricoPresenca(atual, {
-            tipo: "aprovacao",
-            em,
-            por: nomeUsuarioPresencaGestao,
-          });
-          novo = {
-            ...comHistorico,
-            statusGestao: "aprovado",
-            correcao: {
-              ...atual.correcao,
-              analiseStatus: "aprovada",
-              analisePorNome: nomeUsuarioPresencaGestao,
-              analiseEm: em,
-            },
-          };
-        } else {
-          novo = {
-            ...atual,
-            statusGestao: undefined,
-            correcao: {
-              ...atual.correcao,
-              analiseStatus: "recusada",
-              analisePorNome: nomeUsuarioPresencaGestao,
-              analiseEm: em,
-            },
-          };
-        }
-        next.set(chave, novo);
-        void persistirPresencaGestao(funcionarioId, diaIso, novo);
-        return next;
-      };
-      setPresencaGestaoPorChave(aplicar);
-      setGestaoRelatorioPorChave(aplicar);
-    },
-    [nomeUsuarioPresencaGestao, persistirPresencaGestao],
-  );
-
-  const salvarJustificativaPresenca = useCallback(
-    async (payload: PresencaJustificativaSubmitPayload): Promise<boolean> => {
-      if (!presencaJustificarAlvo) return false;
-      const diaIso = toISO(presencaJustificarAlvo.dia);
-      const fid = presencaJustificarAlvo.funcionarioId;
-      const chave = chavePresencaGestao(fid, diaIso);
-      const pt =
-        (presencaFilterStaffIds[0] === fid ? mapaPontoPorDiaIso.get(diaIso) : undefined) ??
-        pontoRelatorioPorFid.get(fid);
-      const entradaRealAnterior = horaRegistoSP(pt?.check_in_at);
-      const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
-      const em = new Date().toISOString();
-      const atual = gestaoRelatorioPorChave.get(chave) ?? presencaGestaoPorChave.get(chave);
-
-      if (payload.motivo === "medico") {
-        const up = await uploadAtestadoPresencaCalendario(fid, diaIso, payload.arquivo);
-        if (!up.ok) return false;
-        const comHistorico = appendHistoricoPresenca(atual, {
-          tipo: "justificativa",
-          em,
-          por: nomeUsuarioPresencaGestao,
-        });
-        const justificativa: PresencaJustificativaMeta = {
-          motivo: "medico",
-          registradoPorNome: nomeUsuarioPresencaGestao,
-          registradoEm: em,
-          atestadoInicio: payload.atestadoInicio,
-          atestadoFim: payload.atestadoFim,
-          atestadoStoragePath: up.storagePath,
-          atestadoFileName: up.fileName,
-          observacao: payload.observacao.trim() || null,
-          atestadoStatus: "em_analise",
-          atestadoDiaRegistro: diaIso,
-        };
-        const novo: PresencaDiaGestao = {
-          ...comHistorico,
-          statusGestao: "em_analise",
-          justificativa,
-        };
-        const ok = await persistirPresencaGestao(fid, diaIso, novo);
-        if (!ok) return false;
-        const patchGestao = (prev: Map<string, PresencaDiaGestao>) => {
-          const next = new Map(prev);
-          next.set(chave, novo);
-          return next;
-        };
-        setPresencaGestaoPorChave(patchGestao);
-        setGestaoRelatorioPorChave(patchGestao);
-        setPresencaGestaoTick((x) => x + 1);
-        setPresencaJustificarAlvo(null);
-        return true;
-      }
-
-      if (payload.motivo === "esquecimento") {
-        let base = appendHistoricoPresenca(atual, {
-          tipo: "justificativa",
-          em,
-          por: nomeUsuarioPresencaGestao,
-        });
-        base = appendHistoricoPresenca(base, {
-          tipo: "correcao",
-          em,
-          por: nomeUsuarioPresencaGestao,
-        });
-        const justificativa: PresencaJustificativaMeta = {
-          motivo: "esquecimento",
-          registradoPorNome: nomeUsuarioPresencaGestao,
-          registradoEm: em,
-        };
-        const novo: PresencaDiaGestao = {
-          ...base,
-          statusGestao: "em_analise",
-          justificativa,
-          correcao: {
-            entradaRealAnterior,
-            saidaRealAnterior,
-            entradaCorrigida: payload.entrada,
-            saidaCorrigida: payload.saida,
-            observacao: null,
-            corrigidoPorNome: nomeUsuarioPresencaGestao,
-            corrigidoEm: em,
-            analiseStatus: "pendente",
-          },
-        };
-        const ok = await persistirPresencaGestao(fid, diaIso, novo);
-        if (!ok) return false;
-        const patchGestaoEsq = (prev: Map<string, PresencaDiaGestao>) => {
-          const next = new Map(prev);
-          next.set(chave, novo);
-          return next;
-        };
-        setPresencaGestaoPorChave(patchGestaoEsq);
-        setGestaoRelatorioPorChave(patchGestaoEsq);
-        setPresencaJustificarAlvo(null);
-        return true;
-      }
-
-      const comHistorico = appendHistoricoPresenca(atual, {
-        tipo: "justificativa",
-        em,
-        por: nomeUsuarioPresencaGestao,
-      });
-      const justificativa: PresencaJustificativaMeta = {
-        motivo: "outro",
-        registradoPorNome: nomeUsuarioPresencaGestao,
-        registradoEm: em,
-        observacao: payload.observacao,
-      };
-      const novo: PresencaDiaGestao = { ...comHistorico, justificativa };
-      const ok = await persistirPresencaGestao(fid, diaIso, novo);
-      if (!ok) return false;
-      const patchGestaoOutro = (prev: Map<string, PresencaDiaGestao>) => {
-        const next = new Map(prev);
-        next.set(chave, novo);
-        return next;
-      };
-      setPresencaGestaoPorChave(patchGestaoOutro);
-      setGestaoRelatorioPorChave(patchGestaoOutro);
-      setPresencaJustificarAlvo(null);
-      return true;
-    },
-    [
-      presencaJustificarAlvo,
-      presencaGestaoPorChave,
-      gestaoRelatorioPorChave,
-      mapaPontoPorDiaIso,
-      pontoRelatorioPorFid,
-      presencaFilterStaffIds,
-      nomeUsuarioPresencaGestao,
-      persistirPresencaGestao,
-    ],
-  );
+    presencaGestaoPorChave,
+    setPresencaGestaoPorChave,
+    gestaoRelatorioPorChave,
+    setGestaoRelatorioPorChave,
+    setPresencaGestaoTick,
+    setAprovacaoPresencaMes,
+    setModalAprovarPresencaMesAberto,
+    presencaAlvoModal,
+    setPresencaAlvoModal,
+    presencaJustificarAlvo,
+    setPresencaJustificarAlvo,
+  });
 
   if (perm.canView === "nao") {
     return (
@@ -2868,16 +2652,13 @@ export default function RhCalendarioPage() {
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 16,
-              width: "100%",
-            }}
-          >
-            <div style={getFilterBarRowStyle({ flex: "1 1 280px" })}>
+          <div className="app-marketplace-filtro-minhas">
+            <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+            <div
+              className="app-marketplace-filtro-minhas__centro"
+              role="group"
+              aria-label="Período e filtros do calendário"
+            >
               <button
                 type="button"
                 onClick={prev}
@@ -3045,7 +2826,7 @@ export default function RhCalendarioPage() {
               )}
             </div>
 
-            <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="app-marketplace-filtro-minhas__cta" style={{ gap: 10 }}>
               {abaPrincipal === "compromissos" && solicitanteAgendarId ? (
                 <CtaCriarButton type="button" onClick={() => setModalAgendarAberto(true)} aria-label="Nova Agenda">
                   Nova Agenda
@@ -3247,8 +3028,7 @@ export default function RhCalendarioPage() {
           }}
           role="status"
         >
-          Não há escala de estúdio <strong>aprovada</strong> para este mês. A Escala Diária em rascunho ou só no navegador não aparece no Calendário — em{" "}
-          <strong>Gestão de Escala</strong>, salve e use <strong>Aprovar Escala</strong> em cada área (Game Presenter, Shuffler, etc.). Depois disso, Situação (Escalado/Folga) e os turnos passam a refletir aqui.
+          Não há escala de estúdio <strong>aprovada</strong> para este mês. A Escala Diária é gerada e aprovada pela liderança e só então os turnos passam a refletir aqui.
         </div>
       ) : null}
 
@@ -3552,25 +3332,13 @@ export default function RhCalendarioPage() {
                       const pRow = prestadorPorId.get(fid);
                       const slug = (pRow?.staff_operadora_slug ?? "").trim();
                       const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
-                      const esc = obterEntradaSaidaEscaladasPrestadorDia(
-                        pRow,
-                        valorG,
-                        opRow,
-                        areaKeyGradeDia(rawGradeRows, fid, iso),
-                      );
+                      const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
                       const pt = mapaPontoPorDiaIso.get(iso);
                       const entEsc = esc ? esc.entrada : "—";
                       const saiEsc = esc ? esc.saida : "—";
                       const escAnterior =
-                        valorGAnterior != null
-                          ? obterEntradaSaidaEscaladasPrestadorDia(
-                              pRow,
-                              valorGAnterior,
-                              opRow,
-                              isoAnterior
-                                ? areaKeyGradeDia(rawGradeRows, fid, isoAnterior)
-                                : null,
-                            )
+                        valorGAnterior != null && isoAnterior
+                          ? obterEntradaSaidaDiaCal(pRow, valorGAnterior, opRow, fid, isoAnterior)
                           : null;
                       const entEscAnterior = escAnterior ? escAnterior.entrada : undefined;
                       const saiEscAnterior = escAnterior ? escAnterior.saida : undefined;
@@ -4047,7 +3815,7 @@ export default function RhCalendarioPage() {
                           <EscalaCompromissoChip
                             key={`${comp.prestadorId}-${comp.turno}`}
                             comp={comp}
-                            subtituloModal={horarioSubtituloParaCompromissoCal(comp)}
+                            subtituloModal={horarioSubtituloParaCompromissoCal(comp, iso)}
                           />
                         ))}
                       </div>

@@ -159,8 +159,14 @@ export function agruparDocumentosPorCategoria(
   }
 
   for (const cat of categorias) {
-    map[cat].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    // Mais antigo → mais recente: «Arquivo 1» permanece estável ao adicionar novos.
+    map[cat].sort((a, b) => a.created_at.localeCompare(b.created_at));
   }
 
   return map;
+}
+
+/** Rótulo curto na lista (evita overflow sobre Visualizar/Download). Nome real no `title`. */
+export function rotuloArquivoDocumentoPrestador(indiceNaCategoria: number): string {
+  return `Arquivo ${indiceNaCategoria + 1}`;
 }

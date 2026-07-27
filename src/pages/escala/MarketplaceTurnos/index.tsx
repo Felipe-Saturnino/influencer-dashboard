@@ -41,7 +41,7 @@ import {
   getMesesDisponiveisEscalaCarrossel,
   idxMesInicialEscalaCarrossel,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
-const MOCK_OFERTAS: LinhaOfertaMarketplace[] = [];
+import { carregarOfertasMarketplace } from "../../../lib/escalaMarketplace";
 
 const MARKETPLACE_TIME_ITEMS = ESCALA_TIME_OPCOES.filter((o) => o.value !== "todos").map((o) => ({
   id: o.value,
@@ -49,6 +49,11 @@ const MARKETPLACE_TIME_ITEMS = ESCALA_TIME_OPCOES.filter((o) => o.value !== "tod
 }));
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
+
+function refMesIsoPrimeiroDia(ano: number, mes0: number): string {
+  const p2 = (n: number) => String(n).padStart(2, "0");
+  return `${ano}-${p2(mes0 + 1)}-01`;
+}
 
 type OfertaSortCol =
   | "dataOferta"
@@ -161,6 +166,8 @@ export default function EscalaMarketplaceTurnosPage() {
     col: "dataOferta",
     dir: "desc",
   });
+  const [ofertas, setOfertas] = useState<LinhaOfertaMarketplace[]>([]);
+  const [loadingOfertas, setLoadingOfertas] = useState(true);
 
   const dataTable = useDataTableBlock();
 
@@ -175,18 +182,37 @@ export default function EscalaMarketplaceTurnosPage() {
     return filtroTimeIdsTodas[0] as EscalaTimeFiltro;
   }, [filtroTimeIdsTodas]);
 
+  const mesSelecionado = mesesDisponiveis[idxMes];
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingOfertas(true);
+    const refMes = historico
+      ? null
+      : mesSelecionado
+        ? refMesIsoPrimeiroDia(mesSelecionado.ano, mesSelecionado.mes)
+        : null;
+    void carregarOfertasMarketplace(refMes)
+      .then((rows) => {
+        if (!cancelled) setOfertas(rows);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingOfertas(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [historico, mesSelecionado]);
+
   const linhasMes = useMemo(() => {
     if (historico) {
-      return MOCK_OFERTAS.filter((r) =>
-        isDataNoPeriodoHistoricoCompetencias(r.dataOfertaIso),
-      );
+      return ofertas.filter((r) => isDataNoPeriodoHistoricoCompetencias(r.dataOfertaIso));
     }
     const m = mesesDisponiveis[idxMes];
     if (!m) return [];
-    return filtrarPorMesEscala(MOCK_OFERTAS, m.ano, m.mes);
-  }, [mesesDisponiveis, idxMes, historico]);
+    return filtrarPorMesEscala(ofertas, m.ano, m.mes);
+  }, [ofertas, mesesDisponiveis, idxMes, historico]);
 
-  const mesSelecionado = mesesDisponiveis[idxMes];
   const carrosselPrimeiro = idxMes === 0;
   const carrosselUltimo = idxMes >= mesesDisponiveis.length - 1;
 
@@ -861,38 +887,48 @@ export default function EscalaMarketplaceTurnosPage() {
           </div>
       </div>
 
-      {aba === "todas" && (
-        <div role="tabpanel" id="panel-mkt-todas" aria-labelledby="tab-mkt-todas">
-          <div style={contentBox}>
-            <SectionTitle>Ofertas de Vendas</SectionTitle>
-            {renderTabelaVendas(linhasVendasTodas)}
-          </div>
-          <div style={contentBox}>
-            <SectionTitle>Ofertas de Troca</SectionTitle>
-            {renderTabelaTrocaTodas(linhasTrocaTodas)}
+      {loadingOfertas ? (
+        <div style={contentBox}>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            Carregando…
           </div>
         </div>
-      )}
+      ) : (
+        <>
+          {aba === "todas" && (
+            <div role="tabpanel" id="panel-mkt-todas" aria-labelledby="tab-mkt-todas">
+              <div style={contentBox}>
+                <SectionTitle>Ofertas de Vendas</SectionTitle>
+                {renderTabelaVendas(linhasVendasTodas)}
+              </div>
+              <div style={contentBox}>
+                <SectionTitle>Ofertas de Troca</SectionTitle>
+                {renderTabelaTrocaTodas(linhasTrocaTodas)}
+              </div>
+            </div>
+          )}
 
-      {aba === "minhas" && (
-        <div role="tabpanel" id="panel-mkt-minhas" aria-labelledby="tab-mkt-minhas">
-          <div style={contentBox}>
-            <SectionTitle>Ofertas em análise</SectionTitle>
-            {renderTabelaMinhasComTipo(porStatus("interessado"), "interessado")}
-          </div>
-          <div style={contentBox}>
-            <SectionTitle>Ofertas em aprovação</SectionTitle>
-            {renderTabelaMinhasComTipo(porStatus("em_analise"), "em_analise")}
-          </div>
-          <div style={contentBox}>
-            <SectionTitle>Ofertas abertas</SectionTitle>
-            {renderTabelaMinhasComTipo(porStatus("aberto"), "aberto")}
-          </div>
-          <div style={contentBox}>
-            <SectionTitle>Ofertas encerradas</SectionTitle>
-            {renderTabelaEncerradas(minhasBase.filter((r) => r.status === "aprovada" || r.status === "recusada"))}
-          </div>
-        </div>
+          {aba === "minhas" && (
+            <div role="tabpanel" id="panel-mkt-minhas" aria-labelledby="tab-mkt-minhas">
+              <div style={contentBox}>
+                <SectionTitle>Ofertas em análise</SectionTitle>
+                {renderTabelaMinhasComTipo(porStatus("interessado"), "interessado")}
+              </div>
+              <div style={contentBox}>
+                <SectionTitle>Ofertas em aprovação</SectionTitle>
+                {renderTabelaMinhasComTipo(porStatus("em_analise"), "em_analise")}
+              </div>
+              <div style={contentBox}>
+                <SectionTitle>Ofertas abertas</SectionTitle>
+                {renderTabelaMinhasComTipo(porStatus("aberto"), "aberto")}
+              </div>
+              <div style={contentBox}>
+                <SectionTitle>Ofertas encerradas</SectionTitle>
+                {renderTabelaEncerradas(minhasBase.filter((r) => r.status === "aprovada" || r.status === "recusada"))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

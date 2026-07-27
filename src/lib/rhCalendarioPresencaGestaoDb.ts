@@ -122,3 +122,27 @@ export async function salvarPresencaGestaoDia(
   });
   return { ok: !error };
 }
+
+/** Aprovação mensal: 1 RPC para vários dias (evita N+1 de `salvarPresencaGestaoDia`). */
+export async function salvarPresencaGestaoDiaLote(
+  supabase: SupabaseClient,
+  funcionarioId: string,
+  itens: Array<{ diaIso: string; gestao: PresencaDiaGestao }>,
+): Promise<{ ok: boolean }> {
+  if (itens.length === 0) return { ok: true };
+  const { error } = await supabase.rpc("rh_calendario_presenca_gestao_salvar_lote", {
+    p_funcionario_id: funcionarioId,
+    p_itens: itens.map(({ diaIso, gestao }) => ({
+      dia_iso: diaIso,
+      status_gestao: gestao.statusGestao ?? null,
+      correcao: gestao.correcao ?? null,
+      justificativa: gestao.justificativa ?? null,
+      historico: gestao.historico ?? [],
+    })),
+  });
+  if (error) {
+    console.error("[rhCalendarioPresencaGestao] salvar_lote:", error);
+    return { ok: false };
+  }
+  return { ok: true };
+}

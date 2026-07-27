@@ -6,49 +6,111 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE } from "../../../constants/theme";
 import { buildMenuAjudaVisivel } from "../../../lib/ajudaVisibilidade";
 import { AbaGlossario } from "./GlossarioPanel";
-import type { PageKey } from "../../../types";
-import { HelpCircle, BookOpen, LifeBuoy, BookMarked } from "lucide-react";
+import type { PageKey, Role } from "../../../types";
+import { HelpCircle, BookOpen, LifeBuoy, BookMarked, GraduationCap } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
+import {
+  carregarTutorialVisibilidade,
+  type TutorialVisibilidadeMap,
+} from "../../../lib/ajudaTutorialVisibilidade";
+import { temAlgumTutorialVisivel } from "./tutoriais/catalog";
 import { CONTEUDO_CONHECA } from "./conteudo/conheca";
 import { CONTEUDO_TROUBLE, TROUBLESHOOTING_TRANSVERSAL } from "./conteudo/troubleshooting";
+import { TutoriaisPanel } from "./TutoriaisPanel";
 
-type Aba = "conheca" | "troubleshooting" | "glossario";
+type Aba = "conheca" | "troubleshooting" | "glossario" | "tutoriais";
 
 // ─── Conteúdo: Conheça a Plataforma ──────────────────────────────────────────
 // Handoffs de seção (ex.: Dashboards, Lives): fundir aqui texto legado útil + itens novos do handoff,
 // estendendo subtítulos existentes — evitar blocos duplicados; não descartar o handoff só porque Ajuda é antiga.
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-const ABAS: Aba[] = ["conheca", "troubleshooting", "glossario"];
+const ABAS: Aba[] = ["conheca", "troubleshooting", "glossario", "tutoriais"];
 
 const LABELS_ABA: Record<Aba, string> = {
   conheca: "Conheça a Plataforma",
   troubleshooting: "Troubleshooting",
   glossario: "Glossário",
+  tutoriais: "Tutoriais",
 };
 
 const AJUDA_TAB_ICONS: Record<Aba, ReactNode> = {
   conheca: <BookOpen {...FILTRO_BAR_TAB_ICON_PROPS} />,
   troubleshooting: <LifeBuoy {...FILTRO_BAR_TAB_ICON_PROPS} />,
   glossario: <BookMarked {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  tutoriais: <GraduationCap {...FILTRO_BAR_TAB_ICON_PROPS} />,
 };
 
 export default function Ajuda() {
-  const { theme: t, isDark, permissions } = useApp();
+  const { theme: t, isDark, permissions, user, effectiveRole } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
-  const [aba, setAba] = useRouteTab("ajuda", "conheca", ["conheca", "troubleshooting", "glossario"] as const);
+  const isAdmin = user?.role === "admin";
+  const roleEfetivo = (effectiveRole ?? user?.role) as Role | null | undefined;
+
+  const [visibility, setVisibility] = useState<TutorialVisibilidadeMap>({});
+  const [visibilityLoaded, setVisibilityLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const map = await carregarTutorialVisibilidade();
+      if (cancelled) return;
+      setVisibility(map);
+      setVisibilityLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const podeVerAbaTutoriais = useMemo(
+    () =>
+      isAdmin ||
+      (visibilityLoaded && temAlgumTutorialVisivel(roleEfetivo, visibility, false)),
+    [isAdmin, visibilityLoaded, roleEfetivo, visibility],
+  );
+
+  const abasVisiveis = useMemo(
+    (): Aba[] => (podeVerAbaTutoriais ? ABAS : ABAS.filter((a) => a !== "tutoriais")),
+    [podeVerAbaTutoriais],
+  );
+
+  const [aba, setAba] = useRouteTab("ajuda", "conheca", abasVisiveis);
   const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
+  const [buscaPagina, setBuscaPagina] = useState("");
+
+  useEffect(() => {
+    if (aba === "tutoriais" && visibilityLoaded && !podeVerAbaTutoriais) {
+      setAba("conheca");
+    }
+  }, [aba, visibilityLoaded, podeVerAbaTutoriais, setAba]);
 
   const menuAjudaVisivel = useMemo(
     () => buildMenuAjudaVisivel(permissions),
     [permissions],
   );
+
+  const menuAjudaFiltrado = useMemo(() => {
+    const q = buscaPagina.trim();
+    if (!q) return menuAjudaVisivel;
+    return menuAjudaVisivel
+      .map((sec) => ({
+        ...sec,
+        items: sec.items.filter(
+          (item) => textoContemBusca(item.label, q) || textoContemBusca(sec.section, q),
+        ),
+      }))
+      .filter((sec) => sec.items.length > 0);
+  }, [menuAjudaVisivel, buscaPagina]);
 
   const primeiroPageKeyVisivel = useMemo((): PageKey | null => {
     const first = menuAjudaVisivel[0]?.items[0];
@@ -155,9 +217,9 @@ export default function Ajuda() {
         role="tablist"
         aria-label="Seções de ajuda"
         style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}
-        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS, setAba, (k) => `tab-ajuda-${k}`)}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abasVisiveis, setAba, (k) => `tab-ajuda-${k}`)}
       >
-        {ABAS.map((a) => (
+        {abasVisiveis.map((a) => (
           <FiltroBarTabButton
             key={a}
             id={`tab-ajuda-${a}`}
@@ -188,6 +250,23 @@ export default function Ajuda() {
           >
             <AbaGlossario dark={isDark} t={t} permissions={permissions} />
           </div>
+        </div>
+      ) : aba === "tutoriais" ? (
+        <div
+          role="tabpanel"
+          id="panel-ajuda-tutoriais"
+          aria-labelledby="tab-ajuda-tutoriais"
+        >
+          <TutoriaisPanel
+            t={t}
+            cardShadow={cardShadow}
+            role={roleEfetivo}
+            isAdmin={isAdmin}
+            visibility={visibility}
+            onVisibilityChange={(tutorialId, roles) => {
+              setVisibility((prev) => ({ ...prev, [tutorialId]: roles }));
+            }}
+          />
         </div>
       ) : menuAjudaVisivel.length === 0 ? (
         <div
@@ -262,65 +341,88 @@ export default function Ajuda() {
               boxShadow: cardShadow,
             }}
           >
+            <BarraPesquisaPagina
+              value={buscaPagina}
+              onChange={setBuscaPagina}
+              placeholder={PAGE_SEARCH.ajudaPagina}
+              aria-label="Buscar página na ajuda"
+              wrapperStyle={{ width: "100%", marginBottom: 14 }}
+              inputStyle={{ fontSize: 12, padding: "8px 12px 8px 34px" }}
+            />
             <nav>
-              {menuAjudaVisivel.map((sec) => (
-                <div key={sec.section} style={{ marginBottom: 20 }}>
-                  <div style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "1.4px",
-                    textTransform: "uppercase",
+              {menuAjudaFiltrado.length === 0 ? (
+                <p
+                  style={{
+                    margin: "8px 4px 0",
+                    fontSize: 12,
+                    lineHeight: 1.5,
                     color: t.textMuted,
-                    marginBottom: 8,
                     fontFamily: FONT.body,
-                    paddingLeft: 10,
-                  }}>
-                    {sec.section}
+                    textAlign: "center",
+                  }}
+                >
+                  Nenhuma página encontrada.
+                </p>
+              ) : (
+                menuAjudaFiltrado.map((sec) => (
+                  <div key={sec.section} style={{ marginBottom: 20 }}>
+                    <div style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "1.4px",
+                      textTransform: "uppercase",
+                      color: t.textMuted,
+                      marginBottom: 8,
+                      fontFamily: FONT.body,
+                      paddingLeft: 10,
+                    }}>
+                      {sec.section}
+                    </div>
+                    {sec.items.map(({ key, label, icon: Icon }) => {
+                      const ativo = paginaSelecionada === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setPaginaSelecionada(key)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "9px 12px",
+                            borderRadius: 10,
+                            cursor: "pointer",
+                            background: ativo ? navActiveBg : "transparent",
+                            color: ativo ? brand.accent : t.text,
+                            fontSize: 13,
+                            fontFamily: FONT.body,
+                            fontWeight: ativo ? 700 : 500,
+                            border: ativo ? `1px solid color-mix(in srgb, ${brand.accent} 35%, transparent)` : "1px solid transparent",
+                            width: "100%",
+                            textAlign: "left",
+                            marginBottom: 2,
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          <div style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            background: ativo ? navIconBg : `${t.textMuted}18`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}>
+                            <Icon size={11} color={ativo ? brand.accent : t.textMuted} />
+                          </div>
+                          {label}
+                        </button>
+                      );
+                    })}
                   </div>
-                  {sec.items.map(({ key, label, icon: Icon }) => {
-                    const ativo = paginaSelecionada === key;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setPaginaSelecionada(key)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "9px 12px",
-                          borderRadius: 10,
-                          cursor: "pointer",
-                          background: ativo ? navActiveBg : "transparent",
-                          color: ativo ? brand.accent : t.text,
-                          fontSize: 13,
-                          fontFamily: FONT.body,
-                          fontWeight: ativo ? 700 : 500,
-                          border: ativo ? `1px solid color-mix(in srgb, ${brand.accent} 35%, transparent)` : "1px solid transparent",
-                          width: "100%",
-                          textAlign: "left",
-                          marginBottom: 2,
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        <div style={{
-                          width: 22,
-                          height: 22,
-                          borderRadius: 6,
-                          background: ativo ? navIconBg : `${t.textMuted}18`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}>
-                          <Icon size={11} color={ativo ? brand.accent : t.textMuted} />
-                        </div>
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
+                ))
+              )}
             </nav>
           </aside>
 

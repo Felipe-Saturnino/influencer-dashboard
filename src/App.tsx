@@ -92,6 +92,7 @@ const RhOrganograma = lazyWithRetry(() => import("./pages/rh/Organograma"));
 const RhVagas = lazyWithRetry(() => import("./pages/rh/Vagas"));
 const RhSolicitacoes = lazyWithRetry(() => import("./pages/rh/Solicitacoes"));
 const RhGestaoEscala = lazyWithRetry(() => import("./pages/rh/GestaoEscala"));
+const EscalaEscritorio = lazyWithRetry(() => import("./pages/rh/EscalaEscritorio"));
 const RhGestaoStaff = lazyWithRetry(() => import("./pages/rh/GestaoStaff"));
 const RhCalendario = lazyWithRetry(() => import("./pages/rh/Calendario"));
 const EscalaMarketplaceTurnos = lazyWithRetry(() => import("./pages/escala/MarketplaceTurnos"));
@@ -152,6 +153,7 @@ const PAGE_MAP: Record<string, LazyExoticComponent<ComponentType>> = {
   rh_vagas:          RhVagas,
   rh_solicitacoes:   RhSolicitacoes,
   rh_gestao_escala:  RhGestaoEscala,
+  escala_escritorio: EscalaEscritorio,
   rh_staff:          RhGestaoStaff,
   rh_calendario:     RhCalendario,
   escala_marketplace_turnos: EscalaMarketplaceTurnos,

@@ -29,6 +29,7 @@ export function ModalDetalhe({
   loadingHist,
   empAtivo,
   podeEditar,
+  podeCriar,
   onClose,
   onRetirada,
   onDevolver,
@@ -42,7 +43,10 @@ export function ModalDetalhe({
   histErro: string | null;
   loadingHist: boolean;
   empAtivo: RhFigurinoEmprestimo | undefined;
+  /** Retirada / Devolução. */
   podeEditar: boolean;
+  /** Manutenção / Disponibilizar / Descartar. */
+  podeCriar: boolean;
   onClose: () => void;
   onRetirada: () => void;
   onDevolver: () => void;
@@ -150,45 +154,49 @@ export function ModalDetalhe({
             {" · "}
             {registroCadastro ? fmtDataHora(registroCadastro.changed_at) : fmtDataHora(peca.created_at)}
           </div>
-          {podeEditar ? (
+          {podeEditar || podeCriar ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
               {peca.status === "available" ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={onRetirada}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 10,
-                      border: `1px solid rgba(34,197,94,0.35)`,
-                      background: "rgba(34,197,94,0.12)",
-                      color: "#22c55e",
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Retirada
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onManutencao}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 10,
-                      border: `1px solid rgba(167,139,250,0.4)`,
-                      background: "rgba(167,139,250,0.12)",
-                      color: "#a78bfa",
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Manutenção
-                  </button>
+                  {podeEditar ? (
+                    <button
+                      type="button"
+                      onClick={onRetirada}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 10,
+                        border: `1px solid rgba(34,197,94,0.35)`,
+                        background: "rgba(34,197,94,0.12)",
+                        color: "#22c55e",
+                        fontWeight: 700,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Retirada
+                    </button>
+                  ) : null}
+                  {podeCriar ? (
+                    <button
+                      type="button"
+                      onClick={onManutencao}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 10,
+                        border: `1px solid rgba(167,139,250,0.4)`,
+                        background: "rgba(167,139,250,0.12)",
+                        color: "#a78bfa",
+                        fontWeight: 700,
+                        fontFamily: FONT.body,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Manutenção
+                    </button>
+                  ) : null}
                 </>
               ) : null}
-              {peca.status === "borrowed" ? (
+              {peca.status === "borrowed" && podeEditar ? (
                 <button
                   type="button"
                   onClick={onDevolver}
@@ -206,7 +214,7 @@ export function ModalDetalhe({
                   Devolução
                 </button>
               ) : null}
-              {peca.status === "maintenance" ? (
+              {peca.status === "maintenance" && podeCriar ? (
                 <>
                   <button
                     type="button"

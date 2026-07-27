@@ -10,23 +10,21 @@ import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTable
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import {
-  AlertCircle,
   AlertTriangle,
   CheckCircle2,
-  Loader2,
   RefreshCw,
   XCircle,
 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
-import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { tabAtivaPrincipalStyle } from "../GestaoUsuarios/gestaoUsuariosHelpers";
+import { ModalCidrAdicionarStatusTecnico } from "./ModalCidrAdicionarStatusTecnico";
 import {
   ctaGradientStatus,
   ERRO_EMAIL_AGENDA,
@@ -2175,12 +2173,6 @@ export default function StatusTecnico() {
     }
   };
 
-  useEffect(() => {
-    if (!modalCidrAdicionar) return;
-    const id = window.setTimeout(() => cidrInputRef.current?.focus(), 100);
-    return () => window.clearTimeout(id);
-  }, [modalCidrAdicionar]);
-
   if (perm.loading) {
     return (
       <div className="app-page-shell">
@@ -3054,164 +3046,22 @@ export default function StatusTecnico() {
         </div>
       )}
 
-      {modalCidrAdicionar && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="status-tecnico-cidr-add-title"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: MODAL_OVERLAY_BG,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 2050,
-            padding: 20,
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !cidrSalvando) setModalCidrAdicionar(false);
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: t.cardBg,
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: 16,
-              padding: 24,
-              maxWidth: 440,
-              width: "100%",
-              maxHeight: "90dvh",
-              overflowY: "auto",
-            }}
-          >
-            <h2 id="status-tecnico-cidr-add-title" style={{ marginTop: 0, fontFamily: FONT_TITLE, fontSize: 17, color: t.text }}>
-              Adicionar CIDR
-            </h2>
-            {cidrErroForm && (
-              <div
-                role="alert"
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  marginBottom: 12,
-                  background: "rgba(232,64,37,0.12)",
-                  border: "1px solid rgba(232,64,37,0.35)",
-                  color: "#e84025",
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <AlertCircle size={14} color="#e84025" aria-hidden="true" />
-                {cidrErroForm}
-              </div>
-            )}
-            <div style={{ marginBottom: 14 }}>
-              <label htmlFor="status-tecnico-cidr-input" style={{ display: "block", fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT.body, marginBottom: 6 }}>
-                Prefixo CIDR
-                <CampoObrigatorioMark />
-              </label>
-              <input
-                ref={cidrInputRef}
-                id="status-tecnico-cidr-input"
-                type="text"
-                value={novoCidr}
-                onChange={(e) => setNovoCidr(e.target.value)}
-                placeholder="ex.: 187.102.187.36/30"
-                autoComplete="off"
-                aria-label="Prefixo CIDR"
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontFamily: FONT.body,
-                  fontSize: 14,
-                }}
-              />
-            </div>
-            <div style={{ marginBottom: 20 }}>
-              <label htmlFor="status-tecnico-cidr-rotulo" style={{ display: "block", fontSize: 13, fontWeight: 600, color: t.text, fontFamily: FONT.body, marginBottom: 6 }}>
-                Rótulo
-              </label>
-              <input
-                id="status-tecnico-cidr-rotulo"
-                type="text"
-                value={novoRotuloCidr}
-                onChange={(e) => setNovoRotuloCidr(e.target.value)}
-                placeholder="ex.: WAN Mundivox"
-                autoComplete="off"
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontFamily: FONT.body,
-                  fontSize: 14,
-                }}
-              />
-            </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                disabled={cidrSalvando}
-                onClick={() => !cidrSalvando && setModalCidrAdicionar(false)}
-                style={{
-                  background: "transparent",
-                  border: `1px solid ${t.cardBorder}`,
-                  borderRadius: 10,
-                  padding: "9px 16px",
-                  cursor: cidrSalvando ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  color: t.text,
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={cidrSalvando}
-                onClick={() => void salvarCidrAllowlist()}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  background: ctaGradientStatus(dashBrand, cidrSalvando, BRAND.cinza),
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "9px 16px",
-                  cursor: cidrSalvando ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  opacity: cidrSalvando ? 0.85 : 1,
-                }}
-              >
-                {cidrSalvando ? (
-                  <>
-                    <Loader2 size={14} color="#fff" className="app-lucide-spin" aria-hidden="true" />
-                    Salvando...
-                  </>
-                ) : (
-                  "Salvar"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ModalCidrAdicionarStatusTecnico
+        open={modalCidrAdicionar}
+        t={t}
+        brand={dashBrand}
+        cidr={novoCidr}
+        rotulo={novoRotuloCidr}
+        erro={cidrErroForm}
+        salvando={cidrSalvando}
+        inputRef={cidrInputRef}
+        onCidrChange={setNovoCidr}
+        onRotuloChange={setNovoRotuloCidr}
+        onClose={() => {
+          if (!cidrSalvando) setModalCidrAdicionar(false);
+        }}
+        onSalvar={() => void salvarCidrAllowlist()}
+      />
 
       {cidrExcluir && (
         <ModalConfirmExcluirPadrao

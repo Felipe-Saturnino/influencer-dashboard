@@ -258,7 +258,7 @@ BEGIN
         'funcionario_id', f.id,
         'nome', f.nome,
         'nickname', COALESCE(NULLIF(btrim(f.staff_nickname), ''), ''),
-        'staff_turno', f.staff_turno,
+        'staff_turno', COALESCE(tm.staff_turno, f.staff_turno),
         'escala', f.escala
       )
       ORDER BY f.nome
@@ -272,15 +272,18 @@ BEGIN
      AND gr.ref_mes = v_ref
      AND gr.area_key = 'game_presenter'
      AND gr.dia_iso = p_dia
+    LEFT JOIN public.rh_gestao_escala_turno_mes tm
+      ON tm.ref_mes = v_ref
+     AND tm.area_key = 'game_presenter'
+     AND tm.funcionario_id = f.id
     WHERE f.status IN ('ativo', 'indisponivel')
       AND lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%game presenter%'
       AND lower(replace(regexp_replace(COALESCE(f.escala, ''), '\s+', '', 'g'), '×', 'x')) = '4x2'
       AND (
-        (v_turno = 'manha' AND btrim(COALESCE(f.staff_turno, '')) = 'Manhã')
-        OR (v_turno = 'tarde' AND btrim(COALESCE(f.staff_turno, '')) = 'Tarde')
-        OR (v_turno = 'noite' AND btrim(COALESCE(f.staff_turno, '')) = 'Noite')
+        (v_turno = 'manha' AND btrim(COALESCE(gr.valor, '')) = 'MRN')
+        OR (v_turno = 'tarde' AND btrim(COALESCE(gr.valor, '')) = 'AFT')
+        OR (v_turno = 'noite' AND btrim(COALESCE(gr.valor, '')) = 'NGT')
       )
-      AND btrim(COALESCE(gr.valor, '')) IN ('MRN', 'AFT', 'NGT', 'Comercial')
       AND (
         (
           f.staff_estudio_slugs IS NOT NULL
@@ -322,7 +325,7 @@ REVOKE ALL ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) FROM
 GRANT EXECUTE ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) TO authenticated;
 
 COMMENT ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) IS
-  'Pool de GPs 4x2 escalados (grade aprovada) + mesas (numero_mesa) + horario 8h do estudio.';
+  'Pool de GPs 4x2 escalados no dia (célula MRN/AFT/NGT da grade) + mesas + horário 8h do estúdio.';
 
 -- ─── 5) RPC: publicar ────────────────────────────────────────────────────────
 

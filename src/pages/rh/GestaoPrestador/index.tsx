@@ -72,9 +72,10 @@ import {
 import { PrestadorAcessoPlataformaPanel } from "./PrestadorAcessoPlataformaPanel";
 import { PrestadorCarreiraVerPanel } from "./PrestadorCarreiraVerPanel";
 import { PrestadorDocumentosGestaoPanel } from "./PrestadorDocumentosGestaoPanel";
+import { ModalHistoricoPrestador } from "./ModalHistoricoPrestador";
 import { podeEnviarDocumentosGestaoPrestador } from "../../../lib/rhPrestadorDocumentosCadastro";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
-import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
+import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import {
   cadastroRevisaoJaRegistradaPeloPrestador,
   revisaoCadastralPendenteParaFuncionario,
@@ -101,7 +102,6 @@ import {
 } from "../../../lib/filterBarStyles";
 import {
   ESCALAS_PERMITIDAS,
-  FILTRO_TIPO_ACAO_HIST_PRESTADOR_OPTS,
   NIVEIS,
   ORIGENS_CONTRATACAO,
   TIPOS_CONTRATO,
@@ -3497,55 +3497,16 @@ export default function RhPrestadoresPage() {
       ) : null}
 
       {histModalRow ? (
-        <ModalBase maxWidth={720} onClose={fecharModalHistorico}>
-          <ModalHeader title="Histórico" onClose={fecharModalHistorico} />
-          <div style={{ padding: "0 4px 16px", fontFamily: FONT.body }}>
-            <div style={{ marginBottom: 12, fontSize: 13, color: t.textMuted }}>
-              <strong style={{ color: t.text }}>{histModalRow.nome}</strong>
-            </div>
-            <label
-              htmlFor="filtro-tipo-acao-historico-prestador"
-              style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, marginBottom: 6, fontFamily: FONT.body }}
-            >
-              Tipo de ação
-            </label>
-            <select
-              id="filtro-tipo-acao-historico-prestador"
-              aria-label="Filtrar por tipo de ação"
-              value={histModalFiltroTipo}
-              onChange={(e) => setHistModalFiltroTipo(e.target.value as FiltroTipoAcaoHistoricoPrestador)}
-              style={{
-                width: "100%",
-                marginBottom: 14,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
-                fontSize: 13,
-                fontFamily: FONT.body,
-              }}
-            >
-              {FILTRO_TIPO_ACAO_HIST_PRESTADOR_OPTS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <div style={{ maxHeight: "min(60vh, 480px)", overflowY: "auto", paddingRight: 2 }}>
-              <ListaHistoricoRh
-                items={histModalItemsFiltrados}
-                loading={histModalLoading}
-                t={t}
-                emptyMessage={
-                  histModalItems.length === 0 && !histModalLoading
-                    ? "Sem dados para o período selecionado."
-                    : "Nenhum registro deste tipo no histórico."
-                }
-              />
-            </div>
-          </div>
-        </ModalBase>
+        <ModalHistoricoPrestador
+          row={histModalRow}
+          items={histModalItems}
+          itemsFiltrados={histModalItemsFiltrados}
+          loading={histModalLoading}
+          filtroTipo={histModalFiltroTipo}
+          onFiltroTipoChange={setHistModalFiltroTipo}
+          onClose={fecharModalHistorico}
+          t={t}
+        />
       ) : null}
 
       {prestadorExcluirConfirm ? (

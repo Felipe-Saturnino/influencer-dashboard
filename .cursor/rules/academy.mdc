@@ -84,13 +84,13 @@ Código de manual: prefixo das **3 primeiras letras** da categoria (sem acento, 
 
 ### Aba Manuais (leitura)
 
-Espelha **Políticas e normativas** do Portal de RH: tabela canónica (`AcademyPortalManuaisTabela`) com colunas Manual (código + título), Versão, Tipo, Jogos, **Sua Ciência** e Ação (visualizar). Modal **Ler manual** com botão **Lido e Ciente** quando `requires_acknowledgment = true` **e** o time/gerência do usuário estiver em `aplicavel_a` (legado sem `aplicavel_a`: todos os leitores). Registro em `academy_portal_read_receipt`.
+Espelha **Políticas e normativas** do Portal de RH: tabela canónica (`AcademyPortalManuaisTabela`) com colunas Manual (código + título), Versão, Tipo, Jogos, **Sua Ciência** e Ação (visualizar). Modal **Ler manual** (`ModalLerConteudo`) exibe introdução, descrição, **imagens/vídeos** (`imagem_storage_paths`) e **anexos**; botão **Lido e Ciente** quando `requires_acknowledgment = true` **e** o time/gerência do usuário estiver em `aplicavel_a` (legado sem `aplicavel_a`: todos os leitores). Registro em `academy_portal_read_receipt`. Lista pública carrega colunas de mídia single + array.
 
 Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valores distintos da coluna Jogo (tipo_jogo) em Gestão de Estúdios; sem duplicar; novos jogos cadastrados aparecem automaticamente. Persistência em `jogo_mesa text[]` (dica/manual).
 
 ### Workflow Gerenciamento
 
-Status: Rascunho · Publicado · Arquivado. Ações: **Editar** (rascunho e publicado — `podeEditarPostagemAcademyGerenciamento` / permissão de Editar sim ou próprios × `created_by`), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`).
+Status: Rascunho · Publicado · Arquivado. Ações: **Editar** (rascunho e publicado — `podeEditarPostagemAcademyGerenciamento` / permissão de Editar sim ou próprios × `created_by`), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página (`TabelaPaginacaoBar`).
 
 ### Filtros
 

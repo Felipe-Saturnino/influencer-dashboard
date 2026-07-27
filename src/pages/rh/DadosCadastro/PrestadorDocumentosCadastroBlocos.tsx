@@ -14,6 +14,7 @@ import {
   agruparDocumentosPorCategoria,
   categoriasDocumentoPorTipoContrato,
   inputIdDocumentoPrestador,
+  rotuloArquivoDocumentoPrestador,
   type RhPrestadorDocumentoCategoria,
 } from "../../../lib/rhPrestadorDocumentosCadastro";
 import type { RhFuncionarioSelfMedia, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
@@ -34,7 +35,7 @@ export function PrestadorDocumentosCadastroBlocos({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const pageBox = getPageContentBoxStyle(brand, t);
-  const [alvoExcluir, setAlvoExcluir] = useState<RhFuncionarioSelfMedia | null>(null);
+  const [alvoExcluir, setAlvoExcluir] = useState<{ row: RhFuncionarioSelfMedia; rotulo: string } | null>(null);
 
   const { rows, loading, erro, signedById, uploadingCategory, excluindoId, upload, excluir } =
     useRhPrestadorDocumentosCategoria(funcionarioId, { podeEditar });
@@ -92,66 +93,78 @@ export function PrestadorDocumentosCadastroBlocos({
               </p>
             ) : (
               <ul style={{ listStyle: "none", margin: "0 0 12px", padding: 0 }}>
-                {arquivos.map((m) => {
+                {arquivos.map((m, idx) => {
                   const url = signedById[m.id];
+                  const rotulo = rotuloArquivoDocumentoPrestador(idx);
                   return (
                     <li
                       key={m.id}
                       style={{
                         display: "flex",
-                        flexWrap: "wrap",
+                        flexWrap: "nowrap",
                         alignItems: "center",
                         gap: 10,
                         padding: "10px 0",
                         borderBottom: `1px solid ${t.cardBorder}`,
                         fontFamily: FONT.body,
                         fontSize: 13,
+                        minWidth: 0,
                       }}
                     >
-                      <span style={{ color: t.text, flex: 1, minWidth: 160, wordBreak: "break-word" }} title={m.file_name}>
-                        {m.file_name}
+                      <span style={{ color: t.text, flex: "0 0 auto", fontWeight: 600, whiteSpace: "nowrap" }} title={m.file_name}>
+                        {rotulo}
                       </span>
-                      {url ? (
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: "var(--brand-primary, #7c3aed)", fontWeight: 600 }}
-                        >
-                          Visualizar
-                        </a>
-                      ) : null}
-                      {podeEditar ? (
-                        <>
-                          <label
-                            htmlFor={inputId}
-                            aria-label={`Substituir ou adicionar em ${RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL[cat]}`}
-                            title="Adicionar ou substituir arquivo"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              padding: "6px 12px",
-                              borderRadius: 8,
-                              border: `1px solid ${t.cardBorder}`,
-                              background: t.inputBg,
-                              color: t.text,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              cursor: enviando ? "wait" : "pointer",
-                              fontFamily: FONT.body,
-                              opacity: enviando ? 0.7 : 1,
-                            }}
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          flex: "0 0 auto",
+                          alignItems: "center",
+                          gap: 10,
+                          marginLeft: "auto",
+                        }}
+                      >
+                        {url ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "var(--brand-primary, #7c3aed)", fontWeight: 600 }}
                           >
-                            <RefreshCw size={14} aria-hidden />
-                            Substituir
-                          </label>
-                          <BtnExcluirLinha
-                            labelAcao={tooltipExcluir("documento")}
-                            onClick={() => setAlvoExcluir(m)}
-                          />
-                        </>
-                      ) : null}
+                            Visualizar
+                          </a>
+                        ) : null}
+                        {podeEditar ? (
+                          <>
+                            <label
+                              htmlFor={inputId}
+                              aria-label={`Substituir ou adicionar em ${RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL[cat]}`}
+                              title="Adicionar ou substituir arquivo"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "6px 12px",
+                                borderRadius: 8,
+                                border: `1px solid ${t.cardBorder}`,
+                                background: t.inputBg,
+                                color: t.text,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: enviando ? "wait" : "pointer",
+                                fontFamily: FONT.body,
+                                opacity: enviando ? 0.7 : 1,
+                              }}
+                            >
+                              <RefreshCw size={14} aria-hidden />
+                              Substituir
+                            </label>
+                            <BtnExcluirLinha
+                              labelAcao={tooltipExcluir("documento")}
+                              onClick={() => setAlvoExcluir({ row: m, rotulo })}
+                            />
+                          </>
+                        ) : null}
+                      </span>
                     </li>
                   );
                 })}
@@ -219,12 +232,12 @@ export function PrestadorDocumentosCadastroBlocos({
 
       {alvoExcluir ? (
         <ModalConfirmExcluirPadrao
-          descricaoItem={descricaoModalExcluirItem("o documento", alvoExcluir.file_name)}
+          descricaoItem={descricaoModalExcluirItem("o documento", alvoExcluir.rotulo)}
           onCancel={() => {
             if (!excluindoId) setAlvoExcluir(null);
           }}
           onConfirm={() => {
-            void excluir(alvoExcluir).then(async (ok) => {
+            void excluir(alvoExcluir.row).then(async (ok) => {
               if (ok) {
                 setAlvoExcluir(null);
                 if (onDocumentosAlterados) await onDocumentosAlterados();

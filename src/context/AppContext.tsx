@@ -3,16 +3,6 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { User, PageKey, PermissaoValor, Role } from "../types";
 import { LIGHT_THEME, DARK_THEME, Theme } from "../constants/theme";
 import { supabase } from "../lib/supabase";
-import { validarBrandguide, cssDerivadasBrand, type BrandValidated } from "../lib/brandguideValidation";
-import {
-  readOperadoraBrandCache,
-  writeOperadoraBrandCache,
-  type OperadoraBrandSnapshot,
-} from "../lib/operadoraBrandCache";
-import {
-  fetchOperadoraBrandSnapshot,
-  operadoraBrandSnapshotHasVisual,
-} from "../lib/operadoraBrandLoad";
 import {
   areAppPathsEqual,
   buildAppPath,
@@ -47,23 +37,12 @@ import {
   validarInputSimulacao,
   writeSimulacaoSession,
 } from "../lib/simuladorLogin";
+import { ALL_PAGE_KEYS } from "../lib/allPageKeys";
+import {
+  aplicarBrandguideReset,
+  syncOperadoraBrandState,
+} from "../lib/operadoraBrandApply";
 
-// Todas as PageKeys existentes — usadas para liberar tudo ao admin
-const ALL_PAGE_KEYS: PageKey[] = [
-  "home",
-  "mesas_spin", "streamers", "dash_afiliados", "dash_midias_sociais", "dash_overview_influencer", "dash_overview_afiliado", "comercial_overview", "dash_headcount", "dash_overview_prestador",
-  "agenda", "resultados", "feedback",
-  "influencers", "scout", "afiliados", "afiliados_network", "financeiro", "banca_jogo", "gestao_links", "campanhas", "galeria_fotos",
-  "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras", "cs_atendimento",
-  "gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa",
-  "academy_performance_hub", "academy_portal",
-  "rh_staff", "escala_relatorio_turno", "escala_solicitacoes", "rh_gestao_escala", "escala_rotacao", "rh_calendario", "escala_marketplace_turnos",
-  "rh_funcionarios", "rh_dados_cadastro", "rh_organograma", "rh_vagas", "rh_solicitacoes", "rh_central_denuncias",
-  "playbook_influencers", "links_materiais", "spin_na_rede", "rh_portal", "informativos",
-  "tech_ops_estoque", "tech_ops_ordem_saida",
-  "gestao_usuarios", "gestao_operadoras", "gestao_mesas", "status_tecnico",
-  "configuracoes", "simulador_login", "ajuda",
-];
 
 /** Home e páginas gerais: só `role_permissions`; sem interseção com `prestador_tipo_pages`. */
 const PAGES_SEM_MATRIZ_ESCOPO_TIPO = new Set<PageKey>(["home", "configuracoes", "simulador_login", "ajuda"]);
@@ -159,130 +138,6 @@ export function registerRevisaoNavGate(handler: RevisaoNavGateHandler | null) {
 const ESCOPOS_VAZIOS: EscoposVisiveis = { influencersVisiveis: [], operadorasVisiveis: [], semRestricaoEscopo: false };
 
 const DEFAULT_FONT_FAMILY = "'Inter', 'Helvetica Neue', Arial, sans-serif";
-
-/** Cores extras de gráficos / semântica — não vêm da operadora. */
-const CHART_SEMANTIC = {
-  extra1: "#1e36f8",
-  extra2: "#22c55e",
-  extra3: "#f59e0b",
-  extra4: "#e84025",
-} as const;
-
-/** Injeta tokens Opção C + aliases legados (`--brand-primary` = `--brand-action`, etc.). */
-function injectBrandCss(validated: BrandValidated) {
-  const root = document.documentElement.style;
-  const der = cssDerivadasBrand(validated);
-  Object.entries(der).forEach(([k, v]) => root.setProperty(k, v));
-  root.setProperty("--brand-action", validated.action);
-  root.setProperty("--brand-contrast", validated.contrast);
-  root.setProperty("--brand-bg", validated.bg);
-  root.setProperty("--brand-text", validated.text);
-  root.setProperty("--brand-primary", validated.action);
-  root.setProperty("--brand-secondary", validated.contrast);
-  root.setProperty("--brand-accent", validated.contrast);
-  root.setProperty("--brand-background", validated.bg);
-  const iconMix = der["--brand-icon-color"]!;
-  root.setProperty("--brand-icon-color", iconMix);
-  root.setProperty("--brand-icon", iconMix);
-  (Object.keys(CHART_SEMANTIC) as (keyof typeof CHART_SEMANTIC)[]).forEach((k) => {
-    root.setProperty(`--brand-${k}`, CHART_SEMANTIC[k]);
-  });
-  root.setProperty("--brand-danger", CHART_SEMANTIC.extra4);
-  root.setProperty("--brand-success", CHART_SEMANTIC.extra2);
-}
-
-/** Reseta para paleta Spin validada (usuário não operador ou sem brand). */
-function aplicarBrandguideReset() {
-  injectBrandCss(validarBrandguide({}));
-}
-
-type OperadoraBrandRow = {
-  brand_action?: string | null;
-  brand_contrast?: string | null;
-  brand_bg?: string | null;
-  brand_text?: string | null;
-  logo_url?: string | null;
-};
-
-function aplicarBrandguideOperadora(data: OperadoraBrandRow | null | undefined) {
-  const validated = validarBrandguide({
-    action: data?.brand_action,
-    contrast: data?.brand_contrast,
-    bg: data?.brand_bg,
-    text: data?.brand_text,
-  });
-  if (validated.warnings.length) console.warn("[brandguide]", validated.warnings);
-  injectBrandCss(validated);
-}
-
-function operadoraBrandFromSnapshot(snapshot: OperadoraBrandSnapshot): OperadoraBrand {
-  return {
-    nome: snapshot.nome,
-    logo_url: snapshot.logo_url,
-    font_url: snapshot.font_url,
-    brand_bg: snapshot.brand_bg,
-    home_template: snapshot.home_template,
-  };
-}
-
-function applyOperadoraBrandSnapshot(snapshot: OperadoraBrandSnapshot): void {
-  if (operadoraBrandSnapshotHasVisual(snapshot)) {
-    aplicarBrandguideOperadora(snapshot);
-  } else {
-    aplicarBrandguideReset();
-  }
-}
-
-/** Cache síncrono + fetch (opcional em background) para evitar flash Spin → operadora. */
-async function syncOperadoraBrandState(
-  slug: string,
-  setBrand: (b: OperadoraBrand | null) => void,
-  setReady: (v: boolean) => void,
-  opts?: { awaitNetwork?: boolean },
-): Promise<void> {
-  const cached = readOperadoraBrandCache(slug);
-
-  if (cached) {
-    applyOperadoraBrandSnapshot(cached);
-    setBrand(operadoraBrandFromSnapshot(cached));
-    setReady(true);
-  } else if (opts?.awaitNetwork !== false) {
-    setReady(false);
-  }
-
-  const applyFresh = (snapshot: OperadoraBrandSnapshot) => {
-    writeOperadoraBrandCache(snapshot);
-    applyOperadoraBrandSnapshot(snapshot);
-    setBrand(operadoraBrandFromSnapshot(snapshot));
-    setReady(true);
-  };
-
-  const onNetworkError = () => {
-    if (!cached) {
-      aplicarBrandguideReset();
-      setBrand(null);
-    }
-    setReady(true);
-  };
-
-  if (opts?.awaitNetwork === false) {
-    void fetchOperadoraBrandSnapshot(slug)
-      .then((fresh) => {
-        if (fresh) applyFresh(fresh);
-        else onNetworkError();
-      })
-      .catch(onNetworkError);
-    return;
-  }
-
-  try {
-    const fresh = await fetchOperadoraBrandSnapshot(slug);
-    if (fresh) applyFresh(fresh);
-    else onNetworkError();
-  } catch {
-    onNetworkError();
-  }
-}
 
 // ─── Carrega escopos visíveis por role e user_scopes (Etapa 7) ─────────────────
 async function carregarEscoposVisiveis(

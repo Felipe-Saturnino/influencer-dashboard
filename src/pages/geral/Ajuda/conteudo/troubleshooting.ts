@@ -224,7 +224,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Uma live não aparece no calendário?",
         texto:
-          "Verifique se os filtros de status, plataforma, influencer ou operadora não estão ocultando a live. Com qualquer filtro ativo, apenas as lives que atendem a todos os critérios são exibidas. O botão Limpar filtros aparece automaticamente — use-o para ver a agenda completa.\n\nInfluencers e agências só visualizam as próprias lives. Se você tem esse perfil e não encontra uma live, ela pode ter sido cadastrada com outro influencer.",
+          "Verifique se os filtros de status, plataforma, influencer ou operadora não estão ocultando a live. Com qualquer filtro ativo, apenas as lives que atendem a todos os critérios são exibidas. O botão Limpar filtros aparece automaticamente — use-o para ver a agenda completa.\n\nA Agenda carrega as lives da janela visível (mês, semana ou dia). Confirme que o carrossel está no período da data agendada.\n\nInfluencers e agências só visualizam as próprias lives. Se você tem esse perfil e não encontra uma live, ela pode ter sido cadastrada com outro influencer.",
+      },
+      {
+        subtitulo: "Salvei uma Nova Live e o modal fechou, mas ela não aparece?",
+        texto:
+          "Se o modal fechou sem mensagem de erro, a live costuma ter sido gravada. Atualize a página e confira se o calendário está no mês/semana/dia da data escolhida. Se um filtro de operadora estiver ativo e o influencer não tiver vínculo ativo em Influencers → Operadoras, a live pode ficar oculta — use **Todas Operadoras** ou ajuste o vínculo.\n\nSe ainda não aparecer, entre em contato com o suporte.",
       },
       {
         subtitulo: "Não consigo salvar uma nova live?",
@@ -360,6 +365,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Nenhum influencer aparece na lista?",
         texto:
           "Verifique se os filtros de status, plataforma, operadora, cachê ou busca estão limitando a lista. O botão Limpar filtros aparece automaticamente quando há filtros ativos. Se a lista continuar vazia, pode ser que nenhum influencer tenha sido cadastrado ou que o escopo do seu perfil não inclua influencers ativos.",
+      },
+      {
+        subtitulo: "Um afiliado do Network aparece em Influencers?",
+        texto:
+          "Não deve. A página Influencers lista apenas o perfil Influencer. Cadastros vindos do Network (página Afiliados) ficam em **Afiliados**. Se ainda vir um afiliado em Influencers, recarregue a página após a atualização da plataforma; se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Não consigo alterar o status ou o cachê de um influencer?",
@@ -564,7 +574,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Os botões Retirada e Manutenção não aparecem na tabela?",
         texto:
-          "Esses botões exigem permissão de edição na página Figurinos. Se você não os vê, sua conta está configurada apenas para visualização. Solicite ao administrador a liberação de permissão de edição.",
+          "O botão **Retirada** exige permissão de **Editar** = Sim. O botão **Manutenção** (e, na aba Manutenção, **Disponibilizar** e **Descartar**) exige permissão de **Criar** = Sim. Se você não vê um deles, solicite ao administrador a liberação correspondente em Gestão de Usuários → Permissões → Figurinos.",
       },
       {
         subtitulo: "A peça está na aba errada ou não aparece?",
@@ -665,6 +675,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Qual Jogo? está vazio no modal?",
         texto:
           "A lista vem de **Gestão de Estúdios → Mesas** (coluna Jogo). Cadastre ou edite mesas com tipo de jogo preenchido; novos valores passam a aparecer automaticamente no Portal da Academy.",
+      },
+      {
+        subtitulo: "Imagem ou vídeo do Manual não aparece ao visualizar?",
+        texto:
+          "No **Gerenciamento**, use o campo **Imagem/Vídeo** (não só Anexo) e publique a postagem. Ao abrir **Visualizar** na aba Manuais, a mídia deve aparecer abaixo da descrição. Se o arquivo não subir ao salvar, tente outro formato (JPG, PNG, MP4, WebM) ou entre em contato com o suporte.",
       },
     ],
   },
@@ -1284,17 +1299,42 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     ],
   },
   rh_gestao_escala: {
-    titulo: "Gestão de Escala",
+    titulo: "Escala Estúdio",
     blocos: [
       {
-        subtitulo: "Não vejo Gestão de Escala no menu?",
+        subtitulo: "Não vejo Escala Estúdio no menu?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários e, se o seu perfil usar escopo, liberação da página nas abas Operadora ou Prestadores. Gestores de departamento usam só a matriz de Permissões.",
+          "Confirme permissão de **Ver** em Gestão de Usuários e, se o seu perfil usar escopo, liberação da página nas abas Operadora ou Prestadores. Gestores de departamento usam só a matriz de Permissões. O item aparece na seção **Escala** do menu.",
       },
       {
         subtitulo: "Não consigo salvar ou aprovar a escala?",
         texto:
-          "Salvar e aprovar exigem permissão de **Editar** (e criar células exige **Criar**). Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+          "Salvar e aprovar exigem permissão de **Criar**. **Alterar Escala** (após aprovada) exige **Editar**. Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+      },
+      {
+        subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",
+        texto:
+          "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um dia pontual no mês já aprovado, use **Alterar Escala** (escolhe o turno do dia + observação).",
+      },
+    ],
+  },
+  escala_escritorio: {
+    titulo: "Escala Escritório",
+    blocos: [
+      {
+        subtitulo: "Não vejo Escala Escritório no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Escala Escritório**. A página nasce bloqueada para todos os perfis exceto Administrador e aparece na seção **RH**. Após liberar, faça logout e login (ou atualize a sessão).",
+      },
+      {
+        subtitulo: "Não consigo salvar ou aprovar a escala de escritório?",
+        texto:
+          "Salvar e aprovar exigem permissão de **Criar** na linha **Escala Escritório** (distinta da Escala Estúdio). Confirme também se o time selecionado tem prestadores com área de atuação **Escritório**.",
+      },
+      {
+        subtitulo: "A Situação no Calendário não acompanha a Escala Escritório?",
+        texto:
+          "Só a grade **aprovada** alimenta o Calendário. Use **Salvar Alterações** e **Aprovar Escala**. Enquanto não houver aprovação, o Calendário usa a escala comercial automática (úteis 09:00–18:00).",
       },
     ],
   },
@@ -1314,12 +1354,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Turnos não aparecem no calendário?",
         texto:
-          "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da Escala Diária **aprovada** em Gestão de Escala. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, verifique se a área de atuação está cadastrada corretamente; a escala de segunda a sexta-feira é gerada automaticamente.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
+          "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da Escala Diária **aprovada** em **Escala Estúdio**. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, se existir **Escala Escritório** aprovada, essa grade prevalece; caso contrário, verifique se a área de atuação está cadastrada corretamente e use a escala automática de segunda a sexta-feira.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
       },
       {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
         texto:
-          "Para **Escritório**, a Situação deve preencher o mês inteiro (úteis Escalado 09:00–18:00; fins de semana Folga). Se faltar dias no meio do mês, atualize a plataforma. Para **Estúdio**, Situação `—` com a Escala Diária já **Aprovada** podia ser um limite técnico na carga da grade (corrigido) — atualize a plataforma, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador (Game Presenter, Service Manager, etc.) aprovada (cada área aprova à parte); célula preenchida na grade daquela área.",
+          "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** em Escala Estúdio podia ser um limite técnico na carga da grade — atualize, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
       },
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
@@ -1354,7 +1394,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo publicar oferta de turno?",
         texto:
-          "Publicar oferta exige permissão de **Criar** no Marketplace. Verifique também se o turno de origem pertence ao seu escopo (time/staff).",
+          "Publicar oferta exige permissão de **Criar** no Marketplace. Verifique também se o turno de origem pertence ao seu escopo (time/staff) e se o seu cadastro está como área **Estúdio**.",
+      },
+      {
+        subtitulo: "Não consigo aceitar uma oferta?",
+        texto:
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma. Confirme se a Escala Estúdio do mês/área está **aprovada** e se a oferta ainda está aberta. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },
@@ -1399,12 +1444,27 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Pool vazio ou sem escala aprovada?",
         texto:
-          "A rotação usa só Game Presenters **escalados** na Gestão de Escala **aprovada** do mês, com escala **4×2**, turno e estúdio corretos em Gestão de Staff. Sem aprovação ou sem GPs no turno, o pool fica vazio — aprove a escala e confira o cadastro operacional.",
+          "A rotação usa Game Presenters com célula de trabalho (Manhã/Tarde/Noite) na **Escala Estúdio** **aprovada** do dia e estúdio efetivo (Staff ou override na própria Rotação). O pool segue o **valor da célula do dia**. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio. Se o SQL de cockpit ainda não foi aplicado, rode `docs/sql/escala_rotacao_cockpit.sql` (e, se necessário, `docs/sql/escala_rotacao_contexto_shift_lead.sql`) no Supabase.",
       },
       {
         subtitulo: "Não consigo publicar a rotação?",
         texto:
-          "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com elegíveis suficientes para o modelo e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
+          "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com gente suficiente para cobrir as mesas e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
+      },
+      {
+        subtitulo: "A prévia mostra mesas a menos ou dois GPs na mesma mesa?",
+        texto:
+          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar o **Shift Lead** só como reserva. Se a cobertura falhar, use **Aviso — intervalo 20 min** ou **Aviso — incluir Shift Lead**. Clique de novo em **Gerar prévia** após atualizar a página.",
+      },
+      {
+        subtitulo: "Chegou no meio do turno — como incluir?",
+        texto:
+          "Não recalcule slots já passados. Com check-in (**Chegou**) use **Incluir na rotação**: a grade redistribui só a partir do **próximo slot**. Se ainda faltar cobertura, use os botões de **Aviso** (20 min ou Shift Lead).",
+      },
+      {
+        subtitulo: "Mover entre estúdios não funciona?",
+        texto:
+          "O move é **só na Rotação** (turno inteiro) e exige o SQL de alocação (`escala_rotacao_cockpit.sql`). Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
       },
     ],
   },

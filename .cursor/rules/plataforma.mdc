@@ -279,7 +279,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - CTAs linha/modal (`btnAcao`, Confirmar, Salvar CIDR): gradiente `var(--brand-primary)` + `var(--brand-secondary)` — nunca `--brand-action`.
 - CTAs Sync/Enviar: `Loader2` branco durante operação (`AcaoCtaContent`).
 - 3 tabelas: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`), `<caption hidden>`, `scope="col"`, hover nas linhas.
-- Modal CIDR: `ref + setTimeout(100)` no prefixo; `90dvh`; Escape.
+- Modal CIDR: componente **`ModalCidrAdicionarStatusTecnico`**; `ref + setTimeout(100)` no prefixo; `90dvh`; Escape.
 - Gráfico de fluxo: `role="img"` + `aria-label` no container; `●` no tooltip com `aria-hidden="true"`.
 - Helpers: `statusTecnicoHelpers.ts`, `statusTecnicoUi.tsx`; loading: `StatusTecnicoLoadingBlock` / `GestaoUsuariosLoading` em `perm.loading`.
 - **`MSG_SEM_DADOS_FILTRO`:** `lib/dashboardConstants.ts`.
