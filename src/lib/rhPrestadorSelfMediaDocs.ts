@@ -38,18 +38,35 @@ export async function urlsAssinadasDocumentosPrestador(
   return next;
 }
 
+function mimeTypeDocumentoPrestador(file: File): string | undefined {
+  if (file.type) return file.type;
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const byExt: Record<string, string> = {
+    pdf: "application/pdf",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  };
+  return byExt[ext];
+}
+
 export async function uploadDocumentoPrestador(opts: {
   funcionarioId: string;
   categoria: RhPrestadorDocumentoCategoria;
   file: File;
 }): Promise<{ ok: true; row: RhFuncionarioSelfMedia } | { ok: false; message: string }> {
+  const contentType = mimeTypeDocumentoPrestador(opts.file);
   const path = `${opts.funcionarioId}/${opts.categoria}/${crypto.randomUUID()}_${sanitizeStorageFileName(opts.file.name)}`;
   const { error: upErr } = await supabase.storage.from(RH_PRESTADOR_SELF_MEDIA_BUCKET).upload(path, opts.file, {
     cacheControl: "3600",
     upsert: false,
-    contentType: opts.file.type || undefined,
+    contentType,
   });
   if (upErr) {
+    console.error("[rhPrestadorSelfMediaDocs] upload storage", upErr);
     return {
       ok: false,
       message: "Não foi possível enviar o documento. Se o problema persistir, entre em contato com o suporte.",
@@ -64,12 +81,13 @@ export async function uploadDocumentoPrestador(opts: {
       document_category: opts.categoria,
       storage_path: path,
       file_name: opts.file.name,
-      mime_type: opts.file.type || null,
+      mime_type: contentType ?? null,
     })
     .select("*")
     .single();
 
   if (insErr || !data) {
+    console.error("[rhPrestadorSelfMediaDocs] insert self_media", insErr);
     await supabase.storage.from(RH_PRESTADOR_SELF_MEDIA_BUCKET).remove([path]);
     return {
       ok: false,
