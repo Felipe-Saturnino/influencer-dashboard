@@ -54,7 +54,6 @@ import {
   FILTRO_STAFF_ESTUDIO_TODOS,
   primeiraOperadoraDoEstudio,
   staffEstudioSlugEfetivo,
-  staffEstudioSlugsFromRow,
   staffEstudioSlugsForEditUi,
   staffEstudioLabel,
   staffEstudioLabelFromRow,
