@@ -77,6 +77,7 @@ import {
   filtrarPrestadoresPorEstudio,
   filtroEstudioValueFromConsolidadoKey,
   consolidadoKeyFromFiltroEstudio,
+  CONSOLIDADO_ESTUDIO_KEY_TODOS,
   gravarEscalaMes,
   labelAreaEscala,
   labelExibicaoCelulaEscala,
@@ -463,16 +464,23 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         const next = { ...prev };
         for (const ak of areas) {
           const fromDb = fromDbPorArea[ak];
+          const gradeCarregada = Object.prototype.hasOwnProperty.call(fromDbPorArea, ak);
           const meta = metaPorArea[ak];
           const statusRaw = (meta?.status ?? "").trim().toLowerCase();
           const statusGradeDb: GradeStatusMetaDb | null =
             statusRaw === "aprovada" || statusRaw === "rascunho" ? statusRaw : null;
           const aprovadaNaBase = statusGradeDb === "aprovada";
           const cur = next[ak];
-          if (!fromDb && !meta) continue;
-          /** Grade aprovada: base é a fonte da verdade (evita localStorage mascarar truncamento antigo). */
+          if (!gradeCarregada && !meta) continue;
+          /**
+           * Grade aprovada: base é a fonte da verdade quando o carregar OK.
+           * Se a RPC falhar (`gradeCarregada` false), preservar células locais —
+           * não zerar a Escala Diária aprovada.
+           */
           const merged = aprovadaNaBase
-            ? { ...(fromDb ?? {}) }
+            ? gradeCarregada
+              ? { ...(fromDb ?? {}) }
+              : { ...(cur?.celulas ?? {}) }
             : { ...(cur?.celulas ?? {}), ...(fromDb ?? {}) };
           const linhasF = filtrarPorArea(prestadoresRaw, ak).map((r) =>
             linhaComTurnoMesArea(r, ak, aprovadaNaBase, turnoMapAtual),
@@ -1150,6 +1158,14 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   /** Clique no estúdio do drilldown: aplica (ou limpa) o filtro da barra + turno da linha pai. */
   const alternarFiltroEstudioConsolidado = useCallback(
     (consolidadoKey: string, turnoKey: FiltroTurnoConsolidadoRh) => {
+      /**
+       * Bucket «Todos Estúdios» (cadastro Staff): a barra já está em Todos quando o drilldown
+       * aparece — só alterna o turno da linha pai (não tratar como clear do filtro de estúdio).
+       */
+      if (consolidadoKey === CONSOLIDADO_ESTUDIO_KEY_TODOS) {
+        setFiltroTurnoConsolidado((prev) => (prev === turnoKey ? null : turnoKey));
+        return;
+      }
       const nextFiltro = filtroEstudioValueFromConsolidadoKey(consolidadoKey);
       const clearing = filtroEstudioEscala === nextFiltro;
       setFiltroEstudioEscala(clearing ? FILTRO_STAFF_ESTUDIO_TODOS : nextFiltro);
@@ -1335,7 +1351,11 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         </tr>
         {mostraDrill && expandido
           ? porEstudio.map((est) => {
-              const estudioAtivo = consolidadoEstudioKeyAtiva === est.key;
+              /** Todos Estúdios: ativo quando o turno da linha pai está no filtro (barra já é Todos). */
+              const estudioAtivo =
+                est.key === CONSOLIDADO_ESTUDIO_KEY_TODOS
+                  ? filtroTurnoConsolidado === turnoKey
+                  : consolidadoEstudioKeyAtiva === est.key;
               return (
               <tr key={`${turnoKey}-est-${est.key}`}>
                 <th

@@ -597,7 +597,10 @@ export function filtroEstudioValueFromConsolidadoKey(key: string): string {
   return key;
 }
 
-/** Key do drilldown ativa conforme o filtro da barra (null = Todos Estúdios sem destaque). */
+/** Key do drilldown ativa conforme o filtro da barra.
+ * «Todos Estúdios» na barra não destaca um bucket de slug — o destaque do bucket
+ * `__todos__` usa o filtro de turno da linha pai (ver `alternarFiltroEstudioConsolidado`).
+ */
 export function consolidadoKeyFromFiltroEstudio(filtro: string): string | null {
   if (filtro === FILTRO_STAFF_ESTUDIO_TODOS) return null;
   if (filtro === FILTRO_STAFF_ESTUDIO_NENHUM) return CONSOLIDADO_ESTUDIO_KEY_NENHUM;
