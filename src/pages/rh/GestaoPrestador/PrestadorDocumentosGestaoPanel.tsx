@@ -88,16 +88,16 @@ export function PrestadorDocumentosGestaoPanel({
         <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", minWidth: 520 }}>
           <caption style={{ display: "none" }}>Documentos cadastrais por categoria</caption>
           <colgroup>
-            <col style={{ width: "28%" }} />
+            <col style={{ width: "34%" }} />
             <col />
             {podeEditar ? <col style={{ width: 120 }} /> : null}
           </colgroup>
           <thead>
             <tr>
-              <th scope="col" style={{ ...getThStyle(t), textAlign: "left" }}>
+              <th scope="col" style={{ ...getThStyle(t), textAlign: "left", overflow: "hidden" }}>
                 Documento
               </th>
-              <th scope="col" style={{ ...getThStyle(t), textAlign: "left" }}>
+              <th scope="col" style={{ ...getThStyle(t), textAlign: "left", overflow: "hidden" }}>
                 Arquivos
               </th>
               {podeEditar ? (
@@ -114,10 +114,32 @@ export function PrestadorDocumentosGestaoPanel({
               const inputId = inputIdDocumentoPrestador("gestao", funcionarioId, cat);
               return (
                 <tr key={cat} style={{ background: zebraStripe(i) }}>
-                  <td style={{ ...getTdStyle(t), textAlign: "left", verticalAlign: "top", fontWeight: 600 }}>
+                  <td
+                    style={{
+                      ...getTdStyle(t),
+                      textAlign: "left",
+                      verticalAlign: "top",
+                      fontWeight: 600,
+                      overflow: "hidden",
+                      maxWidth: 0,
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+                      whiteSpace: "normal",
+                      paddingRight: 12,
+                    }}
+                  >
                     {RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL[cat]}
                   </td>
-                  <td style={{ ...getTdStyle(t), textAlign: "left", verticalAlign: "top", overflow: "hidden" }}>
+                  <td
+                    style={{
+                      ...getTdStyle(t),
+                      textAlign: "left",
+                      verticalAlign: "top",
+                      overflow: "hidden",
+                      maxWidth: 0,
+                      whiteSpace: "normal",
+                    }}
+                  >
                     {arquivos.length === 0 ? (
                       <span style={{ color: t.textMuted, fontSize: 12 }}>Nenhum arquivo enviado.</span>
                     ) : (
@@ -130,7 +152,7 @@ export function PrestadorDocumentosGestaoPanel({
                               key={m.id}
                               style={{
                                 display: "flex",
-                                flexWrap: "nowrap",
+                                flexWrap: "wrap",
                                 alignItems: "center",
                                 gap: 10,
                                 padding: "6px 0",

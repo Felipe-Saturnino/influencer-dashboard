@@ -4,6 +4,10 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { STAFF_ESTUDIO_CADASTRO_TODOS, staffEstudioAtendeTodos } from "./gestaoStaffEstudioHelpers";
 
+/**
+ * Seleção exclusiva: **Todos Estúdios** ou **um** estúdio específico (sem multi).
+ * Persiste como array de 0–1 valor (`todos` | slug) em `staff_estudio_slugs`.
+ */
 export function StaffEstudioCampoSelect({
   value,
   onChange,
@@ -22,7 +26,7 @@ export function StaffEstudioCampoSelect({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const todosAtivo = staffEstudioAtendeTodos(value);
-  const especificos = value.filter((s) => s !== STAFF_ESTUDIO_CADASTRO_TODOS);
+  const slugAtivo = todosAtivo ? "" : (value.find((s) => s !== STAFF_ESTUDIO_CADASTRO_TODOS) ?? "");
 
   const chipBase: CSSProperties = {
     textAlign: "left",
@@ -46,38 +50,34 @@ export function StaffEstudioCampoSelect({
     fontWeight: ativo ? 700 : 500,
   });
 
-  const toggleTodos = () => {
+  const selecionarTodos = () => {
     if (disabled) return;
     onChange(todosAtivo ? [] : [STAFF_ESTUDIO_CADASTRO_TODOS]);
   };
 
-  const toggleSlug = (slug: string) => {
+  const selecionarSlug = (slug: string) => {
     if (disabled) return;
-    if (todosAtivo) {
-      onChange([slug]);
-      return;
-    }
-    if (especificos.includes(slug)) {
-      onChange(especificos.filter((s) => s !== slug));
-      return;
-    }
-    onChange([...especificos, slug]);
+    onChange(slugAtivo === slug ? [] : [slug]);
   };
 
   return (
     <fieldset style={{ border: "none", margin: 0, padding: 0 }} aria-labelledby={`${id}-legend`}>
       <legend id={`${id}-legend`} style={{ display: "none" }}>
-        Estúdios
+        Estúdio
       </legend>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div
+        role="radiogroup"
+        aria-label="Estúdio do staff"
+        style={{ display: "flex", flexDirection: "column", gap: 6 }}
+      >
         <button
           type="button"
           id={id}
-          role="checkbox"
+          role="radio"
           aria-checked={todosAtivo}
           aria-label="Todos Estúdios"
           disabled={disabled}
-          onClick={toggleTodos}
+          onClick={selecionarTodos}
           style={chipStyle(todosAtivo)}
         >
           Todos Estúdios
@@ -93,16 +93,16 @@ export function StaffEstudioCampoSelect({
           }}
         >
           {estudioSlugs.map((slug) => {
-            const ativo = !todosAtivo && especificos.includes(slug);
+            const ativo = slugAtivo === slug;
             return (
               <button
                 key={slug}
                 type="button"
-                role="checkbox"
+                role="radio"
                 aria-checked={ativo}
                 aria-label={`Estúdio ${estudiosNome[slug] ?? slug}`}
                 disabled={disabled}
-                onClick={() => toggleSlug(slug)}
+                onClick={() => selecionarSlug(slug)}
                 style={chipStyle(ativo)}
               >
                 {estudiosNome[slug] ?? slug}

@@ -45,8 +45,12 @@ type Props = {
   open: boolean;
   alvo: PresencaTurnoAlvo;
   onClose: () => void;
-  onAprovar: () => void;
-  onSalvarCorrecao: (payload: { entrada: string; saida: string; observacao: string }) => void;
+  onAprovar: () => boolean | Promise<boolean>;
+  onSalvarCorrecao: (payload: {
+    entrada: string;
+    saida: string;
+    observacao: string;
+  }) => boolean | Promise<boolean>;
   t: Theme;
   brand: ReturnType<typeof useDashboardBrand>;
 };
@@ -173,8 +177,31 @@ export function ModalAprovacaoPresencaCalendario({
       return;
     }
     setSalvando(true);
-    onSalvarCorrecao({ entrada: ent, saida: sai, observacao: observacao.trim() });
-    setSalvando(false);
+    void (async () => {
+      const ok = await Promise.resolve(
+        onSalvarCorrecao({ entrada: ent, saida: sai, observacao: observacao.trim() }),
+      );
+      setSalvando(false);
+      if (!ok) {
+        setErr(
+          "Não foi possível salvar a correção. Se o problema persistir, entre em contato com o suporte.",
+        );
+      }
+    })();
+  };
+
+  const aprovarTurno = () => {
+    setErr(null);
+    setSalvando(true);
+    void (async () => {
+      const ok = await Promise.resolve(onAprovar());
+      setSalvando(false);
+      if (!ok) {
+        setErr(
+          "Não foi possível aprovar o turno. Se o problema persistir, entre em contato com o suporte.",
+        );
+      }
+    })();
   };
 
   if (modo === "correcao") {
@@ -301,9 +328,19 @@ export function ModalAprovacaoPresencaCalendario({
           </tbody>
         </table>
       </div>
+      {err ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+        >
+          {err}
+        </div>
+      ) : null}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
         <button
           type="button"
+          disabled={salvando}
           onClick={() => {
             setEntradaCorrecao(valorInicialCorrecaoPresenca(alvo.entRealOriginal));
             setSaidaCorrecao(valorInicialCorrecaoPresenca(alvo.saiRealOriginal));
@@ -315,8 +352,8 @@ export function ModalAprovacaoPresencaCalendario({
         >
           Editar
         </button>
-        <button type="button" onClick={onAprovar} style={btnPrimario}>
-          Aprovar
+        <button type="button" onClick={aprovarTurno} disabled={salvando} style={btnPrimario}>
+          {salvando ? "Aprovando…" : "Aprovar"}
         </button>
       </div>
     </ModalBase>

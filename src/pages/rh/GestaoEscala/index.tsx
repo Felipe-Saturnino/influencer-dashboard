@@ -52,10 +52,6 @@ import {
   ESCALA_MES0_MIN,
   ESCALA_TOOLBAR_AZUL,
   ESCALA_TOOLBAR_VERDE,
-  STICKY_LEFT_NICK,
-  STICKY_LEFT_NICK_SEM_NOME,
-  STICKY_LEFT_TURNO_SEM_NOME,
-  STICKY_LEFT_TURNO_STAFF,
   STICKY_W_NICK,
   STICKY_W_NOME,
   STICKY_W_TURNO_STAFF,
@@ -67,6 +63,7 @@ import {
   celulasIguais,
   chaveCelulaGerar,
   contarCelulasComSigla,
+  contarCelulasComSiglaPorEstudio,
   dataMaximaEscalaCarrossel,
   dataMinimaEscalaCarrossel,
   diaComDestaqueCalendario,
@@ -97,6 +94,7 @@ import {
   sanitizarValorCelulaGerar,
   type AbaEscalaTime,
   type AreaEscalaKey,
+  type ConsolidadoEstudioLinha,
   type DiaMes,
   type EscalaDiariaSortCol,
   type EscalaGerarEstadoFiltro,
@@ -151,6 +149,10 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const [filtroNicknameEscala, setFiltroNicknameEscala] = useState("");
   /** Filtro da Escala Diária por turno (clique no Consolidado). */
   const [filtroTurnoConsolidado, setFiltroTurnoConsolidado] = useState<FiltroTurnoConsolidadoRh | null>(null);
+  /** Drilldown por estúdio no Consolidado (Game Presenter + Todos Estúdios). */
+  const [consolidadoTurnoExpandido, setConsolidadoTurnoExpandido] = useState<
+    Partial<Record<"manha" | "tarde" | "noite", boolean>>
+  >({});
   const [sortEscalaDiaria, setSortEscalaDiaria] = useState<{ col: EscalaDiariaSortCol; dir: SortDir }>({
     col: modo === "escritorio" ? "nome" : "turno",
     dir: "asc",
@@ -165,12 +167,14 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   useEffect(() => {
     setFiltroNicknameEscala("");
     setFiltroTurnoConsolidado(null);
+    setConsolidadoTurnoExpandido({});
     setSortEscalaDiaria({ col: modo === "escritorio" ? "nome" : "turno", dir: "asc" });
     setPaginaEscalaDiaria(0);
   }, [filtroArea, modo]);
 
   useEffect(() => {
     setFiltroTurnoConsolidado(null);
+    setConsolidadoTurnoExpandido({});
     setPaginaEscalaDiaria(0);
   }, [ano, mes]);
 
@@ -580,10 +584,13 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const linhasAposNickname = useMemo(() => {
     const q = filtroNicknameEscala.trim();
     if (!q) return linhas;
+    const soNome = modo === "escritorio" || filtroArea === "academy";
     return linhas.filter((row) =>
-      textoContemBuscaEmAlgum(q, row.nome, row.nomeCompletoCadastro, row.nickname),
+      soNome
+        ? textoContemBuscaEmAlgum(q, row.nome, row.nomeCompletoCadastro)
+        : textoContemBuscaEmAlgum(q, row.nome, row.nomeCompletoCadastro, row.nickname),
     );
-  }, [linhas, filtroNicknameEscala]);
+  }, [linhas, filtroNicknameEscala, modo, filtroArea]);
 
   const linhasFiltradasEscalaDiaria = useMemo(() => {
     if (filtroTurnoConsolidado == null) return linhasAposNickname;
@@ -921,7 +928,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     left,
     zIndex: Z_STICKY_HEAD,
     boxSizing: "border-box",
-    background: brand.blockBg,
+    background: brand.blockBg ?? t.cardBg ?? t.bg ?? "#fff",
+    transform: "translateZ(0)",
     ...extra,
   });
 
@@ -1032,9 +1040,16 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         : posSugestaoAtiva(estGradeFiltro) && escalaGradeAprovadaNaBase(estGradeFiltro)),
   );
 
+  const estudiosNomeEscala = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const e of estudiosAtivosEscala) m[e.slug] = e.nome;
+    return m;
+  }, [estudiosAtivosEscala]);
+
   const resumoTurnoDias = useMemo(() => {
     if (!mostrarFiltroArea) return null;
-    const linhasF = filtrarPorArea(prestadoresFiltradosEstudio, filtroArea).map(mapLinhaPrestador);
+    const linhasRpc = filtrarPorArea(prestadoresFiltradosEstudio, filtroArea);
+    const linhasF = linhasRpc.map(mapLinhaPrestador);
     const celulas = gerarPorFiltro[filtroArea]?.celulas;
     if (modo === "escritorio") {
       const comercial = contarCelulasComSigla(linhasF, dias, celulas, "Comercial");
@@ -1047,6 +1062,10 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         comercial,
         total: comercial,
         temLinhaTardeConsolidado: false,
+        drilldownPorEstudio: false as const,
+        manhaPorEstudio: [] as ConsolidadoEstudioLinha[],
+        tardePorEstudio: [] as ConsolidadoEstudioLinha[],
+        noitePorEstudio: [] as ConsolidadoEstudioLinha[],
       };
     }
     const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
@@ -1059,6 +1078,19 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     /** Sem pessoal de tarde na operação destas áreas — não exibir linha «Turno da Tarde». */
     const temLinhaTardeConsolidado =
       filtroArea !== "service_manager" && filtroArea !== "shift_leader";
+    const drilldownPorEstudio =
+      modo === "estudio" &&
+      filtroArea === "game_presenter" &&
+      filtroEstudioEscalaEfetivo === FILTRO_STAFF_ESTUDIO_TODOS;
+    const manhaPorEstudio = drilldownPorEstudio
+      ? contarCelulasComSiglaPorEstudio(linhasRpc, dias, celulas, "MRN", opParaEstudio, estudiosNomeEscala)
+      : [];
+    const tardePorEstudio = drilldownPorEstudio
+      ? contarCelulasComSiglaPorEstudio(linhasRpc, dias, celulas, "AFT", opParaEstudio, estudiosNomeEscala)
+      : [];
+    const noitePorEstudio = drilldownPorEstudio
+      ? contarCelulasComSiglaPorEstudio(linhasRpc, dias, celulas, "NGT", opParaEstudio, estudiosNomeEscala)
+      : [];
     const total = dias.map((_, i) => {
       let s = (manha[i] ?? 0) + (noite[i] ?? 0);
       if (temLinhaTardeConsolidado) s += tarde[i] ?? 0;
@@ -1074,8 +1106,22 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       comercial,
       total,
       temLinhaTardeConsolidado,
+      drilldownPorEstudio,
+      manhaPorEstudio,
+      tardePorEstudio,
+      noitePorEstudio,
     };
-  }, [mostrarFiltroArea, filtroArea, prestadoresFiltradosEstudio, dias, gerarPorFiltro, modo]);
+  }, [
+    mostrarFiltroArea,
+    filtroArea,
+    prestadoresFiltradosEstudio,
+    dias,
+    gerarPorFiltro,
+    modo,
+    filtroEstudioEscalaEfetivo,
+    opParaEstudio,
+    estudiosNomeEscala,
+  ]);
 
   const mostrarSalvarAlteracoes = useMemo(() => {
     if (modo === "escritorio") return false;
@@ -1095,8 +1141,18 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
 
+  useEffect(() => {
+    if (filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS || filtroArea !== "game_presenter") {
+      setConsolidadoTurnoExpandido({});
+    }
+  }, [filtroEstudioEscalaEfetivo, filtroArea]);
+
   const alternarFiltroTurnoConsolidado = useCallback((k: FiltroTurnoConsolidadoRh) => {
     setFiltroTurnoConsolidado((prev) => (prev === k ? null : k));
+  }, []);
+
+  const alternarExpandConsolidadoTurno = useCallback((k: "manha" | "tarde" | "noite") => {
+    setConsolidadoTurnoExpandido((prev) => ({ ...prev, [k]: !prev[k] }));
   }, []);
 
   const estiloBotaoTurnoConsolidado = useCallback(
@@ -1143,6 +1199,128 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const acaoGerarNoFiltroSelecionado =
     modo === "escritorio" ? null : podeEditarGrade ? acaoBotaoGerar(filtroArea) : null;
 
+  const estiloCelulaConsolidadoNum = (dia: DiaMes, forte = false): CSSProperties => ({
+    ...getTdStyle(t, {
+      textAlign: "center",
+      fontVariantNumeric: "tabular-nums",
+      fontWeight: forte ? 700 : 600,
+      ...(diaComDestaqueCalendario(dia)
+        ? {
+            background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+            color: "#f59e0b",
+          }
+        : {}),
+    }),
+  });
+
+  const renderLinhaTurnoConsolidadoComDrill = (
+    turnoKey: "manha" | "tarde" | "noite",
+    label: string,
+    totais: number[],
+    porEstudio: ConsolidadoEstudioLinha[],
+    rowKeyPrefix: string,
+  ) => {
+    const expandido = Boolean(consolidadoTurnoExpandido[turnoKey]);
+    const mostraDrill = Boolean(resumoTurnoDias?.drilldownPorEstudio);
+    return (
+      <>
+        <tr key={`turno-${turnoKey}`}>
+          <th
+            scope="row"
+            style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+              fontWeight: 700,
+              fontSize: CONSOLIDADO_FONT_TURNO,
+              padding: 0,
+            })}
+          >
+            <div style={{ display: "flex", alignItems: "stretch", width: "100%" }}>
+              {mostraDrill ? (
+                <button
+                  type="button"
+                  aria-expanded={expandido}
+                  aria-label={
+                    expandido
+                      ? `Recolher detalhe por estúdio — ${label}`
+                      : `Expandir detalhe por estúdio — ${label}`
+                  }
+                  title={expandido ? "Recolher por estúdio" : "Ver por estúdio"}
+                  onClick={() => alternarExpandConsolidadoTurno(turnoKey)}
+                  style={{
+                    flex: "0 0 32px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "none",
+                    borderLeft: filtroTurnoConsolidado === turnoKey ? `3px solid ${brand.accent}` : "3px solid transparent",
+                    background: "transparent",
+                    color: t.textMuted,
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  <ChevronRight
+                    size={14}
+                    aria-hidden
+                    style={{
+                      transform: expandido ? "rotate(90deg)" : "none",
+                      transition: "transform 0.15s ease",
+                    }}
+                  />
+                </button>
+              ) : null}
+              <button
+                type="button"
+                aria-pressed={filtroTurnoConsolidado === turnoKey}
+                aria-label={`Filtrar Escala Diária pelo ${label.toLowerCase()}`}
+                onClick={() => alternarFiltroTurnoConsolidado(turnoKey)}
+                style={{
+                  ...estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === turnoKey),
+                  flex: 1,
+                  borderLeft: mostraDrill ? "none" : undefined,
+                }}
+              >
+                {label}
+              </button>
+            </div>
+          </th>
+          {totais.map((n, idx) => {
+            const d = dias[idx]!;
+            return (
+              <td key={`${rowKeyPrefix}-${d.iso}`} style={estiloCelulaConsolidadoNum(d, true)}>
+                {n}
+              </td>
+            );
+          })}
+        </tr>
+        {mostraDrill && expandido
+          ? porEstudio.map((est) => (
+              <tr key={`${turnoKey}-est-${est.key}`}>
+                <th
+                  scope="row"
+                  style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                    fontWeight: 500,
+                    fontSize: 11,
+                    padding: "6px 12px 6px 36px",
+                    color: t.textMuted,
+                  })}
+                >
+                  {est.label}
+                </th>
+                {est.counts.map((n, idx) => {
+                  const d = dias[idx]!;
+                  return (
+                    <td key={`${rowKeyPrefix}-${est.key}-${d.iso}`} style={estiloCelulaConsolidadoNum(d, false)}>
+                      {n}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          : null}
+      </>
+    );
+  };
+
   const confirmarAlteracaoCelulaAprovada = useCallback(
     (
       funcionarioId: string,
@@ -1180,9 +1358,21 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   /** Oculta coluna Nome na Escala Diária (Service Manager / Shift Leader) — só Estúdio. */
   const semColunaNome =
     modo !== "escritorio" && (filtroArea === "service_manager" || filtroArea === "shift_leader");
-  /** Escala Escritório: só Nome + dias (sem Nickname / Turno). */
-  const semColunasNickTurno = modo === "escritorio";
-  const colunasFixasEscalaDiaria = (semColunaNome ? 0 : 1) + (semColunasNickTurno ? 0 : 2);
+  /** Academy e Escritório: sem coluna Nickname. */
+  const semColunaNickname = modo === "escritorio" || filtroArea === "academy";
+  /** Escala Escritório: sem Nickname e sem Turno. */
+  const semColunaTurno = modo === "escritorio";
+  const semColunasNickTurno = semColunaNickname && semColunaTurno;
+  const stickyLeftNick = semColunaNome ? 0 : STICKY_W_NOME;
+  const stickyLeftTurno =
+    (semColunaNome ? 0 : STICKY_W_NOME) + (semColunaNickname ? 0 : STICKY_W_NICK);
+  const colunasFixasEscalaDiaria =
+    (semColunaNome ? 0 : 1) + (semColunaNickname ? 0 : 1) + (semColunaTurno ? 0 : 1);
+  /** Selo opaco na borda direita da sticky — evita o cabeçalho de dias vazar no vão entre colunas. */
+  const seloStickyDireita = (bg: string): CSSProperties => ({
+    boxShadow: `1px 0 0 0 ${bg}`,
+  });
+  const fundoStickyCabecalho = brand.blockBg ?? t.cardBg ?? t.bg ?? "#fff";
 
   if (perm.loading) {
     return (
@@ -1387,7 +1577,13 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 aria-label="Consolidado - quantidade de Prestadores no dia por turno"
                 style={contentBox}
               >
-                <SectionTitle sub="clique num turno para filtrar a Escala Diária">
+                <SectionTitle
+                  sub={
+                    resumoTurnoDias.drilldownPorEstudio
+                      ? "clique no turno para filtrar · seta para ver por estúdio"
+                      : "clique num turno para filtrar a Escala Diária"
+                  }
+                >
                   Consolidado
                 </SectionTitle>
                 <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -1526,130 +1722,29 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                         })}
                       </tr>
                     ) : null}
-                    <tr>
-                      <th
-                        scope="row"
-                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
-                          fontWeight: 700,
-                          fontSize: CONSOLIDADO_FONT_TURNO,
-                          padding: 0,
-                        })}
-                      >
-                        <button
-                          type="button"
-                          aria-pressed={filtroTurnoConsolidado === "manha"}
-                          aria-label="Filtrar Escala Diária pelo turno da manhã"
-                          onClick={() => alternarFiltroTurnoConsolidado("manha")}
-                          style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "manha")}
-                        >
-                          Turno da Manhã
-                        </button>
-                      </th>
-                      {resumoTurnoDias.manha.map((n, idx) => {
-                        const d = dias[idx]!;
-                        return (
-                          <td
-                            key={`resumo-m-${d.iso}`}
-                            style={getTdStyle(t, {
-                              textAlign: "center",
-                              fontVariantNumeric: "tabular-nums",
-                              fontWeight: 700,
-                              ...(diaComDestaqueCalendario(d)
-                                ? {
-                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                    color: "#f59e0b",
-                                  }
-                                : {}),
-                            })}
-                          >
-                            {n}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                    {resumoTurnoDias.temLinhaTardeConsolidado ? (
-                      <tr>
-                        <th
-                          scope="row"
-                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
-                            fontWeight: 700,
-                            padding: 0,
-                          })}
-                        >
-                          <button
-                            type="button"
-                            aria-pressed={filtroTurnoConsolidado === "tarde"}
-                            aria-label="Filtrar Escala Diária pelo turno da tarde"
-                            onClick={() => alternarFiltroTurnoConsolidado("tarde")}
-                            style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "tarde")}
-                          >
-                            Turno da Tarde
-                          </button>
-                        </th>
-                        {resumoTurnoDias.tarde.map((n, idx) => {
-                          const d = dias[idx]!;
-                          return (
-                            <td
-                              key={`resumo-t-${d.iso}`}
-                              style={getTdStyle(t, {
-                                textAlign: "center",
-                                fontVariantNumeric: "tabular-nums",
-                                fontWeight: 700,
-                                ...(diaComDestaqueCalendario(d)
-                                  ? {
-                                      background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                      color: "#f59e0b",
-                                    }
-                                  : {}),
-                              })}
-                            >
-                              {n}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ) : null}
-                    <tr>
-                      <th
-                        scope="row"
-                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
-                          fontWeight: 700,
-                          fontSize: CONSOLIDADO_FONT_TURNO,
-                          padding: 0,
-                        })}
-                      >
-                        <button
-                          type="button"
-                          aria-pressed={filtroTurnoConsolidado === "noite"}
-                          aria-label="Filtrar Escala Diária pelo turno da noite"
-                          onClick={() => alternarFiltroTurnoConsolidado("noite")}
-                          style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "noite")}
-                        >
-                          Turno da Noite
-                        </button>
-                      </th>
-                      {resumoTurnoDias.noite.map((n, idx) => {
-                        const d = dias[idx]!;
-                        return (
-                          <td
-                            key={`resumo-n-${d.iso}`}
-                            style={getTdStyle(t, {
-                              textAlign: "center",
-                              fontVariantNumeric: "tabular-nums",
-                              fontWeight: 700,
-                              ...(diaComDestaqueCalendario(d)
-                                ? {
-                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                    color: "#f59e0b",
-                                  }
-                                : {}),
-                            })}
-                          >
-                            {n}
-                          </td>
-                        );
-                      })}
-                    </tr>
+                    {renderLinhaTurnoConsolidadoComDrill(
+                      "manha",
+                      "Turno da Manhã",
+                      resumoTurnoDias.manha,
+                      resumoTurnoDias.manhaPorEstudio,
+                      "resumo-m",
+                    )}
+                    {resumoTurnoDias.temLinhaTardeConsolidado
+                      ? renderLinhaTurnoConsolidadoComDrill(
+                          "tarde",
+                          "Turno da Tarde",
+                          resumoTurnoDias.tarde,
+                          resumoTurnoDias.tardePorEstudio,
+                          "resumo-t",
+                        )
+                      : null}
+                    {renderLinhaTurnoConsolidadoComDrill(
+                      "noite",
+                      "Turno da Noite",
+                      resumoTurnoDias.noite,
+                      resumoTurnoDias.noitePorEstudio,
+                      "resumo-n",
+                    )}
                       </>
                     )}
                     <tr>
@@ -1881,9 +1976,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   <BarraPesquisaPagina
                     value={filtroNicknameEscala}
                     onChange={setFiltroNicknameEscala}
-                    placeholder={semColunasNickTurno ? PAGE_SEARCH.nome : PAGE_SEARCH.nomeNickname}
+                    placeholder={semColunaNickname ? PAGE_SEARCH.nome : PAGE_SEARCH.nomeNickname}
                     aria-label={
-                      semColunasNickTurno
+                      semColunaNickname
                         ? "Filtrar tabela de escala por nome"
                         : "Filtrar tabela de escala por nome ou nickname"
                     }
@@ -1897,7 +1992,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 width: "100%",
                 minWidth:
                   (semColunaNome ? 0 : STICKY_W_NOME) +
-                  (semColunasNickTurno ? 0 : STICKY_W_NICK + STICKY_W_TURNO_STAFF) +
+                  (semColunaNickname ? 0 : STICKY_W_NICK) +
+                  (semColunaTurno ? 0 : STICKY_W_TURNO_STAFF) +
                   dias.length * 80,
                 borderCollapse: "separate",
                 borderSpacing: 0,
@@ -1908,6 +2004,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 Escala Diária - Definição de status diário por Prestador.{" "}
                 {semColunasNickTurno
                   ? "Grade mensal por colaborador e dia do mês (sem nickname e turno)."
+                  : semColunaNickname
+                    ? "Grade mensal por colaborador e dia do mês (sem nickname)."
                   : semColunaNome
                     ? "Grade por nickname, turno e dia do mês (coluna Nome oculta nesta área)."
                     : "Grade mensal por colaborador e dia do mês."}
@@ -1927,51 +2025,54 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                         width: STICKY_W_NOME,
                         verticalAlign: "middle",
                         zIndex: Z_STICKY_HEAD_NOME,
-                        ...(semColunasNickTurno
+                        ...(semColunaTurno && semColunaNickname
                           ? {
                               borderRight: `1px solid ${t.cardBorder}`,
                               boxShadow: sombraColFixa,
                             }
-                          : {}),
+                          : {
+                              ...seloStickyDireita(fundoStickyCabecalho),
+                            }),
                       })}
                     />
                   ) : null}
-                  {!semColunasNickTurno ? (
-                    <>
-                      <SortTableTh<EscalaDiariaSortCol>
-                        label="Nickname"
-                        col="nickname"
-                        sortCol={sortEscalaDiaria.col}
-                        sortDir={sortEscalaDiaria.dir}
-                        onSort={onSortEscalaDiaria}
-                        thStyle={thSticky(semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK, {
-                          minWidth: STICKY_W_NICK,
-                          maxWidth: STICKY_W_NICK,
-                          width: STICKY_W_NICK,
-                          verticalAlign: "middle",
-                          zIndex: semColunaNome ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_NICK,
-                        })}
-                        align="center"
-                      />
-                      <SortTableTh<EscalaDiariaSortCol>
-                        label="Turno"
-                        col="turno"
-                        sortCol={sortEscalaDiaria.col}
-                        sortDir={sortEscalaDiaria.dir}
-                        onSort={onSortEscalaDiaria}
-                        title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
-                        thStyle={thSticky(semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF, {
-                          minWidth: STICKY_W_TURNO_STAFF,
-                          maxWidth: STICKY_W_TURNO_STAFF,
-                          width: STICKY_W_TURNO_STAFF,
-                          verticalAlign: "middle",
-                          borderRight: `1px solid ${t.cardBorder}`,
-                          boxShadow: sombraColFixa,
-                          zIndex: semColunaNome ? Z_STICKY_HEAD_NICK : Z_STICKY_HEAD_TURNO,
-                        })}
-                        align="center"
-                      />
-                    </>
+                  {!semColunaNickname ? (
+                    <SortTableTh<EscalaDiariaSortCol>
+                      label="Nickname"
+                      col="nickname"
+                      sortCol={sortEscalaDiaria.col}
+                      sortDir={sortEscalaDiaria.dir}
+                      onSort={onSortEscalaDiaria}
+                      thStyle={thSticky(stickyLeftNick, {
+                        minWidth: STICKY_W_NICK,
+                        maxWidth: STICKY_W_NICK,
+                        width: STICKY_W_NICK,
+                        verticalAlign: "middle",
+                        zIndex: semColunaNome ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_NICK,
+                        ...seloStickyDireita(fundoStickyCabecalho),
+                      })}
+                      align="center"
+                    />
+                  ) : null}
+                  {!semColunaTurno ? (
+                    <SortTableTh<EscalaDiariaSortCol>
+                      label="Turno"
+                      col="turno"
+                      sortCol={sortEscalaDiaria.col}
+                      sortDir={sortEscalaDiaria.dir}
+                      onSort={onSortEscalaDiaria}
+                      title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
+                      thStyle={thSticky(stickyLeftTurno, {
+                        minWidth: STICKY_W_TURNO_STAFF,
+                        maxWidth: STICKY_W_TURNO_STAFF,
+                        width: STICKY_W_TURNO_STAFF,
+                        verticalAlign: "middle",
+                        borderRight: `1px solid ${t.cardBorder}`,
+                        boxShadow: sombraColFixa,
+                        zIndex: semColunaNome && semColunaNickname ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_TURNO,
+                      })}
+                      align="center"
+                    />
                   ) : null}
                   {dias.map((dia) => (
                     <th
@@ -2015,7 +2116,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                       }}
                     >
                       {linhasAposNickname.length === 0 && filtroNicknameEscala.trim()
-                        ? semColunasNickTurno
+                        ? semColunaNickname
                           ? "Nenhum colaborador corresponde à pesquisa por nome."
                           : "Nenhum colaborador corresponde à pesquisa por nome ou nickname."
                         : filtroTurnoConsolidado != null && linhasAposNickname.length > 0
@@ -2036,55 +2137,53 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                               minWidth: STICKY_W_NOME,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
-                              ...(semColunasNickTurno
+                              ...(semColunaTurno && semColunaNickname
                                 ? {
                                     borderRight: `1px solid ${t.cardBorder}`,
                                     boxShadow: sombraColFixa,
                                   }
-                                : {}),
+                                : {
+                                    ...seloStickyDireita(bg),
+                                  }),
                             })}
                             title={row.nomeCompletoCadastro}
                           >
                             {row.nome}
                           </td>
                         ) : null}
-                        {!semColunasNickTurno ? (
-                          <>
-                            <td
-                              style={tdSticky(
-                                semColunaNome ? STICKY_LEFT_NICK_SEM_NOME : STICKY_LEFT_NICK,
-                                bg,
-                                semColunaNome ? Z_BODY_NOME : Z_BODY_NICK,
-                                {
-                                  minWidth: STICKY_W_NICK,
-                                  width: STICKY_W_NICK,
-                                  maxWidth: STICKY_W_NICK,
-                                },
-                              )}
-                              title={semColunaNome ? row.nomeCompletoCadastro : undefined}
-                            >
-                              {row.nickname}
-                            </td>
-                            <td
-                              style={tdSticky(
-                                semColunaNome ? STICKY_LEFT_TURNO_SEM_NOME : STICKY_LEFT_TURNO_STAFF,
-                                bg,
-                                semColunaNome ? Z_BODY_NICK : Z_BODY_TURNO_STAFF,
-                                {
-                                  minWidth: STICKY_W_TURNO_STAFF,
-                                  width: STICKY_W_TURNO_STAFF,
-                                  maxWidth: STICKY_W_TURNO_STAFF,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  borderRight: `1px solid ${t.cardBorder}`,
-                                  boxShadow: sombraColFixa,
-                                },
-                              )}
-                              title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
-                            >
-                              {row.turnoStaffNome || "—"}
-                            </td>
-                          </>
+                        {!semColunaNickname ? (
+                          <td
+                            style={tdSticky(stickyLeftNick, bg, semColunaNome ? Z_BODY_NOME : Z_BODY_NICK, {
+                              minWidth: STICKY_W_NICK,
+                              width: STICKY_W_NICK,
+                              maxWidth: STICKY_W_NICK,
+                              ...seloStickyDireita(bg),
+                            })}
+                            title={semColunaNome ? row.nomeCompletoCadastro : undefined}
+                          >
+                            {row.nickname}
+                          </td>
+                        ) : null}
+                        {!semColunaTurno ? (
+                          <td
+                            style={tdSticky(
+                              stickyLeftTurno,
+                              bg,
+                              semColunaNome && semColunaNickname ? Z_BODY_NOME : Z_BODY_TURNO_STAFF,
+                              {
+                                minWidth: STICKY_W_TURNO_STAFF,
+                                width: STICKY_W_TURNO_STAFF,
+                                maxWidth: STICKY_W_TURNO_STAFF,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                borderRight: `1px solid ${t.cardBorder}`,
+                                boxShadow: sombraColFixa,
+                              },
+                            )}
+                            title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
+                          >
+                            {row.turnoStaffNome || "—"}
+                          </td>
                         ) : null}
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);

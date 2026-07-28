@@ -17,7 +17,12 @@ import {
   sanitizarValorCelulaAlterarEscala,
   type EscalaTurnoMesMap,
 } from "../../../lib/gestaoEscalaTurnoMes";
-import { staffRowPassaFiltroEstudio } from "../GestaoStaff/gestaoStaffEstudioHelpers";
+import {
+  STAFF_ESTUDIO_CADASTRO_TODOS,
+  staffEstudioAtendeTodos,
+  staffEstudioSlugsFromRow,
+  staffRowPassaFiltroEstudio,
+} from "../GestaoStaff/gestaoStaffEstudioHelpers";
 import type { EscalaAlteracaoCelulaMeta } from "./CelulaIndicadorAlteracaoEscala";
 
 const HELPERS_TURNO_SNAPSHOT = {
@@ -535,6 +540,76 @@ export function contarCelulasComSigla(
       return acc + (v === sigla ? 1 : 0);
     }, 0),
   );
+}
+
+export const CONSOLIDADO_ESTUDIO_KEY_TODOS = "__todos__";
+export const CONSOLIDADO_ESTUDIO_KEY_NENHUM = "__nenhum__";
+
+export type ConsolidadoEstudioLinha = {
+  key: string;
+  label: string;
+  counts: number[];
+};
+
+/** Bucket de estúdio para drilldown do Consolidado (primário / Todos / Sem estúdio). */
+export function bucketEstudioConsolidado(
+  row: Pick<RpcPrestadorEscala, "staff_estudio_slug" | "staff_estudio_slugs" | "staff_operadora_slug">,
+  opParaEstudio: Record<string, string>,
+  estudiosNome: Record<string, string>,
+): { key: string; label: string } {
+  const slugs = staffEstudioSlugsFromRow(row, opParaEstudio);
+  if (slugs.length === 0) {
+    return { key: CONSOLIDADO_ESTUDIO_KEY_NENHUM, label: "Sem estúdio" };
+  }
+  if (staffEstudioAtendeTodos(slugs) || slugs.includes(STAFF_ESTUDIO_CADASTRO_TODOS)) {
+    return { key: CONSOLIDADO_ESTUDIO_KEY_TODOS, label: "Todos Estúdios" };
+  }
+  const slug = slugs[0]!;
+  return { key: slug, label: estudiosNome[slug] ?? slug };
+}
+
+/**
+ * Contagem por estúdio × dia para uma sigla de turno (Game Presenter + Todos Estúdios).
+ * Ordena: estúdios nomeados A–Z, depois Todos Estúdios, depois Sem estúdio.
+ */
+export function contarCelulasComSiglaPorEstudio(
+  prestadores: RpcPrestadorEscala[],
+  dias: DiaMes[],
+  celulas: Record<string, string> | undefined,
+  sigla: "MRN" | "AFT" | "NGT",
+  opParaEstudio: Record<string, string>,
+  estudiosNome: Record<string, string>,
+): ConsolidadoEstudioLinha[] {
+  const map = new Map<string, { label: string; counts: number[] }>();
+  for (const p of prestadores) {
+    const bucket = bucketEstudioConsolidado(p, opParaEstudio, estudiosNome);
+    let entry = map.get(bucket.key);
+    if (!entry) {
+      entry = { label: bucket.label, counts: dias.map(() => 0) };
+      map.set(bucket.key, entry);
+    }
+    for (let i = 0; i < dias.length; i++) {
+      const dia = dias[i]!;
+      const k = chaveCelulaGerar(p.id, dia.iso);
+      if ((celulas?.[k] ?? "").trim() === sigla) {
+        entry.counts[i] = (entry.counts[i] ?? 0) + 1;
+      }
+    }
+  }
+  const rows: ConsolidadoEstudioLinha[] = [...map.entries()].map(([key, v]) => ({
+    key,
+    label: v.label,
+    counts: v.counts,
+  }));
+  rows.sort((a, b) => {
+    const rank = (k: string) =>
+      k === CONSOLIDADO_ESTUDIO_KEY_TODOS ? 1 : k === CONSOLIDADO_ESTUDIO_KEY_NENHUM ? 2 : 0;
+    const ra = rank(a.key);
+    const rb = rank(b.key);
+    if (ra !== rb) return ra - rb;
+    return a.label.localeCompare(b.label, "pt-BR");
+  });
+  return rows.filter((r) => r.counts.some((n) => n > 0));
 }
 
 /** Valor interno gravado na célula para dia de trabalho (MRN / AFT / NGT). */
