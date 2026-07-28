@@ -75,6 +75,8 @@ import {
   escalaToolbarBtnVermelho,
   filtrarPorArea,
   filtrarPrestadoresPorEstudio,
+  filtroEstudioValueFromConsolidadoKey,
+  consolidadoKeyFromFiltroEstudio,
   gravarEscalaMes,
   labelAreaEscala,
   labelExibicaoCelulaEscala,
@@ -1145,6 +1147,24 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     setFiltroTurnoConsolidado((prev) => (prev === k ? null : k));
   }, []);
 
+  /** Clique no estúdio do drilldown: aplica (ou limpa) o filtro da barra + turno da linha pai. */
+  const alternarFiltroEstudioConsolidado = useCallback(
+    (consolidadoKey: string, turnoKey: FiltroTurnoConsolidadoRh) => {
+      const nextFiltro = filtroEstudioValueFromConsolidadoKey(consolidadoKey);
+      const clearing = filtroEstudioEscala === nextFiltro;
+      setFiltroEstudioEscala(clearing ? FILTRO_STAFF_ESTUDIO_TODOS : nextFiltro);
+      if (!clearing) setFiltroTurnoConsolidado(turnoKey);
+    },
+    [filtroEstudioEscala],
+  );
+
+  const limparFiltrosConsolidado = useCallback(() => {
+    setFiltroTurnoConsolidado(null);
+    setFiltroEstudioEscala(FILTRO_STAFF_ESTUDIO_TODOS);
+  }, []);
+
+  const consolidadoEstudioKeyAtiva = consolidadoKeyFromFiltroEstudio(filtroEstudioEscalaEfetivo);
+
   const alternarExpandConsolidadoTurno = useCallback((k: "manha" | "tarde" | "noite") => {
     setConsolidadoTurnoExpandido((prev) => ({ ...prev, [k]: !prev[k] }));
   }, []);
@@ -1171,6 +1191,30 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       borderRadius: 0,
     }),
     [brand.accent, brand.useBrand, t.text],
+  );
+
+  const estiloBotaoEstudioConsolidado = useCallback(
+    (ativo: boolean): CSSProperties => ({
+      width: "100%",
+      textAlign: "left",
+      fontWeight: ativo ? 700 : 500,
+      fontFamily: FONT.body,
+      fontSize: 11,
+      padding: "6px 12px 6px 36px",
+      margin: 0,
+      border: "none",
+      borderLeft: ativo ? `3px solid ${brand.accent}` : "3px solid transparent",
+      boxSizing: "border-box",
+      background: ativo
+        ? brand.useBrand
+          ? "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)"
+          : "rgba(124,58,237,0.09)"
+        : "transparent",
+      color: ativo ? t.text : t.textMuted,
+      cursor: "pointer",
+      borderRadius: 0,
+    }),
+    [brand.accent, brand.useBrand, t.text, t.textMuted],
   );
 
   const selectCelulaGerarStyle: CSSProperties = {
@@ -1290,18 +1334,33 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           })}
         </tr>
         {mostraDrill && expandido
-          ? porEstudio.map((est) => (
+          ? porEstudio.map((est) => {
+              const estudioAtivo = consolidadoEstudioKeyAtiva === est.key;
+              return (
               <tr key={`${turnoKey}-est-${est.key}`}>
                 <th
                   scope="row"
                   style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
                     fontWeight: 500,
                     fontSize: 11,
-                    padding: "6px 12px 6px 36px",
+                    padding: 0,
                     color: t.textMuted,
                   })}
                 >
-                  {est.label}
+                  <button
+                    type="button"
+                    aria-pressed={estudioAtivo}
+                    aria-label={`Filtrar Escala Diária pelo estúdio ${est.label}`}
+                    title={
+                      estudioAtivo
+                        ? `Remover filtro de estúdio ${est.label}`
+                        : `Filtrar Escala Diária por ${est.label}`
+                    }
+                    onClick={() => alternarFiltroEstudioConsolidado(est.key, turnoKey)}
+                    style={estiloBotaoEstudioConsolidado(estudioAtivo)}
+                  >
+                    {est.label}
+                  </button>
                 </th>
                 {est.counts.map((n, idx) => {
                   const d = dias[idx]!;
@@ -1312,7 +1371,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   );
                 })}
               </tr>
-            ))
+            );
+            })
           : null}
       </>
     );
@@ -1586,7 +1646,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 <SectionTitle
                   sub={
                     resumoTurnoDias.drilldownPorEstudio
-                      ? "clique no turno para filtrar · use a seta para expandir por estúdio (Todos Estúdios)"
+                      ? "clique no turno ou no estúdio para filtrar a Escala Diária · seta para expandir"
                       : "clique num turno para filtrar a Escala Diária"
                   }
                 >
@@ -1765,8 +1825,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                       >
                         <button
                           type="button"
-                          aria-label="Mostrar na Escala Diária todos os turnos"
-                          onClick={() => setFiltroTurnoConsolidado(null)}
+                          aria-label="Mostrar na Escala Diária todos os turnos e estúdios"
+                          onClick={limparFiltrosConsolidado}
                           style={{
                             width: "100%",
                             textAlign: "left",
@@ -2127,6 +2187,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           : "Nenhum colaborador corresponde à pesquisa por nome ou nickname."
                         : filtroTurnoConsolidado != null && linhasAposNickname.length > 0
                           ? "Nenhum colaborador com o turno selecionado."
+                          : filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS
+                            ? "Nenhum colaborador com o estúdio selecionado."
                           : "Nenhum colaborador corresponde aos filtros aplicados."}
                     </td>
                   </tr>

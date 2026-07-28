@@ -18,6 +18,8 @@ import {
   type EscalaTurnoMesMap,
 } from "../../../lib/gestaoEscalaTurnoMes";
 import {
+  FILTRO_STAFF_ESTUDIO_NENHUM,
+  FILTRO_STAFF_ESTUDIO_TODOS,
   STAFF_ESTUDIO_CADASTRO_TODOS,
   staffEstudioAtendeTodos,
   staffEstudioSlugsFromRow,
@@ -587,6 +589,20 @@ export function contarCelulasComSigla(
 
 export const CONSOLIDADO_ESTUDIO_KEY_TODOS = "__todos__";
 export const CONSOLIDADO_ESTUDIO_KEY_NENHUM = "__nenhum__";
+
+/** Converte key do drilldown Consolidado → valor do `FiltroEstudioSelect`. */
+export function filtroEstudioValueFromConsolidadoKey(key: string): string {
+  if (key === CONSOLIDADO_ESTUDIO_KEY_TODOS) return FILTRO_STAFF_ESTUDIO_TODOS;
+  if (key === CONSOLIDADO_ESTUDIO_KEY_NENHUM) return FILTRO_STAFF_ESTUDIO_NENHUM;
+  return key;
+}
+
+/** Key do drilldown ativa conforme o filtro da barra (null = Todos Estúdios sem destaque). */
+export function consolidadoKeyFromFiltroEstudio(filtro: string): string | null {
+  if (filtro === FILTRO_STAFF_ESTUDIO_TODOS) return null;
+  if (filtro === FILTRO_STAFF_ESTUDIO_NENHUM) return CONSOLIDADO_ESTUDIO_KEY_NENHUM;
+  return filtro;
+}
 
 export type ConsolidadoEstudioLinha = {
   key: string;
