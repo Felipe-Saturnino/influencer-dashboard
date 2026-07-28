@@ -2434,9 +2434,22 @@ export default function RhCalendarioPage() {
       if (!fid) return false;
       if (isAdminPresenca || perm.canEditar === "sim") return true;
       if (perm.canEditar !== "proprios") return false;
+      // `rh_calendario_funcionarios_gerenciaveis` exclui o próprio — Meu Controle precisa das ações.
+      if (meuRhFuncionarioId && fid === meuRhFuncionarioId) return true;
       return funcionariosGerenciaveisIds.has(fid);
     },
-    [isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds],
+    [isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds, meuRhFuncionarioId],
+  );
+
+  /** Justificar a própria falta/pendência: disponível no Meu Controle mesmo só com Ver. */
+  const podeJustificarPresencaStaff = useCallback(
+    (fid: string | undefined | null) => {
+      if (!fid) return false;
+      if (podeGerirPresencaStaff(fid)) return true;
+      if (perm.canView !== "sim" && perm.canView !== "proprios") return false;
+      return Boolean(meuRhFuncionarioId && fid === meuRhFuncionarioId);
+    },
+    [podeGerirPresencaStaff, perm.canView, meuRhFuncionarioId],
   );
 
   const podeAprovarPresencaMes = useMemo(() => {
@@ -2618,8 +2631,13 @@ export default function RhCalendarioPage() {
       };
       const st = resolverStatusPresencaLinha(paramsPresencaLinha);
       const acoesBase = resolverAcoesPresencaLinha(paramsPresencaLinha);
-      const podeAcao = podeGerirPresencaStaff(fid);
-      const acoesLinha: typeof acoesBase = !podeAcao
+      const acaoOk =
+        acoesBase.acaoPrimaria === "justificar"
+          ? podeJustificarPresencaStaff(fid)
+          : acoesBase.acaoPrimaria === "aprovar"
+            ? podeGerirPresencaStaff(fid)
+            : true;
+      const acoesLinha: typeof acoesBase = !acaoOk
         ? {
             acaoPrimaria: null,
             mostrarHistorico: acoesBase.mostrarHistorico,
@@ -2694,6 +2712,7 @@ export default function RhCalendarioPage() {
     pontoRelatorioPorFid,
     gestaoRelatorioPorChave,
     podeGerirPresencaStaff,
+    podeJustificarPresencaStaff,
   ]);
 
   const linhasRelatorioPresencaOrdenadas = useMemo(
@@ -3578,11 +3597,11 @@ export default function RhCalendarioPage() {
                           presencaCorrecaoAnaliseStatusEfetivo(correcao) === "pendente" &&
                           podeGerirPresencaStaff(fid),
                       );
-                      const podeAcaoPresencaLinha = podeGerirPresencaStaff(fid);
                       const mostrarAprovarTurno =
-                        acoesLinha.acaoPrimaria === "aprovar" && podeAcaoPresencaLinha;
+                        acoesLinha.acaoPrimaria === "aprovar" && podeGerirPresencaStaff(fid);
                       const mostrarJustificarPresenca =
-                        acoesLinha.acaoPrimaria === "justificar" && podeAcaoPresencaLinha;
+                        acoesLinha.acaoPrimaria === "justificar" &&
+                        podeJustificarPresencaStaff(fid);
                       const semAcaoPresencaVisivel =
                         !mostrarAprovarTurno &&
                         !mostrarJustificarPresenca &&
