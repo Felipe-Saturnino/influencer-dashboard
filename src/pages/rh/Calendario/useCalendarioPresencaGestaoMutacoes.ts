@@ -89,19 +89,26 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
   } = opts;
 
   const persistirPresencaGestao = useCallback(
-    async (funcionarioId: string, diaIso: string, gestao: PresencaDiaGestao): Promise<boolean> => {
-      const { ok } = await salvarPresencaGestaoDia(supabase, funcionarioId, diaIso, gestao);
-      if (!ok) {
+    async (
+      funcionarioId: string,
+      diaIso: string,
+      gestao: PresencaDiaGestao,
+    ): Promise<{ ok: boolean; semPermissao?: boolean }> => {
+      const result = await salvarPresencaGestaoDia(supabase, funcionarioId, diaIso, gestao);
+      if (!result.ok) {
         console.error("Não foi possível salvar a gestão de presença.");
         setPresencaGestaoTick((x) => x + 1);
       }
-      return ok;
+      return result;
     },
     [setPresencaGestaoTick],
   );
 
-  const confirmarAprovacaoPresenca = useCallback(async (): Promise<boolean> => {
-    if (!presencaAlvoModal) return false;
+  const confirmarAprovacaoPresenca = useCallback(async (): Promise<{
+    ok: boolean;
+    semPermissao?: boolean;
+  }> => {
+    if (!presencaAlvoModal) return { ok: false };
     const diaIso = toISO(presencaAlvoModal.dia);
     const fid = presencaAlvoModal.funcionarioId;
     const chave = chavePresencaGestao(fid, diaIso);
@@ -120,8 +127,8 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
       justificativa: atual?.justificativa,
     };
 
-    const ok = await persistirPresencaGestao(fid, diaIso, novo);
-    if (!ok) return false;
+    const result = await persistirPresencaGestao(fid, diaIso, novo);
+    if (!result.ok) return result;
 
     setPresencaGestaoPorChave((prev) => {
       const next = new Map(prev);
@@ -134,7 +141,7 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
       return next;
     });
     setPresencaAlvoModal(null);
-    return true;
+    return { ok: true };
   }, [
     presencaAlvoModal,
     gestaoRelatorioPorChave,
@@ -204,8 +211,12 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
   ]);
 
   const salvarCorrecaoPresenca = useCallback(
-    async (payload: { entrada: string; saida: string; observacao: string }): Promise<boolean> => {
-      if (!presencaAlvoModal) return false;
+    async (payload: {
+      entrada: string;
+      saida: string;
+      observacao: string;
+    }): Promise<{ ok: boolean; semPermissao?: boolean }> => {
+      if (!presencaAlvoModal) return { ok: false };
       const diaIso = toISO(presencaAlvoModal.dia);
       const fid = presencaAlvoModal.funcionarioId;
       const chave = chavePresencaGestao(fid, diaIso);
@@ -234,8 +245,8 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
         },
       };
 
-      const ok = await persistirPresencaGestao(fid, diaIso, novo);
-      if (!ok) return false;
+      const result = await persistirPresencaGestao(fid, diaIso, novo);
+      if (!result.ok) return result;
 
       setPresencaGestaoPorChave((prev) => {
         const next = new Map(prev);
@@ -248,7 +259,7 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
         return next;
       });
       setPresencaAlvoModal(null);
-      return true;
+      return { ok: true };
     },
     [
       presencaAlvoModal,
@@ -352,8 +363,8 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
           statusGestao: "em_analise",
           justificativa,
         };
-        const ok = await persistirPresencaGestao(fid, diaIso, novo);
-        if (!ok) return false;
+        const result = await persistirPresencaGestao(fid, diaIso, novo);
+        if (!result.ok) return false;
         const patchGestao = (prev: Map<string, PresencaDiaGestao>) => {
           const next = new Map(prev);
           next.set(chave, novo);
@@ -397,8 +408,8 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
             analiseStatus: "pendente",
           },
         };
-        const ok = await persistirPresencaGestao(fid, diaIso, novo);
-        if (!ok) return false;
+        const result = await persistirPresencaGestao(fid, diaIso, novo);
+        if (!result.ok) return false;
         const patchGestaoEsq = (prev: Map<string, PresencaDiaGestao>) => {
           const next = new Map(prev);
           next.set(chave, novo);
@@ -422,8 +433,8 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
         observacao: payload.observacao,
       };
       const novo: PresencaDiaGestao = { ...comHistorico, justificativa };
-      const ok = await persistirPresencaGestao(fid, diaIso, novo);
-      if (!ok) return false;
+      const result = await persistirPresencaGestao(fid, diaIso, novo);
+      if (!result.ok) return false;
       const patchGestaoOutro = (prev: Map<string, PresencaDiaGestao>) => {
         const next = new Map(prev);
         next.set(chave, novo);

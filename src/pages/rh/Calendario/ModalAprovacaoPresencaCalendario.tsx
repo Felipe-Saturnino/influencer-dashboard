@@ -41,19 +41,37 @@ function correcaoPresencaIgualRealizado(correcao: string, realizado: string): bo
   return normalizarHorarioPresencaHHMM(correcao) === r;
 }
 
+type PresencaGestaoSaveResult = { ok: boolean; semPermissao?: boolean };
+
 type Props = {
   open: boolean;
   alvo: PresencaTurnoAlvo;
   onClose: () => void;
-  onAprovar: () => boolean | Promise<boolean>;
+  onAprovar: () => boolean | Promise<boolean | PresencaGestaoSaveResult>;
   onSalvarCorrecao: (payload: {
     entrada: string;
     saida: string;
     observacao: string;
-  }) => boolean | Promise<boolean>;
+  }) => boolean | Promise<boolean | PresencaGestaoSaveResult>;
   t: Theme;
   brand: ReturnType<typeof useDashboardBrand>;
 };
+
+const MSG_ERRO_APROVAR =
+  "Não foi possível aprovar o turno. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_APROVAR_PERM =
+  "Você não tem permissão de Editar para aprovar este turno. Peça liberação em Gestão de Usuários → Permissões (Calendário).";
+const MSG_ERRO_CORRECAO =
+  "Não foi possível salvar a correção. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_CORRECAO_PERM =
+  "Você não tem permissão de Editar para corrigir este turno. Peça liberação em Gestão de Usuários → Permissões (Calendário).";
+
+function normalizarResultadoSave(
+  result: boolean | PresencaGestaoSaveResult,
+): PresencaGestaoSaveResult {
+  if (typeof result === "boolean") return { ok: result };
+  return result;
+}
 
 const MONTHS = [
   "Janeiro",
@@ -178,14 +196,20 @@ export function ModalAprovacaoPresencaCalendario({
     }
     setSalvando(true);
     void (async () => {
-      const ok = await Promise.resolve(
-        onSalvarCorrecao({ entrada: ent, saida: sai, observacao: observacao.trim() }),
-      );
-      setSalvando(false);
-      if (!ok) {
-        setErr(
-          "Não foi possível salvar a correção. Se o problema persistir, entre em contato com o suporte.",
+      try {
+        const result = normalizarResultadoSave(
+          await Promise.resolve(
+            onSalvarCorrecao({ entrada: ent, saida: sai, observacao: observacao.trim() }),
+          ),
         );
+        if (!result.ok) {
+          setErr(result.semPermissao ? MSG_ERRO_CORRECAO_PERM : MSG_ERRO_CORRECAO);
+        }
+      } catch (e) {
+        console.error("[ModalAprovacaoPresenca] correção:", e);
+        setErr(MSG_ERRO_CORRECAO);
+      } finally {
+        setSalvando(false);
       }
     })();
   };
@@ -194,12 +218,16 @@ export function ModalAprovacaoPresencaCalendario({
     setErr(null);
     setSalvando(true);
     void (async () => {
-      const ok = await Promise.resolve(onAprovar());
-      setSalvando(false);
-      if (!ok) {
-        setErr(
-          "Não foi possível aprovar o turno. Se o problema persistir, entre em contato com o suporte.",
-        );
+      try {
+        const result = normalizarResultadoSave(await Promise.resolve(onAprovar()));
+        if (!result.ok) {
+          setErr(result.semPermissao ? MSG_ERRO_APROVAR_PERM : MSG_ERRO_APROVAR);
+        }
+      } catch (e) {
+        console.error("[ModalAprovacaoPresenca] aprovação:", e);
+        setErr(MSG_ERRO_APROVAR);
+      } finally {
+        setSalvando(false);
       }
     })();
   };

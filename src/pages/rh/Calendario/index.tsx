@@ -10,6 +10,7 @@ import {
   ClipboardList,
   ClipboardPen,
   Clock,
+  FileDown,
   Loader2,
   MessageSquare,
   Users,
@@ -90,6 +91,11 @@ import {
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
+import {
+  baixarCalendarioCompromissosPdf,
+  type RhCalendarioPdfDia,
+  type RhCalendarioPdfItem,
+} from "../../../lib/rhCalendarioCompromissosPdf";
 import { mesclarGradeComHorarioComercialSintetico, prestadorUsaHorarioComercialSintetico, AREA_KEY_HORARIO_COMERCIAL_SINTETICO } from "../../../lib/overviewPrestadorCalendarioHelpers";
 import { ModalAprovarPresencaMesCalendario } from "./ModalAprovarPresencaMesCalendario";
 import {
@@ -682,6 +688,8 @@ export default function RhCalendarioPage() {
   const [filtroTipoCompromisso, setFiltroTipoCompromisso] = useState<TipoCompromissoCalFiltroValue>("todos");
   const [modalDia, setModalDia] = useState<Date | null>(null);
   const [modalAgendarAberto, setModalAgendarAberto] = useState(false);
+  const [baixandoCalendarioPdf, setBaixandoCalendarioPdf] = useState(false);
+  const [erroCalendarioPdf, setErroCalendarioPdf] = useState<string | null>(null);
 
   const [times, setTimes] = useState<StaffTimeRow[]>([]);
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
@@ -1413,6 +1421,10 @@ export default function RhCalendarioPage() {
   ]);
 
   useEffect(() => {
+    setErroCalendarioPdf(null);
+  }, [current]);
+
+  useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
       setReunioesMesRaw([]);
       return;
@@ -1630,6 +1642,89 @@ export default function RhCalendarioPage() {
       horarioStaffTurnoMesSnap(comp.prestadorId, area),
     );
     return horario ?? "—";
+  }
+
+  /** Monta o mês do PDF com turnos e reuniões do próprio usuário (ignora filtros da grelha). */
+  function montarDiasPdfMeuCalendario(): RhCalendarioPdfDia[] {
+    const fid = meuRhFuncionarioId;
+    if (!fid) return [];
+    const y = current.getFullYear();
+    const m = current.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    const nome = (nomePrestadorPorId.get(fid) ?? user?.name ?? "").trim() || "—";
+    const out: RhCalendarioPdfDia[] = [];
+
+    for (let d = 1; d <= last; d++) {
+      const iso = toISO(new Date(y, m, d));
+      const itens: RhCalendarioPdfItem[] = [];
+      const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+      const turno = turnoExibicaoDeValorCelulaEscala(valorG ?? "");
+      if (turno) {
+        const horario = horarioSubtituloParaCompromissoCal(
+          { prestadorId: fid, nome, turno },
+          iso,
+        );
+        itens.push({
+          categoria: "Turno",
+          texto: turno,
+          detalhe: horario,
+        });
+      } else {
+        const situacao = situacaoGestaoEscalaParaDia(valorG);
+        if (situacao === "Folga") {
+          itens.push({ categoria: "Situação", texto: "Folga" });
+        } else if (situacao && situacao !== "—") {
+          itens.push({ categoria: "Situação", texto: situacao });
+        }
+      }
+
+      for (const row of reunioesMesRaw) {
+        if (row.solicitante_funcionario_id !== fid) continue;
+        if (isoChaveDiaReuniaoRpc(row.dia_iso as string | Date | undefined) !== iso) continue;
+        const isReuniaoRh = ehReuniaoComRh(row.reuniao_com) && row.solicitacao_status;
+        if (isReuniaoRh) {
+          itens.push({
+            categoria: "Reunião",
+            texto: tituloChipReuniaoRhCalendario(row.solicitacao_status),
+            detalhe: (row.turno ?? "").trim() || undefined,
+          });
+        } else {
+          const comQuem =
+            ((row.reuniao_com_label ?? "").trim() || labelReuniaoCom(row.reuniao_com ?? "")).trim() ||
+            "—";
+          itens.push({
+            categoria: "Reunião",
+            texto: `Reunião (${comQuem})`,
+            detalhe: (row.turno ?? "").trim() || undefined,
+          });
+        }
+      }
+
+      if (itens.length > 0) out.push({ diaIso: iso, itens });
+    }
+    return out;
+  }
+
+  async function onBaixarCalendarioPdf() {
+    const fid = meuRhFuncionarioId;
+    if (!fid || baixandoCalendarioPdf) return;
+    setErroCalendarioPdf(null);
+    setBaixandoCalendarioPdf(true);
+    try {
+      const nome = (nomePrestadorPorId.get(fid) ?? user?.name ?? "").trim() || "Usuário";
+      await baixarCalendarioCompromissosPdf({
+        nomePessoa: nome,
+        mesLabel: `${MONTHS[current.getMonth()]} ${current.getFullYear()}`,
+        dias: montarDiasPdfMeuCalendario(),
+      });
+    } catch (e) {
+      console.error("[Calendario] PDF:", e);
+      setErroCalendarioPdf(
+        "Não foi possível baixar o calendário. Se o problema persistir, entre em contato com o suporte.",
+      );
+    } finally {
+      setBaixandoCalendarioPdf(false);
+    }
   }
 
   function obterEntradaSaidaDiaCal(
@@ -2327,19 +2422,21 @@ export default function RhCalendarioPage() {
     !mesPresencaFuturo &&
     (!mesPresencaFechado || exibirCheckInMesFechadoExcecao);
 
+  const podeGerirPresencaStaff = useCallback(
+    (fid: string | undefined | null) => {
+      if (!fid) return false;
+      if (isAdminPresenca || perm.canEditar === "sim") return true;
+      if (perm.canEditar !== "proprios") return false;
+      return funcionariosGerenciaveisIds.has(fid);
+    },
+    [isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds],
+  );
+
   const podeAprovarPresencaMes = useMemo(() => {
     const fid = presencaFilterStaffIds[0];
     if (!fid || !mesPresencaFechado) return false;
-    if (perm.canEditar === "nao") return false;
-    if (perm.canEditar === "sim" || isAdminPresenca) return true;
-    return funcionariosGerenciaveisIds.has(fid);
-  }, [
-    presencaFilterStaffIds,
-    mesPresencaFechado,
-    perm.canEditar,
-    isAdminPresenca,
-    funcionariosGerenciaveisIds,
-  ]);
+    return podeGerirPresencaStaff(fid);
+  }, [presencaFilterStaffIds, mesPresencaFechado, podeGerirPresencaStaff]);
 
   const linhasAprovacaoPresencaMes = useMemo((): PresencaMesAprovacaoLinha[] => {
     const fid = presencaFilterStaffIds[0];
@@ -2513,7 +2610,15 @@ export default function RhCalendarioPage() {
         gestao: gestaoDia,
       };
       const st = resolverStatusPresencaLinha(paramsPresencaLinha);
-      const acoesLinha = resolverAcoesPresencaLinha(paramsPresencaLinha);
+      const acoesBase = resolverAcoesPresencaLinha(paramsPresencaLinha);
+      const podeAcao = podeGerirPresencaStaff(fid);
+      const acoesLinha: typeof acoesBase = !podeAcao
+        ? {
+            acaoPrimaria: null,
+            mostrarHistorico: acoesBase.mostrarHistorico,
+            mostrarTravessaoAcoes: !acoesBase.mostrarHistorico,
+          }
+        : acoesBase;
       const correcao = gestaoDia?.correcao;
       const exibirIndicadorMedico = presencaJustificativaMedicoExibirIndicador(gestaoDia, iso, situacao);
       const justificativaMedico =
@@ -2533,7 +2638,7 @@ export default function RhCalendarioPage() {
       const podeAnalisarCorrecao = Boolean(
         correcao &&
           presencaCorrecaoAnaliseStatusEfetivo(correcao) === "pendente" &&
-          (perm.canEditar === "sim" || isAdminPresenca || funcionariosGerenciaveisIds.has(fid)),
+          podeGerirPresencaStaff(fid),
       );
       out.push({
         funcionarioId: fid,
@@ -2581,9 +2686,7 @@ export default function RhCalendarioPage() {
     mapOpTurnos,
     pontoRelatorioPorFid,
     gestaoRelatorioPorChave,
-    perm.canEditar,
-    funcionariosGerenciaveisIds,
-    isAdminPresenca,
+    podeGerirPresencaStaff,
   ]);
 
   const linhasRelatorioPresencaOrdenadas = useMemo(
@@ -2827,6 +2930,44 @@ export default function RhCalendarioPage() {
             </div>
 
             <div className="app-marketplace-filtro-minhas__cta" style={{ gap: 10 }}>
+              {abaPrincipal === "compromissos" && meuRhFuncionarioId ? (
+                <button
+                  type="button"
+                  onClick={() => void onBaixarCalendarioPdf()}
+                  disabled={baixandoCalendarioPdf || loadingEscala || loadingStaff}
+                  aria-label="Download do calendário em PDF"
+                  title="Download do calendário em PDF"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "10px 20px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor:
+                      baixandoCalendarioPdf || loadingEscala || loadingStaff ? "not-allowed" : "pointer",
+                    opacity: baixandoCalendarioPdf || loadingEscala || loadingStaff ? 0.7 : 1,
+                  }}
+                >
+                  {baixandoCalendarioPdf ? (
+                    <Loader2
+                      size={14}
+                      className="app-lucide-spin"
+                      aria-hidden="true"
+                      color="var(--brand-primary, #7c3aed)"
+                    />
+                  ) : (
+                    <FileDown size={14} aria-hidden="true" />
+                  )}
+                  {baixandoCalendarioPdf ? "Gerando…" : "Download"}
+                </button>
+              ) : null}
               {abaPrincipal === "compromissos" && solicitanteAgendarId ? (
                 <CtaCriarButton type="button" onClick={() => setModalAgendarAberto(true)} aria-label="Nova Agenda">
                   Nova Agenda
@@ -2897,6 +3038,23 @@ export default function RhCalendarioPage() {
               ) : null}
             </div>
           </div>
+
+          {abaPrincipal === "compromissos" && erroCalendarioPdf ? (
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{
+                marginTop: 10,
+                width: "100%",
+                textAlign: "center",
+                color: "#e84025",
+                fontSize: 12,
+                fontFamily: FONT.body,
+              }}
+            >
+              {erroCalendarioPdf}
+            </div>
+          ) : null}
 
           {abaPrincipal === "compromissos" && temLimparFiltrosCompromissos ? (
             <div style={filterBarSection(true)}>
@@ -3411,10 +3569,17 @@ export default function RhCalendarioPage() {
                       const podeAnalisarCorrecao = Boolean(
                         correcao &&
                           presencaCorrecaoAnaliseStatusEfetivo(correcao) === "pendente" &&
-                          (perm.canEditar === "sim" ||
-                            isAdminPresenca ||
-                            funcionariosGerenciaveisIds.has(fid)),
+                          podeGerirPresencaStaff(fid),
                       );
+                      const podeAcaoPresencaLinha = podeGerirPresencaStaff(fid);
+                      const mostrarAprovarTurno =
+                        acoesLinha.acaoPrimaria === "aprovar" && podeAcaoPresencaLinha;
+                      const mostrarJustificarPresenca =
+                        acoesLinha.acaoPrimaria === "justificar" && podeAcaoPresencaLinha;
+                      const semAcaoPresencaVisivel =
+                        !mostrarAprovarTurno &&
+                        !mostrarJustificarPresenca &&
+                        !acoesLinha.mostrarHistorico;
                       const acoesCellInner: CSSProperties = {
                         display: "flex",
                         alignItems: "center",
@@ -3536,13 +3701,13 @@ export default function RhCalendarioPage() {
                           <td style={dataTable.tdCenter}>{st}</td>
                           <td style={{ ...dataTable.tdCenter, verticalAlign: "middle" }}>
                             <div style={acoesCellInner}>
-                              {acoesLinha.mostrarTravessaoAcoes ? (
+                              {acoesLinha.mostrarTravessaoAcoes || semAcaoPresencaVisivel ? (
                                 <span style={{ lineHeight: "32px" }} aria-hidden="true">
                                   —
                                 </span>
                               ) : (
                                 <>
-                                  {acoesLinha.acaoPrimaria === "aprovar" ? (
+                                  {mostrarAprovarTurno ? (
                                     <BtnIconeAcaoLinha
                                       label={tooltipAcao("APROVAÇÃO DE TURNO")}
                                       onClick={() => {
@@ -3563,7 +3728,7 @@ export default function RhCalendarioPage() {
                                       <Check size={14} aria-hidden="true" />
                                     </BtnIconeAcaoLinha>
                                   ) : null}
-                                  {acoesLinha.acaoPrimaria === "justificar" ? (
+                                  {mostrarJustificarPresenca ? (
                                     <BtnIconeAcaoLinha
                                       label={tooltipAcao("Justificar")}
                                       onClick={() =>

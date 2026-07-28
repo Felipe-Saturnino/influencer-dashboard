@@ -82,6 +82,7 @@ import {
   linhaColaboradorNoFiltroTurnoConsolidado,
   linhaComTurnoMesArea,
   mapAlteracoesUltimasPorCelula,
+  mapaCelulasFromGradeCarregarPayload,
   mapLinhaPrestador,
   mapTurnoMesRowsParaEstado,
   mesclarCelulasEscritorioComPadrao,
@@ -103,7 +104,6 @@ import {
   type GradeStatusMetaDb,
   type RpcAlteracaoUltimaRow,
   type RpcGradeAprovarResult,
-  type RpcGradeCarregarRow,
   type RpcGradeMetaRow,
   type RpcGradeResetarResult,
   type RpcGradeSalvarResult,
@@ -392,14 +392,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       const alteracoesPorArea: Record<string, Record<string, EscalaAlteracaoCelulaMeta>> = {};
       for (const { areaKey, gradeRes, alterRes } of results) {
         if (!gradeRes.error) {
-          const rows = (gradeRes.data ?? []) as RpcGradeCarregarRow[];
-          const fromDb: Record<string, string> = {};
-          for (const row of rows) {
-            const isoRaw = row.dia_iso;
-            const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
-            fromDb[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
-          }
-          fromDbPorArea[areaKey] = fromDb;
+          fromDbPorArea[areaKey] = mapaCelulasFromGradeCarregarPayload(gradeRes.data);
         }
         if (!alterRes.error && alterRes.data) {
           alteracoesPorArea[areaKey] = mapAlteracoesUltimasPorCelula(alterRes.data as RpcAlteracaoUltimaRow[]);
@@ -475,7 +468,10 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           const aprovadaNaBase = statusGradeDb === "aprovada";
           const cur = next[ak];
           if (!fromDb && !meta) continue;
-          const merged = { ...(cur?.celulas ?? {}), ...(fromDb ?? {}) };
+          /** Grade aprovada: base é a fonte da verdade (evita localStorage mascarar truncamento antigo). */
+          const merged = aprovadaNaBase
+            ? { ...(fromDb ?? {}) }
+            : { ...(cur?.celulas ?? {}), ...(fromDb ?? {}) };
           const linhasF = filtrarPorArea(prestadoresRaw, ak).map((r) =>
             linhaComTurnoMesArea(r, ak, aprovadaNaBase, turnoMapAtual),
           );
@@ -672,14 +668,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           p_ref_mes: refPrev,
           p_area_key: areaKey,
         });
-        if (!error && data && (data as RpcGradeCarregarRow[]).length > 0) {
-          const m: Record<string, string> = {};
-          for (const row of data as RpcGradeCarregarRow[]) {
-            const isoRaw = row.dia_iso;
-            const iso = typeof isoRaw === "string" ? isoRaw.slice(0, 10) : String(isoRaw).slice(0, 10);
-            m[chaveCelulaGerar(row.funcionario_id, iso)] = (row.valor ?? "").trim();
-          }
-          celulasMesAnterior = m;
+        if (!error && data) {
+          const m = mapaCelulasFromGradeCarregarPayload(data);
+          if (Object.keys(m).length > 0) celulasMesAnterior = m;
         }
       }
 
@@ -1144,7 +1135,10 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   useEffect(() => {
     if (filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS || filtroArea !== "game_presenter") {
       setConsolidadoTurnoExpandido({});
+      return;
     }
+    /** Com Todos Estúdios + Game Presenter, deixa Manhã expandida para o drilldown ficar óbvio. */
+    setConsolidadoTurnoExpandido({ manha: true });
   }, [filtroEstudioEscalaEfetivo, filtroArea]);
 
   const alternarFiltroTurnoConsolidado = useCallback((k: FiltroTurnoConsolidadoRh) => {
@@ -1246,20 +1240,23 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   title={expandido ? "Recolher por estúdio" : "Ver por estúdio"}
                   onClick={() => alternarExpandConsolidadoTurno(turnoKey)}
                   style={{
-                    flex: "0 0 32px",
+                    flex: "0 0 40px",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    gap: 2,
                     border: "none",
                     borderLeft: filtroTurnoConsolidado === turnoKey ? `3px solid ${brand.accent}` : "3px solid transparent",
-                    background: "transparent",
-                    color: t.textMuted,
+                    background: expandido
+                      ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                      : "transparent",
+                    color: brand.accent ?? t.text,
                     cursor: "pointer",
                     padding: 0,
                   }}
                 >
                   <ChevronRight
-                    size={14}
+                    size={16}
                     aria-hidden
                     style={{
                       transform: expandido ? "rotate(90deg)" : "none",
@@ -1359,18 +1356,27 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const semColunaNome =
     modo !== "escritorio" && (filtroArea === "service_manager" || filtroArea === "shift_leader");
   /** Academy e Escritório: sem coluna Nickname. */
-  const semColunaNickname = modo === "escritorio" || filtroArea === "academy";
+  const semColunaNickname =
+    modo === "escritorio" ||
+    filtroArea === "academy" ||
+    labelAreaEscala(filtroArea, abasTimes).toLowerCase() === "academy";
   /** Escala Escritório: sem Nickname e sem Turno. */
   const semColunaTurno = modo === "escritorio";
   const semColunasNickTurno = semColunaNickname && semColunaTurno;
-  const stickyLeftNick = semColunaNome ? 0 : STICKY_W_NOME;
+  /** Overlap entre sticky — fecha o vão no zoom CSS da plataforma. */
+  const STICKY_OVERLAP_PX = 2;
+  const stickyLeftNick = semColunaNome ? 0 : STICKY_W_NOME - STICKY_OVERLAP_PX;
   const stickyLeftTurno =
-    (semColunaNome ? 0 : STICKY_W_NOME) + (semColunaNickname ? 0 : STICKY_W_NICK);
+    (semColunaNome ? 0 : STICKY_W_NOME) +
+    (semColunaNickname ? 0 : STICKY_W_NICK) -
+    STICKY_OVERLAP_PX * (semColunaNome ? 0 : 1) -
+    STICKY_OVERLAP_PX * (semColunaNickname ? 0 : 1);
   const colunasFixasEscalaDiaria =
     (semColunaNome ? 0 : 1) + (semColunaNickname ? 0 : 1) + (semColunaTurno ? 0 : 1);
-  /** Selo opaco na borda direita da sticky — evita o cabeçalho de dias vazar no vão entre colunas. */
+  /** Selo opaco + overlap — evita cabeçalho de dias no vão (zoom da plataforma). */
   const seloStickyDireita = (bg: string): CSSProperties => ({
-    boxShadow: `1px 0 0 0 ${bg}`,
+    boxShadow: `${STICKY_OVERLAP_PX}px 0 0 0 ${bg}`,
+    borderRight: `1px solid ${bg}`,
   });
   const fundoStickyCabecalho = brand.blockBg ?? t.cardBg ?? t.bg ?? "#fff";
 
@@ -1580,7 +1586,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 <SectionTitle
                   sub={
                     resumoTurnoDias.drilldownPorEstudio
-                      ? "clique no turno para filtrar · seta para ver por estúdio"
+                      ? "clique no turno para filtrar · use a seta para expandir por estúdio (Todos Estúdios)"
                       : "clique num turno para filtrar a Escala Diária"
                   }
                 >

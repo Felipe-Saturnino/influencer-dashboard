@@ -39,7 +39,14 @@ export function staffUiTimeShufflerOcultarBioFotosVer(nomeTime: string): boolean
  */
 export function staffUiTimeEstudioForcadoTodos(nomeTime: string): boolean {
   const n = normStaffNomeTimeUi(nomeTime);
-  return n === "service manager" || n === "shift leader" || n === "shuffler";
+  return (
+    n === "service manager" ||
+    n === "shift leader" ||
+    n === "shuffler" ||
+    n.startsWith("service manager ") ||
+    n.startsWith("shift leader ") ||
+    n.startsWith("shuffler ")
+  );
 }
 
 /** Oculta coluna/campo Estúdio na Gestão de Staff (modais e tabela time a time). */

@@ -54,9 +54,11 @@ import {
   FILTRO_STAFF_ESTUDIO_TODOS,
   primeiraOperadoraDoEstudio,
   staffEstudioSlugEfetivo,
+  staffEstudioSlugsFromRow,
   staffEstudioSlugsForEditUi,
   staffEstudioLabel,
   staffEstudioLabelFromRow,
+  staffEstudioAtendeTodos,
   normalizeStaffEstudioSlugsForSave,
   STAFF_ESTUDIO_CADASTRO_TODOS,
   staffEstudioSlugPrimarioParaSync,
@@ -668,17 +670,72 @@ export default function RhGestaoStaffPage() {
     return m;
   }, [times]);
 
+  const idsStaffEstudioForcarTodos = useMemo(() => {
+    if (loadingPrestadores || prestadores.length === 0 || nomePorTimeId.size === 0) return "";
+    return prestadores
+      .filter((row) => {
+        const nomeTime = row.org_time_id ? nomePorTimeId.get(row.org_time_id) ?? "" : "";
+        if (!staffUiTimeEstudioForcadoTodos(nomeTime)) return false;
+        return !staffEstudioAtendeTodos(staffEstudioSlugsFromRow(row, opParaEstudio));
+      })
+      .map((r) => r.id)
+      .sort()
+      .join(",");
+  }, [loadingPrestadores, prestadores, nomePorTimeId, opParaEstudio]);
+
+  /** SM / SL / Shuffler: grava Estúdio = Todos Estúdios quando o cadastro ainda estiver diferente. */
+  useEffect(() => {
+    if (!perm.canEditarOk || !idsStaffEstudioForcarTodos) return;
+    const ids = idsStaffEstudioForcarTodos.split(",").filter(Boolean);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      const { error } = await supabase
+        .from("rh_funcionarios")
+        .update({
+          staff_estudio_slugs: [STAFF_ESTUDIO_CADASTRO_TODOS],
+          staff_estudio_slug: null,
+          staff_operadora_slug: null,
+        })
+        .in("id", ids);
+      if (cancelled || error) return;
+      setPrestadores((lista) =>
+        lista.map((p) =>
+          ids.includes(p.id)
+            ? {
+                ...p,
+                staff_estudio_slugs: [STAFF_ESTUDIO_CADASTRO_TODOS],
+                staff_estudio_slug: null,
+                staff_operadora_slug: null,
+              }
+            : p,
+        ),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.canEditarOk, idsStaffEstudioForcarTodos]);
+
   /** Vista time a time: tabela sem coluna Estúdio e com Horário do Turno (times de serviço). */
   const layoutTabelaSemEstudioComHorario = useMemo(() => {
     if (todosTimes || !times[idxTime]) return false;
-    return staffUiTimeSemOperadoraHorarioModaisRestritos(times[idxTime]!.nome);
+    const nome = times[idxTime]!.nome;
+    /** SM / SL / Shuffler: mostrar Estúdio = Todos Estúdios (não ocultar a coluna). */
+    if (staffUiTimeEstudioForcadoTodos(nome)) return false;
+    return staffUiTimeSemOperadoraHorarioModaisRestritos(nome);
   }, [todosTimes, times, idxTime]);
 
-  /** Vista time a time: oculta coluna Estúdio sem substituir por Horário do Turno (ex.: Shuffler). */
+  /** Vista time a time: oculta coluna Estúdio sem substituir por Horário do Turno (ex.: outros). */
   const layoutTabelaOcultarColunaEstudio = useMemo(() => {
     if (todosTimes || !times[idxTime]) return false;
-    return staffUiTimeOcultarEstudio(times[idxTime]!.nome) && !layoutTabelaSemEstudioComHorario;
+    const nome = times[idxTime]!.nome;
+    if (staffUiTimeEstudioForcadoTodos(nome)) return false;
+    return staffUiTimeOcultarEstudio(nome) && !layoutTabelaSemEstudioComHorario;
   }, [todosTimes, times, idxTime, layoutTabelaSemEstudioComHorario]);
+
+  const timeAtualForcaTodosEstudio =
+    !todosTimes && times[idxTime] ? staffUiTimeEstudioForcadoTodos(times[idxTime]!.nome) : false;
 
   const colSpanTabelaStaff =
     9 + (layoutTabelaSemEstudioComHorario || !layoutTabelaOcultarColunaEstudio ? 1 : 0);
@@ -1083,11 +1140,15 @@ export default function RhGestaoStaffPage() {
                 </tr>
               ) : (
                 linhasTabelaOrdenadas.map((row, i) => {
-                  const estudioNome = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
                   const nomeTime =
                     row.org_time_id && nomePorTimeId.has(row.org_time_id)
                       ? nomePorTimeId.get(row.org_time_id) ?? "—"
                       : "—";
+                  const forcaTodosEstudio =
+                    timeAtualForcaTodosEstudio || staffUiTimeEstudioForcadoTodos(nomeTime);
+                  const estudioNome = forcaTodosEstudio
+                    ? "Todos Estúdios"
+                    : staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
                   return (
                     <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
                       <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.nome}>

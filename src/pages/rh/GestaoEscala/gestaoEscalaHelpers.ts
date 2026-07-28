@@ -168,6 +168,40 @@ export type RpcGradeCarregarRow = {
   valor: string | null;
 };
 
+/** Aceita jsonb (array) ou legado SETOF/TABLE — evita truncar ~1000 linhas no PostgREST. */
+export function parseRhGestaoEscalaGradeCarregarPayload(data: unknown): RpcGradeCarregarRow[] {
+  let payload: unknown = data;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(payload)) return [];
+  const out: RpcGradeCarregarRow[] = [];
+  for (const item of payload) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    const funcionario_id = String(r.funcionario_id ?? "").trim();
+    if (!funcionario_id) continue;
+    const diaRaw = r.dia_iso;
+    const dia_iso =
+      typeof diaRaw === "string"
+        ? diaRaw.slice(0, 10)
+        : diaRaw instanceof Date
+          ? diaRaw.toISOString().slice(0, 10)
+          : String(diaRaw ?? "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dia_iso)) continue;
+    out.push({
+      funcionario_id,
+      dia_iso,
+      valor: r.valor == null ? null : String(r.valor),
+    });
+  }
+  return out;
+}
+
 export type RpcGradeSalvarResult = {
   ok?: boolean;
   error?: string;
@@ -220,6 +254,15 @@ export function mapAlteracoesUltimasPorCelula(rows: RpcAlteracaoUltimaRow[]): Re
 
 export function chaveCelulaGerar(rowId: string, iso: string): string {
   return `${rowId}|${iso}`;
+}
+
+/** Mapa `funcionarioId|YYYY-MM-DD` → valor a partir do payload da RPC `grade_carregar`. */
+export function mapaCelulasFromGradeCarregarPayload(data: unknown): Record<string, string> {
+  const fromDb: Record<string, string> = {};
+  for (const row of parseRhGestaoEscalaGradeCarregarPayload(data)) {
+    fromDb[chaveCelulaGerar(row.funcionario_id, row.dia_iso)] = (row.valor ?? "").trim();
+  }
+  return fromDb;
 }
 
 export function celulasIguais(a: Record<string, string>, b: Record<string, string>): boolean {
