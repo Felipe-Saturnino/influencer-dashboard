@@ -2,6 +2,8 @@
 -- Pré-requisito: cockpit já aplicado (20261028120000 / escala_rotacao_cockpit.sql).
 -- Idempotente: só CREATE OR REPLACE da RPC + GRANT.
 -- Colar no SQL Editor do Supabase.
+-- Esta é a revisão canónica da RPC (após cockpit). Não reaplicar
+-- escala_rotacao_supabase.sql nem escala_rotacao_contexto_shift_lead.sql depois.
 
 BEGIN;
 

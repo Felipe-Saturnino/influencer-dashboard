@@ -106,21 +106,37 @@ export async function carregarPontoRegistrosDiaLote(
   return { mapa, error: false };
 }
 
+export type SalvarPresencaGestaoResultado = {
+  ok: boolean;
+  /** true quando a RPC negou por escopo/permissão de Editar */
+  semPermissao?: boolean;
+};
+
+function isErroPermissaoPresencaGestao(message: string | undefined): boolean {
+  const m = (message ?? "").toLowerCase();
+  return m.includes("sem permissão") || m.includes("permission denied") || m.includes("42501");
+}
+
 export async function salvarPresencaGestaoDia(
   supabase: SupabaseClient,
   funcionarioId: string,
   diaIso: string,
   gestao: PresencaDiaGestao,
-): Promise<{ ok: boolean }> {
+): Promise<SalvarPresencaGestaoResultado> {
+  const historico = Array.isArray(gestao.historico) ? gestao.historico : [];
   const { error } = await supabase.rpc("rh_calendario_presenca_gestao_salvar", {
     p_funcionario_id: funcionarioId,
     p_dia_iso: diaIso,
     p_status_gestao: gestao.statusGestao ?? null,
     p_correcao: gestao.correcao ?? null,
     p_justificativa: gestao.justificativa ?? null,
-    p_historico: gestao.historico ?? [],
+    p_historico: historico,
   });
-  return { ok: !error };
+  if (error) {
+    console.error("[rhCalendarioPresencaGestao] salvar:", error.message, error);
+    return { ok: false, semPermissao: isErroPermissaoPresencaGestao(error.message) };
+  }
+  return { ok: true };
 }
 
 /** Aprovação mensal: 1 RPC para vários dias (evita N+1 de `salvarPresencaGestaoDia`). */
@@ -128,7 +144,7 @@ export async function salvarPresencaGestaoDiaLote(
   supabase: SupabaseClient,
   funcionarioId: string,
   itens: Array<{ diaIso: string; gestao: PresencaDiaGestao }>,
-): Promise<{ ok: boolean }> {
+): Promise<SalvarPresencaGestaoResultado> {
   if (itens.length === 0) return { ok: true };
   const { error } = await supabase.rpc("rh_calendario_presenca_gestao_salvar_lote", {
     p_funcionario_id: funcionarioId,
@@ -137,12 +153,12 @@ export async function salvarPresencaGestaoDiaLote(
       status_gestao: gestao.statusGestao ?? null,
       correcao: gestao.correcao ?? null,
       justificativa: gestao.justificativa ?? null,
-      historico: gestao.historico ?? [],
+      historico: Array.isArray(gestao.historico) ? gestao.historico : [],
     })),
   });
   if (error) {
-    console.error("[rhCalendarioPresencaGestao] salvar_lote:", error);
-    return { ok: false };
+    console.error("[rhCalendarioPresencaGestao] salvar_lote:", error.message, error);
+    return { ok: false, semPermissao: isErroPermissaoPresencaGestao(error.message) };
   }
   return { ok: true };
 }

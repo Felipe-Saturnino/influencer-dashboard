@@ -112,7 +112,20 @@ export function staffEstudioLabelFromRow(
 export function normalizeStaffEstudioSlugsForSave(slugs: readonly string[]): string[] {
   const trimmed = slugs.map((s) => s.trim()).filter(Boolean);
   if (trimmed.includes(STAFF_ESTUDIO_CADASTRO_TODOS)) return [STAFF_ESTUDIO_CADASTRO_TODOS];
-  return [...new Set(trimmed)];
+  const unique = [...new Set(trimmed)];
+  /** Cadastro Staff: no máximo um estúdio específico (ou Todos). */
+  return unique.length > 0 ? [unique[0]!] : [];
+}
+
+/** Valor inicial do modal de edição: Todos ou o primeiro slug (legado multi → um). */
+export function staffEstudioSlugsForEditUi(
+  row: StaffEstudioVinculo,
+  opParaEstudio: Record<string, string>,
+): string[] {
+  const all = staffEstudioSlugsFromRow(row, opParaEstudio);
+  if (all.length === 0) return [];
+  if (staffEstudioAtendeTodos(all)) return [STAFF_ESTUDIO_CADASTRO_TODOS];
+  return [all[0]!];
 }
 
 export function staffEstudioSlugPrimarioParaSync(slugs: readonly string[]): string | null {

@@ -1,5 +1,11 @@
 -- Rotação cockpit: alocação do dia, pool com estúdio efetivo, prévias rascunho.
 -- Aplicar no SQL Editor do Supabase (Git ≠ migrations não faz deploy automático).
+--
+-- Ordem canónica da RPC escala_rotacao_contexto_dia:
+--   1) Este ficheiro (cockpit)
+--   2) docs/sql/escala_rotacao_incluir_lideranca.sql (última revisão — liderancas)
+-- NÃO reaplicar depois: escala_rotacao_supabase.sql nem escala_rotacao_contexto_shift_lead.sql
+-- (CREATE OR REPLACE antigo → downgrade silencioso da RPC).
 
 BEGIN;
 

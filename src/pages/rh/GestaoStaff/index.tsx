@@ -55,9 +55,12 @@ import {
   primeiraOperadoraDoEstudio,
   staffEstudioSlugEfetivo,
   staffEstudioSlugsFromRow,
+  staffEstudioSlugsForEditUi,
   staffEstudioLabel,
   staffEstudioLabelFromRow,
+  staffEstudioAtendeTodos,
   normalizeStaffEstudioSlugsForSave,
+  STAFF_ESTUDIO_CADASTRO_TODOS,
   staffEstudioSlugPrimarioParaSync,
   staffRowPassaFiltroEstudio,
 } from "./gestaoStaffEstudioHelpers";
@@ -70,6 +73,7 @@ import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 import {
   calcularResumoStaffCards,
+  staffUiTimeEstudioForcadoTodos,
   staffUiTimeOcultarEstudio,
   staffUiTimeSemOperadoraHorarioModaisRestritos,
   staffUiTimeShufflerOcultarBioFotosVer,
@@ -666,17 +670,72 @@ export default function RhGestaoStaffPage() {
     return m;
   }, [times]);
 
+  const idsStaffEstudioForcarTodos = useMemo(() => {
+    if (loadingPrestadores || prestadores.length === 0 || nomePorTimeId.size === 0) return "";
+    return prestadores
+      .filter((row) => {
+        const nomeTime = row.org_time_id ? nomePorTimeId.get(row.org_time_id) ?? "" : "";
+        if (!staffUiTimeEstudioForcadoTodos(nomeTime)) return false;
+        return !staffEstudioAtendeTodos(staffEstudioSlugsFromRow(row, opParaEstudio));
+      })
+      .map((r) => r.id)
+      .sort()
+      .join(",");
+  }, [loadingPrestadores, prestadores, nomePorTimeId, opParaEstudio]);
+
+  /** SM / SL / Shuffler: grava Estúdio = Todos Estúdios quando o cadastro ainda estiver diferente. */
+  useEffect(() => {
+    if (!perm.canEditarOk || !idsStaffEstudioForcarTodos) return;
+    const ids = idsStaffEstudioForcarTodos.split(",").filter(Boolean);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      const { error } = await supabase
+        .from("rh_funcionarios")
+        .update({
+          staff_estudio_slugs: [STAFF_ESTUDIO_CADASTRO_TODOS],
+          staff_estudio_slug: null,
+          staff_operadora_slug: null,
+        })
+        .in("id", ids);
+      if (cancelled || error) return;
+      setPrestadores((lista) =>
+        lista.map((p) =>
+          ids.includes(p.id)
+            ? {
+                ...p,
+                staff_estudio_slugs: [STAFF_ESTUDIO_CADASTRO_TODOS],
+                staff_estudio_slug: null,
+                staff_operadora_slug: null,
+              }
+            : p,
+        ),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.canEditarOk, idsStaffEstudioForcarTodos]);
+
   /** Vista time a time: tabela sem coluna Estúdio e com Horário do Turno (times de serviço). */
   const layoutTabelaSemEstudioComHorario = useMemo(() => {
     if (todosTimes || !times[idxTime]) return false;
-    return staffUiTimeSemOperadoraHorarioModaisRestritos(times[idxTime]!.nome);
+    const nome = times[idxTime]!.nome;
+    /** SM / SL / Shuffler: mostrar Estúdio = Todos Estúdios (não ocultar a coluna). */
+    if (staffUiTimeEstudioForcadoTodos(nome)) return false;
+    return staffUiTimeSemOperadoraHorarioModaisRestritos(nome);
   }, [todosTimes, times, idxTime]);
 
-  /** Vista time a time: oculta coluna Estúdio sem substituir por Horário do Turno (ex.: Shuffler). */
+  /** Vista time a time: oculta coluna Estúdio sem substituir por Horário do Turno (ex.: outros). */
   const layoutTabelaOcultarColunaEstudio = useMemo(() => {
     if (todosTimes || !times[idxTime]) return false;
-    return staffUiTimeOcultarEstudio(times[idxTime]!.nome) && !layoutTabelaSemEstudioComHorario;
+    const nome = times[idxTime]!.nome;
+    if (staffUiTimeEstudioForcadoTodos(nome)) return false;
+    return staffUiTimeOcultarEstudio(nome) && !layoutTabelaSemEstudioComHorario;
   }, [todosTimes, times, idxTime, layoutTabelaSemEstudioComHorario]);
+
+  const timeAtualForcaTodosEstudio =
+    !todosTimes && times[idxTime] ? staffUiTimeEstudioForcadoTodos(times[idxTime]!.nome) : false;
 
   const colSpanTabelaStaff =
     9 + (layoutTabelaSemEstudioComHorario || !layoutTabelaOcultarColunaEstudio ? 1 : 0);
@@ -1081,11 +1140,15 @@ export default function RhGestaoStaffPage() {
                 </tr>
               ) : (
                 linhasTabelaOrdenadas.map((row, i) => {
-                  const estudioNome = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
                   const nomeTime =
                     row.org_time_id && nomePorTimeId.has(row.org_time_id)
                       ? nomePorTimeId.get(row.org_time_id) ?? "—"
                       : "—";
+                  const forcaTodosEstudio =
+                    timeAtualForcaTodosEstudio || staffUiTimeEstudioForcadoTodos(nomeTime);
+                  const estudioNome = forcaTodosEstudio
+                    ? "Todos Estúdios"
+                    : staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
                   return (
                     <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
                       <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.nome}>
@@ -1156,6 +1219,7 @@ export default function RhGestaoStaffPage() {
           row={modalVer}
           estudiosNome={estudiosNome}
           opParaEstudio={opParaEstudio}
+          nomeTimeOrganograma={modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : ""}
           dadosFuncaoOcultarEstudio={staffUiTimeOcultarEstudio(
             modalVer.org_time_id ? nomePorTimeId.get(modalVer.org_time_id) ?? "" : "",
           )}
@@ -1213,6 +1277,7 @@ function ModalStaffVer({
   row,
   estudiosNome,
   opParaEstudio,
+  nomeTimeOrganograma = "",
   dadosFuncaoOcultarEstudio = false,
   dadosFuncaoOcultarBioFotos = false,
   exibirAbaHistorico = true,
@@ -1222,7 +1287,8 @@ function ModalStaffVer({
   row: RhFuncionario;
   estudiosNome: Record<string, string>;
   opParaEstudio: Record<string, string>;
-  /** Times sem Estúdio na aba Função (serviço, Shuffler, …). */
+  nomeTimeOrganograma?: string;
+  /** Times sem Estúdio na aba Função (serviço, Shuffler, …) — exceto forçados a Todos Estúdios. */
   dadosFuncaoOcultarEstudio?: boolean;
   /** Shuffler e times de serviço — oculta bio/fotos do dealer. */
   dadosFuncaoOcultarBioFotos?: boolean;
@@ -1231,6 +1297,7 @@ function ModalStaffVer({
   onClose: () => void;
   t: ReturnType<typeof useApp>["theme"];
 }) {
+  const estudioForcadoTodos = staffUiTimeEstudioForcadoTodos(nomeTimeOrganograma);
   const [aba, setAba] = useState<VerAba>("pessoal");
   const verAbas = useMemo(() => staffVerAbasVisiveis(exibirAbaHistorico), [exibirAbaHistorico]);
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
@@ -1343,7 +1410,13 @@ function ModalStaffVer({
           ) : (
             <CampoLeitura k="Horário do Turno" v="—" t={t} />
           )}
-          {!dadosFuncaoOcultarEstudio ? <CampoLeitura k="Estúdio" v={estudioNome} t={t} /> : null}
+          {!dadosFuncaoOcultarEstudio || estudioForcadoTodos ? (
+            <CampoLeitura
+              k="Estúdio"
+              v={estudioForcadoTodos ? "Todos Estúdios" : estudioNome}
+              t={t}
+            />
+          ) : null}
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
           {!dadosFuncaoOcultarBioFotos ? (
@@ -1531,11 +1604,12 @@ function ModalStaffEditar({
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
   const staffEhGamePresenter = useMemo(() => isGamePresenterTimeNome(nomeTimeOrganograma), [nomeTimeOrganograma]);
+  const estudioForcadoTodos = staffUiTimeEstudioForcadoTodos(nomeTimeOrganograma);
   const [aba, setAba] = useState<EditarAba>("funcao");
   const [nick, setNick] = useState(row.staff_nickname ?? "");
   const [turno, setTurno] = useState(row.staff_turno ?? "");
   const [estudiosSelecionados, setEstudiosSelecionados] = useState<string[]>(() =>
-    staffEstudioSlugsFromRow(row, opParaEstudio),
+    estudioForcadoTodos ? [STAFF_ESTUDIO_CADASTRO_TODOS] : staffEstudioSlugsForEditUi(row, opParaEstudio),
   );
   const [barcode, setBarcode] = useState(row.staff_barcode ?? "");
   const [idOperacional, setIdOperacional] = useState(row.staff_id_operacional ?? "");
@@ -1551,7 +1625,11 @@ function ModalStaffEditar({
   useEffect(() => {
     setNick(row.staff_nickname ?? "");
     setTurno(turnoRhCoerenteComEscala(row.escala, row.staff_turno));
-    setEstudiosSelecionados(staffEstudioSlugsFromRow(row, opParaEstudio));
+    setEstudiosSelecionados(
+      staffUiTimeEstudioForcadoTodos(nomeTimeOrganograma)
+        ? [STAFF_ESTUDIO_CADASTRO_TODOS]
+        : staffEstudioSlugsForEditUi(row, opParaEstudio),
+    );
     setBarcode(row.staff_barcode ?? "");
     setIdOperacional(row.staff_id_operacional ?? "");
     setSkills(normalizarSkills(row.staff_skills as Record<string, unknown>));
@@ -1569,6 +1647,7 @@ function ModalStaffEditar({
     row.staff_estudio_slug,
     row.staff_estudio_slugs,
     opParaEstudio,
+    nomeTimeOrganograma,
     row.staff_barcode,
     row.staff_id_operacional,
     row.staff_skills,
@@ -1647,7 +1726,9 @@ function ModalStaffEditar({
     }
 
     const estudioAntes = staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
-    const estudioDepoisSlugs = normalizeStaffEstudioSlugsForSave(estudiosSelecionados);
+    const estudioDepoisSlugs = estudioForcadoTodos
+      ? [STAFF_ESTUDIO_CADASTRO_TODOS]
+      : normalizeStaffEstudioSlugsForSave(estudiosSelecionados);
     const estudioDepois = staffEstudioLabel(estudioDepoisSlugs, estudiosNome);
 
     const antes = {
@@ -1813,7 +1894,21 @@ function ModalStaffEditar({
             <span style={labelStyle}>Escala (somente leitura)</span>
             <input type="text" readOnly value={row.escala?.trim() || "—"} style={{ ...inputStyle, opacity: 0.85 }} aria-readonly />
           </div>
-          {!ocultarCampoEstudio ? (
+          {estudioForcadoTodos ? (
+            <div style={{ marginBottom: 14 }}>
+              <span style={labelStyle}>Estúdio</span>
+              <StaffEstudioCampoSelect
+                value={[STAFF_ESTUDIO_CADASTRO_TODOS]}
+                onChange={() => {}}
+                estudioSlugs={estudioSlugs}
+                estudiosNome={estudiosNome}
+                disabled
+              />
+              <div style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                Neste time o estúdio fica fixo em Todos Estúdios.
+              </div>
+            </div>
+          ) : !ocultarCampoEstudio ? (
             <div style={{ marginBottom: 14 }}>
               <span style={labelStyle}>Estúdio</span>
               <StaffEstudioCampoSelect

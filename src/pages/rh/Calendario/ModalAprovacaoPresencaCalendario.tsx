@@ -41,15 +41,37 @@ function correcaoPresencaIgualRealizado(correcao: string, realizado: string): bo
   return normalizarHorarioPresencaHHMM(correcao) === r;
 }
 
+type PresencaGestaoSaveResult = { ok: boolean; semPermissao?: boolean };
+
 type Props = {
   open: boolean;
   alvo: PresencaTurnoAlvo;
   onClose: () => void;
-  onAprovar: () => void;
-  onSalvarCorrecao: (payload: { entrada: string; saida: string; observacao: string }) => void;
+  onAprovar: () => boolean | Promise<boolean | PresencaGestaoSaveResult>;
+  onSalvarCorrecao: (payload: {
+    entrada: string;
+    saida: string;
+    observacao: string;
+  }) => boolean | Promise<boolean | PresencaGestaoSaveResult>;
   t: Theme;
   brand: ReturnType<typeof useDashboardBrand>;
 };
+
+const MSG_ERRO_APROVAR =
+  "Não foi possível aprovar o turno. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_APROVAR_PERM =
+  "Você não tem permissão de Editar para aprovar este turno. Peça liberação em Gestão de Usuários → Permissões (Calendário).";
+const MSG_ERRO_CORRECAO =
+  "Não foi possível salvar a correção. Se o problema persistir, entre em contato com o suporte.";
+const MSG_ERRO_CORRECAO_PERM =
+  "Você não tem permissão de Editar para corrigir este turno. Peça liberação em Gestão de Usuários → Permissões (Calendário).";
+
+function normalizarResultadoSave(
+  result: boolean | PresencaGestaoSaveResult,
+): PresencaGestaoSaveResult {
+  if (typeof result === "boolean") return { ok: result };
+  return result;
+}
 
 const MONTHS = [
   "Janeiro",
@@ -173,8 +195,41 @@ export function ModalAprovacaoPresencaCalendario({
       return;
     }
     setSalvando(true);
-    onSalvarCorrecao({ entrada: ent, saida: sai, observacao: observacao.trim() });
-    setSalvando(false);
+    void (async () => {
+      try {
+        const result = normalizarResultadoSave(
+          await Promise.resolve(
+            onSalvarCorrecao({ entrada: ent, saida: sai, observacao: observacao.trim() }),
+          ),
+        );
+        if (!result.ok) {
+          setErr(result.semPermissao ? MSG_ERRO_CORRECAO_PERM : MSG_ERRO_CORRECAO);
+        }
+      } catch (e) {
+        console.error("[ModalAprovacaoPresenca] correção:", e);
+        setErr(MSG_ERRO_CORRECAO);
+      } finally {
+        setSalvando(false);
+      }
+    })();
+  };
+
+  const aprovarTurno = () => {
+    setErr(null);
+    setSalvando(true);
+    void (async () => {
+      try {
+        const result = normalizarResultadoSave(await Promise.resolve(onAprovar()));
+        if (!result.ok) {
+          setErr(result.semPermissao ? MSG_ERRO_APROVAR_PERM : MSG_ERRO_APROVAR);
+        }
+      } catch (e) {
+        console.error("[ModalAprovacaoPresenca] aprovação:", e);
+        setErr(MSG_ERRO_APROVAR);
+      } finally {
+        setSalvando(false);
+      }
+    })();
   };
 
   if (modo === "correcao") {
@@ -301,9 +356,19 @@ export function ModalAprovacaoPresencaCalendario({
           </tbody>
         </table>
       </div>
+      {err ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+        >
+          {err}
+        </div>
+      ) : null}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
         <button
           type="button"
+          disabled={salvando}
           onClick={() => {
             setEntradaCorrecao(valorInicialCorrecaoPresenca(alvo.entRealOriginal));
             setSaidaCorrecao(valorInicialCorrecaoPresenca(alvo.saiRealOriginal));
@@ -315,8 +380,8 @@ export function ModalAprovacaoPresencaCalendario({
         >
           Editar
         </button>
-        <button type="button" onClick={onAprovar} style={btnPrimario}>
-          Aprovar
+        <button type="button" onClick={aprovarTurno} disabled={salvando} style={btnPrimario}>
+          {salvando ? "Aprovando…" : "Aprovar"}
         </button>
       </div>
     </ModalBase>

@@ -17,7 +17,14 @@ import {
   sanitizarValorCelulaAlterarEscala,
   type EscalaTurnoMesMap,
 } from "../../../lib/gestaoEscalaTurnoMes";
-import { staffRowPassaFiltroEstudio } from "../GestaoStaff/gestaoStaffEstudioHelpers";
+import {
+  FILTRO_STAFF_ESTUDIO_NENHUM,
+  FILTRO_STAFF_ESTUDIO_TODOS,
+  STAFF_ESTUDIO_CADASTRO_TODOS,
+  staffEstudioAtendeTodos,
+  staffEstudioSlugsFromRow,
+  staffRowPassaFiltroEstudio,
+} from "../GestaoStaff/gestaoStaffEstudioHelpers";
 import type { EscalaAlteracaoCelulaMeta } from "./CelulaIndicadorAlteracaoEscala";
 
 const HELPERS_TURNO_SNAPSHOT = {
@@ -163,6 +170,40 @@ export type RpcGradeCarregarRow = {
   valor: string | null;
 };
 
+/** Aceita jsonb (array) ou legado SETOF/TABLE — evita truncar ~1000 linhas no PostgREST. */
+export function parseRhGestaoEscalaGradeCarregarPayload(data: unknown): RpcGradeCarregarRow[] {
+  let payload: unknown = data;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(payload)) return [];
+  const out: RpcGradeCarregarRow[] = [];
+  for (const item of payload) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    const funcionario_id = String(r.funcionario_id ?? "").trim();
+    if (!funcionario_id) continue;
+    const diaRaw = r.dia_iso;
+    const dia_iso =
+      typeof diaRaw === "string"
+        ? diaRaw.slice(0, 10)
+        : diaRaw instanceof Date
+          ? diaRaw.toISOString().slice(0, 10)
+          : String(diaRaw ?? "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dia_iso)) continue;
+    out.push({
+      funcionario_id,
+      dia_iso,
+      valor: r.valor == null ? null : String(r.valor),
+    });
+  }
+  return out;
+}
+
 export type RpcGradeSalvarResult = {
   ok?: boolean;
   error?: string;
@@ -215,6 +256,15 @@ export function mapAlteracoesUltimasPorCelula(rows: RpcAlteracaoUltimaRow[]): Re
 
 export function chaveCelulaGerar(rowId: string, iso: string): string {
   return `${rowId}|${iso}`;
+}
+
+/** Mapa `funcionarioId|YYYY-MM-DD` → valor a partir do payload da RPC `grade_carregar`. */
+export function mapaCelulasFromGradeCarregarPayload(data: unknown): Record<string, string> {
+  const fromDb: Record<string, string> = {};
+  for (const row of parseRhGestaoEscalaGradeCarregarPayload(data)) {
+    fromDb[chaveCelulaGerar(row.funcionario_id, row.dia_iso)] = (row.valor ?? "").trim();
+  }
+  return fromDb;
 }
 
 export function celulasIguais(a: Record<string, string>, b: Record<string, string>): boolean {
@@ -535,6 +585,93 @@ export function contarCelulasComSigla(
       return acc + (v === sigla ? 1 : 0);
     }, 0),
   );
+}
+
+export const CONSOLIDADO_ESTUDIO_KEY_TODOS = "__todos__";
+export const CONSOLIDADO_ESTUDIO_KEY_NENHUM = "__nenhum__";
+
+/** Converte key do drilldown Consolidado → valor do `FiltroEstudioSelect`. */
+export function filtroEstudioValueFromConsolidadoKey(key: string): string {
+  if (key === CONSOLIDADO_ESTUDIO_KEY_TODOS) return FILTRO_STAFF_ESTUDIO_TODOS;
+  if (key === CONSOLIDADO_ESTUDIO_KEY_NENHUM) return FILTRO_STAFF_ESTUDIO_NENHUM;
+  return key;
+}
+
+/** Key do drilldown ativa conforme o filtro da barra.
+ * «Todos Estúdios» na barra não destaca um bucket de slug — o destaque do bucket
+ * `__todos__` usa o filtro de turno da linha pai (ver `alternarFiltroEstudioConsolidado`).
+ */
+export function consolidadoKeyFromFiltroEstudio(filtro: string): string | null {
+  if (filtro === FILTRO_STAFF_ESTUDIO_TODOS) return null;
+  if (filtro === FILTRO_STAFF_ESTUDIO_NENHUM) return CONSOLIDADO_ESTUDIO_KEY_NENHUM;
+  return filtro;
+}
+
+export type ConsolidadoEstudioLinha = {
+  key: string;
+  label: string;
+  counts: number[];
+};
+
+/** Bucket de estúdio para drilldown do Consolidado (primário / Todos / Sem estúdio). */
+export function bucketEstudioConsolidado(
+  row: Pick<RpcPrestadorEscala, "staff_estudio_slug" | "staff_estudio_slugs" | "staff_operadora_slug">,
+  opParaEstudio: Record<string, string>,
+  estudiosNome: Record<string, string>,
+): { key: string; label: string } {
+  const slugs = staffEstudioSlugsFromRow(row, opParaEstudio);
+  if (slugs.length === 0) {
+    return { key: CONSOLIDADO_ESTUDIO_KEY_NENHUM, label: "Sem estúdio" };
+  }
+  if (staffEstudioAtendeTodos(slugs) || slugs.includes(STAFF_ESTUDIO_CADASTRO_TODOS)) {
+    return { key: CONSOLIDADO_ESTUDIO_KEY_TODOS, label: "Todos Estúdios" };
+  }
+  const slug = slugs[0]!;
+  return { key: slug, label: estudiosNome[slug] ?? slug };
+}
+
+/**
+ * Contagem por estúdio × dia para uma sigla de turno (Game Presenter + Todos Estúdios).
+ * Ordena: estúdios nomeados A–Z, depois Todos Estúdios, depois Sem estúdio.
+ */
+export function contarCelulasComSiglaPorEstudio(
+  prestadores: RpcPrestadorEscala[],
+  dias: DiaMes[],
+  celulas: Record<string, string> | undefined,
+  sigla: "MRN" | "AFT" | "NGT",
+  opParaEstudio: Record<string, string>,
+  estudiosNome: Record<string, string>,
+): ConsolidadoEstudioLinha[] {
+  const map = new Map<string, { label: string; counts: number[] }>();
+  for (const p of prestadores) {
+    const bucket = bucketEstudioConsolidado(p, opParaEstudio, estudiosNome);
+    let entry = map.get(bucket.key);
+    if (!entry) {
+      entry = { label: bucket.label, counts: dias.map(() => 0) };
+      map.set(bucket.key, entry);
+    }
+    for (let i = 0; i < dias.length; i++) {
+      const dia = dias[i]!;
+      const k = chaveCelulaGerar(p.id, dia.iso);
+      if ((celulas?.[k] ?? "").trim() === sigla) {
+        entry.counts[i] = (entry.counts[i] ?? 0) + 1;
+      }
+    }
+  }
+  const rows: ConsolidadoEstudioLinha[] = [...map.entries()].map(([key, v]) => ({
+    key,
+    label: v.label,
+    counts: v.counts,
+  }));
+  rows.sort((a, b) => {
+    const rank = (k: string) =>
+      k === CONSOLIDADO_ESTUDIO_KEY_TODOS ? 1 : k === CONSOLIDADO_ESTUDIO_KEY_NENHUM ? 2 : 0;
+    const ra = rank(a.key);
+    const rb = rank(b.key);
+    if (ra !== rb) return ra - rb;
+    return a.label.localeCompare(b.label, "pt-BR");
+  });
+  return rows.filter((r) => r.counts.some((n) => n > 0));
 }
 
 /** Valor interno gravado na célula para dia de trabalho (MRN / AFT / NGT). */

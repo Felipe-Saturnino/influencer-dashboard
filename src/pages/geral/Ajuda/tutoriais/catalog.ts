@@ -1,11 +1,15 @@
 import type { Role } from "../../../../types";
 import type { TutorialVisibilidadeMap } from "../../../../lib/ajudaTutorialVisibilidade";
 import { tutorialVisivelParaRole } from "../../../../lib/ajudaTutorialVisibilidade";
+import { TUTORIAL_ALTERAR_ESCALA } from "./alterarEscala";
 import { TUTORIAL_CONTROLE_PRESENCA } from "./controlePresenca";
 import type { TutorialDef, TutorialSecaoNav } from "./types";
 
 /** Catálogo de tutoriais — ordem das secções alinhada ao menu quando possível. */
-export const TUTORIAIS_CATALOG: TutorialDef[] = [TUTORIAL_CONTROLE_PRESENCA];
+export const TUTORIAIS_CATALOG: TutorialDef[] = [
+  TUTORIAL_CONTROLE_PRESENCA,
+  TUTORIAL_ALTERAR_ESCALA,
+];
 
 /** Agrupa tutoriais visíveis por secção (menu lateral da aba Tutoriais). */
 export function buildTutoriaisNav(

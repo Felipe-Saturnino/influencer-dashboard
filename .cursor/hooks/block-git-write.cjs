@@ -39,9 +39,31 @@ const BLOCKED_GIT_SUBCOMMANDS = new Set([
   "am",
 ]);
 
+/** Tokens respeitando aspas (paths com espaços). */
+function tokenize(cmd) {
+  const tokens = [];
+  const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
+  let m;
+  while ((m = re.exec(cmd)) !== null) {
+    tokens.push(m[1] ?? m[2] ?? m[3]);
+  }
+  return tokens;
+}
+
+/** `git`, `git.exe`, `C:\...\git.exe`, `/usr/bin/git`, paths entre aspas. */
+function isGitBinaryToken(token) {
+  const s = String(token || "").replace(/^["']|["']$/g, "").replace(/\\/g, "/");
+  return /(^|\/)git(\.exe)?$/i.test(s);
+}
+
+function isGhBinaryToken(token) {
+  const s = String(token || "").replace(/^["']|["']$/g, "").replace(/\\/g, "/");
+  return /(^|\/)gh(\.exe)?$/i.test(s);
+}
+
 function firstGitSubcommand(segment) {
-  const tokens = segment.trim().split(/\s+/).filter(Boolean);
-  const gitIdx = tokens.findIndex((t) => /^git(\.exe)?$/i.test(t));
+  const tokens = tokenize(segment);
+  const gitIdx = tokens.findIndex((t) => isGitBinaryToken(t));
   if (gitIdx < 0) return null;
   let i = gitIdx + 1;
   while (i < tokens.length) {
@@ -61,8 +83,8 @@ function firstGitSubcommand(segment) {
 }
 
 function isBlockedGh(segment) {
-  const tokens = segment.trim().split(/\s+/).filter(Boolean);
-  const ghIdx = tokens.findIndex((t) => /^gh(\.exe)?$/i.test(t));
+  const tokens = tokenize(segment);
+  const ghIdx = tokens.findIndex((t) => isGhBinaryToken(t));
   if (ghIdx < 0) return false;
   const a = (tokens[ghIdx + 1] || "").toLowerCase();
   const b = (tokens[ghIdx + 2] || "").toLowerCase();

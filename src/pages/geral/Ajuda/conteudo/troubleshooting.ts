@@ -1364,7 +1364,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
         texto:
-          "Ações de presença e justificativa exigem permissão de **Editar** no Calendário. Se o botão não aparece, solicite liberação ao administrador.",
+          "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
       },
       {
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
