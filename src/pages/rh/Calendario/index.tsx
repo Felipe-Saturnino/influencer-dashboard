@@ -93,8 +93,9 @@ import {
 import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
 import {
   baixarCalendarioCompromissosPdf,
+  diaSemanaCurtoPdf,
+  diaSemanaListaPdf,
   type RhCalendarioPdfDia,
-  type RhCalendarioPdfItem,
 } from "../../../lib/rhCalendarioCompromissosPdf";
 import { mesclarGradeComHorarioComercialSintetico, prestadorUsaHorarioComercialSintetico, AREA_KEY_HORARIO_COMERCIAL_SINTETICO } from "../../../lib/overviewPrestadorCalendarioHelpers";
 import { ModalAprovarPresencaMesCalendario } from "./ModalAprovarPresencaMesCalendario";
@@ -1644,7 +1645,7 @@ export default function RhCalendarioPage() {
     return horario ?? "—";
   }
 
-  /** Monta o mês do PDF com turnos e reuniões do próprio usuário (ignora filtros da grelha). */
+  /** Monta o mês do PDF (todos os dias) com turnos/folgas e reuniões do próprio usuário. */
   function montarDiasPdfMeuCalendario(): RhCalendarioPdfDia[] {
     const fid = meuRhFuncionarioId;
     if (!fid) return [];
@@ -1656,53 +1657,54 @@ export default function RhCalendarioPage() {
 
     for (let d = 1; d <= last; d++) {
       const iso = toISO(new Date(y, m, d));
-      const itens: RhCalendarioPdfItem[] = [];
       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
       const turno = turnoExibicaoDeValorCelulaEscala(valorG ?? "");
+      let turnoLinha: string | null = null;
       if (turno) {
         const horario = horarioSubtituloParaCompromissoCal(
           { prestadorId: fid, nome, turno },
           iso,
         );
-        itens.push({
-          categoria: "Turno",
-          texto: turno,
-          detalhe: horario,
-        });
-      } else {
-        const situacao = situacaoGestaoEscalaParaDia(valorG);
-        if (situacao === "Folga") {
-          itens.push({ categoria: "Situação", texto: "Folga" });
-        } else if (situacao && situacao !== "—") {
-          itens.push({ categoria: "Situação", texto: situacao });
-        }
+        turnoLinha = horario && horario !== "—" ? `${turno} — ${horario}` : turno;
       }
 
+      const reunioes: string[] = [];
       for (const row of reunioesMesRaw) {
         if (row.solicitante_funcionario_id !== fid) continue;
         if (isoChaveDiaReuniaoRpc(row.dia_iso as string | Date | undefined) !== iso) continue;
-        const isReuniaoRh = ehReuniaoComRh(row.reuniao_com) && row.solicitacao_status;
-        if (isReuniaoRh) {
-          itens.push({
-            categoria: "Reunião",
-            texto: tituloChipReuniaoRhCalendario(row.solicitacao_status),
-            detalhe: (row.turno ?? "").trim() || undefined,
-          });
-        } else {
-          const comQuem =
-            ((row.reuniao_com_label ?? "").trim() || labelReuniaoCom(row.reuniao_com ?? "")).trim() ||
+        const comQuem = ehReuniaoComRh(row.reuniao_com)
+          ? "RH"
+          : ((row.reuniao_com_label ?? "").trim() || labelReuniaoCom(row.reuniao_com ?? "")).trim() ||
             "—";
-          itens.push({
-            categoria: "Reunião",
-            texto: `Reunião (${comQuem})`,
-            detalhe: (row.turno ?? "").trim() || undefined,
-          });
-        }
+        reunioes.push(`Reunião - ${comQuem}`);
       }
 
-      if (itens.length > 0) out.push({ diaIso: iso, itens });
+      out.push({
+        diaIso: iso,
+        diaNumero: d,
+        diaSemanaCurto: diaSemanaCurtoPdf(iso),
+        diaSemanaLista: diaSemanaListaPdf(iso),
+        turnoLinha,
+        reunioes,
+      });
     }
     return out;
+  }
+
+  function nomeTimePdfMeuCalendario(fid: string): string {
+    const p = prestadorPorId.get(fid);
+    if (!p) return "—";
+    if (p.org_time_id) {
+      const t = times.find((x) => x.id === p.org_time_id);
+      if (t?.nome?.trim()) return t.nome.trim();
+    }
+    if (p.org_gerencia_id) {
+      const gSemTime = times.find((x) => x.id === p.org_gerencia_id && x.id === x.gerencia_id);
+      if (gSemTime?.nome?.trim()) return gSemTime.nome.trim();
+      const qualquer = times.find((x) => x.gerencia_id === p.org_gerencia_id);
+      if (qualquer?.gerencia_nome?.trim()) return qualquer.gerencia_nome.trim();
+    }
+    return "—";
   }
 
   async function onBaixarCalendarioPdf() {
@@ -1712,9 +1714,14 @@ export default function RhCalendarioPage() {
     setBaixandoCalendarioPdf(true);
     try {
       const nome = (nomePrestadorPorId.get(fid) ?? user?.name ?? "").trim() || "Usuário";
+      const ano = current.getFullYear();
+      const mes0 = current.getMonth();
       await baixarCalendarioCompromissosPdf({
+        mesLabel: `${MONTHS[mes0]} ${ano}`,
         nomePessoa: nome,
-        mesLabel: `${MONTHS[current.getMonth()]} ${current.getFullYear()}`,
+        timeNome: nomeTimePdfMeuCalendario(fid),
+        ano,
+        mes0,
         dias: montarDiasPdfMeuCalendario(),
       });
     } catch (e) {
