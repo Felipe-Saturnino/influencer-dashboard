@@ -347,7 +347,13 @@ export function buildLoginPath(): string {
 export type ParsedAppPath =
   | { kind: "empty" }
   | { kind: "special"; special: "home" | "login" | "sem_acesso" }
-  | { kind: "app"; pageKey: PageKey; tabId: string | null; tabSlug: string | null }
+  | {
+      kind: "app";
+      pageKey: PageKey;
+      tabId: string | null;
+      tabSlug: string | null;
+      detailSlug?: string | null;
+    }
   | { kind: "not_found" };
 
 function normalizePathname(pathname: string): string {
@@ -372,7 +378,7 @@ export function parseAppPathname(pathname: string): ParsedAppPath {
   const segments = p.split("/").filter(Boolean);
   if (segments.length === 0) return { kind: "empty" };
 
-  const [seg1, seg2] = segments;
+  const [seg1, seg2, seg3] = segments;
   const s1 = seg1 ?? "";
 
   if (s1.toLowerCase() === ROUTE_SLUG_HOME.toLowerCase()) {
@@ -410,10 +416,32 @@ export function parseAppPathname(pathname: string): ParsedAppPath {
     return { kind: "app", pageKey: route.pageKey, tabId: tab.tabId, tabSlug: tab.slug };
   }
 
+  if (
+    segments.length === 3 &&
+    seg2 &&
+    seg3 &&
+    route.pageKey === "ajuda" &&
+    seg2.toLowerCase() === "tutoriais"
+  ) {
+    const tab = route.tabs.find((t) => t.slug.toLowerCase() === seg2.toLowerCase());
+    if (!tab) return { kind: "not_found" };
+    return {
+      kind: "app",
+      pageKey: route.pageKey,
+      tabId: tab.tabId,
+      tabSlug: tab.slug,
+      detailSlug: seg3,
+    };
+  }
+
   return { kind: "not_found" };
 }
 
-export function buildAppPath(pageKey: PageKey, tabSlug?: string | null): string {
+export function buildAppPath(
+  pageKey: PageKey,
+  tabSlug?: string | null,
+  detailSlug?: string | null,
+): string {
   const route = getAppRouteByPageKey(pageKey);
   if (!route) return `/${ROUTE_SLUG_HOME}`;
 
@@ -431,7 +459,8 @@ export function buildAppPath(pageKey: PageKey, tabSlug?: string | null): string 
       : undefined) ?? route.tabs[0];
 
   if (!tab) return `${prefix}/${route.pageSlug}`;
-  return `${prefix}/${route.pageSlug}/${tab.slug}`;
+  const path = `${prefix}/${route.pageSlug}/${tab.slug}`;
+  return detailSlug ? `${path}/${encodeURIComponent(detailSlug)}` : path;
 }
 
 export function podeVerPaginaNasPermissoes(cv: PermissaoValor | null | undefined): boolean {
@@ -478,7 +507,13 @@ export function isTabAllowedForUser(
 }
 
 export type RouteAccessResult =
-  | { ok: true; pageKey: PageKey; tabId: string | null; tabSlug: string | null }
+  | {
+      ok: true;
+      pageKey: PageKey;
+      tabId: string | null;
+      tabSlug: string | null;
+      detailSlug?: string | null;
+    }
   | { ok: false; reason: "not_found" | "forbidden" };
 
 export function resolveRouteAccess(
@@ -516,6 +551,7 @@ export function resolveRouteAccess(
       pageKey: parsed.pageKey,
       tabId: parsed.tabId,
       tabSlug: parsed.tabSlug,
+      detailSlug: parsed.detailSlug,
     };
   }
 
@@ -537,6 +573,7 @@ export function resolveRouteAccess(
     pageKey: parsed.pageKey,
     tabId: parsed.tabId,
     tabSlug: parsed.tabSlug,
+    detailSlug: parsed.detailSlug,
   };
 }
 

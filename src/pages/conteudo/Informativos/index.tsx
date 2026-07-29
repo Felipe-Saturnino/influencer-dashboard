@@ -66,7 +66,7 @@ export default function InformativosPage() {
 
   const [busca, setBusca] = useState("");
   const [buscaDeb, setBuscaDeb] = useState("");
-  const [modoHistorico, setModoHistorico] = useState(false);
+  const [modoHistorico, setModoHistorico] = useState(true);
   const [mesesCarrossel, setMesesCarrossel] = useState<MesCarrosselEntry[]>([]);
   const [idxMes, setIdxMes] = useState(0);
   const [mesesGer, setMesesGer] = useState<MesCarrosselEntry[]>([]);
@@ -137,6 +137,10 @@ export default function InformativosPage() {
     if (perm.canView !== "nao" && !perm.loading) void carregar();
   }, [perm.canView, perm.loading, carregar]);
 
+  useEffect(() => {
+    if (lista.length > 0 && mesesCarrossel.length > 0) setIdxMes(mesesCarrossel.length - 1);
+  }, [lista.length, mesesCarrossel.length]);
+
   const listaFiltrada = useMemo(() => {
     const mes = mesesCarrossel[idxMes];
     const q = buscaDeb;
@@ -157,8 +161,19 @@ export default function InformativosPage() {
 
   const handleMesesGerChange = useCallback((meses: MesCarrosselEntry[]) => {
     setMesesGer(meses);
-    setIdxMesGer((i) => Math.min(i, Math.max(0, meses.length - 1)));
+    setIdxMesGer(Math.max(0, meses.length - 1));
   }, []);
+
+  const handleModoHistoricoChange = useCallback(
+    (ativo: boolean) => {
+      setModoHistorico(ativo);
+      if (!ativo) {
+        setIdxMes(Math.max(0, mesesCarrossel.length - 1));
+        setIdxMesGer(Math.max(0, mesesGer.length - 1));
+      }
+    },
+    [mesesCarrossel.length, mesesGer.length],
+  );
 
   if (perm.loading) {
     return (
@@ -189,7 +204,7 @@ export default function InformativosPage() {
         idxMes={filtroCarrossel.idx}
         onIdxMesChange={filtroCarrossel.setIdx}
         modoHistorico={modoHistorico}
-        onModoHistoricoChange={setModoHistorico}
+        onModoHistoricoChange={handleModoHistoricoChange}
         busca={busca}
         onBuscaChange={setBusca}
         linhaAbas={

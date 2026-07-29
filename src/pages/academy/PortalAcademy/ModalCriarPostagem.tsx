@@ -26,6 +26,7 @@ import { reservarCodigoManual } from "../../../lib/academyPortalManualCodigo";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
 import { AcademyPortalJogosMultiSelect } from "./AcademyPortalJogosMultiSelect";
+import { usePermission } from "../../../hooks/usePermission";
 import {
   contentTypeFromTipoUi,
   diffEdicaoRascunho,
@@ -36,6 +37,8 @@ import {
   registrarHistoricoStatus,
   slugComunicadoFromLabel,
   slugDicaManualFromLabel,
+  statusEnvioPostagemAcademy,
+  tiposPostagemAcademyPermitidos,
   validarPublicarComunicado,
   validarPublicarDica,
   validarPublicarManual,
@@ -54,7 +57,7 @@ export type PostagemEditRef = {
   id: string;
 };
 
-type AcaoModal = "salvar" | "publicar";
+type AcaoModal = "salvar" | "enviar";
 
 const ERRO_CARREGAR_EDICAO = "Não foi possível carregar a postagem para edição.";
 const ERRO_SALVAR =
@@ -240,6 +243,9 @@ export function ModalCriarPostagem({
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const perm = usePermission("academy_portal");
+  const tiposPermitidos = tiposPostagemAcademyPermitidos(perm.canEditar);
+  const envioParaAprovacao = perm.canEditar === "proprios";
 
   const [tipoPostagem, setTipoPostagem] = useState<AcademyPostagemTipoUi | "">("");
   const [tipoSubcategoria, setTipoSubcategoria] = useState("");
@@ -498,9 +504,14 @@ export function ModalCriarPostagem({
       setErro("Selecione o tipo de postagem.");
       return;
     }
-    const novoStatus: AcademyPostagemStatus = acao === "salvar" ? "rascunho" : "publicado";
+    if (!tiposPermitidos.includes(tipoPostagem)) {
+      setErro("Você não tem permissão para este tipo de postagem.");
+      return;
+    }
+    const novoStatus: AcademyPostagemStatus =
+      acao === "salvar" ? "rascunho" : statusEnvioPostagemAcademy(perm.canEditar);
 
-    if (acao === "publicar") {
+    if (acao === "enviar") {
       let errs: Record<string, string> = {};
       if (tipoPostagem === "comunicado") {
         errs = validarPublicarComunicado({ tipoComunicado: tipoSubcategoria, titulo, descricao });
@@ -519,7 +530,11 @@ export function ModalCriarPostagem({
       }
       setFieldErr(errs);
       if (Object.keys(errs).length > 0) {
-        setErro("Preencha os campos obrigatórios destacados antes de publicar.");
+        setErro(
+          envioParaAprovacao
+            ? "Preencha os campos obrigatórios destacados antes de enviar para aprovação."
+            : "Preencha os campos obrigatórios destacados antes de publicar.",
+        );
         return;
       }
     } else {
@@ -550,7 +565,14 @@ export function ModalCriarPostagem({
     const statusAnterior = modo === "editar" ? statusAtual : null;
 
     const registrarEdicoesRascunho = async (contentId: string) => {
-      if (modo !== "editar" || statusAnterior !== "rascunho" || !snapshotEdicao || !user?.id) return;
+      if (
+        modo !== "editar" ||
+        (statusAnterior !== "rascunho" && statusAnterior !== "aprovacao") ||
+        !snapshotEdicao ||
+        !user?.id
+      ) {
+        return;
+      }
       const depois = buildSnapshot({ imagens: up.imagens, anexos: up.anexos });
       if (!depois) return;
       const alteracoes = diffEdicaoRascunho(snapshotEdicao, depois);
@@ -595,6 +617,12 @@ export function ModalCriarPostagem({
       } else {
         basePayload.published_at = null;
         basePayload.published_by = null;
+      }
+      if (tipoPostagem === "comunicado" || tipoPostagem === "dica") {
+        if (novoStatus === "aprovacao" || novoStatus === "rascunho") {
+          basePayload.approved_at = null;
+          basePayload.approved_by = null;
+        }
       }
 
       if (tipoPostagem === "comunicado") {
@@ -728,9 +756,9 @@ export function ModalCriarPostagem({
               aria-label="Tipo de postagem"
             >
               <option value="">Selecione…</option>
-              <option value="comunicado">Comunicados</option>
-              <option value="dica">Dicas</option>
-              <option value="manual">Manuais</option>
+              {tiposPermitidos.includes("comunicado") ? <option value="comunicado">Comunicados</option> : null}
+              {tiposPermitidos.includes("dica") ? <option value="dica">Dicas</option> : null}
+              {tiposPermitidos.includes("manual") ? <option value="manual">Manuais</option> : null}
             </select>
           </div>
 
@@ -940,7 +968,7 @@ export function ModalCriarPostagem({
         </button>
         <button
           type="button"
-          onClick={() => void persistir("publicar")}
+          onClick={() => void persistir("enviar")}
           disabled={salvando || !tipoPostagem || loadingData}
           style={{
             padding: "10px 20px",
@@ -959,7 +987,13 @@ export function ModalCriarPostagem({
           }}
         >
           {salvando ? <Loader2 className="app-lucide-spin" size={14} color="#fff" aria-hidden /> : null}
-          {salvando ? "Publicando…" : "Publicar"}
+          {salvando
+            ? envioParaAprovacao
+              ? "Enviando…"
+              : "Publicando…"
+            : envioParaAprovacao
+              ? "Enviar para aprovação"
+              : "Publicar"}
         </button>
       </div>
     </ModalBase>

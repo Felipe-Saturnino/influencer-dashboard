@@ -8,11 +8,28 @@ import { textoContemBusca } from "../../../lib/searchText";
 import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import { areAppPathsEqual, buildAppPath } from "../../../lib/appRoutes";
 import type { TutorialVisibilidadeMap } from "../../../lib/ajudaTutorialVisibilidade";
 import { buildTutoriaisNav } from "./tutoriais/catalog";
 import type { TutorialDef } from "./tutoriais/types";
 import { ModalEditarVisibilidadeTutorial } from "./ModalEditarVisibilidadeTutorial";
 import { GraduationCap, Pencil, TriangleAlert } from "lucide-react";
+
+function tutorialSlugDaUrl(): string | null {
+  const segments = window.location.pathname.split("/").filter(Boolean);
+  if (
+    segments[0]?.toLowerCase() !== "ajuda" ||
+    segments[1]?.toLowerCase() !== "tutoriais" ||
+    !segments[2]
+  ) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(segments[2]);
+  } catch {
+    return segments[2];
+  }
+}
 
 type Props = {
   t: Theme;
@@ -34,6 +51,7 @@ export function TutoriaisPanel({
   const brand = useDashboardBrand();
   const [busca, setBusca] = useState("");
   const [tutorialId, setTutorialId] = useState<string | null>(null);
+  const [routeTutorialSlug, setRouteTutorialSlug] = useState(tutorialSlugDaUrl);
   const [editOpen, setEditOpen] = useState(false);
 
   const nav = useMemo(
@@ -62,12 +80,42 @@ export function TutoriaisPanel({
   }, [nav, tutorialId]);
 
   useEffect(() => {
+    const syncRouteSlug = () => setRouteTutorialSlug(tutorialSlugDaUrl());
+    window.addEventListener("popstate", syncRouteSlug);
+    return () => window.removeEventListener("popstate", syncRouteSlug);
+  }, []);
+
+  useEffect(() => {
     if (!primeiroId) {
       setTutorialId(null);
       return;
     }
-    if (!tutorialAtivoVisivel) setTutorialId(primeiroId);
-  }, [primeiroId, tutorialAtivoVisivel]);
+    const tutorialDaRota = routeTutorialSlug
+      ? nav
+          .flatMap((sec) => sec.items)
+          .find((item) => item.urlSlug.toLowerCase() === routeTutorialSlug.toLowerCase())
+      : null;
+    const nextId = tutorialDaRota?.id ?? (tutorialAtivoVisivel ? tutorialId : primeiroId);
+    if (tutorialId !== nextId) setTutorialId(nextId);
+
+    const nextTutorial = nav.flatMap((sec) => sec.items).find((item) => item.id === nextId);
+    if (nextTutorial) {
+      const canonicalPath = buildAppPath("ajuda", "Tutoriais", nextTutorial.urlSlug);
+      if (!areAppPathsEqual(window.location.pathname, canonicalPath)) {
+        window.history.replaceState(window.history.state, "", canonicalPath);
+        setRouteTutorialSlug(nextTutorial.urlSlug);
+      }
+    }
+  }, [nav, primeiroId, routeTutorialSlug, tutorialAtivoVisivel, tutorialId]);
+
+  const selecionarTutorial = (item: TutorialDef) => {
+    setTutorialId(item.id);
+    setRouteTutorialSlug(item.urlSlug);
+    const path = buildAppPath("ajuda", "Tutoriais", item.urlSlug);
+    if (!areAppPathsEqual(window.location.pathname, path)) {
+      window.history.pushState(window.history.state, "", path);
+    }
+  };
 
   const tutorial: TutorialDef | null = useMemo(() => {
     if (!tutorialId) return null;
@@ -203,7 +251,7 @@ export function TutoriaisPanel({
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setTutorialId(item.id)}
+                      onClick={() => selecionarTutorial(item)}
                       style={{
                         display: "flex",
                         alignItems: "center",

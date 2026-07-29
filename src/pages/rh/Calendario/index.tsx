@@ -1042,17 +1042,24 @@ export default function RhCalendarioPage() {
     void (async () => {
       const merged: RpcGradeCalendarioRow[] = [];
       const turnoMapMerged: EscalaTurnoMesMap = {};
-      let teveErro = false;
+      /** Só o mês do carrossel dispara o banner; o mês anterior é auxiliar (virada de turno). */
+      const refMesAtual = mesesRefISOConsulta[0] ?? null;
+      let erroMesAtual = false;
       try {
-        for (const refIso of mesesRefISOConsulta) {
-          if (cancelled) return;
-          const [{ rows, error }, turnoRes] = await Promise.all([
-            carregarRhCalendarioGradeMes(refIso),
-            supabase.rpc("rh_gestao_escala_turno_mes_listar", { p_ref_mes: refIso }),
-          ]);
-          if (cancelled) return;
+        const resultados = await Promise.all(
+          mesesRefISOConsulta.map(async (refIso) => {
+            const [{ rows, error }, turnoRes] = await Promise.all([
+              carregarRhCalendarioGradeMes(refIso),
+              supabase.rpc("rh_gestao_escala_turno_mes_listar", { p_ref_mes: refIso }),
+            ]);
+            return { refIso, rows, error, turnoRes };
+          }),
+        );
+        if (cancelled) return;
+        for (const { refIso, rows, error, turnoRes } of resultados) {
           if (error) {
-            teveErro = true;
+            if (refIso === refMesAtual) erroMesAtual = true;
+            else console.warn("rh_calendario_grade_mes (mês anterior)", refIso, error.message);
             continue;
           }
           merged.push(...rows);
@@ -1076,7 +1083,7 @@ export default function RhCalendarioPage() {
           setRawGradeRowsRpc(merged);
           setTurnoMesMap(turnoMapMerged);
           setErroEscala(
-            teveErro && merged.length === 0
+            erroMesAtual
               ? "Não foi possível carregar a escala do calendário. Se o problema persistir, entre em contato com o suporte."
               : null,
           );
@@ -2743,8 +2750,6 @@ export default function RhCalendarioPage() {
     salvarJustificativaPresenca,
   } = useCalendarioPresencaGestaoMutacoes({
     nomeUsuarioPresencaGestao,
-    mapaPontoPorDiaIso,
-    pontoRelatorioPorFid,
     presencaFilterStaffIds,
     mesPresencaFechado,
     linhasAprovacaoPresencaMes,

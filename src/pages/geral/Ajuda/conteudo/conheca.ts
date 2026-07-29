@@ -729,6 +729,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
+      {
+        subtitulo: "Baixar Excel",
+        texto:
+          "O botão **Baixar Excel**, acima da barra de pesquisa da Escala Diária, gera uma planilha do time e do mês selecionados. A aba **Consolidado** traz um bloco por turno (Manhã, Tarde e Noite) com estúdio nas linhas, dias do mês nas colunas e uma linha de Total; a aba **Detalhado** traz Nome, Nickname, Turno, Estúdio e o status de cada dia. O arquivo respeita os filtros aplicados na tela (estúdio, turno e busca).",
+      },
     ],
   },
   escala_escritorio: {
@@ -901,9 +906,9 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Na aba **Gerenciamento**, **Nova Postagem** abre o modal com tipos Comunicados, Dicas ou Manuais. Campos com asterisco são obrigatórios ao publicar. Dicas e manuais do tipo **Jogos** exibem **Qual Jogo?** — **multi-seleção** alimentada pelos jogos cadastrados em **Gestão de Estúdios** (coluna Jogo), sem duplicar.\n\n**Imagem/Vídeo** e **Anexo** usam o botão **Adicionar…** (sem a barra nativa do navegador). Os arquivos aparecem numa lista abaixo, com badge **Pendente** até salvar ou publicar; dá para remover itens antes do envio.\n\n**Manuais** incluem **Versão**, **Exige ciência do colaborador?** (Sim/Não), **Introdução** e **Descrição** — **sem** campo Código no modal. Quando a ciência for **Sim**, aparece **Aplicável a** (multi-seleção de times das gerências **Game Floor** e **Operation Management**, como em Gestão de Staff). O código é atribuído automaticamente no primeiro salvamento (3 primeiras letras da categoria + sequencial, ex.: Jogos → **JOG-000001**, Imagem → **IMA-000001**), com contador independente por tipo.",
       },
       {
-        subtitulo: "Editar postagem",
+        subtitulo: "Editar postagem e aprovação",
         texto:
-          "Na aba **Gerenciamento**, cada rascunho ou publicação tem o botão **Editar** (ícone de lápis), liberado pela permissão de **Editar**. Com Editar = **Próprios**, só aparece nas postagens criadas por você. Salvar volta a **Rascunho**; Publicar mantém ou publica o conteúdo.\n\nEm **Manuais**, ao abrir a edição a **Versão** sobe automaticamente (ex.: 1.0 → 2.0).",
+          "A aba **Gerenciamento** aparece com permissão de **Editar** (Sim ou Próprios).\n\nCom Editar = **Próprios**, você cria só **Comunicados** e **Dicas**; o botão **Enviar para aprovação** coloca a postagem em **Aprovação**. Editar e Arquivar só nas postagens em que você é o autor.\n\nCom Editar = **Sim**, você cria também **Manuais**, publica direto e usa o botão **Aprovar** nas postagens em Aprovação.\n\nEm **Manuais**, ao abrir a edição a **Versão** sobe automaticamente (ex.: 1.0 → 2.0).",
       },
       {
         subtitulo: "Manuais — tabela e ciência",

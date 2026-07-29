@@ -7,6 +7,7 @@ import {
 } from "../pages/rh/GestaoStaff/gestaoStaffEstudioHelpers";
 
 import { timeOrganogramaIndicaGamePresenter } from "./rhPrestadorUsuarioSync";
+import { primeiroUltimoNome } from "./nomePessoaFormat";
 
 export function isGamePresenterTimeNome(nome: string | null | undefined): boolean {
   return timeOrganogramaIndicaGamePresenter(nome);
@@ -48,13 +49,7 @@ export async function removeDealerForRhFuncionarioId(
   return { ok: true, reason: "removed_from_elenco" };
 }
 
-/** Primeiro e último token do nome (regra dealer). */
-export function primeiroUltimoNome(nomeCompleto: string): string {
-  const parts = nomeCompleto.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "";
-  if (parts.length === 1) return parts[0]!;
-  return `${parts[0]} ${parts[parts.length - 1]}`;
-}
+export { primeiroUltimoNome };
 
 export function staffTurnoTextoParaDealerTurno(raw: string | null | undefined): DealerTurno {
   const n = (raw ?? "").trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");

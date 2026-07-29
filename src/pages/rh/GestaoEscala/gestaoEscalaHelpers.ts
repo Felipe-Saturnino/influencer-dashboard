@@ -638,7 +638,7 @@ export function contarCelulasComSiglaPorEstudio(
   prestadores: RpcPrestadorEscala[],
   dias: DiaMes[],
   celulas: Record<string, string> | undefined,
-  sigla: "MRN" | "AFT" | "NGT",
+  sigla: "MRN" | "AFT" | "NGT" | "Comercial",
   opParaEstudio: Record<string, string>,
   estudiosNome: Record<string, string>,
 ): ConsolidadoEstudioLinha[] {

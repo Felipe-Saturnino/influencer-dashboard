@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { primeiroUltimoNome } from "./nomePessoaFormat";
 
 export type AcademyPortalAutorInfo = {
   nome: string;
@@ -19,6 +20,13 @@ export function fmtDataHoraPortalAcademy(iso: string | null | undefined): string
 export function linhaMetaAutorPortalAcademy(info: AcademyPortalAutorInfo | undefined, dataIso: string | null | undefined): string {
   const nome = (info?.nome ?? "").trim() || "Equipe Academy";
   return `${nome} - ${fmtDataHoraPortalAcademy(dataIso)}`;
+}
+
+/** Nome exibido nas colunas Autor e Aprovador: primeiro e último nome. */
+export function nomeCurtoPortalAcademy(nome: string | null | undefined): string {
+  const limpo = (nome ?? "").trim();
+  if (!limpo) return "—";
+  return primeiroUltimoNome(limpo) || "—";
 }
 
 export function autorIdPostagem(row: { created_by?: string | null; published_by?: string | null }): string | null {

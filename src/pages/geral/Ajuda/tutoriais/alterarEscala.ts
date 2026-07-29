@@ -6,6 +6,7 @@ const IMG = "/tutoriais/escala/alterar-escala";
 /** Tutorial: alteração pontual de um dia na Escala Estúdio (Service Manager / Shift Leader). */
 export const TUTORIAL_ALTERAR_ESCALA: TutorialDef = {
   id: "alterar-escala",
+  urlSlug: "AlterarEscala",
   titulo: "Alterar Escala",
   section: "Escala",
   icon: CalendarCog,
@@ -17,8 +18,6 @@ export const TUTORIAL_ALTERAR_ESCALA: TutorialDef = {
       titulo: "1. Abrir a Escala Estúdio",
       texto:
         "1. No menu, seção Escala, clique em Escala Estúdio.\n2. Escolha o mês no carrossel (ex.: Julho 2026).\n3. Selecione a aba da área — para Game Presenters, clique em Game Presenter.\n4. Confirme que a escala do mês está aprovada: o botão Alterar Escala (azul) aparece na toolbar da Escala Diária.\n5. Clique em Alterar Escala.",
-      aviso:
-        "O botão Alterar Escala só aparece com permissão de Editar e com a escala do mês já aprovada. Não use este fluxo para montar rascunho — use apenas para ajuste pontual de um dia.",
       imagens: [
         {
           src: `${IMG}/01-escala-estudio-game-presenter.png`,
@@ -68,5 +67,5 @@ export const TUTORIAL_ALTERAR_ESCALA: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Use Alterar Escala apenas para ajuste pontual de um dia em escala já aprovada.\n— Service Manager e Shift Leader seguem o mesmo fluxo quando têm permissão de Editar em Escala Estúdio.\n— A alteração reflete no Calendário do prestador (compromissos daquele dia).\n— Não altere a própria escala por este modal se o processo interno exigir outro canal — o fluxo é para outro prestador do Estúdio.",
+    "— Use Alterar Escala apenas para ajuste pontual de um dia em escala já aprovada.\n— A alteração reflete no Calendário do prestador (compromissos daquele dia).",
 };

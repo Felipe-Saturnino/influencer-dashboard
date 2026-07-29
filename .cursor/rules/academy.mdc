@@ -57,7 +57,7 @@ Ordem na Home Estúdio: Informações → **Central Academy** → Blogueiro Spin
 | Perfil | Escopo |
 |--------|--------|
 | **Admin** | Irrestrito |
-| **Demais** | Ver abas de leitura; **Gerenciamento** com permissão de Editar |
+| **Demais** | Ver abas de leitura; **Gerenciamento** com permissão de Editar (**Sim** ou **Próprios**) |
 
 Permissões iniciais: migração `20260703180000_academy_portal.sql` — todos os roles (exceto admin) com Ver/Criar/Editar/Excluir = **Não**.
 
@@ -90,7 +90,18 @@ Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valo
 
 ### Workflow Gerenciamento
 
-Status: Rascunho · Publicado · Arquivado. Ações: **Editar** (rascunho e publicado — `podeEditarPostagemAcademyGerenciamento` / permissão de Editar sim ou próprios × `created_by`), arquivar (publicado), histórico. Tabela: Assunto, Autor, **Tipo** (Comunicados / Dicas / Manuais), **Categoria** (subcategoria: Treinamentos, Jogos, …), Criado em, Status, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página (`TabelaPaginacaoBar`).
+Status: Rascunho · **Aprovação** · Publicado · Arquivado (migration `20261102120000_academy_portal_aprovacao_workflow.sql` — `approved_at` / `approved_by` em comunicado/dica).
+
+Se essa migration ainda não estiver aplicada, a listagem de Gerenciamento refaz a leitura sem `approved_at` / `approved_by` para não bloquear toda a página. Aprovar ou enviar uma postagem para Aprovação continua dependente da migration; o fallback é apenas de leitura e registra aviso técnico no console.
+
+| Permissão Editar | Gerenciamento | Nova Postagem | Envio | Aprovar | Editar / Arquivar |
+|------------------|---------------|---------------|-------|---------|-------------------|
+| **Sim** | Sim | Comunicados, Dicas, Manuais | **Publicar** → Publicado | Sim (status Aprovação) | Todas as postagens |
+| **Próprios** | Sim | Só Comunicados e Dicas | **Enviar para aprovação** → Aprovação | Não | Só postagens com `created_by` = usuário |
+
+**Tutorial (Ajuda → Tutoriais):** **Dicas Academy** (`postagem-academy-aprovacao`, URL `/Ajuda/Tutoriais/DicasAcademy`) — criar Dica/Comunicado e enviar para aprovação; imagens em `public/tutoriais/academy/postagem-aprovacao/`.
+
+Ações por status: rascunho → Editar + Histórico; **aprovacao** → Editar + **Aprovar** (só Sim) + Histórico; publicado → Editar + Arquivar + Histórico; arquivado → Histórico. Tabela: Assunto, Autor, Tipo, Categoria, Criado em, Status, **Data de Aprovação**, **Aprovador**, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página (`TabelaPaginacaoBar`).
 
 ### Filtros
 

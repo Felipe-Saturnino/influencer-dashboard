@@ -4,10 +4,11 @@ import { anexosIguais } from "./academyPortalPostagemFiles";
 
 export type AcademyPostagemTipoUi = "comunicado" | "dica" | "manual";
 export type AcademyPostagemContentType = "comunicado" | "dica" | "manual";
-export type AcademyPostagemStatus = "rascunho" | "publicado" | "arquivado";
+export type AcademyPostagemStatus = "rascunho" | "aprovacao" | "publicado" | "arquivado";
 
 export const ACADEMY_POSTAGEM_STATUS_LABEL: Record<AcademyPostagemStatus, string> = {
   rascunho: "Rascunho",
+  aprovacao: "Aprovação",
   publicado: "Publicado",
   arquivado: "Arquivado",
 };
@@ -99,6 +100,36 @@ export function podeEditarPostagemAcademyGerenciamento(
     return !!userId && !!createdBy && createdBy === userId;
   }
   return canEditar === "sim";
+}
+
+/** Arquivar na aba Gerenciamento — mesma regra de autor que Editar. */
+export function podeArquivarPostagemAcademyGerenciamento(
+  canEditar: PermissaoValor | null,
+  canEditarOk: boolean,
+  userId: string | undefined | null,
+  createdBy: string | null | undefined,
+): boolean {
+  return podeEditarPostagemAcademyGerenciamento(canEditar, canEditarOk, userId, createdBy);
+}
+
+/** Aprovar postagem em Aprovação — somente Editar = Sim. */
+export function podeAprovarPostagemAcademyGerenciamento(canEditar: PermissaoValor | null): boolean {
+  return canEditar === "sim";
+}
+
+/** Editar = Próprios só cria Comunicados e Dicas (sem Manuais). */
+export function tiposPostagemAcademyPermitidos(canEditar: PermissaoValor | null): AcademyPostagemTipoUi[] {
+  if (canEditar === "proprios") return ["comunicado", "dica"];
+  return ["comunicado", "dica", "manual"];
+}
+
+/**
+ * Status ao enviar a postagem (CTA primário):
+ * - Editar = Próprios → Aprovação (Comunicados/Dicas)
+ * - Editar = Sim → Publicado
+ */
+export function statusEnvioPostagemAcademy(canEditar: PermissaoValor | null): "aprovacao" | "publicado" {
+  return canEditar === "proprios" ? "aprovacao" : "publicado";
 }
 
 export function truncPreviewHtml(html: string, maxLen: number): string {
