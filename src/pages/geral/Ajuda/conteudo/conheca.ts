@@ -611,7 +611,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Atendimento",
         texto:
-          "Filtre por tipo de denúncia, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar. Denúncias arquivadas ou concluídas saem das filas operacionais padrão.",
+          "Filtre por tipo de denúncia, incluindo **Elogios**, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar. Denúncias arquivadas ou concluídas saem das filas operacionais padrão.",
       },
     ],
   },
