@@ -667,6 +667,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A aba **Gerenciamento** exige permissão de **Editar** (Sim ou Próprios) na página Portal da Academy. Com apenas **Ver**, só as abas Comunicados, Dicas e Manuais ficam disponíveis.",
       },
       {
+        subtitulo: "Não foi possível carregar as postagens?",
+        texto:
+          "Atualize a página e tente novamente. Se a mensagem continuar no **Gerenciamento**, o suporte deve conferir se a atualização do fluxo de **Aprovação** do Portal da Academy foi aplicada no ambiente. A leitura das postagens continua disponível em modo de compatibilidade, mas publicar ou aprovar depende dessa atualização.",
+      },
+      {
         subtitulo: "Não vejo o botão Editar ou Arquivar em algumas postagens?",
         texto:
           "Com Editar = **Próprios**, **Editar** e **Arquivar** só aparecem nas postagens criadas por você. Com Editar = **Sim**, valem para todas. Postagens **Arquivadas** têm só Histórico.",
@@ -1365,6 +1370,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Turnos não aparecem no calendário?",
         texto:
           "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da Escala Diária **aprovada** em **Escala Estúdio**. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, se existir **Escala Escritório** aprovada, essa grade prevalece; caso contrário, verifique se a área de atuação está cadastrada corretamente e use a escala automática de segunda a sexta-feira.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
+      },
+      {
+        subtitulo: "Aparece «Não foi possível carregar a escala do calendário»?",
+        texto:
+          "Essa mensagem indica falha ao buscar a grade do **mês exibido** no carrossel (não confundir com mês sem escala aprovada, que mostra aviso amarelo). Atualize a página; se continuar, peça ao suporte para aplicar as migrations do Calendário no Supabase e conferir o console (F12) nas RPCs `rh_calendario_grade_mes`. Enquanto isso, Escritório / Horário Comercial podem continuar com a escala automática no cliente.",
       },
       {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",

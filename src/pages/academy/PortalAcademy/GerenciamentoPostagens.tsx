@@ -98,6 +98,17 @@ const ERRO_ARQUIVAR =
 const ERRO_APROVAR =
   "Não foi possível aprovar a postagem. Se o problema persistir, entre em contato com o suporte.";
 
+function erroColunasAprovacaoAusentes(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const mencionaColuna = message.includes("approved_at") || message.includes("approved_by");
+  return (
+    mencionaColuna &&
+    (message.includes("does not exist") ||
+      message.includes("Could not find") ||
+      message.includes("schema cache"))
+  );
+}
+
 const POSTAGEM_TIPO_FILTRO_OPCOES = (["comunicado", "dica", "manual"] as const).map((value) => ({
   value,
   label: ACADEMY_POSTAGEM_TIPO_UI_LABEL[value],
@@ -231,49 +242,61 @@ export function GerenciamentoPostagens({
     setErro(null);
     const { inicio } = getPeriodoHistoricoCompetencias();
 
+    const carregarTabela = (
+      tabela: "academy_portal_comunicado" | "academy_portal_dica" | "academy_portal_manual",
+      incluirAprovacao: boolean,
+    ) =>
+      fetchAllPages(async (from, to) => {
+        const colunasBase =
+          tabela === "academy_portal_manual"
+            ? "id, titulo, corpo, introducao, status, created_at, published_at, created_by"
+            : "id, titulo, corpo, status, created_at, published_at, created_by";
+        const colunasAprovacao =
+          incluirAprovacao && tabela !== "academy_portal_manual" ? ", approved_at, approved_by" : "";
+        const res = await supabase
+          .from(tabela)
+          .select(`${colunasBase}${colunasAprovacao}, categoria:academy_portal_categoria(slug)`)
+          .gte("created_at", inicio)
+          .order("created_at", { ascending: false })
+          .range(from, to);
+        return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
+      });
+
     let coms: unknown[] = [];
     let dicas: unknown[] = [];
     let manuais: unknown[] = [];
     try {
       [coms, dicas, manuais] = await Promise.all([
-        fetchAllPages(async (from, to) => {
-          const res = await supabase
-            .from("academy_portal_comunicado")
-            .select(
-              "id, titulo, corpo, status, created_at, published_at, created_by, approved_at, approved_by, categoria:academy_portal_categoria(slug)",
-            )
-            .gte("created_at", inicio)
-            .order("created_at", { ascending: false })
-            .range(from, to);
-          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
-        }),
-        fetchAllPages(async (from, to) => {
-          const res = await supabase
-            .from("academy_portal_dica")
-            .select(
-              "id, titulo, corpo, status, created_at, published_at, created_by, approved_at, approved_by, categoria:academy_portal_categoria(slug)",
-            )
-            .gte("created_at", inicio)
-            .order("created_at", { ascending: false })
-            .range(from, to);
-          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
-        }),
-        fetchAllPages(async (from, to) => {
-          const res = await supabase
-            .from("academy_portal_manual")
-            .select("id, titulo, corpo, introducao, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
-            .gte("created_at", inicio)
-            .order("created_at", { ascending: false })
-            .range(from, to);
-          return { data: res.data as unknown as Record<string, unknown>[] | null, error: res.error };
-        }),
+        carregarTabela("academy_portal_comunicado", true),
+        carregarTabela("academy_portal_dica", true),
+        carregarTabela("academy_portal_manual", false),
       ]);
     } catch (e) {
-      console.error("[GerenciamentoPostagens Academy]", e);
-      setErro(ERRO_CARREGAR);
-      setRows([]);
-      setLoading(false);
-      return;
+      if (erroColunasAprovacaoAusentes(e)) {
+        console.warn(
+          "[GerenciamentoPostagens Academy] migration de aprovação pendente; carregando schema anterior.",
+          e,
+        );
+        try {
+          [coms, dicas, manuais] = await Promise.all([
+            carregarTabela("academy_portal_comunicado", false),
+            carregarTabela("academy_portal_dica", false),
+            carregarTabela("academy_portal_manual", false),
+          ]);
+        } catch (fallbackError) {
+          console.error("[GerenciamentoPostagens Academy] fallback:", fallbackError);
+          setErro(ERRO_CARREGAR);
+          setRows([]);
+          setLoading(false);
+          return;
+        }
+      } else {
+        console.error("[GerenciamentoPostagens Academy]", e);
+        setErro(ERRO_CARREGAR);
+        setRows([]);
+        setLoading(false);
+        return;
+      }
     }
 
     const comRes = { data: coms };

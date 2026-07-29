@@ -92,6 +92,8 @@ Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valo
 
 Status: Rascunho · **Aprovação** · Publicado · Arquivado (migration `20261102120000_academy_portal_aprovacao_workflow.sql` — `approved_at` / `approved_by` em comunicado/dica).
 
+Se essa migration ainda não estiver aplicada, a listagem de Gerenciamento refaz a leitura sem `approved_at` / `approved_by` para não bloquear toda a página. Aprovar ou enviar uma postagem para Aprovação continua dependente da migration; o fallback é apenas de leitura e registra aviso técnico no console.
+
 | Permissão Editar | Gerenciamento | Nova Postagem | Envio | Aprovar | Editar / Arquivar |
 |------------------|---------------|---------------|-------|---------|-------------------|
 | **Sim** | Sim | Comunicados, Dicas, Manuais | **Publicar** → Publicado | Sim (status Aprovação) | Todas as postagens |
