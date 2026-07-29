@@ -26,7 +26,7 @@ import {
   type AcademyPostagemStatus,
   type AcademyPostagemTipoUi,
 } from "../../../lib/academyPortalWorkflow";
-import { carregarMetaAutoresPortalAcademy } from "../../../lib/academyPortalAutorMeta";
+import { carregarMetaAutoresPortalAcademy, nomeCurtoPortalAcademy } from "../../../lib/academyPortalAutorMeta";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { usePermission } from "../../../hooks/usePermission";
@@ -360,8 +360,8 @@ export function GerenciamentoPostagens({
     const meta = await carregarMetaAutoresPortalAcademy([...userIds]);
     const withAutor = built.map((r) => ({
       ...r,
-      autorNome: meta[r.createdBy ?? ""]?.nome ?? "—",
-      aprovadorNome: r.approvedBy ? (meta[r.approvedBy]?.nome ?? "—") : "—",
+      autorNome: nomeCurtoPortalAcademy(meta[r.createdBy ?? ""]?.nome),
+      aprovadorNome: r.approvedBy ? nomeCurtoPortalAcademy(meta[r.approvedBy]?.nome) : "—",
     }));
 
     setRows(withAutor);
