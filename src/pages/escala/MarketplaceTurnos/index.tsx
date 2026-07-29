@@ -39,8 +39,10 @@ import {
 } from "../../../lib/escalaTurnosUiConstants";
 import type { RhCalendarioAcaoTipo } from "../../../lib/rhCalendarioAcaoHelpers";
 import {
+  ESCALA_CARROSSEL_MESES_PT,
   getMesesDisponiveisEscalaCarrossel,
   idxMesInicialEscalaCarrossel,
+  type MesCarrosselEscalaEntry,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
 import {
   carregarMeuContextoMarketplace,
@@ -60,6 +62,34 @@ const MARKETPLACE_TIME_ITEMS = ESCALA_TIME_OPCOES.filter((o) => o.value !== "tod
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
 const GRADE_VAZIA: MarketplaceMinhaGrade = { aprovada: false, areaKey: "", valorPorIso: new Map() };
+
+/**
+ * TEMP TESTE — o carrossel oficial da Escala começa em agosto/2026.
+ * Inclui julho/2026 e abre nele só nesta página para validação do Marketplace.
+ * Remover `TEMP_MARKETPLACE_INCLUIR_JULHO` e voltar a `getMesesDisponiveisEscalaCarrossel`
+ * + `idxMesInicialEscalaCarrossel` quando os testes terminarem.
+ */
+const TEMP_MARKETPLACE_INCLUIR_JULHO = true;
+const TEMP_JULHO_2026: MesCarrosselEscalaEntry = {
+  ano: 2026,
+  mes: 6,
+  label: `${ESCALA_CARROSSEL_MESES_PT[6]} 2026`,
+};
+
+function getMesesMarketplace(hoje = new Date()): MesCarrosselEscalaEntry[] {
+  const base = getMesesDisponiveisEscalaCarrossel(hoje);
+  if (!TEMP_MARKETPLACE_INCLUIR_JULHO) return base;
+  if (base.some((m) => m.ano === TEMP_JULHO_2026.ano && m.mes === TEMP_JULHO_2026.mes)) return base;
+  return [TEMP_JULHO_2026, ...base];
+}
+
+function idxMesInicialMarketplace(meses: MesCarrosselEscalaEntry[], hoje = new Date()): number {
+  if (TEMP_MARKETPLACE_INCLUIR_JULHO) {
+    const idxJulho = meses.findIndex((m) => m.ano === TEMP_JULHO_2026.ano && m.mes === TEMP_JULHO_2026.mes);
+    if (idxJulho >= 0) return idxJulho;
+  }
+  return idxMesInicialEscalaCarrossel(meses, hoje);
+}
 
 function refMesIsoPrimeiroDia(ano: number, mes0: number): string {
   const p2 = (n: number) => String(n).padStart(2, "0");
@@ -168,12 +198,12 @@ export default function EscalaMarketplaceTurnosPage() {
   const perm = usePermission("escala_marketplace_turnos");
 
   const hoje = useMemo(() => new Date(), []);
-  const mesesDisponiveis = useMemo(() => getMesesDisponiveisEscalaCarrossel(hoje), [hoje]);
-  const [idxMes, setIdxMes] = useState(() => idxMesInicialEscalaCarrossel(getMesesDisponiveisEscalaCarrossel(new Date()), new Date()));
+  const mesesDisponiveis = useMemo(() => getMesesMarketplace(hoje), [hoje]);
+  const [idxMes, setIdxMes] = useState(() => idxMesInicialMarketplace(getMesesMarketplace(new Date()), new Date()));
   const [historico, setHistorico] = useState(false);
 
   const idxMesInicial = useMemo(
-    () => idxMesInicialEscalaCarrossel(mesesDisponiveis, hoje),
+    () => idxMesInicialMarketplace(mesesDisponiveis, hoje),
     [mesesDisponiveis, hoje],
   );
 

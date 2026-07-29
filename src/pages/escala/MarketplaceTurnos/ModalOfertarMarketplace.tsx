@@ -36,6 +36,8 @@ const TIPOS_PUBLICAVEIS: { value: TipoOfertaMarketplace; label: string; ajuda: s
 const MSG_SEM_ESCALA_APROVADA =
   "A escala deste mês ainda não está aprovada. Assim que for aprovada, os seus dias aparecem aqui.";
 
+const MSG_ANTECEDENCIA_24H = "Apenas dias com ao menos 24h de antecedência.";
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -210,15 +212,15 @@ export function ModalOfertarMarketplace({
               </option>
             ))}
           </select>
-          {semDias ? (
-            <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
-              {!grade.aprovada
-                ? MSG_SEM_ESCALA_APROVADA
-                : tipo === "venda_folga"
-                  ? `Sem folgas futuras em ${labelMes} na sua escala.`
-                  : `Sem turnos futuros em ${labelMes} na sua escala.`}
-            </p>
-          ) : null}
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
+            {!grade.aprovada
+              ? MSG_SEM_ESCALA_APROVADA
+              : semDias
+                ? tipo === "venda_folga"
+                  ? `Sem folgas em ${labelMes} com ao menos 24h de antecedência.`
+                  : `Sem dias escalados em ${labelMes} com ao menos 24h de antecedência.`
+                : MSG_ANTECEDENCIA_24H}
+          </p>
         </div>
 
         {tipo === "venda_folga" ? (
@@ -247,7 +249,7 @@ export function ModalOfertarMarketplace({
                 ? "Escolha primeiro o dia de folga."
                 : turnosFolga.length === 0
                   ? "Nenhum turno respeita o intervalo mínimo de 12h entre turnos neste dia."
-                  : "Apenas turnos com intervalo mínimo de 12h em relação aos seus turnos vizinhos."}
+                  : "Apenas turnos com 12h de intervalo em relação ao seu último turno e ao próximo."}
             </p>
           </div>
         ) : null}

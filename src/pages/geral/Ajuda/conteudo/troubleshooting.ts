@@ -1417,14 +1417,19 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Publicar exige permissão de **Criar** no Marketplace e cadastro de prestador com área **Estúdio** ligado ao seu login. Sem esse vínculo o botão não aparece — confirme o cadastro em Gestão de Prestadores e a permissão em Gestão de Usuários → Permissões.",
       },
       {
+        subtitulo: "O dia de amanhã não aparece no modal de oferta?",
+        texto:
+          "Publicar exige **24h de antecedência**: o primeiro dia possível é depois de amanhã. Hoje e amanhã nunca aparecem na lista, mesmo que você esteja escalado ou de folga.",
+      },
+      {
         subtitulo: "Nenhum dia aparece no modal de oferta?",
         texto:
-          "Os dias vêm da sua escala do mês **aprovada** e apenas dias **futuros** entram. Também ficam fora dias já negociados (Compra, Venda ou Troca) e, na Venda de Folga, turnos que deixariam menos de **12h** de intervalo. Se a escala do mês ainda não foi aprovada, o modal avisa e a lista fica vazia.",
+          "Os dias vêm da sua escala do mês **aprovada**, com ao menos **24h de antecedência**: Venda de Turno e Oferta de Troca listam dias em que você está **escalado**; Venda de Folga lista **folgas**. Ficam fora dias já negociados (Compra, Venda ou Troca). Se a escala do mês ainda não foi aprovada, o modal avisa e a lista fica vazia.",
       },
       {
         subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
         texto:
-          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação aos seus turnos vizinhos. Ex.: quem sai da Noite na véspera não pode assumir a Manhã seguinte. Se nenhum turno atender à regra, o dia não pode ser ofertado.",
+          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação ao seu último turno e ao próximo. Ex.: escalado na Noite do dia 12 e de folga no 13 — no dia 13 só a Noite fica disponível; no dia 14 todos os turnos voltam a caber. Se nenhum turno atender à regra, o dia não pode ser ofertado.",
       },
       {
         subtitulo: "Não consigo aceitar uma oferta?",

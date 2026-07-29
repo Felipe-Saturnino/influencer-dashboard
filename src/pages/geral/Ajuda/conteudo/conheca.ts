@@ -808,7 +808,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Publicar uma oferta",
         texto:
-          "Com permissão de **Criar**, use **Nova Oferta**. Os dias listados vêm da sua escala **aprovada** e são sempre **futuros**: **Venda de Turno** e **Oferta de Troca** listam dias em que você está escalado; **Venda de Folga** lista as suas folgas — nesse caso você se oferece para **trabalhar** e escolhe o turno. Dias já negociados (Compra, Venda, Troca) não entram, e só é possível ter **uma** oferta aberta por dia. Enquanto ninguém aceitar, você pode **cancelar** a oferta em Minhas Ofertas — a escala não muda.",
+          "Com permissão de **Criar**, use **Nova Oferta**. Os dias listados vêm da sua escala **aprovada** e exigem no mínimo **24h de antecedência** — o primeiro dia possível é sempre depois de amanhã. **Venda de Turno** e **Oferta de Troca** listam dias em que você está **escalado**; **Venda de Folga** lista as suas **folgas** — nesse caso você se oferece para **trabalhar** e escolhe o turno. Dias já negociados (Compra, Venda, Troca) não entram, e só é possível ter **uma** oferta aberta por dia. Enquanto ninguém aceitar, você pode **cancelar** a oferta em Minhas Ofertas — a escala não muda.",
       },
       {
         subtitulo: "Aceitar uma oferta",
@@ -818,7 +818,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Intervalo mínimo de 12h",
         texto:
-          "Nenhuma oferta ou aceite pode deixar menos de **12h** entre o fim de um turno e o início do seguinte. A plataforma calcula o intervalo com a sua escala, o turno de staff e os horários da operadora, e bloqueia turnos ou dias que violem a regra — por isso um dia pode não aparecer na lista ou o aceite pode ser recusado com aviso.",
+          "Nenhuma oferta ou aceite pode deixar menos de **12h** entre o fim de um turno e o início do seguinte. A plataforma calcula o intervalo com a sua escala, o turno de staff e os horários da operadora. Exemplo na Venda de Folga: escalado na Noite do dia 12 e de folga nos dias 13 e 14 — ao ofertar o dia 13 só a **Noite** fica disponível (Manhã e Tarde ficariam a menos de 12h do fim do turno); no dia 14 todos os turnos voltam a caber.",
       },
     ],
   },
