@@ -1439,7 +1439,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Só vejo ofertas do meu time?",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu time. Para ver todos os times é necessária permissão de **Ver: Sim** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu time e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba muda para **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para alternar o escopo, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
       },
       {
         subtitulo: "Aceitei uma oferta e a escala não mudou?",

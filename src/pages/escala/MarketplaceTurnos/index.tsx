@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Ban, Check, ChevronLeft, ChevronRight, Loader2, Store, User } from "lucide-react";
+import { Archive, Ban, Check, ChevronLeft, ChevronRight, Loader2, Store, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -123,6 +123,12 @@ type OfertaSortCol =
 /** Blocos da aba Minhas Ofertas — cada um com o seu conjunto de colunas. */
 type MinhasVariant = "abertas" | "aceitei" | "historico";
 
+/** Blocos da aba Ofertas Encerradas (Ver = Sim). */
+type EncerradasVariant = "aceitas" | "canceladas";
+
+type MarketplaceAba = "todas" | "minhas" | "encerradas";
+const MARKETPLACE_ABAS: readonly MarketplaceAba[] = ["todas", "minhas", "encerradas"];
+
 function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
 }
@@ -220,7 +226,7 @@ export default function EscalaMarketplaceTurnosPage() {
     setIdxMes((i) => Math.min(Math.max(0, i), Math.max(0, mesesDisponiveis.length - 1)));
   }, [mesesDisponiveis.length]);
 
-  const [aba, setAba] = useRouteTab("escala_marketplace_turnos", "todas", ["todas", "minhas"] as const);
+  const [aba, setAba] = useRouteTab("escala_marketplace_turnos", "todas", MARKETPLACE_ABAS);
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTimeTodas, setFiltroTimeTodas] = useState<EscalaTimeFiltro>("todos");
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
@@ -251,6 +257,13 @@ export default function EscalaMarketplaceTurnosPage() {
     }));
 
   const podeFiltrarTimes = perm.canView === "sim";
+
+  /** Ver = Sim: aba Ofertas Encerradas. Ver = Próprios: aba Minhas Ofertas. */
+  useEffect(() => {
+    if (perm.loading) return;
+    if (podeFiltrarTimes && aba === "minhas") setAba("encerradas");
+    if (!podeFiltrarTimes && aba === "encerradas") setAba("minhas");
+  }, [perm.loading, podeFiltrarTimes, aba, setAba]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -360,6 +373,26 @@ export default function EscalaMarketplaceTurnosPage() {
     [minhasBase],
   );
 
+  /** Gestores (Ver = Sim): todas as aceitas/canceladas, respeitando filtro de time. */
+  const encerradasBase = useMemo(
+    () =>
+      linhasMes.filter(
+        (r) =>
+          passaFiltroTipo(r, filtroTipoTodas) &&
+          passaFiltroTime(r, filtroTimeTodas) &&
+          textoContemBuscaEmAlgum(busca, r.ofertante, r.operadora, r.turnoOferta, r.turnoInteresse, r.comprador),
+      ),
+    [linhasMes, filtroTipoTodas, filtroTimeTodas, busca],
+  );
+  const encerradasAceitas = useMemo(
+    () => encerradasBase.filter((r) => r.status === "aprovada"),
+    [encerradasBase],
+  );
+  const encerradasCanceladas = useMemo(
+    () => encerradasBase.filter((r) => r.status === "cancelada"),
+    [encerradasBase],
+  );
+
   const souPrestadorCadastrado = !!contexto?.funcionarioId;
   const podeOfertar = perm.canCriarOk && souPrestadorCadastrado;
 
@@ -445,17 +478,17 @@ export default function EscalaMarketplaceTurnosPage() {
   const blocoFiltrosLinha1 = (
     <>
       {blocoCarrosselHistorico}
-      {aba === "todas" ? (
-        <FiltroSolicitacoesTipoAcaoSelect
-          value={filtroTipoTodas}
-          onChange={setFiltroTipoTodas}
-          opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
-        />
-      ) : (
+      {aba === "minhas" ? (
         <FiltroSolicitacoesTipoAcaoSelect
           value={filtroTipoMinhas}
           onChange={setFiltroTipoMinhas}
           opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
+        />
+      ) : (
+        <FiltroSolicitacoesTipoAcaoSelect
+          value={filtroTipoTodas}
+          onChange={setFiltroTipoTodas}
+          opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
         />
       )}
       {podeFiltrarTimes ? (
@@ -694,12 +727,61 @@ export default function EscalaMarketplaceTurnosPage() {
     );
   }
 
+  /** Tabelas da aba Ofertas Encerradas — visão de gestão (todos os prestadores). */
+  function renderTabelaEncerradas(rows: LinhaOfertaMarketplace[], variant: EncerradasVariant) {
+    const sorted = ordenarOfertas(rows, sortOferta);
+    if (sorted.length === 0) return celulaVazia();
+    const mostrarAceitoPor = variant === "aceitas";
+
+    return (
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
+          <caption style={{ display: "none" }}>
+            {variant === "aceitas" ? "Ofertas aceitas no Marketplace" : "Ofertas canceladas no Marketplace"}
+          </caption>
+          <thead>
+            <tr>
+              {thSort("Data da Oferta", "dataOferta")}
+              {thSort("Tipo de Ação", "tipo")}
+              {thSort("Turno da Oferta", "turnoOferta")}
+              {thSort("Operadora", "operadora")}
+              {thSort("Ofertante", "ofertante")}
+              {thSort("Data de Interesse", "dataInteresse")}
+              {thSort("Turno de Interesse", "turnoInteresse")}
+              {mostrarAceitoPor && thSort("Aceito por", "comprador")}
+              {thSort("Status", "status")}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r, i) =>
+              linhaTabela(
+                r,
+                i,
+                <>
+                  <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
+                  <td style={dataTable.tdCenter}>{labelTipo(r)}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
+                  <td style={dataTable.tdCenter}>{r.operadora}</td>
+                  <td style={dataTable.tdCenter}>{r.ofertante}</td>
+                  <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
+                  {mostrarAceitoPor && <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>}
+                  <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                </>,
+              ),
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="escala_marketplace_turnos" />}
         title={getPageMenuLabel("escala_marketplace_turnos")}
-        subtitle="Ofertas de venda e troca de turnos — todas as ofertas publicadas e as suas ofertas."
+        subtitle="Ofertas de venda e troca de turnos — mural aberto e histórico conforme a sua permissão."
         brand={brand}
         t={t}
       />
@@ -725,15 +807,27 @@ export default function EscalaMarketplaceTurnosPage() {
               >
                 Todas as Ofertas
               </FiltroBarTabButton>
-              <FiltroBarTabButton
-                id="tab-mkt-minhas"
-                active={aba === "minhas"}
-                aria-controls="panel-mkt-minhas"
-                onClick={() => setAba("minhas")}
-                icon={<User size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-              >
-                Minhas Ofertas
-              </FiltroBarTabButton>
+              {podeFiltrarTimes ? (
+                <FiltroBarTabButton
+                  id="tab-mkt-encerradas"
+                  active={aba === "encerradas"}
+                  aria-controls="panel-mkt-encerradas"
+                  onClick={() => setAba("encerradas")}
+                  icon={<Archive size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+                >
+                  Ofertas Encerradas
+                </FiltroBarTabButton>
+              ) : (
+                <FiltroBarTabButton
+                  id="tab-mkt-minhas"
+                  active={aba === "minhas"}
+                  aria-controls="panel-mkt-minhas"
+                  onClick={() => setAba("minhas")}
+                  icon={<User size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+                >
+                  Minhas Ofertas
+                </FiltroBarTabButton>
+              )}
             </div>
             <div className="app-filter-bar-tabs-cta__actions">{ctaOfertar}</div>
           </div>
@@ -772,7 +866,7 @@ export default function EscalaMarketplaceTurnosPage() {
             </div>
           )}
 
-          {aba === "minhas" && (
+          {aba === "minhas" && !podeFiltrarTimes && (
             <div role="tabpanel" id="panel-mkt-minhas" aria-labelledby="tab-mkt-minhas">
               <div style={contentBox}>
                 <SectionTitle sub="Publicadas por você e ainda disponíveis">
@@ -787,6 +881,23 @@ export default function EscalaMarketplaceTurnosPage() {
               <div style={contentBox}>
                 <SectionTitle sub="Suas ofertas já aceitas ou canceladas">Histórico</SectionTitle>
                 {renderTabelaMinhas(minhasEncerradas, "historico")}
+              </div>
+            </div>
+          )}
+
+          {aba === "encerradas" && podeFiltrarTimes && (
+            <div role="tabpanel" id="panel-mkt-encerradas" aria-labelledby="tab-mkt-encerradas">
+              <div style={contentBox}>
+                <SectionTitle sub="Ofertas de todos os prestadores que foram aceitas">
+                  Ofertas aceitas
+                </SectionTitle>
+                {renderTabelaEncerradas(encerradasAceitas, "aceitas")}
+              </div>
+              <div style={contentBox}>
+                <SectionTitle sub="Ofertas de todos os prestadores que foram canceladas">
+                  Ofertas Canceladas
+                </SectionTitle>
+                {renderTabelaEncerradas(encerradasCanceladas, "canceladas")}
               </div>
             </div>
           )}
