@@ -17,7 +17,6 @@ export const ESCALA_ACAO_TIPO_OPCOES_TODAS: { value: EscalaAcaoFiltro; label: st
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
-  { value: "troca_cassada", label: "Troca Casada" },
 ];
 
 export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: EscalaAcaoFiltro; label: string }[] = [
@@ -25,7 +24,6 @@ export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: EscalaAcaoFiltro; label: s
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
-  { value: "troca_cassada", label: "Troca Casada" },
 ];
 
 export type EscalaTimeFiltro =
@@ -78,7 +76,6 @@ export const RH_CALENDARIO_ACAO_LABEL_FORMAL: Record<RhCalendarioAcaoTipo, strin
   venda_turno: "Venda de Turno",
   venda_folga: "Venda de Folga",
   oferta_troca: "Oferta de Troca",
-  troca_cassada: "Troca Casada",
   agendamento_reuniao: "Agendamento de reunião",
 };
 

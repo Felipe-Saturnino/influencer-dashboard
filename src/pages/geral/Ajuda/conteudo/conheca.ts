@@ -727,7 +727,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. **Compra** e **Venda** não aparecem nas opções manuais: esses estados são preenchidos exclusivamente pela automação do Marketplace. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
       {
         subtitulo: "Baixar Excel",
@@ -803,18 +803,18 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O que você vê",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times. O carrossel filtra pelo mês do dia negociado e **Histórico** abre todo o período.",
+          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times e o filtro **Times** fica disponível. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. Use o filtro de ações e, abaixo das abas, pesquise pelo nome do ofertante, pela operadora ou pelo turno.",
       },
       {
         subtitulo: "Publicar uma oferta",
         texto:
-          "Com permissão de **Criar**, use **Nova Oferta**. Os dias listados vêm da sua escala **aprovada** e exigem no mínimo **24h de antecedência** — o primeiro dia possível é sempre depois de amanhã. **Venda de Turno** e **Oferta de Troca** listam dias em que você está **escalado**; **Venda de Folga** lista as suas **folgas** — nesse caso você se oferece para **trabalhar** e escolhe o turno. Dias já negociados (Compra, Venda, Troca) não entram, e só é possível ter **uma** oferta aberta por dia. Enquanto ninguém aceitar, você pode **cancelar** a oferta em Minhas Ofertas — a escala não muda.",
+          "Com permissão de **Criar**, use **Nova Oferta**. Os dias listados vêm da sua escala **aprovada** e exigem no mínimo **24h de antecedência** — o primeiro dia possível é sempre depois de amanhã. **Venda de Turno** e **Oferta de Troca** listam dias em que você está escalado originalmente ou com **Compra - Turno**; **Venda de Folga** lista Folga e dias com **Venda** — nesse caso você se oferece para trabalhar e escolhe o turno. Só é possível ter uma oferta aberta por dia. Enquanto ninguém aceitar, você pode cancelar em Minhas Ofertas.",
       },
       {
         subtitulo: "Aceitar uma oferta",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar de folga no dia e fica com **Compra** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega **escalado no mesmo turno**, que fica com **Venda** (o ofertante fica Compra). Em **Oferta de Troca** você escolhe um dia seu com turno para dar em troca e ambos ficam com **Troca** nos dois dias.",
-      },
+          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). **Compra - Turno** se comporta como dia escalado e pode ser revendida; **Venda** se comporta como folga e libera nova negociação. Ofertas **aceitas** ou **canceladas** somem do mural de Todas as Ofertas e ficam nos blocos de Minhas Ofertas (**Ofertas que aceitei** ou **Histórico**).",
+        },
       {
         subtitulo: "Intervalo mínimo de 12h",
         texto:

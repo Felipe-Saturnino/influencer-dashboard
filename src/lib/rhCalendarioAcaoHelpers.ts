@@ -11,14 +11,12 @@ export type RhCalendarioAcaoTipo =
   | "venda_folga"
   | "venda_turno"
   | "oferta_troca"
-  | "troca_cassada"
   | "agendamento_reuniao";
 
 export const RH_CALENDARIO_ACAO_LABEL: Record<RhCalendarioAcaoTipo, string> = {
   venda_folga: "Vender Folga",
   venda_turno: "Vender Turno",
   oferta_troca: "Ofertar Troca",
-  troca_cassada: "Solicitar Troca",
   agendamento_reuniao: "Agendar Reunião",
 };
 
@@ -91,10 +89,37 @@ export function valorCelulaEhFolga(valor: string): boolean {
   return v === "Folga" || vl === "folga" || v === "F" || vl === "f";
 }
 
+/** `Venda` fica gravada na grade, mas operacionalmente libera o dia como folga. */
+export function valorCelulaEhFolgaOperacional(valor: string): boolean {
+  return valorCelulaEhFolga(valor) || (valor ?? "").trim().toLowerCase() === "venda";
+}
+
+/**
+ * Turno efetivamente trabalhado no dia.
+ * `Compra - Manhã/Tarde/Noite/Comercial` preserva o turno adquirido para gap,
+ * revenda e calendário. `Venda` não tem turno: comporta-se como folga.
+ */
+export function turnoOperacionalValorGrade(valor: string): string | null {
+  const v = (valor ?? "").trim();
+  if (!v || valorCelulaEhFolgaOperacional(v)) return null;
+  const compra = /^compra\s*-\s*(manhã|manha|tarde|noite|comercial)$/i.exec(v);
+  if (compra) {
+    const turno = compra[1]!.toLowerCase();
+    if (turno === "manhã" || turno === "manha") return "Manhã";
+    if (turno === "tarde") return "Tarde";
+    if (turno === "noite") return "Noite";
+    return "Comercial";
+  }
+  if (v === "Compra" || v === "Troca") return null;
+  if (v === "Comercial") return "Comercial";
+  return siglaGradeParaNomeTurno(v) || null;
+}
+
 /** Turno exibível na grade (não folga). */
 export function turnoExibicaoValorGrade(valor: string): string | null {
   const v = (valor ?? "").trim();
   if (!v || valorCelulaEhFolga(v)) return null;
+  if (/^compra\s*-\s*(manhã|manha|tarde|noite|comercial)$/i.test(v)) return v;
   if (v === "Comercial") return "Comercial";
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   const nome = siglaGradeParaNomeTurno(v);
@@ -143,7 +168,7 @@ export function listarDatasFolgaFuturasNoMes(
   for (const iso of listarIsoDiasDoMes(refMesPrimeiroDia)) {
     if (!diaIsoEhEstritamenteFuturo(iso)) continue;
     const v = valorPorIso.get(iso);
-    if (v == null || !valorCelulaEhFolga(v)) continue;
+    if (v == null || !valorCelulaEhFolgaOperacional(v)) continue;
     out.push({ iso, label: labelDataDdMmAaaa(iso) });
   }
   return out;
@@ -158,7 +183,7 @@ export function listarDatasEscaladoFuturasNoMes(
     if (!diaIsoEhEstritamenteFuturo(iso)) continue;
     const v = valorPorIso.get(iso);
     if (v == null) continue;
-    const turno = turnoExibicaoValorGrade(v);
+    const turno = turnoOperacionalValorGrade(v);
     if (!turno) continue;
     out.push({ iso, turno, label: `${labelDataDdMmAaaa(iso)} - ${turno}` });
   }

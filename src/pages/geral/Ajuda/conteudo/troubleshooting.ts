@@ -1424,7 +1424,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nenhum dia aparece no modal de oferta?",
         texto:
-          "Os dias vêm da sua escala do mês **aprovada**, com ao menos **24h de antecedência**: Venda de Turno e Oferta de Troca listam dias em que você está **escalado**; Venda de Folga lista **folgas**. Ficam fora dias já negociados (Compra, Venda ou Troca). Se a escala do mês ainda não foi aprovada, o modal avisa e a lista fica vazia.",
+          "Os dias vêm da sua escala do mês **aprovada**, com ao menos **24h de antecedência**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda**. Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
       },
       {
         subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
@@ -1444,7 +1444,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitei uma oferta e a escala não mudou?",
         texto:
-          "A célula é gravada na Escala Estúdio aprovada no momento do aceite (Compra, Venda ou Troca). Recarregue a Escala Estúdio ou o Calendário — a leitura pode estar em cache da sessão. Se continuar divergente, entre em contato com o suporte.",
+          "A célula é gravada na Escala Estúdio aprovada no momento do aceite: **Compra - Turno** para quem assumiu e **Venda** para quem saiu. Recarregue a Escala Estúdio ou o Calendário — a leitura pode estar em cache da sessão. Se continuar divergente, entre em contato com o suporte.",
       },
     ],
   },

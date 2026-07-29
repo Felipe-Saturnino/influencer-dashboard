@@ -170,12 +170,14 @@ describe("diasOfertaveisMarketplace", () => {
     ["2026-08-12", "Folga"],
     ["2026-08-13", "Venda"],
     ["2026-08-14", "MRN"],
+    ["2026-08-15", "Compra - Tarde"],
   ]);
 
   it("lista só dias escalados com 24h de antecedência para venda de turno", () => {
     const dias = diasOfertaveisMarketplace("venda_turno", grade, hoje);
-    expect(dias.map((d) => d.iso)).toEqual(["2026-08-14"]);
+    expect(dias.map((d) => d.iso)).toEqual(["2026-08-14", "2026-08-15"]);
     expect(dias[0]!.turno).toBe("Manhã");
+    expect(dias[1]!.turno).toBe("Tarde");
     expect(dias[0]!.label).toContain("14/08/2026");
   });
 
@@ -184,15 +186,15 @@ describe("diasOfertaveisMarketplace", () => {
     expect(dias.map((d) => d.iso)).not.toContain("2026-08-11");
   });
 
-  it("lista só folgas com 24h de antecedência para venda de folga", () => {
+  it("trata Venda como folga disponível para nova negociação", () => {
     const dias = diasOfertaveisMarketplace("venda_folga", grade, hoje);
-    expect(dias.map((d) => d.iso)).toEqual(["2026-08-12"]);
+    expect(dias.map((d) => d.iso)).toEqual(["2026-08-12", "2026-08-13"]);
     expect(dias[0]!.turno).toBe("");
   });
 
-  it("lista dias escalados na oferta de troca e exclui dias já negociados", () => {
+  it("trata Compra - Turno como escalado para oferta de troca", () => {
     const dias = diasOfertaveisMarketplace("oferta_troca", grade, hoje);
-    expect(dias.map((d) => d.iso)).toEqual(["2026-08-14"]);
+    expect(dias.map((d) => d.iso)).toEqual(["2026-08-14", "2026-08-15"]);
     expect(dias.map((d) => d.iso)).not.toContain("2026-08-13");
   });
 });
@@ -234,6 +236,30 @@ describe("gapEntreTurnosOk", () => {
         diaIso: "2026-08-10",
         turnoNome: "Manhã",
         valorPorIso: grade,
+        horario: HORARIO_4X2,
+        operadora: OPERADORA,
+      }),
+    ).toBe(true);
+  });
+
+  it("considera Compra - Turno no cálculo de descanso", () => {
+    expect(
+      gapEntreTurnosOk({
+        diaIso: "2026-08-10",
+        turnoNome: "Manhã",
+        valorPorIso: new Map([["2026-08-09", "Compra - Noite"]]),
+        horario: HORARIO_4X2,
+        operadora: OPERADORA,
+      }),
+    ).toBe(false);
+  });
+
+  it("considera Venda como folga no cálculo de descanso", () => {
+    expect(
+      gapEntreTurnosOk({
+        diaIso: "2026-08-10",
+        turnoNome: "Manhã",
+        valorPorIso: new Map([["2026-08-09", "Venda"]]),
         horario: HORARIO_4X2,
         operadora: OPERADORA,
       }),

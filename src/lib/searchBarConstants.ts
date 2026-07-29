@@ -29,6 +29,7 @@ export const PAGE_SEARCH = {
   informativos: `Buscar por palavras-chave no informativo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   glossario: `Buscar por termo${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   ajudaPagina: `Buscar página${SEARCH_PLACEHOLDER_ELLIPSIS}`,
+  marketplaceOferta: `Buscar por ofertante, operadora ou turno${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   operadoraNome: `Buscar por nome de operadora${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   mesaNomeOuId: `Buscar por nome da mesa ou ID da mesa${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   pipelineB2b: `Buscar por CNPJ, razão social ou marca${SEARCH_PLACEHOLDER_ELLIPSIS}`,

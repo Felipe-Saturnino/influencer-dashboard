@@ -18,6 +18,10 @@ import {
   type EscalaTurnoMesMap,
 } from "../../../lib/gestaoEscalaTurnoMes";
 import {
+  turnoOperacionalValorGrade,
+  valorCelulaEhFolgaOperacional,
+} from "../../../lib/rhCalendarioAcaoHelpers";
+import {
   FILTRO_STAFF_ESTUDIO_NENHUM,
   FILTRO_STAFF_ESTUDIO_TODOS,
   STAFF_ESTUDIO_CADASTRO_TODOS,
@@ -572,6 +576,25 @@ export function filtrarPrestadoresPorEstudio(
   return rows.filter((p) => staffRowPassaFiltroEstudio(p, filtroEstudio, opParaEstudio));
 }
 
+/**
+ * Célula conta no Consolidado da sigla pedida.
+ * `Compra - Manhã|Tarde|Noite|Comercial` entra como dia escalado daquele turno;
+ * `Venda` conta como Folga (operacionalmente livre).
+ */
+export function celulaConsolidadoContaComoSigla(
+  valorArmazenado: string,
+  sigla: "MRN" | "AFT" | "NGT" | "Comercial" | "Folga",
+): boolean {
+  const v = (valorArmazenado ?? "").trim();
+  if (!v) return false;
+  if (v === sigla) return true;
+  if (sigla === "Folga") return valorCelulaEhFolgaOperacional(v);
+  const turno = turnoOperacionalValorGrade(v);
+  if (!turno) return false;
+  if (sigla === "Comercial") return turno === "Comercial";
+  return turnoOperacionalParaSiglaGrade(turno) === sigla;
+}
+
 export function contarCelulasComSigla(
   linhas: LinhaColaborador[],
   dias: DiaMes[],
@@ -581,8 +604,8 @@ export function contarCelulasComSigla(
   return dias.map((dia) =>
     linhas.reduce((acc, row) => {
       const k = chaveCelulaGerar(row.id, dia.iso);
-      const v = (celulas?.[k] ?? "").trim();
-      return acc + (v === sigla ? 1 : 0);
+      const v = celulas?.[k] ?? "";
+      return acc + (celulaConsolidadoContaComoSigla(v, sigla) ? 1 : 0);
     }, 0),
   );
 }
@@ -653,7 +676,7 @@ export function contarCelulasComSiglaPorEstudio(
     for (let i = 0; i < dias.length; i++) {
       const dia = dias[i]!;
       const k = chaveCelulaGerar(p.id, dia.iso);
-      if ((celulas?.[k] ?? "").trim() === sigla) {
+      if (celulaConsolidadoContaComoSigla(celulas?.[k] ?? "", sigla)) {
         entry.counts[i] = (entry.counts[i] ?? 0) + 1;
       }
     }
@@ -754,11 +777,8 @@ export function opcoesSelectCelulaGerar(
   if (areaKey === "academy") {
     out.push({ value: "Comercial", label: "Comercial" });
   }
-  out.push(
-    { value: "Compra", label: "Compra" },
-    { value: "Venda", label: "Venda" },
-    { value: "Troca", label: "Troca" },
-  );
+  // Compra/Venda são preenchidos exclusivamente pela automação do Marketplace.
+  out.push({ value: "Troca", label: "Troca" });
   OPCOES_SELECT_CELULA_CACHE.set(cacheKey, out);
   return out;
 }

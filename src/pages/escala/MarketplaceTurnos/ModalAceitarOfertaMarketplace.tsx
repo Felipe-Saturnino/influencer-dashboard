@@ -5,7 +5,10 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { turnoExibicaoValorGrade, valorCelulaEhFolga } from "../../../lib/rhCalendarioAcaoHelpers";
+import {
+  turnoOperacionalValorGrade,
+  valorCelulaEhFolgaOperacional,
+} from "../../../lib/rhCalendarioAcaoHelpers";
 import {
   aceitarOfertaMarketplace,
   diasOfertaveisMarketplace,
@@ -50,7 +53,7 @@ export function ModalAceitarOfertaMarketplace({
     setGravando(false);
   }, [oferta?.id]);
 
-  const ehTroca = oferta?.tipo === "oferta_troca" || oferta?.tipo === "troca_cassada";
+  const ehTroca = oferta?.tipo === "oferta_troca";
   const ehVendaFolga = oferta?.tipo === "venda_folga";
 
   const diasTroca = useMemo(
@@ -61,7 +64,7 @@ export function ModalAceitarOfertaMarketplace({
   if (!oferta) return null;
 
   const minhaCelulaNoDia = (grade.valorPorIso.get(oferta.dataOfertaIso) ?? "").trim();
-  const meuTurnoNoDia = minhaCelulaNoDia ? turnoExibicaoValorGrade(minhaCelulaNoDia) : null;
+  const meuTurnoNoDia = minhaCelulaNoDia ? turnoOperacionalValorGrade(minhaCelulaNoDia) : null;
 
   const inputStyle: CSSProperties = {
     width: "100%",
@@ -92,7 +95,7 @@ export function ModalAceitarOfertaMarketplace({
     }
 
     if (ehVendaFolga) {
-      if (!minhaCelulaNoDia || valorCelulaEhFolga(minhaCelulaNoDia)) {
+      if (!meuTurnoNoDia) {
         return "Você precisa estar escalado neste dia para aceitar esta oferta.";
       }
       if (meuTurnoNoDia && oferta!.turnoOferta && meuTurnoNoDia !== oferta!.turnoOferta) {
@@ -101,7 +104,7 @@ export function ModalAceitarOfertaMarketplace({
       return null;
     }
 
-    if (minhaCelulaNoDia && !valorCelulaEhFolga(minhaCelulaNoDia)) {
+    if (minhaCelulaNoDia && !valorCelulaEhFolgaOperacional(minhaCelulaNoDia)) {
       return "Você já tem turno neste dia.";
     }
 
@@ -183,8 +186,8 @@ export function ModalAceitarOfertaMarketplace({
 
         {ehVendaFolga ? (
           <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
-            Ao aceitar, {oferta.ofertante} assume o seu turno neste dia e você fica com Venda na
-            escala.
+            Ao aceitar, {oferta.ofertante} fica com Compra - {oferta.turnoOferta} e você fica com
+            Venda na escala.
           </p>
         ) : ehTroca ? (
           <div style={{ marginBottom: 14 }}>
@@ -218,7 +221,7 @@ export function ModalAceitarOfertaMarketplace({
           </div>
         ) : (
           <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
-            Ao aceitar, você assume este turno e fica com Compra na escala.
+            Ao aceitar, você assume este turno e fica com Compra - {oferta.turnoOferta} na escala.
           </p>
         )}
 

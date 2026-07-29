@@ -14,7 +14,11 @@ import {
   formatarHoraInicioOperadora,
   staffHorarioResolvidoParaTurnoDoDia,
 } from "./rhStaffHorarioTurno";
-import { turnoExibicaoValorGrade, valorCelulaEhFolga, turnosBaseOfertaNaFolga } from "./rhCalendarioAcaoHelpers";
+import {
+  turnoOperacionalValorGrade,
+  turnosBaseOfertaNaFolga,
+  valorCelulaEhFolgaOperacional,
+} from "./rhCalendarioAcaoHelpers";
 
 export type OperadoraTurnosPick = Pick<Operadora, "turno_manha_inicio" | "turno_tarde_inicio" | "turno_noite_inicio">;
 
@@ -127,8 +131,8 @@ export function instanteFimTurnoTrabalhadoNoDia(
   ctx: PrestadorHorarioCtx,
   op: OperadoraTurnosPick | null | undefined,
 ): Date | null {
-  const turnoDoDia = turnoExibicaoValorGrade(valorGrade);
-  if (!turnoDoDia || turnoDoDia === "Compra" || turnoDoDia === "Venda" || turnoDoDia === "Troca") return null;
+  const turnoDoDia = turnoOperacionalValorGrade(valorGrade);
+  if (!turnoDoDia) return null;
   const escala = ctx.escala ?? "";
 
   if (turnoDoDia === "Comercial" && turnoStaffEhComercial5x2(ctx.staff_turno)) {
@@ -165,7 +169,7 @@ export function ultimoFimTurnoTrabalhadoAntesDaFolga(
   for (let i = 1; i <= maxDiasRetroceder; i++) {
     const iso = subtractDaysFromIso(diaFolgaIso, i);
     const raw = valorPorIso.get(iso);
-    if (raw == null || valorCelulaEhFolga(raw)) continue;
+    if (raw == null || valorCelulaEhFolgaOperacional(raw)) continue;
     const fim = instanteFimTurnoTrabalhadoNoDia(iso, raw, ctx, op);
     if (!fim) continue;
     if (!best || fim.getTime() > best.getTime()) best = fim;
@@ -173,15 +177,15 @@ export function ultimoFimTurnoTrabalhadoAntesDaFolga(
   return best;
 }
 
-/** Início do turno de um dia trabalhado da grade (célula com turno, não Folga/Compra/Venda/Troca). */
+/** Início do turno trabalhado; `Compra - Turno` conta como trabalho e `Venda` como folga. */
 export function instanteInicioTurnoTrabalhadoNoDia(
   diaIso: string,
   valorGrade: string,
   ctx: PrestadorHorarioCtx,
   op: OperadoraTurnosPick | null | undefined,
 ): Date | null {
-  const turnoDoDia = turnoExibicaoValorGrade(valorGrade);
-  if (!turnoDoDia || turnoDoDia === "Compra" || turnoDoDia === "Venda" || turnoDoDia === "Troca") return null;
+  const turnoDoDia = turnoOperacionalValorGrade(valorGrade);
+  if (!turnoDoDia) return null;
   return instanteInicioTurnoOfertadoNaFolga(diaIso, turnoDoDia, ctx, op);
 }
 
@@ -197,7 +201,7 @@ export function proximoInicioTurnoTrabalhadoDepoisDoDia(
   for (let i = 1; i <= maxDiasAvancar; i++) {
     const iso = shiftIsoDias(diaIso, i);
     const raw = valorPorIso.get(iso);
-    if (raw == null || valorCelulaEhFolga(raw)) continue;
+    if (raw == null || valorCelulaEhFolgaOperacional(raw)) continue;
     const ini = instanteInicioTurnoTrabalhadoNoDia(iso, raw, ctx, op);
     if (!ini) continue;
     if (!best || ini.getTime() < best.getTime()) best = ini;

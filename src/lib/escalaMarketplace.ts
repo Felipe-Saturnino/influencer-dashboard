@@ -28,8 +28,9 @@ import {
 import { turnoOperacionalParaSiglaGrade } from "./rhEscalaTurnos";
 import {
   turnoExibicaoValorGrade,
+  turnoOperacionalValorGrade,
   turnosBaseOfertaNaFolga,
-  valorCelulaEhFolga,
+  valorCelulaEhFolgaOperacional,
 } from "./rhCalendarioAcaoHelpers";
 import type { RhCalendarioAcaoTipo } from "./rhCalendarioAcaoHelpers";
 import type {
@@ -42,13 +43,12 @@ import type {
 export const MS_12H = 12 * 60 * 60 * 1000;
 
 /** Tipos de oferta publicáveis no Marketplace. */
-export type TipoOfertaMarketplace = "venda_turno" | "venda_folga" | "oferta_troca" | "troca_cassada";
+export type TipoOfertaMarketplace = "venda_turno" | "venda_folga" | "oferta_troca";
 
 const TIPOS_OFERTA: ReadonlySet<string> = new Set([
   "venda_turno",
   "venda_folga",
   "oferta_troca",
-  "troca_cassada",
 ]);
 
 /** Linha da oferta como devolvida por `escala_marketplace_ofertas_listar`. */
@@ -444,8 +444,8 @@ function isoComAntecedenciaMinima(iso: string, primeiroIso: string): boolean {
 
 /**
  * Dias do mês que o prestador pode ofertar conforme o tipo, sempre com ≥24h de
- * antecedência: turno/troca = dias em que está escalado; folga = dias de folga.
- * Células já negociadas (Compra / Venda / Troca) ficam fora.
+ * antecedência: turno/troca = dias trabalhados (turno original ou `Compra - Turno`);
+ * folga = folga original ou `Venda`. `Troca` e `Compra` legado sem turno ficam fora.
  */
 export function diasOfertaveisMarketplace(
   tipo: TipoOfertaMarketplace,
@@ -462,14 +462,14 @@ export function diasOfertaveisMarketplace(
     if (!valor) continue;
 
     if (tipo === "venda_folga") {
-      if (!valorCelulaEhFolga(valor)) continue;
+      if (!valorCelulaEhFolgaOperacional(valor)) continue;
       out.push({ iso, label: labelDiaCurto(iso), turno: "", valorCelula: valor });
       continue;
     }
 
-    if (valorCelulaEhFolga(valor)) continue;
-    const turno = turnoExibicaoValorGrade(valor);
-    if (!turno || turno === "Compra" || turno === "Venda" || turno === "Troca") continue;
+    if (valorCelulaEhFolgaOperacional(valor)) continue;
+    const turno = turnoOperacionalValorGrade(valor);
+    if (!turno) continue;
     out.push({ iso, label: `${labelDiaCurto(iso)} — ${turno}`, turno, valorCelula: valor });
   }
 

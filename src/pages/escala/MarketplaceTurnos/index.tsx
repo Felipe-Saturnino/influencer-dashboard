@@ -16,6 +16,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
@@ -26,6 +27,8 @@ import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyl
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   ESCALA_ACAO_TIPO_OPCOES_MINHAS,
@@ -200,7 +203,7 @@ export default function EscalaMarketplaceTurnosPage() {
   const hoje = useMemo(() => new Date(), []);
   const mesesDisponiveis = useMemo(() => getMesesMarketplace(hoje), [hoje]);
   const [idxMes, setIdxMes] = useState(() => idxMesInicialMarketplace(getMesesMarketplace(new Date()), new Date()));
-  const [historico, setHistorico] = useState(false);
+  const [historico, setHistorico] = useState(true);
 
   const idxMesInicial = useMemo(
     () => idxMesInicialMarketplace(mesesDisponiveis, hoje),
@@ -215,6 +218,7 @@ export default function EscalaMarketplaceTurnosPage() {
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTimeIdsTodas, setFiltroTimeIdsTodas] = useState<string[]>([]);
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
+  const [busca, setBusca] = useState("");
   const [sortOferta, setSortOferta] = useState<{ col: OfertaSortCol; dir: SortDir }>({
     col: "dataOferta",
     dir: "desc",
@@ -244,6 +248,8 @@ export default function EscalaMarketplaceTurnosPage() {
     if (filtroTimeIdsTodas.length === 0) return "todos";
     return filtroTimeIdsTodas[0] as EscalaTimeFiltro;
   }, [filtroTimeIdsTodas]);
+
+  const podeFiltrarTimes = perm.canView === "sim";
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -310,27 +316,38 @@ export default function EscalaMarketplaceTurnosPage() {
   const carrosselPrimeiro = idxMes === 0;
   const carrosselUltimo = idxMes >= mesesDisponiveis.length - 1;
 
+  /** Mural público: só ofertas ainda disponíveis (aceitas/canceladas somem daqui). */
   const linhasVendasTodas = useMemo(() => {
     return linhasMes.filter(
       (r) =>
         (r.tipo === "venda_turno" || r.tipo === "venda_folga") &&
+        ofertaEmAberto(r) &&
         passaFiltroTipo(r, filtroTipoTodas) &&
-        passaFiltroTime(r, filtroTimeTodas),
+        (!podeFiltrarTimes || passaFiltroTime(r, filtroTimeTodas)) &&
+        textoContemBuscaEmAlgum(busca, r.ofertante, r.operadora, r.turnoOferta, r.turnoInteresse),
     );
-  }, [linhasMes, filtroTipoTodas, filtroTimeTodas]);
+  }, [linhasMes, filtroTipoTodas, filtroTimeTodas, podeFiltrarTimes, busca]);
 
   const linhasTrocaTodas = useMemo(() => {
     return linhasMes.filter(
       (r) =>
-        (r.tipo === "oferta_troca" || r.tipo === "troca_cassada") &&
+        r.tipo === "oferta_troca" &&
+        ofertaEmAberto(r) &&
         passaFiltroTipo(r, filtroTipoTodas) &&
-        passaFiltroTime(r, filtroTimeTodas),
+        (!podeFiltrarTimes || passaFiltroTime(r, filtroTimeTodas)) &&
+        textoContemBuscaEmAlgum(busca, r.ofertante, r.operadora, r.turnoOferta, r.turnoInteresse),
     );
-  }, [linhasMes, filtroTipoTodas, filtroTimeTodas]);
+  }, [linhasMes, filtroTipoTodas, filtroTimeTodas, podeFiltrarTimes, busca]);
 
   const minhasBase = useMemo(
-    () => linhasMes.filter((r) => passaFiltroTipo(r, filtroTipoMinhas)),
-    [linhasMes, filtroTipoMinhas],
+    () =>
+      linhasMes.filter(
+        (r) =>
+          passaFiltroTipo(r, filtroTipoMinhas) &&
+          (!podeFiltrarTimes || passaFiltroTime(r, filtroTimeTodas)) &&
+          textoContemBuscaEmAlgum(busca, r.ofertante, r.operadora, r.turnoOferta, r.turnoInteresse),
+      ),
+    [linhasMes, filtroTipoMinhas, filtroTimeTodas, podeFiltrarTimes, busca],
   );
 
   const minhasAbertas = useMemo(
@@ -434,18 +451,11 @@ export default function EscalaMarketplaceTurnosPage() {
       <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Período e tipo de ação">
         {blocoCarrosselHistorico}
         {aba === "todas" ? (
-          <>
-            <FiltroSolicitacoesTipoAcaoSelect
-              value={filtroTipoTodas}
-              onChange={setFiltroTipoTodas}
-              opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
-            />
-            <FiltroCalendarioTimeSelect
-              selected={filtroTimeIdsTodas}
-              onChange={(ids) => setFiltroTimeIdsTodas(ids.length <= 1 ? ids : [ids[ids.length - 1]!])}
-              items={MARKETPLACE_TIME_ITEMS}
-            />
-          </>
+          <FiltroSolicitacoesTipoAcaoSelect
+            value={filtroTipoTodas}
+            onChange={setFiltroTipoTodas}
+            opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
+          />
         ) : (
           <FiltroSolicitacoesTipoAcaoSelect
             value={filtroTipoMinhas}
@@ -453,6 +463,13 @@ export default function EscalaMarketplaceTurnosPage() {
             opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
           />
         )}
+        {podeFiltrarTimes ? (
+          <FiltroCalendarioTimeSelect
+            selected={filtroTimeIdsTodas}
+            onChange={(ids) => setFiltroTimeIdsTodas(ids.length <= 1 ? ids : [ids[ids.length - 1]!])}
+            items={MARKETPLACE_TIME_ITEMS}
+          />
+        ) : null}
       </div>
       <div className="app-marketplace-filtro-minhas__cta">{ctaOfertar}</div>
     </div>
@@ -712,6 +729,15 @@ export default function EscalaMarketplaceTurnosPage() {
             Minhas Ofertas
           </FiltroBarTabButton>
         </div>
+        <div style={filterBarSection(true)}>
+          <BarraPesquisaPagina
+            value={busca}
+            onChange={setBusca}
+            placeholder={PAGE_SEARCH.marketplaceOferta}
+            aria-label="Buscar por ofertante, operadora ou turno"
+            wrapperStyle={{ width: "min(100%, 680px)" }}
+          />
+        </div>
       </div>
 
       {loadingOfertas ? (
@@ -750,7 +776,7 @@ export default function EscalaMarketplaceTurnosPage() {
                 {renderTabelaMinhas(minhasAceitas, "aceitei")}
               </div>
               <div style={contentBox}>
-                <SectionTitle sub="Suas ofertas já aceitas ou canceladas">Histórico encerrado</SectionTitle>
+                <SectionTitle sub="Suas ofertas já aceitas ou canceladas">Histórico</SectionTitle>
                 {renderTabelaMinhas(minhasEncerradas, "historico")}
               </div>
             </div>
