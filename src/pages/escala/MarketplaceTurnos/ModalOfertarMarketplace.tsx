@@ -34,18 +34,18 @@ const TIPOS_PUBLICAVEIS: { value: TipoOfertaMarketplace; label: string; ajuda: s
 ];
 
 const MSG_SEM_ESCALA_APROVADA =
-  "A escala deste mês ainda não está aprovada. Assim que for aprovada, os seus dias aparecem aqui.";
+  "Nenhuma escala aprovada encontrada para os próximos meses. Assim que for aprovada, os seus dias aparecem aqui.";
 
-const MSG_ANTECEDENCIA_24H = "Apenas dias com ao menos 24h de antecedência.";
+const MSG_ANTECEDENCIA_24H =
+  "Apenas turnos com início a pelo menos 24h da publicação (horário do turno ofertado ou desejado).";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onCriada: () => void;
   contexto: MarketplaceMeuContexto | null;
+  /** Células de todos os meses com escala aprovada (não só o mês do carrossel). */
   grade: MarketplaceMinhaGrade;
-  /** Rótulo do mês em foco no carrossel — orienta o prestador sobre a janela dos dias listados. */
-  labelMes: string;
 };
 
 export function ModalOfertarMarketplace({
@@ -54,7 +54,6 @@ export function ModalOfertarMarketplace({
   onCriada,
   contexto,
   grade,
-  labelMes,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -83,8 +82,12 @@ export function ModalOfertarMarketplace({
   }, [tipo]);
 
   const dias = useMemo(
-    () => diasOfertaveisMarketplace(tipo, grade.valorPorIso),
-    [tipo, grade.valorPorIso],
+    () =>
+      diasOfertaveisMarketplace(tipo, grade.valorPorIso, {
+        horario: contexto?.horario,
+        operadora: contexto?.operadora,
+      }),
+    [tipo, grade.valorPorIso, contexto],
   );
 
   const turnosFolga = useMemo(() => {
@@ -131,7 +134,7 @@ export function ModalOfertarMarketplace({
     if (!diaIso || !diaSelecionado) return "Selecione o dia da oferta.";
     if (tipo === "venda_folga") {
       if (turnosFolga.length === 0) {
-        return "Nenhum turno respeita o intervalo mínimo de 12h entre turnos neste dia de folga.";
+        return "Nenhum turno respeita as 24h de antecedência e o intervalo mínimo de 12h neste dia de folga.";
       }
       if (!turnoFolga) return "Selecione o turno que pretende trabalhar.";
     }
@@ -217,8 +220,8 @@ export function ModalOfertarMarketplace({
               ? MSG_SEM_ESCALA_APROVADA
               : semDias
                 ? tipo === "venda_folga"
-                  ? `Sem folgas em ${labelMes} com ao menos 24h de antecedência.`
-                  : `Sem dias escalados em ${labelMes} com ao menos 24h de antecedência.`
+                  ? "Sem folgas na escala aprovada com turno desejado a pelo menos 24h e 12h de intervalo."
+                  : "Sem dias escalados na escala aprovada com início do turno a pelo menos 24h."
                 : MSG_ANTECEDENCIA_24H}
           </p>
         </div>
@@ -247,9 +250,9 @@ export function ModalOfertarMarketplace({
             <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
               {!diaIso
                 ? "Escolha primeiro o dia de folga."
-                : turnosFolga.length === 0
-                  ? "Nenhum turno respeita o intervalo mínimo de 12h entre turnos neste dia."
-                  : "Apenas turnos com 12h de intervalo em relação ao seu último turno e ao próximo."}
+                  : turnosFolga.length === 0
+                  ? "Nenhum turno respeita as 24h de antecedência e o intervalo mínimo de 12h entre turnos neste dia."
+                  : "Apenas turnos com início a ≥24h da publicação e 12h de intervalo em relação ao seu último e ao próximo turno."}
             </p>
           </div>
         ) : null}

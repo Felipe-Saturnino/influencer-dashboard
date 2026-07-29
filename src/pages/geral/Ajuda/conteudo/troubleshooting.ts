@@ -1419,17 +1419,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O dia de amanhã não aparece no modal de oferta?",
         texto:
-          "Publicar exige **24h de antecedência**: o primeiro dia possível é depois de amanhã. Hoje e amanhã nunca aparecem na lista, mesmo que você esteja escalado ou de folga.",
+          "A antecedência de **24h** conta até o **início do turno**, não até a meia-noite do dia. Ex.: se agora são 20h30 e a Noite de amanhã começa às 23h, esse turno (ou folga desejando Noite) pode aparecer; Manhã ou Tarde de amanhã ficam de fora porque o início ainda não está a 24h.",
       },
       {
         subtitulo: "Nenhum dia aparece no modal de oferta?",
         texto:
-          "Os dias vêm da sua escala do mês **aprovada**, com ao menos **24h de antecedência**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda**. Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
+          "Os dias vêm de **todas** as competências com escala **aprovada** (Julho, Agosto, etc.), com início do turno a pelo menos **24h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (24h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
       },
       {
         subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
         texto:
-          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação ao seu último turno e ao próximo. Ex.: escalado na Noite do dia 12 e de folga no 13 — no dia 13 só a Noite fica disponível; no dia 14 todos os turnos voltam a caber. Se nenhum turno atender à regra, o dia não pode ser ofertado.",
+          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação ao seu último turno e ao próximo, e com início a pelo menos **24h** da publicação. Ex.: escalado na Noite do dia 12 e de folga no 13 — no dia 13 só a Noite pode caber no intervalo; se a publicação for perto demais do início da Manhã/Tarde, esses turnos também somem. Se nenhum turno atender às duas regras, o dia não pode ser ofertado.",
       },
       {
         subtitulo: "Não consigo aceitar uma oferta?",

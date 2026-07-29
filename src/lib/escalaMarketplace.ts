@@ -6,16 +6,19 @@
  * O escopo também é do servidor — Ver = Sim devolve todos os times, Ver = Próprios
  * só o time do prestador.
  *
- * Antecedência: só dias a ≥24h da publicação entram nas listas de oferta
- * (`primeiroDiaOfertavelIso` = hoje + 2, porque a oferta é por dia e não por hora).
+ * Antecedência: ≥24h entre a publicação e o **início do turno** ofertado/desejado
+ * (`turnoRespeitaAntecedencia24h`). Ex.: às 20h30, a Noite de amanhã (início 23h)
+ * pode ser ofertada; Manhã/Tarde de amanhã não. O banco só exige dia ≥ hoje —
+ * o horário vive no cliente (escala + operadora).
  *
  * Gap entre turnos: produto pede ≥12h entre o fim de um turno e o início do
  * seguinte, verificado nas duas pontas do dia negociado (`gapEntreTurnosOk`).
  * Os horários dependem de escala, turno de staff e operadora, que vivem no
  * cliente — por isso a regra é aplicada aqui e no modal, enquanto o banco valida
- * o que é estrutural (dia futuro, escala aprovada, célula coerente, conflito).
+ * o que é estrutural (dia ≥ hoje, escala aprovada, célula coerente, conflito).
  */
 import { supabase } from "./supabase";
+import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
 import { normRhOrgRotuloOrganograma } from "./rhPrestadorUsuarioSync";
 import {
   instanteFimTurnoTrabalhadoNoDia,
@@ -41,6 +44,20 @@ import type {
 
 /** Intervalo mínimo entre turnos no Marketplace (produto: ≥12h). */
 export const MS_12H = 12 * 60 * 60 * 1000;
+
+/**
+ * Histórico do Marketplace é mensal: inclui a competência atual inteira,
+ * inclusive ofertas futuras dentro do mês, e as 12 competências anteriores.
+ */
+export function isDataNoHistoricoMarketplace(
+  value: string | null | undefined,
+  ref: Date = new Date(),
+): boolean {
+  if (!value) return false;
+  const competencia = value.slice(0, 7);
+  const { inicio, fim } = getPeriodoHistoricoCompetencias(ref);
+  return competencia >= inicio.slice(0, 7) && competencia <= fim.slice(0, 7);
+}
 
 /** Tipos de oferta publicáveis no Marketplace. */
 export type TipoOfertaMarketplace = "venda_turno" | "venda_folga" | "oferta_troca";
@@ -330,6 +347,29 @@ export async function carregarMinhaGradeMarketplace(
   return parseMinhaGradeMarketplace(data);
 }
 
+/**
+ * Junta células de vários meses aprovados (ex.: Julho + Agosto) para o modal
+ * Ofertar listar todos os dias futuros com escala publicada — não só o mês do carrossel.
+ */
+export async function carregarMinhaGradeMarketplaceMeses(
+  refsMesIso: string[],
+): Promise<MarketplaceMinhaGrade> {
+  const unicos = [...new Set(refsMesIso.filter((r) => /^\d{4}-\d{2}-01$/.test(r)))];
+  if (unicos.length === 0) return { aprovada: false, areaKey: "", valorPorIso: new Map() };
+
+  const grades = await Promise.all(unicos.map((ref) => carregarMinhaGradeMarketplace(ref)));
+  const valorPorIso = new Map<string, string>();
+  let areaKey = "";
+  let aprovada = false;
+  for (const g of grades) {
+    if (!g.aprovada) continue;
+    aprovada = true;
+    if (g.areaKey) areaKey = g.areaKey;
+    for (const [iso, valor] of g.valorPorIso) valorPorIso.set(iso, valor);
+  }
+  return { aprovada, areaKey, valorPorIso };
+}
+
 // ─── Regra de intervalo mínimo (12h) ────────────────────────────────────────
 
 export type GapEntreTurnosArgs = {
@@ -397,9 +437,12 @@ export function turnosOfertaveisNaFolgaMarketplace(
   valorPorIso: Map<string, string>,
   horario: PrestadorHorarioCtx,
   operadora: OperadoraTurnosPick | null | undefined,
+  agora: Date = new Date(),
 ): string[] {
-  return turnosBaseOfertaNaFolga(horario.escala).filter((turnoNome) =>
-    gapEntreTurnosOk({ diaIso: diaFolgaIso, turnoNome, valorPorIso, horario, operadora }),
+  return turnosBaseOfertaNaFolga(horario.escala).filter(
+    (turnoNome) =>
+      gapEntreTurnosOk({ diaIso: diaFolgaIso, turnoNome, valorPorIso, horario, operadora }) &&
+      turnoRespeitaAntecedencia24h(diaFolgaIso, turnoNome, horario, operadora, agora),
   );
 }
 
@@ -424,45 +467,76 @@ function isoLocal(ref: Date): string {
   return `${ref.getFullYear()}-${p2(ref.getMonth() + 1)}-${p2(ref.getDate())}`;
 }
 
+/** Intervalo mínimo entre a publicação e o início do turno ofertado/desejado. */
+export const MS_24H = 24 * 60 * 60 * 1000;
+
 /**
- * Produto exige ≥24h de antecedência entre a publicação e o dia negociado.
- * Como a oferta é por dia (não por horário), o primeiro dia elegível é
- * `hoje + 2` — assim qualquer horário de publicação respeita as 24h.
+ * `true` se o início do `turnoNome` em `diaIso` está a ≥24h de `agora`.
+ * Sem horário resolvível, exige dia estritamente depois de hoje (fallback conservador).
  */
-export const DIAS_ANTECEDENCIA_MINIMA_OFERTA = 2;
-
-/** Primeiro dia (`YYYY-MM-DD`) que pode ser ofertado a partir de `ref`. */
-export function primeiroDiaOfertavelIso(ref: Date = new Date()): string {
-  const limite = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
-  limite.setDate(limite.getDate() + DIAS_ANTECEDENCIA_MINIMA_OFERTA);
-  return isoLocal(limite);
-}
-
-function isoComAntecedenciaMinima(iso: string, primeiroIso: string): boolean {
-  return iso.slice(0, 10) >= primeiroIso;
+export function turnoRespeitaAntecedencia24h(
+  diaIso: string,
+  turnoNome: string,
+  horario: PrestadorHorarioCtx | null | undefined,
+  operadora: OperadoraTurnosPick | null | undefined,
+  agora: Date = new Date(),
+): boolean {
+  const dia = diaIso.slice(0, 10);
+  if (!horario) return dia > isoLocal(agora);
+  const inicio = instanteInicioTurnoOfertadoNaFolga(dia, turnoNome, horario, operadora);
+  if (!inicio) return dia > isoLocal(agora);
+  return inicio.getTime() - agora.getTime() >= MS_24H;
 }
 
 /**
- * Dias do mês que o prestador pode ofertar conforme o tipo, sempre com ≥24h de
- * antecedência: turno/troca = dias trabalhados (turno original ou `Compra - Turno`);
- * folga = folga original ou `Venda`. `Troca` e `Compra` legado sem turno ficam fora.
+ * @deprecated Preferir `turnoRespeitaAntecedencia24h` (antecedência pelo início do turno).
+ * Mantido como atalho de “primeiro dia calendário possível” (= hoje).
+ */
+export function primeiroDiaOfertavelIso(ref: Date = new Date()): string {
+  return isoLocal(ref);
+}
+
+export type DiasOfertaveisMarketplaceOpts = {
+  hoje?: Date;
+  horario?: PrestadorHorarioCtx | null;
+  operadora?: OperadoraTurnosPick | null;
+};
+
+/**
+ * Dias com escala aprovada que o prestador pode ofertar conforme o tipo.
+ * Antecedência ≥24h medida no **início do turno** (não no calendário dia+2):
+ * turno/troca = dias trabalhados (turno original ou `Compra - Turno`);
+ * folga = Folga/`Venda` com ao menos um turno desejado elegível (12h + 24h).
  */
 export function diasOfertaveisMarketplace(
   tipo: TipoOfertaMarketplace,
   valorPorIso: Map<string, string>,
-  hoje: Date = new Date(),
+  hojeOuOpts: Date | DiasOfertaveisMarketplaceOpts = new Date(),
 ): DiaOfertavelMarketplace[] {
-  const primeiroIso = primeiroDiaOfertavelIso(hoje);
+  const opts: DiasOfertaveisMarketplaceOpts =
+    hojeOuOpts instanceof Date ? { hoje: hojeOuOpts } : hojeOuOpts;
+  const hoje = opts.hoje ?? new Date();
+  const hojeIso = isoLocal(hoje);
   const out: DiaOfertavelMarketplace[] = [];
   const isos = [...valorPorIso.keys()].sort();
 
   for (const iso of isos) {
-    if (!isoComAntecedenciaMinima(iso, primeiroIso)) continue;
+    if (iso.slice(0, 10) < hojeIso) continue;
     const valor = (valorPorIso.get(iso) ?? "").trim();
     if (!valor) continue;
 
     if (tipo === "venda_folga") {
       if (!valorCelulaEhFolgaOperacional(valor)) continue;
+      if (opts.horario) {
+        const turnos = turnosOfertaveisNaFolgaMarketplace(
+          iso,
+          valorPorIso,
+          opts.horario,
+          opts.operadora,
+          hoje,
+        );
+        if (turnos.length === 0) continue;
+      }
       out.push({ iso, label: labelDiaCurto(iso), turno: "", valorCelula: valor });
       continue;
     }
@@ -470,6 +544,11 @@ export function diasOfertaveisMarketplace(
     if (valorCelulaEhFolgaOperacional(valor)) continue;
     const turno = turnoOperacionalValorGrade(valor);
     if (!turno) continue;
+    if (
+      !turnoRespeitaAntecedencia24h(iso, turno, opts.horario ?? null, opts.operadora, hoje)
+    ) {
+      continue;
+    }
     out.push({ iso, label: `${labelDiaCurto(iso)} — ${turno}`, turno, valorCelula: valor });
   }
 
@@ -570,8 +649,9 @@ const MSG_ERRO_GENERICO =
 
 const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   forbidden: "Você não tem permissão para esta ação no Marketplace.",
-  dia_nao_futuro: "Só é possível ofertar dias futuros.",
-  antecedencia_minima: "A oferta precisa de pelo menos 24h de antecedência.",
+  antecedencia_minima:
+    "A oferta precisa de pelo menos 24h até o início do turno ofertado ou desejado.",
+  dia_nao_futuro: "Só é possível ofertar a partir de hoje, com 24h até o início do turno.",
   prestador_nao_encontrado:
     "Não encontramos o seu cadastro de prestador de estúdio. Entre em contato com o suporte.",
   area_invalida: "O seu time não está configurado na Escala Estúdio. Entre em contato com o suporte.",

@@ -803,12 +803,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O que você vê",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times e o filtro **Times** fica disponível. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. Use o filtro de ações e, abaixo das abas, pesquise pelo nome do ofertante, pela operadora ou pelo turno.",
+          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times e o filtro **Times** fica disponível na primeira linha, com **Todos Times**, **Game Presenter** e **Shuffler**. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, operadora ou turno na última linha.",
       },
       {
         subtitulo: "Publicar uma oferta",
         texto:
-          "Com permissão de **Criar**, use **Nova Oferta**. Os dias listados vêm da sua escala **aprovada** e exigem no mínimo **24h de antecedência** — o primeiro dia possível é sempre depois de amanhã. **Venda de Turno** e **Oferta de Troca** listam dias em que você está escalado originalmente ou com **Compra - Turno**; **Venda de Folga** lista Folga e dias com **Venda** — nesse caso você se oferece para trabalhar e escolhe o turno. Só é possível ter uma oferta aberta por dia. Enquanto ninguém aceitar, você pode cancelar em Minhas Ofertas.",
+          "Com permissão de **Criar**, use **Nova Oferta**, à direita das abas. Os dias listados vêm de **todas** as competências com escala **aprovada** (não só o mês do carrossel) e exigem pelo menos **24h até o início do turno** ofertado ou desejado — ex.: às 20h30, a Noite de amanhã (início 23h) pode entrar; Manhã ou Tarde de amanhã não. **Venda de Turno** e **Oferta de Troca** listam dias em que você está escalado originalmente ou com **Compra - Turno**; **Venda de Folga** lista Folga e dias com **Venda** — nesse caso você se oferece para trabalhar e escolhe o turno (também filtrado pelas 24h e pelas 12h de intervalo). Só é possível ter uma oferta aberta por dia. Enquanto ninguém aceitar, você pode cancelar em Minhas Ofertas.",
       },
       {
         subtitulo: "Aceitar uma oferta",

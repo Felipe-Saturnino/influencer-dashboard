@@ -7,7 +7,6 @@ import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import {
   DashboardPageHeader,
-  FiltroCalendarioTimeSelect,
   FiltroBarTabButton,
   FiltroHistoricoButton,
   FiltroSolicitacoesTipoAcaoSelect,
@@ -18,11 +17,12 @@ import {
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
-import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
@@ -50,7 +50,9 @@ import {
 import {
   carregarMeuContextoMarketplace,
   carregarMinhaGradeMarketplace,
+  carregarMinhaGradeMarketplaceMeses,
   carregarOfertasMarketplace,
+  isDataNoHistoricoMarketplace,
   type MarketplaceMeuContexto,
   type MarketplaceMinhaGrade,
 } from "../../../lib/escalaMarketplace";
@@ -58,10 +60,14 @@ import { ModalOfertarMarketplace } from "./ModalOfertarMarketplace";
 import { ModalAceitarOfertaMarketplace } from "./ModalAceitarOfertaMarketplace";
 import { ModalCancelarOfertaMarketplace } from "./ModalCancelarOfertaMarketplace";
 
-const MARKETPLACE_TIME_ITEMS = ESCALA_TIME_OPCOES.filter((o) => o.value !== "todos").map((o) => ({
-  id: o.value,
-  name: o.label,
-}));
+/** Times que negociam turnos no Marketplace (escopo Ver = Sim). */
+const MARKETPLACE_TIME_TODOS_VALUE = "todos";
+const MARKETPLACE_TIME_TODOS_LABEL = "Todos Times";
+const MARKETPLACE_TIME_ARIA_LABEL = "Times";
+const MARKETPLACE_TIME_SLUGS: EscalaTimeFiltro[] = ["game_presenter", "shuffler"];
+const MARKETPLACE_TIME_OPCOES = ESCALA_TIME_OPCOES.filter((o) =>
+  MARKETPLACE_TIME_SLUGS.includes(o.value),
+).map((o) => ({ value: o.value, label: o.label }));
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
 const GRADE_VAZIA: MarketplaceMinhaGrade = { aprovada: false, areaKey: "", valorPorIso: new Map() };
@@ -216,7 +222,7 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const [aba, setAba] = useRouteTab("escala_marketplace_turnos", "todas", ["todas", "minhas"] as const);
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
-  const [filtroTimeIdsTodas, setFiltroTimeIdsTodas] = useState<string[]>([]);
+  const [filtroTimeTodas, setFiltroTimeTodas] = useState<EscalaTimeFiltro>("todos");
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
   const [busca, setBusca] = useState("");
   const [sortOferta, setSortOferta] = useState<{ col: OfertaSortCol; dir: SortDir }>({
@@ -244,19 +250,14 @@ export default function EscalaMarketplaceTurnosPage() {
       dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
     }));
 
-  const filtroTimeTodas = useMemo((): EscalaTimeFiltro => {
-    if (filtroTimeIdsTodas.length === 0) return "todos";
-    return filtroTimeIdsTodas[0] as EscalaTimeFiltro;
-  }, [filtroTimeIdsTodas]);
-
   const podeFiltrarTimes = perm.canView === "sim";
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
-  const refMesGrade = useMemo(() => {
-    const m = historico ? mesesDisponiveis[idxMesInicial >= 0 ? idxMesInicial : mesesDisponiveis.length - 1] : mesSelecionado;
-    return m ? refMesIsoPrimeiroDia(m.ano, m.mes) : null;
-  }, [historico, mesSelecionado, mesesDisponiveis, idxMesInicial]);
+  const refsMesGradeOfertar = useMemo(
+    () => mesesDisponiveis.map((m) => refMesIsoPrimeiroDia(m.ano, m.mes)),
+    [mesesDisponiveis],
+  );
 
   const recarregar = useCallback(() => setReloadKey((k) => k + 1), []);
 
@@ -291,22 +292,18 @@ export default function EscalaMarketplaceTurnosPage() {
   }, [historico, mesSelecionado, reloadKey]);
 
   useEffect(() => {
-    if (!refMesGrade) {
-      setGradeMes(GRADE_VAZIA);
-      return;
-    }
     let cancelled = false;
-    void carregarMinhaGradeMarketplace(refMesGrade).then((g) => {
+    void carregarMinhaGradeMarketplaceMeses(refsMesGradeOfertar).then((g) => {
       if (!cancelled) setGradeMes(g);
     });
     return () => {
       cancelled = true;
     };
-  }, [refMesGrade, reloadKey]);
+  }, [refsMesGradeOfertar, reloadKey]);
 
   const linhasMes = useMemo(() => {
     if (historico) {
-      return ofertas.filter((r) => isDataNoPeriodoHistoricoCompetencias(r.dataOfertaIso));
+      return ofertas.filter((r) => isDataNoHistoricoMarketplace(r.dataOfertaIso));
     }
     const m = mesesDisponiveis[idxMes];
     if (!m) return [];
@@ -446,33 +443,33 @@ export default function EscalaMarketplaceTurnosPage() {
   ) : null;
 
   const blocoFiltrosLinha1 = (
-    <div className="app-marketplace-filtro-minhas">
-      <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
-      <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Período e tipo de ação">
-        {blocoCarrosselHistorico}
-        {aba === "todas" ? (
-          <FiltroSolicitacoesTipoAcaoSelect
-            value={filtroTipoTodas}
-            onChange={setFiltroTipoTodas}
-            opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
-          />
-        ) : (
-          <FiltroSolicitacoesTipoAcaoSelect
-            value={filtroTipoMinhas}
-            onChange={setFiltroTipoMinhas}
-            opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
-          />
-        )}
-        {podeFiltrarTimes ? (
-          <FiltroCalendarioTimeSelect
-            selected={filtroTimeIdsTodas}
-            onChange={(ids) => setFiltroTimeIdsTodas(ids.length <= 1 ? ids : [ids[ids.length - 1]!])}
-            items={MARKETPLACE_TIME_ITEMS}
-          />
-        ) : null}
-      </div>
-      <div className="app-marketplace-filtro-minhas__cta">{ctaOfertar}</div>
-    </div>
+    <>
+      {blocoCarrosselHistorico}
+      {aba === "todas" ? (
+        <FiltroSolicitacoesTipoAcaoSelect
+          value={filtroTipoTodas}
+          onChange={setFiltroTipoTodas}
+          opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
+        />
+      ) : (
+        <FiltroSolicitacoesTipoAcaoSelect
+          value={filtroTipoMinhas}
+          onChange={setFiltroTipoMinhas}
+          opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
+        />
+      )}
+      {podeFiltrarTimes ? (
+        <FiltroBarCampoSelect
+          value={filtroTimeTodas}
+          onChange={(v) => setFiltroTimeTodas(v as EscalaTimeFiltro)}
+          options={MARKETPLACE_TIME_OPCOES}
+          icon={FilterBarIcons.time}
+          ariaLabel={MARKETPLACE_TIME_ARIA_LABEL}
+          todasValue={MARKETPLACE_TIME_TODOS_VALUE}
+          todasLabel={MARKETPLACE_TIME_TODOS_LABEL}
+        />
+      ) : null}
+    </>
   );
 
   const contentBox = getPageContentBoxStyle(brand, t);
@@ -708,26 +705,38 @@ export default function EscalaMarketplaceTurnosPage() {
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
-        <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
-        <div role="tablist" aria-label="Vista do marketplace" style={filterBarSection(true)}>
-          <FiltroBarTabButton
-            id="tab-mkt-todas"
-            active={aba === "todas"}
-            aria-controls="panel-mkt-todas"
-            onClick={() => setAba("todas")}
-            icon={<Store size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-          >
-            Todas as Ofertas
-          </FiltroBarTabButton>
-          <FiltroBarTabButton
-            id="tab-mkt-minhas"
-            active={aba === "minhas"}
-            aria-controls="panel-mkt-minhas"
-            onClick={() => setAba("minhas")}
-            icon={<User size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-          >
-            Minhas Ofertas
-          </FiltroBarTabButton>
+        <div style={filterBarSection(false)} role="group" aria-label="Período, tipo de ação e time">
+          {blocoFiltrosLinha1}
+        </div>
+        <div style={filterBarSection(true)}>
+          <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+            <div
+              className="app-filter-bar-tabs-cta__tabs"
+              role="tablist"
+              aria-label="Vista do marketplace"
+            >
+              <FiltroBarTabButton
+                id="tab-mkt-todas"
+                active={aba === "todas"}
+                aria-controls="panel-mkt-todas"
+                onClick={() => setAba("todas")}
+                icon={<Store size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+              >
+                Todas as Ofertas
+              </FiltroBarTabButton>
+              <FiltroBarTabButton
+                id="tab-mkt-minhas"
+                active={aba === "minhas"}
+                aria-controls="panel-mkt-minhas"
+                onClick={() => setAba("minhas")}
+                icon={<User size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+              >
+                Minhas Ofertas
+              </FiltroBarTabButton>
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">{ctaOfertar}</div>
+          </div>
         </div>
         <div style={filterBarSection(true)}>
           <BarraPesquisaPagina
@@ -790,7 +799,6 @@ export default function EscalaMarketplaceTurnosPage() {
         onCriada={recarregar}
         contexto={contexto}
         grade={gradeMes}
-        labelMes={mesSelecionado?.label ?? ""}
       />
 
       <ModalAceitarOfertaMarketplace
