@@ -664,12 +664,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparece a aba Gerenciamento?",
         texto:
-          "A aba **Gerenciamento** exige permissão de **Editar** na página Portal da Academy. Com apenas **Ver**, só as abas Comunicados, Dicas e Manuais ficam disponíveis.",
+          "A aba **Gerenciamento** exige permissão de **Editar** (Sim ou Próprios) na página Portal da Academy. Com apenas **Ver**, só as abas Comunicados, Dicas e Manuais ficam disponíveis.",
       },
       {
-        subtitulo: "Não vejo o botão Editar em algumas postagens?",
+        subtitulo: "Não vejo o botão Editar ou Arquivar em algumas postagens?",
         texto:
-          "O botão **Editar** aparece em rascunhos e publicações quando há permissão de **Editar**. Com Editar = **Próprios**, só nas postagens criadas por você. Postagens **Arquivadas** não têm Editar — só Histórico.",
+          "Com Editar = **Próprios**, **Editar** e **Arquivar** só aparecem nas postagens criadas por você. Com Editar = **Sim**, valem para todas. Postagens **Arquivadas** têm só Histórico.",
+      },
+      {
+        subtitulo: "Minha postagem ficou em Aprovação?",
+        texto:
+          "Com Editar = **Próprios**, Comunicados e Dicas vão para **Aprovação** até alguém com Editar = **Sim** clicar em **Aprovar** no Gerenciamento. Enquanto isso, a postagem não aparece nas abas de leitura.",
+      },
+      {
+        subtitulo: "Não consigo criar Manual?",
+        texto:
+          "Manuais só podem ser criados com Editar = **Sim**. Com Editar = **Próprios**, a Nova Postagem oferece só Comunicados e Dicas.",
       },
       {
         subtitulo: "Qual Jogo? está vazio no modal?",

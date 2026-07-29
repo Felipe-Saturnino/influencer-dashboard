@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Clock, Loader2, Newspaper, Pencil } from "lucide-react";
+import { Check, Clock, Loader2, Newspaper, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
@@ -17,6 +17,8 @@ import {
   fmtDataColunaGerenciamento,
   labelComunicadoFromSlug,
   labelDicaManualFromSlug,
+  podeAprovarPostagemAcademyGerenciamento,
+  podeArquivarPostagemAcademyGerenciamento,
   podeEditarPostagemAcademyGerenciamento,
   registrarHistoricoStatus,
   stripHtmlText,
@@ -50,15 +52,28 @@ export type PostagemGerenciamentoRow = {
   status: AcademyPostagemStatus;
   publishedAt: string | null;
   createdBy: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  aprovadorNome: string;
   textoBusca: string;
 };
 
-type PostagemSortCol = "assunto" | "autor" | "tipo" | "categoria" | "createdAt" | "status" | "publishedAt";
+type PostagemSortCol =
+  | "assunto"
+  | "autor"
+  | "tipo"
+  | "categoria"
+  | "createdAt"
+  | "status"
+  | "approvedAt"
+  | "aprovador"
+  | "publishedAt";
 
 const STATUS_ORDEM: Record<AcademyPostagemStatus, number> = {
   rascunho: 0,
-  publicado: 1,
-  arquivado: 2,
+  aprovacao: 1,
+  publicado: 2,
+  arquivado: 3,
 };
 
 function compareTexto(a: string, b: string, dir: number): number {
@@ -80,16 +95,20 @@ const ERRO_CARREGAR =
   "Não foi possível carregar as postagens. Se o problema persistir, entre em contato com o suporte.";
 const ERRO_ARQUIVAR =
   "Não foi possível arquivar a postagem. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_APROVAR =
+  "Não foi possível aprovar a postagem. Se o problema persistir, entre em contato com o suporte.";
 
 const POSTAGEM_TIPO_FILTRO_OPCOES = (["comunicado", "dica", "manual"] as const).map((value) => ({
   value,
   label: ACADEMY_POSTAGEM_TIPO_UI_LABEL[value],
 }));
 
-const POSTAGEM_STATUS_FILTRO_OPCOES = (["publicado", "rascunho", "arquivado"] as const).map((value) => ({
-  value,
-  label: ACADEMY_POSTAGEM_STATUS_LABEL[value],
-}));
+const POSTAGEM_STATUS_FILTRO_OPCOES = (["publicado", "rascunho", "aprovacao", "arquivado"] as const).map(
+  (value) => ({
+    value,
+    label: ACADEMY_POSTAGEM_STATUS_LABEL[value],
+  }),
+);
 
 export function GerenciamentoPostagensFiltrosTipoStatus({
   filtroTipo,
@@ -128,12 +147,14 @@ export function GerenciamentoPostagensFiltrosTipoStatus({
   );
 }
 
-function acoesPorStatus(status: AcademyPostagemStatus): ("editar" | "arquivar" | "historico")[] {
+function acoesPorStatus(status: AcademyPostagemStatus): ("editar" | "aprovar" | "arquivar" | "historico")[] {
   switch (status) {
     case "publicado":
       return ["editar", "arquivar", "historico"];
     case "rascunho":
       return ["editar", "historico"];
+    case "aprovacao":
+      return ["editar", "aprovar", "historico"];
     case "arquivado":
       return ["historico"];
     default:
@@ -218,7 +239,9 @@ export function GerenciamentoPostagens({
         fetchAllPages(async (from, to) => {
           const res = await supabase
             .from("academy_portal_comunicado")
-            .select("id, titulo, corpo, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
+            .select(
+              "id, titulo, corpo, status, created_at, published_at, created_by, approved_at, approved_by, categoria:academy_portal_categoria(slug)",
+            )
             .gte("created_at", inicio)
             .order("created_at", { ascending: false })
             .range(from, to);
@@ -227,7 +250,9 @@ export function GerenciamentoPostagens({
         fetchAllPages(async (from, to) => {
           const res = await supabase
             .from("academy_portal_dica")
-            .select("id, titulo, corpo, status, created_at, published_at, created_by, categoria:academy_portal_categoria(slug)")
+            .select(
+              "id, titulo, corpo, status, created_at, published_at, created_by, approved_at, approved_by, categoria:academy_portal_categoria(slug)",
+            )
             .gte("created_at", inicio)
             .order("created_at", { ascending: false })
             .range(from, to);
@@ -267,6 +292,8 @@ export function GerenciamentoPostagens({
         created_at: string;
         published_at: string | null;
         created_by: string | null;
+        approved_at?: string | null;
+        approved_by?: string | null;
         categoria?: { slug: string } | { slug: string }[] | null;
       },
       contentType: AcademyPostagemContentType,
@@ -276,6 +303,7 @@ export function GerenciamentoPostagens({
     ) => {
       const catSlug = Array.isArray(row.categoria) ? row.categoria[0]?.slug : row.categoria?.slug;
       if (row.created_by) userIds.add(row.created_by);
+      if (row.approved_by) userIds.add(row.approved_by);
       built.push({
         id: row.id,
         contentType,
@@ -288,6 +316,9 @@ export function GerenciamentoPostagens({
         status: row.status ?? "rascunho",
         publishedAt: row.published_at,
         createdBy: row.created_by,
+        approvedAt: row.approved_at ?? null,
+        approvedBy: row.approved_by ?? null,
+        aprovadorNome: "",
         textoBusca: normalizarTextoBusca(`${row.titulo} ${stripHtmlText(row.corpo)} ${extraBusca}`),
       });
     };
@@ -307,6 +338,7 @@ export function GerenciamentoPostagens({
     const withAutor = built.map((r) => ({
       ...r,
       autorNome: meta[r.createdBy ?? ""]?.nome ?? "—",
+      aprovadorNome: r.approvedBy ? (meta[r.approvedBy]?.nome ?? "—") : "—",
     }));
 
     setRows(withAutor);
@@ -319,10 +351,18 @@ export function GerenciamentoPostagens({
   }, [carregar]);
 
   const rowsFiltradas = useMemo(() => {
+    const mesSel = mesesDisponiveis[idxMes];
     let list = [...rows];
     if (!modoHistorico) {
-      const mesSel = mesesDisponiveis[idxMes];
-      list = list.filter((r) => itemNoMesCarrossel(r.publishedAt ?? r.createdAt, mesSel));
+      list = list.filter((row) => {
+        if (row.publishedAt && mesSel && !itemNoMesCarrossel(row.publishedAt, mesSel)) {
+          if (row.status === "publicado" || row.status === "arquivado") return false;
+        }
+        if (!row.publishedAt && mesSel && !itemNoMesCarrossel(row.createdAt, mesSel)) {
+          if (row.status === "rascunho" || row.status === "aprovacao") return false;
+        }
+        return true;
+      });
     } else {
       list = list.filter((r) =>
         isDataNoPeriodoHistoricoCompetencias(r.publishedAt ?? r.createdAt),
@@ -345,6 +385,10 @@ export function GerenciamentoPostagens({
           return compareTexto(a.categoriaLabel, b.categoriaLabel, dir);
         case "status":
           return dir * (STATUS_ORDEM[a.status] - STATUS_ORDEM[b.status]);
+        case "approvedAt":
+          return compareDataIso(a.approvedAt, b.approvedAt, dir);
+        case "aprovador":
+          return compareTexto(a.aprovadorNome, b.aprovadorNome, dir);
         case "publishedAt":
           return compareDataIso(a.publishedAt, b.publishedAt, dir);
         default:
@@ -364,8 +408,47 @@ export function GerenciamentoPostagens({
     [rowsFiltradas, paginaSafe],
   );
 
+  const aprovarPostagem = async (row: PostagemGerenciamentoRow) => {
+    if (!user?.id || !podeAprovarPostagemAcademyGerenciamento(perm.canEditar)) return;
+    if (row.contentType === "manual") return;
+    setAcaoLoading(row.id);
+    const now = new Date().toISOString();
+    const table = row.contentType === "comunicado" ? "academy_portal_comunicado" : "academy_portal_dica";
+    const { error } = await supabase
+      .from(table)
+      .update({
+        status: "publicado",
+        approved_at: now,
+        approved_by: user.id,
+        published_at: now,
+        published_by: user.id,
+      })
+      .eq("id", row.id);
+    if (error) {
+      console.error("[GerenciamentoPostagens Academy] aprovar:", error);
+      setAcaoLoading(null);
+      setErro(ERRO_APROVAR);
+      return;
+    }
+    await registrarHistoricoStatus(supabase, row.contentType, row.id, "aprovacao", "publicado", user.id);
+    setAcaoLoading(null);
+    await carregar();
+    onDadosAlterados();
+  };
+
   const confirmarArquivar = async () => {
     if (!alvoArquivar || !user?.id) return;
+    if (
+      !podeArquivarPostagemAcademyGerenciamento(
+        perm.canEditar,
+        perm.canEditarOk,
+        user.id,
+        alvoArquivar.createdBy,
+      )
+    ) {
+      setAlvoArquivar(null);
+      return;
+    }
     setAcaoLoading(alvoArquivar.id);
     const table =
       alvoArquivar.contentType === "comunicado"
@@ -415,7 +498,7 @@ export function GerenciamentoPostagens({
       ) : (
         <>
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-          <table style={getDataTableStyle({ minWidth: 900 })}>
+          <table style={getDataTableStyle({ minWidth: 1100 })}>
             <caption style={{ display: "none" }}>Gerenciamento de postagens do Portal da Academy</caption>
             <thead>
               <tr>
@@ -474,6 +557,24 @@ export function GerenciamentoPostagens({
                   align="center"
                 />
                 <SortTableTh
+                  label="Data de Aprovação"
+                  col="approvedAt"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                <SortTableTh
+                  label="Aprovador"
+                  col="aprovador"
+                  sortCol={sortCol}
+                  sortDir={sortDir}
+                  onSort={onSortColuna}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                <SortTableTh
                   label="Publicado em"
                   col="publishedAt"
                   sortCol={sortCol}
@@ -498,6 +599,17 @@ export function GerenciamentoPostagens({
                       row.createdBy,
                     );
                   }
+                  if (a === "arquivar") {
+                    return podeArquivarPostagemAcademyGerenciamento(
+                      perm.canEditar,
+                      perm.canEditarOk,
+                      user?.id,
+                      row.createdBy,
+                    );
+                  }
+                  if (a === "aprovar") {
+                    return podeAprovarPostagemAcademyGerenciamento(perm.canEditar);
+                  }
                   return true;
                 });
                 return (
@@ -517,6 +629,8 @@ export function GerenciamentoPostagens({
                     <td style={dataTable.tdCenter}>{row.categoriaLabel}</td>
                     <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.createdAt)}</td>
                     <td style={dataTable.tdCenter}>{ACADEMY_POSTAGEM_STATUS_LABEL[row.status]}</td>
+                    <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.approvedAt)}</td>
+                    <td style={dataTable.tdCenter}>{row.aprovadorNome}</td>
                     <td style={dataTable.tdCenter}>{fmtDataColunaGerenciamento(row.publishedAt)}</td>
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
@@ -529,6 +643,15 @@ export function GerenciamentoPostagens({
                             }}
                           >
                             <Pencil size={13} aria-hidden />
+                          </BtnIconeAcaoLinha>
+                        ) : null}
+                        {acoes.includes("aprovar") ? (
+                          <BtnIconeAcaoLinha
+                            label={tooltipAcao("Aprovar postagem")}
+                            onClick={() => void aprovarPostagem(row)}
+                            disabled={acaoLoading === row.id}
+                          >
+                            <Check size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
                         ) : null}
                         {acoes.includes("arquivar") ? (
