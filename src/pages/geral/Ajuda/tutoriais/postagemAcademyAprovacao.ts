@@ -28,7 +28,7 @@ export const TUTORIAL_POSTAGEM_ACADEMY_APROVACAO: TutorialDef = {
     {
       titulo: "2. Escolher o tipo de postagem",
       texto:
-        "1. No modal Nova postagem, em Tipo de Postagem, escolha Comunicados ou Dicas.\n2. Neste fluxo de aprovação, Manuais não estão disponíveis — só Comunicados e Dicas.\n3. No rodapé, o botão principal é Enviar para aprovação (e também Salvar, para rascunho).",
+        "1. No modal Nova postagem, em Tipo de Postagem, escolha Comunicados ou Dicas.\n2. No rodapé, o botão principal é Enviar para aprovação (e também Salvar, para rascunho).",
       imagens: [
         {
           src: `${IMG}/02-modal-nova-postagem-tipo.png`,
@@ -61,7 +61,7 @@ export const TUTORIAL_POSTAGEM_ACADEMY_APROVACAO: TutorialDef = {
     {
       titulo: "5. Salvar ou enviar para aprovação",
       texto:
-        "1. Salvar: grava como Rascunho — você pode editar depois e enviar quando estiver pronto.\n2. Enviar para aprovação: envia a postagem com status Aprovação.\n3. Na tabela do Gerenciamento, acompanhe o status. Com o filtro Status da postagem, use Aprovação para ver o que ainda aguarda o aprovador.\n4. Quando alguém com permissão de aprovar publicar, o status passa a Publicado e a postagem aparece nas abas Comunicados ou Dicas.",
+        "1. Salvar: grava como Rascunho — você pode editar depois e enviar quando estiver pronto.\n2. Enviar para aprovação: envia a postagem com status Aprovação.\n3. Na tabela do Gerenciamento, acompanhe o status. Com o filtro Status da postagem, use Aprovação para ver o que ainda aguarda o aprovador.\n4. Quando um Gestor de Operações ou da Academy aprovar, o status passa a Publicado e a postagem aparece nas abas Comunicados ou Dicas.",
     },
   ],
   notasFinais:

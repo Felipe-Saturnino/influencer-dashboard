@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, History, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, History, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -57,6 +57,7 @@ import {
   STICKY_W_TURNO_STAFF,
   Z_CONSOLIDADO_STICKY_HEAD,
   Z_CONSOLIDADO_STICKY_ROW,
+  bucketEstudioConsolidado,
   buildAbasEscalaFromTimes,
   buildCelulasSnapshotGrade,
   carregarEscalaMesGravada,
@@ -113,6 +114,14 @@ import {
   type RpcPrestadorEscala,
   type RpcTurnoMesListarRow,
 } from "./gestaoEscalaHelpers";
+import {
+  buildAbaConsolidadoEscalaExcel,
+  buildAbaDetalhadoEscalaExcel,
+  nomeArquivoEscalaExcel,
+  type EscalaExcelBlocoTurno,
+  type EscalaExcelLinhaDetalhe,
+} from "./gestaoEscalaExcel";
+import { baixarXlsx } from "../../../lib/xlsxWriter";
 
 export type GestaoEscalaPageProps = {
   modo?: EscalaGradeModo;
@@ -141,6 +150,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   /** `todos` | `nenhum` | slug do estúdio. */
   const [filtroEstudioEscala, setFiltroEstudioEscala] = useState<string>(FILTRO_STAFF_ESTUDIO_TODOS);
   const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
+  const [erroDownloadEscala, setErroDownloadEscala] = useState<string | null>(null);
   const [salvandoGrade, setSalvandoGrade] = useState(false);
   const [novaEscalaModalArea, setNovaEscalaModalArea] = useState<AreaEscalaKey | null>(null);
   const [alterarEscalaModalAberto, setAlterarEscalaModalAberto] = useState(false);
@@ -1142,6 +1152,108 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
 
+  /**
+   * Download da escala em XLSX: aba «Consolidado» (turno × estúdio × dias) e
+   * aba «Detalhado» (Nome, Nickname, Turno, Estúdio e status de cada dia).
+   * Respeita a aba de time, o mês do carrossel e os filtros aplicados na tabela.
+   */
+  const baixarEscalaExcel = useCallback(() => {
+    const prestadoresArea = filtrarPorArea(prestadoresFiltradosEstudio, filtroArea);
+    const gradeAprovada = escalaGradeAprovadaNaBase(estGradeFiltro);
+    const diasExcel = dias.map((d) => ({ dia: d.dia, dowShort: d.dowShort, iso: d.iso }));
+
+    const turnos: { titulo: string; sigla: "MRN" | "AFT" | "NGT" | "Comercial" }[] =
+      modo === "escritorio"
+        ? [{ titulo: "Comercial", sigla: "Comercial" }]
+        : [
+            { titulo: "Turno da Manhã", sigla: "MRN" },
+            { titulo: "Turno da Tarde", sigla: "AFT" },
+            { titulo: "Turno da Noite", sigla: "NGT" },
+            ...(filtroArea === "academy"
+              ? ([{ titulo: "Comercial", sigla: "Comercial" }] as const)
+              : []),
+          ];
+
+    const blocos: EscalaExcelBlocoTurno[] = turnos.map((turno) => {
+      const linhasEstudio = contarCelulasComSiglaPorEstudio(
+        prestadoresArea,
+        dias,
+        celulasGerarAtivas,
+        turno.sigla,
+        opParaEstudio,
+        estudiosNomeEscala,
+      );
+      return {
+        titulo: turno.titulo,
+        linhas: linhasEstudio.map((l) => ({ label: l.label, counts: l.counts })),
+        total: dias.map((_, i) => linhasEstudio.reduce((acc, l) => acc + (l.counts[i] ?? 0), 0)),
+      };
+    });
+
+    const estudioPorPrestador = new Map<string, string>();
+    for (const p of prestadoresArea) {
+      estudioPorPrestador.set(
+        p.id,
+        bucketEstudioConsolidado(p, opParaEstudio, estudiosNomeEscala).label,
+      );
+    }
+
+    const linhasDetalhe: EscalaExcelLinhaDetalhe[] = linhasOrdenadasEscalaDiaria.map((row) => ({
+      nome: row.nome,
+      nickname: row.nickname,
+      turno: row.turnoStaffNome,
+      estudio: estudioPorPrestador.get(row.id) ?? "",
+      valoresPorDia: dias.map((dia) => {
+        const ck = chaveCelulaGerar(row.id, dia.iso);
+        const texto = gradeAprovada
+          ? labelExibicaoCelulaAlterarEscala(celulasGerarAtivas?.[ck], modo, filtroArea)
+          : labelExibicaoCelulaEscala(
+              row.siglaTurnoStaff,
+              celulasGerarAtivas?.[ck],
+              row.turnoStaffNome,
+              modo,
+              filtroArea,
+            );
+        return texto === "—" ? "" : texto;
+      }),
+    }));
+
+    try {
+      setErroDownloadEscala(null);
+      baixarXlsx(
+        nomeArquivoEscalaExcel(
+          getPageMenuLabel(pageKey),
+          labelAreaEscala(filtroArea, abasTimes),
+          ano,
+          mes,
+        ),
+        [
+          buildAbaConsolidadoEscalaExcel(diasExcel, blocos),
+          buildAbaDetalhadoEscalaExcel(diasExcel, linhasDetalhe),
+        ],
+      );
+    } catch (e) {
+      console.error("Falha ao gerar XLSX da escala", e);
+      setErroDownloadEscala(
+        "Não foi possível gerar o Excel da escala. Se o problema persistir, entre em contato com o suporte.",
+      );
+    }
+  }, [
+    abasTimes,
+    ano,
+    celulasGerarAtivas,
+    dias,
+    estGradeFiltro,
+    estudiosNomeEscala,
+    filtroArea,
+    linhasOrdenadasEscalaDiaria,
+    mes,
+    modo,
+    opParaEstudio,
+    pageKey,
+    prestadoresFiltradosEstudio,
+  ]);
+
   useEffect(() => {
     if (filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS || filtroArea !== "game_presenter") {
       setConsolidadoTurnoExpandido({});
@@ -2052,13 +2164,32 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 <div
                   style={{
                     display: "flex",
-                    alignItems: "center",
+                    flexDirection: "column",
+                    alignItems: "stretch",
                     gap: 8,
                     flex: "1 1 200px",
                     maxWidth: 400,
                     minWidth: 0,
                   }}
                 >
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      type="button"
+                      onClick={baixarEscalaExcel}
+                      disabled={linhasOrdenadasEscalaDiaria.length === 0}
+                      aria-label="Baixar escala em Excel com abas Consolidado e Detalhado"
+                      style={escalaToolbarBtnNeutro(t, {
+                        cursor: linhasOrdenadasEscalaDiaria.length === 0 ? "not-allowed" : "pointer",
+                        opacity: linhasOrdenadasEscalaDiaria.length === 0 ? 0.55 : 1,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                      })}
+                    >
+                      <Download size={14} aria-hidden />
+                      Baixar Excel
+                    </button>
+                  </div>
                   <BarraPesquisaPagina
                     value={filtroNicknameEscala}
                     onChange={setFiltroNicknameEscala}
@@ -2072,6 +2203,20 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   />
                 </div>
               </div>
+              {erroDownloadEscala ? (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  style={{
+                    color: "#e84025",
+                    fontSize: 12,
+                    fontFamily: FONT.body,
+                    marginBottom: 12,
+                  }}
+                >
+                  {erroDownloadEscala}
+                </div>
+              ) : null}
               <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table
               style={{

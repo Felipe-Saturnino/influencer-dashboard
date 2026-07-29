@@ -729,6 +729,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
+      {
+        subtitulo: "Baixar Excel",
+        texto:
+          "O botão **Baixar Excel**, acima da barra de pesquisa da Escala Diária, gera uma planilha do time e do mês selecionados. A aba **Consolidado** traz um bloco por turno (Manhã, Tarde e Noite) com estúdio nas linhas, dias do mês nas colunas e uma linha de Total; a aba **Detalhado** traz Nome, Nickname, Turno, Estúdio e o status de cada dia. O arquivo respeita os filtros aplicados na tela (estúdio, turno e busca).",
+      },
     ],
   },
   escala_escritorio: {
