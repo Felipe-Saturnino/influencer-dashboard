@@ -45,7 +45,8 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - **Visibilidade por perfil:** tabela `ajuda_tutorial_visibilidade` (`tutorial_id`, `roles text[]`). Só perfis listados veem o tutorial; **Administrador** vê todos e é o único com botão **Editar** (ícone) ao lado do título → modal multi-seleção de perfis (`TutorialPerfilMultiSelect` / `ModalEditarVisibilidadeTutorial`).
 - Se o usuário **não** tiver nenhum tutorial liberado para o perfil efetivo, a aba **Tutoriais** **não aparece** na Ajuda (URL `/Ajuda/Tutoriais` redireciona para Conheça).
 - Ao gravar novo tutorial: adicionar ao catálogo, imagens em `public/tutoriais/<secao>/<id>/`, seed/linha em `ajuda_tutorial_visibilidade` (ou o Admin configura na UI).
-- Tutoriais Escala atuais: **Controle de Presença** (`controle-presenca`, Calendário) · **Alterar Escala** (`alterar-escala`, Escala Estúdio — seed `service_manager` / `shift_leader`).
+- Tutoriais atuais: **Controle de Presença** (`controle-presenca`, Escala) · **Alterar Escala** (`alterar-escala`, Escala — seed SM/SL) · **Dicas Academy** (`postagem-academy-aprovacao`, Academy — seed perfis Estúdio).
+- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `ControledePresenca`, `AlterarEscala`, `DicasAcademy`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
 
 **Regra (também no Global):** qualquer alteração de produto em **qualquer secção** deve revisar se Ajuda/glossário precisa de entrada nova, atualização ou remoção.
 

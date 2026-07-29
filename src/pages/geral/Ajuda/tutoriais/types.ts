@@ -13,6 +13,8 @@ export type TutorialPasso = {
 
 export type TutorialDef = {
   id: string;
+  /** Segmento canônico em `/Ajuda/Tutoriais/{urlSlug}`. */
+  urlSlug: string;
   /** Rótulo no menu lateral — ex.: Controle de Presença */
   titulo: string;
   /** Secção do menu (mesmo nome de `menu.ts`) — ex.: Escala */

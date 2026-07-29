@@ -99,6 +99,8 @@ Se essa migration ainda não estiver aplicada, a listagem de Gerenciamento refaz
 | **Sim** | Sim | Comunicados, Dicas, Manuais | **Publicar** → Publicado | Sim (status Aprovação) | Todas as postagens |
 | **Próprios** | Sim | Só Comunicados e Dicas | **Enviar para aprovação** → Aprovação | Não | Só postagens com `created_by` = usuário |
 
+**Tutorial (Ajuda → Tutoriais):** **Dicas Academy** (`postagem-academy-aprovacao`, URL `/Ajuda/Tutoriais/DicasAcademy`) — criar Dica/Comunicado e enviar para aprovação; imagens em `public/tutoriais/academy/postagem-aprovacao/`.
+
 Ações por status: rascunho → Editar + Histórico; **aprovacao** → Editar + **Aprovar** (só Sim) + Histórico; publicado → Editar + Arquivar + Histórico; arquivado → Histórico. Tabela: Assunto, Autor, Tipo, Categoria, Criado em, Status, **Data de Aprovação**, **Aprovador**, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página (`TabelaPaginacaoBar`).
 
 ### Filtros

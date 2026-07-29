@@ -6,6 +6,7 @@ const IMG = "/tutoriais/escala/controle-presenca";
 /** Tutorial: Check-in, Check-out e Justificativa — visão Próprios (sem liderança). */
 export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
   id: "controle-presenca",
+  urlSlug: "ControledePresenca",
   titulo: "Controle de Presença",
   section: "Escala",
   icon: CalendarClock,

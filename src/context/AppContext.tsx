@@ -521,7 +521,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const path = buildAppPath(access.pageKey, access.tabSlug);
+      const path = buildAppPath(access.pageKey, access.tabSlug, access.detailSlug);
       if (
         layoutViewRef.current === "app" &&
         activePageRef.current === access.pageKey &&
