@@ -2743,8 +2743,6 @@ export default function RhCalendarioPage() {
     salvarJustificativaPresenca,
   } = useCalendarioPresencaGestaoMutacoes({
     nomeUsuarioPresencaGestao,
-    mapaPontoPorDiaIso,
-    pontoRelatorioPorFid,
     presencaFilterStaffIds,
     mesPresencaFechado,
     linhasAprovacaoPresencaMes,

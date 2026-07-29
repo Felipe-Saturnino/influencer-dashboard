@@ -28,23 +28,17 @@ function toISO(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-function horaRegistoSP(isoTs: string | null | undefined): string {
-  if (!isoTs) return "—";
-  const d = new Date(isoTs);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  });
+/** Preferir mapa da aba Presença (mês) — o snapshot do Relatório pode estar mais antigo. */
+function gestaoAtualPorChave(
+  chave: string,
+  presencaGestaoPorChave: Map<string, PresencaDiaGestao>,
+  gestaoRelatorioPorChave: Map<string, PresencaDiaGestao>,
+): PresencaDiaGestao | undefined {
+  return presencaGestaoPorChave.get(chave) ?? gestaoRelatorioPorChave.get(chave);
 }
-
-type PontoDia = { check_in_at: string | null; check_out_at: string | null };
 
 export type UseCalendarioPresencaGestaoMutacoesOpts = {
   nomeUsuarioPresencaGestao: string;
-  mapaPontoPorDiaIso: Map<string, PontoDia>;
-  pontoRelatorioPorFid: Map<string, PontoDia>;
   presencaFilterStaffIds: string[];
   mesPresencaFechado: boolean;
   linhasAprovacaoPresencaMes: PresencaMesAprovacaoLinha[];
@@ -69,8 +63,6 @@ export type UseCalendarioPresencaGestaoMutacoesOpts = {
 export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaGestaoMutacoesOpts) {
   const {
     nomeUsuarioPresencaGestao,
-    mapaPontoPorDiaIso,
-    pontoRelatorioPorFid,
     presencaFilterStaffIds,
     mesPresencaFechado,
     linhasAprovacaoPresencaMes,
@@ -113,8 +105,7 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
     const fid = presencaAlvoModal.funcionarioId;
     const chave = chavePresencaGestao(fid, diaIso);
     const em = new Date().toISOString();
-    const atual =
-      gestaoRelatorioPorChave.get(chave) ?? presencaGestaoPorChave.get(chave);
+    const atual = gestaoAtualPorChave(chave, presencaGestaoPorChave, gestaoRelatorioPorChave);
     const comHistorico = appendHistoricoPresenca(atual, {
       tipo: "aprovacao",
       em,
@@ -144,8 +135,8 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
     return { ok: true };
   }, [
     presencaAlvoModal,
-    gestaoRelatorioPorChave,
     presencaGestaoPorChave,
+    gestaoRelatorioPorChave,
     nomeUsuarioPresencaGestao,
     persistirPresencaGestao,
     setPresencaGestaoPorChave,
@@ -220,11 +211,10 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
       const diaIso = toISO(presencaAlvoModal.dia);
       const fid = presencaAlvoModal.funcionarioId;
       const chave = chavePresencaGestao(fid, diaIso);
-      const pt = mapaPontoPorDiaIso.get(diaIso) ?? pontoRelatorioPorFid.get(fid);
-      const entradaRealAnterior = horaRegistoSP(pt?.check_in_at);
-      const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
-      const atual =
-        gestaoRelatorioPorChave.get(chave) ?? presencaGestaoPorChave.get(chave);
+      /** Horários do ponto já resolvidos ao abrir o modal — não usar mapas de ponto (podem estar stale). */
+      const entradaRealAnterior = (presencaAlvoModal.entRealOriginal || "—").trim() || "—";
+      const saidaRealAnterior = (presencaAlvoModal.saiRealOriginal || "—").trim() || "—";
+      const atual = gestaoAtualPorChave(chave, presencaGestaoPorChave, gestaoRelatorioPorChave);
       const comHistorico = appendHistoricoPresenca(atual, {
         tipo: "correcao",
         em: new Date().toISOString(),
@@ -263,10 +253,8 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
     },
     [
       presencaAlvoModal,
-      mapaPontoPorDiaIso,
-      pontoRelatorioPorFid,
-      gestaoRelatorioPorChave,
       presencaGestaoPorChave,
+      gestaoRelatorioPorChave,
       nomeUsuarioPresencaGestao,
       persistirPresencaGestao,
       setPresencaGestaoPorChave,
@@ -330,13 +318,10 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
       const diaIso = toISO(presencaJustificarAlvo.dia);
       const fid = presencaJustificarAlvo.funcionarioId;
       const chave = chavePresencaGestao(fid, diaIso);
-      const pt =
-        (presencaFilterStaffIds[0] === fid ? mapaPontoPorDiaIso.get(diaIso) : undefined) ??
-        pontoRelatorioPorFid.get(fid);
-      const entradaRealAnterior = horaRegistoSP(pt?.check_in_at);
-      const saidaRealAnterior = horaRegistoSP(pt?.check_out_at);
+      const entradaRealAnterior = (presencaJustificarAlvo.entRealOriginal || "—").trim() || "—";
+      const saidaRealAnterior = (presencaJustificarAlvo.saiRealOriginal || "—").trim() || "—";
       const em = new Date().toISOString();
-      const atual = gestaoRelatorioPorChave.get(chave) ?? presencaGestaoPorChave.get(chave);
+      const atual = gestaoAtualPorChave(chave, presencaGestaoPorChave, gestaoRelatorioPorChave);
 
       if (payload.motivo === "medico") {
         const up = await uploadAtestadoPresencaCalendario(fid, diaIso, payload.arquivo);
@@ -449,9 +434,6 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
       presencaJustificarAlvo,
       presencaGestaoPorChave,
       gestaoRelatorioPorChave,
-      mapaPontoPorDiaIso,
-      pontoRelatorioPorFid,
-      presencaFilterStaffIds,
       nomeUsuarioPresencaGestao,
       persistirPresencaGestao,
       setPresencaGestaoPorChave,
