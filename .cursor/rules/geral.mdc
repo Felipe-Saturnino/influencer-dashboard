@@ -108,7 +108,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **`performance_coach`:** `HomePerformanceCoach.tsx` — informativos `performance_coach`. RLS: `20260530200000_home_performance_coach_feed_rls.sql`.
 - **`service_manager`:** `HomeServiceManager.tsx` — informativos `service_manager`. RLS: `20260531200000_home_service_manager_feed_rls.sql`.
 - **`customer_service`:** `HomeCustomerService.tsx` — atalhos Atendimento + Ajuda + Organograma; RLS: `20260707213000_role_customer_service.sql`.
-- **`game_presenter`:** `HomeGamePresenter.tsx` — informativos `game_presenter`. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
+- **`game_presenter`:** `HomeGamePresenter.tsx` — informativos `game_presenter`; atalhos Calendário + Ajuda + Organograma. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
 - **`shuffler`:** `HomeShuffler.tsx` — informativos `shuffler`. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
 - **`tech_ops`:** `HomeTechOps.tsx` — informativos `tech_ops`. RLS: `20260706180000_role_tech_ops.sql`.
 - **`shift_leader`:** `HomeShiftLeader.tsx` — informativos `shift_leader`. RLS: `20260601200000_home_shift_leader_feed_rls.sql`.

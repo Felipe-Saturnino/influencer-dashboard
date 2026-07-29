@@ -208,7 +208,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de abril/2026). O botão Histórico exibe 13 competências mensais — a atual e as 12 anteriores —, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
+          "Use as setas para navegar entre os meses disponíveis (a partir de agosto/2026 — início oficial da escala). O botão Histórico exibe o acumulado das competências disponíveis desde agosto, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
       },
       {
         subtitulo: "Aba Escala — KPIs Consolidados",
@@ -798,12 +798,27 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Marketplace de turnos: publicação de ofertas de venda ou troca entre prestadores e candidatura a vagas abertas. As ofertas ficam **persistidas** na plataforma. Todas as ofertas visíveis e as suas ofertas aparecem em abas distintas.",
+          "Ponta única onde os prestadores de estúdio negociam turnos: **Venda de Turno**, **Venda de Folga** e **Oferta de Troca**. Duas abas — **Todas as Ofertas** (mural do período) e **Minhas Ofertas** (o que você publicou e o que aceitou). O aceite é **imediato**, sem aprovação de gestor: a Escala Estúdio aprovada é atualizada na hora com Compra, Venda ou Troca.",
       },
       {
-        subtitulo: "Ofertas e candidaturas",
+        subtitulo: "O que você vê",
         texto:
-          "Crie oferta informando turno e tipo (venda ou troca) quando tiver permissão de Criar. Acompanhe candidatos, aceite ou recuse propostas conforme regras do time. **Aceitar** só é permitido entre prestadores do **mesmo time** do Organograma; o aceite atualiza a Escala Estúdio **aprovada** (Compra/Venda/Troca). Ofertas encerradas ou expiradas saem da lista ativa.",
+          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times. O carrossel filtra pelo mês do dia negociado e **Histórico** abre todo o período.",
+      },
+      {
+        subtitulo: "Publicar uma oferta",
+        texto:
+          "Com permissão de **Criar**, use **Nova Oferta**. Os dias listados vêm da sua escala **aprovada** e são sempre **futuros**: **Venda de Turno** e **Oferta de Troca** listam dias em que você está escalado; **Venda de Folga** lista as suas folgas — nesse caso você se oferece para **trabalhar** e escolhe o turno. Dias já negociados (Compra, Venda, Troca) não entram, e só é possível ter **uma** oferta aberta por dia. Enquanto ninguém aceitar, você pode **cancelar** a oferta em Minhas Ofertas — a escala não muda.",
+      },
+      {
+        subtitulo: "Aceitar uma oferta",
+        texto:
+          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar de folga no dia e fica com **Compra** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega **escalado no mesmo turno**, que fica com **Venda** (o ofertante fica Compra). Em **Oferta de Troca** você escolhe um dia seu com turno para dar em troca e ambos ficam com **Troca** nos dois dias.",
+      },
+      {
+        subtitulo: "Intervalo mínimo de 12h",
+        texto:
+          "Nenhuma oferta ou aceite pode deixar menos de **12h** entre o fim de um turno e o início do seguinte. A plataforma calcula o intervalo com a sua escala, o turno de staff e os horários da operadora, e bloqueia turnos ou dias que violem a regra — por isso um dia pode não aparecer na lista ou o aceite pode ser recusado com aviso.",
       },
     ],
   },

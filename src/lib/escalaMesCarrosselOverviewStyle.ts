@@ -14,15 +14,16 @@ export const ESCALA_CARROSSEL_MESES_PT = [
   "Dezembro",
 ] as const;
 
-/** Primeiro mês listado no carrossel Escala / Marketplace / Solicitações. */
+/** Primeiro mês listado no carrossel Escala / Marketplace / Solicitações / Overview Prestador. */
 export const ESCALA_CARROSSEL_MIN_ANO = 2026;
-/** Abril (0-based). */
-export const ESCALA_CARROSSEL_MIN_MES = 3;
+/** Agosto (0-based) — início oficial da escala. */
+export const ESCALA_CARROSSEL_MIN_MES = 7;
 
 export type MesCarrosselEscalaEntry = { ano: number; mes: number; label: string };
 
 /**
- * Meses de abril/2026 até o mês civil corrente (inclusivo), no mesmo modelo do carrossel do Overview Spin.
+ * Meses de agosto/2026 até o mês civil corrente (inclusivo).
+ * Antes de agosto/2026, devolve só o mês mínimo (agosto) para permitir pré-visualizar a grade oficial.
  */
 export function getMesesDisponiveisEscalaCarrossel(hoje = new Date()): MesCarrosselEscalaEntry[] {
   const lista: MesCarrosselEscalaEntry[] = [];

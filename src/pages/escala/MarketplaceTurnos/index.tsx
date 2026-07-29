@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, MoreHorizontal, Store, User } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Ban, Check, ChevronLeft, ChevronRight, Loader2, Store, User } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -15,12 +15,14 @@ import {
   SortTableTh,
   type SortDir,
 } from "../../../components/dashboard";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
-import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
@@ -34,14 +36,22 @@ import {
   type EscalaAcaoFiltro,
   type EscalaTimeFiltro,
   type LinhaOfertaMarketplace,
-  type OfertaStatusUi,
 } from "../../../lib/escalaTurnosUiConstants";
 import type { RhCalendarioAcaoTipo } from "../../../lib/rhCalendarioAcaoHelpers";
 import {
   getMesesDisponiveisEscalaCarrossel,
   idxMesInicialEscalaCarrossel,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
-import { carregarOfertasMarketplace } from "../../../lib/escalaMarketplace";
+import {
+  carregarMeuContextoMarketplace,
+  carregarMinhaGradeMarketplace,
+  carregarOfertasMarketplace,
+  type MarketplaceMeuContexto,
+  type MarketplaceMinhaGrade,
+} from "../../../lib/escalaMarketplace";
+import { ModalOfertarMarketplace } from "./ModalOfertarMarketplace";
+import { ModalAceitarOfertaMarketplace } from "./ModalAceitarOfertaMarketplace";
+import { ModalCancelarOfertaMarketplace } from "./ModalCancelarOfertaMarketplace";
 
 const MARKETPLACE_TIME_ITEMS = ESCALA_TIME_OPCOES.filter((o) => o.value !== "todos").map((o) => ({
   id: o.value,
@@ -49,10 +59,15 @@ const MARKETPLACE_TIME_ITEMS = ESCALA_TIME_OPCOES.filter((o) => o.value !== "tod
 }));
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
+const GRADE_VAZIA: MarketplaceMinhaGrade = { aprovada: false, areaKey: "", valorPorIso: new Map() };
 
 function refMesIsoPrimeiroDia(ano: number, mes0: number): string {
   const p2 = (n: number) => String(n).padStart(2, "0");
   return `${ano}-${p2(mes0 + 1)}-01`;
+}
+
+function refMesIsoDaData(dataIso: string): string {
+  return `${dataIso.slice(0, 7)}-01`;
 }
 
 type OfertaSortCol =
@@ -65,6 +80,9 @@ type OfertaSortCol =
   | "turnoInteresse"
   | "comprador"
   | "status";
+
+/** Blocos da aba Minhas Ofertas — cada um com o seu conjunto de colunas. */
+type MinhasVariant = "abertas" | "aceitei" | "historico";
 
 function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)";
@@ -139,6 +157,11 @@ function filtrarPorMesEscala(rows: LinhaOfertaMarketplace[], ano: number, mes0: 
   return rows.filter((r) => dataIsoNoMes(r.dataOfertaIso, ano, mes0));
 }
 
+/** Oferta ainda disponível para aceite. */
+function ofertaEmAberto(row: LinhaOfertaMarketplace): boolean {
+  return row.status === "aberto" || row.status === "interessado";
+}
+
 export default function EscalaMarketplaceTurnosPage() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -168,6 +191,16 @@ export default function EscalaMarketplaceTurnosPage() {
   });
   const [ofertas, setOfertas] = useState<LinhaOfertaMarketplace[]>([]);
   const [loadingOfertas, setLoadingOfertas] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const [contexto, setContexto] = useState<MarketplaceMeuContexto | null>(null);
+  const [gradeMes, setGradeMes] = useState<MarketplaceMinhaGrade>(GRADE_VAZIA);
+  const [gradeAceite, setGradeAceite] = useState<MarketplaceMinhaGrade>(GRADE_VAZIA);
+
+  const [ofertarAberto, setOfertarAberto] = useState(false);
+  const [ofertaAceitar, setOfertaAceitar] = useState<LinhaOfertaMarketplace | null>(null);
+  const [ofertaCancelar, setOfertaCancelar] = useState<LinhaOfertaMarketplace | null>(null);
+  const [preparandoAceiteId, setPreparandoAceiteId] = useState<string | null>(null);
 
   const dataTable = useDataTableBlock();
 
@@ -183,6 +216,23 @@ export default function EscalaMarketplaceTurnosPage() {
   }, [filtroTimeIdsTodas]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
+
+  const refMesGrade = useMemo(() => {
+    const m = historico ? mesesDisponiveis[idxMesInicial >= 0 ? idxMesInicial : mesesDisponiveis.length - 1] : mesSelecionado;
+    return m ? refMesIsoPrimeiroDia(m.ano, m.mes) : null;
+  }, [historico, mesSelecionado, mesesDisponiveis, idxMesInicial]);
+
+  const recarregar = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void carregarMeuContextoMarketplace().then((ctx) => {
+      if (!cancelled) setContexto(ctx);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,7 +252,21 @@ export default function EscalaMarketplaceTurnosPage() {
     return () => {
       cancelled = true;
     };
-  }, [historico, mesSelecionado]);
+  }, [historico, mesSelecionado, reloadKey]);
+
+  useEffect(() => {
+    if (!refMesGrade) {
+      setGradeMes(GRADE_VAZIA);
+      return;
+    }
+    let cancelled = false;
+    void carregarMinhaGradeMarketplace(refMesGrade).then((g) => {
+      if (!cancelled) setGradeMes(g);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [refMesGrade, reloadKey]);
 
   const linhasMes = useMemo(() => {
     if (historico) {
@@ -227,15 +291,41 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const linhasTrocaTodas = useMemo(() => {
     return linhasMes.filter(
-      (r) => r.tipo === "oferta_troca" && passaFiltroTipo(r, filtroTipoTodas) && passaFiltroTime(r, filtroTimeTodas),
+      (r) =>
+        (r.tipo === "oferta_troca" || r.tipo === "troca_cassada") &&
+        passaFiltroTipo(r, filtroTipoTodas) &&
+        passaFiltroTime(r, filtroTimeTodas),
     );
   }, [linhasMes, filtroTipoTodas, filtroTimeTodas]);
 
-  const minhasBase = useMemo(() => {
-    return linhasMes.filter((r) => passaFiltroTipo(r, filtroTipoMinhas));
-  }, [linhasMes, filtroTipoMinhas]);
+  const minhasBase = useMemo(
+    () => linhasMes.filter((r) => passaFiltroTipo(r, filtroTipoMinhas)),
+    [linhasMes, filtroTipoMinhas],
+  );
 
-  const porStatus = (s: OfertaStatusUi) => minhasBase.filter((r) => r.status === s);
+  const minhasAbertas = useMemo(
+    () => minhasBase.filter((r) => r.souOfertante === true && ofertaEmAberto(r)),
+    [minhasBase],
+  );
+  const minhasAceitas = useMemo(
+    () => minhasBase.filter((r) => r.souInteressado === true),
+    [minhasBase],
+  );
+  const minhasEncerradas = useMemo(
+    () => minhasBase.filter((r) => r.souOfertante === true && !ofertaEmAberto(r)),
+    [minhasBase],
+  );
+
+  const souPrestadorCadastrado = !!contexto?.funcionarioId;
+  const podeOfertar = perm.canCriarOk && souPrestadorCadastrado;
+
+  const abrirAceite = useCallback(async (row: LinhaOfertaMarketplace) => {
+    setPreparandoAceiteId(row.id);
+    const grade = await carregarMinhaGradeMarketplace(refMesIsoDaData(row.dataOfertaIso));
+    setGradeAceite(grade);
+    setOfertaAceitar(row);
+    setPreparandoAceiteId(null);
+  }, []);
 
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
     ...getFilterBarRowStyle(),
@@ -304,150 +394,147 @@ export default function EscalaMarketplaceTurnosPage() {
     </>
   );
 
-  const blocoFiltrosLinha1 =
-    aba === "todas" ? (
-      <>
+  const ctaOfertar = podeOfertar ? (
+    <CtaCriarButton onClick={() => setOfertarAberto(true)}>Nova Oferta</CtaCriarButton>
+  ) : null;
+
+  const blocoFiltrosLinha1 = (
+    <div className="app-marketplace-filtro-minhas">
+      <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+      <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Período e tipo de ação">
         {blocoCarrosselHistorico}
-        <FiltroSolicitacoesTipoAcaoSelect
-          value={filtroTipoTodas}
-          onChange={setFiltroTipoTodas}
-          opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
-        />
-        <FiltroCalendarioTimeSelect
-          selected={filtroTimeIdsTodas}
-          onChange={(ids) => setFiltroTimeIdsTodas(ids.length <= 1 ? ids : [ids[ids.length - 1]!])}
-          items={MARKETPLACE_TIME_ITEMS}
-        />
-      </>
-    ) : (
-      <div className="app-marketplace-filtro-minhas">
-        <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
-        <div className="app-marketplace-filtro-minhas__centro" role="group" aria-label="Período e tipo de ação">
-          {blocoCarrosselHistorico}
+        {aba === "todas" ? (
+          <>
+            <FiltroSolicitacoesTipoAcaoSelect
+              value={filtroTipoTodas}
+              onChange={setFiltroTipoTodas}
+              opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
+            />
+            <FiltroCalendarioTimeSelect
+              selected={filtroTimeIdsTodas}
+              onChange={(ids) => setFiltroTimeIdsTodas(ids.length <= 1 ? ids : [ids[ids.length - 1]!])}
+              items={MARKETPLACE_TIME_ITEMS}
+            />
+          </>
+        ) : (
           <FiltroSolicitacoesTipoAcaoSelect
             value={filtroTipoMinhas}
             onChange={setFiltroTipoMinhas}
             opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
           />
-        </div>
-        <div className="app-marketplace-filtro-minhas__cta">
-          <button type="button" aria-label="Ofertar" style={getCtaCriarButtonStyle(brand)}>
-            Ofertar
-          </button>
-        </div>
+        )}
       </div>
-    );
+      <div className="app-marketplace-filtro-minhas__cta">{ctaOfertar}</div>
+    </div>
+  );
 
   const contentBox = getPageContentBoxStyle(brand, t);
 
+  function celulaVazia() {
+    return (
+      <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+        {MSG_VAZIO_OFERTAS}
+      </div>
+    );
+  }
+
+  function thSort(label: string, col: OfertaSortCol) {
+    return (
+      <SortTableTh<OfertaSortCol>
+        label={label}
+        col={col}
+        sortCol={sortOferta.col}
+        sortDir={sortOferta.dir}
+        thStyle={dataTable.thHeader}
+        align="center"
+        onSort={onSortOferta}
+      />
+    );
+  }
+
+  function acoesTodas(row: LinhaOfertaMarketplace) {
+    if (row.souOfertante) {
+      return <span style={{ color: t.textMuted, fontSize: 12 }}>Sua oferta</span>;
+    }
+    if (!ofertaEmAberto(row) || !podeOfertar || row.mesmoTime === false) {
+      return <span style={{ color: t.textMuted }}>—</span>;
+    }
+    if (preparandoAceiteId === row.id) {
+      return <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color={brand.accent} />;
+    }
+    return (
+      <BtnIconeAcaoLinha label={tooltipAcao("Aceitar Oferta")} onClick={() => void abrirAceite(row)}>
+        <Check size={14} aria-hidden="true" />
+      </BtnIconeAcaoLinha>
+    );
+  }
+
+  function linhaTabela(row: LinhaOfertaMarketplace, i: number, celulas: React.ReactNode) {
+    const zebra = dataTable.zebraRow(i);
+    return (
+      <tr
+        key={row.id}
+        style={{ background: zebra }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = zebra;
+        }}
+      >
+        {celulas}
+      </tr>
+    );
+  }
+
+  function tdAcoes(conteudo: React.ReactNode) {
+    return (
+      <td style={dataTable.tdCenter}>
+        <div style={{ display: "flex", justifyContent: "center" }}>{conteudo}</div>
+      </td>
+    );
+  }
+
+  function labelTipo(row: LinhaOfertaMarketplace) {
+    return RH_CALENDARIO_ACAO_LABEL_FORMAL[row.tipo as RhCalendarioAcaoTipo] ?? row.tipo;
+  }
+
   function renderTabelaVendas(rows: LinhaOfertaMarketplace[]) {
     const sorted = ordenarOfertas(rows, sortOferta);
-    if (sorted.length === 0) {
-      return (
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          {MSG_VAZIO_OFERTAS}
-        </div>
-      );
-    }
+    if (sorted.length === 0) return celulaVazia();
     return (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Ofertas de vendas de turno ou folga</caption>
           <thead>
             <tr>
-              <SortTableTh<OfertaSortCol>
-                label="Data da Oferta"
-                col="dataOferta"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Tipo de Ação"
-                col="tipo"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Turno da Oferta"
-                col="turnoOferta"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Operadora"
-                col="operadora"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Ofertante"
-                col="ofertante"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
+              {thSort("Data da Oferta", "dataOferta")}
+              {thSort("Tipo de Ação", "tipo")}
+              {thSort("Turno da Oferta", "turnoOferta")}
+              {thSort("Operadora", "operadora")}
+              {thSort("Ofertante", "ofertante")}
+              {thSort("Status", "status")}
               <th scope="col" style={dataTable.thHeader}>
                 Ações
               </th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) => {
-              const zebra = dataTable.zebraRow(i);
-              return (
-                <tr
-                  key={r.id}
-                  style={{ background: zebra }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = zebra;
-                  }}
-                >
+            {sorted.map((r, i) =>
+              linhaTabela(
+                r,
+                i,
+                <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
-                  <td style={dataTable.tdCenter}>
-                    {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
-                  </td>
+                  <td style={dataTable.tdCenter}>{labelTipo(r)}</td>
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
                   <td style={dataTable.tdCenter}>{r.operadora}</td>
                   <td style={dataTable.tdCenter}>{r.ofertante}</td>
-                  <td style={dataTable.tdCenter}>
-                    <div style={{ display: "flex", justifyContent: "center" }}>
-                      <button
-                        type="button"
-                        aria-label="Ações da oferta"
-                        title="Ações da oferta"
-                        style={{
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
-                          borderRadius: 8,
-                          padding: 6,
-                          cursor: "pointer",
-                          color: t.text,
-                        }}
-                      >
-                        <MoreHorizontal size={16} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                  <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  {tdAcoes(acoesTodas(r))}
+                </>,
+              ),
+            )}
           </tbody>
         </table>
       </div>
@@ -456,397 +543,107 @@ export default function EscalaMarketplaceTurnosPage() {
 
   function renderTabelaTrocaTodas(rows: LinhaOfertaMarketplace[]) {
     const sorted = ordenarOfertas(rows, sortOferta);
-    if (sorted.length === 0) {
-      return (
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          {MSG_VAZIO_OFERTAS}
-        </div>
-      );
-    }
+    if (sorted.length === 0) return celulaVazia();
     return (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Ofertas de troca</caption>
           <thead>
             <tr>
-              <SortTableTh<OfertaSortCol>
-                label="Data da Oferta"
-                col="dataOferta"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Turno da Oferta"
-                col="turnoOferta"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Operadora"
-                col="operadora"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Ofertante"
-                col="ofertante"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Data de Interesse"
-                col="dataInteresse"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Turno de Interesse"
-                col="turnoInteresse"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
+              {thSort("Data da Oferta", "dataOferta")}
+              {thSort("Turno da Oferta", "turnoOferta")}
+              {thSort("Operadora", "operadora")}
+              {thSort("Ofertante", "ofertante")}
+              {thSort("Data de Interesse", "dataInteresse")}
+              {thSort("Turno de Interesse", "turnoInteresse")}
+              {thSort("Status", "status")}
               <th scope="col" style={dataTable.thHeader}>
                 Ações
               </th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) => {
-              const zebra = dataTable.zebraRow(i);
-              return (
-                <tr
-                  key={r.id}
-                  style={{ background: zebra }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = zebra;
-                  }}
-                >
+            {sorted.map((r, i) =>
+              linhaTabela(
+                r,
+                i,
+                <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
                   <td style={dataTable.tdCenter}>{r.operadora}</td>
                   <td style={dataTable.tdCenter}>{r.ofertante}</td>
                   <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
                   <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
-                  <td style={dataTable.tdCenter}>
-                    <div style={{ display: "flex", justifyContent: "center" }}>
-                      <button
-                        type="button"
-                        aria-label="Ações da oferta"
-                        title="Ações da oferta"
-                        style={{
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
-                          borderRadius: 8,
-                          padding: 6,
-                          cursor: "pointer",
-                          color: t.text,
-                        }}
-                      >
-                        <MoreHorizontal size={16} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                  <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  {tdAcoes(acoesTodas(r))}
+                </>,
+              ),
+            )}
           </tbody>
         </table>
       </div>
     );
   }
 
-  function renderTabelaMinhasComTipo(
-    rows: LinhaOfertaMarketplace[],
-    variant: "interessado" | "em_analise" | "aberto",
-  ) {
+  function renderTabelaMinhas(rows: LinhaOfertaMarketplace[], variant: MinhasVariant) {
     const sorted = ordenarOfertas(rows, sortOferta);
-    if (sorted.length === 0) {
-      return (
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          {MSG_VAZIO_OFERTAS}
-        </div>
-      );
-    }
+    if (sorted.length === 0) return celulaVazia();
+    const mostrarOfertante = variant === "aceitei";
+    const mostrarComprador = variant === "historico";
+    const mostrarStatus = variant !== "abertas";
+    const mostrarAcoes = variant === "abertas";
+
     return (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
-          <caption style={{ display: "none" }}>Minhas ofertas</caption>
+          <caption style={{ display: "none" }}>Minhas ofertas no Marketplace</caption>
           <thead>
             <tr>
-              <SortTableTh<OfertaSortCol>
-                label="Data da Oferta"
-                col="dataOferta"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Tipo de Ação"
-                col="tipo"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Turno da Oferta"
-                col="turnoOferta"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Operadora"
-                col="operadora"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Data de Interesse"
-                col="dataInteresse"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Turno de Interesse"
-                col="turnoInteresse"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              {variant !== "aberto" && (
-                <SortTableTh<OfertaSortCol>
-                  label="Comprador"
-                  col="comprador"
-                  sortCol={sortOferta.col}
-                  sortDir={sortOferta.dir}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                  onSort={onSortOferta}
-                />
+              {thSort("Data da Oferta", "dataOferta")}
+              {thSort("Tipo de Ação", "tipo")}
+              {thSort("Turno da Oferta", "turnoOferta")}
+              {thSort("Operadora", "operadora")}
+              {mostrarOfertante && thSort("Ofertante", "ofertante")}
+              {thSort("Data de Interesse", "dataInteresse")}
+              {thSort("Turno de Interesse", "turnoInteresse")}
+              {mostrarComprador && thSort("Aceito por", "comprador")}
+              {mostrarStatus && thSort("Status", "status")}
+              {mostrarAcoes && (
+                <th scope="col" style={dataTable.thHeader}>
+                  Ações
+                </th>
               )}
-              {variant === "em_analise" && (
-                <SortTableTh<OfertaSortCol>
-                  label="Status"
-                  col="status"
-                  sortCol={sortOferta.col}
-                  sortDir={sortOferta.dir}
-                  thStyle={dataTable.thHeader}
-                  align="center"
-                  onSort={onSortOferta}
-                />
-              )}
-              <th scope="col" style={dataTable.thHeader}>
-                Ações
-              </th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) => {
-              const zebra = dataTable.zebraRow(i);
-              return (
-                <tr
-                  key={r.id}
-                  style={{ background: zebra }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = zebra;
-                  }}
-                >
+            {sorted.map((r, i) =>
+              linhaTabela(
+                r,
+                i,
+                <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
-                  <td style={dataTable.tdCenter}>
-                    {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
-                  </td>
+                  <td style={dataTable.tdCenter}>{labelTipo(r)}</td>
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
                   <td style={dataTable.tdCenter}>{r.operadora}</td>
+                  {mostrarOfertante && <td style={dataTable.tdCenter}>{r.ofertante}</td>}
                   <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
                   <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
-                  {variant !== "aberto" && (
-                    <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>
-                  )}
-                  {variant === "em_analise" && (
+                  {mostrarComprador && <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>}
+                  {mostrarStatus && (
                     <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
                   )}
-                  <td style={dataTable.tdCenter}>
-                    <div style={{ display: "flex", justifyContent: "center" }}>
-                      <button
-                        type="button"
-                        aria-label="Ações da oferta"
-                        title="Ações da oferta"
-                        style={{
-                          border: `1px solid ${t.cardBorder}`,
-                          background: t.inputBg,
-                          borderRadius: 8,
-                          padding: 6,
-                          cursor: "pointer",
-                          color: t.text,
-                        }}
+                  {mostrarAcoes &&
+                    tdAcoes(
+                      <BtnIconeAcaoLinha
+                        label={tooltipAcao("Cancelar Oferta")}
+                        onClick={() => setOfertaCancelar(r)}
                       >
-                        <MoreHorizontal size={16} aria-hidden="true" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  function renderTabelaEncerradas(rows: LinhaOfertaMarketplace[]) {
-    const sorted = ordenarOfertas(rows, sortOferta);
-    if (sorted.length === 0) {
-      return (
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          {MSG_VAZIO_OFERTAS}
-        </div>
-      );
-    }
-    return (
-      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-        <table style={getDataTableStyle()}>
-          <caption style={{ display: "none" }}>Ofertas encerradas</caption>
-          <thead>
-            <tr>
-              <SortTableTh<OfertaSortCol>
-                label="Data da Oferta"
-                col="dataOferta"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Tipo de Ação"
-                col="tipo"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Turno da Oferta"
-                col="turnoOferta"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Operadora"
-                col="operadora"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Data de Interesse"
-                col="dataInteresse"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Turno de Interesse"
-                col="turnoInteresse"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Comprador"
-                col="comprador"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-              <SortTableTh<OfertaSortCol>
-                label="Status"
-                col="status"
-                sortCol={sortOferta.col}
-                sortDir={sortOferta.dir}
-                thStyle={dataTable.thHeader}
-                align="center"
-                onSort={onSortOferta}
-              />
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((r, i) => {
-              const zebra = dataTable.zebraRow(i);
-              return (
-                <tr
-                  key={r.id}
-                  style={{ background: zebra }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = tableRowHoverBg(t.isDark);
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = zebra;
-                  }}
-                >
-                  <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
-                  <td style={dataTable.tdCenter}>
-                    {RH_CALENDARIO_ACAO_LABEL_FORMAL[r.tipo as RhCalendarioAcaoTipo] ?? r.tipo}
-                  </td>
-                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
-                  <td style={dataTable.tdCenter}>{r.operadora}</td>
-                  <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
-                  <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
-                  <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>
-                  <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
-                </tr>
-              );
-            })}
+                        <Ban size={14} aria-hidden="true" />
+                      </BtnIconeAcaoLinha>,
+                    )}
+                </>,
+              ),
+            )}
           </tbody>
         </table>
       </div>
@@ -864,27 +661,27 @@ export default function EscalaMarketplaceTurnosPage() {
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
-          <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
-          <div role="tablist" aria-label="Vista do marketplace" style={filterBarSection(true)}>
-            <FiltroBarTabButton
-              id="tab-mkt-todas"
-              active={aba === "todas"}
-              aria-controls="panel-mkt-todas"
-              onClick={() => setAba("todas")}
-              icon={<Store size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-            >
-              Todas as Ofertas
-            </FiltroBarTabButton>
-            <FiltroBarTabButton
-              id="tab-mkt-minhas"
-              active={aba === "minhas"}
-              aria-controls="panel-mkt-minhas"
-              onClick={() => setAba("minhas")}
-              icon={<User size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-            >
-              Minhas Ofertas
-            </FiltroBarTabButton>
-          </div>
+        <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
+        <div role="tablist" aria-label="Vista do marketplace" style={filterBarSection(true)}>
+          <FiltroBarTabButton
+            id="tab-mkt-todas"
+            active={aba === "todas"}
+            aria-controls="panel-mkt-todas"
+            onClick={() => setAba("todas")}
+            icon={<Store size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+          >
+            Todas as Ofertas
+          </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-mkt-minhas"
+            active={aba === "minhas"}
+            aria-controls="panel-mkt-minhas"
+            onClick={() => setAba("minhas")}
+            icon={<User size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+          >
+            Minhas Ofertas
+          </FiltroBarTabButton>
+        </div>
       </div>
 
       {loadingOfertas ? (
@@ -898,11 +695,13 @@ export default function EscalaMarketplaceTurnosPage() {
           {aba === "todas" && (
             <div role="tabpanel" id="panel-mkt-todas" aria-labelledby="tab-mkt-todas">
               <div style={contentBox}>
-                <SectionTitle>Ofertas de Vendas</SectionTitle>
+                <SectionTitle sub="Turnos e folgas disponíveis para assumir">
+                  Ofertas de Vendas
+                </SectionTitle>
                 {renderTabelaVendas(linhasVendasTodas)}
               </div>
               <div style={contentBox}>
-                <SectionTitle>Ofertas de Troca</SectionTitle>
+                <SectionTitle sub="Turnos oferecidos em troca de outro dia">Ofertas de Troca</SectionTitle>
                 {renderTabelaTrocaTodas(linhasTrocaTodas)}
               </div>
             </div>
@@ -911,25 +710,46 @@ export default function EscalaMarketplaceTurnosPage() {
           {aba === "minhas" && (
             <div role="tabpanel" id="panel-mkt-minhas" aria-labelledby="tab-mkt-minhas">
               <div style={contentBox}>
-                <SectionTitle>Ofertas em análise</SectionTitle>
-                {renderTabelaMinhasComTipo(porStatus("interessado"), "interessado")}
+                <SectionTitle sub="Publicadas por você e ainda disponíveis">
+                  Minhas ofertas abertas
+                </SectionTitle>
+                {renderTabelaMinhas(minhasAbertas, "abertas")}
               </div>
               <div style={contentBox}>
-                <SectionTitle>Ofertas em aprovação</SectionTitle>
-                {renderTabelaMinhasComTipo(porStatus("em_analise"), "em_analise")}
+                <SectionTitle sub="Ofertas de colegas que você assumiu">Ofertas que aceitei</SectionTitle>
+                {renderTabelaMinhas(minhasAceitas, "aceitei")}
               </div>
               <div style={contentBox}>
-                <SectionTitle>Ofertas abertas</SectionTitle>
-                {renderTabelaMinhasComTipo(porStatus("aberto"), "aberto")}
-              </div>
-              <div style={contentBox}>
-                <SectionTitle>Ofertas encerradas</SectionTitle>
-                {renderTabelaEncerradas(minhasBase.filter((r) => r.status === "aprovada" || r.status === "recusada"))}
+                <SectionTitle sub="Suas ofertas já aceitas ou canceladas">Histórico encerrado</SectionTitle>
+                {renderTabelaMinhas(minhasEncerradas, "historico")}
               </div>
             </div>
           )}
         </>
       )}
+
+      <ModalOfertarMarketplace
+        open={ofertarAberto}
+        onClose={() => setOfertarAberto(false)}
+        onCriada={recarregar}
+        contexto={contexto}
+        grade={gradeMes}
+        labelMes={mesSelecionado?.label ?? ""}
+      />
+
+      <ModalAceitarOfertaMarketplace
+        oferta={ofertaAceitar}
+        onClose={() => setOfertaAceitar(null)}
+        onAceita={recarregar}
+        contexto={contexto}
+        grade={gradeAceite}
+      />
+
+      <ModalCancelarOfertaMarketplace
+        oferta={ofertaCancelar}
+        onClose={() => setOfertaCancelar(null)}
+        onCancelada={recarregar}
+      />
     </div>
   );
 }

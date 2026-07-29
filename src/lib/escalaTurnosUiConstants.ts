@@ -99,4 +99,11 @@ export type LinhaOfertaMarketplace = {
   comprador?: string;
   /** Para filtro de staff nas Solicitações (ligação futura a `rh_funcionarios`). */
   solicitanteStaffId?: string;
+  observacao?: string;
+  /** Marketplace: o prestador logado publicou esta oferta. */
+  souOfertante?: boolean;
+  /** Marketplace: o prestador logado aceitou esta oferta. */
+  souInteressado?: boolean;
+  /** Marketplace: a oferta é do mesmo time do prestador logado (pré-requisito do aceite). */
+  mesmoTime?: boolean;
 };

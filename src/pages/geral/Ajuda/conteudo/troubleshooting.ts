@@ -1412,14 +1412,34 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     titulo: "Marketplace",
     blocos: [
       {
-        subtitulo: "Não consigo publicar oferta de turno?",
+        subtitulo: "Não vejo o botão Nova Oferta?",
         texto:
-          "Publicar oferta exige permissão de **Criar** no Marketplace. Verifique também se o turno de origem pertence ao seu escopo (time/staff) e se o seu cadastro está como área **Estúdio**.",
+          "Publicar exige permissão de **Criar** no Marketplace e cadastro de prestador com área **Estúdio** ligado ao seu login. Sem esse vínculo o botão não aparece — confirme o cadastro em Gestão de Prestadores e a permissão em Gestão de Usuários → Permissões.",
+      },
+      {
+        subtitulo: "Nenhum dia aparece no modal de oferta?",
+        texto:
+          "Os dias vêm da sua escala do mês **aprovada** e apenas dias **futuros** entram. Também ficam fora dias já negociados (Compra, Venda ou Troca) e, na Venda de Folga, turnos que deixariam menos de **12h** de intervalo. Se a escala do mês ainda não foi aprovada, o modal avisa e a lista fica vazia.",
+      },
+      {
+        subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
+        texto:
+          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação aos seus turnos vizinhos. Ex.: quem sai da Noite na véspera não pode assumir a Manhã seguinte. Se nenhum turno atender à regra, o dia não pode ser ofertado.",
       },
       {
         subtitulo: "Não consigo aceitar uma oferta?",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma. Confirme se a Escala Estúdio do mês/área está **aprovada** e se a oferta ainda está aberta. Se o problema persistir, entre em contato com o suporte.",
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta, e o dia precisa ser futuro com a escala do mês **aprovada**. Em Venda de Turno e Troca você precisa estar **de folga** no dia; em Venda de Folga precisa estar **escalado no mesmo turno** da oferta. Aceites que deixem menos de **12h** entre turnos são bloqueados com aviso.",
+      },
+      {
+        subtitulo: "Só vejo ofertas do meu time?",
+        texto:
+          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu time. Para ver todos os times é necessária permissão de **Ver: Sim** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+      },
+      {
+        subtitulo: "Aceitei uma oferta e a escala não mudou?",
+        texto:
+          "A célula é gravada na Escala Estúdio aprovada no momento do aceite (Compra, Venda ou Troca). Recarregue a Escala Estúdio ou o Calendário — a leitura pode estar em cache da sessão. Se continuar divergente, entre em contato com o suporte.",
       },
     ],
   },

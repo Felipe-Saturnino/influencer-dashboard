@@ -1,6 +1,10 @@
 /**
- * Regra das 8h na «Vender folga»: início do turno ofertado na folga deve ser
+ * Intervalo mínimo entre turnos a partir da grade da escala.
+ *
+ * Calendário («Vender folga»): início do turno ofertado na folga deve ser
  * ≥ fim do último turno trabalhado (em dias anteriores, incl. noite que termina na manhã do dia da folga) + 8h.
+ * Marketplace: mesma mecânica de horários com gap de 12h em ambos os lados do
+ * turno assumido — ver `gapEntreTurnosOk` e `MS_12H` em `escalaMarketplace.ts`.
  */
 import type { Operadora } from "../types";
 import { normalizarEscalaCadastro, turnoStaffEhComercial5x2 } from "./rhEscalaTurnos";
@@ -28,14 +32,18 @@ function horaLocalNoIso(iso: string, hh: number, mm: number): Date {
   return new Date(y, mo - 1, d, hh, mm, 0, 0);
 }
 
-function subtractDaysFromIso(iso: string, dias: number): string {
+function shiftIsoDias(iso: string, dias: number): string {
   const [y, mo, d] = iso.slice(0, 10).split("-").map(Number);
   const dt = new Date(y, mo - 1, d);
-  dt.setDate(dt.getDate() - dias);
+  dt.setDate(dt.getDate() + dias);
   const yy = dt.getFullYear();
   const mm = String(dt.getMonth() + 1).padStart(2, "0");
   const dd = String(dt.getDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
+}
+
+function subtractDaysFromIso(iso: string, dias: number): string {
+  return shiftIsoDias(iso, -dias);
 }
 
 function duracaoTurnoOperadoraMs(escalaRaw: string): number {
@@ -165,6 +173,57 @@ export function ultimoFimTurnoTrabalhadoAntesDaFolga(
   return best;
 }
 
+/** Início do turno de um dia trabalhado da grade (célula com turno, não Folga/Compra/Venda/Troca). */
+export function instanteInicioTurnoTrabalhadoNoDia(
+  diaIso: string,
+  valorGrade: string,
+  ctx: PrestadorHorarioCtx,
+  op: OperadoraTurnosPick | null | undefined,
+): Date | null {
+  const turnoDoDia = turnoExibicaoValorGrade(valorGrade);
+  if (!turnoDoDia || turnoDoDia === "Compra" || turnoDoDia === "Venda" || turnoDoDia === "Troca") return null;
+  return instanteInicioTurnoOfertadoNaFolga(diaIso, turnoDoDia, ctx, op);
+}
+
+/** Menor instante de início de turno trabalhado depois do dia de referência. */
+export function proximoInicioTurnoTrabalhadoDepoisDoDia(
+  diaIso: string,
+  valorPorIso: Map<string, string>,
+  ctx: PrestadorHorarioCtx,
+  op: OperadoraTurnosPick | null | undefined,
+  maxDiasAvancar = 60,
+): Date | null {
+  let best: Date | null = null;
+  for (let i = 1; i <= maxDiasAvancar; i++) {
+    const iso = shiftIsoDias(diaIso, i);
+    const raw = valorPorIso.get(iso);
+    if (raw == null || valorCelulaEhFolga(raw)) continue;
+    const ini = instanteInicioTurnoTrabalhadoNoDia(iso, raw, ctx, op);
+    if (!ini) continue;
+    if (!best || ini.getTime() < best.getTime()) best = ini;
+  }
+  return best;
+}
+
+/** Turnos ofertáveis num dia de folga respeitando o gap informado após o último turno trabalhado. */
+export function turnosPermitidosVendaFolgaComGapMinimo(
+  diaFolgaIso: string,
+  valorPorIso: Map<string, string>,
+  ctx: PrestadorHorarioCtx,
+  op: OperadoraTurnosPick | null | undefined,
+  gapMs: number,
+): string[] {
+  const base = turnosBaseOfertaNaFolga(ctx.escala);
+  const ultimoFim = ultimoFimTurnoTrabalhadoAntesDaFolga(diaFolgaIso, valorPorIso, ctx, op);
+  if (!ultimoFim) return base;
+  const limite = ultimoFim.getTime() + gapMs;
+  return base.filter((turnoNome) => {
+    const ini = instanteInicioTurnoOfertadoNaFolga(diaFolgaIso, turnoNome, ctx, op);
+    if (!ini) return false;
+    return ini.getTime() >= limite;
+  });
+}
+
 /** Turnos que pode ofertar na folga, respeitando ≥8h após o fim do último turno trabalhado. */
 export function turnosPermitidosVendaFolgaComRegra8h(
   diaFolgaIso: string,
@@ -172,13 +231,5 @@ export function turnosPermitidosVendaFolgaComRegra8h(
   ctx: PrestadorHorarioCtx,
   op: OperadoraTurnosPick | null | undefined,
 ): string[] {
-  const base = turnosBaseOfertaNaFolga(ctx.escala);
-  const ultimoFim = ultimoFimTurnoTrabalhadoAntesDaFolga(diaFolgaIso, valorPorIso, ctx, op);
-  if (!ultimoFim) return base;
-  const limite = ultimoFim.getTime() + MS_8H;
-  return base.filter((turnoNome) => {
-    const ini = instanteInicioTurnoOfertadoNaFolga(diaFolgaIso, turnoNome, ctx, op);
-    if (!ini) return false;
-    return ini.getTime() >= limite;
-  });
+  return turnosPermitidosVendaFolgaComGapMinimo(diaFolgaIso, valorPorIso, ctx, op, MS_8H);
 }

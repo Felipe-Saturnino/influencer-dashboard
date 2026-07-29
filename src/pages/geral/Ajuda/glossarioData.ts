@@ -879,7 +879,25 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Marketplace",
         definicao:
-          "Área de ofertas de venda e troca de turnos entre colaboradores — ofertas **persistidas** na plataforma; aceite só entre prestadores do **mesmo time**, sincronizando a Escala Estúdio aprovada.",
+          "Única ponta onde o prestador de estúdio publica e aceita negociações de turno — Venda de Turno, Venda de Folga e Oferta de Troca. O aceite é **imediato**, sem aprovação de gestor, e grava Compra, Venda ou Troca na Escala Estúdio aprovada. Só entre prestadores do **mesmo time**, em dias futuros e respeitando **12h** entre turnos.",
+        referencia: "Marketplace",
+      },
+      {
+        termo: "Venda de Turno",
+        definicao:
+          "Oferta em que o prestador escalado deixa o turno: ele fica com **Venda** na escala e quem aceita (de folga no dia) fica com **Compra**.",
+        referencia: "Marketplace",
+      },
+      {
+        termo: "Venda de Folga",
+        definicao:
+          "Oferta em que o prestador de folga se oferece para **trabalhar** o turno: ele fica com **Compra** e quem aceita — o colega escalado no mesmo turno — fica com **Venda**.",
+        referencia: "Marketplace",
+      },
+      {
+        termo: "Oferta de Troca",
+        definicao:
+          "Oferta em que dois prestadores do mesmo time trocam de dia: quem aceita indica um dia seu com turno e ambos ficam com **Troca** nos dois dias da escala.",
         referencia: "Marketplace",
       },
       {

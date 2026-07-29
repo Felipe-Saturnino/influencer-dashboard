@@ -1,14 +1,30 @@
 /**
- * Marketplace de turnos — ofertas (listar / criar / aceitar).
+ * Marketplace de turnos — ofertas (listar / criar / aceitar / cancelar).
  *
- * Gap entre turnos: produto pede ≥12h entre fim de um turno e início do seguinte
- * ao ofertar/aceitar. A validação completa (horários da grade + operadora) fica
- * para o fluxo Ofertar; ver `gapMinimoMarketplaceOk` / `MS_12H` e
- * `rhCalendarioGap8hFolga` como referência de cálculo.
+ * Listagem vem de `escala_marketplace_ofertas_listar` já em jsonb e com nomes
+ * resolvidos no servidor: o prestador não lê `rh_funcionarios` de colegas por RLS.
+ * O escopo também é do servidor — Ver = Sim devolve todos os times, Ver = Próprios
+ * só o time do prestador.
+ *
+ * Gap entre turnos: produto pede ≥12h entre o fim de um turno e o início do
+ * seguinte, verificado nas duas pontas do dia negociado (`gapEntreTurnosOk`).
+ * Os horários dependem de escala, turno de staff e operadora, que vivem no
+ * cliente — por isso a regra é aplicada aqui e no modal, enquanto o banco valida
+ * o que é estrutural (dia futuro, escala aprovada, célula coerente, conflito).
  */
 import { supabase } from "./supabase";
-import { fetchInBatched } from "./supabasePaginate";
 import { normRhOrgRotuloOrganograma } from "./rhPrestadorUsuarioSync";
+import {
+  instanteFimTurnoTrabalhadoNoDia,
+  instanteInicioTurnoOfertadoNaFolga,
+  proximoInicioTurnoTrabalhadoDepoisDoDia,
+  turnosPermitidosVendaFolgaComGapMinimo,
+  ultimoFimTurnoTrabalhadoAntesDaFolga,
+  type OperadoraTurnosPick,
+  type PrestadorHorarioCtx,
+} from "./rhCalendarioGap8hFolga";
+import { turnoOperacionalParaSiglaGrade } from "./rhEscalaTurnos";
+import { turnoExibicaoValorGrade, valorCelulaEhFolga } from "./rhCalendarioAcaoHelpers";
 import type { RhCalendarioAcaoTipo } from "./rhCalendarioAcaoHelpers";
 import type {
   EscalaTimeFiltro,
@@ -19,32 +35,8 @@ import type {
 /** Intervalo mínimo entre turnos no Marketplace (produto: ≥12h). */
 export const MS_12H = 12 * 60 * 60 * 1000;
 
-/**
- * TODO: validar gap ≥12h entre fim do turno anterior e início do ofertado
- * (adaptar de `rhCalendarioGap8hFolga` quando o modal Ofertar estiver completo).
- * Por ora sempre `true` — não inventar cálculo parcial.
- */
-export function gapMinimoMarketplaceOk(_args?: unknown): boolean {
-  return true;
-}
-
-export type EscalaMarketplaceOfertaDb = {
-  id: string;
-  tipo: string;
-  status: string;
-  ofertante_funcionario_id: string;
-  org_time_id: string;
-  dia_iso: string;
-  valor_celula_origem: string;
-  turno_label: string | null;
-  interessado_funcionario_id: string | null;
-  dia_iso_interesse: string | null;
-  valor_celula_interesse: string | null;
-  criado_em: string;
-  atualizado_em?: string;
-  aceito_em?: string | null;
-  observacao?: string | null;
-};
+/** Tipos de oferta publicáveis no Marketplace. */
+export type TipoOfertaMarketplace = "venda_turno" | "venda_folga" | "oferta_troca" | "troca_cassada";
 
 const TIPOS_OFERTA: ReadonlySet<string> = new Set([
   "venda_turno",
@@ -53,9 +45,41 @@ const TIPOS_OFERTA: ReadonlySet<string> = new Set([
   "troca_cassada",
 ]);
 
-function isoDate(v: string | null | undefined): string {
-  if (!v) return "";
+/** Linha da oferta como devolvida por `escala_marketplace_ofertas_listar`. */
+export type EscalaMarketplaceOfertaDb = {
+  id: string;
+  tipo: string;
+  status: string;
+  dia_iso: string;
+  valor_celula_origem: string;
+  turno_label: string | null;
+  dia_iso_interesse: string | null;
+  valor_celula_interesse: string | null;
+  criado_em: string;
+  atualizado_em?: string | null;
+  aceito_em?: string | null;
+  observacao?: string | null;
+  ofertante_funcionario_id: string;
+  ofertante_nome: string | null;
+  operadora_slug?: string | null;
+  operadora_nome?: string | null;
+  org_time_id: string;
+  time_nome: string | null;
+  interessado_funcionario_id: string | null;
+  interessado_nome: string | null;
+  sou_ofertante?: boolean;
+  sou_interessado?: boolean;
+  mesmo_time?: boolean;
+};
+
+function isoDate(v: unknown): string {
+  if (v == null) return "";
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
   return String(v).slice(0, 10);
+}
+
+function texto(v: unknown): string {
+  return v == null ? "" : String(v).trim();
 }
 
 function labelTruncadoUuid(id: string): string {
@@ -99,106 +123,77 @@ export function timeKeyFromOrgTimeNome(nome: string | null | undefined): EscalaT
 }
 
 function turnoLabelOferta(row: EscalaMarketplaceOfertaDb): string {
-  const label = (row.turno_label ?? "").trim();
+  const label = texto(row.turno_label);
   if (label) return label;
-  const cel = (row.valor_celula_origem ?? "").trim();
-  return cel || "—";
+  const cel = texto(row.valor_celula_origem);
+  if (!cel) return "—";
+  return turnoExibicaoValorGrade(cel) ?? cel;
 }
 
-export function mapOfertaDbParaLinha(
-  row: EscalaMarketplaceOfertaDb,
-  nomesPorId: Map<string, string>,
-  timeNomePorId: Map<string, string>,
-  operadoraPorFuncId: Map<string, string>,
-): LinhaOfertaMarketplace {
-  const ofertanteId = row.ofertante_funcionario_id;
-  const interessadoId = row.interessado_funcionario_id;
-  const timeNome = timeNomePorId.get(row.org_time_id);
-  const operadora = (operadoraPorFuncId.get(ofertanteId) ?? "").trim() || "—";
+export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfertaMarketplace {
+  const ofertanteId = texto(row.ofertante_funcionario_id);
+  const interessadoId = texto(row.interessado_funcionario_id);
+  const operadora = texto(row.operadora_nome) || texto(row.operadora_slug) || "—";
+  const turnoInteresseCel = texto(row.valor_celula_interesse);
 
   return {
-    id: row.id,
+    id: String(row.id),
     dataOfertaIso: isoDate(row.dia_iso),
     dataAberturaIso: isoDate(row.criado_em) || undefined,
-    tipo: mapTipoDb(row.tipo),
+    tipo: mapTipoDb(texto(row.tipo)),
     turnoOferta: turnoLabelOferta(row),
     operadora,
-    ofertante: nomesPorId.get(ofertanteId) ?? labelTruncadoUuid(ofertanteId),
+    ofertante: texto(row.ofertante_nome) || labelTruncadoUuid(ofertanteId),
     dataInteresseIso: isoDate(row.dia_iso_interesse) || undefined,
-    turnoInteresse: (row.valor_celula_interesse ?? "").trim() || undefined,
-    timeKey: timeKeyFromOrgTimeNome(timeNome),
-    status: mapStatusDbParaUi(row.status),
+    turnoInteresse: turnoInteresseCel
+      ? (turnoExibicaoValorGrade(turnoInteresseCel) ?? turnoInteresseCel)
+      : undefined,
+    timeKey: timeKeyFromOrgTimeNome(row.time_nome),
+    status: mapStatusDbParaUi(texto(row.status)),
     comprador: interessadoId
-      ? (nomesPorId.get(interessadoId) ?? labelTruncadoUuid(interessadoId))
+      ? texto(row.interessado_nome) || labelTruncadoUuid(interessadoId)
       : undefined,
     solicitanteStaffId: ofertanteId,
+    observacao: texto(row.observacao) || undefined,
+    souOfertante: row.sou_ofertante === true,
+    souInteressado: row.sou_interessado === true,
+    mesmoTime: row.mesmo_time === true,
   };
 }
 
-async function carregarNomesFuncionarios(ids: string[]): Promise<{
-  nomes: Map<string, string>;
-  operadoras: Map<string, string>;
-}> {
-  const nomes = new Map<string, string>();
-  const operadoras = new Map<string, string>();
-  const uniq = [...new Set(ids.filter(Boolean))];
-  if (!uniq.length) return { nomes, operadoras };
-
-  const rows = await fetchInBatched(
-    uniq,
-    80,
-    async (slice) => {
-      const { data, error } = await supabase
-        .from("rh_funcionarios")
-        .select("id, nome, staff_operadora_slug")
-        .in("id", slice);
-      if (error) {
-        console.error("[escalaMarketplace] rh_funcionarios", error);
-        return [];
-      }
-      return (data ?? []) as { id: string; nome: string | null; staff_operadora_slug: string | null }[];
-    },
-    2,
-  );
-
-  for (const r of rows) {
-    const nome = (r.nome ?? "").trim();
-    if (nome) nomes.set(r.id, nome);
-    const op = (r.staff_operadora_slug ?? "").trim();
-    if (op) operadoras.set(r.id, op);
+/** Aceita jsonb (array), string serializada ou legado SETOF. */
+function parseArrayPayload(data: unknown): unknown[] {
+  let payload: unknown = data;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return [];
+    }
   }
-  return { nomes, operadoras };
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.data)) return obj.data;
+    if (Array.isArray(obj.rows)) return obj.rows;
+  }
+  return [];
 }
 
-async function carregarNomesTimes(ids: string[]): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  const uniq = [...new Set(ids.filter(Boolean))];
-  if (!uniq.length) return map;
-
-  const rows = await fetchInBatched(
-    uniq,
-    80,
-    async (slice) => {
-      const { data, error } = await supabase.from("rh_org_times").select("id, nome").in("id", slice);
-      if (error) {
-        console.error("[escalaMarketplace] rh_org_times", error);
-        return [];
-      }
-      return (data ?? []) as { id: string; nome: string | null }[];
-    },
-    2,
-  );
-
-  for (const r of rows) {
-    const nome = (r.nome ?? "").trim();
-    if (nome) map.set(r.id, nome);
+export function parseOfertasMarketplacePayload(data: unknown): LinhaOfertaMarketplace[] {
+  const out: LinhaOfertaMarketplace[] = [];
+  for (const item of parseArrayPayload(data)) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as EscalaMarketplaceOfertaDb;
+    if (!texto(row.id)) continue;
+    out.push(mapOfertaDbParaLinha(row));
   }
-  return map;
+  return out;
 }
 
 /**
  * Lista ofertas do Marketplace.
- * @param refMesIso primeiro dia do mês (`YYYY-MM-01`) ou `null` = todo o histórico (RPC sem filtro de mês)
+ * @param refMesIso primeiro dia do mês (`YYYY-MM-01`) ou `null` = todo o histórico
  */
 export async function carregarOfertasMarketplace(
   refMesIso: string | null,
@@ -210,24 +205,264 @@ export async function carregarOfertasMarketplace(
     console.error("[carregarOfertasMarketplace]", error);
     return [];
   }
+  return parseOfertasMarketplacePayload(data);
+}
 
-  const raw = (data ?? []) as EscalaMarketplaceOfertaDb[];
-  if (!raw.length) return [];
+// ─── Contexto do prestador e grade própria ──────────────────────────────────
 
-  const funcIds: string[] = [];
-  const timeIds: string[] = [];
-  for (const r of raw) {
-    if (r.ofertante_funcionario_id) funcIds.push(r.ofertante_funcionario_id);
-    if (r.interessado_funcionario_id) funcIds.push(r.interessado_funcionario_id);
-    if (r.org_time_id) timeIds.push(r.org_time_id);
+export type MarketplaceMeuContexto = {
+  escopo: "sim" | "proprios";
+  funcionarioId: string | null;
+  nome: string;
+  orgTimeId: string | null;
+  timeNome: string;
+  areaKey: string;
+  areaAtuacao: string;
+  horario: PrestadorHorarioCtx;
+  operadora: OperadoraTurnosPick | null;
+};
+
+function objetoPayload(data: unknown): Record<string, unknown> | null {
+  let payload: unknown = data;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  return payload as Record<string, unknown>;
+}
+
+export function parseMeuContextoMarketplace(data: unknown): MarketplaceMeuContexto | null {
+  const obj = objetoPayload(data);
+  if (!obj || obj.ok !== true) return null;
+  const escopo = obj.escopo === "sim" ? "sim" : "proprios";
+  const func = objetoPayload(obj.funcionario);
+  const op = objetoPayload(obj.operadora);
+  if (!func) {
+    return {
+      escopo,
+      funcionarioId: null,
+      nome: "",
+      orgTimeId: null,
+      timeNome: "",
+      areaKey: "",
+      areaAtuacao: "",
+      horario: { escala: null },
+      operadora: null,
+    };
+  }
+  return {
+    escopo,
+    funcionarioId: texto(func.id) || null,
+    nome: texto(func.nome),
+    orgTimeId: texto(func.org_time_id) || null,
+    timeNome: texto(func.time_nome),
+    areaKey: texto(func.area_key),
+    areaAtuacao: texto(func.area_atuacao),
+    horario: {
+      escala: texto(func.escala) || null,
+      staff_turno: texto(func.staff_turno) || null,
+      staff_horario_turno: texto(func.staff_horario_turno) || null,
+    },
+    operadora: op
+      ? {
+          turno_manha_inicio: texto(op.turno_manha_inicio) || null,
+          turno_tarde_inicio: texto(op.turno_tarde_inicio) || null,
+          turno_noite_inicio: texto(op.turno_noite_inicio) || null,
+        }
+      : null,
+  };
+}
+
+export async function carregarMeuContextoMarketplace(): Promise<MarketplaceMeuContexto | null> {
+  const { data, error } = await supabase.rpc("escala_marketplace_meu_contexto");
+  if (error) {
+    console.error("[carregarMeuContextoMarketplace]", error);
+    return null;
+  }
+  return parseMeuContextoMarketplace(data);
+}
+
+export type MarketplaceMinhaGrade = {
+  aprovada: boolean;
+  areaKey: string;
+  /** Célula da grade por dia (`YYYY-MM-DD` → valor). */
+  valorPorIso: Map<string, string>;
+};
+
+export function parseMinhaGradeMarketplace(data: unknown): MarketplaceMinhaGrade {
+  const obj = objetoPayload(data);
+  const valorPorIso = new Map<string, string>();
+  if (!obj || obj.ok !== true) return { aprovada: false, areaKey: "", valorPorIso };
+  for (const item of parseArrayPayload(obj.dias)) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    const iso = isoDate(r.dia_iso);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) continue;
+    valorPorIso.set(iso, texto(r.valor));
+  }
+  return {
+    aprovada: obj.aprovada === true,
+    areaKey: texto(obj.area_key),
+    valorPorIso,
+  };
+}
+
+export async function carregarMinhaGradeMarketplace(
+  refMesIso: string,
+): Promise<MarketplaceMinhaGrade> {
+  const { data, error } = await supabase.rpc("escala_marketplace_minha_grade_mes", {
+    p_ref_mes: refMesIso,
+  });
+  if (error) {
+    console.error("[carregarMinhaGradeMarketplace]", error);
+    return { aprovada: false, areaKey: "", valorPorIso: new Map() };
+  }
+  return parseMinhaGradeMarketplace(data);
+}
+
+// ─── Regra de intervalo mínimo (12h) ────────────────────────────────────────
+
+export type GapEntreTurnosArgs = {
+  /** Dia do turno assumido (`YYYY-MM-DD`). */
+  diaIso: string;
+  /** Nome do turno assumido no dia (Manhã / Tarde / Noite / Comercial). */
+  turnoNome: string;
+  /** Grade do prestador: célula por dia. */
+  valorPorIso: Map<string, string>;
+  horario: PrestadorHorarioCtx;
+  operadora: OperadoraTurnosPick | null | undefined;
+  /** Gap mínimo em milissegundos (default 12h). */
+  gapMs?: number;
+};
+
+/**
+ * `true` se assumir `turnoNome` em `diaIso` respeita o gap mínimo nas duas pontas:
+ * após o último turno trabalhado antes do dia e antes do próximo turno depois dele.
+ * Sem horários resolvíveis (cadastro incompleto) não bloqueia — a validação
+ * estrutural do banco continua valendo.
+ */
+export function gapEntreTurnosOk(args: GapEntreTurnosArgs): boolean {
+  const { diaIso, turnoNome, valorPorIso, horario, operadora } = args;
+  const gapMs = args.gapMs ?? MS_12H;
+
+  const inicio = instanteInicioTurnoOfertadoNaFolga(diaIso, turnoNome, horario, operadora);
+  if (!inicio) return true;
+
+  const ultimoFim = ultimoFimTurnoTrabalhadoAntesDaFolga(diaIso, valorPorIso, horario, operadora);
+  if (ultimoFim && inicio.getTime() - ultimoFim.getTime() < gapMs) return false;
+
+  const proximoInicio = proximoInicioTurnoTrabalhadoDepoisDoDia(
+    diaIso,
+    valorPorIso,
+    horario,
+    operadora,
+  );
+  if (!proximoInicio) return true;
+
+  const fim = instanteFimTurnoTrabalhadoNoDia(
+    diaIso,
+    valorCelulaDoTurno(turnoNome),
+    horario,
+    operadora,
+  );
+  if (!fim) return true;
+  return proximoInicio.getTime() - fim.getTime() >= gapMs;
+}
+
+/** Nome do turno → valor equivalente na célula da grade (`MRN`/`AFT`/`NGT`/`Comercial`). */
+function valorCelulaDoTurno(turnoNome: string): string {
+  const nome = turnoNome.trim();
+  if (nome === "Comercial") return "Comercial";
+  return turnoOperacionalParaSiglaGrade(nome) || nome;
+}
+
+/** Turnos que o prestador pode ofertar num dia de folga respeitando o gap de 12h. */
+export function turnosOfertaveisNaFolgaMarketplace(
+  diaFolgaIso: string,
+  valorPorIso: Map<string, string>,
+  horario: PrestadorHorarioCtx,
+  operadora: OperadoraTurnosPick | null | undefined,
+): string[] {
+  return turnosPermitidosVendaFolgaComGapMinimo(
+    diaFolgaIso,
+    valorPorIso,
+    horario,
+    operadora,
+    MS_12H,
+  );
+}
+
+// ─── Dias elegíveis para ofertar ────────────────────────────────────────────
+
+export type DiaOfertavelMarketplace = {
+  iso: string;
+  label: string;
+  /** Turno da célula (dias escalados) — vazio em dias de folga. */
+  turno: string;
+  valorCelula: string;
+};
+
+function labelDiaCurto(iso: string): string {
+  const [y, mo, d] = iso.slice(0, 10).split("-");
+  if (!y || !mo || !d) return iso;
+  return `${d}/${mo}/${y}`;
+}
+
+function isoEstritamenteFuturo(iso: string, hojeIso: string): boolean {
+  return iso.slice(0, 10) > hojeIso.slice(0, 10);
+}
+
+function hojeIsoLocal(ref: Date): string {
+  const p2 = (n: number) => String(n).padStart(2, "0");
+  return `${ref.getFullYear()}-${p2(ref.getMonth() + 1)}-${p2(ref.getDate())}`;
+}
+
+/**
+ * Dias do mês que o prestador pode ofertar conforme o tipo:
+ * turno/troca = dias futuros com turno na escala; folga = dias futuros de folga.
+ * Células já negociadas (Compra / Venda / Troca) ficam fora.
+ */
+export function diasOfertaveisMarketplace(
+  tipo: TipoOfertaMarketplace,
+  valorPorIso: Map<string, string>,
+  hoje: Date = new Date(),
+): DiaOfertavelMarketplace[] {
+  const hojeIso = hojeIsoLocal(hoje);
+  const out: DiaOfertavelMarketplace[] = [];
+  const isos = [...valorPorIso.keys()].sort();
+
+  for (const iso of isos) {
+    if (!isoEstritamenteFuturo(iso, hojeIso)) continue;
+    const valor = (valorPorIso.get(iso) ?? "").trim();
+    if (!valor) continue;
+
+    if (tipo === "venda_folga") {
+      if (!valorCelulaEhFolga(valor)) continue;
+      out.push({ iso, label: labelDiaCurto(iso), turno: "", valorCelula: valor });
+      continue;
+    }
+
+    if (valorCelulaEhFolga(valor)) continue;
+    const turno = turnoExibicaoValorGrade(valor);
+    if (!turno || turno === "Compra" || turno === "Venda" || turno === "Troca") continue;
+    out.push({ iso, label: `${labelDiaCurto(iso)} — ${turno}`, turno, valorCelula: valor });
   }
 
-  const [{ nomes, operadoras }, timeNomes] = await Promise.all([
-    carregarNomesFuncionarios(funcIds),
-    carregarNomesTimes(timeIds),
-  ]);
+  return out;
+}
 
-  return raw.map((r) => mapOfertaDbParaLinha(r, nomes, timeNomes, operadoras));
+// ─── Mutações ───────────────────────────────────────────────────────────────
+
+type RpcResultado = { ok?: boolean; error?: string; id?: string; area_key?: string } | null;
+
+function payloadResultado(data: unknown): RpcResultado {
+  const obj = objetoPayload(data);
+  if (!obj) return null;
+  return obj as RpcResultado;
 }
 
 export type AceitarOfertaMarketplaceResult =
@@ -248,7 +483,7 @@ export async function aceitarOfertaMarketplace(
     console.error("[aceitarOfertaMarketplace]", error);
     return { ok: false, error: "rpc_error" };
   }
-  const payload = data as { ok?: boolean; error?: string; area_key?: string } | null;
+  const payload = payloadResultado(data);
   if (!payload?.ok) {
     return { ok: false, error: payload?.error ?? "unknown" };
   }
@@ -256,7 +491,7 @@ export async function aceitarOfertaMarketplace(
 }
 
 export type CriarOfertaMarketplaceInput = {
-  tipo: string;
+  tipo: TipoOfertaMarketplace;
   diaIso: string;
   valorCelula: string;
   turnoLabel?: string | null;
@@ -281,9 +516,69 @@ export async function criarOfertaMarketplace(
     console.error("[criarOfertaMarketplace]", error);
     return { ok: false, error: "rpc_error" };
   }
-  const payload = data as { ok?: boolean; error?: string; id?: string } | null;
+  const payload = payloadResultado(data);
   if (!payload?.ok || !payload.id) {
     return { ok: false, error: payload?.error ?? "unknown" };
   }
   return { ok: true, id: String(payload.id) };
+}
+
+export type CancelarOfertaMarketplaceResult = { ok: true } | { ok: false; error: string };
+
+export async function cancelarOfertaMarketplace(
+  id: string,
+): Promise<CancelarOfertaMarketplaceResult> {
+  const { data, error } = await supabase.rpc("escala_marketplace_oferta_cancelar", {
+    p_oferta_id: id,
+  });
+  if (error) {
+    console.error("[cancelarOfertaMarketplace]", error);
+    return { ok: false, error: "rpc_error" };
+  }
+  const payload = payloadResultado(data);
+  if (!payload?.ok) {
+    return { ok: false, error: payload?.error ?? "unknown" };
+  }
+  return { ok: true };
+}
+
+// ─── Mensagens de erro (PT-BR) ──────────────────────────────────────────────
+
+const MSG_ERRO_GENERICO =
+  "Não foi possível concluir a ação. Se o problema persistir, entre em contato com o suporte.";
+
+const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
+  forbidden: "Você não tem permissão para esta ação no Marketplace.",
+  dia_nao_futuro: "Só é possível ofertar dias futuros.",
+  prestador_nao_encontrado:
+    "Não encontramos o seu cadastro de prestador de estúdio. Entre em contato com o suporte.",
+  area_invalida: "O seu time não está configurado na Escala Estúdio. Entre em contato com o suporte.",
+  escala_nao_aprovada: "A escala do mês ainda não está aprovada.",
+  oferta_duplicada: "Você já tem uma oferta aberta para este dia.",
+  dia_nao_folga: "Este dia não está como folga na sua escala.",
+  dia_sem_turno: "Este dia não tem turno na sua escala.",
+  dia_em_negociacao: "Este dia já está em negociação na escala (Compra, Venda ou Troca).",
+  turno_obrigatorio: "Escolha o turno que pretende trabalhar.",
+  not_found: "Esta oferta não está mais disponível.",
+  status_invalido: "Esta oferta já foi aceita ou encerrada.",
+  mesmo_ofertante: "Você não pode aceitar a sua própria oferta.",
+  times_diferentes: "O aceite só é permitido entre prestadores do mesmo time.",
+  aceitante_ja_escalado: "Você já tem turno neste dia.",
+  aceitante_sem_turno: "Você precisa estar escalado neste dia para aceitar esta oferta.",
+  aceitante_em_negociacao: "O seu dia já está em negociação na escala (Compra, Venda ou Troca).",
+  turno_diferente: "O turno oferecido não é o mesmo do seu turno neste dia.",
+  dia_interesse_obrigatorio: "Escolha o dia que você oferece em troca.",
+  dia_interesse_nao_futuro: "O dia oferecido em troca deve ser futuro.",
+  escala_interesse_nao_aprovada:
+    "A escala do mês do dia oferecido em troca ainda não está aprovada.",
+  dia_interesse_sem_turno: "O dia oferecido em troca não tem turno na sua escala.",
+  dia_interesse_em_negociacao: "O dia oferecido em troca já está em negociação na escala.",
+  ofertante_ja_escalado: "O ofertante já tem turno no dia que você oferece em troca.",
+  nao_e_ofertante: "Só o autor da oferta pode cancelá-la.",
+  gap_minimo: "É necessário respeitar o intervalo mínimo de 12h entre turnos.",
+};
+
+/** Mensagem de produto para o código devolvido pelas RPCs do Marketplace. */
+export function mensagemErroOfertaMarketplace(codigo: string): string {
+  return MENSAGENS_ERRO_OFERTA[codigo] ?? MSG_ERRO_GENERICO;
 }
