@@ -19,6 +19,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   AlertTriangle,
@@ -672,12 +673,19 @@ export default function Resultados() {
         subtitle="Valide lives encerradas (após 5 h do horário agendado): status, duração, views e operadora."
         brand={brand}
         t={t}
+        right={
+          showFiltroInfluencer || showFiltroOperadora ? undefined : (
+            <AjudaContextualAcoes pageKey="resultados" />
+          )
+        }
       />
 
       {/* ── FILTROS (padrão Dashboards) ── */}
       {(showFiltroInfluencer || showFiltroOperadora) && (
         <div style={getFilterBarWrapperStyle(brand, t)}>
-            <div style={getFilterBarRowStyle()}>
+            <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+            <div className="app-filter-bar-tabs-cta__tabs" style={getFilterBarRowStyle()}>
               {showFiltroInfluencer && influencerListVisiveis.length > 0 && (
                 <FiltroInfluencerSelect
                   mode="multiple"
@@ -696,6 +704,10 @@ export default function Resultados() {
                   podeVerOperadora={podeVerOperadora}
                 />
               )}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="resultados" />
+            </div>
             </div>
         </div>
       )}

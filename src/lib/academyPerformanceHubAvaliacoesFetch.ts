@@ -34,8 +34,12 @@ type AvaliacaoRow = {
   criterios: Record<string, PerformanceHubCriterioResposta> | null;
   video_url: string | null;
   video_nome: string | null;
+  video_removido_em: string | null;
   solicitacao_feedback_texto: string | null;
 };
+
+/** `video_removido_em` é escrito só pela retenção (Edge Function) — nunca pela UI. */
+type AvaliacaoWriteRow = Omit<AvaliacaoRow, "id" | "video_removido_em"> & { id?: string };
 
 function formatDataBrFromIso(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
@@ -73,13 +77,12 @@ export function mapRowParaAvaliacao(row: AvaliacaoRow): PerformanceHubAvaliacao 
     criterios: row.criterios ?? undefined,
     videoUrl: row.video_url,
     videoNome: row.video_nome,
+    videoRemovidoEm: row.video_removido_em,
     solicitacaoFeedbackTexto: row.solicitacao_feedback_texto,
   };
 }
 
-function mapAvaliacaoParaRow(
-  row: PerformanceHubAvaliacao,
-): Omit<AvaliacaoRow, "id"> & { id?: string } {
+function mapAvaliacaoParaRow(row: PerformanceHubAvaliacao): AvaliacaoWriteRow {
   const dataIso = parseDataBrParaIso(row.data) ?? new Date().toISOString().slice(0, 10);
   return {
     id: row.id.startsWith("novo-") ? undefined : row.id,
@@ -131,6 +134,7 @@ const SELECT_AVALIACAO = `
   criterios,
   video_url,
   video_nome,
+  video_removido_em,
   solicitacao_feedback_texto
 `;
 

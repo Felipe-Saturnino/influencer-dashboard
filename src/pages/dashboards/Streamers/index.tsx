@@ -15,6 +15,7 @@ import {
   FiltroOperadoraSelect,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { FILTRO_BAR_TAB_ICON_SIZE, handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
@@ -130,27 +131,29 @@ function StreamersFiltrosEUAbas({
           )}
         </div>
 
-        <div
-          role="tablist"
-          aria-label="Seções Streamers"
-          style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}
-        >
-          {tabIds.map((key) => {
-            const TabIcon = TAB_ICONS[key];
-            return (
-              <FiltroBarTabButton
-                key={key}
-                id={`tab-streamers-${key}`}
-                active={aba === key}
-                aria-controls={`panel-streamers-${key}`}
-                onClick={() => setAba(key)}
-                onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabIds, key, setAba, "tab-streamers-")}
-                icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-              >
-                {TAB_LABELS[key]}
-              </FiltroBarTabButton>
-            );
-          })}
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div className="app-filter-bar-tabs-cta__tabs" role="tablist" aria-label="Seções Streamers">
+            {tabIds.map((key) => {
+              const TabIcon = TAB_ICONS[key];
+              return (
+                <FiltroBarTabButton
+                  key={key}
+                  id={`tab-streamers-${key}`}
+                  active={aba === key}
+                  aria-controls={`panel-streamers-${key}`}
+                  onClick={() => setAba(key)}
+                  onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabIds, key, setAba, "tab-streamers-")}
+                  icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+                >
+                  {TAB_LABELS[key]}
+                </FiltroBarTabButton>
+              );
+            })}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="streamers" />
+          </div>
         </div>
     </div>
   );

@@ -12,8 +12,8 @@ export type EscalaAlteracaoCelulaMeta = {
 };
 
 type CelulaIndicadorAlteracaoEscalaProps = {
-  meta: EscalaAlteracaoCelulaMeta;
-  valorAnteriorLabel: string;
+  meta?: EscalaAlteracaoCelulaMeta;
+  valorAnteriorLabel?: string;
   t: Theme;
   /** Título do tooltip — default «Alteração de escala». */
   tituloTooltip?: string;
@@ -23,6 +23,9 @@ type CelulaIndicadorAlteracaoEscalaProps = {
   rotuloDataHora?: string;
   /** Cor do ícone — default verde semântico (escala). */
   corIcone?: string;
+  /** Detalhes de domínio (ex.: negociação do Marketplace). */
+  detalhes?: ReadonlyArray<{ rotulo: string; valor: string }>;
+  ariaLabel?: string;
 };
 
 type TooltipCoords = {
@@ -33,6 +36,7 @@ type TooltipCoords = {
 
 const TOOLTIP_Z = 5000;
 const HIDE_DELAY_MS = 80;
+const SEM_DETALHES: ReadonlyArray<{ rotulo: string; valor: string }> = [];
 
 function fmtAlteracaoDataHora(iso: string): string {
   const d = new Date(iso);
@@ -70,6 +74,8 @@ export function CelulaIndicadorAlteracaoEscala({
   rotuloValorAnterior = "Valor anterior:",
   rotuloDataHora = "Data/hora:",
   corIcone = "#22c55e",
+  detalhes = SEM_DETALHES,
+  ariaLabel = "Ver detalhes da alteração desta célula",
 }: CelulaIndicadorAlteracaoEscalaProps) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<TooltipCoords | null>(null);
@@ -77,7 +83,7 @@ export function CelulaIndicadorAlteracaoEscala({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const tooltipId = useId();
-  const obs = (meta.observacao ?? "").trim();
+  const obs = (meta?.observacao ?? "").trim();
   const tooltipBg = t.isDark ? "#1a1625" : "#ffffff";
   const tooltipText = t.isDark ? "#f3f4f6" : "#111827";
   const tooltipMuted = t.isDark ? "#9ca3af" : "#6b7280";
@@ -126,7 +132,7 @@ export function CelulaIndicadorAlteracaoEscala({
     const anchor = anchorRef.current;
     if (!anchor) return;
     setCoords(calcTooltipCoords(anchor, tooltipRef.current));
-  }, [open, obs, meta.alteradoPorNome, meta.alteradoEm, valorAnteriorLabel]);
+  }, [open, obs, meta?.alteradoPorNome, meta?.alteradoEm, valorAnteriorLabel, detalhes]);
 
   useEffect(() => () => clearHideTimer(), []);
 
@@ -163,18 +169,28 @@ export function CelulaIndicadorAlteracaoEscala({
         }}
       >
         <div style={{ fontWeight: 700, marginBottom: 6, color: tooltipText }}>{tituloTooltip}</div>
-        <div>
-          <span style={{ color: tooltipMuted }}>Alterado por: </span>
-          {meta.alteradoPorNome}
-        </div>
-        <div>
-          <span style={{ color: tooltipMuted }}>{rotuloDataHora} </span>
-          {fmtAlteracaoDataHora(meta.alteradoEm)}
-        </div>
-        <div>
-          <span style={{ color: tooltipMuted }}>{rotuloValorAnterior} </span>
-          {valorAnteriorLabel}
-        </div>
+        {meta ? (
+          <>
+            <div>
+              <span style={{ color: tooltipMuted }}>Alterado por: </span>
+              {meta.alteradoPorNome}
+            </div>
+            <div>
+              <span style={{ color: tooltipMuted }}>{rotuloDataHora} </span>
+              {fmtAlteracaoDataHora(meta.alteradoEm)}
+            </div>
+            <div>
+              <span style={{ color: tooltipMuted }}>{rotuloValorAnterior} </span>
+              {valorAnteriorLabel ?? "—"}
+            </div>
+          </>
+        ) : null}
+        {detalhes.map((detalhe) => (
+          <div key={detalhe.rotulo}>
+            <span style={{ color: tooltipMuted }}>{detalhe.rotulo}: </span>
+            {detalhe.valor}
+          </div>
+        ))}
         {obs ? (
           <div style={{ marginTop: 6 }}>
             <span style={{ color: tooltipMuted }}>Observação: </span>
@@ -198,7 +214,7 @@ export function CelulaIndicadorAlteracaoEscala({
         <button
           ref={anchorRef}
           type="button"
-          aria-label="Ver detalhes da alteração desta célula"
+          aria-label={ariaLabel}
           aria-describedby={open ? tooltipId : undefined}
           onMouseEnter={show}
           onMouseLeave={scheduleHide}

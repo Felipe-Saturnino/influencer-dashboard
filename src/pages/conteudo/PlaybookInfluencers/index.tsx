@@ -16,6 +16,7 @@ import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/
 import { FILTRO_BAR_TAB_ICON_SIZE } from "../../../lib/filterBarStyles";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_HEADER_SUBTITLE_PADDING_LEFT } from "../../../lib/pageHeaderStyles";
 import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
@@ -879,7 +880,12 @@ export default function PlaybookInfluencers() {
         icon={<PageMenuIcon pageKey="playbook_influencers" />}
         title={getPageMenuLabel("playbook_influencers")}
         subtitle="Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir."
-        actions={playbookHeaderActions || undefined}
+        actions={
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <AjudaContextualAcoes pageKey="playbook_influencers" />
+            {playbookHeaderActions}
+          </div>
+        }
       />
 
       <div

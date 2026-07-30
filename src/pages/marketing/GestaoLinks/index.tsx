@@ -12,6 +12,7 @@ import { nomeExibicaoLinksEntidade } from "../../../lib/linksMateriaisCanal";
 import { Ban, CheckCircle2, Link2, EyeOff, RotateCcw, AlertCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmDelete } from "../../../components/OperacoesModal";
@@ -644,15 +645,18 @@ export default function GestaoLinks() {
                   );
                 })}
               </div>
-              {showFiltroOperadora && operadorasList.length > 0 && (
-                <FiltroOperadoraSelect
-                  pill
-                  minWidth={200}
-                  value={operadoraFiltro}
-                  onChange={setOperadoraFiltro}
-                  operadoras={operadorasList}
-                />
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                {showFiltroOperadora && operadorasList.length > 0 && (
+                  <FiltroOperadoraSelect
+                    pill
+                    minWidth={200}
+                    value={operadoraFiltro}
+                    onChange={setOperadoraFiltro}
+                    operadoras={operadorasList}
+                  />
+                )}
+                <AjudaContextualAcoes pageKey="gestao_links" />
+              </div>
             </div>
             {narrowMobile ? (
               <div

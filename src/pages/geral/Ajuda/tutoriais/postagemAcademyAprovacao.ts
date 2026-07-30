@@ -11,6 +11,7 @@ export const TUTORIAL_POSTAGEM_ACADEMY_APROVACAO: TutorialDef = {
   section: "Academy",
   icon: Send,
   relatedPageKey: "academy_portal",
+  relatedTabId: "gerenciamento",
   objetivo:
     "Criar uma Dica ou um Comunicado no Portal da Academy e enviar para aprovação.",
   passos: [

@@ -68,6 +68,10 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import {
+  AjudaContextualAcoes,
+  type AjudaContextualTutorial,
+} from "../../../components/AjudaContextualAcoes";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import {
   labelReuniaoCom,
@@ -161,6 +165,16 @@ import {
   type PresencaAprovacaoMes,
 } from "../../../lib/rhCalendarioPresencaAprovacaoMesDb";
 import { useCalendarioPresencaGestaoMutacoes } from "./useCalendarioPresencaGestaoMutacoes";
+
+const TUTORIAL_CALENDARIO: AjudaContextualTutorial = {
+  id: "calendario-prestador",
+  urlSlug: "Calendario",
+};
+
+const TUTORIAL_CONTROLE_PRESENCA: AjudaContextualTutorial = {
+  id: "controle-presenca",
+  urlSlug: "ControledePresenca",
+};
 
 const MONTHS = [
   "Janeiro",
@@ -971,9 +985,9 @@ export default function RhCalendarioPage() {
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
   }, [prestadores, relatorioFiltroTimeAtivo, relatorioFiltroTimeIdsReais]);
 
+  /** Relatório de Presença: só Editar = Sim (ou admin). Editar = Próprios não vê a aba. */
   const podeVerAbaRelatorioPresenca =
-    !perm.loading &&
-    (user?.role === "admin" || perm.canEditar === "sim" || perm.canEditar === "proprios");
+    !perm.loading && (user?.role === "admin" || perm.canEditar === "sim");
 
   useEffect(() => {
     if (!perm.loading && abaPrincipal === "relatorio" && !podeVerAbaRelatorioPresenca) {
@@ -2959,6 +2973,16 @@ export default function RhCalendarioPage() {
             </div>
 
             <div className="app-marketplace-filtro-minhas__cta" style={{ gap: 10 }}>
+              <AjudaContextualAcoes
+                pageKey="rh_calendario"
+                tutorial={
+                  abaPrincipal === "compromissos"
+                    ? TUTORIAL_CALENDARIO
+                    : abaPrincipal === "presenca"
+                      ? TUTORIAL_CONTROLE_PRESENCA
+                      : null
+                }
+              />
               {abaPrincipal === "compromissos" && meuRhFuncionarioId ? (
                 <button
                   type="button"

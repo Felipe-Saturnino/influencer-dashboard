@@ -17,6 +17,7 @@ import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -284,6 +285,7 @@ export default function RhSolicitacoesPage() {
           </div>
 
           <div className="app-marketplace-filtro-minhas__cta">
+            <AjudaContextualAcoes pageKey="rh_solicitacoes" />
             <FiltroBarCampoSelect
               id="filtro-tipo-solicitacao"
               value={filtroTipo}

@@ -18,6 +18,7 @@ import {
 } from "../../../lib/prospectoRegistroMeta";
 import { ProspectoRegistroMeta } from "../../../components/ProspectoRegistroMeta";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
@@ -298,6 +299,7 @@ export default function AfiliadosNetwork() {
               aria-label="Buscar afiliado por nome ou e-mail"
               wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
             />
+            <AjudaContextualAcoes pageKey="afiliados_network" />
             {perm.canCriarOk && (
               <CtaCriarButton type="button" onClick={() => setModalNovo(true)}>
                 Novo Afiliado

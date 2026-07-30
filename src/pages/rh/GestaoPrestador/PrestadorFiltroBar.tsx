@@ -2,6 +2,7 @@ import { ClipboardList, FileSignature, Layers, StickyNote, Users } from "lucide-
 import type { CSSProperties } from "react";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { FiltroBarCampoSelect, FiltroBarTabButton } from "../../../components/dashboard";
 import type { Theme } from "../../../constants/theme";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
@@ -196,6 +197,7 @@ export function PrestadorFiltroBar({
               ))}
             </div>
             <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="rh_funcionarios" />
               {abaPagina === "headcount" && podeCriarHeadcount ? (
                 <CtaCriarButton type="button" onClick={onNovoPrestador}>
                   Novo Prestador
@@ -209,39 +211,34 @@ export function PrestadorFiltroBar({
             </div>
           </div>
         ) : (
-          <div
-            role="tablist"
-            aria-label="Módulos de gestão de colaboradores"
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              width: "100%",
-            }}
-          >
-            {ABAS_PAGINA_RH_FUNC.map((tb) => (
-              <FiltroBarTabButton
-                key={tb.key}
-                id={idTabPagina(tb.key)}
-                active={abaPagina === tb.key}
-                aria-controls={panelPaginaRhId}
-                onClick={() => onAbaPaginaChange(tb.key)}
-                onKeyDown={(e) =>
-                  handleFiltroBarTabsArrowKeyDown(
-                    e,
-                    ABAS_PAGINA_RH_FUNC.map((x) => x.key),
-                    tb.key,
-                    onAbaPaginaChange,
-                    "rh-gest-func-pag-",
-                  )
-                }
-                icon={iconAbaPagina(tb.key)}
-              >
-                {tb.label}
-              </FiltroBarTabButton>
-            ))}
+          <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+            <div role="tablist" aria-label="Módulos de gestão de colaboradores" className="app-filter-bar-tabs-cta__tabs">
+              {ABAS_PAGINA_RH_FUNC.map((tb) => (
+                <FiltroBarTabButton
+                  key={tb.key}
+                  id={idTabPagina(tb.key)}
+                  active={abaPagina === tb.key}
+                  aria-controls={panelPaginaRhId}
+                  onClick={() => onAbaPaginaChange(tb.key)}
+                  onKeyDown={(e) =>
+                    handleFiltroBarTabsArrowKeyDown(
+                      e,
+                      ABAS_PAGINA_RH_FUNC.map((x) => x.key),
+                      tb.key,
+                      onAbaPaginaChange,
+                      "rh-gest-func-pag-",
+                    )
+                  }
+                  icon={iconAbaPagina(tb.key)}
+                >
+                  {tb.label}
+                </FiltroBarTabButton>
+              ))}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="rh_funcionarios" />
+            </div>
           </div>
         )}
       </div>

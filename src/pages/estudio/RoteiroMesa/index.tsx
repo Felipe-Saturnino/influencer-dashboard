@@ -12,6 +12,7 @@ import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroEstudioSelect } from "../../../components/FiltroEstudioSelect";
 import { FiltroSemanticoTabPill } from "../../../components/dashboard";
@@ -1419,17 +1420,20 @@ export default function RoteiroMesa() {
                 })}
               </div>
             </div>
-            {/* Direita: Estúdio (só quando showFiltroOperadora; não aparece para perfil Operador) */}
-            {mostrarFiltroEstudio && opcoesFiltroEstudio.length > 0 && (
-              <FiltroEstudioSelect
-                pill
-                minWidth={200}
-                value={filtroEstudio}
-                onChange={setFiltroEstudio}
-                estudios={opcoesFiltroEstudio}
-                showTodosOption={!estudioSlugsForcado || estudioSlugsForcado.length !== 1}
-              />
-            )}
+            {/* Direita: Estúdio (só quando showFiltroOperadora; não aparece para perfil Operador) + ajuda contextual */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flexShrink: 0 }}>
+              {mostrarFiltroEstudio && opcoesFiltroEstudio.length > 0 && (
+                <FiltroEstudioSelect
+                  pill
+                  minWidth={200}
+                  value={filtroEstudio}
+                  onChange={setFiltroEstudio}
+                  estudios={opcoesFiltroEstudio}
+                  showTodosOption={!estudioSlugsForcado || estudioSlugsForcado.length !== 1}
+                />
+              )}
+              <AjudaContextualAcoes pageKey="roteiro_mesa" />
+            </div>
           </div>
           {narrowMobile ? (
             <div

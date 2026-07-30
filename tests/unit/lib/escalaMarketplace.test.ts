@@ -27,11 +27,20 @@ describe("isDataNoHistoricoMarketplace", () => {
     expect(isDataNoHistoricoMarketplace("2026-07-31", ref)).toBe(true);
   });
 
-  it("mantém somente as 13 competências inclusivas", () => {
+  it("mantém o início nas 13 competências inclusivas", () => {
     expect(isDataNoHistoricoMarketplace("2025-07-01", ref)).toBe(true);
     expect(isDataNoHistoricoMarketplace("2025-06-30", ref)).toBe(false);
-    expect(isDataNoHistoricoMarketplace("2026-08-01", ref)).toBe(false);
     expect(isDataNoHistoricoMarketplace(null, ref)).toBe(false);
+  });
+
+  it("sem competênciaFimMax, não inclui mês futuro além da ref", () => {
+    expect(isDataNoHistoricoMarketplace("2026-08-01", ref)).toBe(false);
+  });
+
+  it("com competênciaFimMax do carrossel, inclui meses futuros da Escala", () => {
+    expect(isDataNoHistoricoMarketplace("2026-08-01", ref, "2026-09")).toBe(true);
+    expect(isDataNoHistoricoMarketplace("2026-09-30", ref, "2026-09")).toBe(true);
+    expect(isDataNoHistoricoMarketplace("2026-10-01", ref, "2026-09")).toBe(false);
   });
 });
 
@@ -69,6 +78,8 @@ describe("parseOfertasMarketplacePayload", () => {
     expect(row.status).toBe("aberto");
     expect(row.turnoOferta).toBe("Tarde");
     expect(row.operadora).toBe("Blaze");
+    /** Oferta legada sem estúdio no cadastro cai no rótulo da operadora. */
+    expect(row.estudio).toBe("Blaze");
     expect(row.ofertante).toBe("Ana Souza");
     expect(row.timeKey).toBe("game_presenter");
     expect(row.observacao).toBe("Aceito trocar depois");
@@ -105,6 +116,31 @@ describe("parseOfertasMarketplacePayload", () => {
     expect(rows[0]!.comprador).toBe("João");
     expect(rows[0]!.souInteressado).toBe(true);
     expect(rows[0]!.timeKey).toBe("shuffler");
+  });
+
+  it("usa o estúdio do ofertante quando a RPC resolve o cadastro de Staff", () => {
+    const rows = parseOfertasMarketplacePayload([
+      {
+        id: "of-estudio",
+        tipo: "oferta_troca",
+        status: "em_analise",
+        dia_iso: "2026-08-20",
+        valor_celula_origem: "NGT",
+        turno_label: "Noite",
+        criado_em: "2026-07-29T12:00:00Z",
+        ofertante_funcionario_id: "of-2",
+        ofertante_nome: "Bia Lima",
+        estudio_nome: "Sports Club",
+        operadora_slug: "blaze",
+        operadora_nome: "Blaze",
+        org_time_id: "t-2",
+        time_nome: "Game Presenter",
+      },
+    ]);
+
+    expect(rows[0]!.estudio).toBe("Sports Club");
+    expect(rows[0]!.operadora).toBe("Blaze");
+    expect(rows[0]!.status).toBe("em_analise");
   });
 });
 

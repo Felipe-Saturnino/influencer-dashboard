@@ -1,0 +1,10 @@
+# Cloudflare Pages — cache dos assets do build.
+# HTML sempre revalidado: index.html em cache aponta para hashes de chunk que
+# já não existem após deploy, e o fallback de _redirects devolve HTML no lugar
+# do .js ausente (200 text/html) — o import dinâmico falha com ChunkLoadError.
+/*
+  Cache-Control: no-cache, must-revalidate
+
+# Ficheiros com hash no nome — imutáveis por definição.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

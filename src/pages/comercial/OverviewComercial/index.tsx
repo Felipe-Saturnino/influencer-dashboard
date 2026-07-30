@@ -8,6 +8,7 @@ import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
@@ -320,7 +321,15 @@ export default function OverviewComercial() {
       />
 
       <div style={filterBox}>
-        <OverviewComercialAbaNav aba={aba} onSelectAba={handleSelectAba} />
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div className="app-filter-bar-tabs-cta__tabs">
+            <OverviewComercialAbaNav aba={aba} onSelectAba={handleSelectAba} />
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="comercial_overview" />
+          </div>
+        </div>
 
         {aba === "operadoras" || aba === "agregadoras" ? (
           <div

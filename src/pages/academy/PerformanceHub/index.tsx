@@ -15,14 +15,12 @@ import type {
   PerformanceHubTab,
   PerformanceHubTimeSlug,
 } from "../../../lib/academyPerformanceHubTypes";
-import {
-  cloneScoringPorTime,
-  scoringConfigParaTime,
-} from "../../../lib/academyPerformanceHubScoring";
+import { scoringConfigParaTime } from "../../../lib/academyPerformanceHubScoring";
 import { normalizarTextoBusca } from "../../../lib/searchText";
 import { getPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { usePerformanceHubCadastro } from "../../../hooks/usePerformanceHubCadastro";
 import { usePerformanceHubAvaliacoes } from "../../../hooks/usePerformanceHubAvaliacoes";
+import { usePerformanceHubScoringConfig } from "../../../hooks/usePerformanceHubScoringConfig";
 import {
   avaliacaoEmAndamentoPorNome,
   avaliacaoVisivelAbaAvaliacoes,
@@ -76,10 +74,6 @@ function buildMesesCarrossel(rows: PerformanceHubAvaliacao[], time: PerformanceH
   return [{ ano: now.getFullYear(), mes: now.getMonth(), label: raw.charAt(0).toUpperCase() + raw.slice(1) }];
 }
 
-function cloneScoringDefault(): PerformanceHubScoringPorTime {
-  return cloneScoringPorTime();
-}
-
 function nomeCoincideUsuario(nomeAvaliado: string, nomeUsuario: string): boolean {
   return normalizarTextoBusca(nomeAvaliado) === normalizarTextoBusca(nomeUsuario);
 }
@@ -115,6 +109,7 @@ export default function PerformanceHubPage() {
   const perm = usePermission("academy_performance_hub");
   const cadastro = usePerformanceHubCadastro();
   const avaliacoesDb = usePerformanceHubAvaliacoes();
+  const scoringDb = usePerformanceHubScoringConfig();
   const [aba, setAba] = useRouteTab(
     "academy_performance_hub",
     "avaliacoes",
@@ -125,7 +120,7 @@ export default function PerformanceHubPage() {
   const [timeSelecionado, setTimeSelecionado] = useState<PerformanceHubTimeSlug>(PERFORMANCE_HUB_TIME_DEFAULT);
   const [staffSelecionado, setStaffSelecionado] = useState<string[]>([]);
   const [idxMes, setIdxMes] = useState(0);
-  const [scoringPorTime, setScoringPorTime] = useState<PerformanceHubScoringPorTime>(() => cloneScoringDefault());
+  const { scoringPorTime, setScoringPorTime } = scoringDb;
   const { avaliacoes, setAvaliacoes, persistirAvaliacao } = avaliacoesDb;
   const [avaliacaoEmEdicao, setAvaliacaoEmEdicao] = useState<PerformanceHubAvaliacao | null>(null);
   const [modalModo, setModalModo] = useState<PerformanceHubModalModo>("ver");
@@ -277,7 +272,7 @@ export default function PerformanceHubPage() {
     });
   }
 
-  if (perm.loading || cadastro.loading || avaliacoesDb.loading) {
+  if (perm.loading || cadastro.loading || avaliacoesDb.loading || scoringDb.loading) {
     return (
       <div
         className="app-page-shell"
@@ -360,7 +355,8 @@ export default function PerformanceHubPage() {
                 [timeSelecionado]: next as PerformanceHubScoringPorTime[typeof timeSelecionado],
               }))
             }
-            onSalvar={() => undefined}
+            loadError={scoringDb.loadError}
+            onSalvar={() => scoringDb.salvar(timeSelecionado, scoringPorTime[timeSelecionado])}
           />
         ) : null}
       </div>

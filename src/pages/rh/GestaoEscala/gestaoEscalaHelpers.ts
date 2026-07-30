@@ -87,6 +87,8 @@ export type EscalaGerarEstadoFiltro = {
   posSugestaoCs?: boolean;
   /** Última alteração pontual por célula (`prestadorId|YYYY-MM-DD`) — modal Alterar Escala. */
   alteracoesPorCelula?: Record<string, EscalaAlteracaoCelulaMeta>;
+  /** Comentário de Compra/Venda/Troca originado no Marketplace. */
+  comentariosMarketplacePorCelula?: Record<string, EscalaMarketplaceCelulaComentario>;
 };
 
 export function escalaGradeAprovadaNaBase(est: EscalaGerarEstadoFiltro | undefined): boolean {
@@ -136,7 +138,11 @@ export function gravarEscalaMes(
   try {
     const stripped: Record<string, EscalaGerarEstadoFiltro> = {};
     for (const [k, v] of Object.entries(est)) {
-      const { alteracoesPorCelula: _omit, ...rest } = v;
+      const {
+        alteracoesPorCelula: _omit,
+        comentariosMarketplacePorCelula: _omitMarketplace,
+        ...rest
+      } = v;
       stripped[k] = rest;
     }
     localStorage.setItem(chaveStorageEscalaMes(ano, mes0, modo), JSON.stringify(stripped));
@@ -241,6 +247,53 @@ export type RpcAlteracaoUltimaRow = {
   alterado_em: string;
   alterado_por_nome: string | null;
 };
+
+export type EscalaMarketplaceCelulaComentario = {
+  tipo: "compra" | "venda" | "troca";
+  contraparteNome: string;
+  turnoTrabalhar: string | null;
+  estudioTrabalhar: string | null;
+};
+
+export function mapMarketplaceComentariosPorCelula(
+  data: unknown,
+): Record<string, EscalaMarketplaceCelulaComentario> {
+  let payload: unknown = data;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload) as unknown;
+    } catch {
+      return {};
+    }
+  }
+  if (!Array.isArray(payload)) return {};
+
+  const out: Record<string, EscalaMarketplaceCelulaComentario> = {};
+  for (const item of payload) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const funcionarioId = String(row.funcionario_id ?? "").trim();
+    const diaIso = String(row.dia_iso ?? "").slice(0, 10);
+    const tipo = String(row.tipo ?? "").trim();
+    const contraparteNome = String(row.contraparte_nome ?? "").trim();
+    if (
+      !funcionarioId ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(diaIso) ||
+      !["compra", "venda", "troca"].includes(tipo) ||
+      !contraparteNome
+    ) {
+      continue;
+    }
+    out[chaveCelulaGerar(funcionarioId, diaIso)] = {
+      tipo: tipo as EscalaMarketplaceCelulaComentario["tipo"],
+      contraparteNome,
+      turnoTrabalhar: row.turno_trabalhar == null ? null : String(row.turno_trabalhar).trim() || null,
+      estudioTrabalhar:
+        row.estudio_trabalhar == null ? null : String(row.estudio_trabalhar).trim() || null,
+    };
+  }
+  return out;
+}
 
 export function mapAlteracoesUltimasPorCelula(rows: RpcAlteracaoUltimaRow[]): Record<string, EscalaAlteracaoCelulaMeta> {
   const out: Record<string, EscalaAlteracaoCelulaMeta> = {};

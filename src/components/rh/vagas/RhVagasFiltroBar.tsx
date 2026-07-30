@@ -25,6 +25,7 @@ import type { FiltroBarCampoOption } from "../../FiltroBarCampoSelect";
 import { FiltroBarCampoSelect } from "../../FiltroBarCampoSelect";
 import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { CtaCriarButton } from "../../CtaCriarButton";
+import { AjudaContextualAcoes } from "../../AjudaContextualAcoes";
 import type { RhVagasAba } from "../../../types/rhVaga";
 
 const TAB_BASE: RhVagasAba[] = ["abertas", "em_andamento", "gerenciamento"];
@@ -227,11 +228,14 @@ export function RhVagasFiltroBar({
             />
             {linha2Filtros}
           </div>
-          {mostrarNovaVaga ? (
-            <CtaCriarButton type="button" onClick={onNovaVaga} style={{ flexShrink: 0 }}>
-              Nova Vaga
-            </CtaCriarButton>
-          ) : null}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <AjudaContextualAcoes pageKey="rh_vagas" />
+            {mostrarNovaVaga ? (
+              <CtaCriarButton type="button" onClick={onNovaVaga}>
+                Nova Vaga
+              </CtaCriarButton>
+            ) : null}
+          </div>
         </div>
     </div>
   );

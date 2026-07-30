@@ -6,6 +6,7 @@ import type { PerformanceHubTab, PerformanceHubTimeSlug } from "../../../lib/aca
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FILTER_BAR_ROW_GAP, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import {
   FILTRO_BAR_TAB_ICON_PROPS,
   FiltroBarTabButton,
@@ -71,7 +72,9 @@ export function PerformanceHubFiltroBar({
 
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: FILTER_BAR_ROW_GAP, flexWrap: "wrap", width: "100%" }}>
+      <div className="app-filter-bar-tabs-cta">
+      <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+      <div className="app-filter-bar-tabs-cta__tabs" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: FILTER_BAR_ROW_GAP, flexWrap: "wrap" }}>
         <button
           type="button"
           aria-label="Mês anterior"
@@ -111,6 +114,10 @@ export function PerformanceHubFiltroBar({
             items={staffItems}
           />
         ) : null}
+      </div>
+      <div className="app-filter-bar-tabs-cta__actions">
+        <AjudaContextualAcoes pageKey="academy_performance_hub" />
+      </div>
       </div>
 
       <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>

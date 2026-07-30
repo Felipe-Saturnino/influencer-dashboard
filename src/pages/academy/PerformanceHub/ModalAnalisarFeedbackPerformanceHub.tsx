@@ -177,7 +177,11 @@ export function ModalAnalisarFeedbackPerformanceHub({
               </>
             ) : null}
             {" · "}
-            <strong>Vídeo:</strong> <LinkAssistirVideoPerformanceHub videoUrl={avaliacao.videoUrl} />
+            <strong>Vídeo:</strong>{" "}
+            <LinkAssistirVideoPerformanceHub
+              videoUrl={avaliacao.videoUrl}
+              videoRemovidoEm={avaliacao.videoRemovidoEm}
+            />
           </LinhaTexto>
           <LinhaTexto t={t}>
             <strong>Notas:</strong> Total {formatNotaPerformanceHub(avaliacao.notaTotal)} · Imagem{" "}

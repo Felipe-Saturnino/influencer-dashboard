@@ -48,6 +48,35 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - Tutoriais atuais: **Controle de Presença** (`controle-presenca`, Escala) · **Alterar Escala** (`alterar-escala`, Escala — seed SM/SL) · **Marketplace** (`marketplace-ofertas`, Escala — seed GP/Shuffler) · **Dicas Academy** (`postagem-academy-aprovacao`, Academy — seed perfis Estúdio).
 - **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `Calendario`, `ControledePresenca`, `AlterarEscala`, `MarketplaceOfertas`, `CienciaManuaisAcademy`, `DicasAcademy`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
 
+### Ajuda contextual nas páginas
+
+- Componente: **`AjudaContextualAcoes`** (`src/components/AjudaContextualAcoes.tsx`) dentro do bloco de filtros, no grupo de ações à direita.
+- Os atalhos **Conheça esta página** e **Troubleshooting desta página** aparecem sempre e usam o slug canônico de `APP_ROUTE_CATALOG`: `/Ajuda/ConhecaAPlataforma/{PaginaSlug}` e `/Ajuda/Troubleshooting/{PaginaSlug}`.
+- O atalho **Abrir tutorial desta seção** só aparece quando a aba atual tem tutorial associado **e** `tutorialVisivelParaRole` libera o perfil efetivo. Administrador efetivo vê todos; sem linha de visibilidade ou sem o role na lista = ícone oculto.
+- Ao criar tutorial contextual, preencher `relatedPageKey` e, quando for de uma aba específica, `relatedTabId` na definição. Na página, passar `{ id, urlSlug }` para `AjudaContextualAcoes` apenas na aba correspondente.
+- **Cor por ação** (fixa, não whitelabel): Conheça azul · Troubleshooting amarelo · Tutorial roxo — `getAjudaContextualAcaoStyle` em `src/lib/ajudaContextualStyles.ts` (detalhe visual em Brand §5).
+- Conheça / Troubleshooting: o terceiro segmento da URL seleciona a página na navegação lateral. Página inexistente ou sem permissão cai no primeiro item visível e substitui a URL pelo destino permitido.
+- **Cobertura:** todas as páginas de produto do menu (exceto Home, Configurações e a própria Ajuda). Páginas sem barra de filtros usam `PageHeader` `actions`/`right`.
+
+| Secção | Páginas | Tutorial contextual |
+|---|----|----|
+| **Dashboards** | Overview Spin, Streamers, Afiliados, Mídias Sociais, Overview Influencer, Overview Afiliado, Overview Comercial, Headcount, Overview Prestador | — |
+| **Lives** | Agenda, Resultados, Feedback, Influencers, Scout | — |
+| **Afiliados** | Afiliados, Network | — |
+| **Aquisição** | Financeiro, Banca de Jogo | — |
+| **Marketing** | Campanhas, Gestão de Links, Galeria de Fotos | — |
+| **Comercial** | Integração, Pipeline B2B, Pipeline Agregadoras | — |
+| **Customer Success** | Atendimento | — |
+| **Estúdio** | Gestão de Dealers, Central de Notificações, Figurinos, Roteiro de Mesa | — |
+| **Academy** | Performance Hub, Portal da Academy | Portal: **Manuais** → `ciencia-manuais-academy`; **Gerenciamento** → `postagem-academy-aprovacao` |
+| **Escala** | Gestão de Staff, Relatório de Turno, Solicitações, Escala Estúdio, Rotação, Calendário, Marketplace | Escala Estúdio → `alterar-escala` (**nunca** Escritório); Marketplace → `marketplace-ofertas`; Calendário → Compromissos / Controle de Presença |
+| **RH** | Gestão de Prestadores, Dados de Cadastro, Organograma, Escala Escritório, Vagas, Solicitações, Central de Denúncias | Escala Escritório: só Conheça + Troubleshooting |
+| **Conteúdo** | Playbook Influencers, Links e Materiais, Spin na Rede, Portal de RH, Informativos | — |
+| **Tech Ops** | Gestão de Estoque, Ordem de Saída | — |
+| **Plataforma** | Gestão de Usuários, Gestão de Operadoras, Gestão de Estúdios, Status Técnico | — |
+
+- **Motor compartilhado (Escala Estúdio / Escritório):** `GestaoEscala` recebe `modo`; o `pageKey` passado ao componente é o mesmo já derivado para `usePermission` — **não** duplicar constante nem liberar tutorial no modo escritório.
+
 **Regra (também no Global):** qualquer alteração de produto em **qualquer secção** deve revisar se Ajuda/glossário precisa de entrada nova, atualização ou remoção.
 
 ### Nomenclatura — sempre o nome do menu

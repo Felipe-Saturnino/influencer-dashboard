@@ -4,10 +4,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
-import { reloadAfterChunkError } from "./lib/chunkReloadGuard";
+import { limparParamCacheBustDaUrl, reloadAfterChunkError } from "./lib/chunkReloadGuard";
 import { initObservability } from "./lib/observability";
 import { queryClient } from "./lib/queryClient";
 
+limparParamCacheBustDaUrl();
 initObservability();
 
 /** Apenas erros típicos de import dinâmico / chunk (evita falso positivo em outras promises). */

@@ -7,6 +7,7 @@ type DashboardBrand = ReturnType<
   typeof import("../../../hooks/useDashboardBrand").useDashboardBrand
 >;
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { OverviewSpinAbaNav } from "./OverviewSpinAbaNav";
 import { abaEhFinanceira, type OverviewSpinTab } from "./overviewSpinTabs";
 
@@ -125,7 +126,15 @@ export function OverviewSpinFiltroBar({
         )}
       </div>
 
-      <OverviewSpinAbaNav aba={aba} onSelectAba={onSelectAba} tabsVisiveis={tabsVisiveis} />
+      <div className="app-filter-bar-tabs-cta">
+        <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+        <div className="app-filter-bar-tabs-cta__tabs">
+          <OverviewSpinAbaNav aba={aba} onSelectAba={onSelectAba} tabsVisiveis={tabsVisiveis} />
+        </div>
+        <div className="app-filter-bar-tabs-cta__actions">
+          <AjudaContextualAcoes pageKey="mesas_spin" />
+        </div>
+      </div>
     </div>
   );
 }

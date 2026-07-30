@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { reloadAfterChunkError } from "../lib/chunkReloadGuard";
+import { limparChunkReloadGuard, reloadAfterChunkError } from "../lib/chunkReloadGuard";
 
 function isChunkLoadError(error: Error | null): boolean {
   if (!error) return false;
@@ -25,6 +25,8 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  /** Recarga automática por erro de chunk em curso — evita tela parada quando o limite é atingido. */
+  chunkRecarregando: boolean;
 }
 
 const btnBase: React.CSSProperties = {
@@ -37,25 +39,26 @@ const btnBase: React.CSSProperties = {
 };
 
 export default class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null };
+  state: State = { hasError: false, error: null, chunkRecarregando: false };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Erro capturado:", error?.message ?? error, errorInfo);
     if (isChunkLoadError(error)) {
-      reloadAfterChunkError("ErrorBoundary: ChunkLoadError");
+      this.setState({ chunkRecarregando: reloadAfterChunkError("ErrorBoundary: ChunkLoadError") });
     }
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, chunkRecarregando: false });
     this.props.onReset?.();
   };
 
   handleReload = () => {
+    limparChunkReloadGuard();
     window.location.reload();
   };
 
@@ -63,7 +66,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       const isChunk = isChunkLoadError(this.state.error);
-      if (isChunk) {
+      if (isChunk && this.state.chunkRecarregando) {
         return (
           <div
             aria-live="polite"
@@ -124,7 +127,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                 color: "#e5dce1",
               }}
             >
-              Erro ao carregar a página
+              {isChunk ? "Nova versão disponível" : "Erro ao carregar a página"}
             </h3>
             <p
               style={{
@@ -134,28 +137,32 @@ export default class ErrorBoundary extends Component<Props, State> {
                 lineHeight: 1.5,
               }}
             >
-              Pode ter sido um problema temporário de conexão. Tente novamente ou recarregue a página.
+              {isChunk
+                ? "Não foi possível carregar esta parte da plataforma. Recarregue para buscar a versão mais recente. Se o problema persistir, entre em contato com o suporte."
+                : "Pode ter sido um problema temporário de conexão. Tente novamente ou recarregue a página."}
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={this.handleRetry}
-                style={{
-                  ...btnBase,
-                  border: borderMix,
-                  background: bgPrimary,
-                  color: "#c4b5d4",
-                }}
-              >
-                Tentar novamente
-              </button>
+              {isChunk ? null : (
+                <button
+                  type="button"
+                  onClick={this.handleRetry}
+                  style={{
+                    ...btnBase,
+                    border: borderMix,
+                    background: bgPrimary,
+                    color: "#c4b5d4",
+                  }}
+                >
+                  Tentar novamente
+                </button>
+              )}
               <button
                 type="button"
                 onClick={this.handleReload}
                 style={{
                   ...btnBase,
                   border: borderMix,
-                  background: "transparent",
+                  background: isChunk ? bgPrimary : "transparent",
                   color: "#c4b5d4",
                 }}
               >

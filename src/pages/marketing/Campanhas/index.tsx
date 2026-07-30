@@ -10,6 +10,7 @@ import { FONT } from "../../../constants/theme";
 import { Campanha, CampanhaLink } from "../../../types";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   FiltroBarTabButton,
@@ -230,11 +231,14 @@ export default function Campanhas() {
           </div>
         ) : null}
 
+        <div className="app-filter-bar-tabs-cta">
+        <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
         <div
+          className="app-filter-bar-tabs-cta__tabs"
           role="tablist"
           aria-label="Abas de Campanhas"
           onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS, setAba, (k) => `tab-campanhas-${k}`)}
-          style={{ ...getFilterBarRowStyle(), width: "100%" }}
+          style={getFilterBarRowStyle()}
         >
           <FiltroBarTabButton
             id="tab-campanhas-campanhas"
@@ -254,6 +258,10 @@ export default function Campanhas() {
           >
             {ABA_LABEL.geracao_links}
           </FiltroBarTabButton>
+        </div>
+        <div className="app-filter-bar-tabs-cta__actions">
+          <AjudaContextualAcoes pageKey="campanhas" />
+        </div>
         </div>
       </div>
 

@@ -49,6 +49,9 @@ import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
 import { LinkAssistirVideoPerformanceHub } from "../../../components/LinkAssistirVideoPerformanceHub";
 import {
+  ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO,
+  ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES,
+  ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO,
   uploadVideoPerformanceHub,
   videoPerformanceHubPodeAssistir,
 } from "../../../lib/academyPerformanceHubVideoFiles";
@@ -459,6 +462,15 @@ export function ModalAvaliarPerformanceHub({
       setVideoFile(null);
       return;
     }
+    if (file.size > ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES) {
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      setVideoNome("");
+      setVideoFile(null);
+      setErros([ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO]);
+      setInvalidFields((prev) => new Set(prev).add("video"));
+      return;
+    }
+    setErros((prev) => prev.filter((e) => e !== ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO));
     setVideoNome(file.name);
     setVideoFile(file);
     setInvalidFields((prev) => {
@@ -778,7 +790,10 @@ export function ModalAvaliarPerformanceHub({
                 {!somenteLeitura ? <CampoObrigatorioMark /> : null}
               </label>
               {somenteLeitura ? (
-                <LinkAssistirVideoPerformanceHub videoUrl={videoPathSalvo || avaliacao.videoUrl} />
+                <LinkAssistirVideoPerformanceHub
+                  videoUrl={videoPathSalvo || avaliacao.videoUrl}
+                  videoRemovidoEm={avaliacao.videoRemovidoEm}
+                />
               ) : (
                 <>
                   <input
@@ -797,6 +812,9 @@ export function ModalAvaliarPerformanceHub({
                     }}
                     aria-label="Enviar vídeo da avaliação"
                   />
+                  <p style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                    {ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO}
+                  </p>
                   {videoNome ? (
                     <p style={{ fontSize: 12, color: t.text, marginTop: 6, fontFamily: FONT.body }}>{videoNome}</p>
                   ) : null}

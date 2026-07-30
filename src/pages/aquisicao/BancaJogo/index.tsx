@@ -10,6 +10,7 @@ import { supabase } from "../../../lib/supabase"
 import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard"
 import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes"
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { getPageFilterBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles"
@@ -220,7 +221,9 @@ export default function BancaJogo() {
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div className="app-filter-bar-tabs-cta__tabs" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               aria-label="Mês anterior"
@@ -266,6 +269,10 @@ export default function BancaJogo() {
                 podeVerOperadora={podeVerOperadora}
               />
             )}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="banca_jogo" />
+          </div>
           </div>
       </div>
 

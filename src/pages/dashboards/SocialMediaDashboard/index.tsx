@@ -31,6 +31,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes"
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import {
   PAGE_CONTENT_BOX_GAP,
@@ -805,23 +806,29 @@ export default function SocialMediaDashboard() {
             )}
           </div>
 
-          <div role="tablist" aria-label="Seções Mídias sociais" style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-            {tabIds.map((key) => {
-              const TabIcon = TAB_ICONS[key];
-              return (
-                <FiltroBarTabButton
-                  key={key}
-                  id={`tab-midias-${key}`}
-                  active={aba === key}
-                  aria-controls={`panel-midias-${key}`}
-                  onClick={() => setAba(key)}
-                  onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabIds, key, setAba, "tab-midias-")}
-                  icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-                >
-                  {TAB_LABELS[key]}
-                </FiltroBarTabButton>
-              );
-            })}
+          <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+            <div className="app-filter-bar-tabs-cta__tabs" role="tablist" aria-label="Seções Mídias sociais">
+              {tabIds.map((key) => {
+                const TabIcon = TAB_ICONS[key];
+                return (
+                  <FiltroBarTabButton
+                    key={key}
+                    id={`tab-midias-${key}`}
+                    active={aba === key}
+                    aria-controls={`panel-midias-${key}`}
+                    onClick={() => setAba(key)}
+                    onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, tabIds, key, setAba, "tab-midias-")}
+                    icon={<TabIcon size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+                  >
+                    {TAB_LABELS[key]}
+                  </FiltroBarTabButton>
+                );
+              })}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="dash_midias_sociais" />
+            </div>
           </div>
       </div>
 

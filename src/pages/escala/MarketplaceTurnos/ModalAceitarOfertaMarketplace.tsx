@@ -31,6 +31,7 @@ type Props = {
   onAceita: () => void;
   contexto: MarketplaceMeuContexto | null;
   grade: MarketplaceMinhaGrade;
+  diasReservados: ReadonlySet<string>;
 };
 
 export function ModalAceitarOfertaMarketplace({
@@ -39,6 +40,7 @@ export function ModalAceitarOfertaMarketplace({
   onAceita,
   contexto,
   grade,
+  diasReservados,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -56,10 +58,24 @@ export function ModalAceitarOfertaMarketplace({
   const ehTroca = oferta?.tipo === "oferta_troca";
   const ehVendaFolga = oferta?.tipo === "venda_folga";
 
-  const diasTroca = useMemo(
-    () => (ehTroca ? diasOfertaveisMarketplace("oferta_troca", grade.valorPorIso) : []),
-    [ehTroca, grade.valorPorIso],
-  );
+  const diasTroca = useMemo(() => {
+    if (!ehTroca || !oferta || !contexto) return [];
+    return diasOfertaveisMarketplace("oferta_troca", grade.valorPorIso, {
+      horario: contexto.horario,
+      operadora: contexto.operadora,
+    }).filter((dia) => {
+      if (dia.iso === oferta.dataOfertaIso || diasReservados.has(dia.iso)) return false;
+      const gradeComDiaLiberado = new Map(grade.valorPorIso);
+      gradeComDiaLiberado.set(dia.iso, "Folga");
+      return gapEntreTurnosOk({
+        diaIso: oferta.dataOfertaIso,
+        turnoNome: oferta.turnoOferta,
+        valorPorIso: gradeComDiaLiberado,
+        horario: contexto.horario,
+        operadora: contexto.operadora,
+      });
+    });
+  }, [ehTroca, oferta, contexto, grade.valorPorIso, diasReservados]);
 
   if (!oferta) return null;
 
@@ -163,7 +179,7 @@ export function ModalAceitarOfertaMarketplace({
 
   return (
     <ModalBase maxWidth={520} onClose={onClose} zIndex={1140}>
-      <ModalHeader title="Aceitar oferta" onClose={onClose} />
+      <ModalHeader title={ehTroca ? "Propor troca" : "Aceitar oferta"} onClose={onClose} />
       <div style={{ padding: "4px 4px 0", fontFamily: FONT.body, color: t.text }}>
         <div
           style={{
@@ -216,7 +232,7 @@ export function ModalAceitarOfertaMarketplace({
             <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
               {diasTroca.length === 0
                 ? "Sem turnos futuros disponíveis na sua escala para oferecer em troca."
-                : "Você assume o dia da oferta e o ofertante assume o dia escolhido."}
+                : "O dia escolhido deve ser um turno da sua escala e respeitar o intervalo mínimo de 12h. A troca só será aplicada após a aprovação do ofertante."}
             </p>
           </div>
         ) : (
@@ -278,7 +294,7 @@ export function ModalAceitarOfertaMarketplace({
                 Salvando…
               </span>
             ) : (
-              "Aceitar oferta"
+              ehTroca ? "Enviar proposta" : "Aceitar oferta"
             )}
           </button>
         </div>

@@ -14,6 +14,7 @@ import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
@@ -427,33 +428,32 @@ export default function Integracao() {
             minWidth={200}
           />
         </div>
-        <div
-          role="tablist"
-          aria-label="Abas de integração"
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-          }}
-          onKeyDown={(e) =>
-            onFiltroBarTabsKeyDown(e, INTEGRACAO_TABS, handleTabClick, (k) => `tab-integracao-${k}`)
-          }
-        >
-          {INTEGRACAO_TABS.map((tb) => (
-            <FiltroBarTabButton
-              key={tb}
-              id={`tab-integracao-${tb}`}
-              active={tab === tb}
-              aria-controls={`panel-integracao-${tb}`}
-              onClick={() => handleTabClick(tb)}
-              icon={TAB_ICONS[tb]}
-            >
-              {INTEGRACAO_TAB_LABEL[tb]}
-            </FiltroBarTabButton>
-          ))}
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div
+            className="app-filter-bar-tabs-cta__tabs"
+            role="tablist"
+            aria-label="Abas de integração"
+            onKeyDown={(e) =>
+              onFiltroBarTabsKeyDown(e, INTEGRACAO_TABS, handleTabClick, (k) => `tab-integracao-${k}`)
+            }
+          >
+            {INTEGRACAO_TABS.map((tb) => (
+              <FiltroBarTabButton
+                key={tb}
+                id={`tab-integracao-${tb}`}
+                active={tab === tb}
+                aria-controls={`panel-integracao-${tb}`}
+                onClick={() => handleTabClick(tb)}
+                icon={TAB_ICONS[tb]}
+              >
+                {INTEGRACAO_TAB_LABEL[tb]}
+              </FiltroBarTabButton>
+            ))}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="comercial_integracao" />
+          </div>
         </div>
       </div>
 

@@ -27,6 +27,7 @@ import OperadoraTag from "../../../components/OperadoraTag";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { normalizarTextoBusca } from "../../../lib/searchText";
@@ -383,7 +384,9 @@ export default function GestaoDealers() {
 
       {/* ─── Bloco filtros: carrossel turnos (Overview) + estúdio ───────────── */}
       <div style={getPageFilterBoxStyle(brand, t)}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div className="app-filter-bar-tabs-cta__tabs" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               aria-label="Turno anterior"
@@ -412,6 +415,10 @@ export default function GestaoDealers() {
                 extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum estúdio" }]}
               />
             ) : null}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="gestao_dealers" />
+          </div>
           </div>
       </div>
 

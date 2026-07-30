@@ -4,6 +4,7 @@ import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
@@ -193,6 +194,7 @@ export default function SpinNaRede() {
         icon={<PageMenuIcon pageKey="spin_na_rede" />}
         title={getPageMenuLabel("spin_na_rede")}
         subtitle="Acompanhe as menções e aparições públicas da Spin Gaming na mídia."
+        actions={<AjudaContextualAcoes pageKey="spin_na_rede" />}
       />
 
       {erro && (

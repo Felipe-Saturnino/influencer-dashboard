@@ -7,6 +7,7 @@ import {
 } from "../../../components/dashboard";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { FONT } from "../../../constants/theme";
 import {
   getFilterBarRowStyle,
@@ -245,24 +246,30 @@ export function GestaoUsuariosFiltroBar({
   return (
     <div style={getFilterBarWrapperStyle(brand, t)}>
       {mostrarAbasAdmin ? (
-        <div
-          role="tablist"
-          aria-label="Seções de gestão de usuários"
-          style={getFilterBarRowStyle({ marginBottom: 0 })}
-          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abaKeys, onAbaChange, (k) => `tab-gestao-${k}`)}
-        >
-          {abasVisiveis.map((a) => (
-            <FiltroBarTabButton
-              key={a.key}
-              id={`tab-gestao-${a.key}`}
-              active={aba === a.key}
-              aria-controls={`panel-gestao-${a.key}`}
-              onClick={() => onAbaChange(a.key)}
-              icon={GESTAO_TAB_ICONS[a.key]}
-            >
-              {a.label}
-            </FiltroBarTabButton>
-          ))}
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+          <div
+            role="tablist"
+            aria-label="Seções de gestão de usuários"
+            className="app-filter-bar-tabs-cta__tabs"
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abaKeys, onAbaChange, (k) => `tab-gestao-${k}`)}
+          >
+            {abasVisiveis.map((a) => (
+              <FiltroBarTabButton
+                key={a.key}
+                id={`tab-gestao-${a.key}`}
+                active={aba === a.key}
+                aria-controls={`panel-gestao-${a.key}`}
+                onClick={() => onAbaChange(a.key)}
+                icon={GESTAO_TAB_ICONS[a.key]}
+              >
+                {a.label}
+              </FiltroBarTabButton>
+            ))}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="gestao_usuarios" />
+          </div>
         </div>
       ) : null}
 
@@ -275,49 +282,56 @@ export function GestaoUsuariosFiltroBar({
             ...(mostrarAbasAdmin ? { paddingTop: 12, marginTop: 12 } : {}),
           }}
         >
-          <div style={getFilterBarRowStyle()}>
-            <button
-              type="button"
-              aria-label="Status anterior"
-              onClick={retrocederStatus}
-              style={getCarouselBtnNavStyle(t, false)}
-            >
-              <ChevronLeft size={14} aria-hidden="true" />
-            </button>
-            <span
-              style={{
-                ...getCarouselPeriodLabelStyle(t, { minWidth: 140 }),
-                fontSize: 15,
-                fontWeight: 700,
-              }}
-            >
-              {labelStatusCentral}
-              {filtroStatus !== "todos" ? (
-                <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 800, opacity: 0.9 }}>
-                  {countStatusCentral}
-                </span>
-              ) : null}
-            </span>
-            <button
-              type="button"
-              aria-label="Próximo status"
-              onClick={avancarStatus}
-              style={getCarouselBtnNavStyle(t, false)}
-            >
-              <ChevronRight size={14} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              aria-pressed={todosStatusAtivo}
-              onClick={() => onFiltroStatusChange("todos")}
-              style={{
-                ...pillTodos,
-                fontFamily: FONT.body,
-                transition: "all 0.15s",
-              }}
-            >
-              {STATUS_USUARIO_TODOS_LABEL}
-            </button>
+          <div className="app-marketplace-filtro-minhas">
+            <div className="app-marketplace-filtro-minhas__filters" style={getFilterBarRowStyle({ marginBottom: 0 })}>
+              <button
+                type="button"
+                aria-label="Status anterior"
+                onClick={retrocederStatus}
+                style={getCarouselBtnNavStyle(t, false)}
+              >
+                <ChevronLeft size={14} aria-hidden="true" />
+              </button>
+              <span
+                style={{
+                  ...getCarouselPeriodLabelStyle(t, { minWidth: 140 }),
+                  fontSize: 15,
+                  fontWeight: 700,
+                }}
+              >
+                {labelStatusCentral}
+                {filtroStatus !== "todos" ? (
+                  <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 800, opacity: 0.9 }}>
+                    {countStatusCentral}
+                  </span>
+                ) : null}
+              </span>
+              <button
+                type="button"
+                aria-label="Próximo status"
+                onClick={avancarStatus}
+                style={getCarouselBtnNavStyle(t, false)}
+              >
+                <ChevronRight size={14} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                aria-pressed={todosStatusAtivo}
+                onClick={() => onFiltroStatusChange("todos")}
+                style={{
+                  ...pillTodos,
+                  fontFamily: FONT.body,
+                  transition: "all 0.15s",
+                }}
+              >
+                {STATUS_USUARIO_TODOS_LABEL}
+              </button>
+            </div>
+            {!mostrarAbasAdmin ? (
+              <div className="app-marketplace-filtro-minhas__cta" style={{ gap: 10 }}>
+                <AjudaContextualAcoes pageKey="gestao_usuarios" />
+              </div>
+            ) : null}
           </div>
 
           <FiltroBarSecaoSeparada>

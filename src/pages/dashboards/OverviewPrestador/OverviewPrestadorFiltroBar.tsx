@@ -8,6 +8,7 @@ import {
   FiltroHistoricoButton,
 } from "../../../components/dashboard";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import {
   FILTRO_BAR_TAB_ICON_PROPS,
   getFilterBarRowStyle,
@@ -127,18 +128,13 @@ export function OverviewPrestadorFiltroBar({
         )}
       </div>
 
-      <div
-        style={{
-          ...getFilterBarRowStyle(),
-          paddingTop: 12,
-          marginTop: 12,
-          borderTop: `1px solid ${t.cardBorder}`,
-        }}
-      >
+      <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
         <div
+          className="app-filter-bar-tabs-cta__tabs"
           role="tablist"
           aria-label="Abas do Overview Prestador"
-          style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", width: "100%" }}
           onKeyDown={(e) =>
             onFiltroBarTabsKeyDown(e, TABS.map((x) => x.key), onSelectAba, (k) => `tab-overview-prestador-${k}`)
           }
@@ -159,6 +155,10 @@ export function OverviewPrestadorFiltroBar({
               </FiltroBarTabButton>
             );
           })}
+        </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="dash_overview_prestador" />
+          </div>
         </div>
       </div>
     </div>

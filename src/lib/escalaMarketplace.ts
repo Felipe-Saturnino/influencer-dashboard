@@ -46,17 +46,31 @@ import type {
 export const MS_12H = 12 * 60 * 60 * 1000;
 
 /**
- * Histórico do Marketplace é mensal: inclui a competência atual inteira,
- * inclusive ofertas futuras dentro do mês, e as 12 competências anteriores.
+ * Histórico do Marketplace por competência (`YYYY-MM`):
+ * - início: 13 competências inclusivas (atual + 12 anteriores), como nos dashboards;
+ * - fim: competência atual **ou** `competenciaFimMax` (último mês do carrossel), o que for maior —
+ *   ofertas futuras em meses da Escala (ex.: Agosto com ref em Julho) entram no «Todo o período».
  */
 export function isDataNoHistoricoMarketplace(
   value: string | null | undefined,
   ref: Date = new Date(),
+  competenciaFimMax?: string | null,
 ): boolean {
   if (!value) return false;
   const competencia = value.slice(0, 7);
   const { inicio, fim } = getPeriodoHistoricoCompetencias(ref);
-  return competencia >= inicio.slice(0, 7) && competencia <= fim.slice(0, 7);
+  const inicioComp = inicio.slice(0, 7);
+  let fimComp = fim.slice(0, 7);
+  const extra = (competenciaFimMax ?? "").trim().slice(0, 7);
+  if (/^\d{4}-\d{2}$/.test(extra) && extra > fimComp) {
+    fimComp = extra;
+  }
+  return competencia >= inicioComp && competencia <= fimComp;
+}
+
+/** Competência `YYYY-MM` a partir de ano + mês 0-based. */
+export function competenciaAnoMes(ano: number, mes0: number): string {
+  return `${ano}-${String(mes0 + 1).padStart(2, "0")}`;
 }
 
 /** Tipos de oferta publicáveis no Marketplace. */
@@ -84,6 +98,7 @@ export type EscalaMarketplaceOfertaDb = {
   observacao?: string | null;
   ofertante_funcionario_id: string;
   ofertante_nome: string | null;
+  estudio_nome?: string | null;
   operadora_slug?: string | null;
   operadora_nome?: string | null;
   org_time_id: string;
@@ -116,6 +131,8 @@ function mapStatusDbParaUi(status: string): OfertaStatusUi {
       return "aberto";
     case "interessado":
       return "interessado";
+    case "em_analise":
+      return "em_analise";
     case "aceita":
       return "aprovada";
     case "recusada":
@@ -157,6 +174,7 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
   const ofertanteId = texto(row.ofertante_funcionario_id);
   const interessadoId = texto(row.interessado_funcionario_id);
   const operadora = texto(row.operadora_nome) || texto(row.operadora_slug) || "—";
+  const estudio = texto(row.estudio_nome) || operadora;
   const turnoInteresseCel = texto(row.valor_celula_interesse);
 
   return {
@@ -166,6 +184,7 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
     tipo: mapTipoDb(texto(row.tipo)),
     turnoOferta: turnoLabelOferta(row),
     operadora,
+    estudio,
     ofertante: texto(row.ofertante_nome) || labelTruncadoUuid(ofertanteId),
     dataInteresseIso: isoDate(row.dia_iso_interesse) || undefined,
     turnoInteresse: turnoInteresseCel
@@ -557,7 +576,13 @@ export function diasOfertaveisMarketplace(
 
 // ─── Mutações ───────────────────────────────────────────────────────────────
 
-type RpcResultado = { ok?: boolean; error?: string; id?: string; area_key?: string } | null;
+type RpcResultado = {
+  ok?: boolean;
+  error?: string;
+  id?: string;
+  area_key?: string;
+  em_analise?: boolean;
+} | null;
 
 function payloadResultado(data: unknown): RpcResultado {
   const obj = objetoPayload(data);
@@ -566,7 +591,7 @@ function payloadResultado(data: unknown): RpcResultado {
 }
 
 export type AceitarOfertaMarketplaceResult =
-  | { ok: true; areaKey?: string }
+  | { ok: true; areaKey?: string; emAnalise?: boolean }
   | { ok: false; error: string };
 
 export async function aceitarOfertaMarketplace(
@@ -587,7 +612,31 @@ export async function aceitarOfertaMarketplace(
   if (!payload?.ok) {
     return { ok: false, error: payload?.error ?? "unknown" };
   }
-  return { ok: true, areaKey: payload.area_key };
+  return { ok: true, areaKey: payload.area_key, emAnalise: payload.em_analise === true };
+}
+
+export type DecidirTrocaMarketplaceResult = { ok: true } | { ok: false; error: string };
+
+async function decidirTrocaMarketplace(
+  rpc: "escala_marketplace_troca_aprovar" | "escala_marketplace_troca_recusar",
+  id: string,
+): Promise<DecidirTrocaMarketplaceResult> {
+  const { data, error } = await supabase.rpc(rpc, { p_oferta_id: id });
+  if (error) {
+    console.error(`[${rpc}]`, error);
+    return { ok: false, error: "rpc_error" };
+  }
+  const payload = payloadResultado(data);
+  if (!payload?.ok) return { ok: false, error: payload?.error ?? "unknown" };
+  return { ok: true };
+}
+
+export function aprovarTrocaMarketplace(id: string): Promise<DecidirTrocaMarketplaceResult> {
+  return decidirTrocaMarketplace("escala_marketplace_troca_aprovar", id);
+}
+
+export function recusarTrocaMarketplace(id: string): Promise<DecidirTrocaMarketplaceResult> {
+  return decidirTrocaMarketplace("escala_marketplace_troca_recusar", id);
 }
 
 export type CriarOfertaMarketplaceInput = {
@@ -657,6 +706,7 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   area_invalida: "O seu time não está configurado na Escala Estúdio. Entre em contato com o suporte.",
   escala_nao_aprovada: "A escala do mês ainda não está aprovada.",
   oferta_duplicada: "Você já tem uma oferta aberta para este dia.",
+  dia_reservado: "Este dia já está reservado em outra negociação.",
   dia_nao_folga: "Este dia não está como folga na sua escala.",
   dia_sem_turno: "Este dia não tem turno na sua escala.",
   dia_em_negociacao: "Este dia já está em negociação na escala (Compra, Venda ou Troca).",
@@ -675,7 +725,10 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
     "A escala do mês do dia oferecido em troca ainda não está aprovada.",
   dia_interesse_sem_turno: "O dia oferecido em troca não tem turno na sua escala.",
   dia_interesse_em_negociacao: "O dia oferecido em troca já está em negociação na escala.",
+  dia_interesse_alterado: "O turno do dia oferecido em troca foi alterado. Atualize a página e tente novamente.",
   ofertante_ja_escalado: "O ofertante já tem turno no dia que você oferece em troca.",
+  escala_alterada:
+    "A escala de um dos dias foi alterada durante a negociação. Recuse a proposta e publique ou aceite uma nova troca.",
   nao_e_ofertante: "Só o autor da oferta pode cancelá-la.",
   gap_minimo: "É necessário respeitar o intervalo mínimo de 12h entre turnos.",
 };

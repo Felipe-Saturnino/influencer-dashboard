@@ -33,6 +33,7 @@ import {
   SectionTitle,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 
@@ -300,7 +301,9 @@ export default function Agenda() {
 
       {/* ── BLOCO DE FILTROS (padrão Dashboards) ── */}
       <div style={getFilterBarWrapperStyle(brand, t)}>
-          <div style={getFilterBarRowStyle()}>
+          <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div className="app-filter-bar-tabs-cta__tabs" style={getFilterBarRowStyle()}>
             <button
               type="button"
               onClick={prev}
@@ -345,6 +348,10 @@ export default function Agenda() {
                 podeVerOperadora={podeVerOperadora}
               />
             )}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="agenda" />
+          </div>
           </div>
 
           {/* Status e Plataforma */}

@@ -102,3 +102,8 @@ verify_jwt = false
 [functions.sync-vagas-carreiras-site]
 verify_jwt = false
 # Snapshot diário vagas externas abertas → WordPress Carreiras (WORDPRESS_VAGAS_SYNC_URL + SPIN_VAGAS_SYNC_SECRET).
+
+[functions.purge-academy-performance-hub-videos]
+verify_jwt = true
+# Retenção de vídeos do Performance Hub (cron semanal / service_role). A function também
+# compara o Bearer com SUPABASE_SERVICE_ROLE_KEY — nenhum usuário logado consegue executar.

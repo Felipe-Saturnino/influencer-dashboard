@@ -37,6 +37,9 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `validate-comercial-dominios` |
 | `enrich-comercial-cnpj` |
 | `trigger-social-kpis` |
+| `purge-academy-performance-hub-videos` |
+
+**`purge-academy-performance-hub-videos`:** retenção dos vídeos do Performance Hub (cron semanal). Sem secrets próprios — usa `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`, e só aceita chamada cujo `Authorization` seja a service role key. Simulação: `{"dry_run": true}` no body. Regras: `.cursor/rules/academy.mdc` § Vídeo — limite e retenção.
 
 **`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser CSV/XLSX inline). Testes locais: `src/lib/comercialSpaCsvParser.ts` + `src/lib/comercialSpaXlsx.ts`. A página gov.br publica **`planilha-de-autorizacoes.xlsx`** (rótulo “CSV”); a Edge descoberta esse URL automaticamente.
 

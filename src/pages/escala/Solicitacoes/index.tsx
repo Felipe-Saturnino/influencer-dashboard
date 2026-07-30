@@ -17,6 +17,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
@@ -714,7 +715,15 @@ export default function EscalaSolicitacoesPage() {
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
-          <div style={filterBarSection(false)}>{blocoFiltrosLinha1}</div>
+          <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+            <div className="app-filter-bar-tabs-cta__tabs" style={{ ...filterBarSection(false), width: "auto" }}>
+              {blocoFiltrosLinha1}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="escala_solicitacoes" />
+            </div>
+          </div>
           <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(true)}>
             <FiltroBarTabButton
               id="tab-sol-aberto"

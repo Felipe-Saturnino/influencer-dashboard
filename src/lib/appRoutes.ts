@@ -323,17 +323,30 @@ export function getAppRouteByPageSlug(pageSlug: string): AppRouteDef | undefined
 }
 
 /** Destino de navegação interna a partir de `PageKey` + slug opcional de aba. */
-export function buildParsedAppTarget(pageKey: PageKey, tabSlug?: string | null): ParsedAppPath {
+export function buildParsedAppTarget(
+  pageKey: PageKey,
+  tabSlug?: string | null,
+  detailSlug?: string | null,
+): ParsedAppPath {
   const route = getAppRouteByPageKey(pageKey);
   if (!route) return { kind: "not_found" };
   if (!route.tabs?.length) {
+    if (detailSlug) return { kind: "not_found" };
     return { kind: "app", pageKey, tabId: null, tabSlug: null };
   }
   if (tabSlug) {
     const tab = route.tabs.find((t) => t.slug.toLowerCase() === tabSlug.trim().toLowerCase());
     if (!tab) return { kind: "not_found" };
-    return { kind: "app", pageKey, tabId: tab.tabId, tabSlug: tab.slug };
+    if (detailSlug && pageKey !== "ajuda") return { kind: "not_found" };
+    return {
+      kind: "app",
+      pageKey,
+      tabId: tab.tabId,
+      tabSlug: tab.slug,
+      detailSlug: detailSlug ?? null,
+    };
   }
+  if (detailSlug) return { kind: "not_found" };
   const first = route.tabs[0];
   return { kind: "app", pageKey, tabId: first.tabId, tabSlug: first.slug };
 }
@@ -422,15 +435,14 @@ export function parseAppPathname(pathname: string): ParsedAppPath {
     return { kind: "app", pageKey: route.pageKey, tabId: tab.tabId, tabSlug: tab.slug };
   }
 
-  if (
-    segments.length === 3 &&
-    seg2 &&
-    seg3 &&
-    route.pageKey === "ajuda" &&
-    seg2.toLowerCase() === "tutoriais"
-  ) {
+  if (segments.length === 3 && seg2 && seg3 && route.pageKey === "ajuda") {
     const tab = route.tabs.find((t) => t.slug.toLowerCase() === seg2.toLowerCase());
     if (!tab) return { kind: "not_found" };
+    const aceitaDetalhe =
+      tab.tabId === "conheca" ||
+      tab.tabId === "troubleshooting" ||
+      tab.tabId === "tutoriais";
+    if (!aceitaDetalhe) return { kind: "not_found" };
     return {
       kind: "app",
       pageKey: route.pageKey,
@@ -506,7 +518,8 @@ export function isTabAllowedForUser(
     case "academy_portal_gerenciamento":
       return podeExecutarPerm(acoes.academy_portal?.editar ?? null);
     case "calendario_relatorio_presenca":
-      return podeExecutarPerm(acoes.rh_calendario?.editar ?? null);
+      /** Só Editar = Sim — Próprios não acessa Relatório de Presença. */
+      return (acoes.rh_calendario?.editar ?? null) === "sim";
     default:
       return true;
   }

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
@@ -2226,6 +2227,7 @@ export default function StatusTecnico() {
         icon={<PageMenuIcon pageKey="status_tecnico" />}
         title={getPageMenuLabel("status_tecnico")}
         subtitle="Monitore integrações, alertas automáticos e sincronizações da plataforma."
+        actions={<AjudaContextualAcoes pageKey="status_tecnico" />}
       />
 
       <div className="app-grid-kpi-4" style={{ ...getPageKpiSectionGapStyle(), width: "100%", gap: 14 }}>

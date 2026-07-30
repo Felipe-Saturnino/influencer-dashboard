@@ -17,11 +17,8 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBusca } from "../../../lib/searchText";
 import { AjudaPaginaAcessoLink } from "../../../components/AppPageLink";
 import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
-import {
-  carregarTutorialVisibilidade,
-  type TutorialVisibilidadeMap,
-} from "../../../lib/ajudaTutorialVisibilidade";
 import { temAlgumTutorialVisivel } from "./tutoriais/catalog";
+import { getAppRouteByPageKey, getAppRouteByPageSlug } from "../../../lib/appRoutes";
 import { CONTEUDO_CONHECA } from "./conteudo/conheca";
 import { CONTEUDO_TROUBLE, TROUBLESHOOTING_TRANSVERSAL } from "./conteudo/troubleshooting";
 import { TutoriaisPanel } from "./TutoriaisPanel";
@@ -50,27 +47,22 @@ const AJUDA_TAB_ICONS: Record<Aba, ReactNode> = {
 };
 
 export default function Ajuda() {
-  const { theme: t, isDark, permissions, user, effectiveRole } = useApp();
+  const {
+    theme: t,
+    isDark,
+    permissions,
+    user,
+    effectiveRole,
+    activeDetailSlug,
+    navigateTo,
+    tutorialVisibility: visibility,
+    tutorialVisibilityLoaded: visibilityLoaded,
+    atualizarTutorialVisibilidadeLocal,
+  } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
   const isAdmin = user?.role === "admin";
   const roleEfetivo = (effectiveRole ?? user?.role) as Role | null | undefined;
-
-  const [visibility, setVisibility] = useState<TutorialVisibilidadeMap>({});
-  const [visibilityLoaded, setVisibilityLoaded] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const map = await carregarTutorialVisibilidade();
-      if (cancelled) return;
-      setVisibility(map);
-      setVisibilityLoaded(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const podeVerAbaTutoriais = useMemo(
     () =>
@@ -85,7 +77,10 @@ export default function Ajuda() {
   );
 
   const [aba, setAba] = useRouteTab("ajuda", "conheca", abasVisiveis);
-  const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>("streamers");
+  const [paginaSelecionada, setPaginaSelecionada] = useState<PageKey>(() => {
+    if (!activeDetailSlug) return "streamers";
+    return getAppRouteByPageSlug(activeDetailSlug)?.pageKey ?? "streamers";
+  });
   const [buscaPagina, setBuscaPagina] = useState("");
 
   useEffect(() => {
@@ -117,17 +112,59 @@ export default function Ajuda() {
     return first?.key ?? null;
   }, [menuAjudaVisivel]);
 
-  const paginaAtualVisivel = useMemo(
-    () => menuAjudaVisivel.some((sec) => sec.items.some((item) => item.key === paginaSelecionada)),
-    [menuAjudaVisivel, paginaSelecionada],
-  );
-
   useEffect(() => {
+    if (aba !== "conheca" && aba !== "troubleshooting") return;
+    const paginaDaUrl = activeDetailSlug
+      ? getAppRouteByPageSlug(activeDetailSlug)?.pageKey
+      : null;
+    const paginaDaUrlVisivel =
+      paginaDaUrl &&
+      menuAjudaVisivel.some((sec) => sec.items.some((item) => item.key === paginaDaUrl));
+    if (paginaDaUrl && paginaDaUrlVisivel) {
+      if (paginaSelecionada !== paginaDaUrl) setPaginaSelecionada(paginaDaUrl);
+      return;
+    }
     if (!primeiroPageKeyVisivel) return;
-    if (!paginaAtualVisivel) {
+    if (paginaSelecionada !== primeiroPageKeyVisivel) {
       setPaginaSelecionada(primeiroPageKeyVisivel);
     }
-  }, [primeiroPageKeyVisivel, paginaAtualVisivel]);
+    const fallbackSlug = getAppRouteByPageKey(primeiroPageKeyVisivel)?.pageSlug;
+    const tabSlug = aba === "conheca" ? "ConhecaAPlataforma" : "Troubleshooting";
+    if (fallbackSlug && activeDetailSlug !== fallbackSlug) {
+      navigateTo("ajuda", tabSlug, { replace: true, detailSlug: fallbackSlug });
+    }
+  }, [
+    aba,
+    activeDetailSlug,
+    menuAjudaVisivel,
+    navigateTo,
+    paginaSelecionada,
+    primeiroPageKeyVisivel,
+  ]);
+
+  const selecionarPagina = (pageKey: PageKey) => {
+    const pageSlug = getAppRouteByPageKey(pageKey)?.pageSlug;
+    if (!pageSlug) return;
+    setPaginaSelecionada(pageKey);
+    navigateTo(
+      "ajuda",
+      aba === "troubleshooting" ? "Troubleshooting" : "ConhecaAPlataforma",
+      { detailSlug: pageSlug },
+    );
+  };
+
+  const selecionarAba = (next: Aba) => {
+    if (next === "conheca" || next === "troubleshooting") {
+      const pageSlug = getAppRouteByPageKey(paginaSelecionada)?.pageSlug;
+      navigateTo(
+        "ajuda",
+        next === "conheca" ? "ConhecaAPlataforma" : "Troubleshooting",
+        { detailSlug: pageSlug ?? undefined },
+      );
+      return;
+    }
+    setAba(next);
+  };
 
   const cardShadow = t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
   const navActiveBg = brand.useBrand
@@ -217,7 +254,7 @@ export default function Ajuda() {
         role="tablist"
         aria-label="Seções de ajuda"
         style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}
-        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abasVisiveis, setAba, (k) => `tab-ajuda-${k}`)}
+        onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abasVisiveis, selecionarAba, (k) => `tab-ajuda-${k}`)}
       >
         {abasVisiveis.map((a) => (
           <FiltroBarTabButton
@@ -225,7 +262,7 @@ export default function Ajuda() {
             id={`tab-ajuda-${a}`}
             active={aba === a}
             aria-controls={`panel-ajuda-${a}`}
-            onClick={() => setAba(a)}
+            onClick={() => selecionarAba(a)}
             icon={AJUDA_TAB_ICONS[a]}
           >
             {LABELS_ABA[a]}
@@ -263,9 +300,7 @@ export default function Ajuda() {
             role={roleEfetivo}
             isAdmin={isAdmin}
             visibility={visibility}
-            onVisibilityChange={(tutorialId, roles) => {
-              setVisibility((prev) => ({ ...prev, [tutorialId]: roles }));
-            }}
+            onVisibilityChange={atualizarTutorialVisibilidadeLocal}
           />
         </div>
       ) : menuAjudaVisivel.length === 0 ? (
@@ -384,7 +419,7 @@ export default function Ajuda() {
                         <button
                           key={key}
                           type="button"
-                          onClick={() => setPaginaSelecionada(key)}
+                          onClick={() => selecionarPagina(key)}
                           style={{
                             display: "flex",
                             alignItems: "center",
