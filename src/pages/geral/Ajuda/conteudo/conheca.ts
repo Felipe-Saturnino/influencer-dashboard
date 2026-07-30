@@ -223,12 +223,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aproveitamento e Movimentações",
         texto:
-          "Dois gráficos de barras lado a lado comparam dias e horas escalados vs realizados.\n\nO gráfico de pizza **Movimentações de turno** agrupa trocas realizadas, turnos vendidos e turnos comprados no período.",
+          "Dois gráficos de barras lado a lado comparam dias e horas escalados vs realizados.\n\nO gráfico de pizza **Movimentações de turno** agrupa trocas realizadas, turnos vendidos e turnos comprados no período — as contagens vêm da grade aprovada; o Detalhamento Diário mostra com quem foi a negociação quando ela passou pelo Marketplace.",
       },
       {
         subtitulo: "Detalhamento Diário",
         texto:
-          "Tabela com colunas Data, Ocorrência e Detalhe. Ocorrências possíveis: Troca, Atestado, Atraso, Esquecimento, Compra e Venda.\n\nO detalhe varia por tipo (contraparte em troca/compra/venda, dias de atestado, minutos de atraso, check-in/out esquecido). Estado vazio de dados: \"Sem dados para o período selecionado.\"",
+          "Tabela com colunas Data, Ocorrência e Detalhe. Ocorrências possíveis: Troca, Atestado, Atraso, Esquecimento, Compra e Venda.\n\nO detalhe varia por tipo: Troca/Compra/Venda mostram o colega da negociação no Marketplace (e turno/estúdio quando aplicável); Atestado mostra a quantidade de dias; Atraso o tempo; Esquecimento se foi check-in e/ou check-out. Negociações feitas só com alteração manual na Escala (sem Marketplace) podem aparecer sem o nome do colega. Estado vazio de dados: \"Sem dados para o período selecionado.\"",
       },
       {
         subtitulo: "Aba Performance",

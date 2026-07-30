@@ -161,14 +161,14 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Filtros Time / Staff:** `FiltroCalendarioTimeSelect` + `FiltroCalendarioStaffSelect` (`mode="single"`) — catálogo e ordem de `rhCalendarioStaffFiltroHelpers.ts`. Staff filtra por time quando time ≠ agregador.
 - **Escopo próprios (`canView === "proprios"`):** ocultar filtros Time/Staff; auto-vincular `meuRhFuncionarioId` via e-mail de login (espelho Calendário RH). Default `proprios` para role `prestador` em `AppContext`.
 - **Staff obrigatório (gestores):** sem prestador selecionado → string **Selecione um prestador para visualizar os resultados.** (não a string global de período vazio).
-- **Dados:** RPCs `rh_calendario_grade_escala_mes`, `rh_calendario_ponto_registros_mes`, presença gestão (`carregarPresencaGestaoMes`); turnos via `fetchTurnosPorOperadoraSlugs`. Métricas em `lib/overviewPrestadorMetrics.ts` + helpers calendário em `lib/overviewPrestadorCalendarioHelpers.ts`.
-- **Cache mensal:** grade, ponto e presença usam `overviewPrestadorQueries.ts`, com chave por mês e prestador quando aplicável. Meses do Histórico carregam em paralelo; no modo mensal, a carga inclui também o mês comparativo anterior para o MoM. O loading permanece ativo até os três grupos necessários terminarem.
+- **Dados:** RPCs `rh_calendario_grade_mes` (fallback `rh_calendario_grade_escala_mes`), `rh_calendario_ponto_registros_mes`, presença gestão (`carregarPresencaGestaoMes`); movimentações Marketplace via `dash_overview_prestador_movimentacoes_mes`; turnos via `fetchTurnosPorOperadoraSlugs`. Métricas em `lib/overviewPrestadorMetrics.ts` + helpers em `lib/overviewPrestadorCalendarioHelpers.ts` e `lib/overviewPrestadorMovimentacoes.ts`.
+- **Cache mensal:** grade, ponto, presença e movimentações usam `overviewPrestadorQueries.ts`, com chave por mês e prestador quando aplicável. Meses do Histórico carregam em paralelo; no modo mensal, a carga inclui também o mês comparativo anterior para o MoM. O loading permanece ativo até os grupos necessários terminarem.
 - **KPIs Consolidados (Escala):** 4× `KpiCard` — Dias Escalado, Dias Realizado, Horas Escaladas, Horas Realizadas — MoM via `getPeriodoComparativoMoM` (exceto Histórico).
 - **Absenteísmo:** cards locais (não `KpiCard`) — Pontualidade, Ponto não Registrado, Atestados — com sublinhas de detalhe.
-- **Gráficos:** Recharts — barras Aproveitamento (dias/horas); pizza Movimentações (Trocas / Vendidos / Comprados). Cores semânticas fixas no pie (`PIE_CORES`), barras com `--brand-action`.
+- **Gráficos:** Recharts — barras Aproveitamento (dias/horas); pizza Movimentações (Trocas / Vendidos / Comprados). Contagens pela **grade** (inclui `Compra - Turno`); contraparte pelo snapshot Marketplace. Cores semânticas fixas no pie (`PIE_CORES`), barras com `--brand-action`.
 - **Detalhamento Diário:** tabela canónica `useDataTableBlock` — colunas Data, Ocorrência, Detalhe; sort default **desc** em Data.
-- **Detalhe Troca/Compra/Venda:** contraparte **"—"** até modelo backend expor parceiro da movimentação (grade só indica tipo).
-- **Migration:** `20260630180000_dash_overview_prestador_page.sql` — seeds permissão + extensão RPCs com `dash_overview_prestador`.
+- **Detalhe Troca/Compra/Venda:** snapshot `escala_marketplace_celula_comentario` — Compra `Comprado de {nome} · turno · estúdio`; Venda `Vendido para {nome}`; Troca `Troca com {nome} · turno · estúdio`. Sem snapshot (alteração manual na Escala) → **"—"**.
+- **Migration:** `20260630180000_dash_overview_prestador_page.sql` (seeds + RPCs calendário); `20261105210000_dash_overview_prestador_movimentacoes_mes.sql` (contraparte Marketplace).
 
 ### Strings de vazio (Overview Prestador)
 

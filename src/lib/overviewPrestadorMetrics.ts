@@ -7,6 +7,12 @@ import {
 } from "./rhCalendarioPresencaGestao";
 import type { RhFuncionario } from "../types/rhFuncionario";
 import {
+  chaveMovimentacaoCelula,
+  formatarDetalheMovimentacao,
+  situacaoEhCompraMarketplace,
+  type OverviewPrestadorMovimentacaoCelula,
+} from "./overviewPrestadorMovimentacoes";
+import {
   diasDoMesRef,
   duracaoMinutosEntreTimestampsIso,
   duracaoMinutosRelogioHHMM,
@@ -78,6 +84,8 @@ export type CalcularMetricasPrestadorInput = {
   gradeRows: RpcGradeCalendarioRow[];
   pontoRows: RpcPontoMesRow[];
   presencaGestao: Map<string, PresencaDiaGestao>;
+  /** Snapshot Marketplace (contraparte) — chave `funcionarioId|YYYY-MM-DD`. */
+  movimentacoes?: Map<string, OverviewPrestadorMovimentacaoCelula>;
   periodoInicio: string;
   periodoFim: string;
   /** Meses a iterar (ano, mes0) — ex.: mês do carrossel ou todos no histórico. */
@@ -137,6 +145,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
     gradeRows,
     pontoRows,
     presencaGestao,
+    movimentacoes,
     periodoInicio,
     periodoFim,
     mesesRef,
@@ -166,6 +175,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
 
       const valorG = primeiroValorGradeDiaParaPrestador(gradeRows, funcionarioId, iso, prestador);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
+      const snapMov = movimentacoes?.get(chaveMovimentacaoCelula(funcionarioId, iso));
       const esc = obterEntradaSaidaEscaladasPrestadorDia(
         prestador,
         valorG,
@@ -198,15 +208,27 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
 
       if (situacao === "Troca") {
         trocas += 1;
-        detalhamento.push({ dataIso: iso, ocorrencia: "Troca", detalhe: "—" });
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Troca",
+          detalhe: formatarDetalheMovimentacao("Troca", snapMov),
+        });
       }
       if (situacao === "Venda") {
         vendas += 1;
-        detalhamento.push({ dataIso: iso, ocorrencia: "Venda", detalhe: "—" });
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Venda",
+          detalhe: formatarDetalheMovimentacao("Venda", snapMov),
+        });
       }
-      if (situacao === "Compra") {
+      if (situacaoEhCompraMarketplace(situacao)) {
         compras += 1;
-        detalhamento.push({ dataIso: iso, ocorrencia: "Compra", detalhe: "—" });
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Compra",
+          detalhe: formatarDetalheMovimentacao("Compra", snapMov),
+        });
       }
 
       const just = gestao?.justificativa;

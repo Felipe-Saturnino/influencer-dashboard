@@ -808,6 +808,7 @@ export default function EscalaMarketplaceTurnosPage() {
     const sorted = ordenarOfertas(rows, sortOferta);
     if (sorted.length === 0) return celulaVazia();
     const mostrarAceitoPor = variant === "aceitas";
+    const mostrarStatus = variant === "canceladas";
 
     return (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -825,7 +826,7 @@ export default function EscalaMarketplaceTurnosPage() {
               {thSort("Data de Interesse", "dataInteresse")}
               {thSort("Turno de Interesse", "turnoInteresse")}
               {mostrarAceitoPor && thSort("Aceito por", "comprador")}
-              {thSort("Status", "status")}
+              {mostrarStatus && thSort("Status", "status")}
             </tr>
           </thead>
           <tbody>
@@ -842,7 +843,9 @@ export default function EscalaMarketplaceTurnosPage() {
                   <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
                   <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
                   {mostrarAceitoPor && <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>}
-                  <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  {mostrarStatus && (
+                    <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  )}
                 </>,
               ),
             )}

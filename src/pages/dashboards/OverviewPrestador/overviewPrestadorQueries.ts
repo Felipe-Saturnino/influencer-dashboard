@@ -2,6 +2,10 @@ import { queryClient } from "../../../lib/queryClient";
 import { carregarPresencaGestaoMes } from "../../../lib/rhCalendarioPresencaGestaoDb";
 import type { PresencaDiaGestao } from "../../../lib/rhCalendarioPresencaGestao";
 import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
+import {
+  mapOverviewPrestadorMovimentacoes,
+  type OverviewPrestadorMovimentacaoCelula,
+} from "../../../lib/overviewPrestadorMovimentacoes";
 import { supabase } from "../../../lib/supabase";
 import type {
   RpcGradeCalendarioRow,
@@ -51,6 +55,24 @@ export function fetchOverviewPrestadorPresencaMes(
       const { mapa, error } = await carregarPresencaGestaoMes(supabase, funcionarioId, refMes);
       if (error) throw error;
       return mapa;
+    },
+  });
+}
+
+export function fetchOverviewPrestadorMovimentacoesMes(
+  funcionarioId: string,
+  refMes: string,
+): Promise<Map<string, OverviewPrestadorMovimentacaoCelula>> {
+  return queryClient.fetchQuery({
+    queryKey: ["overview-prestador", "movimentacoes", funcionarioId, refMes],
+    staleTime: STALE_TIME_MENSAL,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("dash_overview_prestador_movimentacoes_mes", {
+        p_funcionario_id: funcionarioId,
+        p_ref_mes: refMes,
+      });
+      if (error) throw error;
+      return mapOverviewPrestadorMovimentacoes(data);
     },
   });
 }

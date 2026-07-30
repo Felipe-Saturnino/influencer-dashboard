@@ -35,9 +35,11 @@ import {
 } from "../../../lib/overviewPrestadorCalendarioHelpers";
 import {
   fetchOverviewPrestadorGradeMes,
+  fetchOverviewPrestadorMovimentacoesMes,
   fetchOverviewPrestadorPontoMes,
   fetchOverviewPrestadorPresencaMes,
 } from "./overviewPrestadorQueries";
+import type { OverviewPrestadorMovimentacaoCelula } from "../../../lib/overviewPrestadorMovimentacoes";
 
 export type OverviewPrestadorTab = "escala" | "performance";
 
@@ -65,10 +67,14 @@ export function useOverviewPrestadorDados(
   const [presencaGestaoPorChave, setPresencaGestaoPorChave] = useState<Map<string, PresencaDiaGestao>>(
     () => new Map(),
   );
+  const [movimentacoesPorChave, setMovimentacoesPorChave] = useState<
+    Map<string, OverviewPrestadorMovimentacaoCelula>
+  >(() => new Map());
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosHorarioPick>>(() => new Map());
   const [loadingGrade, setLoadingGrade] = useState(false);
   const [loadingPonto, setLoadingPonto] = useState(false);
   const [loadingPresenca, setLoadingPresenca] = useState(false);
+  const [loadingMovimentacoes, setLoadingMovimentacoes] = useState(false);
 
   const mesSelecionado: MesCarrosselEscalaEntry | undefined = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes <= 0;
@@ -408,6 +414,36 @@ export function useOverviewPrestadorDados(
   }, [staffSelecionadoId, mesesParaCarga]);
 
   useEffect(() => {
+    if (!staffSelecionadoId || mesesParaCarga.length === 0) {
+      setMovimentacoesPorChave(new Map());
+      setLoadingMovimentacoes(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingMovimentacoes(true);
+    void (async () => {
+      try {
+        const mapas = await Promise.all(
+          mesesParaCarga.map(({ ano, mes }) =>
+            fetchOverviewPrestadorMovimentacoesMes(
+              staffSelecionadoId,
+              refMesPrimeiroDiaISO(new Date(ano, mes, 1)),
+            ).catch(() => new Map<string, OverviewPrestadorMovimentacaoCelula>()),
+          ),
+        );
+        const next = new Map<string, OverviewPrestadorMovimentacaoCelula>();
+        mapas.forEach((mapa) => mapa.forEach((v, k) => next.set(k, v)));
+        if (!cancelled) setMovimentacoesPorChave(next);
+      } finally {
+        if (!cancelled) setLoadingMovimentacoes(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [staffSelecionadoId, mesesParaCarga]);
+
+  useEffect(() => {
     const slugs = [...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean))];
     if (slugs.length === 0) {
       setMapOpTurnos(new Map());
@@ -440,6 +476,7 @@ export function useOverviewPrestadorDados(
       gradeRows: rawGradeRows,
       pontoRows: pontoMesLinhas,
       presencaGestao: presencaGestaoPorChave,
+      movimentacoes: movimentacoesPorChave,
       periodoInicio: periodoComparativo.atual.inicio,
       periodoFim: periodoComparativo.atual.fim,
       mesesRef: mesesMetricasAtual,
@@ -451,6 +488,7 @@ export function useOverviewPrestadorDados(
     rawGradeRows,
     pontoMesLinhas,
     presencaGestaoPorChave,
+    movimentacoesPorChave,
     periodoComparativo.atual,
     mesesMetricasAtual,
   ]);
@@ -467,6 +505,7 @@ export function useOverviewPrestadorDados(
       gradeRows: rawGradeRows,
       pontoRows: pontoMesLinhas,
       presencaGestao: presencaGestaoPorChave,
+      movimentacoes: movimentacoesPorChave,
       periodoInicio: periodoComparativo.anterior.inicio,
       periodoFim: periodoComparativo.anterior.fim,
       mesesRef: mesesMetricasAnterior,
@@ -479,6 +518,7 @@ export function useOverviewPrestadorDados(
     rawGradeRows,
     pontoMesLinhas,
     presencaGestaoPorChave,
+    movimentacoesPorChave,
     periodoComparativo.anterior,
     mesesMetricasAnterior,
   ]);
@@ -491,7 +531,7 @@ export function useOverviewPrestadorDados(
     setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids));
   }, [filtroStaffIds]);
 
-  const isLoading = loadingStaff || loadingGrade || loadingPonto || loadingPresenca;
+  const isLoading = loadingStaff || loadingGrade || loadingPonto || loadingPresenca || loadingMovimentacoes;
 
   return {
     mesesDisponiveis,
