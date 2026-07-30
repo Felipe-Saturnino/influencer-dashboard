@@ -81,6 +81,8 @@ export interface PerformanceHubAvaliacao {
   criterios?: Record<string, PerformanceHubCriterioResposta>;
   videoUrl?: string | null;
   videoNome?: string | null;
+  /** Preenchido quando a retenção apagou o vídeo do Storage (video_nome é mantido). */
+  videoRemovidoEm?: string | null;
   /** Texto do avaliado ao solicitar esclarecimento (Feedback → Em Análise). */
   solicitacaoFeedbackTexto?: string | null;
 }

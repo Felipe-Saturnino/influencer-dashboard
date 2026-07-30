@@ -36,6 +36,7 @@ import {
   SkeletonKpiCard,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   getPageContentBoxStyle,
@@ -964,7 +965,9 @@ export default function DashboardOverviewInfluencer() {
 
       {/* ─── BLOCO 1: Filtros (mesmo padrão visual dos cards) ───────────────────── */}
       <div style={getPageFilterBoxStyle(brand, t)}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+            <div className="app-filter-bar-tabs-cta__tabs">
 
             {/* Navegação de mês */}
             <button
@@ -1020,6 +1023,10 @@ export default function DashboardOverviewInfluencer() {
                 Carregando…
               </span>
             )}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="dash_overview_influencer" />
+            </div>
           </div>
       </div>
 

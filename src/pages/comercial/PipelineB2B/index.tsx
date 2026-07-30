@@ -15,6 +15,7 @@ import { FONT } from "../../../constants/theme";
 import { supabase } from "../../../lib/supabase";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
@@ -439,31 +440,30 @@ export default function PipelineB2B() {
             minWidth={200}
           />
         </div>
-        <div
-          role="tablist"
-          aria-label="Abas do pipeline"
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-          }}
-          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, PIPELINE_TABS, setTab, (k) => `tab-pipeline-${k}`)}
-        >
-          {PIPELINE_TABS.map((tb) => (
-            <FiltroBarTabButton
-              key={tb}
-              id={`tab-pipeline-${tb}`}
-              active={tab === tb}
-              aria-controls={`panel-pipeline-${tb}`}
-              onClick={() => setTab(tb)}
-              icon={TAB_ICONS[tb]}
-            >
-              {PIPELINE_TAB_LABEL[tb]}
-            </FiltroBarTabButton>
-          ))}
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div
+            className="app-filter-bar-tabs-cta__tabs"
+            role="tablist"
+            aria-label="Abas do pipeline"
+            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, PIPELINE_TABS, setTab, (k) => `tab-pipeline-${k}`)}
+          >
+            {PIPELINE_TABS.map((tb) => (
+              <FiltroBarTabButton
+                key={tb}
+                id={`tab-pipeline-${tb}`}
+                active={tab === tb}
+                aria-controls={`panel-pipeline-${tb}`}
+                onClick={() => setTab(tb)}
+                icon={TAB_ICONS[tb]}
+              >
+                {PIPELINE_TAB_LABEL[tb]}
+              </FiltroBarTabButton>
+            ))}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="comercial_pipeline_b2b" />
+          </div>
         </div>
       </div>
 

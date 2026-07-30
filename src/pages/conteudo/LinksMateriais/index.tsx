@@ -31,6 +31,7 @@ import {
 } from "../../../components/dashboard";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { QRCodeCanvas } from "qrcode.react";
@@ -542,42 +543,42 @@ export default function LinksMateriais() {
         icon={<PageMenuIcon pageKey="links_materiais" />}
         title={getPageMenuLabel("links_materiais")}
         subtitle="Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação."
+        actions={abasVisiveis.length <= 1 ? <AjudaContextualAcoes pageKey="links_materiais" /> : undefined}
       />
 
       {abasVisiveis.length > 1 && (
         <div style={getPageFilterBoxStyle(brand, t)}>
-          <div
-            role="tablist"
-            aria-label="Canal de links"
-            onKeyDown={(e) =>
-              onFiltroBarTabsKeyDown(e, abasVisiveis, setCanal, (k) => `tab-links-materiais-${k}`)
-            }
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              flexWrap: "wrap",
-              width: "100%",
-            }}
-          >
-            {canalTabs
-              .filter((tab) => abasVisiveis.includes(tab.id))
-              .map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <FiltroBarTabButton
-                    key={tab.id}
-                    id={`tab-links-materiais-${tab.id}`}
-                    active={canal === tab.id}
-                    aria-controls="panel-links-materiais"
-                    onClick={() => setCanal(tab.id)}
-                    icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
-                  >
-                    {tab.label}
-                  </FiltroBarTabButton>
-                );
-              })}
+          <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+            <div
+              role="tablist"
+              aria-label="Canal de links"
+              className="app-filter-bar-tabs-cta__tabs"
+              onKeyDown={(e) =>
+                onFiltroBarTabsKeyDown(e, abasVisiveis, setCanal, (k) => `tab-links-materiais-${k}`)
+              }
+            >
+              {canalTabs
+                .filter((tab) => abasVisiveis.includes(tab.id))
+                .map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <FiltroBarTabButton
+                      key={tab.id}
+                      id={`tab-links-materiais-${tab.id}`}
+                      active={canal === tab.id}
+                      aria-controls="panel-links-materiais"
+                      onClick={() => setCanal(tab.id)}
+                      icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                    >
+                      {tab.label}
+                    </FiltroBarTabButton>
+                  );
+                })}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="links_materiais" />
+            </div>
           </div>
         </div>
       )}

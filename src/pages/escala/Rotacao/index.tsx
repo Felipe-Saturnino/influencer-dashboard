@@ -16,6 +16,7 @@ import {
   SectionTitle,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
@@ -883,7 +884,9 @@ export default function EscalaRotacaoPage() {
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-        <div style={getFilterBarRowStyle()}>
+        <div className="app-filter-bar-tabs-cta">
+        <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+        <div className="app-filter-bar-tabs-cta__tabs" style={{ ...getFilterBarRowStyle(), width: "auto" }}>
           <button
             type="button"
             aria-label="Dia anterior"
@@ -904,6 +907,10 @@ export default function EscalaRotacaoPage() {
             <ChevronRight size={14} aria-hidden="true" />
           </button>
           <FiltroHojeButton active={diaIso === hojeIso} onClick={() => setDiaIso(hojeIso)} />
+        </div>
+        <div className="app-filter-bar-tabs-cta__actions">
+          <AjudaContextualAcoes pageKey="escala_rotacao" />
+        </div>
         </div>
         <div style={{ ...getFilterBarRowStyle(), marginTop: 10 }}>
           <FiltroTurnoSelect

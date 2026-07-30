@@ -46,6 +46,7 @@ type Props = {
   contexto: MarketplaceMeuContexto | null;
   /** Células de todos os meses com escala aprovada (não só o mês do carrossel). */
   grade: MarketplaceMinhaGrade;
+  diasReservados: ReadonlySet<string>;
 };
 
 export function ModalOfertarMarketplace({
@@ -54,6 +55,7 @@ export function ModalOfertarMarketplace({
   onCriada,
   contexto,
   grade,
+  diasReservados,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -86,8 +88,8 @@ export function ModalOfertarMarketplace({
       diasOfertaveisMarketplace(tipo, grade.valorPorIso, {
         horario: contexto?.horario,
         operadora: contexto?.operadora,
-      }),
-    [tipo, grade.valorPorIso, contexto],
+      }).filter((dia) => !diasReservados.has(dia.iso)),
+    [tipo, grade.valorPorIso, contexto, diasReservados],
   );
 
   const turnosFolga = useMemo(() => {

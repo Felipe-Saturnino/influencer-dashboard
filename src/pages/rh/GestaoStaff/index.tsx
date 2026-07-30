@@ -35,6 +35,7 @@ import {
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -912,7 +913,9 @@ export default function RhGestaoStaffPage() {
       ) : null}
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-          <div style={getFilterBarRowStyle()}>
+          <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div className="app-filter-bar-tabs-cta__tabs" style={{ ...getFilterBarRowStyle(), width: "auto" }}>
             <button
               type="button"
               onClick={() => setIdxTime((i) => Math.max(0, i - 1))}
@@ -957,6 +960,10 @@ export default function RhGestaoStaffPage() {
                 Carregando…
               </span>
             ) : null}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="rh_staff" />
+          </div>
           </div>
 
           <div

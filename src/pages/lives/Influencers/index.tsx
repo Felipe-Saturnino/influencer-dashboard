@@ -26,6 +26,7 @@ import {
   FiltroStatusSemanticoPill,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -275,6 +276,7 @@ export default function Influencers() {
         subtitle={showManagementUI ? "Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro." : "Seu perfil completo na plataforma."}
         brand={brand}
         t={t}
+        right={showManagementUI ? undefined : <AjudaContextualAcoes pageKey="influencers" />}
       />
 
       {/* Quadros resumo (quem gerencia múltiplos) */}
@@ -331,7 +333,9 @@ export default function Influencers() {
       {showManagementUI && (
         <div style={getPageFilterBoxStyle(brand, t)}>
             {/* Linha 1: Status / Operadora */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
+            <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+            <div className="app-filter-bar-tabs-cta__tabs" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
               {STATUS_OPTS.map((s) => (
                 <FiltroStatusSemanticoPill
@@ -354,6 +358,10 @@ export default function Influencers() {
                   />
                 </>
               )}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="influencers" />
+            </div>
             </div>
 
             {/* Linha 2: Plataforma */}

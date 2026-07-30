@@ -21,6 +21,7 @@ import type { Operadora } from "../../../types";
 import OperadoraTag from "../../../components/OperadoraTag";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroHistoricoButton, FiltroOperadoraSelect, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { ModalThreadSolicitacao, type ThreadSolicitacaoOrigem } from "../solicitacoes/ModalThreadSolicitacao";
@@ -1019,13 +1020,18 @@ export default function CentralNotificacoes() {
       />
       <div style={getPageFilterBoxStyle(brand, t)}>
           <div
+            className="app-filter-bar-tabs-cta"
+            style={{ marginBottom: verInboxEstudio ? 12 : 0 }}
+          >
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div
+            className="app-filter-bar-tabs-cta__tabs"
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: 10,
               flexWrap: "wrap",
-              marginBottom: verInboxEstudio ? 12 : 0,
             }}
           >
             <button
@@ -1069,6 +1075,10 @@ export default function CentralNotificacoes() {
                 Carregando…
               </span>
             )}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="central_notificacoes" />
+          </div>
           </div>
 
           {verInboxEstudio ? (

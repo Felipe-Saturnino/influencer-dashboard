@@ -8,6 +8,7 @@ import { Operadora } from "../../../types";
 import { Pencil, Loader2 } from "lucide-react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
@@ -185,6 +186,7 @@ export default function GestaoOperadoras() {
               aria-label="Buscar por nome de operadora"
               wrapperStyle={{ flex: "1 1 240px", minWidth: 200, maxWidth: 480 }}
             />
+            <AjudaContextualAcoes pageKey="gestao_operadoras" />
             {perm.canCriarOk ? (
               <CtaCriarButton
                 type="button"

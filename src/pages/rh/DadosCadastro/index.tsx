@@ -37,6 +37,7 @@ import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePre
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   FiltroBarTabButton,
@@ -840,6 +841,7 @@ export default function RhDadosCadastroPage() {
           icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
           title={getPageMenuLabel("rh_dados_cadastro")}
           subtitle={pageSubtitle}
+          actions={<AjudaContextualAcoes pageKey="rh_dados_cadastro" />}
         />
         <div style={getPageFilterBoxStyle(brand, t)}>
           <div style={getFilterBarRowStyle({ width: "100%" })}>
@@ -876,6 +878,7 @@ export default function RhDadosCadastroPage() {
           icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
           title={getPageMenuLabel("rh_dados_cadastro")}
           subtitle={pageSubtitle}
+          actions={<AjudaContextualAcoes pageKey="rh_dados_cadastro" />}
         />
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Não encontramos um cadastro de prestador vinculado ao seu e-mail de acesso. Em caso de dúvida, fale com o RH.
@@ -977,6 +980,7 @@ export default function RhDadosCadastroPage() {
         icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
         title={getPageMenuLabel("rh_dados_cadastro")}
         subtitle={pageSubtitle}
+        actions={<AjudaContextualAcoes pageKey="rh_dados_cadastro" />}
       />
 
       {erroGlobal ? (

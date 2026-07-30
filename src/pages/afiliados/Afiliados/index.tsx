@@ -17,6 +17,7 @@ import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { DashboardPageHeader, FiltroOperadoraSelect, FiltroStatusSemanticoPill } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -291,7 +292,7 @@ export default function Afiliados() {
 
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
-      <DashboardPageHeader icon={<PageMenuIcon pageKey="afiliados" />} title={getPageMenuLabel("afiliados")} subtitle={showManagementUI ? "Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras." : "Seu perfil de afiliado na plataforma."} brand={brand} t={t} />
+      <DashboardPageHeader icon={<PageMenuIcon pageKey="afiliados" />} title={getPageMenuLabel("afiliados")} subtitle={showManagementUI ? "Gerencie o cadastro de parceiros afiliados com perfil, financeiro e operadoras." : "Seu perfil de afiliado na plataforma."} brand={brand} t={t} right={showManagementUI ? undefined : <AjudaContextualAcoes pageKey="afiliados" />} />
 
       {showManagementUI && (
         <div className="app-grid-2" style={{ ...getPageKpiSectionGapStyle(), gap: 16 }}>
@@ -339,7 +340,9 @@ export default function Afiliados() {
       {showManagementUI && (
         <div style={getPageFilterBoxStyle(brand, t)}>
             {/* Linha 1: Status + Operadora */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
+            <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+            <div className="app-filter-bar-tabs-cta__tabs" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.1em", marginRight: 4 }}>Status</span>
               {STATUS_OPTS.map((s) => (
                 <FiltroStatusSemanticoPill
@@ -362,6 +365,10 @@ export default function Afiliados() {
                   />
                 </>
               )}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="afiliados" />
+            </div>
             </div>
 
             {/* Linha 2: Busca */}

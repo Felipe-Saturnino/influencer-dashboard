@@ -14,6 +14,10 @@ import { getThStyle, getTdStyle } from "../../../lib/tableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import {
+  AjudaContextualAcoes,
+  type AjudaContextualTutorial,
+} from "../../../components/AjudaContextualAcoes";
 import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
@@ -86,6 +90,7 @@ import {
   linhaColaboradorNoFiltroTurnoConsolidado,
   linhaComTurnoMesArea,
   mapAlteracoesUltimasPorCelula,
+  mapMarketplaceComentariosPorCelula,
   mapaCelulasFromGradeCarregarPayload,
   mapLinhaPrestador,
   mapTurnoMesRowsParaEstado,
@@ -104,6 +109,7 @@ import {
   type EscalaDiariaSortCol,
   type EscalaGerarEstadoFiltro,
   type EscalaGradeModo,
+  type EscalaMarketplaceCelulaComentario,
   type FiltroTurnoConsolidadoRh,
   type GradeStatusMetaDb,
   type RpcAlteracaoUltimaRow,
@@ -125,6 +131,12 @@ import { baixarXlsx } from "../../../lib/xlsxWriter";
 
 export type GestaoEscalaPageProps = {
   modo?: EscalaGradeModo;
+};
+
+/** Tutorial disponível só na Escala Estúdio (`rh_gestao_escala`), nunca no Escritório. */
+const TUTORIAL_ALTERAR_ESCALA: AjudaContextualTutorial = {
+  id: "alterar-escala",
+  urlSlug: "AlterarEscala",
 };
 
 export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPageProps) {
@@ -375,7 +387,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         supabase.rpc("rh_gestao_escala_grade_meta_listar", { p_ref_mes: ref }),
         supabase.rpc("rh_gestao_escala_turno_mes_listar", { p_ref_mes: ref }),
         ...areas.map(async (areaKey) => {
-          const [gradeRes, alterRes] = await Promise.all([
+          const [gradeRes, alterRes, marketplaceRes] = await Promise.all([
             supabase.rpc("rh_gestao_escala_grade_carregar", {
               p_ref_mes: ref,
               p_area_key: areaKey,
@@ -384,8 +396,14 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               p_ref_mes: ref,
               p_area_key: areaKey,
             }),
+            modo === "estudio"
+              ? supabase.rpc("rh_gestao_escala_marketplace_comentarios", {
+                  p_ref_mes: ref,
+                  p_area_key: areaKey,
+                })
+              : Promise.resolve({ data: [], error: null }),
           ]);
-          return { areaKey, gradeRes, alterRes };
+          return { areaKey, gradeRes, alterRes, marketplaceRes };
         }),
       ]);
       if (cancelled) return;
@@ -403,12 +421,16 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       }
       const fromDbPorArea: Record<string, Record<string, string>> = {};
       const alteracoesPorArea: Record<string, Record<string, EscalaAlteracaoCelulaMeta>> = {};
-      for (const { areaKey, gradeRes, alterRes } of results) {
+      const marketplacePorArea: Record<string, Record<string, EscalaMarketplaceCelulaComentario>> = {};
+      for (const { areaKey, gradeRes, alterRes, marketplaceRes } of results) {
         if (!gradeRes.error) {
           fromDbPorArea[areaKey] = mapaCelulasFromGradeCarregarPayload(gradeRes.data);
         }
         if (!alterRes.error && alterRes.data) {
           alteracoesPorArea[areaKey] = mapAlteracoesUltimasPorCelula(alterRes.data as RpcAlteracaoUltimaRow[]);
+        }
+        if (!marketplaceRes.error) {
+          marketplacePorArea[areaKey] = mapMarketplaceComentariosPorCelula(marketplaceRes.data);
         }
       }
       if (modo !== "escritorio" && Object.keys(fromDbPorArea).length === 0 && Object.keys(metaPorArea).length === 0) {
@@ -463,6 +485,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             posSugestao: true,
             celulasSincronizadasComDb: snap,
             alteracoesPorCelula: aprovadaEfetiva ? (alteracoesPorArea[ak] ?? {}) : undefined,
+            comentariosMarketplacePorCelula: undefined,
           };
         }
         if (cancelled) return;
@@ -512,6 +535,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             celulasSincronizadasComDb: snap,
             alteracoesPorCelula: aprovadaNaBase
               ? (alteracoesPorArea[ak] ?? cur?.alteracoesPorCelula ?? {})
+              : undefined,
+            comentariosMarketplacePorCelula: aprovadaNaBase
+              ? (marketplacePorArea[ak] ?? cur?.comentariosMarketplacePorCelula ?? {})
               : undefined,
           };
         }
@@ -1040,6 +1066,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const estGradeFiltro = gerarPorFiltro[filtroArea];
   const celulasGerarAtivas = estGradeFiltro?.celulas;
   const alteracoesPorCelulaAtivas = estGradeFiltro?.alteracoesPorCelula;
+  const comentariosMarketplaceAtivos = estGradeFiltro?.comentariosMarketplacePorCelula;
   const podeEditarCelulasDia = Boolean(
     modo !== "escritorio" && podeEditarGrade && !escalaGradeAprovadaNaBase(estGradeFiltro),
   );
@@ -1656,25 +1683,31 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 />
               ) : null}
             </div>
-            <button
-              type="button"
-              onClick={() => setHistoricoModalAberto(true)}
-              aria-label="Abrir histórico de ações da escala neste mês"
-              title="Histórico"
-              style={{
-                ...getFiltroBarPillStateStyle(t, brand, false),
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 36,
-                height: 36,
-                padding: 0,
-                flexShrink: 0,
-                cursor: "pointer",
-              }}
-            >
-              <History size={15} aria-hidden="true" />
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flexShrink: 0 }}>
+              <AjudaContextualAcoes
+                pageKey={pageKey}
+                tutorial={modo === "escritorio" ? null : TUTORIAL_ALTERAR_ESCALA}
+              />
+              <button
+                type="button"
+                onClick={() => setHistoricoModalAberto(true)}
+                aria-label="Abrir histórico de ações da escala neste mês"
+                title="Histórico"
+                style={{
+                  ...getFiltroBarPillStateStyle(t, brand, false),
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  padding: 0,
+                  flexShrink: 0,
+                  cursor: "pointer",
+                }}
+              >
+                <History size={15} aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
           {mostrarFiltroArea ? (
@@ -2436,6 +2469,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                                 filtroArea,
                               );
                           const alteracaoMeta = alteracoesPorCelulaAtivas?.[ck];
+                          const comentarioMarketplace = comentariosMarketplaceAtivos?.[ck];
                           const valorAnteriorLabel = alteracaoMeta
                             ? gradeAprovada
                               ? labelExibicaoCelulaAlterarEscala(alteracaoMeta.valorAnterior, modo, filtroArea)
@@ -2454,7 +2488,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                                 ...tdDia,
                                 background: fundoColunaDia(dia, bg),
                                 ...(podeEditarCelulasDia ? { minWidth: 76, maxWidth: 86 } : {}),
-                                ...(alteracaoMeta
+                                ...(alteracaoMeta || comentarioMarketplace
                                   ? { position: "relative" as const, overflow: "visible" as const }
                                   : {}),
                               }}
@@ -2496,7 +2530,58 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                                   >
                                     {textoCelula}
                                   </span>
-                                  {alteracaoMeta ? (
+                                  {comentarioMarketplace ? (
+                                    <CelulaIndicadorAlteracaoEscala
+                                      t={t}
+                                      tituloTooltip={
+                                        comentarioMarketplace.tipo === "compra"
+                                          ? "Compra no Marketplace"
+                                          : comentarioMarketplace.tipo === "venda"
+                                            ? "Venda no Marketplace"
+                                            : "Troca no Marketplace"
+                                      }
+                                      detalhes={
+                                        comentarioMarketplace.tipo === "compra"
+                                          ? [
+                                              {
+                                                rotulo: "Venda",
+                                                valor: comentarioMarketplace.contraparteNome,
+                                              },
+                                              {
+                                                rotulo: "Turno a trabalhar",
+                                                valor: comentarioMarketplace.turnoTrabalhar ?? "—",
+                                              },
+                                              {
+                                                rotulo: "Estúdio a trabalhar",
+                                                valor: comentarioMarketplace.estudioTrabalhar ?? "—",
+                                              },
+                                            ]
+                                          : comentarioMarketplace.tipo === "venda"
+                                            ? [
+                                                {
+                                                  rotulo: "Compra",
+                                                  valor: comentarioMarketplace.contraparteNome,
+                                                },
+                                              ]
+                                            : [
+                                                {
+                                                  rotulo: "Troca realizada com",
+                                                  valor: comentarioMarketplace.contraparteNome,
+                                                },
+                                                {
+                                                  rotulo: "Turno a trabalhar",
+                                                  valor: comentarioMarketplace.turnoTrabalhar ?? "—",
+                                                },
+                                                {
+                                                  rotulo: "Estúdio a trabalhar",
+                                                  valor: comentarioMarketplace.estudioTrabalhar ?? "—",
+                                                },
+                                              ]
+                                      }
+                                      ariaLabel="Ver detalhes da negociação no Marketplace"
+                                      corIcone="#a78bfa"
+                                    />
+                                  ) : alteracaoMeta ? (
                                     <CelulaIndicadorAlteracaoEscala
                                       meta={alteracaoMeta}
                                       valorAnteriorLabel={valorAnteriorLabel}

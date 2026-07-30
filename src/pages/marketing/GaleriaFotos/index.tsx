@@ -28,6 +28,7 @@ import { consumeHomeGaleriaFocus } from "../../../lib/homeGaleriaDeepLink";
 import { supabase } from "../../../lib/supabase";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader, ModalConfirmExcluirPadrao, ModalConfirmDelete } from "../../../components/OperacoesModal";
@@ -1134,7 +1135,10 @@ export default function GaleriaFotos() {
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
+        <div className="app-filter-bar-tabs-cta">
+        <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
         <div
+          className="app-filter-bar-tabs-cta__tabs"
           role="tablist"
           aria-label="Seções da galeria"
           onKeyDown={(e) => onFiltroBarTabsKeyDown(e, abasDisponiveis, setAba, (k) => `tab-galeria-${k}`)}
@@ -1144,7 +1148,6 @@ export default function GaleriaFotos() {
             justifyContent: "center",
             flexWrap: "wrap",
             gap: 10,
-            width: "100%",
           }}
         >
           <FiltroBarTabButton
@@ -1167,6 +1170,10 @@ export default function GaleriaFotos() {
               Upload
             </FiltroBarTabButton>
           ) : null}
+        </div>
+        <div className="app-filter-bar-tabs-cta__actions">
+          <AjudaContextualAcoes pageKey="galeria_fotos" />
+        </div>
         </div>
       </div>
 

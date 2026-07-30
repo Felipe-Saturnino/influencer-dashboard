@@ -42,6 +42,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -224,16 +225,9 @@ export default function DashboardOverviewAfiliado() {
         />
 
         <div style={getPageFilterBoxStyle(brand, t)}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              flexWrap: "wrap",
-              width: "100%",
-            }}
-          >
+          <div className="app-filter-bar-tabs-cta">
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+            <div className="app-filter-bar-tabs-cta__tabs">
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               <button
                 type="button"
@@ -294,6 +288,10 @@ export default function DashboardOverviewAfiliado() {
                 podeVerOperadora={podeVerOperadora}
               />
             )}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="dash_overview_afiliado" />
+            </div>
           </div>
         </div>
 

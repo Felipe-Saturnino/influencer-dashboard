@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { FiltroHistoricoButton } from "../../../components/dashboard";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -111,6 +112,7 @@ export function InformativosBlocoFiltros({
           wrapperStyle={{ flex: "1 1 220px", minWidth: 200, maxWidth: 480 }}
         />
         {filtroStatusGerenciamento}
+        <AjudaContextualAcoes pageKey="informativos" />
         {linhaAposSubabas ? (
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", flexShrink: 0 }}>
             {linhaAposSubabas}

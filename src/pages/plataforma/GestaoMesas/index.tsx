@@ -6,6 +6,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { GestaoUsuariosLoading } from "../GestaoUsuarios/gestaoUsuariosUi";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -183,34 +184,38 @@ export default function GestaoMesas() {
         </div>
 
         <div
-          role="tablist"
-          aria-label="Estúdios ou Mesas"
-          onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, TAB_IDS, aba, setAba, "tab-gestao-estudios-")}
-          style={{
-            ...getFilterBarRowStyle({ width: "100%" }),
-            paddingTop: 12,
-            marginTop: 12,
-            borderTop: `1px solid ${t.cardBorder}`,
-          }}
+          className="app-filter-bar-tabs-cta"
+          style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}
         >
-          <FiltroBarTabButton
-            id="tab-gestao-estudios-estudios"
-            active={aba === "estudios"}
-            aria-controls="panel-gestao-estudios-estudios"
-            onClick={() => setAba("estudios")}
-            icon={<Building2 size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+          <div
+            role="tablist"
+            aria-label="Estúdios ou Mesas"
+            className="app-filter-bar-tabs-cta__tabs"
+            onKeyDown={(e) => handleFiltroBarTabsArrowKeyDown(e, TAB_IDS, aba, setAba, "tab-gestao-estudios-")}
           >
-            Estúdios
-          </FiltroBarTabButton>
-          <FiltroBarTabButton
-            id="tab-gestao-estudios-mesas"
-            active={aba === "mesas"}
-            aria-controls="panel-gestao-estudios-mesas"
-            onClick={() => setAba("mesas")}
-            icon={<LayoutGrid size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-          >
-            Mesas
-          </FiltroBarTabButton>
+            <FiltroBarTabButton
+              id="tab-gestao-estudios-estudios"
+              active={aba === "estudios"}
+              aria-controls="panel-gestao-estudios-estudios"
+              onClick={() => setAba("estudios")}
+              icon={<Building2 size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+            >
+              Estúdios
+            </FiltroBarTabButton>
+            <FiltroBarTabButton
+              id="tab-gestao-estudios-mesas"
+              active={aba === "mesas"}
+              aria-controls="panel-gestao-estudios-mesas"
+              onClick={() => setAba("mesas")}
+              icon={<LayoutGrid size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+            >
+              Mesas
+            </FiltroBarTabButton>
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="gestao_mesas" />
+          </div>
         </div>
       </div>
 

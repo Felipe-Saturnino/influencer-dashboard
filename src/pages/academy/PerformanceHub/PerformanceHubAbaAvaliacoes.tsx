@@ -282,7 +282,10 @@ export function PerformanceHubAbaAvaliacoes({
                         </span>
                       </td>
                       <td style={dataTable.tdCenter}>
-                        <LinkAssistirVideoPerformanceHub videoUrl={row.videoUrl} />
+                        <LinkAssistirVideoPerformanceHub
+                          videoUrl={row.videoUrl}
+                          videoRemovidoEm={row.videoRemovidoEm}
+                        />
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>

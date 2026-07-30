@@ -24,6 +24,7 @@ import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
@@ -564,7 +565,7 @@ export default function CsAtendimentoPage() {
             ) : null}
           </div>
 
-          <div className="app-marketplace-filtro-minhas__cta">
+          <div className="app-marketplace-filtro-minhas__cta" style={{ gap: 10 }}>
             <FiltroBarCampoSelect
               id="filtro-staff-cs"
               value={filtroAtendente}
@@ -577,6 +578,7 @@ export default function CsAtendimentoPage() {
               todasLabel={CS_ATENDIMENTO_FILTRO_TODOS_LABEL}
               minWidth={220}
             />
+            <AjudaContextualAcoes pageKey="cs_atendimento" />
           </div>
         </div>
 

@@ -3,24 +3,37 @@ import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { FONT } from "../constants/theme";
 import {
+  ACADEMY_PERFORMANCE_HUB_VIDEO_RETENCAO_DIAS,
   urlAssinadaVideoPerformanceHub,
   videoPerformanceHubPodeAssistir,
 } from "../lib/academyPerformanceHubVideoFiles";
 
 type Props = {
   videoUrl: string | null | undefined;
+  /** Quando preenchido, a retenção já apagou o arquivo do Storage. */
+  videoRemovidoEm?: string | null;
   /** Estilo do link (default: marca). */
   className?: string;
 };
 
 /** Abre o vídeo com URL assinada do Storage (paths) ou URL http(s) legada. */
-export function LinkAssistirVideoPerformanceHub({ videoUrl }: Props) {
+export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(false);
 
   if (!videoPerformanceHubPodeAssistir(videoUrl)) {
+    if (videoRemovidoEm) {
+      return (
+        <span
+          title={`Vídeo apagado ${ACADEMY_PERFORMANCE_HUB_VIDEO_RETENCAO_DIAS} dias após a conclusão da avaliação.`}
+          style={{ color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}
+        >
+          Vídeo removido
+        </span>
+      );
+    }
     return <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>—</span>;
   }
 

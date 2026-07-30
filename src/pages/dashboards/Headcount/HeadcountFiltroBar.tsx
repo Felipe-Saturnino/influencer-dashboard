@@ -11,6 +11,7 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { HeadcountDiretoriaRef } from "../../../lib/headcountMetrics";
 import type { HeadcountTab } from "./useHeadcountDados";
@@ -109,18 +110,13 @@ export function HeadcountFiltroBar({
         )}
       </div>
 
-      <div
-        style={{
-          ...getFilterBarRowStyle(),
-          paddingTop: 12,
-          marginTop: 12,
-          borderTop: `1px solid ${t.cardBorder}`,
-        }}
-      >
+      <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
         <div
+          className="app-filter-bar-tabs-cta__tabs"
           role="tablist"
           aria-label="Abas do Headcount"
-          style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", width: "100%" }}
           onKeyDown={(e) =>
             onFiltroBarTabsKeyDown(
               e,
@@ -145,6 +141,10 @@ export function HeadcountFiltroBar({
               </FiltroBarTabButton>
             );
           })}
+        </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="dash_headcount" />
+          </div>
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle, getFilterBarWrapperStyle } from "../../../lib/filterBarStyles";
 import { getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { FiltroBarCampoSelect, FiltroEntidadeBarSelect, FiltroHistoricoButton } from "../../../components/dashboard";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import {
   STATUS_OPTIONS,
   STORAGE_BUCKET,
@@ -353,6 +354,7 @@ export default function CentralDenunciasSpin() {
               aria-label="Pesquisar denúncias por palavras-chave no relato"
               wrapperStyle={{ width: "100%", flex: "1 1 280px", maxWidth: "100%" }}
             />
+            <AjudaContextualAcoes pageKey="rh_central_denuncias" />
           </div>
         </div>
 

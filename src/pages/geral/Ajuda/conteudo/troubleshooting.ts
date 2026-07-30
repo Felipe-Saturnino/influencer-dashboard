@@ -654,7 +654,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro o botão Analisar?",
         texto:
-          "O botão **Analisar** só aparece para avaliações em status **Em Análise**. Avaliações **Concluída**, **Pendente** ou **Feedback** exibem apenas **Ver** e **Histórico** — isso é intencional.",
+          "O botão **Analisar** aparece em status **Em Análise** e **Feedback**. Avaliações **Pendente** e **Concluída** exibem apenas **Ver** e **Histórico** — isso é intencional.\n\nCom escopo **Próprios** o botão não aparece em **Em Análise**, apenas em **Feedback**.",
+      },
+      {
+        subtitulo: "Erro ao enviar o vídeo da avaliação?",
+        texto:
+          "O limite é **500 MB** por arquivo. Se a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.\n\nO envio só acontece ao clicar em **Salvar** ou **Concluir** — enquanto o botão mostra **Enviando…**, mantenha a aba aberta.",
+      },
+      {
+        subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",
+        texto:
+          "Comportamento esperado: o vídeo é apagado **90 dias após a avaliação ser concluída**, porque serve ao ciclo de avaliação e feedback. Notas, comentários e o nome do arquivo continuam disponíveis.\n\nSe precisar rever a gravação depois desse prazo, guarde uma cópia própria antes. Se o vídeo desapareceu **antes** de 90 dias da conclusão, entre em contato com o suporte.",
       },
     ],
   },
@@ -1336,6 +1346,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um dia pontual no mês já aprovado, use **Alterar Escala** (escolhe o turno do dia + observação).",
       },
+      {
+        subtitulo: "A célula de Compra, Venda ou Troca não mostra o comentário?",
+        texto:
+          "O comentário aparece em células gravadas por uma negociação **concluída** no Marketplace. Propostas de troca **Em análise** ainda não alteram a escala. Atualize a Escala Estúdio após o aceite ou aprovação. Se a célula tiver sido alterada manualmente depois, o comentário da negociação deixa de aparecer porque o valor atual já não corresponde ao valor registrado pelo Marketplace.",
+      },
     ],
   },
   escala_escritorio: {
@@ -1439,7 +1454,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo aceitar uma oferta?",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta, e o dia precisa ser futuro com a escala do mês **aprovada**. Em Venda de Turno e Troca você precisa estar **de folga** no dia; em Venda de Folga precisa estar **escalado no mesmo turno** da oferta. Aceites que deixem menos de **12h** entre turnos são bloqueados com aviso.",
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta, e o dia precisa ser futuro com a escala do mês **aprovada**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar.",
       },
       {
         subtitulo: "Só vejo ofertas do meu time?",
@@ -1449,7 +1464,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitei uma oferta e a escala não mudou?",
         texto:
-          "A célula é gravada na Escala Estúdio aprovada no momento do aceite: **Compra - Turno** para quem assumiu e **Venda** para quem saiu. Recarregue a Escala Estúdio ou o Calendário — a leitura pode estar em cache da sessão. Se continuar divergente, entre em contato com o suporte.",
+          "Nas vendas, a célula é gravada no aceite: **Compra - Turno** para quem assumiu e **Venda** para quem saiu. Na **Oferta de Troca**, enviar a proposta não altera a escala: o status fica **Em análise** e o ofertante original deve aprovar em **Minhas ofertas abertas**. Se a aprovação já ocorreu, recarregue a Escala Estúdio ou o Calendário. Se continuar divergente, entre em contato com o suporte.",
       },
     ],
   },

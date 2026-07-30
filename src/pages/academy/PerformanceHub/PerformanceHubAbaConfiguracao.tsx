@@ -1,4 +1,4 @@
-import { Loader2, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -11,7 +11,8 @@ import { CtaCriarButton, SectionTitle } from "../../../components/dashboard";
 type Props = {
   config: Record<string, PerformanceHubDimensaoConfig>;
   onChange: (next: Record<string, PerformanceHubDimensaoConfig>) => void;
-  onSalvar: () => void;
+  onSalvar: () => Promise<string | null>;
+  loadError?: string | null;
 };
 
 const COL_CRITERIO_WIDTH = "76%";
@@ -24,16 +25,20 @@ const tableStyle = {
   tableLayout: "fixed" as const,
 };
 
-export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Props) {
+export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar, loadError }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const pageBox = getPageContentBoxStyle(brand, t);
   const [salvando, setSalvando] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [salvo, setSalvo] = useState(false);
   const dimKeys = orderedPerformanceHubConfigKeys(config);
 
   function updatePesoDimensao(key: string, value: string) {
     const parsed = Number(value);
     if (Number.isNaN(parsed)) return;
+    setSalvo(false);
+    setSaveError(null);
     onChange({
       ...config,
       [key]: {
@@ -46,6 +51,8 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Pr
   function updatePesoCriterio(dimKey: string, criterioSlug: string, value: string) {
     const parsed = Number(value);
     if (Number.isNaN(parsed)) return;
+    setSalvo(false);
+    setSaveError(null);
     const dim = config[dimKey]!;
     onChange({
       ...config,
@@ -58,8 +65,15 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Pr
 
   async function handleSalvar() {
     setSalvando(true);
-    onSalvar();
-    window.setTimeout(() => setSalvando(false), 500);
+    setSaveError(null);
+    setSalvo(false);
+    try {
+      const error = await onSalvar();
+      setSaveError(error);
+      setSalvo(error == null);
+    } finally {
+      setSalvando(false);
+    }
   }
 
   return (
@@ -67,6 +81,16 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Pr
       <SectionTitle sub="Escala 0–10 · alterações aplicam-se a novas avaliações">
         Configuração de Pesos
       </SectionTitle>
+
+      {loadError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+        >
+          {loadError}
+        </div>
+      ) : null}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {dimKeys.map((dimKey) => {
@@ -155,10 +179,22 @@ export function PerformanceHubAbaConfiguracao({ config, onChange, onSalvar }: Pr
         </CtaCriarButton>
       </div>
 
-      {salvando ? (
-        <div style={{ marginTop: 10, color: t.textMuted, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <Loader2 size={12} className="app-lucide-spin" aria-hidden />
-          Salvando…
+      {saveError ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{ marginTop: 10, color: "#e84025", fontSize: 12, fontFamily: FONT.body }}
+        >
+          {saveError}
+        </div>
+      ) : null}
+      {salvo ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{ marginTop: 10, color: "#22c55e", fontSize: 12, fontFamily: FONT.body }}
+        >
+          Pesos salvos com sucesso.
         </div>
       ) : null}
     </div>

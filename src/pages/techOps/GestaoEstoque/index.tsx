@@ -13,6 +13,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import {
   FiltroBarTabButton,
@@ -230,6 +231,7 @@ export default function TechOpsGestaoEstoque() {
               todasLabel="Todas Categorias"
             />
           ) : null}
+          <AjudaContextualAcoes pageKey="tech_ops_estoque" />
         </div>
       </div>
 

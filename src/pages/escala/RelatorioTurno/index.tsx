@@ -20,6 +20,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
@@ -247,7 +248,9 @@ export default function EscalaRelatorioTurnoPage() {
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
-        <div style={filterBarSection(false)}>
+        <div className="app-filter-bar-tabs-cta">
+        <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+        <div className="app-filter-bar-tabs-cta__tabs" style={{ ...filterBarSection(false), width: "auto" }}>
           <button
             type="button"
             aria-label="Mês anterior"
@@ -280,6 +283,10 @@ export default function EscalaRelatorioTurnoPage() {
               }
             }}
           />
+        </div>
+        <div className="app-filter-bar-tabs-cta__actions">
+          <AjudaContextualAcoes pageKey="escala_relatorio_turno" />
+        </div>
         </div>
 
         <div

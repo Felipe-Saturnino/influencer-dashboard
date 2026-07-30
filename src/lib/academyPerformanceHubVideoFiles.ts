@@ -2,8 +2,21 @@ import { supabase } from "./supabase";
 
 export const ACADEMY_PERFORMANCE_HUB_VIDEOS_BUCKET = "academy-performance-hub-videos";
 
-/** Limite alinhado ao bucket (200 MB). */
-export const ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES = 209715200;
+/** Limite alinhado ao bucket (500 MB). */
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES = 524288000;
+
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL = "500 MB";
+
+/** Retenção aplicada pela Edge Function purge-academy-performance-hub-videos. */
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_RETENCAO_DIAS = 90;
+
+/** Orientação no campo de upload — evita arquivos grandes na origem. */
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO =
+  `Grave em 720p para o arquivo ficar leve — máximo ${ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL} por vídeo. ` +
+  `O arquivo é apagado ${ACADEMY_PERFORMANCE_HUB_VIDEO_RETENCAO_DIAS} dias após a avaliação ser concluída.`;
+
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO =
+  `O vídeo ultrapassa o tamanho máximo de ${ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL}. Envie um arquivo menor.`;
 
 const MIME_POR_EXTENSAO: Record<string, string> = {
   mp4: "video/mp4",
@@ -58,7 +71,7 @@ function mensagemErroUploadVideo(error: { message?: string; statusCode?: string 
     return "Formato de vídeo não suportado. Use MP4, MOV ou WebM.";
   }
   if (raw.includes("maximum") || raw.includes("too large") || raw.includes("payload") || raw.includes("413")) {
-    return "O vídeo ultrapassa o tamanho máximo de 200 MB. Envie um arquivo menor.";
+    return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO;
   }
   if (
     raw.includes("row-level security") ||
@@ -77,10 +90,7 @@ export async function uploadVideoPerformanceHub(
   avaliacaoId?: string | null,
 ): Promise<{ path: string; error: string | null }> {
   if (file.size > ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES) {
-    return {
-      path: "",
-      error: "O vídeo ultrapassa o tamanho máximo de 200 MB. Envie um arquivo menor.",
-    };
+    return { path: "", error: ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO };
   }
 
   const extRaw = file.name.includes(".") ? file.name.split(".").pop() : "mp4";

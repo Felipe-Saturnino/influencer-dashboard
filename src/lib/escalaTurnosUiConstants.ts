@@ -88,6 +88,8 @@ export type LinhaOfertaMarketplace = {
   tipo: RhCalendarioAcaoTipo;
   turnoOferta: string;
   operadora: string;
+  /** Marketplace: estúdio(s) do prestador ofertante (Gestão de Staff); sem valor cai no rótulo de operadora. */
+  estudio?: string;
   ofertante: string;
   dataInteresseIso?: string;
   turnoInteresse?: string;

@@ -37,6 +37,7 @@ export function PortalAcademyBlocoFiltros({
   onBuscaChange,
   buscaPlaceholder = PAGE_SEARCH.portalAcademy,
   buscaAriaLabel = "Pesquisar postagens por palavras-chave",
+  acoesAjuda,
   linhaAbas,
   linhaSubabas,
 }: {
@@ -49,6 +50,7 @@ export function PortalAcademyBlocoFiltros({
   onBuscaChange: (v: string) => void;
   buscaPlaceholder?: string;
   buscaAriaLabel?: string;
+  acoesAjuda?: ReactNode;
   linhaAbas?: ReactNode;
   linhaSubabas?: ReactNode;
 }) {
@@ -63,7 +65,9 @@ export function PortalAcademyBlocoFiltros({
 
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
-      <div style={LINHA_FILTRO}>
+      <div className="app-filter-bar-tabs-cta">
+      <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+      <div className="app-filter-bar-tabs-cta__tabs" style={{ ...LINHA_FILTRO, width: "auto" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <button
             type="button"
@@ -86,6 +90,8 @@ export function PortalAcademyBlocoFiltros({
           </button>
         </div>
         <FiltroHistoricoButton active={modoHistorico} onClick={() => onModoHistoricoChange(!modoHistorico)} />
+      </div>
+      <div className="app-filter-bar-tabs-cta__actions">{acoesAjuda}</div>
       </div>
 
       {linhaAbas ? <div style={{ ...LINHA_FILTRO, ...sep }}>{linhaAbas}</div> : null}

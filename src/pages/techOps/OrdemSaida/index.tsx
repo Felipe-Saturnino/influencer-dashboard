@@ -13,6 +13,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import {
   FiltroBarTabButton,
@@ -267,6 +268,7 @@ export default function TechOpsOrdemSaida() {
             aria-label="Buscar ordens de saída"
             wrapperStyle={{ flex: "1 1 260px", maxWidth: 420 }}
           />
+          <AjudaContextualAcoes pageKey="tech_ops_ordem_saida" />
         </div>
       </div>
 

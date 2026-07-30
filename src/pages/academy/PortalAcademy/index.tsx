@@ -47,6 +47,10 @@ import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import {
+  AjudaContextualAcoes,
+  type AjudaContextualTutorial,
+} from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
@@ -54,6 +58,16 @@ import { getPageContentBoxStyle, getPageContentBoxShadow } from "../../../lib/pa
 import type { AcademyPostagemTipoUi } from "../../../lib/academyPortalWorkflow";
 
 type AbaPortal = "comunicados" | "dicas" | "manuais" | "gerenciamento";
+
+const TUTORIAL_CIENCIA_MANUAIS: AjudaContextualTutorial = {
+  id: "ciencia-manuais-academy",
+  urlSlug: "CienciaManuaisAcademy",
+};
+
+const TUTORIAL_POSTAGEM_APROVACAO: AjudaContextualTutorial = {
+  id: "postagem-academy-aprovacao",
+  urlSlug: "DicasAcademy",
+};
 
 function isPostagemPublica(status: AcademyPostagemStatus | string | null | undefined): boolean {
   return !status || status === "publicado";
@@ -782,6 +796,18 @@ export default function PortalAcademyPage() {
           aba === "manuais"
             ? "Pesquisar manuais por código, título ou palavra-chave"
             : "Pesquisar postagens por palavras-chave"
+        }
+        acoesAjuda={
+          <AjudaContextualAcoes
+            pageKey="academy_portal"
+            tutorial={
+              aba === "manuais"
+                ? TUTORIAL_CIENCIA_MANUAIS
+                : aba === "gerenciamento"
+                  ? TUTORIAL_POSTAGEM_APROVACAO
+                  : null
+            }
+          />
         }
         linhaAbas={linhaAbas}
         linhaSubabas={linhaSubabas}

@@ -14,6 +14,7 @@ import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioL
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina"
 import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes"
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants"
 import { textoContemBusca } from "../../../lib/searchText"
@@ -631,6 +632,7 @@ export default function FigurinosPage() {
               aria-label="Buscar peças na aba atual"
               wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
             />
+            <AjudaContextualAcoes pageKey="rh_figurinos" />
             <button
               type="button"
               onClick={() => {

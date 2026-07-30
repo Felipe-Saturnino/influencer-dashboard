@@ -28,6 +28,7 @@ import {
   FiltroStatusSemanticoPill,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   getPageContentBoxStyle,
@@ -501,7 +502,9 @@ export default function Feedback() {
       {/* ── BLOCO DE FILTROS (carrossel de semanas + Histórico + Status padrão Agenda) ── */}
       <div style={getPageFilterBoxStyle(brand, t)}>
           {/* Linha 1: Carrossel de semanas, Histórico, Influencer e Operadora — alinhado ao Overview Influencer */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div className="app-filter-bar-tabs-cta__tabs" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               style={getCarouselBtnNavStyle(t, historico || isPrimeiro)}
@@ -555,6 +558,10 @@ export default function Feedback() {
                 }
               />
             )}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="feedback" />
+          </div>
           </div>
 
           {/* Linha 2: Status (padrão Agenda — legenda + cores) */}

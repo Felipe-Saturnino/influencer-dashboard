@@ -13,6 +13,7 @@ import type { CicloPagamento } from "../../../types"
 import { FiltroInfluencerSelect, FiltroHistoricoButton, FiltroOperadoraSelect } from "../../../components/dashboard"
 import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
+import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes"
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles"
 import { roleParidadeInfluencer } from "../../../lib/staffRoles"
@@ -310,6 +311,7 @@ export default function Financeiro() {
           icon={<PageMenuIcon pageKey="financeiro" />}
           title={getPageMenuLabel("financeiro")}
           subtitle="Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago."
+          actions={<AjudaContextualAcoes pageKey="financeiro" />}
         />
         <div style={getPageContentBoxStyle(brand, t, { padding: 48, textAlign: "center" })}>
           <p style={{ fontFamily: FONT_TITLE, fontSize: "18px", fontWeight: 900, color: t.text, marginBottom: "8px" }}>
@@ -361,7 +363,9 @@ export default function Financeiro() {
 
       {/* Bloco de filtros (similar Agenda) */}
       <div style={getPageFilterBoxStyle(brand, t)}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+          <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
+          <div className="app-filter-bar-tabs-cta__tabs" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               aria-label="Mês anterior"
@@ -407,6 +411,10 @@ export default function Financeiro() {
                 podeVerOperadora={podeVerOperadora}
               />
             )}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="financeiro" />
+          </div>
           </div>
       </div>
 

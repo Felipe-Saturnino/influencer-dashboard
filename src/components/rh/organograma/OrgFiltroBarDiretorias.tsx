@@ -6,6 +6,7 @@ import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { FiltroBarPillButton } from "../../dashboard/FiltroBarPillButton";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import type { RhOrgDiretoria } from "../../../types/rhOrganograma";
+import { AjudaContextualAcoes } from "../../AjudaContextualAcoes";
 
 const TODAS_KEY = "todas" as const;
 
@@ -104,17 +105,10 @@ export function OrgFiltroBarDiretorias({
           padding: "12px 20px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            flexWrap: "wrap",
-            marginBottom: podeEditar ? 12 : 0,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <div className="app-filter-bar-tabs-cta" style={{ marginBottom: podeEditar ? 12 : 0 }}>
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+          <div className="app-filter-bar-tabs-cta__tabs">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <button
               type="button"
               aria-label="Diretoria anterior"
@@ -148,35 +142,39 @@ export function OrgFiltroBarDiretorias({
             >
               <ChevronRight size={14} strokeWidth={2} aria-hidden="true" />
             </button>
-          </div>
+            </div>
 
-          <FiltroBarPillButton
-            active={todas}
-            onClick={toggleTodasDiretorias}
-            icon={FilterBarIcons.diretoria}
-            aria-label={
-              todas ? "Ver uma diretoria de cada vez" : "Ver todas as diretorias de uma vez"
-            }
-          >
-            Todas as diretorias
-          </FiltroBarPillButton>
-
-          {loading ? (
-            <span
-              style={{
-                fontSize: 12,
-                color: t.textMuted,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                flexShrink: 0,
-              }}
-              aria-live="polite"
+            <FiltroBarPillButton
+              active={todas}
+              onClick={toggleTodasDiretorias}
+              icon={FilterBarIcons.diretoria}
+              aria-label={
+                todas ? "Ver uma diretoria de cada vez" : "Ver todas as diretorias de uma vez"
+              }
             >
-              <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
-              Carregando…
-            </span>
-          ) : null}
+              Todas as diretorias
+            </FiltroBarPillButton>
+
+            {loading ? (
+              <span
+                style={{
+                  fontSize: 12,
+                  color: t.textMuted,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexShrink: 0,
+                }}
+                aria-live="polite"
+              >
+                <Loader2 size={14} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
+                Carregando…
+              </span>
+            ) : null}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="rh_organograma" />
+          </div>
         </div>
 
         {podeEditar ? (

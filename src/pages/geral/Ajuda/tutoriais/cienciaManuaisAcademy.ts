@@ -11,6 +11,7 @@ export const TUTORIAL_CIENCIA_MANUAIS_ACADEMY: TutorialDef = {
   section: "Academy",
   icon: BookCheck,
   relatedPageKey: "academy_portal",
+  relatedTabId: "manuais",
   objetivo:
     "Identificar se um manual exige ciência e registrar o aceite Lido e Ciente na aba Manuais.",
   passos: [

@@ -739,6 +739,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "O botão **Baixar Excel**, acima da barra de pesquisa da Escala Diária, gera uma planilha do time e do mês selecionados. A aba **Consolidado** traz um bloco por turno (Manhã, Tarde e Noite) com estúdio nas linhas, dias do mês nas colunas e uma linha de Total; a aba **Detalhado** traz Nome, Nickname, Turno, Estúdio e o status de cada dia. O arquivo respeita os filtros aplicados na tela (estúdio, turno e busca).",
       },
+      {
+        subtitulo: "Comentários do Marketplace",
+        texto:
+          "Células alteradas por uma negociação aceita no **Marketplace** exibem um ícone de comentário. Em **Compra**, o detalhe informa quem vendeu, o turno e o estúdio onde o prestador trabalhará. Em **Venda**, informa quem comprou. Em **Troca**, os dois prestadores veem com quem trocaram e qual turno/estúdio cada um assumirá. Os dados são registrados no momento da conclusão da negociação e permanecem vinculados à célula enquanto ela mantiver o valor gravado pelo Marketplace.",
+      },
     ],
   },
   escala_escritorio: {
@@ -803,12 +808,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Ponta única onde os prestadores de estúdio negociam turnos: **Venda de Turno**, **Venda de Folga** e **Oferta de Troca**. A aba **Todas as Ofertas** mostra o mural do período. Com **Ver: Próprios** há ainda **Minhas Ofertas** (o que você publicou e o que aceitou). Com **Ver: Sim** (gestão), no lugar de Minhas Ofertas aparece **Ofertas Encerradas**, com o histórico de aceites e cancelamentos de todos os prestadores. O aceite é **imediato**, sem aprovação de gestor: a Escala Estúdio aprovada é atualizada na hora com Compra, Venda ou Troca.",
+          "Ponta única onde os prestadores de estúdio negociam turnos: **Venda de Turno**, **Venda de Folga** e **Oferta de Troca**. A aba **Todas as Ofertas** mostra o mural do período. Com **Ver: Próprios** há ainda **Minhas Ofertas** (o que você publicou e o que aceitou). Com **Ver: Sim** (gestão), no lugar de Minhas Ofertas aparece **Ofertas Encerradas**, com o histórico de aceites e cancelamentos de todos os prestadores. Vendas têm aceite imediato; na **Oferta de Troca**, o aceitante envia uma proposta e a escala só muda após o ofertante original aprovar — sem aprovação de gestor.",
       },
       {
         subtitulo: "O que você vê",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter** e **Shuffler**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, operadora ou turno na última linha.",
+          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter** e **Shuffler**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha.",
       },
       {
         subtitulo: "Publicar uma oferta",
@@ -818,7 +823,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitar uma oferta",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). **Compra - Turno** se comporta como dia escalado e pode ser revendida; **Venda** se comporta como folga e libera nova negociação. Ofertas **aceitas** ou **canceladas** somem do mural de Todas as Ofertas e ficam nos blocos de Minhas Ofertas (**Ofertas que aceitei** ou **Histórico**).",
+          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
         },
       {
         subtitulo: "Intervalo mínimo de 12h",
@@ -899,7 +904,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Status e ações",
         texto:
-          "**Pendente** — Ver e Histórico (sem notas).\n\n**Em Análise** — Ver, **Analisar** (modal com critérios 0–10) e Histórico.\n\n**Feedback** e **Concluída** — Ver e Histórico; avaliações concluídas **não** exibem Analisar.\n\nPrestador (Próprios): **Ver minha avaliação** e Histórico nas concluídas.",
+          "**Pendente** — Ver e Histórico (sem notas).\n\n**Em Análise** — Ver, **Analisar** (modal com critérios 0–10) e Histórico.\n\n**Feedback** — Ver, **Analisar** (revisão em leitura, com **Aprovar** ou **Solicitar Feedback**) e Histórico.\n\n**Concluída** — Ver e Histórico; avaliações concluídas **não** exibem Analisar.\n\nPrestador (Próprios): **Ver minha avaliação** e Histórico nas concluídas.",
+      },
+      {
+        subtitulo: "Vídeo da avaliação",
+        texto:
+          "O vídeo é obrigatório para concluir a avaliação e fica guardado em área privada — o link **Assistir** abre um endereço temporário, válido por 1 hora.\n\nGrave em **720p** para o arquivo ficar leve: o limite é **500 MB** por vídeo, e arquivos maiores são recusados já na seleção.\n\nPassados **90 dias** da conclusão da avaliação, o vídeo é apagado automaticamente e a coluna passa a exibir **Vídeo removido**. Notas, comentários e o nome do arquivo permanecem no histórico.",
       },
       {
         subtitulo: "Pontuação",
