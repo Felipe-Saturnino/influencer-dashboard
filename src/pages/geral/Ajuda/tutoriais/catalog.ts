@@ -3,6 +3,7 @@ import type { TutorialVisibilidadeMap } from "../../../../lib/ajudaTutorialVisib
 import { tutorialVisivelParaRole } from "../../../../lib/ajudaTutorialVisibilidade";
 import { TUTORIAL_ALTERAR_ESCALA } from "./alterarEscala";
 import { TUTORIAL_CONTROLE_PRESENCA } from "./controlePresenca";
+import { TUTORIAL_MARKETPLACE_OFERTAS } from "./marketplaceOfertas";
 import { TUTORIAL_POSTAGEM_ACADEMY_APROVACAO } from "./postagemAcademyAprovacao";
 import type { TutorialDef, TutorialSecaoNav } from "./types";
 
@@ -10,6 +11,7 @@ import type { TutorialDef, TutorialSecaoNav } from "./types";
 export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_CONTROLE_PRESENCA,
   TUTORIAL_ALTERAR_ESCALA,
+  TUTORIAL_MARKETPLACE_OFERTAS,
   TUTORIAL_POSTAGEM_ACADEMY_APROVACAO,
 ];
 
