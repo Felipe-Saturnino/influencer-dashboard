@@ -164,6 +164,11 @@ import {
   carregarAprovacaoPresencaMes,
   type PresencaAprovacaoMes,
 } from "../../../lib/rhCalendarioPresencaAprovacaoMesDb";
+import {
+  chaveMovimentacaoCelula,
+  mapOverviewPrestadorMovimentacoes,
+  type OverviewPrestadorMovimentacaoCelula,
+} from "../../../lib/overviewPrestadorMovimentacoes";
 import { useCalendarioPresencaGestaoMutacoes } from "./useCalendarioPresencaGestaoMutacoes";
 
 const TUTORIAL_CALENDARIO: AjudaContextualTutorial = {
@@ -757,6 +762,13 @@ export default function RhCalendarioPage() {
   );
   const [loadingPresencaGestao, setLoadingPresencaGestao] = useState(false);
   const [presencaGestaoTick, setPresencaGestaoTick] = useState(0);
+  /**
+   * Snapshot Marketplace do staff filtrado no mês — usado só nos KPIs para contar
+   * como Troca os dias gravados na grade como Venda / `Compra - Turno`.
+   */
+  const [movimentacoesPresencaPorChave, setMovimentacoesPresencaPorChave] = useState<
+    Map<string, OverviewPrestadorMovimentacaoCelula>
+  >(() => new Map());
   const [aprovacaoPresencaMes, setAprovacaoPresencaMes] = useState<PresencaAprovacaoMes | null>(null);
   const [loadingAprovacaoPresencaMes, setLoadingAprovacaoPresencaMes] = useState(false);
   const [modalAprovarPresencaMesAberto, setModalAprovarPresencaMesAberto] = useState(false);
@@ -1306,6 +1318,35 @@ export default function RhCalendarioPage() {
       cancelled = true;
     };
   }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, mesAnteriorPresencaRef, presencaGestaoTick]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
+      setMovimentacoesPresencaPorChave(new Map());
+      return;
+    }
+    const fid = presencaFilterStaffIds[0];
+    if (!fid) {
+      setMovimentacoesPresencaPorChave(new Map());
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase.rpc("dash_overview_prestador_movimentacoes_mes", {
+        p_funcionario_id: fid,
+        p_ref_mes: refMesPrimeiroDiaISO(current),
+      });
+      if (cancelled) return;
+      if (error) {
+        console.error("[calendario-presenca-movimentacoes]", error);
+        setMovimentacoesPresencaPorChave(new Map());
+        return;
+      }
+      setMovimentacoesPresencaPorChave(mapOverviewPrestadorMovimentacoes(data));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, presencaGestaoTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
@@ -2578,7 +2619,9 @@ export default function RhCalendarioPage() {
           statusBase: stBase,
           gestao: gestaoDia,
         });
-        return { situacao, status, temCheckIn };
+        const origemTrocaMarketplace =
+          movimentacoesPresencaPorChave.get(chaveMovimentacaoCelula(fid, iso))?.tipo === "troca";
+        return { situacao, status, temCheckIn, origemTrocaMarketplace };
       });
       return computePresencaKpisConsolidados(diasInput);
     },
@@ -2591,6 +2634,7 @@ export default function RhCalendarioPage() {
       prestadorPorId,
       mapOpTurnos,
       indiceJustificativaMedicoPresenca,
+      movimentacoesPresencaPorChave,
     ],
   );
 

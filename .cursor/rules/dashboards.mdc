@@ -158,24 +158,25 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Duas abas:** **Escala** (implementada) e **Performance** (placeholder «Conteúdo em desenvolvimento.»). Abas via `FiltroBarTabButton` + `useRouteTab` (`escala` | `performance`).
 - **Carrossel de mês:** `getMesesDisponiveisEscalaCarrossel` (agosto/2026+ — início oficial da escala). Antes de agosto, a lista contém só Agosto para pré-visualizar a grade.
 - **Histórico:** `FiltroHistoricoButton`; rótulo central **Todo o período**; janela de 13 competências inclusivas; MoM desligado nos KPIs.
-- **Filtros Time / Staff:** `FiltroCalendarioTimeSelect` + `FiltroCalendarioStaffSelect` (`mode="single"`) — catálogo e ordem de `rhCalendarioStaffFiltroHelpers.ts`. Staff filtra por time quando time ≠ agregador.
-- **Escopo próprios (`canView === "proprios"`):** ocultar filtros Time/Staff; auto-vincular `meuRhFuncionarioId` via e-mail de login (espelho Calendário RH). Default `proprios` para role `prestador` em `AppContext`.
-- **Staff obrigatório (gestores):** sem prestador selecionado → string **Selecione um prestador para visualizar os resultados.** (não a string global de período vazio).
-- **Dados:** RPCs `rh_calendario_grade_mes` (fallback `rh_calendario_grade_escala_mes`), `rh_calendario_ponto_registros_mes`, presença gestão (`carregarPresencaGestaoMes`); movimentações Marketplace via `dash_overview_prestador_movimentacoes_mes`; turnos via `fetchTurnosPorOperadoraSlugs`. Métricas em `lib/overviewPrestadorMetrics.ts` + helpers em `lib/overviewPrestadorCalendarioHelpers.ts` e `lib/overviewPrestadorMovimentacoes.ts`.
-- **Cache mensal:** grade, ponto, presença e movimentações usam `overviewPrestadorQueries.ts`, com chave por mês e prestador quando aplicável. Meses do Histórico carregam em paralelo; no modo mensal, a carga inclui também o mês comparativo anterior para o MoM. O loading permanece ativo até os grupos necessários terminarem.
-- **KPIs Consolidados (Escala):** 4× `KpiCard` — Dias Escalado, Dias Realizado, Horas Escaladas, Horas Realizadas — MoM via `getPeriodoComparativoMoM` (exceto Histórico).
-- **Absenteísmo:** cards locais (não `KpiCard`) — Pontualidade, Ponto não Registrado, Atestados — com sublinhas de detalhe.
-- **Gráficos:** Recharts — barras Aproveitamento (dias/horas); pizza Movimentações (Trocas / Vendidos / Comprados). Contagens pela **grade** (inclui `Compra - Turno`); contraparte pelo snapshot Marketplace. Cores semânticas fixas no pie (`PIE_CORES`), barras com `--brand-action`.
-- **Detalhamento Diário:** tabela canónica `useDataTableBlock` — colunas Data, Ocorrência, Detalhe; sort default **desc** em Data.
-- **Detalhe Troca/Compra/Venda:** snapshot `escala_marketplace_celula_comentario` — Compra `Comprado de {nome} · turno · estúdio`; Venda `Vendido para {nome}`; Troca `Troca com {nome} · turno · estúdio`. Sem snapshot (alteração manual na Escala) → **"—"**.
-- **Migration:** `20260630180000_dash_overview_prestador_page.sql` (seeds + RPCs calendário); `20261105210000_dash_overview_prestador_movimentacoes_mes.sql` (contraparte Marketplace).
+- **Filtros Time / Staff (gestores):** `FiltroCalendarioTimeSelect` + `FiltroCalendarioStaffSelect` (`mode="single"`). Times da v1: **Game Presenter** (default), **Shuffler**, **Shift Leader**, **Service Manager** — sem agregador «Todos os Times»; limpar Time restaura o default GP. Staff opcional: vazio = **visão de time** (consolidado); com Staff = visão individual.
+- **Escopo próprios (`canView === "proprios"`):** ocultar filtros Time/Staff; auto-vincular `meuRhFuncionarioId` via e-mail de login; caps do time inferidos pelo Organograma do prestador.
+- **Caps por time** (`lib/overviewPrestadorTeamConfig.ts`): GP/Shuffler negociam turno (Marketplace); só GP tem Cobertura/Distribuição por estúdio; SL/SM usam 2 turnos Diurno/Noturno (MRN/NGT) sem movimentações nem estúdio.
+- **Dados:** RPCs `rh_calendario_grade_mes` (fallback `rh_calendario_grade_escala_mes`), `rh_calendario_ponto_registros_mes`, presença gestão; movimentações Marketplace via `dash_overview_prestador_movimentacoes_mes` (só times que negociam); turnos via `fetchTurnosPorOperadoraSlugs`. Visão de time carrega ponto/presença/mov em paralelo por prestador do time (`mapPool`). Métricas em `lib/overviewPrestadorMetrics.ts` + cobertura em `lib/overviewPrestadorCobertura.ts`.
+- **Cache mensal:** grade, ponto, presença e movimentações usam `overviewPrestadorQueries.ts`, com chave por mês e prestador quando aplicável.
+- **Resumo / KPIs:** visão time = **Jornadas** escaladas/realizadas; individual = **Dias**. Horas em ambos. MoM via `getPeriodoComparativoMoM` (exceto Histórico).
+- **Aderência (time) / Absenteísmo (individual):** Presença % (só time), Pontualidade, **Controle de Presença** (ex-«Ponto não Registrado» / «Ponto completo»), Atestados.
+- **Gráficos:** Recharts — Aproveitamento (barras); Movimentações (pizza, se `negocia`); Distribuição por estúdio (pizza, só GP individual). Layout GP individual: Aproveitamento em linha cheia; Movimentações + Distribuição lado a lado.
+- **Blocos só visão time:** Pontos de atenção; Cobertura por turno; Cobertura por estúdio (só GP).
+- **Detalhamento Diário:** tabela canónica — Data [, Prestador na visão time], Ocorrência, Detalhe; sort default **desc** em Data. Troca/Compra/Venda enriquecidos pelo snapshot Marketplace.
+- **Migration:** `20260630180000_dash_overview_prestador_page.sql`; `20261105210000_dash_overview_prestador_movimentacoes_mes.sql`.
+- **Mockup de produto:** `docs/mockups/overview-prestador-visoes.html`.
 
 ### Strings de vazio (Overview Prestador)
 
 | Contexto | String |
 |----------|--------|
-| Sem prestador (gestor) | Selecione um prestador para visualizar os resultados. |
-| Prestador selecionado, sem dados | Sem dados para o período selecionado. |
+| Sem time (gestor, edge) | Selecione um time para visualizar os resultados. |
+| Time/staff com dados vazios | Sem dados para o período selecionado. |
 | Aba Performance | Conteúdo em desenvolvimento. |
 | Sem permissão | Você não tem permissão para visualizar este dashboard. |
 

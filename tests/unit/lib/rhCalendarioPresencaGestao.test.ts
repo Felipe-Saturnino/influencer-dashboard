@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolverAcoesPresencaLinha } from "@/lib/rhCalendarioPresencaGestao";
+import {
+  computePresencaKpisConsolidados,
+  resolverAcoesPresencaLinha,
+} from "@/lib/rhCalendarioPresencaGestao";
 
 const base = {
   situacao: "Folga",
@@ -42,5 +45,40 @@ describe("resolverAcoesPresencaLinha em Folga", () => {
         },
       }).acaoPrimaria,
     ).toBeNull();
+  });
+});
+
+describe("computePresencaKpisConsolidados — Troca, Venda e Compra", () => {
+  const dia = (over: Partial<Parameters<typeof computePresencaKpisConsolidados>[0][number]>) => ({
+    situacao: "Folga",
+    status: "Folga",
+    temCheckIn: false,
+    ...over,
+  });
+
+  it("conta como Troca os dias de Venda e Compra - Turno vindos de Oferta de Troca", () => {
+    const kpis = computePresencaKpisConsolidados([
+      dia({ situacao: "Venda", origemTrocaMarketplace: true }),
+      dia({ situacao: "Compra - Manhã", origemTrocaMarketplace: true }),
+    ]);
+    expect(kpis.trocas).toBe(2);
+    expect(kpis.venda).toBe(0);
+    expect(kpis.compra).toBe(0);
+  });
+
+  it("mantém Venda e Compra quando a origem não é troca", () => {
+    const kpis = computePresencaKpisConsolidados([
+      dia({ situacao: "Venda" }),
+      dia({ situacao: "Compra - Noite" }),
+      dia({ situacao: "Compra" }),
+    ]);
+    expect(kpis.trocas).toBe(0);
+    expect(kpis.venda).toBe(1);
+    expect(kpis.compra).toBe(2);
+  });
+
+  it("conta a célula Troca gravada manualmente na Escala", () => {
+    const kpis = computePresencaKpisConsolidados([dia({ situacao: "Troca" })]);
+    expect(kpis.trocas).toBe(1);
   });
 });

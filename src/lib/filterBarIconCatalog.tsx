@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import {
   Building2,
   Calendar,
+  CalendarDays,
   CalendarHeart,
   CalendarRange,
   Clock,
@@ -41,6 +42,8 @@ export const FilterBarIcons = {
   staff: <IdCard {...FILTRO_BAR_ICON_PROPS} />,
   turno: <Clock {...FILTRO_BAR_ICON_PROPS} />,
   historico: <Calendar {...FILTRO_BAR_ICON_PROPS} />,
+  /** Dia específico dentro do período (ex.: Marketplace — dias com oferta). */
+  dia: <CalendarDays {...FILTRO_BAR_ICON_PROPS} />,
   hoje: <History {...FILTRO_BAR_ICON_PROPS} />,
   modoVisualizacao: <CalendarRange {...FILTRO_BAR_ICON_PROPS} />,
   diretoria: <Building2 {...FILTRO_BAR_ICON_PROPS} />,

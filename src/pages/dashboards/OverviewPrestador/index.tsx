@@ -89,7 +89,13 @@ export default function OverviewPrestador() {
             metricasAnterior={dados.metricasAnterior}
             historico={dados.historico}
             loading={dados.isLoading}
-            staffSelecionado={Boolean(dados.staffSelecionadoId)}
+            prontoParaExibir={dados.prontoParaExibir}
+            visaoTime={dados.visaoTime}
+            caps={dados.caps}
+            pontosAtencao={dados.pontosAtencao}
+            coberturaPorTurno={dados.coberturaPorTurno}
+            coberturaPorEstudio={dados.coberturaPorEstudio}
+            distribuicaoEstudio={dados.distribuicaoEstudio}
           />
         )}
 

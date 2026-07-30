@@ -17,7 +17,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS: TutorialDef = {
     {
       titulo: "1. Abrir o Marketplace",
       texto:
-        "1. No menu, seção Escala, clique em Marketplace.\n2. A aba Todas as Ofertas mostra o mural: Ofertas de Vendas e Ofertas de Troca.\n3. Use Nova Oferta para publicar.\n4. Em Minhas Ofertas você acompanha o que publicou, o que aceitou e o histórico.",
+        "1. No menu, seção Escala, clique em Marketplace.\n2. A aba Todas as Ofertas mostra o mural em três blocos: Ofertas de Turno, Ofertas de Folga e Ofertas de Troca. Cada linha traz a data, o turno, o estúdio, o ofertante e a observação de quem publicou.\n3. Na barra de filtros, o filtro Todos os Dias lista apenas os dias que têm oferta no período — escolha um dia para ver só ele.\n4. Use Nova Oferta para publicar.\n5. Em Minhas Ofertas você acompanha o que publicou, o que aceitou e o histórico.",
       imagens: [
         {
           src: `${IMG}/01-marketplace-todas-ofertas.png`,
@@ -35,7 +35,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS: TutorialDef = {
     {
       titulo: "3. Ofertar Venda de Turno",
       texto:
-        "1. Clique em Nova Oferta.\n2. Tipo de oferta: Venda de Turno — você deixa o turno e um colega de folga assume.\n3. Escolha o Dia do turno (só dias em que você está escalado e com início ≥ 24h).\n4. Observação é opcional.\n5. Clique em Publicar oferta.",
+        "1. Clique em Nova Oferta.\n2. Tipo de oferta: Venda de Turno — você deixa o turno e um colega de folga assume.\n3. Marque um ou vários Dias do turno (só dias em que você está escalado e com início ≥ 24h).\n4. Cada dia marcado gera uma oferta separada no mural, e pode ser aceito por colegas diferentes.\n5. Observação é opcional e vale para todos os dias marcados.\n6. Clique em Publicar oferta (ou Publicar N ofertas, quando marcar mais de um dia).",
       imagens: [
         {
           src: `${IMG}/02-ofertar-venda-turno.png`,
@@ -46,7 +46,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS: TutorialDef = {
     {
       titulo: "4. Ofertar Venda de Folga",
       texto:
-        "1. Nova Oferta → Tipo: Venda de Folga — você está de folga e se oferece para trabalhar; quem aceita é o colega escalado naquele turno.\n2. Escolha o Dia de folga.\n3. Em Turno que pretende trabalhar, escolha Manhã, Tarde ou Noite — a lista já respeita 24h e 12h.\n4. Publicar oferta.",
+        "1. Nova Oferta → Tipo: Venda de Folga — você está de folga e se oferece para trabalhar; quem aceita é o colega escalado naquele turno.\n2. Marque um ou vários Dias de folga.\n3. Escolha o turno em cada dia marcado: a lista é diferente por dia, porque já respeita as 24h de antecedência e as 12h de descanso em relação ao seu último e ao próximo turno. Quando só um turno é possível, ele vem selecionado.\n4. Publicar oferta (ou Publicar N ofertas) — cada dia vira uma oferta independente.",
       imagens: [
         {
           src: `${IMG}/03-ofertar-venda-folga.png`,
@@ -57,7 +57,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS: TutorialDef = {
     {
       titulo: "5. Ofertar Troca",
       texto:
-        "1. Nova Oferta → Tipo: Oferta de Troca — você entrega este turno e, em troca, assume um dia de quem enviar uma proposta.\n2. Escolha o Dia do turno que está oferecendo.\n3. Publique a oferta.\n4. Quando um colega propuser um dia/turno, a oferta ficará Em análise em Minhas ofertas abertas para você decidir.",
+        "1. Nova Oferta → Tipo: Oferta de Troca — você entrega este turno e, em troca, assume um dia de quem enviar uma proposta.\n2. Escolha o Dia do turno que está oferecendo — na troca é um dia por oferta, porque o colega escolhe o dia que entrega em troca.\n3. Publique a oferta.\n4. Quando um colega propuser um dia/turno, a oferta ficará Em análise em Minhas ofertas abertas para você decidir.",
       imagens: [
         {
           src: `${IMG}/04-ofertar-troca.png`,
@@ -68,7 +68,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS: TutorialDef = {
     {
       titulo: "6. Aceitar uma venda ou propor uma troca",
       texto:
-        "1. Na aba Todas as Ofertas, localize a linha nas Ofertas de Vendas ou Ofertas de Troca.\n2. Clique no ícone Aceitar Oferta nas vendas ou Propor Troca nas trocas (na sua própria linha aparece «Sua oferta»).\n3. Confira tipo, dia, turno e ofertante.\n— Venda de Turno: ao aceitar, você assume o turno (Compra - Turno na escala).\n— Venda de Folga: ao aceitar, você sai do turno (Venda) e o ofertante assume.\n— Oferta de Troca: você deve estar livre no dia ofertado. Em Dia que você oferece em troca, aparecem somente seus dias escalados, com 24h de antecedência, descanso mínimo de 12h e sem reserva em outra negociação.\n4. Nas vendas, confirme Aceitar oferta: a escala muda imediatamente.\n5. Na troca, confirme Enviar proposta: o status fica Em análise, a oferta some do mural e nenhuma escala muda ainda.\n6. A proposta fica registrada em Minhas Ofertas → Ofertas que aceitei até a decisão do ofertante.",
+        "1. Na aba Todas as Ofertas, localize a linha em Ofertas de Turno, Ofertas de Folga ou Ofertas de Troca.\n2. Clique no ícone Aceitar Oferta nas vendas ou Propor Troca nas trocas (na sua própria linha aparece «Sua oferta»).\n3. Confira tipo, dia, turno e ofertante.\n— Venda de Turno: ao aceitar, você assume o turno (Compra - Turno na escala).\n— Venda de Folga: ao aceitar, você sai do turno (Venda) e o ofertante assume.\n— Oferta de Troca: você deve estar livre no dia ofertado. Em Dia que você oferece em troca, aparecem somente seus dias escalados, com 24h de antecedência, descanso mínimo de 12h e sem reserva em outra negociação.\n4. Nas vendas, confirme Aceitar oferta: a escala muda imediatamente.\n5. Na troca, confirme Enviar proposta: o status fica Em análise, a oferta some do mural e nenhuma escala muda ainda.\n6. A proposta fica registrada em Minhas Ofertas → Ofertas que aceitei até a decisão do ofertante.",
     },
     {
       titulo: "7. Aprovar ou recusar uma proposta de troca",
@@ -92,5 +92,5 @@ export const TUTORIAL_MARKETPLACE_OFERTAS: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Vendas têm aceite imediato; trocas dependem da aprovação do ofertante original, nunca de gestor.\n— Respeite sempre as 24h até o início do turno e as 12h de descanso entre turnos.\n— Dias de troca Em análise ficam reservados para os dois prestadores.\n— Venda aceita ou troca aprovada não pode ser desfeita pelo Marketplace — o novo dia pode ser negociado novamente conforme as regras.",
+    "— Marcar vários dias em Venda de Turno ou Venda de Folga cria uma oferta por dia; se algum dia não puder ser publicado, os demais seguem publicados e a mensagem indica o motivo.\n— Vendas têm aceite imediato; trocas dependem da aprovação do ofertante original, nunca de gestor.\n— Respeite sempre as 24h até o início do turno e as 12h de descanso entre turnos.\n— Dias de troca Em análise ficam reservados para os dois prestadores.\n— Venda aceita ou troca aprovada não pode ser desfeita pelo Marketplace — o novo dia pode ser negociado novamente conforme as regras.",
 };

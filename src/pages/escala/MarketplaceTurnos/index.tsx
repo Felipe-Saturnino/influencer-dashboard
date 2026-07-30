@@ -18,6 +18,7 @@ import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
+import { FiltroEntidadeBarSelect } from "../../../components/FiltroEntidadeBarSelect";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import {
   AjudaContextualAcoes,
@@ -31,7 +32,7 @@ import { FILTRO_BAR_TAB_ICON_SIZE, getFilterBarRowStyle, getFilterBarWrapperStyl
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
-import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { PAGE_SEARCH, placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
@@ -81,6 +82,11 @@ const MARKETPLACE_TIME_OPCOES = ESCALA_TIME_OPCOES.filter((o) =>
 ).map((o) => ({ value: o.value, label: o.label }));
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
+
+/** Filtro de dia na barra (aba Todas as Ofertas) — vazio = todos os dias do período. */
+const MARKETPLACE_DIA_TODOS_LABEL = "Todos os Dias";
+const MARKETPLACE_DIA_ARIA_PREFIX = "Filtrar por dia";
+const MARKETPLACE_DIA_LISTBOX_LABEL = "Dias com ofertas";
 const GRADE_VAZIA: MarketplaceMinhaGrade = { aprovada: false, areaKey: "", valorPorIso: new Map() };
 
 /**
@@ -126,6 +132,7 @@ type OfertaSortCol =
   | "turnoOferta"
   | "estudio"
   | "ofertante"
+  | "observacao"
   | "dataInteresse"
   | "turnoInteresse"
   | "comprador"
@@ -161,6 +168,8 @@ function valorOrdenacaoOferta(row: LinhaOfertaMarketplace, col: OfertaSortCol): 
       return estudioDaOferta(row);
     case "ofertante":
       return row.ofertante;
+    case "observacao":
+      return row.observacao ?? "";
     case "dataInteresse":
       return row.dataInteresseIso ?? "";
     case "turnoInteresse":
@@ -196,6 +205,13 @@ function inicioFimMesUtc(ano: number, mes0: number): { ini: string; fim: string 
     ini: `${ini.getUTCFullYear()}-${p2(ini.getUTCMonth() + 1)}-${p2(ini.getUTCDate())}`,
     fim: `${fim.getUTCFullYear()}-${p2(fim.getUTCMonth() + 1)}-${p2(fim.getUTCDate())}`,
   };
+}
+
+/** `2026-07-05` → `05/07/2026` (rótulo do filtro de dia). */
+function labelDiaBr(dataIso: string): string {
+  const [y, mo, d] = dataIso.slice(0, 10).split("-");
+  if (!y || !mo || !d) return dataIso;
+  return `${d}/${mo}/${y}`;
 }
 
 function dataIsoNoMes(dataIso: string, ano: number, mes0: number): boolean {
@@ -250,6 +266,8 @@ export default function EscalaMarketplaceTurnosPage() {
   const [aba, setAba] = useRouteTab("escala_marketplace_turnos", "todas", MARKETPLACE_ABAS);
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
   const [filtroTimeTodas, setFiltroTimeTodas] = useState<EscalaTimeFiltro>("todos");
+  /** `""` = todos os dias do período (mês do carrossel ou Histórico). */
+  const [filtroDiaTodas, setFiltroDiaTodas] = useState("");
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
   const [busca, setBusca] = useState("");
   const [sortOferta, setSortOferta] = useState<{ col: OfertaSortCol; dir: SortDir }>({
@@ -373,10 +391,9 @@ export default function EscalaMarketplaceTurnosPage() {
   const carrosselUltimo = idxMes >= mesesDisponiveis.length - 1;
 
   /** Mural público: só ofertas ainda disponíveis (aceitas/canceladas somem daqui). */
-  const linhasVendasTodas = useMemo(() => {
+  const linhasTodasBase = useMemo(() => {
     return linhasMes.filter(
       (r) =>
-        (r.tipo === "venda_turno" || r.tipo === "venda_folga") &&
         ofertaEmAberto(r) &&
         passaFiltroTipo(r, filtroTipoTodas) &&
         (!podeFiltrarTimes || passaFiltroTime(r, filtroTimeTodas)) &&
@@ -384,16 +401,40 @@ export default function EscalaMarketplaceTurnosPage() {
     );
   }, [linhasMes, filtroTipoTodas, filtroTimeTodas, podeFiltrarTimes, busca]);
 
-  const linhasTrocaTodas = useMemo(() => {
-    return linhasMes.filter(
-      (r) =>
-        r.tipo === "oferta_troca" &&
-        ofertaEmAberto(r) &&
-        passaFiltroTipo(r, filtroTipoTodas) &&
-        (!podeFiltrarTimes || passaFiltroTime(r, filtroTimeTodas)) &&
-        textoContemBuscaEmAlgum(busca, r.ofertante, estudioDaOferta(r), r.turnoOferta, r.turnoInteresse),
-    );
-  }, [linhasMes, filtroTipoTodas, filtroTimeTodas, podeFiltrarTimes, busca]);
+  /** Dias com oferta em aberto no período — alimentam o filtro de dia da barra. */
+  const diasComOfertaTodas = useMemo(() => {
+    const isos = new Set<string>();
+    for (const r of linhasTodasBase) isos.add(r.dataOfertaIso.slice(0, 10));
+    return [...isos].sort().map((iso) => ({ id: iso, name: labelDiaBr(iso) }));
+  }, [linhasTodasBase]);
+
+  /** Dia selecionado deixa de existir ao mudar mês, Histórico, aba ou demais filtros. */
+  useEffect(() => {
+    if (!filtroDiaTodas) return;
+    if (aba !== "todas" || !diasComOfertaTodas.some((d) => d.id === filtroDiaTodas)) {
+      setFiltroDiaTodas("");
+    }
+  }, [aba, diasComOfertaTodas, filtroDiaTodas]);
+
+  const linhasTodasDoDia = useMemo(() => {
+    if (!filtroDiaTodas) return linhasTodasBase;
+    return linhasTodasBase.filter((r) => r.dataOfertaIso.slice(0, 10) === filtroDiaTodas);
+  }, [linhasTodasBase, filtroDiaTodas]);
+
+  const linhasTurnoTodas = useMemo(
+    () => linhasTodasDoDia.filter((r) => r.tipo === "venda_turno"),
+    [linhasTodasDoDia],
+  );
+
+  const linhasFolgaTodas = useMemo(
+    () => linhasTodasDoDia.filter((r) => r.tipo === "venda_folga"),
+    [linhasTodasDoDia],
+  );
+
+  const linhasTrocaTodas = useMemo(
+    () => linhasTodasDoDia.filter((r) => r.tipo === "oferta_troca"),
+    [linhasTodasDoDia],
+  );
 
   const minhasBase = useMemo(
     () =>
@@ -558,6 +599,20 @@ export default function EscalaMarketplaceTurnosPage() {
           todasLabel={MARKETPLACE_TIME_TODOS_LABEL}
         />
       ) : null}
+      {aba === "todas" ? (
+        <FiltroEntidadeBarSelect
+          mode="single"
+          selected={filtroDiaTodas ? [filtroDiaTodas] : []}
+          onChange={(v) => setFiltroDiaTodas(v[0] ?? "")}
+          items={diasComOfertaTodas}
+          icon={FilterBarIcons.dia}
+          triggerEmptyLabel={MARKETPLACE_DIA_TODOS_LABEL}
+          ariaFilterPrefix={MARKETPLACE_DIA_ARIA_PREFIX}
+          listboxAriaLabel={MARKETPLACE_DIA_LISTBOX_LABEL}
+          searchPlaceholder={placeholderPesquisaFiltro("Dia")}
+          disabled={diasComOfertaTodas.length === 0}
+        />
+      ) : null}
     </>
   );
 
@@ -635,21 +690,46 @@ export default function EscalaMarketplaceTurnosPage() {
     return RH_CALENDARIO_ACAO_LABEL_FORMAL[row.tipo as RhCalendarioAcaoTipo] ?? row.tipo;
   }
 
-  function renderTabelaVendas(rows: LinhaOfertaMarketplace[]) {
+  function tdObservacao(row: LinhaOfertaMarketplace) {
+    const obs = row.observacao?.trim();
+    return (
+      <td style={dataTable.tdCenter}>
+        {obs ? (
+          <span
+            title={obs}
+            style={{
+              display: "block",
+              maxWidth: 240,
+              margin: "0 auto",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {obs}
+          </span>
+        ) : (
+          "—"
+        )}
+      </td>
+    );
+  }
+
+  /** Mural de vendas — blocos Ofertas de Turno e Ofertas de Folga (tipo já vem do bloco). */
+  function renderTabelaOfertasVenda(rows: LinhaOfertaMarketplace[], caption: string) {
     const sorted = ordenarOfertas(rows, sortOferta);
     if (sorted.length === 0) return celulaVazia();
     return (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
-          <caption style={{ display: "none" }}>Ofertas de vendas de turno ou folga</caption>
+          <caption style={{ display: "none" }}>{caption}</caption>
           <thead>
             <tr>
               {thSort("Data da Oferta", "dataOferta")}
-              {thSort("Tipo de Ação", "tipo")}
               {thSort("Turno da Oferta", "turnoOferta")}
               {thSort("Estúdio", "estudio")}
               {thSort("Ofertante", "ofertante")}
-              {thSort("Status", "status")}
+              {thSort("Observação", "observacao")}
               <th scope="col" style={dataTable.thHeader}>
                 Ações
               </th>
@@ -662,11 +742,10 @@ export default function EscalaMarketplaceTurnosPage() {
                 i,
                 <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
-                  <td style={dataTable.tdCenter}>{labelTipo(r)}</td>
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
                   <td style={dataTable.tdCenter}>{estudioDaOferta(r)}</td>
                   <td style={dataTable.tdCenter}>{r.ofertante}</td>
-                  <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  {tdObservacao(r)}
                   {tdAcoes(acoesTodas(r))}
                 </>,
               ),
@@ -690,8 +769,7 @@ export default function EscalaMarketplaceTurnosPage() {
               {thSort("Turno da Oferta", "turnoOferta")}
               {thSort("Estúdio", "estudio")}
               {thSort("Ofertante", "ofertante")}
-              {thSort("Data de Interesse", "dataInteresse")}
-              {thSort("Turno de Interesse", "turnoInteresse")}
+              {thSort("Observação", "observacao")}
               {thSort("Status", "status")}
               <th scope="col" style={dataTable.thHeader}>
                 Ações
@@ -708,8 +786,7 @@ export default function EscalaMarketplaceTurnosPage() {
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
                   <td style={dataTable.tdCenter}>{estudioDaOferta(r)}</td>
                   <td style={dataTable.tdCenter}>{r.ofertante}</td>
-                  <td style={dataTable.tdCenter}>{r.dataInteresseIso ?? "—"}</td>
-                  <td style={dataTable.tdCenter}>{r.turnoInteresse ?? "—"}</td>
+                  {tdObservacao(r)}
                   <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
                   {tdAcoes(acoesTodas(r))}
                 </>,
@@ -939,10 +1016,16 @@ export default function EscalaMarketplaceTurnosPage() {
           {aba === "todas" && (
             <div role="tabpanel" id="panel-mkt-todas" aria-labelledby="tab-mkt-todas">
               <div style={contentBox}>
-                <SectionTitle sub="Turnos e folgas disponíveis para assumir">
-                  Ofertas de Vendas
+                <SectionTitle sub="Turnos que colegas de folga podem assumir">
+                  Ofertas de Turno
                 </SectionTitle>
-                {renderTabelaVendas(linhasVendasTodas)}
+                {renderTabelaOfertasVenda(linhasTurnoTodas, "Ofertas de venda de turno")}
+              </div>
+              <div style={contentBox}>
+                <SectionTitle sub="Folgas de quem se oferece para trabalhar no seu lugar">
+                  Ofertas de Folga
+                </SectionTitle>
+                {renderTabelaOfertasVenda(linhasFolgaTodas, "Ofertas de venda de folga")}
               </div>
               <div style={contentBox}>
                 <SectionTitle sub="Turnos oferecidos em troca de outro dia">Ofertas de Troca</SectionTitle>

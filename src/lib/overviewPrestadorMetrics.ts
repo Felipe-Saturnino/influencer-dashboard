@@ -43,6 +43,10 @@ export type OverviewPrestadorDetalheLinha = {
   dataIso: string;
   ocorrencia: OverviewPrestadorOcorrencia;
   detalhe: string;
+  /** Preenchido na visão de time. */
+  prestadorId?: string;
+  prestadorNome?: string;
+  timeRotulo?: string;
 };
 
 export type OverviewPrestadorMetricas = {
@@ -340,3 +344,86 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
     detalhamento,
   };
 }
+
+export function somarMetricasPrestador(
+  partes: OverviewPrestadorMetricas[],
+): OverviewPrestadorMetricas {
+  const out: OverviewPrestadorMetricas = { ...OVERVIEW_PRESTADOR_METRICAS_ZERO, detalhamento: [] };
+  for (const m of partes) {
+    out.diasEscalado += m.diasEscalado;
+    out.diasRealizado += m.diasRealizado;
+    out.horasEscaladasMin += m.horasEscaladasMin;
+    out.horasRealizadasMin += m.horasRealizadasMin;
+    out.entradasAtrasadas += m.entradasAtrasadas;
+    out.saidasAntecipadas += m.saidasAntecipadas;
+    out.checkInNaoRegistrado += m.checkInNaoRegistrado;
+    out.checkOutNaoRegistrado += m.checkOutNaoRegistrado;
+    out.diasAtestado += m.diasAtestado;
+    out.trocas += m.trocas;
+    out.vendas += m.vendas;
+    out.compras += m.compras;
+    out.detalhamento.push(...m.detalhamento);
+  }
+  out.detalhamento.sort((a, b) => b.dataIso.localeCompare(a.dataIso));
+  return out;
+}
+
+export type OverviewPrestadorAtencaoLinha = {
+  prestadorId: string;
+  nome: string;
+  timeRotulo: string;
+  presencaPct: number | null;
+  atrasos: number;
+  pontoIncompleto: number;
+  atestadoDias: number;
+  severidade: "alta" | "media" | "ok";
+};
+
+export function severidadeAtencaoPrestador(m: OverviewPrestadorMetricas): "alta" | "media" | "ok" {
+  const presenca =
+    m.diasEscalado > 0 ? (m.diasRealizado / m.diasEscalado) * 100 : null;
+  const ocorrencias =
+    m.entradasAtrasadas +
+    m.saidasAntecipadas +
+    m.checkInNaoRegistrado +
+    m.checkOutNaoRegistrado +
+    (m.diasAtestado > 0 ? 1 : 0);
+  if (presenca != null && presenca < 90) return "alta";
+  if (ocorrencias >= 3) return "media";
+  return "ok";
+}
+
+export function montarLinhaAtencao(
+  prestadorId: string,
+  nome: string,
+  timeRotulo: string,
+  m: OverviewPrestadorMetricas,
+): OverviewPrestadorAtencaoLinha {
+  const presencaPct =
+    m.diasEscalado > 0 ? Math.round((m.diasRealizado / m.diasEscalado) * 1000) / 10 : null;
+  return {
+    prestadorId,
+    nome,
+    timeRotulo,
+    presencaPct,
+    atrasos: m.entradasAtrasadas + m.saidasAntecipadas,
+    pontoIncompleto: m.checkInNaoRegistrado + m.checkOutNaoRegistrado,
+    atestadoDias: m.diasAtestado,
+    severidade: severidadeAtencaoPrestador(m),
+  };
+}
+
+export type OverviewPrestadorCoberturaLinha = {
+  chave: string;
+  label: string;
+  prestadores: number;
+  jornadasEscaladas: number;
+  jornadasRealizadas: number;
+  movimentacoes: number;
+};
+
+export type OverviewPrestadorEstudioFatia = {
+  slug: string;
+  label: string;
+  dias: number;
+};

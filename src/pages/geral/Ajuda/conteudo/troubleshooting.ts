@@ -1402,6 +1402,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** em Escala Estúdio pode indicar falha na carga da grade — atualize a página e, se persistir, entre em contato com o suporte técnico. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
       },
       {
+        subtitulo: "O card Trocas fica zerado mesmo depois de uma troca aprovada?",
+        texto:
+          "A **Oferta de Troca** aceita no Marketplace grava **Venda** no dia que você entregou e **Compra - Turno** no dia que você assumiu — a Escala e o Calendário continuam mostrando assim, de propósito. O card **Trocas** reconhece a origem da negociação, por isso conta esses dois dias e não os soma em Venda nem em Compra. Se o card continuar em zero, confirme que a troca está **aprovada** (não Em análise) e que o mês do carrossel e o Staff filtrado são os da negociação; depois atualize a página.",
+      },
+      {
         subtitulo: "Não consigo registrar presença ou justificativa?",
         texto:
           "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
@@ -1460,6 +1465,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Só vejo ofertas do meu time?",
         texto:
           "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu time e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba muda para **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para alternar o escopo, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+      },
+      {
+        subtitulo: "Marquei vários dias e só parte das ofertas foi publicada?",
+        texto:
+          "Cada dia marcado em **Venda de Turno** ou **Venda de Folga** gera uma oferta separada, validada de forma independente. Se um dia não puder ser publicado (já tem oferta aberta, entrou em outra negociação, deixou de cumprir as 24h ou as 12h), os demais continuam publicados: o mural é atualizado, o modal permanece aberto apenas com os dias que falharam e a mensagem explica o motivo. Ajuste ou desmarque esses dias e publique novamente.",
+      },
+      {
+        subtitulo: "O filtro de dia não mostra a data que eu quero?",
+        texto:
+          "O filtro (**Todos os Dias**) lista somente dias com oferta **em aberto** dentro do período e dos demais filtros ativos. Se a data não aparecer, verifique o mês do carrossel (ou ative **Histórico**), limpe o filtro de tipo de ação, o filtro de times e a busca. A seleção é limpa automaticamente quando o dia deixa de ter oferta — por exemplo, após alguém aceitar a última oferta daquele dia.",
       },
       {
         subtitulo: "Aceitei uma oferta e a escala não mudou?",

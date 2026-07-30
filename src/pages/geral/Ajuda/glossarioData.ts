@@ -911,7 +911,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Overview Prestador",
         definicao:
-          "Dashboard analítico de escala, presença, absenteísmo e movimentações de turno por prestador — KPIs MTD, gráficos de aproveitamento e detalhamento diário de ocorrências (troca, atestado, atraso, esquecimento, compra e venda).",
+          "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio.",
         referencia: "Overview Prestador",
       },
       {
