@@ -17,7 +17,6 @@ export const ESCALA_ACAO_TIPO_OPCOES_TODAS: { value: EscalaAcaoFiltro; label: st
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
-  { value: "troca_cassada", label: "Troca Casada" },
 ];
 
 export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: EscalaAcaoFiltro; label: string }[] = [
@@ -25,7 +24,6 @@ export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: EscalaAcaoFiltro; label: s
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
-  { value: "troca_cassada", label: "Troca Casada" },
 ];
 
 export type EscalaTimeFiltro =
@@ -78,7 +76,6 @@ export const RH_CALENDARIO_ACAO_LABEL_FORMAL: Record<RhCalendarioAcaoTipo, strin
   venda_turno: "Venda de Turno",
   venda_folga: "Venda de Folga",
   oferta_troca: "Oferta de Troca",
-  troca_cassada: "Troca Casada",
   agendamento_reuniao: "Agendamento de reunião",
 };
 
@@ -99,4 +96,11 @@ export type LinhaOfertaMarketplace = {
   comprador?: string;
   /** Para filtro de staff nas Solicitações (ligação futura a `rh_funcionarios`). */
   solicitanteStaffId?: string;
+  observacao?: string;
+  /** Marketplace: o prestador logado publicou esta oferta. */
+  souOfertante?: boolean;
+  /** Marketplace: o prestador logado aceitou esta oferta. */
+  souInteressado?: boolean;
+  /** Marketplace: a oferta é do mesmo time do prestador logado (pré-requisito do aceite). */
+  mesmoTime?: boolean;
 };

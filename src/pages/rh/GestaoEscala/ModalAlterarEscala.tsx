@@ -30,7 +30,7 @@ export type DiaMesAlterarEscala = {
   iso: string;
 };
 
-type OpcaoCelula = { value: string; label: string };
+type OpcaoCelula = { value: string; label: string; disabled?: boolean };
 
 type RpcAlterarCelulaResult = {
   ok?: boolean;
@@ -85,8 +85,13 @@ const labelCampoStyle: CSSProperties = {
   letterSpacing: "0.06em",
 };
 
+const MSG_ERRO_GENERICO =
+  "Não foi possível alterar a escala. Se o problema persistir, entre em contato com o suporte.";
+
 function mensagemErroAlterarCelula(code: string): string {
   switch (code) {
+    case "not_authenticated":
+      return "Sessão expirada. Entre novamente para alterar a escala.";
     case "forbidden":
       return "Sem permissão para alterar a escala.";
     case "escala_nao_aprovada":
@@ -97,14 +102,18 @@ function mensagemErroAlterarCelula(code: string): string {
       return "O dia selecionado não pertence ao mês exibido no carrossel.";
     case "prestador_fora_area":
       return "O prestador não pertence a esta área.";
+    case "invalid_area":
+      return "A área da escala não foi reconhecida. Recarregue a página e tente novamente.";
+    case "invalid_payload":
+      return "Selecione o prestador e o dia antes de salvar.";
+    case "valor_too_long":
+      return "O status selecionado não é válido para esta escala.";
     case "observacao_too_long":
       return `A observação deve ter no máximo ${OBSERVACAO_MAX} caracteres.`;
     case "observacao_obrigatoria":
       return "Informe a observação sobre a alteração.";
     default:
-      return code
-        ? `Não foi possível alterar a escala. Se o problema persistir, entre em contato com o suporte.`
-        : "Não foi possível alterar a escala. Se o problema persistir, entre em contato com o suporte.";
+      return MSG_ERRO_GENERICO;
   }
 }
 
@@ -181,7 +190,15 @@ export function ModalAlterarEscala({
     return sanitizarValor(prestador.siglaTurnoStaff, bruto, prestador.turnoStaffNome);
   }, [prestador, diaIso, celulas, chaveCelula, sanitizarValor]);
 
-  const opcoesStatus = prestador ? opcoesSelectCelula(prestador) : [];
+  const opcoesStatus = useMemo(() => {
+    if (!prestador) return [];
+    const base = opcoesSelectCelula(prestador);
+    const valorMarketplace =
+      valorOriginal === "Compra" || valorOriginal.startsWith("Compra - ") || valorOriginal === "Venda";
+    if (!valorMarketplace || base.some((o) => o.value === valorOriginal)) return base;
+    // Mostra o estado automático atual, mas não o oferece como escolha manual.
+    return [{ value: valorOriginal, label: valorOriginal, disabled: true }, ...base];
+  }, [prestador, opcoesSelectCelula, valorOriginal]);
   const statusAtualLabel = prestador
     ? labelExibicaoCelula(prestador.siglaTurnoStaff, valorOriginal, prestador.turnoStaffNome)
     : "—";
@@ -244,6 +261,13 @@ export function ModalAlterarEscala({
       if (error) throw error;
       const payload = data as RpcAlterarCelulaResult | null;
       if (!payload?.ok) {
+        console.error("[Alterar Escala] recusado pela base", {
+          code: payload?.error ?? "(sem código)",
+          refMesIso,
+          areaKey,
+          diaIso,
+          valor: valorSan,
+        });
         setErr(mensagemErroAlterarCelula(payload?.error ?? ""));
         return;
       }
@@ -254,8 +278,14 @@ export function ModalAlterarEscala({
         observacao: payload.observacao ?? obsTrim,
       });
       onClose();
-    } catch {
-      setErr("Não foi possível alterar a escala. Se o problema persistir, entre em contato com o suporte.");
+    } catch (e) {
+      console.error("[Alterar Escala] falha na chamada rh_gestao_escala_grade_alterar_celula", {
+        erro: e,
+        refMesIso,
+        areaKey,
+        diaIso,
+      });
+      setErr(MSG_ERRO_GENERICO);
     } finally {
       setSalvando(false);
     }
@@ -458,7 +488,7 @@ export function ModalAlterarEscala({
                     }}
                   >
                     {opcoesStatus.map((o) => (
-                      <option key={o.value === "" ? "__empty" : o.value} value={o.value}>
+                      <option key={o.value === "" ? "__empty" : o.value} value={o.value} disabled={o.disabled}>
                         {o.label}
                       </option>
                     ))}

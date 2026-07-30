@@ -179,6 +179,12 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Marketplace", "escala_marketplace_turnos", "Marketplace", [
     { tabId: "todas", slug: "TodasAsOfertas", label: "Todas as Ofertas", access: "always" },
     { tabId: "minhas", slug: "MinhasOfertas", label: "Minhas Ofertas", access: "always" },
+    {
+      tabId: "encerradas",
+      slug: "OfertasEncerradas",
+      label: "Ofertas Encerradas",
+      access: "always",
+    },
   ]),
   page("Solicitações", "escala_solicitacoes", "Solicitacoes", [
     { tabId: "aberto", slug: "SolicitacoesEmAberto", label: "Solicitações em Aberto", access: "always" },

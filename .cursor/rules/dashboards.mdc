@@ -156,7 +156,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 
 - **PageKey:** `dash_overview_prestador` — pasta `OverviewPrestador/`.
 - **Duas abas:** **Escala** (implementada) e **Performance** (placeholder «Conteúdo em desenvolvimento.»). Abas via `FiltroBarTabButton` + `useRouteTab` (`escala` | `performance`).
-- **Carrossel de mês:** `getMesesDisponiveisEscalaCarrossel` (abril/2026+) — mesma janela do Calendário RH / Gestão de Escala.
+- **Carrossel de mês:** `getMesesDisponiveisEscalaCarrossel` (agosto/2026+ — início oficial da escala). Antes de agosto, a lista contém só Agosto para pré-visualizar a grade.
 - **Histórico:** `FiltroHistoricoButton`; rótulo central **Todo o período**; janela de 13 competências inclusivas; MoM desligado nos KPIs.
 - **Filtros Time / Staff:** `FiltroCalendarioTimeSelect` + `FiltroCalendarioStaffSelect` (`mode="single"`) — catálogo e ordem de `rhCalendarioStaffFiltroHelpers.ts`. Staff filtra por time quando time ≠ agregador.
 - **Escopo próprios (`canView === "proprios"`):** ocultar filtros Time/Staff; auto-vincular `meuRhFuncionarioId` via e-mail de login (espelho Calendário RH). Default `proprios` para role `prestador` em `AppContext`.

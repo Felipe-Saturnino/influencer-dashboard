@@ -5,7 +5,6 @@ import { fmtHorasTotal } from "./dashboardHelpers";
 import { ehFeriadoSaoPauloCapital } from "./feriadosSaoPauloCapital";
 import {
   normalizarEscalaCadastro,
-  siglaGradeParaNomeTurno,
   turnoStaffEhComercial5x2,
 } from "./rhEscalaTurnos";
 import {
@@ -17,6 +16,10 @@ import {
 } from "./rhStaffHorarioTurno";
 import type { RhFuncionario } from "../types/rhFuncionario";
 import type { TurnosDealersPick } from "./turnosDealers";
+import {
+  turnoOperacionalValorGrade,
+  valorCelulaEhFolgaOperacional,
+} from "./rhCalendarioAcaoHelpers";
 
 /** `area_key` das células sintéticas de horário comercial (Estúdio 5×2 / Comercial). */
 export const AREA_KEY_HORARIO_COMERCIAL_SINTETICO = "horario_comercial";
@@ -71,19 +74,15 @@ export function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
 export function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   const v = (valor ?? "").trim();
   if (!v) return null;
-  const vl = v.toLowerCase();
-  if (v === "Folga" || vl === "folga" || v === "F" || vl === "f") return null;
-  if (v === "Comercial") return "Comercial";
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
-  const nome = siglaGradeParaNomeTurno(v);
-  return nome || null;
+  if (valorCelulaEhFolgaOperacional(v)) return null;
+  return turnoOperacionalValorGrade(v) ?? (v === "Compra" || v === "Troca" ? v : null);
 }
 
 export function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | undefined): string {
   const v = (valorCelulaRaw ?? "").trim();
   if (!v) return "—";
-  const vl = v.toLowerCase();
-  if (v === "Folga" || vl === "folga" || v === "F" || vl === "f") return "Folga";
+  if (valorCelulaEhFolgaOperacional(v)) return v.toLowerCase() === "venda" ? "Venda" : "Folga";
+  if (v.startsWith("Compra - ")) return v;
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   return "Escalado";
 }

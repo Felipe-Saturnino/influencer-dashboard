@@ -1,7 +1,8 @@
-import { HelpCircle, Network } from "lucide-react";
+import { CalendarRange, HelpCircle, Network } from "lucide-react";
 import { AtalhosStaffHome } from "../shared/AtalhosStaffHome";
 
 const ATALHOS_GAME_PRESENTER = [
+  { key: "rh_calendario" as const, icon: CalendarRange },
   { key: "ajuda" as const, icon: HelpCircle },
   { key: "rh_organograma" as const, icon: Network },
 ];

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Home Game Presenter (todos os blocos ativos)</title>
+  <style>
+    :root {
+      /* Tokens Spin default (src/styles/global.css :root) */
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #7c3aed;
+      --brand-roxo: #4a2082;
+      --brand-ciano: #70cae4;
+      --vermelho: #e84025;
+      --amarelo: #f59e0b;
+      --rosa: #ec4899;
+
+      --page-bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --input-bg: #f8f8fc;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --section-title: #1a1a2e;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+
+    body.dark {
+      --page-bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --input-bg: rgba(255,255,255,0.07);
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --section-title: #ffffff;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    /* app-page-shell aproximado */
+    .page-shell {
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px;
+      display: flex; flex-direction: column; gap: 14px; /* PAGE_CONTENT_BOX_GAP */
+    }
+
+    .block-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand-primary); background: rgba(124, 58, 237, 0.12);
+      border: 1px dashed rgba(124, 58, 237, 0.45);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
+    }
+    body.dark .block-tag { color: var(--brand-ciano); }
+
+    /* Cards de destaque (boas-vindas, cadastro, celebracoes): radius 20 */
+    .hero-card {
+      position: relative; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 24px 28px;
+    }
+    .hero-card.welcome { padding: 28px 28px 26px; }
+    .hero-card .topbar { position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+    .topbar-brand   { background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary)); }
+    .topbar-alert   { background: linear-gradient(90deg, var(--vermelho), var(--amarelo)); }
+    .topbar-party   { background: linear-gradient(90deg, var(--amarelo), var(--rosa), var(--brand-primary)); }
+    .topbar-empresa { background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary)); }
+
+    .hero-card h1 {
+      font-family: var(--font-title); font-size: 22px; font-weight: 800;
+      letter-spacing: .02em; line-height: 1.25; margin: 0 0 12px;
+    }
+    .title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .icon-box {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(74,32,130,0.18); border: 1px solid rgba(74,32,130,0.30);
+      color: var(--brand-ciano);
+    }
+    .icon-box.alert {
+      background: rgba(232,64,37,0.12); border-color: rgba(232,64,37,0.35); color: var(--vermelho);
+    }
+    .hero-card h2 {
+      font-family: var(--font-title); font-size: 20px; font-weight: 800;
+      letter-spacing: .02em; line-height: 1.3; margin: 0;
+    }
+    .hero-body { font-size: 13px; line-height: 1.55; color: var(--text-muted); margin: 12px 0 0; }
+    .hero-body.pre { white-space: pre-line; margin: 0; }
+    .cta-alert {
+      display: inline-flex; align-items: center; margin-top: 16px;
+      padding: 10px 20px; border-radius: 10px;
+      border: 1px solid rgba(232,64,37,0.45); background: rgba(232,64,37,0.12);
+      color: var(--vermelho); font-size: 13px; font-weight: 700; text-decoration: none;
+    }
+
+    /* Bloco de conteudo */
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
+      margin: 0 0 14px;
+    }
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+
+    /* HomeStaffFeedCard */
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card.collapsed { padding: 12px 16px; }
+    .feed-card h3 {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 800; margin: 0; color: var(--text);
+    }
+    .feed-card h3 svg { flex-shrink: 0; color: var(--text); }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
+    .feed-body p + p { margin-top: 10px; }
+    .feed-body a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+    .btn-li-ocultar {
+      display: inline-flex; align-items: center; margin-top: 14px;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+    .collapsed-row {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      background: none; border: none; padding: 0; cursor: pointer; text-align: left;
+      font-family: var(--font);
+    }
+    .collapsed-row h3 { flex: 1; }
+    .collapsed-row svg.chev { color: var(--text); flex-shrink: 0; }
+
+    /* Anotacao do mockup - nao e UI da plataforma */
+    .nota-mock {
+      display: flex; align-items: center; gap: 6px; margin-top: 14px;
+      font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
+      background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
+    }
+    body.dark .nota-mock { color: var(--amarelo); }
+
+    /* Acesso rapido */
+    .hint { font-size: 13px; line-height: 1.55; color: var(--text-muted); margin-bottom: 16px; }
+    .grid-atalhos {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    }
+    .atalho {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); text-decoration: none;
+    }
+    .atalho .ic {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(74,32,130,0.2); color: var(--brand-accent);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .atalho .tit { display: flex; align-items: flex-start; gap: 8px; }
+    .atalho .tit span { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .legenda {
+      max-width: 1100px; margin: 0 auto; padding: 0 20px 48px;
+    }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
+    .legenda h2 { color: var(--section-title); }
+    .legenda ul { padding-left: 18px; }
+    .legenda li { margin-bottom: 6px; }
+    .legenda strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <span>Mockup — Home · perfil <strong>Game Presenter</strong> · cenário com todos os blocos ativos</span>
+    <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
+  </div>
+
+  <div class="page-shell">
+
+    <!-- 1 — Boas-vindas -->
+    <span class="block-tag">Bloco 1 · Boas-vindas</span>
+    <div class="hero-card welcome">
+      <div class="topbar topbar-brand"></div>
+      <h1>Olá, Ana Beatriz!</h1>
+      <p class="hero-body pre">Você conduz a mesa com energia e presença.
+Seu trabalho transforma cada transmissão em uma experiência envolvente para o jogador. Esta plataforma foi criada para apoiar sua rotina e fortalecer quem está no centro do jogo ao vivo.</p>
+    </div>
+
+    <!-- 2 — Atualização cadastral -->
+    <span class="block-tag">Bloco 2 · Atualização cadastral (só quando pendente)</span>
+    <div class="hero-card">
+      <div class="topbar topbar-alert"></div>
+      <div class="title-row">
+        <div class="icon-box alert">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+          </svg>
+        </div>
+        <h2>Ana, AÇÃO NECESSÁRIA!</h2>
+      </div>
+      <p class="hero-body">Sua atualização cadastral de 6 meses está pendente. Acesse Dados de Cadastro, revise seus dados e documentos ou confirme que nada mudou no período. Você não conseguirá realizar nenhuma ação na plataforma até que este processo seja concluído, caso tenha dúvidas de como realizar o processo procure orientação com a liderança ou RH.</p>
+      <a class="cta-alert" href="#">Ir para Dados de Cadastro</a>
+    </div>
+
+    <!-- 3 — Aniversário pessoal -->
+    <span class="block-tag">Bloco 3 · Aniversário pessoal (só no dia)</span>
+    <div class="hero-card">
+      <div class="topbar topbar-party"></div>
+      <div class="title-row">
+        <div class="icon-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/>
+            <path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 12"/>
+            <path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11-.11.7-.72 1.22-1.43 1.22H17"/>
+            <path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7"/>
+            <path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z"/>
+          </svg>
+        </div>
+        <h2>Parabéns, Ana!</h2>
+      </div>
+      <p class="hero-body">
+        Hoje celebramos você! Obrigado por fazer parte da equipe que faz a Spin Gaming acontecer todos os dias. Desejamos um novo ciclo repleto de saúde, sucesso, conquistas e muitos motivos para comemorar. Aproveite o seu dia — ele é todo seu!
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#70cae4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:-.15em;margin-left:4px">
+          <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/>
+        </svg>
+      </p>
+    </div>
+
+    <!-- 4 — Aniversário de empresa -->
+    <span class="block-tag">Bloco 4 · Aniversário de empresa (só no dia)</span>
+    <div class="hero-card">
+      <div class="topbar topbar-empresa"></div>
+      <div class="title-row">
+        <div class="icon-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
+          </svg>
+        </div>
+        <h2>Ana, hoje comemoramos a sua história com a Spin!</h2>
+      </div>
+      <p class="hero-body">
+        Hoje comemoramos mais um ano da sua jornada na Spin Gaming. Sua dedicação, profissionalismo e compromisso fazem parte da história que estamos construindo juntos. Obrigado por contribuir diariamente para a excelência da nossa operação. Que esta parceria continue rendendo muitas conquistas e momentos especiais. Feliz aniversário de Spin!
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#70cae4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:-.15em;margin-left:4px">
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+        </svg>
+      </p>
+    </div>
+
+    <!-- 5 — Informações -->
+    <span class="block-tag">Bloco 5 · Informações (informativos · 10 dias)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>Nova política de troca de turno entra em vigor em agosto</h3>
+            <div class="feed-body">
+              <p>A partir de <strong>01/08</strong>, toda troca de turno entre Game Presenters deve ser registrada no Marketplace de Turnos com no mínimo 48 horas de antecedência. Trocas combinadas por mensagem não serão mais consideradas válidas pela liderança.</p>
+              <p>Em caso de imprevisto, acione o Shift Leader do seu turno antes de abrir a solicitação.</p>
+            </div>
+            <p class="feed-footer">Marina Costa · 28/07/26 - 09:15</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card collapsed">
+            <button type="button" class="collapsed-row" aria-expanded="false">
+              <h3>Manutenção programada do estúdio 2 — sábado, 02/08</h3>
+              <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </article>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 6 — Central Academy -->
+    <span class="block-tag">Bloco 6 · Central Academy (só perfis de Estúdio)</span>
+    <div class="content-box">
+      <h2 class="section-title">Central Academy</h2>
+      <ul class="feed-list">
+        <!-- Manual com ciência pendente: sem janela de 10 dias e sem «Li e Ocultar» -->
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
+              </svg>
+              Novo Manual de Academy na área!
+            </h3>
+            <div class="feed-body">
+              <p>Acesse o novo Manual de Procedimentos de Mesa — Blackjack no <a href="#">Portal da Academy</a>!</p>
+            </div>
+            <p class="feed-footer">Rafael Lima - 21/07/26 - 16:40</p>
+            <p class="nota-mock">
+              Nota do mockup: ciência obrigatória pendente — sem botão «Li e Ocultar» e sem janela de 10 dias; o card fica até a ciência ser dada no Portal da Academy.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>
+              </svg>
+              Nova Dica Academy: Como manter o ritmo da narração em mesas rápidas
+            </h3>
+            <div class="feed-body">
+              <p>Veja esta e outras Dicas no <a href="#">Portal da Academy</a>!</p>
+            </div>
+            <p class="feed-footer">Camila Duarte - 27/07/26 - 11:05</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+              </svg>
+              Academy Informa: Treinamento de Roleta Ao Vivo — turma de agosto!
+            </h3>
+            <div class="feed-body">
+              <p>Acesse a página do <a href="#">Portal da Academy</a> para ver mais!</p>
+            </div>
+            <p class="feed-footer">Rafael Lima - 25/07/26 - 10:12</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 7 — Blogueiro Spin -->
+    <span class="block-tag">Bloco 7 · Blogueiro Spin (Galeria + Spin na Rede · 10 dias)</span>
+    <div class="content-box">
+      <h2 class="section-title">Blogueiro Spin</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>Album Festa Julina Spin 2026 com fotos novas</h3>
+            <div class="feed-body">
+              <p>Temos fotos novas no álbum Festa Julina Spin 2026, acesse a <a href="#">Galeria de Fotos</a> para ver!</p>
+            </div>
+            <p class="feed-footer">Bruno Alves · 28/07/26 - 19:22</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>Temos Fotos novas sua</h3>
+            <div class="feed-body">
+              <p>Temos fotos novas no seu álbum pessoal, acesse a <a href="#">Galeria de Fotos</a> para ver!</p>
+            </div>
+            <p class="feed-footer">Bruno Alves · 26/07/26 - 15:48</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>Spin saiu novamente na Mídia</h3>
+            <div class="feed-body">
+              <p>A reportagem Spin Gaming amplia operação de live cassino no Brasil acaba de sair, acesse o <a href="#">Spin na Rede</a> para ver!</p>
+            </div>
+            <p class="feed-footer">24/07/26 - 08:30</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 8 — Acesso rápido -->
+    <span class="block-tag">Bloco 8 · Acesso rápido</span>
+    <div class="content-box">
+      <h2 class="section-title">Acesso rápido</h2>
+      <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
+      <div class="grid-atalhos">
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>
+            </svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Calendário</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Organize a rotina operacional com visibilidade completa de turnos e compromissos.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
+            </svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Ajuda</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Conheça as funcionalidades da plataforma, o glossário, tutoriais passo a passo e soluções para problemas comuns.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/>
+            </svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Organograma</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Conheça a empresa, saiba mais sobre os times e pessoas que fazem a operação acontecer.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legenda">
+    <div class="content-box">
+      <h2 class="section-title">Notas do cenário</h2>
+      <ul>
+        <li><strong>Blocos 2, 3 e 4</strong> aparecem apenas nas condições específicas (revisão cadastral pendente, dia do aniversário pessoal, dia do aniversário de empresa). Neste mockup, todos estão ativos ao mesmo tempo.</li>
+        <li><strong>Blocos 5, 6 e 7</strong> somem por completo quando não há itens na janela de <strong>10 dias</strong>.</li>
+        <li><strong>«Li e Ocultar»</strong> recolhe o card para só o título + seta — o 2º card de Informações está nesse estado. Clicar no título expande de volta na sessão.</li>
+        <li><strong>Manual com ciência obrigatória</strong> ignora a janela de 10 dias e não exibe «Li e Ocultar» — permanece até a ciência ser registrada no Portal da Academy.</li>
+        <li><strong>Central Academy</strong> só existe para perfis de Estúdio (Performance Coach, Service Manager, Customer Service, Shift Leader, Shuffler, Game Presenter) e depende de permissão de Ver em Portal da Academy.</li>
+        <li>Ordenação da Central Academy: manuais com ciência pendente primeiro, depois por data de publicação (mais recente primeiro).</li>
+      </ul>
+    </div>
+  </div>
+  <script>
+    document.getElementById("btn-tema").addEventListener("click", function () {
+      document.body.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>

@@ -45,8 +45,8 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - **Visibilidade por perfil:** tabela `ajuda_tutorial_visibilidade` (`tutorial_id`, `roles text[]`). Só perfis listados veem o tutorial; **Administrador** vê todos e é o único com botão **Editar** (ícone) ao lado do título → modal multi-seleção de perfis (`TutorialPerfilMultiSelect` / `ModalEditarVisibilidadeTutorial`).
 - Se o usuário **não** tiver nenhum tutorial liberado para o perfil efetivo, a aba **Tutoriais** **não aparece** na Ajuda (URL `/Ajuda/Tutoriais` redireciona para Conheça).
 - Ao gravar novo tutorial: adicionar ao catálogo, imagens em `public/tutoriais/<secao>/<id>/`, seed/linha em `ajuda_tutorial_visibilidade` (ou o Admin configura na UI).
-- Tutoriais atuais: **Controle de Presença** (`controle-presenca`, Escala) · **Alterar Escala** (`alterar-escala`, Escala — seed SM/SL) · **Dicas Academy** (`postagem-academy-aprovacao`, Academy — seed perfis Estúdio).
-- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `ControledePresenca`, `AlterarEscala`, `DicasAcademy`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
+- Tutoriais atuais: **Controle de Presença** (`controle-presenca`, Escala) · **Alterar Escala** (`alterar-escala`, Escala — seed SM/SL) · **Marketplace** (`marketplace-ofertas`, Escala — seed GP/Shuffler) · **Dicas Academy** (`postagem-academy-aprovacao`, Academy — seed perfis Estúdio).
+- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `Calendario`, `ControledePresenca`, `AlterarEscala`, `MarketplaceOfertas`, `CienciaManuaisAcademy`, `DicasAcademy`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
 
 **Regra (também no Global):** qualquer alteração de produto em **qualquer secção** deve revisar se Ajuda/glossário precisa de entrada nova, atualização ou remoção.
 
@@ -62,6 +62,7 @@ A **fonte de verdade** do nome visível da página é `src/constants/menu.ts` (`
 | Glossário | Categorias filtradas por `GLOSSARIO_CATEGORIA_PAGE_KEYS` — exibir se o usuário tiver **Ver** ou **Próprios** em ao menos uma página mapeada |
 | `glossarioData.ts` | Referências no corpo do termo (“na página **Resultados**”) — não “Resultado de Lives” |
 | Texto que cita subtítulo da UI | Copiar o subtítulo **atual** da página (`PageHeader` / parágrafo sob `h1`), não versão antiga |
+| Abas, filtros e CTAs citados | Conferir na página real antes de escrever — nomes de aba (ex.: `ABAS_PAGINA_RH_FUNC`), agregadoras dos filtros e rótulos de status (ex.: **Aguard. pagamento**) mudam sem aviso na Ajuda |
 
 **Proibido** inventar títulos longos na Ajuda quando o menu já tem nome curto (`Feedback de Lives`, `Agenda de Lives`, etc.), salvo **exceção documentada** no MDC da secção.
 
@@ -77,6 +78,9 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 | Loading citado na Ajuda | **`Carregando…`** (elipse Unicode) — alinhado à FilterBar e boot |
 | Erros citados na Ajuda | Fecho **`entre em contato com o suporte`** |
 | Dealers / cassino | **cassino ao vivo**; badge/campo **Live Cassino** |
+| **Infraestrutura** | **Proibido** citar tabela, coluna, RPC, Edge Function, secret, migration, comando CLI, caminho `docs/…` ou `PageKey` no texto ao usuário — descrever o efeito e fechar com **entre em contato com o suporte técnico** |
+| **Histórico** | Sempre **13 competências mensais — a atual e as 12 anteriores** (rótulo **Todo o período**) — nunca “desde o início da operação”, “todo o intervalo disponível” ou “sem restrição de período” |
+| **Fluxos por estúdio vs operadora** | Catálogo e operação de estúdio (Dealers, Staff, Figurinos) citam **estúdio**; **operadora** só em vínculo comercial e solicitações (Central de Notificações) |
 
 ### Ao adicionar página no menu
 
@@ -108,7 +112,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **`performance_coach`:** `HomePerformanceCoach.tsx` — informativos `performance_coach`. RLS: `20260530200000_home_performance_coach_feed_rls.sql`.
 - **`service_manager`:** `HomeServiceManager.tsx` — informativos `service_manager`. RLS: `20260531200000_home_service_manager_feed_rls.sql`.
 - **`customer_service`:** `HomeCustomerService.tsx` — atalhos Atendimento + Ajuda + Organograma; RLS: `20260707213000_role_customer_service.sql`.
-- **`game_presenter`:** `HomeGamePresenter.tsx` — informativos `game_presenter`. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
+- **`game_presenter`:** `HomeGamePresenter.tsx` — informativos `game_presenter`; atalhos Calendário + Ajuda + Organograma. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
 - **`shuffler`:** `HomeShuffler.tsx` — informativos `shuffler`. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
 - **`tech_ops`:** `HomeTechOps.tsx` — informativos `tech_ops`. RLS: `20260706180000_role_tech_ops.sql`.
 - **`shift_leader`:** `HomeShiftLeader.tsx` — informativos `shift_leader`. RLS: `20260601200000_home_shift_leader_feed_rls.sql`.
@@ -176,6 +180,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Sem** matriz Gestão de Usuários — acesso por URL pública (`isCanalDenunciasPublicPath`).
 - Tema: pode usar tokens neutros e identidade Spin fixa; whitelabel operador **não** se aplica como nas páginas internas salvo decisão de produto.
 - Formulários: `CampoObrigatorioMark` e semântica de erro do Global.
+- Tipos compartilhados com a Central interna via `TIPOS_DENUNCIA`; **Elogios** (`elogios`) segue o mesmo envio, protocolo e atendimento dos demais tipos.
 - Privacidade: não expor detalhes técnicos em mensagens de erro.
 
 **Handoff:** campos do formulário, anonimato, confirmação pós-envio, a11y embed.

@@ -37,6 +37,7 @@ export type TipoDenunciaKey =
   | "vazamento_info"
   | "seguranca_trabalho"
   | "retaliacao"
+  | "elogios"
   | "outro";
 
 /** Título curto + detalhe (ex.: itálico no formulário público). `label` agregado para listagens internas. */
@@ -106,6 +107,12 @@ export const TIPOS_DENUNCIA: { key: TipoDenunciaKey; titulo: string; detalhe: st
     titulo: "Retaliação",
     detalhe: "Punição ou ameaça a quem fez uma denúncia",
     label: "Retaliação (punição ou ameaça a quem fez uma denúncia)",
+  },
+  {
+    key: "elogios",
+    titulo: "Elogios",
+    detalhe: "Reconhecimento por atitudes, comportamentos ou resultados positivos",
+    label: "Elogios (reconhecimento por atitudes, comportamentos ou resultados positivos)",
   },
   { key: "outro", titulo: "Outro", detalhe: "", label: "Outro" },
 ];

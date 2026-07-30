@@ -87,7 +87,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. As métricas vêm da integração TAP CDA — conta Afiliados (`influencer_metricas` dos perfis com role afiliado).",
+          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. As métricas vêm da integração TAP CDA — conta Afiliados, considerando apenas os perfis cadastrados como afiliado.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -208,7 +208,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de abril/2026). O botão Histórico exibe 13 competências mensais — a atual e as 12 anteriores —, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
+          "Use as setas para navegar entre os meses disponíveis (a partir de agosto/2026 — início oficial da escala). O botão Histórico exibe o acumulado das competências disponíveis desde agosto, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
       },
       {
         subtitulo: "Aba Escala — KPIs Consolidados",
@@ -242,12 +242,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Headcount é o dashboard executivo de pessoas da Spin, com quatro abas — Overview, Plano de Carreira, Contratação e Distratos. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
+          "O Headcount é o dashboard executivo de pessoas da Spin, com três abas — Overview, Contratação e Distratos. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela dos últimos 13 meses (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Plano de Carreira, Contratação e Distratos.",
+          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
       },
       {
         subtitulo: "Aba Overview",
@@ -255,14 +255,9 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses.",
       },
       {
-        subtitulo: "Aba Plano de Carreira",
-        texto:
-          "Mesmos blocos da aba Contratação (KPIs, origem das candidaturas, funil e tabela de vagas), restritos a vagas **internas** e **mistas**. No Histórico, considera os 13 meses.",
-      },
-      {
         subtitulo: "Aba Contratação",
         texto:
-          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse, quantidade de candidatos e status. Contempla vagas **externas** e **mistas**. No Histórico, os mesmos blocos consideram os 13 meses.",
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse, quantidade de candidatos e status. No Histórico, os mesmos blocos consideram as 13 competências.",
       },
       {
         subtitulo: "Aba Distratos",
@@ -481,12 +476,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nAo lado do carrossel fica o filtro de **estúdio** (**Todos Estúdios** por padrão, com a opção **Nenhum estúdio** para dealers ainda sem vínculo). Perfis com escopo de um único estúdio já entram com ele selecionado, sem o agregador.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname.",
       },
       {
         subtitulo: "Cards de Dealers",
         texto:
-          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, jogos de especialidade e operadora vinculada.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, operadora e bio do dealer.",
+          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, tags dos jogos de especialidade, bio e, na base, as tags de gênero, **estúdio** e — quando houver vínculo — operadora.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, estúdio e bio do dealer.",
       },
       {
         subtitulo: "Solicitações ao Estúdio (perfil Operador)",
@@ -501,7 +496,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Visibilidade por Perfil",
         texto:
-          "— Gestor / Admin: visualização do elenco de todas as operadoras e histórico de solicitações de todas as operadoras.\n— Operador: visualiza apenas os dealers da sua operadora. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
+          "— Gestor / Admin: visualização do elenco de todos os estúdios e do histórico de solicitações de todas as operadoras.\n— Operador: visualiza os dealers do estúdio que atende a sua operadora. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer, sempre restrito à própria operadora.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
       },
     ],
   },
@@ -515,7 +510,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre meses ou ative Histórico para ver todas as solicitações desde o início da operação. No modo Histórico, as setas ficam desabilitadas.\n\nO filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar as notificações de uma parceira específica em todos os blocos da página.\n\nO indicador 'Carregando…' na barra de filtros é um estado secundário que confirma que os dados estão sendo atualizados após mudança de período ou operadora.",
+          "Use as setas para navegar entre meses ou ative Histórico para ver as solicitações de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). No modo Histórico, as setas ficam desabilitadas. Solicitações ainda em aberto aparecem independentemente do mês selecionado.\n\nO filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar as notificações de uma parceira específica em todos os blocos da página.\n\nO indicador 'Carregando…' na barra de filtros é um estado secundário que confirma que os dados estão sendo atualizados após mudança de período ou operadora.",
       },
       {
         subtitulo: "Inbox do Estúdio — perfil Gestor",
@@ -544,12 +539,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Centraliza o cadastro de prestadores, head count por área, movimentações de RH e fluxos operacionais (contratação, desligamento, anotações). O acesso às abas e ações depende das permissões Ver, Criar, Editar e Excluir configuradas em Gestão de Usuários.",
+          "Centraliza o cadastro de prestadores, o head count por área, as movimentações de RH e as anotações internas. A página tem três abas: **Head Count**, **Ações de RH** e **Anotações RH**. O acesso às abas e ações depende das permissões de Ver, Criar, Editar e Excluir configuradas em Gestão de Usuários.",
       },
       {
-        subtitulo: "Abas e filtros",
+        subtitulo: "Filtros e busca",
         texto:
-          "Navegue entre as abas de gestão (cadastro, head count, anotações e fluxos conforme liberado ao perfil). Use os filtros de operadora, time ou busca quando disponíveis para restringir a lista antes de editar ou exportar.",
+          "A barra de filtros tem três linhas. Na primeira, os seletores de **Diretorias**, **Gerências**, **Setores**, **Contratos** (CLT, PJ, Estágio, Temporário) e **Status** — cada um com opção agregadora (**Todas Diretorias**, **Todos Contratos**, **Todos Status** e assim por diante). Na segunda, a busca por **nome, CPF ou e-mail**. Na terceira, as abas da página.\n\nO padrão do filtro de status mostra os prestadores disponíveis (ativos e indisponíveis); escolha **Encerrado** para ver quem já saiu.",
+      },
+      {
+        subtitulo: "Abas",
+        texto:
+          "— **Head Count**: lista de prestadores com função, líder imediato, data da função, remuneração e status. Com permissão de Criar, o botão **Novo Prestador** abre o cadastro completo.\n— **Ações de RH**: movimentações formais do prestador — revisão de contrato, período de indisponibilidade, alinhamento, término e reativação da prestação.\n— **Anotações RH**: registros internos sobre o prestador. Com permissão, o botão **RH Talks** abre o fluxo de conversa com o time.",
+      },
+      {
+        subtitulo: "Cadastro e detalhe do prestador",
+        texto:
+          "O modal do prestador é organizado em abas: **Dados pessoais**, **Dados de contratação**, **Dados da empresa** (só para contrato PJ), **Dados bancários**, **Documentos**, **Carreira** e **Acesso a Plataforma** — as três últimas conforme permissão do perfil.\n\nOs campos preenchidos em uma aba são mantidos ao alternar entre elas; um único **Salvar** grava tudo.",
       },
       {
         subtitulo: "Remuneração e dados sensíveis",
@@ -611,7 +616,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Atendimento",
         texto:
-          "Filtre por tipo de denúncia, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar. Denúncias arquivadas ou concluídas saem das filas operacionais padrão.",
+          "Filtre por tipo de denúncia, incluindo **Elogios**, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar. Denúncias arquivadas ou concluídas saem das filas operacionais padrão.",
       },
     ],
   },
@@ -727,7 +732,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. **Compra** e **Venda** não aparecem nas opções manuais: esses estados são preenchidos exclusivamente pela automação do Marketplace. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
       {
         subtitulo: "Baixar Excel",
@@ -741,7 +746,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (`area_atuacao` Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. O time **Arte** não aparece nesta página. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
+          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (prestadores com área de atuação Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. O time **Arte** não aparece nesta página. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
       },
       {
         subtitulo: "Fluxo e Calendário",
@@ -798,12 +803,27 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Marketplace de turnos: publicação de ofertas de venda ou troca entre prestadores e candidatura a vagas abertas. As ofertas ficam **persistidas** na plataforma. Todas as ofertas visíveis e as suas ofertas aparecem em abas distintas.",
+          "Ponta única onde os prestadores de estúdio negociam turnos: **Venda de Turno**, **Venda de Folga** e **Oferta de Troca**. A aba **Todas as Ofertas** mostra o mural do período. Com **Ver: Próprios** há ainda **Minhas Ofertas** (o que você publicou e o que aceitou). Com **Ver: Sim** (gestão), no lugar de Minhas Ofertas aparece **Ofertas Encerradas**, com o histórico de aceites e cancelamentos de todos os prestadores. O aceite é **imediato**, sem aprovação de gestor: a Escala Estúdio aprovada é atualizada na hora com Compra, Venda ou Troca.",
       },
       {
-        subtitulo: "Ofertas e candidaturas",
+        subtitulo: "O que você vê",
         texto:
-          "Crie oferta informando turno e tipo (venda ou troca) quando tiver permissão de Criar. Acompanhe candidatos, aceite ou recuse propostas conforme regras do time. **Aceitar** só é permitido entre prestadores do **mesmo time** do Organograma; o aceite atualiza a Escala Estúdio **aprovada** (Compra/Venda/Troca). Ofertas encerradas ou expiradas saem da lista ativa.",
+          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter** e **Shuffler**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, operadora ou turno na última linha.",
+      },
+      {
+        subtitulo: "Publicar uma oferta",
+        texto:
+          "Com permissão de **Criar**, use **Nova Oferta**, à direita das abas. Os dias listados vêm de **todas** as competências com escala **aprovada** (não só o mês do carrossel) e exigem pelo menos **24h até o início do turno** ofertado ou desejado — ex.: às 20h30, a Noite de amanhã (início 23h) pode entrar; Manhã ou Tarde de amanhã não. **Venda de Turno** e **Oferta de Troca** listam dias em que você está escalado originalmente ou com **Compra - Turno**; **Venda de Folga** lista Folga e dias com **Venda** — nesse caso você se oferece para trabalhar e escolhe o turno (também filtrado pelas 24h e pelas 12h de intervalo). Só é possível ter uma oferta aberta por dia. Enquanto ninguém aceitar, você pode cancelar em Minhas Ofertas.",
+      },
+      {
+        subtitulo: "Aceitar uma oferta",
+        texto:
+          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). **Compra - Turno** se comporta como dia escalado e pode ser revendida; **Venda** se comporta como folga e libera nova negociação. Ofertas **aceitas** ou **canceladas** somem do mural de Todas as Ofertas e ficam nos blocos de Minhas Ofertas (**Ofertas que aceitei** ou **Histórico**).",
+        },
+      {
+        subtitulo: "Intervalo mínimo de 12h",
+        texto:
+          "Nenhuma oferta ou aceite pode deixar menos de **12h** entre o fim de um turno e o início do seguinte. A plataforma calcula o intervalo com a sua escala, o turno de staff e os horários da operadora. Exemplo na Venda de Folga: escalado na Noite do dia 12 e de folga nos dias 13 e 14 — ao ofertar o dia 13 só a **Noite** fica disponível (Manhã e Tarde ficariam a menos de 12h do fim do turno); no dia 14 todos os turnos voltam a caber.",
       },
     ],
   },
@@ -850,7 +870,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Acompanhe solicitações de escala em aberto e o histórico arquivado — trocas, coberturas e pedidos operacionais distintos das solicitações de RH (atestados, reuniões, vagas) na secção RH.",
+          "Acompanhe solicitações de escala em aberto e o histórico arquivado — trocas, coberturas e pedidos operacionais distintos das solicitações de RH (atestados, reuniões, vagas) na seção RH.",
       },
       {
         subtitulo: "Filtros",
@@ -1135,7 +1155,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
+          "Navegue pelos meses com as setas ou ative o Histórico para ver as solicitações de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
       },
       {
         subtitulo: "Solicitações",
@@ -1232,12 +1252,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses e o botão Histórico para ver todos os ciclos sem restrição de período. O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
+          "Use as setas para navegar entre os meses e o botão Histórico para ver os ciclos de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
       },
       {
         subtitulo: "KPIs",
         texto:
-          "Três cards no topo (formato igual à Banca de Jogo — rótulo em caixa alta acima do valor, sem caixa branca em volta):\n\n— **R$ PAGO:** soma dos pagamentos com status Pago\n— **R$ PENDENTE:** soma dos pagamentos Em análise ou Aguardando pagamento\n— **HORAS REALIZADAS:** horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
+          "Três cards no topo (formato igual à Banca de Jogo — rótulo em caixa alta acima do valor, sem caixa branca em volta):\n\n— **R$ PAGO:** soma dos pagamentos com status Pago\n— **R$ PENDENTE:** soma dos pagamentos Em análise ou Aguard. pagamento\n— **HORAS REALIZADAS:** horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
       },
       {
         subtitulo: "Ciclo de Pagamento",
@@ -1352,7 +1372,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e abas",
         texto:
-          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n— **Fechado** lista marcas com Dedicada ou Network em **Contrato Assinado** ou **Ativo** (mesmo que o Status ainda estivesse em Negociação).\n\nAs URLs das abas são sincronizadas com a rota (`/PipelineB2B/...`).",
+          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n— **Fechado** lista marcas com Dedicada ou Network em **Contrato Assinado** ou **Ativo** (mesmo que o Status ainda estivesse em Negociação).\n\nA aba selecionada fica registrada no endereço da página — dá para copiar o link e voltar direto na mesma aba.",
       },
       {
         subtitulo: "Tabela e edição",
@@ -1443,7 +1463,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e grava município/UF em `comercial_empresas` (cron diário ~8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos/falhas de secrets ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.",
+          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e preenche município e UF no cadastro da empresa (execução diária, por volta das 8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos e falhas de credenciais ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.",
       },
       {
         subtitulo: "Logs Recentes",

@@ -61,11 +61,8 @@ export function opcoesSelectCelulaAlterarEscala(
   if (areaKey === "academy") {
     out.push({ value: "Comercial", label: "Comercial" });
   }
-  out.push(
-    { value: "Compra", label: "Compra" },
-    { value: "Venda", label: "Venda" },
-    { value: "Troca", label: "Troca" },
-  );
+  // Compra/Venda são estados exclusivos da automação do Marketplace.
+  out.push({ value: "Troca", label: "Troca" });
   return out;
 }
 
@@ -81,6 +78,8 @@ export function sanitizarValorCelulaAlterarEscala(
   const permiteComercial = modo === "escritorio" || areaKey === "academy";
   if (permiteComercial && (v === "Comercial" || v.toLowerCase() === "comercial")) return "Comercial";
   if (modo === "escritorio") return "";
+  if (/^Compra - (Manhã|Tarde|Noite)$/.test(v)) return v;
+  if (areaKey === "academy" && v === "Compra - Comercial") return v;
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   if (v === "MRN" || v === "AFT" || v === "NGT") return v;
   if (v === "Manhã" || v.toLowerCase() === "manha") return "MRN";
@@ -99,6 +98,7 @@ export function labelExibicaoCelulaAlterarEscala(
   if (!v) return "—";
   if (v === "Folga") return "Folga";
   if (v === "Comercial") return "Comercial";
+  if (v.startsWith("Compra - ")) return v;
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   if (v === "MRN") return "Manhã";
   if (v === "AFT") return "Tarde";

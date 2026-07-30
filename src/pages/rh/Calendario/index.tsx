@@ -32,10 +32,7 @@ import {
   type PrestadorPontoEstado,
 } from "../../../lib/prestadorPontoApi";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
-import {
-  normalizarEscalaCadastro,
-  siglaGradeParaNomeTurno,
-} from "../../../lib/rhEscalaTurnos";
+import { normalizarEscalaCadastro } from "../../../lib/rhEscalaTurnos";
 import { chaveTurnoMes, type EscalaTurnoMesMap } from "../../../lib/gestaoEscalaTurnoMes";
 import {
   adicionarMinutosAoRelogioHHMM,
@@ -72,7 +69,12 @@ import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
-import { labelReuniaoCom, listarDatasEscaladoFuturasNoMes } from "../../../lib/rhCalendarioAcaoHelpers";
+import {
+  labelReuniaoCom,
+  listarDatasEscaladoFuturasNoMes,
+  turnoOperacionalValorGrade,
+  valorCelulaEhFolgaOperacional,
+} from "../../../lib/rhCalendarioAcaoHelpers";
 import {
   ehReuniaoComRh,
   exibirObservacaoRhModalReuniao,
@@ -389,12 +391,8 @@ function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
 function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   const v = (valor ?? "").trim();
   if (!v) return null;
-  const vl = v.toLowerCase();
-  if (v === "Folga" || vl === "folga" || v === "F" || vl === "f") return null;
-  if (v === "Comercial") return "Comercial";
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
-  const nome = siglaGradeParaNomeTurno(v);
-  return nome || null;
+  if (valorCelulaEhFolgaOperacional(v)) return null;
+  return turnoOperacionalValorGrade(v) ?? (v === "Compra" || v === "Troca" ? v : null);
 }
 
 type OpTurnosCalPick = { slug: string } & TurnosDealersPick;
@@ -408,8 +406,8 @@ function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
 function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | undefined): string {
   const v = (valorCelulaRaw ?? "").trim();
   if (!v) return "—";
-  const vl = v.toLowerCase();
-  if (v === "Folga" || vl === "folga" || v === "F" || vl === "f") return "Folga";
+  if (valorCelulaEhFolgaOperacional(v)) return v.toLowerCase() === "venda" ? "Venda" : "Folga";
+  if (v.startsWith("Compra - ")) return v;
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
   return "Escalado";
 }
