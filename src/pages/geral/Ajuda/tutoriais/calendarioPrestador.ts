@@ -11,6 +11,7 @@ export const TUTORIAL_CALENDARIO_PRESTADOR: TutorialDef = {
   section: "Escala",
   icon: CalendarDays,
   relatedPageKey: "rh_calendario",
+  relatedTabId: "compromissos",
   objetivo:
     "Consultar os dias escalados e as folgas do mês e solicitar o agendamento de uma reunião.",
   passos: [

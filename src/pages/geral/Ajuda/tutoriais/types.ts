@@ -22,6 +22,8 @@ export type TutorialDef = {
   icon: LucideIcon;
   /** Se definido, o tutorial só aparece com Ver sim|próprios nesta página. */
   relatedPageKey?: PageKey;
+  /** Aba interna da página em que o atalho contextual deve aparecer. */
+  relatedTabId?: string;
   /** Uma linha sob o título do tutorial. */
   objetivo: string;
   passos: TutorialPasso[];

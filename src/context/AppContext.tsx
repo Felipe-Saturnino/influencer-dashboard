@@ -42,6 +42,10 @@ import {
   aplicarBrandguideReset,
   syncOperadoraBrandState,
 } from "../lib/operadoraBrandApply";
+import {
+  carregarTutorialVisibilidade,
+  type TutorialVisibilidadeMap,
+} from "../lib/ajudaTutorialVisibilidade";
 
 
 /** Home e páginas gerais: só `role_permissions`; sem interseção com `prestador_tipo_pages`. */
@@ -96,11 +100,19 @@ interface AppContextValue {
   // Navegação (página ativa no layout)
   activePage:  string;
   activeTabSlug: string | null;
+  activeDetailSlug: string | null;
   layoutView: LayoutView;
   setActivePage: (page: string) => void;
-  navigateTo: (pageKey: PageKey, tabSlug?: string | null, options?: { replace?: boolean }) => void;
+  navigateTo: (
+    pageKey: PageKey,
+    tabSlug?: string | null,
+    options?: { replace?: boolean; detailSlug?: string | null },
+  ) => void;
   applyPathFromLocation: (options?: { replace?: boolean }) => void;
   goToSemAcesso: (reason: "not_found" | "forbidden", options?: { replace?: boolean }) => void;
+  tutorialVisibility: TutorialVisibilidadeMap;
+  tutorialVisibilityLoaded: boolean;
+  atualizarTutorialVisibilidadeLocal: (tutorialId: string, roles: Role[]) => void;
   // Permissões de menu
   permissions: PermissoesMapa;
   permissionsAcoes: PermissoesAcoesMapa;
@@ -389,6 +401,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isDark,         setIsDark]      = useState(false);
   const [activePage,     setActivePageState]   = useState("home");
   const [activeTabSlug,  setActiveTabSlug] = useState<string | null>(null);
+  const [activeDetailSlug, setActiveDetailSlug] = useState<string | null>(null);
   const [layoutView,     setLayoutView]   = useState<LayoutView>("app");
   const [permissions,    setPermissions]  = useState<PermissoesMapa>(
     Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa
@@ -402,6 +415,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [simulacaoLogin, setSimulacaoLogin] = useState<SimulacaoLoginState | null>(null);
   const [simuladorRolesPermitidos, setSimuladorRolesPermitidos] = useState<Role[]>([]);
   const [escoposVisiveis, setEscoposVisiveis] = useState<EscoposVisiveis>(ESCOPOS_VAZIOS);
+  const [tutorialVisibility, setTutorialVisibility] = useState<TutorialVisibilidadeMap>({});
+  const [tutorialVisibilityLoaded, setTutorialVisibilityLoaded] = useState(false);
 
   /** Refs síncronos — evitam checar permissões stale logo após `setPermissions` (antes do re-render). */
   const userRef = useRef<User | null>(null);
@@ -409,6 +424,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const permissionsAcoesRef = useRef(permissionsAcoes);
   const activePageRef = useRef(activePage);
   const activeTabSlugRef = useRef(activeTabSlug);
+  const activeDetailSlugRef = useRef(activeDetailSlug);
   const layoutViewRef = useRef(layoutView);
   const simulacaoLoginRef = useRef(simulacaoLogin);
   const simuladorRolesPermitidosRef = useRef(simuladorRolesPermitidos);
@@ -418,6 +434,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   permissionsAcoesRef.current = permissionsAcoes;
   activePageRef.current = activePage;
   activeTabSlugRef.current = activeTabSlug;
+  activeDetailSlugRef.current = activeDetailSlug;
   layoutViewRef.current = layoutView;
   simulacaoLoginRef.current = simulacaoLogin;
   simuladorRolesPermitidosRef.current = simuladorRolesPermitidos;
@@ -440,11 +457,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const navigateTo = useCallback(
-    (pageKey: PageKey, tabSlug?: string | null, options?: { replace?: boolean }) => {
+    (
+      pageKey: PageKey,
+      tabSlug?: string | null,
+      options?: { replace?: boolean; detailSlug?: string | null },
+    ) => {
       const u = userRef.current;
       if (!u) return;
       const roleEfetivo = simulacaoLoginRef.current?.role ?? u.role;
-      const parsed = buildParsedAppTarget(pageKey, tabSlug);
+      const parsed = buildParsedAppTarget(pageKey, tabSlug, options?.detailSlug);
       const access = resolveRouteAccess(
         parsed,
         roleEfetivo,
@@ -459,11 +480,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         revisaoNavGateHandler.onBlocked();
         return;
       }
-      const nextPath = buildAppPath(access.pageKey, access.tabSlug);
+      const nextPath = buildAppPath(access.pageKey, access.tabSlug, access.detailSlug);
       if (
         layoutViewRef.current === "app" &&
         activePageRef.current === access.pageKey &&
         (activeTabSlugRef.current ?? null) === (access.tabSlug ?? null) &&
+        (activeDetailSlugRef.current ?? null) === (access.detailSlug ?? null) &&
         areAppPathsEqual(window.location.pathname, nextPath)
       ) {
         return;
@@ -471,10 +493,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       layoutViewRef.current = "app";
       activePageRef.current = access.pageKey;
       activeTabSlugRef.current = access.tabSlug;
+      activeDetailSlugRef.current = access.detailSlug ?? null;
       sessionStorage.removeItem(SEM_ACESSO_REASON_KEY);
       setLayoutView("app");
       setActivePageState(access.pageKey);
       setActiveTabSlug(access.tabSlug);
+      setActiveDetailSlug(access.detailSlug ?? null);
       syncHistory(nextPath, options?.replace ?? false);
     },
     [goToSemAcesso],
@@ -526,6 +550,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         layoutViewRef.current === "app" &&
         activePageRef.current === access.pageKey &&
         (activeTabSlugRef.current ?? null) === (access.tabSlug ?? null) &&
+        (activeDetailSlugRef.current ?? null) === (access.detailSlug ?? null) &&
         areAppPathsEqual(window.location.pathname, path)
       ) {
         return;
@@ -534,9 +559,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       layoutViewRef.current = "app";
       activePageRef.current = access.pageKey;
       activeTabSlugRef.current = access.tabSlug;
+      activeDetailSlugRef.current = access.detailSlug ?? null;
       setLayoutView("app");
       setActivePageState(access.pageKey);
       setActiveTabSlug(access.tabSlug);
+      setActiveDetailSlug(access.detailSlug ?? null);
       syncHistory(path, options?.replace ?? true);
     },
     [navigateTo, goToSemAcesso],
@@ -957,6 +984,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [escoposVisiveis],
   );
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setTutorialVisibility({});
+      setTutorialVisibilityLoaded(false);
+      return;
+    }
+    setTutorialVisibilityLoaded(false);
+    void carregarTutorialVisibilidade().then((map) => {
+      if (cancelled) return;
+      setTutorialVisibility(map);
+      setTutorialVisibilityLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const atualizarTutorialVisibilidadeLocal = useCallback((tutorialId: string, roles: Role[]) => {
+    setTutorialVisibility((prev) => ({ ...prev, [tutorialId]: roles }));
+  }, []);
+
   const setTheme = useCallback((v: boolean) => {
     if (effectiveRole === "operador") return; // Operador travado em Dark
     setIsDark(v);
@@ -979,11 +1028,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       permissionsAcoesReais,
       activePage,
       activeTabSlug,
+      activeDetailSlug,
       layoutView,
       setActivePage,
       navigateTo,
       applyPathFromLocation,
       goToSemAcesso,
+      tutorialVisibility,
+      tutorialVisibilityLoaded,
+      atualizarTutorialVisibilidadeLocal,
       permissions,
       permissionsAcoes,
       setPermissions,
@@ -1012,11 +1065,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       permissionsAcoesReais,
       activePage,
       activeTabSlug,
+      activeDetailSlug,
       layoutView,
       setActivePage,
       navigateTo,
       applyPathFromLocation,
       goToSemAcesso,
+      tutorialVisibility,
+      tutorialVisibilityLoaded,
+      atualizarTutorialVisibilidadeLocal,
       permissions,
       permissionsAcoes,
       escoposVisiveis,

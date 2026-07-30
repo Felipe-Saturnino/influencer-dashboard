@@ -257,6 +257,15 @@ Quando o fluxo **criar / adicionar / nova …** ficar na **mesma strip** de filt
 
 **Fora do bloco** (card da Agenda, `PageHeader`, toolbar de tabela): mesmo **`CtaCriarButton`** — §3; só muda o wrapper pai, não o contrato do botão.
 
+### Atalhos contextuais de Ajuda na barra
+
+Quando a página usar **`AjudaContextualAcoes`**, posicionar o grupo no bloco de ações à direita da linha principal da barra (`app-marketplace-filtro-minhas__cta` ou equivalente), antes dos CTAs de fluxo.
+
+- Botões só ícone: **32×32**, `borderRadius` **9**, fundo `t.inputBg`, borda `t.cardBorder`, cor `brand.primary`.
+- Ordem fixa: **Conheça** (`BookOpen`) · **Troubleshooting** (`LifeBuoy`) · **Tutorial** (`GraduationCap`, somente se permitido).
+- Todos são links canônicos com `href`, `aria-label` e `title`; navegação interna preserva SPA.
+- O grupo não substitui CTAs com texto e não deve entrar na fileira central de carrossel/selects.
+
 ---
 
 ## 6. Iconografia em filtros e controles da barra

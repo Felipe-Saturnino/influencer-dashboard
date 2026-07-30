@@ -11,6 +11,7 @@ export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
   section: "Escala",
   icon: CalendarClock,
   relatedPageKey: "rh_calendario",
+  relatedTabId: "presenca",
   objetivo: "Realizar o Check-in / Check-out e justificar faltas ou pendências.",
   passos: [
     {

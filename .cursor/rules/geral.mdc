@@ -48,6 +48,15 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - Tutoriais atuais: **Controle de Presença** (`controle-presenca`, Escala) · **Alterar Escala** (`alterar-escala`, Escala — seed SM/SL) · **Marketplace** (`marketplace-ofertas`, Escala — seed GP/Shuffler) · **Dicas Academy** (`postagem-academy-aprovacao`, Academy — seed perfis Estúdio).
 - **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `Calendario`, `ControledePresenca`, `AlterarEscala`, `MarketplaceOfertas`, `CienciaManuaisAcademy`, `DicasAcademy`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
 
+### Ajuda contextual nas páginas
+
+- Componente: **`AjudaContextualAcoes`** (`src/components/AjudaContextualAcoes.tsx`) dentro do bloco de filtros, no grupo de ações à direita.
+- Os atalhos **Conheça esta página** e **Troubleshooting desta página** aparecem sempre e usam o slug canônico de `APP_ROUTE_CATALOG`: `/Ajuda/ConhecaAPlataforma/{PaginaSlug}` e `/Ajuda/Troubleshooting/{PaginaSlug}`.
+- O atalho **Abrir tutorial desta seção** só aparece quando a aba atual tem tutorial associado **e** `tutorialVisivelParaRole` libera o perfil efetivo. Administrador efetivo vê todos; sem linha de visibilidade ou sem o role na lista = ícone oculto.
+- Ao criar tutorial contextual, preencher `relatedPageKey` e, quando for de uma aba específica, `relatedTabId` na definição. Na página, passar `{ id, urlSlug }` para `AjudaContextualAcoes` apenas na aba correspondente.
+- Conheça / Troubleshooting: o terceiro segmento da URL seleciona a página na navegação lateral. Página inexistente ou sem permissão cai no primeiro item visível e substitui a URL pelo destino permitido.
+- **Piloto atual:** Calendário — Compromissos → tutorial `calendario-prestador`; Controle de Presença → `controle-presenca`; Relatório de Presença sem tutorial.
+
 **Regra (também no Global):** qualquer alteração de produto em **qualquer secção** deve revisar se Ajuda/glossário precisa de entrada nova, atualização ou remoção.
 
 ### Nomenclatura — sempre o nome do menu
