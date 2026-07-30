@@ -85,5 +85,5 @@ export const TUTORIAL_MARKETPLACE_OFERTAS: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Aceite é imediato: não depende de aprovação de gestor.\n— Respeite sempre as 24h até o início do turno e as 12h de descanso entre turnos.\n— Oferta aceita não pode ser desfeita pelo Marketplace — ajuste pontual de escala, se necessário, segue outro fluxo (Alterar Escala), com quem tiver permissão.",
+    "— Aceite é imediato: não depende de aprovação de gestor.\n— Respeite sempre as 24h até o início do turno e as 12h de descanso entre turnos.\n— Oferta aceita não pode ser desfeita pelo Marketplace — você pode revender ou negociar o dia com outro prestador.",
 };
