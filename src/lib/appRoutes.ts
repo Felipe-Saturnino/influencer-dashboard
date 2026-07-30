@@ -518,7 +518,8 @@ export function isTabAllowedForUser(
     case "academy_portal_gerenciamento":
       return podeExecutarPerm(acoes.academy_portal?.editar ?? null);
     case "calendario_relatorio_presenca":
-      return podeExecutarPerm(acoes.rh_calendario?.editar ?? null);
+      /** Só Editar = Sim — Próprios não acessa Relatório de Presença. */
+      return (acoes.rh_calendario?.editar ?? null) === "sim";
     default:
       return true;
   }

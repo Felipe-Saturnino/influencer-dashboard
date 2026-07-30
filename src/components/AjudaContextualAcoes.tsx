@@ -1,9 +1,12 @@
 import { BookOpen, GraduationCap, LifeBuoy } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import { useApp } from "../context/AppContext";
-import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { buildAppPath, getAppRouteByPageKey } from "../lib/appRoutes";
-import { getBtnIconeAcaoLinhaStyle } from "../lib/btnIconeAcaoLinhaStyles";
+import {
+  AJUDA_CONTEXTUAL_ICON_SIZE,
+  getAjudaContextualAcaoStyle,
+  type AjudaContextualAcao,
+} from "../lib/ajudaContextualStyles";
 import { tutorialVisivelParaRole } from "../lib/ajudaTutorialVisibilidade";
 import type { PageKey } from "../types";
 
@@ -18,6 +21,7 @@ type AjudaContextualAcoesProps = {
 };
 
 type LinkAjudaProps = {
+  acao: AjudaContextualAcao;
   href: string;
   label: string;
   onClick: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -33,7 +37,6 @@ export function AjudaContextualAcoes({ pageKey, tutorial }: AjudaContextualAcoes
     tutorialVisibility,
     tutorialVisibilityLoaded,
   } = useApp();
-  const brand = useDashboardBrand();
   const pageSlug = getAppRouteByPageKey(pageKey)?.pageSlug;
   if (!pageSlug) return null;
 
@@ -47,17 +50,14 @@ export function AjudaContextualAcoes({ pageKey, tutorial }: AjudaContextualAcoes
       effectiveRole === "admin",
     );
 
-  const linkStyle = {
-    ...getBtnIconeAcaoLinhaStyle(t),
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    color: brand.primary,
-    textDecoration: "none",
-  };
-
-  const LinkAjuda = ({ href, label, onClick, children }: LinkAjudaProps) => (
-    <a href={href} aria-label={label} title={label} onClick={onClick} style={linkStyle}>
+  const LinkAjuda = ({ acao, href, label, onClick, children }: LinkAjudaProps) => (
+    <a
+      href={href}
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      style={getAjudaContextualAcaoStyle(acao, t.isDark)}
+    >
       {children}
     </a>
   );
@@ -69,6 +69,7 @@ export function AjudaContextualAcoes({ pageKey, tutorial }: AjudaContextualAcoes
       style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}
     >
       <LinkAjuda
+        acao="conheca"
         href={buildAppPath("ajuda", "ConhecaAPlataforma", pageSlug)}
         label="Conheça esta página"
         onClick={(event) => {
@@ -76,9 +77,10 @@ export function AjudaContextualAcoes({ pageKey, tutorial }: AjudaContextualAcoes
           navigateTo("ajuda", "ConhecaAPlataforma", { detailSlug: pageSlug });
         }}
       >
-        <BookOpen size={15} aria-hidden="true" />
+        <BookOpen size={AJUDA_CONTEXTUAL_ICON_SIZE} aria-hidden="true" />
       </LinkAjuda>
       <LinkAjuda
+        acao="troubleshooting"
         href={buildAppPath("ajuda", "Troubleshooting", pageSlug)}
         label="Troubleshooting desta página"
         onClick={(event) => {
@@ -86,10 +88,11 @@ export function AjudaContextualAcoes({ pageKey, tutorial }: AjudaContextualAcoes
           navigateTo("ajuda", "Troubleshooting", { detailSlug: pageSlug });
         }}
       >
-        <LifeBuoy size={15} aria-hidden="true" />
+        <LifeBuoy size={AJUDA_CONTEXTUAL_ICON_SIZE} aria-hidden="true" />
       </LinkAjuda>
       {tutorial && tutorialVisivel ? (
         <LinkAjuda
+          acao="tutorial"
           href={buildAppPath("ajuda", "Tutoriais", tutorial.urlSlug)}
           label="Abrir tutorial desta seção"
           onClick={(event) => {
@@ -97,7 +100,7 @@ export function AjudaContextualAcoes({ pageKey, tutorial }: AjudaContextualAcoes
             navigateTo("ajuda", "Tutoriais", { detailSlug: tutorial.urlSlug });
           }}
         >
-          <GraduationCap size={15} aria-hidden="true" />
+          <GraduationCap size={AJUDA_CONTEXTUAL_ICON_SIZE} aria-hidden="true" />
         </LinkAjuda>
       ) : null}
     </div>

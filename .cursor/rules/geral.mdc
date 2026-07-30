@@ -54,6 +54,7 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - Os atalhos **Conheça esta página** e **Troubleshooting desta página** aparecem sempre e usam o slug canônico de `APP_ROUTE_CATALOG`: `/Ajuda/ConhecaAPlataforma/{PaginaSlug}` e `/Ajuda/Troubleshooting/{PaginaSlug}`.
 - O atalho **Abrir tutorial desta seção** só aparece quando a aba atual tem tutorial associado **e** `tutorialVisivelParaRole` libera o perfil efetivo. Administrador efetivo vê todos; sem linha de visibilidade ou sem o role na lista = ícone oculto.
 - Ao criar tutorial contextual, preencher `relatedPageKey` e, quando for de uma aba específica, `relatedTabId` na definição. Na página, passar `{ id, urlSlug }` para `AjudaContextualAcoes` apenas na aba correspondente.
+- **Cor por ação** (fixa, não whitelabel): Conheça azul · Troubleshooting amarelo · Tutorial roxo — `getAjudaContextualAcaoStyle` em `src/lib/ajudaContextualStyles.ts` (detalhe visual em Brand §5).
 - Conheça / Troubleshooting: o terceiro segmento da URL seleciona a página na navegação lateral. Página inexistente ou sem permissão cai no primeiro item visível e substitui a URL pelo destino permitido.
 - **Piloto atual:** Calendário — Compromissos → tutorial `calendario-prestador`; Controle de Presença → `controle-presenca`; Relatório de Presença sem tutorial.
 

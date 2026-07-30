@@ -9,6 +9,11 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
       texto:
         "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
     },
+    {
+      subtitulo: "A página ficou em «Atualizando...» ou pedindo para recarregar?",
+      texto:
+        "Isso acontece logo após uma nova versão da plataforma entrar no ar: o navegador ainda tem em cache a versão anterior e não encontra um dos arquivos atualizados.\n\nA plataforma tenta se atualizar sozinha. Se a mensagem **Nova versão disponível** permanecer, clique em **Recarregar página**.\n\nSe continuar, force a atualização com **Ctrl+Shift+R** (ou **Cmd+Shift+R** no Mac) e, em último caso, abra numa janela anônima. Persistindo, entre em contato com o suporte.",
+    },
   ],
 } as const;
 
@@ -1404,7 +1409,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo a aba Relatório de Presença?",
         texto:
-          "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar** no Calendário (Gestão de Usuários → Permissões → linha Calendário → coluna Editar). Escolha **Sim** ou **Próprios** e salve. Administradores vêem sempre. Sem essa permissão, usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
+          "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar: Sim** no Calendário (Gestão de Usuários → Permissões → linha Calendário → coluna Editar). **Editar: Próprios** não libera a aba. Administradores vêem sempre. Sem **Editar: Sim**, usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
       },
     ],
   },

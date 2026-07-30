@@ -985,9 +985,9 @@ export default function RhCalendarioPage() {
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
   }, [prestadores, relatorioFiltroTimeAtivo, relatorioFiltroTimeIdsReais]);
 
+  /** Relatório de Presença: só Editar = Sim (ou admin). Editar = Próprios não vê a aba. */
   const podeVerAbaRelatorioPresenca =
-    !perm.loading &&
-    (user?.role === "admin" || perm.canEditar === "sim" || perm.canEditar === "proprios");
+    !perm.loading && (user?.role === "admin" || perm.canEditar === "sim");
 
   useEffect(() => {
     if (!perm.loading && abaPrincipal === "relatorio" && !podeVerAbaRelatorioPresenca) {

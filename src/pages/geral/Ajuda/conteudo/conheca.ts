@@ -794,7 +794,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Relatório de Presença",
         texto:
-          "Aba disponível apenas com permissão de **Editar** no Calendário (Gestão de Usuários → Permissões). Use o carrossel de **dia** e os filtros de **Time** e **Staff** para ver o Controle de Presença autorizado no dia selecionado. Selecione ao menos um dos filtros para carregar; as colunas são as mesmas da aba mensal, com **Prestador** no lugar de **Data**.",
+          "Aba disponível apenas com permissão de **Editar: Sim** no Calendário (Gestão de Usuários → Permissões). Quem tem **Editar: Próprios** não vê esta aba. Use o carrossel de **dia** e os filtros de **Time** e **Staff** para ver o Controle de Presença autorizado no dia selecionado. Selecione ao menos um dos filtros para carregar; as colunas são as mesmas da aba mensal, com **Prestador** no lugar de **Data**.",
       },
     ],
   },
