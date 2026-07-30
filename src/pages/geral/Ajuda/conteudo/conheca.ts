@@ -87,7 +87,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. As métricas vêm da integração TAP CDA — conta Afiliados (`influencer_metricas` dos perfis com role afiliado).",
+          "O dashboard de Afiliados consolida a performance do canal de afiliados em três dimensões: visão executiva (financeiro e conversão), análise de conversão e ranking financeiro. Todas as abas compartilham os mesmos filtros de período, afiliado e operadora. As métricas vêm da integração TAP CDA — conta Afiliados, considerando apenas os perfis cadastrados como afiliado.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -242,12 +242,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Headcount é o dashboard executivo de pessoas da Spin, com quatro abas — Overview, Plano de Carreira, Contratação e Distratos. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
+          "O Headcount é o dashboard executivo de pessoas da Spin, com três abas — Overview, Contratação e Distratos. Serve diretoria e investidores; é distinto da aba operacional Head Count em Gestão de Prestadores e do Overview Prestador (escala individual).",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela dos últimos 13 meses (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Plano de Carreira, Contratação e Distratos.",
+          "Navegue pelos meses com as setas. O botão **Histórico** mostra a janela de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). Filtre por **diretoria** (Todas as diretorias por padrão). Na segunda linha, alterne entre as abas Overview, Contratação e Distratos.",
       },
       {
         subtitulo: "Aba Overview",
@@ -255,14 +255,9 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "No modo mês: KPIs HC Ativo, Contratação e Distrato na primeira linha; Variação, Turnover e Permanência na segunda (comparação com o mês anterior só com o valor). Pizza do HC por gerência (total no centro; hover na lista mostra HC por time) e barras por tipo de contrato.\n\nNo **Histórico**: KPIs HC Ativo, Distrato, Turnover e Permanência Média, mais a tabela **Mês a Mês** com Headcount, Contratação, Distrato e Turnover dos últimos 13 meses.",
       },
       {
-        subtitulo: "Aba Plano de Carreira",
-        texto:
-          "Mesmos blocos da aba Contratação (KPIs, origem das candidaturas, funil e tabela de vagas), restritos a vagas **internas** e **mistas**. No Histórico, considera os 13 meses.",
-      },
-      {
         subtitulo: "Aba Contratação",
         texto:
-          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse, quantidade de candidatos e status. Contempla vagas **externas** e **mistas**. No Histórico, os mesmos blocos consideram os 13 meses.",
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse, quantidade de candidatos e status. No Histórico, os mesmos blocos consideram as 13 competências.",
       },
       {
         subtitulo: "Aba Distratos",
@@ -481,12 +476,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname. O filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar o elenco de uma parceira específica.",
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nAo lado do carrossel fica o filtro de **estúdio** (**Todos Estúdios** por padrão, com a opção **Nenhum estúdio** para dealers ainda sem vínculo). Perfis com escopo de um único estúdio já entram com ele selecionado, sem o agregador.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname.",
       },
       {
         subtitulo: "Cards de Dealers",
         texto:
-          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, jogos de especialidade e operadora vinculada.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, operadora e bio do dealer.",
+          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, tags dos jogos de especialidade, bio e, na base, as tags de gênero, **estúdio** e — quando houver vínculo — operadora.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, estúdio e bio do dealer.",
       },
       {
         subtitulo: "Solicitações ao Estúdio (perfil Operador)",
@@ -501,7 +496,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Visibilidade por Perfil",
         texto:
-          "— Gestor / Admin: visualização do elenco de todas as operadoras e histórico de solicitações de todas as operadoras.\n— Operador: visualiza apenas os dealers da sua operadora. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
+          "— Gestor / Admin: visualização do elenco de todos os estúdios e do histórico de solicitações de todas as operadoras.\n— Operador: visualiza os dealers do estúdio que atende a sua operadora. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer, sempre restrito à própria operadora.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
       },
     ],
   },
@@ -515,7 +510,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre meses ou ative Histórico para ver todas as solicitações desde o início da operação. No modo Histórico, as setas ficam desabilitadas.\n\nO filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar as notificações de uma parceira específica em todos os blocos da página.\n\nO indicador 'Carregando…' na barra de filtros é um estado secundário que confirma que os dados estão sendo atualizados após mudança de período ou operadora.",
+          "Use as setas para navegar entre meses ou ative Histórico para ver as solicitações de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). No modo Histórico, as setas ficam desabilitadas. Solicitações ainda em aberto aparecem independentemente do mês selecionado.\n\nO filtro de operadora aparece para perfis com acesso a múltiplas operadoras, permitindo isolar as notificações de uma parceira específica em todos os blocos da página.\n\nO indicador 'Carregando…' na barra de filtros é um estado secundário que confirma que os dados estão sendo atualizados após mudança de período ou operadora.",
       },
       {
         subtitulo: "Inbox do Estúdio — perfil Gestor",
@@ -544,12 +539,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Centraliza o cadastro de prestadores, head count por área, movimentações de RH e fluxos operacionais (contratação, desligamento, anotações). O acesso às abas e ações depende das permissões Ver, Criar, Editar e Excluir configuradas em Gestão de Usuários.",
+          "Centraliza o cadastro de prestadores, o head count por área, as movimentações de RH e as anotações internas. A página tem três abas: **Head Count**, **Ações de RH** e **Anotações RH**. O acesso às abas e ações depende das permissões de Ver, Criar, Editar e Excluir configuradas em Gestão de Usuários.",
       },
       {
-        subtitulo: "Abas e filtros",
+        subtitulo: "Filtros e busca",
         texto:
-          "Navegue entre as abas de gestão (cadastro, head count, anotações e fluxos conforme liberado ao perfil). Use os filtros de operadora, time ou busca quando disponíveis para restringir a lista antes de editar ou exportar.",
+          "A barra de filtros tem três linhas. Na primeira, os seletores de **Diretorias**, **Gerências**, **Setores**, **Contratos** (CLT, PJ, Estágio, Temporário) e **Status** — cada um com opção agregadora (**Todas Diretorias**, **Todos Contratos**, **Todos Status** e assim por diante). Na segunda, a busca por **nome, CPF ou e-mail**. Na terceira, as abas da página.\n\nO padrão do filtro de status mostra os prestadores disponíveis (ativos e indisponíveis); escolha **Encerrado** para ver quem já saiu.",
+      },
+      {
+        subtitulo: "Abas",
+        texto:
+          "— **Head Count**: lista de prestadores com função, líder imediato, data da função, remuneração e status. Com permissão de Criar, o botão **Novo Prestador** abre o cadastro completo.\n— **Ações de RH**: movimentações formais do prestador — revisão de contrato, período de indisponibilidade, alinhamento, término e reativação da prestação.\n— **Anotações RH**: registros internos sobre o prestador. Com permissão, o botão **RH Talks** abre o fluxo de conversa com o time.",
+      },
+      {
+        subtitulo: "Cadastro e detalhe do prestador",
+        texto:
+          "O modal do prestador é organizado em abas: **Dados pessoais**, **Dados de contratação**, **Dados da empresa** (só para contrato PJ), **Dados bancários**, **Documentos**, **Carreira** e **Acesso a Plataforma** — as três últimas conforme permissão do perfil.\n\nOs campos preenchidos em uma aba são mantidos ao alternar entre elas; um único **Salvar** grava tudo.",
       },
       {
         subtitulo: "Remuneração e dados sensíveis",
@@ -741,7 +746,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (`area_atuacao` Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. O time **Arte** não aparece nesta página. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
+          "Monta e mantém a escala mensal dos times **e gerências sem times** de **escritório** (prestadores com área de atuação Escritório) por colaborador e dia. Reutiliza a mesma interface da **Escala Estúdio**, sem filtro de estúdio e com células **Comercial**, Folga, Compra, Venda e Troca. O time **Arte** não aparece nesta página. A **Gestão de Prestadores** não muda por esta página — só a grade operacional.",
       },
       {
         subtitulo: "Fluxo e Calendário",
@@ -865,7 +870,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Acompanhe solicitações de escala em aberto e o histórico arquivado — trocas, coberturas e pedidos operacionais distintos das solicitações de RH (atestados, reuniões, vagas) na secção RH.",
+          "Acompanhe solicitações de escala em aberto e o histórico arquivado — trocas, coberturas e pedidos operacionais distintos das solicitações de RH (atestados, reuniões, vagas) na seção RH.",
       },
       {
         subtitulo: "Filtros",
@@ -1150,7 +1155,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Navegue pelos meses com as setas ou ative o Histórico para ver todas as solicitações sem restrição de período. O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
+          "Navegue pelos meses com as setas ou ative o Histórico para ver as solicitações de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite selecionar nomes específicos; o de operadora restringe à plataforma escolhida.\n\nO filtro de operadora só aparece para perfis de gestão — influencers e agências veem apenas seus próprios dados.",
       },
       {
         subtitulo: "Solicitações",
@@ -1247,12 +1252,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses e o botão Histórico para ver todos os ciclos sem restrição de período. O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
+          "Use as setas para navegar entre os meses e o botão Histórico para ver os ciclos de 13 competências mensais — a atual e as 12 anteriores (rótulo **Todo o período**). O filtro de Influencers (pill, **Todos Influencers** por defeito; pesquisa no painel com mais de cinco nomes) permite focar em um ou mais nomes específicos; o filtro de operadora restringe os dados à plataforma selecionada.\n\nO mês exibido no carrossel determina quais ciclos aparecem no bloco de Ciclo de Pagamento — ciclos cujo último dia cai dentro do mês selecionado.",
       },
       {
         subtitulo: "KPIs",
         texto:
-          "Três cards no topo (formato igual à Banca de Jogo — rótulo em caixa alta acima do valor, sem caixa branca em volta):\n\n— **R$ PAGO:** soma dos pagamentos com status Pago\n— **R$ PENDENTE:** soma dos pagamentos Em análise ou Aguardando pagamento\n— **HORAS REALIZADAS:** horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
+          "Três cards no topo (formato igual à Banca de Jogo — rótulo em caixa alta acima do valor, sem caixa branca em volta):\n\n— **R$ PAGO:** soma dos pagamentos com status Pago\n— **R$ PENDENTE:** soma dos pagamentos Em análise ou Aguard. pagamento\n— **HORAS REALIZADAS:** horas acumuladas de todos os influencers no período\n\nOs valores se atualizam conforme os filtros aplicados.",
       },
       {
         subtitulo: "Ciclo de Pagamento",
@@ -1367,7 +1372,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e abas",
         texto:
-          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n— **Fechado** lista marcas com Dedicada ou Network em **Contrato Assinado** ou **Ativo** (mesmo que o Status ainda estivesse em Negociação).\n\nAs URLs das abas são sincronizadas com a rota (`/PipelineB2B/...`).",
+          "Use a busca para localizar marcas por CNPJ, razão social ou nome da marca. O filtro **Comercial** restringe a lista ao responsável interno (**Todos Comerciais**, **Nenhum** ou um gestor).\n\nAs abas organizam o funil:\n— **Todos:** visão consolidada com totais hierárquicos.\n— **Disponíveis**, **Conexão**, **Negociação** e **Fechado:** KPIs clicáveis filtram o detalhe da tabela por substatus.\n— **Fechado** lista marcas com Dedicada ou Network em **Contrato Assinado** ou **Ativo** (mesmo que o Status ainda estivesse em Negociação).\n\nA aba selecionada fica registrada no endereço da página — dá para copiar o link e voltar direto na mesma aba.",
       },
       {
         subtitulo: "Tabela e edição",
@@ -1458,7 +1463,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e grava município/UF em `comercial_empresas` (cron diário ~8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos/falhas de secrets ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.",
+          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e preenche município e UF no cadastro da empresa (execução diária, por volta das 8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos e falhas de credenciais ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.",
       },
       {
         subtitulo: "Logs Recentes",

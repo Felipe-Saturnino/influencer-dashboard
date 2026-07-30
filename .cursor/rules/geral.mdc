@@ -46,7 +46,7 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - Se o usuário **não** tiver nenhum tutorial liberado para o perfil efetivo, a aba **Tutoriais** **não aparece** na Ajuda (URL `/Ajuda/Tutoriais` redireciona para Conheça).
 - Ao gravar novo tutorial: adicionar ao catálogo, imagens em `public/tutoriais/<secao>/<id>/`, seed/linha em `ajuda_tutorial_visibilidade` (ou o Admin configura na UI).
 - Tutoriais atuais: **Controle de Presença** (`controle-presenca`, Escala) · **Alterar Escala** (`alterar-escala`, Escala — seed SM/SL) · **Marketplace** (`marketplace-ofertas`, Escala — seed GP/Shuffler) · **Dicas Academy** (`postagem-academy-aprovacao`, Academy — seed perfis Estúdio).
-- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `ControledePresenca`, `AlterarEscala`, `MarketplaceOfertas`, `DicasAcademy`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
+- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `Calendario`, `ControledePresenca`, `AlterarEscala`, `MarketplaceOfertas`, `CienciaManuaisAcademy`, `DicasAcademy`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
 
 **Regra (também no Global):** qualquer alteração de produto em **qualquer secção** deve revisar se Ajuda/glossário precisa de entrada nova, atualização ou remoção.
 
@@ -62,6 +62,7 @@ A **fonte de verdade** do nome visível da página é `src/constants/menu.ts` (`
 | Glossário | Categorias filtradas por `GLOSSARIO_CATEGORIA_PAGE_KEYS` — exibir se o usuário tiver **Ver** ou **Próprios** em ao menos uma página mapeada |
 | `glossarioData.ts` | Referências no corpo do termo (“na página **Resultados**”) — não “Resultado de Lives” |
 | Texto que cita subtítulo da UI | Copiar o subtítulo **atual** da página (`PageHeader` / parágrafo sob `h1`), não versão antiga |
+| Abas, filtros e CTAs citados | Conferir na página real antes de escrever — nomes de aba (ex.: `ABAS_PAGINA_RH_FUNC`), agregadoras dos filtros e rótulos de status (ex.: **Aguard. pagamento**) mudam sem aviso na Ajuda |
 
 **Proibido** inventar títulos longos na Ajuda quando o menu já tem nome curto (`Feedback de Lives`, `Agenda de Lives`, etc.), salvo **exceção documentada** no MDC da secção.
 
@@ -77,6 +78,9 @@ Seguir **Global § Linguagem e copy (PT-BR)**. Regras específicas:
 | Loading citado na Ajuda | **`Carregando…`** (elipse Unicode) — alinhado à FilterBar e boot |
 | Erros citados na Ajuda | Fecho **`entre em contato com o suporte`** |
 | Dealers / cassino | **cassino ao vivo**; badge/campo **Live Cassino** |
+| **Infraestrutura** | **Proibido** citar tabela, coluna, RPC, Edge Function, secret, migration, comando CLI, caminho `docs/…` ou `PageKey` no texto ao usuário — descrever o efeito e fechar com **entre em contato com o suporte técnico** |
+| **Histórico** | Sempre **13 competências mensais — a atual e as 12 anteriores** (rótulo **Todo o período**) — nunca “desde o início da operação”, “todo o intervalo disponível” ou “sem restrição de período” |
+| **Fluxos por estúdio vs operadora** | Catálogo e operação de estúdio (Dealers, Staff, Figurinos) citam **estúdio**; **operadora** só em vínculo comercial e solicitações (Central de Notificações) |
 
 ### Ao adicionar página no menu
 

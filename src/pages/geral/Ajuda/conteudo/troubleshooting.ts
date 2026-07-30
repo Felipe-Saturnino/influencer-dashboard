@@ -79,7 +79,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA) ainda não executou hoje, aguarde a próxima coleta — confira **Status Técnico** (integração `lobby_blaze` ou `lobby_cda` com status OK). Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze e Casa de Apostas aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso de permissão (`mesas_spin`) ou dados só na tabela sem posições vinculadas à execução.",
+          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA) ainda não executou hoje, aguarde a próxima coleta — confira em **Status Técnico** se as integrações **Lobby Blaze** e **Lobby CDA** estão com status OK. Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze e Casa de Apostas aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso na liberação de permissão da página ou uma coleta registrada sem as posições das mesas.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
@@ -454,7 +454,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Solicitar não aparece no card?",
         texto:
-          "O botão Solicitar só é exibido para o perfil Operador e apenas quando a operadora ativa está definida no escopo do usuário. Se o botão não aparece, verifique:\n\n— Se o usuário tem o perfil Operador configurado na Gestão de Usuários.\n— Se o escopo de operadora está atribuído corretamente ao usuário.\n— Se o filtro de operadora na página está definido para a operadora do escopo — quando o usuário tem acesso a mais de uma, a operadora precisa estar selecionada no filtro para que o botão apareça.",
+          "O botão Solicitar só é exibido para o perfil Operador e apenas quando a operadora ativa está definida no escopo do usuário. Se o botão não aparece, verifique:\n\n— Se o usuário tem o perfil Operador configurado na Gestão de Usuários.\n— Se o escopo de operadora está atribuído corretamente ao usuário.\n— Se o **filtro de estúdio** na barra está no estúdio da sua operadora — quando o usuário atende mais de uma parceira, o estúdio correspondente precisa estar selecionado para o botão aparecer com a operadora certa.",
       },
       {
         subtitulo: "O botão Histórico não aparece?",
@@ -469,7 +469,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O histórico de solicitações do dealer está vazio?",
         texto:
-          "O modal de Histórico exibe solicitações registradas na tabela 'dealer_solicitacoes' para aquele dealer. Se estiver vazio, significa que nenhuma solicitação foi criada para esse dealer ainda — isso é comportamento esperado para dealers recém-cadastrados ou sem interação da operadora.\n\nPara o perfil Operador, o Histórico é filtrado pela operadora do escopo — solicitações de outras operadoras para o mesmo dealer não são exibidas.",
+          "O modal de Histórico exibe as solicitações já registradas para aquele dealer. Se estiver vazio, significa que nenhuma solicitação foi criada para esse dealer ainda — isso é comportamento esperado para dealers recém-cadastrados ou sem interação da operadora.\n\nPara o perfil Operador, o Histórico é filtrado pela operadora do escopo — solicitações de outras operadoras para o mesmo dealer não são exibidas.",
       },
     ],
   },
@@ -484,7 +484,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O badge de contagem na aba não reflete o número correto?",
         texto:
-          "O badge exibe apenas solicitações abertas (pendente ou em andamento) onde o campo 'aguarda_resposta_de' está definido como 'gestor' — ou seja, a bola está com o estúdio. Solicitações em andamento mas aguardando resposta da operadora não são contabilizadas no badge.\n\nSe o número parece desatualizado, recarregue a página — a contagem é calculada no momento do carregamento dos dados e não atualiza em tempo real nessa visualização.",
+          "O badge exibe apenas solicitações abertas (pendente ou em andamento) que aguardam resposta do estúdio — ou seja, a bola está com o time Spin. Solicitações em andamento mas aguardando resposta da operadora não são contabilizadas no badge.\n\nSe o número parece desatualizado, recarregue a página — a contagem é calculada no momento do carregamento dos dados e não atualiza em tempo real nessa visualização.",
       },
       {
         subtitulo: "Não consigo responder na thread?",
@@ -494,7 +494,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A campanha não aparece para o Operador?",
         texto:
-          "As campanhas exibidas para operadores vêm da tabela 'roteiro_mesa_campanhas' filtradas pelo estúdio/operadora do escopo e pelo período selecionado. Se uma campanha não aparece:\n\n— Verifique se a campanha foi cadastrada para o estúdio correto no módulo Roteiro de Mesa.\n— Confirme que as datas de início e fim da campanha estão dentro do período selecionado na Central.\n— Ative o Histórico para ver campanhas fora do mês atual.\n— Verifique se o filtro de operadora na barra superior corresponde à operadora vinculada à campanha (solicitações continuam por operadora).",
+          "As campanhas exibidas para operadores são as cadastradas em **Roteiro de Mesa**, filtradas pelo estúdio e pela operadora do escopo e pelo período selecionado. Se uma campanha não aparece:\n\n— Verifique se a campanha foi cadastrada para o estúdio correto no módulo Roteiro de Mesa.\n— Confirme que as datas de início e fim da campanha estão dentro do período selecionado na Central.\n— Ative o Histórico para ver campanhas fora do mês atual.\n— Verifique se o filtro de operadora na barra superior corresponde à operadora vinculada à campanha (solicitações continuam por operadora).",
       },
       {
         subtitulo: "O botão 'Marcar como resolvido' não aparece na thread?",
@@ -504,7 +504,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O banner de pendências na Gestão de Dealers não aparece?",
         texto:
-          "O banner amarelo de pendências (componente BannerPendencias) só é exibido para o perfil Operador quando há solicitações com 'aguarda_resposta_de = operadora' em aberto. Verifique:\n\n— Se o usuário tem o perfil Operador configurado.\n— Se há solicitações abertas aguardando resposta da operadora — o banner não aparece quando todas as solicitações estão aguardando o estúdio.\n— O banner monitora em tempo real via realtime do Supabase. Se a conexão realtime estiver instável, o banner pode não atualizar automaticamente — recarregue a página para forçar a leitura.",
+          "O banner amarelo de pendências só é exibido para o perfil Operador quando há solicitações em aberto aguardando resposta da operadora. Verifique:\n\n— Se o usuário tem o perfil Operador configurado.\n— Se há solicitações abertas aguardando resposta da operadora — o banner não aparece quando todas estão aguardando o estúdio.\n— O banner é atualizado em tempo real; se a conexão oscilar, ele pode não atualizar sozinho — recarregue a página para forçar a leitura.",
       },
       {
         subtitulo: "As solicitações concluídas não aparecem na seção de histórico?",
@@ -614,7 +614,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao salvar bloco ou campanha?",
         texto:
-          "Verifique campos obrigatórios (título, texto, estúdio, datas em campanhas) e conexão. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.\n\nSe o problema persistir, valide no Supabase (RLS, policies e tabelas roteiro_mesa_*) com o administrador.",
+          "Verifique campos obrigatórios (título, texto, estúdio, datas em campanhas) e conexão. A interface exibe uma mensagem genérica em português — os detalhes técnicos ficam registrados para o suporte.\n\nSe o problema persistir, entre em contato com o suporte técnico.",
       },
       {
         subtitulo: "Não consigo editar uma sugestão de roteiro?",
@@ -879,7 +879,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A solicitação sumiu após ser criada?",
         texto:
-          "A tabela de Solicitações exibe apenas pedidos com status Solicitado ou Aprovado — pedidos Liberados aparecem apenas no Consolidado de Bancas. Se você não vê a solicitação, confirme o mês selecionado no carrossel — a solicitação pode ter sido criada em outro período. Ative o Histórico para ver tudo sem restrição de data.",
+          "A tabela de Solicitações exibe apenas pedidos com status Solicitado ou Aprovado — pedidos Liberados aparecem apenas no Consolidado de Bancas. Se você não vê a solicitação, confirme o mês selecionado no carrossel — a solicitação pode ter sido criada em outro período. Ative o Histórico para ver as 13 competências mensais — a atual e as 12 anteriores.",
       },
       {
         subtitulo: "Os botões Aprovar, Recusar e Liberar não aparecem?",
@@ -899,7 +899,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O Histórico do Consolidado não expande?",
         texto:
-          "Clique na linha do influencer para expandir o histórico. Se o histórico aparecer vazio após expandir, significa que não há solicitações registradas para aquele influencer no período selecionado. Ative o Histórico (filtro) para ver todas as transações sem restrição de data.",
+          "Clique na linha do influencer para expandir o histórico. Se o histórico aparecer vazio após expandir, significa que não há solicitações registradas para aquele influencer no período selecionado. Ative o Histórico (filtro) para ver as transações das 13 competências mensais — a atual e as 12 anteriores.",
       },
     ],
   },
@@ -999,7 +999,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Analisar ou Pagar não aparece?",
         texto:
-          "Esses botões dependem do seu perfil e da permissão de edição. O botão Analisar aparece para pagamentos Em análise; Pagar aparece para pagamentos Aguardando pagamento. Se você tem permissão e os botões não aparecem, confirme que o ciclo está fechado — no ciclo aberto (prévia), nenhuma ação está disponível.",
+          "Esses botões dependem do seu perfil e da permissão de edição. O botão Analisar aparece para pagamentos Em análise; Pagar aparece para pagamentos **Aguard. pagamento**. Se você tem permissão e os botões não aparecem, confirme que o ciclo está fechado — no ciclo aberto (prévia), nenhuma ação está disponível.",
       },
       {
         subtitulo: "Minhas lives estão realizadas mas não aparecem no financeiro?",
@@ -1199,12 +1199,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Uma integração aparece como 'Falha' — o que fazer?",
         texto:
-          "Verifique os Logs Recentes na mesma página: o campo Descrição traz a causa do erro. Os erros mais comuns são token de API expirado (renove o secret no Supabase) ou Edge Function não publicada (execute o deploy no CLI do Supabase). Com permissão de Editar, use **Executar diagnóstico** para registrar um relatório em Logs Recentes (sem disparar sync). Se o erro persistir após corrigir a causa, use o botão Sync na integração correspondente.",
+          "Verifique os Logs Recentes na mesma página: o campo Descrição traz a causa do erro. As causas mais comuns são credencial de API expirada ou rotina de integração indisponível — as duas exigem ação do time técnico. Com permissão de Editar, use **Executar diagnóstico** para registrar um relatório em Logs Recentes (sem disparar sync). Depois de corrigida a causa, use o botão Sync na integração correspondente; se o erro persistir, entre em contato com o suporte técnico.",
       },
       {
         subtitulo: "Executar diagnóstico não faz nada ou retorna erro?",
         texto:
-          "Confirme permissão de **Editar** em Status Técnico (Gestão de Usuários). A função precisa estar publicada no Supabase: `supabase functions deploy platform-health-check`. Se a mensagem indicar função não encontrada, faça o deploy e tente de novo. O diagnóstico não substitui os testes Vitest do CI — ele só inspeciona o ambiente em que você está logado.",
+          "Confirme permissão de **Editar** em Status Técnico (Gestão de Usuários). Se a mensagem indicar que a rotina de diagnóstico não está disponível, entre em contato com o suporte técnico — a publicação da rotina é feita pelo time de plataforma. O diagnóstico verifica apenas o ambiente em que você está logado; não substitui os testes automatizados da esteira de deploy.",
       },
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
@@ -1374,12 +1374,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aparece «Não foi possível carregar a escala do calendário»?",
         texto:
-          "Essa mensagem indica falha ao buscar a grade do **mês exibido** no carrossel (não confundir com mês sem escala aprovada, que mostra aviso amarelo). Atualize a página; se continuar, peça ao suporte para aplicar as migrations do Calendário no Supabase e conferir o console (F12) nas RPCs `rh_calendario_grade_mes`. Enquanto isso, Escritório / Horário Comercial podem continuar com a escala automática no cliente.",
+          "Essa mensagem indica falha ao buscar a grade do **mês exibido** no carrossel (não confundir com mês sem escala aprovada, que mostra aviso amarelo). Atualize a página; se continuar, entre em contato com o suporte técnico para verificar a carga da grade daquele mês. Enquanto isso, Escritório / Horário Comercial continuam com a escala automática.",
       },
       {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
         texto:
-          "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** em Escala Estúdio podia ser um limite técnico na carga da grade — atualize, aplique as migrations do Calendário e recarregue. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
+          "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** em Escala Estúdio pode indicar falha na carga da grade — atualize a página e, se persistir, entre em contato com o suporte técnico. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
       },
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
@@ -1394,7 +1394,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O pop-up confirma o check-in, mas o horário realizado não aparece?",
         texto:
-          "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e alinhado à conta Auth. A leitura do ponto usa o vínculo RH ↔ Auth; com e-mail pessoal e e-mail Spin em contas diferentes, a correção exige a migration de `funcionario_id` no ponto e o deploy da função **prestador-ponto**. Depois de aplicar, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
+          "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e é o mesmo usado para acessar a plataforma. A leitura do ponto depende desse vínculo — com e-mail pessoal e e-mail Spin em contas diferentes, o registro não é associado ao prestador. Após corrigir o cadastro, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
       },
       {
         subtitulo: "Posso registrar ponto em uma Folga?",
@@ -1489,7 +1489,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Pool vazio ou sem escala aprovada?",
         texto:
-          "A rotação usa Game Presenters com célula de trabalho (Manhã/Tarde/Noite) na **Escala Estúdio** **aprovada** do dia e estúdio efetivo (Staff ou override na própria Rotação). O pool segue o **valor da célula do dia**. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio. Se o SQL de cockpit ainda não foi aplicado, rode `docs/sql/escala_rotacao_cockpit.sql` (e, se necessário, `docs/sql/escala_rotacao_contexto_shift_lead.sql`) no Supabase.",
+          "A rotação usa Game Presenters com célula de trabalho (Manhã/Tarde/Noite) na **Escala Estúdio** **aprovada** do dia e estúdio efetivo (Staff ou override na própria Rotação). O pool segue o **valor da célula do dia**. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio. Se a escala do dia está aprovada e o pool continua vazio, entre em contato com o suporte técnico.",
       },
       {
         subtitulo: "Não consigo publicar a rotação?",
@@ -1519,7 +1519,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Confundi com Solicitações do RH?",
         texto:
-          "A secção **Escala → Solicitações** trata pedidos operacionais de escala (trocas, coberturas). A secção **RH → Solicitações** trata atestados, reuniões com RH e vagas — são páginas distintas no menu.",
+          "A seção **Escala → Solicitações** trata pedidos operacionais de escala (trocas, coberturas). A seção **RH → Solicitações** trata atestados, reuniões com RH e vagas — são páginas distintas no menu.",
       },
     ],
   },
@@ -1529,7 +1529,27 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Gestão de Prestadores no menu?",
         texto:
-          "Confirme permissão de **Ver** e liberação da página nas abas de escopo (Gestores / Prestadores / Operadora). O rótulo no menu é **Gestão de Prestadores** (`rh_funcionarios`).",
+          "Confirme permissão de **Ver** e a liberação da página nas abas de escopo (Gestores / Prestadores / Operadora) em Gestão de Usuários.",
+      },
+      {
+        subtitulo: "Um prestador não aparece na lista?",
+        texto:
+          "O filtro de **Status** entra com os prestadores disponíveis (ativos e indisponíveis) — quem já saiu só aparece ao selecionar **Encerrado**. Confira também os filtros de Diretoria, Gerência, Setor e Contrato e limpe a busca por nome, CPF ou e-mail.",
+      },
+      {
+        subtitulo: "A coluna Remuneração aparece vazia?",
+        texto:
+          "Os valores da coluna ficam ocultos por padrão — use o ícone de olho no cabeçalho para exibir ou ocultar. Se a coluna não aparece, o perfil não tem permissão de **Ver** os dados financeiros nesta página. Alterar valores exige permissão de **Editar**.",
+      },
+      {
+        subtitulo: "Não vejo as abas Documentos, Carreira ou Acesso a Plataforma no modal?",
+        texto:
+          "Essas abas dependem da permissão do perfil nesta página. A aba **Dados da empresa** aparece apenas quando o contrato do prestador é **PJ**.",
+      },
+      {
+        subtitulo: "Os botões Novo Prestador ou RH Talks não aparecem?",
+        texto:
+          "**Novo Prestador** exige permissão de **Criar** e só é exibido na aba **Head Count**. **RH Talks** aparece na aba **Anotações RH** para perfis com a permissão correspondente.",
       },
     ],
   },
@@ -1579,7 +1599,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Lista vazia?",
         texto:
-          "Na aba **Site Spin**, chamados entram pelo formulário do site (Edge `prospecto-cs-atendimento-site`). Na aba **E-mail**, chamados vêm da caixa **contato@spingaming.com.br** via Edge `ingest-cs-atendimento-outlook` (cron a cada poucos minutos). Confirme migrations `cs_atendimento` e `cs_atendimento_email`, secrets Graph (`CS_OUTLOOK_*`) e deploy da function. Guia: `docs/SETUP-CS-ATENDIMENTO-OUTLOOK.md`.",
+          "Na aba **Site Spin**, os chamados entram pelo formulário do site institucional. Na aba **E-mail**, vêm da caixa **contato@spingaming.com.br**, com leitura automática a cada poucos minutos. Um chamado recém-enviado pode levar alguns minutos para aparecer — atualize a página antes de concluir que está faltando. Se a lista continuar vazia com chamados confirmados na origem, entre em contato com o suporte técnico.",
       },
       {
         subtitulo: "Não consigo atender chamado?",
@@ -1644,7 +1664,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo mudar o tema (claro/escuro)?",
         texto:
-          "Perfis Operador usam sempre o modo escuro com a identidade da operadora — o seletor de aparência não aparece. Nos demais perfis, use os botões de tema na secção Aparência.",
+          "Perfis Operador usam sempre o modo escuro com a identidade da operadora — o seletor de aparência não aparece. Nos demais perfis, use os botões de tema na seção Aparência.",
       },
       {
         subtitulo: "Erro ao alterar a senha?",

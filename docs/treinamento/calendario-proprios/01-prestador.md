@@ -10,22 +10,15 @@
 
 **Capturas:** sessão real em Produção (jul/2026), conta de exemplo Prestador — turnos **Noite**.
 
+A aba **Compromissos** (dias escalados, folgas e agendamento de reunião) é tratada em `docs/treinamento/calendario/01-calendario-prestador.md`.
+
 ---
 
-## 1. Abrir o Calendário
+## 1. Abrir a aba Controle de Presença
 
 1. No menu, seção **Escala**, clique em **Calendário**.
-2. A aba padrão é **Compromissos**: grade do mês com turnos publicados (ex.: Noite 18h–06h).
-3. Quem tem só visão própria **não** vê filtros de Time/Staff nem “Meu Controle”.
-
-![Compromissos do próprio mês](imagens/prestador/01-calendario-compromissos.png)
-
----
-
-## 2. Ir para Controle de Presença
-
-1. Clique na aba **Controle de Presença**.
-2. Veja o resumo (Escalados, Trocas, Venda, Compra) e a tabela do mês:
+2. Clique na aba **Controle de Presença**.
+3. Veja o resumo (Escalados, Trocas, Venda, Compra) e a tabela do mês:
    - **Situação:** Escalado ou Folga
    - **Entrada / Saída:** Escalada vs Realizada (horário realizado em vermelho quando diverge)
    - **Status:** Folga, Falta, Pendente, Registrado, Em aberto, etc.
@@ -35,7 +28,7 @@
 
 ---
 
-## 3. Check-in
+## 2. Check-in
 
 1. Com o mês **atual** selecionado, use o botão **Fazer Check-in** (canto direito da barra).
 2. Confirme o modal **Check-in Realizado** (horário e mensagem “Turno iniciado, bom turno.”).
@@ -58,7 +51,7 @@
 
 ---
 
-## 4. Check-out
+## 3. Check-out
 
 1. Ao encerrar o turno, clique em **Fazer Check-out**.
 2. Confirme o modal **Check-out Realizado** (horário + horas cumpridas no turno).
@@ -69,7 +62,7 @@
 
 ---
 
-## 5. Justificar (Falta ou Pendente)
+## 4. Justificar (Falta ou Pendente)
 
 Use quando o status for **Falta** ou **Pendente** (após o limite) e existir o ícone **Justificar** na coluna Ações.
 
@@ -77,25 +70,25 @@ Use quando o status for **Falta** ou **Pendente** (após o limite) e existir o �
 2. Confira a data no título do modal (ex.: “Quinta, 02 de Julho”).
 3. Em **Motivo**, escolha uma opção:
 
-### 5.1 Modal inicial
+### 4.1 Modal inicial
 
 ![Modal Justificar — escolher motivo](imagens/prestador/07-modal-justificar.png)
 
-### 5.2 Motivo Médico
+### 4.2 Motivo Médico
 
 Campos: início e fim do atestado, anexo do atestado, observação opcional.  
 Ao salvar, o RH recebe uma solicitação de **Atestado** em **Solicitações** (status Em análise).
 
 ![Justificar — Médico](imagens/prestador/08-justificar-medico.png)
 
-### 5.3 Motivo Esquecimento
+### 4.3 Motivo Esquecimento
 
 Informe **Correção de Entrada** e **Correção de Saída** (formato HH:MM).  
 Após salvar, a correção segue para **aprovação do líder**.
 
 ![Justificar — Esquecimento](imagens/prestador/09-justificar-esquecimento.png)
 
-### 5.4 Motivo Outro
+### 4.4 Motivo Outro
 
 **Observação** obrigatória descrevendo o caso.
 
@@ -108,7 +101,7 @@ Após salvar, a correção segue para **aprovação do líder**.
 
 ---
 
-## 6. O que este perfil normalmente não faz
+## 5. O que este perfil normalmente não faz
 
 | Ação | Quem faz |
 |------|----------|
@@ -134,7 +127,6 @@ Em alguns dias **Registrado**, pode aparecer ícone de **Aprovação de Turno** 
 
 | Arquivo | Conteúdo |
 |---------|----------|
-| `01-calendario-compromissos.png` | Aba Compromissos |
 | `02-controle-presenca.png` | Aba Controle de Presença |
 | `03-cta-check-in.png` | Botão Fazer Check-in |
 | `04-modal-check-in-realizado.png` | Confirmação de Check-in |

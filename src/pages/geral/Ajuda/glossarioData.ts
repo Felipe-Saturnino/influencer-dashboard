@@ -54,7 +54,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Período de sete dias usado como unidade de filtro na página Feedback para agrupar lives validadas e seus resultados.",
         nota:
-          "O carrossel de semanas navega entre períodos disponíveis. O modo Histórico desativa o filtro por semana e exibe todo o período com dados cadastrados.",
+          "O carrossel de semanas navega entre períodos disponíveis. O modo Histórico desativa o filtro por semana e exibe o acumulado de 13 competências mensais — a atual e as 12 anteriores.",
         referencia: "Feedback",
       },
       {
@@ -645,9 +645,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Dealer",
         definicao:
-          "Profissional de casino ao vivo no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e operadora vinculada.",
+          "Profissional de cassino ao vivo no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e o **estúdio** onde atua.",
         nota:
-          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página.",
+          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil e estúdio em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página. O catálogo é filtrado por estúdio; a operadora entra apenas nas solicitações e no vínculo comercial.",
         referencia: "Gestão de Dealers · Gestão de Staff · Gestão de Prestadores",
       },
       {
@@ -780,6 +780,44 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Situação em que mais de uma marca opera sob o mesmo CNPJ e portaria SPA/MF. No modal Ver, a aba Licença Compartilhada lista as demais marcas da mesma empresa.",
         referencia: "Pipeline B2B",
       },
+      {
+        termo: "Agregadora",
+        definicao:
+          "Plataforma B2B que distribui conteúdo de jogos para operadoras. Tem funil próprio — Conexão, Negociação e Fechado — na página Pipeline Agregadoras.",
+        referencia: "Pipeline Agregadoras · Overview Comercial",
+      },
+      {
+        termo: "Integração (marca)",
+        definicao:
+          "Etapa técnica após o fechamento comercial: cada marca da aba Fechado do Pipeline B2B ganha uma linha de integração por tipo (Dedicada ou Network), com Prioridade, Caminho, PAM e Agregador.",
+        nota:
+          "Ao marcar Dedicada ou Network como Contrato Assinado ou Ativo, a plataforma cria a linha automaticamente com status Não Iniciado e prioridade Baixo.",
+        referencia: "Integração · Overview Comercial",
+      },
+      {
+        termo: "Caminho (integração)",
+        definicao:
+          "Rota técnica pela qual a marca recebe o sinal das mesas — direta ou via agregadora. Preenchido na linha de integração e usado no volume por Caminho do Overview Comercial.",
+        referencia: "Integração",
+      },
+      {
+        termo: "PAM",
+        definicao:
+          "Plataforma de gestão de contas e carteira usada pela marca (Player Account Management). Informado na linha de integração e pesquisável na busca da página.",
+        referencia: "Integração",
+      },
+      {
+        termo: "SLA por etapa",
+        definicao:
+          "Tempo médio de cada trecho do fluxo de integração: criação até Em andamento, Em andamento até Concluído e criação até Concluído.",
+        referencia: "Overview Comercial",
+      },
+      {
+        termo: "Movimentação recente",
+        definicao:
+          "Bloco que resume as mudanças de status dos últimos 30 dias no funil (entradas em Conexão, Negociação e Fechado, além do total de alterações).",
+        referencia: "Overview Comercial",
+      },
     ],
   },
   {
@@ -822,10 +860,10 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Lido e Ciente",
         definicao:
-          "Confirmação formal de que o colaborador leu e tomou conhecimento de um documento oficial no Portal de RH (política ou normativa), com registro de data e hora.",
+          "Confirmação formal de que o colaborador leu e tomou conhecimento de um documento que exige ciência — no Portal de RH (política ou normativa) ou no Portal da Academy (manuais), com registro de data e hora.",
         nota:
-          "Diferente de apenas marcar um comunicado como Lido. O registro de Lido e Ciente implica responsabilidade sobre o conteúdo do documento. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
-        referencia: "Portal de RH",
+          "Diferente de apenas marcar um comunicado como Lido. No Portal da Academy, a coluna Sua Ciência mostra Pendente até o aceite; travessão (—) indica que o manual não exige ciência. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
+        referencia: "Portal de RH · Portal da Academy",
       },
       {
         termo: "Read Receipt",
@@ -905,6 +943,26 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Fila de pedidos de escala em aberto e histórico arquivado, filtrável por período, time e colaborador.",
         referencia: "Solicitações",
+      },
+      {
+        termo: "Relatório do Turno",
+        definicao:
+          "Registro estruturado da passagem de turno: um bloco por estúdio ativo com Game Presenters escalados e absenteísmo (atrasos, faltas e atestados), mais o bloco de Shufflers e o campo Geral.",
+        nota:
+          "A Data do turno é o dia em que o turno começou — não a data da publicação. Importante no turno noturno, que fecha na manhã seguinte.",
+        referencia: "Relatório de Turno",
+      },
+      {
+        termo: "Relatório de Estúdio",
+        definicao:
+          "Segunda aba do Relatório de Turno (Manhã ou Noite), com SOSs, Sinais, Payout e Resumo obrigatórios, além do checklist opcional de manutenção — roletas, mesas, troca de cartas, CC Machine e cartas contadas.",
+        referencia: "Relatório de Turno",
+      },
+      {
+        termo: "Absenteísmo",
+        definicao:
+          "Total de ausências e desvios de presença no turno — atrasos, faltas e atestados somados dos blocos do relatório.",
+        referencia: "Relatório de Turno · Overview Prestador",
       },
     ],
   },
@@ -995,7 +1053,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Formulário em URL pública da Spin, fora do menu lateral — envio anônimo ou identificado sem login na plataforma. Não substitui a Central de Denúncias interna.",
         nota:
           "Quem já tem acesso logado deve usar a Central de Denúncias no menu RH para acompanhar protocolos internos.",
-        referencia: "Canal público Spin (sem PageKey no menu)",
+        referencia: "Canal público Spin (fora do menu lateral)",
       },
     ],
   },
@@ -1023,6 +1081,24 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Abas Operadora, Gestores e Prestadores em Gestão de Usuários definem quais itens do menu lateral cada grupo vê. O acesso efetivo é o cruzamento com a matriz Permissões.",
         referencia: "Gestão de Usuários",
+      },
+      {
+        termo: "Integração (Status Técnico)",
+        definicao:
+          "Pipeline automático de dados monitorado na página Status Técnico — CDA Influencers, CDA Afiliados, Social Media, Spin na Rede, automações do Pipeline B2B, Lobby e envios de e-mail — com horário da última execução, volume processado e erros.",
+        referencia: "Status Técnico",
+      },
+      {
+        termo: "Sync manual",
+        definicao:
+          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico. Lobby Blaze e Lobby CDA rodam por job automatizado e não têm essa ação.",
+        referencia: "Status Técnico",
+      },
+      {
+        termo: "Diagnóstico da Plataforma",
+        definicao:
+          "Verificação sob demanda que testa integrações e configurações essenciais. Fica OK quando conclui; avisos e falhas aparecem na coluna Erros e em Logs Recentes.",
+        referencia: "Status Técnico",
       },
     ],
   },
@@ -1123,7 +1199,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Histórico",
         definicao:
-          'Visão acumulada de todos os dados disponíveis desde o início da operação. Ao ativar "Histórico", o período expande para todo o intervalo disponível e o comparativo MoM é desabilitado.',
+          'Visão acumulada de 13 competências mensais — a competência atual e as 12 anteriores. Ao ativar "Histórico", o carrossel exibe o rótulo "Todo o período", a navegação por mês fica desabilitada e o comparativo MoM deixa de aparecer.',
+        nota:
+          "A janela de 13 competências permite comparar a competência atual com a mesma competência do ano anterior. Dados anteriores a essa janela não entram nos KPIs do modo Histórico.",
         referencia: "Todos os dashboards",
       },
       {
