@@ -1652,6 +1652,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O botão Mapear requer permissão de edição na Gestão de Links. Se não aparece, seu perfil não tem essa permissão. Entre em contato com o gestor para solicitar acesso.",
       },
       {
+        subtitulo: "O modal Mapear não mostra influencers ou afiliados?",
+        texto:
+          "As listas são formadas pelos usuários cadastrados com os perfis **Influencer** e **Afiliado**. Aguarde o término de **Carregando…**. Se aparecer **Membros indisponíveis**, recarregue a página; se o problema persistir, entre em contato com o suporte. Quando a permissão de Editar estiver limitada a **Próprios**, somente membros dentro do seu escopo aparecem.",
+      },
+      {
         subtitulo: "Quero remapear um link que já foi mapeado incorretamente?",
         texto:
           "Na aba Mapeados, clique em Reabrir na linha correspondente. O link volta para Pendentes e pode ser mapeado novamente para o influencer, afiliado ou campanha corretos.",

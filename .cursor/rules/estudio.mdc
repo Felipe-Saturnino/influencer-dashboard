@@ -39,7 +39,7 @@ alwaysApply: false
 | `roteiro_mesa` | Roteiro de Mesa | `estudio/RoteiroMesa/` |
 | — | Modais de solicitação | `estudio/solicitacoes/` |
 
-**Ajuda contextual:** as quatro páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros, antes de CTAs e ações de fluxo (contrato em `geral.mdc` § Ajuda contextual). Nenhuma delas tem tutorial associado — só **Conheça** e **Troubleshooting**. Em Figurinos o grupo fica na linha da busca, antes de **Bipar código** e **Cadastrar peça**; no Roteiro de Mesa, ao lado do filtro de estúdio.
+**Ajuda contextual:** as quatro páginas usam **`AjudaContextualAcoes`** (contrato em `geral.mdc` § Ajuda contextual). Nenhuma delas tem tutorial associado — só **Conheça** e **Troubleshooting**. Em **Figurinos**, o grupo fica à direita da mesma linha das abas de status; no Roteiro de Mesa, ao lado do filtro de estúdio.
 
 ---
 

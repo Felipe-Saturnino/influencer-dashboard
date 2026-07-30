@@ -2973,16 +2973,6 @@ export default function RhCalendarioPage() {
             </div>
 
             <div className="app-marketplace-filtro-minhas__cta" style={{ gap: 10 }}>
-              <AjudaContextualAcoes
-                pageKey="rh_calendario"
-                tutorial={
-                  abaPrincipal === "compromissos"
-                    ? TUTORIAL_CALENDARIO
-                    : abaPrincipal === "presenca"
-                      ? TUTORIAL_CONTROLE_PRESENCA
-                      : null
-                }
-              />
               {abaPrincipal === "compromissos" && meuRhFuncionarioId ? (
                 <button
                   type="button"
@@ -3139,49 +3129,67 @@ export default function RhCalendarioPage() {
           ) : null}
 
           <div
-            role="tablist"
-            aria-label="Seção do calendário"
-            style={filterBarSection(true)}
-            onKeyDown={(e) =>
-              onFiltroBarTabsKeyDown(
-                e,
-                (podeVerAbaRelatorioPresenca
-                  ? (["compromissos", "presenca", "relatorio"] as const)
-                  : (["compromissos", "presenca"] as const)),
-                setAbaPrincipal,
-                (k) => `tab-cal-${k}`,
-              )
-            }
+            className="app-filter-bar-tabs-cta"
+            style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}
           >
-            <FiltroBarTabButton
-              id="tab-cal-compromissos"
-              active={abaPrincipal === "compromissos"}
-              aria-controls="panel-cal-compromissos"
-              onClick={() => setAbaPrincipal("compromissos")}
-              icon={<CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+            <div
+              role="tablist"
+              aria-label="Seção do calendário"
+              className="app-filter-bar-tabs-cta__tabs"
+              onKeyDown={(e) =>
+                onFiltroBarTabsKeyDown(
+                  e,
+                  (podeVerAbaRelatorioPresenca
+                    ? (["compromissos", "presenca", "relatorio"] as const)
+                    : (["compromissos", "presenca"] as const)),
+                  setAbaPrincipal,
+                  (k) => `tab-cal-${k}`,
+                )
+              }
             >
-              Compromissos
-            </FiltroBarTabButton>
-            <FiltroBarTabButton
-              id="tab-cal-presenca"
-              active={abaPrincipal === "presenca"}
-              aria-controls="panel-cal-presenca"
-              onClick={() => setAbaPrincipal("presenca")}
-              icon={<ClipboardCheck {...FILTRO_BAR_TAB_ICON_PROPS} />}
-            >
-              Controle de Presença
-            </FiltroBarTabButton>
-            {podeVerAbaRelatorioPresenca ? (
               <FiltroBarTabButton
-                id="tab-cal-relatorio"
-                active={abaPrincipal === "relatorio"}
-                aria-controls="panel-cal-relatorio"
-                onClick={() => setAbaPrincipal("relatorio")}
-                icon={<ClipboardList {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                id="tab-cal-compromissos"
+                active={abaPrincipal === "compromissos"}
+                aria-controls="panel-cal-compromissos"
+                onClick={() => setAbaPrincipal("compromissos")}
+                icon={<CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />}
               >
-                Relatório de Presença
+                Compromissos
               </FiltroBarTabButton>
-            ) : null}
+              <FiltroBarTabButton
+                id="tab-cal-presenca"
+                active={abaPrincipal === "presenca"}
+                aria-controls="panel-cal-presenca"
+                onClick={() => setAbaPrincipal("presenca")}
+                icon={<ClipboardCheck {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              >
+                Controle de Presença
+              </FiltroBarTabButton>
+              {podeVerAbaRelatorioPresenca ? (
+                <FiltroBarTabButton
+                  id="tab-cal-relatorio"
+                  active={abaPrincipal === "relatorio"}
+                  aria-controls="panel-cal-relatorio"
+                  onClick={() => setAbaPrincipal("relatorio")}
+                  icon={<ClipboardList {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                >
+                  Relatório de Presença
+                </FiltroBarTabButton>
+              ) : null}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes
+                pageKey="rh_calendario"
+                tutorial={
+                  abaPrincipal === "compromissos"
+                    ? TUTORIAL_CALENDARIO
+                    : abaPrincipal === "presenca"
+                      ? TUTORIAL_CONTROLE_PRESENCA
+                      : null
+                }
+              />
+            </div>
           </div>
       </div>
 

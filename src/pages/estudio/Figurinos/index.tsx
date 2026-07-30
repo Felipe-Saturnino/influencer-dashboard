@@ -632,7 +632,6 @@ export default function FigurinosPage() {
               aria-label="Buscar peças na aba atual"
               wrapperStyle={{ flex: "1 1 200px", minWidth: 0 }}
             />
-            <AjudaContextualAcoes pageKey="rh_figurinos" />
             <button
               type="button"
               onClick={() => {
@@ -672,32 +671,32 @@ export default function FigurinosPage() {
           </div>
 
           <div
-            role="tablist"
-            aria-label="Status do inventário"
-            style={{
-              display: "flex",
-              gap: 8,
-              flexWrap: "wrap",
-              justifyContent: "center",
-              width: "100%",
-              paddingTop: 12,
-              marginTop: 4,
-              borderTop: `1px solid ${t.cardBorder}`,
-            }}
-            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, FIGURINOS_ABAS, setAba, (a) => `tab-fig-${a}`)}
+            className="app-filter-bar-tabs-cta"
+            style={{ paddingTop: 12, marginTop: 4, borderTop: `1px solid ${t.cardBorder}` }}
           >
-            {FIGURINOS_ABAS.map((a) => (
-              <FiltroBarTabButton
-                key={a}
-                id={`tab-fig-${a}`}
-                active={aba === a}
-                aria-controls={`panel-fig-${a}`}
-                onClick={() => setAba(a)}
-                icon={FIGURINOS_TAB_ICONS[a]}
-              >
-                {labelAba(a)}
-              </FiltroBarTabButton>
-            ))}
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+            <div
+              role="tablist"
+              aria-label="Status do inventário"
+              className="app-filter-bar-tabs-cta__tabs"
+              onKeyDown={(e) => onFiltroBarTabsKeyDown(e, FIGURINOS_ABAS, setAba, (a) => `tab-fig-${a}`)}
+            >
+              {FIGURINOS_ABAS.map((a) => (
+                <FiltroBarTabButton
+                  key={a}
+                  id={`tab-fig-${a}`}
+                  active={aba === a}
+                  aria-controls={`panel-fig-${a}`}
+                  onClick={() => setAba(a)}
+                  icon={FIGURINOS_TAB_ICONS[a]}
+                >
+                  {labelAba(a)}
+                </FiltroBarTabButton>
+              ))}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes pageKey="rh_figurinos" />
+            </div>
           </div>
       </div>
 

@@ -208,29 +208,35 @@ export default function TechOpsOrdemSaida() {
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-        <div style={getFilterBarRowStyle({ width: "100%" })}>
-          <button
-            type="button"
-            aria-label="Mês anterior"
-            disabled={historico || carrosselPrimeiro}
-            onClick={() => setMesIdx((i) => Math.max(0, i - 1))}
-            style={getCarouselBtnNavStyle(t, historico || carrosselPrimeiro)}
-          >
-            <ChevronLeft size={14} aria-hidden="true" />
-          </button>
-          <span style={getCarouselPeriodLabelStyle(t, { minWidth: 180 })}>
-            {historico ? "Todo o período" : mesAtual?.label}
-          </span>
-          <button
-            type="button"
-            aria-label="Próximo mês"
-            disabled={historico || carrosselUltimo}
-            onClick={() => setMesIdx((i) => Math.min(meses.length - 1, i + 1))}
-            style={getCarouselBtnNavStyle(t, historico || carrosselUltimo)}
-          >
-            <ChevronRight size={14} aria-hidden="true" />
-          </button>
-          <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
+        <div className="app-marketplace-filtro-minhas">
+          <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+          <div className="app-marketplace-filtro-minhas__centro" style={getFilterBarRowStyle({ width: "100%" })}>
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              disabled={historico || carrosselPrimeiro}
+              onClick={() => setMesIdx((i) => Math.max(0, i - 1))}
+              style={getCarouselBtnNavStyle(t, historico || carrosselPrimeiro)}
+            >
+              <ChevronLeft size={14} aria-hidden="true" />
+            </button>
+            <span style={getCarouselPeriodLabelStyle(t, { minWidth: 180 })}>
+              {historico ? "Todo o período" : mesAtual?.label}
+            </span>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              disabled={historico || carrosselUltimo}
+              onClick={() => setMesIdx((i) => Math.min(meses.length - 1, i + 1))}
+              style={getCarouselBtnNavStyle(t, historico || carrosselUltimo)}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+            <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
+          </div>
+          <div className="app-marketplace-filtro-minhas__cta">
+            <AjudaContextualAcoes pageKey="tech_ops_ordem_saida" />
+          </div>
         </div>
 
         <div
@@ -268,7 +274,6 @@ export default function TechOpsOrdemSaida() {
             aria-label="Buscar ordens de saída"
             wrapperStyle={{ flex: "1 1 260px", maxWidth: 420 }}
           />
-          <AjudaContextualAcoes pageKey="tech_ops_ordem_saida" />
         </div>
       </div>
 

@@ -1023,7 +1023,8 @@ export default function PlaybookInfluencers() {
         border: `1px solid ${t.cardBorder}`,
         borderTop: "none",
         borderRadius: "0 0 14px 14px",
-        padding: "clamp(14px, 4vw, 28px)",
+        // Topo maior: o painel encosta na faixa de abas, sem gap entre blocos para separar.
+        padding: "clamp(22px, 4vw, 32px) clamp(14px, 4vw, 28px) clamp(14px, 4vw, 28px)",
         boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
       }}
       >

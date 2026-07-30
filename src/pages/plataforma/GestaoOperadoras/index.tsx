@@ -142,6 +142,7 @@ export default function GestaoOperadoras() {
         icon={<PageMenuIcon pageKey="gestao_operadoras" />}
         title={getPageMenuLabel("gestao_operadoras")}
         subtitle="Gerencie operadoras parceiras, identidade visual e configurações de integração."
+        actions={<AjudaContextualAcoes pageKey="gestao_operadoras" />}
       />
 
       {/* ─── Cards de resumo ─────────────────────────────────────────────────── */}
@@ -186,7 +187,6 @@ export default function GestaoOperadoras() {
               aria-label="Buscar por nome de operadora"
               wrapperStyle={{ flex: "1 1 240px", minWidth: 200, maxWidth: 480 }}
             />
-            <AjudaContextualAcoes pageKey="gestao_operadoras" />
             {perm.canCriarOk ? (
               <CtaCriarButton
                 type="button"

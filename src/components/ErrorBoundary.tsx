@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { limparChunkReloadGuard, reloadAfterChunkError } from "../lib/chunkReloadGuard";
+import { recarregarAposErroDeChunk, reloadAfterChunkError } from "../lib/chunkReloadGuard";
 
 function isChunkLoadError(error: Error | null): boolean {
   if (!error) return false;
@@ -58,7 +58,10 @@ export default class ErrorBoundary extends Component<Props, State> {
   };
 
   handleReload = () => {
-    limparChunkReloadGuard();
+    if (isChunkLoadError(this.state.error)) {
+      recarregarAposErroDeChunk();
+      return;
+    }
     window.location.reload();
   };
 

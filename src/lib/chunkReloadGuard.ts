@@ -46,6 +46,16 @@ export function reloadAfterChunkError(context?: string): boolean {
   return true;
 }
 
+/**
+ * Recarga manual pedida pelo usuário depois de um erro de chunk: libera novas tentativas
+ * automáticas e busca o `index.html` no servidor — `reload()` sozinho pode devolver o HTML
+ * em cache, que é justamente o que aponta para o chunk inexistente.
+ */
+export function recarregarAposErroDeChunk(): void {
+  limparChunkReloadGuard();
+  recarregarIgnorandoCacheDoHtml();
+}
+
 function recarregarIgnorandoCacheDoHtml(): void {
   try {
     const url = new URL(window.location.href);

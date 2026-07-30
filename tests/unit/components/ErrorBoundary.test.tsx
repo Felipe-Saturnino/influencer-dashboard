@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { reloadAfterChunkError } from "@/lib/chunkReloadGuard";
+import { recarregarAposErroDeChunk, reloadAfterChunkError } from "@/lib/chunkReloadGuard";
 
 vi.mock("@/lib/chunkReloadGuard", () => ({
   reloadAfterChunkError: vi.fn(() => true),
-  limparChunkReloadGuard: vi.fn(),
+  recarregarAposErroDeChunk: vi.fn(),
 }));
 
 const reloadGuardMock = vi.mocked(reloadAfterChunkError);
+const recarregarManualMock = vi.mocked(recarregarAposErroDeChunk);
 
 function Thrower({ message }: { message: string }) {
   throw new Error(message);
@@ -17,6 +18,7 @@ function Thrower({ message }: { message: string }) {
 describe("ErrorBoundary", () => {
   beforeEach(() => {
     reloadGuardMock.mockReturnValue(true);
+    recarregarManualMock.mockClear();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -59,5 +61,34 @@ describe("ErrorBoundary", () => {
     expect(tela.getByText("Nova versão disponível")).toBeInTheDocument();
     expect(tela.getByRole("button", { name: "Recarregar página" })).toBeInTheDocument();
     expect(tela.queryByRole("button", { name: "Tentar novamente" })).not.toBeInTheDocument();
+  });
+
+  it("recarga manual após erro de chunk ignora o html em cache", () => {
+    reloadGuardMock.mockReturnValue(false);
+
+    const tela = render(
+      <ErrorBoundary>
+        <Thrower message="Failed to fetch dynamically imported module" />
+      </ErrorBoundary>,
+    );
+    fireEvent.click(tela.getByRole("button", { name: "Recarregar página" }));
+
+    expect(recarregarManualMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("erro genérico recarrega sem cache-busting", () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", { ...window.location, reload } as Location);
+
+    const tela = render(
+      <ErrorBoundary>
+        <Thrower message="falha de teste" />
+      </ErrorBoundary>,
+    );
+    fireEvent.click(tela.getByRole("button", { name: "Recarregar página" }));
+
+    expect(recarregarManualMock).not.toHaveBeenCalled();
+    expect(reload).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
   });
 });

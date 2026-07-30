@@ -134,6 +134,8 @@ export default function GestaoLinks() {
   const [loading, setLoading] = useState(true);
   const [influencers, setInfluencers] = useState<InfluencerOpcao[]>([]);
   const [afiliados, setAfiliados] = useState<InfluencerOpcao[]>([]);
+  const [loadingEntidades, setLoadingEntidades] = useState(true);
+  const [erroEntidades, setErroEntidades] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [aliasSelecionado, setAliasSelecionado] = useState<UtmAlias | null>(null);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
@@ -254,28 +256,59 @@ export default function GestaoLinks() {
   useEffect(() => { carregar(); }, [carregar]);
   useEffect(() => { supabase.from("operadoras").select("slug, nome").eq("ativo", true).order("nome").then(({ data }) => setOperadorasList(data ?? [])); }, []);
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
-      const { data, error } = await supabase
+      setLoadingEntidades(true);
+      setErroEntidades(false);
+      const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, name, role, influencer_perfil(nome_artistico, nome_completo, status)")
+        .select("id, name, role")
         .in("role", ["influencer", "afiliado"]);
-      if (error) {
-        console.error("[GestaoLinks] lista perfis:", error.message);
+      if (profilesError) {
+        console.error("[GestaoLinks] lista profiles:", profilesError.message);
+        if (cancelled) return;
         setInfluencers([]);
         setAfiliados([]);
+        setErroEntidades(true);
+        setLoadingEntidades(false);
         return;
       }
-      type Row = {
+
+      type ProfileRow = {
         id: string;
         name: string | null;
         role: "influencer" | "afiliado";
-        influencer_perfil:
-          | { nome_artistico: string | null; nome_completo: string | null; status: string | null }
-          | { nome_artistico: string | null; nome_completo: string | null; status: string | null }[]
-          | null;
       };
-      const mapped = ((data ?? []) as Row[]).map((r) => {
-        const perfil = Array.isArray(r.influencer_perfil) ? r.influencer_perfil[0] : r.influencer_perfil;
+      type PerfilRow = {
+        id: string;
+        nome_artistico: string | null;
+        nome_completo: string | null;
+        status: string | null;
+      };
+      const profiles = (profilesData ?? []) as ProfileRow[];
+      const ids = profiles.map((profile) => profile.id);
+      const perfilRes =
+        ids.length > 0
+          ? await supabase
+              .from("influencer_perfil")
+              .select("id, nome_artistico, nome_completo, status")
+              .in("id", ids)
+          : { data: [] as PerfilRow[], error: null };
+      if (perfilRes.error) {
+        console.error("[GestaoLinks] lista influencer_perfil:", perfilRes.error.message);
+        if (cancelled) return;
+        setInfluencers([]);
+        setAfiliados([]);
+        setErroEntidades(true);
+        setLoadingEntidades(false);
+        return;
+      }
+
+      const perfilById = new Map(
+        ((perfilRes.data ?? []) as PerfilRow[]).map((perfil) => [perfil.id, perfil] as const),
+      );
+      const mapped = profiles.map((r) => {
+        const perfil = perfilById.get(r.id);
         return {
           id: r.id,
           role: r.role,
@@ -288,9 +321,14 @@ export default function GestaoLinks() {
           }),
         } satisfies InfluencerOpcao;
       });
+      if (cancelled) return;
       setInfluencers(mapped.filter((m) => m.role === "influencer"));
       setAfiliados(mapped.filter((m) => m.role === "afiliado"));
+      setLoadingEntidades(false);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   useEffect(() => { supabase.from("campanhas").select("id, nome, ativo").eq("ativo", true).order("nome").then(({ data }) => setCampanhas(data ?? [])); }, []);
 
@@ -1020,6 +1058,21 @@ export default function GestaoLinks() {
               ))}
             </div>
 
+            {erroEntidades && tipoMapeamento !== "campanha" ? (
+              <div
+                role="alert"
+                aria-live="polite"
+                style={{
+                  color: COR.vermelho,
+                  fontSize: 12,
+                  fontFamily: FONT.body,
+                  marginBottom: 14,
+                }}
+              >
+                Não foi possível carregar os membros. Se o problema persistir, entre em contato com o suporte.
+              </div>
+            ) : null}
+
             {tipoMapeamento === "influencer" ? (
               <>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "1.1px", marginBottom: 6, fontFamily: FONT.body }}>
@@ -1027,9 +1080,16 @@ export default function GestaoLinks() {
                   <CampoObrigatorioMark />
                 </label>
                 <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
+                  disabled={loadingEntidades || erroEntidades}
                   style={{ width: "100%", padding: "10px 12px", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
-                  <option value="">Selecione o influencer...</option>
-                  {(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers)
+                  <option value="">
+                    {loadingEntidades
+                      ? "Carregando…"
+                      : erroEntidades
+                        ? "Membros indisponíveis"
+                        : "Selecione o influencer..."}
+                  </option>
+                  {[...(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers)]
                     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
                     .map((inf) => (
                       <option key={inf.id} value={inf.id}>{inf.nome}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
@@ -1043,9 +1103,16 @@ export default function GestaoLinks() {
                   <CampoObrigatorioMark />
                 </label>
                 <select value={afiliadoSelecionado} onChange={(e) => setAfiliadoSelecionado(e.target.value)}
+                  disabled={loadingEntidades || erroEntidades}
                   style={{ width: "100%", padding: "10px 12px", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
-                  <option value="">Selecione o afiliado...</option>
-                  {(perm.canEditar === "proprios" ? afiliados.filter((af) => podeVerInfluencer(af.id)) : afiliados)
+                  <option value="">
+                    {loadingEntidades
+                      ? "Carregando…"
+                      : erroEntidades
+                        ? "Membros indisponíveis"
+                        : "Selecione o afiliado..."}
+                  </option>
+                  {[...(perm.canEditar === "proprios" ? afiliados.filter((af) => podeVerInfluencer(af.id)) : afiliados)]
                     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
                     .map((af) => (
                       <option key={af.id} value={af.id}>{af.nome}{af.status !== "ativo" ? ` (${af.status})` : ""}</option>

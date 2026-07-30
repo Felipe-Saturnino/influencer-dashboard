@@ -1585,7 +1585,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Usuários",
         texto:
-          "Lista todos os usuários cadastrados. Permite buscar por nome ou e-mail, filtrar por status (Ativo / Desativado) e por perfil. Administradores podem criar novos usuários, editar dados e escopos, redefinir senhas para o padrão e desativar acessos.",
+          "Lista todos os usuários cadastrados em uma tabela com as colunas Nome do Usuário, E-mail, Perfil, Escopo, Último Login e Ações. Clique no título de qualquer coluna para reordenar — a lista abre pelo login mais recente. Usuários desativados aparecem com a etiqueta Desativado ao lado do nome.\n\nPermite buscar por nome ou e-mail, filtrar por status (Ativo / Desativado) e por perfil. Administradores podem criar novos usuários e, na coluna Ações, editar dados e escopos (lápis), redefinir a senha para a padrão (chave), desativar o acesso ou reativar um usuário desativado.",
       },
       {
         subtitulo: "Aba Permissões",

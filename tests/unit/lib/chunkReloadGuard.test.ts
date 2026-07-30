@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { limparParamCacheBustDaUrl, reloadAfterChunkError } from "@/lib/chunkReloadGuard";
+import {
+  limparParamCacheBustDaUrl,
+  recarregarAposErroDeChunk,
+  reloadAfterChunkError,
+} from "@/lib/chunkReloadGuard";
 
 describe("reloadAfterChunkError", () => {
   const STORAGE_KEY = "spin_chunk_reload_guard_v1";
@@ -48,6 +52,17 @@ describe("reloadAfterChunkError", () => {
     expect(reload).not.toHaveBeenCalled();
     expect(replace).not.toHaveBeenCalled();
     expect(console.error).toHaveBeenCalled();
+  });
+
+  it("recarga manual limpa o guard e ignora o html em cache", () => {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ count: 3, windowStart: Date.now() }));
+
+    recarregarAposErroDeChunk();
+
+    expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(reload).not.toHaveBeenCalled();
+    const destino = new URL(replace.mock.calls[0]![0] as string);
+    expect(destino.searchParams.get("_spinv")).toBeTruthy();
   });
 });
 

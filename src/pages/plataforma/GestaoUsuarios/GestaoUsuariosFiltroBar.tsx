@@ -283,7 +283,8 @@ export function GestaoUsuariosFiltroBar({
           }}
         >
           <div className="app-marketplace-filtro-minhas">
-            <div className="app-marketplace-filtro-minhas__filters" style={getFilterBarRowStyle({ marginBottom: 0 })}>
+            <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+            <div className="app-marketplace-filtro-minhas__centro" style={getFilterBarRowStyle({ marginBottom: 0 })}>
               <button
                 type="button"
                 aria-label="Status anterior"
