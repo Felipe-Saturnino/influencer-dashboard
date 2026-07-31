@@ -409,6 +409,10 @@ describe("mensagemErroOfertaMarketplace", () => {
       "Você já tem uma oferta aberta para este dia.",
     );
     expect(mensagemErroOfertaMarketplace("turno_diferente")).toContain("mesmo do seu turno");
+    expect(mensagemErroOfertaMarketplace("oferta_expirada")).toContain("menos de 2h");
+    expect(mensagemErroOfertaMarketplace("horario_turno_indisponivel")).toContain(
+      "horário de início",
+    );
   });
 
   it("usa mensagem genérica com fecho de suporte em código desconhecido", () => {

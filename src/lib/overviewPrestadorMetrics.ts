@@ -9,6 +9,7 @@ import type { RhFuncionario } from "../types/rhFuncionario";
 import {
   chaveMovimentacaoCelula,
   formatarDetalheMovimentacao,
+  movimentacaoEhTroca,
   situacaoEhCompraMarketplace,
   type OverviewPrestadorMovimentacaoCelula,
 } from "./overviewPrestadorMovimentacoes";
@@ -210,23 +211,24 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
         gestao,
       });
 
-      if (situacao === "Troca") {
+      const ehVenda = situacao === "Venda";
+      const ehCompra = situacaoEhCompraMarketplace(situacao);
+      const ehTroca = situacao === "Troca" || ((ehVenda || ehCompra) && movimentacaoEhTroca(snapMov));
+      if (ehTroca) {
         trocas += 1;
         detalhamento.push({
           dataIso: iso,
           ocorrencia: "Troca",
           detalhe: formatarDetalheMovimentacao("Troca", snapMov),
         });
-      }
-      if (situacao === "Venda") {
+      } else if (ehVenda) {
         vendas += 1;
         detalhamento.push({
           dataIso: iso,
           ocorrencia: "Venda",
           detalhe: formatarDetalheMovimentacao("Venda", snapMov),
         });
-      }
-      if (situacaoEhCompraMarketplace(situacao)) {
+      } else if (ehCompra) {
         compras += 1;
         detalhamento.push({
           dataIso: iso,

@@ -28,8 +28,27 @@ import {
 } from "./overviewPrestadorCalendarioHelpers";
 import type { OverviewPrestadorMovimentacaoCelula } from "./overviewPrestadorMovimentacoes";
 import { chaveMovimentacaoCelula } from "./overviewPrestadorMovimentacoes";
+import { normalizarTextoBusca } from "./searchText";
 
 const ESTUDIO_TODOS = "todos";
+
+/**
+ * O snapshot do Marketplace grava o **rótulo** do estúdio; o cadastro do Staff grava o
+ * **slug**. Sem esta resolução a mesma unidade rende duas linhas na Cobertura por estúdio.
+ */
+function resolverSlugEstudio(
+  valorRaw: string,
+  estudiosNome: Record<string, string>,
+): string {
+  const valor = valorRaw.trim();
+  if (!valor || valor === "—") return "";
+  if (estudiosNome[valor]) return valor;
+  const alvo = normalizarTextoBusca(valor);
+  for (const [slug, nome] of Object.entries(estudiosNome)) {
+    if (normalizarTextoBusca(nome) === alvo || normalizarTextoBusca(slug) === alvo) return slug;
+  }
+  return valor;
+}
 
 function parseEstudioSlugs(row: RhFuncionario): string[] {
   const fromArray = Array.isArray(row.staff_estudio_slugs)
@@ -139,7 +158,7 @@ function toLinhas(map: Map<string, AccBucket>, ordem: { chave: string; label: st
   let totalMov = 0;
   for (const o of ordem) {
     const acc = map.get(o.chave);
-    if (!acc || acc.jornadasEscaladas === 0) continue;
+    if (!acc || (acc.jornadasEscaladas === 0 && acc.movimentacoes === 0)) continue;
     rows.push({
       chave: o.chave,
       label: o.label,
@@ -233,19 +252,22 @@ export function calcularCoberturaPrestadorPeriodo(input: CoberturaInput): {
               )
             : false;
 
-        if (turnoKey && (situacao === "Escalado" || situacaoEhCompraLocal(situacao) || situacao === "Troca")) {
+        const ehJornada = situacao === "Escalado" || situacaoEhCompraLocal(situacao);
+
+        if (turnoKey && (ehJornada || situacao === "Troca")) {
           const acc = porTurno.get(turnoKey)!;
-          acc.prestadores.add(funcionarioId);
-          if (situacao === "Escalado" || situacaoEhCompraLocal(situacao)) {
+          // Prestadores = quadro que cumpre jornada no turno; dia só de Troca não aloca ninguém.
+          if (ehJornada) {
+            acc.prestadores.add(funcionarioId);
             acc.jornadasEscaladas += 1;
             if (realizado) acc.jornadasRealizadas += 1;
           }
           acc.movimentacoes += movDia;
         }
 
-        if (caps.porEstudio && prestador && (situacao === "Escalado" || situacaoEhCompraLocal(situacao) || situacao === "Troca")) {
+        if (caps.porEstudio && prestador && (ehJornada || situacao === "Troca")) {
           const snap = movimentacoes?.get(chaveMovimentacaoCelula(funcionarioId, iso));
-          const estudioSnap = (snap?.estudioTrabalhar ?? "").trim();
+          const estudioSnap = resolverSlugEstudio(snap?.estudioTrabalhar ?? "", estudiosNome);
           let bucketKey = estudioSnap;
           let bucketLabel = estudioSnap ? (estudiosNome[estudioSnap] ?? estudioSnap) : "";
           if (!bucketKey) {
@@ -260,8 +282,8 @@ export function calcularCoberturaPrestadorPeriodo(input: CoberturaInput): {
             accE = emptyAcc(bucketLabel);
             porEstudio.set(bucketKey, accE);
           }
-          accE.prestadores.add(funcionarioId);
-          if (situacao === "Escalado" || situacaoEhCompraLocal(situacao)) {
+          if (ehJornada) {
+            accE.prestadores.add(funcionarioId);
             accE.jornadasEscaladas += 1;
             if (realizado) accE.jornadasRealizadas += 1;
           }
@@ -348,8 +370,7 @@ export function calcularDistribuicaoEstudioIndividual(input: {
       if (!realizado) continue;
 
       const snap = movimentacoes?.get(chaveMovimentacaoCelula(funcionarioId, iso));
-      const estudioSnap = (snap?.estudioTrabalhar ?? "").trim();
-      let slug = estudioSnap;
+      let slug = resolverSlugEstudio(snap?.estudioTrabalhar ?? "", estudiosNome);
       if (!slug) {
         if (slugsCadastro.includes(ESTUDIO_TODOS)) continue;
         slug = fallbackSlug;

@@ -61,6 +61,16 @@ export function situacaoEhCompraMarketplace(situacao: string): boolean {
   return situacao === "Compra" || situacao.startsWith("Compra - ");
 }
 
+/**
+ * Troca aceita grava o par na grade como `Venda` (dia liberado) + `Compra - Turno`
+ * (dia assumido) — só o snapshot do Marketplace identifica a movimentação como troca.
+ */
+export function movimentacaoEhTroca(
+  snap: OverviewPrestadorMovimentacaoCelula | undefined,
+): boolean {
+  return snap?.tipo === "troca";
+}
+
 /** Copy PT-BR do Detalhamento — usa a situação da grade; snapshot só enriquece. */
 export function formatarDetalheMovimentacao(
   ocorrencia: "Troca" | "Venda" | "Compra",

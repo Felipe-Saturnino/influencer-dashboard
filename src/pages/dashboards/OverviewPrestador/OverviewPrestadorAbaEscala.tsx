@@ -13,7 +13,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -52,8 +51,125 @@ type Props = {
   distribuicaoEstudio: OverviewPrestadorEstudioFatia[];
 };
 
-const PIE_MOV_CORES = ["#1e36f8", "#f59e0b", "#22c55e"] as const;
+const MOV_CORES = { trocas: "#1e36f8", vendas: "#f59e0b", compras: "#22c55e" } as const;
 const PIE_ESTUDIO_CORES = ["#7c3aed", "#1e36f8", "#a78bfa", "#22c55e", "#f59e0b"] as const;
+
+type FatiaDonut = { key: string; label: string; valor: number; cor: string };
+
+function GraficoDonut({
+  fatias,
+  totalLabel,
+  unidadeLabel,
+}: {
+  fatias: FatiaDonut[];
+  totalLabel: string;
+  unidadeLabel: string;
+}) {
+  const { theme: t } = useApp();
+  const brand = useDashboardBrand();
+  const total = fatias.reduce((s, f) => s + f.valor, 0);
+  const comValor = fatias.filter((f) => f.valor > 0);
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 20 }}>
+      <div style={{ position: "relative", flex: "1 1 240px", minWidth: 220, height: 220 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={comValor}
+              dataKey="valor"
+              nameKey="label"
+              cx="50%"
+              cy="50%"
+              innerRadius={62}
+              outerRadius={92}
+              paddingAngle={comValor.length > 1 ? 2 : 0}
+              stroke="none"
+              labelLine={false}
+            >
+              {comValor.map((f) => (
+                <Cell key={f.key} fill={f.cor} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, fontSize: 12 }}
+              formatter={(v: number, n: string) => [`${v} ${unidadeLabel}`, n]}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <span style={{ fontSize: 24, fontWeight: 800, fontFamily: FONT.body, color: t.text }}>{total}</span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: t.textMuted,
+              fontFamily: FONT.body,
+            }}
+          >
+            {totalLabel}
+          </span>
+        </div>
+      </div>
+
+      <ul
+        style={{
+          flex: "1 1 220px",
+          minWidth: 200,
+          listStyle: "none",
+          margin: 0,
+          padding: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        {fatias.map((f) => {
+          const pct = total > 0 ? (f.valor / total) * 100 : 0;
+          return (
+            <li
+              key={f.key}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                fontFamily: FONT.body,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{ width: 10, height: 10, borderRadius: 999, background: f.cor, flex: "0 0 auto" }}
+              />
+              <span style={{ fontSize: 12, color: t.text, flex: 1 }}>{f.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: t.text, fontVariantNumeric: "tabular-nums" }}>
+                {f.valor}
+              </span>
+              <span style={{ fontSize: 11, color: t.textMuted, minWidth: 44, textAlign: "right" }}>
+                {`${pct.toFixed(1).replace(".", ",")}%`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 function fmtDataPt(iso: string): string {
   const [y, m, d] = iso.split("-");
@@ -170,17 +286,19 @@ export function OverviewPrestadorAbaEscala({
     },
   ];
 
-  const dadosPizzaTurnos = [
-    { name: "Trocas Realizadas", value: metricas.trocas },
-    { name: "Turnos Vendidos", value: metricas.vendas },
-    { name: "Turnos Comprados", value: metricas.compras },
-  ].filter((x) => x.value > 0);
+  const fatiasMovimentacoes: FatiaDonut[] = [
+    { key: "trocas", label: "Trocas realizadas", valor: metricas.trocas, cor: MOV_CORES.trocas },
+    { key: "vendas", label: "Turnos vendidos", valor: metricas.vendas, cor: MOV_CORES.vendas },
+    { key: "compras", label: "Turnos comprados", valor: metricas.compras, cor: MOV_CORES.compras },
+  ];
 
   const totalMovimentacoes = metricas.trocas + metricas.vendas + metricas.compras;
 
-  const dadosPizzaEstudio = distribuicaoEstudio.map((e) => ({
-    name: e.label,
-    value: e.dias,
+  const fatiasEstudio: FatiaDonut[] = distribuicaoEstudio.map((e, i) => ({
+    key: e.slug,
+    label: e.label,
+    valor: e.dias,
+    cor: PIE_ESTUDIO_CORES[i % PIE_ESTUDIO_CORES.length] ?? "#94a3b8",
   }));
   const totalDiasEstudio = distribuicaoEstudio.reduce((s, e) => s + e.dias, 0);
 
@@ -410,25 +528,11 @@ export function OverviewPrestadorAbaEscala({
                   Sem dados para o período selecionado.
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={dadosPizzaTurnos}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      label={({ name, value }) => `${name}: ${value}`}
-                    >
-                      {dadosPizzaTurnos.map((_, i) => (
-                        <Cell key={i} fill={PIE_MOV_CORES[i % PIE_MOV_CORES.length] ?? "#94a3b8"} />
-                      ))}
-                    </Pie>
-                    <Legend />
-                    <Tooltip contentStyle={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <GraficoDonut
+                  fatias={fatiasMovimentacoes}
+                  totalLabel={visaoTime ? "Movimentações" : "No período"}
+                  unidadeLabel={visaoTime ? "jornadas" : "dias"}
+                />
               )}
             </div>
           ) : null}
@@ -443,25 +547,7 @@ export function OverviewPrestadorAbaEscala({
                   Sem dados para o período selecionado.
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={dadosPizzaEstudio}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      label={({ name, value }) => `${name}: ${value}`}
-                    >
-                      {dadosPizzaEstudio.map((_, i) => (
-                        <Cell key={i} fill={PIE_ESTUDIO_CORES[i % PIE_ESTUDIO_CORES.length] ?? "#94a3b8"} />
-                      ))}
-                    </Pie>
-                    <Legend />
-                    <Tooltip contentStyle={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <GraficoDonut fatias={fatiasEstudio} totalLabel="Dias realizados" unidadeLabel="dias" />
               )}
             </div>
           ) : null}
@@ -490,7 +576,7 @@ export function OverviewPrestadorAbaEscala({
                     <th scope="col" style={dataTable.thHeader}>Time</th>
                     <th scope="col" style={dataTable.thHeader}>Presença</th>
                     <th scope="col" style={dataTable.thHeader}>Atrasos</th>
-                    <th scope="col" style={dataTable.thHeader}>Ponto incompleto</th>
+                    <th scope="col" style={dataTable.thHeader}>Controle de Presença</th>
                     <th scope="col" style={dataTable.thHeader}>Atestado</th>
                     <th scope="col" style={dataTable.thHeader}>Severidade</th>
                   </tr>

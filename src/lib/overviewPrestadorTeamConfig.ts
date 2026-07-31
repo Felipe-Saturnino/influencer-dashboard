@@ -71,6 +71,29 @@ export function capsOverviewPrestadorTime(rotulo: string | null | undefined): Ov
   return CAPS["Game Presenter"];
 }
 
+/**
+ * `area_key` da Escala Estúdio para o time (mesma regra de `areaKeyLegadoFromNomeTime`).
+ * Usada para restringir a grade às células do time selecionado — células de outras
+ * áreas (academy, escritório, outros times) não entram nas métricas do Overview.
+ */
+const AREA_KEY_GRADE: Record<OverviewPrestadorTimeRotulo, string> = {
+  "Game Presenter": "game_presenter",
+  Shuffler: "shuffler",
+  "Shift Leader": "shift_leader",
+  "Service Manager": "service_manager",
+};
+
+export function areaKeyGradeDoTime(rotulo: string | null | undefined): string | null {
+  if (rotulo && isOverviewPrestadorTimeRotulo(rotulo)) return AREA_KEY_GRADE[rotulo];
+  return null;
+}
+
+/** `area_key` alternativa quando o time não casa com o legado (`t_<hex32>`). */
+export function areaKeyGradeDoTimeId(timeId: string | null | undefined): string | null {
+  const id = (timeId ?? "").trim().toLowerCase().replace(/-/g, "");
+  return id ? `t_${id}` : null;
+}
+
 export function rotuloTimeFromNomeOrganograma(nome: string | null | undefined): OverviewPrestadorTimeRotulo | null {
   const n = (nome ?? "").trim().toLowerCase().replace(/\s+/g, " ");
   if (!n) return null;

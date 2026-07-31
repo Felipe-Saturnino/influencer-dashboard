@@ -5,6 +5,9 @@ cooperação de velocidade e roda) por **dia de Brasília**, **mesa** e **Game P
 O jogo canônico vem do cadastro da mesa; `game_type` é usado apenas internamente para
 selecionar as métricas corretas no ClickHouse.
 
+O identificador técnico `autoWheel` é excluído: representa roda automática, não um
+Game Presenter humano.
+
 | Item | Valor |
 |---|---|
 | Origem | ClickHouse, datasource Grafana `risk_integrity_ch_live_sg` |

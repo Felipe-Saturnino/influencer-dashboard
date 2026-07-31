@@ -1452,6 +1452,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Os dias vêm de **todas** as competências com escala **aprovada** (Julho, Agosto, etc.), com início do turno a pelo menos **24h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (24h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
       },
       {
+        subtitulo: "Minha oferta foi cancelada sem ninguém aceitar?",
+        texto:
+          "Ofertas ainda abertas e propostas de troca **Em análise** são canceladas automaticamente quando faltam **menos de 2h para o início do turno**. Na troca, isso significa que o ofertante não aprovou a proposta a tempo: os dias reservados são liberados e nenhuma célula da escala é alterada. Se o cancelamento ocorreu antes dessa janela, confirme o horário do turno na Gestão de Staff ou no cadastro da operadora e, se persistir, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
         texto:
           "A lista só mostra turnos com pelo menos **12h** de intervalo em relação ao seu último turno e ao próximo, e com início a pelo menos **24h** da publicação. Ex.: escalado na Noite do dia 12 e de folga no 13 — no dia 13 só a Noite pode caber no intervalo; se a publicação for perto demais do início da Manhã/Tarde, esses turnos também somem. Se nenhum turno atender às duas regras, o dia não pode ser ofertado.",

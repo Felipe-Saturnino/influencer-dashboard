@@ -223,7 +223,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aproveitamento, movimentações e estúdio",
         texto:
-          "O bloco Aproveitamento compara escalado vs realizado em barras.\n\nQuando o time negocia turno, o gráfico de pizza **Movimentações de turno** agrupa trocas, vendas e compras. No Game Presenter individual, **Distribuição por estúdio** aparece ao lado das movimentações (dias realizados por estúdio). No Game Presenter time, há ainda **Cobertura por turno**, **Cobertura por estúdio** e **Pontos de atenção**.",
+          "O bloco Aproveitamento compara escalado vs realizado em barras.\n\nQuando o time negocia turno, o gráfico **Movimentações de turno** agrupa trocas, vendas e compras, com o total no centro e os valores na lista ao lado. Uma troca aceita muda dois dias na escala (o que foi liberado e o que passou a ser trabalhado) e conta como troca — não como venda e compra separadas. No Game Presenter individual, **Distribuição por estúdio** aparece ao lado das movimentações (dias realizados por estúdio). No Game Presenter time, há ainda **Cobertura por turno**, **Cobertura por estúdio** e **Pontos de atenção**.",
+      },
+      {
+        subtitulo: "Como ler as coberturas",
+        texto:
+          "Nas tabelas **Cobertura por turno** e **Cobertura por estúdio**, a coluna **Prestadores** conta pessoas distintas com jornada no período — quem apenas trocou o dia entra em Movimentações, sem ocupar vaga do turno. Um prestador que assume um turno comprado fora do seu turno habitual aparece nos dois turnos, por isso a soma das linhas pode passar do Total, que é sempre a contagem de pessoas distintas. Só a escala do time selecionado entra na conta: dias em treinamento ou em outra área não contam.",
       },
       {
         subtitulo: "Detalhamento Diário",
@@ -828,7 +833,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitar uma oferta",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
+          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. Se o aceite — ou a aprovação final da troca — não for concluído, a oferta é **cancelada automaticamente quando faltam menos de 2h para o início do turno**, liberando as reservas sem alterar a escala. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
         },
       {
         subtitulo: "Intervalo mínimo de 12h",

@@ -34,6 +34,8 @@ import {
   calcularDistribuicaoEstudioIndividual,
 } from "../../../lib/overviewPrestadorCobertura";
 import {
+  areaKeyGradeDoTime,
+  areaKeyGradeDoTimeId,
   capsOverviewPrestadorTime,
   OVERVIEW_PRESTADOR_TIME_DEFAULT,
   OVERVIEW_PRESTADOR_TIMES_ORDEM,
@@ -309,6 +311,27 @@ export function useOverviewPrestadorDados(
   const timeRotuloEfetivo = timeRotuloSelecionado ?? (soProprios ? "Game Presenter" : OVERVIEW_PRESTADOR_TIME_DEFAULT);
   const caps = useMemo(() => capsOverviewPrestadorTime(timeRotuloEfetivo), [timeRotuloEfetivo]);
 
+  const timeIdEscopo = useMemo(() => {
+    if (soProprios) return (prestadores[0]?.org_time_id ?? "").trim() || null;
+    return [...filtroTimeIdsReais][0] ?? null;
+  }, [soProprios, prestadores, filtroTimeIdsReais]);
+
+  /**
+   * Só as células da Escala Estúdio do time selecionado — sem isto, linhas de outras
+   * áreas (Academy/treinamento, escritório, outros times) entram nas jornadas e na
+   * contagem de prestadores por turno.
+   */
+  const gradeRows = useMemo(() => {
+    const permitidas = new Set(
+      [areaKeyGradeDoTime(timeRotuloEfetivo), areaKeyGradeDoTimeId(timeIdEscopo)].filter(
+        (x): x is string => Boolean(x),
+      ),
+    );
+    if (permitidas.size === 0) return rawGradeRows;
+    const filtradas = rawGradeRows.filter((r) => permitidas.has((r.area_key ?? "").trim().toLowerCase()));
+    return filtradas.length > 0 ? filtradas : rawGradeRows;
+  }, [rawGradeRows, timeRotuloEfetivo, timeIdEscopo]);
+
   const staffMultiselectItems = useMemo(() => {
     const opts = {
       filtroAtivo: filtroTimeAtivo,
@@ -513,7 +536,7 @@ export function useOverviewPrestadorDados(
           funcionarioId: fid,
           prestador: pRow,
           opTurnos: opRow,
-          gradeRows: rawGradeRows,
+          gradeRows,
           pontoRows: pontoRowsPorFuncionario(fid),
           presencaGestao: presencaGestaoPorChave,
           movimentacoes: movimentacoesPorChave,
@@ -528,7 +551,7 @@ export function useOverviewPrestadorDados(
     idsEscopo,
     prestadorPorId,
     mapOpTurnos,
-    rawGradeRows,
+    gradeRows,
     pontoRowsPorFuncionario,
     presencaGestaoPorChave,
     movimentacoesPorChave,
@@ -565,7 +588,7 @@ export function useOverviewPrestadorDados(
         funcionarioId: fid,
         prestador: pRow,
         opTurnos: opRow,
-        gradeRows: rawGradeRows,
+        gradeRows,
         pontoRows: pontoRowsPorFuncionario(fid),
         presencaGestao: presencaGestaoPorChave,
         movimentacoes: movimentacoesPorChave,
@@ -580,7 +603,7 @@ export function useOverviewPrestadorDados(
     idsEscopo,
     prestadorPorId,
     mapOpTurnos,
-    rawGradeRows,
+    gradeRows,
     pontoRowsPorFuncionario,
     presencaGestaoPorChave,
     movimentacoesPorChave,
@@ -619,7 +642,7 @@ export function useOverviewPrestadorDados(
       funcionarioIds: idsEscopo,
       prestadorPorId,
       opTurnosPorFuncionario,
-      gradeRows: rawGradeRows,
+      gradeRows,
       pontoPorChave,
       presencaGestao: presencaGestaoPorChave,
       movimentacoes: movimentacoesPorChave,
@@ -635,7 +658,7 @@ export function useOverviewPrestadorDados(
     idsEscopo,
     prestadorPorId,
     mapOpTurnos,
-    rawGradeRows,
+    gradeRows,
     pontoPorChave,
     presencaGestaoPorChave,
     movimentacoesPorChave,
@@ -654,7 +677,7 @@ export function useOverviewPrestadorDados(
       funcionarioId: staffSelecionadoId,
       prestador: pRow,
       opTurnos: slug ? mapOpTurnos.get(slug) ?? null : null,
-      gradeRows: rawGradeRows,
+      gradeRows,
       pontoRows: pontoRowsPorFuncionario(staffSelecionadoId),
       presencaGestao: presencaGestaoPorChave,
       movimentacoes: movimentacoesPorChave,
@@ -670,7 +693,7 @@ export function useOverviewPrestadorDados(
     caps.distribuicaoEstudioIndividual,
     prestadorPorId,
     mapOpTurnos,
-    rawGradeRows,
+    gradeRows,
     pontoRowsPorFuncionario,
     presencaGestaoPorChave,
     movimentacoesPorChave,

@@ -153,6 +153,7 @@ FROM
   WHERE gp.game_started_at >= toDateTime(${deSegundos})
     AND gp.game_started_at <  toDateTime(${ateSegundos})
     AND gp.environment IN (${amb})
+    AND lowerUTF8(trim(gp.game_presenter_id)) != 'autowheel'
 ) AS base
 GROUP BY dia_brt, table_id, game_presenter_id
 HAVING rodadas > 0
@@ -233,7 +234,12 @@ function frameParaLinhas(frame) {
  * (um objeto ou uma lista de blocos), uma lista de frames ou linhas já normalizadas.
  */
 function lerArquivoLinhas(caminho) {
-  const bruto = JSON.parse(readFileSync(caminho, "utf8"));
+  let bruto = JSON.parse(readFileSync(caminho, "utf8"));
+  // O navegador controlado pelo Cursor salva respostas grandes do Runtime.evaluate
+  // neste envelope; o value contém a resposta JSON original do Grafana.
+  if (bruto?.result?.type === "string" && typeof bruto.result.value === "string") {
+    bruto = JSON.parse(bruto.result.value);
+  }
   const blocos = Array.isArray(bruto) ? bruto : [bruto];
   const linhas = [];
 
@@ -442,7 +448,9 @@ async function main() {
   let totalGravadas = 0;
 
   async function processar(linhas, rotulo) {
-    const registros = linhas.map((l) => montarRegistro(l, ambiente, mesasPorId, staffPorIdOp));
+    const registros = linhas
+      .filter((l) => String(l.game_presenter_id ?? "").trim().toLowerCase() !== "autowheel")
+      .map((l) => montarRegistro(l, ambiente, mesasPorId, staffPorIdOp));
     for (const r of registros) {
       if (!r.mesa_id) semCadastro.add(r.table_id);
       if (!r.funcionario_id && r.game_presenter_id) gpSemStaff.add(r.game_presenter_id);

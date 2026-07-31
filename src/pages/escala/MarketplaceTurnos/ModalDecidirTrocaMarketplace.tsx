@@ -30,10 +30,12 @@ export function ModalDecidirTrocaMarketplace({
   const brand = useDashboardBrand();
   const [erro, setErro] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
+  const [ofertaExpirada, setOfertaExpirada] = useState(false);
 
   useEffect(() => {
     setErro(null);
     setGravando(false);
+    setOfertaExpirada(false);
   }, [oferta?.id, decisao]);
 
   if (!oferta) return null;
@@ -51,6 +53,10 @@ export function ModalDecidirTrocaMarketplace({
     setGravando(false);
     if ("error" in res) {
       setErro(mensagemErroOfertaMarketplace(res.error));
+      if (res.error === "oferta_expirada") {
+        setOfertaExpirada(true);
+        onConcluida();
+      }
       return;
     }
     onConcluida();
@@ -110,7 +116,7 @@ export function ModalDecidirTrocaMarketplace({
           </button>
           <button
             type="button"
-            disabled={gravando}
+            disabled={gravando || ofertaExpirada}
             onClick={() => void confirmar()}
             style={{
               padding: "10px 18px",

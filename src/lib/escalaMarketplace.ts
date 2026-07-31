@@ -731,6 +731,10 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
     "A escala de um dos dias foi alterada durante a negociação. Recuse a proposta e publique ou aceite uma nova troca.",
   nao_e_ofertante: "Só o autor da oferta pode cancelá-la.",
   gap_minimo: "É necessário respeitar o intervalo mínimo de 12h entre turnos.",
+  horario_turno_indisponivel:
+    "Não foi possível identificar o horário de início deste turno. Revise o horário na Gestão de Staff ou no cadastro da operadora.",
+  oferta_expirada:
+    "Esta oferta foi cancelada porque faltam menos de 2h para o início do turno.",
 };
 
 /** Mensagem de produto para o código devolvido pelas RPCs do Marketplace. */
