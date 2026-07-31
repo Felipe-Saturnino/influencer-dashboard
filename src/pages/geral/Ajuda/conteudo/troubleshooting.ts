@@ -201,6 +201,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Métricas de escala e presença dependem de escala publicada e registros no Calendário. Verifique se o prestador ou time selecionado tem turnos no período e se justificativas pendentes não estão bloqueando o fechamento.",
       },
+      {
+        subtitulo: "Não vejo a aba KPIs de Mesa?",
+        texto:
+          "A aba só aparece quando o filtro **Time** está em **Game Presenter**. Em outros times (Shuffler, Shift Leader, Service Manager) permanece apenas a aba Escala.",
+      },
+      {
+        subtitulo: "KPIs de Mesa sem números?",
+        texto:
+          "Na visão de time (Staff vazio), selecione um Game Presenter no filtro Staff. Confirme também o mês no carrossel (os dados piloto começaram em julho/2026) e se o prestador tem **ID operacional** vinculado em Gestão de Staff — sem esse vínculo a carga do Grafana não associa as linhas.",
+      },
     ],
   },
   dash_headcount: {

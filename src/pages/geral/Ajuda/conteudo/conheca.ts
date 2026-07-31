@@ -203,12 +203,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos times de estúdio. A página tem duas abas — Escala (disponível) e Performance (em desenvolvimento) — e reutiliza os mesmos dados de grade e ponto do Calendário RH, com detalhes de negociação vindos do Marketplace quando existirem.",
+          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos times de estúdio. A aba **Escala** está disponível para todos os times; a aba **KPIs de Mesa** aparece somente com o filtro Time em **Game Presenter** e mostra a performance operacional do GP na mesa (visão individual nesta versão).",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de agosto/2026 — início oficial da escala). O botão Histórico exibe o acumulado das competências disponíveis desde agosto, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
+          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional na Escala: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual. Em **KPIs de Mesa**, selecione um Game Presenter no Staff para ver os indicadores.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
       },
       {
         subtitulo: "Visão de time vs individual",
@@ -236,9 +236,9 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time). Ocorrências: Troca, Atestado, Atraso, Esquecimento, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
       },
       {
-        subtitulo: "Aba Performance",
+        subtitulo: "Aba KPIs de Mesa",
         texto:
-          "Conteúdo em desenvolvimento — será liberado em versão futura.",
+          "Visível apenas com Time = Game Presenter. Nesta versão, escolha um prestador no filtro Staff (ou use a visão próprios) para ver: Rodadas, Dealing e Reaction (médias em segundos — quanto menor, melhor), Cooperação de Velocidade e Cooperação de Roda (percentuais sobre as rodadas).\n\nAbaixo dos cards, o Detalhamento Diário e a tabela Por Mesa detalham o mesmo período. Sem Staff selecionado (visão de time), a aba pede para escolher um Game Presenter — o consolidado do time virá em versão futura. Sem linhas no período: \"Sem dados para o período selecionado.\"",
       },
     ],
   },

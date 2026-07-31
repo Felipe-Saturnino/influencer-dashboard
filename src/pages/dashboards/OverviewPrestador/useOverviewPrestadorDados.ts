@@ -56,7 +56,7 @@ import {
 } from "./overviewPrestadorQueries";
 import type { OverviewPrestadorMovimentacaoCelula } from "../../../lib/overviewPrestadorMovimentacoes";
 
-export type OverviewPrestadorTab = "escala" | "performance";
+export type OverviewPrestadorTab = "escala" | "kpis_mesa";
 
 const CONCURRENCY_STAFF = 4;
 

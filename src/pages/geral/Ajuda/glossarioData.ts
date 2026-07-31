@@ -911,7 +911,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Overview Prestador",
         definicao:
-          "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio.",
+          "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio. No Game Presenter, a aba **KPIs de Mesa** mostra Rodadas, Dealing, Reaction e cooperação na mesa.",
+        referencia: "Overview Prestador",
+      },
+      {
+        termo: "KPIs de Mesa",
+        definicao:
+          "Indicadores operacionais do Game Presenter na mesa ao vivo: volume de rodadas, tempo médio de dealing e reaction (quanto menor, melhor) e percentuais de cooperação de velocidade e de roda. Fonte: carga diária a partir do Grafana/ClickHouse.",
         referencia: "Overview Prestador",
       },
       {

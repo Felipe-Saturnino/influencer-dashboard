@@ -65,7 +65,7 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   ]),
   page("Overview Prestador", "dash_overview_prestador", "OverviewPrestador", [
     { tabId: "escala", slug: "Escala", label: "Escala", access: "always" },
-    { tabId: "performance", slug: "Performance", label: "Performance", access: "always" },
+    { tabId: "kpis_mesa", slug: "KPIsdeMesa", label: "KPIs de Mesa", access: "always" },
   ]),
   page("Agenda", "agenda", "Agenda"),
   page("Resultados", "resultados", "Resultados"),

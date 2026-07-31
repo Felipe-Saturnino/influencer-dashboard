@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, LayoutGrid, CalendarRange } from "lucide-react";
 import type { Theme } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import {
@@ -14,7 +14,6 @@ import {
   getFilterBarRowStyle,
   onFiltroBarTabsKeyDown,
 } from "../../../lib/filterBarStyles";
-import { CalendarRange, LineChart } from "lucide-react";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { OverviewPrestadorTab } from "./useOverviewPrestadorDados";
 
@@ -25,6 +24,7 @@ type Props = {
   t: Theme;
   aba: OverviewPrestadorTab;
   onSelectAba: (tab: OverviewPrestadorTab) => void;
+  showAbaKpisMesa: boolean;
   historico: boolean;
   onToggleHistorico: () => void;
   labelCarrossel: string;
@@ -43,16 +43,15 @@ type Props = {
   loading: boolean;
 };
 
-const TABS: { key: OverviewPrestadorTab; label: string; icon: typeof CalendarRange }[] = [
-  { key: "escala", label: "Escala", icon: CalendarRange },
-  { key: "performance", label: "Performance", icon: LineChart },
-];
+const TAB_ESCALA = { key: "escala" as const, label: "Escala", icon: CalendarRange };
+const TAB_KPIS = { key: "kpis_mesa" as const, label: "KPIs de Mesa", icon: LayoutGrid };
 
 export function OverviewPrestadorFiltroBar({
   brand,
   t,
   aba,
   onSelectAba,
+  showAbaKpisMesa,
   historico,
   onToggleHistorico,
   labelCarrossel,
@@ -70,6 +69,8 @@ export function OverviewPrestadorFiltroBar({
   onFiltroStaffChange,
   loading,
 }: Props) {
+  const tabs = showAbaKpisMesa ? [TAB_ESCALA, TAB_KPIS] : [TAB_ESCALA];
+
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
       <div style={getFilterBarRowStyle()}>
@@ -131,31 +132,36 @@ export function OverviewPrestadorFiltroBar({
       <div style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}>
         <div className="app-filter-bar-tabs-cta">
           <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
-        <div
-          className="app-filter-bar-tabs-cta__tabs"
-          role="tablist"
-          aria-label="Abas do Overview Prestador"
-          onKeyDown={(e) =>
-            onFiltroBarTabsKeyDown(e, TABS.map((x) => x.key), onSelectAba, (k) => `tab-overview-prestador-${k}`)
-          }
-        >
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const ativo = aba === tab.key;
-            return (
-              <FiltroBarTabButton
-                key={tab.key}
-                id={`tab-overview-prestador-${tab.key}`}
-                active={ativo}
-                aria-controls={`panel-overview-prestador-${tab.key}`}
-                onClick={() => onSelectAba(tab.key)}
-                icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
-              >
-                {tab.label}
-              </FiltroBarTabButton>
-            );
-          })}
-        </div>
+          <div
+            className="app-filter-bar-tabs-cta__tabs"
+            role="tablist"
+            aria-label="Abas do Overview Prestador"
+            onKeyDown={(e) =>
+              onFiltroBarTabsKeyDown(
+                e,
+                tabs.map((x) => x.key),
+                onSelectAba,
+                (k) => `tab-overview-prestador-${k}`,
+              )
+            }
+          >
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const ativo = aba === tab.key;
+              return (
+                <FiltroBarTabButton
+                  key={tab.key}
+                  id={`tab-overview-prestador-${tab.key}`}
+                  active={ativo}
+                  aria-controls={`panel-overview-prestador-${tab.key}`}
+                  onClick={() => onSelectAba(tab.key)}
+                  icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                >
+                  {tab.label}
+                </FiltroBarTabButton>
+              );
+            })}
+          </div>
           <div className="app-filter-bar-tabs-cta__actions">
             <AjudaContextualAcoes pageKey="dash_overview_prestador" />
           </div>
