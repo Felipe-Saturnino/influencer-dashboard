@@ -1,5 +1,18 @@
 /** Agregação de KPIs de mesa (gp_kpi_diario) para Overview Prestador. */
 
+import {
+  GAME_IDENTITY_LABEL,
+  type GameIdentityKey,
+} from "./gameIdentityColors";
+
+/** Ordem de produto na aba KPIs de Mesa (drilldown e Por Jogo). */
+export const GP_KPI_JOGOS_ORDEM: GameIdentityKey[] = [
+  "blackjack",
+  "baccarat",
+  "futebol_brasileiro",
+  "roleta",
+];
+
 export type GpKpiDiarioRow = {
   dia_brt: string;
   table_id: string;
@@ -16,6 +29,21 @@ export type GpKpiDiarioRow = {
   nome_mesa?: string | null;
   tipo_jogo?: string | null;
 };
+
+/** Normaliza `mesas_spin_cadastro.tipo_jogo` → identidade canónica (ou null se fora do escopo). */
+export function normalizarTipoJogoGpKpi(tipo: string | null | undefined): GameIdentityKey | null {
+  const t = String(tipo ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  if (!t) return null;
+  if (t.includes("blackjack") || t === "bj") return "blackjack";
+  if (t.includes("baccarat")) return "baccarat";
+  if (t.includes("futebol") || t.includes("football") || t.includes("soccer")) return "futebol_brasileiro";
+  if (t.includes("roleta") || t.includes("roulette")) return "roleta";
+  return null;
+}
 
 export type GpKpiAgregado = {
   rodadas: number;
@@ -73,6 +101,47 @@ export function fmtPctCoop(pct: number | null): string {
   return `${pct.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 }
 
+export type GpKpiJogoLinha = {
+  jogoKey: GameIdentityKey;
+  jogoLabel: string;
+  rodadas: number;
+  dealingSeg: number | null;
+  reactionSeg: number | null;
+  coopVelPct: number | null;
+  coopRodaPct: number | null;
+};
+
+function linhaMetricasDeAgg(agg: GpKpiAgregado) {
+  return {
+    rodadas: agg.rodadas,
+    dealingSeg: mediaSegundos(agg.dealingMsSoma, agg.dealingAmostras),
+    reactionSeg: mediaSegundos(agg.reactionMsSoma, agg.reactionAmostras),
+    coopVelPct: pctCoop(agg.coopVelocidade, agg.rodadas),
+    coopRodaPct: pctCoop(agg.coopRoda, agg.rodadas),
+  };
+}
+
+/** Agrega todas as mesas do período por tipo de jogo (Blackjack, Baccarat, FB, Roleta). */
+export function agruparGpKpiPorJogo(rows: GpKpiDiarioRow[]): GpKpiJogoLinha[] {
+  const map = new Map<GameIdentityKey, GpKpiDiarioRow[]>();
+  for (const r of rows) {
+    const key = normalizarTipoJogoGpKpi(r.tipo_jogo);
+    if (!key) continue;
+    const list = map.get(key) ?? [];
+    list.push(r);
+    map.set(key, list);
+  }
+  return GP_KPI_JOGOS_ORDEM.filter((k) => map.has(k)).map((key) => {
+    const list = map.get(key)!;
+    const agg = agregarGpKpiRows(list);
+    return {
+      jogoKey: key,
+      jogoLabel: GAME_IDENTITY_LABEL[key],
+      ...linhaMetricasDeAgg(agg),
+    };
+  });
+}
+
 export type GpKpiDiaLinha = {
   dia_brt: string;
   rodadas: number;
@@ -80,6 +149,8 @@ export type GpKpiDiaLinha = {
   reactionSeg: number | null;
   coopVelPct: number | null;
   coopRodaPct: number | null;
+  /** Breakdown por jogo no dia (mesmas métricas; sem separar mesa). */
+  porJogo: GpKpiJogoLinha[];
 };
 
 export function agruparGpKpiPorDia(rows: GpKpiDiarioRow[]): GpKpiDiaLinha[] {
@@ -97,51 +168,8 @@ export function agruparGpKpiPorDia(rows: GpKpiDiarioRow[]): GpKpiDiaLinha[] {
       const agg = agregarGpKpiRows(list);
       return {
         dia_brt: dia,
-        rodadas: agg.rodadas,
-        dealingSeg: mediaSegundos(agg.dealingMsSoma, agg.dealingAmostras),
-        reactionSeg: mediaSegundos(agg.reactionMsSoma, agg.reactionAmostras),
-        coopVelPct: pctCoop(agg.coopVelocidade, agg.rodadas),
-        coopRodaPct: pctCoop(agg.coopRoda, agg.rodadas),
+        ...linhaMetricasDeAgg(agg),
+        porJogo: agruparGpKpiPorJogo(list),
       };
     });
-}
-
-export type GpKpiMesaLinha = {
-  table_id: string;
-  nome_mesa: string;
-  tipo_jogo: string;
-  estudio_slug: string | null;
-  rodadas: number;
-  dealingSeg: number | null;
-  reactionSeg: number | null;
-  coopVelPct: number | null;
-  coopRodaPct: number | null;
-};
-
-export function agruparGpKpiPorMesa(rows: GpKpiDiarioRow[]): GpKpiMesaLinha[] {
-  const map = new Map<string, GpKpiDiarioRow[]>();
-  for (const r of rows) {
-    const id = String(r.table_id ?? "").trim();
-    if (!id) continue;
-    const list = map.get(id) ?? [];
-    list.push(r);
-    map.set(id, list);
-  }
-  return [...map.entries()]
-    .map(([tableId, list]) => {
-      const agg = agregarGpKpiRows(list);
-      const sample = list[0]!;
-      return {
-        table_id: tableId,
-        nome_mesa: (sample.nome_mesa ?? "").trim() || tableId,
-        tipo_jogo: (sample.tipo_jogo ?? "").trim() || "—",
-        estudio_slug: sample.estudio_slug,
-        rodadas: agg.rodadas,
-        dealingSeg: mediaSegundos(agg.dealingMsSoma, agg.dealingAmostras),
-        reactionSeg: mediaSegundos(agg.reactionMsSoma, agg.reactionAmostras),
-        coopVelPct: pctCoop(agg.coopVelocidade, agg.rodadas),
-        coopRodaPct: pctCoop(agg.coopRoda, agg.rodadas),
-      };
-    })
-    .sort((a, b) => b.rodadas - a.rodadas || a.nome_mesa.localeCompare(b.nome_mesa, "pt-BR"));
 }

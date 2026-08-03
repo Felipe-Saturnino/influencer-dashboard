@@ -917,7 +917,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "KPIs de Mesa",
         definicao:
-          "Indicadores operacionais do Game Presenter na mesa ao vivo: volume de rodadas, tempo médio de dealing e reaction (quanto menor, melhor) e percentuais de cooperação de velocidade e de roda. Fonte: carga diária a partir do Grafana/ClickHouse.",
+          "Indicadores operacionais do Game Presenter na mesa ao vivo: volume de rodadas, tempo médio de dealing e reaction (quanto menor, melhor) e percentuais de cooperação de velocidade e de roda, com comparativo MTD ao mês anterior. Inclui visão Por Jogo e detalhamento diário com drilldown por jogo (Blackjack, Baccarat, Futebol Brasileiro, Roleta). Fonte: carga diária a partir do Grafana/ClickHouse.",
         referencia: "Overview Prestador",
       },
       {

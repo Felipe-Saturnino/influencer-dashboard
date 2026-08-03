@@ -238,7 +238,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de Mesa",
         texto:
-          "Visível apenas com Time = Game Presenter. Nesta versão, escolha um prestador no filtro Staff (ou use a visão próprios) para ver: Rodadas, Dealing e Reaction (médias em segundos — quanto menor, melhor), Cooperação de Velocidade e Cooperação de Roda (percentuais sobre as rodadas).\n\nAbaixo dos cards, o Detalhamento Diário e a tabela Por Mesa detalham o mesmo período. Sem Staff selecionado (visão de time), a aba pede para escolher um Game Presenter — o consolidado do time virá em versão futura. Sem linhas no período: \"Sem dados para o período selecionado.\"",
+          "Visível apenas com Time = Game Presenter. Nesta versão, escolha um prestador no filtro Staff (ou use a visão próprios) para ver: Rodadas, Dealing e Reaction (médias em segundos — quanto menor, melhor), Cooperação de Velocidade e Cooperação de Roda (percentuais sobre as rodadas), com comparativo MTD ao mesmo intervalo do mês anterior (sem MoM no Histórico).\n\nEm seguida, **Por Jogo** soma todas as mesas em que o prestador atuou em Blackjack, Baccarat, Futebol Brasileiro e Roleta. O **Detalhamento Diário** lista o total do dia; expanda a linha para ver o mesmo breakdown por jogo (sem separar mesa). Sem Staff selecionado (visão de time), a aba pede para escolher um Game Presenter — o consolidado do time virá em versão futura. Sem linhas no período: \"Sem dados para o período selecionado.\"",
       },
     ],
   },

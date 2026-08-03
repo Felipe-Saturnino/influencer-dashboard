@@ -8,7 +8,7 @@ import {
 import {
   agregarGpKpiRows,
   agruparGpKpiPorDia,
-  agruparGpKpiPorMesa,
+  agruparGpKpiPorJogo,
   GP_KPI_AGREGADO_ZERO,
   type GpKpiAgregado,
   type GpKpiDiarioRow,
@@ -146,7 +146,7 @@ export function useOverviewPrestadorGpKpi(opts: {
 
   const agregado = useMemo(() => agregarGpKpiRows(rowsAtual), [rowsAtual]);
   const porDia = useMemo(() => agruparGpKpiPorDia(rowsAtual), [rowsAtual]);
-  const porMesa = useMemo(() => agruparGpKpiPorMesa(rowsAtual), [rowsAtual]);
+  const porJogo = useMemo(() => agruparGpKpiPorJogo(rowsAtual), [rowsAtual]);
 
   return {
     loading,
@@ -154,7 +154,7 @@ export function useOverviewPrestadorGpKpi(opts: {
     agregado,
     aggAnterior,
     porDia,
-    porMesa,
+    porJogo,
     temDados: rowsAtual.length > 0,
   };
 }

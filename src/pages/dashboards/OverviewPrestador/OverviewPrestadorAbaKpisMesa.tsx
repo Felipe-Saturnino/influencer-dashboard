@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Gauge, Hash, RotateCw, Timer, Zap } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import { ChevronRight, Gauge, Hash, RotateCw, Timer, Zap } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -8,12 +8,16 @@ import { BRAND } from "../../../lib/dashboardConstants";
 import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { GAME_IDENTITY_LABEL, getGameTagChipStyle } from "../../../lib/gameIdentityColors";
+import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
 import {
   fmtMediaSegundos,
   fmtPctCoop,
+  GP_KPI_JOGOS_ORDEM,
   mediaSegundos,
   pctCoop,
   type GpKpiAgregado,
+  type GpKpiJogoLinha,
 } from "../../../lib/gpKpiMetrics";
 import { KpiCard, SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { useOverviewPrestadorGpKpi } from "./useOverviewPrestadorGpKpi";
@@ -28,7 +32,7 @@ type Props = {
 };
 
 type SortDiaCol = "dia" | "rodadas" | "dealing" | "reaction" | "coopVel" | "coopRoda";
-type SortMesaCol = "mesa" | "jogo" | "rodadas" | "dealing" | "reaction" | "coopVel" | "coopRoda";
+type SortJogoCol = "jogo" | "dealing" | "reaction" | "coopVel" | "coopRoda";
 
 function fmtDiaBr(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-");
@@ -38,6 +42,32 @@ function fmtDiaBr(iso: string): string {
 
 function numOrNeg(v: number | null): number {
   return v == null || !Number.isFinite(v) ? Number.NEGATIVE_INFINITY : v;
+}
+
+function JogoChip({ jogo, isDark }: { jogo: GpKpiJogoLinha; isDark: boolean }) {
+  const chip = getGameTagChipStyle(jogo.jogoKey, isDark);
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        fontSize: 12,
+        fontWeight: 700,
+        fontFamily: FONT.body,
+        padding: "3px 10px",
+        borderRadius: 20,
+        background: chip.bg,
+        color: chip.color,
+        border: `1px solid ${chip.border}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {GAME_IDENTITY_ICONS[jogo.jogoKey]}
+      {GAME_IDENTITY_LABEL[jogo.jogoKey]}
+    </span>
+  );
 }
 
 function KpisMesaCards({
@@ -70,6 +100,7 @@ function KpisMesaCards({
         atual={atual.rodadas}
         anterior={anterior.rodadas}
         isHistorico={historico}
+        vsLegendaSuffix="MTD mês ant."
       />
       <KpiCard
         label="Dealing"
@@ -81,6 +112,7 @@ function KpisMesaCards({
         anterior={dealingAnt ?? 0}
         isHistorico={historico || dealing == null}
         isInverso
+        vsLegendaSuffix="MTD mês ant."
       />
       <KpiCard
         label="Reaction"
@@ -91,6 +123,7 @@ function KpisMesaCards({
         anterior={reactionAnt ?? 0}
         isHistorico={historico || reaction == null}
         isInverso
+        vsLegendaSuffix="MTD mês ant."
       />
       <KpiCard
         label="Coop. Velocidade"
@@ -100,6 +133,7 @@ function KpisMesaCards({
         atual={coopVel ?? 0}
         anterior={coopVelAnt ?? 0}
         isHistorico={historico || coopVel == null}
+        vsLegendaSuffix="MTD mês ant."
       />
       <KpiCard
         label="Coop. Roda"
@@ -109,6 +143,7 @@ function KpisMesaCards({
         atual={coopRoda ?? 0}
         anterior={coopRodaAnt ?? 0}
         isHistorico={historico || coopRoda == null}
+        vsLegendaSuffix="MTD mês ant."
       />
     </div>
   );
@@ -125,8 +160,9 @@ export function OverviewPrestadorAbaKpisMesa({
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
+  const isDark = Boolean(t.isDark);
 
-  const { loading, erro, agregado, aggAnterior, porDia, porMesa, temDados } = useOverviewPrestadorGpKpi({
+  const { loading, erro, agregado, aggAnterior, porDia, porJogo, temDados } = useOverviewPrestadorGpKpi({
     enabled: !visaoTime && Boolean(funcionarioId),
     funcionarioId,
     mesSelecionado,
@@ -134,10 +170,11 @@ export function OverviewPrestadorAbaKpisMesa({
   });
 
   const [sortDia, setSortDia] = useState<{ col: SortDiaCol; dir: SortDir }>({ col: "dia", dir: "desc" });
-  const [sortMesa, setSortMesa] = useState<{ col: SortMesaCol; dir: SortDir }>({
-    col: "rodadas",
-    dir: "desc",
+  const [sortJogo, setSortJogo] = useState<{ col: SortJogoCol; dir: SortDir }>({
+    col: "jogo",
+    dir: "asc",
   });
+  const [diasExpandidos, setDiasExpandidos] = useState<Set<string>>(() => new Set());
 
   const diasOrdenados = useMemo(() => {
     const rows = [...porDia];
@@ -163,17 +200,17 @@ export function OverviewPrestadorAbaKpisMesa({
     return rows;
   }, [porDia, sortDia]);
 
-  const mesasOrdenadas = useMemo(() => {
-    const rows = [...porMesa];
-    const dir = sortMesa.dir;
+  const jogosOrdenados = useMemo(() => {
+    const rows = [...porJogo];
+    const dir = sortJogo.dir;
+    const ordemJogo = (k: string) => {
+      const i = GP_KPI_JOGOS_ORDEM.indexOf(k as (typeof GP_KPI_JOGOS_ORDEM)[number]);
+      return i < 0 ? 99 : i;
+    };
     rows.sort((a, b) => {
-      switch (sortMesa.col) {
-        case "mesa":
-          return compareLocaleTexto(a.nome_mesa, b.nome_mesa, dir);
+      switch (sortJogo.col) {
         case "jogo":
-          return compareLocaleTexto(a.tipo_jogo, b.tipo_jogo, dir);
-        case "rodadas":
-          return compareNumber(a.rodadas, b.rodadas, dir);
+          return compareNumber(ordemJogo(a.jogoKey), ordemJogo(b.jogoKey), dir);
         case "dealing":
           return compareNumber(numOrNeg(a.dealingSeg), numOrNeg(b.dealingSeg), dir);
         case "reaction":
@@ -187,7 +224,7 @@ export function OverviewPrestadorAbaKpisMesa({
       }
     });
     return rows;
-  }, [porMesa, sortMesa]);
+  }, [porJogo, sortJogo]);
 
   const onSortDia = (col: SortDiaCol) => {
     setSortDia((prev) =>
@@ -195,10 +232,19 @@ export function OverviewPrestadorAbaKpisMesa({
     );
   };
 
-  const onSortMesa = (col: SortMesaCol) => {
-    setSortMesa((prev) =>
+  const onSortJogo = (col: SortJogoCol) => {
+    setSortJogo((prev) =>
       prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" },
     );
+  };
+
+  const toggleDia = (dia: string) => {
+    setDiasExpandidos((prev) => {
+      const n = new Set(prev);
+      if (n.has(dia)) n.delete(dia);
+      else n.add(dia);
+      return n;
+    });
   };
 
   if (visaoTime || !funcionarioId) {
@@ -211,14 +257,21 @@ export function OverviewPrestadorAbaKpisMesa({
     );
   }
 
-  const subPeriodo = historico ? "acumulado" : mesSelecionado?.label;
-  const subTitulo =
-    staffNome && subPeriodo ? `${staffNome} · ${subPeriodo}` : staffNome || subPeriodo;
+  const subPeriodo = historico
+    ? "acumulado"
+    : staffNome
+      ? `${staffNome} · comparativo MTD vs mês anterior`
+      : "comparativo MTD vs mês anterior";
+  const subTituloKpis = historico
+    ? staffNome
+      ? `${staffNome} · acumulado`
+      : "acumulado"
+    : subPeriodo;
 
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle sub={subTitulo}>KPIs de Mesa</SectionTitle>
+        <SectionTitle sub={subTituloKpis}>KPIs de Mesa</SectionTitle>
 
         {erro && (
           <div
@@ -248,10 +301,85 @@ export function OverviewPrestadorAbaKpisMesa({
       {!loading && temDados && (
         <>
           <div style={pageBox}>
-            <SectionTitle sub={historico ? "mês a mês" : "dia a dia"}>Detalhamento Diário</SectionTitle>
+            <SectionTitle sub="todas as mesas do prestador agrupadas por tipo de jogo">Por Jogo</SectionTitle>
+            <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle({ minWidth: 640 })}>
+                <caption style={{ display: "none" }}>KPIs de mesa agregados por jogo</caption>
+                <thead>
+                  <tr>
+                    <SortTableTh
+                      label="Jogo"
+                      col="jogo"
+                      sortCol={sortJogo.col}
+                      sortDir={sortJogo.dir}
+                      onSort={onSortJogo}
+                      thStyle={dataTable.thHeaderSticky}
+                      align="center"
+                    />
+                    <SortTableTh
+                      label="Dealing"
+                      col="dealing"
+                      sortCol={sortJogo.col}
+                      sortDir={sortJogo.dir}
+                      onSort={onSortJogo}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
+                    <SortTableTh
+                      label="Reaction"
+                      col="reaction"
+                      sortCol={sortJogo.col}
+                      sortDir={sortJogo.dir}
+                      onSort={onSortJogo}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
+                    <SortTableTh
+                      label="Coop. Vel."
+                      col="coopVel"
+                      sortCol={sortJogo.col}
+                      sortDir={sortJogo.dir}
+                      onSort={onSortJogo}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
+                    <SortTableTh
+                      label="Coop. Roda"
+                      col="coopRoda"
+                      sortCol={sortJogo.col}
+                      sortDir={sortJogo.dir}
+                      onSort={onSortJogo}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
+                  </tr>
+                </thead>
+                <tbody>
+                  {jogosOrdenados.map((row, i) => (
+                    <tr key={row.jogoKey} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={dataTable.tdSticky()}>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <JogoChip jogo={row} isDark={isDark} />
+                        </div>
+                      </td>
+                      <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.dealingSeg)}</td>
+                      <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.reactionSeg)}</td>
+                      <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopVelPct)}</td>
+                      <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopRodaPct)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style={{ ...pageBox, marginBottom: 0 }}>
+            <SectionTitle sub={historico ? "mês a mês · expandir o dia para ver por jogo" : "dia a dia · expandir para ver por jogo"}>
+              Detalhamento Diário
+            </SectionTitle>
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 720 })}>
-                <caption style={{ display: "none" }}>KPIs de mesa por dia</caption>
+                <caption style={{ display: "none" }}>KPIs de mesa por dia com drilldown por jogo</caption>
                 <thead>
                   <tr>
                     <SortTableTh
@@ -311,107 +439,80 @@ export function OverviewPrestadorAbaKpisMesa({
                   </tr>
                 </thead>
                 <tbody>
-                  {diasOrdenados.map((row, i) => (
-                    <tr key={row.dia_brt} style={{ background: dataTable.zebraRow(i) }}>
-                      <td style={dataTable.tdSticky()}>{fmtDiaBr(row.dia_brt)}</td>
-                      <td style={dataTable.tdCenter}>{row.rodadas.toLocaleString("pt-BR")}</td>
-                      <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.dealingSeg)}</td>
-                      <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.reactionSeg)}</td>
-                      <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopVelPct)}</td>
-                      <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopRodaPct)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div style={{ ...pageBox, marginBottom: 0 }}>
-            <SectionTitle sub="por mesa no período">Por Mesa</SectionTitle>
-            <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-              <table style={getDataTableStyle({ minWidth: 800 })}>
-                <caption style={{ display: "none" }}>KPIs de mesa agregados por mesa</caption>
-                <thead>
-                  <tr>
-                    <SortTableTh
-                      label="Mesa"
-                      col="mesa"
-                      sortCol={sortMesa.col}
-                      sortDir={sortMesa.dir}
-                      onSort={onSortMesa}
-                      thStyle={dataTable.thHeaderSticky}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Jogo"
-                      col="jogo"
-                      sortCol={sortMesa.col}
-                      sortDir={sortMesa.dir}
-                      onSort={onSortMesa}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Rodadas"
-                      col="rodadas"
-                      sortCol={sortMesa.col}
-                      sortDir={sortMesa.dir}
-                      onSort={onSortMesa}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Dealing"
-                      col="dealing"
-                      sortCol={sortMesa.col}
-                      sortDir={sortMesa.dir}
-                      onSort={onSortMesa}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Reaction"
-                      col="reaction"
-                      sortCol={sortMesa.col}
-                      sortDir={sortMesa.dir}
-                      onSort={onSortMesa}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Coop. Vel."
-                      col="coopVel"
-                      sortCol={sortMesa.col}
-                      sortDir={sortMesa.dir}
-                      onSort={onSortMesa}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Coop. Roda"
-                      col="coopRoda"
-                      sortCol={sortMesa.col}
-                      sortDir={sortMesa.dir}
-                      onSort={onSortMesa}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                  </tr>
-                </thead>
-                <tbody>
-                  {mesasOrdenadas.map((row, i) => (
-                    <tr key={row.table_id} style={{ background: dataTable.zebraRow(i) }}>
-                      <td style={dataTable.tdSticky()} title={row.table_id}>
-                        {row.nome_mesa}
-                      </td>
-                      <td style={dataTable.tdCenter}>{row.tipo_jogo}</td>
-                      <td style={dataTable.tdCenter}>{row.rodadas.toLocaleString("pt-BR")}</td>
-                      <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.dealingSeg)}</td>
-                      <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.reactionSeg)}</td>
-                      <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopVelPct)}</td>
-                      <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopRodaPct)}</td>
-                    </tr>
-                  ))}
+                  {diasOrdenados.map((row, i) => {
+                    const aberto = diasExpandidos.has(row.dia_brt);
+                    const labelDia = fmtDiaBr(row.dia_brt);
+                    return (
+                      <Fragment key={row.dia_brt}>
+                        <tr
+                          style={{ background: dataTable.zebraRow(i), cursor: "pointer" }}
+                          tabIndex={0}
+                          aria-expanded={aberto}
+                          onClick={() => toggleDia(row.dia_brt)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              toggleDia(row.dia_brt);
+                            }
+                          }}
+                        >
+                          <td style={dataTable.tdSticky()}>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                gap: 6,
+                                width: "100%",
+                              }}
+                            >
+                              <ChevronRight
+                                size={14}
+                                aria-hidden
+                                style={{
+                                  transform: aberto ? "rotate(90deg)" : "rotate(0deg)",
+                                  transition: "transform 0.15s ease",
+                                  flexShrink: 0,
+                                  color: t.textMuted,
+                                }}
+                              />
+                              <span style={{ fontWeight: 600 }}>{labelDia}</span>
+                            </div>
+                          </td>
+                          <td style={dataTable.tdCenter}>{row.rodadas.toLocaleString("pt-BR")}</td>
+                          <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.dealingSeg)}</td>
+                          <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.reactionSeg)}</td>
+                          <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopVelPct)}</td>
+                          <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopRodaPct)}</td>
+                        </tr>
+                        {aberto &&
+                          row.porJogo.map((jogo) => (
+                            <tr
+                              key={`${row.dia_brt}-${jogo.jogoKey}`}
+                              style={{ background: dataTable.zebraRow(i) }}
+                            >
+                              <td style={dataTable.tdSticky()}>
+                                <div style={{ display: "flex", justifyContent: "center", paddingLeft: 18 }}>
+                                  <JogoChip jogo={jogo} isDark={isDark} />
+                                </div>
+                              </td>
+                              <td style={dataTable.tdCenter}>{jogo.rodadas.toLocaleString("pt-BR")}</td>
+                              <td style={dataTable.tdCenter}>{fmtMediaSegundos(jogo.dealingSeg)}</td>
+                              <td style={dataTable.tdCenter}>{fmtMediaSegundos(jogo.reactionSeg)}</td>
+                              <td style={dataTable.tdCenter}>{fmtPctCoop(jogo.coopVelPct)}</td>
+                              <td style={dataTable.tdCenter}>{fmtPctCoop(jogo.coopRodaPct)}</td>
+                            </tr>
+                          ))}
+                        {aberto && row.porJogo.length === 0 && (
+                          <tr style={{ background: dataTable.zebraRow(i) }}>
+                            <td colSpan={6} style={{ ...dataTable.tdCenter, color: t.textMuted }}>
+                              Sem jogos identificados neste dia.
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

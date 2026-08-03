@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Incidentes · Estúdio · Data Intelligence</title>
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-action: #7c3aed;
+      --brand-contrast: #1e36f8;
+      --bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --input-bg: #f8f8fc;
+      --pos: #22c55e;
+      --neg: #e84025;
+      --warn: #f59e0b;
+      --special: #a78bfa;
+      --neutral: #6b7280;
+      --bj: #22c55e;
+      --roleta: #eab308;
+      --baccarat: #1e36f8;
+      --fb: #ea580c;
+      --radius-box: 14px;
+      --radius-tab: 10px;
+      --font-body: "DM Sans", system-ui, sans-serif;
+      --font-title: "Outfit", system-ui, sans-serif;
+      --shadow: 0 2px 10px rgba(26, 26, 46, 0.06);
+      --th-bg: color-mix(in srgb, #ffffff 86%, var(--brand-action) 14%);
+      --zebra-a: #ffffff;
+      --zebra-b: color-mix(in srgb, #1e36f8 6%, #ffffff);
+    }
+    body[data-theme="dark"] {
+      --bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --input-bg: rgba(255,255,255,0.07);
+      --shadow: 0 4px 20px rgba(0,0,0,0.35);
+      --radius-box: 18px;
+      --th-bg: color-mix(in srgb, #1a1a2e 82%, var(--brand-action) 18%);
+      --zebra-a: #1a1a2e;
+      --zebra-b: color-mix(in srgb, #1e36f8 12%, #1a1a2e);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Mock chrome ─────────────────────────────────────────── */
+    .mock-bar {
+      position: sticky; top: 0; z-index: 40;
+      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 10px 20px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    }
+    .mock-bar__label {
+      font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--text-muted); margin-right: 4px;
+    }
+    .mock-btn {
+      font: inherit; font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 999px; cursor: pointer;
+      background: var(--input-bg); color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+    .mock-btn[aria-pressed="true"] {
+      border-color: var(--brand-action);
+      background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+      font-weight: 700;
+    }
+
+    .app-shell { display: flex; min-height: calc(100vh - 52px); }
+    .sidebar {
+      width: 240px; background: #141414; color: #e4e4e4;
+      padding: 20px 0; flex-shrink: 0;
+    }
+    .sidebar-brand {
+      padding: 0 20px 20px; font-family: var(--font-title);
+      font-weight: 800; font-size: 14px; letter-spacing: 0.04em;
+      color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;
+    }
+    .sidebar-section {
+      padding: 8px 20px 4px; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: rgba(228,228,228,0.45);
+    }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px; font-size: 13px; color: rgba(228,228,228,0.55);
+    }
+    .sidebar-item.active {
+      background: rgba(124, 58, 237, 0.18); color: #fff;
+      border-right: 2px solid var(--brand-primary);
+    }
+    .main { flex: 1; padding: 24px 28px 64px; overflow-x: auto; max-width: 1180px; }
+
+    .mockup-banner {
+      background: color-mix(in srgb, var(--brand-primary) 8%, var(--card-bg));
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      border-radius: var(--radius-box); padding: 12px 16px; margin-bottom: 18px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .mockup-banner strong { color: var(--brand-primary); }
+    .mockup-banner code {
+      font-size: 11px; padding: 1px 6px; border-radius: 6px;
+      background: var(--input-bg); border: 1px solid var(--card-border);
+    }
+
+    /* ── Nível 1 — header ────────────────────────────────────── */
+    .page-header { margin-bottom: 18px; }
+    .page-header-row { display: flex; align-items: center; gap: 8px; }
+    .page-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary);
+    }
+    .page-header h1 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.02em;
+    }
+    .page-header .subtitle {
+      margin: 5px 0 0 40px; font-size: 13px; color: var(--text-muted);
+    }
+
+    /* ── Nível 2 — filtros ───────────────────────────────────── */
+    .filter-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 12px 20px; margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    body[data-theme="dark"] .filter-box {
+      background: color-mix(in srgb, var(--brand-action) 6%, var(--card-bg));
+      border-color: color-mix(in srgb, var(--brand-action) 22%, transparent);
+    }
+    .filter-row {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; gap: 10px; width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 12px; }
+
+    .carousel-btn {
+      width: 32px; height: 32px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .carousel-btn:disabled { opacity: 0.35; cursor: default; }
+    .carousel-label {
+      font-size: 18px; font-weight: 800; min-width: 180px; text-align: center;
+    }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; color: var(--text); cursor: pointer;
+    }
+    .pill.active, .pill[aria-pressed="true"] {
+      border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+      color: var(--brand-primary); font-weight: 700;
+    }
+    .pill svg { flex-shrink: 0; opacity: 0.75; }
+
+    .tab {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .tab.active {
+      font-weight: 700; color: var(--brand-contrast);
+      border-color: color-mix(in srgb, var(--brand-contrast) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-contrast) 12%, transparent);
+    }
+
+    .sem-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .sem-pill.active {
+      font-weight: 700;
+      border-color: var(--sc, var(--brand-contrast));
+      color: var(--sc, var(--brand-contrast));
+      background: color-mix(in srgb, var(--sc, var(--brand-contrast)) 15%, transparent);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sc, currentColor); flex-shrink: 0; }
+
+    .search-input {
+      min-width: 220px; max-width: 320px; width: 100%;
+      padding: 8px 12px 8px 38px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-family: inherit; color: var(--text);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: 12px center;
+    }
+
+    .cta-criar {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: var(--radius-tab); border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font-family: inherit; font-size: 13px;
+      font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .cta-criar:hover { filter: brightness(1.05); }
+    .cta-criar[hidden] { display: none !important; }
+
+    /* ── Nível 3 — blocos ────────────────────────────────────── */
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 20px; margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .section-title {
+      display: flex; align-items: baseline; gap: 0; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .section-title h2 {
+      font-family: var(--font-title); font-size: 14px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.04em;
+    }
+    .section-title .dash { margin: 0 6px 0 12px; color: var(--text-muted); font-size: 12px; }
+    .section-title .sub { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    .section-title-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+    }
+    .section-title-row .section-title { margin-bottom: 0; }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+    }
+    @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
+
+    .kpi-card {
+      background: var(--input-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius-box); padding: 14px 16px;
+      border-left: 3px solid var(--kpi-color, var(--brand-primary));
+      cursor: pointer; text-align: left; font-family: inherit; width: 100%;
+      color: inherit; transition: box-shadow 0.15s;
+    }
+    .kpi-card:hover { box-shadow: var(--shadow); }
+    .kpi-card.active {
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-color, var(--brand-primary)) 30%, transparent);
+      border-color: var(--kpi-color, var(--brand-primary));
+    }
+    .kpi-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .kpi-value {
+      font-family: var(--font-title); font-size: 26px; font-weight: 800;
+      color: var(--kpi-color, var(--brand-primary)); margin: 6px 0 0;
+      font-variant-numeric: tabular-nums; line-height: 1.1;
+    }
+    .kpi-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    .table-wrap {
+      overflow-x: auto; border-radius: var(--radius-box);
+      border: 1px solid var(--card-border);
+    }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 920px; }
+    caption { display: none; }
+    thead th {
+      background: var(--th-bg);
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text); padding: 12px 10px;
+      text-align: center; white-space: nowrap; border-bottom: 1px solid var(--card-border);
+    }
+    tbody td {
+      padding: 11px 10px; font-size: 13px; text-align: center;
+      border-bottom: 1px solid var(--card-border);
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    tbody tr:nth-child(odd) { background: var(--zebra-a); }
+    tbody tr:nth-child(even) { background: var(--zebra-b); }
+    tbody tr:hover { background: color-mix(in srgb, var(--card-bg) 88%, var(--brand-action) 12%) !important; cursor: pointer; }
+    td.left, th.left { text-align: left; }
+    .cod { font-weight: 700; color: var(--brand-contrast); }
+    .muted { color: var(--text-muted); font-size: 12px; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .b-aberto   { background: #f59e0b22; color: #d97706; border: 1px solid #f59e0b44; }
+    .b-em_analise { background: #3b82f622; color: #2563eb; border: 1px solid #3b82f644; }
+    .b-resolvido { background: #22c55e22; color: #16a34a; border: 1px solid #22c55e44; }
+    .b-arquivado { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+    .b-gp { background: color-mix(in srgb, var(--brand-action) 15%, transparent); color: var(--brand-action); border: 1px solid color-mix(in srgb, var(--brand-action) 38%, transparent); }
+    .b-shuf { background: color-mix(in srgb, var(--brand-contrast) 12%, transparent); color: var(--brand-contrast); border: 1px solid color-mix(in srgb, var(--brand-contrast) 34%, transparent); }
+    .b-tipo { background: color-mix(in srgb, var(--sc, var(--special)) 15%, transparent); color: var(--sc, var(--special)); border: 1px solid color-mix(in srgb, var(--sc, var(--special)) 40%, transparent); }
+    .b-sev-alta { background: #e8402522; color: #e84025; border: 1px solid #e8402544; }
+    .b-sev-media { background: #f59e0b22; color: #d97706; border: 1px solid #f59e0b44; }
+    .b-sev-baixa { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
+
+    .game-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+      border: 1px solid color-mix(in srgb, var(--gc) 40%, transparent);
+      background: color-mix(in srgb, var(--gc) 15%, transparent);
+      color: var(--gc);
+    }
+
+    .btn-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); cursor: pointer;
+    }
+    .btn-icon:hover { border-color: var(--brand-action); color: var(--brand-action); }
+    .actions { display: flex; gap: 6px; justify-content: center; }
+
+    .rank-row {
+      display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+      border: 1px solid var(--card-border); border-radius: 12px;
+      background: var(--input-bg); margin-bottom: 8px;
+    }
+    .rank-pos {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px;
+      background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+      color: var(--brand-action);
+    }
+    .rank-name { font-weight: 700; flex: 1; min-width: 0; }
+    .rank-meta { font-size: 12px; color: var(--text-muted); }
+    .rank-bar {
+      width: 120px; height: 6px; border-radius: 999px;
+      background: var(--card-bg); border: 1px solid var(--card-border); overflow: hidden;
+    }
+    .rank-bar > i { display: block; height: 100%; background: var(--neg); border-radius: 999px; }
+    .rank-count { font-weight: 800; font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .note {
+      margin-top: 14px; font-size: 11px; color: var(--text-muted);
+      padding: 10px 14px; border-radius: 10px; background: var(--input-bg);
+      border: 1px dashed var(--card-border);
+    }
+    .empty { padding: 40px 0; text-align: center; font-size: 13px; color: var(--text-muted); }
+    .hidden { display: none !important; }
+
+    /* ── Modal ───────────────────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(15, 15, 26, 0.55);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px clamp(12px, 4vw, 32px);
+    }
+    .overlay[hidden] { display: none !important; }
+    .modal {
+      width: min(560px, 100%); max-height: 90dvh; overflow: auto;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+      padding: 20px;
+    }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 16px;
+    }
+    .modal-head h3 {
+      font-family: var(--font-title); font-size: 16px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary);
+    }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px;
+      color: var(--text);
+    }
+    .req { color: #e84025; margin-left: 2px; }
+    .field select, .field textarea, .field input {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); font: inherit; font-size: 13px;
+    }
+    .field textarea { min-height: 96px; resize: vertical; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
+    .modal-foot {
+      display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;
+      padding-top: 14px; border-top: 1px solid var(--card-border);
+    }
+    .btn-ghost {
+      padding: 10px 18px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: transparent; color: var(--text); font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .btn-primary {
+      padding: 10px 18px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+    }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 60;
+      padding: 12px 16px; border-radius: 12px;
+      background: var(--card-bg); border: 1px solid color-mix(in srgb, var(--pos) 40%, transparent);
+      box-shadow: var(--shadow); font-size: 13px; font-weight: 600;
+      color: var(--pos); display: none;
+    }
+    .toast.show { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    .prestador-banner {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+      padding: 14px 18px; border-radius: 14px; margin-bottom: 14px;
+      background: color-mix(in srgb, var(--brand-contrast) 10%, var(--card-bg));
+      border: 1px solid color-mix(in srgb, var(--brand-contrast) 30%, transparent);
+    }
+    .prestador-banner .kind {
+      font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 20px;
+      background: color-mix(in srgb, var(--brand-contrast) 22%, transparent);
+      color: var(--brand-contrast);
+      border: 1px solid color-mix(in srgb, var(--brand-contrast) 40%, transparent);
+    }
+  </style>
+</head>
+<body data-theme="light">
+
+<!-- Barra do mockup (não faz parte do produto) -->
+<div class="mock-bar">
+  <span class="mock-bar__label">Tema</span>
+  <button type="button" class="mock-btn" id="btn-theme" aria-pressed="false">Dark</button>
+  <span class="mock-bar__label" style="margin-left:8px">Persona</span>
+  <button type="button" class="mock-btn" data-persona="sm" aria-pressed="true">Service Manager</button>
+  <button type="button" class="mock-btn" data-persona="gp" aria-pressed="false">Game Presenter</button>
+  <button type="button" class="mock-btn" data-persona="shuf" aria-pressed="false">Shuffler</button>
+  <span class="mock-bar__label" style="margin-left:8px">Abrir</span>
+  <button type="button" class="mock-btn" id="btn-open-modal">Novo Incidente</button>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Menu lateral (mock)">
+    <div class="sidebar-brand">SPIN · DATA INTEL</div>
+    <div class="sidebar-section">Estúdio</div>
+    <div class="sidebar-item">Gestão de Dealers</div>
+    <div class="sidebar-item">Central de Notificações</div>
+    <div class="sidebar-item">Figurinos</div>
+    <div class="sidebar-item">Roteiro de Mesa</div>
+    <div class="sidebar-item active">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Incidentes
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="mockup-banner">
+      <strong>Mockup de produto</strong> — página <code>Incidentes</code> na seção Estúdio.
+      Substitui tickets de erro no Jira: o SM registra um incidente por GP/Shuffler quando o erro ocorre na mesa.
+      Tipos abaixo são <strong>proposta inicial</strong> para validação com operação (não são canônicos ainda).
+      Escopo de acompanhamento: apenas times <strong>Game Presenter</strong> e <strong>Shuffler</strong>.
+    </div>
+
+    <header class="page-header">
+      <div class="page-header-row">
+        <div class="page-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h1>Incidentes</h1>
+      </div>
+      <p class="subtitle" id="page-sub">Registre e acompanhe erros de mesa por Game Presenter e Shuffler no período.</p>
+    </header>
+
+    <div class="prestador-banner hidden" id="banner-prestador">
+      <span class="kind" id="banner-kind">Meus incidentes</span>
+      <div>
+        <div style="font-weight:700" id="banner-nome">Ana Souza</div>
+        <div class="muted" id="banner-meta">Game Presenter · Turno Tarde · Estúdio Blaze Dedicado</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-box">
+      <div class="filter-row" role="tablist" aria-label="Visão da página">
+        <button type="button" class="tab active" data-view="lista" id="tab-lista" role="tab" aria-selected="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          Lista
+        </button>
+        <button type="button" class="tab" data-view="prestadores" id="tab-prestadores" role="tab" aria-selected="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Por Prestador
+        </button>
+        <button type="button" class="cta-criar" id="cta-novo" aria-label="Novo Incidente">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+          Novo Incidente
+        </button>
+      </div>
+
+      <div class="filter-row" style="margin-top:12px">
+        <button type="button" class="carousel-btn" id="mes-prev" aria-label="Mês anterior">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="carousel-label" id="mes-label">Agosto 2026</span>
+        <button type="button" class="carousel-btn" id="mes-next" aria-label="Próximo mês" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <button type="button" class="pill" id="btn-historico" aria-pressed="false" aria-label="Ativar modo histórico — ver todo o período">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Histórico
+        </button>
+        <button type="button" class="pill" title="Filtro de estúdio (mock)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+          Todos Estúdios
+        </button>
+        <button type="button" class="pill" title="Filtro de turno (mock)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Todos Turnos
+        </button>
+      </div>
+
+      <div class="filter-row" style="margin-top:12px" id="chips-time">
+        <button type="button" class="sem-pill active" data-time="todos" style="--sc:#6b7280">Todos Times</button>
+        <button type="button" class="sem-pill" data-time="gp" style="--sc:var(--brand-action)">
+          <span class="dot"></span> Game Presenter
+        </button>
+        <button type="button" class="sem-pill" data-time="shuf" style="--sc:var(--brand-contrast)">
+          <span class="dot"></span> Shuffler
+        </button>
+      </div>
+
+      <div class="filter-row" style="margin-top:12px" id="chips-status">
+        <button type="button" class="sem-pill active" data-status="todos" style="--sc:#6b7280">Todos Status</button>
+        <button type="button" class="sem-pill" data-status="aberto" style="--sc:#f59e0b"><span class="dot"></span> Aberto</button>
+        <button type="button" class="sem-pill" data-status="em_analise" style="--sc:#3b82f6"><span class="dot"></span> Em análise</button>
+        <button type="button" class="sem-pill" data-status="resolvido" style="--sc:#22c55e"><span class="dot"></span> Resolvido</button>
+      </div>
+
+      <div class="filter-row" style="margin-top:12px">
+        <input class="search-input" type="search" id="busca" placeholder="Pesquisar prestador, mesa ou protocolo..." aria-label="Buscar incidentes" />
+      </div>
+    </div>
+
+    <!-- Consolidado por tipo -->
+    <section class="content-box" aria-label="Consolidados por tipo">
+      <div class="section-title">
+        <h2>Consolidados</h2>
+        <span class="dash">—</span>
+        <span class="sub" id="kpi-sub">Quantidade de incidentes por tipo · Agosto 2026</span>
+      </div>
+      <div class="kpi-grid" id="kpi-grid" role="group" aria-label="KPIs de incidentes por tipo"></div>
+      <p class="note">
+        Clique em um card para filtrar a lista pelo tipo. Tipos sugeridos (rascunho):
+        <b>Procedimento</b>, <b>Pagamento</b>, <b>Cartas / Shuffle</b>, <b>Comunicação</b>, <b>Equipamento</b>.
+        Severidade e status seguem fluxo operacional interno (não são ticket Jira).
+      </p>
+    </section>
+
+    <!-- Lista -->
+    <section class="content-box" id="panel-lista">
+      <div class="section-title-row">
+        <div class="section-title">
+          <h2>Incidentes do período</h2>
+          <span class="dash">—</span>
+          <span class="sub" id="lista-sub">12 registros · filtros aplicados</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption>Lista de incidentes de mesa no período selecionado</caption>
+          <thead>
+            <tr>
+              <th scope="col">Protocolo</th>
+              <th scope="col">Data</th>
+              <th scope="col" class="left">Prestador</th>
+              <th scope="col">Time</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Severidade</th>
+              <th scope="col">Mesa / Jogo</th>
+              <th scope="col">Status</th>
+              <th scope="col">SM</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-lista"></tbody>
+        </table>
+      </div>
+      <div class="empty hidden" id="lista-empty">Sem dados para o período selecionado.</div>
+    </section>
+
+    <!-- Por prestador -->
+    <section class="content-box hidden" id="panel-prestadores">
+      <div class="section-title">
+        <h2>Acompanhamento por prestador</h2>
+        <span class="dash">—</span>
+        <span class="sub">Ranking de incidentes no período · só GP e Shuffler</span>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="muted" style="margin-bottom:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px">Game Presenters</div>
+          <div id="rank-gp"></div>
+        </div>
+        <div>
+          <div class="muted" style="margin-bottom:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px">Shufflers</div>
+          <div id="rank-shuf"></div>
+        </div>
+      </div>
+      <p class="note">
+        Visão pensada para líderes e SM: volume por pessoa no mês, com barra relativa ao máximo do time.
+        Na persona Prestador, esta aba mostra apenas o próprio histórico (mock: lista filtrada).
+      </p>
+    </section>
+  </main>
+</div>
+
+<!-- Modal Novo Incidente -->
+<div class="overlay" id="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Novo Incidente</h3>
+      <button type="button" class="btn-icon" id="modal-close" aria-label="Fechar modal" title="Fechar modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="field">
+      <label>Prestador <span class="req" aria-hidden="true">*</span></label>
+      <select id="f-prestador" aria-label="Prestador">
+        <option value="">Selecione o Game Presenter ou Shuffler…</option>
+        <option>Ana Souza — Game Presenter</option>
+        <option>Bruno Lima — Game Presenter</option>
+        <option>Carla Mendes — Game Presenter</option>
+        <option>Diego Alves — Shuffler</option>
+        <option>Elena Costa — Shuffler</option>
+        <option>Felipe Rocha — Game Presenter</option>
+      </select>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Tipo <span class="req" aria-hidden="true">*</span></label>
+        <select id="f-tipo" aria-label="Tipo do incidente">
+          <option value="">Selecione…</option>
+          <option>Procedimento</option>
+          <option>Pagamento</option>
+          <option>Cartas / Shuffle</option>
+          <option>Comunicação</option>
+          <option>Equipamento</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Severidade <span class="req" aria-hidden="true">*</span></label>
+        <select aria-label="Severidade">
+          <option>Baixa</option>
+          <option selected>Média</option>
+          <option>Alta</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Estúdio <span class="req" aria-hidden="true">*</span></label>
+        <select aria-label="Estúdio">
+          <option>Blaze Dedicado</option>
+          <option>Casa Esportiva Dedicado</option>
+          <option>Sports Club (Network)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Mesa / Jogo <span class="req" aria-hidden="true">*</span></label>
+        <select aria-label="Mesa">
+          <option>Blackjack 1</option>
+          <option>VIP Blackjack 1</option>
+          <option>Speed Baccarat</option>
+          <option>Roleta Lightning</option>
+          <option>Futebol Brasileiro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Data e hora <span class="req" aria-hidden="true">*</span></label>
+        <input type="datetime-local" value="2026-08-03T14:35" aria-label="Data e hora do incidente" />
+      </div>
+      <div class="field">
+        <label>Turno</label>
+        <select aria-label="Turno">
+          <option>Manhã</option>
+          <option selected>Tarde</option>
+          <option>Noite</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Descrição <span class="req" aria-hidden="true">*</span></label>
+      <textarea placeholder="Descreva o erro ocorrido na mesa, contexto e impacto…" aria-label="Descrição do incidente"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Ação imediata / observação</label>
+      <textarea placeholder="Opcional — o que foi feito no momento (correção, troca, alinhamento)…" style="min-height:64px" aria-label="Ação imediata"></textarea>
+    </div>
+
+    <div class="modal-foot">
+      <button type="button" class="btn-ghost" id="modal-cancel">Cancelar</button>
+      <button type="button" class="btn-primary" id="modal-save">Registrar Incidente</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status">Incidente registrado (mock) — INC-2026-0847</div>
+
+<script>
+(function () {
+  const TIPOS = [
+    { key: "todos", label: "Total", color: "var(--brand-primary)", hint: "Todos os tipos" },
+    { key: "procedimento", label: "Procedimento", color: "var(--warn)", hint: "Protocolo / sequência" },
+    { key: "pagamento", label: "Pagamento", color: "var(--neg)", hint: "Payout incorreto" },
+    { key: "cartas", label: "Cartas / Shuffle", color: "var(--baccarat)", hint: "Deal / shuffle" },
+    { key: "comunicacao", label: "Comunicação", color: "var(--special)", hint: "Script / anúncio" },
+    { key: "equipamento", label: "Equipamento", color: "var(--neutral)", hint: "Mesa / hardware" },
+  ];
+
+  const MESES = ["Maio 2026", "Junho 2026", "Julho 2026", "Agosto 2026"];
+  let mesIdx = 3;
+  let historico = false;
+  let filtroTipo = "todos";
+  let filtroTime = "todos";
+  let filtroStatus = "todos";
+  let view = "lista";
+  let persona = "sm";
+
+  const INCIDENTES = [
+    { proto: "INC-2026-0841", data: "03/08 14:35", nome: "Ana Souza", time: "gp", tipo: "pagamento", sev: "alta", mesa: "Blackjack 1", jogo: "bj", status: "aberto", sm: "Beatriz R." },
+    { proto: "INC-2026-0838", data: "03/08 11:02", nome: "Diego Alves", time: "shuf", tipo: "cartas", sev: "media", mesa: "Speed Baccarat", jogo: "baccarat", status: "em_analise", sm: "Camila A." },
+    { proto: "INC-2026-0832", data: "02/08 22:18", nome: "Bruno Lima", time: "gp", tipo: "procedimento", sev: "media", mesa: "Roleta Lightning", jogo: "roleta", status: "resolvido", sm: "Beatriz R." },
+    { proto: "INC-2026-0829", data: "02/08 19:40", nome: "Carla Mendes", time: "gp", tipo: "comunicacao", sev: "baixa", mesa: "VIP Blackjack 1", jogo: "bj", status: "resolvido", sm: "Diego M." },
+    { proto: "INC-2026-0821", data: "01/08 16:55", nome: "Elena Costa", time: "shuf", tipo: "cartas", sev: "alta", mesa: "Speed Baccarat", jogo: "baccarat", status: "aberto", sm: "Camila A." },
+    { proto: "INC-2026-0817", data: "01/08 10:12", nome: "Felipe Rocha", time: "gp", tipo: "equipamento", sev: "baixa", mesa: "Futebol Brasileiro", jogo: "fb", status: "arquivado", sm: "Beatriz R." },
+    { proto: "INC-2026-0810", data: "31/07 23:05", nome: "Ana Souza", time: "gp", tipo: "procedimento", sev: "media", mesa: "Blackjack 1", jogo: "bj", status: "resolvido", sm: "Diego M." },
+    { proto: "INC-2026-0804", data: "30/07 15:33", nome: "Bruno Lima", time: "gp", tipo: "pagamento", sev: "alta", mesa: "VIP Blackjack 1", jogo: "bj", status: "em_analise", sm: "Beatriz R." },
+    { proto: "INC-2026-0798", data: "29/07 12:20", nome: "Diego Alves", time: "shuf", tipo: "procedimento", sev: "baixa", mesa: "Roleta Lightning", jogo: "roleta", status: "resolvido", sm: "Camila A." },
+    { proto: "INC-2026-0791", data: "28/07 18:44", nome: "Carla Mendes", time: "gp", tipo: "cartas", sev: "media", mesa: "Speed Baccarat", jogo: "baccarat", status: "resolvido", sm: "Diego M." },
+    { proto: "INC-2026-0785", data: "27/07 09:15", nome: "Elena Costa", time: "shuf", tipo: "equipamento", sev: "media", mesa: "Blackjack 1", jogo: "bj", status: "aberto", sm: "Beatriz R." },
+    { proto: "INC-2026-0779", data: "26/07 21:08", nome: "Felipe Rocha", time: "gp", tipo: "comunicacao", sev: "baixa", mesa: "Futebol Brasileiro", jogo: "fb", status: "resolvido", sm: "Camila A." },
+  ];
+
+  const TIPO_LABEL = {
+    procedimento: "Procedimento",
+    pagamento: "Pagamento",
+    cartas: "Cartas / Shuffle",
+    comunicacao: "Comunicação",
+    equipamento: "Equipamento",
+  };
+  const TIPO_COLOR = {
+    procedimento: "var(--warn)",
+    pagamento: "var(--neg)",
+    cartas: "var(--baccarat)",
+    comunicacao: "var(--special)",
+    equipamento: "var(--neutral)",
+  };
+  const STATUS_LABEL = { aberto: "Aberto", em_analise: "Em análise", resolvido: "Resolvido", arquivado: "Arquivado" };
+  const SEV_LABEL = { alta: "Alta", media: "Média", baixa: "Baixa" };
+  const JOGO_HEX = { bj: "#22c55e", roleta: "#eab308", baccarat: "#1e36f8", fb: "#ea580c" };
+  const JOGO_LABEL = { bj: "Blackjack", roleta: "Roleta", baccarat: "Baccarat", fb: "FB" };
+
+  function filtered() {
+    const q = (document.getElementById("busca").value || "").trim().toLowerCase();
+    return INCIDENTES.filter((r) => {
+      if (persona === "gp" && r.nome !== "Ana Souza") return false;
+      if (persona === "shuf" && r.nome !== "Diego Alves") return false;
+      if (filtroTipo !== "todos" && r.tipo !== filtroTipo) return false;
+      if (filtroTime !== "todos" && r.time !== filtroTime) return false;
+      if (filtroStatus !== "todos" && r.status !== filtroStatus) return false;
+      if (q) {
+        const hay = `${r.proto} ${r.nome} ${r.mesa} ${TIPO_LABEL[r.tipo]}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderKpis() {
+    const rows = filtered();
+    const counts = { todos: rows.length };
+    TIPOS.slice(1).forEach((t) => {
+      counts[t.key] = rows.filter((r) => r.tipo === t.key).length;
+    });
+    const grid = document.getElementById("kpi-grid");
+    grid.innerHTML = TIPOS.map((t) => `
+      <button type="button" class="kpi-card ${filtroTipo === t.key ? "active" : ""}"
+        style="--kpi-color:${t.color}" data-tipo="${t.key}"
+        aria-pressed="${filtroTipo === t.key}"
+        aria-label="${t.label}: ${counts[t.key] ?? 0} incidentes">
+        <div class="kpi-label">${t.label}</div>
+        <div class="kpi-value">${counts[t.key] ?? 0}</div>
+        <div class="kpi-hint">${t.hint}</div>
+      </button>
+    `).join("");
+    grid.querySelectorAll("[data-tipo]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        filtroTipo = btn.getAttribute("data-tipo");
+        renderAll();
+      });
+    });
+  }
+
+  function renderLista() {
+    const rows = filtered();
+    const tbody = document.getElementById("tbody-lista");
+    const empty = document.getElementById("lista-empty");
+    document.getElementById("lista-sub").textContent =
+      `${rows.length} registro${rows.length === 1 ? "" : "s"} · filtros aplicados`;
+
+    if (!rows.length) {
+      tbody.innerHTML = "";
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    tbody.innerHTML = rows.map((r) => `
+      <tr>
+        <td><span class="cod">${r.proto}</span></td>
+        <td>${r.data}</td>
+        <td class="left"><strong>${r.nome}</strong></td>
+        <td><span class="badge ${r.time === "gp" ? "b-gp" : "b-shuf"}">${r.time === "gp" ? "Game Presenter" : "Shuffler"}</span></td>
+        <td><span class="badge b-tipo" style="--sc:${TIPO_COLOR[r.tipo]}">${TIPO_LABEL[r.tipo]}</span></td>
+        <td><span class="badge b-sev-${r.sev}">${SEV_LABEL[r.sev]}</span></td>
+        <td>
+          <div>${r.mesa}</div>
+          <span class="game-chip" style="--gc:${JOGO_HEX[r.jogo]}">${JOGO_LABEL[r.jogo]}</span>
+        </td>
+        <td><span class="badge b-${r.status}">${STATUS_LABEL[r.status]}</span></td>
+        <td class="muted">${r.sm}</td>
+        <td>
+          <div class="actions">
+            <button type="button" class="btn-icon" aria-label="Ver incidente" title="Ver incidente">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button type="button" class="btn-icon" aria-label="Editar incidente" title="Editar incidente" ${persona !== "sm" ? "disabled style='opacity:.35'" : ""}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  function renderRanking() {
+    const rows = filtered();
+    function build(timeKey, mountId) {
+      const map = {};
+      rows.filter((r) => r.time === timeKey).forEach((r) => {
+        map[r.nome] = (map[r.nome] || 0) + 1;
+      });
+      const list = Object.entries(map).sort((a, b) => b[1] - a[1]);
+      const max = list[0]?.[1] || 1;
+      const el = document.getElementById(mountId);
+      if (!list.length) {
+        el.innerHTML = `<div class="empty" style="padding:20px 0">Sem dados para o período selecionado.</div>`;
+        return;
+      }
+      el.innerHTML = list.map(([nome, n], i) => `
+        <div class="rank-row">
+          <span class="rank-pos">${i + 1}</span>
+          <div class="rank-name">${nome}<div class="rank-meta">${n} incidente${n === 1 ? "" : "s"}</div></div>
+          <div class="rank-bar" aria-hidden="true"><i style="width:${Math.round((n / max) * 100)}%"></i></div>
+          <span class="rank-count">${n}</span>
+        </div>
+      `).join("");
+    }
+    build("gp", "rank-gp");
+    build("shuf", "rank-shuf");
+  }
+
+  function applyPersona() {
+    const cta = document.getElementById("cta-novo");
+    const banner = document.getElementById("banner-prestador");
+    const sub = document.getElementById("page-sub");
+    if (persona === "sm") {
+      cta.hidden = false;
+      banner.classList.add("hidden");
+      sub.textContent = "Registre e acompanhe erros de mesa por Game Presenter e Shuffler no período.";
+      document.getElementById("tab-prestadores").classList.remove("hidden");
+    } else {
+      cta.hidden = true;
+      banner.classList.remove("hidden");
+      if (persona === "gp") {
+        document.getElementById("banner-nome").textContent = "Ana Souza";
+        document.getElementById("banner-meta").textContent = "Game Presenter · Turno Tarde · Estúdio Blaze Dedicado";
+        document.getElementById("banner-kind").textContent = "Meus incidentes";
+        sub.textContent = "Acompanhe os incidentes registrados sobre a sua operação em mesa.";
+      } else {
+        document.getElementById("banner-nome").textContent = "Diego Alves";
+        document.getElementById("banner-meta").textContent = "Shuffler · Turno Noite · Todos os estúdios";
+        document.getElementById("banner-kind").textContent = "Meus incidentes";
+        sub.textContent = "Acompanhe os incidentes registrados sobre a sua operação em mesa.";
+      }
+    }
+  }
+
+  function renderAll() {
+    const periodo = historico ? "Todo o período" : MESES[mesIdx];
+    document.getElementById("mes-label").textContent = periodo;
+    document.getElementById("kpi-sub").textContent =
+      `Quantidade de incidentes por tipo · ${periodo}`;
+    document.getElementById("mes-prev").disabled = historico || mesIdx === 0;
+    document.getElementById("mes-next").disabled = historico || mesIdx === MESES.length - 1;
+    applyPersona();
+    renderKpis();
+    renderLista();
+    renderRanking();
+    document.getElementById("panel-lista").classList.toggle("hidden", view !== "lista");
+    document.getElementById("panel-prestadores").classList.toggle("hidden", view !== "prestadores");
+  }
+
+  // Tema
+  document.getElementById("btn-theme").addEventListener("click", (e) => {
+    const dark = document.body.getAttribute("data-theme") !== "dark";
+    document.body.setAttribute("data-theme", dark ? "dark" : "light");
+    e.currentTarget.setAttribute("aria-pressed", String(dark));
+    e.currentTarget.textContent = dark ? "Light" : "Dark";
+  });
+
+  // Persona
+  document.querySelectorAll("[data-persona]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      persona = btn.getAttribute("data-persona");
+      document.querySelectorAll("[data-persona]").forEach((b) =>
+        b.setAttribute("aria-pressed", String(b === btn))
+      );
+      if (persona !== "sm" && view === "prestadores") {
+        view = "lista";
+        document.querySelectorAll("[data-view]").forEach((t) => {
+          const on = t.getAttribute("data-view") === "lista";
+          t.classList.toggle("active", on);
+          t.setAttribute("aria-selected", String(on));
+        });
+      }
+      renderAll();
+    });
+  });
+
+  // Views
+  document.querySelectorAll("[data-view]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      view = tab.getAttribute("data-view");
+      document.querySelectorAll("[data-view]").forEach((t) => {
+        const on = t === tab;
+        t.classList.toggle("active", on);
+        t.setAttribute("aria-selected", String(on));
+      });
+      renderAll();
+    });
+  });
+
+  // Carrossel
+  document.getElementById("mes-prev").addEventListener("click", () => {
+    if (mesIdx > 0) { mesIdx--; renderAll(); }
+  });
+  document.getElementById("mes-next").addEventListener("click", () => {
+    if (mesIdx < MESES.length - 1) { mesIdx++; renderAll(); }
+  });
+  document.getElementById("btn-historico").addEventListener("click", (e) => {
+    historico = !historico;
+    e.currentTarget.setAttribute("aria-pressed", String(historico));
+    e.currentTarget.classList.toggle("active", historico);
+    if (!historico) mesIdx = MESES.length - 1;
+    renderAll();
+  });
+
+  // Chips
+  document.querySelectorAll("#chips-time [data-time]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filtroTime = btn.getAttribute("data-time");
+      document.querySelectorAll("#chips-time [data-time]").forEach((b) =>
+        b.classList.toggle("active", b === btn)
+      );
+      renderAll();
+    });
+  });
+  document.querySelectorAll("#chips-status [data-status]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filtroStatus = btn.getAttribute("data-status");
+      document.querySelectorAll("#chips-status [data-status]").forEach((b) =>
+        b.classList.toggle("active", b === btn)
+      );
+      renderAll();
+    });
+  });
+  document.getElementById("busca").addEventListener("input", renderAll);
+
+  // Modal
+  const overlay = document.getElementById("modal-overlay");
+  function openModal() {
+    if (persona !== "sm") return;
+    overlay.hidden = false;
+  }
+  function closeModal() { overlay.hidden = true; }
+  document.getElementById("cta-novo").addEventListener("click", openModal);
+  document.getElementById("btn-open-modal").addEventListener("click", () => {
+    persona = "sm";
+    document.querySelectorAll("[data-persona]").forEach((b) =>
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-persona") === "sm"))
+    );
+    renderAll();
+    openModal();
+  });
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  document.getElementById("modal-cancel").addEventListener("click", closeModal);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !overlay.hidden) closeModal();
+  });
+  document.getElementById("modal-save").addEventListener("click", () => {
+    closeModal();
+    const toast = document.getElementById("toast");
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2800);
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
