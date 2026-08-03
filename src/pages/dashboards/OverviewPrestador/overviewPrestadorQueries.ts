@@ -64,7 +64,7 @@ export function fetchOverviewPrestadorMovimentacoesMes(
   refMes: string,
 ): Promise<Map<string, OverviewPrestadorMovimentacaoCelula>> {
   return queryClient.fetchQuery({
-    queryKey: ["overview-prestador", "movimentacoes", funcionarioId, refMes],
+    queryKey: ["overview-prestador", "movimentacoes", "v2", funcionarioId, refMes],
     staleTime: STALE_TIME_MENSAL,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("dash_overview_prestador_movimentacoes_mes", {

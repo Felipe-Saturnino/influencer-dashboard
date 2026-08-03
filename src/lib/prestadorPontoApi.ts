@@ -1,7 +1,7 @@
 import { supabaseAnonKey, supabaseUrl } from "./supabase";
 
 export const MSG_PRESTADOR_PONTO_REDE =
-  "Você deve estar logado na rede Spin Colaboradores para realizar o Check-in/Check-out.";
+  "Você deve estar logado na rede Spin Gaming para realizar o Check-in/Check-out.";
 
 /** Janela de check-out após check-in (espelha Edge Function prestador-ponto). */
 export const PRESTADOR_PONTO_JANELA_CHECKOUT_HORAS = 20;

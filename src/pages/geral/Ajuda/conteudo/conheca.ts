@@ -223,7 +223,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aproveitamento, movimentações e estúdio",
         texto:
-          "O bloco Aproveitamento compara escalado vs realizado em barras.\n\nQuando o time negocia turno, o gráfico **Movimentações de turno** agrupa trocas, vendas e compras, com o total no centro e os valores na lista ao lado. Uma troca aceita muda dois dias na escala (o que foi liberado e o que passou a ser trabalhado) e conta como troca — não como venda e compra separadas. No Game Presenter individual, **Distribuição por estúdio** aparece ao lado das movimentações (dias realizados por estúdio). No Game Presenter time, há ainda **Cobertura por turno**, **Cobertura por estúdio** e **Pontos de atenção**.",
+          "O bloco Aproveitamento compara escalado vs realizado em barras.\n\nQuando o time negocia turno, o gráfico **Movimentações de turno** agrupa **Trocas realizadas**, **Turnos vendidos** e **Folgas vendidas** (sem contar a compra, que espelha a venda). Uma troca aceita muda dois dias na escala e conta como troca. No Game Presenter individual, **Distribuição por estúdio** aparece ao lado das movimentações (dias realizados por estúdio). No Game Presenter time, há ainda **Cobertura por turno**, **Cobertura por estúdio** e **Pontos de atenção**.",
       },
       {
         subtitulo: "Como ler as coberturas",
@@ -794,7 +794,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Check-in e Check-out",
         texto:
-          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. O vínculo do login com o cadastro RH e a conexão à rede Spin Colaboradores continuam obrigatórios.\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.",
+          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. O vínculo do login com o cadastro RH e a conexão à rede Spin Gaming continuam obrigatórios.\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.",
       },
       {
         subtitulo: "Cards de Escalados, Trocas, Venda e Compra",

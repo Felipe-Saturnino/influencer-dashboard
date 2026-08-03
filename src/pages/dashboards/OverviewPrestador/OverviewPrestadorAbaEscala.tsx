@@ -51,7 +51,11 @@ type Props = {
   distribuicaoEstudio: OverviewPrestadorEstudioFatia[];
 };
 
-const MOV_CORES = { trocas: "#1e36f8", vendas: "#f59e0b", compras: "#22c55e" } as const;
+const MOV_CORES = {
+  trocas: "#1e36f8",
+  turnosVendidos: "#f59e0b",
+  folgasVendidas: "#22c55e",
+} as const;
 const PIE_ESTUDIO_CORES = ["#7c3aed", "#1e36f8", "#a78bfa", "#22c55e", "#f59e0b"] as const;
 
 type FatiaDonut = { key: string; label: string; valor: number; cor: string };
@@ -288,11 +292,22 @@ export function OverviewPrestadorAbaEscala({
 
   const fatiasMovimentacoes: FatiaDonut[] = [
     { key: "trocas", label: "Trocas realizadas", valor: metricas.trocas, cor: MOV_CORES.trocas },
-    { key: "vendas", label: "Turnos vendidos", valor: metricas.vendas, cor: MOV_CORES.vendas },
-    { key: "compras", label: "Turnos comprados", valor: metricas.compras, cor: MOV_CORES.compras },
+    {
+      key: "turnosVendidos",
+      label: "Turnos vendidos",
+      valor: metricas.turnosVendidos,
+      cor: MOV_CORES.turnosVendidos,
+    },
+    {
+      key: "folgasVendidas",
+      label: "Folgas vendidas",
+      valor: metricas.folgasVendidas,
+      cor: MOV_CORES.folgasVendidas,
+    },
   ];
 
-  const totalMovimentacoes = metricas.trocas + metricas.vendas + metricas.compras;
+  const totalMovimentacoes =
+    metricas.trocas + metricas.turnosVendidos + metricas.folgasVendidas;
 
   const fatiasEstudio: FatiaDonut[] = distribuicaoEstudio.map((e, i) => ({
     key: e.slug,
@@ -520,7 +535,9 @@ export function OverviewPrestadorAbaEscala({
         <div className={layoutGpIndividual ? "app-grid-2" : undefined} style={layoutGpIndividual ? { gap: 14 } : undefined}>
           {mostrarMov ? (
             <div style={{ ...pageBox, marginBottom: layoutGpIndividual ? 0 : pageBox.marginBottom }}>
-              <SectionTitle sub="trocas, vendas e compras de turno">Movimentações de turno</SectionTitle>
+              <SectionTitle sub="trocas, turnos vendidos e folgas vendidas">
+                Movimentações de turno
+              </SectionTitle>
               {!prontoParaExibir || loading ? (
                 blocoVazioOuLoading()
               ) : totalMovimentacoes === 0 ? (

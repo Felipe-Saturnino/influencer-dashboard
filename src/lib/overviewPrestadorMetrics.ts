@@ -9,7 +9,9 @@ import type { RhFuncionario } from "../types/rhFuncionario";
 import {
   chaveMovimentacaoCelula,
   formatarDetalheMovimentacao,
+  movimentacaoEhFolgaVendida,
   movimentacaoEhTroca,
+  movimentacaoEhTurnoVendido,
   situacaoEhCompraMarketplace,
   type OverviewPrestadorMovimentacaoCelula,
 } from "./overviewPrestadorMovimentacoes";
@@ -61,8 +63,10 @@ export type OverviewPrestadorMetricas = {
   checkOutNaoRegistrado: number;
   diasAtestado: number;
   trocas: number;
-  vendas: number;
-  compras: number;
+  /** Ofertas venda_turno — célula Venda (sem espelhar a Compra). */
+  turnosVendidos: number;
+  /** Ofertas venda_folga — célula Venda do interessado (sem espelhar a Compra). */
+  folgasVendidas: number;
   detalhamento: OverviewPrestadorDetalheLinha[];
 };
 
@@ -77,8 +81,8 @@ export const OVERVIEW_PRESTADOR_METRICAS_ZERO: OverviewPrestadorMetricas = {
   checkOutNaoRegistrado: 0,
   diasAtestado: 0,
   trocas: 0,
-  vendas: 0,
-  compras: 0,
+  turnosVendidos: 0,
+  folgasVendidas: 0,
   detalhamento: [],
 };
 
@@ -170,8 +174,8 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
   let checkOutNaoRegistrado = 0;
   let diasAtestado = 0;
   let trocas = 0;
-  let vendas = 0;
-  let compras = 0;
+  let turnosVendidos = 0;
+  let folgasVendidas = 0;
 
   for (const { ano, mes } of mesesRef) {
     for (const dia of diasDoMesRef(ano, mes)) {
@@ -221,19 +225,33 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
           ocorrencia: "Troca",
           detalhe: formatarDetalheMovimentacao("Troca", snapMov),
         });
-      } else if (ehVenda) {
-        vendas += 1;
+      } else if (movimentacaoEhTurnoVendido(situacao, snapMov)) {
+        turnosVendidos += 1;
         detalhamento.push({
           dataIso: iso,
           ocorrencia: "Venda",
           detalhe: formatarDetalheMovimentacao("Venda", snapMov),
         });
+      } else if (movimentacaoEhFolgaVendida(situacao, snapMov)) {
+        folgasVendidas += 1;
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Venda",
+          detalhe: formatarDetalheMovimentacao("Folga Vendida", snapMov),
+        });
       } else if (ehCompra) {
-        compras += 1;
+        // Compra espelha a venda — não entra no gráfico; mantém no Detalhamento.
         detalhamento.push({
           dataIso: iso,
           ocorrencia: "Compra",
           detalhe: formatarDetalheMovimentacao("Compra", snapMov),
+        });
+      } else if (ehVenda) {
+        turnosVendidos += 1;
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Venda",
+          detalhe: formatarDetalheMovimentacao("Venda", snapMov),
         });
       }
 
@@ -341,8 +359,8 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
     checkOutNaoRegistrado,
     diasAtestado,
     trocas,
-    vendas,
-    compras,
+    turnosVendidos,
+    folgasVendidas,
     detalhamento,
   };
 }
@@ -362,8 +380,8 @@ export function somarMetricasPrestador(
     out.checkOutNaoRegistrado += m.checkOutNaoRegistrado;
     out.diasAtestado += m.diasAtestado;
     out.trocas += m.trocas;
-    out.vendas += m.vendas;
-    out.compras += m.compras;
+    out.turnosVendidos += m.turnosVendidos;
+    out.folgasVendidas += m.folgasVendidas;
     out.detalhamento.push(...m.detalhamento);
   }
   out.detalhamento.sort((a, b) => b.dataIso.localeCompare(a.dataIso));
