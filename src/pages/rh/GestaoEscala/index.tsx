@@ -230,6 +230,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       setAbasTimes(abas);
       setFiltroArea((prev) => {
         if (abas.some((a) => a.areaKey === prev)) return prev;
+        if (modo === "estudio" && abas.some((a) => a.areaKey === DEFAULT_AREA_ESCALA)) {
+          return DEFAULT_AREA_ESCALA;
+        }
         if (abas[0]) return abas[0].areaKey;
         return modo === "estudio" ? DEFAULT_AREA_ESCALA : prev;
       });

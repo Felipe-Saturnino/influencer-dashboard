@@ -19,15 +19,38 @@ describe("overviewPrestadorMovimentacoes", () => {
     ]);
     expect(map.get("f1|2026-08-10")).toEqual({
       tipo: "compra",
+      tipoOferta: null,
       contraparteNome: "Ana Silva",
       turnoTrabalhar: "Manhã",
       estudioTrabalhar: "Sports Club",
     });
   });
 
+  it("mapeia tipo_oferta quando presente no payload", () => {
+    const map = mapOverviewPrestadorMovimentacoes([
+      {
+        funcionario_id: "f2",
+        dia_iso: "2026-08-11",
+        tipo: "venda",
+        tipo_oferta: "venda_folga",
+        contraparte_nome: "Bruno Costa",
+        turno_trabalhar: null,
+        estudio_trabalhar: null,
+      },
+    ]);
+    expect(map.get("f2|2026-08-11")).toEqual({
+      tipo: "venda",
+      tipoOferta: "venda_folga",
+      contraparteNome: "Bruno Costa",
+      turnoTrabalhar: null,
+      estudioTrabalhar: null,
+    });
+  });
+
   it("formata detalhe por ocorrência da grade", () => {
     const snap = {
       tipo: "compra" as const,
+      tipoOferta: null,
       contraparteNome: "Ana Silva",
       turnoTrabalhar: "Manhã",
       estudioTrabalhar: "Sports Club",

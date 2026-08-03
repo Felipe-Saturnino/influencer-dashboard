@@ -38,7 +38,7 @@ const MSG_SEM_ESCALA_APROVADA =
   "Nenhuma escala aprovada encontrada para os próximos meses. Assim que for aprovada, os seus dias aparecem aqui.";
 
 const MSG_ANTECEDENCIA_24H =
-  "Apenas turnos com início a pelo menos 24h da publicação (horário do turno ofertado ou desejado).";
+  "Apenas turnos com início a pelo menos 4h da publicação (horário do turno ofertado ou desejado).";
 
 const MSG_MULTI_DIAS = "Você pode marcar vários dias — cada dia gera uma oferta separada no mural.";
 
@@ -99,7 +99,7 @@ export function ModalOfertarMarketplace({
     [tipo, grade.valorPorIso, contexto, diasReservados],
   );
 
-  /** Turnos elegíveis (24h + 12h) por dia de folga — cada dia tem a sua lista. */
+  /** Turnos elegíveis (4h + 12h) por dia de folga — cada dia tem a sua lista. */
   const turnosPorDiaFolga = useMemo(() => {
     const out = new Map<string, string[]>();
     if (!ehFolga || !contexto) return out;
@@ -186,7 +186,7 @@ export function ModalOfertarMarketplace({
       for (const iso of diasSelecionados) {
         const turnos = turnosPorDiaFolga.get(iso) ?? [];
         if (turnos.length === 0) {
-          return "Nenhum turno respeita as 24h de antecedência e o intervalo mínimo de 12h em um dos dias selecionados.";
+          return "Nenhum turno respeita as 4h de antecedência e o intervalo mínimo de 12h em um dos dias selecionados.";
         }
         if (!turnoPorDia[iso]) return "Selecione o turno que pretende trabalhar em cada dia marcado.";
       }
@@ -249,8 +249,8 @@ export function ModalOfertarMarketplace({
     ? MSG_SEM_ESCALA_APROVADA
     : semDias
       ? ehFolga
-        ? "Sem folgas na escala aprovada com turno desejado a pelo menos 24h e 12h de intervalo."
-        : "Sem dias escalados na escala aprovada com início do turno a pelo menos 24h."
+        ? "Sem folgas na escala aprovada com turno desejado a pelo menos 4h e 12h de intervalo."
+        : "Sem dias escalados na escala aprovada com início do turno a pelo menos 4h."
       : multiDias
         ? `${MSG_MULTI_DIAS} ${MSG_ANTECEDENCIA_24H}`
         : MSG_ANTECEDENCIA_24H;
@@ -363,7 +363,7 @@ export function ModalOfertarMarketplace({
           </p>
           {ehFolga && !semDias ? (
             <p style={{ margin: "4px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
-              Cada dia tem os seus turnos: só aparecem os que respeitam 24h de antecedência e 12h de
+              Cada dia tem os seus turnos: só aparecem os que respeitam 4h de antecedência e 12h de
               intervalo em relação ao seu último e ao próximo turno.
             </p>
           ) : null}

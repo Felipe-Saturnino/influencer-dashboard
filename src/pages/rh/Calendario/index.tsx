@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   BookOpen,
@@ -753,6 +753,10 @@ export default function RhCalendarioPage() {
   const [pontoMsgModal, setPontoMsgModal] = useState<string | null>(null);
   const [pontoSucessoModal, setPontoSucessoModal] = useState<PontoSucessoModalData | null>(null);
   const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
+  /** Staff cujo ponto está em `pontoMesLinhas` — evita merge otimista entre prestadores. */
+  const pontoMesStaffIdRef = useRef<string | null>(null);
+  const presencaGestaoStaffIdRef = useRef<string | null>(null);
+  const movimentacoesPresencaStaffIdRef = useRef<string | null>(null);
   const [loadingPontoMes, setLoadingPontoMes] = useState(false);
   const [pontoMesTick, setPontoMesTick] = useState(0);
   const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
@@ -1224,14 +1228,22 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
+      pontoMesStaffIdRef.current = null;
       setPontoMesLinhas([]);
       return;
     }
     if (abaPrincipal !== "presenca") return;
     const fid = presencaFilterStaffIds[0];
     if (!fid) {
+      pontoMesStaffIdRef.current = null;
       setPontoMesLinhas([]);
       return;
+    }
+    const trocouStaff = pontoMesStaffIdRef.current !== fid;
+    if (trocouStaff) {
+      pontoMesStaffIdRef.current = fid;
+      // Limpa na hora — senão a tabela mostra check-in do prestador anterior até a RPC voltar.
+      setPontoMesLinhas([]);
     }
     let cancelled = false;
     setLoadingPontoMes(true);
@@ -1264,8 +1276,10 @@ export default function RhCalendarioPage() {
         setPontoMesLinhas([]);
         return;
       }
-      // Preserva horários já vistos (ex.: otimista pós check-in) se a RPC ainda vier sem o user_id certo.
+      // Merge otimista só no mesmo Staff (ex.: pós check-in se a RPC ainda vier sem horário).
+      // Nunca reaproveitar check-in/out de outro prestador ao trocar o filtro.
       setPontoMesLinhas((prev) => {
+        if (trocouStaff || prev.length === 0) return merged;
         const prevPorDia = new Map(prev.map((r) => [r.dia_sp.slice(0, 10), r]));
         return merged.map((r) => {
           const key = r.dia_sp.slice(0, 10);
@@ -1285,15 +1299,56 @@ export default function RhCalendarioPage() {
   }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, mesAnteriorPresencaRef, pontoMesTick]);
 
   useEffect(() => {
+    if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
+      movimentacoesPresencaStaffIdRef.current = null;
+      setMovimentacoesPresencaPorChave(new Map());
+      return;
+    }
+    const fid = presencaFilterStaffIds[0];
+    if (!fid) {
+      movimentacoesPresencaStaffIdRef.current = null;
+      setMovimentacoesPresencaPorChave(new Map());
+      return;
+    }
+    if (movimentacoesPresencaStaffIdRef.current !== fid) {
+      movimentacoesPresencaStaffIdRef.current = fid;
+      setMovimentacoesPresencaPorChave(new Map());
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase.rpc("dash_overview_prestador_movimentacoes_mes", {
+        p_funcionario_id: fid,
+        p_ref_mes: refMesPrimeiroDiaISO(current),
+      });
+      if (cancelled) return;
+      if (error) {
+        console.error("[calendario-presenca-movimentacoes]", error);
+        setMovimentacoesPresencaPorChave(new Map());
+        return;
+      }
+      setMovimentacoesPresencaPorChave(mapOverviewPrestadorMovimentacoes(data));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, presencaGestaoTick]);
+
+  useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
+      presencaGestaoStaffIdRef.current = null;
       setPresencaGestaoPorChave(new Map());
       return;
     }
     if (abaPrincipal !== "presenca") return;
     const fid = presencaFilterStaffIds[0];
     if (!fid) {
+      presencaGestaoStaffIdRef.current = null;
       setPresencaGestaoPorChave(new Map());
       return;
+    }
+    if (presencaGestaoStaffIdRef.current !== fid) {
+      presencaGestaoStaffIdRef.current = fid;
+      setPresencaGestaoPorChave(new Map());
     }
     let cancelled = false;
     setLoadingPresencaGestao(true);
@@ -1318,35 +1373,6 @@ export default function RhCalendarioPage() {
       cancelled = true;
     };
   }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, mesAnteriorPresencaRef, presencaGestaoTick]);
-
-  useEffect(() => {
-    if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
-      setMovimentacoesPresencaPorChave(new Map());
-      return;
-    }
-    const fid = presencaFilterStaffIds[0];
-    if (!fid) {
-      setMovimentacoesPresencaPorChave(new Map());
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const { data, error } = await supabase.rpc("dash_overview_prestador_movimentacoes_mes", {
-        p_funcionario_id: fid,
-        p_ref_mes: refMesPrimeiroDiaISO(current),
-      });
-      if (cancelled) return;
-      if (error) {
-        console.error("[calendario-presenca-movimentacoes]", error);
-        setMovimentacoesPresencaPorChave(new Map());
-        return;
-      }
-      setMovimentacoesPresencaPorChave(mapOverviewPrestadorMovimentacoes(data));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, presencaGestaoTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {

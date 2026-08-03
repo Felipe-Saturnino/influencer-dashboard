@@ -1407,6 +1407,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Essa mensagem indica falha ao buscar a grade do **mês exibido** no carrossel (não confundir com mês sem escala aprovada, que mostra aviso amarelo). Atualize a página; se continuar, entre em contato com o suporte técnico para verificar a carga da grade daquele mês. Enquanto isso, Escritório / Horário Comercial continuam com a escala automática.",
       },
       {
+        subtitulo: "Ao trocar o Staff, o Controle de Presença ainda mostra o check-in do anterior?",
+        texto:
+          "Atualize a página (Ctrl+Shift+R). Se o problema continuar após o deploy, entre em contato com o suporte — o ponto do prestador anterior não deve ser reaproveitado ao mudar o filtro de Staff.",
+      },
+      {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
         texto:
           "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** em Escala Estúdio pode indicar falha na carga da grade — atualize a página e, se persistir, entre em contato com o suporte técnico. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
@@ -1454,22 +1459,27 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O dia de amanhã não aparece no modal de oferta?",
         texto:
-          "A antecedência de **24h** conta até o **início do turno**, não até a meia-noite do dia. Ex.: se agora são 20h30 e a Noite de amanhã começa às 23h, esse turno (ou folga desejando Noite) pode aparecer; Manhã ou Tarde de amanhã ficam de fora porque o início ainda não está a 24h.",
+          "A antecedência de **4h** conta até o **início do turno**, não até a meia-noite do dia. Ex.: se agora são 6h e a Manhã começa às 7h, esse turno (ou folga desejando Manhã) não aparece; a Tarde com início às 15h pode.",
       },
       {
         subtitulo: "Nenhum dia aparece no modal de oferta?",
         texto:
-          "Os dias vêm de **todas** as competências com escala **aprovada** (Julho, Agosto, etc.), com início do turno a pelo menos **24h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (24h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
+          "Os dias vêm de **todas** as competências com escala **aprovada** (Julho, Agosto, etc.), com início do turno a pelo menos **4h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (4h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
+      },
+      {
+        subtitulo: "Ao publicar aparece erro genérico ou de horário do turno?",
+        texto:
+          "A publicação precisa resolver o **horário de início** do turno (antecedência de 4h e expiração de 2h). Em Game Presenter e Shuffler esse horário vem do **estúdio** (Gestão de Estúdios → turnos Manhã/Tarde/Noite), não da operadora. Confirme que o estúdio do Staff tem os horários preenchidos; Shuffler com **Todos Estúdios** usa o primeiro estúdio ativo com horário. Depois da correção no banco, tente publicar de novo — se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Minha oferta foi cancelada sem ninguém aceitar?",
         texto:
-          "Ofertas ainda abertas e propostas de troca **Em análise** são canceladas automaticamente quando faltam **menos de 2h para o início do turno**. Na troca, isso significa que o ofertante não aprovou a proposta a tempo: os dias reservados são liberados e nenhuma célula da escala é alterada. Se o cancelamento ocorreu antes dessa janela, confirme o horário do turno na Gestão de Staff ou no cadastro da operadora e, se persistir, entre em contato com o suporte.",
+          "Ofertas ainda abertas e propostas de troca **Em análise** são canceladas automaticamente quando faltam **menos de 2h para o início do turno**. Na troca, isso significa que o ofertante não aprovou a proposta a tempo: os dias reservados são liberados e nenhuma célula da escala é alterada. Se o cancelamento ocorreu antes dessa janela, confirme o horário do turno no cadastro do **estúdio** (Gestão de Estúdios) ou na Gestão de Staff e, se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
         texto:
-          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação ao seu último turno e ao próximo, e com início a pelo menos **24h** da publicação. Ex.: escalado na Noite do dia 12 e de folga no 13 — no dia 13 só a Noite pode caber no intervalo; se a publicação for perto demais do início da Manhã/Tarde, esses turnos também somem. Se nenhum turno atender às duas regras, o dia não pode ser ofertado.",
+          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação ao seu último turno e ao próximo, e com início a pelo menos **4h** da publicação. Ex.: escalado na Noite do dia 12 e de folga no 13 — no dia 13 só a Noite pode caber no intervalo; se a publicação for perto demais do início da Manhã/Tarde, esses turnos também somem. Se nenhum turno atender às duas regras, o dia não pode ser ofertado.",
       },
       {
         subtitulo: "Não consigo aceitar uma oferta?",
@@ -1484,7 +1494,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Marquei vários dias e só parte das ofertas foi publicada?",
         texto:
-          "Cada dia marcado em **Venda de Turno** ou **Venda de Folga** gera uma oferta separada, validada de forma independente. Se um dia não puder ser publicado (já tem oferta aberta, entrou em outra negociação, deixou de cumprir as 24h ou as 12h), os demais continuam publicados: o mural é atualizado, o modal permanece aberto apenas com os dias que falharam e a mensagem explica o motivo. Ajuste ou desmarque esses dias e publique novamente.",
+          "Cada dia marcado em **Venda de Turno** ou **Venda de Folga** gera uma oferta separada, validada de forma independente. Se um dia não puder ser publicado (já tem oferta aberta, entrou em outra negociação, deixou de cumprir as 4h ou as 12h), os demais continuam publicados: o mural é atualizado, o modal permanece aberto apenas com os dias que falharam e a mensagem explica o motivo. Ajuste ou desmarque esses dias e publique novamente.",
       },
       {
         subtitulo: "O filtro de dia não mostra a data que eu quero?",
