@@ -344,7 +344,7 @@ export function OverviewPrestadorAbaEscala({
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle sub={visaoTime ? "consolidado do time · comparativo MTD" : "comparativo MTD vs mês anterior"}>
+        <SectionTitle sub={visaoTime ? "consolidado do time · mês completo vs mês anterior" : "mês completo vs mês anterior"}>
           {visaoTime ? "Resumo operacional" : "KPIs Consolidados"}
         </SectionTitle>
         {loading ? (

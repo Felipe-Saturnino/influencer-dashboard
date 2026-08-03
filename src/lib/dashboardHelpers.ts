@@ -151,6 +151,27 @@ export function getPeriodoComparativoMoM(
   };
 }
 
+/**
+ * MoM com **mês civil completo** no atual e no anterior — sem recorte MTD.
+ * Usar em dashboards de escala/planejamento (ex.: Overview Prestador → Escala),
+ * onde a grade do mês já está publicada e o KPI deve refletir o período inteiro.
+ */
+export function getPeriodoComparativoMesCompleto(
+  anoSel: number,
+  mesSel: number,
+): { atual: PeriodoDashboardMoM; anterior: PeriodoDashboardMoM } {
+  let anoAnt = anoSel;
+  let mesAnt = mesSel - 1;
+  if (mesAnt < 0) {
+    mesAnt = 11;
+    anoAnt--;
+  }
+  return {
+    atual: getDatasDoMes(anoSel, mesSel),
+    anterior: getDatasDoMes(anoAnt, mesAnt),
+  };
+}
+
 /** Janela do mês anterior alinhada ao MTD/mês completo de `getPeriodoComparativoMoM` (só o objeto `anterior`). */
 export function getDatasDoMesMtd(ano: number, mes: number): { inicio: string; fim: string } {
   return getPeriodoComparativoMoM(ano, mes).anterior;

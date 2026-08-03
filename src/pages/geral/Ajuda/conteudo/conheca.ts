@@ -218,7 +218,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Escala — Resumo e aderência",
         texto:
-          "Quatro cards com comparativo MTD ao mesmo intervalo do mês anterior (sem MoM no Histórico): jornadas/dias e horas escaladas vs realizadas.\n\nEm seguida, Aderência (time) ou Absenteísmo (individual): Presença (só no time), Pontualidade, **Controle de Presença** (check-in/check-out não registrados) e Atestados.",
+          "Quatro cards com o **mês civil completo** (não só até hoje) e comparativo ao mês anterior inteiro (sem MoM no Histórico): jornadas/dias e horas escaladas vs realizadas — alinhados à Escala Estúdio do período.\n\nEm seguida, Aderência (time) ou Absenteísmo (individual): Presença (só no time), Pontualidade, **Controle de Presença** (check-in/check-out não registrados) e Atestados.",
       },
       {
         subtitulo: "Aproveitamento, movimentações e estúdio",

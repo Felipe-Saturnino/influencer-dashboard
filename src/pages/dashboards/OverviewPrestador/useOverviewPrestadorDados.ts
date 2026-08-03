@@ -14,7 +14,7 @@ import {
   type MesCarrosselEscalaEntry,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
 import {
-  getPeriodoComparativoMoM,
+  getPeriodoComparativoMesCompleto,
   HISTORICO_COMPETENCIAS_MESES,
 } from "../../../lib/dashboardHelpers";
 import type { PresencaDiaGestao } from "../../../lib/rhCalendarioPresencaGestao";
@@ -393,7 +393,7 @@ export function useOverviewPrestadorDados(
         anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
       };
     }
-    return getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+    return getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
   }, [historico, mesSelecionado, mesesHistorico]);
 
   const mesesMetricasAtual = useMemo(() => {
