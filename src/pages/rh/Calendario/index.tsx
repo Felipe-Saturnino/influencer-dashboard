@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   BookOpen,
@@ -164,6 +164,11 @@ import {
   carregarAprovacaoPresencaMes,
   type PresencaAprovacaoMes,
 } from "../../../lib/rhCalendarioPresencaAprovacaoMesDb";
+import {
+  chaveMovimentacaoCelula,
+  mapOverviewPrestadorMovimentacoes,
+  type OverviewPrestadorMovimentacaoCelula,
+} from "../../../lib/overviewPrestadorMovimentacoes";
 import { useCalendarioPresencaGestaoMutacoes } from "./useCalendarioPresencaGestaoMutacoes";
 
 const TUTORIAL_CALENDARIO: AjudaContextualTutorial = {
@@ -748,6 +753,10 @@ export default function RhCalendarioPage() {
   const [pontoMsgModal, setPontoMsgModal] = useState<string | null>(null);
   const [pontoSucessoModal, setPontoSucessoModal] = useState<PontoSucessoModalData | null>(null);
   const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
+  /** Staff cujo ponto está em `pontoMesLinhas` — evita merge otimista entre prestadores. */
+  const pontoMesStaffIdRef = useRef<string | null>(null);
+  const presencaGestaoStaffIdRef = useRef<string | null>(null);
+  const movimentacoesPresencaStaffIdRef = useRef<string | null>(null);
   const [loadingPontoMes, setLoadingPontoMes] = useState(false);
   const [pontoMesTick, setPontoMesTick] = useState(0);
   const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
@@ -757,6 +766,13 @@ export default function RhCalendarioPage() {
   );
   const [loadingPresencaGestao, setLoadingPresencaGestao] = useState(false);
   const [presencaGestaoTick, setPresencaGestaoTick] = useState(0);
+  /**
+   * Snapshot Marketplace do staff filtrado no mês — usado só nos KPIs para contar
+   * como Troca os dias gravados na grade como Venda / `Compra - Turno`.
+   */
+  const [movimentacoesPresencaPorChave, setMovimentacoesPresencaPorChave] = useState<
+    Map<string, OverviewPrestadorMovimentacaoCelula>
+  >(() => new Map());
   const [aprovacaoPresencaMes, setAprovacaoPresencaMes] = useState<PresencaAprovacaoMes | null>(null);
   const [loadingAprovacaoPresencaMes, setLoadingAprovacaoPresencaMes] = useState(false);
   const [modalAprovarPresencaMesAberto, setModalAprovarPresencaMesAberto] = useState(false);
@@ -1212,14 +1228,22 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
+      pontoMesStaffIdRef.current = null;
       setPontoMesLinhas([]);
       return;
     }
     if (abaPrincipal !== "presenca") return;
     const fid = presencaFilterStaffIds[0];
     if (!fid) {
+      pontoMesStaffIdRef.current = null;
       setPontoMesLinhas([]);
       return;
+    }
+    const trocouStaff = pontoMesStaffIdRef.current !== fid;
+    if (trocouStaff) {
+      pontoMesStaffIdRef.current = fid;
+      // Limpa na hora — senão a tabela mostra check-in do prestador anterior até a RPC voltar.
+      setPontoMesLinhas([]);
     }
     let cancelled = false;
     setLoadingPontoMes(true);
@@ -1252,8 +1276,10 @@ export default function RhCalendarioPage() {
         setPontoMesLinhas([]);
         return;
       }
-      // Preserva horários já vistos (ex.: otimista pós check-in) se a RPC ainda vier sem o user_id certo.
+      // Merge otimista só no mesmo Staff (ex.: pós check-in se a RPC ainda vier sem horário).
+      // Nunca reaproveitar check-in/out de outro prestador ao trocar o filtro.
       setPontoMesLinhas((prev) => {
+        if (trocouStaff || prev.length === 0) return merged;
         const prevPorDia = new Map(prev.map((r) => [r.dia_sp.slice(0, 10), r]));
         return merged.map((r) => {
           const key = r.dia_sp.slice(0, 10);
@@ -1273,15 +1299,56 @@ export default function RhCalendarioPage() {
   }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, mesAnteriorPresencaRef, pontoMesTick]);
 
   useEffect(() => {
+    if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
+      movimentacoesPresencaStaffIdRef.current = null;
+      setMovimentacoesPresencaPorChave(new Map());
+      return;
+    }
+    const fid = presencaFilterStaffIds[0];
+    if (!fid) {
+      movimentacoesPresencaStaffIdRef.current = null;
+      setMovimentacoesPresencaPorChave(new Map());
+      return;
+    }
+    if (movimentacoesPresencaStaffIdRef.current !== fid) {
+      movimentacoesPresencaStaffIdRef.current = fid;
+      setMovimentacoesPresencaPorChave(new Map());
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase.rpc("dash_overview_prestador_movimentacoes_mes", {
+        p_funcionario_id: fid,
+        p_ref_mes: refMesPrimeiroDiaISO(current),
+      });
+      if (cancelled) return;
+      if (error) {
+        console.error("[calendario-presenca-movimentacoes]", error);
+        setMovimentacoesPresencaPorChave(new Map());
+        return;
+      }
+      setMovimentacoesPresencaPorChave(mapOverviewPrestadorMovimentacoes(data));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, presencaGestaoTick]);
+
+  useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
+      presencaGestaoStaffIdRef.current = null;
       setPresencaGestaoPorChave(new Map());
       return;
     }
     if (abaPrincipal !== "presenca") return;
     const fid = presencaFilterStaffIds[0];
     if (!fid) {
+      presencaGestaoStaffIdRef.current = null;
       setPresencaGestaoPorChave(new Map());
       return;
+    }
+    if (presencaGestaoStaffIdRef.current !== fid) {
+      presencaGestaoStaffIdRef.current = fid;
+      setPresencaGestaoPorChave(new Map());
     }
     let cancelled = false;
     setLoadingPresencaGestao(true);
@@ -2578,7 +2645,9 @@ export default function RhCalendarioPage() {
           statusBase: stBase,
           gestao: gestaoDia,
         });
-        return { situacao, status, temCheckIn };
+        const origemTrocaMarketplace =
+          movimentacoesPresencaPorChave.get(chaveMovimentacaoCelula(fid, iso))?.tipo === "troca";
+        return { situacao, status, temCheckIn, origemTrocaMarketplace };
       });
       return computePresencaKpisConsolidados(diasInput);
     },
@@ -2591,6 +2660,7 @@ export default function RhCalendarioPage() {
       prestadorPorId,
       mapOpTurnos,
       indiceJustificativaMedicoPresenca,
+      movimentacoesPresencaPorChave,
     ],
   );
 
@@ -2973,16 +3043,6 @@ export default function RhCalendarioPage() {
             </div>
 
             <div className="app-marketplace-filtro-minhas__cta" style={{ gap: 10 }}>
-              <AjudaContextualAcoes
-                pageKey="rh_calendario"
-                tutorial={
-                  abaPrincipal === "compromissos"
-                    ? TUTORIAL_CALENDARIO
-                    : abaPrincipal === "presenca"
-                      ? TUTORIAL_CONTROLE_PRESENCA
-                      : null
-                }
-              />
               {abaPrincipal === "compromissos" && meuRhFuncionarioId ? (
                 <button
                   type="button"
@@ -3139,49 +3199,67 @@ export default function RhCalendarioPage() {
           ) : null}
 
           <div
-            role="tablist"
-            aria-label="Seção do calendário"
-            style={filterBarSection(true)}
-            onKeyDown={(e) =>
-              onFiltroBarTabsKeyDown(
-                e,
-                (podeVerAbaRelatorioPresenca
-                  ? (["compromissos", "presenca", "relatorio"] as const)
-                  : (["compromissos", "presenca"] as const)),
-                setAbaPrincipal,
-                (k) => `tab-cal-${k}`,
-              )
-            }
+            className="app-filter-bar-tabs-cta"
+            style={{ paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }}
           >
-            <FiltroBarTabButton
-              id="tab-cal-compromissos"
-              active={abaPrincipal === "compromissos"}
-              aria-controls="panel-cal-compromissos"
-              onClick={() => setAbaPrincipal("compromissos")}
-              icon={<CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+            <div
+              role="tablist"
+              aria-label="Seção do calendário"
+              className="app-filter-bar-tabs-cta__tabs"
+              onKeyDown={(e) =>
+                onFiltroBarTabsKeyDown(
+                  e,
+                  (podeVerAbaRelatorioPresenca
+                    ? (["compromissos", "presenca", "relatorio"] as const)
+                    : (["compromissos", "presenca"] as const)),
+                  setAbaPrincipal,
+                  (k) => `tab-cal-${k}`,
+                )
+              }
             >
-              Compromissos
-            </FiltroBarTabButton>
-            <FiltroBarTabButton
-              id="tab-cal-presenca"
-              active={abaPrincipal === "presenca"}
-              aria-controls="panel-cal-presenca"
-              onClick={() => setAbaPrincipal("presenca")}
-              icon={<ClipboardCheck {...FILTRO_BAR_TAB_ICON_PROPS} />}
-            >
-              Controle de Presença
-            </FiltroBarTabButton>
-            {podeVerAbaRelatorioPresenca ? (
               <FiltroBarTabButton
-                id="tab-cal-relatorio"
-                active={abaPrincipal === "relatorio"}
-                aria-controls="panel-cal-relatorio"
-                onClick={() => setAbaPrincipal("relatorio")}
-                icon={<ClipboardList {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                id="tab-cal-compromissos"
+                active={abaPrincipal === "compromissos"}
+                aria-controls="panel-cal-compromissos"
+                onClick={() => setAbaPrincipal("compromissos")}
+                icon={<CalendarDays {...FILTRO_BAR_TAB_ICON_PROPS} />}
               >
-                Relatório de Presença
+                Compromissos
               </FiltroBarTabButton>
-            ) : null}
+              <FiltroBarTabButton
+                id="tab-cal-presenca"
+                active={abaPrincipal === "presenca"}
+                aria-controls="panel-cal-presenca"
+                onClick={() => setAbaPrincipal("presenca")}
+                icon={<ClipboardCheck {...FILTRO_BAR_TAB_ICON_PROPS} />}
+              >
+                Controle de Presença
+              </FiltroBarTabButton>
+              {podeVerAbaRelatorioPresenca ? (
+                <FiltroBarTabButton
+                  id="tab-cal-relatorio"
+                  active={abaPrincipal === "relatorio"}
+                  aria-controls="panel-cal-relatorio"
+                  onClick={() => setAbaPrincipal("relatorio")}
+                  icon={<ClipboardList {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                >
+                  Relatório de Presença
+                </FiltroBarTabButton>
+              ) : null}
+            </div>
+            <div className="app-filter-bar-tabs-cta__actions">
+              <AjudaContextualAcoes
+                pageKey="rh_calendario"
+                tutorial={
+                  abaPrincipal === "compromissos"
+                    ? TUTORIAL_CALENDARIO
+                    : abaPrincipal === "presenca"
+                      ? TUTORIAL_CONTROLE_PRESENCA
+                      : null
+                }
+              />
+            </div>
           </div>
       </div>
 

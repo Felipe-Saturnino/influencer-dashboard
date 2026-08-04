@@ -402,16 +402,16 @@ export function linhaColaboradorNoFiltroTurnoConsolidado(
   }
 }
 
-/** Ordem dos botões de área abaixo do carrossel do mês (legado Estúdio). */
+/** Ordem dos botões de área abaixo do carrossel do mês (Escala Estúdio). */
 export const AREA_ESCALA_ORDEM_BOTOES: readonly AreaEscalaLegada[] = [
-  "service_manager",
-  "shift_leader",
   "game_presenter",
-  "academy",
   "shuffler",
+  "shift_leader",
+  "service_manager",
+  "academy",
 ];
 
-export const DEFAULT_AREA_ESCALA: AreaEscalaKey = "service_manager";
+export const DEFAULT_AREA_ESCALA: AreaEscalaKey = "game_presenter";
 
 export function isAreaEscalaLegada(area: string): area is AreaEscalaLegada {
   return (

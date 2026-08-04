@@ -10,6 +10,7 @@ import {
   diasOfertaveisMarketplace,
   mensagemErroOfertaMarketplace,
   turnosOfertaveisNaFolgaMarketplace,
+  type DiaOfertavelMarketplace,
   type MarketplaceMeuContexto,
   type MarketplaceMinhaGrade,
   type TipoOfertaMarketplace,
@@ -37,7 +38,9 @@ const MSG_SEM_ESCALA_APROVADA =
   "Nenhuma escala aprovada encontrada para os próximos meses. Assim que for aprovada, os seus dias aparecem aqui.";
 
 const MSG_ANTECEDENCIA_24H =
-  "Apenas turnos com início a pelo menos 24h da publicação (horário do turno ofertado ou desejado).";
+  "Apenas turnos com início a pelo menos 4h da publicação (horário do turno ofertado ou desejado).";
+
+const MSG_MULTI_DIAS = "Você pode marcar vários dias — cada dia gera uma oferta separada no mural.";
 
 type Props = {
   open: boolean;
@@ -61,8 +64,8 @@ export function ModalOfertarMarketplace({
   const brand = useDashboardBrand();
 
   const [tipo, setTipo] = useState<TipoOfertaMarketplace>("venda_turno");
-  const [diaIso, setDiaIso] = useState("");
-  const [turnoFolga, setTurnoFolga] = useState("");
+  const [diasSelecionados, setDiasSelecionados] = useState<string[]>([]);
+  const [turnoPorDia, setTurnoPorDia] = useState<Record<string, string>>({});
   const [observacao, setObservacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
@@ -70,18 +73,22 @@ export function ModalOfertarMarketplace({
   useEffect(() => {
     if (!open) return;
     setTipo("venda_turno");
-    setDiaIso("");
-    setTurnoFolga("");
+    setDiasSelecionados([]);
+    setTurnoPorDia({});
     setObservacao("");
     setErro(null);
     setGravando(false);
   }, [open]);
 
   useEffect(() => {
-    setDiaIso("");
-    setTurnoFolga("");
+    setDiasSelecionados([]);
+    setTurnoPorDia({});
     setErro(null);
   }, [tipo]);
+
+  const ehFolga = tipo === "venda_folga";
+  /** Troca continua com um único dia — o aceitante escolhe o dia que entrega em troca. */
+  const multiDias = tipo !== "oferta_troca";
 
   const dias = useMemo(
     () =>
@@ -92,19 +99,26 @@ export function ModalOfertarMarketplace({
     [tipo, grade.valorPorIso, contexto, diasReservados],
   );
 
-  const turnosFolga = useMemo(() => {
-    if (tipo !== "venda_folga" || !diaIso || !contexto) return [];
-    return turnosOfertaveisNaFolgaMarketplace(
-      diaIso,
-      grade.valorPorIso,
-      contexto.horario,
-      contexto.operadora,
-    );
-  }, [tipo, diaIso, contexto, grade.valorPorIso]);
+  /** Turnos elegíveis (4h + 12h) por dia de folga — cada dia tem a sua lista. */
+  const turnosPorDiaFolga = useMemo(() => {
+    const out = new Map<string, string[]>();
+    if (!ehFolga || !contexto) return out;
+    for (const dia of dias) {
+      out.set(
+        dia.iso,
+        turnosOfertaveisNaFolgaMarketplace(
+          dia.iso,
+          grade.valorPorIso,
+          contexto.horario,
+          contexto.operadora,
+        ),
+      );
+    }
+    return out;
+  }, [ehFolga, contexto, dias, grade.valorPorIso]);
 
   if (!open) return null;
 
-  const diaSelecionado = dias.find((d) => d.iso === diaIso) ?? null;
   const tipoAtual = TIPOS_PUBLICAVEIS.find((o) => o.value === tipo)!;
   const semDias = dias.length === 0;
 
@@ -128,17 +142,54 @@ export function ModalOfertarMarketplace({
     marginBottom: 6,
   };
 
+  const turnoSelectStyle: CSSProperties = {
+    ...inputStyle,
+    width: "auto",
+    minWidth: 150,
+    padding: "6px 10px",
+    fontSize: 13,
+  };
+
+  function alternarDia(dia: DiaOfertavelMarketplace) {
+    setErro(null);
+    if (!multiDias) {
+      setDiasSelecionados((prev) => (prev[0] === dia.iso ? [] : [dia.iso]));
+      return;
+    }
+    setDiasSelecionados((prev) => {
+      if (prev.includes(dia.iso)) return prev.filter((iso) => iso !== dia.iso);
+      return [...prev, dia.iso].sort();
+    });
+    if (!ehFolga) return;
+    setTurnoPorDia((prev) => {
+      if (prev[dia.iso]) return prev;
+      const turnos = turnosPorDiaFolga.get(dia.iso) ?? [];
+      if (turnos.length !== 1) return prev;
+      return { ...prev, [dia.iso]: turnos[0] };
+    });
+  }
+
+  function definirTurnoDia(iso: string, turno: string) {
+    setErro(null);
+    setTurnoPorDia((prev) => ({ ...prev, [iso]: turno }));
+  }
+
   function validar(): string | null {
     if (!contexto?.funcionarioId) {
       return "Não encontramos o seu cadastro de prestador de estúdio. Entre em contato com o suporte.";
     }
     if (!grade.aprovada) return MSG_SEM_ESCALA_APROVADA;
-    if (!diaIso || !diaSelecionado) return "Selecione o dia da oferta.";
-    if (tipo === "venda_folga") {
-      if (turnosFolga.length === 0) {
-        return "Nenhum turno respeita as 24h de antecedência e o intervalo mínimo de 12h neste dia de folga.";
+    if (diasSelecionados.length === 0) {
+      return multiDias ? "Selecione ao menos um dia para ofertar." : "Selecione o dia da oferta.";
+    }
+    if (ehFolga) {
+      for (const iso of diasSelecionados) {
+        const turnos = turnosPorDiaFolga.get(iso) ?? [];
+        if (turnos.length === 0) {
+          return "Nenhum turno respeita as 4h de antecedência e o intervalo mínimo de 12h em um dos dias selecionados.";
+        }
+        if (!turnoPorDia[iso]) return "Selecione o turno que pretende trabalhar em cada dia marcado.";
       }
-      if (!turnoFolga) return "Selecione o turno que pretende trabalhar.";
     }
     return null;
   }
@@ -149,26 +200,60 @@ export function ModalOfertarMarketplace({
       setErro(v);
       return;
     }
-    const dia = diaSelecionado!;
     setGravando(true);
     setErro(null);
 
-    const res = await criarOfertaMarketplace({
-      tipo,
-      diaIso: dia.iso,
-      valorCelula: dia.valorCelula,
-      turnoLabel: tipo === "venda_folga" ? turnoFolga : dia.turno,
-      observacao: observacao.trim() || null,
-    });
+    const obs = observacao.trim() || null;
+    const publicados: string[] = [];
+    const falhas: { iso: string; error: string }[] = [];
+
+    for (const iso of diasSelecionados) {
+      const dia = dias.find((d) => d.iso === iso);
+      if (!dia) {
+        falhas.push({ iso, error: "not_found" });
+        continue;
+      }
+      const res = await criarOfertaMarketplace({
+        tipo,
+        diaIso: dia.iso,
+        valorCelula: dia.valorCelula,
+        turnoLabel: ehFolga ? (turnoPorDia[iso] ?? "") : dia.turno,
+        observacao: obs,
+      });
+      if (res.ok) publicados.push(iso);
+      else falhas.push({ iso, error: res.error });
+    }
 
     setGravando(false);
-    if (!res.ok) {
-      setErro(mensagemErroOfertaMarketplace(res.error));
+
+    if (publicados.length > 0) onCriada();
+
+    if (falhas.length === 0) {
+      onClose();
       return;
     }
-    onCriada();
-    onClose();
+
+    const motivo = mensagemErroOfertaMarketplace(falhas[0].error);
+    if (publicados.length === 0) {
+      setErro(motivo);
+      return;
+    }
+    setDiasSelecionados(falhas.map((f) => f.iso));
+    setErro(
+      `Publicamos ${publicados.length} de ${publicados.length + falhas.length} ofertas. ` +
+        `Dias não publicados: ${falhas.map((f) => labelDiaCurtoBr(f.iso)).join(", ")}. ${motivo}`,
+    );
   }
+
+  const textoAjudaDias = !grade.aprovada
+    ? MSG_SEM_ESCALA_APROVADA
+    : semDias
+      ? ehFolga
+        ? "Sem folgas na escala aprovada com turno desejado a pelo menos 4h e 12h de intervalo."
+        : "Sem dias escalados na escala aprovada com início do turno a pelo menos 4h."
+      : multiDias
+        ? `${MSG_MULTI_DIAS} ${MSG_ANTECEDENCIA_24H}`
+        : MSG_ANTECEDENCIA_24H;
 
   return (
     <ModalBase maxWidth={520} onClose={onClose} zIndex={1140}>
@@ -198,66 +283,91 @@ export function ModalOfertarMarketplace({
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle} htmlFor="mkt-ofertar-dia">
-            {tipo === "venda_folga" ? "Dia de folga" : "Dia do turno"}
+          <span style={labelStyle} id="mkt-ofertar-dias-label">
+            {ehFolga ? (multiDias ? "Dias de folga" : "Dia de folga") : multiDias ? "Dias do turno" : "Dia do turno"}
             <CampoObrigatorioMark />
-          </label>
-          <select
-            id="mkt-ofertar-dia"
-            aria-label={tipo === "venda_folga" ? "Dia de folga" : "Dia do turno"}
-            value={diaIso}
-            onChange={(e) => setDiaIso(e.target.value)}
-            disabled={semDias}
-            style={inputStyle}
-          >
-            <option value="">Selecione…</option>
-            {dias.map((d) => (
-              <option key={d.iso} value={d.iso}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-          <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
-            {!grade.aprovada
-              ? MSG_SEM_ESCALA_APROVADA
-              : semDias
-                ? tipo === "venda_folga"
-                  ? "Sem folgas na escala aprovada com turno desejado a pelo menos 24h e 12h de intervalo."
-                  : "Sem dias escalados na escala aprovada com início do turno a pelo menos 24h."
-                : MSG_ANTECEDENCIA_24H}
-          </p>
-        </div>
-
-        {tipo === "venda_folga" ? (
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle} htmlFor="mkt-ofertar-turno">
-              Turno que pretende trabalhar
-              <CampoObrigatorioMark />
-            </label>
-            <select
-              id="mkt-ofertar-turno"
-              aria-label="Turno que pretende trabalhar"
-              value={turnoFolga}
-              onChange={(e) => setTurnoFolga(e.target.value)}
-              disabled={!diaIso || turnosFolga.length === 0}
-              style={inputStyle}
+          </span>
+          {semDias ? null : (
+            <div
+              role="group"
+              aria-labelledby="mkt-ofertar-dias-label"
+              style={{
+                border: `1px solid ${t.cardBorder}`,
+                borderRadius: 10,
+                background: t.inputBg,
+                padding: 6,
+                maxHeight: 240,
+                overflowY: "auto",
+              }}
             >
-              <option value="">Selecione…</option>
-              {turnosFolga.map((turno) => (
-                <option key={turno} value={turno}>
-                  {turno}
-                </option>
-              ))}
-            </select>
-            <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
-              {!diaIso
-                ? "Escolha primeiro o dia de folga."
-                  : turnosFolga.length === 0
-                  ? "Nenhum turno respeita as 24h de antecedência e o intervalo mínimo de 12h entre turnos neste dia."
-                  : "Apenas turnos com início a ≥24h da publicação e 12h de intervalo em relação ao seu último e ao próximo turno."}
+              {dias.map((dia) => {
+                const marcado = diasSelecionados.includes(dia.iso);
+                const turnos = turnosPorDiaFolga.get(dia.iso) ?? [];
+                return (
+                  <div
+                    key={dia.iso}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      flexWrap: "wrap",
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      background: marcado
+                        ? "color-mix(in srgb, var(--brand-action, #7c3aed) 12%, transparent)"
+                        : "transparent",
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        fontSize: 13,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type={multiDias ? "checkbox" : "radio"}
+                        name={multiDias ? undefined : "mkt-ofertar-dia"}
+                        checked={marcado}
+                        onChange={() => alternarDia(dia)}
+                        style={{ accentColor: brand.accent, cursor: "pointer" }}
+                      />
+                      {dia.label}
+                    </label>
+                    {ehFolga && marcado ? (
+                      <select
+                        aria-label={`Turno que pretende trabalhar em ${dia.label}`}
+                        value={turnoPorDia[dia.iso] ?? ""}
+                        onChange={(e) => definirTurnoDia(dia.iso, e.target.value)}
+                        disabled={turnos.length === 0}
+                        style={turnoSelectStyle}
+                      >
+                        <option value="">Selecione o turno…</option>
+                        {turnos.map((turno) => (
+                          <option key={turno} value={turno}>
+                            {turno}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
+            {textoAjudaDias}
+          </p>
+          {ehFolga && !semDias ? (
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
+              Cada dia tem os seus turnos: só aparecem os que respeitam 4h de antecedência e 12h de
+              intervalo em relação ao seu último e ao próximo turno.
             </p>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
         <div style={{ marginBottom: 14 }}>
           <label style={labelStyle} htmlFor="mkt-ofertar-obs">
@@ -272,6 +382,11 @@ export function ModalOfertarMarketplace({
             placeholder="Contexto que ajude quem for aceitar"
             style={{ ...inputStyle, resize: "vertical", minHeight: 72, lineHeight: 1.45 }}
           />
+          {multiDias ? (
+            <p style={{ margin: "6px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
+              A mesma observação é usada em todos os dias marcados.
+            </p>
+          ) : null}
         </div>
 
         {erro ? (
@@ -326,6 +441,8 @@ export function ModalOfertarMarketplace({
                 <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="#fff" />
                 Salvando…
               </span>
+            ) : diasSelecionados.length > 1 ? (
+              `Publicar ${diasSelecionados.length} ofertas`
             ) : (
               "Publicar oferta"
             )}
@@ -334,4 +451,11 @@ export function ModalOfertarMarketplace({
       </div>
     </ModalBase>
   );
+}
+
+/** `2026-07-05` → `05/07` (lista de dias não publicados na mensagem de erro). */
+function labelDiaCurtoBr(iso: string): string {
+  const [, mo, d] = iso.slice(0, 10).split("-");
+  if (!mo || !d) return iso;
+  return `${d}/${mo}`;
 }

@@ -84,7 +84,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA) ainda não executou hoje, aguarde a próxima coleta — confira em **Status Técnico** se as integrações **Lobby Blaze** e **Lobby CDA** estão com status OK. Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze e Casa de Apostas aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso na liberação de permissão da página ou uma coleta registrada sem as posições das mesas.",
+          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA / Lobby Esportiva Bet) ainda não executou hoje, aguarde a próxima coleta — confira em **Status Técnico** se as integrações **Lobby Blaze**, **Lobby CDA** e **Lobby Esportiva Bet** estão com status OK. Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze, Casa de Apostas e Esportiva Bet aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso na liberação de permissão da página ou uma coleta registrada sem as posições das mesas.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
@@ -200,6 +200,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "KPIs de presença ou absenteísmo vazios?",
         texto:
           "Métricas de escala e presença dependem de escala publicada e registros no Calendário. Verifique se o prestador ou time selecionado tem turnos no período e se justificativas pendentes não estão bloqueando o fechamento.",
+      },
+      {
+        subtitulo: "Não vejo a aba KPIs de Mesa?",
+        texto:
+          "A aba só aparece quando o filtro **Time** está em **Game Presenter**. Em outros times (Shuffler, Shift Leader, Service Manager) permanece apenas a aba Escala.",
+      },
+      {
+        subtitulo: "KPIs de Mesa sem números?",
+        texto:
+          "Na visão de time (Staff vazio), selecione um Game Presenter no filtro Staff. Confirme o mês no carrossel (dados de mesa a partir de julho/2026) e se o prestador tem **ID operacional** vinculado em Gestão de Staff — sem esse vínculo a carga do Grafana não associa as rodadas. O card e as colunas de **Incidentes** vêm dos registros da página Incidentes no mesmo período; se só houver KPI de mesa sem incidentes (ou o contrário), a aba ainda mostra o que existir.",
       },
     ],
   },
@@ -630,6 +640,46 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
         texto:
           "A exclusão exige permissão de Excluir na página Roteiro de Mesa. Sem ela, os ícones de exclusão não aparecem. Ao clicar, o pop-up padrão pede confirmação. Confirme também que o estúdio do item está dentro do escopo do usuário.",
+      },
+    ],
+  },
+  incidentes: {
+    titulo: "Incidentes",
+    blocos: [
+      {
+        subtitulo: "A lista de incidentes está vazia?",
+        texto:
+          "Confirme o mês selecionado no carrossel (ou ative **Histórico** para ver todo o período) e revise os filtros de Estúdio, Time e Staff — cada um restringe a lista. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
+      },
+      {
+        subtitulo: "O botão Novo Incidente não aparece?",
+        texto:
+          "O botão exige permissão de **Editar** = Sim na página Incidentes (Gestão de Usuários → Permissões). Sem ela, a página fica em modo consulta. Solicite a liberação ao administrador se precisar registrar incidentes.",
+      },
+      {
+        subtitulo: "O campo Tipo não tem opções ou está vazio?",
+        texto:
+          "Para Game Presenter, o tipo de incidente depende da mesa selecionada — escolha a mesa primeiro para carregar a lista de tipos daquele jogo. Para Shuffler, a lista de tipos é fixa e não depende da mesa.",
+      },
+      {
+        subtitulo: "A mesa que eu procuro não aparece na lista do formulário?",
+        texto:
+          "Mesas de Roleta não aparecem na lista quando o time selecionado é Shuffler, pois esse time não atua nesse jogo. Confirme também se a mesa está cadastrada e ativa em Gestão de Mesas.",
+      },
+      {
+        subtitulo: "Não encontro o prestador na lista do formulário?",
+        texto:
+          "A lista de prestadores é filtrada pelo time selecionado (Game Presenter ou Shuffler) e inclui apenas funcionários ativos ou indisponíveis vinculados a esse time (ou papéis de apoio como Service Manager, Shift Leader, Performance Coach e Academy). Verifique o cadastro em Gestão de Prestadores se o nome não aparece.",
+      },
+      {
+        subtitulo: "O anexo não foi enviado ao salvar o incidente?",
+        texto:
+          "Cada arquivo tem limite de 10 MB. Se o arquivo exceder esse tamanho, uma mensagem indica qual anexo excedeu o limite — reduza o tamanho do arquivo ou envie um formato mais leve e tente novamente.",
+      },
+      {
+        subtitulo: "Não vejo as colunas Prestador, Time ou Relator na tabela?",
+        texto:
+          "Essas colunas ficam ocultas quando sua permissão de Ver é **Próprios** — nesse modo, você já sabe que os registros são seus. Se você deveria ver todos os incidentes, solicite ao administrador a permissão Ver = Sim em Gestão de Usuários → Permissões → Incidentes.",
       },
     ],
   },
@@ -1224,7 +1274,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze e Lobby CDA operam via job automatizado externo e não têm ação disponível na interface.",
+          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA e Lobby Esportiva Bet operam via job automatizado externo e não têm ação disponível na interface.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
@@ -1397,9 +1447,19 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Essa mensagem indica falha ao buscar a grade do **mês exibido** no carrossel (não confundir com mês sem escala aprovada, que mostra aviso amarelo). Atualize a página; se continuar, entre em contato com o suporte técnico para verificar a carga da grade daquele mês. Enquanto isso, Escritório / Horário Comercial continuam com a escala automática.",
       },
       {
+        subtitulo: "Ao trocar o Staff, o Controle de Presença ainda mostra o check-in do anterior?",
+        texto:
+          "Atualize a página (Ctrl+Shift+R). Se o problema continuar após o deploy, entre em contato com o suporte — o ponto do prestador anterior não deve ser reaproveitado ao mudar o filtro de Staff.",
+      },
+      {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
         texto:
           "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** em Escala Estúdio pode indicar falha na carga da grade — atualize a página e, se persistir, entre em contato com o suporte técnico. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
+      },
+      {
+        subtitulo: "O card Trocas fica zerado mesmo depois de uma troca aprovada?",
+        texto:
+          "A **Oferta de Troca** aceita no Marketplace grava **Venda** no dia que você entregou e **Compra - Turno** no dia que você assumiu — a Escala e o Calendário continuam mostrando assim, de propósito. O card **Trocas** reconhece a origem da negociação, por isso conta esses dois dias e não os soma em Venda nem em Compra. Se o card continuar em zero, confirme que a troca está **aprovada** (não Em análise) e que o mês do carrossel e o Staff filtrado são os da negociação; depois atualize a página.",
       },
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
@@ -1439,17 +1499,27 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O dia de amanhã não aparece no modal de oferta?",
         texto:
-          "A antecedência de **24h** conta até o **início do turno**, não até a meia-noite do dia. Ex.: se agora são 20h30 e a Noite de amanhã começa às 23h, esse turno (ou folga desejando Noite) pode aparecer; Manhã ou Tarde de amanhã ficam de fora porque o início ainda não está a 24h.",
+          "A antecedência de **4h** conta até o **início do turno**, não até a meia-noite do dia. Ex.: se agora são 6h e a Manhã começa às 7h, esse turno (ou folga desejando Manhã) não aparece; a Tarde com início às 15h pode.",
       },
       {
         subtitulo: "Nenhum dia aparece no modal de oferta?",
         texto:
-          "Os dias vêm de **todas** as competências com escala **aprovada** (Julho, Agosto, etc.), com início do turno a pelo menos **24h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (24h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
+          "Os dias vêm de **todas** as competências com escala **aprovada** (Julho, Agosto, etc.), com início do turno a pelo menos **4h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (4h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
+      },
+      {
+        subtitulo: "Ao publicar aparece erro genérico ou de horário do turno?",
+        texto:
+          "A publicação precisa resolver o **horário de início** do turno (antecedência de 4h e expiração de 2h). Em Game Presenter e Shuffler esse horário vem do **estúdio** (Gestão de Estúdios → turnos Manhã/Tarde/Noite), não da operadora. Confirme que o estúdio do Staff tem os horários preenchidos; Shuffler com **Todos Estúdios** usa o primeiro estúdio ativo com horário. Depois da correção no banco, tente publicar de novo — se persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Minha oferta foi cancelada sem ninguém aceitar?",
+        texto:
+          "Ofertas ainda abertas e propostas de troca **Em análise** são canceladas automaticamente quando faltam **menos de 2h para o início do turno**. Na troca, isso significa que o ofertante não aprovou a proposta a tempo: os dias reservados são liberados e nenhuma célula da escala é alterada. Se o cancelamento ocorreu antes dessa janela, confirme o horário do turno no cadastro do **estúdio** (Gestão de Estúdios) ou na Gestão de Staff e, se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
         texto:
-          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação ao seu último turno e ao próximo, e com início a pelo menos **24h** da publicação. Ex.: escalado na Noite do dia 12 e de folga no 13 — no dia 13 só a Noite pode caber no intervalo; se a publicação for perto demais do início da Manhã/Tarde, esses turnos também somem. Se nenhum turno atender às duas regras, o dia não pode ser ofertado.",
+          "A lista só mostra turnos com pelo menos **12h** de intervalo em relação ao seu último turno e ao próximo, e com início a pelo menos **4h** da publicação. Ex.: escalado na Noite do dia 12 e de folga no 13 — no dia 13 só a Noite pode caber no intervalo; se a publicação for perto demais do início da Manhã/Tarde, esses turnos também somem. Se nenhum turno atender às duas regras, o dia não pode ser ofertado.",
       },
       {
         subtitulo: "Não consigo aceitar uma oferta?",
@@ -1460,6 +1530,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Só vejo ofertas do meu time?",
         texto:
           "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu time e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba muda para **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para alternar o escopo, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+      },
+      {
+        subtitulo: "Marquei vários dias e só parte das ofertas foi publicada?",
+        texto:
+          "Cada dia marcado em **Venda de Turno** ou **Venda de Folga** gera uma oferta separada, validada de forma independente. Se um dia não puder ser publicado (já tem oferta aberta, entrou em outra negociação, deixou de cumprir as 4h ou as 12h), os demais continuam publicados: o mural é atualizado, o modal permanece aberto apenas com os dias que falharam e a mensagem explica o motivo. Ajuste ou desmarque esses dias e publique novamente.",
+      },
+      {
+        subtitulo: "O filtro de dia não mostra a data que eu quero?",
+        texto:
+          "O filtro (**Todos os Dias**) lista somente dias com oferta **em aberto** dentro do período e dos demais filtros ativos. Se a data não aparecer, verifique o mês do carrossel (ou ative **Histórico**), limpe o filtro de tipo de ação, o filtro de times e a busca. A seleção é limpa automaticamente quando o dia deixa de ter oferta — por exemplo, após alguém aceitar a última oferta daquele dia.",
       },
       {
         subtitulo: "Aceitei uma oferta e a escala não mudou?",
@@ -1650,6 +1730,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "O botão Mapear não aparece na aba Pendentes?",
         texto:
           "O botão Mapear requer permissão de edição na Gestão de Links. Se não aparece, seu perfil não tem essa permissão. Entre em contato com o gestor para solicitar acesso.",
+      },
+      {
+        subtitulo: "O modal Mapear não mostra influencers ou afiliados?",
+        texto:
+          "As listas são formadas pelos usuários cadastrados com os perfis **Influencer** e **Afiliado**. Aguarde o término de **Carregando…**. Se aparecer **Membros indisponíveis**, recarregue a página; se o problema persistir, entre em contato com o suporte. Quando a permissão de Editar estiver limitada a **Próprios**, somente membros dentro do seu escopo aparecem.",
       },
       {
         subtitulo: "Quero remapear um link que já foi mapeado incorretamente?",

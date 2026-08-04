@@ -276,16 +276,6 @@ export default function RhSolicitacoesPage() {
               {RH_SOLICITACAO_TODOS_STATUS_LABEL}
             </FiltroBarPillButton>
 
-            {loading ? (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: t.textMuted }}>
-                <Loader2 size={12} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-                Carregando…
-              </span>
-            ) : null}
-          </div>
-
-          <div className="app-marketplace-filtro-minhas__cta">
-            <AjudaContextualAcoes pageKey="rh_solicitacoes" />
             <FiltroBarCampoSelect
               id="filtro-tipo-solicitacao"
               value={filtroTipo}
@@ -297,6 +287,17 @@ export default function RhSolicitacoesPage() {
               todasLabel="Todas Solicitações"
               minWidth={220}
             />
+
+            {loading ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: t.textMuted }}>
+                <Loader2 size={12} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+                Carregando…
+              </span>
+            ) : null}
+          </div>
+
+          <div className="app-marketplace-filtro-minhas__cta">
+            <AjudaContextualAcoes pageKey="rh_solicitacoes" />
           </div>
         </div>
       </div>

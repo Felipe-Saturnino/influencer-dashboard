@@ -10,7 +10,7 @@ import {
   primeiroDiaOfertavelIso,
   timeKeyFromOrgTimeNome,
   turnosOfertaveisNaFolgaMarketplace,
-  turnoRespeitaAntecedencia24h,
+  turnoRespeitaAntecedencia4h,
 } from "../../../src/lib/escalaMarketplace";
 
 const HORARIO_4X2 = { escala: "4x2", staff_turno: "Manhã", staff_horario_turno: null };
@@ -214,58 +214,62 @@ describe("primeiroDiaOfertavelIso", () => {
   });
 });
 
-describe("turnoRespeitaAntecedencia24h", () => {
-  // Operadora: Manhã 07:00 · Tarde 13:00 · Noite 19:00
-  const agora = new Date(2026, 6, 29, 20, 30); // 29/07 20:30
+describe("turnoRespeitaAntecedencia4h", () => {
+  // Operadora: Manhã 07:00 · Tarde 15:00 · Noite 19:00
+  const opExemplo = {
+    turno_manha_inicio: "07:00",
+    turno_tarde_inicio: "15:00",
+    turno_noite_inicio: "19:00",
+  };
 
-  it("permite Noite de amanhã quando o início fica a ≥24h", () => {
-    // 29/07 20:30 → 30/07 23:00 = 26h30 — usar operadora com noite 23:00
-    const opNoite23 = { ...OPERADORA, turno_noite_inicio: "23:00" };
+  it("às 6h bloqueia Manhã de hoje (7h) e permite Tarde (15h)", () => {
+    const agora = new Date(2026, 7, 3, 6, 0); // 03/08 06:00
     expect(
-      turnoRespeitaAntecedencia24h("2026-07-30", "Noite", HORARIO_4X2, opNoite23, agora),
+      turnoRespeitaAntecedencia4h("2026-08-03", "Manhã", HORARIO_4X2, opExemplo, agora),
+    ).toBe(false);
+    expect(
+      turnoRespeitaAntecedencia4h("2026-08-03", "Tarde", HORARIO_4X2, opExemplo, agora),
     ).toBe(true);
   });
 
-  it("bloqueia Manhã e Tarde de amanhã quando faltam 24h até o início", () => {
+  it("bloqueia turno com menos de 4h até o início", () => {
+    const agora = new Date(2026, 7, 3, 12, 0); // 03/08 12:00 → Tarde 15:00 = 3h
     expect(
-      turnoRespeitaAntecedencia24h("2026-07-30", "Manhã", HORARIO_4X2, OPERADORA, agora),
-    ).toBe(false);
-    expect(
-      turnoRespeitaAntecedencia24h("2026-07-30", "Tarde", HORARIO_4X2, OPERADORA, agora),
+      turnoRespeitaAntecedencia4h("2026-08-03", "Tarde", HORARIO_4X2, opExemplo, agora),
     ).toBe(false);
   });
 
-  it("bloqueia Noite de amanhã com início às 19:00 (só 22h30)", () => {
+  it("permite turno com exatamente 4h até o início", () => {
+    const agora = new Date(2026, 7, 3, 11, 0); // 03/08 11:00 → Tarde 15:00 = 4h
     expect(
-      turnoRespeitaAntecedencia24h("2026-07-30", "Noite", HORARIO_4X2, OPERADORA, agora),
-    ).toBe(false);
+      turnoRespeitaAntecedencia4h("2026-08-03", "Tarde", HORARIO_4X2, opExemplo, agora),
+    ).toBe(true);
   });
 });
 
 describe("diasOfertaveisMarketplace", () => {
-  const hoje = new Date(2026, 7, 10, 20, 30); // 10/08 20:30
+  const hoje = new Date(2026, 7, 10, 6, 0); // 10/08 06:00
   const opts = { hoje, horario: HORARIO_4X2, operadora: OPERADORA };
   const grade = new Map<string, string>([
-    ["2026-08-09", "MRN"],
-    ["2026-08-10", "AFT"],
-    ["2026-08-11", "NGT"], // 11/08 19:00 = 22h30 depois → fora
+    ["2026-08-10", "MRN"], // 07:00 — 1h → fora
+    ["2026-08-11", "NGT"], // 19:00 → ok
     ["2026-08-12", "Folga"],
     ["2026-08-13", "Venda"],
     ["2026-08-14", "MRN"],
     ["2026-08-15", "Compra - Tarde"],
   ]);
 
-  it("lista só dias escalados com início do turno a ≥24h", () => {
+  it("lista só dias escalados com início do turno a ≥4h", () => {
     const dias = diasOfertaveisMarketplace("venda_turno", grade, opts);
-    expect(dias.map((d) => d.iso)).toEqual(["2026-08-14", "2026-08-15"]);
-    expect(dias[0]!.turno).toBe("Manhã");
-    expect(dias[1]!.turno).toBe("Tarde");
-    expect(dias[0]!.label).toContain("14/08/2026");
+    expect(dias.map((d) => d.iso)).toEqual(["2026-08-11", "2026-08-14", "2026-08-15"]);
+    expect(dias[0]!.turno).toBe("Noite");
+    expect(dias[1]!.turno).toBe("Manhã");
+    expect(dias[2]!.turno).toBe("Tarde");
   });
 
-  it("descarta amanhã à noite quando faltam 24h até o início", () => {
+  it("descarta Manhã de hoje quando faltam 4h até o início", () => {
     const dias = diasOfertaveisMarketplace("venda_turno", grade, opts);
-    expect(dias.map((d) => d.iso)).not.toContain("2026-08-11");
+    expect(dias.map((d) => d.iso)).not.toContain("2026-08-10");
   });
 
   it("trata Venda como folga e exige ao menos um turno desejado elegível", () => {
@@ -276,18 +280,14 @@ describe("diasOfertaveisMarketplace", () => {
 
   it("trata Compra - Turno como escalado para oferta de troca", () => {
     const dias = diasOfertaveisMarketplace("oferta_troca", grade, opts);
-    expect(dias.map((d) => d.iso)).toEqual(["2026-08-14", "2026-08-15"]);
+    expect(dias.map((d) => d.iso)).toEqual(["2026-08-11", "2026-08-14", "2026-08-15"]);
     expect(dias.map((d) => d.iso)).not.toContain("2026-08-13");
   });
 
-  it("inclui Noite de amanhã quando o início respeita 24h", () => {
-    const opNoite23 = { ...OPERADORA, turno_noite_inicio: "23:00" };
-    const dias = diasOfertaveisMarketplace("venda_turno", grade, {
-      hoje,
-      horario: HORARIO_4X2,
-      operadora: opNoite23,
-    });
-    expect(dias.map((d) => d.iso)).toContain("2026-08-11");
+  it("inclui Tarde de hoje quando o início respeita 4h", () => {
+    const g = new Map<string, string>([["2026-08-10", "AFT"]]); // 13:00 — 7h depois das 06:00
+    const dias = diasOfertaveisMarketplace("venda_turno", g, opts);
+    expect(dias.map((d) => d.iso)).toContain("2026-08-10");
   });
 });
 
@@ -409,6 +409,10 @@ describe("mensagemErroOfertaMarketplace", () => {
       "Você já tem uma oferta aberta para este dia.",
     );
     expect(mensagemErroOfertaMarketplace("turno_diferente")).toContain("mesmo do seu turno");
+    expect(mensagemErroOfertaMarketplace("oferta_expirada")).toContain("menos de 2h");
+    expect(mensagemErroOfertaMarketplace("horario_turno_indisponivel")).toContain(
+      "horário de início",
+    );
   });
 
   it("usa mensagem genérica com fecho de suporte em código desconhecido", () => {

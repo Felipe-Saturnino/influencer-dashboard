@@ -1,3 +1,5 @@
+import { situacaoEhCompraMarketplace } from "./overviewPrestadorMovimentacoes";
+
 export type PresencaGestaoStatus = "aprovado" | "em_analise";
 
 export type PresencaHistoricoTipo = "aprovacao" | "justificativa" | "correcao";
@@ -721,9 +723,18 @@ export type PresencaKpiDiaInput = {
   situacao: string;
   status: string;
   temCheckIn: boolean;
+  /**
+   * Dia cuja célula (Venda ou `Compra - Turno`) veio de uma **Oferta de Troca**
+   * aceita no Marketplace. A grade e o Calendário continuam a mostrar Venda /
+   * Compra - Turno; só o KPI conta o dia como Troca.
+   */
+  origemTrocaMarketplace?: boolean;
 };
 
-/** KPIs do mês na aba Controle de Presença (staff + dias já resolvidos). */
+/**
+ * KPIs do mês na aba Controle de Presença (staff + dias já resolvidos).
+ * Cada dia entra em no máximo um dos cards Troca / Venda / Compra.
+ */
 export function computePresencaKpisConsolidados(dias: PresencaKpiDiaInput[]): PresencaKpisConsolidados {
   let escalados = 0;
   let trabalhados = 0;
@@ -738,9 +749,9 @@ export function computePresencaKpisConsolidados(dias: PresencaKpiDiaInput[]): Pr
       if (d.temCheckIn) trabalhados += 1;
     }
     if (d.status === "Falta") faltas += 1;
-    if (d.situacao === "Troca") trocas += 1;
-    if (d.situacao === "Venda") venda += 1;
-    if (d.situacao === "Compra") compra += 1;
+    if (d.origemTrocaMarketplace || d.situacao === "Troca") trocas += 1;
+    else if (d.situacao === "Venda") venda += 1;
+    else if (situacaoEhCompraMarketplace(d.situacao)) compra += 1;
   }
 
   return { escalados, trabalhados, faltas, trocas, venda, compra };

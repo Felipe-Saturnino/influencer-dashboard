@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -7,8 +8,8 @@ import { DashboardPageHeader } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
-import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { OverviewPrestadorAbaEscala } from "./OverviewPrestadorAbaEscala";
+import { OverviewPrestadorAbaKpisMesa } from "./OverviewPrestadorAbaKpisMesa";
 import { OverviewPrestadorFiltroBar } from "./OverviewPrestadorFiltroBar";
 import { useOverviewPrestadorDados, type OverviewPrestadorTab } from "./useOverviewPrestadorDados";
 
@@ -16,9 +17,20 @@ export default function OverviewPrestador() {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("dash_overview_prestador");
-  const [aba, setAba] = useRouteTab("dash_overview_prestador", "escala", ["escala", "performance"] as const);
+  const [aba, setAba] = useRouteTab("dash_overview_prestador", "escala", ["escala", "kpis_mesa"] as const);
 
   const dados = useOverviewPrestadorDados(perm.canView, perm.loading, user?.email);
+
+  const showAbaKpisMesa = dados.timeRotulo === "Game Presenter";
+
+  useEffect(() => {
+    if (!showAbaKpisMesa && aba === "kpis_mesa") setAba("escala");
+  }, [showAbaKpisMesa, aba, setAba]);
+
+  const staffNome = useMemo(() => {
+    if (!dados.staffSelecionadoId) return undefined;
+    return dados.staffMultiselectItems.find((x) => x.id === dados.staffSelecionadoId)?.name;
+  }, [dados.staffSelecionadoId, dados.staffMultiselectItems]);
 
   if (perm.loading) {
     return (
@@ -64,6 +76,7 @@ export default function OverviewPrestador() {
         t={t}
         aba={aba}
         onSelectAba={selecionarAba}
+        showAbaKpisMesa={showAbaKpisMesa}
         historico={dados.historico}
         onToggleHistorico={dados.toggleHistorico}
         labelCarrossel={labelCarrossel}
@@ -89,16 +102,24 @@ export default function OverviewPrestador() {
             metricasAnterior={dados.metricasAnterior}
             historico={dados.historico}
             loading={dados.isLoading}
-            staffSelecionado={Boolean(dados.staffSelecionadoId)}
+            prontoParaExibir={dados.prontoParaExibir}
+            visaoTime={dados.visaoTime}
+            caps={dados.caps}
+            pontosAtencao={dados.pontosAtencao}
+            coberturaPorTurno={dados.coberturaPorTurno}
+            coberturaPorEstudio={dados.coberturaPorEstudio}
+            distribuicaoEstudio={dados.distribuicaoEstudio}
           />
         )}
 
-        {aba === "performance" && (
-          <div style={getPageContentBoxStyle(brand, t)}>
-            <div style={{ padding: "48px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-              Conteúdo em desenvolvimento.
-            </div>
-          </div>
+        {aba === "kpis_mesa" && showAbaKpisMesa && (
+          <OverviewPrestadorAbaKpisMesa
+            funcionarioId={dados.staffSelecionadoId}
+            visaoTime={dados.visaoTime}
+            mesSelecionado={dados.mesSelecionado}
+            historico={dados.historico}
+            staffNome={staffNome}
+          />
         )}
       </div>
     </div>

@@ -72,10 +72,11 @@ export interface RelatorioDiretoriaData {
   posicionamento: PosicionamentoOperadora[]
 }
 
-const LOBBY_SLUGS = ['blaze', 'casa_apostas'] as const
+const LOBBY_SLUGS = ['blaze', 'casa_apostas', 'esportiva_bet'] as const
 const LOBBY_TITULOS: Record<string, string> = {
   blaze: 'Posição Atual das Mesas Blaze',
   casa_apostas: 'Posição Atual das Mesas Casa de Apostas',
+  esportiva_bet: 'Posição Atual das Mesas Esportiva Bet',
 }
 
 async function fetchAllPages<T>(

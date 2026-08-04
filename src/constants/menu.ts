@@ -1,5 +1,6 @@
 import { PageKey } from "../types";
 import {
+  AlertTriangle,
   Banknote,
   Bell,
   BookOpen,
@@ -129,6 +130,7 @@ export const MENU: MenuSection[] = [
       { key: "central_notificacoes", label: "Central de Notificações", icon: Bell },
       { key: "rh_figurinos", label: "Figurinos", icon: Shirt },
       { key: "roteiro_mesa", label: "Roteiro de Mesa", icon: Notebook },
+      { key: "incidentes", label: "Incidentes", icon: AlertTriangle },
     ],
   },
   {

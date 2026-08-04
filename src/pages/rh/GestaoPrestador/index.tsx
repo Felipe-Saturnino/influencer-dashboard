@@ -9,6 +9,7 @@ import {
   KeyRound,
   Landmark,
   Loader2,
+  Paperclip,
   UserCircle2,
   X,
 } from "lucide-react";
@@ -72,6 +73,7 @@ import {
 import { PrestadorAcessoPlataformaPanel } from "./PrestadorAcessoPlataformaPanel";
 import { PrestadorCarreiraVerPanel } from "./PrestadorCarreiraVerPanel";
 import { PrestadorDocumentosGestaoPanel } from "./PrestadorDocumentosGestaoPanel";
+import { CampoUploadArquivos, type CampoUploadArquivosTheme } from "../../../components/CampoUploadArquivos";
 import { ModalHistoricoPrestador } from "./ModalHistoricoPrestador";
 import { podeEnviarDocumentosGestaoPrestador } from "../../../lib/rhPrestadorDocumentosCadastro";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
@@ -137,6 +139,64 @@ import { PrestadorKpiResumo } from "./PrestadorKpiResumo";
 import { PrestadorFiltroBar } from "./PrestadorFiltroBar";
 import { PrestadorTabelaColaboradores } from "./PrestadorTabelaColaboradores";
 import { usePrestadorLista } from "./usePrestadorLista";
+
+function AnexosAcaoRhUpload({
+  id,
+  files,
+  onChange,
+  disabled,
+  t,
+}: {
+  id: string;
+  files: File[];
+  onChange: (files: File[]) => void;
+  disabled?: boolean;
+  t: CampoUploadArquivosTheme;
+}) {
+  return (
+    <CampoUploadArquivos
+      id={id}
+      label="Anexos"
+      buttonLabel="Adicionar anexos"
+      icon={Paperclip}
+      multiple
+      items={files.map((f, i) => ({ key: `${i}-${f.name}`, label: f.name, pendente: true }))}
+      onAdd={onChange}
+      onRemove={(key) => onChange(files.filter((f, i) => `${i}-${f.name}` !== key))}
+      disabled={disabled}
+      t={t}
+    />
+  );
+}
+
+function AnexoAnotacaoRhUpload({
+  id,
+  files,
+  onChange,
+  disabled,
+  t,
+}: {
+  id: string;
+  files: File[];
+  onChange: (files: File[]) => void;
+  disabled?: boolean;
+  t: CampoUploadArquivosTheme;
+}) {
+  return (
+    <CampoUploadArquivos
+      id={id}
+      label="Anexo"
+      buttonLabel="Adicionar anexo"
+      icon={Paperclip}
+      multiple={false}
+      items={files.map((f, i) => ({ key: `${i}-${f.name}`, label: f.name, pendente: true }))}
+      onAdd={onChange}
+      onRemove={(key) => onChange(files.filter((f, i) => `${i}-${f.name}` !== key))}
+      disabled={disabled}
+      t={t}
+    />
+  );
+}
 
 export default function RhPrestadoresPage() {
   const { theme: t, user } = useApp();
@@ -2695,17 +2755,13 @@ export default function RhPrestadoresPage() {
                   <textarea id="acao-obs" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
                 <div style={{ gridColumn: "1 / -1", marginBottom: 8 }}>
-                  <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos</label>
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
-                    style={{ fontSize: 12, width: "100%", color: t.textMuted }}
-                    aria-label="Anexos"
+                  <AnexosAcaoRhUpload
+                    id="acao-anexos-indisponibilidade"
+                    files={acaoFiles}
+                    onChange={setAcaoFiles}
+                    disabled={acaoSalvando}
+                    t={t}
                   />
-                  {acaoFiles.length > 0 ? (
-                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
-                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -2717,17 +2773,13 @@ export default function RhPrestadoresPage() {
                   <textarea id="acao-obs-r" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
                 <div style={{ marginBottom: 8 }}>
-                  <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos</label>
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
-                    style={{ fontSize: 12, width: "100%", color: t.textMuted }}
-                    aria-label="Anexos"
+                  <AnexosAcaoRhUpload
+                    id="acao-anexos-retorno"
+                    files={acaoFiles}
+                    onChange={setAcaoFiles}
+                    disabled={acaoSalvando}
+                    t={t}
                   />
-                  {acaoFiles.length > 0 ? (
-                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
-                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -2758,17 +2810,13 @@ export default function RhPrestadoresPage() {
                   <textarea id="acao-obs-t" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
                 <div style={{ gridColumn: "1 / -1", marginBottom: 8 }}>
-                  <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos</label>
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
-                    style={{ fontSize: 12, width: "100%", color: t.textMuted }}
-                    aria-label="Anexos"
+                  <AnexosAcaoRhUpload
+                    id="acao-anexos-termino"
+                    files={acaoFiles}
+                    onChange={setAcaoFiles}
+                    disabled={acaoSalvando}
+                    t={t}
                   />
-                  {acaoFiles.length > 0 ? (
-                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
-                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -2780,17 +2828,13 @@ export default function RhPrestadoresPage() {
                   <textarea id="acao-obs-a" value={acaoObs} onChange={(e) => setAcaoObs(e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                 </div>
                 <div style={{ marginBottom: 8 }}>
-                  <label style={{ fontSize: 12, color: t.textMuted, display: "block", marginBottom: 4 }}>Anexos</label>
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(e) => setAcaoFiles(Array.from(e.target.files ?? []))}
-                    style={{ fontSize: 12, width: "100%", color: t.textMuted }}
-                    aria-label="Anexos"
+                  <AnexosAcaoRhUpload
+                    id="acao-anexos-alinhamento"
+                    files={acaoFiles}
+                    onChange={setAcaoFiles}
+                    disabled={acaoSalvando}
+                    t={t}
                   />
-                  {acaoFiles.length > 0 ? (
-                    <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{acaoFiles.map((f) => f.name).join(", ")}</div>
-                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -3437,19 +3481,13 @@ export default function RhPrestadoresPage() {
               />
             </div>
             <div style={{ marginBottom: 8 }}>
-              <label htmlFor="an-anexo" style={{ display: "block", fontSize: 12, color: t.textMuted, marginBottom: 4, fontFamily: FONT.body }}>
-                Anexo
-              </label>
-              <input
+              <AnexoAnotacaoRhUpload
                 id="an-anexo"
-                type="file"
-                onChange={(e) => setAnFiles(Array.from(e.target.files ?? []))}
-                style={{ fontSize: 12, width: "100%", color: t.textMuted }}
-                aria-label="Anexo"
+                files={anFiles}
+                onChange={setAnFiles}
+                disabled={anSalvando}
+                t={t}
               />
-              {anFiles.length > 0 ? (
-                <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>{anFiles.map((f) => f.name).join(", ")}</div>
-              ) : null}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
               <button

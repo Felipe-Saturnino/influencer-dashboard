@@ -841,27 +841,31 @@ export default function RhDadosCadastroPage() {
           icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
           title={getPageMenuLabel("rh_dados_cadastro")}
           subtitle={pageSubtitle}
-          actions={<AjudaContextualAcoes pageKey="rh_dados_cadastro" />}
         />
         <div style={getPageFilterBoxStyle(brand, t)}>
-          <div style={getFilterBarRowStyle({ width: "100%" })}>
-            <FiltroCalendarioStaffSelect
-              mode="single"
-              selected={filterStaffId ? [filterStaffId] : []}
-              onChange={(ids) => setFilterStaffId(ids[0] ?? null)}
-              items={staffSelectItems}
-              disabled={loadingStaff || staffSelectItems.length === 0}
-            />
-            {meuPrestadorId ? (
-              <FiltroMeuCalendarioButton
-                active={meuCadastroAtivo}
-                onClick={() => setFilterStaffId(meuPrestadorId)}
-                ariaLabelActive="Mostrar lista completa de prestadores"
-                ariaLabelInactive="Filtrar cadastro apenas para o meu registro de prestador"
-              >
-                Meu Cadastro
-              </FiltroMeuCalendarioButton>
-            ) : null}
+          <div className="app-marketplace-filtro-minhas">
+            <div className="app-marketplace-filtro-minhas__centro" style={getFilterBarRowStyle({ width: "100%" })}>
+              <FiltroCalendarioStaffSelect
+                mode="single"
+                selected={filterStaffId ? [filterStaffId] : []}
+                onChange={(ids) => setFilterStaffId(ids[0] ?? null)}
+                items={staffSelectItems}
+                disabled={loadingStaff || staffSelectItems.length === 0}
+              />
+              {meuPrestadorId ? (
+                <FiltroMeuCalendarioButton
+                  active={meuCadastroAtivo}
+                  onClick={() => setFilterStaffId(meuPrestadorId)}
+                  ariaLabelActive="Mostrar lista completa de prestadores"
+                  ariaLabelInactive="Filtrar cadastro apenas para o meu registro de prestador"
+                >
+                  Meu Cadastro
+                </FiltroMeuCalendarioButton>
+              ) : null}
+            </div>
+            <div className="app-marketplace-filtro-minhas__cta">
+              <AjudaContextualAcoes pageKey="rh_dados_cadastro" />
+            </div>
           </div>
         </div>
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -980,7 +984,6 @@ export default function RhDadosCadastroPage() {
         icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
         title={getPageMenuLabel("rh_dados_cadastro")}
         subtitle={pageSubtitle}
-        actions={<AjudaContextualAcoes pageKey="rh_dados_cadastro" />}
       />
 
       {erroGlobal ? (
@@ -1217,24 +1220,29 @@ export default function RhDadosCadastroPage() {
 
       {vistaCompleta ? (
         <div style={{ ...getPageFilterBoxStyle(brand, t), marginBottom: PAGE_CONTENT_BOX_GAP }}>
-          <div style={getFilterBarRowStyle({ width: "100%" })}>
-            <FiltroCalendarioStaffSelect
-              mode="single"
-              selected={filterStaffId ? [filterStaffId] : []}
-              onChange={(ids) => setFilterStaffId(ids[0] ?? null)}
-              items={staffSelectItems}
-              disabled={loadingStaff || staffSelectItems.length === 0}
-            />
-            {meuPrestadorId ? (
-              <FiltroMeuCalendarioButton
-                active={meuCadastroAtivo}
-                onClick={() => setFilterStaffId(meuPrestadorId)}
-                ariaLabelActive="Mostrar lista completa de prestadores"
-                ariaLabelInactive="Filtrar cadastro apenas para o meu registro de prestador"
-              >
-                Meu Cadastro
-              </FiltroMeuCalendarioButton>
-            ) : null}
+          <div className="app-marketplace-filtro-minhas">
+            <div className="app-marketplace-filtro-minhas__centro" style={getFilterBarRowStyle({ width: "100%" })}>
+              <FiltroCalendarioStaffSelect
+                mode="single"
+                selected={filterStaffId ? [filterStaffId] : []}
+                onChange={(ids) => setFilterStaffId(ids[0] ?? null)}
+                items={staffSelectItems}
+                disabled={loadingStaff || staffSelectItems.length === 0}
+              />
+              {meuPrestadorId ? (
+                <FiltroMeuCalendarioButton
+                  active={meuCadastroAtivo}
+                  onClick={() => setFilterStaffId(meuPrestadorId)}
+                  ariaLabelActive="Mostrar lista completa de prestadores"
+                  ariaLabelInactive="Filtrar cadastro apenas para o meu registro de prestador"
+                >
+                  Meu Cadastro
+                </FiltroMeuCalendarioButton>
+              ) : null}
+            </div>
+            <div className="app-marketplace-filtro-minhas__cta">
+              <AjudaContextualAcoes pageKey="rh_dados_cadastro" />
+            </div>
           </div>
           {revisaoCadastralProximaNoticeRow}
           <div
@@ -1249,15 +1257,22 @@ export default function RhDadosCadastroPage() {
         </div>
       ) : (
         <div style={{ ...getPageFilterBoxStyle(brand, t), marginBottom: PAGE_CONTENT_BOX_GAP }}>
-          {revisaoCadastralProximaNoticeRow}
+          <div className="app-marketplace-filtro-minhas">
+            <div className="app-marketplace-filtro-minhas__centro">
+              {revisaoCadastralProximaNoticeRow}
+            </div>
+            <div className="app-marketplace-filtro-minhas__cta">
+              <AjudaContextualAcoes pageKey="rh_dados_cadastro" />
+            </div>
+          </div>
           <div
             role="tablist"
             aria-label="Seções do cadastro"
             className="app-cadastro-tabs-row"
             style={{
-              ...(revisaoCadastralProximaNotice
-                ? { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${t.cardBorder}` }
-                : {}),
+              paddingTop: 12,
+              marginTop: 12,
+              borderTop: `1px solid ${t.cardBorder}`,
               display: "flex",
               gap: 8,
               ...getFilterBarRowStyle(),

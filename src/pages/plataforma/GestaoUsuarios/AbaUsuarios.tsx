@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { KeyRound } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { KeyRound, Loader2, Pencil, UserCheck, UserX } from "lucide-react";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -12,8 +12,15 @@ import type { Role } from "../../../types";
 import { BRAND, roleLabel, roleBadgeColor, PRESTADOR_TIPOS, ROLES, type FiltroStatusUsuarios } from "./constants";
 import { ModalUsuario } from "./ModalUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
-import { AcaoCardSpinner, GestaoUsuariosLoading } from "./gestaoUsuariosUi";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
+import { SkeletonTableRow, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_USUARIOS } from "../../../lib/tablePagination";
 import type { ContagensFiltroUsuarios } from "./GestaoUsuariosFiltroBar";
 
 interface AbaUsuariosProps {
@@ -32,6 +39,19 @@ interface AbaUsuariosProps {
   onContagensChange: (c: ContagensFiltroUsuarios) => void;
 }
 
+type UsuariosSortCol = "nome" | "email" | "perfil" | "escopo" | "ultimoLogin";
+
+/** Linha da tabela — campos derivados calculados uma vez por usuário. */
+type LinhaUsuario = {
+  usuario: UsuarioCompleto;
+  ativo: boolean;
+  perfilLabel: string;
+  perfilCor: string;
+  escopoTexto: string;
+  ultimoLoginTexto: string;
+  ultimoLoginMs: number;
+};
+
 function formatarUltimoLogin(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
@@ -40,6 +60,27 @@ function formatarUltimoLogin(iso: string | null | undefined): string {
     return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   } catch {
     return "—";
+  }
+}
+
+function timestampUltimoLogin(iso: string | null | undefined): number {
+  if (!iso) return 0;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+function compararLinhasUsuario(a: LinhaUsuario, b: LinhaUsuario, col: UsuariosSortCol, dir: SortDir): number {
+  switch (col) {
+    case "nome":
+      return compareLocaleTexto(a.usuario.name ?? "", b.usuario.name ?? "", dir);
+    case "email":
+      return compareLocaleTexto(a.usuario.email ?? "", b.usuario.email ?? "", dir);
+    case "perfil":
+      return compareLocaleTexto(a.perfilLabel, b.perfilLabel, dir);
+    case "escopo":
+      return compareLocaleTexto(a.escopoTexto, b.escopoTexto, dir);
+    default:
+      return compareNumber(a.ultimoLoginMs, b.ultimoLoginMs, dir);
   }
 }
 
@@ -96,7 +137,13 @@ export function AbaUsuarios({
   onContagensChange,
 }: AbaUsuariosProps) {
   const { theme: t } = useApp();
+  const dataTable = useDataTableBlock();
   const [usuarios, setUsuarios] = useState<UsuarioCompleto[]>([]);
+  const [sortUsuarios, setSortUsuarios] = useState<{ col: UsuariosSortCol; dir: SortDir }>({
+    col: "ultimoLogin",
+    dir: "desc",
+  });
+  const [pagina, setPagina] = useState(0);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -107,7 +154,7 @@ export function AbaUsuarios({
   /** `${userId}:${action}` enquanto a Edge Function processa */
   const [acaoEmAndamento, setAcaoEmAndamento] = useState<string | null>(null);
 
-  const isCardBusy = (uid: string) => acaoEmAndamento?.startsWith(`${uid}:`) ?? false;
+  const isLinhaBusy = (uid: string) => acaoEmAndamento?.startsWith(`${uid}:`) ?? false;
   const isEstaAcao = (uid: string, action: string) => acaoEmAndamento === `${uid}:${action}`;
 
   const carregar = useCallback(async () => {
@@ -217,6 +264,38 @@ export function AbaUsuarios({
     [qtdAtivos, qtdDesativados, contagensPerfilKey, onContagensChange],
   );
 
+  const linhasOrdenadas = useMemo(() => {
+    const linhas: LinhaUsuario[] = usuariosListaFinal.map((u) => ({
+      usuario: u,
+      ativo: u.ativo !== false,
+      perfilLabel: roleLabel(u.role as Role),
+      perfilCor: roleBadgeColor(u.role as Role),
+      escopoTexto: formatarEscopo(u.scopes ?? [], operadoras) ?? "—",
+      ultimoLoginTexto: formatarUltimoLogin(u.last_sign_in_at),
+      ultimoLoginMs: timestampUltimoLogin(u.last_sign_in_at),
+    }));
+    return linhas.sort((a, b) => compararLinhasUsuario(a, b, sortUsuarios.col, sortUsuarios.dir));
+  }, [usuariosListaFinal, operadoras, sortUsuarios.col, sortUsuarios.dir]);
+
+  useEffect(() => {
+    setPagina(0);
+  }, [busca, filtroStatus, filtroPerfilSet, sortUsuarios.col, sortUsuarios.dir]);
+
+  const paginaSafe = clampPageIndex(pagina, linhasOrdenadas.length, TABELA_PAGE_SIZE_USUARIOS);
+  const linhasPagina = useMemo(
+    () => slicePage(linhasOrdenadas, paginaSafe, TABELA_PAGE_SIZE_USUARIOS),
+    [linhasOrdenadas, paginaSafe],
+  );
+
+  const onSortUsuarios = (col: UsuariosSortCol) => {
+    setSortUsuarios((prev) =>
+      prev.col === col ? { col, dir: prev.dir === "desc" ? "asc" : "desc" } : { col, dir: "desc" },
+    );
+  };
+
+  const mostrarAcoes = modoAdmin && (podeEditarUsuario || podeExcluirUsuario);
+  const colunasTabela = mostrarAcoes ? 6 : 5;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div
@@ -260,246 +339,236 @@ export function AbaUsuarios({
         </div>
       )}
 
-      {loading ? (
-        <GestaoUsuariosLoading />
-      ) : usuariosListaFinal.length === 0 ? (
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: t.textMuted,
-            fontSize: 14,
-            fontFamily: FONT.body,
-            border: `1px dashed ${t.cardBorder}`,
-            borderRadius: 14,
-          }}
-        >
-          {usuarios.length === 0 ? "Nenhum usuário cadastrado." : "Nenhum usuário corresponde aos filtros ou à busca."}
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))", gap: 16 }}>
-          {usuariosListaFinal.map((u: UsuarioCompleto) => {
-            const escopoTexto = formatarEscopo(u.scopes ?? [], operadoras);
-            const ativo = u.ativo !== false;
-            const corPerfil = roleBadgeColor(u.role as Role);
-            return (
-              <div
-                key={u.id}
-                style={{
-                  background: t.cardBg,
-                  border: `1px solid ${t.cardBorder}`,
-                  borderLeft: `3px solid ${corPerfil}`,
-                  borderRadius: 14,
-                  padding: 18,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                  opacity: ativo ? 1 : 0.75,
-                  boxShadow: t.isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)",
-                  transition: "box-shadow 0.18s",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <strong style={{ fontFamily: FONT.body, fontSize: 15, color: t.text, display: "block" }}>
-                      {u.name}
-                    </strong>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: t.textMuted,
-                        marginTop: 2,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        maxWidth: "100%",
+      <div>
+        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+          <table style={getDataTableStyle({ minWidth: 900 })}>
+            <caption style={{ display: "none" }}>Usuários da plataforma</caption>
+            <thead>
+              <tr>
+                <SortTableTh<UsuariosSortCol>
+                  label="Nome do Usuário"
+                  col="nome"
+                  sortCol={sortUsuarios.col}
+                  sortDir={sortUsuarios.dir}
+                  onSort={onSortUsuarios}
+                  thStyle={dataTable.thHeader}
+                  align="left"
+                />
+                <SortTableTh<UsuariosSortCol>
+                  label="E-mail"
+                  col="email"
+                  sortCol={sortUsuarios.col}
+                  sortDir={sortUsuarios.dir}
+                  onSort={onSortUsuarios}
+                  thStyle={dataTable.thHeader}
+                  align="left"
+                />
+                <SortTableTh<UsuariosSortCol>
+                  label="Perfil"
+                  col="perfil"
+                  sortCol={sortUsuarios.col}
+                  sortDir={sortUsuarios.dir}
+                  onSort={onSortUsuarios}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                <SortTableTh<UsuariosSortCol>
+                  label="Escopo"
+                  col="escopo"
+                  sortCol={sortUsuarios.col}
+                  sortDir={sortUsuarios.dir}
+                  onSort={onSortUsuarios}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                <SortTableTh<UsuariosSortCol>
+                  label="Último Login"
+                  col="ultimoLogin"
+                  sortCol={sortUsuarios.col}
+                  sortDir={sortUsuarios.dir}
+                  onSort={onSortUsuarios}
+                  thStyle={dataTable.thHeader}
+                  align="center"
+                />
+                {mostrarAcoes ? (
+                  <th scope="col" style={dataTable.thHeader}>
+                    Ações
+                  </th>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <>
+                  <SkeletonTableRow cols={colunasTabela} />
+                  <SkeletonTableRow cols={colunasTabela} />
+                  <SkeletonTableRow cols={colunasTabela} />
+                </>
+              ) : linhasOrdenadas.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={colunasTabela}
+                    style={{ ...dataTable.tdCenter, padding: "40px 16px", color: t.textMuted }}
+                  >
+                    {usuarios.length === 0
+                      ? "Nenhum usuário cadastrado."
+                      : "Nenhum usuário corresponde aos filtros ou à busca."}
+                  </td>
+                </tr>
+              ) : (
+                linhasPagina.map((linha, i) => {
+                  const u = linha.usuario;
+                  const zebraBg = dataTable.zebraRow(paginaSafe * TABELA_PAGE_SIZE_USUARIOS + i);
+                  const linhaBusy = isLinhaBusy(u.id);
+                  return (
+                    <tr
+                      key={u.id}
+                      style={{ background: zebraBg, opacity: linha.ativo ? 1 : 0.7 }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = t.isDark
+                          ? "rgba(255,255,255,0.04)"
+                          : "rgba(0,0,0,0.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = zebraBg;
                       }}
                     >
-                      {u.email}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      background: ativo ? "#22c55e22" : t.cardBorder,
-                      color: ativo ? BRAND.verde : t.textMuted,
-                      border: `1px solid ${ativo ? BRAND.verde : t.cardBorder}`,
-                      borderRadius: 20,
-                      padding: "3px 10px",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {ativo ? "Ativo" : "Desativado"}
-                  </span>
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                  <span
-                    style={{
-                      background: `${corPerfil}22`,
-                      color: corPerfil,
-                      border: `1px solid ${corPerfil}`,
-                      borderRadius: 20,
-                      padding: "3px 10px",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.3px",
-                    }}
-                  >
-                    {roleLabel(u.role as Role)}
-                  </span>
-                  {escopoTexto && <span style={{ fontSize: 12, color: t.textMuted }}>{escopoTexto}</span>}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: t.textMuted,
-                    fontFamily: FONT.body,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  <span style={{ fontWeight: 600, color: t.textMuted }}>Último login:</span>{" "}
-                  <span style={{ color: t.text }}>{formatarUltimoLogin(u.last_sign_in_at)}</span>
-                </div>
-                {modoAdmin && (podeEditarUsuario || podeExcluirUsuario) ? (
-                  <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>
-                    {podeEditarUsuario ? (
-                      <button
-                        type="button"
-                        disabled={isCardBusy(u.id)}
-                        onClick={() => abrirEditar(u)}
+                      <td style={{ ...dataTable.tdCenter, textAlign: "left", maxWidth: 240 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              minWidth: 0,
+                              flex: "1 1 auto",
+                            }}
+                            title={u.name}
+                          >
+                            {u.name}
+                          </span>
+                          {!linha.ativo ? (
+                            <span
+                              style={{
+                                flexShrink: 0,
+                                padding: "2px 8px",
+                                borderRadius: 999,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: t.textMuted,
+                                border: `1px solid ${t.cardBorder}`,
+                                background: t.inputBg,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              Desativado
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td
                         style={{
-                          background: `${BRAND.roxoVivo}12`,
-                          border: `1px solid ${BRAND.roxoVivo}44`,
-                          borderRadius: 8,
-                          padding: "6px 14px",
-                          cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
-                          opacity: isCardBusy(u.id) ? 0.55 : 1,
-                          fontFamily: FONT.body,
-                          fontSize: 12,
-                          color: BRAND.roxoVivo,
-                          fontWeight: 600,
-                          transition: "all 0.15s",
+                          ...dataTable.tdCenter,
+                          textAlign: "left",
+                          maxWidth: 240,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
-                        onMouseEnter={(e) => {
-                          if (isCardBusy(u.id)) return;
-                          e.currentTarget.style.background = `${BRAND.roxoVivo}22`;
-                          e.currentTarget.style.borderColor = BRAND.roxoVivo;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = `${BRAND.roxoVivo}12`;
-                          e.currentTarget.style.borderColor = `${BRAND.roxoVivo}44`;
-                        }}
+                        title={u.email}
                       >
-                        Editar
-                      </button>
-                    ) : null}
-                    {podeEditarUsuario ? (
-                      <button
-                        type="button"
-                        disabled={isCardBusy(u.id)}
-                        onClick={() => setModalResetSenha(u)}
+                        {u.email}
+                      </td>
+                      <td style={dataTable.tdCenter}>
+                        <span style={{ fontWeight: 700, color: linha.perfilCor }}>{linha.perfilLabel}</span>
+                      </td>
+                      <td
                         style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          background: `${BRAND.amarelo}18`,
-                          border: `1px solid ${BRAND.amarelo}`,
-                          borderRadius: 8,
-                          padding: "6px 14px",
-                          cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
-                          opacity: isCardBusy(u.id) ? 0.55 : 1,
-                          fontFamily: FONT.body,
-                          fontSize: 12,
-                          color: BRAND.amarelo,
-                          fontWeight: 600,
+                          ...dataTable.tdCenter,
+                          maxWidth: 220,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
+                        title={linha.escopoTexto !== "—" ? linha.escopoTexto : undefined}
                       >
-                        <KeyRound size={14} aria-hidden="true" />
-                        {isEstaAcao(u.id, "reset_senha") ? (
-                          <>
-                            <AcaoCardSpinner color={BRAND.amarelo} />
-                            Reset senha
-                          </>
-                        ) : (
-                          "Reset senha"
-                        )}
-                      </button>
-                    ) : null}
-                    {ativo && podeExcluirUsuario ? (
-                      <button
-                        type="button"
-                        disabled={isCardBusy(u.id)}
-                        onClick={() => setModalDesativar(u)}
-                        style={{
-                          background: "none",
-                          border: `1px solid ${BRAND.vermelho}`,
-                          borderRadius: 8,
-                          padding: "6px 14px",
-                          cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
-                          opacity: isCardBusy(u.id) ? 0.55 : 1,
-                          fontFamily: FONT.body,
-                          fontSize: 12,
-                          color: BRAND.vermelho,
-                          transition: "background 0.15s",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (isCardBusy(u.id)) return;
-                          e.currentTarget.style.background = `${BRAND.vermelho}18`;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "none";
-                        }}
-                      >
-                        {isEstaAcao(u.id, "desativar") ? (
-                          <>
-                            <AcaoCardSpinner color={BRAND.vermelho} />
-                            Desativar
-                          </>
-                        ) : (
-                          "Desativar"
-                        )}
-                      </button>
-                    ) : null}
-                    {!ativo && podeEditarUsuario ? (
-                      <button
-                        type="button"
-                        disabled={isCardBusy(u.id)}
-                        onClick={() => executarAcaoAdmin(u, "ativar")}
-                        style={{
-                          background: `${BRAND.verde}22`,
-                          border: `1px solid ${BRAND.verde}`,
-                          borderRadius: 8,
-                          padding: "6px 14px",
-                          cursor: isCardBusy(u.id) ? "not-allowed" : "pointer",
-                          opacity: isCardBusy(u.id) ? 0.55 : 1,
-                          fontFamily: FONT.body,
-                          fontSize: 12,
-                          color: BRAND.verde,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {isEstaAcao(u.id, "ativar") ? (
-                          <>
-                            <AcaoCardSpinner color={BRAND.verde} />
-                            Reativar
-                          </>
-                        ) : (
-                          "Reativar"
-                        )}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
+                        {linha.escopoTexto}
+                      </td>
+                      <td style={dataTable.tdCenter}>{linha.ultimoLoginTexto}</td>
+                      {mostrarAcoes ? (
+                        <td style={dataTable.tdCenter}>
+                          <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+                            {podeEditarUsuario ? (
+                              <BtnIconeAcaoLinha
+                                label={tooltipAcao("Editar Usuário")}
+                                disabled={linhaBusy}
+                                onClick={() => abrirEditar(u)}
+                              >
+                                <Pencil size={14} aria-hidden />
+                              </BtnIconeAcaoLinha>
+                            ) : null}
+                            {podeEditarUsuario ? (
+                              <BtnIconeAcaoLinha
+                                label={tooltipAcao("Redefinir Senha")}
+                                disabled={linhaBusy}
+                                onClick={() => setModalResetSenha(u)}
+                                style={{ color: BRAND.amarelo, borderColor: `${BRAND.amarelo}55` }}
+                              >
+                                {isEstaAcao(u.id, "reset_senha") ? (
+                                  <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                                ) : (
+                                  <KeyRound size={14} aria-hidden />
+                                )}
+                              </BtnIconeAcaoLinha>
+                            ) : null}
+                            {linha.ativo && podeExcluirUsuario ? (
+                              <BtnIconeAcaoLinha
+                                label={tooltipAcao("Desativar Usuário")}
+                                disabled={linhaBusy}
+                                onClick={() => setModalDesativar(u)}
+                                style={{ color: BRAND.vermelho, borderColor: `${BRAND.vermelho}55` }}
+                              >
+                                {isEstaAcao(u.id, "desativar") ? (
+                                  <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                                ) : (
+                                  <UserX size={14} aria-hidden />
+                                )}
+                              </BtnIconeAcaoLinha>
+                            ) : null}
+                            {!linha.ativo && podeEditarUsuario ? (
+                              <BtnIconeAcaoLinha
+                                label={tooltipAcao("Reativar Usuário")}
+                                disabled={linhaBusy}
+                                onClick={() => void executarAcaoAdmin(u, "ativar")}
+                                style={{ color: BRAND.verde, borderColor: `${BRAND.verde}55` }}
+                              >
+                                {isEstaAcao(u.id, "ativar") ? (
+                                  <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                                ) : (
+                                  <UserCheck size={14} aria-hidden />
+                                )}
+                              </BtnIconeAcaoLinha>
+                            ) : null}
+                          </div>
+                        </td>
+                      ) : null}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+        {!loading && linhasOrdenadas.length > 0 ? (
+          <TabelaPaginacaoBar
+            t={t}
+            page={paginaSafe}
+            pageSize={TABELA_PAGE_SIZE_USUARIOS}
+            totalItems={linhasOrdenadas.length}
+            onPageChange={setPagina}
+          />
+        ) : null}
+      </div>
 
       {modoAdmin && podeExcluirUsuario && modalDesativar && (
         <ModalConfirmDelete

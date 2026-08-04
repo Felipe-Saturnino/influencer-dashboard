@@ -704,6 +704,25 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "PDF com código de barras e informações da peça gerado no cadastro ou nos detalhes. Serve para identificação física e bipagem com câmera ou leitor externo.",
         referencia: "Figurinos",
       },
+      {
+        termo: "Protocolo de Incidente",
+        definicao:
+          "Código único gerado automaticamente para cada incidente registrado na página Incidentes — identifica o registro em conversas com a operadora e no histórico do estúdio.",
+        referencia: "Incidentes",
+      },
+      {
+        termo: "Incidente",
+        definicao:
+          "Ocorrência registrada sobre um erro de mesa (ou caso avulso) cometido por Game Presenter ou Shuffler durante uma rodada. Classificado em cinco categorias — Caso, Oculto, Não Avisado, Avisado/Resolvido e Avisado/Não Resolvido — conforme a gravidade e o desfecho.",
+        nota: "Erros Avisado/Resolvido e Avisado/Não Resolvido também registram se ocorreram Em Mesa ou Fora da Mesa (aplicável apenas ao Shuffler).",
+        referencia: "Incidentes",
+      },
+      {
+        termo: "Local do Shoe",
+        definicao:
+          "Indica se o erro do Shuffler ocorreu Em Jogo (durante a rodada, com o shoe em mesa) ou Fora de Jogo (na preparação do shoe antes de entrar em mesa). Aplicável apenas a incidentes de Shuffler.",
+        referencia: "Incidentes",
+      },
     ],
   },
   {
@@ -911,7 +930,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Overview Prestador",
         definicao:
-          "Dashboard analítico de escala, presença, absenteísmo e movimentações de turno por prestador — KPIs MTD, gráficos de aproveitamento e detalhamento diário de ocorrências (troca, atestado, atraso, esquecimento, compra e venda).",
+          "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio. No Game Presenter, a aba **KPIs de Mesa** mostra Rodadas, Dealing, Reaction e cooperação na mesa.",
+        referencia: "Overview Prestador",
+      },
+      {
+        termo: "KPIs de Mesa",
+        definicao:
+          "Indicadores do Game Presenter na mesa: Rodadas; Dealing/Reaction por Blackjack, Baccarat e Futebol Brasileiro; Bola e Cilindro na Roleta; e total de Incidentes (página Incidentes). Inclui Por Jogo e Detalhamento Diário com Casos, Erros e Graves. Fonte operacional: Grafana/ClickHouse + registro de incidentes do estúdio.",
         referencia: "Overview Prestador",
       },
       {
@@ -1091,7 +1116,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Sync manual",
         definicao:
-          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico. Lobby Blaze e Lobby CDA rodam por job automatizado e não têm essa ação.",
+          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico. Lobby Blaze, Lobby CDA e Lobby Esportiva Bet rodam por job automatizado e não têm essa ação.",
         referencia: "Status Técnico",
       },
       {
@@ -1366,7 +1391,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   midias_sociais: ["dash_midias_sociais"],
   afiliados: ["afiliados", "afiliados_network", "dash_afiliados", "dash_overview_afiliado"],
   financeiro_operacional: ["financeiro", "banca_jogo"],
-  estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa"],
+  estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa", "incidentes"],
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
   comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
   customer_success: ["cs_atendimento"],

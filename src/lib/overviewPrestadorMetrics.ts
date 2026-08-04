@@ -7,6 +7,15 @@ import {
 } from "./rhCalendarioPresencaGestao";
 import type { RhFuncionario } from "../types/rhFuncionario";
 import {
+  chaveMovimentacaoCelula,
+  formatarDetalheMovimentacao,
+  movimentacaoEhFolgaVendida,
+  movimentacaoEhTroca,
+  movimentacaoEhTurnoVendido,
+  situacaoEhCompraMarketplace,
+  type OverviewPrestadorMovimentacaoCelula,
+} from "./overviewPrestadorMovimentacoes";
+import {
   diasDoMesRef,
   duracaoMinutosEntreTimestampsIso,
   duracaoMinutosRelogioHHMM,
@@ -37,6 +46,10 @@ export type OverviewPrestadorDetalheLinha = {
   dataIso: string;
   ocorrencia: OverviewPrestadorOcorrencia;
   detalhe: string;
+  /** Preenchido na visão de time. */
+  prestadorId?: string;
+  prestadorNome?: string;
+  timeRotulo?: string;
 };
 
 export type OverviewPrestadorMetricas = {
@@ -50,8 +63,10 @@ export type OverviewPrestadorMetricas = {
   checkOutNaoRegistrado: number;
   diasAtestado: number;
   trocas: number;
-  vendas: number;
-  compras: number;
+  /** Ofertas venda_turno — célula Venda (sem espelhar a Compra). */
+  turnosVendidos: number;
+  /** Ofertas venda_folga — célula Venda do interessado (sem espelhar a Compra). */
+  folgasVendidas: number;
   detalhamento: OverviewPrestadorDetalheLinha[];
 };
 
@@ -66,8 +81,8 @@ export const OVERVIEW_PRESTADOR_METRICAS_ZERO: OverviewPrestadorMetricas = {
   checkOutNaoRegistrado: 0,
   diasAtestado: 0,
   trocas: 0,
-  vendas: 0,
-  compras: 0,
+  turnosVendidos: 0,
+  folgasVendidas: 0,
   detalhamento: [],
 };
 
@@ -78,6 +93,8 @@ export type CalcularMetricasPrestadorInput = {
   gradeRows: RpcGradeCalendarioRow[];
   pontoRows: RpcPontoMesRow[];
   presencaGestao: Map<string, PresencaDiaGestao>;
+  /** Snapshot Marketplace (contraparte) — chave `funcionarioId|YYYY-MM-DD`. */
+  movimentacoes?: Map<string, OverviewPrestadorMovimentacaoCelula>;
   periodoInicio: string;
   periodoFim: string;
   /** Meses a iterar (ano, mes0) — ex.: mês do carrossel ou todos no histórico. */
@@ -137,6 +154,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
     gradeRows,
     pontoRows,
     presencaGestao,
+    movimentacoes,
     periodoInicio,
     periodoFim,
     mesesRef,
@@ -156,8 +174,8 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
   let checkOutNaoRegistrado = 0;
   let diasAtestado = 0;
   let trocas = 0;
-  let vendas = 0;
-  let compras = 0;
+  let turnosVendidos = 0;
+  let folgasVendidas = 0;
 
   for (const { ano, mes } of mesesRef) {
     for (const dia of diasDoMesRef(ano, mes)) {
@@ -166,6 +184,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
 
       const valorG = primeiroValorGradeDiaParaPrestador(gradeRows, funcionarioId, iso, prestador);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
+      const snapMov = movimentacoes?.get(chaveMovimentacaoCelula(funcionarioId, iso));
       const esc = obterEntradaSaidaEscaladasPrestadorDia(
         prestador,
         valorG,
@@ -196,17 +215,44 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
         gestao,
       });
 
-      if (situacao === "Troca") {
+      const ehVenda = situacao === "Venda";
+      const ehCompra = situacaoEhCompraMarketplace(situacao);
+      const ehTroca = situacao === "Troca" || ((ehVenda || ehCompra) && movimentacaoEhTroca(snapMov));
+      if (ehTroca) {
         trocas += 1;
-        detalhamento.push({ dataIso: iso, ocorrencia: "Troca", detalhe: "—" });
-      }
-      if (situacao === "Venda") {
-        vendas += 1;
-        detalhamento.push({ dataIso: iso, ocorrencia: "Venda", detalhe: "—" });
-      }
-      if (situacao === "Compra") {
-        compras += 1;
-        detalhamento.push({ dataIso: iso, ocorrencia: "Compra", detalhe: "—" });
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Troca",
+          detalhe: formatarDetalheMovimentacao("Troca", snapMov),
+        });
+      } else if (movimentacaoEhTurnoVendido(situacao, snapMov)) {
+        turnosVendidos += 1;
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Venda",
+          detalhe: formatarDetalheMovimentacao("Venda", snapMov),
+        });
+      } else if (movimentacaoEhFolgaVendida(situacao, snapMov)) {
+        folgasVendidas += 1;
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Venda",
+          detalhe: formatarDetalheMovimentacao("Folga Vendida", snapMov),
+        });
+      } else if (ehCompra) {
+        // Compra espelha a venda — não entra no gráfico; mantém no Detalhamento.
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Compra",
+          detalhe: formatarDetalheMovimentacao("Compra", snapMov),
+        });
+      } else if (ehVenda) {
+        turnosVendidos += 1;
+        detalhamento.push({
+          dataIso: iso,
+          ocorrencia: "Venda",
+          detalhe: formatarDetalheMovimentacao("Venda", snapMov),
+        });
       }
 
       const just = gestao?.justificativa;
@@ -313,8 +359,91 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
     checkOutNaoRegistrado,
     diasAtestado,
     trocas,
-    vendas,
-    compras,
+    turnosVendidos,
+    folgasVendidas,
     detalhamento,
   };
 }
+
+export function somarMetricasPrestador(
+  partes: OverviewPrestadorMetricas[],
+): OverviewPrestadorMetricas {
+  const out: OverviewPrestadorMetricas = { ...OVERVIEW_PRESTADOR_METRICAS_ZERO, detalhamento: [] };
+  for (const m of partes) {
+    out.diasEscalado += m.diasEscalado;
+    out.diasRealizado += m.diasRealizado;
+    out.horasEscaladasMin += m.horasEscaladasMin;
+    out.horasRealizadasMin += m.horasRealizadasMin;
+    out.entradasAtrasadas += m.entradasAtrasadas;
+    out.saidasAntecipadas += m.saidasAntecipadas;
+    out.checkInNaoRegistrado += m.checkInNaoRegistrado;
+    out.checkOutNaoRegistrado += m.checkOutNaoRegistrado;
+    out.diasAtestado += m.diasAtestado;
+    out.trocas += m.trocas;
+    out.turnosVendidos += m.turnosVendidos;
+    out.folgasVendidas += m.folgasVendidas;
+    out.detalhamento.push(...m.detalhamento);
+  }
+  out.detalhamento.sort((a, b) => b.dataIso.localeCompare(a.dataIso));
+  return out;
+}
+
+export type OverviewPrestadorAtencaoLinha = {
+  prestadorId: string;
+  nome: string;
+  timeRotulo: string;
+  presencaPct: number | null;
+  atrasos: number;
+  pontoIncompleto: number;
+  atestadoDias: number;
+  severidade: "alta" | "media" | "ok";
+};
+
+export function severidadeAtencaoPrestador(m: OverviewPrestadorMetricas): "alta" | "media" | "ok" {
+  const presenca =
+    m.diasEscalado > 0 ? (m.diasRealizado / m.diasEscalado) * 100 : null;
+  const ocorrencias =
+    m.entradasAtrasadas +
+    m.saidasAntecipadas +
+    m.checkInNaoRegistrado +
+    m.checkOutNaoRegistrado +
+    (m.diasAtestado > 0 ? 1 : 0);
+  if (presenca != null && presenca < 90) return "alta";
+  if (ocorrencias >= 3) return "media";
+  return "ok";
+}
+
+export function montarLinhaAtencao(
+  prestadorId: string,
+  nome: string,
+  timeRotulo: string,
+  m: OverviewPrestadorMetricas,
+): OverviewPrestadorAtencaoLinha {
+  const presencaPct =
+    m.diasEscalado > 0 ? Math.round((m.diasRealizado / m.diasEscalado) * 1000) / 10 : null;
+  return {
+    prestadorId,
+    nome,
+    timeRotulo,
+    presencaPct,
+    atrasos: m.entradasAtrasadas + m.saidasAntecipadas,
+    pontoIncompleto: m.checkInNaoRegistrado + m.checkOutNaoRegistrado,
+    atestadoDias: m.diasAtestado,
+    severidade: severidadeAtencaoPrestador(m),
+  };
+}
+
+export type OverviewPrestadorCoberturaLinha = {
+  chave: string;
+  label: string;
+  prestadores: number;
+  jornadasEscaladas: number;
+  jornadasRealizadas: number;
+  movimentacoes: number;
+};
+
+export type OverviewPrestadorEstudioFatia = {
+  slug: string;
+  label: string;
+  dias: number;
+};

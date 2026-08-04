@@ -715,35 +715,41 @@ export default function EscalaSolicitacoesPage() {
       />
 
       <div style={getFilterBarWrapperStyle(brand, t)}>
+        <div style={filterBarSection(false)} role="group" aria-label="Período, tipo de ação, time e staff">
+          {blocoFiltrosLinha1}
+        </div>
+        <div style={filterBarSection(true)}>
           <div className="app-filter-bar-tabs-cta">
             <span className="app-filter-bar-tabs-cta__spacer" aria-hidden />
-            <div className="app-filter-bar-tabs-cta__tabs" style={{ ...filterBarSection(false), width: "auto" }}>
-              {blocoFiltrosLinha1}
+            <div
+              className="app-filter-bar-tabs-cta__tabs"
+              role="tablist"
+              aria-label="Estado das solicitações"
+            >
+              <FiltroBarTabButton
+                id="tab-sol-aberto"
+                active={aba === "aberto"}
+                aria-controls="panel-sol-aberto"
+                onClick={() => setAba("aberto")}
+                icon={<Inbox size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+              >
+                Solicitações em Aberto
+              </FiltroBarTabButton>
+              <FiltroBarTabButton
+                id="tab-sol-arq"
+                active={aba === "arquivadas"}
+                aria-controls="panel-sol-arq"
+                onClick={() => setAba("arquivadas")}
+                icon={<Archive size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+              >
+                Solicitações Arquivadas
+              </FiltroBarTabButton>
             </div>
             <div className="app-filter-bar-tabs-cta__actions">
               <AjudaContextualAcoes pageKey="escala_solicitacoes" />
             </div>
           </div>
-          <div role="tablist" aria-label="Estado das solicitações" style={filterBarSection(true)}>
-            <FiltroBarTabButton
-              id="tab-sol-aberto"
-              active={aba === "aberto"}
-              aria-controls="panel-sol-aberto"
-              onClick={() => setAba("aberto")}
-              icon={<Inbox size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-            >
-              Solicitações em Aberto
-            </FiltroBarTabButton>
-            <FiltroBarTabButton
-              id="tab-sol-arq"
-              active={aba === "arquivadas"}
-              aria-controls="panel-sol-arq"
-              onClick={() => setAba("arquivadas")}
-              icon={<Archive size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-            >
-              Solicitações Arquivadas
-            </FiltroBarTabButton>
-          </div>
+        </div>
       </div>
 
       {aba === "aberto" && (

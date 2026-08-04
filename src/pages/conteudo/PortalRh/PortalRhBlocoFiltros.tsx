@@ -67,33 +67,38 @@ export function PortalRhBlocoFiltros({
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
       {/* Linha 1 — carrossel de mês + Histórico */}
-      <div style={LINHA_FILTRO}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <button
-            type="button"
-            aria-label="Mês anterior"
-            disabled={carouselPrimeiro || carrosselBloqueado}
-            onClick={() => onIdxMesChange((i) => Math.max(0, i - 1))}
-            style={getCarouselBtnNavStyle(t, carouselPrimeiro || carrosselBloqueado)}
-          >
-            <ChevronLeft size={14} aria-hidden="true" />
-          </button>
-          <span style={getCarouselPeriodLabelStyle(t)}>{labelCarrossel}</span>
-          <button
-            type="button"
-            aria-label="Próximo mês"
-            disabled={carouselUltimo || carrosselBloqueado}
-            onClick={() => onIdxMesChange((i) => Math.min(meses.length - 1, i + 1))}
-            style={getCarouselBtnNavStyle(t, carouselUltimo || carrosselBloqueado)}
-          >
-            <ChevronRight size={14} aria-hidden="true" />
-          </button>
+      <div className="app-marketplace-filtro-minhas">
+        <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+        <div className="app-marketplace-filtro-minhas__centro" style={LINHA_FILTRO}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <button
+              type="button"
+              aria-label="Mês anterior"
+              disabled={carouselPrimeiro || carrosselBloqueado}
+              onClick={() => onIdxMesChange((i) => Math.max(0, i - 1))}
+              style={getCarouselBtnNavStyle(t, carouselPrimeiro || carrosselBloqueado)}
+            >
+              <ChevronLeft size={14} aria-hidden="true" />
+            </button>
+            <span style={getCarouselPeriodLabelStyle(t)}>{labelCarrossel}</span>
+            <button
+              type="button"
+              aria-label="Próximo mês"
+              disabled={carouselUltimo || carrosselBloqueado}
+              onClick={() => onIdxMesChange((i) => Math.min(meses.length - 1, i + 1))}
+              style={getCarouselBtnNavStyle(t, carouselUltimo || carrosselBloqueado)}
+            >
+              <ChevronRight size={14} aria-hidden="true" />
+            </button>
+          </div>
+          <FiltroHistoricoButton
+            active={modoHistorico}
+            onClick={() => onModoHistoricoChange(!modoHistorico)}
+          />
         </div>
-
-        <FiltroHistoricoButton
-          active={modoHistorico}
-          onClick={() => onModoHistoricoChange(!modoHistorico)}
-        />
+        <div className="app-marketplace-filtro-minhas__cta">
+          <AjudaContextualAcoes pageKey="rh_portal" />
+        </div>
       </div>
 
       {/* Linha 2 — abas da página */}
@@ -120,7 +125,6 @@ export function PortalRhBlocoFiltros({
             wrapperStyle={{ width: "100%" }}
           />
         </div>
-        <AjudaContextualAcoes pageKey="rh_portal" />
         {linhaSubabas ? (
           <div
             style={{

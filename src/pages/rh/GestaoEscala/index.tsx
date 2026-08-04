@@ -230,6 +230,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       setAbasTimes(abas);
       setFiltroArea((prev) => {
         if (abas.some((a) => a.areaKey === prev)) return prev;
+        if (modo === "estudio" && abas.some((a) => a.areaKey === DEFAULT_AREA_ESCALA)) {
+          return DEFAULT_AREA_ESCALA;
+        }
         if (abas[0]) return abas[0].areaKey;
         return modo === "estudio" ? DEFAULT_AREA_ESCALA : prev;
       });
@@ -1684,10 +1687,6 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               ) : null}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flexShrink: 0 }}>
-              <AjudaContextualAcoes
-                pageKey={pageKey}
-                tutorial={modo === "escritorio" ? null : TUTORIAL_ALTERAR_ESCALA}
-              />
               <button
                 type="button"
                 onClick={() => setHistoricoModalAberto(true)}
@@ -1711,50 +1710,51 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           </div>
 
           {mostrarFiltroArea ? (
-            <div
-              role="group"
-              aria-label="Área (time)"
-              style={{
-                marginTop: 14,
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                width: "100%",
-              }}
-            >
-              {abasTimes.map((aba) => {
-                const key = aba.areaKey;
-                const ativo = filtroArea === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    aria-pressed={ativo}
-                    onClick={() => setFiltroArea(key)}
-                    style={{
-                      padding: "10px 14px",
-                      minHeight: 44,
-                      borderRadius: 10,
-                      fontWeight: 700,
-                      fontFamily: FONT.body,
-                      fontSize: 12,
-                      cursor: "pointer",
-                      border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
-                      background: ativo
-                        ? brand.useBrand
-                          ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
-                          : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
-                        : (t.inputBg ?? t.cardBg ?? "transparent"),
-                      color: ativo ? brand.accent : t.textMuted,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {labelAreaEscala(key, abasTimes)}
-                  </button>
-                );
-              })}
+            <div className="app-filter-bar-tabs-cta" style={{ marginTop: 14 }}>
+              <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+              <div
+                role="group"
+                aria-label="Área (time)"
+                className="app-filter-bar-tabs-cta__tabs"
+              >
+                {abasTimes.map((aba) => {
+                  const key = aba.areaKey;
+                  const ativo = filtroArea === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={ativo}
+                      onClick={() => setFiltroArea(key)}
+                      style={{
+                        padding: "10px 14px",
+                        minHeight: 44,
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontFamily: FONT.body,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        border: `1px solid ${ativo ? brand.accent : t.cardBorder}`,
+                        background: ativo
+                          ? brand.useBrand
+                            ? "color-mix(in srgb, var(--brand-contrast, #1e36f8) 15%, transparent)"
+                            : "color-mix(in srgb, var(--brand-action, #7c3aed) 15%, transparent)"
+                          : (t.inputBg ?? t.cardBg ?? "transparent"),
+                        color: ativo ? brand.accent : t.textMuted,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {labelAreaEscala(key, abasTimes)}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="app-filter-bar-tabs-cta__actions">
+                <AjudaContextualAcoes
+                  pageKey={pageKey}
+                  tutorial={modo === "escritorio" ? null : TUTORIAL_ALTERAR_ESCALA}
+                />
+              </div>
             </div>
           ) : null}
       </div>

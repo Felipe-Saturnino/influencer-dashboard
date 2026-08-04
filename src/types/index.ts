@@ -72,6 +72,7 @@ export type PageKey =
   | "central_notificacoes"
   | "status_tecnico"
   | "roteiro_mesa"
+  | "incidentes"
   | "playbook_influencers"
   | "links_materiais"
   | "spin_na_rede"

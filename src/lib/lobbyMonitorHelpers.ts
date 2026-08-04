@@ -47,7 +47,8 @@ export interface LobbyExecucaoRow {
 
 export interface ConcorrenteLobby {
   posicao: number;
-  game_id: number;
+  /** Numérico (Blaze/CDA) ou string (Esportiva / GG Labs, ex. good-game-v2:…). */
+  game_id: number | string;
   name: string;
   slug: string;
   provider_name: string;
@@ -752,14 +753,14 @@ export function concorrentesPorJogoDetalhe(posicoes: LobbyPosicaoRow[]): {
   max: number;
   jogos: ConcorrenteLobby[];
 }[] {
-  const byJogo = new Map<string, { qtdMax: number; jogos: Map<number, ConcorrenteLobby> }>();
+  const byJogo = new Map<string, { qtdMax: number; jogos: Map<string, ConcorrenteLobby> }>();
   for (const p of posicoes) {
     const j = labelTipoJogo(p.tipo_jogo, p.nome_mesa);
     if (!byJogo.has(j)) byJogo.set(j, { qtdMax: 0, jogos: new Map() });
     const b = byJogo.get(j)!;
     b.qtdMax = Math.max(b.qtdMax, p.qtd_concorrentes_a_frente ?? 0);
     for (const c of p.concorrentes_a_frente ?? []) {
-      b.jogos.set(c.game_id, c);
+      b.jogos.set(String(c.game_id), c);
     }
   }
   let maxQ = 1;
@@ -779,12 +780,13 @@ export function concorrentesPorJogoDetalhe(posicoes: LobbyPosicaoRow[]): {
  * Não usa `jogos_a_frente_pior_mesa` (só a pior mesa / vitrine).
  */
 export function rankingConcorrentesFromPosicoes(posicoes: LobbyPosicaoRow[]): ConcorrenteLobby[] {
-  const byId = new Map<number, ConcorrenteLobby>();
+  const byId = new Map<string, ConcorrenteLobby>();
   for (const p of posicoes) {
     for (const c of p.concorrentes_a_frente ?? []) {
-      const prev = byId.get(c.game_id);
+      const key = String(c.game_id);
+      const prev = byId.get(key);
       if (!prev || c.posicao < prev.posicao) {
-        byId.set(c.game_id, c);
+        byId.set(key, c);
       }
     }
   }

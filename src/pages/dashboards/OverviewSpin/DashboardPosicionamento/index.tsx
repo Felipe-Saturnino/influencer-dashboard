@@ -397,6 +397,7 @@ function DashboardPosicionamentoTodas({
 }) {
   const blaze = useLobbyPosicionamentoData("blaze", refDate, { historico: false });
   const cda = useLobbyPosicionamentoData("casa_apostas", refDate, { historico: false });
+  const esportiva = useLobbyPosicionamentoData("esportiva_bet", refDate, { historico: false });
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -404,12 +405,16 @@ function DashboardPosicionamentoTodas({
         ...a,
         texto: `${slugToNome(slug)} — ${a.texto}`,
       }));
-    return [...prefix("blaze", blaze.alertas), ...prefix("casa_apostas", cda.alertas)];
-  }, [blaze.alertas, cda.alertas, slugToNome]);
+    return [
+      ...prefix("blaze", blaze.alertas),
+      ...prefix("casa_apostas", cda.alertas),
+      ...prefix("esportiva_bet", esportiva.alertas),
+    ];
+  }, [blaze.alertas, cda.alertas, esportiva.alertas, slugToNome]);
 
   return (
     <>
-      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
+      <div className="app-grid-3" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
           titulo={`Posição atual das Mesas ${slugToNome("blaze")}`}
           loading={blaze.loading}
@@ -426,6 +431,15 @@ function DashboardPosicionamentoTodas({
           mesasOrdenadas={cda.mesasOrdenadas}
           prevMap={cda.prevMap}
           ultimaExecutadoEm={cda.ultimaNoDia?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Posição atual das Mesas ${slugToNome("esportiva_bet")}`}
+          loading={esportiva.loading}
+          semDados={esportiva.semDados}
+          mesasOrdenadas={esportiva.mesasOrdenadas}
+          prevMap={esportiva.prevMap}
+          ultimaExecutadoEm={esportiva.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
       </div>

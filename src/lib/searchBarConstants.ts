@@ -36,4 +36,5 @@ export const PAGE_SEARCH = {
   pipelineAgregadoras: `Buscar por nome ou site${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   integracao: `Buscar por operador, caminho ou PAM${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   utmSource: `Buscar por UTM Source${SEARCH_PLACEHOLDER_ELLIPSIS}`,
+  incidentes: `Buscar por protocolo, prestador ou mesa${SEARCH_PLACEHOLDER_ELLIPSIS}`,
 } as const;

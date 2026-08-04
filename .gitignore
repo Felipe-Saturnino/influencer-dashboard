@@ -9,6 +9,8 @@ build/
 .env
 .env.local
 .env.*.local
+.env.gp-kpi
+.env.monitor-cda
 
 # OAuth / Google (client secret — não versionar)
 client_secret*.json
@@ -32,6 +34,9 @@ coverage/
 # TypeScript / Vite cache
 *.tsbuildinfo
 .vite/
+
+# Extrações locais (dumps de dados intermediários)
+tmp/
 
 # Ferramentas locais
 .turbo/

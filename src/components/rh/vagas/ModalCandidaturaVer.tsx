@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { ClipboardList, GitBranch, Loader2, StickyNote } from "lucide-react";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../dashboard";
 import { useApp } from "../../../context/AppContext";
@@ -25,6 +25,7 @@ import {
 } from "../../../lib/rhVagasFormat";
 import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow } from "../../../types/rhVagaCandidatura";
 import type { RhVagaTipo } from "../../../types/rhVaga";
+import { CampoUploadArquivos } from "../../CampoUploadArquivos";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
 
 type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; cardBg?: string; isDark?: boolean };
@@ -73,7 +74,6 @@ export function ModalCandidaturaVer({
 }) {
   const brand = useDashboardBrand();
   const { user } = useApp();
-  const inputAnexoRef = useRef<HTMLInputElement>(null);
 
   const [c, setC] = useState<RhVagaCandidaturaRow | null>(null);
   const [loading, setLoading] = useState(false);
@@ -202,10 +202,10 @@ export function ModalCandidaturaVer({
     onAtualizado();
   }
 
-  async function enviarAnexos(files: FileList | null) {
-    if (!c || !user?.id || !podeEditar || !files?.length) return;
+  async function enviarAnexos(files: File[]) {
+    if (!c || !user?.id || !podeEditar || !files.length) return;
     setSalvandoAnotacao(true);
-    for (const file of [...files]) {
+    for (const file of files) {
       const up = await uploadAnexoCandidaturaVaga(c.funcionario_id, c.vaga_id, file);
       if (!up.ok) {
         setErro(up.message);
@@ -228,7 +228,6 @@ export function ModalCandidaturaVer({
       }
     }
     setSalvandoAnotacao(false);
-    if (inputAnexoRef.current) inputAnexoRef.current.value = "";
     void carregarAnotacoes();
     onAtualizado();
   }
@@ -487,15 +486,20 @@ export function ModalCandidaturaVer({
                   >
                     Salvar
                   </button>
-                  <input
-                    ref={inputAnexoRef}
-                    type="file"
-                    multiple
-                    disabled={salvandoAnotacao}
-                    onChange={(e) => void enviarAnexos(e.target.files)}
-                    style={{ ...inputStyle, padding: 8, marginBottom: 16 }}
-                    aria-label="Enviar arquivos"
-                  />
+                  <div style={{ marginBottom: 16 }}>
+                    <CampoUploadArquivos
+                      id="cand-anot-anexo"
+                      label="Anexos"
+                      buttonLabel="Enviar arquivos"
+                      multiple
+                      showList={false}
+                      items={[]}
+                      onAdd={(files) => void enviarAnexos(files)}
+                      onRemove={() => {}}
+                      disabled={salvandoAnotacao}
+                      t={t}
+                    />
+                  </div>
                 </>
               ) : null}
               <div style={{ fontSize: 12, fontWeight: 700, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>Trilha</div>

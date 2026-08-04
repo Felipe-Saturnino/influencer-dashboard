@@ -203,37 +203,42 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos prestadores do estúdio. A página tem duas abas — Escala (disponível) e Performance (em desenvolvimento) — e reutiliza os mesmos dados de grade e ponto do Calendário RH.",
+          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos times de estúdio. A aba **Escala** está disponível para todos os times; a aba **KPIs de Mesa** aparece somente com o filtro Time em **Game Presenter** e mostra a performance operacional do GP na mesa (visão individual nesta versão).",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de agosto/2026 — início oficial da escala). O botão Histórico exibe o acumulado das competências disponíveis desde agosto, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo (Shift Leader, RH, gestores): filtro **Time** (todos os times por padrão) e filtro **Staff** (todos os prestadores). Quando um time específico está selecionado, a lista de Staff mostra apenas prestadores daquele time.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.\n\nGestores devem selecionar um prestador no filtro Staff para carregar os blocos da aba Escala. Enquanto nenhum prestador estiver selecionado, a mensagem exibida é \"Selecione um prestador para visualizar os resultados.\"",
+          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional na Escala: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual. Em **KPIs de Mesa**, selecione um Game Presenter no Staff para ver os indicadores.\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
       },
       {
-        subtitulo: "Aba Escala — KPIs Consolidados",
+        subtitulo: "Visão de time vs individual",
         texto:
-          "Quatro cards com comparativo MTD ao mesmo intervalo do mês anterior (subtítulo \"acumulado\" no Histórico, sem MoM):\n\n— Dias Escalado: dias em que o prestador constava na grade de escala.\n— Dias Realizado: dias com presença registrada conforme regras do Calendário.\n— Horas Escaladas e Horas Realizadas: totais de horas no período, no formato HH:MM.",
+          "Na visão de time a unidade dos KPIs é **jornada** (prestador × dia escalado). Na visão individual a unidade volta a ser **dia**. Times Game Presenter e Shuffler têm movimentações de turno (Marketplace); Shift Leader e Service Manager usam dois turnos (Diurno/Noturno) e não exibem o bloco de movimentações. Cobertura por estúdio e Distribuição por estúdio existem apenas para Game Presenter.",
       },
       {
-        subtitulo: "Absenteísmo",
+        subtitulo: "Aba Escala — Resumo e aderência",
         texto:
-          "Três cards complementares:\n\n— Pontualidade: soma de entradas atrasadas e saídas antecipadas em relação ao horário escalado, com detalhamento abaixo.\n— Ponto não Registrado: check-in e/ou check-out não registrados pelo prestador (com justificativa), com detalhamento por tipo.\n— Atestados: total de dias de atestado médico no período.",
+          "Quatro cards com o **mês civil completo** (não só até hoje) e comparativo ao mês anterior inteiro (sem MoM no Histórico): jornadas/dias e horas escaladas vs realizadas — alinhados à Escala Estúdio do período.\n\nEm seguida, Aderência (time) ou Absenteísmo (individual): Presença (só no time), Pontualidade, **Controle de Presença** (check-in/check-out não registrados) e Atestados.",
       },
       {
-        subtitulo: "Aproveitamento e Movimentações",
+        subtitulo: "Aproveitamento, movimentações e estúdio",
         texto:
-          "Dois gráficos de barras lado a lado comparam dias e horas escalados vs realizados.\n\nO gráfico de pizza **Movimentações de turno** agrupa trocas realizadas, turnos vendidos e turnos comprados no período.",
+          "O bloco Aproveitamento compara escalado vs realizado em barras.\n\nQuando o time negocia turno, o gráfico **Movimentações de turno** agrupa **Trocas realizadas**, **Turnos vendidos** e **Folgas vendidas** (sem contar a compra, que espelha a venda). Uma troca aceita muda dois dias na escala e conta como troca. No Game Presenter individual, **Distribuição por estúdio** aparece ao lado das movimentações (dias realizados por estúdio). No Game Presenter time, há ainda **Cobertura por turno**, **Cobertura por estúdio** e **Pontos de atenção**.",
+      },
+      {
+        subtitulo: "Como ler as coberturas",
+        texto:
+          "Nas tabelas **Cobertura por turno** e **Cobertura por estúdio**, a coluna **Prestadores** conta pessoas distintas com jornada no período — quem apenas trocou o dia entra em Movimentações, sem ocupar vaga do turno. Um prestador que assume um turno comprado fora do seu turno habitual aparece nos dois turnos, por isso a soma das linhas pode passar do Total, que é sempre a contagem de pessoas distintas. Só a escala do time selecionado entra na conta: dias em treinamento ou em outra área não contam.",
       },
       {
         subtitulo: "Detalhamento Diário",
         texto:
-          "Tabela com colunas Data, Ocorrência e Detalhe. Ocorrências possíveis: Troca, Atestado, Atraso, Esquecimento, Compra e Venda.\n\nO detalhe varia por tipo (contraparte em troca/compra/venda, dias de atestado, minutos de atraso, check-in/out esquecido). Estado vazio de dados: \"Sem dados para o período selecionado.\"",
+          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time). Ocorrências: Troca, Atestado, Atraso, Esquecimento, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
       },
       {
-        subtitulo: "Aba Performance",
+        subtitulo: "Aba KPIs de Mesa",
         texto:
-          "Conteúdo em desenvolvimento — será liberado em versão futura.",
+          "Visível apenas com Time = Game Presenter. Escolha um prestador no filtro Staff (ou use a visão próprios) para ver os cards: Rodadas; Blackjack, Baccarat e Futebol Brasileiro (cada um com Dealing e Reaction); Roleta (Bola e Cilindro — cooperação de velocidade e de roda); e Incidentes (total no período, a partir da página Incidentes). Comparativo MTD ao mês anterior fica desligado no Histórico.\n\n**Por Jogo** detalha as mesmas métricas por tipo de jogo, com a coluna Incidentes. O **Detalhamento Diário** lista Data, Rodadas, Total de Incidentes, Casos, Erros e Graves (Oculto + Não Avisado + Avisado/Resolvido + Avisado/Não Resolvido). Sem Staff selecionado (visão de time), a aba pede para escolher um Game Presenter. Sem linhas no período: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -722,17 +727,51 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  incidentes: {
+    titulo: "Incidentes",
+    blocos: [
+      {
+        texto:
+          "Registre e acompanhe erros de mesa cometidos por Game Presenter ou Shuffler no período — de casos avulsos a erros que geraram (ou não) aviso à operadora e resolução do jogo. Cada registro recebe um protocolo único, mesa, prestador envolvido, tipo de erro (conforme o jogo), resolução aplicada e, quando necessário, anexos de evidência.",
+      },
+      {
+        subtitulo: "Categorias de incidente",
+        texto:
+          "— **Caso**: ocorrência avulsa registrada para acompanhamento, sem necessariamente ser um erro técnico.\n— **Oculto**: erro identificado mas não visível ao jogador nem à operadora.\n— **Não Avisado**: erro ocorreu e a operadora não foi avisada a tempo.\n— **Avisado/Resolvido**: erro avisado à operadora e o jogo foi corrigido ou seguiu válido.\n— **Avisado/Não Resolvido**: erro avisado à operadora, mas sem resolução (jogo cancelado ou encerrado incorretamente).\n\nPara os erros **Avisado/Resolvido** e **Avisado/Não Resolvido**, o painel de KPIs também mostra quantos ocorreram **Em Mesa** (durante o jogo) ou **Fora da Mesa** — essa distinção só existe para Shuffler.",
+      },
+      {
+        subtitulo: "Filtros e KPIs",
+        texto:
+          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período), o filtro de **Estúdio** e os cinco cards de KPI (um por categoria) resumem a quantidade de incidentes do período e do escopo selecionado, comparando com o mês anterior.\n\nAs abas **Todos Times / Game Presenters / Shuffler** e o filtro de **Staff** restringem a lista e os KPIs a um time ou prestador específico. Usuários com permissão de Ver = Próprios não veem essas abas — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca localiza incidentes por protocolo, prestador ou mesa.",
+      },
+      {
+        subtitulo: "Registrar um incidente",
+        texto:
+          "Clique em **Novo Incidente** e informe: time (Game Presenter ou Shuffler), mesa, ID e horário da rodada, prestador envolvido, categoria e tipo do incidente (a lista de tipos muda conforme o jogo da mesa), local do erro (só para Shuffler — Em Jogo ou Fora de Jogo), resolução aplicada, se houve necessidade de payout e uma descrição do ocorrido. É possível anexar arquivos de evidência (tamanho máximo de 10 MB por arquivo).",
+      },
+      {
+        subtitulo: "Consultar um incidente",
+        texto:
+          "Clique no ícone de olho na linha da tabela para abrir os detalhes completos: dados da rodada, prestador, relator, resolução, payout, descrição e anexos (com link para abrir cada arquivo).",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "O acesso é definido em Gestão de Usuários → Permissões para a página Incidentes:\n— **Ver = Sim**: consulta todos os incidentes do escopo.\n— **Ver = Próprios**: consulta apenas os incidentes em que o prestador está envolvido (sem colunas de Prestador, Time e Relator).\n— **Editar = Sim**: exibe o botão **Novo Incidente**.\n\nSem Editar, a página fica em modo consulta.",
+      },
+    ],
+  },
   rh_gestao_escala: {
     titulo: "Escala Estúdio",
     blocos: [
       {
         texto:
-          "Monta e mantém a escala operacional do **estúdio** por área (time ou gerência sem times), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio. As abas seguem o Organograma: times com prestadores de Estúdio e **gerências sem times ativos** (pessoas vinculadas só à gerência). A aba **Academy** reúne **Performance Coach** e **Treinamento**.",
+          "Monta e mantém a escala operacional do **estúdio** por área (time ou gerência sem times), colaborador e dia do mês. Inclui grade diária, sugestão automática, aprovação e registro de alterações conforme permissões de Criar e Editar. O motor da página é o mesmo da **Escala Escritório** (menu RH), com modo Estúdio. As abas de time seguem esta ordem e abrem em **Game Presenter** por padrão: Game Presenter, Shuffler, Shift Leader, Service Manager e **Academy** (Performance Coach + Treinamento). Também entram gerências sem times ativos (pessoas vinculadas só à gerência).",
       },
       {
         subtitulo: "Fluxo da escala",
         texto:
-          "Selecione time (ou gerência sem times) e mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Service Manager, Shift Leader e Shuffler; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. **Compra** e **Venda** não aparecem nas opções manuais: esses estados são preenchidos exclusivamente pela automação do Marketplace. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
+          "A página abre na aba **Game Presenter**. Selecione o time (ou gerência sem times) e o mês no carrossel. O filtro **Estúdios** fica em **Todos Estúdios** nas áreas Shuffler, Shift Leader, Service Manager e Academy; só na aba **Game Presenter** é possível escolher um estúdio específico ou **Nenhum**. Use **Sugestão de Escala** ou preencha as células manualmente — na primeira alteração manual o botão de sugestão some e passam a aparecer **Salvar Alterações**, **Aprovar Escala** e **Nova Escala**. **Compra** e **Venda** não aparecem nas opções manuais: esses estados são preenchidos exclusivamente pela automação do Marketplace. Após salvar, qualquer nova edição na grade faz **Salvar Alterações** reaparecer.\n\nAo **aprovar**, o turno de cada prestador (e o horário cadastrado na Staff) fica **congelado** para aquele mês/área: mudar o turno depois na Gestão de Staff **não** altera a coluna Turno nem o calendário daquele mês aprovado. Com a escala aprovada, **Alterar Escala** (permissão de Editar) permite mudar o status **e o turno do dia** (Manhã, Tarde ou Noite) a partir de hoje, com observação obrigatória — a mudança aparece no Calendário e na Rotação. Na Escala Diária, dias de trabalho aparecem como **Manhã**, **Tarde** ou **Noite**. Prestadores enxergam a escala publicada no Calendário e no Overview Prestador, dentro do escopo liberado.",
       },
       {
         subtitulo: "Baixar Excel",
@@ -789,7 +828,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Check-in e Check-out",
         texto:
-          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. O vínculo do login com o cadastro RH e a conexão à rede Spin Colaboradores continuam obrigatórios.\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.",
+          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. O vínculo do login com o cadastro RH e a conexão à rede Spin Gaming continuam obrigatórios.\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.",
+      },
+      {
+        subtitulo: "Cards de Escalados, Trocas, Venda e Compra",
+        texto:
+          "Na aba **Controle de Presença**, os quatro cards somam **dias** do mês do carrossel para o prestador filtrado.\n\n**Trocas** conta os dias que vieram de uma **Oferta de Troca** aceita no Marketplace. Na Escala e no Calendário esses dias continuam a aparecer como **Venda** (o dia que você entregou) e **Compra - Turno** (o dia que você assumiu) — o card apenas reconhece a origem da negociação, então uma troca aparece como dois dias. Uma **Troca** lançada manualmente na Escala também entra aqui.\n\n**Venda** e **Compra** contam os dias das negociações de venda: cada dia entra em um único card, nunca em dois.",
       },
       {
         subtitulo: "Escritório e Horário Comercial",
@@ -808,22 +852,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Ponta única onde os prestadores de estúdio negociam turnos: **Venda de Turno**, **Venda de Folga** e **Oferta de Troca**. A aba **Todas as Ofertas** mostra o mural do período. Com **Ver: Próprios** há ainda **Minhas Ofertas** (o que você publicou e o que aceitou). Com **Ver: Sim** (gestão), no lugar de Minhas Ofertas aparece **Ofertas Encerradas**, com o histórico de aceites e cancelamentos de todos os prestadores. Vendas têm aceite imediato; na **Oferta de Troca**, o aceitante envia uma proposta e a escala só muda após o ofertante original aprovar — sem aprovação de gestor.",
+          "Ponta única onde os prestadores de estúdio negociam turnos: **Venda de Turno**, **Venda de Folga** e **Oferta de Troca**. A aba **Todas as Ofertas** mostra o mural do período em três blocos — **Ofertas de Turno**, **Ofertas de Folga** e **Ofertas de Troca** — com a **Observação** de quem publicou em cada linha. Com **Ver: Próprios** há ainda **Minhas Ofertas** (o que você publicou e o que aceitou). Com **Ver: Sim** (gestão), no lugar de Minhas Ofertas aparece **Ofertas Encerradas**, com o histórico de aceites e cancelamentos de todos os prestadores. Vendas têm aceite imediato; na **Oferta de Troca**, o aceitante envia uma proposta e a escala só muda após o ofertante original aprovar — sem aprovação de gestor.",
       },
       {
         subtitulo: "O que você vê",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter** e **Shuffler**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha.",
+          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter** e **Shuffler**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha. Na aba **Todas as Ofertas** há ainda o filtro de dia (**Todos os Dias**), que lista somente os dias com oferta no período — com mais de cinco dias, o painel do filtro abre com pesquisa.",
       },
       {
         subtitulo: "Publicar uma oferta",
         texto:
-          "Com permissão de **Criar**, use **Nova Oferta**, à direita das abas. Os dias listados vêm de **todas** as competências com escala **aprovada** (não só o mês do carrossel) e exigem pelo menos **24h até o início do turno** ofertado ou desejado — ex.: às 20h30, a Noite de amanhã (início 23h) pode entrar; Manhã ou Tarde de amanhã não. **Venda de Turno** e **Oferta de Troca** listam dias em que você está escalado originalmente ou com **Compra - Turno**; **Venda de Folga** lista Folga e dias com **Venda** — nesse caso você se oferece para trabalhar e escolhe o turno (também filtrado pelas 24h e pelas 12h de intervalo). Só é possível ter uma oferta aberta por dia. Enquanto ninguém aceitar, você pode cancelar em Minhas Ofertas.",
+          "Com permissão de **Criar**, use **Nova Oferta**, à direita das abas. Os dias listados vêm de **todas** as competências com escala **aprovada** (não só o mês do carrossel) e exigem pelo menos **4h até o início do turno** ofertado ou desejado — ex.: às 6h, a Manhã de hoje (início 7h) não entra; a Tarde (início 15h) pode. **Venda de Turno** e **Oferta de Troca** listam dias em que você está escalado originalmente ou com **Compra - Turno**; **Venda de Folga** lista Folga e dias com **Venda** — nesse caso você se oferece para trabalhar e escolhe o turno (também filtrado pelas 4h e pelas 12h de intervalo). Em Venda de Turno e Venda de Folga você pode **marcar vários dias de uma vez**: cada dia marcado gera uma oferta independente no mural, com a mesma observação, e na Venda de Folga o turno é escolhido dia a dia. A **Oferta de Troca** continua com um dia por oferta, porque quem aceita escolhe o dia que entrega em troca. Só é possível ter uma oferta aberta por dia. Enquanto ninguém aceitar, você pode cancelar em Minhas Ofertas.",
       },
       {
         subtitulo: "Aceitar uma oferta",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
+          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. Se o aceite — ou a aprovação final da troca — não for concluído, a oferta é **cancelada automaticamente quando faltam menos de 2h para o início do turno**, liberando as reservas sem alterar a escala. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
         },
       {
         subtitulo: "Intervalo mínimo de 12h",
@@ -1585,7 +1629,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Usuários",
         texto:
-          "Lista todos os usuários cadastrados. Permite buscar por nome ou e-mail, filtrar por status (Ativo / Desativado) e por perfil. Administradores podem criar novos usuários, editar dados e escopos, redefinir senhas para o padrão e desativar acessos.",
+          "Lista todos os usuários cadastrados em uma tabela com as colunas Nome do Usuário, E-mail, Perfil, Escopo, Último Login e Ações. Clique no título de qualquer coluna para reordenar — a lista abre pelo login mais recente. Usuários desativados aparecem com a etiqueta Desativado ao lado do nome.\n\nPermite buscar por nome ou e-mail, filtrar por status (Ativo / Desativado) e por perfil. Administradores podem criar novos usuários e, na coluna Ações, editar dados e escopos (lápis), redefinir a senha para a padrão (chave), desativar o acesso ou reativar um usuário desativado.",
       },
       {
         subtitulo: "Aba Permissões",

@@ -3,12 +3,9 @@ import { supabase } from "../../../lib/supabase";
 import { fetchTurnosPorOperadoraSlugs } from "../../../lib/turnosDealers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
-  CALENDARIO_TIMES_FILTRO_ORDEM,
-  normalizarNomeCalFiltro,
   normalizarSelecaoUnica,
   prestadorAtendeFiltroTime,
   timeRowPorRotuloCanonica,
-  TREINAMENTO_FILTRO_ID,
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
 import {
@@ -17,16 +14,34 @@ import {
   type MesCarrosselEscalaEntry,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
 import {
-  getPeriodoComparativoMoM,
+  getPeriodoComparativoMesCompleto,
   HISTORICO_COMPETENCIAS_MESES,
 } from "../../../lib/dashboardHelpers";
 import type { PresencaDiaGestao } from "../../../lib/rhCalendarioPresencaGestao";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import {
   calcularMetricasPrestadorPeriodo,
+  montarLinhaAtencao,
   OVERVIEW_PRESTADOR_METRICAS_ZERO,
+  somarMetricasPrestador,
+  type OverviewPrestadorAtencaoLinha,
+  type OverviewPrestadorCoberturaLinha,
+  type OverviewPrestadorEstudioFatia,
   type OverviewPrestadorMetricas,
 } from "../../../lib/overviewPrestadorMetrics";
+import {
+  calcularCoberturaPrestadorPeriodo,
+  calcularDistribuicaoEstudioIndividual,
+} from "../../../lib/overviewPrestadorCobertura";
+import {
+  areaKeyGradeDoTime,
+  areaKeyGradeDoTimeId,
+  capsOverviewPrestadorTime,
+  OVERVIEW_PRESTADOR_TIME_DEFAULT,
+  OVERVIEW_PRESTADOR_TIMES_ORDEM,
+  rotuloTimeFromNomeOrganograma,
+  type OverviewPrestadorTimeRotulo,
+} from "../../../lib/overviewPrestadorTeamConfig";
 import {
   refMesPrimeiroDiaISO,
   type OpTurnosHorarioPick,
@@ -35,11 +50,29 @@ import {
 } from "../../../lib/overviewPrestadorCalendarioHelpers";
 import {
   fetchOverviewPrestadorGradeMes,
+  fetchOverviewPrestadorMovimentacoesMes,
   fetchOverviewPrestadorPontoMes,
   fetchOverviewPrestadorPresencaMes,
 } from "./overviewPrestadorQueries";
+import type { OverviewPrestadorMovimentacaoCelula } from "../../../lib/overviewPrestadorMovimentacoes";
 
-export type OverviewPrestadorTab = "escala" | "performance";
+export type OverviewPrestadorTab = "escala" | "kpis_mesa";
+
+const CONCURRENCY_STAFF = 4;
+
+async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  if (items.length === 0) return [];
+  const out: R[] = new Array(items.length);
+  let idx = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (idx < items.length) {
+      const i = idx++;
+      out[i] = await fn(items[i]!);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
 
 export function useOverviewPrestadorDados(
   permCanView: "sim" | "proprios" | "nao" | null,
@@ -58,17 +91,19 @@ export function useOverviewPrestadorDados(
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
-  const [treinamentoGerenciaId, setTreinamentoGerenciaId] = useState<string | null>(null);
-  const [treinamentoTimeIdsList, setTreinamentoTimeIdsList] = useState<string[]>([]);
   const [rawGradeRows, setRawGradeRows] = useState<RpcGradeCalendarioRow[]>([]);
-  const [pontoMesLinhas, setPontoMesLinhas] = useState<RpcPontoMesRow[]>([]);
+  const [pontoPorChave, setPontoPorChave] = useState<Map<string, RpcPontoMesRow>>(() => new Map());
   const [presencaGestaoPorChave, setPresencaGestaoPorChave] = useState<Map<string, PresencaDiaGestao>>(
     () => new Map(),
   );
+  const [movimentacoesPorChave, setMovimentacoesPorChave] = useState<
+    Map<string, OverviewPrestadorMovimentacaoCelula>
+  >(() => new Map());
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosHorarioPick>>(() => new Map());
+  const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
+  const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
   const [loadingGrade, setLoadingGrade] = useState(false);
-  const [loadingPonto, setLoadingPonto] = useState(false);
-  const [loadingPresenca, setLoadingPresenca] = useState(false);
+  const [loadingStaffDados, setLoadingStaffDados] = useState(false);
 
   const mesSelecionado: MesCarrosselEscalaEntry | undefined = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes <= 0;
@@ -106,7 +141,6 @@ export function useOverviewPrestadorDados(
       return;
     }
     if (soProprios) {
-      setTimes([]);
       return;
     }
     setLoadingStaff(true);
@@ -118,6 +152,7 @@ export function useOverviewPrestadorDados(
     if (!userEmail?.trim()) {
       setPrestadores([]);
       setMeuRhFuncionarioId(null);
+      setTimes([]);
       setLoadingStaff(false);
       return;
     }
@@ -129,9 +164,28 @@ export function useOverviewPrestadorDados(
       if (row) {
         setPrestadores([row]);
         setMeuRhFuncionarioId(row.id);
+        const timeId = (row.org_time_id ?? "").trim();
+        if (timeId) {
+          const { data: trow } = await supabase
+            .from("rh_org_times")
+            .select("id, nome, gerencia_id")
+            .eq("id", timeId)
+            .maybeSingle();
+          if (!cancelled && trow) {
+            setTimes([
+              {
+                id: String((trow as { id: string }).id),
+                nome: String((trow as { nome: string }).nome ?? ""),
+                gerencia_id: String((trow as { gerencia_id: string }).gerencia_id ?? ""),
+                gerencia_nome: "",
+              },
+            ]);
+          } else if (!cancelled) setTimes([]);
+        } else if (!cancelled) setTimes([]);
       } else {
         setPrestadores([]);
         setMeuRhFuncionarioId(null);
+        setTimes([]);
       }
       setLoadingStaff(false);
     })();
@@ -144,76 +198,30 @@ export function useOverviewPrestadorDados(
     if (permLoading || permCanView === "nao" || soProprios) return;
     let cancelled = false;
     void (async () => {
-      const { data, error } = await supabase
-        .from("rh_org_gerencias")
-        .select("id, nome")
-        .eq("status", "ativo")
-        .ilike("nome", "%treinamento%");
-      if (cancelled) return;
-      if (error || !data?.length) {
-        setTreinamentoGerenciaId(null);
+      const idsStaff = times.map((x) => x.id);
+      if (idsStaff.length === 0) {
+        if (!cancelled) setPrestadores([]);
         return;
       }
-      const exato = data.find((r: { nome: string }) => normalizarNomeCalFiltro(r.nome) === "treinamento");
-      setTreinamentoGerenciaId(exato?.id ?? data[0]!.id);
+      const { data, error } = await supabase
+        .from("rh_funcionarios")
+        .select("*")
+        .in("org_time_id", idsStaff)
+        .in("status", ["ativo", "indisponivel"])
+        .order("nome", { ascending: true });
+      if (cancelled) return;
+      if (error) {
+        setPrestadores([]);
+        return;
+      }
+      setPrestadores(
+        [...(data ?? [])].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")) as RhFuncionario[],
+      );
     })();
     return () => {
       cancelled = true;
     };
-  }, [permLoading, permCanView, soProprios]);
-
-  useEffect(() => {
-    if (permLoading || permCanView === "nao" || soProprios) return;
-    let cancelled = false;
-    void (async () => {
-      const idsStaff = times.map((x) => x.id);
-      const merged = new Map<string, RhFuncionario>();
-
-      if (idsStaff.length > 0) {
-        const { data, error } = await supabase
-          .from("rh_funcionarios")
-          .select("*")
-          .in("org_time_id", idsStaff)
-          .in("status", ["ativo", "indisponivel"])
-          .order("nome", { ascending: true });
-        if (!cancelled && !error) (data ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
-      }
-
-      if (treinamentoGerenciaId) {
-        const { data: tt } = await supabase
-          .from("rh_org_times")
-          .select("id")
-          .eq("gerencia_id", treinamentoGerenciaId)
-          .eq("status", "ativo");
-        const ttIdsLocal = (tt ?? []).map((r: { id: string }) => r.id);
-        if (!cancelled) setTreinamentoTimeIdsList(ttIdsLocal);
-
-        let q = supabase
-          .from("rh_funcionarios")
-          .select("*")
-          .in("status", ["ativo", "indisponivel"])
-          .order("nome", { ascending: true });
-        if (ttIdsLocal.length > 0) {
-          q = q.or(`org_gerencia_id.eq.${treinamentoGerenciaId},org_time_id.in.(${ttIdsLocal.join(",")})`);
-        } else {
-          q = q.eq("org_gerencia_id", treinamentoGerenciaId);
-        }
-        const { data: d2, error: e2 } = await q;
-        if (!cancelled && !e2) (d2 ?? []).forEach((p: RhFuncionario) => merged.set(p.id, p));
-      } else if (!cancelled) {
-        setTreinamentoTimeIdsList([]);
-      }
-
-      if (!cancelled) {
-        setPrestadores(
-          [...merged.values()].sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR")),
-        );
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [permLoading, permCanView, soProprios, times, treinamentoGerenciaId]);
+  }, [permLoading, permCanView, soProprios, times]);
 
   useEffect(() => {
     if (permCanView === "proprios" && meuRhFuncionarioId) {
@@ -221,58 +229,131 @@ export function useOverviewPrestadorDados(
     }
   }, [permCanView, meuRhFuncionarioId]);
 
-  const timeIds = useMemo(() => times.map((x) => x.id), [times]);
-  const treinamentoTimeIds = useMemo(() => new Set(treinamentoTimeIdsList), [treinamentoTimeIdsList]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const [{ data: estudios }, { data: junction }] = await Promise.all([
+        supabase.from("estudios_spin").select("slug, nome").eq("ativo", true).order("nome"),
+        supabase.from("estudios_spin_operadoras").select("operadora_slug, estudio_slug, tipo"),
+      ]);
+      if (cancelled) return;
+      const nomes: Record<string, string> = {};
+      for (const e of estudios ?? []) {
+        const slug = String((e as { slug: string }).slug ?? "").trim();
+        if (slug) nomes[slug] = String((e as { nome: string }).nome ?? slug);
+      }
+      setEstudiosNome(nomes);
 
-  const filtroTimeIdsReais = useMemo(() => {
-    const allowed = new Set(timeIds);
-    return new Set(filtroTimeIds.filter((id) => id !== TREINAMENTO_FILTRO_ID && allowed.has(id)));
-  }, [filtroTimeIds, timeIds]);
-
-  const treinamentoSelecionado = filtroTimeIds.includes(TREINAMENTO_FILTRO_ID);
-  const filtroTimeAtivo = filtroTimeIds.length > 0;
+      const opMap: Record<string, string> = {};
+      const sorted = [...(junction ?? [])].sort((a, b) => {
+        const pa = (a as { tipo: string }).tipo === "dedicado" ? 0 : 1;
+        const pb = (b as { tipo: string }).tipo === "dedicado" ? 0 : 1;
+        if (pa !== pb) return pa - pb;
+        return String((a as { estudio_slug: string }).estudio_slug).localeCompare(
+          String((b as { estudio_slug: string }).estudio_slug),
+          "pt-BR",
+        );
+      });
+      for (const row of sorted) {
+        const op = String((row as { operadora_slug: string }).operadora_slug ?? "").trim();
+        const est = String((row as { estudio_slug: string }).estudio_slug ?? "").trim();
+        if (op && est && !opMap[op]) opMap[op] = est;
+      }
+      setOpParaEstudio(opMap);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const timeMultiselectItems = useMemo(() => {
     const items: { id: string; name: string }[] = [];
-    for (const rotulo of CALENDARIO_TIMES_FILTRO_ORDEM) {
-      if (rotulo === "Treinamento") {
-        if (treinamentoGerenciaId) items.push({ id: TREINAMENTO_FILTRO_ID, name: "Treinamento" });
-        continue;
-      }
+    for (const rotulo of OVERVIEW_PRESTADOR_TIMES_ORDEM) {
       const row = timeRowPorRotuloCanonica(times, rotulo);
       if (row) items.push({ id: row.id, name: rotulo });
     }
     return items;
-  }, [times, treinamentoGerenciaId]);
+  }, [times]);
+
+  /** Default Time = Game Presenter (sem agregador «Todos»). */
+  useEffect(() => {
+    if (soProprios || timeMultiselectItems.length === 0) return;
+    const gp = timeMultiselectItems.find((x) => x.name === OVERVIEW_PRESTADOR_TIME_DEFAULT);
+    const fallback = gp?.id ?? timeMultiselectItems[0]!.id;
+    setFiltroTimeIds((prev) => {
+      if (prev.length === 1 && timeMultiselectItems.some((x) => x.id === prev[0])) return prev;
+      return [fallback];
+    });
+  }, [soProprios, timeMultiselectItems]);
+
+  const filtroTimeIdsReais = useMemo(() => {
+    const allowed = new Set(timeMultiselectItems.map((x) => x.id));
+    return new Set(filtroTimeIds.filter((id) => allowed.has(id)));
+  }, [filtroTimeIds, timeMultiselectItems]);
+
+  const filtroTimeAtivo = filtroTimeIdsReais.size > 0;
+
+  const timeRotuloSelecionado: OverviewPrestadorTimeRotulo | null = useMemo(() => {
+    if (soProprios) {
+      const p = prestadores[0];
+      const time = times.find((t) => t.id === p?.org_time_id);
+      return rotuloTimeFromNomeOrganograma(time?.nome ?? null);
+    }
+    const id = [...filtroTimeIdsReais][0];
+    if (!id) return null;
+    const item = timeMultiselectItems.find((x) => x.id === id);
+    return item && OVERVIEW_PRESTADOR_TIMES_ORDEM.includes(item.name as OverviewPrestadorTimeRotulo)
+      ? (item.name as OverviewPrestadorTimeRotulo)
+      : null;
+  }, [soProprios, prestadores, times, filtroTimeIdsReais, timeMultiselectItems]);
+
+  /** Para próprios sem time no catálogo: inferir pelo nome via org se já carregado. */
+  const timeRotuloEfetivo = timeRotuloSelecionado ?? (soProprios ? "Game Presenter" : OVERVIEW_PRESTADOR_TIME_DEFAULT);
+  const caps = useMemo(() => capsOverviewPrestadorTime(timeRotuloEfetivo), [timeRotuloEfetivo]);
+
+  const timeIdEscopo = useMemo(() => {
+    if (soProprios) return (prestadores[0]?.org_time_id ?? "").trim() || null;
+    return [...filtroTimeIdsReais][0] ?? null;
+  }, [soProprios, prestadores, filtroTimeIdsReais]);
+
+  /**
+   * Só as células da Escala Estúdio do time selecionado — sem isto, linhas de outras
+   * áreas (Academy/treinamento, escritório, outros times) entram nas jornadas e na
+   * contagem de prestadores por turno.
+   */
+  const gradeRows = useMemo(() => {
+    const permitidas = new Set(
+      [areaKeyGradeDoTime(timeRotuloEfetivo), areaKeyGradeDoTimeId(timeIdEscopo)].filter(
+        (x): x is string => Boolean(x),
+      ),
+    );
+    if (permitidas.size === 0) return rawGradeRows;
+    const filtradas = rawGradeRows.filter((r) => permitidas.has((r.area_key ?? "").trim().toLowerCase()));
+    return filtradas.length > 0 ? filtradas : rawGradeRows;
+  }, [rawGradeRows, timeRotuloEfetivo, timeIdEscopo]);
 
   const staffMultiselectItems = useMemo(() => {
     const opts = {
       filtroAtivo: filtroTimeAtivo,
       filtroTimeIdsReais,
-      treinamentoSelecionado,
-      treinamentoGerenciaId,
-      treinamentoTimeIds,
+      treinamentoSelecionado: false,
+      treinamentoGerenciaId: null as string | null,
+      treinamentoTimeIds: new Set<string>(),
     };
     return prestadores
       .filter((p) => prestadorAtendeFiltroTime(p, opts))
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
-  }, [
-    prestadores,
-    filtroTimeAtivo,
-    filtroTimeIdsReais,
-    treinamentoSelecionado,
-    treinamentoGerenciaId,
-    treinamentoTimeIds,
-  ]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais]);
 
   useEffect(() => {
+    if (soProprios) return;
     const allowedIds = new Set(staffMultiselectItems.map((x) => x.id));
     setFiltroStaffIds((prev) => {
       if (prev.length === 0) return prev;
       const next = prev.filter((id) => allowedIds.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [staffMultiselectItems]);
+  }, [staffMultiselectItems, soProprios]);
 
   const prestadorPorId = useMemo(() => {
     const m = new Map<string, RhFuncionario>();
@@ -281,6 +362,14 @@ export function useOverviewPrestadorDados(
   }, [prestadores]);
 
   const staffSelecionadoId = filtroStaffIds[0] ?? null;
+  const visaoTime = !soProprios && !staffSelecionadoId;
+
+  const idsEscopo = useMemo(() => {
+    if (staffSelecionadoId) return [staffSelecionadoId];
+    if (visaoTime) return staffMultiselectItems.map((x) => x.id);
+    return [];
+  }, [staffSelecionadoId, visaoTime, staffMultiselectItems]);
+
   const mesesHistorico = useMemo(
     () => mesesDisponiveis.slice(-HISTORICO_COMPETENCIAS_MESES),
     [mesesDisponiveis],
@@ -304,7 +393,7 @@ export function useOverviewPrestadorDados(
         anterior: { inicio: "1970-01-01", fim: "1970-01-01" },
       };
     }
-    return getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+    return getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
   }, [historico, mesSelecionado, mesesHistorico]);
 
   const mesesMetricasAtual = useMemo(() => {
@@ -350,62 +439,58 @@ export function useOverviewPrestadorDados(
   }, [mesesParaCarga, permLoading, permCanView]);
 
   useEffect(() => {
-    if (!staffSelecionadoId || mesesParaCarga.length === 0) {
-      setPontoMesLinhas([]);
-      setLoadingPonto(false);
-      return;
-    }
-    let cancelled = false;
-    setLoadingPonto(true);
-    void (async () => {
-      try {
-        const grupos = await Promise.all(
-          mesesParaCarga.map(({ ano, mes }) =>
-            fetchOverviewPrestadorPontoMes(
-              staffSelecionadoId,
-              refMesPrimeiroDiaISO(new Date(ano, mes, 1)),
-            ).catch(() => []),
-          ),
-        );
-        if (!cancelled) setPontoMesLinhas(grupos.flat());
-      } finally {
-        if (!cancelled) setLoadingPonto(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [staffSelecionadoId, mesesParaCarga]);
-
-  useEffect(() => {
-    if (!staffSelecionadoId || mesesParaCarga.length === 0) {
+    if (idsEscopo.length === 0 || mesesParaCarga.length === 0) {
+      setPontoPorChave(new Map());
       setPresencaGestaoPorChave(new Map());
-      setLoadingPresenca(false);
+      setMovimentacoesPorChave(new Map());
+      setLoadingStaffDados(false);
       return;
     }
     let cancelled = false;
-    setLoadingPresenca(true);
+    setLoadingStaffDados(true);
     void (async () => {
       try {
-        const mapas = await Promise.all(
-          mesesParaCarga.map(({ ano, mes }) =>
-            fetchOverviewPrestadorPresencaMes(
-              staffSelecionadoId,
-              refMesPrimeiroDiaISO(new Date(ano, mes, 1)),
-            ).catch(() => new Map<string, PresencaDiaGestao>()),
-          ),
+        const jobs = idsEscopo.flatMap((fid) =>
+          mesesParaCarga.map((ref) => ({ fid, ref })),
         );
-        const next = new Map<string, PresencaDiaGestao>();
-        mapas.forEach((mapa) => mapa.forEach((v, k) => next.set(k, v)));
-        if (!cancelled) setPresencaGestaoPorChave(next);
+        const resultados = await mapPool(jobs, CONCURRENCY_STAFF, async ({ fid, ref }) => {
+          const refMes = refMesPrimeiroDiaISO(new Date(ref.ano, ref.mes, 1));
+          const [ponto, presenca, mov] = await Promise.all([
+            fetchOverviewPrestadorPontoMes(fid, refMes).catch(() => [] as RpcPontoMesRow[]),
+            fetchOverviewPrestadorPresencaMes(fid, refMes).catch(
+              () => new Map<string, PresencaDiaGestao>(),
+            ),
+            caps.negocia
+              ? fetchOverviewPrestadorMovimentacoesMes(fid, refMes).catch(
+                  () => new Map<string, OverviewPrestadorMovimentacaoCelula>(),
+                )
+              : Promise.resolve(new Map<string, OverviewPrestadorMovimentacaoCelula>()),
+          ]);
+          return { fid, ponto, presenca, mov };
+        });
+        if (cancelled) return;
+        const nextPonto = new Map<string, RpcPontoMesRow>();
+        const nextPresenca = new Map<string, PresencaDiaGestao>();
+        const nextMov = new Map<string, OverviewPrestadorMovimentacaoCelula>();
+        for (const r of resultados) {
+          for (const pt of r.ponto) {
+            const iso = (pt.dia_sp ?? "").slice(0, 10);
+            if (iso) nextPonto.set(`${r.fid}|${iso}`, pt);
+          }
+          r.presenca.forEach((v, k) => nextPresenca.set(k, v));
+          r.mov.forEach((v, k) => nextMov.set(k, v));
+        }
+        setPontoPorChave(nextPonto);
+        setPresencaGestaoPorChave(nextPresenca);
+        setMovimentacoesPorChave(nextMov);
       } finally {
-        if (!cancelled) setLoadingPresenca(false);
+        if (!cancelled) setLoadingStaffDados(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [staffSelecionadoId, mesesParaCarga]);
+  }, [idsEscopo, mesesParaCarga, caps.negocia]);
 
   useEffect(() => {
     const slugs = [...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean))];
@@ -428,70 +513,217 @@ export function useOverviewPrestadorDados(
     };
   }, [prestadores]);
 
-  const metricasAtual: OverviewPrestadorMetricas = useMemo(() => {
-    if (!staffSelecionadoId) return OVERVIEW_PRESTADOR_METRICAS_ZERO;
-    const pRow = prestadorPorId.get(staffSelecionadoId);
-    const slug = (pRow?.staff_operadora_slug ?? "").trim();
-    const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
-    return calcularMetricasPrestadorPeriodo({
-      funcionarioId: staffSelecionadoId,
-      prestador: pRow,
-      opTurnos: opRow,
-      gradeRows: rawGradeRows,
-      pontoRows: pontoMesLinhas,
-      presencaGestao: presencaGestaoPorChave,
-      periodoInicio: periodoComparativo.atual.inicio,
-      periodoFim: periodoComparativo.atual.fim,
-      mesesRef: mesesMetricasAtual,
-    });
+  const pontoRowsPorFuncionario = useCallback(
+    (fid: string): RpcPontoMesRow[] => {
+      const rows: RpcPontoMesRow[] = [];
+      pontoPorChave.forEach((v, k) => {
+        if (k.startsWith(`${fid}|`)) rows.push(v);
+      });
+      return rows;
+    },
+    [pontoPorChave],
+  );
+
+  const metricasPorStaff = useMemo(() => {
+    const map = new Map<string, OverviewPrestadorMetricas>();
+    for (const fid of idsEscopo) {
+      const pRow = prestadorPorId.get(fid);
+      const slug = (pRow?.staff_operadora_slug ?? "").trim();
+      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+      map.set(
+        fid,
+        calcularMetricasPrestadorPeriodo({
+          funcionarioId: fid,
+          prestador: pRow,
+          opTurnos: opRow,
+          gradeRows,
+          pontoRows: pontoRowsPorFuncionario(fid),
+          presencaGestao: presencaGestaoPorChave,
+          movimentacoes: movimentacoesPorChave,
+          periodoInicio: periodoComparativo.atual.inicio,
+          periodoFim: periodoComparativo.atual.fim,
+          mesesRef: mesesMetricasAtual,
+        }),
+      );
+    }
+    return map;
   }, [
-    staffSelecionadoId,
+    idsEscopo,
     prestadorPorId,
     mapOpTurnos,
-    rawGradeRows,
-    pontoMesLinhas,
+    gradeRows,
+    pontoRowsPorFuncionario,
     presencaGestaoPorChave,
+    movimentacoesPorChave,
     periodoComparativo.atual,
     mesesMetricasAtual,
   ]);
 
-  const metricasAnterior: OverviewPrestadorMetricas = useMemo(() => {
-    if (historico || !staffSelecionadoId) return OVERVIEW_PRESTADOR_METRICAS_ZERO;
-    const pRow = prestadorPorId.get(staffSelecionadoId);
-    const slug = (pRow?.staff_operadora_slug ?? "").trim();
-    const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
-    return calcularMetricasPrestadorPeriodo({
-      funcionarioId: staffSelecionadoId,
-      prestador: pRow,
-      opTurnos: opRow,
-      gradeRows: rawGradeRows,
-      pontoRows: pontoMesLinhas,
-      presencaGestao: presencaGestaoPorChave,
-      periodoInicio: periodoComparativo.anterior.inicio,
-      periodoFim: periodoComparativo.anterior.fim,
-      mesesRef: mesesMetricasAnterior,
+  const metricasAtual: OverviewPrestadorMetricas = useMemo(() => {
+    if (idsEscopo.length === 0) return OVERVIEW_PRESTADOR_METRICAS_ZERO;
+    const partes = idsEscopo.map((id) => {
+      const base = metricasPorStaff.get(id) ?? OVERVIEW_PRESTADOR_METRICAS_ZERO;
+      if (!visaoTime) return base;
+      const p = prestadorPorId.get(id);
+      return {
+        ...base,
+        detalhamento: base.detalhamento.map((d) => ({
+          ...d,
+          prestadorId: id,
+          prestadorNome: (p?.nome ?? "").trim() || "—",
+          timeRotulo: timeRotuloEfetivo,
+        })),
+      };
     });
+    return somarMetricasPrestador(partes);
+  }, [idsEscopo, metricasPorStaff, visaoTime, prestadorPorId, timeRotuloEfetivo]);
+
+  const metricasAnterior: OverviewPrestadorMetricas = useMemo(() => {
+    if (historico || idsEscopo.length === 0) return OVERVIEW_PRESTADOR_METRICAS_ZERO;
+    const partes = idsEscopo.map((fid) => {
+      const pRow = prestadorPorId.get(fid);
+      const slug = (pRow?.staff_operadora_slug ?? "").trim();
+      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+      return calcularMetricasPrestadorPeriodo({
+        funcionarioId: fid,
+        prestador: pRow,
+        opTurnos: opRow,
+        gradeRows,
+        pontoRows: pontoRowsPorFuncionario(fid),
+        presencaGestao: presencaGestaoPorChave,
+        movimentacoes: movimentacoesPorChave,
+        periodoInicio: periodoComparativo.anterior.inicio,
+        periodoFim: periodoComparativo.anterior.fim,
+        mesesRef: mesesMetricasAnterior,
+      });
+    });
+    return somarMetricasPrestador(partes);
   }, [
     historico,
-    staffSelecionadoId,
+    idsEscopo,
     prestadorPorId,
     mapOpTurnos,
-    rawGradeRows,
-    pontoMesLinhas,
+    gradeRows,
+    pontoRowsPorFuncionario,
     presencaGestaoPorChave,
+    movimentacoesPorChave,
     periodoComparativo.anterior,
     mesesMetricasAnterior,
   ]);
 
-  const setFiltroTimeIdsNormalizado = useCallback((ids: string[]) => {
-    setFiltroTimeIds(normalizarSelecaoUnica(filtroTimeIds, ids));
-  }, [filtroTimeIds]);
+  const pontosAtencao: OverviewPrestadorAtencaoLinha[] = useMemo(() => {
+    if (!visaoTime) return [];
+    return idsEscopo
+      .map((id) => {
+        const m = metricasPorStaff.get(id) ?? OVERVIEW_PRESTADOR_METRICAS_ZERO;
+        const p = prestadorPorId.get(id);
+        return montarLinhaAtencao(id, (p?.nome ?? "").trim() || "—", timeRotuloEfetivo, m);
+      })
+      .filter((r) => r.severidade !== "ok" || r.atrasos > 0 || r.pontoIncompleto > 0 || r.atestadoDias > 0)
+      .sort((a, b) => {
+        const rank = { alta: 0, media: 1, ok: 2 };
+        if (rank[a.severidade] !== rank[b.severidade]) return rank[a.severidade] - rank[b.severidade];
+        return (a.presencaPct ?? 100) - (b.presencaPct ?? 100);
+      })
+      .slice(0, 12);
+  }, [visaoTime, idsEscopo, metricasPorStaff, prestadorPorId, timeRotuloEfetivo]);
+
+  const cobertura = useMemo(() => {
+    if (!visaoTime || idsEscopo.length === 0) {
+      return { porTurno: [] as OverviewPrestadorCoberturaLinha[], porEstudio: [] as OverviewPrestadorCoberturaLinha[] };
+    }
+    const opTurnosPorFuncionario = new Map<string, OpTurnosHorarioPick | null>();
+    for (const fid of idsEscopo) {
+      const p = prestadorPorId.get(fid);
+      const slug = (p?.staff_operadora_slug ?? "").trim();
+      opTurnosPorFuncionario.set(fid, slug ? mapOpTurnos.get(slug) ?? null : null);
+    }
+    return calcularCoberturaPrestadorPeriodo({
+      funcionarioIds: idsEscopo,
+      prestadorPorId,
+      opTurnosPorFuncionario,
+      gradeRows,
+      pontoPorChave,
+      presencaGestao: presencaGestaoPorChave,
+      movimentacoes: movimentacoesPorChave,
+      periodoInicio: periodoComparativo.atual.inicio,
+      periodoFim: periodoComparativo.atual.fim,
+      mesesRef: mesesMetricasAtual,
+      caps,
+      opParaEstudio,
+      estudiosNome,
+    });
+  }, [
+    visaoTime,
+    idsEscopo,
+    prestadorPorId,
+    mapOpTurnos,
+    gradeRows,
+    pontoPorChave,
+    presencaGestaoPorChave,
+    movimentacoesPorChave,
+    periodoComparativo.atual,
+    mesesMetricasAtual,
+    caps,
+    opParaEstudio,
+    estudiosNome,
+  ]);
+
+  const distribuicaoEstudio: OverviewPrestadorEstudioFatia[] = useMemo(() => {
+    if (visaoTime || !staffSelecionadoId || !caps.distribuicaoEstudioIndividual) return [];
+    const pRow = prestadorPorId.get(staffSelecionadoId);
+    const slug = (pRow?.staff_operadora_slug ?? "").trim();
+    return calcularDistribuicaoEstudioIndividual({
+      funcionarioId: staffSelecionadoId,
+      prestador: pRow,
+      opTurnos: slug ? mapOpTurnos.get(slug) ?? null : null,
+      gradeRows,
+      pontoRows: pontoRowsPorFuncionario(staffSelecionadoId),
+      presencaGestao: presencaGestaoPorChave,
+      movimentacoes: movimentacoesPorChave,
+      periodoInicio: periodoComparativo.atual.inicio,
+      periodoFim: periodoComparativo.atual.fim,
+      mesesRef: mesesMetricasAtual,
+      opParaEstudio,
+      estudiosNome,
+    });
+  }, [
+    visaoTime,
+    staffSelecionadoId,
+    caps.distribuicaoEstudioIndividual,
+    prestadorPorId,
+    mapOpTurnos,
+    gradeRows,
+    pontoRowsPorFuncionario,
+    presencaGestaoPorChave,
+    movimentacoesPorChave,
+    periodoComparativo.atual,
+    mesesMetricasAtual,
+    opParaEstudio,
+    estudiosNome,
+  ]);
+
+  const setFiltroTimeIdsNormalizado = useCallback(
+    (ids: string[]) => {
+      const next = normalizarSelecaoUnica(filtroTimeIds, ids);
+      if (next.length === 0) {
+        const gp = timeMultiselectItems.find((x) => x.name === OVERVIEW_PRESTADOR_TIME_DEFAULT);
+        const keep = filtroTimeIds[0] ?? gp?.id ?? timeMultiselectItems[0]?.id;
+        if (keep) setFiltroTimeIds([keep]);
+        return;
+      }
+      setFiltroTimeIds(next);
+      setFiltroStaffIds([]);
+    },
+    [filtroTimeIds, timeMultiselectItems],
+  );
 
   const setFiltroStaffIdsNormalizado = useCallback((ids: string[]) => {
     setFiltroStaffIds(normalizarSelecaoUnica(filtroStaffIds, ids));
   }, [filtroStaffIds]);
 
-  const isLoading = loadingStaff || loadingGrade || loadingPonto || loadingPresenca;
+  const isLoading = loadingStaff || loadingGrade || loadingStaffDados;
+  const prontoParaExibir = soProprios ? Boolean(staffSelecionadoId) : filtroTimeAtivo;
 
   return {
     mesesDisponiveis,
@@ -513,8 +745,16 @@ export function useOverviewPrestadorDados(
     filtroStaffIds,
     setFiltroStaffIds: setFiltroStaffIdsNormalizado,
     staffSelecionadoId,
+    visaoTime,
+    timeRotulo: timeRotuloEfetivo,
+    caps,
     metricasAtual,
     metricasAnterior,
+    pontosAtencao,
+    coberturaPorTurno: cobertura.porTurno,
+    coberturaPorEstudio: cobertura.porEstudio,
+    distribuicaoEstudio,
+    prontoParaExibir,
     isLoading,
   };
 }

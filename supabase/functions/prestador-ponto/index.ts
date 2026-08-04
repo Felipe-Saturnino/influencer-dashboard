@@ -9,7 +9,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
  */
 
 const MSG_REDE =
-  'Você deve estar logado na rede Spin Colaboradores para realizar o Check-in/Check-out.'
+  'Você deve estar logado na rede Spin Gaming para realizar o Check-in/Check-out.'
 const MSG_SEM_VINCULO_RH =
   'Não encontramos um colaborador em RH associado ao seu e-mail de login (e-mail ou e-mail Spin).'
 const MSG_SEQUENCIA_HOJE = 'Check-in e Check-out de hoje já foram registrados.'

@@ -44,7 +44,3 @@ export function SalvarCtaContent({
     </>
   );
 }
-
-export function AcaoCardSpinner({ color }: { color: string }) {
-  return <Loader2 size={14} className="app-lucide-spin" style={{ color }} aria-hidden="true" />;
-}

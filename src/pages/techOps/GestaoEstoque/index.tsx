@@ -182,31 +182,37 @@ export default function TechOpsGestaoEstoque() {
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-        <div
-          role="tablist"
-          aria-label="Abas da Gestão de Estoque"
-          style={getFilterBarRowStyle({ width: "100%" })}
-          onKeyDown={(e) =>
-            onFiltroBarTabsKeyDown(
-              e,
-              tabs.map((tb) => tb.id),
-              setAba,
-              (k) => `tab-estoque-${k}`,
-            )
-          }
-        >
-          {tabs.map((tb) => (
-            <FiltroBarTabButton
-              key={tb.id}
-              id={`tab-estoque-${tb.id}`}
-              active={aba === tb.id}
-              aria-controls={`panel-estoque-${tb.id}`}
-              onClick={() => setAba(tb.id)}
-              icon={tb.icon}
-            >
-              {tb.label}
-            </FiltroBarTabButton>
-          ))}
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+          <div
+            role="tablist"
+            aria-label="Abas da Gestão de Estoque"
+            className="app-filter-bar-tabs-cta__tabs"
+            onKeyDown={(e) =>
+              onFiltroBarTabsKeyDown(
+                e,
+                tabs.map((tb) => tb.id),
+                setAba,
+                (k) => `tab-estoque-${k}`,
+              )
+            }
+          >
+            {tabs.map((tb) => (
+              <FiltroBarTabButton
+                key={tb.id}
+                id={`tab-estoque-${tb.id}`}
+                active={aba === tb.id}
+                aria-controls={`panel-estoque-${tb.id}`}
+                onClick={() => setAba(tb.id)}
+                icon={tb.icon}
+              >
+                {tb.label}
+              </FiltroBarTabButton>
+            ))}
+          </div>
+          <div className="app-filter-bar-tabs-cta__actions">
+            <AjudaContextualAcoes pageKey="tech_ops_estoque" />
+          </div>
         </div>
 
         <div style={getFilterBarRowStyle({ width: "100%", marginTop: 10 })}>
@@ -231,7 +237,6 @@ export default function TechOpsGestaoEstoque() {
               todasLabel="Todas Categorias"
             />
           ) : null}
-          <AjudaContextualAcoes pageKey="tech_ops_estoque" />
         </div>
       </div>
 

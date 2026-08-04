@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Loader2, Paperclip, Plus } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { uploadPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
@@ -710,6 +711,20 @@ export function ModalCriarPostagem({
     }
   };
 
+  const itensImagem = useMemo(() => {
+    if (imagemFile) return [{ key: "pending", label: imagemFile.name, pendente: true as const }];
+    if (imagemPath) {
+      return [{ key: "saved", label: imagemPath.split("/").pop() || imagemPath, pendente: false as const }];
+    }
+    return [];
+  }, [imagemFile, imagemPath]);
+
+  const itensAnexo = useMemo(() => {
+    if (anexoFile) return [{ key: "pending", label: anexoFile.name, pendente: true as const }];
+    if (anexoPath && anexoNome) return [{ key: "saved", label: anexoNome, pendente: false as const }];
+    return [];
+  }, [anexoFile, anexoPath, anexoNome]);
+
   if (!open) return null;
 
   const inputStyle: CSSProperties = {
@@ -944,30 +959,38 @@ export function ModalCriarPostagem({
 
           {tipoPostagem && (tipoPostagem !== "politica" || legadoPolitica) ? (
             <>
-              <div>
-                {lbl("mp-imagem", "Imagem")}
-                <input
-                  id="mp-imagem"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImagemFile(e.target.files?.[0] ?? null)}
-                  style={{ ...inputStyle, padding: 8 }}
-                  aria-label="Imagem"
-                />
-              </div>
-              <div>
-                {lbl("mp-anexo", "Anexo")}
-                <input
-                  id="mp-anexo"
-                  type="file"
-                  onChange={(e) => setAnexoFile(e.target.files?.[0] ?? null)}
-                  style={{ ...inputStyle, padding: 8 }}
-                  aria-label="Anexo"
-                />
-                {anexoNome && !anexoFile ? (
-                  <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4, fontFamily: FONT.body }}>{anexoNome}</div>
-                ) : null}
-              </div>
+              <CampoUploadArquivos
+                id="mp-imagem"
+                label="Imagem"
+                buttonLabel="Adicionar imagem"
+                icon={Plus}
+                accept="image/*"
+                multiple={false}
+                items={itensImagem}
+                onAdd={(files) => setImagemFile(files[0] ?? null)}
+                onRemove={() => {
+                  setImagemFile(null);
+                  setImagemPath(null);
+                }}
+                disabled={salvando}
+                t={t}
+              />
+              <CampoUploadArquivos
+                id="mp-anexo"
+                label="Anexo"
+                buttonLabel="Adicionar anexo"
+                icon={Paperclip}
+                multiple={false}
+                items={itensAnexo}
+                onAdd={(files) => setAnexoFile(files[0] ?? null)}
+                onRemove={() => {
+                  setAnexoFile(null);
+                  setAnexoPath(null);
+                  setAnexoNome(null);
+                }}
+                disabled={salvando}
+                t={t}
+              />
             </>
           ) : null}
         </div>

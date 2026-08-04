@@ -156,6 +156,7 @@ components/     # Compartilhados — usar antes de criar local
   FiltroCalendarioTimeSelect.tsx / FiltroCalendarioStaffSelect.tsx
   OperacoesModal.tsx (ModalBase, ModalHeader)
   CampoObrigatorioMark.tsx
+  CampoUploadArquivos.tsx  # upload em modal (layout canónico Portal Academy)
 constants/      # theme.ts (FONT), menu.ts, platforms.ts
 context/        # AppContext — theme, permissions, operadoraBrand
 hooks/          # usePermission, useDashboardBrand, useDashboardFiltros, useMediaQuery
@@ -856,6 +857,44 @@ import { ModalTabPanel } from "../components/ModalTabPanel";
 
 **Exceção:** abas só leitura (visualização / histórico) podem desmontar conteúdo pesado se documentado na secção — edição mista segue o padrão acima.
 
+### Upload de arquivo em modal — padrão canónico (obrigatório)
+
+**Referência:** Portal Academy → `ModalCriarPostagem` · componente **`CampoUploadArquivos`** (`src/components/CampoUploadArquivos.tsx`).
+
+Em **todo** modal (ou painel dentro de modal) que permita o usuário enviar arquivo:
+
+| Peça | Regra |
+|------|--------|
+| Componente | **`CampoUploadArquivos`** — **proibido** `<input type="file">` nativo visível, label dashed ad hoc ou dropzone visual própria em código novo |
+| Layout | Label do campo + botão (ícone + `buttonLabel`) + microcopy **ou arraste e solte aqui** + lista de itens (nome, badge **Pendente** se ainda não persistido, `X` remover) + empty «Nenhum arquivo adicionado.» |
+| Drag-and-drop | **Incluído no componente** — área ao redor do botão aceita soltar arquivos; feedback visual (borda dashed + tint de marca) enquanto arrasta; respeita `accept`, `multiple` e `disabled`. **Proibido** reinventar dropzone fora deste componente |
+| `buttonLabel` / `label` | **Do domínio da página** — não unificar textos (ex.: «Selecionar PDF», «Enviar vídeo da avaliação», «Adicionar anexo», «Anexar arquivo») |
+| `accept`, tamanho, `multiple`, upload imediato vs. no save | **Da página** — o componente **não** padroniza regras de negócio; só o jeito/layout do seletor |
+| `hint` | Opcional — orientação de tipo/tamanho (ex.: máx. 15 MB) fica na página via prop |
+| `showList={false}` | Só quando a lista de arquivos já aparece noutro sítio do mesmo modal (ex.: coluna da tabela de documentos, grelha de thumbs de fotos) — o **botão** + drop continuam canónicos |
+| Remover (`X`) | `tooltipAcao("Remover arquivo")` — sem nome do ficheiro no helper |
+
+```tsx
+import { CampoUploadArquivos } from "../components/CampoUploadArquivos";
+import { Paperclip } from "lucide-react";
+
+<CampoUploadArquivos
+  id="modal-anexo"
+  label="Anexo"
+  buttonLabel="Adicionar anexo"
+  icon={Paperclip}
+  items={itens}
+  onAdd={(files) => setFiles((prev) => [...prev, ...files])}
+  onRemove={(key) => setFiles((prev) => prev.filter(/* … */))}
+  disabled={salvando}
+  t={t}
+/>
+```
+
+**Fora deste contrato (não migrar para o padrão sem pedido de produto):** upload **fora de modal** — Galeria de Fotos (aba Upload), Dados de Cadastro → Documentos (página), Canal público de denúncias.
+
+**Proibido em modal novo:** input file estilizado como campo de formulário nativo; dropzone dashed ad hoc fora de `CampoUploadArquivos`; duplicar markup do componente localmente.
+
 ### Exclusão — padrão canónico (ícone ou ícone + texto)
 
 Dois variantes partilham **mesma cor**, **ícone `Trash2`**, **helpers** (`excluirItemUi.ts`) e **pop-up** **`ModalConfirmExcluirPadrao`**. **Proibido** confirmação em 2 cliques no botão (`Confirmar?`, microtexto) ou `window.confirm()`.
@@ -1207,7 +1246,7 @@ O `index.html` gerado **não** deve ter `modulepreload` para `vendor-*-icons-*`;
 
 **Cache (`public/_headers`):** HTML com `no-cache, must-revalidate`; `/assets/*` com `max-age=31536000, immutable`. `index.html` em cache aponta para hashes que já não existem após deploy — é a origem mais comum de `ChunkLoadError` em produção. **Não** cachear HTML nem remover este ficheiro.
 
-**Recarga automática (`lib/chunkReloadGuard.ts`):** 1ª tentativa usa `location.reload()`; a **última** navega para a mesma URL com o param descartável **`_spinv`**, porque `reload()` pode reaproveitar o `index.html` em cache — justamente o ficheiro que aponta para o chunk inexistente. O param é removido do histórico em `main.tsx` (`limparParamCacheBustDaUrl`) **antes** do render, portanto nenhuma rota o observa. Esgotado o limite, a UI mostra **Nova versão disponível** com botão de recarga manual — **não** deixar o utilizador preso em «Atualizando...».
+**Recarga automática (`lib/chunkReloadGuard.ts`):** 1ª tentativa usa `location.reload()`; a **última** navega para a mesma URL com o param descartável **`_spinv`**, porque `reload()` pode reaproveitar o `index.html` em cache — justamente o ficheiro que aponta para o chunk inexistente. O param é removido do histórico em `main.tsx` (`limparParamCacheBustDaUrl`) **antes** do render, portanto nenhuma rota o observa. Esgotado o limite, a UI mostra **Nova versão disponível** com botão de recarga manual — **não** deixar o utilizador preso em «Atualizando...». O botão manual chama **`recarregarAposErroDeChunk()`** (limpa o guard **e** navega com `_spinv`); **proibido** `location.reload()` puro nesse caminho, senão o mesmo `index.html` em cache volta a pedir o chunk inexistente.
 
 **Domínio custom vs `*.pages.dev`:** produção passa pelas *Cache Rules* / *Browser Cache TTL* da zona Cloudflare; staging em `*.pages.dev` não. Sintoma exclusivo de produção com staging saudável ⇒ suspeitar de override de cache na zona (**Browser Cache TTL** deve ser *Respect Existing Headers*) antes de procurar regressão no código.
 
@@ -1300,6 +1339,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - CTA de criação (Nova Live, Adicionar, Criar, …) sem `CtaCriarButton` ou com `+` no texto em vez de ícone `Plus`.
 - `window.confirm()` / `alert()` para fluxos de modal.
 - Modal de edição com abas: desmontar painel com `{aba === … &&}`; `useEffect` que reseta campos ao trocar aba; **Salvar** só da aba ativa — ver § Modais pré-save.
+- Upload em **modal** sem **`CampoUploadArquivos`** (input file nativo visível, label dashed ou dropzone local) — ver § Modais → Upload de arquivo; não unificar `accept`/tamanho/labels de domínio.
 - Exclusão sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** + **`ModalConfirmExcluirPadrao`** (Global § Modais → Exclusão).
 - Arquivamento (Informativos / Portal RH Gerenciamento) sem **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`** ou com confirmação em 2 cliques no botão.
 - `90vh` em modais — usar `90dvh`.

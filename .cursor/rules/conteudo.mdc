@@ -121,11 +121,13 @@ Mesmo padrão das demais secções — fundo transparente de marca (ex. **Roteir
   id={`panel-${abaConfig.key}`}
   aria-labelledby={`tab-${abaConfig.key}`}
   tabIndex={0}
-  style={{ padding: "clamp(14px, 4vw, 28px)", ... }}
+  style={{ padding: "clamp(22px, 4vw, 32px) clamp(14px, 4vw, 28px) clamp(14px, 4vw, 28px)", ... }}
 >
   {/* conteúdo */}
 </div>
 ```
+
+- **Painel colado à faixa de abas** (`borderTop: none`, raio só embaixo): usar **topo maior** — `clamp(22px, 4vw, 32px)` — porque não há gap entre blocos separando as abas do conteúdo. Laterais e base seguem `clamp(14px, 4vw, 28px)`.
 
 - Dots de status em abas obrigatórias: círculo com `aria-hidden`; texto em `<span className="sr-only">` (`item obrigatório pendente` / `confirmado`).
 - Classe **`.sr-only`** em `src/styles/global.css` — não recriar inline.
@@ -369,7 +371,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 ### PlaybookInfluencers (`src/pages/conteudo/PlaybookInfluencers/index.tsx`)
 
 - Header: `BookOpen`, `h1` **18px**; `BRAND_SEMANTIC as BRAND` de `constants/theme` — sem `const BRAND` local.
-- Abas: ARIA completa + `onKeyDown` ArrowLeft/Right + `tabIndex` roving + fade de overflow; `tabpanel` com `tabIndex={0}` e `padding: clamp(14px, 4vw, 28px)`.
+- Abas: ARIA completa + `onKeyDown` ArrowLeft/Right + `tabIndex` roving + fade de overflow; `tabpanel` com `tabIndex={0}`, topo `clamp(22px, 4vw, 32px)` (painel encosta nas abas) e laterais/base `clamp(14px, 4vw, 28px)`.
 - **BlocoCiencia:** `role="checkbox"` customizado; `key={itemKey}` para remount; `aria-live` na transição; erro upsert: `"Não foi possível registrar a confirmação. Tente novamente."`; `Loader2` branco em Confirmar Ciência.
 - **PainelAuditoria:** `Loader2` no loading; fallback nome `Influencer (${id.slice(0, 8)}…)` — nunca UUID completo.
 - **Fun Facts:** `value: "Sim"` — proibido `"✓"`.
@@ -392,6 +394,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **`useDashboardBrand()`** + `ctaGradientInformativos` em `src/lib/informativosUi.ts`.
 - **Abas:** `FiltroBarTabButton` — Informativos | Gerenciamento de Informativos (gerenciamento só com `canEditarOk`).
 - **Filtros:** a página abre com **Histórico ativo** (`modoHistorico` inicial `true`, rótulo `Todo o período`) nas duas abas — exceção documentada ao default de mês corrente. Ao desligar o Histórico, o carrossel volta ao mês mais recente (`meses.length - 1`) em ambas as abas; a lista de meses é sempre antigo → recente.
+- **Ajuda contextual:** `AjudaContextualAcoes` fica à direita da mesma linha do carrossel e do botão Histórico.
 - **Leitura:** só `status === publicado'`; RLS filtra por `perfis` × `profiles.role` do usuário; perfil **Operador** também por `operador_escopo` (`todos` ou slug de operadora **ativa** em Gestão de Operadoras × `user_scopes`).
 - **Gerenciamento:** tabela + workflow rascunho / aprovação / publicado / arquivado; histórico em `conteudo_informativo_status_historico`; **Editar** (ícone `Pencil` na coluna Ações) em rascunho, aprovação e publicado — `podeEditarInformativoGerenciamento` (`canEditar` sim ou próprios × `created_by`); **Arquivar** = **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**; excluir com `podeExcluirInformativoGerenciamento`. Linha de busca: filtro status + **`CtaCriarButton` Novo Informativo** à direita (`marginLeft: auto`), mesma fileira.
 - **Modal criar:** Assunto, Descrição (`EditorTextoFormatado` + hiperlink), multi-seleção de perfis (`Role`); com **Operador** selecionado, campo obrigatório **Operadora** (`InformativoOperadorEscopoSelect` — opção **Todos** ou slug ativa); coluna `operador_escopo` em `conteudo_informativo`; Publicar grava `published_at` / `published_by`.
@@ -409,6 +412,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Permissões do Portal:** **Ver = Sim** → todas as postagens publicadas nas abas de leitura, sem Gerenciamento; **Ver = Próprios** → sem Gerenciamento e, em Políticas e normativas, apenas documentos cujo `aplicavel_a` contenha **Todos os prestadores** ou a diretoria/gerência/time do prestador logado; **Editar = Sim** → Gerenciamento + todas as postagens das abas de leitura, sem filtro por `aplicavel_a`. **Editar = Próprios não libera Gerenciamento.**
 - **GerenciamentoPostagens:** `app-table-wrap` + `tableStyles`; hover em `<tr>`; **Arquivar** = **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**; ações só ícone = **`BtnIconeAcaoLinha`** + **`tooltipModal(tituloModalHeader)`** (Editar postagem, Aprovar, `` Histórico — ${assunto} ``).
 - **PortalRhBlocoFiltros:** carrossel + **`FiltroHistoricoButton`** por **data de publicação** (`published_at`); modo histórico = rótulo **`Todo o período`** e janela de 13 competências mensais inclusivas.
+- **Ajuda contextual:** `AjudaContextualAcoes` fica à direita da mesma linha do carrossel e do botão Histórico.
 - **Abas Comunicados / Políticas / RH Talks:** listar só `status === "publicado"` — **nunca** arquivados.
 - **Carga (leitura pública):** `fetchAllPages` com **`status = publicado`** e **`published_at >=` janela de 13 competências** (`getPeriodoHistoricoCompetencias`) — comunicados ainda incluem `is_pinned = true` fora da janela. Join de categoria e colunas de postagem **explícitos** (sem `select("*")`). Participantes, receipts (`.in("content_id", ids)` do conjunto carregado) e autores em **`Promise.all`** após a carga principal. **Proibido** baixar rascunhos/arquivados no portal de leitura, dump all-time de receipts, ou filtrar só no cliente o status/período da listagem pública.
 - **Aba Políticas — modelo normativo (novo):** documentos com `codigo` + `tipo_documento` + PDF canónico (`anexo_storage_path` ou `storage_path` em pasta `pdfs`). Lista em **`PortalRhDocumentosTabela`** (`useDataTableBlock`, `SortTableTh` por código/versão/ciência). Filtros por família: **Todos · Políticas RH · Procedimentos · Códigos · Operações** (`FiltroSemanticoTabPill` + `portalRhDocumentoNormativo.ts`). Leitura: **`ModalVisualizarDocumento`** — iframe PDF + «Li e estou ciente». Cadastro/edição: **`ModalFormPoliticaNormativa`** dentro de **`ModalCriarPostagem`** — PDF obrigatório; `aplicavel_a` aceita **diretoria, gerência e time**, além de **Todos os prestadores**. **Ciência:** só **Perfis Gerenciais + Perfis Internos** (`perfilPortalRhParticipaCiencia`); **Perfis Externos** não veem coluna nem botão. Exige `requires_acknowledgment` **e** público em `aplicavel_a`: diretoria/gerência/time selecionados → só prestadores daquele vínculo/hierarquia no organograma; demais perfis elegíveis só visualizam (`—` na coluna). **Todos os prestadores** → todos com cadastro ativo em **Gestão de Prestadores**. Helpers em `portalRhDocumentoNormativo.ts`.
