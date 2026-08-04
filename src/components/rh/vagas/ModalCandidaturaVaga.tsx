@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
@@ -10,6 +10,7 @@ import { uploadCurriculoCandidaturaVaga } from "../../../lib/rhVagaCandidaturaFi
 import type { RhVagaRow } from "../../../types/rhVaga";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
+import { CampoUploadArquivos } from "../../CampoUploadArquivos";
 import { ModalBase, ModalHeader } from "../../OperacoesModal";
 
 const CARTA_PLACEHOLDER =
@@ -47,7 +48,6 @@ export function ModalCandidaturaVaga({
 }) {
   const brand = useDashboardBrand();
   const { user } = useApp();
-  const inputCurriculoRef = useRef<HTMLInputElement>(null);
 
   const [prestador, setPrestador] = useState<RhFuncionario | null>(null);
   const [carregandoPrestador, setCarregandoPrestador] = useState(false);
@@ -69,7 +69,6 @@ export function ModalCandidaturaVaga({
     setCartaApresentacao("");
     setFieldErr({});
     setErroSalvar(null);
-    if (inputCurriculoRef.current) inputCurriculoRef.current.value = "";
   }, []);
 
   useEffect(() => {
@@ -266,31 +265,31 @@ export function ModalCandidaturaVaga({
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          {lblReq("cand-curriculo", "Currículo Atualizado")}
-          <input
+          <CampoUploadArquivos
             id="cand-curriculo"
-            ref={inputCurriculoRef}
-            type="file"
+            label="Currículo Atualizado"
+            buttonLabel="Adicionar currículo"
             accept={CURRICULO_ACCEPT}
-            disabled={!podeEnviar || salvando}
-            onChange={(e) => {
-              const f = e.target.files?.[0] ?? null;
+            multiple={false}
+            obrigatorio
+            hasError={!!fieldErr.curriculo}
+            hint="PDF ou Word (.pdf, .doc, .docx)"
+            items={
+              curriculoFile
+                ? [{ key: "curriculo", label: curriculoFile.name, pendente: true }]
+                : []
+            }
+            onAdd={(files) => {
+              const f = files[0] ?? null;
               setCurriculoFile(f);
               if (fieldErr.curriculo) setFieldErr((prev) => ({ ...prev, curriculo: "" }));
             }}
-            style={{
-              ...inputStyle,
-              padding: 8,
-              cursor: !podeEnviar || salvando ? "not-allowed" : "pointer",
-              opacity: !podeEnviar || salvando ? 0.7 : 1,
+            onRemove={() => {
+              setCurriculoFile(null);
             }}
-            aria-describedby={fieldErr.curriculo ? "cand-curriculo-err" : undefined}
+            disabled={!podeEnviar || salvando}
+            t={t}
           />
-          {curriculoFile ? (
-            <div style={{ marginTop: 6, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{curriculoFile.name}</div>
-          ) : (
-            <div style={{ marginTop: 6, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>PDF ou Word (.pdf, .doc, .docx)</div>
-          )}
           {fieldErr.curriculo ? (
             <div id="cand-curriculo-err" style={{ color: "#e84025", fontSize: 12, marginTop: 4, fontFamily: FONT.body }}>
               {fieldErr.curriculo}

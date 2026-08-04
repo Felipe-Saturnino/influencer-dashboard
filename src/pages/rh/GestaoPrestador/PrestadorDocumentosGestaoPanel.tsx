@@ -1,5 +1,6 @@
-import { useMemo, useState, type CSSProperties } from "react";
-import { Download, Eye, Loader2, Upload } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Download, Eye, Loader2 } from "lucide-react";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { descricaoModalExcluirItem, tooltipExcluir } from "../../../lib/excluirItemUi";
@@ -17,18 +18,6 @@ import {
 } from "../../../lib/rhPrestadorDocumentosCadastro";
 import type { RhFuncionarioSelfMedia, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
 import { useRhPrestadorDocumentosCategoria } from "../../../hooks/useRhPrestadorDocumentosCategoria";
-
-const hiddenFileInputStyle: CSSProperties = {
-  position: "absolute",
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-};
 
 export function PrestadorDocumentosGestaoPanel({
   funcionarioId,
@@ -228,51 +217,23 @@ export function PrestadorDocumentosGestaoPanel({
                   </td>
                   {podeEditar ? (
                     <td style={{ ...getTdStyle(t), textAlign: "center", verticalAlign: "top" }}>
-                      <label
-                        htmlFor={inputId}
-                        aria-label={`Adicionar arquivos em ${RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL[cat]}`}
-                        title={`Adicionar arquivos em ${RH_PRESTADOR_DOCUMENTO_CATEGORIA_LABEL[cat]}`}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          padding: "6px 12px",
-                          borderRadius: 8,
-                          border: `1px dashed ${t.cardBorder}`,
-                          background: t.inputBg,
-                          color: "var(--brand-primary, #7c3aed)",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: enviando ? "wait" : "pointer",
-                          fontFamily: FONT.body,
-                          opacity: enviando ? 0.7 : 1,
+                      <CampoUploadArquivos
+                        id={inputId}
+                        label=""
+                        buttonLabel={enviando ? "Enviando…" : "Adicionar"}
+                        accept={RH_PRESTADOR_DOC_ACCEPT}
+                        multiple
+                        showList={false}
+                        items={[]}
+                        disabled={enviando}
+                        onAdd={(files) => {
+                          const dt = new DataTransfer();
+                          for (const f of files) dt.items.add(f);
+                          void upload(cat, dt.files);
                         }}
-                      >
-                        <input
-                          id={inputId}
-                          type="file"
-                          multiple
-                          accept={RH_PRESTADOR_DOC_ACCEPT}
-                          disabled={enviando}
-                          style={hiddenFileInputStyle}
-                          onChange={(e) => {
-                            void upload(cat, e.target.files).then(() => {
-                              e.target.value = "";
-                            });
-                          }}
-                        />
-                        {enviando ? (
-                          <>
-                            <Loader2 size={14} className="app-lucide-spin" aria-hidden />
-                            Enviando…
-                          </>
-                        ) : (
-                          <>
-                            <Upload size={14} aria-hidden />
-                            Adicionar
-                          </>
-                        )}
-                      </label>
+                        onRemove={() => {}}
+                        t={t}
+                      />
                     </td>
                   ) : null}
                 </tr>

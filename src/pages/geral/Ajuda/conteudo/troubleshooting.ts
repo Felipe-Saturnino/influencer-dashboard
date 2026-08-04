@@ -209,7 +209,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs de Mesa sem números?",
         texto:
-          "Na visão de time (Staff vazio), selecione um Game Presenter no filtro Staff. Confirme também o mês no carrossel (os dados piloto começaram em julho/2026) e se o prestador tem **ID operacional** vinculado em Gestão de Staff — sem esse vínculo a carga do Grafana não associa as linhas.",
+          "Na visão de time (Staff vazio), selecione um Game Presenter no filtro Staff. Confirme o mês no carrossel (dados de mesa a partir de julho/2026) e se o prestador tem **ID operacional** vinculado em Gestão de Staff — sem esse vínculo a carga do Grafana não associa as rodadas. O card e as colunas de **Incidentes** vêm dos registros da página Incidentes no mesmo período; se só houver KPI de mesa sem incidentes (ou o contrário), a aba ainda mostra o que existir.",
       },
     ],
   },
@@ -640,6 +640,46 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo excluir uma sugestão ou campanha?",
         texto:
           "A exclusão exige permissão de Excluir na página Roteiro de Mesa. Sem ela, os ícones de exclusão não aparecem. Ao clicar, o pop-up padrão pede confirmação. Confirme também que o estúdio do item está dentro do escopo do usuário.",
+      },
+    ],
+  },
+  incidentes: {
+    titulo: "Incidentes",
+    blocos: [
+      {
+        subtitulo: "A lista de incidentes está vazia?",
+        texto:
+          "Confirme o mês selecionado no carrossel (ou ative **Histórico** para ver todo o período) e revise os filtros de Estúdio, Time e Staff — cada um restringe a lista. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
+      },
+      {
+        subtitulo: "O botão Novo Incidente não aparece?",
+        texto:
+          "O botão exige permissão de **Editar** = Sim na página Incidentes (Gestão de Usuários → Permissões). Sem ela, a página fica em modo consulta. Solicite a liberação ao administrador se precisar registrar incidentes.",
+      },
+      {
+        subtitulo: "O campo Tipo não tem opções ou está vazio?",
+        texto:
+          "Para Game Presenter, o tipo de incidente depende da mesa selecionada — escolha a mesa primeiro para carregar a lista de tipos daquele jogo. Para Shuffler, a lista de tipos é fixa e não depende da mesa.",
+      },
+      {
+        subtitulo: "A mesa que eu procuro não aparece na lista do formulário?",
+        texto:
+          "Mesas de Roleta não aparecem na lista quando o time selecionado é Shuffler, pois esse time não atua nesse jogo. Confirme também se a mesa está cadastrada e ativa em Gestão de Mesas.",
+      },
+      {
+        subtitulo: "Não encontro o prestador na lista do formulário?",
+        texto:
+          "A lista de prestadores é filtrada pelo time selecionado (Game Presenter ou Shuffler) e inclui apenas funcionários ativos ou indisponíveis vinculados a esse time (ou papéis de apoio como Service Manager, Shift Leader, Performance Coach e Academy). Verifique o cadastro em Gestão de Prestadores se o nome não aparece.",
+      },
+      {
+        subtitulo: "O anexo não foi enviado ao salvar o incidente?",
+        texto:
+          "Cada arquivo tem limite de 10 MB. Se o arquivo exceder esse tamanho, uma mensagem indica qual anexo excedeu o limite — reduza o tamanho do arquivo ou envie um formato mais leve e tente novamente.",
+      },
+      {
+        subtitulo: "Não vejo as colunas Prestador, Time ou Relator na tabela?",
+        texto:
+          "Essas colunas ficam ocultas quando sua permissão de Ver é **Próprios** — nesse modo, você já sabe que os registros são seus. Se você deveria ver todos os incidentes, solicite ao administrador a permissão Ver = Sim em Gestão de Usuários → Permissões → Incidentes.",
       },
     ],
   },

@@ -5,14 +5,25 @@ import {
   getPeriodoComparativoMoM,
   getPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
+import { fetchEstudioIncidentesPrestadorPeriodo } from "../../../lib/estudioIncidentesFetch";
+import type { EstudioIncidenteRow } from "../../../lib/estudioIncidentesTypes";
+import {
+  agregarContagemIncidentes,
+  agruparIncidentesPorDia,
+  contarIncidentesPorJogo,
+  INCIDENTE_AGG_ZERO,
+  jogosComDadosOuIncidentes,
+  type IncidenteAggContagem,
+} from "../../../lib/overviewPrestadorIncidentes";
 import {
   agregarGpKpiRows,
   agruparGpKpiPorDia,
   agruparGpKpiPorJogo,
-  GP_KPI_AGREGADO_ZERO,
-  type GpKpiAgregado,
+  GP_KPI_JOGOS_ORDEM,
   type GpKpiDiarioRow,
+  type GpKpiJogoLinha,
 } from "../../../lib/gpKpiMetrics";
+import { GAME_IDENTITY_LABEL, type GameIdentityKey } from "../../../lib/gameIdentityColors";
 import type { MesCarrosselEscalaEntry } from "../../../lib/escalaMesCarrosselOverviewStyle";
 
 type MesaEmbed = {
@@ -34,6 +45,17 @@ type RowDb = {
   coop_velocidade: number;
   coop_roda: number;
   mesas_spin_cadastro: MesaEmbed | MesaEmbed[];
+};
+
+export type GpKpiJogoComIncidentes = GpKpiJogoLinha & { incidentes: number };
+
+export type GpKpiDiaComIncidentes = {
+  dia_brt: string;
+  rodadas: number;
+  totalIncidentes: number;
+  casos: number;
+  erros: number;
+  graves: number;
 };
 
 function unwrapMesa(embed: MesaEmbed | MesaEmbed[]): MesaEmbed {
@@ -84,6 +106,59 @@ async function fetchGpKpiPeriodo(
   return mapRows(rows);
 }
 
+function metricasPorJogoMap(rows: GpKpiDiarioRow[]): Map<GameIdentityKey, GpKpiJogoLinha> {
+  const map = new Map<GameIdentityKey, GpKpiJogoLinha>();
+  for (const row of agruparGpKpiPorJogo(rows)) map.set(row.jogoKey, row);
+  return map;
+}
+
+function linhaJogoVazia(key: GameIdentityKey): GpKpiJogoLinha {
+  return {
+    jogoKey: key,
+    jogoLabel: GAME_IDENTITY_LABEL[key],
+    rodadas: 0,
+    dealingSeg: null,
+    reactionSeg: null,
+    coopVelPct: null,
+    coopRodaPct: null,
+  };
+}
+
+function mergePorJogo(
+  rowsKpi: GpKpiDiarioRow[],
+  incRows: EstudioIncidenteRow[],
+): GpKpiJogoComIncidentes[] {
+  const kpiMap = metricasPorJogoMap(rowsKpi);
+  const incPorJogo = contarIncidentesPorJogo(incRows);
+  const keys = jogosComDadosOuIncidentes(new Set(kpiMap.keys()), incPorJogo);
+  return keys.map((key) => {
+    const base = kpiMap.get(key) ?? linhaJogoVazia(key);
+    return { ...base, incidentes: incPorJogo[key] ?? 0 };
+  });
+}
+
+function mergePorDia(
+  rowsKpi: GpKpiDiarioRow[],
+  incRows: EstudioIncidenteRow[],
+): GpKpiDiaComIncidentes[] {
+  const kpiPorDia = new Map(agruparGpKpiPorDia(rowsKpi).map((d) => [d.dia_brt, d.rodadas]));
+  const incPorDia = new Map(agruparIncidentesPorDia(incRows).map((d) => [d.dia, d]));
+  const dias = new Set([...kpiPorDia.keys(), ...incPorDia.keys()]);
+  return [...dias]
+    .sort((a, b) => b.localeCompare(a))
+    .map((dia) => {
+      const inc = incPorDia.get(dia) ?? { ...INCIDENTE_AGG_ZERO, dia };
+      return {
+        dia_brt: dia,
+        rodadas: kpiPorDia.get(dia) ?? 0,
+        totalIncidentes: inc.total,
+        casos: inc.casos,
+        erros: inc.erros,
+        graves: inc.graves,
+      };
+    });
+}
+
 export function useOverviewPrestadorGpKpi(opts: {
   enabled: boolean;
   funcionarioId: string | null;
@@ -92,14 +167,18 @@ export function useOverviewPrestadorGpKpi(opts: {
 }) {
   const { enabled, funcionarioId, mesSelecionado, historico } = opts;
   const [rowsAtual, setRowsAtual] = useState<GpKpiDiarioRow[]>([]);
-  const [aggAnterior, setAggAnterior] = useState<GpKpiAgregado>(GP_KPI_AGREGADO_ZERO);
+  const [rowsAnt, setRowsAnt] = useState<GpKpiDiarioRow[]>([]);
+  const [incAtual, setIncAtual] = useState<EstudioIncidenteRow[]>([]);
+  const [incAnterior, setIncAnterior] = useState<EstudioIncidenteRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enabled || !funcionarioId || (!historico && !mesSelecionado)) {
       setRowsAtual([]);
-      setAggAnterior(GP_KPI_AGREGADO_ZERO);
+      setRowsAnt([]);
+      setIncAtual([]);
+      setIncAnterior([]);
       setLoading(false);
       setErro(null);
       return;
@@ -113,26 +192,51 @@ export function useOverviewPrestadorGpKpi(opts: {
       try {
         if (historico) {
           const { inicio, fim } = getPeriodoHistoricoCompetencias();
-          const rows = await fetchGpKpiPeriodo(funcionarioId, inicio, fim);
+          const [kpi, inc] = await Promise.all([
+            fetchGpKpiPeriodo(funcionarioId, inicio, fim),
+            fetchEstudioIncidentesPrestadorPeriodo({
+              prestadorId: funcionarioId,
+              dataIni: inicio,
+              dataFim: fim,
+            }),
+          ]);
           if (cancelled) return;
-          setRowsAtual(rows);
-          setAggAnterior(GP_KPI_AGREGADO_ZERO);
+          setRowsAtual(kpi);
+          setRowsAnt([]);
+          setIncAtual(inc);
+          setIncAnterior([]);
         } else if (mesSelecionado) {
           const mom = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
-          const [atual, ant] = await Promise.all([
+          const [atual, ant, incA, incB] = await Promise.all([
             fetchGpKpiPeriodo(funcionarioId, mom.atual.inicio, mom.atual.fim),
             fetchGpKpiPeriodo(funcionarioId, mom.anterior.inicio, mom.anterior.fim),
+            fetchEstudioIncidentesPrestadorPeriodo({
+              prestadorId: funcionarioId,
+              dataIni: mom.atual.inicio,
+              dataFim: mom.atual.fim,
+            }),
+            fetchEstudioIncidentesPrestadorPeriodo({
+              prestadorId: funcionarioId,
+              dataIni: mom.anterior.inicio,
+              dataFim: mom.anterior.fim,
+            }),
           ]);
           if (cancelled) return;
           setRowsAtual(atual);
-          setAggAnterior(agregarGpKpiRows(ant));
+          setRowsAnt(ant);
+          setIncAtual(incA);
+          setIncAnterior(incB);
         }
       } catch (e) {
         console.error(e);
         if (!cancelled) {
           setRowsAtual([]);
-          setAggAnterior(GP_KPI_AGREGADO_ZERO);
-          setErro("Não foi possível carregar os KPIs de mesa. Se o problema persistir, entre em contato com o suporte.");
+          setRowsAnt([]);
+          setIncAtual([]);
+          setIncAnterior([]);
+          setErro(
+            "Não foi possível carregar os KPIs de mesa. Se o problema persistir, entre em contato com o suporte.",
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -145,16 +249,47 @@ export function useOverviewPrestadorGpKpi(opts: {
   }, [enabled, funcionarioId, mesSelecionado, historico]);
 
   const agregado = useMemo(() => agregarGpKpiRows(rowsAtual), [rowsAtual]);
-  const porDia = useMemo(() => agruparGpKpiPorDia(rowsAtual), [rowsAtual]);
-  const porJogo = useMemo(() => agruparGpKpiPorJogo(rowsAtual), [rowsAtual]);
+  const aggAnterior = useMemo(() => agregarGpKpiRows(rowsAnt), [rowsAnt]);
+
+  const porJogoAtual = useMemo(() => metricasPorJogoMap(rowsAtual), [rowsAtual]);
+  const porJogoAnterior = useMemo(() => metricasPorJogoMap(rowsAnt), [rowsAnt]);
+
+  const metricasJogo = useMemo(() => {
+    const out: Record<
+      GameIdentityKey,
+      { atual: GpKpiJogoLinha; anterior: GpKpiJogoLinha }
+    > = {} as Record<GameIdentityKey, { atual: GpKpiJogoLinha; anterior: GpKpiJogoLinha }>;
+    for (const key of GP_KPI_JOGOS_ORDEM) {
+      out[key] = {
+        atual: porJogoAtual.get(key) ?? linhaJogoVazia(key),
+        anterior: porJogoAnterior.get(key) ?? linhaJogoVazia(key),
+      };
+    }
+    return out;
+  }, [porJogoAtual, porJogoAnterior]);
+
+  const incidentesAgg: IncidenteAggContagem = useMemo(
+    () => agregarContagemIncidentes(incAtual),
+    [incAtual],
+  );
+  const incidentesAggAnt: IncidenteAggContagem = useMemo(
+    () => agregarContagemIncidentes(incAnterior),
+    [incAnterior],
+  );
+
+  const porJogo = useMemo(() => mergePorJogo(rowsAtual, incAtual), [rowsAtual, incAtual]);
+  const porDia = useMemo(() => mergePorDia(rowsAtual, incAtual), [rowsAtual, incAtual]);
 
   return {
     loading,
     erro,
     agregado,
     aggAnterior,
+    metricasJogo,
+    incidentesAgg,
+    incidentesAggAnt,
     porDia,
     porJogo,
-    temDados: rowsAtual.length > 0,
+    temDados: rowsAtual.length > 0 || incAtual.length > 0,
   };
 }

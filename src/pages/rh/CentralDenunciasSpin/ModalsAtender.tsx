@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Loader2, FileText, StickyNote } from "lucide-react";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
@@ -62,7 +63,7 @@ export function ModalAtenderDenuncia({
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [notaTexto, setNotaTexto] = useState("");
-  const [notaFiles, setNotaFiles] = useState<FileList | null>(null);
+  const [notaFiles, setNotaFiles] = useState<{ id: string; file: File }[]>([]);
   const [notaSaving, setNotaSaving] = useState(false);
   const [notas, setNotas] = useState<{ id: string; texto: string; created_at: string; created_by: string; autor: string; anexos: AnexoRow[] }[]>([]);
   useEscClose(open, onClose);
@@ -156,9 +157,9 @@ export function ModalAtenderDenuncia({
       return;
     }
     const aid = ins.id as string;
-    if (notaFiles && notaFiles.length > 0) {
+    if (notaFiles.length > 0) {
       for (let i = 0; i < notaFiles.length; i++) {
-        const f = notaFiles[i];
+        const f = notaFiles[i].file;
         const safe = sanitizeStorageFileName(f.name);
         const path = `${row.id}/${aid}/${Date.now()}_${i}_${safe}`;
         const { error: upErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, f, { contentType: f.type || undefined });
@@ -166,7 +167,7 @@ export function ModalAtenderDenuncia({
           setErr("Anotação salva, mas falhou o envio de um anexo.");
           setNotaSaving(false);
           setNotaTexto("");
-          setNotaFiles(null);
+          setNotaFiles([]);
           void loadNotas();
           onSaved();
           return;
@@ -182,7 +183,7 @@ export function ModalAtenderDenuncia({
       }
     }
     setNotaTexto("");
-    setNotaFiles(null);
+    setNotaFiles([]);
     setNotaSaving(false);
     void loadNotas();
     onSaved();
@@ -354,12 +355,29 @@ export function ModalAtenderDenuncia({
                     resize: "vertical",
                   }}
                 />
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => setNotaFiles(e.target.files)}
-                  style={{ marginTop: 10, display: "block", width: "100%", maxWidth: "100%", fontSize: 13, boxSizing: "border-box" }}
-                />
+                <div style={{ marginTop: 10 }}>
+                  <CampoUploadArquivos
+                    id="nota-anexo"
+                    label="Anexos"
+                    buttonLabel="Adicionar anexos"
+                    multiple
+                    items={notaFiles.map((nf) => ({
+                      key: nf.id,
+                      label: nf.file.name,
+                      pendente: true,
+                    }))}
+                    onAdd={(files) =>
+                      setNotaFiles((prev) => [
+                        ...prev,
+                        ...files.map((file) => ({ id: crypto.randomUUID(), file })),
+                      ])
+                    }
+                    onRemove={(key) => setNotaFiles((prev) => prev.filter((nf) => nf.id !== key))}
+                    disabled={notaSaving}
+                    t={t}
+                    pendingHint="Anexos serão enviados ao registrar a anotação."
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => void registrarNota()}

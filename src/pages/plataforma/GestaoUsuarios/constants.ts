@@ -127,6 +127,7 @@ const PAGES_META: {
   },
   { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
+  { key: "incidentes", label: "Incidentes", secao: "Estúdio", hasCriar: false, hasEditar: true, hasExcluir: false },
   // Academy
   {
     key: "academy_performance_hub",

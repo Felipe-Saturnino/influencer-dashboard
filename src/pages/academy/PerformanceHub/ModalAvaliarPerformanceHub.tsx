@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BarChart3, ClipboardList, Image, ListChecks, MessageSquare, NotebookPen, TableProperties } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import {
@@ -138,7 +139,6 @@ export function ModalAvaliarPerformanceHub({
 }: Props) {
   const { theme: t, isDark } = useApp();
   const somenteLeitura = modo === "ver";
-  const videoInputRef = useRef<HTMLInputElement>(null);
   const isShuffler = variantTime === "shuffler";
   const configGp = isShuffler ? null : (config as PerformanceHubScoringConfigGamePresenter);
   const configSh = isShuffler ? (config as PerformanceHubScoringConfigShuffler) : null;
@@ -463,7 +463,6 @@ export function ModalAvaliarPerformanceHub({
       return;
     }
     if (file.size > ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES) {
-      if (videoInputRef.current) videoInputRef.current.value = "";
       setVideoNome("");
       setVideoFile(null);
       setErros([ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO]);
@@ -785,45 +784,47 @@ export function ModalAvaliarPerformanceHub({
             </div>
 
             <div style={{ marginTop: 14 }}>
-              <label htmlFor="modalVideo" style={labelStyle(t)}>
-                Vídeo da avaliação
-                {!somenteLeitura ? <CampoObrigatorioMark /> : null}
-              </label>
               {somenteLeitura ? (
-                <LinkAssistirVideoPerformanceHub
-                  videoUrl={videoPathSalvo || avaliacao.videoUrl}
-                  videoRemovidoEm={avaliacao.videoRemovidoEm}
-                />
-              ) : (
                 <>
-                  <input
-                    ref={videoInputRef}
-                    id="modalVideo"
-                    type="file"
-                    accept="video/*"
-                    disabled={somenteLeitura || enviandoVideo}
-                    onChange={(e) => handleVideoChange(e.target.files?.[0] ?? null)}
-                    style={{
-                      width: "100%",
-                      fontSize: 13,
-                      fontFamily: FONT.body,
-                      color: t.text,
-                      borderColor: invalidFields.has("video") ? "#e84025" : undefined,
-                    }}
-                    aria-label="Enviar vídeo da avaliação"
+                  <span style={labelStyle(t)}>Vídeo da avaliação</span>
+                  <LinkAssistirVideoPerformanceHub
+                    videoUrl={videoPathSalvo || avaliacao.videoUrl}
+                    videoRemovidoEm={avaliacao.videoRemovidoEm}
                   />
-                  <p style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-                    {ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO}
-                  </p>
-                  {videoNome ? (
-                    <p style={{ fontSize: 12, color: t.text, marginTop: 6, fontFamily: FONT.body }}>{videoNome}</p>
-                  ) : null}
-                  {!videoFile && videoPerformanceHubPodeAssistir(videoPathSalvo) ? (
-                    <div style={{ marginTop: 8 }}>
-                      <LinkAssistirVideoPerformanceHub videoUrl={videoPathSalvo} />
-                    </div>
-                  ) : null}
                 </>
+              ) : (
+                <CampoUploadArquivos
+                  id="modalVideo"
+                  label="Vídeo da avaliação"
+                  buttonLabel="Enviar vídeo da avaliação"
+                  accept="video/*"
+                  multiple={false}
+                  obrigatorio
+                  hasError={invalidFields.has("video")}
+                  hint={ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO}
+                  items={
+                    videoFile
+                      ? [{ key: "pendente", label: videoFile.name, pendente: true }]
+                      : videoPerformanceHubPodeAssistir(videoPathSalvo) && videoNome
+                        ? [{ key: "salvo", label: videoNome }]
+                        : []
+                  }
+                  onAdd={(files) => handleVideoChange(files[0] ?? null)}
+                  onRemove={() => {
+                    setVideoFile(null);
+                    setVideoNome("");
+                    setVideoPathSalvo("");
+                  }}
+                  disabled={enviandoVideo}
+                  t={t}
+                  footer={
+                    !videoFile && videoPerformanceHubPodeAssistir(videoPathSalvo) ? (
+                      <div style={{ marginTop: 8 }}>
+                        <LinkAssistirVideoPerformanceHub videoUrl={videoPathSalvo} />
+                      </div>
+                    ) : null
+                  }
+                />
               )}
             </div>
           </ModalTabPanel>

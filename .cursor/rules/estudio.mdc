@@ -24,8 +24,11 @@ alwaysApply: false
 | `central_notificacoes` | Central de Notificações | **Fixo:** Gerencie solicitações entre operadoras e estúdio com histórico de conversas. |
 | `rh_figurinos` | Figurinos | Controle o inventário de peças com retiradas, devoluções e manutenções. |
 | `roteiro_mesa` | Roteiro de Mesa | Scripts e orientações de live por estúdio para o dealer usar em mesa. |
+| `incidentes` | Incidentes | Registre e acompanhe erros de mesa por Game Presenter e Shuffler no período. |
 
 **Central de Notificações:** após o `PageHeader`, manter `<p>` separado para texto dinâmico (ex.: contador de pendentes ou “Campanhas de roteiro…”) — não substituir o `subtitle` fixo do header.
+
+**Incidentes (Ver = Próprios):** subtítulo alternativo — `Acompanhe os incidentes registrados sobre a sua operação em mesa.` — substitui o subtítulo padrão quando `canView === "proprios"` (prestador vendo só os próprios registros).
 
 ---
 
@@ -37,9 +40,10 @@ alwaysApply: false
 | `central_notificacoes` | Central de Notificações | `estudio/CentralNotificacoes/` |
 | `rh_figurinos` | Figurinos | `estudio/Figurinos/` |
 | `roteiro_mesa` | Roteiro de Mesa | `estudio/RoteiroMesa/` |
+| `incidentes` | Incidentes | `estudio/Incidentes/` |
 | — | Modais de solicitação | `estudio/solicitacoes/` |
 
-**Ajuda contextual:** as quatro páginas usam **`AjudaContextualAcoes`** (contrato em `geral.mdc` § Ajuda contextual). Nenhuma delas tem tutorial associado — só **Conheça** e **Troubleshooting**. Em **Figurinos**, o grupo fica à direita da mesma linha das abas de status; no Roteiro de Mesa, ao lado do filtro de estúdio.
+**Ajuda contextual:** as cinco páginas usam **`AjudaContextualAcoes`** (contrato em `geral.mdc` § Ajuda contextual). Nenhuma delas tem tutorial associado — só **Conheça** e **Troubleshooting**. Em **Figurinos**, o grupo fica à direita da mesma linha das abas de status; no Roteiro de Mesa, ao lado do filtro de estúdio; em **Incidentes**, na linha do carrossel/Histórico/estúdio.
 
 ---
 
@@ -129,6 +133,52 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 
 ---
 
+## Incidentes (`incidentes`)
+
+### Protocolo e categorias
+
+- Cada registro grava **`protocolo`** único (gerado no banco) e uma **categoria** (`incidente`): `caso`, `erro`, `oculto`, `nao_avisado`, `avisado_resolvido`, `avisado_nao_resolvido` — rótulos e cor semântica em **`INCIDENTE_CATEGORIA_META`** (`lib/estudioIncidentesTypes.ts`): Caso (roxo especial), Erro (vermelho negativo), Oculto (cinza neutro), Não Avisado (amarelo atenção), Avisado/Resolvido (verde positivo), Avisado/Não Resolvido (vermelho negativo) — cores herdadas da paleta semântica do Global, não confundir com identidade de jogo.
+- Prefixo do protocolo: **Caso** → `CASO-XXXXX`; **Oculto** → `OCULTO-XXXXX`; **Erro** e demais categorias de erro → `ERRO-XXXXX` (sequências distintas por família).
+- **`local_mesa`** (`em_mesa` | `fora_mesa`) só é obrigatório para **Shuffler** (`time_alvo = "shuf"`); Game Presenter grava sempre `em_mesa`. Usado no detalhamento **Em Mesa / Fora da Mesa** sob os KPIs `avisado_resolvido` e `avisado_nao_resolvido`.
+- **Tipos de incidente** dependem do jogo da mesa (GP) ou são fixos (Shuffler) — catálogos em `TIPOS_INCIDENTE_BLACKJACK`, `TIPOS_INCIDENTE_BACCARAT_FB` (Baccarat e Futebol Brasileiro compartilham lista), `TIPOS_INCIDENTE_ROLETA`, `TIPOS_INCIDENTE_SHUFFLER` (`lib/estudioIncidentesTypes.ts`); resolvidos via `tiposIncidenteParaForm(timeAlvo, tipoJogoMesa)`. Roleta **não** aparece na lista de mesas do formulário quando `time_alvo = "shuf"` (Shuffler não atua em Roleta).
+
+### KPIs Consolidados
+
+- 6 cards (`app-grid-kpi-6`) — um por categoria, ordem **Caso → Erro → Oculto → Não Avisado → Avisado/Resolvido → Avisado/Não Resolvido**; `KpiCard` com `isInverso` (queda é positiva) e `isHistorico={historico}`; ícones: `AlertTriangle` (Caso), `CircleAlert` (Erro), `EyeOff` (Oculto), `BellOff` (Não Avisado), `CheckCircle2` (Avisado/Resolvido), `AlertCircle` (Avisado/Não Resolvido).
+- Cards **Avisado/Resolvido** e **Avisado/Não Resolvido** exibem, abaixo do `KpiCard`, a contagem **Em Mesa** / **Fora da Mesa** (`local_mesa`) do período filtrado — não é um `subValue` do próprio card (o KPI continua contando o total da categoria).
+- MoM: `getPeriodoComparativoMoM` (mês civil) para atual/anterior; Histórico usa `getPeriodoHistoricoCompetencias` (13 competências) e desativa o comparativo (`isHistorico`).
+
+### Filtros
+
+- Carrossel de mês (início em `INCIDENTES_MES_INICIO` — julho/2026) + **`FiltroHistoricoButton`** + **`FiltroEstudioSelect`** (**Todos Estúdios**) na primeira linha, com **`AjudaContextualAcoes`**.
+- Segunda linha — **abas de Time** (`FiltroBarTabButton`: Todos Times `Users`, Game Presenters `UserRound`, Shuffler `Shuffle`) — **oculta** quando `canView === "proprios"` (prestador só vê os próprios incidentes, sem necessidade de trocar de time).
+- Terceira linha — **`BarraPesquisaPagina`** (protocolo, prestador, mesa) + **`FiltroEntidadeBarSelect`** `mode="single"` para **Staff** (ícone `FilterBarIcons.staff`, agregadora **Todos Staff**) — lista de staff restrita ao time selecionado na aba; **oculta** quando `canView === "proprios"`.
+- Filtro de escopo (time, staff, estúdio) e busca são **client-side** sobre o período já buscado no servidor (`fetchEstudioIncidentesPeriodo`).
+
+### Permissões
+
+| Ação | Regra |
+|---|---|
+| **Ver = Sim** | Vê todos os incidentes do período/escopo — abas de Time e filtro Staff visíveis. |
+| **Ver = Próprios** | `canView === "proprios"` — lista e KPIs restritos aos incidentes cujo `prestador_id` corresponde ao próprio usuário (`buscarRhFuncionarioIdsPorEmailLogin`); tabela **omite** colunas Prestador, Time e Relator; `ModalVerIncidente` recebe `ocultarPrestadorTimeRelator`; abas de Time e filtro Staff ficam ocultos. |
+| **Editar = Sim** (`canEditar === "sim"`) | Mostra o CTA **Novo Incidente** (`CtaCriarButton`) — produto trata a criação como ação de Editar; **Editar = Próprios** não libera o botão. |
+
+### Tabela
+
+- Colunas: Protocolo (1ª coluna fixa), Data/Hora, Prestador, Time, Jogo (chip `getGameTagChipStyle` + `GAME_IDENTITY_ICONS` quando o jogo mapear para `GameIdentityKey`), Incidente (badge com `INCIDENTE_CATEGORIA_META.color`), Tipo, Relator, Ações (`BtnIconeAcaoLinha` + `Eye` → `ModalVerIncidente`). Colunas Prestador/Time/Relator omitidas em **Ver = Próprios**.
+- Ordenação padrão: `data` desc (`SortTableTh`); demais colunas ordenáveis.
+
+### Modais
+
+- **`ModalVerIncidente`** — somente leitura, abas **Dados do Incidente** / **Descrição**; carrega anexos via `fetchEstudioIncidenteAnexos` + `urlAssinadaAnexoIncidente` (URL assinada, bucket `estudio-incidentes`).
+- **`ModalNovoIncidente`** — Time (GP/Shuffler) → Mesa (combo buscável, filtra Roleta para Shuffler) → ID/Data/Hora da rodada → Prestador (combo buscável, `fetchStaffFormIncidente` por time) → Incidente/Tipo → Local do Shoe (só Shuffler) → Resolução → Payout necessário → Descrição → Anexos via **`CampoUploadArquivos`** (`buttonLabel` **Adicionar anexo**, múltiplos, 10 MB por arquivo, badge Pendente até salvar). Relator = usuário logado (`user.name`/`user.email` + `user.id`); grava via `insertEstudioIncidente` + `uploadEstudioIncidenteAnexos`.
+
+### Exceções — identidade de jogo
+
+Nenhuma exceção documentada nesta secção. Chip de jogo na tabela usa paleta canónica (Global § Identidade visual por jogo).
+
+---
+
 ## Solicitações (`estudio/solicitacoes/`)
 
 - Modais partilhados por Dealers e outras páginas — `useApp` + `useDashboardBrand` internos.
@@ -143,6 +193,7 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 | Dealers vazio | `Nenhum dealer encontrado.` |
 | Sem permissão | String Global |
 | KPIs período | `Sem dados para o período selecionado.` |
+| Incidentes — tabela vazia | `Sem dados para o período selecionado.` (string Global — não específica) |
 
 ---
 
@@ -156,3 +207,5 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 - Query de observações sem `.limit()`.
 - Figurinos: `<select>` nativo para categoria/tamanho/cor/gênero — usar `FiltroFigurinosCategoriaSelect` / `FiltroFigurinosTamanhoSelect` / `FiltroFigurinosCorSelect` / `FiltroFigurinosGeneroSelect` (**Todas Categorias** / **Todos Tamanhos** / **Todas Cores** / **Todos Gêneros**). Filtro de estúdio: **`FiltroEstudioSelect`** (**Todos Estúdios**), não `FiltroOperadoraSelect`.
 - Aba **Disponíveis** — colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação, Ações (sem data de aquisição).
+- Incidentes: abas de Time / filtro Staff visíveis para usuário com `canView === "proprios"` — devem ficar ocultas (o prestador só vê os próprios registros, sem necessidade de trocar de time ou staff).
+- Incidentes: tratar CTA **Novo Incidente** como ação de **Criar** — o produto define como **Editar = Sim** (`canEditar === "sim"`); não gatear por `canCriarOk` nem por `canEditarOk` (Próprios não libera).

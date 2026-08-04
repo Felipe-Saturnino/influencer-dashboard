@@ -21,10 +21,6 @@
       --warn: #f59e0b;
       --special: #a78bfa;
       --neutral: #6b7280;
-      --bj: #22c55e;
-      --roleta: #eab308;
-      --baccarat: #1e36f8;
-      --fb: #ea580c;
       --radius-box: 14px;
       --radius-tab: 10px;
       --font-body: "DM Sans", system-ui, sans-serif;
@@ -58,7 +54,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Mock chrome ─────────────────────────────────────────── */
     .mock-bar {
       position: sticky; top: 0; z-index: 40;
       background: color-mix(in srgb, var(--bg) 92%, transparent);
@@ -114,12 +109,7 @@
       font-size: 12px; color: var(--text-muted);
     }
     .mockup-banner strong { color: var(--brand-primary); }
-    .mockup-banner code {
-      font-size: 11px; padding: 1px 6px; border-radius: 6px;
-      background: var(--input-bg); border: 1px solid var(--card-border);
-    }
 
-    /* ── Nível 1 — header ────────────────────────────────────── */
     .page-header { margin-bottom: 18px; }
     .page-header-row { display: flex; align-items: center; gap: 8px; }
     .page-icon {
@@ -136,7 +126,6 @@
       margin: 5px 0 0 40px; font-size: 13px; color: var(--text-muted);
     }
 
-    /* ── Nível 2 — filtros ───────────────────────────────────── */
     .filter-box {
       background: var(--card-bg); border: 1px solid var(--card-border);
       border-radius: var(--radius-box); padding: 12px 20px; margin-bottom: 14px;
@@ -168,6 +157,7 @@
       padding: 6px 14px; border-radius: 999px;
       border: 1px solid var(--card-border); background: var(--input-bg);
       font-size: 13px; color: var(--text); cursor: pointer;
+      font-family: inherit;
     }
     .pill.active, .pill[aria-pressed="true"] {
       border-color: color-mix(in srgb, var(--brand-action) 40%, transparent);
@@ -181,26 +171,13 @@
       padding: 10px 18px; min-height: 44px; border-radius: var(--radius-tab);
       border: 1px solid var(--card-border); background: var(--input-bg);
       color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer;
+      font-family: inherit;
     }
     .tab.active {
       font-weight: 700; color: var(--brand-contrast);
       border-color: color-mix(in srgb, var(--brand-contrast) 40%, transparent);
       background: color-mix(in srgb, var(--brand-contrast) 12%, transparent);
     }
-
-    .sem-pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 18px; min-height: 44px; border-radius: 10px;
-      border: 1px solid var(--card-border); background: var(--input-bg);
-      color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer;
-    }
-    .sem-pill.active {
-      font-weight: 700;
-      border-color: var(--sc, var(--brand-contrast));
-      color: var(--sc, var(--brand-contrast));
-      background: color-mix(in srgb, var(--sc, var(--brand-contrast)) 15%, transparent);
-    }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sc, currentColor); flex-shrink: 0; }
 
     .search-input {
       min-width: 220px; max-width: 320px; width: 100%;
@@ -211,6 +188,27 @@
       background-repeat: no-repeat; background-position: 12px center;
     }
 
+    .staff-wrap { position: relative; min-width: 220px; }
+    .staff-panel {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 12;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; box-shadow: var(--shadow); padding: 8px; max-height: 240px; overflow: auto;
+    }
+    .staff-panel[hidden] { display: none !important; }
+    .staff-opt {
+      display: block; width: 100%; text-align: left; padding: 8px 10px;
+      border: none; background: transparent; color: var(--text); font: inherit;
+      border-radius: 8px; cursor: pointer;
+    }
+    .staff-opt:hover, .staff-opt[aria-selected="true"] {
+      background: color-mix(in srgb, var(--brand-action) 12%, transparent);
+    }
+    .staff-search {
+      width: 100%; margin-bottom: 6px; padding: 8px 10px; border-radius: 8px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); font: inherit; font-size: 12px;
+    }
+
     .cta-criar {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 10px 20px; border-radius: var(--radius-tab); border: none;
@@ -219,9 +217,7 @@
       font-weight: 700; cursor: pointer; white-space: nowrap;
     }
     .cta-criar:hover { filter: brightness(1.05); }
-    .cta-criar[hidden] { display: none !important; }
 
-    /* ── Nível 3 — blocos ────────────────────────────────────── */
     .content-box {
       background: var(--card-bg); border: 1px solid var(--card-border);
       border-radius: var(--radius-box); padding: 20px; margin-bottom: 14px;
@@ -244,22 +240,16 @@
     .section-title-row .section-title { margin-bottom: 0; }
 
     .kpi-grid {
-      display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
     }
     @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 700px) { .kpi-grid { grid-template-columns: 1fr; } }
 
     .kpi-card {
       background: var(--input-bg); border: 1px solid var(--card-border);
       border-radius: var(--radius-box); padding: 14px 16px;
       border-left: 3px solid var(--kpi-color, var(--brand-primary));
-      cursor: pointer; text-align: left; font-family: inherit; width: 100%;
-      color: inherit; transition: box-shadow 0.15s;
-    }
-    .kpi-card:hover { box-shadow: var(--shadow); }
-    .kpi-card.active {
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--kpi-color, var(--brand-primary)) 30%, transparent);
-      border-color: var(--kpi-color, var(--brand-primary));
+      text-align: left; width: 100%; color: inherit;
     }
     .kpi-label {
       font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
@@ -270,13 +260,24 @@
       color: var(--kpi-color, var(--brand-primary)); margin: 6px 0 0;
       font-variant-numeric: tabular-nums; line-height: 1.1;
     }
-    .kpi-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+    .kpi-mom {
+      margin-top: 8px; font-size: 11px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    }
+    .kpi-mom .up { color: var(--neg); font-weight: 700; }
+    .kpi-mom .down { color: var(--pos); font-weight: 700; }
+    .kpi-mom .flat { color: var(--neutral); font-weight: 700; }
+    .kpi-mom .ref { color: var(--text-muted); }
+    .kpi-split {
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--card-border);
+      display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text-muted);
+    }
+    .kpi-split b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
 
     .table-wrap {
       overflow-x: auto; border-radius: var(--radius-box);
       border: 1px solid var(--card-border);
     }
-    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 920px; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 860px; }
     caption { display: none; }
     thead th {
       background: var(--th-bg);
@@ -291,26 +292,17 @@
     }
     tbody tr:nth-child(odd) { background: var(--zebra-a); }
     tbody tr:nth-child(even) { background: var(--zebra-b); }
-    tbody tr:hover { background: color-mix(in srgb, var(--card-bg) 88%, var(--brand-action) 12%) !important; cursor: pointer; }
+    tbody tr:hover { background: color-mix(in srgb, var(--card-bg) 88%, var(--brand-action) 12%) !important; }
     td.left, th.left { text-align: left; }
     .cod { font-weight: 700; color: var(--brand-contrast); }
-    .muted { color: var(--text-muted); font-size: 12px; }
 
     .badge {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap;
     }
-    .b-aberto   { background: #f59e0b22; color: #d97706; border: 1px solid #f59e0b44; }
-    .b-em_analise { background: #3b82f622; color: #2563eb; border: 1px solid #3b82f644; }
-    .b-resolvido { background: #22c55e22; color: #16a34a; border: 1px solid #22c55e44; }
-    .b-arquivado { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
     .b-gp { background: color-mix(in srgb, var(--brand-action) 15%, transparent); color: var(--brand-action); border: 1px solid color-mix(in srgb, var(--brand-action) 38%, transparent); }
     .b-shuf { background: color-mix(in srgb, var(--brand-contrast) 12%, transparent); color: var(--brand-contrast); border: 1px solid color-mix(in srgb, var(--brand-contrast) 34%, transparent); }
-    .b-tipo { background: color-mix(in srgb, var(--sc, var(--special)) 15%, transparent); color: var(--sc, var(--special)); border: 1px solid color-mix(in srgb, var(--sc, var(--special)) 40%, transparent); }
-    .b-sev-alta { background: #e8402522; color: #e84025; border: 1px solid #e8402544; }
-    .b-sev-media { background: #f59e0b22; color: #d97706; border: 1px solid #f59e0b44; }
-    .b-sev-baixa { background: #6b728022; color: #6b7280; border: 1px solid #6b728044; }
-
+    .b-inc { background: color-mix(in srgb, var(--sc, var(--special)) 15%, transparent); color: var(--sc, var(--special)); border: 1px solid color-mix(in srgb, var(--sc, var(--special)) 40%, transparent); }
     .game-chip {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
@@ -326,41 +318,14 @@
       color: var(--text); cursor: pointer;
     }
     .btn-icon:hover { border-color: var(--brand-action); color: var(--brand-action); }
-    .actions { display: flex; gap: 6px; justify-content: center; }
-
-    .rank-row {
-      display: flex; align-items: center; gap: 14px; padding: 12px 14px;
-      border: 1px solid var(--card-border); border-radius: 12px;
-      background: var(--input-bg); margin-bottom: 8px;
-    }
-    .rank-pos {
-      width: 28px; height: 28px; border-radius: 8px;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 13px;
-      background: color-mix(in srgb, var(--brand-action) 15%, transparent);
-      color: var(--brand-action);
-    }
-    .rank-name { font-weight: 700; flex: 1; min-width: 0; }
-    .rank-meta { font-size: 12px; color: var(--text-muted); }
-    .rank-bar {
-      width: 120px; height: 6px; border-radius: 999px;
-      background: var(--card-bg); border: 1px solid var(--card-border); overflow: hidden;
-    }
-    .rank-bar > i { display: block; height: 100%; background: var(--neg); border-radius: 999px; }
-    .rank-count { font-weight: 800; font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
-
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
-
+    .empty { padding: 40px 0; text-align: center; font-size: 13px; color: var(--text-muted); }
+    .hidden { display: none !important; }
     .note {
       margin-top: 14px; font-size: 11px; color: var(--text-muted);
       padding: 10px 14px; border-radius: 10px; background: var(--input-bg);
       border: 1px dashed var(--card-border);
     }
-    .empty { padding: 40px 0; text-align: center; font-size: 13px; color: var(--text-muted); }
-    .hidden { display: none !important; }
 
-    /* ── Modal ───────────────────────────────────────────────── */
     .overlay {
       position: fixed; inset: 0; z-index: 50;
       background: rgba(15, 15, 26, 0.55);
@@ -369,33 +334,55 @@
     }
     .overlay[hidden] { display: none !important; }
     .modal {
-      width: min(560px, 100%); max-height: 90dvh; overflow: auto;
+      width: min(640px, 100%); max-height: 90dvh; overflow: auto;
       background: var(--card-bg); border: 1px solid var(--card-border);
       border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.35);
       padding: 20px;
     }
-    .modal-head {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 12px; margin-bottom: 16px;
+    .modal--lg { width: min(720px, 100%); }
+    .modal-head { margin-bottom: 14px; }
+    .modal-head-row {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     }
     .modal-head h3 {
       font-family: var(--font-title); font-size: 16px; font-weight: 800;
-      text-transform: uppercase; color: var(--brand-primary);
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.02em;
+    }
+    .modal-sub { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+    .modal-tabs {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;
     }
     .field { margin-bottom: 14px; }
     .field label {
-      display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px;
-      color: var(--text);
+      display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: var(--text);
     }
     .req { color: #e84025; margin-left: 2px; }
-    .field select, .field textarea, .field input {
+    .field select, .field textarea, .field input[type="text"],
+    .field input[type="date"], .field input[type="time"], .field input[type="file"] {
       width: 100%; padding: 10px 12px; border-radius: 10px;
       border: 1px solid var(--card-border); background: var(--input-bg);
       color: var(--text); font: inherit; font-size: 13px;
     }
     .field textarea { min-height: 96px; resize: vertical; }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+    .field-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .readonly-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px;
+    }
+    @media (max-width: 560px) { .readonly-grid { grid-template-columns: 1fr; } }
+    .ro-item label {
+      display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;
+    }
+    .ro-item div { font-size: 13px; font-weight: 600; }
+    .ro-full { grid-column: 1 / -1; }
+    .anexo-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+    .anexo-item {
+      display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+      border-radius: 10px; border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 12px;
+    }
     .modal-foot {
       display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;
       padding-top: 14px; border-top: 1px solid var(--card-border);
@@ -410,6 +397,25 @@
       color: #fff; font: inherit; font-weight: 700; cursor: pointer;
     }
 
+    .combo { position: relative; }
+    .combo-trigger {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; text-align: left;
+    }
+    .combo-panel {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; box-shadow: var(--shadow); padding: 8px; max-height: 220px; overflow: auto;
+    }
+    .combo-panel[hidden] { display: none !important; }
+    .combo-opt {
+      display: block; width: 100%; text-align: left; padding: 8px 10px;
+      border: none; background: transparent; color: var(--text); font: inherit;
+      border-radius: 8px; cursor: pointer; font-size: 12px;
+    }
+    .combo-opt:hover { background: color-mix(in srgb, var(--brand-action) 12%, transparent); }
+
     .toast {
       position: fixed; bottom: 24px; right: 24px; z-index: 60;
       padding: 12px 16px; border-radius: 12px;
@@ -417,36 +423,32 @@
       box-shadow: var(--shadow); font-size: 13px; font-weight: 600;
       color: var(--pos); display: none;
     }
-    .toast.show { display: block; animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .toast.show { display: block; }
 
-    .prestador-banner {
-      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-      padding: 14px 18px; border-radius: 14px; margin-bottom: 14px;
-      background: color-mix(in srgb, var(--brand-contrast) 10%, var(--card-bg));
-      border: 1px solid color-mix(in srgb, var(--brand-contrast) 30%, transparent);
+    .seg {
+      display: flex; gap: 8px; flex-wrap: wrap;
     }
-    .prestador-banner .kind {
-      font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
-      padding: 4px 10px; border-radius: 20px;
-      background: color-mix(in srgb, var(--brand-contrast) 22%, transparent);
-      color: var(--brand-contrast);
-      border: 1px solid color-mix(in srgb, var(--brand-contrast) 40%, transparent);
+    .seg button {
+      flex: 1; min-width: 120px; padding: 10px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .seg button.active {
+      color: var(--brand-contrast); font-weight: 700;
+      border-color: color-mix(in srgb, var(--brand-contrast) 40%, transparent);
+      background: color-mix(in srgb, var(--brand-contrast) 12%, transparent);
     }
   </style>
 </head>
 <body data-theme="light">
 
-<!-- Barra do mockup (não faz parte do produto) -->
 <div class="mock-bar">
   <span class="mock-bar__label">Tema</span>
   <button type="button" class="mock-btn" id="btn-theme" aria-pressed="false">Dark</button>
-  <span class="mock-bar__label" style="margin-left:8px">Persona</span>
-  <button type="button" class="mock-btn" data-persona="sm" aria-pressed="true">Service Manager</button>
-  <button type="button" class="mock-btn" data-persona="gp" aria-pressed="false">Game Presenter</button>
-  <button type="button" class="mock-btn" data-persona="shuf" aria-pressed="false">Shuffler</button>
-  <span class="mock-bar__label" style="margin-left:8px">Abrir</span>
-  <button type="button" class="mock-btn" id="btn-open-modal">Novo Incidente</button>
+  <span class="mock-bar__label" style="margin-left:8px">Permissão</span>
+  <button type="button" class="mock-btn" data-perm="full" aria-pressed="true">Ver Sim + Editar Sim</button>
+  <button type="button" class="mock-btn" data-perm="readonly" aria-pressed="false">Ver Sim + Editar Não</button>
+  <button type="button" class="mock-btn" data-perm="proprios" aria-pressed="false">Ver Próprios</button>
 </div>
 
 <div class="app-shell">
@@ -465,10 +467,9 @@
 
   <main class="main">
     <div class="mockup-banner">
-      <strong>Mockup de produto</strong> — página <code>Incidentes</code> na seção Estúdio.
-      Substitui tickets de erro no Jira: o SM registra um incidente por GP/Shuffler quando o erro ocorre na mesa.
-      Tipos abaixo são <strong>proposta inicial</strong> para validação com operação (não são canônicos ainda).
-      Escopo de acompanhamento: apenas times <strong>Game Presenter</strong> e <strong>Shuffler</strong>.
+      <strong>Mockup v2</strong> — filtros em 3 linhas · KPIs por categoria de incidente com MoM MTD ·
+      protocolos <code>CASO-</code> / <code>OCULTO-</code> / <code>ERRO-</code> ·
+      modais Ver (leitura) e Novo Incidente (GP vs Shuffler) · regras de Ver=Próprios e Editar=Sim.
     </div>
 
     <header class="page-header">
@@ -481,32 +482,10 @@
       <p class="subtitle" id="page-sub">Registre e acompanhe erros de mesa por Game Presenter e Shuffler no período.</p>
     </header>
 
-    <div class="prestador-banner hidden" id="banner-prestador">
-      <span class="kind" id="banner-kind">Meus incidentes</span>
-      <div>
-        <div style="font-weight:700" id="banner-nome">Ana Souza</div>
-        <div class="muted" id="banner-meta">Game Presenter · Turno Tarde · Estúdio Blaze Dedicado</div>
-      </div>
-    </div>
-
     <!-- Filtros -->
     <div class="filter-box">
-      <div class="filter-row" role="tablist" aria-label="Visão da página">
-        <button type="button" class="tab active" data-view="lista" id="tab-lista" role="tab" aria-selected="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-          Lista
-        </button>
-        <button type="button" class="tab" data-view="prestadores" id="tab-prestadores" role="tab" aria-selected="false">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Por Prestador
-        </button>
-        <button type="button" class="cta-criar" id="cta-novo" aria-label="Novo Incidente">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
-          Novo Incidente
-        </button>
-      </div>
-
-      <div class="filter-row" style="margin-top:12px">
+      <!-- Linha 1 -->
+      <div class="filter-row">
         <button type="button" class="carousel-btn" id="mes-prev" aria-label="Mês anterior">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
@@ -518,415 +497,699 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Histórico
         </button>
-        <button type="button" class="pill" title="Filtro de estúdio (mock)">
+        <button type="button" class="pill" id="pill-estudio" title="Filtro de estúdio">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
           Todos Estúdios
         </button>
-        <button type="button" class="pill" title="Filtro de turno (mock)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Todos Turnos
-        </button>
       </div>
 
-      <div class="filter-row" style="margin-top:12px" id="chips-time">
-        <button type="button" class="sem-pill active" data-time="todos" style="--sc:#6b7280">Todos Times</button>
-        <button type="button" class="sem-pill" data-time="gp" style="--sc:var(--brand-action)">
-          <span class="dot"></span> Game Presenter
-        </button>
-        <button type="button" class="sem-pill" data-time="shuf" style="--sc:var(--brand-contrast)">
-          <span class="dot"></span> Shuffler
-        </button>
+      <!-- Linha 2 — abas de time -->
+      <div class="filter-row" id="row-times" role="tablist" aria-label="Time">
+        <button type="button" class="tab active" data-time="todos" role="tab" aria-selected="true">Todos Times</button>
+        <button type="button" class="tab" data-time="gp" role="tab" aria-selected="false">Game Presenters</button>
+        <button type="button" class="tab" data-time="shuf" role="tab" aria-selected="false">Shuffler</button>
       </div>
 
-      <div class="filter-row" style="margin-top:12px" id="chips-status">
-        <button type="button" class="sem-pill active" data-status="todos" style="--sc:#6b7280">Todos Status</button>
-        <button type="button" class="sem-pill" data-status="aberto" style="--sc:#f59e0b"><span class="dot"></span> Aberto</button>
-        <button type="button" class="sem-pill" data-status="em_analise" style="--sc:#3b82f6"><span class="dot"></span> Em análise</button>
-        <button type="button" class="sem-pill" data-status="resolvido" style="--sc:#22c55e"><span class="dot"></span> Resolvido</button>
-      </div>
-
-      <div class="filter-row" style="margin-top:12px">
-        <input class="search-input" type="search" id="busca" placeholder="Pesquisar prestador, mesa ou protocolo..." aria-label="Buscar incidentes" />
+      <!-- Linha 3 — busca + staff -->
+      <div class="filter-row" id="row-busca-staff">
+        <input class="search-input" type="search" id="busca" placeholder="Pesquisar protocolo, tipo ou mesa..." aria-label="Buscar incidentes" />
+        <div class="staff-wrap" id="staff-wrap">
+          <button type="button" class="pill" id="btn-staff" aria-expanded="false" aria-haspopup="listbox">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span id="staff-label">Todos Staff</span>
+          </button>
+          <div class="staff-panel" id="staff-panel" hidden role="listbox" aria-label="Filtrar por staff">
+            <input type="search" class="staff-search" id="staff-search" placeholder="Pesquisar Staff..." aria-label="Pesquisar Staff" />
+            <div id="staff-opts"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Consolidado por tipo -->
-    <section class="content-box" aria-label="Consolidados por tipo">
+    <!-- KPIs -->
+    <section class="content-box" aria-label="KPIs consolidados">
       <div class="section-title">
         <h2>Consolidados</h2>
         <span class="dash">—</span>
-        <span class="sub" id="kpi-sub">Quantidade de incidentes por tipo · Agosto 2026</span>
+        <span class="sub" id="kpi-sub">Quantidade por categoria · Agosto 2026 · MoM MTD</span>
       </div>
-      <div class="kpi-grid" id="kpi-grid" role="group" aria-label="KPIs de incidentes por tipo"></div>
-      <p class="note">
-        Clique em um card para filtrar a lista pelo tipo. Tipos sugeridos (rascunho):
-        <b>Procedimento</b>, <b>Pagamento</b>, <b>Cartas / Shuffle</b>, <b>Comunicação</b>, <b>Equipamento</b>.
-        Severidade e status seguem fluxo operacional interno (não são ticket Jira).
-      </p>
+      <div class="kpi-grid" id="kpi-grid"></div>
     </section>
 
-    <!-- Lista -->
-    <section class="content-box" id="panel-lista">
+    <!-- Tabela -->
+    <section class="content-box">
       <div class="section-title-row">
         <div class="section-title">
-          <h2>Incidentes do período</h2>
+          <h2>Incidentes</h2>
           <span class="dash">—</span>
-          <span class="sub" id="lista-sub">12 registros · filtros aplicados</span>
+          <span class="sub" id="lista-sub">12 registros · período selecionado</span>
         </div>
+        <button type="button" class="cta-criar" id="cta-novo" aria-label="Novo Incidente">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+          Novo Incidente
+        </button>
       </div>
       <div class="table-wrap">
         <table>
-          <caption>Lista de incidentes de mesa no período selecionado</caption>
+          <caption>Lista de incidentes no período</caption>
           <thead>
-            <tr>
-              <th scope="col">Protocolo</th>
-              <th scope="col">Data</th>
-              <th scope="col" class="left">Prestador</th>
-              <th scope="col">Time</th>
-              <th scope="col">Tipo</th>
-              <th scope="col">Severidade</th>
-              <th scope="col">Mesa / Jogo</th>
-              <th scope="col">Status</th>
-              <th scope="col">SM</th>
-              <th scope="col">Ações</th>
-            </tr>
+            <tr id="thead-row"></tr>
           </thead>
           <tbody id="tbody-lista"></tbody>
         </table>
       </div>
       <div class="empty hidden" id="lista-empty">Sem dados para o período selecionado.</div>
-    </section>
-
-    <!-- Por prestador -->
-    <section class="content-box hidden" id="panel-prestadores">
-      <div class="section-title">
-        <h2>Acompanhamento por prestador</h2>
-        <span class="dash">—</span>
-        <span class="sub">Ranking de incidentes no período · só GP e Shuffler</span>
-      </div>
-      <div class="grid-2">
-        <div>
-          <div class="muted" style="margin-bottom:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px">Game Presenters</div>
-          <div id="rank-gp"></div>
-        </div>
-        <div>
-          <div class="muted" style="margin-bottom:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px">Shufflers</div>
-          <div id="rank-shuf"></div>
-        </div>
-      </div>
       <p class="note">
-        Visão pensada para líderes e SM: volume por pessoa no mês, com barra relativa ao máximo do time.
-        Na persona Prestador, esta aba mostra apenas o próprio histórico (mock: lista filtrada).
+        Protocolo automático: <b>Caso</b> → <code>CASO-XXXXX</code> · <b>Oculto</b> → <code>OCULTO-XXXXX</code> ·
+        <b>Não Avisado / Avisado/Resolvido / Avisado/Não Resolvido</b> → <code>ERRO-XXXXX</code>.
+        Botão <b>Novo Incidente</b> só com permissão de Editar = Sim. Ver = Próprios esconde abas, filtro Staff e colunas Prestador / Time / Relator.
       </p>
     </section>
   </main>
 </div>
 
-<!-- Modal Novo Incidente -->
-<div class="overlay" id="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+<!-- Modal Ver -->
+<div class="overlay" id="modal-ver" hidden role="dialog" aria-modal="true" aria-labelledby="ver-title">
   <div class="modal">
     <div class="modal-head">
-      <h3 id="modal-title">Novo Incidente</h3>
-      <button type="button" class="btn-icon" id="modal-close" aria-label="Fechar modal" title="Fechar modal">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
+      <div class="modal-head-row">
+        <div>
+          <h3 id="ver-title">ERRO-00041</h3>
+          <p class="modal-sub" id="ver-sub">Avisado/Resolvido — Wrong Action</p>
+        </div>
+        <button type="button" class="btn-icon" id="ver-close" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="modal-tabs" role="tablist" aria-label="Detalhe do incidente">
+      <button type="button" class="tab active" data-ver-tab="dados" role="tab" aria-selected="true">Dados do Incidente</button>
+      <button type="button" class="tab" data-ver-tab="desc" role="tab" aria-selected="false">Descrição</button>
+    </div>
+    <div id="ver-panel-dados">
+      <div class="readonly-grid" id="ver-dados"></div>
+    </div>
+    <div id="ver-panel-desc" class="hidden">
+      <div class="readonly-grid" id="ver-desc"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-ghost" id="ver-cancel">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo -->
+<div class="overlay" id="modal-novo" hidden role="dialog" aria-modal="true" aria-labelledby="novo-title">
+  <div class="modal modal--lg">
+    <div class="modal-head">
+      <div class="modal-head-row">
+        <div>
+          <h3 id="novo-title">Novo Incidente</h3>
+          <p class="modal-sub">Preencha os campos conforme o time envolvido</p>
+        </div>
+        <button type="button" class="btn-icon" id="novo-close" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="field">
-      <label>Prestador <span class="req" aria-hidden="true">*</span></label>
-      <select id="f-prestador" aria-label="Prestador">
-        <option value="">Selecione o Game Presenter ou Shuffler…</option>
-        <option>Ana Souza — Game Presenter</option>
-        <option>Bruno Lima — Game Presenter</option>
-        <option>Carla Mendes — Game Presenter</option>
-        <option>Diego Alves — Shuffler</option>
-        <option>Elena Costa — Shuffler</option>
-        <option>Felipe Rocha — Game Presenter</option>
-      </select>
+      <label>Time <span class="req" aria-hidden="true">*</span></label>
+      <div class="seg" role="group" aria-label="Time do incidente">
+        <button type="button" class="active" data-form-time="gp">Game Presenter</button>
+        <button type="button" data-form-time="shuf">Shuffler</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Mesa <span class="req" aria-hidden="true">*</span></label>
+      <div class="combo" id="combo-mesa">
+        <button type="button" class="combo-trigger" id="mesa-trigger" aria-haspopup="listbox" aria-expanded="false">
+          <span id="mesa-label">Selecione a mesa…</span>
+          <span aria-hidden="true">▾</span>
+        </button>
+        <div class="combo-panel" id="mesa-panel" hidden>
+          <input type="search" class="staff-search" id="mesa-search" placeholder="Pesquisar mesa..." aria-label="Pesquisar mesa" />
+          <div id="mesa-opts"></div>
+        </div>
+      </div>
     </div>
 
     <div class="field-row">
+      <div class="field">
+        <label>ID da Rodada <span class="req" aria-hidden="true">*</span></label>
+        <input type="text" id="f-id-rodada" placeholder="Ex.: RND-88421" aria-label="ID da Rodada" />
+      </div>
+      <div class="field">
+        <label>Data da Rodada <span class="req" aria-hidden="true">*</span></label>
+        <input type="date" id="f-data-rodada" aria-label="Data da Rodada" />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Hora da Rodada <span class="req" aria-hidden="true">*</span></label>
+        <input type="time" id="f-hora-rodada" aria-label="Hora da Rodada" />
+      </div>
+      <div class="field">
+        <label>Prestador <span class="req" aria-hidden="true">*</span></label>
+        <div class="combo" id="combo-prestador">
+          <button type="button" class="combo-trigger" id="prest-trigger" aria-haspopup="listbox">
+            <span id="prest-label">Selecione o prestador…</span>
+            <span aria-hidden="true">▾</span>
+          </button>
+          <div class="combo-panel" id="prest-panel" hidden>
+            <input type="search" class="staff-search" id="prest-search" placeholder="Pesquisar Prestador..." aria-label="Pesquisar Prestador" />
+            <div id="prest-opts"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Incidente <span class="req" aria-hidden="true">*</span></label>
+        <select id="f-incidente" aria-label="Incidente">
+          <option value="">Selecione…</option>
+          <option value="caso">Caso</option>
+          <option value="oculto">Oculto</option>
+          <option value="nao_avisado">Não Avisado</option>
+          <option value="avisado_resolvido">Avisado/Resolvido</option>
+          <option value="avisado_nao_resolvido">Avisado/Não Resolvido</option>
+        </select>
+      </div>
       <div class="field">
         <label>Tipo <span class="req" aria-hidden="true">*</span></label>
-        <select id="f-tipo" aria-label="Tipo do incidente">
+        <select id="f-tipo" aria-label="Tipo">
+          <option value="">Selecione a mesa primeiro…</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field hidden" id="field-local-shoe">
+      <label>Local do Shoe <span class="req" aria-hidden="true">*</span></label>
+      <div class="seg" role="group" aria-label="Local do Shoe">
+        <button type="button" class="active" data-local="em_jogo">Em Jogo</button>
+        <button type="button" data-local="fora_jogo">Fora de Jogo</button>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Resolução <span class="req" aria-hidden="true">*</span></label>
+        <select id="f-resolucao" aria-label="Resolução">
           <option value="">Selecione…</option>
-          <option>Procedimento</option>
-          <option>Pagamento</option>
-          <option>Cartas / Shuffle</option>
-          <option>Comunicação</option>
-          <option>Equipamento</option>
+          <option>Resolvido</option>
+          <option>Jogo Cancelado</option>
+          <option>Jogo Encerrado Incorretamente</option>
+          <option>Não afetado</option>
         </select>
       </div>
       <div class="field">
-        <label>Severidade <span class="req" aria-hidden="true">*</span></label>
-        <select aria-label="Severidade">
-          <option>Baixa</option>
-          <option selected>Média</option>
-          <option>Alta</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="field-row">
-      <div class="field">
-        <label>Estúdio <span class="req" aria-hidden="true">*</span></label>
-        <select aria-label="Estúdio">
-          <option>Blaze Dedicado</option>
-          <option>Casa Esportiva Dedicado</option>
-          <option>Sports Club (Network)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Mesa / Jogo <span class="req" aria-hidden="true">*</span></label>
-        <select aria-label="Mesa">
-          <option>Blackjack 1</option>
-          <option>VIP Blackjack 1</option>
-          <option>Speed Baccarat</option>
-          <option>Roleta Lightning</option>
-          <option>Futebol Brasileiro</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="field-row">
-      <div class="field">
-        <label>Data e hora <span class="req" aria-hidden="true">*</span></label>
-        <input type="datetime-local" value="2026-08-03T14:35" aria-label="Data e hora do incidente" />
-      </div>
-      <div class="field">
-        <label>Turno</label>
-        <select aria-label="Turno">
-          <option>Manhã</option>
-          <option selected>Tarde</option>
-          <option>Noite</option>
-        </select>
+        <label>Payout necessário <span class="req" aria-hidden="true">*</span></label>
+        <div class="seg" role="group" aria-label="Payout necessário">
+          <button type="button" data-payout="sim">SIM</button>
+          <button type="button" class="active" data-payout="nao">NÃO</button>
+        </div>
       </div>
     </div>
 
     <div class="field">
       <label>Descrição <span class="req" aria-hidden="true">*</span></label>
-      <textarea placeholder="Descreva o erro ocorrido na mesa, contexto e impacto…" aria-label="Descrição do incidente"></textarea>
+      <textarea id="f-desc" placeholder="Descreva o ocorrido na mesa…" aria-label="Descrição"></textarea>
     </div>
 
     <div class="field">
-      <label>Ação imediata / observação</label>
-      <textarea placeholder="Opcional — o que foi feito no momento (correção, troca, alinhamento)…" style="min-height:64px" aria-label="Ação imediata"></textarea>
+      <label>Anexos</label>
+      <input type="file" id="f-anexos" multiple aria-label="Anexos" />
+      <p class="field-hint">Vários arquivos · tamanho máximo por arquivo: 10 MB (mock)</p>
     </div>
 
     <div class="modal-foot">
-      <button type="button" class="btn-ghost" id="modal-cancel">Cancelar</button>
-      <button type="button" class="btn-primary" id="modal-save">Registrar Incidente</button>
+      <button type="button" class="btn-ghost" id="novo-cancel">Cancelar</button>
+      <button type="button" class="btn-primary" id="novo-save">Registrar Incidente</button>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast" role="status">Incidente registrado (mock) — INC-2026-0847</div>
+<div class="toast" id="toast" role="status">Incidente registrado (mock)</div>
 
 <script>
 (function () {
-  const TIPOS = [
-    { key: "todos", label: "Total", color: "var(--brand-primary)", hint: "Todos os tipos" },
-    { key: "procedimento", label: "Procedimento", color: "var(--warn)", hint: "Protocolo / sequência" },
-    { key: "pagamento", label: "Pagamento", color: "var(--neg)", hint: "Payout incorreto" },
-    { key: "cartas", label: "Cartas / Shuffle", color: "var(--baccarat)", hint: "Deal / shuffle" },
-    { key: "comunicacao", label: "Comunicação", color: "var(--special)", hint: "Script / anúncio" },
-    { key: "equipamento", label: "Equipamento", color: "var(--neutral)", hint: "Mesa / hardware" },
+  /* ── Catálogos ─────────────────────────────────────────────── */
+  const MESES = ["Julho 2026", "Agosto 2026"]; // começa em julho; default = mês atual (ago)
+  let mesIdx = 1;
+  let historico = false;
+  let filtroTime = "todos";
+  let filtroStaff = "todos";
+  let perm = "full"; // full | readonly | proprios
+  let formTime = "gp";
+  let selectedMesa = null;
+  let selectedPrest = null;
+  let verRow = null;
+
+  const INC_META = {
+    caso: { label: "Caso", prefix: "CASO", color: "var(--special)" },
+    oculto: { label: "Oculto", prefix: "OCULTO", color: "var(--neutral)" },
+    nao_avisado: { label: "Não Avisado", prefix: "ERRO", color: "var(--warn)" },
+    avisado_resolvido: { label: "Avisado/Resolvido", prefix: "ERRO", color: "var(--pos)" },
+    avisado_nao_resolvido: { label: "Avisado/Não Resolvido", prefix: "ERRO", color: "var(--neg)" },
+  };
+
+  const JOGO_HEX = { blackjack: "#22c55e", roleta: "#eab308", baccarat: "#1e36f8", fb: "#ea580c" };
+  const JOGO_LABEL = { blackjack: "Blackjack", roleta: "Roleta", baccarat: "Baccarat", fb: "Futebol Brasileiro" };
+
+  const TIPOS_BJ = [
+    "Card not scanned","Card scanned too early","Cards Scattered or Dropped","Card(s) on the floor",
+    "Cards were dealt with unshuffled shoe","Extra card not needed","Faced up card in the shoe",
+    "Game before time","Game(s) instead of the shoe change","Hidden card opened before time",
+    "ID card not scanned","Incorrect card position","Less/ More boxes","Misscan",
+    "Next card scanned instead of the hidden card","Removed cards before the end of the game",
+    "Scan Hidden Card before time","Two (or more) cards out","Two (or more) cards out (with cutting card)",
+    "Two (or more) cards out (before cutting card)","Wrong Action",
+  ];
+  const TIPOS_BACC_FB = [
+    "Cards scattered or dropped","Card(s) on the floor","Cards were dealt with un-shuffled shoe",
+    "Extra card not needed","Faced up card in the shoe","Game before time",
+    "Game(s) instead of the shoe change","Incorrect burn procedure","ID card not scanned",
+    "Incorrect card position","Misscan","Removed cards before the end of the game",
+    "Two (or more) cards out","Two (or more) cards out (with cutting card)",
+    "Two (or more) cards out (before cutting card)","Wrong Action",
+  ];
+  const TIPOS_ROLETA = [
+    "Ball out","Ball dropped","Ball spun twice instead of confirming the result",
+    "Game before time / Early spin","ID card not scanned","No spin","Same direction",
+    "Two balls in the wheel","Two balls out","Wheel stopped","Wrong action","Wrong direction",
+  ];
+  const TIPOS_SHUF = [
+    "Bad Shuffle","Card(s) on the floor","Cards Scattered","CC placed incorrectly",
+    "Face up card","Game delay","Shuffle chack","Wrong action","Wrong procedure",
   ];
 
-  const MESES = ["Maio 2026", "Junho 2026", "Julho 2026", "Agosto 2026"];
-  let mesIdx = 3;
-  let historico = false;
-  let filtroTipo = "todos";
-  let filtroTime = "todos";
-  let filtroStatus = "todos";
-  let view = "lista";
-  let persona = "sm";
+  const MESAS = [
+    { id: "1", label: "01 — Blaze Dedicado — Blackjack 1", jogo: "blackjack", estudio: "Blaze Dedicado" },
+    { id: "2", label: "02 — Blaze Dedicado — VIP Blackjack 1", jogo: "blackjack", estudio: "Blaze Dedicado" },
+    { id: "3", label: "03 — Blaze Dedicado — Speed Baccarat", jogo: "baccarat", estudio: "Blaze Dedicado" },
+    { id: "4", label: "04 — Blaze Dedicado — Roleta Lightning", jogo: "roleta", estudio: "Blaze Dedicado" },
+    { id: "5", label: "05 — Casa Esportiva — Blackjack 1", jogo: "blackjack", estudio: "Casa Esportiva Dedicado" },
+    { id: "6", label: "06 — Sports Club — Futebol Brasileiro", jogo: "fb", estudio: "Sports Club" },
+    { id: "7", label: "07 — Sports Club — Speed Baccarat", jogo: "baccarat", estudio: "Sports Club" },
+    { id: "8", label: "08 — Casa Esportiva — Roleta Classic", jogo: "roleta", estudio: "Casa Esportiva Dedicado" },
+  ];
+
+  const STAFF = [
+    { id: "ana", nome: "Ana Souza", time: "gp", papel: "Game Presenter" },
+    { id: "bruno", nome: "Bruno Lima", time: "gp", papel: "Game Presenter" },
+    { id: "carla", nome: "Carla Mendes", time: "gp", papel: "Game Presenter" },
+    { id: "felipe", nome: "Felipe Rocha", time: "gp", papel: "Game Presenter" },
+    { id: "diego", nome: "Diego Alves", time: "shuf", papel: "Shuffler" },
+    { id: "elena", nome: "Elena Costa", time: "shuf", papel: "Shuffler" },
+    { id: "ricardo", nome: "Ricardo Nunes", time: "shuf", papel: "Shuffler" },
+    { id: "beatriz", nome: "Beatriz Rocha", time: "gp", papel: "Service Manager", extra: true },
+    { id: "camila", nome: "Camila Antunes", time: "gp", papel: "Shift Leader", extra: true },
+    { id: "paulo", nome: "Paulo Vieira", time: "gp", papel: "Performance Coach", extra: true },
+    { id: "marina", nome: "Marina Dias", time: "gp", papel: "Academy", extra: true },
+    { id: "hugo", nome: "Hugo Martins", time: "shuf", papel: "Service Manager", extra: true },
+    { id: "sofia", nome: "Sofia Reis", time: "shuf", papel: "Shift Leader", extra: true },
+  ];
 
   const INCIDENTES = [
-    { proto: "INC-2026-0841", data: "03/08 14:35", nome: "Ana Souza", time: "gp", tipo: "pagamento", sev: "alta", mesa: "Blackjack 1", jogo: "bj", status: "aberto", sm: "Beatriz R." },
-    { proto: "INC-2026-0838", data: "03/08 11:02", nome: "Diego Alves", time: "shuf", tipo: "cartas", sev: "media", mesa: "Speed Baccarat", jogo: "baccarat", status: "em_analise", sm: "Camila A." },
-    { proto: "INC-2026-0832", data: "02/08 22:18", nome: "Bruno Lima", time: "gp", tipo: "procedimento", sev: "media", mesa: "Roleta Lightning", jogo: "roleta", status: "resolvido", sm: "Beatriz R." },
-    { proto: "INC-2026-0829", data: "02/08 19:40", nome: "Carla Mendes", time: "gp", tipo: "comunicacao", sev: "baixa", mesa: "VIP Blackjack 1", jogo: "bj", status: "resolvido", sm: "Diego M." },
-    { proto: "INC-2026-0821", data: "01/08 16:55", nome: "Elena Costa", time: "shuf", tipo: "cartas", sev: "alta", mesa: "Speed Baccarat", jogo: "baccarat", status: "aberto", sm: "Camila A." },
-    { proto: "INC-2026-0817", data: "01/08 10:12", nome: "Felipe Rocha", time: "gp", tipo: "equipamento", sev: "baixa", mesa: "Futebol Brasileiro", jogo: "fb", status: "arquivado", sm: "Beatriz R." },
-    { proto: "INC-2026-0810", data: "31/07 23:05", nome: "Ana Souza", time: "gp", tipo: "procedimento", sev: "media", mesa: "Blackjack 1", jogo: "bj", status: "resolvido", sm: "Diego M." },
-    { proto: "INC-2026-0804", data: "30/07 15:33", nome: "Bruno Lima", time: "gp", tipo: "pagamento", sev: "alta", mesa: "VIP Blackjack 1", jogo: "bj", status: "em_analise", sm: "Beatriz R." },
-    { proto: "INC-2026-0798", data: "29/07 12:20", nome: "Diego Alves", time: "shuf", tipo: "procedimento", sev: "baixa", mesa: "Roleta Lightning", jogo: "roleta", status: "resolvido", sm: "Camila A." },
-    { proto: "INC-2026-0791", data: "28/07 18:44", nome: "Carla Mendes", time: "gp", tipo: "cartas", sev: "media", mesa: "Speed Baccarat", jogo: "baccarat", status: "resolvido", sm: "Diego M." },
-    { proto: "INC-2026-0785", data: "27/07 09:15", nome: "Elena Costa", time: "shuf", tipo: "equipamento", sev: "media", mesa: "Blackjack 1", jogo: "bj", status: "aberto", sm: "Beatriz R." },
-    { proto: "INC-2026-0779", data: "26/07 21:08", nome: "Felipe Rocha", time: "gp", tipo: "comunicacao", sev: "baixa", mesa: "Futebol Brasileiro", jogo: "fb", status: "resolvido", sm: "Camila A." },
+    { proto: "ERRO-00041", dataHora: "03/08/2026 14:35", prestadorId: "ana", time: "gp", jogo: "blackjack", mesa: "01 — Blaze Dedicado — Blackjack 1", incidente: "avisado_resolvido", tipo: "Wrong Action", relator: "Beatriz Rocha", idRodada: "RND-88421", dataRodada: "03/08/2026", horaRodada: "14:32", resolucao: "Resolvido", payout: "NÃO", descricao: "Ação incorreta no payout da caixa 3; corrigido em mesa após alerta do SM.", anexos: ["print-payout.png"], local: "em_mesa" },
+    { proto: "ERRO-00038", dataHora: "03/08/2026 11:02", prestadorId: "diego", time: "shuf", jogo: "baccarat", mesa: "03 — Blaze Dedicado — Speed Baccarat", incidente: "nao_avisado", tipo: "Bad Shuffle", relator: "Hugo Martins", idRodada: "RND-88390", dataRodada: "03/08/2026", horaRodada: "10:58", resolucao: "Não afetado", payout: "NÃO", descricao: "Shuffle fora do padrão detectado em revisão; GP não foi avisado na hora.", anexos: [], local: "fora_mesa" },
+    { proto: "CASO-00012", dataHora: "02/08/2026 22:18", prestadorId: "bruno", time: "gp", jogo: "roleta", mesa: "04 — Blaze Dedicado — Roleta Lightning", incidente: "caso", tipo: "Ball out", relator: "Camila Antunes", idRodada: "RND-88211", dataRodada: "02/08/2026", horaRodada: "22:15", resolucao: "Jogo Cancelado", payout: "SIM", descricao: "Bola saiu da roda; jogo cancelado e payout recalculado.", anexos: ["video-clip.mp4"], local: "em_mesa" },
+    { proto: "OCULTO-00007", dataHora: "02/08/2026 19:40", prestadorId: "carla", time: "gp", jogo: "blackjack", mesa: "02 — Blaze Dedicado — VIP Blackjack 1", incidente: "oculto", tipo: "Misscan", relator: "Paulo Vieira", idRodada: "RND-88155", dataRodada: "02/08/2026", horaRodada: "19:37", resolucao: "Resolvido", payout: "NÃO", descricao: "Erro oculto identificado no replay de qualidade.", anexos: ["replay-frame.jpg"], local: "em_mesa" },
+    { proto: "ERRO-00032", dataHora: "01/08/2026 16:55", prestadorId: "elena", time: "shuf", jogo: "baccarat", mesa: "07 — Sports Club — Speed Baccarat", incidente: "avisado_nao_resolvido", tipo: "Face up card", relator: "Sofia Reis", idRodada: "RND-88002", dataRodada: "01/08/2026", horaRodada: "16:50", resolucao: "Jogo Encerrado Incorretamente", payout: "SIM", descricao: "Carta virada no shoe; aviso dado mas resolução incompleta em mesa.", anexos: ["foto-carta.jpg"], local: "em_mesa" },
+    { proto: "ERRO-00029", dataHora: "01/08/2026 10:12", prestadorId: "felipe", time: "gp", jogo: "fb", mesa: "06 — Sports Club — Futebol Brasileiro", incidente: "avisado_resolvido", tipo: "Wrong Action", relator: "Beatriz Rocha", idRodada: "RND-87940", dataRodada: "01/08/2026", horaRodada: "10:09", resolucao: "Resolvido", payout: "NÃO", descricao: "Procedimento de burn incorreto; corrigido após aviso.", anexos: [], local: "fora_mesa" },
+    { proto: "ERRO-00021", dataHora: "31/07/2026 23:05", prestadorId: "ana", time: "gp", jogo: "blackjack", mesa: "01 — Blaze Dedicado — Blackjack 1", incidente: "nao_avisado", tipo: "Extra card not needed", relator: "Camila Antunes", idRodada: "RND-87801", dataRodada: "31/07/2026", horaRodada: "23:01", resolucao: "Não afetado", payout: "NÃO", descricao: "Carta extra não necessária; identificado depois.", anexos: [], local: "em_mesa" },
+    { proto: "CASO-00009", dataHora: "30/07/2026 15:33", prestadorId: "bruno", time: "gp", jogo: "blackjack", mesa: "05 — Casa Esportiva — Blackjack 1", incidente: "caso", tipo: "Less/ More boxes", relator: "Marina Dias", idRodada: "RND-87660", dataRodada: "30/07/2026", horaRodada: "15:30", resolucao: "Resolvido", payout: "SIM", descricao: "Quantidade de caixas divergente.", anexos: ["log-caixas.pdf"], local: "em_mesa" },
+    { proto: "ERRO-00018", dataHora: "29/07/2026 12:20", prestadorId: "diego", time: "shuf", jogo: "baccarat", mesa: "03 — Blaze Dedicado — Speed Baccarat", incidente: "avisado_resolvido", tipo: "Wrong procedure", relator: "Hugo Martins", idRodada: "RND-87510", dataRodada: "29/07/2026", horaRodada: "12:15", resolucao: "Resolvido", payout: "NÃO", descricao: "Procedimento de shuffle corrigido após aviso.", anexos: [], local: "fora_mesa" },
+    { proto: "OCULTO-00004", dataHora: "28/07/2026 18:44", prestadorId: "ricardo", time: "shuf", jogo: "blackjack", mesa: "01 — Blaze Dedicado — Blackjack 1", incidente: "oculto", tipo: "Shuffle chack", relator: "Sofia Reis", idRodada: "RND-87400", dataRodada: "28/07/2026", horaRodada: "18:40", resolucao: "Não afetado", payout: "NÃO", descricao: "Check de shuffle falhou em auditoria silenciosa.", anexos: [], local: "fora_mesa" },
+    { proto: "ERRO-00011", dataHora: "27/07/2026 09:15", prestadorId: "elena", time: "shuf", jogo: "fb", mesa: "06 — Sports Club — Futebol Brasileiro", incidente: "avisado_nao_resolvido", tipo: "Cards Scattered", relator: "Hugo Martins", idRodada: "RND-87220", dataRodada: "27/07/2026", horaRodada: "09:10", resolucao: "Jogo Cancelado", payout: "SIM", descricao: "Cartas espalhadas; aviso sem resolução completa antes do cancelamento.", anexos: ["foto-scatter.jpg"], local: "em_mesa" },
+    { proto: "ERRO-00008", dataHora: "26/07/2026 21:08", prestadorId: "carla", time: "gp", jogo: "roleta", mesa: "08 — Casa Esportiva — Roleta Classic", incidente: "avisado_resolvido", tipo: "Wrong direction", relator: "Beatriz Rocha", idRodada: "RND-87100", dataRodada: "26/07/2026", horaRodada: "21:05", resolucao: "Resolvido", payout: "NÃO", descricao: "Direção do spin corrigida após aviso em mesa.", anexos: [], local: "em_mesa" },
   ];
 
-  const TIPO_LABEL = {
-    procedimento: "Procedimento",
-    pagamento: "Pagamento",
-    cartas: "Cartas / Shuffle",
-    comunicacao: "Comunicação",
-    equipamento: "Equipamento",
+  /* KPIs mock: atual vs MTD mês anterior */
+  const KPI_BASE = {
+    caso: { atual: 2, ant: 1 },
+    oculto: { atual: 2, ant: 3 },
+    nao_avisado: { atual: 2, ant: 2 },
+    avisado_resolvido: { atual: 4, ant: 5, emMesa: 3, foraMesa: 1 },
+    avisado_nao_resolvido: { atual: 2, ant: 1, emMesa: 2, foraMesa: 0 },
   };
-  const TIPO_COLOR = {
-    procedimento: "var(--warn)",
-    pagamento: "var(--neg)",
-    cartas: "var(--baccarat)",
-    comunicacao: "var(--special)",
-    equipamento: "var(--neutral)",
-  };
-  const STATUS_LABEL = { aberto: "Aberto", em_analise: "Em análise", resolvido: "Resolvido", arquivado: "Arquivado" };
-  const SEV_LABEL = { alta: "Alta", media: "Média", baixa: "Baixa" };
-  const JOGO_HEX = { bj: "#22c55e", roleta: "#eab308", baccarat: "#1e36f8", fb: "#ea580c" };
-  const JOGO_LABEL = { bj: "Blackjack", roleta: "Roleta", baccarat: "Baccarat", fb: "FB" };
+
+  function staffById(id) {
+    return STAFF.find((s) => s.id === id);
+  }
+
+  function staffFiltroLista() {
+    return STAFF.filter((s) => {
+      if (s.extra) return false; // filtro de Staff na barra = prestadores dos times GP/Shuffler
+      if (filtroTime === "gp") return s.time === "gp";
+      if (filtroTime === "shuf") return s.time === "shuf";
+      return s.time === "gp" || s.time === "shuf";
+    });
+  }
+
+  function prestadoresFormulario() {
+    // Time selecionado no form + SM, SL, PC, Academy
+    const papeisExtra = ["Service Manager", "Shift Leader", "Performance Coach", "Academy"];
+    return STAFF.filter((s) => {
+      if (s.time !== formTime) return false;
+      if (!s.extra) return true;
+      return papeisExtra.includes(s.papel);
+    });
+  }
+
+  function mesasFormulario() {
+    if (formTime === "shuf") return MESAS.filter((m) => m.jogo !== "roleta");
+    return MESAS;
+  }
+
+  function tiposParaMesa(mesa) {
+    if (formTime === "shuf") return TIPOS_SHUF;
+    if (!mesa) return [];
+    if (mesa.jogo === "blackjack") return TIPOS_BJ;
+    if (mesa.jogo === "roleta") return TIPOS_ROLETA;
+    return TIPOS_BACC_FB; // baccarat + fb
+  }
+
+  function isProprios() { return perm === "proprios"; }
+  function canEditar() { return perm === "full"; }
 
   function filtered() {
     const q = (document.getElementById("busca").value || "").trim().toLowerCase();
     return INCIDENTES.filter((r) => {
-      if (persona === "gp" && r.nome !== "Ana Souza") return false;
-      if (persona === "shuf" && r.nome !== "Diego Alves") return false;
-      if (filtroTipo !== "todos" && r.tipo !== filtroTipo) return false;
+      if (isProprios() && r.prestadorId !== "ana") return false;
       if (filtroTime !== "todos" && r.time !== filtroTime) return false;
-      if (filtroStatus !== "todos" && r.status !== filtroStatus) return false;
+      if (filtroStaff !== "todos" && r.prestadorId !== filtroStaff) return false;
       if (q) {
-        const hay = `${r.proto} ${r.nome} ${r.mesa} ${TIPO_LABEL[r.tipo]}`.toLowerCase();
+        const st = staffById(r.prestadorId);
+        const hay = `${r.proto} ${r.tipo} ${r.mesa} ${INC_META[r.incidente].label} ${st?.nome || ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
+      }
+      // Carrossel: julho = datas 26–31/07; agosto = 01–03/08 (mock simplificado)
+      if (!historico) {
+        const isJul = r.dataHora.includes("/07/");
+        const isAgo = r.dataHora.includes("/08/");
+        if (mesIdx === 0 && !isJul) return false;
+        if (mesIdx === 1 && !isAgo) return false;
       }
       return true;
     });
   }
 
+  function momHtml(atual, ant) {
+    const delta = atual - ant;
+    const pct = ant === 0 ? (atual === 0 ? 0 : 100) : Math.round((delta / ant) * 100);
+    let cls = "flat";
+    let arrow = "→";
+    // Menos incidentes = melhor (verde); mais = pior (vermelho)
+    if (delta < 0) { cls = "down"; arrow = "↓"; }
+    else if (delta > 0) { cls = "up"; arrow = "↑"; }
+    const sign = pct > 0 ? "+" : "";
+    return `<span class="${cls}">${arrow} ${sign}${pct}%</span><span class="ref">vs MTD mês ant. (${ant})</span>`;
+  }
+
   function renderKpis() {
-    const rows = filtered();
-    const counts = { todos: rows.length };
-    TIPOS.slice(1).forEach((t) => {
-      counts[t.key] = rows.filter((r) => r.tipo === t.key).length;
-    });
-    const grid = document.getElementById("kpi-grid");
-    grid.innerHTML = TIPOS.map((t) => `
-      <button type="button" class="kpi-card ${filtroTipo === t.key ? "active" : ""}"
-        style="--kpi-color:${t.color}" data-tipo="${t.key}"
-        aria-pressed="${filtroTipo === t.key}"
-        aria-label="${t.label}: ${counts[t.key] ?? 0} incidentes">
-        <div class="kpi-label">${t.label}</div>
-        <div class="kpi-value">${counts[t.key] ?? 0}</div>
-        <div class="kpi-hint">${t.hint}</div>
+    const periodo = historico ? "Todo o período" : MESES[mesIdx];
+    document.getElementById("kpi-sub").textContent =
+      `Quantidade por categoria · ${periodo} · MoM MTD`;
+
+    const items = [
+      { key: "caso", label: "Caso", color: "var(--special)", hint: "Quantidade de Casos" },
+      { key: "oculto", label: "Oculto", color: "var(--neutral)", hint: "Erro Oculto" },
+      { key: "nao_avisado", label: "Não Avisado", color: "var(--warn)", hint: "Erro Não Avisado" },
+      { key: "avisado_resolvido", label: "Avisado/Resolvido", color: "var(--pos)", hint: "Erro Avisado", split: true },
+      { key: "avisado_nao_resolvido", label: "Avisado/Não Resolvido", color: "var(--neg)", hint: "Erro Avisado", split: true },
+    ];
+
+    document.getElementById("kpi-grid").innerHTML = items.map((it) => {
+      const d = KPI_BASE[it.key];
+      const split = it.split ? `
+        <div class="kpi-split">
+          <span>Em Mesa · <b>${d.emMesa}</b></span>
+          <span>Fora da Mesa · <b>${d.foraMesa}</b></span>
+        </div>` : "";
+      return `
+        <div class="kpi-card" style="--kpi-color:${it.color}" aria-label="${it.label}: ${d.atual}">
+          <div class="kpi-label">${it.label}</div>
+          <div class="kpi-value">${d.atual}</div>
+          <div class="kpi-mom">${momHtml(d.atual, d.ant)}</div>
+          ${split}
+        </div>`;
+    }).join("");
+  }
+
+  function renderStaffFilter() {
+    const wrap = document.getElementById("staff-wrap");
+    const rowTimes = document.getElementById("row-times");
+    if (isProprios()) {
+      wrap.classList.add("hidden");
+      rowTimes.classList.add("hidden");
+      return;
+    }
+    wrap.classList.remove("hidden");
+    rowTimes.classList.remove("hidden");
+
+    const list = staffFiltroLista();
+    // Reset staff se saiu do universo da aba
+    if (filtroStaff !== "todos" && !list.some((s) => s.id === filtroStaff)) {
+      filtroStaff = "todos";
+      document.getElementById("staff-label").textContent = "Todos Staff";
+      document.getElementById("btn-staff").classList.remove("active");
+    }
+
+    const q = (document.getElementById("staff-search").value || "").trim().toLowerCase();
+    const opts = [
+      { id: "todos", nome: "Todos Staff", papel: "" },
+      ...list.filter((s) => !q || s.nome.toLowerCase().includes(q) || s.papel.toLowerCase().includes(q)),
+    ];
+    document.getElementById("staff-opts").innerHTML = opts.map((s) => `
+      <button type="button" class="staff-opt" role="option"
+        aria-selected="${filtroStaff === s.id}" data-staff="${s.id}">
+        ${s.nome}${s.papel ? ` <span style="color:var(--text-muted);font-weight:500">· ${s.papel}</span>` : ""}
       </button>
     `).join("");
-    grid.querySelectorAll("[data-tipo]").forEach((btn) => {
+    document.querySelectorAll("#staff-opts [data-staff]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        filtroTipo = btn.getAttribute("data-tipo");
-        renderAll();
+        filtroStaff = btn.getAttribute("data-staff");
+        const lab = filtroStaff === "todos" ? "Todos Staff" : staffById(filtroStaff).nome;
+        document.getElementById("staff-label").textContent = lab;
+        document.getElementById("btn-staff").classList.toggle("active", filtroStaff !== "todos");
+        document.getElementById("staff-panel").hidden = true;
+        document.getElementById("btn-staff").setAttribute("aria-expanded", "false");
+        renderLista();
       });
     });
   }
 
   function renderLista() {
     const rows = filtered();
-    const tbody = document.getElementById("tbody-lista");
-    const empty = document.getElementById("lista-empty");
-    document.getElementById("lista-sub").textContent =
-      `${rows.length} registro${rows.length === 1 ? "" : "s"} · filtros aplicados`;
+    const proprios = isProprios();
+    document.getElementById("cta-novo").classList.toggle("hidden", !canEditar());
+    document.getElementById("page-sub").textContent = proprios
+      ? "Acompanhe os incidentes registrados sobre a sua operação em mesa."
+      : "Registre e acompanhe erros de mesa por Game Presenter e Shuffler no período.";
 
+    const cols = proprios
+      ? ["Protocolo", "Data/Hora", "Jogo", "Incidente", "Tipo", "Ações"]
+      : ["Protocolo", "Data/Hora", "Prestador", "Time", "Jogo", "Incidente", "Tipo", "Relator", "Ações"];
+
+    document.getElementById("thead-row").innerHTML = cols.map((c) =>
+      `<th scope="col"${c === "Prestador" || c === "Tipo" ? ' class="left"' : ""}>${c}</th>`
+    ).join("");
+
+    document.getElementById("lista-sub").textContent =
+      `${rows.length} registro${rows.length === 1 ? "" : "s"} · período selecionado`;
+
+    const empty = document.getElementById("lista-empty");
+    const tbody = document.getElementById("tbody-lista");
     if (!rows.length) {
       tbody.innerHTML = "";
       empty.classList.remove("hidden");
       return;
     }
     empty.classList.add("hidden");
-    tbody.innerHTML = rows.map((r) => `
-      <tr>
-        <td><span class="cod">${r.proto}</span></td>
-        <td>${r.data}</td>
-        <td class="left"><strong>${r.nome}</strong></td>
-        <td><span class="badge ${r.time === "gp" ? "b-gp" : "b-shuf"}">${r.time === "gp" ? "Game Presenter" : "Shuffler"}</span></td>
-        <td><span class="badge b-tipo" style="--sc:${TIPO_COLOR[r.tipo]}">${TIPO_LABEL[r.tipo]}</span></td>
-        <td><span class="badge b-sev-${r.sev}">${SEV_LABEL[r.sev]}</span></td>
-        <td>
-          <div>${r.mesa}</div>
-          <span class="game-chip" style="--gc:${JOGO_HEX[r.jogo]}">${JOGO_LABEL[r.jogo]}</span>
-        </td>
-        <td><span class="badge b-${r.status}">${STATUS_LABEL[r.status]}</span></td>
-        <td class="muted">${r.sm}</td>
-        <td>
-          <div class="actions">
-            <button type="button" class="btn-icon" aria-label="Ver incidente" title="Ver incidente">
+
+    tbody.innerHTML = rows.map((r) => {
+      const st = staffById(r.prestadorId);
+      const meta = INC_META[r.incidente];
+      const mid = proprios ? "" : `
+        <td class="left"><strong>${st?.nome || "—"}</strong></td>
+        <td><span class="badge ${r.time === "gp" ? "b-gp" : "b-shuf"}">${r.time === "gp" ? "Game Presenter" : "Shuffler"}</span></td>`;
+      const rel = proprios ? "" : `<td>${r.relator}</td>`;
+      return `
+        <tr data-proto="${r.proto}">
+          <td><span class="cod">${r.proto}</span></td>
+          <td>${r.dataHora}</td>
+          ${mid}
+          <td><span class="game-chip" style="--gc:${JOGO_HEX[r.jogo]}">${JOGO_LABEL[r.jogo]}</span></td>
+          <td><span class="badge b-inc" style="--sc:${meta.color}">${meta.label}</span></td>
+          <td class="left">${r.tipo}</td>
+          ${rel}
+          <td>
+            <button type="button" class="btn-icon btn-ver" data-proto="${r.proto}"
+              aria-label="Ver incidente" title="Ver incidente">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
-            <button type="button" class="btn-icon" aria-label="Editar incidente" title="Editar incidente" ${persona !== "sm" ? "disabled style='opacity:.35'" : ""}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join("");
-  }
+          </td>
+        </tr>`;
+    }).join("");
 
-  function renderRanking() {
-    const rows = filtered();
-    function build(timeKey, mountId) {
-      const map = {};
-      rows.filter((r) => r.time === timeKey).forEach((r) => {
-        map[r.nome] = (map[r.nome] || 0) + 1;
+    tbody.querySelectorAll(".btn-ver").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openVer(btn.getAttribute("data-proto"));
       });
-      const list = Object.entries(map).sort((a, b) => b[1] - a[1]);
-      const max = list[0]?.[1] || 1;
-      const el = document.getElementById(mountId);
-      if (!list.length) {
-        el.innerHTML = `<div class="empty" style="padding:20px 0">Sem dados para o período selecionado.</div>`;
-        return;
-      }
-      el.innerHTML = list.map(([nome, n], i) => `
-        <div class="rank-row">
-          <span class="rank-pos">${i + 1}</span>
-          <div class="rank-name">${nome}<div class="rank-meta">${n} incidente${n === 1 ? "" : "s"}</div></div>
-          <div class="rank-bar" aria-hidden="true"><i style="width:${Math.round((n / max) * 100)}%"></i></div>
-          <span class="rank-count">${n}</span>
-        </div>
-      `).join("");
-    }
-    build("gp", "rank-gp");
-    build("shuf", "rank-shuf");
+    });
   }
 
-  function applyPersona() {
-    const cta = document.getElementById("cta-novo");
-    const banner = document.getElementById("banner-prestador");
-    const sub = document.getElementById("page-sub");
-    if (persona === "sm") {
-      cta.hidden = false;
-      banner.classList.add("hidden");
-      sub.textContent = "Registre e acompanhe erros de mesa por Game Presenter e Shuffler no período.";
-      document.getElementById("tab-prestadores").classList.remove("hidden");
-    } else {
-      cta.hidden = true;
-      banner.classList.remove("hidden");
-      if (persona === "gp") {
-        document.getElementById("banner-nome").textContent = "Ana Souza";
-        document.getElementById("banner-meta").textContent = "Game Presenter · Turno Tarde · Estúdio Blaze Dedicado";
-        document.getElementById("banner-kind").textContent = "Meus incidentes";
-        sub.textContent = "Acompanhe os incidentes registrados sobre a sua operação em mesa.";
-      } else {
-        document.getElementById("banner-nome").textContent = "Diego Alves";
-        document.getElementById("banner-meta").textContent = "Shuffler · Turno Noite · Todos os estúdios";
-        document.getElementById("banner-kind").textContent = "Meus incidentes";
-        sub.textContent = "Acompanhe os incidentes registrados sobre a sua operação em mesa.";
-      }
+  function openVer(proto) {
+    verRow = INCIDENTES.find((r) => r.proto === proto);
+    if (!verRow) return;
+    const meta = INC_META[verRow.incidente];
+    const st = staffById(verRow.prestadorId);
+    document.getElementById("ver-title").textContent = verRow.proto;
+    document.getElementById("ver-sub").textContent = `${meta.label} — ${verRow.tipo}`;
+
+    const proprios = isProprios();
+    const dados = [
+      ["Data/Hora", verRow.dataHora],
+      ...(!proprios ? [["Prestador", st?.nome || "—"], ["Time", verRow.time === "gp" ? "Game Presenter" : "Shuffler"]] : []),
+      ["Jogo", JOGO_LABEL[verRow.jogo]],
+      ["Mesa", verRow.mesa],
+      ...(!proprios ? [["Relator", verRow.relator]] : []),
+      ["ID da Rodada", verRow.idRodada],
+      ["Data da Rodada", verRow.dataRodada],
+      ["Hora da Rodada", verRow.horaRodada],
+    ];
+    document.getElementById("ver-dados").innerHTML = dados.map(([l, v], i) =>
+      `<div class="ro-item${l === "Mesa" ? " ro-full" : ""}"><label>${l}</label><div>${v}</div></div>`
+    ).join("");
+
+    const anexos = (verRow.anexos || []).length
+      ? verRow.anexos.map((a) => `<div class="anexo-item">📎 ${a}</div>`).join("")
+      : `<div style="color:var(--text-muted);font-size:13px">Nenhum anexo</div>`;
+
+    document.getElementById("ver-desc").innerHTML = `
+      <div class="ro-item"><label>Resolução</label><div>${verRow.resolucao}</div></div>
+      <div class="ro-item"><label>Payout</label><div>${verRow.payout}</div></div>
+      <div class="ro-item ro-full"><label>Descrição</label><div style="font-weight:500;white-space:normal">${verRow.descricao}</div></div>
+      <div class="ro-item ro-full"><label>Anexos</label><div class="anexo-list">${anexos}</div></div>
+    `;
+
+    // reset tabs
+    document.querySelectorAll("[data-ver-tab]").forEach((t) => {
+      const on = t.getAttribute("data-ver-tab") === "dados";
+      t.classList.toggle("active", on);
+      t.setAttribute("aria-selected", String(on));
+    });
+    document.getElementById("ver-panel-dados").classList.remove("hidden");
+    document.getElementById("ver-panel-desc").classList.add("hidden");
+    document.getElementById("modal-ver").hidden = false;
+  }
+
+  function syncTipoSelect() {
+    const sel = document.getElementById("f-tipo");
+    const tipos = tiposParaMesa(selectedMesa);
+    if (!tipos.length) {
+      sel.innerHTML = `<option value="">${formTime === "shuf" ? "Selecione…" : "Selecione a mesa primeiro…"}</option>`;
+      return;
     }
+    sel.innerHTML = `<option value="">Selecione…</option>` +
+      tipos.map((t) => `<option value="${t}">${t}</option>`).join("");
+  }
+
+  function renderMesaOpts() {
+    const q = (document.getElementById("mesa-search").value || "").trim().toLowerCase();
+    const list = mesasFormulario().filter((m) => !q || m.label.toLowerCase().includes(q));
+    document.getElementById("mesa-opts").innerHTML = list.map((m) => `
+      <button type="button" class="combo-opt" data-mesa="${m.id}">${m.label}</button>
+    `).join("") || `<div style="padding:8px;color:var(--text-muted);font-size:12px">Nenhuma mesa</div>`;
+    document.querySelectorAll("#mesa-opts [data-mesa]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedMesa = MESAS.find((m) => m.id === btn.getAttribute("data-mesa"));
+        document.getElementById("mesa-label").textContent = selectedMesa.label;
+        document.getElementById("mesa-panel").hidden = true;
+        syncTipoSelect();
+      });
+    });
+  }
+
+  function renderPrestOpts() {
+    const q = (document.getElementById("prest-search").value || "").trim().toLowerCase();
+    const list = prestadoresFormulario().filter((s) =>
+      !q || s.nome.toLowerCase().includes(q) || s.papel.toLowerCase().includes(q)
+    );
+    document.getElementById("prest-opts").innerHTML = list.map((s) => `
+      <button type="button" class="combo-opt" data-prest="${s.id}">
+        ${s.nome} · ${s.papel}
+      </button>
+    `).join("");
+    document.querySelectorAll("#prest-opts [data-prest]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedPrest = STAFF.find((s) => s.id === btn.getAttribute("data-prest"));
+        document.getElementById("prest-label").textContent = `${selectedPrest.nome} · ${selectedPrest.papel}`;
+        document.getElementById("prest-panel").hidden = true;
+      });
+    });
+  }
+
+  function openNovo() {
+    if (!canEditar()) return;
+    formTime = "gp";
+    selectedMesa = null;
+    selectedPrest = null;
+    document.querySelectorAll("[data-form-time]").forEach((b) =>
+      b.classList.toggle("active", b.getAttribute("data-form-time") === "gp")
+    );
+    document.getElementById("mesa-label").textContent = "Selecione a mesa…";
+    document.getElementById("prest-label").textContent = "Selecione o prestador…";
+    document.getElementById("f-incidente").value = "";
+    document.getElementById("f-resolucao").value = "";
+    document.getElementById("f-desc").value = "";
+    document.getElementById("f-id-rodada").value = "";
+    document.getElementById("f-hora-rodada").value = "";
+    // Data da Rodada = hoje
+    const hoje = new Date();
+    const yyyy = hoje.getFullYear();
+    const mm = String(hoje.getMonth() + 1).padStart(2, "0");
+    const dd = String(hoje.getDate()).padStart(2, "0");
+    // Mock fixo no contexto do mockup (ago/2026) se o SO estiver em outra data
+    document.getElementById("f-data-rodada").value = "2026-08-03";
+    document.getElementById("field-local-shoe").classList.add("hidden");
+    document.querySelectorAll("[data-payout]").forEach((b) =>
+      b.classList.toggle("active", b.getAttribute("data-payout") === "nao")
+    );
+    syncTipoSelect();
+    renderMesaOpts();
+    renderPrestOpts();
+    document.getElementById("modal-novo").hidden = false;
+  }
+
+  function applyFormTime(t) {
+    formTime = t;
+    selectedMesa = null;
+    selectedPrest = null;
+    document.getElementById("mesa-label").textContent = "Selecione a mesa…";
+    document.getElementById("prest-label").textContent = "Selecione o prestador…";
+    document.getElementById("field-local-shoe").classList.toggle("hidden", t !== "shuf");
+    syncTipoSelect();
+    renderMesaOpts();
+    renderPrestOpts();
   }
 
   function renderAll() {
     const periodo = historico ? "Todo o período" : MESES[mesIdx];
     document.getElementById("mes-label").textContent = periodo;
-    document.getElementById("kpi-sub").textContent =
-      `Quantidade de incidentes por tipo · ${periodo}`;
     document.getElementById("mes-prev").disabled = historico || mesIdx === 0;
     document.getElementById("mes-next").disabled = historico || mesIdx === MESES.length - 1;
-    applyPersona();
     renderKpis();
+    renderStaffFilter();
     renderLista();
-    renderRanking();
-    document.getElementById("panel-lista").classList.toggle("hidden", view !== "lista");
-    document.getElementById("panel-prestadores").classList.toggle("hidden", view !== "prestadores");
   }
 
-  // Tema
+  /* ── Eventos ───────────────────────────────────────────────── */
   document.getElementById("btn-theme").addEventListener("click", (e) => {
     const dark = document.body.getAttribute("data-theme") !== "dark";
     document.body.setAttribute("data-theme", dark ? "dark" : "light");
@@ -934,17 +1197,17 @@
     e.currentTarget.textContent = dark ? "Light" : "Dark";
   });
 
-  // Persona
-  document.querySelectorAll("[data-persona]").forEach((btn) => {
+  document.querySelectorAll("[data-perm]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      persona = btn.getAttribute("data-persona");
-      document.querySelectorAll("[data-persona]").forEach((b) =>
+      perm = btn.getAttribute("data-perm");
+      document.querySelectorAll("[data-perm]").forEach((b) =>
         b.setAttribute("aria-pressed", String(b === btn))
       );
-      if (persona !== "sm" && view === "prestadores") {
-        view = "lista";
-        document.querySelectorAll("[data-view]").forEach((t) => {
-          const on = t.getAttribute("data-view") === "lista";
+      if (isProprios()) {
+        filtroTime = "todos";
+        filtroStaff = "todos";
+        document.querySelectorAll("#row-times [data-time]").forEach((t) => {
+          const on = t.getAttribute("data-time") === "todos";
           t.classList.toggle("active", on);
           t.setAttribute("aria-selected", String(on));
         });
@@ -953,20 +1216,6 @@
     });
   });
 
-  // Views
-  document.querySelectorAll("[data-view]").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      view = tab.getAttribute("data-view");
-      document.querySelectorAll("[data-view]").forEach((t) => {
-        const on = t === tab;
-        t.classList.toggle("active", on);
-        t.setAttribute("aria-selected", String(on));
-      });
-      renderAll();
-    });
-  });
-
-  // Carrossel
   document.getElementById("mes-prev").addEventListener("click", () => {
     if (mesIdx > 0) { mesIdx--; renderAll(); }
   });
@@ -981,54 +1230,114 @@
     renderAll();
   });
 
-  // Chips
-  document.querySelectorAll("#chips-time [data-time]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      filtroTime = btn.getAttribute("data-time");
-      document.querySelectorAll("#chips-time [data-time]").forEach((b) =>
-        b.classList.toggle("active", b === btn)
-      );
+  document.querySelectorAll("#row-times [data-time]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      filtroTime = tab.getAttribute("data-time");
+      document.querySelectorAll("#row-times [data-time]").forEach((t) => {
+        const on = t === tab;
+        t.classList.toggle("active", on);
+        t.setAttribute("aria-selected", String(on));
+      });
       renderAll();
     });
   });
-  document.querySelectorAll("#chips-status [data-status]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      filtroStatus = btn.getAttribute("data-status");
-      document.querySelectorAll("#chips-status [data-status]").forEach((b) =>
-        b.classList.toggle("active", b === btn)
-      );
-      renderAll();
-    });
-  });
-  document.getElementById("busca").addEventListener("input", renderAll);
 
-  // Modal
-  const overlay = document.getElementById("modal-overlay");
-  function openModal() {
-    if (persona !== "sm") return;
-    overlay.hidden = false;
-  }
-  function closeModal() { overlay.hidden = true; }
-  document.getElementById("cta-novo").addEventListener("click", openModal);
-  document.getElementById("btn-open-modal").addEventListener("click", () => {
-    persona = "sm";
-    document.querySelectorAll("[data-persona]").forEach((b) =>
-      b.setAttribute("aria-pressed", String(b.getAttribute("data-persona") === "sm"))
-    );
-    renderAll();
-    openModal();
+  document.getElementById("busca").addEventListener("input", renderLista);
+
+  document.getElementById("btn-staff").addEventListener("click", () => {
+    const panel = document.getElementById("staff-panel");
+    panel.hidden = !panel.hidden;
+    document.getElementById("btn-staff").setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) renderStaffFilter();
   });
-  document.getElementById("modal-close").addEventListener("click", closeModal);
-  document.getElementById("modal-cancel").addEventListener("click", closeModal);
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !overlay.hidden) closeModal();
+  document.getElementById("staff-search").addEventListener("input", renderStaffFilter);
+  document.addEventListener("click", (e) => {
+    if (!document.getElementById("staff-wrap").contains(e.target)) {
+      document.getElementById("staff-panel").hidden = true;
+    }
+    if (!document.getElementById("combo-mesa").contains(e.target)) {
+      document.getElementById("mesa-panel").hidden = true;
+    }
+    if (!document.getElementById("combo-prestador").contains(e.target)) {
+      document.getElementById("prest-panel").hidden = true;
+    }
   });
-  document.getElementById("modal-save").addEventListener("click", () => {
-    closeModal();
+
+  document.getElementById("cta-novo").addEventListener("click", openNovo);
+
+  // Modal Ver
+  document.querySelectorAll("[data-ver-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const key = tab.getAttribute("data-ver-tab");
+      document.querySelectorAll("[data-ver-tab]").forEach((t) => {
+        const on = t === tab;
+        t.classList.toggle("active", on);
+        t.setAttribute("aria-selected", String(on));
+      });
+      document.getElementById("ver-panel-dados").classList.toggle("hidden", key !== "dados");
+      document.getElementById("ver-panel-desc").classList.toggle("hidden", key !== "desc");
+    });
+  });
+  const closeVer = () => { document.getElementById("modal-ver").hidden = true; };
+  document.getElementById("ver-close").addEventListener("click", closeVer);
+  document.getElementById("ver-cancel").addEventListener("click", closeVer);
+  document.getElementById("modal-ver").addEventListener("click", (e) => {
+    if (e.target.id === "modal-ver") closeVer();
+  });
+
+  // Modal Novo
+  document.querySelectorAll("[data-form-time]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-form-time]").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      applyFormTime(btn.getAttribute("data-form-time"));
+    });
+  });
+  document.querySelectorAll("[data-local]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-local]").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+  document.querySelectorAll("[data-payout]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-payout]").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+  document.getElementById("mesa-trigger").addEventListener("click", () => {
+    const p = document.getElementById("mesa-panel");
+    p.hidden = !p.hidden;
+    if (!p.hidden) renderMesaOpts();
+  });
+  document.getElementById("mesa-search").addEventListener("input", renderMesaOpts);
+  document.getElementById("prest-trigger").addEventListener("click", () => {
+    const p = document.getElementById("prest-panel");
+    p.hidden = !p.hidden;
+    if (!p.hidden) renderPrestOpts();
+  });
+  document.getElementById("prest-search").addEventListener("input", renderPrestOpts);
+
+  const closeNovo = () => { document.getElementById("modal-novo").hidden = true; };
+  document.getElementById("novo-close").addEventListener("click", closeNovo);
+  document.getElementById("novo-cancel").addEventListener("click", closeNovo);
+  document.getElementById("modal-novo").addEventListener("click", (e) => {
+    if (e.target.id === "modal-novo") closeNovo();
+  });
+  document.getElementById("novo-save").addEventListener("click", () => {
+    const inc = document.getElementById("f-incidente").value;
+    const prefix = INC_META[inc]?.prefix || "ERRO";
+    closeNovo();
     const toast = document.getElementById("toast");
+    toast.textContent = `Incidente registrado (mock) — ${prefix}-00042`;
     toast.classList.add("show");
     setTimeout(() => toast.classList.remove("show"), 2800);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    closeVer();
+    closeNovo();
   });
 
   renderAll();

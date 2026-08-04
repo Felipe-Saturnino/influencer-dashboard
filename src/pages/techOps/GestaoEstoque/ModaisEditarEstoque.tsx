@@ -7,6 +7,7 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -90,17 +91,21 @@ function PainelAnotacaoForm({
           A anotação fica registrada no histórico do registro com autor e data.
         </div>
       </div>
-      <div>
-        <label htmlFor={`${idPrefix}-anotacao-anexo`} style={labelStyle}>
-          Anexo
-        </label>
-        <input
-          id={`${idPrefix}-anotacao-anexo`}
-          type="file"
-          onChange={(e) => onChange({ arquivo: e.target.files?.[0] ?? null })}
-          style={{ ...getEstoqueInputStyle(t), padding: "8px 12px" }}
-        />
-      </div>
+      <CampoUploadArquivos
+        id={`${idPrefix}-anotacao-anexo`}
+        label="Anexo"
+        buttonLabel="Adicionar anexo"
+        multiple={false}
+        items={
+          draft.arquivo
+            ? [{ key: "anexo", label: draft.arquivo.name, pendente: true }]
+            : []
+        }
+        onAdd={(files) => onChange({ arquivo: files[0] ?? null })}
+        onRemove={() => onChange({ arquivo: null })}
+        t={t}
+        pendingHint="O anexo será enviado ao salvar."
+      />
     </div>
   );
 }

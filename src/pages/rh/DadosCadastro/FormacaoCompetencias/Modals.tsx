@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../../components/OperacoesModal";
 import { CampoObrigatorioMark } from "../../../../components/CampoObrigatorioMark";
+import { CampoUploadArquivos } from "../../../../components/CampoUploadArquivos";
 import { useApp } from "../../../../context/AppContext";
 import { FONT } from "../../../../constants/theme";
 import {
@@ -585,20 +586,25 @@ export function ModalPortfolio({
         </div>
       ) : null}
       {!somenteLink && origem === "arquivo" ? (
-        <div style={fieldGap}>
-          <label style={labelStyle}>{initial ? "Substituir arquivo" : "Arquivo"}</label>
-          {initial?.file_name ? (
-            <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>
-              Arquivo atual: {initial.file_name}
-            </div>
-          ) : null}
-          <input
-            type="file"
-            accept={RH_FORMACAO_PORTFOLIO_ACCEPT}
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            aria-label="Arquivo do portfólio"
-          />
-        </div>
+        <CampoUploadArquivos
+          id="portfolio-arquivo"
+          label={initial ? "Substituir arquivo" : "Arquivo"}
+          buttonLabel={initial ? "Substituir arquivo" : "Selecionar arquivo"}
+          accept={RH_FORMACAO_PORTFOLIO_ACCEPT}
+          multiple={false}
+          items={file ? [{ key: "novo", label: file.name, pendente: true }] : []}
+          onAdd={(files) => setFile(files[0] ?? null)}
+          onRemove={() => setFile(null)}
+          disabled={loading}
+          t={t}
+          footer={
+            !file && initial?.file_name ? (
+              <div style={{ marginTop: 8, fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+                Arquivo atual: {initial.file_name}
+              </div>
+            ) : null
+          }
+        />
       ) : null}
     </ModalShell>
   );

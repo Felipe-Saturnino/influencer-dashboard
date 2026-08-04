@@ -238,7 +238,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de Mesa",
         texto:
-          "Visível apenas com Time = Game Presenter. Nesta versão, escolha um prestador no filtro Staff (ou use a visão próprios) para ver: Rodadas, Dealing e Reaction (médias em segundos — quanto menor, melhor), Cooperação de Velocidade e Cooperação de Roda (percentuais sobre as rodadas), com comparativo MTD ao mesmo intervalo do mês anterior (sem MoM no Histórico).\n\nEm seguida, **Por Jogo** soma todas as mesas em que o prestador atuou em Blackjack, Baccarat, Futebol Brasileiro e Roleta. O **Detalhamento Diário** lista o total do dia; expanda a linha para ver o mesmo breakdown por jogo (sem separar mesa). Sem Staff selecionado (visão de time), a aba pede para escolher um Game Presenter — o consolidado do time virá em versão futura. Sem linhas no período: \"Sem dados para o período selecionado.\"",
+          "Visível apenas com Time = Game Presenter. Escolha um prestador no filtro Staff (ou use a visão próprios) para ver os cards: Rodadas; Blackjack, Baccarat e Futebol Brasileiro (cada um com Dealing e Reaction); Roleta (Bola e Cilindro — cooperação de velocidade e de roda); e Incidentes (total no período, a partir da página Incidentes). Comparativo MTD ao mês anterior fica desligado no Histórico.\n\n**Por Jogo** detalha as mesmas métricas por tipo de jogo, com a coluna Incidentes. O **Detalhamento Diário** lista Data, Rodadas, Total de Incidentes, Casos, Erros e Graves (Oculto + Não Avisado + Avisado/Resolvido + Avisado/Não Resolvido). Sem Staff selecionado (visão de time), a aba pede para escolher um Game Presenter. Sem linhas no período: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -724,6 +724,40 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Permissões",
         texto:
           "O acesso é controlado em Gestão de Usuários → Permissões para a página Roteiro de Mesa:\n\n— Ver = Sim: consulta os roteiros e campanhas do escopo (operador: filtro de Estúdio limitado aos estúdios das suas operadoras).\n— Criar = Sim: botões '+ Roteiro' e '+ Campanha'.\n— Editar = Sim: botão Editar (lápis) nos cards de sugestão de roteiro.\n— Excluir = Sim: botão Excluir nos cards.\n\nSem Criar/Editar/Excluir, a página fica em modo consulta.",
+      },
+    ],
+  },
+  incidentes: {
+    titulo: "Incidentes",
+    blocos: [
+      {
+        texto:
+          "Registre e acompanhe erros de mesa cometidos por Game Presenter ou Shuffler no período — de casos avulsos a erros que geraram (ou não) aviso à operadora e resolução do jogo. Cada registro recebe um protocolo único, mesa, prestador envolvido, tipo de erro (conforme o jogo), resolução aplicada e, quando necessário, anexos de evidência.",
+      },
+      {
+        subtitulo: "Categorias de incidente",
+        texto:
+          "— **Caso**: ocorrência avulsa registrada para acompanhamento, sem necessariamente ser um erro técnico.\n— **Oculto**: erro identificado mas não visível ao jogador nem à operadora.\n— **Não Avisado**: erro ocorreu e a operadora não foi avisada a tempo.\n— **Avisado/Resolvido**: erro avisado à operadora e o jogo foi corrigido ou seguiu válido.\n— **Avisado/Não Resolvido**: erro avisado à operadora, mas sem resolução (jogo cancelado ou encerrado incorretamente).\n\nPara os erros **Avisado/Resolvido** e **Avisado/Não Resolvido**, o painel de KPIs também mostra quantos ocorreram **Em Mesa** (durante o jogo) ou **Fora da Mesa** — essa distinção só existe para Shuffler.",
+      },
+      {
+        subtitulo: "Filtros e KPIs",
+        texto:
+          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período), o filtro de **Estúdio** e os cinco cards de KPI (um por categoria) resumem a quantidade de incidentes do período e do escopo selecionado, comparando com o mês anterior.\n\nAs abas **Todos Times / Game Presenters / Shuffler** e o filtro de **Staff** restringem a lista e os KPIs a um time ou prestador específico. Usuários com permissão de Ver = Próprios não veem essas abas — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca localiza incidentes por protocolo, prestador ou mesa.",
+      },
+      {
+        subtitulo: "Registrar um incidente",
+        texto:
+          "Clique em **Novo Incidente** e informe: time (Game Presenter ou Shuffler), mesa, ID e horário da rodada, prestador envolvido, categoria e tipo do incidente (a lista de tipos muda conforme o jogo da mesa), local do erro (só para Shuffler — Em Jogo ou Fora de Jogo), resolução aplicada, se houve necessidade de payout e uma descrição do ocorrido. É possível anexar arquivos de evidência (tamanho máximo de 10 MB por arquivo).",
+      },
+      {
+        subtitulo: "Consultar um incidente",
+        texto:
+          "Clique no ícone de olho na linha da tabela para abrir os detalhes completos: dados da rodada, prestador, relator, resolução, payout, descrição e anexos (com link para abrir cada arquivo).",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "O acesso é definido em Gestão de Usuários → Permissões para a página Incidentes:\n— **Ver = Sim**: consulta todos os incidentes do escopo.\n— **Ver = Próprios**: consulta apenas os incidentes em que o prestador está envolvido (sem colunas de Prestador, Time e Relator).\n— **Editar = Sim**: exibe o botão **Novo Incidente**.\n\nSem Editar, a página fica em modo consulta.",
       },
     ],
   },

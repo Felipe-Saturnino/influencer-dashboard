@@ -1,9 +1,10 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { Upload } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
@@ -88,18 +89,6 @@ const inputField = (t: Theme): CSSProperties => ({
   boxSizing: "border-box",
 });
 
-const hiddenFileInputStyle: CSSProperties = {
-  position: "absolute",
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-};
-
 function validarDatasAtestado(inicio: string, fim: string): string | null {
   if (!inicio.trim()) return "Informe o início do atestado.";
   if (!fim.trim()) return "Informe o fim do atestado.";
@@ -117,7 +106,6 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
   const [saidaEsquecimento, setSaidaEsquecimento] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const arquivoInputId = useId();
   const alvoDiaMs = alvo?.dia.getTime();
   const alvoFuncionarioId = alvo?.funcionarioId;
 
@@ -294,39 +282,28 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
             />
           </div>
           <div style={{ marginBottom: 14 }}>
-            <span style={labelField}>
-              Atestado
-              <CampoObrigatorioMark />
-            </span>
-            <input
-              id={arquivoInputId}
-              type="file"
+            <CampoUploadArquivos
+              id="pres-just-atestado"
+              label="Atestado"
+              buttonLabel="Anexar arquivo"
+              icon={Upload}
               accept={RH_CALENDARIO_PRESENCA_ATESTADO_ACCEPT}
-              style={hiddenFileInputStyle}
-              onChange={(e) => {
-                setArquivo(e.target.files?.[0] ?? null);
-                setErr(null);
+              multiple={false}
+              obrigatorio
+              items={
+                arquivo ? [{ key: "atestado", label: arquivo.name, pendente: true }] : []
+              }
+              onAdd={(files) => {
+                const f = files[0];
+                if (f) {
+                  setArquivo(f);
+                  setErr(null);
+                }
               }}
+              onRemove={() => setArquivo(null)}
+              disabled={salvando}
+              t={t}
             />
-            <label
-              htmlFor={arquivoInputId}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 12,
-                border: `1px dashed ${t.cardBorder}`,
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--brand-primary, #7c3aed)",
-                fontFamily: FONT.body,
-              }}
-            >
-              <Upload size={16} aria-hidden="true" />
-              {arquivo ? arquivo.name : "Anexar arquivo"}
-            </label>
           </div>
           <div style={{ marginBottom: 8 }}>
             <label htmlFor="pres-just-obs-medico" style={labelField}>

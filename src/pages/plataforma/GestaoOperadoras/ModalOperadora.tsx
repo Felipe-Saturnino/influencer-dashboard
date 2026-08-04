@@ -7,6 +7,7 @@ import { BRAND_SEMANTIC as BRAND, FONT } from "../../../constants/theme";
 import { Operadora } from "../../../types";
 import { AlertCircle, Upload, Check, Palette, Layers, Building2 } from "lucide-react";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
@@ -112,11 +113,9 @@ export function ModalOperadora({
 
   const BUCKET = "operadoras-brand";
 
-  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleUploadLogo = async (file: File) => {
     if (!file || !storageSlug) {
       setErro("Informe o nome para gerar o identificador antes de enviar o logo.");
-      e.target.value = "";
       return;
     }
     setUploadingLogo(true);
@@ -133,7 +132,6 @@ export function ModalOperadora({
       setErro(ERRO_UPLOAD_LOGO);
     } finally {
       setUploadingLogo(false);
-      e.target.value = "";
     }
   };
 
@@ -144,11 +142,9 @@ export function ModalOperadora({
     otf: "font/otf",
   };
 
-  const handleUploadFont = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleUploadFont = async (file: File) => {
     if (!file || !storageSlug) {
       setErro("Informe o nome para gerar o identificador antes de enviar a fonte.");
-      e.target.value = "";
       return;
     }
     setUploadingFont(true);
@@ -166,7 +162,6 @@ export function ModalOperadora({
       setErro(ERRO_UPLOAD_FONTE);
     } finally {
       setUploadingFont(false);
-      e.target.value = "";
     }
   };
 
@@ -434,19 +429,23 @@ export function ModalOperadora({
           </label>
           <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="URL ou envie um arquivo"
             style={inputStyle} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-            <label style={{
-              display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-              background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${t.cardBorder}`,
-              borderRadius: 8, cursor: uploadingLogo ? "not-allowed" : "pointer",
-              fontSize: 12, fontFamily: FONT.body, color: t.text,
-            }}>
-              <Upload size={14} aria-hidden="true" />
-              {uploadingLogo ? "Enviando..." : "Enviar logo (PNG, JPG, SVG)"}
-              <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden disabled={uploadingLogo} onChange={handleUploadLogo} />
-            </label>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            <CampoUploadArquivos
+              id="op-logo-upload"
+              label=""
+              buttonLabel={uploadingLogo ? "Enviando…" : "Enviar logo (PNG, JPG, SVG)"}
+              icon={Upload}
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              multiple={false}
+              showList={false}
+              items={[]}
+              onAdd={(files) => void handleUploadLogo(files[0])}
+              onRemove={() => {}}
+              disabled={uploadingLogo}
+              t={t}
+            />
             {logoUrl ? (
-              <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
+              <a href={logoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo, marginTop: 10 }}>Ver</a>
             ) : null}
           </div>
         </div>
@@ -454,19 +453,23 @@ export function ModalOperadora({
           <label style={{ ...labelStyle, fontSize: 10 }}>Fonte customizada</label>
           <input type="url" value={fontUrl} onChange={(e) => setFontUrl(e.target.value)} placeholder="URL ou envie .woff2, .woff, .ttf, .otf"
             style={inputStyle} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-            <label style={{
-              display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px",
-              background: t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${t.cardBorder}`,
-              borderRadius: 8, cursor: uploadingFont ? "not-allowed" : "pointer",
-              fontSize: 12, fontFamily: FONT.body, color: t.text,
-            }}>
-              <Upload size={14} aria-hidden="true" />
-              {uploadingFont ? "Enviando..." : "Enviar fonte (WOFF2, WOFF, TTF, OTF)"}
-              <input type="file" accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf" hidden disabled={uploadingFont} onChange={handleUploadFont} />
-            </label>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            <CampoUploadArquivos
+              id="op-font-upload"
+              label=""
+              buttonLabel={uploadingFont ? "Enviando…" : "Enviar fonte (WOFF2, WOFF, TTF, OTF)"}
+              icon={Upload}
+              accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf"
+              multiple={false}
+              showList={false}
+              items={[]}
+              onAdd={(files) => void handleUploadFont(files[0])}
+              onRemove={() => {}}
+              disabled={uploadingFont}
+              t={t}
+            />
             {fontUrl ? (
-              <a href={fontUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo }}>Ver</a>
+              <a href={fontUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BRAND.roxoVivo, marginTop: 10 }}>Ver</a>
             ) : null}
           </div>
         </div>

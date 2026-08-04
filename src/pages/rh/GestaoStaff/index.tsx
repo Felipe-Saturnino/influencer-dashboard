@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { fetchTurnosPorEstudioSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
@@ -7,6 +7,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -1689,14 +1690,13 @@ function ModalStaffEditar({
     boxSizing: "border-box",
   };
 
-  const handleDealerFotosUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files?.length) return;
+  const handleDealerFotosUpload = async (files: File[]) => {
+    if (!files.length) return;
     setDealerUploading(true);
     setErr("");
     try {
       const novas: string[] = [];
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         const ext = file.name.split(".").pop() ?? "jpg";
         const path = `${row.id}-${crypto.randomUUID()}.${ext}`;
         const { data, error } = await supabase.storage.from("dealer-photos").upload(path, file, { upsert: true });
@@ -1713,7 +1713,6 @@ function ModalStaffEditar({
       );
     } finally {
       setDealerUploading(false);
-      e.target.value = "";
     }
   };
 
@@ -2088,24 +2087,20 @@ function ModalStaffEditar({
                 </div>
               ))}
             </div>
-            <label
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: `1px dashed ${t.cardBorder}`,
-                cursor: dealerUploading ? "wait" : "pointer",
-                fontFamily: FONT.body,
-                fontSize: 13,
-                color: t.textMuted,
-              }}
-            >
-              {dealerUploading ? <Loader2 size={14} className="app-lucide-spin" aria-hidden /> : <Upload size={16} aria-hidden />}
-              {dealerUploading ? "Enviando…" : "Adicionar fotos"}
-              <input type="file" accept="image/*" multiple hidden onChange={(ev) => void handleDealerFotosUpload(ev)} disabled={dealerUploading} />
-            </label>
+            <CampoUploadArquivos
+              id="dealer-fotos-upload"
+              label="Fotos"
+              buttonLabel="Adicionar fotos"
+              icon={Upload}
+              accept="image/*"
+              multiple
+              showList={false}
+              items={[]}
+              onAdd={(files) => void handleDealerFotosUpload(files)}
+              onRemove={() => {}}
+              disabled={dealerUploading}
+              t={t}
+            />
           </div>
         </ModalTabPanel>
       ) : null}

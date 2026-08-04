@@ -1,8 +1,9 @@
 import { useMemo, type CSSProperties } from "react";
-import { FileText, Upload, X } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { SelectOrganogramaTimes } from "../../../components/rh/SelectOrganogramaTimes";
 import { SelectOrganogramaMultiForm } from "../../../components/rh/SelectOrganogramaMultiForm";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
@@ -84,7 +85,12 @@ export function ModalFormPoliticaNormativa({
     onChange({ relacionadosIds: next });
   };
 
-  const pdfLabel = pdfFile?.name ?? pdfNomeAtual ?? values.pdfNome;
+  const pdfItems = useMemo(() => {
+    if (pdfFile) return [{ key: "pending", label: pdfFile.name, pendente: true as const }];
+    const nome = pdfNomeAtual ?? values.pdfNome;
+    if (nome) return [{ key: "saved", label: nome, pendente: false as const }];
+    return [];
+  }, [pdfFile, pdfNomeAtual, values.pdfNome]);
 
   return (
     <>
@@ -246,74 +252,24 @@ export function ModalFormPoliticaNormativa({
         </div>
 
         <div style={{ gridColumn: "1 / -1" }}>
-          {lbl("mp-pdf", "Documento (PDF)", t, true)}
-          <div
-            style={{
-              border: `2px dashed ${fieldErr.pdf ? "#e84025" : "color-mix(in srgb, var(--brand-accent, #1e36f8) 35%, transparent)"}`,
-              borderRadius: 12,
-              padding: 20,
-              textAlign: "center",
-              background: "color-mix(in srgb, var(--brand-accent, #1e36f8) 4%, #fff)",
+          <CampoUploadArquivos
+            id="mp-pdf"
+            label="Documento (PDF)"
+            buttonLabel="Selecionar PDF"
+            icon={Upload}
+            accept="application/pdf,.pdf"
+            multiple={false}
+            obrigatorio
+            hasError={Boolean(fieldErr.pdf)}
+            hint="O colaborador lê este arquivo na plataforma. Máx. 15 MB."
+            items={pdfItems}
+            onAdd={(files) => onPdfFileChange(files[0] ?? null)}
+            onRemove={() => {
+              onPdfFileChange(null);
+              onChange({ pdfPath: null, pdfNome: null });
             }}
-          >
-            <Upload size={22} color="var(--brand-primary, #7c3aed)" aria-hidden style={{ marginBottom: 8 }} />
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>PDF do documento</div>
-            <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12 }}>
-              O colaborador lê este arquivo na plataforma. Máx. 15 MB.
-            </div>
-            <label
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 16px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg,
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              Selecionar PDF
-              <input
-                type="file"
-                accept="application/pdf,.pdf"
-                style={{ display: "none" }}
-                onChange={(e) => onPdfFileChange(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            {pdfLabel ? (
-              <div
-                style={{
-                  marginTop: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  textAlign: "left",
-                }}
-              >
-                <FileText size={18} aria-hidden />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis" }}>{pdfLabel}</div>
-                </div>
-                {pdfFile ? (
-                  <button
-                    type="button"
-                    aria-label="Remover PDF selecionado"
-                    onClick={() => onPdfFileChange(null)}
-                    style={{ border: "none", background: "transparent", cursor: "pointer", color: t.textMuted }}
-                  >
-                    <X size={16} aria-hidden />
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+            t={t}
+          />
         </div>
 
         {documentosParaRelacionar.length > 0 ? (
