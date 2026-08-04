@@ -621,7 +621,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Atendimento",
         texto:
-          "Filtre por tipo de denúncia, incluindo **Elogios**, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar. Denúncias arquivadas ou concluídas saem das filas operacionais padrão.",
+          "Filtre por tipo de denúncia, incluindo **Elogios**, status e período. Abra o protocolo para registrar andamento, parecer e encerramento conforme permissão de Editar.\n\nNa aba **Anotações** do atendimento, registre mensagens à investigação. Por padrão elas ficam **visíveis na consulta pública** (protocolo); marque **Somente interno** para notas que o relator não deve ver. Respostas do relator na página pública entram nesta mesma thread com o selo Relator — use o espaço como conversa para dúvidas e evidências.",
       },
     ],
   },
@@ -828,7 +828,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Check-in e Check-out",
         texto:
-          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. O vínculo do login com o cadastro RH e a conexão à rede Spin Gaming continuam obrigatórios.\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.",
+          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga** ou **Venda**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga/Venda; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. Dias com **Compra** (ou Compra - Turno) seguem as mesmas regras de **Escalado** no Controle de Presença (Falta, Justificar e Aprovar).\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.\n\nCorreções de horário (Esquecimento ou Correção) ficam **Em análise**: o líder imediato aprova **entrada e saída separadamente** no ícone de comentário de cada coluna. O próprio prestador não aprova a própria correção. Justificativa **Médico** segue para **Solicitações** (RH).",
       },
       {
         subtitulo: "Cards de Escalados, Trocas, Venda e Compra",

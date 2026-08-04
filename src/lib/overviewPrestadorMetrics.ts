@@ -1,7 +1,6 @@
 import {
   chavePresencaGestao,
-  presencaCorrecaoAnaliseStatusEfetivo,
-  presencaCorrecaoCampoAlterado,
+  presencaCorrecaoCampoAprovado,
   resolverStatusPresencaLinha,
   type PresencaDiaGestao,
 } from "./rhCalendarioPresencaGestao";
@@ -128,16 +127,12 @@ function horariosRealizadosExib(
   const entReal = horaRegistoSP(pt?.check_in_at);
   const saiReal = horaRegistoSP(pt?.check_out_at);
   const correcao = gestao?.correcao;
-  const correcaoAprovada =
-    Boolean(correcao) && presencaCorrecaoAnaliseStatusEfetivo(correcao) === "aprovada";
-  const entExib =
-    correcaoAprovada && correcao && presencaCorrecaoCampoAlterado("entrada", correcao)
-      ? correcao.entradaCorrigida
-      : entReal;
-  const saiExib =
-    correcaoAprovada && correcao && presencaCorrecaoCampoAlterado("saida", correcao)
-      ? correcao.saidaCorrigida
-      : saiReal;
+  const entExib = presencaCorrecaoCampoAprovado(correcao, "entrada")
+    ? (correcao?.entradaCorrigida ?? entReal)
+    : entReal;
+  const saiExib = presencaCorrecaoCampoAprovado(correcao, "saida")
+    ? (correcao?.saidaCorrigida ?? saiReal)
+    : saiReal;
   return {
     ent: entExib,
     sai: saiExib,

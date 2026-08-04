@@ -3,7 +3,10 @@ import { supabase } from "../../../lib/supabase";
 import {
   appendHistoricoPresenca,
   chavePresencaGestao,
+  presencaCorrecaoAnaliseStatusCampo,
   presencaCorrecaoAnaliseStatusEfetivo,
+  presencaCorrecaoCampoAlterado,
+  type PresencaCorrecaoMeta,
   type PresencaDiaGestao,
   type PresencaJustificativaMeta,
   type PresencaMesAprovacaoLinha,
@@ -215,24 +218,35 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
       const entradaRealAnterior = (presencaAlvoModal.entRealOriginal || "—").trim() || "—";
       const saidaRealAnterior = (presencaAlvoModal.saiRealOriginal || "—").trim() || "—";
       const atual = gestaoAtualPorChave(chave, presencaGestaoPorChave, gestaoRelatorioPorChave);
+      const em = new Date().toISOString();
       const comHistorico = appendHistoricoPresenca(atual, {
         tipo: "correcao",
-        em: new Date().toISOString(),
+        em,
         por: nomeUsuarioPresencaGestao,
       });
+      const correcaoBase: PresencaCorrecaoMeta = {
+        entradaRealAnterior,
+        saidaRealAnterior,
+        entradaCorrigida: payload.entrada,
+        saidaCorrigida: payload.saida,
+        observacao: payload.observacao.trim() || null,
+        corrigidoPorNome: nomeUsuarioPresencaGestao,
+        corrigidoEm: em,
+        analiseStatus: "pendente",
+      };
+      const correcao: PresencaCorrecaoMeta = {
+        ...correcaoBase,
+        ...(presencaCorrecaoCampoAlterado("entrada", correcaoBase)
+          ? { entradaAnaliseStatus: "pendente" as const }
+          : {}),
+        ...(presencaCorrecaoCampoAlterado("saida", correcaoBase)
+          ? { saidaAnaliseStatus: "pendente" as const }
+          : {}),
+      };
       const novo: PresencaDiaGestao = {
         ...comHistorico,
         statusGestao: "em_analise",
-        correcao: {
-          entradaRealAnterior,
-          saidaRealAnterior,
-          entradaCorrigida: payload.entrada,
-          saidaCorrigida: payload.saida,
-          observacao: payload.observacao.trim() || null,
-          corrigidoPorNome: nomeUsuarioPresencaGestao,
-          corrigidoEm: new Date().toISOString(),
-          analiseStatus: "pendente",
-        },
+        correcao,
       };
 
       const result = await persistirPresencaGestao(fid, diaIso, novo);
@@ -264,17 +278,50 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
   );
 
   const analisarCorrecaoPresenca = useCallback(
-    (funcionarioId: string, diaIso: string, decisao: "aprovada" | "recusada") => {
+    (
+      funcionarioId: string,
+      diaIso: string,
+      decisao: "aprovada" | "recusada",
+      campo: "entrada" | "saida",
+    ) => {
       const chave = chavePresencaGestao(funcionarioId, diaIso);
       const em = new Date().toISOString();
       const aplicar = (prev: Map<string, PresencaDiaGestao>) => {
         const next = new Map(prev);
         const atual = next.get(chave);
         if (!atual?.correcao) return prev;
-        if (presencaCorrecaoAnaliseStatusEfetivo(atual.correcao) !== "pendente") return prev;
+        if (!presencaCorrecaoCampoAlterado(campo, atual.correcao)) return prev;
+        if (presencaCorrecaoAnaliseStatusCampo(atual.correcao, campo) !== "pendente") return prev;
+
+        const correcaoAtualizada: PresencaCorrecaoMeta =
+          campo === "entrada"
+            ? {
+                ...atual.correcao,
+                entradaAnaliseStatus: decisao,
+                entradaAnalisePorNome: nomeUsuarioPresencaGestao,
+                entradaAnaliseEm: em,
+              }
+            : {
+                ...atual.correcao,
+                saidaAnaliseStatus: decisao,
+                saidaAnalisePorNome: nomeUsuarioPresencaGestao,
+                saidaAnaliseEm: em,
+              };
+
+        const efetivo = presencaCorrecaoAnaliseStatusEfetivo(correcaoAtualizada);
+        const correcaoFinal: PresencaCorrecaoMeta = {
+          ...correcaoAtualizada,
+          analiseStatus: efetivo,
+          ...(efetivo !== "pendente"
+            ? {
+                analisePorNome: nomeUsuarioPresencaGestao,
+                analiseEm: em,
+              }
+            : {}),
+        };
 
         let novo: PresencaDiaGestao;
-        if (decisao === "aprovada") {
+        if (efetivo === "aprovada") {
           const comHistorico = appendHistoricoPresenca(atual, {
             tipo: "aprovacao",
             em,
@@ -283,23 +330,19 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
           novo = {
             ...comHistorico,
             statusGestao: "aprovado",
-            correcao: {
-              ...atual.correcao,
-              analiseStatus: "aprovada",
-              analisePorNome: nomeUsuarioPresencaGestao,
-              analiseEm: em,
-            },
+            correcao: correcaoFinal,
+          };
+        } else if (efetivo === "pendente") {
+          novo = {
+            ...atual,
+            statusGestao: "em_analise",
+            correcao: correcaoFinal,
           };
         } else {
           novo = {
             ...atual,
             statusGestao: undefined,
-            correcao: {
-              ...atual.correcao,
-              analiseStatus: "recusada",
-              analisePorNome: nomeUsuarioPresencaGestao,
-              analiseEm: em,
-            },
+            correcao: correcaoFinal,
           };
         }
         next.set(chave, novo);
@@ -378,20 +421,30 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
           registradoPorNome: nomeUsuarioPresencaGestao,
           registradoEm: em,
         };
+        const correcaoBase: PresencaCorrecaoMeta = {
+          entradaRealAnterior,
+          saidaRealAnterior,
+          entradaCorrigida: payload.entrada,
+          saidaCorrigida: payload.saida,
+          observacao: null,
+          corrigidoPorNome: nomeUsuarioPresencaGestao,
+          corrigidoEm: em,
+          analiseStatus: "pendente",
+        };
+        const correcao: PresencaCorrecaoMeta = {
+          ...correcaoBase,
+          ...(presencaCorrecaoCampoAlterado("entrada", correcaoBase)
+            ? { entradaAnaliseStatus: "pendente" as const }
+            : {}),
+          ...(presencaCorrecaoCampoAlterado("saida", correcaoBase)
+            ? { saidaAnaliseStatus: "pendente" as const }
+            : {}),
+        };
         const novo: PresencaDiaGestao = {
           ...base,
           statusGestao: "em_analise",
           justificativa,
-          correcao: {
-            entradaRealAnterior,
-            saidaRealAnterior,
-            entradaCorrigida: payload.entrada,
-            saidaCorrigida: payload.saida,
-            observacao: null,
-            corrigidoPorNome: nomeUsuarioPresencaGestao,
-            corrigidoEm: em,
-            analiseStatus: "pendente",
-          },
+          correcao,
         };
         const result = await persistirPresencaGestao(fid, diaIso, novo);
         if (!result.ok) return false;
@@ -417,7 +470,11 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
         registradoEm: em,
         observacao: payload.observacao,
       };
-      const novo: PresencaDiaGestao = { ...comHistorico, justificativa };
+      const novo: PresencaDiaGestao = {
+        ...comHistorico,
+        statusGestao: "em_analise",
+        justificativa,
+      };
       const result = await persistirPresencaGestao(fid, diaIso, novo);
       if (!result.ok) return false;
       const patchGestaoOutro = (prev: Map<string, PresencaDiaGestao>) => {

@@ -210,7 +210,9 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - Tema: pode usar tokens neutros e identidade Spin fixa; whitelabel operador **não** se aplica como nas páginas internas salvo decisão de produto.
 - Formulários: `CampoObrigatorioMark` e semântica de erro do Global.
 - Tipos compartilhados com a Central interna via `TIPOS_DENUNCIA`; **Elogios** (`elogios`) segue o mesmo envio, protocolo e atendimento dos demais tipos.
-- Privacidade: não expor detalhes técnicos em mensagens de erro.
+- Privacidade: não expor detalhes técnicos em mensagens de erro; na consulta, mensagens do RH aparecem como **Equipe RH** (sem nome do staff).
+
+**Consulta por protocolo (`consultar_denuncia_spin`):** status + linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta (`responder_denuncia_spin`) com anexos opcionais enquanto o status não estiver encerrado (Procedente / Não procedente).
 
 **Handoff:** campos do formulário, anonimato, confirmação pós-envio, a11y embed.
 

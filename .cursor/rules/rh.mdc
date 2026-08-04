@@ -135,6 +135,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 - **Proteção de volume:** a lista interna retorna no máximo 200 denúncias, mais recentes primeiro; anexos são consultados somente para os IDs exibidos.
 - **Tipos de denúncia:** o catálogo compartilhado pelo canal público e pela Central inclui **Elogios** (`elogios`), submetido e tratado pelo mesmo fluxo dos demais tipos.
 - Modais: `ModalsVerHist`, `ModalsAtender` — ações só ícone = **`BtnIconeAcaoLinha`** + **`tooltipAcao("Ver denúncia")`**, «Atender denúncia», «Histórico da denúncia»; excluir = **`tooltipExcluir("denúncia")`**.
+- **Comunicação com o relator (thread):** anotações em `canal_denuncia_anotacoes` com `autor_origem` (`rh` \| `relator`) e `visivel_externo`. Por defeito as notas do RH aparecem na consulta pública; checkbox **Somente interno** grava `visivel_externo = false`. Respostas do relator (RPC `responder_denuncia_spin` por protocolo) entram na mesma aba **Anotações** do Atender e no Histórico, com badge **Relator**. Migração `20260804120000_canal_denuncia_thread_externa.sql`.
 - **Handoff:** SLA, status, atendimento, histórico.
 
 ---

@@ -5,7 +5,7 @@ import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Theme } from "../../../constants/theme";
-import { statusLabel, tipoLabel, type DenunciaStatusDb } from "../../../lib/canalDenunciasSpin";
+import { statusLabel, tipoLabel, labelAutorMensagemRh, type DenunciaStatusDb } from "../../../lib/canalDenunciasSpin";
 import type { DenunciaListRow, AnexoRow } from "./types";
 
 const MODAL_MAX = "90dvh" as const;
@@ -302,7 +302,7 @@ export function ModalHistoricoDenuncia({
         .order("changed_at", { ascending: false }),
       supabase
         .from("canal_denuncia_anotacoes")
-        .select("id, texto, created_at, created_by")
+        .select("id, texto, created_at, created_by, autor_origem, visivel_externo")
         .eq("denuncia_id", denunciaId)
         .order("created_at", { ascending: false }),
     ]);
@@ -347,7 +347,9 @@ export function ModalHistoricoDenuncia({
       });
     }
     for (const n of nRows) {
-      const who = nameMap[n.created_by] ?? "—";
+      const origem = n.autor_origem === "relator" ? "relator" : "rh";
+      const who = labelAutorMensagemRh(origem, n.created_by ? nameMap[n.created_by] : null);
+      const titulo = origem === "relator" ? "Mensagem do relator" : n.visivel_externo === false ? "Anotação interna" : "Anotação (visível na consulta)";
       merged.push({
         sortAt: n.created_at,
         node: (
@@ -357,13 +359,20 @@ export function ModalHistoricoDenuncia({
               padding: 14,
               borderRadius: 12,
               border: `1px solid ${t.cardBorder}`,
-              background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+              background:
+                origem === "relator"
+                  ? t.isDark
+                    ? "rgba(124,58,237,0.12)"
+                    : "rgba(124,58,237,0.06)"
+                  : t.isDark
+                    ? "rgba(255,255,255,0.03)"
+                    : "rgba(0,0,0,0.02)",
             }}
           >
             <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
               {fmtDt(n.created_at)} · {who}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>Anotação</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 4 }}>{titulo}</div>
             <div style={{ fontSize: 13, color: t.text, whiteSpace: "pre-wrap" }}>{n.texto}</div>
           </div>
         ),

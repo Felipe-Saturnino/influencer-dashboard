@@ -123,6 +123,26 @@ export function tipoLabel(key: string): string {
   return t.detalhe ? `${t.titulo} (${t.detalhe})` : t.titulo;
 }
 
+export type CanalDenunciaAutorOrigem = "rh" | "relator";
+
+export type CanalDenunciaMensagemPublica = {
+  id: string;
+  texto: string;
+  autor_origem: CanalDenunciaAutorOrigem;
+  created_at: string;
+  anexos: { id: string; file_name: string }[];
+};
+
+export function labelAutorMensagemPublica(origem: CanalDenunciaAutorOrigem): string {
+  return origem === "relator" ? "Você" : "Equipe RH";
+}
+
+export function labelAutorMensagemRh(origem: CanalDenunciaAutorOrigem, nomeRh?: string | null): string {
+  if (origem === "relator") return "Relator";
+  const n = (nomeRh ?? "").trim();
+  return n || "Equipe RH";
+}
+
 export function sanitizeStorageFileName(name: string): string {
   const base = name.replace(/[/\\]/g, "_").replace(/[^\w.\-()\s\u00C0-\u024F]/g, "_");
   return base.length > 180 ? base.slice(-180) : base;

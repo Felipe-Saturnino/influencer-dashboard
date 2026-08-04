@@ -1464,7 +1464,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
         texto:
-          "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
+          "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença registrada com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). **Correções** de horário (Esquecimento / Correção) e a justificativa **Outro** só o **líder imediato** (ou Editar Sim) analisa — o próprio prestador não aprova a própria correção. Atestado **Médico** é atendido em **Solicitações** (RH). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
       },
       {
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
@@ -1715,6 +1715,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não vejo Central de Denúncias no menu?",
         texto:
           "Confirme permissão de **Ver** em Gestão de Usuários. O canal público de denúncias (sem login) é distinto — protocolos internos são tratados nesta página logada.",
+      },
+      {
+        subtitulo: "O relator diz que não vê minhas anotações na consulta pública?",
+        texto:
+          "Na aba **Anotações** do atendimento, confira se a mensagem não foi marcada como **Somente interno**. Notas internas não aparecem na consulta por protocolo. Respostas do relator entram na mesma thread com o selo Relator — atualize o modal ou recarregue a lista se a mensagem ainda não aparecer.",
       },
     ],
   },
