@@ -133,6 +133,8 @@ interface FluxoDia {
   lobbyBlaze: number;
   /** Mesas localizadas no lobby CDA (sync_logs lobby_cda). */
   lobbyCda: number;
+  /** Mesas localizadas no lobby Esportiva (sync_logs lobby_esportiva). */
+  lobbyEsportiva: number;
   /** Empresas enriquecidas (cidade/UF) — sync_logs comercial_cnpj_enriquecimento. */
   comercialCnpj: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
@@ -288,7 +290,7 @@ export default function StatusTecnico() {
     setRegistrosHoje(count ?? 0);
 
     // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails (datas civis em SP)
-    const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync, resComercialCnpjSync] = await Promise.all([
+    const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync, resLobbyEsportivaSync, resComercialCnpjSync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
       supabase.from("email_envios").select("data, tipo, destinatarios_count, created_at").gte("data", dataInicioStr),
@@ -310,6 +312,13 @@ export default function StatusTecnico() {
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_cda")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_esportiva")
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
@@ -342,6 +351,9 @@ export default function StatusTecnico() {
     );
     const lobbyCdaPorData = agregarSyncPorData(
       (resLobbyCdaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    );
+    const lobbyEsportivaPorData = agregarSyncPorData(
+      (resLobbyEsportivaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
     );
     const comercialCnpjPorData = agregarSyncPorData(
       (resComercialCnpjSync.data ?? []) as {
@@ -385,6 +397,7 @@ export default function StatusTecnico() {
       ...Object.keys(spinPorData),
       ...Object.keys(lobbyBlazePorData),
       ...Object.keys(lobbyCdaPorData),
+      ...Object.keys(lobbyEsportivaPorData),
       ...Object.keys(comercialCnpjPorData),
       ...Object.keys(emailsPorData),
       hoje,
@@ -398,6 +411,7 @@ export default function StatusTecnico() {
         const spinRss = spinPorData[data] ?? 0;
         const lobbyBlaze = lobbyBlazePorData[data] ?? 0;
         const lobbyCda = lobbyCdaPorData[data] ?? 0;
+        const lobbyEsportiva = lobbyEsportivaPorData[data] ?? 0;
         const comercialCnpj = comercialCnpjPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
@@ -408,9 +422,10 @@ export default function StatusTecnico() {
           spinRss,
           lobbyBlaze,
           lobbyCda,
+          lobbyEsportiva,
           comercialCnpj,
           emails,
-          total: cda + social + spinRss + lobbyBlaze + lobbyCda + comercialCnpj + emailTotal,
+          total: cda + social + spinRss + lobbyBlaze + lobbyCda + lobbyEsportiva + comercialCnpj + emailTotal,
         };
       });
     setFluxoDados(fluxoArray);
@@ -1314,6 +1329,9 @@ export default function StatusTecnico() {
   const ultimoSyncLobbyCdaLog = syncLogs.find((l) => l.integracao_slug === "lobby_cda");
   const lobbyCdaStatusOk = ultimoSyncLobbyCdaLog?.status === "ok";
 
+  const ultimoSyncLobbyEsportivaLog = syncLogs.find((l) => l.integracao_slug === "lobby_esportiva");
+  const lobbyEsportivaStatusOk = ultimoSyncLobbyEsportivaLog?.status === "ok";
+
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
@@ -1359,10 +1377,11 @@ export default function StatusTecnico() {
     comercialCnpjStatusOk,
     lobbyBlazeStatusOk,
     lobbyCdaStatusOk,
+    lobbyEsportivaStatusOk,
     emailStatusDiretoriaOk,
     emailStatusAgendaOk,
   ].filter(Boolean).length;
-  const totalIntegracoes = 11;
+  const totalIntegracoes = 12;
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
@@ -1389,6 +1408,9 @@ export default function StatusTecnico() {
   }
   if (ultimoSyncLobbyBlazeLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyBlazeLog.executado_em, label: "Lobby Blaze" });
   if (ultimoSyncLobbyCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyCdaLog.executado_em, label: "Lobby CDA" });
+  if (ultimoSyncLobbyEsportivaLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyEsportivaLog.executado_em, label: "Lobby Esportiva Bet" });
+  }
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
   const ultimoSyncQualquer = timestamps.length > 0 ? timestamps.reduce((a, b) => (a.ts > b.ts ? a : b)) : null;
@@ -1420,6 +1442,10 @@ export default function StatusTecnico() {
   const lobbyBlazeFalhas = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze" && l.status === "falha").length;
   const lobbyCdaTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_cda").length;
   const lobbyCdaFalhas = syncLogs.filter((l) => l.integracao_slug === "lobby_cda" && l.status === "falha").length;
+  const lobbyEsportivaTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_esportiva").length;
+  const lobbyEsportivaFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_esportiva" && l.status === "falha",
+  ).length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
@@ -1438,6 +1464,7 @@ export default function StatusTecnico() {
     comercialCnpjTotal +
     lobbyBlazeTotal +
     lobbyCdaTotal +
+    lobbyEsportivaTotal +
     socialTotal +
     Math.max(emailTotal, 1);
   const totalFalhas =
@@ -1449,6 +1476,7 @@ export default function StatusTecnico() {
     comercialCnpjFalhas +
     lobbyBlazeFalhas +
     lobbyCdaFalhas +
+    lobbyEsportivaFalhas +
     socialFalhas +
     emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
@@ -1725,6 +1753,35 @@ export default function StatusTecnico() {
     alertas.push({ nivel: "erro", msg: `Taxa de erro alta no Lobby CDA (${taxaErroLobbyCda}%)` });
   }
 
+  // ── Lobby Esportiva Bet ──
+  const syncLogsLobbyEsportiva = syncLogs.filter((l) => l.integracao_slug === "lobby_esportiva");
+  const ultimoSyncLobbyEsportivaOk = syncLogsLobbyEsportiva.find((l) => l.status === "ok");
+  const ultimoSyncLobbyEsportivaFalha = syncLogsLobbyEsportiva.find((l) => l.status === "falha");
+  const taxaErroLobbyEsportiva =
+    syncLogsLobbyEsportiva.length > 0
+      ? ((syncLogsLobbyEsportiva.filter((l) => l.status === "falha").length /
+          syncLogsLobbyEsportiva.length) *
+          100).toFixed(1)
+      : "0";
+
+  if (syncLogsLobbyEsportiva.length > 0 && !ultimoSyncLobbyEsportivaOk && ultimoSyncLobbyEsportivaFalha) {
+    alertas.push({ nivel: "erro", msg: "Nenhuma coleta Lobby Esportiva Bet com sucesso" });
+  } else if (ultimoSyncLobbyEsportivaOk) {
+    const exec = new Date(ultimoSyncLobbyEsportivaOk.executado_em);
+    if (exec < vinteQuatroHoras) {
+      alertas.push({
+        nivel: "aviso",
+        msg: "Coleta Lobby Esportiva Bet atrasada (> 24h sem execução OK)",
+      });
+    }
+  }
+  if (parseFloat(taxaErroLobbyEsportiva) > 5 && syncLogsLobbyEsportiva.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no Lobby Esportiva Bet (${taxaErroLobbyEsportiva}%)`,
+    });
+  }
+
   // Status por integração (última execução)
   const statusPorIntegracao = useMemo(
     () =>
@@ -1758,6 +1815,8 @@ export default function StatusTecnico() {
                 ? ("lobby_blaze" as const)
                 : int.slug === "lobby_cda"
                   ? ("lobby_cda" as const)
+                  : int.slug === "lobby_esportiva"
+                    ? ("lobby_esportiva" as const)
                   : ("none" as const);
         return {
           ...int,
@@ -1905,7 +1964,7 @@ export default function StatusTecnico() {
   const linhasOperadoras = useMemo(
     () =>
       ordenarLinhasIntegracao(
-        (["casa_apostas", "casa_apostas_afiliados", "lobby_blaze", "lobby_cda"] as const)
+        (["casa_apostas", "casa_apostas_afiliados", "lobby_blaze", "lobby_cda", "lobby_esportiva"] as const)
           .map((slug) => pickIntegracaoRow(slug))
           .filter(Boolean) as StatusIntegracaoRow[],
         sortOperadoras,
@@ -1991,6 +2050,8 @@ export default function StatusTecnico() {
               ? "Lobby Blaze"
               : log.integracao_slug === "lobby_cda"
                 ? "Lobby Casa de Apostas"
+                : log.integracao_slug === "lobby_esportiva"
+                  ? "Lobby Esportiva Bet"
                 : log.integracao_slug);
         return nomeIntegracaoStatusTecnicoUi(log.integracao_slug, nomeDb);
       }
@@ -2014,6 +2075,7 @@ export default function StatusTecnico() {
           cs_atendimento_outlook: LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
+          lobby_esportiva: "Lobby Esportiva Bet",
           diagnostico_plataforma: "Diagnóstico da plataforma",
           diagnostico_ok: "Diagnóstico da plataforma",
           diagnostico_aviso: "Diagnóstico da plataforma",
@@ -2059,6 +2121,7 @@ export default function StatusTecnico() {
       comercial_cnpj: `${LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE} (Pipeline B2B)`,
       lobby_blaze: "Lobby Blaze",
       lobby_cda: "Lobby CDA",
+      lobby_esportiva: "Lobby Esportiva Bet",
       relatorio_diretoria: "E-mail: Relatório",
       email_agenda_diaria: "E-mail: Agenda",
       boas_vindas: "E-mail: Boas-vindas",
@@ -2072,6 +2135,7 @@ export default function StatusTecnico() {
       comercial_cnpj: "#0d9488",
       lobby_blaze: "#f97316",
       lobby_cda: "#0ea5e9",
+      lobby_esportiva: "#22c55e",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
       boas_vindas: "#8b5cf6",
@@ -2408,6 +2472,7 @@ export default function StatusTecnico() {
             { key: "spin_rss", label: "Spin RSS" },
             { key: "lobby_blaze", label: "Lobby Blaze" },
             { key: "lobby_cda", label: "Lobby CDA" },
+            { key: "lobby_esportiva", label: "Lobby Esportiva" },
             { key: "comercial_cnpj", label: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE },
             { key: "relatorio_diretoria", label: "E-mail de Relatório" },
             { key: "email_agenda_diaria", label: "E-mail de Agenda" },
@@ -2475,6 +2540,12 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.lobbyCda)}%`, minWidth: f.lobbyCda > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_cda"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.lobbyEsportiva > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_esportiva")}: ${f.lobbyEsportiva.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyEsportiva)}%`, minWidth: f.lobbyEsportiva > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_esportiva"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {f.comercialCnpj > 0 && (
                       <div
                         title={`${fluxoLabel("comercial_cnpj")}: ${f.comercialCnpj.toLocaleString("pt-BR")}`}
@@ -2518,6 +2589,7 @@ export default function StatusTecnico() {
                       {f.spinRss > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("spin_rss"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("spin_rss")}: {f.spinRss.toLocaleString("pt-BR")}</div>}
                       {f.lobbyBlaze > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_blaze"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_blaze")}: {f.lobbyBlaze.toLocaleString("pt-BR")}</div>}
                       {f.lobbyCda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_cda"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_cda")}: {f.lobbyCda.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyEsportiva > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_esportiva"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_esportiva")}: {f.lobbyEsportiva.toLocaleString("pt-BR")}</div>}
                       {f.comercialCnpj > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("comercial_cnpj"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("comercial_cnpj")}: {f.comercialCnpj.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
@@ -2889,6 +2961,12 @@ export default function StatusTecnico() {
                   ["Nenhuma coleta Lobby Blaze com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_blaze)"],
                   ["Coleta Lobby Blaze atrasada", "> 24h sem sync_logs OK"],
                   ["Taxa de erro alta no Lobby Blaze", "> 5% em sync_logs (slug lobby_blaze)"],
+                  ["Nenhuma coleta Lobby CDA com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_cda)"],
+                  ["Coleta Lobby CDA atrasada", "> 24h sem sync_logs OK"],
+                  ["Taxa de erro alta no Lobby CDA", "> 5% em sync_logs (slug lobby_cda)"],
+                  ["Nenhuma coleta Lobby Esportiva Bet com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_esportiva)"],
+                  ["Coleta Lobby Esportiva Bet atrasada", "> 24h sem sync_logs OK"],
+                  ["Taxa de erro alta no Lobby Esportiva Bet", "> 5% em sync_logs (slug lobby_esportiva)"],
                 ].map(([alerta, condicao], idx) => (
                   <tr
                     key={alerta}

@@ -14,6 +14,7 @@ export type StatusIntegracaoSyncTipo =
   | "comercial_cnpj"
   | "lobby_blaze"
   | "lobby_cda"
+  | "lobby_esportiva"
   | "email"
   | "email_agenda"
   | "email_track"

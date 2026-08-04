@@ -29,7 +29,7 @@ import {
   rankingConcorrentesFromPosicoes,
 } from "../../../../lib/lobbyMonitorHelpers";
 
-export const LOBBY_POS_SLUGS_CONSOLIDADOS = ["blaze", "casa_apostas"] as const;
+export const LOBBY_POS_SLUGS_CONSOLIDADOS = ["blaze", "casa_apostas", "esportiva_bet"] as const;
 
 export type LobbyPosSlugConsolidado = (typeof LOBBY_POS_SLUGS_CONSOLIDADOS)[number];
 

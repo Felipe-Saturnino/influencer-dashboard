@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Plus, X, type LucideIcon } from "lucide-react";
 import { FONT } from "../constants/theme";
 import { CampoObrigatorioMark } from "./CampoObrigatorioMark";
@@ -46,9 +46,32 @@ export type CampoUploadArquivosProps = {
   footer?: ReactNode;
 };
 
+function fileMatchesAccept(file: File, accept?: string): boolean {
+  if (!accept?.trim()) return true;
+  const tokens = accept
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (tokens.length === 0) return true;
+  const name = file.name.toLowerCase();
+  const type = (file.type || "").toLowerCase();
+  return tokens.some((token) => {
+    if (token.startsWith(".")) return name.endsWith(token);
+    if (token.endsWith("/*")) return type.startsWith(token.slice(0, -1));
+    return type === token;
+  });
+}
+
+function filesFromDataTransfer(dt: DataTransfer, accept: string | undefined, multiple: boolean): File[] {
+  const raw = Array.from(dt.files ?? []).filter((f) => fileMatchesAccept(f, accept));
+  if (raw.length === 0) return [];
+  return multiple ? raw : raw.slice(0, 1);
+}
+
 /**
  * Upload em modal — layout canónico (Portal Academy).
  * Só padroniza a UI; accept, tamanho, upload imediato vs. no save e regras de domínio ficam na página.
+ * Inclui seleção por botão e arrastar/soltar na área do campo.
  */
 export function CampoUploadArquivos({
   id,
@@ -71,7 +94,53 @@ export function CampoUploadArquivos({
   footer,
 }: CampoUploadArquivosProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const borderColor = hasError ? "#e84025" : t.cardBorder;
+  const dragDepthRef = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const borderColor = hasError ? "#e84025" : isDragging ? "var(--brand-primary, #7c3aed)" : t.cardBorder;
+  const dropZoneBg = isDragging
+    ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)"
+    : t.inputBg;
+
+  function resetDrag() {
+    dragDepthRef.current = 0;
+    setIsDragging(false);
+  }
+
+  function onDragEnter(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (disabled) return;
+    if (![...e.dataTransfer.types].includes("Files")) return;
+    dragDepthRef.current += 1;
+    setIsDragging(true);
+  }
+
+  function onDragLeave(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (disabled) return;
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragging(false);
+  }
+
+  function onDragOver(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (disabled) return;
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function onDrop(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (disabled) {
+      resetDrag();
+      return;
+    }
+    const files = filesFromDataTransfer(e.dataTransfer, accept, multiple);
+    resetDrag();
+    if (files.length > 0) onAdd(files);
+  }
 
   return (
     <div>
@@ -94,7 +163,8 @@ export function CampoUploadArquivos({
         onChange={(e) => {
           const list = e.target.files;
           if (!list?.length) return;
-          onAdd(Array.from(list));
+          const files = Array.from(list);
+          onAdd(multiple ? files : files.slice(0, 1));
           e.target.value = "";
         }}
         style={{
@@ -109,32 +179,54 @@ export function CampoUploadArquivos({
         }}
         aria-label={buttonLabel}
       />
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => inputRef.current?.click()}
+      <div
+        role="group"
+        aria-label={`${buttonLabel} — arraste arquivos para esta área`}
+        aria-disabled={disabled || undefined}
+        onDragEnter={onDragEnter}
+        onDragLeave={onDragLeave}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 16px",
           borderRadius: 10,
-          border: `1px solid ${borderColor}`,
-          background: t.inputBg,
-          color: t.text,
-          fontFamily: FONT.body,
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: disabled ? "not-allowed" : "pointer",
-          opacity: disabled ? 0.6 : 1,
+          border: `1px ${isDragging ? "dashed" : "solid"} ${borderColor}`,
+          background: dropZoneBg,
+          padding: 12,
+          transition: "border-color 120ms ease, background 120ms ease",
         }}
       >
-        <Icon size={15} aria-hidden />
-        {buttonLabel}
-      </button>
-      {hint ? (
-        <div style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{hint}</div>
-      ) : null}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => inputRef.current?.click()}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 16px",
+            borderRadius: 10,
+            border: `1px solid ${hasError ? "#e84025" : t.cardBorder}`,
+            background: t.inputBg,
+            color: t.text,
+            fontFamily: FONT.body,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: disabled ? "not-allowed" : "pointer",
+            opacity: disabled ? 0.6 : 1,
+          }}
+        >
+          <Icon size={15} aria-hidden />
+          {buttonLabel}
+        </button>
+        {!disabled ? (
+          <div style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+            {isDragging ? "Solte os arquivos aqui." : "ou arraste e solte aqui"}
+          </div>
+        ) : null}
+        {hint ? (
+          <div style={{ margin: "6px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{hint}</div>
+        ) : null}
+      </div>
       {showList ? (
         items.length === 0 ? (
           <p style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{emptyLabel}</p>
