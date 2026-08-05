@@ -936,7 +936,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "KPIs de Mesa",
         definicao:
-          "Indicadores do Game Presenter na mesa: Rodadas; Dealing/Reaction por Blackjack, Baccarat e Futebol Brasileiro; Bola e Cilindro na Roleta; e total de Incidentes (página Incidentes). Inclui Por Jogo e Detalhamento Diário com Casos, Erros e Graves. Fonte operacional: Grafana/ClickHouse + registro de incidentes do estúdio.",
+          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Dealing/Reaction, cooperação na Roleta e incidentes. Shuffler: só incidentes (sem Roleta). Service Manager: placeholder; Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
         referencia: "Overview Prestador",
       },
       {

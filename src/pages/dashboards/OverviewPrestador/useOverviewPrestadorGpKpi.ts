@@ -2,29 +2,35 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
-  getPeriodoComparativoMoM,
+  getPeriodoComparativoMesCompleto,
   getPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
-import { fetchEstudioIncidentesPrestadorPeriodo } from "../../../lib/estudioIncidentesFetch";
+import { fetchEstudioIncidentesPrestadoresPeriodo } from "../../../lib/estudioIncidentesFetch";
 import type { EstudioIncidenteRow } from "../../../lib/estudioIncidentesTypes";
 import {
   agregarContagemIncidentes,
   agruparIncidentesPorDia,
+  agruparIncidentesPorJogo,
+  agruparIncidentesPorPrestador,
   contarIncidentesPorJogo,
   INCIDENTE_AGG_ZERO,
   jogosComDadosOuIncidentes,
   type IncidenteAggContagem,
+  type IncidenteJogoLinha,
+  type IncidentePrestadorLinha,
 } from "../../../lib/overviewPrestadorIncidentes";
 import {
   agregarGpKpiRows,
   agruparGpKpiPorDia,
   agruparGpKpiPorJogo,
   GP_KPI_JOGOS_ORDEM,
+  SHUFFLER_KPI_JOGOS_ORDEM,
   type GpKpiDiarioRow,
   type GpKpiJogoLinha,
 } from "../../../lib/gpKpiMetrics";
 import { GAME_IDENTITY_LABEL, type GameIdentityKey } from "../../../lib/gameIdentityColors";
 import type { MesCarrosselEscalaEntry } from "../../../lib/escalaMesCarrosselOverviewStyle";
+import type { OverviewPrestadorKpisMesaMode } from "../../../lib/overviewPrestadorTeamConfig";
 
 type MesaEmbed = {
   nome_mesa?: string | null;
@@ -35,6 +41,7 @@ type RowDb = {
   dia_brt: string;
   table_id: string;
   game_presenter_id: string;
+  funcionario_id?: string;
   mesa_id: string | null;
   estudio_slug: string | null;
   rodadas: number;
@@ -55,7 +62,7 @@ export type GpKpiDiaComIncidentes = {
   totalIncidentes: number;
   casos: number;
   erros: number;
-  graves: number;
+  outros: number;
 };
 
 function unwrapMesa(embed: MesaEmbed | MesaEmbed[]): MesaEmbed {
@@ -86,17 +93,19 @@ function mapRows(data: RowDb[]): GpKpiDiarioRow[] {
 }
 
 async function fetchGpKpiPeriodo(
-  funcionarioId: string,
+  funcionarioIds: string[],
   dataIni: string,
   dataFim: string,
 ): Promise<GpKpiDiarioRow[]> {
+  const ids = [...new Set(funcionarioIds.map((x) => x.trim()).filter(Boolean))];
+  if (ids.length === 0) return [];
   const rows = await fetchAllPages<RowDb>(async (from, to) => {
     const { data, error } = await supabase
       .from("gp_kpi_diario")
       .select(
         "dia_brt, table_id, game_presenter_id, mesa_id, estudio_slug, rodadas, dealing_ms_soma, dealing_amostras, reaction_ms_soma, reaction_amostras, coop_velocidade, coop_roda, mesas_spin_cadastro(nome_mesa, tipo_jogo)",
       )
-      .eq("funcionario_id", funcionarioId)
+      .in("funcionario_id", ids)
       .gte("dia_brt", dataIni)
       .lte("dia_brt", dataFim)
       .order("dia_brt", { ascending: true })
@@ -124,13 +133,13 @@ function linhaJogoVazia(key: GameIdentityKey): GpKpiJogoLinha {
   };
 }
 
-function mergePorJogo(
+function mergePorJogoGp(
   rowsKpi: GpKpiDiarioRow[],
   incRows: EstudioIncidenteRow[],
 ): GpKpiJogoComIncidentes[] {
   const kpiMap = metricasPorJogoMap(rowsKpi);
   const incPorJogo = contarIncidentesPorJogo(incRows);
-  const keys = jogosComDadosOuIncidentes(new Set(kpiMap.keys()), incPorJogo);
+  const keys = jogosComDadosOuIncidentes(new Set(kpiMap.keys()), incPorJogo, GP_KPI_JOGOS_ORDEM);
   return keys.map((key) => {
     const base = kpiMap.get(key) ?? linhaJogoVazia(key);
     return { ...base, incidentes: incPorJogo[key] ?? 0 };
@@ -154,18 +163,24 @@ function mergePorDia(
         totalIncidentes: inc.total,
         casos: inc.casos,
         erros: inc.erros,
-        graves: inc.graves,
+        outros: inc.outros,
       };
     });
 }
 
 export function useOverviewPrestadorGpKpi(opts: {
   enabled: boolean;
-  funcionarioId: string | null;
+  /** Um ou vários prestadores (visão individual ou time). */
+  funcionarioIds: string[];
+  prestadores: { id: string; nome: string }[];
   mesSelecionado: MesCarrosselEscalaEntry | undefined;
   historico: boolean;
+  mode: OverviewPrestadorKpisMesaMode;
 }) {
-  const { enabled, funcionarioId, mesSelecionado, historico } = opts;
+  const { enabled, funcionarioIds, prestadores, mesSelecionado, historico, mode } = opts;
+  const carregaKpiGrafana = mode === "gp";
+  const carregaIncidentes = mode === "gp" || mode === "shuffler";
+
   const [rowsAtual, setRowsAtual] = useState<GpKpiDiarioRow[]>([]);
   const [rowsAnt, setRowsAnt] = useState<GpKpiDiarioRow[]>([]);
   const [incAtual, setIncAtual] = useState<EstudioIncidenteRow[]>([]);
@@ -173,8 +188,10 @@ export function useOverviewPrestadorGpKpi(opts: {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const idsKey = funcionarioIds.slice().sort().join("|");
+
   useEffect(() => {
-    if (!enabled || !funcionarioId || (!historico && !mesSelecionado)) {
+    if (!enabled || funcionarioIds.length === 0 || (!historico && !mesSelecionado) || !carregaIncidentes) {
       setRowsAtual([]);
       setRowsAnt([]);
       setIncAtual([]);
@@ -190,42 +207,37 @@ export function useOverviewPrestadorGpKpi(opts: {
 
     void (async () => {
       try {
-        if (historico) {
-          const { inicio, fim } = getPeriodoHistoricoCompetencias();
+        const fetchPar = async (ini: string, fim: string) => {
           const [kpi, inc] = await Promise.all([
-            fetchGpKpiPeriodo(funcionarioId, inicio, fim),
-            fetchEstudioIncidentesPrestadorPeriodo({
-              prestadorId: funcionarioId,
-              dataIni: inicio,
+            carregaKpiGrafana ? fetchGpKpiPeriodo(funcionarioIds, ini, fim) : Promise.resolve([] as GpKpiDiarioRow[]),
+            fetchEstudioIncidentesPrestadoresPeriodo({
+              prestadorIds: funcionarioIds,
+              dataIni: ini,
               dataFim: fim,
             }),
           ]);
+          return { kpi, inc };
+        };
+
+        if (historico) {
+          const { inicio, fim } = getPeriodoHistoricoCompetencias();
+          const { kpi, inc } = await fetchPar(inicio, fim);
           if (cancelled) return;
           setRowsAtual(kpi);
           setRowsAnt([]);
           setIncAtual(inc);
           setIncAnterior([]);
         } else if (mesSelecionado) {
-          const mom = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
-          const [atual, ant, incA, incB] = await Promise.all([
-            fetchGpKpiPeriodo(funcionarioId, mom.atual.inicio, mom.atual.fim),
-            fetchGpKpiPeriodo(funcionarioId, mom.anterior.inicio, mom.anterior.fim),
-            fetchEstudioIncidentesPrestadorPeriodo({
-              prestadorId: funcionarioId,
-              dataIni: mom.atual.inicio,
-              dataFim: mom.atual.fim,
-            }),
-            fetchEstudioIncidentesPrestadorPeriodo({
-              prestadorId: funcionarioId,
-              dataIni: mom.anterior.inicio,
-              dataFim: mom.anterior.fim,
-            }),
+          const mom = getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
+          const [atual, ant] = await Promise.all([
+            fetchPar(mom.atual.inicio, mom.atual.fim),
+            fetchPar(mom.anterior.inicio, mom.anterior.fim),
           ]);
           if (cancelled) return;
-          setRowsAtual(atual);
-          setRowsAnt(ant);
-          setIncAtual(incA);
-          setIncAnterior(incB);
+          setRowsAtual(atual.kpi);
+          setRowsAnt(ant.kpi);
+          setIncAtual(atual.inc);
+          setIncAnterior(ant.inc);
         }
       } catch (e) {
         console.error(e);
@@ -246,7 +258,9 @@ export function useOverviewPrestadorGpKpi(opts: {
     return () => {
       cancelled = true;
     };
-  }, [enabled, funcionarioId, mesSelecionado, historico]);
+    // idsKey cobre funcionarioIds sem recriar array a cada render
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- idsKey
+  }, [enabled, idsKey, mesSelecionado, historico, carregaKpiGrafana, carregaIncidentes]);
 
   const agregado = useMemo(() => agregarGpKpiRows(rowsAtual), [rowsAtual]);
   const aggAnterior = useMemo(() => agregarGpKpiRows(rowsAnt), [rowsAnt]);
@@ -277,8 +291,18 @@ export function useOverviewPrestadorGpKpi(opts: {
     [incAnterior],
   );
 
-  const porJogo = useMemo(() => mergePorJogo(rowsAtual, incAtual), [rowsAtual, incAtual]);
+  const porJogoGp = useMemo(() => mergePorJogoGp(rowsAtual, incAtual), [rowsAtual, incAtual]);
+  const porJogoShuffler: IncidenteJogoLinha[] = useMemo(
+    () => agruparIncidentesPorJogo(incAtual, SHUFFLER_KPI_JOGOS_ORDEM),
+    [incAtual],
+  );
   const porDia = useMemo(() => mergePorDia(rowsAtual, incAtual), [rowsAtual, incAtual]);
+  const porDiaShuffler = useMemo(() => agruparIncidentesPorDia(incAtual), [incAtual]);
+
+  const pontosAtencao: IncidentePrestadorLinha[] = useMemo(
+    () => agruparIncidentesPorPrestador(incAtual, prestadores),
+    [incAtual, prestadores],
+  );
 
   return {
     loading,
@@ -289,7 +313,10 @@ export function useOverviewPrestadorGpKpi(opts: {
     incidentesAgg,
     incidentesAggAnt,
     porDia,
-    porJogo,
+    porDiaShuffler,
+    porJogo: porJogoGp,
+    porJogoShuffler,
+    pontosAtencao,
     temDados: rowsAtual.length > 0 || incAtual.length > 0,
   };
 }

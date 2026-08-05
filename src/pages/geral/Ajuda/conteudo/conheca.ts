@@ -213,7 +213,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Visão de time vs individual",
         texto:
-          "Na visão de time a unidade dos KPIs é **jornada** (prestador × dia escalado). Na visão individual a unidade volta a ser **dia**. Times Game Presenter e Shuffler têm movimentações de turno (Marketplace); Shift Leader e Service Manager usam dois turnos (Diurno/Noturno) e não exibem o bloco de movimentações. Cobertura por estúdio e Distribuição por estúdio existem apenas para Game Presenter.",
+          "Na visão de time a unidade dos KPIs é **jornada** (prestador × dia escalado). Na visão individual a unidade volta a ser **dia**. Todos os times da v1 exibem **Movimentações de turno** na Escala. Shift Leader e Service Manager usam dois turnos (Diurno/Noturno). Cobertura por estúdio e Distribuição por estúdio existem apenas para Game Presenter.",
       },
       {
         subtitulo: "Aba Escala — Resumo e aderência",
@@ -238,7 +238,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de Mesa",
         texto:
-          "Visível apenas com Time = Game Presenter. Escolha um prestador no filtro Staff (ou use a visão próprios) para ver os cards: Rodadas; Blackjack, Baccarat e Futebol Brasileiro (cada um com Dealing e Reaction); Roleta (Bola e Cilindro — cooperação de velocidade e de roda); e Incidentes (total no período, a partir da página Incidentes). Comparativo MTD ao mês anterior fica desligado no Histórico.\n\n**Por Jogo** detalha as mesmas métricas por tipo de jogo, com a coluna Incidentes. O **Detalhamento Diário** lista Data, Rodadas, Total de Incidentes, Casos, Erros e Graves (Oculto + Não Avisado + Avisado/Resolvido + Avisado/Não Resolvido). Sem Staff selecionado (visão de time), a aba pede para escolher um Game Presenter. Sem linhas no período: \"Sem dados para o período selecionado.\"",
+          "A aba **KPIs de Mesa** depende do time:\n\n— **Game Presenter:** cards de Rodadas, médias por jogo (Blackjack, Baccarat, Futebol Brasileiro, Roleta) e Incidentes; **Por Jogo** com Rodadas, Dealing, Reaction, Coop. Vel., Coop. Roda e Incidentes; **Detalhamento Diário** com Data, Rodadas, Total de Incidentes, Casos, Erros e Outros. Na visão de time (Staff vazio), os totais somam o time, as médias usam as amostras do time e há **Pontos de atenção** por prestador.\n\n— **Shuffler:** cards e tabelas só de incidentes (Incidentes, Casos, Erros, Outros), sem Roleta em Por Jogo; na visão de time há Pontos de atenção.\n\n— **Service Manager:** placeholder («Conteúdo em desenvolvimento.»).\n\n— **Shift Leader:** a aba não aparece.\n\n**Erros** = Erro + Não Avisados + Avisado/Não Resolvido. **Outros** = Oculto + Avisado/Resolvido (substitui a antiga coluna Graves). Período = mês civil completo (sem recorte MTD). Sem linhas: \"Sem dados para o período selecionado.\"",
       },
     ],
   },

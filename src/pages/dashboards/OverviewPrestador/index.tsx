@@ -21,7 +21,8 @@ export default function OverviewPrestador() {
 
   const dados = useOverviewPrestadorDados(perm.canView, perm.loading, user?.email);
 
-  const showAbaKpisMesa = dados.timeRotulo === "Game Presenter";
+  const kpisMesaMode = dados.caps.kpisMesaMode;
+  const showAbaKpisMesa = kpisMesaMode !== "hidden";
 
   useEffect(() => {
     if (!showAbaKpisMesa && aba === "kpis_mesa") setAba("escala");
@@ -31,6 +32,15 @@ export default function OverviewPrestador() {
     if (!dados.staffSelecionadoId) return undefined;
     return dados.staffMultiselectItems.find((x) => x.id === dados.staffSelecionadoId)?.name;
   }, [dados.staffSelecionadoId, dados.staffMultiselectItems]);
+
+  const prestadoresKpi = useMemo(
+    () =>
+      dados.idsEscopo.map((id) => ({
+        id,
+        nome: dados.staffMultiselectItems.find((x) => x.id === id)?.name ?? id,
+      })),
+    [dados.idsEscopo, dados.staffMultiselectItems],
+  );
 
   if (perm.loading) {
     return (
@@ -114,11 +124,13 @@ export default function OverviewPrestador() {
 
         {aba === "kpis_mesa" && showAbaKpisMesa && (
           <OverviewPrestadorAbaKpisMesa
-            funcionarioId={dados.staffSelecionadoId}
+            funcionarioIds={dados.idsEscopo}
+            prestadores={prestadoresKpi}
             visaoTime={dados.visaoTime}
             mesSelecionado={dados.mesSelecionado}
             historico={dados.historico}
             staffNome={staffNome}
+            mode={kpisMesaMode}
           />
         )}
       </div>

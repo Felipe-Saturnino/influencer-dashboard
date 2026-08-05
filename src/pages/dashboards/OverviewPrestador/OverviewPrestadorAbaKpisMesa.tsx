@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, Hash } from "lucide-react";
+import { AlertTriangle, CircleAlert, FileWarning, Hash, Layers } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -19,8 +19,10 @@ import {
   fmtMediaSegundos,
   fmtPctCoop,
   GP_KPI_JOGOS_ORDEM,
+  SHUFFLER_KPI_JOGOS_ORDEM,
   type GpKpiJogoLinha,
 } from "../../../lib/gpKpiMetrics";
+import type { OverviewPrestadorKpisMesaMode } from "../../../lib/overviewPrestadorTeamConfig";
 import { KpiCard, SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { OverviewPrestadorKpiDuplaCard } from "./OverviewPrestadorKpiDuplaCard";
 import {
@@ -30,15 +32,19 @@ import {
 import type { MesCarrosselEscalaEntry } from "../../../lib/escalaMesCarrosselOverviewStyle";
 
 type Props = {
-  funcionarioId: string | null;
+  funcionarioIds: string[];
+  prestadores: { id: string; nome: string }[];
   visaoTime: boolean;
   mesSelecionado: MesCarrosselEscalaEntry | undefined;
   historico: boolean;
   staffNome?: string;
+  mode: OverviewPrestadorKpisMesaMode;
 };
 
-type SortDiaCol = "dia" | "rodadas" | "totalInc" | "casos" | "erros" | "graves";
-type SortJogoCol = "jogo" | "rodadas" | "dealing" | "reaction" | "coopVel" | "coopRoda" | "incidentes";
+type SortDiaCol = "dia" | "rodadas" | "totalInc" | "casos" | "erros" | "outros";
+type SortJogoColGp = "jogo" | "rodadas" | "dealing" | "reaction" | "coopVel" | "coopRoda" | "incidentes";
+type SortJogoColShuf = "jogo" | "totalInc" | "casos" | "erros" | "outros";
+type SortAtencaoCol = "nome" | "totalInc" | "casos" | "erros" | "outros" | "severidade";
 
 function fmtDiaBr(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-");
@@ -50,8 +56,8 @@ function numOrNeg(v: number | null): number {
   return v == null || !Number.isFinite(v) ? Number.NEGATIVE_INFINITY : v;
 }
 
-function JogoChip({ jogo, isDark }: { jogo: Pick<GpKpiJogoLinha, "jogoKey">; isDark: boolean }) {
-  const chip = getGameTagChipStyle(jogo.jogoKey, isDark);
+function JogoChip({ jogoKey, isDark }: { jogoKey: GameIdentityKey; isDark: boolean }) {
+  const chip = getGameTagChipStyle(jogoKey, isDark);
   return (
     <span
       style={{
@@ -70,8 +76,8 @@ function JogoChip({ jogo, isDark }: { jogo: Pick<GpKpiJogoLinha, "jogoKey">; isD
         whiteSpace: "nowrap",
       }}
     >
-      {GAME_IDENTITY_ICONS[jogo.jogoKey]}
-      {GAME_IDENTITY_LABEL[jogo.jogoKey]}
+      {GAME_IDENTITY_ICONS[jogoKey]}
+      {GAME_IDENTITY_LABEL[jogoKey]}
     </span>
   );
 }
@@ -107,7 +113,7 @@ function cardDuplaDealingReaction(
   );
 }
 
-function KpisMesaCards({
+function KpisMesaCardsGp({
   rodadas,
   rodadasAnt,
   metricasJogo,
@@ -123,7 +129,6 @@ function KpisMesaCards({
   historico: boolean;
 }) {
   const roleta = metricasJogo.roleta;
-
   return (
     <div className="app-grid-kpi-6" style={{ gap: 12 }}>
       <KpiCard
@@ -135,20 +140,10 @@ function KpisMesaCards({
         atual={rodadas}
         anterior={rodadasAnt}
         isHistorico={historico}
-        vsLegendaSuffix="MTD mês ant."
+        vsLegendaSuffix="mês ant."
       />
-      {cardDuplaDealingReaction(
-        "blackjack",
-        metricasJogo.blackjack.atual,
-        metricasJogo.blackjack.anterior,
-        historico,
-      )}
-      {cardDuplaDealingReaction(
-        "baccarat",
-        metricasJogo.baccarat.atual,
-        metricasJogo.baccarat.anterior,
-        historico,
-      )}
+      {cardDuplaDealingReaction("blackjack", metricasJogo.blackjack.atual, metricasJogo.blackjack.anterior, historico)}
+      {cardDuplaDealingReaction("baccarat", metricasJogo.baccarat.atual, metricasJogo.baccarat.anterior, historico)}
       {cardDuplaDealingReaction(
         "futebol_brasileiro",
         metricasJogo.futebol_brasileiro.atual,
@@ -182,18 +177,91 @@ function KpisMesaCards({
         anterior={incidentesTotalAnt}
         isHistorico={historico}
         isInverso
-        vsLegendaSuffix="MTD mês ant."
+        vsLegendaSuffix="mês ant."
+      />
+    </div>
+  );
+}
+
+function KpisMesaCardsIncidentes({
+  total,
+  totalAnt,
+  casos,
+  casosAnt,
+  erros,
+  errosAnt,
+  outros,
+  outrosAnt,
+  historico,
+}: {
+  total: number;
+  totalAnt: number;
+  casos: number;
+  casosAnt: number;
+  erros: number;
+  errosAnt: number;
+  outros: number;
+  outrosAnt: number;
+  historico: boolean;
+}) {
+  return (
+    <div className="app-grid-kpi-4" style={{ gap: 12 }}>
+      <KpiCard
+        label="Incidentes"
+        value={total.toLocaleString("pt-BR")}
+        icon={<AlertTriangle size={16} aria-hidden />}
+        accentColor="#e84025"
+        atual={total}
+        anterior={totalAnt}
+        isHistorico={historico}
+        isInverso
+        vsLegendaSuffix="mês ant."
+      />
+      <KpiCard
+        label="Casos"
+        value={casos.toLocaleString("pt-BR")}
+        icon={<FileWarning size={16} aria-hidden />}
+        accentColor={BRAND.amarelo}
+        atual={casos}
+        anterior={casosAnt}
+        isHistorico={historico}
+        isInverso
+        vsLegendaSuffix="mês ant."
+      />
+      <KpiCard
+        label="Erros"
+        value={erros.toLocaleString("pt-BR")}
+        icon={<CircleAlert size={16} aria-hidden />}
+        accentColor="#e84025"
+        atual={erros}
+        anterior={errosAnt}
+        isHistorico={historico}
+        isInverso
+        vsLegendaSuffix="mês ant."
+      />
+      <KpiCard
+        label="Outros"
+        value={outros.toLocaleString("pt-BR")}
+        icon={<Layers size={16} aria-hidden />}
+        accentColor="#6b7280"
+        atual={outros}
+        anterior={outrosAnt}
+        isHistorico={historico}
+        isInverso
+        vsLegendaSuffix="mês ant."
       />
     </div>
   );
 }
 
 export function OverviewPrestadorAbaKpisMesa({
-  funcionarioId,
+  funcionarioIds,
+  prestadores,
   visaoTime,
   mesSelecionado,
   historico,
   staffNome,
+  mode,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -201,6 +269,66 @@ export function OverviewPrestadorAbaKpisMesa({
   const pageBox = getPageContentBoxStyle(brand, t);
   const isDark = Boolean(t.isDark);
 
+  if (mode === "placeholder") {
+    return (
+      <div style={pageBox}>
+        <SectionTitle sub="em desenvolvimento">KPIs de Mesa</SectionTitle>
+        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+          Conteúdo em desenvolvimento.
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "hidden") return null;
+
+  if (funcionarioIds.length === 0) {
+    return (
+      <div style={pageBox}>
+        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+          {visaoTime
+            ? "Selecione um time para visualizar os resultados."
+            : "Selecione um prestador no filtro Staff para ver os KPIs de mesa."}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <OverviewPrestadorAbaKpisMesaConteudo
+      funcionarioIds={funcionarioIds}
+      prestadores={prestadores}
+      visaoTime={visaoTime}
+      mesSelecionado={mesSelecionado}
+      historico={historico}
+      staffNome={staffNome}
+      mode={mode}
+      t={t}
+      dataTable={dataTable}
+      pageBox={pageBox}
+      isDark={isDark}
+    />
+  );
+}
+
+function OverviewPrestadorAbaKpisMesaConteudo({
+  funcionarioIds,
+  prestadores,
+  visaoTime,
+  mesSelecionado,
+  historico,
+  staffNome,
+  mode,
+  t,
+  dataTable,
+  pageBox,
+  isDark,
+}: Props & {
+  t: ReturnType<typeof useApp>["theme"];
+  dataTable: ReturnType<typeof useDataTableBlock>;
+  pageBox: ReturnType<typeof getPageContentBoxStyle>;
+  isDark: boolean;
+}) {
   const {
     loading,
     erro,
@@ -210,22 +338,35 @@ export function OverviewPrestadorAbaKpisMesa({
     incidentesAgg,
     incidentesAggAnt,
     porDia,
+    porDiaShuffler,
     porJogo,
+    porJogoShuffler,
+    pontosAtencao,
     temDados,
   } = useOverviewPrestadorGpKpi({
-    enabled: !visaoTime && Boolean(funcionarioId),
-    funcionarioId,
+    enabled: mode === "gp" || mode === "shuffler",
+    funcionarioIds,
+    prestadores,
     mesSelecionado,
     historico,
+    mode,
   });
 
   const [sortDia, setSortDia] = useState<{ col: SortDiaCol; dir: SortDir }>({ col: "dia", dir: "desc" });
-  const [sortJogo, setSortJogo] = useState<{ col: SortJogoCol; dir: SortDir }>({
+  const [sortJogoGp, setSortJogoGp] = useState<{ col: SortJogoColGp; dir: SortDir }>({
     col: "jogo",
     dir: "asc",
   });
+  const [sortJogoShuf, setSortJogoShuf] = useState<{ col: SortJogoColShuf; dir: SortDir }>({
+    col: "jogo",
+    dir: "asc",
+  });
+  const [sortAtencao, setSortAtencao] = useState<{ col: SortAtencaoCol; dir: SortDir }>({
+    col: "totalInc",
+    dir: "desc",
+  });
 
-  const diasOrdenados = useMemo(() => {
+  const diasGpOrdenados = useMemo(() => {
     const rows = [...porDia];
     const dir = sortDia.dir;
     rows.sort((a, b) => {
@@ -240,8 +381,8 @@ export function OverviewPrestadorAbaKpisMesa({
           return compareNumber(a.casos, b.casos, dir);
         case "erros":
           return compareNumber(a.erros, b.erros, dir);
-        case "graves":
-          return compareNumber(a.graves, b.graves, dir);
+        case "outros":
+          return compareNumber(a.outros, b.outros, dir);
         default:
           return 0;
       }
@@ -249,15 +390,37 @@ export function OverviewPrestadorAbaKpisMesa({
     return rows;
   }, [porDia, sortDia]);
 
-  const jogosOrdenados = useMemo(() => {
+  const diasShufOrdenados = useMemo(() => {
+    const rows = [...porDiaShuffler];
+    const dir = sortDia.dir;
+    rows.sort((a, b) => {
+      switch (sortDia.col) {
+        case "dia":
+          return compareLocaleTexto(a.dia, b.dia, dir);
+        case "totalInc":
+          return compareNumber(a.total, b.total, dir);
+        case "casos":
+          return compareNumber(a.casos, b.casos, dir);
+        case "erros":
+          return compareNumber(a.erros, b.erros, dir);
+        case "outros":
+          return compareNumber(a.outros, b.outros, dir);
+        default:
+          return 0;
+      }
+    });
+    return rows;
+  }, [porDiaShuffler, sortDia]);
+
+  const jogosGpOrdenados = useMemo(() => {
     const rows: GpKpiJogoComIncidentes[] = [...porJogo];
-    const dir = sortJogo.dir;
+    const dir = sortJogoGp.dir;
     const ordemJogo = (k: string) => {
-      const i = GP_KPI_JOGOS_ORDEM.indexOf(k as (typeof GP_KPI_JOGOS_ORDEM)[number]);
+      const i = GP_KPI_JOGOS_ORDEM.indexOf(k as GameIdentityKey);
       return i < 0 ? 99 : i;
     };
     rows.sort((a, b) => {
-      switch (sortJogo.col) {
+      switch (sortJogoGp.col) {
         case "jogo":
           return compareNumber(ordemJogo(a.jogoKey), ordemJogo(b.jogoKey), dir);
         case "rodadas":
@@ -277,40 +440,76 @@ export function OverviewPrestadorAbaKpisMesa({
       }
     });
     return rows;
-  }, [porJogo, sortJogo]);
+  }, [porJogo, sortJogoGp]);
 
-  const onSortDia = (col: SortDiaCol) => {
-    setSortDia((prev) =>
-      prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" },
-    );
-  };
+  const jogosShufOrdenados = useMemo(() => {
+    const rows = [...porJogoShuffler];
+    const dir = sortJogoShuf.dir;
+    const ordemJogo = (k: string) => {
+      const i = SHUFFLER_KPI_JOGOS_ORDEM.indexOf(k as GameIdentityKey);
+      return i < 0 ? 99 : i;
+    };
+    rows.sort((a, b) => {
+      switch (sortJogoShuf.col) {
+        case "jogo":
+          return compareNumber(ordemJogo(a.jogoKey), ordemJogo(b.jogoKey), dir);
+        case "totalInc":
+          return compareNumber(a.total, b.total, dir);
+        case "casos":
+          return compareNumber(a.casos, b.casos, dir);
+        case "erros":
+          return compareNumber(a.erros, b.erros, dir);
+        case "outros":
+          return compareNumber(a.outros, b.outros, dir);
+        default:
+          return 0;
+      }
+    });
+    return rows;
+  }, [porJogoShuffler, sortJogoShuf]);
 
-  const onSortJogo = (col: SortJogoCol) => {
-    setSortJogo((prev) =>
-      prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" },
-    );
-  };
+  const atencaoOrdenados = useMemo(() => {
+    const rows = [...pontosAtencao];
+    const dir = sortAtencao.dir;
+    const rank = { alta: 0, media: 1, ok: 2 };
+    rows.sort((a, b) => {
+      switch (sortAtencao.col) {
+        case "nome":
+          return compareLocaleTexto(a.nome, b.nome, dir);
+        case "totalInc":
+          return compareNumber(a.total, b.total, dir);
+        case "casos":
+          return compareNumber(a.casos, b.casos, dir);
+        case "erros":
+          return compareNumber(a.erros, b.erros, dir);
+        case "outros":
+          return compareNumber(a.outros, b.outros, dir);
+        case "severidade":
+          return compareNumber(rank[a.severidade], rank[b.severidade], dir);
+        default:
+          return 0;
+      }
+    });
+    return rows;
+  }, [pontosAtencao, sortAtencao]);
 
-  if (visaoTime || !funcionarioId) {
-    return (
-      <div style={pageBox}>
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Selecione um Game Presenter no filtro Staff para ver os KPIs de mesa.
-        </div>
-      </div>
-    );
-  }
-
-  const subPeriodo = historico
-    ? "acumulado"
-    : staffNome
-      ? `${staffNome} · comparativo MTD vs mês anterior`
-      : "comparativo MTD vs mês anterior";
   const subTituloKpis = historico
     ? staffNome
       ? `${staffNome} · acumulado`
-      : "acumulado"
-    : subPeriodo;
+      : visaoTime
+        ? "consolidado do time · acumulado"
+        : "acumulado"
+    : staffNome
+      ? `${staffNome} · mês completo vs mês anterior`
+      : visaoTime
+        ? "consolidado do time · mês completo vs mês anterior"
+        : "mês completo vs mês anterior";
+
+  const vazio = (
+    <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+      Sem dados para o período selecionado.
+    </div>
+  );
 
   return (
     <>
@@ -328,17 +527,15 @@ export function OverviewPrestadorAbaKpisMesa({
         )}
 
         {loading ? (
-          <div className="app-grid-kpi-6" style={{ gap: 12 }}>
-            {Array.from({ length: 6 }, (_, i) => (
+          <div className={mode === "gp" ? "app-grid-kpi-6" : "app-grid-kpi-4"} style={{ gap: 12 }}>
+            {Array.from({ length: mode === "gp" ? 6 : 4 }, (_, i) => (
               <SkeletonKpiCard key={i} />
             ))}
           </div>
         ) : !temDados ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            Sem dados para o período selecionado.
-          </div>
-        ) : (
-          <KpisMesaCards
+          vazio
+        ) : mode === "gp" ? (
+          <KpisMesaCardsGp
             rodadas={agregado.rodadas}
             rodadasAnt={aggAnterior.rodadas}
             metricasJogo={metricasJogo}
@@ -346,177 +543,163 @@ export function OverviewPrestadorAbaKpisMesa({
             incidentesTotalAnt={incidentesAggAnt.total}
             historico={historico}
           />
+        ) : (
+          <KpisMesaCardsIncidentes
+            total={incidentesAgg.total}
+            totalAnt={incidentesAggAnt.total}
+            casos={incidentesAgg.casos}
+            casosAnt={incidentesAggAnt.casos}
+            erros={incidentesAgg.erros}
+            errosAnt={incidentesAggAnt.erros}
+            outros={incidentesAgg.outros}
+            outrosAnt={incidentesAggAnt.outros}
+            historico={historico}
+          />
         )}
       </div>
 
-      {!loading && temDados && (
-        <>
-          <div style={pageBox}>
-            <SectionTitle sub="todas as mesas do prestador agrupadas por tipo de jogo">Por Jogo</SectionTitle>
-            <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-              <table style={getDataTableStyle({ minWidth: 720 })}>
-                <caption style={{ display: "none" }}>KPIs de mesa agregados por jogo</caption>
+      {!loading && temDados && mode === "gp" ? (
+        <div style={pageBox}>
+          <SectionTitle sub={visaoTime ? "soma e médias do time por tipo de jogo" : "mesas do prestador agrupadas por tipo de jogo"}>
+            Por Jogo
+          </SectionTitle>
+          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 720 })}>
+              <caption style={{ display: "none" }}>KPIs de mesa agregados por jogo</caption>
+              <thead>
+                <tr>
+                  <SortTableTh label="Jogo" col="jogo" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "asc" }))} thStyle={dataTable.thHeaderSticky} align="center" />
+                  <SortTableTh label="Rodadas" col="rodadas" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Dealing" col="dealing" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Reaction" col="reaction" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Coop. Vel." col="coopVel" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Coop. Roda" col="coopRoda" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Incidentes" col="incidentes" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                </tr>
+              </thead>
+              <tbody>
+                {jogosGpOrdenados.map((row, i) => (
+                  <tr key={row.jogoKey} style={{ background: dataTable.zebraRow(i) }}>
+                    <td style={dataTable.tdSticky({ rowIndex: i })}>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <JogoChip jogoKey={row.jogoKey} isDark={isDark} />
+                      </div>
+                    </td>
+                    <td style={dataTable.tdCenter}>{row.rodadas.toLocaleString("pt-BR")}</td>
+                    <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.dealingSeg)}</td>
+                    <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.reactionSeg)}</td>
+                    <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopVelPct)}</td>
+                    <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopRodaPct)}</td>
+                    <td style={dataTable.tdCenter}>{row.incidentes.toLocaleString("pt-BR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {!loading && temDados && mode === "shuffler" ? (
+        <div style={pageBox}>
+          <SectionTitle sub="incidentes por tipo de jogo (sem Roleta)">Por Jogo</SectionTitle>
+          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+            <table style={getDataTableStyle({ minWidth: 560 })}>
+              <caption style={{ display: "none" }}>Incidentes por jogo — Shuffler</caption>
+              <thead>
+                <tr>
+                  <SortTableTh label="Jogo" col="jogo" sortCol={sortJogoShuf.col} sortDir={sortJogoShuf.dir} onSort={(c) => setSortJogoShuf((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "asc" }))} thStyle={dataTable.thHeaderSticky} align="center" />
+                  <SortTableTh label="Total de Incidentes" col="totalInc" sortCol={sortJogoShuf.col} sortDir={sortJogoShuf.dir} onSort={(c) => setSortJogoShuf((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Casos" col="casos" sortCol={sortJogoShuf.col} sortDir={sortJogoShuf.dir} onSort={(c) => setSortJogoShuf((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Erros" col="erros" sortCol={sortJogoShuf.col} sortDir={sortJogoShuf.dir} onSort={(c) => setSortJogoShuf((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Outros" col="outros" sortCol={sortJogoShuf.col} sortDir={sortJogoShuf.dir} onSort={(c) => setSortJogoShuf((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                </tr>
+              </thead>
+              <tbody>
+                {jogosShufOrdenados.map((row, i) => (
+                  <tr key={row.jogoKey} style={{ background: dataTable.zebraRow(i) }}>
+                    <td style={dataTable.tdSticky({ rowIndex: i })}>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <JogoChip jogoKey={row.jogoKey} isDark={isDark} />
+                      </div>
+                    </td>
+                    <td style={dataTable.tdCenter}>{row.total.toLocaleString("pt-BR")}</td>
+                    <td style={dataTable.tdCenter}>{row.casos.toLocaleString("pt-BR")}</td>
+                    <td style={dataTable.tdCenter}>{row.erros.toLocaleString("pt-BR")}</td>
+                    <td style={dataTable.tdCenter}>{row.outros.toLocaleString("pt-BR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {!loading && temDados && visaoTime ? (
+        <div style={pageBox}>
+          <SectionTitle sub="prestadores com incidentes no período">Pontos de atenção</SectionTitle>
+          {atencaoOrdenados.length === 0 ? (
+            vazio
+          ) : (
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle({ minWidth: 640 })}>
+                <caption style={{ display: "none" }}>Prestadores com incidentes</caption>
                 <thead>
                   <tr>
-                    <SortTableTh
-                      label="Jogo"
-                      col="jogo"
-                      sortCol={sortJogo.col}
-                      sortDir={sortJogo.dir}
-                      onSort={onSortJogo}
-                      thStyle={dataTable.thHeaderSticky}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Rodadas"
-                      col="rodadas"
-                      sortCol={sortJogo.col}
-                      sortDir={sortJogo.dir}
-                      onSort={onSortJogo}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Dealing"
-                      col="dealing"
-                      sortCol={sortJogo.col}
-                      sortDir={sortJogo.dir}
-                      onSort={onSortJogo}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Reaction"
-                      col="reaction"
-                      sortCol={sortJogo.col}
-                      sortDir={sortJogo.dir}
-                      onSort={onSortJogo}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Coop. Vel."
-                      col="coopVel"
-                      sortCol={sortJogo.col}
-                      sortDir={sortJogo.dir}
-                      onSort={onSortJogo}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Coop. Roda"
-                      col="coopRoda"
-                      sortCol={sortJogo.col}
-                      sortDir={sortJogo.dir}
-                      onSort={onSortJogo}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Incidentes"
-                      col="incidentes"
-                      sortCol={sortJogo.col}
-                      sortDir={sortJogo.dir}
-                      onSort={onSortJogo}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
+                    <SortTableTh label="Prestador" col="nome" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "asc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Incidentes" col="totalInc" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Casos" col="casos" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Erros" col="erros" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Outros" col="outros" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Severidade" col="severidade" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "asc" }))} thStyle={dataTable.thHeader} align="center" />
                   </tr>
                 </thead>
                 <tbody>
-                  {jogosOrdenados.map((row, i) => (
-                    <tr key={row.jogoKey} style={{ background: dataTable.zebraRow(i) }}>
-                      <td style={dataTable.tdSticky({ rowIndex: i })}>
-                        <div style={{ display: "flex", justifyContent: "center" }}>
-                          <JogoChip jogo={row} isDark={isDark} />
-                        </div>
-                      </td>
-                      <td style={dataTable.tdCenter}>{row.rodadas.toLocaleString("pt-BR")}</td>
-                      <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.dealingSeg)}</td>
-                      <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.reactionSeg)}</td>
-                      <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopVelPct)}</td>
-                      <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopRodaPct)}</td>
-                      <td style={dataTable.tdCenter}>{row.incidentes.toLocaleString("pt-BR")}</td>
+                  {atencaoOrdenados.map((r, i) => (
+                    <tr key={r.prestadorId} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={dataTable.tdCenter}>{r.nome}</td>
+                      <td style={dataTable.tdCenter}>{r.total}</td>
+                      <td style={dataTable.tdCenter}>{r.casos}</td>
+                      <td style={dataTable.tdCenter}>{r.erros}</td>
+                      <td style={dataTable.tdCenter}>{r.outros}</td>
+                      <td style={dataTable.tdCenter}>—</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          )}
+        </div>
+      ) : null}
 
-          <div style={{ ...pageBox, marginBottom: 0 }}>
-            <SectionTitle
-              sub={
-                historico
-                  ? "mês a mês · rodadas e incidentes por categoria"
-                  : "dia a dia · rodadas e incidentes por categoria"
-              }
-            >
-              Detalhamento Diário
-            </SectionTitle>
-            <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+      {!loading && temDados ? (
+        <div style={{ ...pageBox, marginBottom: 0 }}>
+          <SectionTitle
+            sub={
+              historico
+                ? "mês a mês · incidentes por categoria"
+                : mode === "gp"
+                  ? "dia a dia · rodadas e incidentes por categoria"
+                  : "dia a dia · incidentes por categoria"
+            }
+          >
+            Detalhamento Diário
+          </SectionTitle>
+          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+            {mode === "gp" ? (
               <table style={getDataTableStyle({ minWidth: 720 })}>
                 <caption style={{ display: "none" }}>Rodadas e incidentes por dia</caption>
                 <thead>
                   <tr>
-                    <SortTableTh
-                      label="Data"
-                      col="dia"
-                      sortCol={sortDia.col}
-                      sortDir={sortDia.dir}
-                      onSort={onSortDia}
-                      thStyle={dataTable.thHeaderSticky}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Rodadas"
-                      col="rodadas"
-                      sortCol={sortDia.col}
-                      sortDir={sortDia.dir}
-                      onSort={onSortDia}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Total de Incidentes"
-                      col="totalInc"
-                      sortCol={sortDia.col}
-                      sortDir={sortDia.dir}
-                      onSort={onSortDia}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Casos"
-                      col="casos"
-                      sortCol={sortDia.col}
-                      sortDir={sortDia.dir}
-                      onSort={onSortDia}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Erros"
-                      col="erros"
-                      sortCol={sortDia.col}
-                      sortDir={sortDia.dir}
-                      onSort={onSortDia}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
-                    <SortTableTh
-                      label="Graves"
-                      col="graves"
-                      sortCol={sortDia.col}
-                      sortDir={sortDia.dir}
-                      onSort={onSortDia}
-                      thStyle={dataTable.thHeader}
-                      align="center"
-                    />
+                    <SortTableTh label="Data" col="dia" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeaderSticky} align="center" />
+                    <SortTableTh label="Rodadas" col="rodadas" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Total de Incidentes" col="totalInc" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Casos" col="casos" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Erros" col="erros" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Outros" col="outros" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                   </tr>
                 </thead>
                 <tbody>
-                  {diasOrdenados.map((row, i) => (
+                  {diasGpOrdenados.map((row, i) => (
                     <tr key={row.dia_brt} style={{ background: dataTable.zebraRow(i) }}>
                       <td style={dataTable.tdSticky({ rowIndex: i })}>
                         <span style={{ fontWeight: 600 }}>{fmtDiaBr(row.dia_brt)}</span>
@@ -525,15 +708,41 @@ export function OverviewPrestadorAbaKpisMesa({
                       <td style={dataTable.tdCenter}>{row.totalIncidentes.toLocaleString("pt-BR")}</td>
                       <td style={dataTable.tdCenter}>{row.casos.toLocaleString("pt-BR")}</td>
                       <td style={dataTable.tdCenter}>{row.erros.toLocaleString("pt-BR")}</td>
-                      <td style={dataTable.tdCenter}>{row.graves.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{row.outros.toLocaleString("pt-BR")}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            ) : (
+              <table style={getDataTableStyle({ minWidth: 560 })}>
+                <caption style={{ display: "none" }}>Incidentes por dia — Shuffler</caption>
+                <thead>
+                  <tr>
+                    <SortTableTh label="Data" col="dia" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeaderSticky} align="center" />
+                    <SortTableTh label="Total de Incidentes" col="totalInc" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Casos" col="casos" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Erros" col="erros" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Outros" col="outros" sortCol={sortDia.col} sortDir={sortDia.dir} onSort={(c) => setSortDia((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {diasShufOrdenados.map((row, i) => (
+                    <tr key={row.dia} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={dataTable.tdSticky({ rowIndex: i })}>
+                        <span style={{ fontWeight: 600 }}>{fmtDiaBr(row.dia)}</span>
+                      </td>
+                      <td style={dataTable.tdCenter}>{row.total.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{row.casos.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{row.erros.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{row.outros.toLocaleString("pt-BR")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        </>
-      )}
+        </div>
+      ) : null}
     </>
   );
 }

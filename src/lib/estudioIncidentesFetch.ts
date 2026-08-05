@@ -40,11 +40,26 @@ export async function fetchEstudioIncidentesPrestadorPeriodo(opts: {
   dataIni: string;
   dataFim: string;
 }): Promise<EstudioIncidenteRow[]> {
+  return fetchEstudioIncidentesPrestadoresPeriodo({
+    prestadorIds: [opts.prestadorId],
+    dataIni: opts.dataIni,
+    dataFim: opts.dataFim,
+  });
+}
+
+/** Incidentes de vários prestadores no período (`data_rodada`). */
+export async function fetchEstudioIncidentesPrestadoresPeriodo(opts: {
+  prestadorIds: string[];
+  dataIni: string;
+  dataFim: string;
+}): Promise<EstudioIncidenteRow[]> {
+  const ids = [...new Set(opts.prestadorIds.map((x) => x.trim()).filter(Boolean))];
+  if (ids.length === 0) return [];
   return fetchAllPages<EstudioIncidenteRow>(async (from, to) =>
     supabase
       .from("estudio_incidentes")
       .select(INCIDENTE_SELECT)
-      .eq("prestador_id", opts.prestadorId)
+      .in("prestador_id", ids)
       .gte("data_rodada", opts.dataIni)
       .lte("data_rodada", opts.dataFim)
       .order("data_rodada", { ascending: false })

@@ -745,6 +745,7 @@ export function useOverviewPrestadorDados(
     filtroStaffIds,
     setFiltroStaffIds: setFiltroStaffIdsNormalizado,
     staffSelecionadoId,
+    idsEscopo,
     visaoTime,
     timeRotulo: timeRotuloEfetivo,
     caps,
