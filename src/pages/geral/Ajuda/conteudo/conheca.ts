@@ -747,7 +747,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Registrar um incidente",
         texto:
-          "Clique em **Novo Incidente** e informe: time (Game Presenter ou Shuffler), mesa e tipo, categoria e resolução (e, para Shuffler, local do shoe), prestador (lista do time na Gestão de Staff — pesquisa por nome ou nickname), ID da rodada (ou marque **Não tem ID**), data e hora da rodada (hora em texto, formato HH:MM), se houve necessidade de payout e uma descrição do ocorrido. É possível anexar arquivos de evidência (arrastar e soltar ou botão; tamanho máximo de 10 MB por arquivo).",
+          "Clique em **Novo Incidente** e informe: time (Game Presenter ou Shuffler), mesa e tipo, categoria e resolução (e, para Shuffler, local do shoe), prestador (lista do time na Gestão de Staff — pesquisa por nome ou nickname), ID da rodada (ou marque **Não tem ID**), data e hora da rodada (hora em texto, placeholder `#HH:MM:SS`), se houve necessidade de payout e uma descrição do ocorrido. É possível anexar arquivos de evidência (arrastar e soltar ou botão; tamanho máximo de 10 MB por arquivo).",
       },
       {
         subtitulo: "Consultar um incidente",

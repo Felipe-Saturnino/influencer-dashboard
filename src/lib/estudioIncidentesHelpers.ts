@@ -156,10 +156,10 @@ export function compareNumeroMesaIncidente(
 
 /**
  * Normaliza hora digitada (texto) para `HH:MM:SS` aceito pela coluna `time`.
- * Aceita `H:MM`, `HH:MM` e `HH:MM:SS`.
+ * Aceita `H:MM`, `HH:MM` e `HH:MM:SS` (com `#` opcional no início).
  */
 export function normalizarHoraRodadaTexto(raw: string): string | null {
-  const s = raw.trim();
+  const s = raw.trim().replace(/^#/, "");
   const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s);
   if (!m) return null;
   const h = Number.parseInt(m[1]!, 10);

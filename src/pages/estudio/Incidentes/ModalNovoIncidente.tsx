@@ -396,7 +396,7 @@ export function ModalNovoIncidente({
     }
     const horaNorm = normalizarHoraRodadaTexto(horaRodada);
     if (!horaNorm) {
-      setErro("Informe a hora da rodada no formato HH:MM.");
+      setErro("Informe a hora da rodada no formato HH:MM:SS.");
       return;
     }
     if (!prestadorId) {
@@ -667,15 +667,11 @@ export function ModalNovoIncidente({
         type="text"
         value={horaRodada}
         onChange={(e) => setHoraRodada(e.target.value)}
-        placeholder="HH:MM"
+        placeholder="#HH:MM:SS"
         inputMode="numeric"
         autoComplete="off"
         style={inputBaseStyle(t)}
-        aria-describedby="hint-hora-rodada"
       />
-      <div id="hint-hora-rodada" style={{ marginTop: 6, fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-        Formato 24h, ex.: 14:30
-      </div>
     </Campo>
   );
 
