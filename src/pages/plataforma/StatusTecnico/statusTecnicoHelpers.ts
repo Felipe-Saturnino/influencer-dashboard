@@ -32,6 +32,7 @@ export const SYNC_LOG_SLUGS_GARANTIDOS = [
   "lobby_blaze",
   "lobby_cda",
   "lobby_esportiva",
+  "lobby_jonbet",
   "cs_atendimento_outlook",
 ] as const;
 

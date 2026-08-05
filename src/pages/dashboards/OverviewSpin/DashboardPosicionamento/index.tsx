@@ -398,6 +398,7 @@ function DashboardPosicionamentoTodas({
   const blaze = useLobbyPosicionamentoData("blaze", refDate, { historico: false });
   const cda = useLobbyPosicionamentoData("casa_apostas", refDate, { historico: false });
   const esportiva = useLobbyPosicionamentoData("esportiva_bet", refDate, { historico: false });
+  const jonbet = useLobbyPosicionamentoData("jonbet", refDate, { historico: false });
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -409,12 +410,13 @@ function DashboardPosicionamentoTodas({
       ...prefix("blaze", blaze.alertas),
       ...prefix("casa_apostas", cda.alertas),
       ...prefix("esportiva_bet", esportiva.alertas),
+      ...prefix("jonbet", jonbet.alertas),
     ];
-  }, [blaze.alertas, cda.alertas, esportiva.alertas, slugToNome]);
+  }, [blaze.alertas, cda.alertas, esportiva.alertas, jonbet.alertas, slugToNome]);
 
   return (
     <>
-      <div className="app-grid-3" style={getPageKpiSectionGapStyle()}>
+      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
           titulo={`Posição atual das Mesas ${slugToNome("blaze")}`}
           loading={blaze.loading}
@@ -440,6 +442,15 @@ function DashboardPosicionamentoTodas({
           mesasOrdenadas={esportiva.mesasOrdenadas}
           prevMap={esportiva.prevMap}
           ultimaExecutadoEm={esportiva.ultimaNoDia?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Posição atual das Mesas ${slugToNome("jonbet")}`}
+          loading={jonbet.loading}
+          semDados={jonbet.semDados}
+          mesasOrdenadas={jonbet.mesasOrdenadas}
+          prevMap={jonbet.prevMap}
+          ultimaExecutadoEm={jonbet.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
       </div>

@@ -2,25 +2,27 @@
  * Telecom / job agendado: busca o lobby Esportiva Bet (BS2Bet / GG Labs)
  * e chama monitor-lobby-esportiva (esportiva_lobby no body).
  *
- * API: https://api-esportiva-betbr.bs2bet.com/v2/casino-games/filter
+ * API (proxy do site): https://esportiva.bet.br/api/casino-games/filter
+ * Query: categories[]=cassino-ao-vivo&per_page=50
  * Match: data[].id ↔ Gestão de Estúdios (esportiva_bet)
+ * Mesas Spin na API = provider Good Game Labs (slug goodgame), ids good-game-v2:…
  *
  * Uso:
  *   node scripts/monitor-lobby-esportiva-run.mjs --dry-run
  *   node scripts/monitor-lobby-esportiva-run.mjs
  *
  * Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- * Opcional: MONITOR_LOBBY_ESPORTIVA_INGEST_SECRET, ESPORTIVA_LOBBY_FILTER_URL
+ * Opcional: MONITOR_LOBBY_ESPORTIVA_INGEST_SECRET, ESPORTIVA_LOBBY_FILTER_URL,
+ *           ESPORTIVA_LOBBY_FILTER_QUERY
  *
  * Doc: docs/TELECOM-MONITOR-LOBBY-ESPORTIVA.md
  */
 
 const OPERADORA = "esportiva_bet";
-const FILTER_BASE_DEFAULT =
-  "https://api-esportiva-betbr.bs2bet.com/v2/casino-games/filter";
-const FILTER_QUERY_DEFAULT = "category=cassino-ao-vivo";
-const PAGE_REFERER =
-  "https://esportiva.bet.br/games/category/cassino-ao-vivo/popular";
+const FILTER_BASE_DEFAULT = "https://esportiva.bet.br/api/casino-games/filter";
+/** categories[] precisa ser encoded; não usar category= (legado incorreto). */
+const FILTER_QUERY_DEFAULT = "categories%5B%5D=cassino-ao-vivo&per_page=50";
+const PAGE_REFERER = "https://esportiva.bet.br/";
 const PAGE_ORIGIN = "https://esportiva.bet.br";
 
 const dryRun = process.argv.includes("--dry-run");

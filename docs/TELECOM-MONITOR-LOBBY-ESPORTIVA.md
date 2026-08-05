@@ -1,8 +1,41 @@
 # Telecom — Monitor Lobby Esportiva Bet
 
-Job horário que lê o Cassino ao Vivo da Esportiva (`api-esportiva-betbr.bs2bet.com`) e envia o snapshot para a Edge `monitor-lobby-esportiva` gravar em `lobby_monitor_*`.
+Job horário que lê o **Cassino ao Vivo** da Esportiva e envia o snapshot para a Edge `monitor-lobby-esportiva`.
 
-**Agregador:** Good Game Labs (GG Labs). IDs no formato `good-game-v2:…` cadastrados em **Gestão de Estúdios → ID Esportiva Bet**.
+**Agregador das mesas Spin:** Good Game Labs (`provider.slug = goodgame`).  
+IDs no formato `good-game-v2:…` — cadastrados em **Gestão de Estúdios → ID Esportiva Bet**.
+
+---
+
+## Endpoint correto (F12)
+
+| Item | Valor |
+|------|--------|
+| Host | `https://esportiva.bet.br` (página inicial) |
+| Request | `GET /api/casino-games/filter` |
+| Query | `categories[]=cassino-ao-vivo&per_page=50&page=N` |
+| URL completa (página 1) | `https://esportiva.bet.br/api/casino-games/filter?categories%5B%5D=cassino-ao-vivo&per_page=50&page=1` |
+
+**Não usar** requests com `categories[]=jogos-crash` — essa é outra seção da home (Aviator etc.) e **não** lista as mesas Spin.
+
+### Como achar no DevTools
+
+1. Abrir `https://esportiva.bet.br/` (ou a seção **Cassino Ao Vivo**).
+2. F12 → **Rede** → limpar → filtrar: `casino-games` ou `filter`.
+3. Recarregar / rolar até **Cassino Ao Vivo**.
+4. Clicar no request cujo **Query String** tenha `categories[]` = **`cassino-ao-vivo`** (não `jogos-crash`).
+5. Aba **Resposta** → em `data[]`, filtrar mentalmente por `provider.name` = **Good Game Labs**.
+
+Mesas Spin esperadas na API (nomes técnicos; na UI podem aparecer como Roleta / Blackjack VIP / Baccarat VIP com logo Spin):
+
+| `id` (cadastrar na plataforma) | `name` na API |
+|--------------------------------|---------------|
+| `good-game-v2:live-roulette` | Roulette |
+| `good-game-v2:live-blackjack` | Blackjack |
+| `good-game-v2:live-baccarat` | Baccarat |
+| `good-game-v2:live-cardmatchup` | Futebol Brasileiro |
+
+---
 
 ## O que a Telecom precisa
 
@@ -10,10 +43,15 @@ Job horário que lê o Cassino ao Vivo da Esportiva (`api-esportiva-betbr.bs2bet
 |------|--------|
 | Script | `scripts/monitor-lobby-esportiva-run.mjs` |
 | Wrapper Windows | `scripts/run-monitor-lobby-esportiva.ps1` |
-| Frequência | A cada **1 hora** (fuso `America/Sao_Paulo`) |
-| Rede | Escritório / IP BR (se a API bloquear datacenter — mesmo padrão Blaze) |
-| Env | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (mesmo `.env.monitor` do Blaze/CDA) |
-| Cookie | **Não** precisa (diferente da CDA) |
+| Frequência | A cada **1 hora** (`America/Sao_Paulo`) |
+| Rede | Escritório / IP BR |
+| Env | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (mesmo `.env.monitor` do Blaze) |
+| Cookie | **Não** precisa |
+
+Defaults do script (já corretos):
+
+- Base: `https://esportiva.bet.br/api/casino-games/filter`
+- Query: `categories%5B%5D=cassino-ao-vivo&per_page=50`
 
 ## Teste
 
@@ -21,29 +59,12 @@ Job horário que lê o Cassino ao Vivo da Esportiva (`api-esportiva-betbr.bs2bet
 node scripts/monitor-lobby-esportiva-run.mjs --dry-run
 ```
 
-Esperado: `mesas_encontradas` = quantidade de IDs cadastrados (ou `parcial` se algum ID não aparecer no filtro).
+Esperado: `mesas_encontradas` alinhado aos IDs Good Game Labs cadastrados.
 
-Produção (grava):
+Produção:
 
 ```bash
 node scripts/monitor-lobby-esportiva-run.mjs
 ```
 
-## Query da API
-
-Default: `category=cassino-ao-vivo` em  
-`https://api-esportiva-betbr.bs2bet.com/v2/casino-games/filter`
-
-Se o F12 mostrar outro parâmetro, sobrescrever:
-
-```env
-ESPORTIVA_LOBBY_FILTER_QUERY=...
-```
-
-## Spin (já feito no repo)
-
-- Edge `monitor-lobby-esportiva`
-- Migration `integrations` slug `lobby_esportiva`
-- UI Posicionamento + Status Técnico
-
-Setup interno: `docs/SETUP-MONITOR-LOBBY-ESPORTIVA.md`
+Setup interno Spin: `docs/SETUP-MONITOR-LOBBY-ESPORTIVA.md`

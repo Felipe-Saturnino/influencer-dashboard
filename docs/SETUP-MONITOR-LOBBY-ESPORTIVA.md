@@ -11,9 +11,13 @@ Automação horária da posição das mesas Spin no Cassino ao Vivo da Esportiva
 
 ## API
 
-- Base: `https://api-esportiva-betbr.bs2bet.com/v2/casino-games/filter`
-- Ranking: campo `order` (menor = mais à frente) → posição 1…N
-- Concorrentes: mesmo tipo de jogo cujo `id` **não** está na lista Spin (tudo é GG Labs)
+- Base (F12 no site): `https://esportiva.bet.br/api/casino-games/filter`
+- Query: `categories[]=cassino-ao-vivo&per_page=50` (**não** `jogos-crash`)
+- Mesas Spin: provider **Good Game Labs** (`goodgame`), ids `good-game-v2:live-*`
+- Ranking: campo `order` (menor = mais à frente) → posição 1…N no conjunto Cassino ao Vivo
+- Concorrentes: mesmo tipo de jogo cujo `id` **não** está na lista Spin
+
+**Atenção:** o tile na home pode dizer “Roleta Brasileira / Blackjack VIP” com logo Spin; na API o nome costuma ser `Roulette` / `Blackjack` / `Baccarat` sob Good Game Labs. Cadastre o campo **`id`**, não o título da UI.
 
 ## Deploy
 

@@ -1116,7 +1116,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Sync manual",
         definicao:
-          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico. Lobby Blaze, Lobby CDA e Lobby Esportiva Bet rodam por job automatizado e não têm essa ação.",
+          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet rodam por job automatizado e não têm essa ação.",
         referencia: "Status Técnico",
       },
       {
