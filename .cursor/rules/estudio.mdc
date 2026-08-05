@@ -139,13 +139,12 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 
 - Cada registro grava **`protocolo`** único (gerado no banco) e uma **categoria** (`incidente`): `caso`, `erro`, `oculto`, `nao_avisado`, `avisado_resolvido`, `avisado_nao_resolvido` — rótulos e cor semântica em **`INCIDENTE_CATEGORIA_META`** (`lib/estudioIncidentesTypes.ts`): Caso (roxo especial), Erro (vermelho negativo), Oculto (cinza neutro), Não Avisado (amarelo atenção), Avisado/Resolvido (verde positivo), Avisado/Não Resolvido (vermelho negativo) — cores herdadas da paleta semântica do Global, não confundir com identidade de jogo.
 - Prefixo do protocolo: **Caso** → `CASO-XXXXX`; **Oculto** → `OCULTO-XXXXX`; **Erro** e demais categorias de erro → `ERRO-XXXXX` (sequências distintas por família).
-- **`local_mesa`** (`em_mesa` | `fora_mesa`) só é obrigatório para **Shuffler** (`time_alvo = "shuf"`); Game Presenter grava sempre `em_mesa`. Usado no detalhamento **Em Mesa / Fora da Mesa** sob os KPIs `avisado_resolvido` e `avisado_nao_resolvido`.
+- **`local_mesa`** (`em_mesa` | `fora_mesa`) só é obrigatório para **Shuffler** (`time_alvo = "shuf"`); Game Presenter grava sempre `em_mesa`. Exibido no formulário/modal Ver (Local do Shoe); **não** aparece sob os KPIs.
 - **Tipos de incidente** dependem do jogo da mesa (GP) ou são fixos (Shuffler) — catálogos em `TIPOS_INCIDENTE_BLACKJACK`, `TIPOS_INCIDENTE_BACCARAT_FB` (Baccarat e Futebol Brasileiro compartilham lista), `TIPOS_INCIDENTE_ROLETA`, `TIPOS_INCIDENTE_SHUFFLER` (`lib/estudioIncidentesTypes.ts`); resolvidos via `tiposIncidenteParaForm(timeAlvo, tipoJogoMesa)`. Roleta **não** aparece na lista de mesas do formulário quando `time_alvo = "shuf"` (Shuffler não atua em Roleta).
 
 ### KPIs Consolidados
 
 - 6 cards (`app-grid-kpi-6`) — um por categoria, ordem **Caso → Erro → Oculto → Não Avisado → Avisado/Resolvido → Avisado/Não Resolvido**; `KpiCard` com `isInverso` (queda é positiva) e `isHistorico={historico}`; ícones: `AlertTriangle` (Caso), `CircleAlert` (Erro), `EyeOff` (Oculto), `BellOff` (Não Avisado), `CheckCircle2` (Avisado/Resolvido), `AlertCircle` (Avisado/Não Resolvido).
-- Cards **Avisado/Resolvido** e **Avisado/Não Resolvido** exibem, abaixo do `KpiCard`, a contagem **Em Mesa** / **Fora da Mesa** (`local_mesa`) do período filtrado — não é um `subValue` do próprio card (o KPI continua contando o total da categoria).
 - MoM: `getPeriodoComparativoMoM` (mês civil) para atual/anterior; Histórico usa `getPeriodoHistoricoCompetencias` (13 competências) e desativa o comparativo (`isHistorico`).
 
 ### Filtros
@@ -171,7 +170,14 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 ### Modais
 
 - **`ModalVerIncidente`** — somente leitura, abas **Dados do Incidente** / **Descrição**; carrega anexos via `fetchEstudioIncidenteAnexos` + `urlAssinadaAnexoIncidente` (URL assinada, bucket `estudio-incidentes`).
-- **`ModalNovoIncidente`** — Time (GP/Shuffler) → Mesa (combo buscável, filtra Roleta para Shuffler) → ID/Data/Hora da rodada → Prestador (combo buscável, `fetchStaffFormIncidente` por time) → Incidente/Tipo → Local do Shoe (só Shuffler) → Resolução → Payout necessário → Descrição → Anexos via **`CampoUploadArquivos`** (`buttonLabel` **Adicionar anexo**, múltiplos, 10 MB por arquivo, badge Pendente até salvar). Relator = usuário logado (`user.name`/`user.email` + `user.id`); grava via `insertEstudioIncidente` + `uploadEstudioIncidenteAnexos`.
+- **`ModalNovoIncidente`** (`maxWidth` 920) — Time (GP/Shuffler) no topo; layout por linhas:
+  - **GP:** Mesa / Tipo → Incidente / Resolução / Payout → Prestador / ID da Rodada → Data / Hora → Descrição → Anexos.
+  - **Shuffler:** Mesa / Tipo → Incidente / Resolução → Payout / Local do Shoe → Prestador / ID da Rodada → Data / Hora → Descrição → Anexos.
+  - **Mesa:** combo buscável ordenado por **número da mesa**; Roleta omitida quando `time_alvo = "shuf"`.
+  - **Prestador:** combo buscável com barra **Pesquisar por nome ou nickname...** (`forceSearch`); opções = prestadores ativos/indisponíveis do time GP ou Shuffler em Gestão de Staff (`fetchStaffFormIncidente` via `rh_org_times` + `org_time_id`, sem SM/SL/Academy).
+  - **ID da Rodada:** obrigatório salvo checkbox **Não tem ID** (grava `INCIDENTE_ID_RODADA_SEM_ID` = `—`).
+  - **Hora da Rodada:** campo **texto** (`HH:MM`), normalizado para `time` no insert.
+  - Anexos via **`CampoUploadArquivos`** (`buttonLabel` **Adicionar anexo**, drag-and-drop, múltiplos, 10 MB). Relator = usuário logado; grava via `insertEstudioIncidente` + `uploadEstudioIncidenteAnexos`.
 
 ### Exceções — identidade de jogo
 

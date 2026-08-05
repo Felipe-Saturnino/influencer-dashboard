@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, CircleAlert, FileWarning, Hash, Layers } from "lucide-react";
+import {
+  AlertTriangle,
+  CircleAlert,
+  FileWarning,
+  Hash,
+  Layers,
+} from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -342,7 +348,6 @@ function OverviewPrestadorAbaKpisMesaConteudo({
     porJogo,
     porJogoShuffler,
     pontosAtencao,
-    temDados,
   } = useOverviewPrestadorGpKpi({
     enabled: mode === "gp" || mode === "shuffler",
     funcionarioIds,
@@ -532,8 +537,6 @@ function OverviewPrestadorAbaKpisMesaConteudo({
               <SkeletonKpiCard key={i} />
             ))}
           </div>
-        ) : !temDados ? (
-          vazio
         ) : mode === "gp" ? (
           <KpisMesaCardsGp
             rodadas={agregado.rodadas}
@@ -558,11 +561,14 @@ function OverviewPrestadorAbaKpisMesaConteudo({
         )}
       </div>
 
-      {!loading && temDados && mode === "gp" ? (
+      {!loading && mode === "gp" ? (
         <div style={pageBox}>
           <SectionTitle sub={visaoTime ? "soma e médias do time por tipo de jogo" : "mesas do prestador agrupadas por tipo de jogo"}>
             Por Jogo
           </SectionTitle>
+          {jogosGpOrdenados.length === 0 ? (
+            vazio
+          ) : (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>KPIs de mesa agregados por jogo</caption>
@@ -596,10 +602,11 @@ function OverviewPrestadorAbaKpisMesaConteudo({
               </tbody>
             </table>
           </div>
+          )}
         </div>
       ) : null}
 
-      {!loading && temDados && mode === "shuffler" ? (
+      {!loading && mode === "shuffler" ? (
         <div style={pageBox}>
           <SectionTitle sub="incidentes por tipo de jogo (sem Roleta)">Por Jogo</SectionTitle>
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
@@ -634,7 +641,7 @@ function OverviewPrestadorAbaKpisMesaConteudo({
         </div>
       ) : null}
 
-      {!loading && temDados && visaoTime ? (
+      {!loading && visaoTime ? (
         <div style={pageBox}>
           <SectionTitle sub="prestadores com incidentes no período">Pontos de atenção</SectionTitle>
           {atencaoOrdenados.length === 0 ? (
@@ -671,7 +678,7 @@ function OverviewPrestadorAbaKpisMesaConteudo({
         </div>
       ) : null}
 
-      {!loading && temDados ? (
+      {!loading ? (
         <div style={{ ...pageBox, marginBottom: 0 }}>
           <SectionTitle
             sub={
@@ -684,6 +691,9 @@ function OverviewPrestadorAbaKpisMesaConteudo({
           >
             Detalhamento Diário
           </SectionTitle>
+          {(mode === "gp" ? diasGpOrdenados.length === 0 : diasShufOrdenados.length === 0) ? (
+            vazio
+          ) : (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             {mode === "gp" ? (
               <table style={getDataTableStyle({ minWidth: 720 })}>
@@ -741,6 +751,7 @@ function OverviewPrestadorAbaKpisMesaConteudo({
               </table>
             )}
           </div>
+          )}
         </div>
       ) : null}
     </>

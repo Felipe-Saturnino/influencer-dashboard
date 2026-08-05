@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { fetchAllPages } from "./supabasePaginate";
+import { fetchAllPages, fetchInBatched } from "./supabasePaginate";
 import type {
   EstudioIncidenteAnexoRow,
   EstudioIncidenteInsert,
@@ -7,7 +7,7 @@ import type {
   IncidenteStaffOption,
   IncidenteTimeAlvo,
 } from "./estudioIncidentesTypes";
-import { orgTimeEhGpOuShuffler, orgTimeElegivelFormIncidente } from "./estudioIncidentesHelpers";
+import { orgTimeEhGpOuShuffler } from "./estudioIncidentesHelpers";
 import {
   ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES,
   ESTUDIO_INCIDENTES_STORAGE_BUCKET,
@@ -47,6 +47,9 @@ export async function fetchEstudioIncidentesPrestadorPeriodo(opts: {
   });
 }
 
+/** Tamanho seguro de lote para `.in("prestador_id", …)` em estudio_incidentes. */
+const ESTUDIO_INCIDENTES_PRESTADOR_IN_CHUNK = 80;
+
 /** Incidentes de vários prestadores no período (`data_rodada`). */
 export async function fetchEstudioIncidentesPrestadoresPeriodo(opts: {
   prestadorIds: string[];
@@ -55,15 +58,19 @@ export async function fetchEstudioIncidentesPrestadoresPeriodo(opts: {
 }): Promise<EstudioIncidenteRow[]> {
   const ids = [...new Set(opts.prestadorIds.map((x) => x.trim()).filter(Boolean))];
   if (ids.length === 0) return [];
-  return fetchAllPages<EstudioIncidenteRow>(async (from, to) =>
-    supabase
-      .from("estudio_incidentes")
-      .select(INCIDENTE_SELECT)
-      .in("prestador_id", ids)
-      .gte("data_rodada", opts.dataIni)
-      .lte("data_rodada", opts.dataFim)
-      .order("data_rodada", { ascending: false })
-      .range(from, to),
+
+  return fetchInBatched(ids, ESTUDIO_INCIDENTES_PRESTADOR_IN_CHUNK, async (slice) =>
+    fetchAllPages<EstudioIncidenteRow>(async (from, to) =>
+      supabase
+        .from("estudio_incidentes")
+        .select(INCIDENTE_SELECT)
+        .in("prestador_id", slice)
+        .gte("data_rodada", opts.dataIni)
+        .lte("data_rodada", opts.dataFim)
+        .order("data_rodada", { ascending: false })
+        .range(from, to),
+    ),
+    2,
   );
 }
 
@@ -152,42 +159,72 @@ export async function urlAssinadaAnexoIncidente(storagePath: string): Promise<st
   return data?.signedUrl ?? null;
 }
 
-type FuncionarioTimeRow = {
-  id: string;
-  nome: string;
-  status: string;
-  org_time_id: string | null;
-  rh_org_times: { id: string; nome: string; status: string } | { id: string; nome: string; status: string }[] | null;
-};
+type OrgTimeAtivo = { id: string; nome: string };
 
-function unwrapTime(
-  embed: FuncionarioTimeRow["rh_org_times"],
-): { id: string; nome: string; status: string } | null {
-  if (!embed) return null;
-  return Array.isArray(embed) ? embed[0] ?? null : embed;
-}
-
-/** Prestadores ativos/indisponíveis de times GP e Shuffler (filtro da barra). */
-export async function fetchStaffFiltroIncidentes(): Promise<IncidenteStaffOption[]> {
+/**
+ * Times ativos GP/Shuffler do organograma — mesma fonte conceitual da Gestão de Staff
+ * (`org_time_id` em `rh_funcionarios`), sem depender de embed PostgREST.
+ */
+async function fetchOrgTimesGpShuffler(): Promise<OrgTimeAtivo[]> {
   const { data, error } = await supabase
-    .from("rh_funcionarios")
-    .select("id, nome, status, org_time_id, rh_org_times(id, nome, status)")
-    .in("status", ["ativo", "indisponivel"])
-    .not("org_time_id", "is", null)
+    .from("rh_org_times")
+    .select("id, nome, status")
+    .eq("status", "ativo")
     .order("nome");
   if (error) {
-    console.error("[Incidentes] staff filtro:", error);
+    console.error("[Incidentes] org times:", error);
     return [];
   }
+  const out: OrgTimeAtivo[] = [];
+  for (const raw of data ?? []) {
+    const row = raw as { id: string; nome: string; status: string };
+    if (!orgTimeEhGpOuShuffler(row.nome)) continue;
+    out.push({ id: row.id, nome: row.nome });
+  }
+  return out;
+}
+
+async function fetchFuncionariosPorOrgTimes(
+  times: OrgTimeAtivo[],
+  timeAlvo?: IncidenteTimeAlvo,
+): Promise<IncidenteStaffOption[]> {
+  const filtrados = timeAlvo
+    ? times.filter((t) => orgTimeEhGpOuShuffler(t.nome) === timeAlvo)
+    : times;
+  if (filtrados.length === 0) return [];
+
+  const byId = new Map(filtrados.map((t) => [t.id, t]));
+  const timeIds = filtrados.map((t) => t.id);
+
+  const { data, error } = await supabase
+    .from("rh_funcionarios")
+    .select("id, nome, staff_nickname, status, org_time_id")
+    .in("org_time_id", timeIds)
+    .in("status", ["ativo", "indisponivel"])
+    .order("nome");
+  if (error) {
+    console.error("[Incidentes] staff por time:", error);
+    return [];
+  }
+
   const out: IncidenteStaffOption[] = [];
-  for (const raw of (data ?? []) as FuncionarioTimeRow[]) {
-    const t = unwrapTime(raw.rh_org_times);
-    if (!t || t.status !== "ativo") continue;
+  for (const raw of data ?? []) {
+    const row = raw as {
+      id: string;
+      nome: string;
+      staff_nickname: string | null;
+      org_time_id: string | null;
+    };
+    if (!row.org_time_id) continue;
+    const t = byId.get(row.org_time_id);
+    if (!t) continue;
     const key = orgTimeEhGpOuShuffler(t.nome);
     if (!key) continue;
+    if (timeAlvo && key !== timeAlvo) continue;
     out.push({
-      id: raw.id,
-      nome: raw.nome,
+      id: row.id,
+      nome: row.nome,
+      nickname: (row.staff_nickname ?? "").trim() || null,
       timeKey: key,
       papel: key === "gp" ? "Game Presenter" : "Shuffler",
       orgTimeNome: t.nome,
@@ -196,36 +233,19 @@ export async function fetchStaffFiltroIncidentes(): Promise<IncidenteStaffOption
   return out;
 }
 
-/** Prestadores para o formulário (GP ou Shuffler + SM/SL/PC/Academy do mesmo eixo). */
+/** Prestadores ativos/indisponíveis de times GP e Shuffler (filtro da barra). */
+export async function fetchStaffFiltroIncidentes(): Promise<IncidenteStaffOption[]> {
+  const times = await fetchOrgTimesGpShuffler();
+  return fetchFuncionariosPorOrgTimes(times);
+}
+
+/**
+ * Prestadores do formulário Novo Incidente — mesmo universo da Gestão de Staff
+ * para o time selecionado (Game Presenter ou Shuffler).
+ */
 export async function fetchStaffFormIncidente(
   timeAlvo: IncidenteTimeAlvo,
 ): Promise<IncidenteStaffOption[]> {
-  const { data, error } = await supabase
-    .from("rh_funcionarios")
-    .select("id, nome, status, org_time_id, rh_org_times(id, nome, status)")
-    .in("status", ["ativo", "indisponivel"])
-    .not("org_time_id", "is", null)
-    .order("nome");
-  if (error) {
-    console.error("[Incidentes] staff form:", error);
-    return [];
-  }
-  const out: IncidenteStaffOption[] = [];
-  for (const raw of (data ?? []) as FuncionarioTimeRow[]) {
-    const t = unwrapTime(raw.rh_org_times);
-    if (!t || t.status !== "ativo") continue;
-    const elig = orgTimeElegivelFormIncidente(timeAlvo, t.nome);
-    if (!elig.ok) continue;
-    // SM/SL/PC/Academy: aceitar no form do time selecionado (mesmo pool)
-    const key: IncidenteTimeAlvo =
-      orgTimeEhGpOuShuffler(t.nome) ?? timeAlvo;
-    out.push({
-      id: raw.id,
-      nome: raw.nome,
-      timeKey: key,
-      papel: elig.papel,
-      orgTimeNome: t.nome,
-    });
-  }
-  return out;
+  const times = await fetchOrgTimesGpShuffler();
+  return fetchFuncionariosPorOrgTimes(times, timeAlvo);
 }

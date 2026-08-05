@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
-import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import {
   getPeriodoComparativoMesCompleto,
   getPeriodoHistoricoCompetencias,
@@ -99,19 +99,22 @@ async function fetchGpKpiPeriodo(
 ): Promise<GpKpiDiarioRow[]> {
   const ids = [...new Set(funcionarioIds.map((x) => x.trim()).filter(Boolean))];
   if (ids.length === 0) return [];
-  const rows = await fetchAllPages<RowDb>(async (from, to) => {
-    const { data, error } = await supabase
-      .from("gp_kpi_diario")
-      .select(
-        "dia_brt, table_id, game_presenter_id, mesa_id, estudio_slug, rodadas, dealing_ms_soma, dealing_amostras, reaction_ms_soma, reaction_amostras, coop_velocidade, coop_roda, mesas_spin_cadastro(nome_mesa, tipo_jogo)",
-      )
-      .in("funcionario_id", ids)
-      .gte("dia_brt", dataIni)
-      .lte("dia_brt", dataFim)
-      .order("dia_brt", { ascending: true })
-      .range(from, to);
-    return { data, error };
-  });
+  const rows = await fetchInBatched(ids, 80, async (slice) =>
+    fetchAllPages<RowDb>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("gp_kpi_diario")
+        .select(
+          "dia_brt, table_id, game_presenter_id, mesa_id, estudio_slug, rodadas, dealing_ms_soma, dealing_amostras, reaction_ms_soma, reaction_amostras, coop_velocidade, coop_roda, mesas_spin_cadastro(nome_mesa, tipo_jogo)",
+        )
+        .in("funcionario_id", slice)
+        .gte("dia_brt", dataIni)
+        .lte("dia_brt", dataFim)
+        .order("dia_brt", { ascending: true })
+        .range(from, to);
+      return { data, error };
+    }),
+    2,
+  );
   return mapRows(rows);
 }
 
@@ -293,7 +296,7 @@ export function useOverviewPrestadorGpKpi(opts: {
 
   const porJogoGp = useMemo(() => mergePorJogoGp(rowsAtual, incAtual), [rowsAtual, incAtual]);
   const porJogoShuffler: IncidenteJogoLinha[] = useMemo(
-    () => agruparIncidentesPorJogo(incAtual, SHUFFLER_KPI_JOGOS_ORDEM),
+    () => agruparIncidentesPorJogo(incAtual, SHUFFLER_KPI_JOGOS_ORDEM, true),
     [incAtual],
   );
   const porDia = useMemo(() => mergePorDia(rowsAtual, incAtual), [rowsAtual, incAtual]);

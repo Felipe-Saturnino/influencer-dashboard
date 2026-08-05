@@ -268,9 +268,15 @@ export function useOverviewPrestadorDados(
 
   const timeMultiselectItems = useMemo(() => {
     const items: { id: string; name: string }[] = [];
+    const usados = new Set<string>();
     for (const rotulo of OVERVIEW_PRESTADOR_TIMES_ORDEM) {
-      const row = timeRowPorRotuloCanonica(times, rotulo);
-      if (row) items.push({ id: row.id, name: rotulo });
+      const row =
+        timeRowPorRotuloCanonica(times, rotulo) ??
+        times.find((t) => rotuloTimeFromNomeOrganograma(t.nome) === rotulo);
+      if (row && !usados.has(row.id)) {
+        usados.add(row.id);
+        items.push({ id: row.id, name: rotulo });
+      }
     }
     return items;
   }, [times]);

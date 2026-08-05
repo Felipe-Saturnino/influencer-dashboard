@@ -77,6 +77,8 @@ export type IncidenteJogoLinha = IncidenteAggContagem & {
 export function agruparIncidentesPorJogo(
   rows: EstudioIncidenteRow[],
   jogosOrdem: GameIdentityKey[] = GP_KPI_JOGOS_ORDEM,
+  /** Se true, devolve todas as chaves de `jogosOrdem` (zeros quando sem dados). */
+  incluirVazios = false,
 ): IncidenteJogoLinha[] {
   const map = new Map<GameIdentityKey, EstudioIncidenteRow[]>();
   for (const r of rows) {
@@ -86,12 +88,11 @@ export function agruparIncidentesPorJogo(
     list.push(r);
     map.set(key, list);
   }
-  return jogosOrdem
-    .filter((k) => map.has(k))
-    .map((jogoKey) => ({
-      jogoKey,
-      ...agregarContagemIncidentes(map.get(jogoKey)!),
-    }));
+  const keys = incluirVazios ? jogosOrdem : jogosOrdem.filter((k) => map.has(k));
+  return keys.map((jogoKey) => ({
+    jogoKey,
+    ...agregarContagemIncidentes(map.get(jogoKey) ?? []),
+  }));
 }
 
 export type IncidenteDiaLinha = IncidenteAggContagem & { dia: string };

@@ -81,10 +81,15 @@ export type EstudioIncidenteInsert = {
 export type IncidenteStaffOption = {
   id: string;
   nome: string;
+  /** Nickname de staff (Gestão de Staff) — busca no formulário. */
+  nickname: string | null;
   timeKey: IncidenteTimeAlvo;
   papel: string;
   orgTimeNome: string;
 };
+
+/** Valor persistido em `id_rodada` quando o usuário marca «Não tem ID». */
+export const INCIDENTE_ID_RODADA_SEM_ID = "—";
 
 export const INCIDENTE_CATEGORIA_META: Record<
   IncidenteCategoria,
