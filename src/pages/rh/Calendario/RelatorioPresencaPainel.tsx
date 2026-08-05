@@ -55,7 +55,12 @@ type Props = {
   onAprovarTurno: (row: RelatorioPresencaLinha) => void;
   onJustificar: (row: RelatorioPresencaLinha) => void;
   onHistorico: (row: RelatorioPresencaLinha) => void;
-  onAnalisarCorrecao: (fid: string, dia: Date, decisao: "aprovada" | "recusada") => void;
+  onAnalisarCorrecao: (
+    fid: string,
+    dia: Date,
+    decisao: "aprovada" | "recusada",
+    campo: "entrada" | "saida",
+  ) => void;
 };
 
 export function RelatorioPresencaPainel({
@@ -259,8 +264,12 @@ export function RelatorioPresencaPainel({
                           correcao={row.correcao}
                           valorCorrecao={row.correcao.entradaCorrigida}
                           podeAnalisar={row.podeAnalisarCorrecao}
-                          onAprovar={() => onAnalisarCorrecao(row.funcionarioId, row.dia, "aprovada")}
-                          onRejeitar={() => onAnalisarCorrecao(row.funcionarioId, row.dia, "recusada")}
+                          onAprovar={() =>
+                            onAnalisarCorrecao(row.funcionarioId, row.dia, "aprovada", "entrada")
+                          }
+                          onRejeitar={() =>
+                            onAnalisarCorrecao(row.funcionarioId, row.dia, "recusada", "entrada")
+                          }
                         />
                       ) : null}
                     </td>
@@ -285,8 +294,12 @@ export function RelatorioPresencaPainel({
                           correcao={row.correcao}
                           valorCorrecao={row.correcao.saidaCorrigida}
                           podeAnalisar={row.podeAnalisarCorrecao}
-                          onAprovar={() => onAnalisarCorrecao(row.funcionarioId, row.dia, "aprovada")}
-                          onRejeitar={() => onAnalisarCorrecao(row.funcionarioId, row.dia, "recusada")}
+                          onAprovar={() =>
+                            onAnalisarCorrecao(row.funcionarioId, row.dia, "aprovada", "saida")
+                          }
+                          onRejeitar={() =>
+                            onAnalisarCorrecao(row.funcionarioId, row.dia, "recusada", "saida")
+                          }
                         />
                       ) : null}
                     </td>

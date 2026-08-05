@@ -140,8 +140,10 @@ import {
   mesCalendarioPresencaFechado,
   mesCalendarioPresencaFuturo,
   mensagemAprovacaoPresencaMesPt,
-  presencaCorrecaoAnaliseStatusEfetivo,
   presencaCorrecaoCampoAlterado,
+  presencaCorrecaoCampoAprovado,
+  presencaCorrecaoTemCampoPendenteAnalise,
+  situacaoPresencaComoEscalado,
   construirIndiceJustificativaMedicoPorDia,
   fundirGestaoPresencaComJustificativaMedico,
   historicoLinhasJustificativaMedico,
@@ -2527,6 +2529,21 @@ export default function RhCalendarioPage() {
     [isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds, meuRhFuncionarioId],
   );
 
+  /**
+   * Análise de correção / esquecimento / Outro: só líder imediato (gerenciáveis), admin ou Editar sim.
+   * O próprio prestador nunca aprova a própria correção — atestado médico segue em Solicitações (RH).
+   */
+  const podeAnalisarCorrecaoPresencaStaff = useCallback(
+    (fid: string | undefined | null) => {
+      if (!fid) return false;
+      if (meuRhFuncionarioId && fid === meuRhFuncionarioId) return false;
+      if (isAdminPresenca || perm.canEditar === "sim") return true;
+      if (perm.canEditar !== "proprios") return false;
+      return funcionariosGerenciaveisIds.has(fid);
+    },
+    [isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds, meuRhFuncionarioId],
+  );
+
   /** Justificar a própria falta/pendência: disponível no Meu Controle mesmo só com Ver. */
   const podeJustificarPresencaStaff = useCallback(
     (fid: string | undefined | null) => {
@@ -2555,7 +2572,7 @@ export default function RhCalendarioPage() {
       const iso = toISO(dia);
       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
-      if (situacao !== "Escalado") continue;
+      if (!situacaoPresencaComoEscalado(situacao)) continue;
       const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
       const pt = mapaPontoPorDiaIso.get(iso);
       const entEsc = esc ? esc.entrada : "—";
@@ -2580,16 +2597,14 @@ export default function RhCalendarioPage() {
         gestao: gestaoDia,
       });
       const correcao = gestaoDia?.correcao;
-      const correcaoEntradaAlterada = correcao ? presencaCorrecaoCampoAlterado("entrada", correcao) : false;
-      const correcaoSaidaAlterada = correcao ? presencaCorrecaoCampoAlterado("saida", correcao) : false;
-      const correcaoAprovada =
-        Boolean(correcao) && presencaCorrecaoAnaliseStatusEfetivo(correcao) === "aprovada";
       const entReal = horaRegistoSP(pt?.check_in_at);
       const saiReal = horaRegistoSP(pt?.check_out_at);
-      const entRealExib =
-        correcaoAprovada && correcao && correcaoEntradaAlterada ? correcao.entradaCorrigida : entReal;
-      const saiRealExib =
-        correcaoAprovada && correcao && correcaoSaidaAlterada ? correcao.saidaCorrigida : saiReal;
+      const entRealExib = presencaCorrecaoCampoAprovado(correcao, "entrada")
+        ? (correcao?.entradaCorrigida ?? entReal)
+        : entReal;
+      const saiRealExib = presencaCorrecaoCampoAprovado(correcao, "saida")
+        ? (correcao?.saidaCorrigida ?? saiReal)
+        : saiReal;
       out.push({
         diaIso: iso,
         dataLabel: dia.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }),
@@ -2724,7 +2739,9 @@ export default function RhCalendarioPage() {
         acoesBase.acaoPrimaria === "justificar"
           ? podeJustificarPresencaStaff(fid)
           : acoesBase.acaoPrimaria === "aprovar"
-            ? podeGerirPresencaStaff(fid)
+            ? gestaoDia?.justificativa?.motivo === "outro" && gestaoDia.statusGestao === "em_analise"
+              ? podeAnalisarCorrecaoPresencaStaff(fid)
+              : podeGerirPresencaStaff(fid)
             : true;
       const acoesLinha: typeof acoesBase = !acaoOk
         ? {
@@ -2739,20 +2756,18 @@ export default function RhCalendarioPage() {
         gestaoDia?.justificativa?.motivo === "medico" ? gestaoDia.justificativa : null;
       const correcaoEntradaAlterada = correcao ? presencaCorrecaoCampoAlterado("entrada", correcao) : false;
       const correcaoSaidaAlterada = correcao ? presencaCorrecaoCampoAlterado("saida", correcao) : false;
-      const correcaoAprovada =
-        Boolean(correcao) && presencaCorrecaoAnaliseStatusEfetivo(correcao) === "aprovada";
-      const entRealExib =
-        correcaoAprovada && correcao && correcaoEntradaAlterada ? correcao.entradaCorrigida : entReal;
-      const saiRealExib =
-        correcaoAprovada && correcao && correcaoSaidaAlterada ? correcao.saidaCorrigida : saiReal;
+      const entAprovada = presencaCorrecaoCampoAprovado(correcao, "entrada");
+      const saiAprovada = presencaCorrecaoCampoAprovado(correcao, "saida");
+      const entRealExib = entAprovada && correcao ? correcao.entradaCorrigida : entReal;
+      const saiRealExib = saiAprovada && correcao ? correcao.saidaCorrigida : saiReal;
       const horasRealExib =
-        correcaoAprovada && correcao && (correcaoEntradaAlterada || correcaoSaidaAlterada)
+        (entAprovada || saiAprovada) && correcao
           ? formatoDuracaoFmtHorasTotal(entRealExib, saiRealExib)
           : horasReal;
       const podeAnalisarCorrecao = Boolean(
         correcao &&
-          presencaCorrecaoAnaliseStatusEfetivo(correcao) === "pendente" &&
-          podeGerirPresencaStaff(fid),
+          presencaCorrecaoTemCampoPendenteAnalise(correcao) &&
+          podeAnalisarCorrecaoPresencaStaff(fid),
       );
       out.push({
         funcionarioId: fid,
@@ -2768,7 +2783,7 @@ export default function RhCalendarioPage() {
         entRealDesvio: presencaDesvioRelogioMaior5Min(entEsc, entRealExib),
         saiRealDesvio: presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib),
         horasRealDesvio:
-          correcaoAprovada && correcao && (correcaoEntradaAlterada || correcaoSaidaAlterada)
+          (entAprovada || saiAprovada) && correcao
             ? (() => {
                 const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
                 const realMin = duracaoMinutosRelogioHHMM(entRealExib, saiRealExib);
@@ -2801,6 +2816,7 @@ export default function RhCalendarioPage() {
     pontoRelatorioPorFid,
     gestaoRelatorioPorChave,
     podeGerirPresencaStaff,
+    podeAnalisarCorrecaoPresencaStaff,
     podeJustificarPresencaStaff,
   ]);
 
@@ -3368,8 +3384,8 @@ export default function RhCalendarioPage() {
                 : undefined,
             })
           }
-          onAnalisarCorrecao={(fid, dia, decisao) =>
-            analisarCorrecaoPresenca(fid, toISO(dia), decisao)
+          onAnalisarCorrecao={(fid, dia, decisao, campo) =>
+            analisarCorrecaoPresenca(fid, toISO(dia), decisao, campo)
           }
         />
       ) : abaPrincipal === "compromissos" ? (
@@ -3667,24 +3683,18 @@ export default function RhCalendarioPage() {
                         gestaoDia?.justificativa?.motivo === "medico" ? gestaoDia.justificativa : null;
                       const correcaoEntradaAlterada = correcao ? presencaCorrecaoCampoAlterado("entrada", correcao) : false;
                       const correcaoSaidaAlterada = correcao ? presencaCorrecaoCampoAlterado("saida", correcao) : false;
-                      const correcaoAprovada =
-                        Boolean(correcao) && presencaCorrecaoAnaliseStatusEfetivo(correcao) === "aprovada";
-                      const entRealExib =
-                        correcaoAprovada && correcao && correcaoEntradaAlterada
-                          ? correcao.entradaCorrigida
-                          : entReal;
-                      const saiRealExib =
-                        correcaoAprovada && correcao && correcaoSaidaAlterada
-                          ? correcao.saidaCorrigida
-                          : saiReal;
+                      const entAprovada = presencaCorrecaoCampoAprovado(correcao, "entrada");
+                      const saiAprovada = presencaCorrecaoCampoAprovado(correcao, "saida");
+                      const entRealExib = entAprovada && correcao ? correcao.entradaCorrigida : entReal;
+                      const saiRealExib = saiAprovada && correcao ? correcao.saidaCorrigida : saiReal;
                       const horasRealExib =
-                        correcaoAprovada && correcao && (correcaoEntradaAlterada || correcaoSaidaAlterada)
+                        (entAprovada || saiAprovada) && correcao
                           ? formatoDuracaoFmtHorasTotal(entRealExib, saiRealExib)
                           : horasReal;
                       const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entRealExib);
                       const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib);
                       const horasRealDesvio =
-                        correcaoAprovada && correcao && (correcaoEntradaAlterada || correcaoSaidaAlterada)
+                        (entAprovada || saiAprovada) && correcao
                           ? (() => {
                               const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
                               const realMin = duracaoMinutosRelogioHHMM(entRealExib, saiRealExib);
@@ -3699,11 +3709,17 @@ export default function RhCalendarioPage() {
                             );
                       const podeAnalisarCorrecao = Boolean(
                         correcao &&
-                          presencaCorrecaoAnaliseStatusEfetivo(correcao) === "pendente" &&
-                          podeGerirPresencaStaff(fid),
+                          presencaCorrecaoTemCampoPendenteAnalise(correcao) &&
+                          podeAnalisarCorrecaoPresencaStaff(fid),
                       );
+                      const aprovarExigeLider =
+                        gestaoDia?.justificativa?.motivo === "outro" &&
+                        gestaoDia.statusGestao === "em_analise";
                       const mostrarAprovarTurno =
-                        acoesLinha.acaoPrimaria === "aprovar" && podeGerirPresencaStaff(fid);
+                        acoesLinha.acaoPrimaria === "aprovar" &&
+                        (aprovarExigeLider
+                          ? podeAnalisarCorrecaoPresencaStaff(fid)
+                          : podeGerirPresencaStaff(fid));
                       const mostrarJustificarPresenca =
                         acoesLinha.acaoPrimaria === "justificar" &&
                         podeJustificarPresencaStaff(fid);
@@ -3775,8 +3791,12 @@ export default function RhCalendarioPage() {
                                 correcao={correcao}
                                 valorCorrecao={correcao.entradaCorrigida}
                                 podeAnalisar={podeAnalisarCorrecao}
-                                onAprovar={() => analisarCorrecaoPresenca(fid, iso, "aprovada")}
-                                onRejeitar={() => analisarCorrecaoPresenca(fid, iso, "recusada")}
+                                onAprovar={() =>
+                                  analisarCorrecaoPresenca(fid, iso, "aprovada", "entrada")
+                                }
+                                onRejeitar={() =>
+                                  analisarCorrecaoPresenca(fid, iso, "recusada", "entrada")
+                                }
                               />
                             ) : null}
                           </td>
@@ -3808,8 +3828,12 @@ export default function RhCalendarioPage() {
                                 correcao={correcao}
                                 valorCorrecao={correcao.saidaCorrigida}
                                 podeAnalisar={podeAnalisarCorrecao}
-                                onAprovar={() => analisarCorrecaoPresenca(fid, iso, "aprovada")}
-                                onRejeitar={() => analisarCorrecaoPresenca(fid, iso, "recusada")}
+                                onAprovar={() =>
+                                  analisarCorrecaoPresenca(fid, iso, "aprovada", "saida")
+                                }
+                                onRejeitar={() =>
+                                  analisarCorrecaoPresenca(fid, iso, "recusada", "saida")
+                                }
                               />
                             ) : null}
                           </td>

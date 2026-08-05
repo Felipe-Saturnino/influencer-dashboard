@@ -70,6 +70,7 @@ import {
   formatDataHoraIncidente,
   incidenteCategoriaLabel,
   labelMesaIncidente,
+  labelPrestadorIncidente,
   labelTipoJogoIncidente,
   normalizarTipoJogoIncidente,
   timeAlvoLabel,
@@ -123,20 +124,6 @@ function contarPorCategoria(rows: EstudioIncidenteRow[]): Record<IncidenteCatego
   };
   for (const r of rows) out[r.incidente] += 1;
   return out;
-}
-
-function contarLocalMesa(
-  rows: EstudioIncidenteRow[],
-  categoria: IncidenteCategoria,
-): { emMesa: number; foraMesa: number } {
-  let emMesa = 0;
-  let foraMesa = 0;
-  for (const r of rows) {
-    if (r.incidente !== categoria) continue;
-    if (r.local_mesa === "em_mesa") emMesa += 1;
-    else if (r.local_mesa === "fora_mesa") foraMesa += 1;
-  }
-  return { emMesa, foraMesa };
 }
 
 function sortRows(rows: EstudioIncidenteRow[], col: SortCol, dir: SortDir): EstudioIncidenteRow[] {
@@ -286,6 +273,7 @@ export default function Incidentes() {
       mesasRows.map((m) => ({
         id: m.id,
         label: labelMesaIncidente(m.numero_mesa, nomeEstudioJoin(m, estudiosRows), m.nome_mesa),
+        numeroMesa: m.numero_mesa,
         estudioSlug: m.estudio_slug,
         tipoJogo: m.tipo_jogo,
       })),
@@ -464,7 +452,10 @@ export default function Incidentes() {
               mode="single"
               selected={staffFiltroId ? [staffFiltroId] : []}
               onChange={(v) => setStaffFiltroId(v[0] ?? "")}
-              items={staffFiltroOptions.map((s) => ({ id: s.id, name: s.nome }))}
+              items={staffFiltroOptions.map((s) => ({
+                id: s.id,
+                name: labelPrestadorIncidente(s.nome, s.nickname),
+              }))}
               icon={FilterBarIcons.staff}
               triggerEmptyLabel="Todos Staff"
               ariaFilterPrefix="Filtrar por staff"
@@ -489,37 +480,18 @@ export default function Incidentes() {
             <div className="app-grid-kpi-6">
               {CATEGORIAS_KPI.map((cat) => {
                 const meta = INCIDENTE_CATEGORIA_META[cat];
-                const local =
-                  cat === "avisado_resolvido" || cat === "avisado_nao_resolvido"
-                    ? contarLocalMesa(rowsAtualEscopo, cat)
-                    : null;
                 return (
-                  <div key={cat}>
-                    <KpiCard
-                      label={meta.label}
-                      value={String(kpiAtual[cat])}
-                      icon={CATEGORIA_ICON[cat]}
-                      accentColor={meta.color}
-                      atual={kpiAtual[cat]}
-                      anterior={kpiAnterior[cat]}
-                      isHistorico={historico}
-                      isInverso
-                    />
-                    {local ? (
-                      <div
-                        style={{
-                          marginTop: 6,
-                          fontSize: 11,
-                          color: t.textMuted,
-                          fontFamily: FONT.body,
-                          textAlign: "center",
-                        }}
-                      >
-                        Em Mesa: <strong style={{ color: t.text }}>{local.emMesa}</strong> · Fora da Mesa:{" "}
-                        <strong style={{ color: t.text }}>{local.foraMesa}</strong>
-                      </div>
-                    ) : null}
-                  </div>
+                  <KpiCard
+                    key={cat}
+                    label={meta.label}
+                    value={String(kpiAtual[cat])}
+                    icon={CATEGORIA_ICON[cat]}
+                    accentColor={meta.color}
+                    atual={kpiAtual[cat]}
+                    anterior={kpiAnterior[cat]}
+                    isHistorico={historico}
+                    isInverso
+                  />
                 );
               })}
             </div>

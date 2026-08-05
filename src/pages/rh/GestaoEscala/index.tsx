@@ -42,6 +42,7 @@ import {
 } from "../../../lib/gestaoEscalaTurnoMes";
 import { ModalAlterarEscala } from "./ModalAlterarEscala";
 import { ModalHistoricoEscala } from "./ModalHistoricoEscala";
+import { FiltroColunaDiaEscala } from "./FiltroColunaDiaEscala";
 import {
   CelulaIndicadorAlteracaoEscala,
   type EscalaAlteracaoCelulaMeta,
@@ -73,6 +74,7 @@ import {
   dataMinimaEscalaCarrossel,
   diaComDestaqueCalendario,
   diasDoMes,
+  fundoCelulaStatusEscalaDiaria,
   escalaGradeAprovadaNaBase,
   escalaToolbarBtnAzul,
   escalaToolbarBtnNeutro,
@@ -89,6 +91,7 @@ import {
   labelMesAno,
   linhaColaboradorNoFiltroTurnoConsolidado,
   linhaComTurnoMesArea,
+  linhaPassaFiltrosColunaDiaEscala,
   mapAlteracoesUltimasPorCelula,
   mapMarketplaceComentariosPorCelula,
   mapaCelulasFromGradeCarregarPayload,
@@ -174,6 +177,11 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const [filtroNicknameEscala, setFiltroNicknameEscala] = useState("");
   /** Filtro da Escala Diária por turno (clique no Consolidado). */
   const [filtroTurnoConsolidado, setFiltroTurnoConsolidado] = useState<FiltroTurnoConsolidadoRh | null>(null);
+  /**
+   * Filtro estilo Excel por coluna de dia: chave = dia ISO, valor = rótulos permitidos.
+   * Chave ausente = sem filtro naquele dia.
+   */
+  const [filtroColunaDiaEscala, setFiltroColunaDiaEscala] = useState<Record<string, string[]>>({});
   /** Drilldown por estúdio no Consolidado (Game Presenter + Todos Estúdios). */
   const [consolidadoTurnoExpandido, setConsolidadoTurnoExpandido] = useState<
     Partial<Record<"manha" | "tarde" | "noite", boolean>>
@@ -192,6 +200,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   useEffect(() => {
     setFiltroNicknameEscala("");
     setFiltroTurnoConsolidado(null);
+    setFiltroColunaDiaEscala({});
     setConsolidadoTurnoExpandido({});
     setSortEscalaDiaria({ col: modo === "escritorio" ? "nome" : "turno", dir: "asc" });
     setPaginaEscalaDiaria(0);
@@ -199,6 +208,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
 
   useEffect(() => {
     setFiltroTurnoConsolidado(null);
+    setFiltroColunaDiaEscala({});
     setConsolidadoTurnoExpandido({});
     setPaginaEscalaDiaria(0);
   }, [ano, mes]);
@@ -637,10 +647,57 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     );
   }, [linhas, filtroNicknameEscala, modo, filtroArea]);
 
-  const linhasFiltradasEscalaDiaria = useMemo(() => {
+  const textoCelulaEscalaDiariaRow = useCallback(
+    (row: (typeof linhas)[number], diaIso: string): string => {
+      const ck = chaveCelulaGerar(row.id, diaIso);
+      const est = gerarPorFiltro[filtroArea];
+      const gradeAprovada = escalaGradeAprovadaNaBase(est);
+      return gradeAprovada
+        ? labelExibicaoCelulaAlterarEscala(est?.celulas?.[ck], modo, filtroArea)
+        : labelExibicaoCelulaEscala(
+            row.siglaTurnoStaff,
+            est?.celulas?.[ck],
+            row.turnoStaffNome,
+            modo,
+            filtroArea,
+          );
+    },
+    [gerarPorFiltro, filtroArea, modo],
+  );
+
+  const linhasAposTurnoConsolidado = useMemo(() => {
     if (filtroTurnoConsolidado == null) return linhasAposNickname;
     return linhasAposNickname.filter((row) => linhaColaboradorNoFiltroTurnoConsolidado(row, filtroTurnoConsolidado));
   }, [linhasAposNickname, filtroTurnoConsolidado]);
+
+  const opcoesFiltroPorDiaIso = useMemo(() => {
+    const out: Record<string, string[]> = {};
+    for (const d of dias) {
+      const set = new Set<string>();
+      for (const row of linhasAposTurnoConsolidado) {
+        set.add(textoCelulaEscalaDiariaRow(row, d.iso));
+      }
+      out[d.iso] = Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    }
+    return out;
+  }, [dias, linhasAposTurnoConsolidado, textoCelulaEscalaDiariaRow]);
+
+  const linhasFiltradasEscalaDiaria = useMemo(() => {
+    const temFiltroColuna = Object.keys(filtroColunaDiaEscala).length > 0;
+    if (!temFiltroColuna) return linhasAposTurnoConsolidado;
+    return linhasAposTurnoConsolidado.filter((row) => {
+      const mapa: Record<string, string> = {};
+      for (const d of dias) {
+        mapa[d.iso] = textoCelulaEscalaDiariaRow(row, d.iso);
+      }
+      return linhaPassaFiltrosColunaDiaEscala(mapa, filtroColunaDiaEscala);
+    });
+  }, [
+    linhasAposTurnoConsolidado,
+    filtroColunaDiaEscala,
+    dias,
+    textoCelulaEscalaDiariaRow,
+  ]);
 
   const onSortEscalaDiaria = useCallback((col: EscalaDiariaSortCol) => {
     setSortEscalaDiaria((s) => ({
@@ -669,6 +726,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   }, [
     filtroNicknameEscala,
     filtroTurnoConsolidado,
+    filtroColunaDiaEscala,
     sortEscalaDiaria.col,
     sortEscalaDiaria.dir,
     filtroEstudioEscala,
@@ -993,11 +1051,19 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     }),
   });
 
-  const fundoColunaDia = (dia: DiaMes, rowBg: string): string => {
-    if (!diaComDestaqueCalendario(dia)) return rowBg;
-    return t.isDark
-      ? `color-mix(in srgb, rgba(245,158,11,0.22) 32%, ${rowBg})`
-      : `color-mix(in srgb, rgba(245,158,11,0.24) 34%, ${rowBg})`;
+  /** Escala Diária: cabeçalho de dia sem destaque de fim de semana / feriado. */
+  const thDiaEscalaDiaria: CSSProperties = {
+    ...getThStyle(t, {
+      textAlign: "center",
+      minWidth: 72,
+      maxWidth: 88,
+      whiteSpace: "normal",
+      lineHeight: 1.25,
+      fontSize: CONSOLIDADO_FONT_DIA_HEADER,
+      letterSpacing: 0,
+      zIndex: Z_DIA,
+      position: "relative",
+    }),
   };
 
   const sombraColFixa = t.isDark ? "4px 0 10px rgba(0,0,0,0.35)" : "4px 0 10px rgba(0,0,0,0.08)";
@@ -1285,12 +1351,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   ]);
 
   useEffect(() => {
-    if (filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS || filtroArea !== "game_presenter") {
-      setConsolidadoTurnoExpandido({});
-      return;
-    }
-    /** Com Todos Estúdios + Game Presenter, deixa Manhã expandida para o drilldown ficar óbvio. */
-    setConsolidadoTurnoExpandido({ manha: true });
+    /** Drilldowns do Consolidado começam recolhidos ao trocar área/estúdio. */
+    setConsolidadoTurnoExpandido({});
   }, [filtroEstudioEscalaEfetivo, filtroArea]);
 
   const alternarFiltroTurnoConsolidado = useCallback((k: FiltroTurnoConsolidadoRh) => {
@@ -2342,11 +2404,43 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     <th
                       key={dia.iso}
                       scope="col"
-                      style={thDiaConsolidado(dia)}
+                      style={thDiaEscalaDiaria}
                       title={dia.feriadoNome ? `${dia.iso} · ${dia.feriadoNome}` : dia.iso}
                     >
-                      <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
-                      <div style={{ fontWeight: 600, textTransform: "lowercase", opacity: 0.95 }}>{dia.dowShort}</div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 0,
+                        }}
+                      >
+                        <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
+                        <div style={{ fontWeight: 600, textTransform: "lowercase", opacity: 0.95 }}>
+                          {dia.dowShort}
+                        </div>
+                        <FiltroColunaDiaEscala
+                          t={t}
+                          diaLabel={`${dia.dia} ${dia.dowShort}`}
+                          opcoes={opcoesFiltroPorDiaIso[dia.iso] ?? []}
+                          selecionados={
+                            Object.prototype.hasOwnProperty.call(filtroColunaDiaEscala, dia.iso)
+                              ? filtroColunaDiaEscala[dia.iso]!
+                              : null
+                          }
+                          onChange={(next) => {
+                            setFiltroColunaDiaEscala((prev) => {
+                              const copy = { ...prev };
+                              if (next == null) {
+                                delete copy[dia.iso];
+                              } else {
+                                copy[dia.iso] = next;
+                              }
+                              return copy;
+                            });
+                          }}
+                        />
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -2385,6 +2479,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           : "Nenhum colaborador corresponde à pesquisa por nome ou nickname."
                         : filtroTurnoConsolidado != null && linhasAposNickname.length > 0
                           ? "Nenhum colaborador com o turno selecionado."
+                          : Object.keys(filtroColunaDiaEscala).length > 0
+                            ? "Nenhum colaborador corresponde aos filtros das colunas de dia."
                           : filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS
                             ? "Nenhum colaborador com o estúdio selecionado."
                           : "Nenhum colaborador corresponde aos filtros aplicados."}
@@ -2481,12 +2577,14 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                                   filtroArea,
                                 )
                             : "";
+                          const bgStatus = fundoCelulaStatusEscalaDiaria(textoCelula, t.isDark);
+                          const bgCelula = bgStatus ?? bg;
                           return (
                             <td
                               key={`${row.id}-${dia.iso}`}
                               style={{
                                 ...tdDia,
-                                background: fundoColunaDia(dia, bg),
+                                background: bgCelula,
                                 ...(podeEditarCelulasDia ? { minWidth: 76, maxWidth: 86 } : {}),
                                 ...(alteracaoMeta || comentarioMarketplace
                                   ? { position: "relative" as const, overflow: "visible" as const }
@@ -2507,7 +2605,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                                       e.target.value,
                                     )
                                   }
-                                  style={selectCelulaGerarStyle}
+                                  style={{
+                                    ...selectCelulaGerarStyle,
+                                    background: bgStatus
+                                      ? "color-mix(in srgb, #ffffff 35%, transparent)"
+                                      : selectCelulaGerarStyle.background,
+                                  }}
                                 >
                                   {opts.map((o) => (
                                     <option key={o.value === "" ? "__empty" : o.value} value={o.value}>

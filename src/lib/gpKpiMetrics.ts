@@ -13,6 +13,13 @@ export const GP_KPI_JOGOS_ORDEM: GameIdentityKey[] = [
   "roleta",
 ];
 
+/** Shuffler: mesma ordem sem Roleta. */
+export const SHUFFLER_KPI_JOGOS_ORDEM: GameIdentityKey[] = [
+  "blackjack",
+  "baccarat",
+  "futebol_brasileiro",
+];
+
 export type GpKpiDiarioRow = {
   dia_brt: string;
   table_id: string;

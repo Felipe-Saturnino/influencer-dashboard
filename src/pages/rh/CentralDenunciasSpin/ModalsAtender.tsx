@@ -5,7 +5,7 @@ import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown }
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
-import { STORAGE_BUCKET, sanitizeStorageFileName, tipoLabel, type DenunciaStatusDb } from "../../../lib/canalDenunciasSpin";
+import { STORAGE_BUCKET, sanitizeStorageFileName, labelAutorMensagemRh, tipoLabel, type DenunciaStatusDb } from "../../../lib/canalDenunciasSpin";
 import type { DenunciaListRow, AnexoRow } from "./types";
 
 const MODAL_MAX = "90dvh" as const;
@@ -65,7 +65,19 @@ export function ModalAtenderDenuncia({
   const [notaTexto, setNotaTexto] = useState("");
   const [notaFiles, setNotaFiles] = useState<{ id: string; file: File }[]>([]);
   const [notaSaving, setNotaSaving] = useState(false);
-  const [notas, setNotas] = useState<{ id: string; texto: string; created_at: string; created_by: string; autor: string; anexos: AnexoRow[] }[]>([]);
+  const [notaSomenteInterna, setNotaSomenteInterna] = useState(false);
+  const [notas, setNotas] = useState<
+    {
+      id: string;
+      texto: string;
+      created_at: string;
+      created_by: string | null;
+      autor_origem: "rh" | "relator";
+      visivel_externo: boolean;
+      autor: string;
+      anexos: AnexoRow[];
+    }[]
+  >([]);
   useEscClose(open, onClose);
 
   const finalStatuses: DenunciaStatusDb[] = ["procedente", "nao_procedente"];
@@ -75,12 +87,12 @@ export function ModalAtenderDenuncia({
     if (!row?.id) return;
     const { data: notes } = await supabase
       .from("canal_denuncia_anotacoes")
-      .select("id, texto, created_at, created_by")
+      .select("id, texto, created_at, created_by, autor_origem, visivel_externo")
       .eq("denuncia_id", row.id)
       .order("created_at", { ascending: true });
     const { data: ax } = await supabase.from("canal_denuncia_anexos").select("*").eq("denuncia_id", row.id).not("anotacao_id", "is", null);
     const nlist = notes ?? [];
-    const uids = [...new Set(nlist.map((n) => n.created_by))];
+    const uids = [...new Set(nlist.map((n) => n.created_by).filter(Boolean))] as string[];
     const nm: Record<string, string> = {};
     if (uids.length) {
       const { data: profs } = await supabase.from("profiles").select("id, name").in("id", uids);
@@ -90,11 +102,19 @@ export function ModalAtenderDenuncia({
     }
     const axList = (ax ?? []) as AnexoRow[];
     setNotas(
-      nlist.map((n) => ({
-        ...n,
-        autor: nm[n.created_by] ?? "—",
-        anexos: axList.filter((a) => a.anotacao_id === n.id),
-      })),
+      nlist.map((n) => {
+        const origem = (n.autor_origem === "relator" ? "relator" : "rh") as "rh" | "relator";
+        return {
+          id: n.id,
+          texto: n.texto,
+          created_at: n.created_at,
+          created_by: n.created_by,
+          autor_origem: origem,
+          visivel_externo: n.visivel_externo !== false,
+          autor: labelAutorMensagemRh(origem, n.created_by ? nm[n.created_by] : null),
+          anexos: axList.filter((a) => a.anotacao_id === n.id),
+        };
+      }),
     );
   }, [row?.id]);
 
@@ -104,6 +124,7 @@ export function ModalAtenderDenuncia({
       setStatusDraft(row.status);
       setResolucaoDraft(row.descricao_resolucao ?? "");
       setErr(null);
+      setNotaSomenteInterna(false);
       void loadNotas();
     }
   }, [open, row, loadNotas]);
@@ -148,7 +169,13 @@ export function ModalAtenderDenuncia({
     setErr(null);
     const { data: ins, error: insErr } = await supabase
       .from("canal_denuncia_anotacoes")
-      .insert({ denuncia_id: row.id, texto: txt, created_by: uid })
+      .insert({
+        denuncia_id: row.id,
+        texto: txt,
+        created_by: uid,
+        autor_origem: "rh",
+        visivel_externo: !notaSomenteInterna,
+      })
       .select("id")
       .single();
     if (insErr || !ins) {
@@ -168,6 +195,7 @@ export function ModalAtenderDenuncia({
           setNotaSaving(false);
           setNotaTexto("");
           setNotaFiles([]);
+          setNotaSomenteInterna(false);
           void loadNotas();
           onSaved();
           return;
@@ -184,6 +212,7 @@ export function ModalAtenderDenuncia({
     }
     setNotaTexto("");
     setNotaFiles([]);
+    setNotaSomenteInterna(false);
     setNotaSaving(false);
     void loadNotas();
     onSaved();
@@ -333,6 +362,10 @@ export function ModalAtenderDenuncia({
 
           {aba === "anotacoes" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <p style={{ margin: 0, fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
+                Mensagens visíveis ao relator na consulta pública (exceto se marcar «Somente interno»). Respostas do
+                relator aparecem aqui automaticamente.
+              </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 0, width: "100%" }}>
                 <label htmlFor="nota-nova" style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>
                   Nova anotação
@@ -355,6 +388,26 @@ export function ModalAtenderDenuncia({
                     resize: "vertical",
                   }}
                 />
+                <label
+                  style={{
+                    marginTop: 10,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 13,
+                    color: t.text,
+                    cursor: "pointer",
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={notaSomenteInterna}
+                    onChange={(e) => setNotaSomenteInterna(e.target.checked)}
+                    disabled={notaSaving}
+                  />
+                  Somente interno (não aparece na consulta pública)
+                </label>
                 <div style={{ marginTop: 10 }}>
                   <CampoUploadArquivos
                     id="nota-anexo"
@@ -400,8 +453,15 @@ export function ModalAtenderDenuncia({
                 </button>
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 10 }}>Histórico de anotações</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", marginBottom: 10 }}>
+                  Histórico de comunicação
+                </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {notas.length === 0 ? (
+                    <div style={{ fontSize: 13, color: t.textMuted, textAlign: "center", padding: "12px 0" }}>
+                      Nenhuma mensagem registrada.
+                    </div>
+                  ) : null}
                   {notas.map((n) => (
                     <div
                       key={n.id}
@@ -409,11 +469,75 @@ export function ModalAtenderDenuncia({
                         padding: 12,
                         borderRadius: 10,
                         border: `1px solid ${t.cardBorder}`,
-                        background: t.isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+                        background:
+                          n.autor_origem === "relator"
+                            ? t.isDark
+                              ? "rgba(124,58,237,0.12)"
+                              : "rgba(124,58,237,0.06)"
+                            : t.isDark
+                              ? "rgba(255,255,255,0.03)"
+                              : "rgba(0,0,0,0.02)",
                       }}
                     >
-                      <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 6 }}>
-                        {fmtDt(n.created_at)} · {n.autor}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 8,
+                          alignItems: "center",
+                          fontSize: 12,
+                          color: t.textMuted,
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span>
+                          {fmtDt(n.created_at)} · {n.autor}
+                        </span>
+                        {n.autor_origem === "relator" ? (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              color: "var(--brand-primary, #7c3aed)",
+                              border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 40%, transparent)",
+                              background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)",
+                            }}
+                          >
+                            Relator
+                          </span>
+                        ) : null}
+                        {n.autor_origem === "rh" && !n.visivel_externo ? (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              color: t.textMuted,
+                              border: `1px solid ${t.cardBorder}`,
+                              background: t.inputBg,
+                            }}
+                          >
+                            Interno
+                          </span>
+                        ) : null}
+                        {n.autor_origem === "rh" && n.visivel_externo ? (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              color: "#22c55e",
+                              border: "1px solid rgba(34,197,94,0.35)",
+                              background: "rgba(34,197,94,0.12)",
+                            }}
+                          >
+                            Visível na consulta
+                          </span>
+                        ) : null}
                       </div>
                       <div style={{ fontSize: 14, color: t.text, whiteSpace: "pre-wrap" }}>{n.texto}</div>
                       {n.anexos.length > 0 && (

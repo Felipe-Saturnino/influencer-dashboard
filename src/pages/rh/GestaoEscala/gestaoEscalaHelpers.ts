@@ -53,6 +53,74 @@ export function diaComDestaqueCalendario(dia: DiaMes): boolean {
   return dia.isWeekend || dia.isFeriadoSP;
 }
 
+/**
+ * Chave de cor da célula na Escala Diária (rótulo exibido).
+ * Compra - Turno partilha a cor do turno correspondente.
+ */
+export type EscalaCelulaStatusCorKey =
+  | "manha"
+  | "tarde"
+  | "noite"
+  | "comercial"
+  | "venda"
+  | "folga"
+  | "troca"
+  | "compra";
+
+export function chaveCorCelulaEscalaDiaria(textoCelula: string): EscalaCelulaStatusCorKey | null {
+  const v = (textoCelula ?? "").trim();
+  if (!v || v === "—") return null;
+  if (v === "Folga") return "folga";
+  if (v === "Venda") return "venda";
+  if (v === "Troca") return "troca";
+  if (v === "Comercial" || v === "Compra - Comercial") return "comercial";
+  if (v === "Manhã" || v === "Compra - Manhã") return "manha";
+  if (v === "Tarde" || v === "Compra - Tarde") return "tarde";
+  if (v === "Noite" || v === "Compra - Noite") return "noite";
+  if (v === "Compra") return "compra";
+  return null;
+}
+
+/** Fundos pastel alinhados ao Excel legado (Manhã azul, Tarde pêssego, Noite verde, …). */
+const ESCALA_CELULA_STATUS_BG: Record<EscalaCelulaStatusCorKey, { light: string; dark: string }> = {
+  manha: { light: "rgba(59, 130, 246, 0.28)", dark: "rgba(59, 130, 246, 0.34)" },
+  tarde: { light: "rgba(251, 146, 60, 0.32)", dark: "rgba(251, 146, 60, 0.36)" },
+  noite: { light: "rgba(34, 197, 94, 0.28)", dark: "rgba(34, 197, 94, 0.34)" },
+  comercial: { light: "rgba(14, 165, 233, 0.26)", dark: "rgba(14, 165, 233, 0.32)" },
+  venda: { light: "rgba(167, 139, 250, 0.32)", dark: "rgba(167, 139, 250, 0.36)" },
+  folga: { light: "rgba(148, 163, 184, 0.22)", dark: "rgba(148, 163, 184, 0.28)" },
+  troca: { light: "rgba(245, 158, 11, 0.32)", dark: "rgba(245, 158, 11, 0.36)" },
+  compra: { light: "rgba(236, 72, 153, 0.28)", dark: "rgba(236, 72, 153, 0.34)" },
+};
+
+export function fundoCelulaStatusEscalaDiaria(
+  textoCelula: string,
+  isDark: boolean,
+): string | undefined {
+  const key = chaveCorCelulaEscalaDiaria(textoCelula);
+  if (!key) return undefined;
+  const pair = ESCALA_CELULA_STATUS_BG[key];
+  return isDark ? pair.dark : pair.light;
+}
+
+/**
+ * Linha passa no filtro Excel das colunas de dia.
+ * `filtrosPorDiaIso[iso]` = lista de rótulos permitidos; chave ausente = sem filtro naquele dia.
+ */
+export function linhaPassaFiltrosColunaDiaEscala(
+  textoPorDiaIso: Record<string, string>,
+  filtrosPorDiaIso: Record<string, string[]>,
+): boolean {
+  for (const [iso, permitidos] of Object.entries(filtrosPorDiaIso)) {
+    if (permitidos == null) continue;
+    /** Checklist vazia = nenhum valor selecionado → nenhuma linha passa. */
+    if (permitidos.length === 0) return false;
+    const texto = textoPorDiaIso[iso] ?? "—";
+    if (!permitidos.includes(texto)) return false;
+  }
+  return true;
+}
+
 export type LinhaColaborador = {
   id: string;
   nome: string;

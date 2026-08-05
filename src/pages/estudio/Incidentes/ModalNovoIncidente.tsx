@@ -9,7 +9,7 @@ import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS } from "../../../components/dashboard";
 import { getFiltroBarTabButtonStyle } from "../../../lib/filterBarStyles";
-import { textoContemBusca } from "../../../lib/searchText";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import {
   fetchStaffFormIncidente,
@@ -19,6 +19,7 @@ import {
 import {
   ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES,
   INCIDENTE_CATEGORIA_OPTIONS,
+  INCIDENTE_ID_RODADA_SEM_ID,
   INCIDENTE_RESOLUCAO_OPTIONS,
   type IncidenteCategoria,
   type IncidenteLocalMesa,
@@ -27,7 +28,10 @@ import {
   type IncidenteTimeAlvo,
 } from "../../../lib/estudioIncidentesTypes";
 import {
+  compareNumeroMesaIncidente,
   hojeIsoDateLocal,
+  labelPrestadorIncidente,
+  normalizarHoraRodadaTexto,
   normalizarTipoJogoIncidente,
   tiposIncidenteParaForm,
 } from "../../../lib/estudioIncidentesHelpers";
@@ -35,6 +39,7 @@ import {
 export type NovoIncidenteMesaOption = {
   id: string;
   label: string;
+  numeroMesa: string | null;
   estudioSlug: string | null;
   tipoJogo: string;
 };
@@ -46,6 +51,13 @@ const ANEXO_HINT = "Vários arquivos · tamanho máximo por arquivo: 10 MB";
 
 type AnexoPendente = { key: string; file: File };
 
+type ComboOption = {
+  id: string;
+  label: string;
+  /** Textos extras para busca (ex.: nickname). */
+  buscaExtras?: string[];
+};
+
 function ComboBuscavel({
   id,
   label,
@@ -54,14 +66,19 @@ function ComboBuscavel({
   onChange,
   options,
   disabled,
+  forceSearch,
+  searchPlaceholder,
 }: {
   id: string;
   label: string;
   placeholder: string;
   value: string;
   onChange: (id: string) => void;
-  options: { id: string; label: string }[];
+  options: ComboOption[];
   disabled?: boolean;
+  /** Exibe a barra de pesquisa mesmo com ≤5 opções. */
+  forceSearch?: boolean;
+  searchPlaceholder?: string;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -82,9 +99,12 @@ function ComboBuscavel({
   }, [open]);
 
   const selecionado = options.find((o) => o.id === value);
+  const showSearch = forceSearch || options.length > 5;
   const filtered = useMemo(() => {
     if (!query.trim()) return options;
-    return options.filter((o) => textoContemBusca(o.label, query));
+    return options.filter((o) =>
+      textoContemBuscaEmAlgum(query, o.label, ...(o.buscaExtras ?? [])),
+    );
   }, [options, query]);
 
   return (
@@ -135,17 +155,17 @@ function ComboBuscavel({
             border: `1px solid ${t.cardBorder}`,
             borderRadius: 12,
             padding: 8,
-            maxHeight: 240,
+            maxHeight: 280,
             overflowY: "auto",
             boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
           }}
         >
-          {options.length > 5 ? (
+          {showSearch ? (
             <div style={{ marginBottom: 6 }}>
               <BarraPesquisaFiltroPainel
                 value={query}
                 onChange={setQuery}
-                placeholder={placeholderPesquisaFiltro(label)}
+                placeholder={searchPlaceholder ?? placeholderPesquisaFiltro(label)}
               />
             </div>
           ) : null}
@@ -188,7 +208,9 @@ function ComboBuscavel({
                   color: o.id === value ? brand.primary : t.text,
                   fontWeight: o.id === value ? 700 : 400,
                   background:
-                    o.id === value ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)" : "transparent",
+                    o.id === value
+                      ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                      : "transparent",
                 }}
               >
                 {o.label}
@@ -238,6 +260,18 @@ const inputBaseStyle = (t: { cardBorder: string; inputBg?: string; cardBg: strin
   boxSizing: "border-box" as const,
 });
 
+const row2: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 16,
+};
+
+const row3: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: 16,
+};
+
 export function ModalNovoIncidente({
   mesas,
   onClose,
@@ -253,6 +287,7 @@ export function ModalNovoIncidente({
   const [timeAlvo, setTimeAlvo] = useState<IncidenteTimeAlvo>("gp");
   const [mesaId, setMesaId] = useState("");
   const [idRodada, setIdRodada] = useState("");
+  const [semIdRodada, setSemIdRodada] = useState(false);
   const [dataRodada, setDataRodada] = useState(hojeIsoDateLocal());
   const [horaRodada, setHoraRodada] = useState("");
   const [prestadorId, setPrestadorId] = useState("");
@@ -278,6 +313,7 @@ export function ModalNovoIncidente({
         if (!cancel) setStaffOptions(rows);
       } catch (e) {
         console.error("Incidentes: falha ao carregar staff do formulário", e);
+        if (!cancel) setStaffOptions([]);
       } finally {
         if (!cancel) setLoadingStaff(false);
       }
@@ -295,8 +331,11 @@ export function ModalNovoIncidente({
   }, [timeAlvo]);
 
   const mesasDisponiveis = useMemo(() => {
-    if (timeAlvo !== "shuf") return mesas;
-    return mesas.filter((m) => normalizarTipoJogoIncidente(m.tipoJogo) !== "roleta");
+    const base =
+      timeAlvo !== "shuf"
+        ? [...mesas]
+        : mesas.filter((m) => normalizarTipoJogoIncidente(m.tipoJogo) !== "roleta");
+    return base.sort((a, b) => compareNumeroMesaIncidente(a.numeroMesa, b.numeroMesa));
   }, [mesas, timeAlvo]);
 
   const mesaSelecionada = mesasDisponiveis.find((m) => m.id === mesaId) ?? null;
@@ -310,6 +349,16 @@ export function ModalNovoIncidente({
     if (tipo && !tiposOptions.includes(tipo)) setTipo("");
   }, [tiposOptions, tipo]);
 
+  const prestadorComboOptions = useMemo<ComboOption[]>(
+    () =>
+      staffOptions.map((s) => ({
+        id: s.id,
+        label: labelPrestadorIncidente(s.nome, s.nickname),
+        buscaExtras: [s.nome, s.nickname ?? ""],
+      })),
+    [staffOptions],
+  );
+
   function onAddAnexos(files: File[]) {
     const oversized = files.find((f) => f.size > ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES);
     if (oversized) {
@@ -319,7 +368,10 @@ export function ModalNovoIncidente({
     setErro(null);
     setAnexos((prev) => [
       ...prev,
-      ...files.map((file) => ({ key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`, file })),
+      ...files.map((file) => ({
+        key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
+        file,
+      })),
     ]);
   }
 
@@ -334,16 +386,17 @@ export function ModalNovoIncidente({
       setErro("Selecione a mesa do incidente.");
       return;
     }
-    if (!idRodada.trim()) {
-      setErro("Informe o ID da rodada.");
+    if (!semIdRodada && !idRodada.trim()) {
+      setErro("Informe o ID da rodada ou marque «Não tem ID».");
       return;
     }
     if (!dataRodada) {
       setErro("Informe a data da rodada.");
       return;
     }
-    if (!horaRodada) {
-      setErro("Informe a hora da rodada.");
+    const horaNorm = normalizarHoraRodadaTexto(horaRodada);
+    if (!horaNorm) {
+      setErro("Informe a hora da rodada no formato HH:MM:SS.");
       return;
     }
     if (!prestadorId) {
@@ -376,7 +429,7 @@ export function ModalNovoIncidente({
     }
 
     const relatorNome = user?.name?.trim() || user?.email || "Usuário";
-    const ocorridoEm = `${dataRodada}T${horaRodada}:00`;
+    const ocorridoEm = `${dataRodada}T${horaNorm}`;
 
     setSalvando(true);
     try {
@@ -391,9 +444,9 @@ export function ModalNovoIncidente({
         jogo: mesaSelecionada.tipoJogo,
         incidente: incidenteCategoria,
         tipo,
-        id_rodada: idRodada.trim(),
+        id_rodada: semIdRodada ? INCIDENTE_ID_RODADA_SEM_ID : idRodada.trim(),
         data_rodada: dataRodada,
-        hora_rodada: horaRodada,
+        hora_rodada: horaNorm,
         local_mesa: timeAlvo === "gp" ? "em_mesa" : (localMesa as IncidenteLocalMesa),
         resolucao,
         payout_necessario: payoutNecessario,
@@ -429,19 +482,206 @@ export function ModalNovoIncidente({
     }
   }
 
-  const gridStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 16,
-  } as const;
+  const campoMesa = (
+    <Campo label="Mesa" required>
+      <ComboBuscavel
+        id="novo-incidente-mesa"
+        label="Mesa"
+        placeholder="Selecione a mesa"
+        value={mesaId}
+        onChange={setMesaId}
+        options={mesasDisponiveis.map((m) => ({ id: m.id, label: m.label }))}
+      />
+    </Campo>
+  );
+
+  const campoTipo = (
+    <Campo label="Tipo" required>
+      <select
+        value={tipo}
+        onChange={(e) => setTipo(e.target.value)}
+        disabled={tiposOptions.length === 0}
+        style={inputBaseStyle(t)}
+      >
+        <option value="">{tiposOptions.length === 0 ? "Selecione a mesa primeiro" : "Selecione o tipo"}</option>
+        {tiposOptions.map((tp) => (
+          <option key={tp} value={tp}>
+            {tp}
+          </option>
+        ))}
+      </select>
+    </Campo>
+  );
+
+  const campoIncidente = (
+    <Campo label="Incidente">
+      <select
+        value={incidenteCategoria}
+        onChange={(e) => setIncidenteCategoria(e.target.value as IncidenteCategoria)}
+        style={inputBaseStyle(t)}
+      >
+        {INCIDENTE_CATEGORIA_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </Campo>
+  );
+
+  const campoResolucao = (
+    <Campo label="Resolução">
+      <select
+        value={resolucao}
+        onChange={(e) => setResolucao(e.target.value as IncidenteResolucao)}
+        style={inputBaseStyle(t)}
+      >
+        {INCIDENTE_RESOLUCAO_OPTIONS.map((r) => (
+          <option key={r} value={r}>
+            {r}
+          </option>
+        ))}
+      </select>
+    </Campo>
+  );
+
+  const campoPayout = (
+    <Campo label="Payout necessário">
+      <div role="group" aria-label="Payout necessário" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          aria-pressed={payoutNecessario}
+          onClick={() => setPayoutNecessario(true)}
+          style={getFiltroBarTabButtonStyle(t, brand, payoutNecessario)}
+        >
+          Sim
+        </button>
+        <button
+          type="button"
+          aria-pressed={!payoutNecessario}
+          onClick={() => setPayoutNecessario(false)}
+          style={getFiltroBarTabButtonStyle(t, brand, !payoutNecessario)}
+        >
+          Não
+        </button>
+      </div>
+    </Campo>
+  );
+
+  const campoLocalShoe = (
+    <Campo label="Local do Shoe" required>
+      <div role="group" aria-label="Local do Shoe" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          aria-pressed={localMesa === "em_mesa"}
+          onClick={() => setLocalMesa("em_mesa")}
+          style={getFiltroBarTabButtonStyle(t, brand, localMesa === "em_mesa")}
+        >
+          Em Jogo
+        </button>
+        <button
+          type="button"
+          aria-pressed={localMesa === "fora_mesa"}
+          onClick={() => setLocalMesa("fora_mesa")}
+          style={getFiltroBarTabButtonStyle(t, brand, localMesa === "fora_mesa")}
+        >
+          Fora de Jogo
+        </button>
+      </div>
+    </Campo>
+  );
+
+  const campoPrestador = (
+    <Campo label="Prestador" required>
+      <ComboBuscavel
+        id="novo-incidente-prestador"
+        label="Prestador"
+        placeholder={loadingStaff ? "Carregando…" : "Selecione o prestador"}
+        value={prestadorId}
+        onChange={setPrestadorId}
+        options={prestadorComboOptions}
+        disabled={loadingStaff}
+        forceSearch
+        searchPlaceholder="Pesquisar por nome ou nickname..."
+      />
+    </Campo>
+  );
+
+  const campoIdRodada = (
+    <Campo label="ID da Rodada" required={!semIdRodada}>
+      <input
+        type="text"
+        value={semIdRodada ? "" : idRodada}
+        onChange={(e) => setIdRodada(e.target.value)}
+        disabled={semIdRodada || salvando}
+        placeholder={semIdRodada ? "Sem ID" : undefined}
+        style={{
+          ...inputBaseStyle(t),
+          opacity: semIdRodada ? 0.6 : 1,
+        }}
+        aria-required={!semIdRodada}
+      />
+      <label
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          marginTop: 8,
+          fontSize: 12,
+          color: t.text,
+          fontFamily: FONT.body,
+          cursor: salvando ? "not-allowed" : "pointer",
+          userSelect: "none",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={semIdRodada}
+          disabled={salvando}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            setSemIdRodada(checked);
+            if (checked) setIdRodada("");
+          }}
+          style={{ width: 15, height: 15, accentColor: "var(--brand-primary, #7c3aed)" }}
+        />
+        Não tem ID
+      </label>
+    </Campo>
+  );
+
+  const campoDataRodada = (
+    <Campo label="Data da Rodada" required>
+      <input
+        type="date"
+        value={dataRodada}
+        onChange={(e) => setDataRodada(e.target.value)}
+        style={inputBaseStyle(t)}
+      />
+    </Campo>
+  );
+
+  const campoHoraRodada = (
+    <Campo label="Hora da Rodada" required>
+      <input
+        type="text"
+        value={horaRodada}
+        onChange={(e) => setHoraRodada(e.target.value)}
+        placeholder="#HH:MM:SS"
+        inputMode="numeric"
+        autoComplete="off"
+        style={inputBaseStyle(t)}
+      />
+    </Campo>
+  );
 
   return (
-    <ModalBase onClose={onClose} maxWidth={720}>
+    <ModalBase onClose={onClose} maxWidth={920}>
       <ModalHeader title="Novo Incidente" onClose={onClose} />
 
-      <div style={{ display: "grid", gap: 16 }}>
+      <div style={{ display: "grid", gap: 18 }}>
         <Campo label="Time">
-          <div role="tablist" aria-label="Time" style={{ display: "flex", gap: 8 }}>
+          <div role="tablist" aria-label="Time" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <FiltroBarTabButton
               id="tab-novo-incidente-gp"
               active={timeAlvo === "gp"}
@@ -461,146 +701,38 @@ export function ModalNovoIncidente({
           </div>
         </Campo>
 
-        <div style={gridStyle}>
-          <Campo label="Mesa" required>
-            <ComboBuscavel
-              id="novo-incidente-mesa"
-              label="Mesa"
-              placeholder="Selecione a mesa"
-              value={mesaId}
-              onChange={setMesaId}
-              options={mesasDisponiveis.map((m) => ({ id: m.id, label: m.label }))}
-            />
-          </Campo>
+        <div style={row2}>
+          {campoMesa}
+          {campoTipo}
+        </div>
 
-          <Campo label="ID da Rodada" required>
-            <input
-              type="text"
-              value={idRodada}
-              onChange={(e) => setIdRodada(e.target.value)}
-              style={inputBaseStyle(t)}
-            />
-          </Campo>
-
-          <Campo label="Data da Rodada">
-            <input
-              type="date"
-              value={dataRodada}
-              onChange={(e) => setDataRodada(e.target.value)}
-              style={inputBaseStyle(t)}
-            />
-          </Campo>
-
-          <Campo label="Hora da Rodada" required>
-            <input
-              type="time"
-              value={horaRodada}
-              onChange={(e) => setHoraRodada(e.target.value)}
-              style={inputBaseStyle(t)}
-            />
-          </Campo>
-
-          <Campo label="Prestador" required>
-            <ComboBuscavel
-              id="novo-incidente-prestador"
-              label="Prestador"
-              placeholder={loadingStaff ? "Carregando…" : "Selecione o prestador"}
-              value={prestadorId}
-              onChange={setPrestadorId}
-              options={staffOptions.map((s) => ({ id: s.id, label: `${s.nome} — ${s.papel}` }))}
-              disabled={loadingStaff}
-            />
-          </Campo>
-
-          <Campo label="Incidente">
-            <select
-              value={incidenteCategoria}
-              onChange={(e) => setIncidenteCategoria(e.target.value as IncidenteCategoria)}
-              style={inputBaseStyle(t)}
-            >
-              {INCIDENTE_CATEGORIA_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          <Campo label="Tipo" required>
-            <select
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-              disabled={tiposOptions.length === 0}
-              style={inputBaseStyle(t)}
-            >
-              <option value="">
-                {tiposOptions.length === 0 ? "Selecione a mesa primeiro" : "Selecione o tipo"}
-              </option>
-              {tiposOptions.map((tp) => (
-                <option key={tp} value={tp}>
-                  {tp}
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          {timeAlvo === "shuf" ? (
-            <Campo label="Local do Shoe" required>
-              <div role="group" aria-label="Local do Shoe" style={{ display: "flex", gap: 8 }}>
-                <button
-                  type="button"
-                  aria-pressed={localMesa === "em_mesa"}
-                  onClick={() => setLocalMesa("em_mesa")}
-                  style={getFiltroBarTabButtonStyle(t, brand, localMesa === "em_mesa")}
-                >
-                  Em Jogo
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={localMesa === "fora_mesa"}
-                  onClick={() => setLocalMesa("fora_mesa")}
-                  style={getFiltroBarTabButtonStyle(t, brand, localMesa === "fora_mesa")}
-                >
-                  Fora de Jogo
-                </button>
-              </div>
-            </Campo>
-          ) : null}
-
-          <Campo label="Resolução">
-            <select
-              value={resolucao}
-              onChange={(e) => setResolucao(e.target.value as IncidenteResolucao)}
-              style={inputBaseStyle(t)}
-            >
-              {INCIDENTE_RESOLUCAO_OPTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          <Campo label="Payout necessário">
-            <div role="group" aria-label="Payout necessário" style={{ display: "flex", gap: 8 }}>
-              <button
-                type="button"
-                aria-pressed={payoutNecessario}
-                onClick={() => setPayoutNecessario(true)}
-                style={getFiltroBarTabButtonStyle(t, brand, payoutNecessario)}
-              >
-                Sim
-              </button>
-              <button
-                type="button"
-                aria-pressed={!payoutNecessario}
-                onClick={() => setPayoutNecessario(false)}
-                style={getFiltroBarTabButtonStyle(t, brand, !payoutNecessario)}
-              >
-                Não
-              </button>
+        {timeAlvo === "gp" ? (
+          <div style={row3}>
+            {campoIncidente}
+            {campoResolucao}
+            {campoPayout}
+          </div>
+        ) : (
+          <>
+            <div style={row2}>
+              {campoIncidente}
+              {campoResolucao}
             </div>
-          </Campo>
+            <div style={row2}>
+              {campoPayout}
+              {campoLocalShoe}
+            </div>
+          </>
+        )}
+
+        <div style={row2}>
+          {campoPrestador}
+          {campoIdRodada}
+        </div>
+
+        <div style={row2}>
+          {campoDataRodada}
+          {campoHoraRodada}
         </div>
 
         <Campo label="Descrição" required>
@@ -659,7 +791,8 @@ export function ModalNovoIncidente({
               padding: "10px 20px",
               borderRadius: 10,
               border: "none",
-              background: "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))",
+              background:
+                "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))",
               color: "#fff",
               fontSize: 13,
               fontWeight: 700,

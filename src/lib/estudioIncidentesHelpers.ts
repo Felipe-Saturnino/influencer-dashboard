@@ -134,3 +134,44 @@ export function hojeIsoDateLocal(): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+/** Ordenação de mesa pelo número (numérico; sem número vai ao fim). */
+export function compareNumeroMesaIncidente(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): number {
+  const digitos = (v: string | null | undefined) => {
+    const m = String(v ?? "").trim().match(/\d+/);
+    return m ? Number.parseInt(m[0]!, 10) : NaN;
+  };
+  const na = digitos(a);
+  const nb = digitos(b);
+  const aOk = Number.isFinite(na);
+  const bOk = Number.isFinite(nb);
+  if (aOk && bOk && na !== nb) return na - nb;
+  if (aOk && !bOk) return -1;
+  if (!aOk && bOk) return 1;
+  return String(a ?? "").localeCompare(String(b ?? ""), "pt-BR", { numeric: true });
+}
+
+/**
+ * Normaliza hora digitada (texto) para `HH:MM:SS` aceito pela coluna `time`.
+ * Aceita `H:MM`, `HH:MM` e `HH:MM:SS` (com `#` opcional no início).
+ */
+export function normalizarHoraRodadaTexto(raw: string): string | null {
+  const s = raw.trim().replace(/^#/, "");
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+  if (!m) return null;
+  const h = Number.parseInt(m[1]!, 10);
+  const min = Number.parseInt(m[2]!, 10);
+  const sec = m[3] != null ? Number.parseInt(m[3], 10) : 0;
+  if (h > 23 || min > 59 || sec > 59) return null;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+/** Rótulo do prestador no combo (nome · nickname). */
+export function labelPrestadorIncidente(nome: string, nickname: string | null | undefined): string {
+  const n = nome.trim();
+  const nick = (nickname ?? "").trim();
+  return nick ? `${n} · ${nick}` : n;
+}

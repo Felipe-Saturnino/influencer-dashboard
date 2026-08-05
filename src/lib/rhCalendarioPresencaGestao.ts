@@ -26,23 +26,103 @@ export type PresencaCorrecaoMeta = {
   observacao: string | null;
   corrigidoPorNome: string;
   corrigidoEm: string;
+  /** Legado — status único para ambos os campos; preferir `entradaAnaliseStatus` / `saidaAnaliseStatus`. */
   analiseStatus?: PresencaCorrecaoAnaliseStatus;
   analisePorNome?: string;
   analiseEm?: string;
+  entradaAnaliseStatus?: PresencaCorrecaoAnaliseStatus;
+  entradaAnalisePorNome?: string;
+  entradaAnaliseEm?: string;
+  saidaAnaliseStatus?: PresencaCorrecaoAnaliseStatus;
+  saidaAnalisePorNome?: string;
+  saidaAnaliseEm?: string;
 };
 
 export const PRESENCA_CORRECAO_COR_PENDENTE = "#f59e0b";
 export const PRESENCA_CORRECAO_COR_APROVADA = "#22c55e";
 export const PRESENCA_CORRECAO_COR_RECUSADA = "#e84025";
 
+/** Situação de jornada trabalhada: Escalado ou Compra (Marketplace). */
+export function situacaoPresencaComoEscalado(situacao: string): boolean {
+  return situacao === "Escalado" || situacaoEhCompraMarketplace(situacao);
+}
+
+/** Situação de dia livre: Folga ou Venda (Marketplace). */
+export function situacaoPresencaComoFolga(situacao: string): boolean {
+  return situacao === "Folga" || situacao === "Venda";
+}
+
+/** Status de análise de um campo (entrada ou saída). Legado: `analiseStatus` único. */
+export function presencaCorrecaoAnaliseStatusCampo(
+  correcao: PresencaCorrecaoMeta | undefined,
+  campo: "entrada" | "saida",
+): PresencaCorrecaoAnaliseStatus {
+  if (!correcao) return "pendente";
+  const perField =
+    campo === "entrada" ? correcao.entradaAnaliseStatus : correcao.saidaAnaliseStatus;
+  if (perField) return perField;
+  if (!presencaCorrecaoCampoAlterado(campo, correcao)) return "pendente";
+  return correcao.analiseStatus ?? "pendente";
+}
+
+export function presencaCorrecaoAnaliseMetaCampo(
+  correcao: PresencaCorrecaoMeta,
+  campo: "entrada" | "saida",
+): { porNome?: string; em?: string } {
+  if (campo === "entrada" && correcao.entradaAnalisePorNome) {
+    return { porNome: correcao.entradaAnalisePorNome, em: correcao.entradaAnaliseEm };
+  }
+  if (campo === "saida" && correcao.saidaAnalisePorNome) {
+    return { porNome: correcao.saidaAnalisePorNome, em: correcao.saidaAnaliseEm };
+  }
+  return { porNome: correcao.analisePorNome, em: correcao.analiseEm };
+}
+
+/**
+ * Status consolidado da correção: pendente se algum campo alterado ainda espera;
+ * aprovada só quando todos os alterados estão aprovados; recusada se todos decididos e algum recusado.
+ */
 export function presencaCorrecaoAnaliseStatusEfetivo(
   correcao: PresencaCorrecaoMeta | undefined,
 ): PresencaCorrecaoAnaliseStatus {
-  return correcao?.analiseStatus ?? "pendente";
+  if (!correcao) return "pendente";
+  const campos: Array<"entrada" | "saida"> = [];
+  if (presencaCorrecaoCampoAlterado("entrada", correcao)) campos.push("entrada");
+  if (presencaCorrecaoCampoAlterado("saida", correcao)) campos.push("saida");
+  if (campos.length === 0) return correcao.analiseStatus ?? "pendente";
+  const statuses = campos.map((c) => presencaCorrecaoAnaliseStatusCampo(correcao, c));
+  if (statuses.some((s) => s === "pendente")) return "pendente";
+  if (statuses.every((s) => s === "aprovada")) return "aprovada";
+  return "recusada";
 }
 
-export function presencaCorrecaoCorIndicador(correcao: PresencaCorrecaoMeta | undefined): string {
-  const st = presencaCorrecaoAnaliseStatusEfetivo(correcao);
+export function presencaCorrecaoCampoAprovado(
+  correcao: PresencaCorrecaoMeta | undefined,
+  campo: "entrada" | "saida",
+): boolean {
+  if (!correcao || !presencaCorrecaoCampoAlterado(campo, correcao)) return false;
+  return presencaCorrecaoAnaliseStatusCampo(correcao, campo) === "aprovada";
+}
+
+export function presencaCorrecaoTemCampoPendenteAnalise(
+  correcao: PresencaCorrecaoMeta | undefined,
+): boolean {
+  if (!correcao) return false;
+  return (
+    (presencaCorrecaoCampoAlterado("entrada", correcao) &&
+      presencaCorrecaoAnaliseStatusCampo(correcao, "entrada") === "pendente") ||
+    (presencaCorrecaoCampoAlterado("saida", correcao) &&
+      presencaCorrecaoAnaliseStatusCampo(correcao, "saida") === "pendente")
+  );
+}
+
+export function presencaCorrecaoCorIndicador(
+  correcao: PresencaCorrecaoMeta | undefined,
+  campo?: "entrada" | "saida",
+): string {
+  const st = campo
+    ? presencaCorrecaoAnaliseStatusCampo(correcao, campo)
+    : presencaCorrecaoAnaliseStatusEfetivo(correcao);
   if (st === "aprovada") return PRESENCA_CORRECAO_COR_APROVADA;
   if (st === "recusada") return PRESENCA_CORRECAO_COR_RECUSADA;
   return PRESENCA_CORRECAO_COR_PENDENTE;
@@ -53,7 +133,7 @@ export function presencaCorrecaoTituloTooltipCampo(
   correcao: PresencaCorrecaoMeta | undefined,
 ): string {
   const base = campo === "entrada" ? "Correção de Entrada" : "Correção de Saída";
-  const st = presencaCorrecaoAnaliseStatusEfetivo(correcao);
+  const st = presencaCorrecaoAnaliseStatusCampo(correcao, campo);
   if (st === "aprovada") return `${base} - Aprovada`;
   if (st === "recusada") return `${base} - Recusada`;
   return base;
@@ -216,7 +296,7 @@ export function presencaJustificativaMedicoAplicavelAoDia(
   justificativa: PresencaJustificativaMeta,
 ): boolean {
   if (justificativa.motivo !== "medico") return false;
-  if (situacao !== "Escalado") return false;
+  if (!situacaoPresencaComoEscalado(situacao)) return false;
   const ini = justificativa.atestadoInicio;
   const fim = justificativa.atestadoFim;
   if (!ini || !fim) return false;
@@ -563,16 +643,22 @@ export function resolverStatusPresencaLinha(params: ResolverPresencaLinhaParams)
   if (
     gestao?.statusGestao === "em_analise" &&
     gestao.correcao &&
-    presencaCorrecaoAnaliseStatusEfetivo(gestao.correcao) === "pendente" &&
-    presencaCorrecaoTemCampoAlterado(gestao.correcao)
+    presencaCorrecaoTemCampoPendenteAnalise(gestao.correcao)
+  ) {
+    return "Em análise";
+  }
+  if (
+    gestao?.statusGestao === "em_analise" &&
+    gestao.justificativa?.motivo === "outro" &&
+    !presencaCorrecaoTemCampoPendenteAnalise(gestao.correcao)
   ) {
     return "Em análise";
   }
 
-  if (situacao === "Escalado" && diaIsoEhAmanhaOuFuturo(diaIso, agora)) return "—";
+  if (situacaoPresencaComoEscalado(situacao) && diaIsoEhAmanhaOuFuturo(diaIso, agora)) return "—";
 
   if (
-    situacao === "Escalado" &&
+    situacaoPresencaComoEscalado(situacao) &&
     passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc)
   ) {
     if (!temCheckIn && !temCheckOut) return "Falta";
@@ -599,11 +685,11 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
     return { acaoPrimaria: null, mostrarHistorico: false, mostrarTravessaoAcoes: true };
   }
 
-  if (situacao === "Escalado" && diaIsoEhAmanhaOuFuturo(diaIso, agora)) {
+  if (situacaoPresencaComoEscalado(situacao) && diaIsoEhAmanhaOuFuturo(diaIso, agora)) {
     return { acaoPrimaria: null, mostrarHistorico: false, mostrarTravessaoAcoes: true };
   }
 
-  if (situacao === "Folga") {
+  if (situacaoPresencaComoFolga(situacao)) {
     if (
       temCheckIn &&
       temCheckOut &&
@@ -647,21 +733,25 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
         mostrarTravessaoAcoes: !temHist,
       };
     }
-    const pendente =
-      Boolean(gestao.correcao) &&
-      presencaCorrecaoAnaliseStatusEfetivo(gestao.correcao) === "pendente" &&
-      presencaCorrecaoTemCampoAlterado(gestao.correcao!);
-    if (pendente) {
+    if (presencaCorrecaoTemCampoPendenteAnalise(gestao.correcao)) {
       return {
         acaoPrimaria: null,
         mostrarHistorico: temHist,
         mostrarTravessaoAcoes: !temHist,
       };
     }
+    if (gestao.justificativa?.motivo === "outro") {
+      return {
+        acaoPrimaria: "aprovar",
+        mostrarHistorico: temHist,
+        mostrarTravessaoAcoes: false,
+      };
+    }
   }
 
   const passouLimite =
-    situacao === "Escalado" && passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc);
+    situacaoPresencaComoEscalado(situacao) &&
+    passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc);
 
   if (passouLimite && !temJustificativaRegistrada(gestao)) {
     if (!temCheckIn && !temCheckOut) {
@@ -673,7 +763,7 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
   }
 
   const podeAprovar =
-    situacao === "Escalado" &&
+    situacaoPresencaComoEscalado(situacao) &&
     temCheckIn &&
     temCheckOut &&
     statusBase === "Registrado";

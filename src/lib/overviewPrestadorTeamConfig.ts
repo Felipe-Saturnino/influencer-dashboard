@@ -10,6 +10,9 @@ export type OverviewPrestadorTimeRotulo = (typeof OVERVIEW_PRESTADOR_TIMES_ORDEM
 
 export const OVERVIEW_PRESTADOR_TIME_DEFAULT: OverviewPrestadorTimeRotulo = "Game Presenter";
 
+/** Layout da aba KPIs de Mesa conforme o time. */
+export type OverviewPrestadorKpisMesaMode = "gp" | "shuffler" | "placeholder" | "hidden";
+
 export type OverviewPrestadorTimeCaps = {
   /** Negocia turno no Marketplace (troca / venda / compra). */
   negocia: boolean;
@@ -17,6 +20,8 @@ export type OverviewPrestadorTimeCaps = {
   porEstudio: boolean;
   /** Mostra pizza Distribuição por estúdio (visão individual). */
   distribuicaoEstudioIndividual: boolean;
+  /** Layout da aba KPIs de Mesa (`hidden` = aba não aparece). */
+  kpisMesaMode: OverviewPrestadorKpisMesaMode;
   /** Turnos exibidos na Cobertura por turno. */
   turnos: { key: "MRN" | "AFT" | "NGT"; label: string }[];
 };
@@ -26,6 +31,7 @@ const CAPS: Record<OverviewPrestadorTimeRotulo, OverviewPrestadorTimeCaps> = {
     negocia: true,
     porEstudio: true,
     distribuicaoEstudioIndividual: true,
+    kpisMesaMode: "gp",
     turnos: [
       { key: "MRN", label: "Manhã" },
       { key: "AFT", label: "Tarde" },
@@ -36,6 +42,7 @@ const CAPS: Record<OverviewPrestadorTimeRotulo, OverviewPrestadorTimeCaps> = {
     negocia: true,
     porEstudio: false,
     distribuicaoEstudioIndividual: false,
+    kpisMesaMode: "shuffler",
     turnos: [
       { key: "MRN", label: "Manhã" },
       { key: "AFT", label: "Tarde" },
@@ -43,18 +50,20 @@ const CAPS: Record<OverviewPrestadorTimeRotulo, OverviewPrestadorTimeCaps> = {
     ],
   },
   "Shift Leader": {
-    negocia: false,
+    negocia: true,
     porEstudio: false,
     distribuicaoEstudioIndividual: false,
+    kpisMesaMode: "hidden",
     turnos: [
       { key: "MRN", label: "Diurno (08h–20h)" },
       { key: "NGT", label: "Noturno (20h–08h)" },
     ],
   },
   "Service Manager": {
-    negocia: false,
+    negocia: true,
     porEstudio: false,
     distribuicaoEstudioIndividual: false,
+    kpisMesaMode: "placeholder",
     turnos: [
       { key: "MRN", label: "Diurno (08h–20h)" },
       { key: "NGT", label: "Noturno (20h–08h)" },

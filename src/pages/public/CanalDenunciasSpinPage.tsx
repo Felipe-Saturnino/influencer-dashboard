@@ -8,9 +8,12 @@ import {
   TIPOS_DENUNCIA,
   STORAGE_BUCKET,
   sanitizeStorageFileName,
+  labelAutorMensagemPublica,
   type TipoDenunciaKey,
+  type CanalDenunciaMensagemPublica,
 } from "../../lib/canalDenunciasSpin";
 import { buildLoginPath } from "../../lib/appRoutes";
+import { CampoUploadArquivos } from "../../components/CampoUploadArquivos";
 
 const MAX_ANEXO_BYTES = 20 * 1024 * 1024;
 
@@ -52,6 +55,7 @@ type ConsultaPublicOk = {
   em_avaliacao_em: string | null;
   atendida_em: string | null;
   descricao_resolucao: string | null;
+  mensagens?: CanalDenunciaMensagemPublica[];
 };
 
 function fmtDataHora(iso: string | null | undefined): string {
@@ -120,6 +124,18 @@ export default function CanalDenunciasSpinPage() {
   const [consultando, setConsultando] = useState(false);
   const [consultaErro, setConsultaErro] = useState<string | null>(null);
   const [consultaData, setConsultaData] = useState<ConsultaPublicOk | null>(null);
+  const [respostaTexto, setRespostaTexto] = useState("");
+  const [respostaFiles, setRespostaFiles] = useState<{ id: string; file: File }[]>([]);
+  const [enviandoResposta, setEnviandoResposta] = useState(false);
+  const [respostaErro, setRespostaErro] = useState<string | null>(null);
+  const [respostaOk, setRespostaOk] = useState<string | null>(null);
+
+  const uploadTheme = {
+    text: "#e5dce1",
+    textMuted: "#9b8ab8",
+    cardBorder: "rgba(255,255,255,0.12)",
+    inputBg: "rgba(0,0,0,0.25)",
+  };
 
   const toggleTipo = useCallback((k: TipoDenunciaKey) => {
     setTiposSel((prev) => {
@@ -236,6 +252,10 @@ export default function CanalDenunciasSpinPage() {
   async function handleConsultar() {
     setConsultaErro(null);
     setConsultaData(null);
+    setRespostaErro(null);
+    setRespostaOk(null);
+    setRespostaTexto("");
+    setRespostaFiles([]);
     const p = protocoloConsulta.trim().toUpperCase();
     if (!p) {
       setConsultaErro("Informe o protocolo.");
@@ -253,7 +273,100 @@ export default function CanalDenunciasSpinPage() {
       setConsultaErro("Protocolo não encontrado");
       return;
     }
-    setConsultaData(j as ConsultaPublicOk);
+    const ok = j as ConsultaPublicOk;
+    setConsultaData({
+      ...ok,
+      mensagens: Array.isArray(ok.mensagens) ? ok.mensagens : [],
+    });
+  }
+
+  async function handleEnviarResposta() {
+    setRespostaErro(null);
+    setRespostaOk(null);
+    const p = protocoloConsulta.trim().toUpperCase();
+    const txt = respostaTexto.trim();
+    if (!p) {
+      setRespostaErro("Informe o protocolo.");
+      return;
+    }
+    if (!txt) {
+      setRespostaErro("Digite sua mensagem.");
+      return;
+    }
+    for (const nf of respostaFiles) {
+      if (nf.file.size > MAX_ANEXO_BYTES) {
+        setRespostaErro("Cada anexo deve ter no máximo 20MB.");
+        return;
+      }
+    }
+    setEnviandoResposta(true);
+    try {
+      const { data, error } = await supabase.rpc("responder_denuncia_spin", {
+        p_protocolo: p,
+        p_texto: txt,
+      });
+      if (error) {
+        setRespostaErro("Não foi possível enviar a mensagem. Tente novamente.");
+        return;
+      }
+      const res = data as { ok?: boolean; error?: string; id?: string; denuncia_id?: string } | null;
+      if (!res?.ok) {
+        if (res?.error === "closed") {
+          setRespostaErro("Esta denúncia já foi encerrada. Não é possível enviar novas mensagens.");
+        } else if (res?.error === "not_found") {
+          setRespostaErro("Protocolo não encontrado");
+        } else {
+          setRespostaErro("Não foi possível enviar a mensagem. Tente novamente.");
+        }
+        return;
+      }
+      const anotacaoId = res.id;
+      const denunciaId = res.denuncia_id;
+      let falhaAnexo = false;
+      if (anotacaoId && denunciaId && respostaFiles.length > 0) {
+        for (let i = 0; i < respostaFiles.length; i++) {
+          const f = respostaFiles[i].file;
+          const safe = sanitizeStorageFileName(f.name);
+          const path = `${denunciaId}/${anotacaoId}/${Date.now()}_${i}_${safe}`;
+          const { error: upErr } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .upload(path, f, { contentType: f.type || undefined });
+          if (upErr) {
+            falhaAnexo = true;
+            break;
+          }
+          await supabase.from("canal_denuncia_anexos").insert({
+            denuncia_id: denunciaId,
+            anotacao_id: anotacaoId,
+            storage_path: path,
+            file_name: f.name,
+            content_type: f.type || null,
+            file_size: f.size,
+          });
+        }
+      }
+      setRespostaTexto("");
+      setRespostaFiles([]);
+      if (falhaAnexo) {
+        setRespostaErro(
+          "Mensagem enviada, mas houve falha no envio de um ou mais anexos. A equipe RH já pode ver o texto.",
+        );
+      } else {
+        setRespostaOk("Mensagem enviada. A equipe RH receberá sua resposta na Central de Denúncias.");
+      }
+      const { data: refreshed } = await supabase.rpc("consultar_denuncia_spin", { p_protocolo: p });
+      const j = refreshed as ConsultaPublicOk | null;
+      if (j?.ok) {
+        setConsultaData({
+          ...j,
+          mensagens: Array.isArray(j.mensagens) ? j.mensagens : [],
+        });
+      }
+    } catch {
+      setRespostaErro("Não foi possível enviar a mensagem. Tente novamente.");
+    } finally {
+      setEnviandoResposta(false);
+    }
   }
 
   return (
@@ -679,6 +792,180 @@ export default function CanalDenunciasSpinPage() {
                     </>
                   )}
                 </ul>
+
+                <h2 style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: "28px 0 8px" }}>
+                  Comunicação com o RH
+                </h2>
+                <p style={{ margin: "0 0 16px", fontSize: 12, color: "#9b8ab8", lineHeight: 1.5 }}>
+                  Mensagens da equipe e suas respostas. Use este espaço para esclarecer dúvidas e enviar evidências
+                  durante a investigação.
+                </p>
+
+                {(consultaData.mensagens ?? []).length === 0 ? (
+                  <div
+                    style={{
+                      padding: "16px",
+                      borderRadius: 12,
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px dashed rgba(255,255,255,0.12)",
+                      fontSize: 13,
+                      color: "#9b8ab8",
+                      textAlign: "center",
+                    }}
+                  >
+                    Ainda não há mensagens nesta denúncia. Quando a equipe RH enviar uma anotação, ela aparecerá aqui.
+                  </div>
+                ) : (
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+                    {(consultaData.mensagens ?? []).map((m) => {
+                      const doRelator = m.autor_origem === "relator";
+                      return (
+                        <li
+                          key={m.id}
+                          style={{
+                            padding: "14px 16px",
+                            borderRadius: 12,
+                            background: doRelator ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.05)",
+                            borderLeft: `3px solid ${doRelator ? "var(--brand-primary, #7c3aed)" : "var(--brand-icon, #70cae4)"}`,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              flexWrap: "wrap",
+                              marginBottom: 8,
+                            }}
+                          >
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>
+                              {labelAutorMensagemPublica(m.autor_origem)}
+                            </span>
+                            <span style={{ fontSize: 12, color: "#9b8ab8" }}>{fmtDataHora(m.created_at)}</span>
+                          </div>
+                          <div style={{ fontSize: 14, color: "#e5dce1", whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
+                            {m.texto}
+                          </div>
+                          {(m.anexos ?? []).length > 0 ? (
+                            <ul style={{ margin: "10px 0 0", paddingLeft: 18, fontSize: 12, color: "#b8a8d4" }}>
+                              {(m.anexos ?? []).map((ax) => (
+                                <li key={ax.id}>{ax.file_name}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {consultaData.status === "procedente" || consultaData.status === "nao_procedente" ? (
+                  <p style={{ margin: "20px 0 0", fontSize: 13, color: "#9b8ab8", lineHeight: 1.5 }}>
+                    Esta denúncia já foi encerrada. Não é possível enviar novas mensagens.
+                  </p>
+                ) : (
+                  <div
+                    style={{
+                      marginTop: 20,
+                      padding: 16,
+                      borderRadius: 12,
+                      border: "1px solid rgba(124,58,237,0.35)",
+                      background: "rgba(0,0,0,0.2)",
+                    }}
+                  >
+                    <label
+                      htmlFor="resposta-relator"
+                      style={{ fontSize: 13, fontWeight: 600, color: "#fff", display: "block", marginBottom: 8 }}
+                    >
+                      Sua mensagem
+                      <CampoObrigatorioMark />
+                    </label>
+                    <textarea
+                      id="resposta-relator"
+                      value={respostaTexto}
+                      onChange={(e) => setRespostaTexto(e.target.value)}
+                      rows={4}
+                      placeholder="Esclareça dúvidas ou envie informações adicionais à equipe RH…"
+                      disabled={enviandoResposta}
+                      style={{ ...inp, resize: "vertical", minHeight: 96 }}
+                    />
+                    <div style={{ marginTop: 12 }}>
+                      <CampoUploadArquivos
+                        id="resposta-anexos"
+                        label="Anexos"
+                        buttonLabel="Adicionar evidências"
+                        multiple
+                        items={respostaFiles.map((nf) => ({
+                          key: nf.id,
+                          label: nf.file.name,
+                          pendente: true,
+                        }))}
+                        onAdd={(files) =>
+                          setRespostaFiles((prev) => [
+                            ...prev,
+                            ...files.map((file) => ({ id: crypto.randomUUID(), file })),
+                          ])
+                        }
+                        onRemove={(key) => setRespostaFiles((prev) => prev.filter((nf) => nf.id !== key))}
+                        disabled={enviandoResposta}
+                        t={uploadTheme}
+                        hint="Opcional · até 20MB por arquivo"
+                        pendingHint="Anexos serão enviados junto com a mensagem."
+                      />
+                    </div>
+                    {respostaErro ? (
+                      <div role="alert" style={{ ...alertBox, marginTop: 12 }}>
+                        {respostaErro}
+                      </div>
+                    ) : null}
+                    {respostaOk ? (
+                      <div
+                        role="status"
+                        style={{
+                          marginTop: 12,
+                          padding: "12px 14px",
+                          borderRadius: 10,
+                          background: "rgba(34,197,94,0.12)",
+                          border: "1px solid rgba(34,197,94,0.35)",
+                          color: "#22c55e",
+                          fontSize: 13,
+                        }}
+                      >
+                        {respostaOk}
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => void handleEnviarResposta()}
+                      disabled={enviandoResposta}
+                      style={{
+                        marginTop: 14,
+                        width: "100%",
+                        padding: "12px 18px",
+                        borderRadius: 12,
+                        border: "none",
+                        background: "var(--brand-primary, #7c3aed)",
+                        color: "#fff",
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        cursor: enviandoResposta ? "wait" : "pointer",
+                        fontFamily: FONT.body,
+                      }}
+                    >
+                      {enviandoResposta ? (
+                        <>
+                          <Loader2 className="app-lucide-spin" size={18} color="#fff" aria-hidden />
+                          Enviando…
+                        </>
+                      ) : (
+                        "Enviar mensagem"
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -4,7 +4,8 @@ import { Check, MessageSquare, X } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
 import {
-  presencaCorrecaoAnaliseStatusEfetivo,
+  presencaCorrecaoAnaliseMetaCampo,
+  presencaCorrecaoAnaliseStatusCampo,
   presencaCorrecaoCorIndicador,
   presencaCorrecaoRotuloAnalisePor,
   presencaCorrecaoTituloTooltipCampo,
@@ -65,8 +66,9 @@ export function CelulaIndicadorCorrecaoPresencaCalendario({
   const hideTimerRef = useRef<number | null>(null);
   const tooltipId = useId();
 
-  const analiseStatus = presencaCorrecaoAnaliseStatusEfetivo(correcao);
-  const corIcone = presencaCorrecaoCorIndicador(correcao);
+  const analiseStatus = presencaCorrecaoAnaliseStatusCampo(correcao, campo);
+  const analiseMeta = presencaCorrecaoAnaliseMetaCampo(correcao, campo);
+  const corIcone = presencaCorrecaoCorIndicador(correcao, campo);
   const titulo = presencaCorrecaoTituloTooltipCampo(campo, correcao);
   const rotuloCorrecao = campo === "entrada" ? "Correção de Entrada:" : "Correção de Saída:";
   const obs = (correcao.observacao ?? "").trim();
@@ -139,7 +141,7 @@ export function CelulaIndicadorCorrecaoPresencaCalendario({
     const anchor = anchorRef.current;
     if (!anchor) return;
     setCoords(calcTooltipCoords(anchor, tooltipRef.current));
-  }, [open, obs, correcao.corrigidoPorNome, correcao.corrigidoEm, valorCorrecao, analiseStatus]);
+  }, [open, obs, correcao.corrigidoPorNome, correcao.corrigidoEm, valorCorrecao, analiseStatus, analiseMeta.porNome, analiseMeta.em]);
 
   useEffect(() => () => clearHideTimer(), []);
 
@@ -194,15 +196,15 @@ export function CelulaIndicadorCorrecaoPresencaCalendario({
             {obs}
           </div>
         ) : null}
-        {analiseStatus !== "pendente" && correcao.analisePorNome && correcao.analiseEm ? (
+        {analiseStatus !== "pendente" && analiseMeta.porNome && analiseMeta.em ? (
           <>
             <div style={{ marginTop: 6 }}>
               <span style={{ color: tooltipMuted }}>{presencaCorrecaoRotuloAnalisePor(analiseStatus)} </span>
-              {correcao.analisePorNome}
+              {analiseMeta.porNome}
             </div>
             <div>
               <span style={{ color: tooltipMuted }}>Data/Hora da Análise: </span>
-              {fmtAlteracaoDataHora(correcao.analiseEm)}
+              {fmtAlteracaoDataHora(analiseMeta.em)}
             </div>
           </>
         ) : null}

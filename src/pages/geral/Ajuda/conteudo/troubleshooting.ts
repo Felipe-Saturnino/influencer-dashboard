@@ -204,12 +204,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo a aba KPIs de Mesa?",
         texto:
-          "A aba só aparece quando o filtro **Time** está em **Game Presenter**. Em outros times (Shuffler, Shift Leader, Service Manager) permanece apenas a aba Escala.",
+          "A aba aparece conforme o time: **Game Presenter** e **Shuffler** (conteúdo completo), **Service Manager** (placeholder) e **não** aparece para **Shift Leader**. Com Ver = Próprios, o time vem do Organograma do seu cadastro.",
       },
       {
         subtitulo: "KPIs de Mesa sem números?",
         texto:
-          "Na visão de time (Staff vazio), selecione um Game Presenter no filtro Staff. Confirme o mês no carrossel (dados de mesa a partir de julho/2026) e se o prestador tem **ID operacional** vinculado em Gestão de Staff — sem esse vínculo a carga do Grafana não associa as rodadas. O card e as colunas de **Incidentes** vêm dos registros da página Incidentes no mesmo período; se só houver KPI de mesa sem incidentes (ou o contrário), a aba ainda mostra o que existir.",
+          "Os cards e tabelas aparecem mesmo sem registros (valores em 0). Confirme o mês no carrossel e se o filtro **Time** / **Staff** cobre o prestador certo. **Game Presenter:** rodadas e tempos vêm do Grafana (`gp_kpi_diario`) — o prestador precisa de **ID operacional** em Gestão de Staff. **Incidentes** (GP e Shuffler) vêm da página Incidentes no mesmo período (`data da rodada`). Sem linhas de detalhe diário: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -1464,7 +1464,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
         texto:
-          "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
+          "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença registrada com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). **Correções** de horário (Esquecimento / Correção) e a justificativa **Outro** só o **líder imediato** (ou Editar Sim) analisa — o próprio prestador não aprova a própria correção. Atestado **Médico** é atendido em **Solicitações** (RH). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
       },
       {
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
@@ -1715,6 +1715,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não vejo Central de Denúncias no menu?",
         texto:
           "Confirme permissão de **Ver** em Gestão de Usuários. O canal público de denúncias (sem login) é distinto — protocolos internos são tratados nesta página logada.",
+      },
+      {
+        subtitulo: "O relator diz que não vê minhas anotações na consulta pública?",
+        texto:
+          "Na aba **Anotações** do atendimento, confira se a mensagem não foi marcada como **Somente interno**. Notas internas não aparecem na consulta por protocolo. Respostas do relator entram na mesma thread com o selo Relator — atualize o modal ou recarregue a lista se a mensagem ainda não aparecer.",
       },
     ],
   },
