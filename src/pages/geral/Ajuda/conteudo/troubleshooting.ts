@@ -674,7 +674,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O anexo não foi enviado ao salvar o incidente?",
         texto:
-          "Cada arquivo tem limite de 10 MB. Se o arquivo exceder esse tamanho, uma mensagem indica qual anexo excedeu o limite — reduza o tamanho do arquivo ou envie um formato mais leve e tente novamente.",
+          "Cada arquivo tem limite de 50 MB. Se o arquivo exceder esse tamanho, uma mensagem indica qual anexo excedeu o limite — reduza o tamanho do arquivo ou envie um formato mais leve e tente novamente.",
       },
       {
         subtitulo: "Não vejo as colunas Prestador, Time ou Relator na tabela?",

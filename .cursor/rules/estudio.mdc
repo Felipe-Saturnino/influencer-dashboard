@@ -177,7 +177,7 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
   - **Prestador:** combo buscável com barra **Pesquisar por nome ou nickname...** (`forceSearch`); opções = prestadores ativos/indisponíveis do time GP ou Shuffler em Gestão de Staff (`fetchStaffFormIncidente` via `rh_org_times` + `org_time_id`, sem SM/SL/Academy).
   - **ID da Rodada:** obrigatório salvo checkbox **Não tem ID** (grava `INCIDENTE_ID_RODADA_SEM_ID` = `—`).
   - **Hora da Rodada:** campo **texto**, placeholder `#HH:MM:SS` (sem legenda auxiliar); normalizado para `time` no insert.
-  - Anexos via **`CampoUploadArquivos`** (`buttonLabel` **Adicionar anexo**, drag-and-drop, múltiplos, 10 MB). Relator = usuário logado; grava via `insertEstudioIncidente` + `uploadEstudioIncidenteAnexos`.
+  - Anexos via **`CampoUploadArquivos`** (`buttonLabel` **Adicionar anexo**, drag-and-drop + **colar Ctrl+V** imagem/vídeo, múltiplos, **50 MB** — `ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES` alinhado ao `file_size_limit` do bucket `estudio-incidentes`). Relator = usuário logado; grava via `insertEstudioIncidente` + `uploadEstudioIncidenteAnexos`.
 
 ### Exceções — identidade de jogo
 

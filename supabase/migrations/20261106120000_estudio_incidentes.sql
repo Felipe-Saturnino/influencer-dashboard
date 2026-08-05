@@ -237,7 +237,7 @@ VALUES (
   'estudio-incidentes',
   'estudio-incidentes',
   false,
-  10485760,
+  52428800,
   ARRAY[
     'application/pdf',
     'image/png',
