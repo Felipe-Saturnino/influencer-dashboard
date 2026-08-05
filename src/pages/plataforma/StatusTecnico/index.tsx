@@ -39,6 +39,8 @@ import {
   LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
   LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
   LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
+  LABEL_UI_LOBBY_ESPORTIVA,
+  LABEL_UI_LOBBY_JONBET,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_COMERCIAL_CNPJ,
@@ -1979,56 +1981,86 @@ export default function StatusTecnico() {
     [statusPorIntegracao],
   );
 
-  /** Sempre visível na tabela Externas — fallback se a migration de `integrations` ainda não rodou. */
-  const csAtendimentoOutlookRow = useMemo((): StatusIntegracaoRow => {
-    const fromDb = statusPorIntegracao.find((i) => i.slug === "cs_atendimento_outlook");
-    if (fromDb) {
+  /** Linha a partir de sync_logs quando o slug ainda não está em `integrations`. */
+  const rowFromSyncLogsFallback = useCallback(
+    (
+      slug: string,
+      nomeFallback: string,
+      syncTipo: StatusIntegracaoRow["syncTipo"],
+    ): StatusIntegracaoRow => {
+      const fromDb = statusPorIntegracao.find((i) => i.slug === slug);
+      if (fromDb) {
+        return {
+          slug: fromDb.slug,
+          nome: nomeIntegracaoStatusTecnicoUi(fromDb.slug, fromDb.nome),
+          ultimoSync: fromDb.ultimoSync,
+          registrosHoje: fromDb.registrosHoje,
+          erros: fromDb.erros,
+          status: fromDb.status,
+          syncTipo,
+        };
+      }
+
+      const logsInt = syncLogs.filter((l) => l.integracao_slug === slug);
+      const ultimo = logsInt[0];
+      const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
+      const regsHoje = syncsHoje.reduce(
+        (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
+        0,
+      );
+      const regsExibir =
+        regsHoje ||
+        (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
+      let status: "ok" | "warning" | "falha" = "ok";
+      if (!ultimo) status = "falha";
+      else if (ultimo.status === "falha") status = "falha";
+      else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+
       return {
-        slug: fromDb.slug,
-        nome: nomeIntegracaoStatusTecnicoUi(fromDb.slug, fromDb.nome),
-        ultimoSync: fromDb.ultimoSync,
-        registrosHoje: fromDb.registrosHoje,
-        erros: fromDb.erros,
-        status: fromDb.status,
-        syncTipo: "cs_outlook",
+        slug,
+        nome: nomeFallback,
+        ultimoSync: ultimo?.executado_em ?? null,
+        registrosHoje: regsExibir,
+        erros: ultimo?.erros_count ?? 0,
+        status,
+        syncTipo,
       };
-    }
+    },
+    [statusPorIntegracao, syncLogs, hojeIso],
+  );
 
-    const logsInt = syncLogs.filter((l) => l.integracao_slug === "cs_atendimento_outlook");
-    const ultimo = logsInt[0];
-    const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
-    const regsHoje = syncsHoje.reduce(
-      (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
-      0,
-    );
-    const regsExibir =
-      regsHoje ||
-      (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
-    let status: "ok" | "warning" | "falha" = "ok";
-    if (!ultimo) status = "falha";
-    else if (ultimo.status === "falha") status = "falha";
-    else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+  /** Sempre visível na tabela Externas — fallback se a migration de `integrations` ainda não rodou. */
+  const csAtendimentoOutlookRow = useMemo(
+    () => rowFromSyncLogsFallback("cs_atendimento_outlook", LABEL_UI_CS_ATENDIMENTO_OUTLOOK, "cs_outlook"),
+    [rowFromSyncLogsFallback],
+  );
 
-    return {
-      slug: "cs_atendimento_outlook",
-      nome: LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
-      ultimoSync: ultimo?.executado_em ?? null,
-      registrosHoje: regsExibir,
-      erros: ultimo?.erros_count ?? 0,
-      status,
-      syncTipo: "cs_outlook",
-    };
-  }, [statusPorIntegracao, syncLogs, hojeIso]);
+  /** Lobby Esportiva / Jonbet — sempre na tabela Operadoras (mesmo sem row em `integrations`). */
+  const lobbyEsportivaRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_esportiva", LABEL_UI_LOBBY_ESPORTIVA, "lobby_esportiva"),
+    [rowFromSyncLogsFallback],
+  );
+  const lobbyJonbetRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_jonbet", LABEL_UI_LOBBY_JONBET, "lobby_jonbet"),
+    [rowFromSyncLogsFallback],
+  );
 
   const linhasOperadoras = useMemo(
     () =>
       ordenarLinhasIntegracao(
-        (["casa_apostas", "casa_apostas_afiliados", "lobby_blaze", "lobby_cda", "lobby_esportiva", "lobby_jonbet"] as const)
-          .map((slug) => pickIntegracaoRow(slug))
-          .filter(Boolean) as StatusIntegracaoRow[],
+        (
+          [
+            pickIntegracaoRow("casa_apostas"),
+            pickIntegracaoRow("casa_apostas_afiliados"),
+            pickIntegracaoRow("lobby_blaze"),
+            pickIntegracaoRow("lobby_cda"),
+            lobbyEsportivaRow,
+            lobbyJonbetRow,
+          ] as (StatusIntegracaoRow | null)[]
+        ).filter(Boolean) as StatusIntegracaoRow[],
         sortOperadoras,
       ),
-    [pickIntegracaoRow, sortOperadoras],
+    [pickIntegracaoRow, lobbyEsportivaRow, lobbyJonbetRow, sortOperadoras],
   );
 
   const linhasExternas = useMemo(

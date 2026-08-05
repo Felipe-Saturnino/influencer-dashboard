@@ -709,7 +709,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite é **500 MB** por arquivo. Se a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.\n\nO envio só acontece ao clicar em **Salvar** ou **Concluir** — enquanto o botão mostra **Enviando…**, mantenha a aba aberta.",
+          "O limite é **500 MB** por arquivo. Se a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…** nos botões). Mantenha a aba aberta até o fim. Se aparecer falha de conexão, tente de novo — o envio pode retomar de onde parou.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",
@@ -1436,6 +1436,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
   rh_calendario: {
     titulo: "Calendário",
     blocos: [
+      {
+        subtitulo: "Não vejo Calendário no menu (perfil Prestador)?",
+        texto:
+          "Para o perfil **Prestador**, a página só aparece no menu se as **duas** liberações estiverem ok:\n\n1. **Gestão de Usuários → Permissões** — perfil Prestador com Ver em **Próprios** ou **Sim** no Calendário.\n2. **Gestão de Usuários → Escopos → Prestadores** — a página **Calendário** marcada na(s) **área(s) de atuação** do usuário (Escritório, Estúdio, Facilities, TI).\n\nO menu efetivo é a interseção das duas. Se só a Permissão estiver liberada e o Escopo da área não tiver Calendário marcado, a página continua oculta. Confirme também se o usuário tem área de atuação no cadastro (escopo `prestador_tipo`). Depois de salvar, o prestador precisa **sair e entrar de novo** — as permissões do menu são carregadas no login.",
+      },
       {
         subtitulo: "Turnos não aparecem no calendário?",
         texto:

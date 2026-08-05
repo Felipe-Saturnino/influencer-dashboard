@@ -169,9 +169,32 @@ export function normalizarHoraRodadaTexto(raw: string): string | null {
   return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-/** Rótulo do prestador no combo (nome · nickname). */
-export function labelPrestadorIncidente(nome: string, nickname: string | null | undefined): string {
+/** Formato do rótulo prestador: GP = nickname - nome; Shuffler / Ver = nome - nickname. */
+export type PrestadorIncidenteLabelFmt = "nome-nick" | "nick-nome";
+
+/** Rótulo do prestador (Nome - Nickname ou Nickname - Nome). */
+export function labelPrestadorIncidente(
+  nome: string,
+  nickname: string | null | undefined,
+  fmt: PrestadorIncidenteLabelFmt = "nome-nick",
+): string {
   const n = nome.trim();
   const nick = (nickname ?? "").trim();
-  return nick ? `${n} · ${nick}` : n;
+  if (!nick) return n || "—";
+  return fmt === "nick-nome" ? `${nick} - ${n}` : `${n} - ${nick}`;
+}
+
+/** Combo Novo Incidente: GP = Nickname - Nome; Shuffler = Nome - Nickname. */
+export function labelPrestadorIncidentePorTime(
+  timeAlvo: IncidenteTimeAlvo,
+  nome: string,
+  nickname: string | null | undefined,
+): string {
+  return labelPrestadorIncidente(nome, nickname, timeAlvo === "gp" ? "nick-nome" : "nome-nick");
+}
+
+export function labelLocalMesaIncidente(local: string | null | undefined): string {
+  if (local === "em_mesa") return "Em Jogo";
+  if (local === "fora_mesa") return "Fora de Jogo";
+  return "—";
 }

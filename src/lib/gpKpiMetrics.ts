@@ -108,23 +108,31 @@ export function fmtPctCoop(pct: number | null): string {
   return `${pct.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 }
 
+/** Bola / Cilindro (coop Grafana) só se aplicam à Roleta. */
+export function jogoTemCoopGpKpi(jogoKey: GameIdentityKey | null | undefined): boolean {
+  return jogoKey === "roleta";
+}
+
 export type GpKpiJogoLinha = {
   jogoKey: GameIdentityKey;
   jogoLabel: string;
   rodadas: number;
   dealingSeg: number | null;
   reactionSeg: number | null;
+  /** Bola — só Roleta; demais jogos ficam `null` (exibir «—»). */
   coopVelPct: number | null;
+  /** Cilindro — só Roleta; demais jogos ficam `null` (exibir «—»). */
   coopRodaPct: number | null;
 };
 
-function linhaMetricasDeAgg(agg: GpKpiAgregado) {
+function linhaMetricasDeAgg(agg: GpKpiAgregado, jogoKey?: GameIdentityKey | null) {
+  const coop = jogoTemCoopGpKpi(jogoKey);
   return {
     rodadas: agg.rodadas,
     dealingSeg: mediaSegundos(agg.dealingMsSoma, agg.dealingAmostras),
     reactionSeg: mediaSegundos(agg.reactionMsSoma, agg.reactionAmostras),
-    coopVelPct: pctCoop(agg.coopVelocidade, agg.rodadas),
-    coopRodaPct: pctCoop(agg.coopRoda, agg.rodadas),
+    coopVelPct: coop ? pctCoop(agg.coopVelocidade, agg.rodadas) : null,
+    coopRodaPct: coop ? pctCoop(agg.coopRoda, agg.rodadas) : null,
   };
 }
 
@@ -144,7 +152,7 @@ export function agruparGpKpiPorJogo(rows: GpKpiDiarioRow[]): GpKpiJogoLinha[] {
     return {
       jogoKey: key,
       jogoLabel: GAME_IDENTITY_LABEL[key],
-      ...linhaMetricasDeAgg(agg),
+      ...linhaMetricasDeAgg(agg, key),
     };
   });
 }

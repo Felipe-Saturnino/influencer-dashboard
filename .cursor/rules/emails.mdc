@@ -230,7 +230,7 @@ Estrutura comum aos crons (**Agenda** e **Relatório Diretoria**):
 
 ```
 <body fundo #f0eef8>
-  <div card max-width 740px, radius 16px, shadow roxa, borda #e5e7eb>
+  <div card max-width 960px (width 100%), radius 16px, shadow roxa, borda #e5e7eb — responsivo mobile>
     <header .email-header>   ← gradiente Spin + logo + h1 + subtítulo
     <div fundo #ffffff>       ← blocos de conteúdo
     <footer faixa #f9f7ff>   ← timestamp BRT
@@ -328,8 +328,9 @@ Três níveis dentro do corpo branco:
 | **3 — Subtítulo de bloco** | `subtitulo` | `13px`, `#6b7280`, *itálico*, margem inferior 16px |
 | **4 — Subsecção** | `tituloSubSecao` | `13px`, peso **700**, `#4a2082`, **uppercase**, `letter-spacing: 0.08em` |
 
-Ordem típica Relatório Diretoria: **Consolidado MTD** → **Posicionamento** → **Streamers** (agenda + D-1).
+Ordem típica Relatório Diretoria: **Consolidado MTD** (até última data Overview Spin) → **Posicionamento** (Dedicadas / Network) → **Streamers** (agenda + D-1).
 
+**Largura do card:** `EMAIL_CARD_MAX_WIDTH_PX = 960` em `common.ts` (`width:100%` + media query ≤640px).
 ---
 
 ## Tabelas

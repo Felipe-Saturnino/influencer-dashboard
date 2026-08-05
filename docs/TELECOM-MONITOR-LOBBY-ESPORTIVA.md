@@ -1,9 +1,9 @@
 # Telecom — Monitor Lobby Esportiva Bet
 
-Job horário que lê o **Cassino ao Vivo** da Esportiva e envia o snapshot para a Edge `monitor-lobby-esportiva`.
+Job horário que lê a prateleira **Cassino Ao Vivo** da **home** Esportiva e envia o snapshot para a Edge `monitor-lobby-esportiva`.
 
-**Agregador das mesas Spin:** Good Game Labs (`provider.slug = goodgame`).  
-IDs no formato `good-game-v2:…` — cadastrados em **Gestão de Estúdios → ID Esportiva Bet**.
+**Agregador das mesas Spin:** Good Game Labs.  
+IDs = `child[].id` da seção home — cadastrados em **Gestão de Estúdios → ID Esportiva Bet**.
 
 ---
 
@@ -11,29 +11,32 @@ IDs no formato `good-game-v2:…` — cadastrados em **Gestão de Estúdios → 
 
 | Item | Valor |
 |------|--------|
-| Host | `https://esportiva.bet.br` (página inicial) |
-| Request | `GET /api/casino-games/filter` |
-| Query | `categories[]=cassino-ao-vivo&per_page=50&page=N` |
-| URL completa (página 1) | `https://esportiva.bet.br/api/casino-games/filter?categories%5B%5D=cassino-ao-vivo&per_page=50&page=1` |
+| Host | `https://painel.esportivabet.cloud` |
+| Request | `GET /api/home-sections/public` |
+| URL completa | `https://painel.esportivabet.cloud/api/home-sections/public` |
+| Seção | `title` = **`Cassino Ao Vivo`** (`type` = `games-fixed`) |
+| Ordem | índice de `child[]` (1º item = posição 1) |
 
-**Não usar** requests com `categories[]=jogos-crash` — essa é outra seção da home (Aviator etc.) e **não** lista as mesas Spin.
+**Não usar** `GET /api/casino-games/filter?categories[]=cassino-ao-vivo` — esse é o **catálogo completo** (~559 jogos) e gera posições ~100+ que **não** batem com a home.
 
 ### Como achar no DevTools
 
-1. Abrir `https://esportiva.bet.br/` (ou a seção **Cassino Ao Vivo**).
-2. F12 → **Rede** → limpar → filtrar: `casino-games` ou `filter`.
-3. Recarregar / rolar até **Cassino Ao Vivo**.
-4. Clicar no request cujo **Query String** tenha `categories[]` = **`cassino-ao-vivo`** (não `jogos-crash`).
-5. Aba **Resposta** → em `data[]`, filtrar mentalmente por `provider.name` = **Good Game Labs**.
+1. Abrir `https://esportiva.bet.br/` (home).
+2. F12 → **Rede** → limpar → filtrar: `home-sections` ou `painel.esportivabet`.
+3. Recarregar a página.
+4. Abrir a resposta → achar o objeto com `"title":"Cassino Ao Vivo"`.
+5. Em `child[]`, as mesas Spin (Good Game Labs) devem estar no **topo** (hoje P1–P4).
 
-Mesas Spin esperadas na API (nomes técnicos; na UI podem aparecer como Roleta / Blackjack VIP / Baccarat VIP com logo Spin):
+Mesas Spin esperadas (IDs atuais da home — atualizar Gestão de Estúdios se divergir):
 
-| `id` (cadastrar na plataforma) | `name` na API |
-|--------------------------------|---------------|
-| `good-game-v2:live-roulette` | Roulette |
-| `good-game-v2:live-blackjack` | Blackjack |
-| `good-game-v2:live-baccarat` | Baccarat |
-| `good-game-v2:live-cardmatchup` | Futebol Brasileiro |
+| `id` (cadastrar) | Nome na home | Slug |
+|------------------|--------------|------|
+| `good-game-v2:live-cardmatchup` | Futebol Brasileiro | `goodgame/futebol-brasileiro` |
+| `good-game-v2:live-roulette` | Roulette | `goodgame/roulette` |
+| `5685` | Blackjack | `goodgame/blackjack` |
+| `good-game-v2:live-baccarat` | Baccarat | `goodgame/baccarat` |
+
+**Nota Blackjack:** no catálogo BS2Bet o mesmo jogo aparece como `good-game-v2:live-blackjack`; na home o CMS usa **`5685`**. Preferir cadastrar **`5685`**. O monitor aceita os dois como alias.
 
 ---
 
@@ -48,10 +51,11 @@ Mesas Spin esperadas na API (nomes técnicos; na UI podem aparecer como Roleta /
 | Env | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (mesmo `.env.monitor` do Blaze) |
 | Cookie | **Não** precisa |
 
-Defaults do script (já corretos):
+Defaults do script:
 
-- Base: `https://esportiva.bet.br/api/casino-games/filter`
-- Query: `categories%5B%5D=cassino-ao-vivo&per_page=50`
+- URL: `https://painel.esportivabet.cloud/api/home-sections/public`
+- Seção: `Cassino Ao Vivo`
+- Override opcional: `ESPORTIVA_LOBBY_HOME_SECTIONS_URL`, `ESPORTIVA_LOBBY_HOME_SECTION_TITLE`
 
 ## Teste
 
@@ -59,7 +63,7 @@ Defaults do script (já corretos):
 node scripts/monitor-lobby-esportiva-run.mjs --dry-run
 ```
 
-Esperado: `mesas_encontradas` alinhado aos IDs Good Game Labs cadastrados.
+Esperado: `mesas_encontradas` alinhado aos IDs da home (P1–P4 para as quatro mesas Spin, se a curadoria da Esportiva mantiver o topo).
 
 Produção:
 

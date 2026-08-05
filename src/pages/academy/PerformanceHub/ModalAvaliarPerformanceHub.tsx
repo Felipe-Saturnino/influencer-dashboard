@@ -164,6 +164,7 @@ export function ModalAvaliarPerformanceHub({
   );
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [enviandoVideo, setEnviandoVideo] = useState(false);
+  const [progressoVideo, setProgressoVideo] = useState<number | null>(null);
   const [pontosFortes, setPontosFortes] = useState(avaliacao.pontosFortes ?? "");
   const [pontosDesenvolver, setPontosDesenvolver] = useState(avaliacao.pontosDesenvolver ?? "");
   const [respostasComunicacao, setRespostasComunicacao] = useState<RespostasPorSlug>(() =>
@@ -332,7 +333,8 @@ export function ModalAvaliarPerformanceHub({
 
   async function resolverVideoParaSalvar(): Promise<{ url: string | null; error: string | null }> {
     if (videoFile) {
-      const up = await uploadVideoPerformanceHub(videoFile, avaliacao.id);
+      setProgressoVideo(0);
+      const up = await uploadVideoPerformanceHub(videoFile, avaliacao.id, (pct) => setProgressoVideo(pct));
       if (up.error) return { url: null, error: up.error };
       setVideoPathSalvo(up.path);
       setVideoFile(null);
@@ -342,6 +344,13 @@ export function ModalAvaliarPerformanceHub({
       return { url: videoPathSalvo, error: null };
     }
     return { url: null, error: null };
+  }
+
+  function rotuloEnviandoVideo(): string {
+    if (progressoVideo != null && progressoVideo < 100) {
+      return `Enviando ${progressoVideo}%…`;
+    }
+    return "Enviando…";
   }
 
   function validarConcluir(): string[] {
@@ -416,6 +425,7 @@ export function ModalAvaliarPerformanceHub({
     setErros([]);
     setInvalidFields(new Set());
     setEnviandoVideo(true);
+    setProgressoVideo(null);
     try {
       const resolved = await resolverVideoParaSalvar();
       if (resolved.error) {
@@ -427,6 +437,7 @@ export function ModalAvaliarPerformanceHub({
       setStatusRascunho(`Rascunho salvo às ${horaFormatada()} — você pode continuar depois.`);
     } finally {
       setEnviandoVideo(false);
+      setProgressoVideo(null);
     }
   }
 
@@ -439,6 +450,7 @@ export function ModalAvaliarPerformanceHub({
     }
     setErros([]);
     setEnviandoVideo(true);
+    setProgressoVideo(null);
     try {
       const resolved = await resolverVideoParaSalvar();
       if (resolved.error) {
@@ -453,6 +465,7 @@ export function ModalAvaliarPerformanceHub({
       onConcluir(montarPayload(resolved.url));
     } finally {
       setEnviandoVideo(false);
+      setProgressoVideo(null);
     }
   }
 
@@ -964,7 +977,7 @@ export function ModalAvaliarPerformanceHub({
                   disabled={enviandoVideo}
                   style={btnSecundario(t)}
                 >
-                  {enviandoVideo ? "Enviando…" : "Salvar"}
+                  {enviandoVideo ? rotuloEnviandoVideo() : "Salvar"}
                 </button>
                 <button
                   type="button"
@@ -972,7 +985,7 @@ export function ModalAvaliarPerformanceHub({
                   disabled={enviandoVideo}
                   style={btnPrimario()}
                 >
-                  {enviandoVideo ? "Enviando…" : "Concluir"}
+                  {enviandoVideo ? rotuloEnviandoVideo() : "Concluir"}
                 </button>
               </>
             ) : null}

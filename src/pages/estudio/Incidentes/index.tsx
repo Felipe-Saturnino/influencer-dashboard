@@ -306,12 +306,28 @@ export default function Incidentes() {
   const kpiAtual = useMemo(() => contarPorCategoria(rowsAtualEscopo), [rowsAtualEscopo]);
   const kpiAnterior = useMemo(() => contarPorCategoria(rowsAnteriorEscopo), [rowsAnteriorEscopo]);
 
+  const nicknamePorPrestadorId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of staffOptions) {
+      const nick = (s.nickname ?? "").trim();
+      if (nick) m.set(s.id, nick);
+    }
+    return m;
+  }, [staffOptions]);
+
   const rowsTabela = useMemo(() => {
     const filtradas = rowsAtualEscopo.filter((r) =>
-      textoContemBuscaEmAlgum(busca, r.protocolo, r.tipo, r.mesa_label, r.prestador_nome),
+      textoContemBuscaEmAlgum(
+        busca,
+        r.protocolo,
+        r.tipo,
+        r.mesa_label,
+        r.prestador_nome,
+        nicknamePorPrestadorId.get(r.prestador_id) ?? "",
+      ),
     );
     return sortRows(filtradas, sort.col, sort.dir);
-  }, [rowsAtualEscopo, busca, sort]);
+  }, [rowsAtualEscopo, busca, sort, nicknamePorPrestadorId]);
 
   function onSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" }));
@@ -444,7 +460,7 @@ export default function Incidentes() {
             value={busca}
             onChange={setBusca}
             placeholder={PAGE_SEARCH.incidentes}
-            aria-label="Buscar incidentes"
+            aria-label="Buscar incidentes por protocolo, prestador, nickname ou mesa"
             wrapperStyle={{ flex: "1 1 260px", maxWidth: 420 }}
           />
           {!isProprios ? (
@@ -628,6 +644,7 @@ export default function Incidentes() {
       {verIncidente ? (
         <ModalVerIncidente
           incidente={verIncidente}
+          prestadorNickname={nicknamePorPrestadorId.get(verIncidente.prestador_id) ?? null}
           ocultarPrestadorTimeRelator={isProprios}
           onClose={() => setVerIncidente(null)}
         />

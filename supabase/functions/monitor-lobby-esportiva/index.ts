@@ -3,15 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 /**
  * Edge Function: monitor-lobby-esportiva
- * Lê o lobby Cassino ao Vivo da Esportiva Bet (API BS2Bet / agregador GG Labs),
+ * Lê a prateleira «Cassino Ao Vivo» da home Esportiva Bet (CMS painel),
  * grava posição das mesas Spin e concorrentes do mesmo tipo à frente.
  *
  * Fontes de ID (união, dedupe por mesa Spin):
  * 1. `mesas_spin_operadora_identificacao` onde operadora_slug = esportiva_bet
  * 2. Legado: `mesas_spin_cadastro.operadora_slug = esportiva_bet` + mesa_identificacao_operadora
  *
- * Match: `data[].id` da API (ex. good-game-v2:live-roulette) ↔ ID na Gestão de Estúdios.
- * Concorrentes: mesmo tipo de jogo cujo id NÃO está na lista Spin (tudo passa por GG Labs).
+ * Match: `child[].id` de home-sections ↔ ID na Gestão de Estúdios.
+ * Alias: Blackjack home `5685` ↔ catálogo `good-game-v2:live-blackjack`.
+ * Concorrentes: mesmo tipo de jogo cujo id NÃO está na lista Spin.
  *
  * Chamada: POST {} ou { dry_run?: boolean, esportiva_lobby?: LobbyGame[] }
  * Segurança: MONITOR_LOBBY_ESPORTIVA_INGEST_SECRET (header x-monitor-lobby-esportiva-secret)
@@ -22,12 +23,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const OPERADORA_SLUG = "esportiva_bet";
 const INTEGRACAO_SLUG = "lobby_esportiva";
-/** Proxy público do site (F12 → Rede → casino-games/filter). */
-const FILTER_BASE = "https://esportiva.bet.br/api/casino-games/filter";
-/** categories[]=cassino-ao-vivo — não confundir com jogos-crash. */
-const FILTER_QUERY = "categories%5B%5D=cassino-ao-vivo&per_page=50";
+/** CMS da home (F12 → Rede → home-sections / painel.esportivabet). */
+const HOME_SECTIONS_URL =
+  "https://painel.esportivabet.cloud/api/home-sections/public";
+const HOME_SECTION_TITLE = "Cassino Ao Vivo";
 const PAGE_REFERER = "https://esportiva.bet.br/";
 const PAGE_ORIGIN = "https://esportiva.bet.br";
+
+/** IDs equivalentes na home vs catálogo BS2Bet (mesmo jogo). */
+const GAME_ID_ALIASES: Record<string, string[]> = {
+  "5685": ["good-game-v2:live-blackjack"],
+  "good-game-v2:live-blackjack": ["5685"],
+};
 
 function esportivaFetchHeaders(): Record<string, string> {
   return {
@@ -155,7 +162,7 @@ async function carregarMesasMonitorEsportiva(
   };
 }
 
-/** Posição no lobby; game_id = string da API BS2Bet (ex. good-game-v2:live-roulette). */
+/** Posição na prateleira home; game_id = child[].id (ex. good-game-v2:live-roulette). */
 interface LobbyGame {
   posicao: number;
   game_id: string;
@@ -163,27 +170,25 @@ interface LobbyGame {
   slug: string;
   provider_name: string;
   provider_slug: string;
-  /** Campo `order` bruto da API (menor = mais à frente). */
   order?: number;
 }
 
-interface EsportivaGameRecord {
+interface HomeSectionChild {
   id: string;
-  name: string;
-  slug: string;
-  order?: number;
+  name?: string;
+  slug?: string;
   provider?: {
     id?: number;
     name?: string;
-    slug?: string;
   };
 }
 
-interface EsportivaFilterResponse {
-  data?: EsportivaGameRecord[];
-  current_page?: number;
-  last_page?: number;
-  total?: number;
+interface HomeSection {
+  title?: string;
+  type?: string;
+  active?: boolean;
+  maxItems?: number;
+  child?: HomeSectionChild[];
 }
 
 interface ConcorrenteJson {
@@ -256,13 +261,33 @@ function idsSpinSet(mesas: MesaCadastro[]): Set<string> {
   );
 }
 
-/** Concorrente = mesmo tipo e id fora da lista Spin (agregador GG Labs compartilhado). */
+function expandGameIds(id: string): string[] {
+  const base = String(id);
+  const aliases = GAME_ID_ALIASES[base] ?? [];
+  return [base, ...aliases];
+}
+
+/** True se o id do lobby (ou alias) está cadastrado como ID Esportiva. */
+function idSpinMatches(gameId: string, idsSpin: Set<string>): boolean {
+  return expandGameIds(gameId).some((id) => idsSpin.has(id));
+}
+
+function providerSlugFromName(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("good game")) return "goodgame";
+  if (n.includes("evolution")) return "evolution";
+  if (n.includes("pragmatic")) return "pragmaticplay";
+  if (n.includes("playtech")) return "playtech";
+  return n.replace(/\s+/g, "") || "unknown";
+}
+
+/** Concorrente = mesmo tipo e id fora da lista Spin. */
 function isConcorrente(
   jogo: LobbyGame,
   tipoAlvo: TipoLobby,
   idsSpin: Set<string>,
 ): boolean {
-  if (idsSpin.has(String(jogo.game_id))) return false;
+  if (idSpinMatches(String(jogo.game_id), idsSpin)) return false;
   return tipoLobbyFromJogo(jogo.name, jogo.slug) === tipoAlvo;
 }
 
@@ -294,7 +319,9 @@ function jogosAFrentePiorMesaSpin(
   idsSpin: Set<string>,
 ): ConcorrenteJson[] {
   return lobby
-    .filter((g) => g.posicao < posicaoPiorMesa && !idsSpin.has(String(g.game_id)))
+    .filter(
+      (g) => g.posicao < posicaoPiorMesa && !idSpinMatches(String(g.game_id), idsSpin),
+    )
     .sort((a, b) => a.posicao - b.posicao)
     .map((g) => toConcorrenteJson(g));
 }
@@ -321,33 +348,32 @@ function piorMesaSpinLinhas(
   return worst;
 }
 
-async function fetchPagina(page: number): Promise<EsportivaFilterResponse> {
-  const url = `${FILTER_BASE}?page=${page}&${FILTER_QUERY}`;
-  const res = await fetch(url, { headers: esportivaFetchHeaders() });
+async function fetchHomeSections(): Promise<HomeSection[]> {
+  const res = await fetch(HOME_SECTIONS_URL, { headers: esportivaFetchHeaders() });
   if (!res.ok) {
     throw new Error(
-      `Esportiva filter HTTP ${res.status} (page=${page}). Se bloquear datacenter, use o script Telecom com esportiva_lobby.`,
+      `Esportiva home-sections HTTP ${res.status}. Se bloquear datacenter, use o script Telecom com esportiva_lobby.`,
     );
   }
-  return (await res.json()) as EsportivaFilterResponse;
+  const data = await res.json();
+  if (!Array.isArray(data)) {
+    throw new Error("Esportiva home-sections: resposta não é array.");
+  }
+  return data as HomeSection[];
 }
 
-function recordsToLobbyOrdered(records: EsportivaGameRecord[]): LobbyGame[] {
-  const sorted = [...records].sort((a, b) => {
-    const oa = typeof a.order === "number" ? a.order : Number.POSITIVE_INFINITY;
-    const ob = typeof b.order === "number" ? b.order : Number.POSITIVE_INFINITY;
-    if (oa !== ob) return oa - ob;
-    return String(a.id).localeCompare(String(b.id));
+function sectionChildrenToLobby(children: HomeSectionChild[]): LobbyGame[] {
+  return children.map((r, i) => {
+    const providerName = r.provider?.name ?? "";
+    return {
+      posicao: i + 1,
+      game_id: String(r.id),
+      name: r.name ?? "",
+      slug: r.slug ?? "",
+      provider_name: providerName || "Good Game Labs",
+      provider_slug: providerSlugFromName(providerName) || "goodgame",
+    };
   });
-  return sorted.map((r, i) => ({
-    posicao: i + 1,
-    game_id: String(r.id),
-    name: r.name ?? "",
-    slug: r.slug ?? "",
-    provider_name: r.provider?.name ?? "Good Game Labs",
-    provider_slug: r.provider?.slug ?? "goodgame",
-    order: typeof r.order === "number" ? r.order : undefined,
-  }));
 }
 
 function posicoesFromLobby(
@@ -357,9 +383,10 @@ function posicoesFromLobby(
   const idsEsperados = idsSpinSet(mesasEsperadas);
   const posicoes = new Map<string, number>();
   for (const g of lobby) {
-    const idStr = String(g.game_id);
-    if (idsEsperados.has(idStr)) {
-      posicoes.set(idStr, g.posicao);
+    for (const id of expandGameIds(String(g.game_id))) {
+      if (idsEsperados.has(id) && !posicoes.has(id)) {
+        posicoes.set(id, g.posicao);
+      }
     }
   }
   return posicoes;
@@ -372,29 +399,26 @@ async function escanearLobby(
   posicoes: Map<string, number>;
   paginasLidas: number;
 }> {
-  const idsEsperados = idsSpinSet(mesasEsperadas);
-  const allRecords: EsportivaGameRecord[] = [];
-  let page = 1;
-  let lastPage = 1;
-
-  while (page <= lastPage) {
-    const data = await fetchPagina(page);
-    if (page === 1) {
-      lastPage = Math.max(1, data.last_page ?? 1);
-    }
-    allRecords.push(...(data.data ?? []));
-    page++;
+  const sections = await fetchHomeSections();
+  const section = sections.find(
+    (s) =>
+      String(s.title ?? "").trim() === HOME_SECTION_TITLE && s.active !== false,
+  );
+  if (!section) {
+    throw new Error(
+      `Seção «${HOME_SECTION_TITLE}» não encontrada em home-sections/public.`,
+    );
   }
-
-  const lobby = recordsToLobbyOrdered(allRecords);
-  const posicoes = new Map<string, number>();
-  for (const g of lobby) {
-    if (idsEsperados.has(g.game_id)) {
-      posicoes.set(g.game_id, g.posicao);
-    }
+  const children = Array.isArray(section.child) ? section.child : [];
+  if (children.length === 0) {
+    throw new Error(`Seção «${HOME_SECTION_TITLE}» sem jogos (child vazio).`);
   }
-
-  return { lobby, posicoes, paginasLidas: lastPage };
+  const lobby = sectionChildrenToLobby(children);
+  return {
+    lobby,
+    posicoes: posicoesFromLobby(mesasEsperadas, lobby),
+    paginasLidas: 1,
+  };
 }
 
 type SupabaseAdmin = ReturnType<typeof createClient>;

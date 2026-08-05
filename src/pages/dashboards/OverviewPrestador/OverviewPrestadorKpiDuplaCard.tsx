@@ -8,7 +8,7 @@ type MetricSide = {
   value: string;
   atual: number | null;
   anterior: number | null;
-  /** Quando true, queda é positiva (ex.: Dealing / Reaction). */
+  /** Quando true, queda é positiva (ex.: Velocidade / Tempo de Reação). */
   isInverso?: boolean;
 };
 
@@ -47,7 +47,7 @@ function MomLine({
   );
 }
 
-/** Card com duas métricas lado a lado (ex.: Dealing | Reaction; Bola | Cilindro). */
+/** Card com duas métricas lado a lado (ex.: Velocidade | Tempo de Reação; Bola | Cilindro). */
 export function OverviewPrestadorKpiDuplaCard({
   title,
   icon,

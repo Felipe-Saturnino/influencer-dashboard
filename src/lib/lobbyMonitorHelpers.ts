@@ -388,6 +388,41 @@ export function deltaPosicao(
   return atual - anterior;
 }
 
+/**
+ * Última posição distinta da atual na janela `[desdeDiaKey … hoje]`.
+ * Percorre execuções da mais recente à mais antiga (exceto a execução atual).
+ * Se não houver posição diferente na janela, devolve `null` (UI: —).
+ */
+export function ultimaPosicaoDiferenteNaJanela(
+  mesaIdentificacao: string,
+  posicaoAtual: number | null,
+  execucaoAtualId: string | undefined,
+  execucoes: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+  desdeDiaKey: string,
+): number | null {
+  const mesaId = mesaIdentificacao.trim();
+  if (!mesaId) return null;
+
+  const ordenadas = [...execucoes].sort(
+    (a, b) => new Date(b.executado_em).getTime() - new Date(a.executado_em).getTime(),
+  );
+
+  for (const ex of ordenadas) {
+    if (execucaoAtualId && ex.id === execucaoAtualId) continue;
+    const dia = isoDateBrasilFromInstant(ex.executado_em);
+    if (!dia || dia < desdeDiaKey) continue;
+    const row = (posByExec.get(ex.id) ?? []).find(
+      (p) => p.mesa_identificacao.trim() === mesaId,
+    );
+    if (row?.posicao == null) continue;
+    if (posicaoAtual == null || row.posicao !== posicaoAtual) {
+      return row.posicao;
+    }
+  }
+  return null;
+}
+
 export type BucketHistorico = { key: string; label: string; execucaoIds: string[] };
 
 export function bucketsHistorico(

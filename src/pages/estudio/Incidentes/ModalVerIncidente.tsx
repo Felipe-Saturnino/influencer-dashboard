@@ -21,7 +21,8 @@ import {
   formatDataIsoBr,
   formatHoraRodada,
   incidenteCategoriaLabel,
-  labelTipoJogoIncidente,
+  labelLocalMesaIncidente,
+  labelPrestadorIncidente,
   timeAlvoLabel,
 } from "../../../lib/estudioIncidentesHelpers";
 
@@ -30,10 +31,19 @@ type AbaVer = "dados" | "descricao";
 const ERRO_CARREGAR_ANEXOS =
   "Não foi possível carregar os anexos. Se o problema persistir, entre em contato com o suporte.";
 
-function Campo({ label, value }: { label: string; value: string }) {
+function Campo({
+  label,
+  value,
+  fullWidth,
+}: {
+  label: string;
+  value: string;
+  /** Ocupa a linha inteira do grid (ex.: ID da Rodada longo). */
+  fullWidth?: boolean;
+}) {
   const { theme: t } = useApp();
   return (
-    <div>
+    <div style={{ minWidth: 0, ...(fullWidth ? { gridColumn: "1 / -1" } : null) }}>
       <div
         style={{
           fontSize: 10,
@@ -47,17 +57,42 @@ function Campo({ label, value }: { label: string; value: string }) {
       >
         {label}
       </div>
-      <div style={{ fontSize: 13, color: t.text, fontFamily: FONT.body }}>{value || "—"}</div>
+      <div
+        style={{
+          fontSize: 13,
+          color: t.text,
+          fontFamily: FONT.body,
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+        }}
+      >
+        {value || "—"}
+      </div>
     </div>
   );
 }
 
+const row2 = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 14,
+} as const;
+
+const row3 = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: 14,
+} as const;
+
 export function ModalVerIncidente({
   incidente,
+  prestadorNickname,
   ocultarPrestadorTimeRelator,
   onClose,
 }: {
   incidente: EstudioIncidenteRow;
+  /** Nickname do staff (Gestão de Staff), se conhecido. */
+  prestadorNickname?: string | null;
   ocultarPrestadorTimeRelator: boolean;
   onClose: () => void;
 }) {
@@ -94,20 +129,17 @@ export function ModalVerIncidente({
   }, [incidente.id]);
 
   const categoriaCor = INCIDENTE_CATEGORIA_META[incidente.incidente]?.color ?? t.textMuted;
+  const isShuffler = incidente.time_alvo === "shuf";
 
   const tabs: { id: AbaVer; label: string }[] = [
     { id: "dados", label: "Dados do Incidente" },
     { id: "descricao", label: "Descrição" },
   ];
 
-  const gridStyle = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: 14,
-  } as const;
+  const prestadorLabel = labelPrestadorIncidente(incidente.prestador_nome, prestadorNickname, "nome-nick");
 
   return (
-    <ModalBase onClose={onClose} maxWidth={640}>
+    <ModalBase onClose={onClose} maxWidth={720}>
       <ModalHeader title={incidente.protocolo} onClose={onClose} />
       <p
         style={{
@@ -155,16 +187,29 @@ export function ModalVerIncidente({
       </div>
 
       <ModalTabPanel active={aba === "dados"} id="panel-ver-incidente-dados" labelledBy="tab-ver-incidente-dados">
-        <div style={gridStyle}>
-          <Campo label="Data/Hora" value={formatDataHoraIncidente(incidente.ocorrido_em)} />
-          {!ocultarPrestadorTimeRelator && <Campo label="Prestador" value={incidente.prestador_nome} />}
-          {!ocultarPrestadorTimeRelator && <Campo label="Time" value={timeAlvoLabel(incidente.time_alvo)} />}
-          <Campo label="Jogo" value={labelTipoJogoIncidente(incidente.jogo)} />
-          <Campo label="Mesa" value={incidente.mesa_label} />
-          {!ocultarPrestadorTimeRelator && <Campo label="Relator" value={incidente.relator_nome} />}
-          <Campo label="ID da Rodada" value={incidente.id_rodada} />
-          <Campo label="Data da Rodada" value={formatDataIsoBr(incidente.data_rodada)} />
-          <Campo label="Hora da Rodada" value={formatHoraRodada(incidente.hora_rodada)} />
+        <div style={{ display: "grid", gap: 14 }}>
+          {ocultarPrestadorTimeRelator ? (
+            <Campo label="Abertura de Incidente" value={formatDataHoraIncidente(incidente.ocorrido_em)} fullWidth />
+          ) : (
+            <div style={row2}>
+              <Campo label="Abertura de Incidente" value={formatDataHoraIncidente(incidente.ocorrido_em)} />
+              <Campo label="Relator" value={incidente.relator_nome} />
+            </div>
+          )}
+          <div style={row2}>
+            <Campo label="Data da Rodada" value={formatDataIsoBr(incidente.data_rodada)} />
+            <Campo label="Hora da Rodada" value={formatHoraRodada(incidente.hora_rodada)} />
+          </div>
+          <Campo label="ID da Rodada" value={incidente.id_rodada} fullWidth />
+          {ocultarPrestadorTimeRelator ? (
+            <Campo label="Mesa" value={incidente.mesa_label} fullWidth />
+          ) : (
+            <div style={row3}>
+              <Campo label="Mesa" value={incidente.mesa_label} />
+              <Campo label="Prestador" value={prestadorLabel} />
+              <Campo label="Time" value={timeAlvoLabel(incidente.time_alvo)} />
+            </div>
+          )}
         </div>
       </ModalTabPanel>
 
@@ -174,11 +219,19 @@ export function ModalVerIncidente({
         labelledBy="tab-ver-incidente-descricao"
       >
         <div style={{ display: "grid", gap: 14 }}>
-          <div style={gridStyle}>
-            <Campo label="Resolução" value={incidente.resolucao} />
-            <Campo label="Payout necessário" value={incidente.payout_necessario ? "SIM" : "NÃO"} />
-          </div>
-          <div>
+          {isShuffler ? (
+            <div style={row3}>
+              <Campo label="Resolução" value={incidente.resolucao} />
+              <Campo label="Payout necessário" value={incidente.payout_necessario ? "SIM" : "NÃO"} />
+              <Campo label="Local do Shoe" value={labelLocalMesaIncidente(incidente.local_mesa)} />
+            </div>
+          ) : (
+            <div style={row2}>
+              <Campo label="Resolução" value={incidente.resolucao} />
+              <Campo label="Payout necessário" value={incidente.payout_necessario ? "SIM" : "NÃO"} />
+            </div>
+          )}
+          <div style={{ minWidth: 0 }}>
             <div
               style={{
                 fontSize: 10,
@@ -198,6 +251,8 @@ export function ModalVerIncidente({
                 color: t.text,
                 fontFamily: FONT.body,
                 whiteSpace: "pre-wrap" as const,
+                overflowWrap: "anywhere",
+                wordBreak: "break-word",
               }}
             >
               {incidente.descricao || "—"}
@@ -229,13 +284,16 @@ export function ModalVerIncidente({
               </div>
             ) : (
               <div style={{ display: "grid", gap: 6 }}>
-                {anexos.map((a) =>
-                  a.url ? (
+                {anexos.map((a, idx) => {
+                  const rotulo = `Arquivo ${idx + 1}`;
+                  return a.url ? (
                     <a
                       key={a.id}
                       href={a.url}
                       target="_blank"
                       rel="noreferrer"
+                      title={a.file_name}
+                      aria-label={`${rotulo} — ${a.file_name}`}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -246,11 +304,12 @@ export function ModalVerIncidente({
                       }}
                     >
                       <Paperclip size={12} aria-hidden />
-                      {a.file_name}
+                      {rotulo}
                     </a>
                   ) : (
                     <div
                       key={a.id}
+                      title={a.file_name}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -261,10 +320,10 @@ export function ModalVerIncidente({
                       }}
                     >
                       <Paperclip size={12} aria-hidden />
-                      {a.file_name}
+                      {rotulo}
                     </div>
-                  ),
-                )}
+                  );
+                })}
               </div>
             )}
           </div>

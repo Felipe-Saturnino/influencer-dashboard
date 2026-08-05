@@ -32,7 +32,7 @@ import {
   SEMANTIC,
   labelMesaPosicionamentoRow,
 } from "../../../../lib/lobbyMonitorHelpers";
-import { useLobbyPosicionamentoData } from "./useLobbyPosicionamentoData";
+import { useLobbyPosicionamentoData, POS_COMPARACAO_DIFERENTE_DIAS } from "./useLobbyPosicionamentoData";
 import {
   getPageContentBoxShellStyle,
   getPageContentBoxStyle,
@@ -238,6 +238,8 @@ function PosicaoAtualMesasBlock({
   semDados,
   mesasOrdenadas,
   prevMap,
+  prevDiferenteMap,
+  layout = "operadora",
   ultimaExecutadoEm,
   cardStyle,
 }: {
@@ -246,6 +248,10 @@ function PosicaoAtualMesasBlock({
   semDados: boolean;
   mesasOrdenadas: LobbyPosicaoRow[];
   prevMap: Map<string, number | null>;
+  /** Vista consolidada: última posição ≠ atual nos últimos 7 dias. */
+  prevDiferenteMap?: Map<string, number | null>;
+  /** `consolidado` = Todas Operadoras (posição · estúdio · mesa · posição anterior). */
+  layout?: "operadora" | "consolidado";
   ultimaExecutadoEm: string | undefined;
   cardStyle: CSSProperties;
 }) {
@@ -289,9 +295,94 @@ function PosicaoAtualMesasBlock({
       <SectionTitle sub={fmtUltimaAtualizacao(ultimaExecutadoEm)}>{titulo}</SectionTitle>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {mesasOrdenadas.map((m) => {
+          const estudo = m.nome_estudio?.trim() || "—";
+          const mesa = m.nome_mesa?.trim() || "—";
+
+          if (layout === "consolidado") {
+            const prevDif = prevDiferenteMap?.get(m.mesa_identificacao) ?? null;
+            const tituloLinha = `${fmtPosicao(m.posicao)} — ${estudo} — ${mesa} — ${fmtPosicao(prevDif)}`;
+            return (
+              <li
+                key={m.mesa_identificacao}
+                title={tituloLinha}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 0",
+                  borderBottom: `1px solid ${t.cardBorder}`,
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    minWidth: 40,
+                    padding: "4px 8px",
+                    borderRadius: 8,
+                    textAlign: "center",
+                    fontWeight: 700,
+                    fontSize: 12,
+                    background: posicaoBgColor(m.posicao),
+                    color: posicaoTextColor(m.posicao),
+                    flexShrink: 0,
+                  }}
+                >
+                  {fmtPosicao(m.posicao)}
+                </span>
+                <span style={{ color: t.textMuted, flexShrink: 0 }} aria-hidden>
+                  —
+                </span>
+                <span
+                  style={{
+                    color: t.text,
+                    fontWeight: 600,
+                    maxWidth: 140,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {estudo}
+                </span>
+                <span style={{ color: t.textMuted, flexShrink: 0 }} aria-hidden>
+                  —
+                </span>
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 80,
+                    color: t.text,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {mesa}
+                </span>
+                <span style={{ color: t.textMuted, flexShrink: 0 }} aria-hidden>
+                  —
+                </span>
+                <span
+                  style={{
+                    minWidth: 36,
+                    textAlign: "right",
+                    fontWeight: 600,
+                    color: prevDif == null ? t.textMuted : t.text,
+                    fontVariantNumeric: "tabular-nums",
+                    flexShrink: 0,
+                  }}
+                >
+                  {fmtPosicao(prevDif)}
+                </span>
+              </li>
+            );
+          }
+
           const pa = prevMap.get(m.mesa_identificacao) ?? null;
           const d = deltaPosicao(m.posicao, pa);
-          const label = labelMesaPosicionamentoRow(m);
+          const labelCompleto = labelMesaPosicionamentoRow(m);
           return (
             <li
               key={m.mesa_identificacao}
@@ -321,17 +412,17 @@ function PosicaoAtualMesasBlock({
               </span>
               <span
                 style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }}
-                title={label}
+                title={labelCompleto}
               >
-                {label}
+                {labelCompleto}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 2, minWidth: 28, justifyContent: "flex-end" }}>
                 {d == null || d === 0 ? (
                   <Minus size={14} color={SEMANTIC.cinza} aria-label="Sem variação de posição" />
                 ) : d < 0 ? (
-                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label={`${label} melhorou posição`} />
+                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label={`${labelCompleto} melhorou posição`} />
                 ) : (
-                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label={`${label} piorou posição`} />
+                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label={`${labelCompleto} piorou posição`} />
                 )}
               </span>
             </li>
@@ -395,10 +486,14 @@ function DashboardPosicionamentoTodas({
   slugToNome: (slug: string) => string;
   card: CSSProperties;
 }) {
-  const blaze = useLobbyPosicionamentoData("blaze", refDate, { historico: false });
-  const cda = useLobbyPosicionamentoData("casa_apostas", refDate, { historico: false });
-  const esportiva = useLobbyPosicionamentoData("esportiva_bet", refDate, { historico: false });
-  const jonbet = useLobbyPosicionamentoData("jonbet", refDate, { historico: false });
+  const optsConsolidados = {
+    historico: true as const,
+    historicoDias: POS_COMPARACAO_DIFERENTE_DIAS,
+  };
+  const blaze = useLobbyPosicionamentoData("blaze", refDate, optsConsolidados);
+  const cda = useLobbyPosicionamentoData("casa_apostas", refDate, optsConsolidados);
+  const esportiva = useLobbyPosicionamentoData("esportiva_bet", refDate, optsConsolidados);
+  const jonbet = useLobbyPosicionamentoData("jonbet", refDate, optsConsolidados);
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -418,38 +513,46 @@ function DashboardPosicionamentoTodas({
     <>
       <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
-          titulo={`Posição atual das Mesas ${slugToNome("blaze")}`}
+          titulo={`Mesas ${slugToNome("blaze")}`}
           loading={blaze.loading}
           semDados={blaze.semDados}
           mesasOrdenadas={blaze.mesasOrdenadas}
           prevMap={blaze.prevMap}
+          prevDiferenteMap={blaze.prevDiferenteMap}
+          layout="consolidado"
           ultimaExecutadoEm={blaze.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
         <PosicaoAtualMesasBlock
-          titulo={`Posição atual das Mesas ${slugToNome("casa_apostas")}`}
+          titulo={`Mesas ${slugToNome("casa_apostas")}`}
           loading={cda.loading}
           semDados={cda.semDados}
           mesasOrdenadas={cda.mesasOrdenadas}
           prevMap={cda.prevMap}
+          prevDiferenteMap={cda.prevDiferenteMap}
+          layout="consolidado"
           ultimaExecutadoEm={cda.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
         <PosicaoAtualMesasBlock
-          titulo={`Posição atual das Mesas ${slugToNome("esportiva_bet")}`}
+          titulo={`Mesas ${slugToNome("esportiva_bet")}`}
           loading={esportiva.loading}
           semDados={esportiva.semDados}
           mesasOrdenadas={esportiva.mesasOrdenadas}
           prevMap={esportiva.prevMap}
+          prevDiferenteMap={esportiva.prevDiferenteMap}
+          layout="consolidado"
           ultimaExecutadoEm={esportiva.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
         <PosicaoAtualMesasBlock
-          titulo={`Posição atual das Mesas ${slugToNome("jonbet")}`}
+          titulo={`Mesas ${slugToNome("jonbet")}`}
           loading={jonbet.loading}
           semDados={jonbet.semDados}
           mesasOrdenadas={jonbet.mesasOrdenadas}
           prevMap={jonbet.prevMap}
+          prevDiferenteMap={jonbet.prevDiferenteMap}
+          layout="consolidado"
           ultimaExecutadoEm={jonbet.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />

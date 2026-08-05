@@ -238,7 +238,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de Mesa",
         texto:
-          "A aba **KPIs de Mesa** depende do time:\n\n— **Game Presenter:** cards de Rodadas, médias por jogo (Blackjack, Baccarat, Futebol Brasileiro, Roleta) e Incidentes; **Por Jogo** com Rodadas, Dealing, Reaction, Coop. Vel., Coop. Roda e Incidentes; **Detalhamento Diário** com Data, Rodadas, Total de Incidentes, Casos, Erros e Outros. Na visão de time (Staff vazio), os totais somam o time, as médias usam as amostras do time e há **Pontos de atenção** por prestador.\n\n— **Shuffler:** cards e tabelas só de incidentes (Incidentes, Casos, Erros, Outros), sem Roleta em Por Jogo; na visão de time há Pontos de atenção.\n\n— **Service Manager:** placeholder («Conteúdo em desenvolvimento.»).\n\n— **Shift Leader:** a aba não aparece.\n\n**Erros** = Erro + Não Avisados + Avisado/Não Resolvido. **Outros** = Oculto + Avisado/Resolvido (substitui a antiga coluna Graves). Período = mês civil completo (sem recorte MTD). Sem linhas: \"Sem dados para o período selecionado.\"",
+          "A aba **KPIs de Mesa** depende do time:\n\n— **Game Presenter:** cards de Rodadas, médias por jogo (Blackjack, Baccarat, Futebol Brasileiro, Roleta) e Incidentes; **Por Jogo** com Rodadas, Velocidade, Tempo de Reação e Incidentes — **Bola e Cilindro só na Roleta** (nos demais jogos aparece «—»); **Detalhamento Diário** com Data, Rodadas, Total de Incidentes, Casos, Erros e Outros. Na visão de time (Staff vazio), os totais somam o time, as médias usam as amostras do time e há **Pontos de atenção** por prestador.\n\n— **Shuffler:** cards e tabelas só de incidentes (Incidentes, Casos, Erros, Outros), sem Roleta em Por Jogo; na visão de time há Pontos de atenção.\n\n— **Service Manager:** placeholder («Conteúdo em desenvolvimento.»).\n\n— **Shift Leader:** a aba não aparece.\n\n**Erros** = Erro + Não Avisados + Avisado/Não Resolvido. **Outros** = Oculto + Avisado/Resolvido (substitui a antiga coluna Graves). Período = mês civil completo (sem recorte MTD). Sem linhas: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -742,17 +742,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e KPIs",
         texto:
-          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período), o filtro de **Estúdio** e os seis cards de KPI (um por categoria) resumem a quantidade de incidentes do período e do escopo selecionado, comparando com o mês anterior.\n\nAs abas **Todos Times / Game Presenters / Shuffler** e o filtro de **Staff** restringem a lista e os KPIs a um time ou prestador específico. Usuários com permissão de Ver = Próprios não veem essas abas — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca localiza incidentes por protocolo, prestador ou mesa."
+          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período), o filtro de **Estúdio** e os seis cards de KPI (um por categoria) resumem a quantidade de incidentes do período e do escopo selecionado, comparando com o mês anterior.\n\nAs abas **Todos Times / Game Presenters / Shuffler** e o filtro de **Staff** restringem a lista e os KPIs a um time ou prestador específico. Usuários com permissão de Ver = Próprios não veem essas abas — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca localiza incidentes por protocolo, prestador, nickname ou mesa."
       },
       {
         subtitulo: "Registrar um incidente",
         texto:
-          "Clique em **Novo Incidente** e informe: time (Game Presenter ou Shuffler), mesa e tipo, categoria e resolução (e, para Shuffler, local do shoe), prestador (lista do time na Gestão de Staff — pesquisa por nome ou nickname), ID da rodada (ou marque **Não tem ID**), data e hora da rodada (hora em texto, placeholder `#HH:MM:SS`), se houve necessidade de payout e uma descrição do ocorrido. É possível anexar arquivos de evidência (botão, arrastar e soltar ou **colar com Ctrl+V** uma imagem/vídeo da área de transferência, como uma captura de tela; tamanho máximo de 50 MB por arquivo).",
+          "Clique em **Novo Incidente** e informe: time (Game Presenter ou Shuffler), mesa e tipo, categoria e resolução (e, para Shuffler, local do shoe), prestador (lista do time na Gestão de Staff — pesquisa por nome ou nickname; em Game Presenter a lista mostra **Nickname - Nome**, em Shuffler **Nome - Nickname**), ID da rodada (ou marque **Não tem ID**), data e hora da rodada (hora em texto, placeholder `#HH:MM:SS`), se houve necessidade de payout e uma descrição do ocorrido. É possível anexar arquivos de evidência (botão, arrastar e soltar ou **colar com Ctrl+V** uma imagem/vídeo da área de transferência, como uma captura de tela; tamanho máximo de 50 MB por arquivo).",
       },
       {
         subtitulo: "Consultar um incidente",
         texto:
-          "Clique no ícone de olho na linha da tabela para abrir os detalhes completos: dados da rodada, prestador, relator, resolução, payout, descrição e anexos (com link para abrir cada arquivo).",
+          "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator, data/hora da rodada, ID da rodada, mesa, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir).",
       },
       {
         subtitulo: "Permissões",

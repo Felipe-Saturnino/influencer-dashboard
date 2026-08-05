@@ -30,7 +30,7 @@ import {
 import {
   compareNumeroMesaIncidente,
   hojeIsoDateLocal,
-  labelPrestadorIncidente,
+  labelPrestadorIncidentePorTime,
   normalizarHoraRodadaTexto,
   normalizarTipoJogoIncidente,
   tiposIncidenteParaForm,
@@ -354,10 +354,10 @@ export function ModalNovoIncidente({
     () =>
       staffOptions.map((s) => ({
         id: s.id,
-        label: labelPrestadorIncidente(s.nome, s.nickname),
+        label: labelPrestadorIncidentePorTime(timeAlvo, s.nome, s.nickname),
         buscaExtras: [s.nome, s.nickname ?? ""],
       })),
-    [staffOptions],
+    [staffOptions, timeAlvo],
   );
 
   function onAddAnexos(files: File[]) {
