@@ -179,29 +179,54 @@ async function main() {
     process.exit(1);
   }
 
-  const mesasRes = await fetch(
-    `${supabaseUrl}/rest/v1/mesas_spin_cadastro?operadora_slug=eq.${OPERADORA}&select=mesa_identificacao_operadora`,
-    {
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
+  // União: Gestão de Estúdios (junction) + legado cadastro blaze.
+  // Network (Sports Club) costuma ter só ID Blaze na junction.
+  const [juncRes, legadoRes] = await Promise.all([
+    fetch(
+      `${supabaseUrl}/rest/v1/mesas_spin_operadora_identificacao?operadora_slug=eq.${OPERADORA}&mesa_identificacao_operadora=not.is.null&select=mesa_identificacao_operadora`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
       },
-    },
-  );
-  if (!mesasRes.ok) {
+    ),
+    fetch(
+      `${supabaseUrl}/rest/v1/mesas_spin_cadastro?operadora_slug=eq.${OPERADORA}&select=mesa_identificacao_operadora`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+      },
+    ),
+  ]);
+  if (!juncRes.ok) {
     console.error(
-      "Erro ao ler mesas_spin_cadastro:",
-      mesasRes.status,
-      await mesasRes.text(),
+      "Erro mesas_spin_operadora_identificacao:",
+      juncRes.status,
+      await juncRes.text(),
     );
     process.exit(1);
   }
-  const mesas = await mesasRes.json();
-  const ids = new Set(
-    mesas.map((m) => m.mesa_identificacao_operadora?.trim()).filter(Boolean),
-  );
+  if (!legadoRes.ok) {
+    console.error(
+      "Erro ao ler mesas_spin_cadastro:",
+      legadoRes.status,
+      await legadoRes.text(),
+    );
+    process.exit(1);
+  }
+  const junc = await juncRes.json();
+  const legado = await legadoRes.json();
+  const ids = new Set([
+    ...junc.map((m) => m.mesa_identificacao_operadora?.trim()).filter(Boolean),
+    ...legado.map((m) => m.mesa_identificacao_operadora?.trim()).filter(Boolean),
+  ]);
   if (ids.size === 0) {
-    console.error("Nenhuma mesa com mesa_identificacao_operadora para blaze.");
+    console.error(
+      "Nenhuma mesa com ID Blaze (Gestão de Estúdios → ID Blaze).",
+    );
     process.exit(1);
   }
 

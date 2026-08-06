@@ -24,6 +24,7 @@ import {
   concorrentesPorJogoDetalhe,
   visibilidadePorCategoriaDia,
   gerarAlertas,
+  gerarAlertasAlteracoesJanela,
   toDateKey,
   POS_MONITOR_DIA_MIN,
   rankingConcorrentesFromPosicoes,
@@ -357,6 +358,12 @@ export function useLobbyPosicionamentoData(
     [snapshotAtual, snapshotOntem, execDia, posByExec],
   );
 
+  /** Todas as mudanças de posição nos últimos 7 dias civis (vista consolidada). */
+  const alertasAlteracoes7d = useMemo(() => {
+    const desdeKey = subDiasIso(dayKey, POS_COMPARACAO_DIFERENTE_DIAS);
+    return gerarAlertasAlteracoesJanela(execucoesAll, posByExec, desdeKey, dayKey);
+  }, [execucoesAll, posByExec, dayKey]);
+
   const semDados =
     skip || (!loading && (!ultimaNoDia || snapshotAtual.length === 0));
 
@@ -382,5 +389,6 @@ export function useLobbyPosicionamentoData(
     rankingJogos,
     cats,
     alertas,
+    alertasAlteracoes7d,
   };
 }

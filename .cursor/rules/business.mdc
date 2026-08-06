@@ -82,6 +82,8 @@ A plataforma **não substitui** o PLS/fornecedor de relatórios: hoje a carga fi
 
 **Anti-pattern:** tratar estúdio network (Sports Club) como `operadoras.slug` e carregar `relatorio_daily_summary` com esse slug — duplica ou distorce agregados “Todas Operadoras”.
 
+**Monitor de lobby (Telecom):** um job por **operadora** (Blaze, CDA, …); IDs de mesa (dedicada **e** network) só na Gestão de Estúdios — ver **`telecom.mdc`**. Não criar job Telecom por estúdio.
+
 ---
 
 ## 5. Dados financeiros das mesas (Overview Spin)

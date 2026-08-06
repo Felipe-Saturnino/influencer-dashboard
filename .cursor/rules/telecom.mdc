@@ -1,0 +1,152 @@
+---
+description: Padrão dos jobs Telecom (monitor de lobby) — script único por operadora, mesas só no Data Intelligence, expansão sem redeploy Telecom.
+globs:
+  - scripts/monitor-lobby-*-run.mjs
+  - scripts/run-monitor-lobby-*.ps1
+  - scripts/env.monitor*.example
+  - docs/TELECOM-MONITOR-LOBBY-*.md
+  - docs/SETUP-MONITOR-LOBBY-*.md
+  - supabase/functions/monitor-lobby-*/**
+  - supabase/migrations/*lobby*
+alwaysApply: false
+---
+
+# Telecom — jobs de monitor de lobby
+
+**Antes de criar ou alterar job Telecom / Edge `monitor-lobby-*`:** `business.mdc` (estúdio vs operadora, dedicada vs network) → **este MDC** → handoff `docs/TELECOM-MONITOR-LOBBY-*.md`.
+
+**Escopo:** scripts Node na máquina da Telecom + Edge Functions `monitor-lobby-*` + docs de handoff. **Não** cobre UI de Posicionamento / Status Técnico (ver `dashboards.mdc` / `plataforma.mdc`).
+
+---
+
+## 1. Princípio — configuração só no Data Intelligence
+
+| Quem | Responsabilidade |
+|------|------------------|
+| **Data Intelligence** (Gestão de Estúdios) | Quais mesas rastrear; ID da mesa **naquela** operadora (`mesa_identificacao_operadora` / junction) |
+| **Telecom** | Rodar **um** script por lobby/operadora, a cada hora, com secrets estáveis |
+| **Edge Function** | Cruzar lobby × IDs do cadastro, gravar `lobby_monitor_*` + `sync_logs` |
+
+**Contrato com a Telecom:** configurar o job **uma vez**. Nova mesa, novo estúdio (ex. Network Sports Club) ou nova venda para o **mesmo** provedor/lobby → Spin só cadastra o ID na plataforma → o próximo ciclo do job **já rastreia**, sem novo desenvolvimento Telecom.
+
+**Proibido** no script Telecom / Edge:
+
+- Lista fixa de mesas, IDs Spin ou IDs de operadora hardcodados no código
+- “Só as 5 dedicadas Blaze” / “só Good Game Labs” como filtro de escopo de cadastro
+- Exigir novo deploy ou novo `.env` quando a Spin adiciona mesa no mesmo lobby
+
+Exceção legítima de constante no código: **URL/query da API do lobby**, título de seção CMS, aliases de ID **do mesmo jogo** no mesmo provedor (ex. Esportiva Blackjack `5685` ↔ `good-game-v2:live-blackjack`) — documentar no SETUP.
+
+---
+
+## 2. Arquitetura canónica (igual Blaze / CDA / Jonbet / Esportiva)
+
+```
+[Agendador Telecom 1h]
+    → script monitor-lobby-<operadora>-run.mjs
+        1. Lê IDs esperados no Supabase (junction ∪ legado)
+        2. Busca o lobby na API da operadora (rede BR / cookie se preciso)
+        3. POST body com o lobby para Edge monitor-lobby-<operadora>
+    → Edge cruza, grava execução + posições + sync_logs
+```
+
+| Peça | Caminho |
+|------|---------|
+| Script | `scripts/monitor-lobby-<slug>-run.mjs` |
+| Wrapper Windows | `scripts/run-monitor-lobby-<slug>.ps1` (ou `*-telecom.ps1`) |
+| Edge | `supabase/functions/monitor-lobby-<slug>/` |
+| Handoff Telecom | `docs/TELECOM-MONITOR-LOBBY-<SLUG>.md` |
+| Setup Spin | `docs/SETUP-MONITOR-LOBBY-<SLUG>.md` |
+| Env exemplo | `scripts/env.monitor*.example` / `.env.monitor` (não versionar secrets) |
+
+`<slug>` = operadora parceira (`blaze`, `cda`, `jonbet`, `esportiva`) — **não** o estúdio network.
+
+---
+
+## 3. Fonte de IDs (obrigatório em script e Edge)
+
+União, dedupe; **nunca** só o legado:
+
+1. `mesas_spin_operadora_identificacao` onde `operadora_slug = <parceiro>` e `mesa_identificacao_operadora` preenchido  
+   → mesas de **qualquer** estúdio (dedicada + network) com ID naquele parceiro  
+2. Legado: `mesas_spin_cadastro` com `operadora_slug = <parceiro>` + `mesa_identificacao_operadora`
+
+Referência de implementação: `monitor-lobby-jonbet-run.mjs` / `monitor-lobby-blaze-run.mjs` (pós-Network).
+
+**Paginação do lobby:** continuar até achar **todos** os IDs esperados **ou** esgotar páginas. Parar cedo só com dedicadas no set faz o job **omitir** Network no fim do ranking (anti-pattern Blaze pré-correção).
+
+---
+
+## 4. Pacote completo para a Telecom (entrega padrão)
+
+Quando o produto pedir um **novo provedor/lobby** (ou atualização de um existente), o agente gera o **pacote inteiro** para o Felipe enviar à Telecom — **não** só o `.mjs` solto.
+
+| Entrega | Ficheiro | Conteúdo |
+|---------|----------|----------|
+| **1. Handoff operacional** | `docs/TELECOM-MONITOR-LOBBY-<SLUG>.md` | O que configurar, env, F12/endpoints, comandos, agendamento, falhas |
+| **2. Script técnico** | `scripts/monitor-lobby-<slug>-run.mjs` | Fetch do lobby + ingest na Edge |
+| **3. Wrapper Windows** | `scripts/run-monitor-lobby-<slug>.ps1` | Carrega `.env.monitor` e chama o `.mjs` |
+| **4. Setup Spin (interno)** | `docs/SETUP-MONITOR-LOBBY-<SLUG>.md` | IDs, deploy Edge, secrets — **não** é o handoff principal da Telecom |
+
+**Input do produto (Felipe):** caminho do novo provedor — URL do site, request F12 (ou indício), slug da operadora no DI, restrições (cookie, home vs catálogo, 451, etc.).
+
+**Output:** pacote acima + Edge `monitor-lobby-<slug>` alinhada. Telecom recebe sobretudo **(1)+(2)+(3)**; secrets `SUPABASE_*` à parte (cofre).
+
+**Diferenças por provedor (obrigatório no handoff):** o *formato* do pacote é sempre o mesmo (env, dry-run, 1h, IDs só no DI), mas a **consulta ao lobby** muda — e isso deve estar **explícito e completo** no `TELECOM-MONITOR-LOBBY-*.md` e no script. **Não** assumir “é igual à Blaze”. Exemplos em produção:
+
+| Operadora | Peculiaridade a documentar |
+|-----------|----------------------------|
+| **Blaze / Jonbet** | API de search; risco **HTTP 451** em IP de datacenter → job só em rede BR |
+| **CDA** | Precisa **`CDA_LOBBY_COOKIE`** de sessão válida; renovar via F12; 401 sem cookie |
+| **Esportiva** | Fonte = CMS `home-sections/public` (prateleira home), **não** o catálogo `casino-games/filter` |
+
+No material para a Telecom: secção clara de **autenticação / cookie / proxy**, **URL + query exatas**, e **como renovar** o que expirar (passo a passo F12).
+
+Todo handoff `TELECOM-MONITOR-LOBBY-*.md` deve ter, nesta ordem:
+
+1. **Objetivo** — 1h, fuso `America/Sao_Paulo`, o que o script faz vs o que a Edge faz  
+2. **Arquivo a executar** — um `.mjs` (+ `.ps1` se Windows)  
+3. **Env** — tabela `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, secrets específicos do lobby (cookie, etc.)  
+4. **Endpoints / como achar no F12** — host, path, filtro Rede (sem ambiguidade de seção errada)  
+5. **Onde cadastrar IDs** — Gestão de Estúdios → ID da operadora (Spin faz; Telecom **não** edita lista de mesas)  
+6. **Comandos** — `--dry-run` depois produção; exit `0` = OK  
+7. **Agendamento** — frequência 1h  
+8. **Falhas comuns** — 401/451/cookie, contactar Spin  
+
+Tom: operacional, PT-BR, **sem** pedir à Telecom para recompilar quando a Spin cadastrar mesa nova.
+
+---
+
+## 5. Checklist — novo lobby / novo script
+
+- [ ] `operadora_slug` = parceiro comercial (não estúdio Sports Club como operadora)
+- [ ] Script lê **junction ∪ legado**; zero IDs de mesa no código
+- [ ] Edge idem; match por `mesa_identificacao_operadora` (aliases só se o CMS/API divergir do catálogo)
+- [ ] Paginação / prateleira cobre ranking completo necessário (ou fonte CMS que seja a métrica de produto)
+- [ ] Body ingest: `{ dry_run?, <slug>_lobby, <slug>_paginas_lidas? }`
+- [ ] Secret opcional `MONITOR_LOBBY_<SLUG>_INGEST_SECRET` + header `x-monitor-lobby-<slug>-secret`
+- [ ] Integration slug em `sync_logs` / Status Técnico alinhado
+- [ ] Docs TELECOM + SETUP; TELECOM deixa claro: **expansão = cadastro na plataforma**
+- [ ] Deploy Edge; Telecom só troca ficheiro `.mjs` / env **se** mudar API do provedor — não por mesa nova
+
+---
+
+## 6. Anti-patterns
+
+- Hardcodar mesas no script “para facilitar o dry-run”
+- Script que só consulta `mesas_spin_cadastro` do slug dedicado e ignora Network na junction
+- Early-break de paginação quando ainda faltam IDs esperados
+- Pedir à Telecom um job novo por estúdio no **mesmo** lobby da mesma operadora
+- Documentar “atualize o script quando entrarem mesas novas” em vez de “cadastre o ID na Gestão de Estúdios”
+- Confundir catálogo completo com prateleira da home (caso Esportiva) — a métrica de produto define a fonte; a expansão de mesas continua só no DI
+
+---
+
+## 7. Inventário atual
+
+| Operadora | Script | Edge | Nota de fonte |
+|-----------|--------|------|----------------|
+| Blaze | `monitor-lobby-blaze-run.mjs` | `monitor-lobby-blaze` | `/api/games/search` live-casino |
+| CDA | `monitor-lobby-cda-run.mjs` | `monitor-lobby-cda` | cookie + casino-categories |
+| Jonbet | `monitor-lobby-jonbet-run.mjs` | `monitor-lobby-jonbet` | espelha Blaze |
+| Esportiva | `monitor-lobby-esportiva-run.mjs` | `monitor-lobby-esportiva` | `home-sections/public` (prateleira home) |

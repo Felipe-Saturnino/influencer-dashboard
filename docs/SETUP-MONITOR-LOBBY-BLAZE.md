@@ -21,6 +21,8 @@ O job `monitor-lobby-blaze` cruza o lobby usando **`mesa_identificacao_operadora
 
 ### IDs Blaze (operadora) — referência
 
+**Dedicadas** (estúdio Blaze):
+
 | Mesa | `mesa_identificacao_operadora` |
 |------|--------------------------------|
 | Roleta | `500617` |
@@ -29,7 +31,16 @@ O job `monitor-lobby-blaze` cruza o lobby usando **`mesa_identificacao_operadora
 | Blackjack VIP | `501110` |
 | Blackjack 2 | `500615` |
 
-Script para preencher IDs da operadora em linhas existentes: `scripts/manual-supabase-mesas-spin-blaze-lobby-ids.sql`
+**Network** (Sports Club — cadastrar **ID Blaze** na mesa do estúdio network):
+
+| Mesa na Blaze | `mesa_identificacao_operadora` |
+|---------------|--------------------------------|
+| Futebol Brasileiro Sports Club | `542821` |
+| Roleta Brasileira Sports Club | `542822` |
+| Blackjack Sports Club | `542819` |
+| Baccarat Sports Club | `542820` |
+
+Script para preencher IDs dedicados em linhas existentes: `scripts/manual-supabase-mesas-spin-blaze-lobby-ids.sql`
 
 ## Deploy da função
 
