@@ -17,6 +17,9 @@ import { propsBotaoFecharModal } from "../lib/iconOnlyButtonA11y";
 
 const DialogTitleIdContext = createContext<string>("");
 
+/** Padding interno do painel `ModalBase` — usar em `ModalHeader` sticky para alinhar ao topo. */
+export const MODAL_BASE_PADDING_PX = 28;
+
 export function useDialogTitleId() {
   return useContext(DialogTitleIdContext);
 }
@@ -85,7 +88,7 @@ export function ModalBase({
           background: brand.blockBg,
           border: `1px solid ${t.cardBorder}`,
           borderRadius: "20px",
-          padding: "28px",
+          padding: MODAL_BASE_PADDING_PX,
           width: "100%",
           maxWidth,
           minWidth: 0,
@@ -102,19 +105,45 @@ export function ModalBase({
 export function ModalHeader({
   title,
   onClose,
+  /**
+   * Mantém título + X visíveis ao rolar o conteúdo do modal.
+   * Prévia em Incidentes — após aprovação, tornar padrão em todos os modais com X.
+   */
+  sticky = false,
 }: {
   title: string;
   onClose: () => void;
+  sticky?: boolean;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const titleId = useDialogTitleId();
+  const pad = MODAL_BASE_PADDING_PX;
   return (
     <div
       style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "20px",
+        marginBottom: 20,
+        ...(sticky
+          ? {
+              position: "sticky",
+              top: -pad,
+              zIndex: 2,
+              marginTop: -pad,
+              marginLeft: -pad,
+              marginRight: -pad,
+              paddingTop: pad,
+              paddingLeft: pad,
+              paddingRight: pad,
+              paddingBottom: 16,
+              marginBottom: 20,
+              background: brand.blockBg,
+              borderBottom: `1px solid ${t.cardBorder}`,
+              boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+            }
+          : null),
       }}
     >
       <h2
@@ -141,6 +170,7 @@ export function ModalHeader({
           alignItems: "center",
           justifyContent: "center",
           color: t.textMuted,
+          flexShrink: 0,
         }}
         {...propsBotaoFecharModal()}
       >
