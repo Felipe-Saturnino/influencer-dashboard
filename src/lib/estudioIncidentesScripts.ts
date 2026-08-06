@@ -7,7 +7,7 @@ import type { IncidenteTimeAlvo } from "./estudioIncidentesTypes";
 
 export type IncidenteScript = {
   id: string;
-  /** Rótulo do chip quando há 2+ scripts. Com 1 script a UI mostra «Usar script». */
+  /** Rótulo do chip na faixa de scripts. */
   titulo: string;
   corpo: string;
 };

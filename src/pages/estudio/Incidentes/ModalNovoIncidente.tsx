@@ -963,8 +963,7 @@ export function ModalNovoIncidente({
                 >
                   {scriptsDisponiveis.map((s) => {
                     const ativo = scriptAtivoId === s.id;
-                    const label =
-                      scriptsDisponiveis.length === 1 ? "Usar script" : `Usar: ${s.titulo}`;
+                    const label = s.titulo;
                     return (
                       <button
                         key={s.id}
