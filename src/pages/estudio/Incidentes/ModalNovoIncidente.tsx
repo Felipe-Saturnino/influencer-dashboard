@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Paperclip, Shuffle, UserRound } from "lucide-react";
+import { ChevronDown, FileText, Paperclip, Shuffle, UserRound } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalConfirmDelete, ModalHeader } from "../../../components/OperacoesModal";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
@@ -39,6 +39,10 @@ import {
   normalizarTipoJogoIncidente,
   tiposIncidenteParaForm,
 } from "../../../lib/estudioIncidentesHelpers";
+import {
+  scriptsParaIncidente,
+  type IncidenteScript,
+} from "../../../lib/estudioIncidentesScripts";
 
 export type NovoIncidenteMesaOption = {
   id: string;
@@ -341,6 +345,32 @@ export function ModalNovoIncidente({
   const salvandoRef = useRef(false);
   const skipResetTimeAlvoRef = useRef(isEdit);
   const [erro, setErro] = useState<string | null>(null);
+  const [scriptAtivoId, setScriptAtivoId] = useState<string | null>(null);
+  const [scriptPendente, setScriptPendente] = useState<IncidenteScript | null>(null);
+
+  const scriptsDisponiveis = useMemo(
+    () => scriptsParaIncidente(timeAlvo, tipo),
+    [timeAlvo, tipo],
+  );
+
+  function aplicarScript(script: IncidenteScript) {
+    setDescricao(script.corpo);
+    setScriptAtivoId(script.id);
+    setScriptPendente(null);
+  }
+
+  function tentarAplicarScript(script: IncidenteScript) {
+    const atual = descricao.trim();
+    if (atual && atual !== script.corpo.trim()) {
+      setScriptPendente(script);
+      return;
+    }
+    aplicarScript(script);
+  }
+
+  useEffect(() => {
+    setScriptAtivoId(null);
+  }, [tipo, timeAlvo]);
 
   useEffect(() => {
     let cancel = false;
@@ -788,6 +818,7 @@ export function ModalNovoIncidente({
       : ANEXO_HINT;
 
   return (
+    <>
     <ModalBase onClose={onClose} maxWidth={920}>
       <ModalHeader title={isEdit ? "Editar Incidente" : "Novo Incidente"} onClose={onClose} />
 
@@ -864,14 +895,109 @@ export function ModalNovoIncidente({
           {campoHoraRodada}
         </div>
 
-        <Campo label="Descrição" required>
-          <textarea
-            value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
-            rows={4}
-            style={{ ...inputBaseStyle(t), resize: "vertical" as const, fontFamily: FONT.body }}
-          />
-        </Campo>
+        <div>
+          <div
+            style={{
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: 14,
+              background: "color-mix(in srgb, var(--brand-primary, #7c3aed) 4%, transparent)",
+              padding: 14,
+              display: "grid",
+              gap: 10,
+            }}
+          >
+            {scriptsDisponiveis.length > 0 ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                      color: t.textMuted,
+                      fontFamily: FONT.body,
+                    }}
+                  >
+                    Scripts para{" "}
+                    <span style={{ color: "var(--brand-primary, #7c3aed)", fontWeight: 800 }}>{tipo}</span>
+                  </span>
+                  <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                    Opcional — edite ou complemente após aplicar
+                  </span>
+                </div>
+                <div
+                  role="group"
+                  aria-label="Scripts de descrição"
+                  style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
+                >
+                  {scriptsDisponiveis.map((s) => {
+                    const ativo = scriptAtivoId === s.id;
+                    const label =
+                      scriptsDisponiveis.length === 1 ? "Usar script" : `Usar: ${s.titulo}`;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        aria-pressed={ativo}
+                        disabled={salvando}
+                        onClick={() => tentarAplicarScript(s)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "8px 14px",
+                          minHeight: 40,
+                          borderRadius: 10,
+                          border: ativo
+                            ? "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 55%, transparent)"
+                            : `1px solid ${t.cardBorder}`,
+                          background: ativo
+                            ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 15%, transparent)"
+                            : t.inputBg ?? t.cardBg,
+                          color: ativo ? "var(--brand-primary, #7c3aed)" : t.text,
+                          fontFamily: FONT.body,
+                          fontSize: 12,
+                          fontWeight: ativo ? 700 : 600,
+                          cursor: salvando ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        <FileText size={14} aria-hidden />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            <Campo label="Descrição" required>
+              <textarea
+                value={descricao}
+                onChange={(e) => {
+                  setDescricao(e.target.value);
+                  setScriptAtivoId(null);
+                }}
+                rows={5}
+                disabled={salvando}
+                placeholder={
+                  scriptsDisponiveis.length > 0
+                    ? "Descreva o ocorrido na mesa… ou use um script acima."
+                    : "Descreva o ocorrido na mesa…"
+                }
+                style={{ ...inputBaseStyle(t), resize: "vertical" as const, fontFamily: FONT.body }}
+              />
+            </Campo>
+          </div>
+        </div>
 
         <CampoUploadArquivos
           id="incidente-anexos"
@@ -935,5 +1061,20 @@ export function ModalNovoIncidente({
         </div>
       </div>
     </ModalBase>
+
+    {scriptPendente ? (
+      <ModalConfirmDelete
+        title="Substituir descrição?"
+        texto="A descrição já tem texto. Deseja substituir pelo script selecionado? O conteúdo atual será perdido."
+        confirmLabel="Substituir"
+        destructive={false}
+        zIndex={1100}
+        onCancel={() => setScriptPendente(null)}
+        onConfirm={() => {
+          if (scriptPendente) aplicarScript(scriptPendente);
+        }}
+      />
+    ) : null}
+    </>
   );
 }

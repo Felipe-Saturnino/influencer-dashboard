@@ -682,6 +682,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Para Game Presenter, o tipo de incidente depende da mesa selecionada — escolha a mesa primeiro para carregar a lista de tipos daquele jogo. Para Shuffler, a lista de tipos é fixa e não depende da mesa.",
       },
       {
+        subtitulo: "Não aparecem scripts na Descrição?",
+        texto:
+          "Os scripts só aparecem depois de escolher um **Tipo** que tenha template cadastrado. Se o tipo não tiver script, escreva a descrição livremente. Com mais de um script, os chips mostram a variante (por exemplo Rescan ou Cancelou) — o texto continua editável após aplicar.",
+      },
+      {
         subtitulo: "A mesa que eu procuro não aparece na lista do formulário?",
         texto:
           "Mesas de Roleta não aparecem na lista quando o time selecionado é Shuffler, pois esse time não atua nesse jogo. Confirme também se a mesa está cadastrada e ativa em Gestão de Mesas.",
