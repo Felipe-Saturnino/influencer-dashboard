@@ -209,7 +209,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs de Mesa sem números?",
         texto:
-          "Os cards e tabelas aparecem mesmo sem registros (valores em 0). Confirme o mês no carrossel e se o filtro **Time** / **Staff** cobre o prestador certo. **Game Presenter:** rodadas e tempos vêm do Grafana (`gp_kpi_diario`) — o prestador precisa de **ID operacional** em Gestão de Staff. **Incidentes** (GP e Shuffler) vêm da página Incidentes no mesmo período (`data da rodada`). Sem linhas de detalhe diário: \"Sem dados para o período selecionado.\"",
+          "Os cards e tabelas aparecem mesmo sem registros (valores em 0). Confirme o mês no carrossel e se o filtro **Time** / **Staff** cobre o prestador certo. **Game Presenter:** rodadas e tempos vêm do Grafana (`gp_kpi_diario`) — o prestador precisa de **ID operacional** em Gestão de Staff. **Incidentes** (GP e Shuffler) usam a data da rodada, com o mesmo fechamento **D-1** das rodadas: o que foi registrado hoje só aparece amanhã nesta aba (na página Incidentes continua visível no dia). Sem linhas de detalhe diário: \"Sem dados para o período selecionado.\"",
       },
     ],
   },

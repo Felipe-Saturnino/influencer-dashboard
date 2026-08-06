@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import {
+  getOntemIsoLocal,
   getPeriodoComparativoMesCompleto,
   getPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
@@ -171,6 +172,15 @@ function mergePorDia(
     });
 }
 
+/**
+ * Incidentes e Grafana na aba KPIs de Mesa fecham em D-1 (mesmo dia operacional).
+ * Incidentes podem ser cadastrados no dia; só entram no Overview a partir do dia seguinte.
+ */
+function fimPeriodoKpisMesaD1(fim: string): string {
+  const ontem = getOntemIsoLocal();
+  return fim > ontem ? ontem : fim;
+}
+
 export function useOverviewPrestadorGpKpi(opts: {
   enabled: boolean;
   /** Um ou vários prestadores (visão individual ou time). */
@@ -211,12 +221,18 @@ export function useOverviewPrestadorGpKpi(opts: {
     void (async () => {
       try {
         const fetchPar = async (ini: string, fim: string) => {
+          const fimD1 = fimPeriodoKpisMesaD1(fim);
+          if (fimD1 < ini) {
+            return { kpi: [] as GpKpiDiarioRow[], inc: [] as EstudioIncidenteRow[] };
+          }
           const [kpi, inc] = await Promise.all([
-            carregaKpiGrafana ? fetchGpKpiPeriodo(funcionarioIds, ini, fim) : Promise.resolve([] as GpKpiDiarioRow[]),
+            carregaKpiGrafana
+              ? fetchGpKpiPeriodo(funcionarioIds, ini, fimD1)
+              : Promise.resolve([] as GpKpiDiarioRow[]),
             fetchEstudioIncidentesPrestadoresPeriodo({
               prestadorIds: funcionarioIds,
               dataIni: ini,
-              dataFim: fim,
+              dataFim: fimD1,
             }),
           ]);
           return { kpi, inc };

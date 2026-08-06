@@ -109,7 +109,7 @@ function cardDuplaDealingReaction(
         isInverso: true,
       }}
       right={{
-        label: "Tempo de Reação",
+        label: "Reação",
         value: fmtMediaSegundos(atual.reactionSeg),
         atual: atual.reactionSeg,
         anterior: anterior.reactionSeg,
@@ -577,7 +577,7 @@ function OverviewPrestadorAbaKpisMesaConteudo({
                   <SortTableTh label="Jogo" col="jogo" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "asc" }))} thStyle={dataTable.thHeaderSticky} align="center" />
                   <SortTableTh label="Rodadas" col="rodadas" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Velocidade" col="dealing" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
-                  <SortTableTh label="Tempo de Reação" col="reaction" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                  <SortTableTh label="Reação" col="reaction" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Bola" col="coopVel" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Cilindro" col="coopRoda" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Incidentes" col="incidentes" sortCol={sortJogoGp.col} sortDir={sortJogoGp.dir} onSort={(c) => setSortJogoGp((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />

@@ -936,7 +936,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "KPIs de Mesa",
         definicao:
-          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Velocidade, Tempo de Reação, Bola/Cilindro (só Roleta) e incidentes. Shuffler: só incidentes (sem Roleta). Service Manager: placeholder; Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
+          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Velocidade, Reação, Bola/Cilindro (só Roleta) e incidentes. Shuffler: só incidentes (sem Roleta). Service Manager: placeholder; Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
         referencia: "Overview Prestador",
       },
       {
