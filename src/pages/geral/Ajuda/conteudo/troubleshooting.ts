@@ -14,6 +14,11 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
       texto:
         "Isso acontece logo após uma nova versão da plataforma entrar no ar: o navegador ainda tem em cache a versão anterior e não encontra um dos arquivos atualizados.\n\nA plataforma tenta se atualizar sozinha. Se a mensagem **Nova versão disponível** permanecer, clique em **Recarregar página**.\n\nSe continuar, force a atualização com **Ctrl+Shift+R** (ou **Cmd+Shift+R** no Mac) e, em último caso, abra numa janela anônima. Persistindo, entre em contato com o suporte.",
     },
+    {
+      subtitulo: "No endereço de staging (pages.dev) aparece que não tenho acesso ao ambiente?",
+      texto:
+        "O ambiente de preview/staging restringe o login a uma lista de e-mails definida pela equipe (variável de build no Cloudflare Pages — Preview). Produção e o uso local não usam essa lista. Quem não está autorizado vê a mensagem de acesso negado e não entra nas features em desenvolvimento. Integrações e rotas `/api/*` (formulários do site, webhooks) **não** são bloqueadas por essa regra. Se você precisa de acesso ao staging, peça inclusão do seu e-mail ao administrador.",
+    },
   ],
 } as const;
 

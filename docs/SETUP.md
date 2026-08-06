@@ -71,6 +71,7 @@ O projeto usa variáveis de ambiente do Vite (prefixo `VITE_`). São embutidas n
 |----------|-------------|-----------|
 | `VITE_SUPABASE_URL` | Sim | URL do projeto Supabase (ex: `https://xyz.supabase.co`) |
 | `VITE_SUPABASE_ANON_KEY` | Sim | Chave anônima (pública) do Supabase |
+| `VITE_STAGING_LOGIN_ALLOWLIST` | Só Preview | Em hosts `*.pages.dev` / `*.cloudflareapp.com`, só estes e-mails (ou `@dominio`) conseguem logar. Produção e `localhost` ignoram. **Não** bloqueia rotas `/api/*`. Lista vazia em staging = ninguém entra. |
 
 ### Onde obter
 
@@ -99,6 +100,13 @@ Configure as variáveis de ambiente no painel do provedor:
 
 Use os mesmos nomes: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 
+Para o staging `*.pages.dev`, defina **`VITE_STAGING_LOGIN_ALLOWLIST` apenas no ambiente Preview** (não em Production), por exemplo:
+
+```
+VITE_STAGING_LOGIN_ALLOWLIST=felipe.saturnino@spingaming.com.br,outro@spingaming.com.br
+```
+
+Depois **refaça o deploy** do Preview (a variável é embutida no build). Produção (`data-intelligence.spingaming.com.br`) continua sem essa restrição.
 ## Deploy no Cloudflare Pages
 
 1. Conecte o repositório ao Cloudflare Pages

@@ -320,21 +320,21 @@ function PosicaoAtualMesasBlock({
     return (
       <div style={cardStyle}>
         <SectionTitle sub={fmtUltimaAtualizacao(ultimaExecutadoEm)}>{titulo}</SectionTitle>
-        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-          <table style={getDataTableStyle({ minWidth: 360 })}>
+        <div className="app-table-wrap" style={{ ...getDataTableWrapStyle(), overflowX: "visible" }}>
+          <table style={getDataTableStyle({ width: "100%", minWidth: 0, tableLayout: "fixed" })}>
             <caption style={{ display: "none" }}>{`Posição das mesas — ${titulo}`}</caption>
             <thead>
               <tr>
-                <th scope="col" style={dataTable.thHeader}>
+                <th scope="col" style={{ ...dataTable.thHeader, width: "18%" }}>
                   Atual
                 </th>
-                <th scope="col" style={dataTable.thHeader}>
+                <th scope="col" style={{ ...dataTable.thHeader, width: "28%" }}>
                   Estúdio
                 </th>
-                <th scope="col" style={dataTable.thHeader}>
+                <th scope="col" style={{ ...dataTable.thHeader, width: "36%" }}>
                   Mesa
                 </th>
-                <th scope="col" style={dataTable.thHeader}>
+                <th scope="col" style={{ ...dataTable.thHeader, width: "18%" }}>
                   Anterior
                 </th>
               </tr>
@@ -351,10 +351,26 @@ function PosicaoAtualMesasBlock({
                         <PosicaoBadge posicao={m.posicao} />
                       </div>
                     </td>
-                    <td style={dataTable.tdCenter} title={estudo}>
+                    <td
+                      style={{
+                        ...dataTable.tdCenter,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={estudo}
+                    >
                       {estudo}
                     </td>
-                    <td style={dataTable.tdCenter} title={mesa}>
+                    <td
+                      style={{
+                        ...dataTable.tdCenter,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={mesa}
+                    >
                       {mesa}
                     </td>
                     <td style={dataTable.tdCenter}>
@@ -529,7 +545,7 @@ function DashboardPosicionamentoTodas({
 
   return (
     <>
-      <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
+      <div className="app-grid-pos-operadoras" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
           titulo={`Mesas ${slugToNome("blaze")}`}
           loading={blaze.loading}
