@@ -304,7 +304,8 @@ export function ModalNovoIncidente({
 }: {
   mesas: NovoIncidenteMesaOption[];
   onClose: () => void;
-  onSaved: (protocolo: string) => void;
+  /** `criarOutro`: mantém o modal aberto e limpa campos para o próximo ticket. */
+  onSaved: (protocolo: string, opts?: { criarOutro?: boolean }) => void;
   /** Quando informado, abre em modo edição (protocolo somente leitura). */
   editando?: EstudioIncidenteRow | null;
 }) {
@@ -347,6 +348,7 @@ export function ModalNovoIncidente({
   const [erro, setErro] = useState<string | null>(null);
   const [scriptAtivoId, setScriptAtivoId] = useState<string | null>(null);
   const [scriptPendente, setScriptPendente] = useState<IncidenteScript | null>(null);
+  const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
 
   const scriptsDisponiveis = useMemo(
     () => scriptsParaIncidente(timeAlvo, tipo),
@@ -475,10 +477,28 @@ export function ModalNovoIncidente({
     setAnexos((prev) => prev.filter((a) => a.key !== key));
   }
 
-  async function handleSalvar() {
+  function resetParaProximoIncidente(protocolo: string) {
+    // Mantém Time, Mesa, Prestador, Data e campos de classificação — típico em tickets seguidos.
+    setIdRodada("");
+    setSemIdRodada(false);
+    setHoraRodada("");
+    setTipo("");
+    setDescricao("");
+    setAnexos([]);
+    setScriptAtivoId(null);
+    setScriptPendente(null);
+    setErro(null);
+    setSucessoMsg(`Incidente ${protocolo} registrado. Preencha o próximo.`);
+    salvandoRef.current = false;
+    setSalvando(false);
+  }
+
+  async function handleSalvar(opts?: { criarOutro?: boolean }) {
     // Trava síncrona — `setSalvando` é assíncrono e um 2º clique gerava ticket duplicado.
     if (salvandoRef.current) return;
+    const criarOutro = opts?.criarOutro === true && !isEdit;
     setErro(null);
+    setSucessoMsg(null);
 
     if (!mesaSelecionada) {
       setErro("Selecione a mesa do incidente.");
@@ -593,12 +613,14 @@ export function ModalNovoIncidente({
             protocoloSalvo,
             up.error,
           );
-          onSaved(protocoloSalvo);
+          onSaved(protocoloSalvo, criarOutro ? { criarOutro: true } : undefined);
+          if (criarOutro) resetParaProximoIncidente(protocoloSalvo);
           return;
         }
       }
 
-      onSaved(protocoloSalvo);
+      onSaved(protocoloSalvo, criarOutro ? { criarOutro: true } : undefined);
+      if (criarOutro) resetParaProximoIncidente(protocoloSalvo);
     } catch (e) {
       console.error("Incidentes: falha ao salvar", e);
       setErro(isEdit ? ERRO_GENERICO_EDITAR : ERRO_GENERICO_CRIAR);
@@ -1013,13 +1035,30 @@ export function ModalNovoIncidente({
           hint={anexoHint}
         />
 
+        {sucessoMsg ? (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{ color: "#22c55e", fontSize: 12, fontFamily: FONT.body, fontWeight: 600 }}
+          >
+            {sucessoMsg}
+          </div>
+        ) : null}
+
         {erro ? (
           <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body }}>
             {erro}
           </div>
         ) : null}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
           <button
             type="button"
             onClick={onClose}
@@ -1038,6 +1077,27 @@ export function ModalNovoIncidente({
           >
             Cancelar
           </button>
+          {!isEdit ? (
+            <button
+              type="button"
+              onClick={() => void handleSalvar({ criarOutro: true })}
+              disabled={salvando}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg ?? t.cardBg,
+                color: t.text,
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: salvando ? "not-allowed" : "pointer",
+                opacity: salvando ? 0.75 : 1,
+              }}
+            >
+              {salvando ? "Salvando…" : "Registrar e criar outro"}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => void handleSalvar()}

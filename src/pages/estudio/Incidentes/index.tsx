@@ -665,12 +665,13 @@ export default function Incidentes() {
         <ModalNovoIncidente
           mesas={mesasParaForm}
           onClose={() => setNovoOpen(false)}
-          onSaved={() => {
+          onSaved={(_protocolo, opts) => {
+            void carregarDados();
+            if (opts?.criarOutro) return;
             setNovoOpen(false);
             setBusca("");
             setStaffFiltroId("");
             setTimeTab("todos");
-            void carregarDados();
           }}
         />
       ) : null}
