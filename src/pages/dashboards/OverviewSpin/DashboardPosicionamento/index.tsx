@@ -611,7 +611,6 @@ function DashboardPosicionamentoOperadora({
   card: CSSProperties;
 }) {
   const { theme: t } = useApp();
-  const brand = useDashboardBrand();
   const [historicoModo, setHistoricoModo] = useState<HeatmapHistoricoModo>("dia");
   const [sortCatVis, setSortCatVis] = useState<{ col: CatVisSortCol; dir: SortDir }>({
     col: "top10",
