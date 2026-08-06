@@ -755,9 +755,14 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator, data/hora da rodada, ID da rodada, mesa, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir).",
       },
       {
+        subtitulo: "Editar um incidente",
+        texto:
+          "Com permissão de Editar = Sim, clique no ícone de lápis na coluna Ações. O formulário abre com os dados preenchidos — o **Protocolo** aparece só para consulta e não pode ser alterado. Os demais campos podem ser corrigidos; novos anexos são adicionados aos já existentes. Ao concluir, use **Salvar Alterações**.",
+      },
+      {
         subtitulo: "Permissões",
         texto:
-          "O acesso é definido em Gestão de Usuários → Permissões para a página Incidentes:\n— **Ver = Sim**: consulta todos os incidentes do escopo.\n— **Ver = Próprios**: consulta apenas os incidentes em que o prestador está envolvido (sem colunas de Prestador, Time e Relator).\n— **Editar = Sim**: exibe o botão **Novo Incidente**.\n\nSem Editar, a página fica em modo consulta.",
+          "O acesso é definido em Gestão de Usuários → Permissões para a página Incidentes:\n— **Ver = Sim**: consulta todos os incidentes do escopo.\n— **Ver = Próprios**: consulta apenas os incidentes em que o prestador está envolvido (sem colunas de Prestador, Time e Relator).\n— **Editar = Sim**: exibe o botão **Novo Incidente** e o ícone **Editar** na tabela.\n\nSem Editar = Sim, a página fica em modo consulta.",
       },
     ],
   },

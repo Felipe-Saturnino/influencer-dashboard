@@ -667,6 +667,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O botão exige permissão de **Editar** = Sim na página Incidentes (Gestão de Usuários → Permissões). Sem ela, a página fica em modo consulta. Solicite a liberação ao administrador se precisar registrar incidentes.",
       },
       {
+        subtitulo: "O ícone Editar não aparece na tabela?",
+        texto:
+          "Assim como o **Novo Incidente**, o lápis na coluna Ações só aparece com **Editar** = Sim. Com Editar = Próprios ou Não, a tabela permanece só com a ação de visualizar.",
+      },
+      {
+        subtitulo: "Posso alterar o protocolo ao editar?",
+        texto:
+          "Não. O protocolo é gerado automaticamente no registro e permanece fixo — no modal de edição ele aparece somente para consulta.",
+      },
+      {
         subtitulo: "O campo Tipo não tem opções ou está vazio?",
         texto:
           "Para Game Presenter, o tipo de incidente depende da mesa selecionada — escolha a mesa primeiro para carregar a lista de tipos daquele jogo. Para Shuffler, a lista de tipos é fixa e não depende da mesa.",

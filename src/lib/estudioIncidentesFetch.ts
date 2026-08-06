@@ -4,6 +4,7 @@ import type {
   EstudioIncidenteAnexoRow,
   EstudioIncidenteInsert,
   EstudioIncidenteRow,
+  EstudioIncidenteUpdate,
   IncidenteStaffOption,
   IncidenteTimeAlvo,
 } from "./estudioIncidentesTypes";
@@ -104,6 +105,26 @@ export async function insertEstudioIncidente(
     return {
       data: null,
       error: "Não foi possível registrar o incidente. Se o problema persistir, entre em contato com o suporte.",
+    };
+  }
+  return { data: data as EstudioIncidenteRow, error: null };
+}
+
+export async function updateEstudioIncidente(
+  id: string,
+  patch: EstudioIncidenteUpdate,
+): Promise<{ data: EstudioIncidenteRow | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from("estudio_incidentes")
+    .update(patch)
+    .eq("id", id)
+    .select(INCIDENTE_SELECT)
+    .maybeSingle();
+  if (error) {
+    console.error("[Incidentes] update:", error);
+    return {
+      data: null,
+      error: "Não foi possível salvar o incidente. Se o problema persistir, entre em contato com o suporte.",
     };
   }
   return { data: data as EstudioIncidenteRow, error: null };

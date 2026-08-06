@@ -12,8 +12,10 @@ import { getFiltroBarTabButtonStyle } from "../../../lib/filterBarStyles";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import {
+  fetchEstudioIncidenteAnexos,
   fetchStaffFormIncidente,
   insertEstudioIncidente,
+  updateEstudioIncidente,
   uploadEstudioIncidenteAnexos,
 } from "../../../lib/estudioIncidentesFetch";
 import {
@@ -21,6 +23,7 @@ import {
   INCIDENTE_CATEGORIA_OPTIONS,
   INCIDENTE_ID_RODADA_SEM_ID,
   INCIDENTE_RESOLUCAO_OPTIONS,
+  type EstudioIncidenteRow,
   type IncidenteCategoria,
   type IncidenteLocalMesa,
   type IncidenteResolucao,
@@ -29,6 +32,7 @@ import {
 } from "../../../lib/estudioIncidentesTypes";
 import {
   compareNumeroMesaIncidente,
+  formatHoraRodada,
   hojeIsoDateLocal,
   labelPrestadorIncidentePorTime,
   normalizarHoraRodadaTexto,
@@ -44,8 +48,19 @@ export type NovoIncidenteMesaOption = {
   tipoJogo: string;
 };
 
-const ERRO_GENERICO =
+const ERRO_GENERICO_CRIAR =
   "Não foi possível registrar o incidente. Se o problema persistir, entre em contato com o suporte.";
+
+const ERRO_GENERICO_EDITAR =
+  "Não foi possível salvar o incidente. Se o problema persistir, entre em contato com o suporte.";
+
+function horaRodadaInicial(hora: string | null | undefined): string {
+  if (!hora) return "";
+  const h = hora.trim();
+  if (h.length >= 8) return h.slice(0, 8);
+  if (h.length >= 5) return formatHoraRodada(h);
+  return h;
+}
 
 const ANEXO_HINT = "Imagem ou vídeo · máx. 50 MB por arquivo";
 
@@ -281,32 +296,50 @@ export function ModalNovoIncidente({
   mesas,
   onClose,
   onSaved,
+  editando = null,
 }: {
   mesas: NovoIncidenteMesaOption[];
   onClose: () => void;
   onSaved: (protocolo: string) => void;
+  /** Quando informado, abre em modo edição (protocolo somente leitura). */
+  editando?: EstudioIncidenteRow | null;
 }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
+  const isEdit = !!editando;
 
-  const [timeAlvo, setTimeAlvo] = useState<IncidenteTimeAlvo>("gp");
-  const [mesaId, setMesaId] = useState("");
-  const [idRodada, setIdRodada] = useState("");
-  const [semIdRodada, setSemIdRodada] = useState(false);
-  const [dataRodada, setDataRodada] = useState(hojeIsoDateLocal());
-  const [horaRodada, setHoraRodada] = useState("");
-  const [prestadorId, setPrestadorId] = useState("");
-  const [incidenteCategoria, setIncidenteCategoria] = useState<IncidenteCategoria>("caso");
-  const [tipo, setTipo] = useState("");
-  const [localMesa, setLocalMesa] = useState<IncidenteLocalMesa | "">("em_mesa");
-  const [resolucao, setResolucao] = useState<IncidenteResolucao>(INCIDENTE_RESOLUCAO_OPTIONS[0]!);
-  const [payoutNecessario, setPayoutNecessario] = useState(false);
-  const [descricao, setDescricao] = useState("");
+  const [timeAlvo, setTimeAlvo] = useState<IncidenteTimeAlvo>(editando?.time_alvo ?? "gp");
+  const [mesaId, setMesaId] = useState(editando?.mesa_id ?? "");
+  const [idRodada, setIdRodada] = useState(() =>
+    editando?.id_rodada === INCIDENTE_ID_RODADA_SEM_ID ? "" : (editando?.id_rodada ?? ""),
+  );
+  const [semIdRodada, setSemIdRodada] = useState(
+    () => editando?.id_rodada === INCIDENTE_ID_RODADA_SEM_ID,
+  );
+  const [dataRodada, setDataRodada] = useState(editando?.data_rodada ?? hojeIsoDateLocal());
+  const [horaRodada, setHoraRodada] = useState(() => horaRodadaInicial(editando?.hora_rodada));
+  const [prestadorId, setPrestadorId] = useState(editando?.prestador_id ?? "");
+  const [incidenteCategoria, setIncidenteCategoria] = useState<IncidenteCategoria>(
+    editando?.incidente ?? "caso",
+  );
+  const [tipo, setTipo] = useState(editando?.tipo ?? "");
+  const [localMesa, setLocalMesa] = useState<IncidenteLocalMesa | "">(() => {
+    if (editando) return editando.local_mesa ?? (editando.time_alvo === "shuf" ? "em_mesa" : "");
+    return "em_mesa";
+  });
+  const [resolucao, setResolucao] = useState<IncidenteResolucao>(
+    editando?.resolucao ?? INCIDENTE_RESOLUCAO_OPTIONS[0]!,
+  );
+  const [payoutNecessario, setPayoutNecessario] = useState(editando?.payout_necessario ?? false);
+  const [descricao, setDescricao] = useState(editando?.descricao ?? "");
   const [anexos, setAnexos] = useState<AnexoPendente[]>([]);
+  const [anexosExistentesCount, setAnexosExistentesCount] = useState(0);
 
   const [staffOptions, setStaffOptions] = useState<IncidenteStaffOption[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const salvandoRef = useRef(false);
+  const skipResetTimeAlvoRef = useRef(isEdit);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
@@ -329,11 +362,32 @@ export function ModalNovoIncidente({
   }, [timeAlvo]);
 
   useEffect(() => {
+    // Em edição, não limpar campos no mount (time já vem do registro).
+    if (skipResetTimeAlvoRef.current) {
+      skipResetTimeAlvoRef.current = false;
+      return;
+    }
     setMesaId("");
     setTipo("");
     setPrestadorId("");
     setLocalMesa(timeAlvo === "shuf" ? "em_mesa" : "");
   }, [timeAlvo]);
+
+  useEffect(() => {
+    if (!editando?.id) return;
+    let cancel = false;
+    void (async () => {
+      try {
+        const rows = await fetchEstudioIncidenteAnexos(editando.id);
+        if (!cancel) setAnexosExistentesCount(rows.length);
+      } catch (e) {
+        console.error("Incidentes: falha ao carregar anexos existentes", e);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [editando?.id]);
 
   const mesasDisponiveis = useMemo(() => {
     const base =
@@ -392,6 +446,8 @@ export function ModalNovoIncidente({
   }
 
   async function handleSalvar() {
+    // Trava síncrona — `setSalvando` é assíncrono e um 2º clique gerava ticket duplicado.
+    if (salvandoRef.current) return;
     setErro(null);
 
     if (!mesaSelecionada) {
@@ -441,13 +497,10 @@ export function ModalNovoIncidente({
       return;
     }
 
-    const relatorNome = user?.name?.trim() || user?.email || "Usuário";
-
+    salvandoRef.current = true;
     setSalvando(true);
     try {
-      const { data, error } = await insertEstudioIncidente({
-        // Momento do registro (não a data/hora da rodada — essas vão em data_rodada / hora_rodada).
-        ocorrido_em: new Date().toISOString(),
+      const payloadBase = {
         time_alvo: timeAlvo,
         prestador_id: prestador.id,
         prestador_nome: prestador.nome,
@@ -460,37 +513,66 @@ export function ModalNovoIncidente({
         id_rodada: semIdRodada ? INCIDENTE_ID_RODADA_SEM_ID : idRodada.trim(),
         data_rodada: dataRodada,
         hora_rodada: horaNorm,
-        local_mesa: timeAlvo === "gp" ? "em_mesa" : (localMesa as IncidenteLocalMesa),
+        local_mesa: timeAlvo === "gp" ? ("em_mesa" as const) : (localMesa as IncidenteLocalMesa),
         resolucao,
         payout_necessario: payoutNecessario,
         descricao: descricao.trim(),
-        relator_user_id: user?.id ?? null,
-        relator_nome: relatorNome,
-        created_by: user?.id ?? null,
-      });
+      };
 
-      if (error || !data) {
-        setErro(error ?? ERRO_GENERICO);
-        setSalvando(false);
-        return;
+      let protocoloSalvo: string;
+      let incidenteId: string;
+
+      if (isEdit && editando) {
+        const { data, error } = await updateEstudioIncidente(editando.id, payloadBase);
+        if (error || !data) {
+          setErro(error ?? ERRO_GENERICO_EDITAR);
+          salvandoRef.current = false;
+          setSalvando(false);
+          return;
+        }
+        protocoloSalvo = data.protocolo;
+        incidenteId = data.id;
+      } else {
+        const relatorNome = user?.name?.trim() || user?.email || "Usuário";
+        const { data, error } = await insertEstudioIncidente({
+          ocorrido_em: new Date().toISOString(),
+          ...payloadBase,
+          relator_user_id: user?.id ?? null,
+          relator_nome: relatorNome,
+          created_by: user?.id ?? null,
+        });
+
+        if (error || !data) {
+          setErro(error ?? ERRO_GENERICO_CRIAR);
+          salvandoRef.current = false;
+          setSalvando(false);
+          return;
+        }
+        protocoloSalvo = data.protocolo;
+        incidenteId = data.id;
       }
 
       if (anexos.length > 0) {
         const up = await uploadEstudioIncidenteAnexos(
-          data.id,
+          incidenteId,
           anexos.map((a) => a.file),
         );
         if (!up.ok) {
-          setErro(up.error ?? ERRO_GENERICO);
-          setSalvando(false);
+          console.error(
+            "Incidentes: incidente salvo, falha nos anexos",
+            protocoloSalvo,
+            up.error,
+          );
+          onSaved(protocoloSalvo);
           return;
         }
       }
 
-      onSaved(data.protocolo);
+      onSaved(protocoloSalvo);
     } catch (e) {
       console.error("Incidentes: falha ao salvar", e);
-      setErro(ERRO_GENERICO);
+      setErro(isEdit ? ERRO_GENERICO_EDITAR : ERRO_GENERICO_CRIAR);
+      salvandoRef.current = false;
       setSalvando(false);
     }
   }
@@ -700,11 +782,33 @@ export function ModalNovoIncidente({
     </Campo>
   );
 
+  const anexoHint =
+    isEdit && anexosExistentesCount > 0
+      ? `${ANEXO_HINT} · ${anexosExistentesCount} anexo(s) já no incidente — novos arquivos serão adicionados`
+      : ANEXO_HINT;
+
   return (
     <ModalBase onClose={onClose} maxWidth={920}>
-      <ModalHeader title="Novo Incidente" onClose={onClose} />
+      <ModalHeader title={isEdit ? "Editar Incidente" : "Novo Incidente"} onClose={onClose} />
 
       <div style={{ display: "grid", gap: 18 }}>
+        {isEdit && editando ? (
+          <Campo label="Protocolo">
+            <input
+              type="text"
+              value={editando.protocolo}
+              readOnly
+              aria-readonly="true"
+              style={{
+                ...inputBaseStyle(t),
+                color: t.textMuted,
+                cursor: "default",
+                opacity: 0.9,
+              }}
+            />
+          </Campo>
+        ) : null}
+
         <Campo label="Time">
           <div role="tablist" aria-label="Time" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <FiltroBarTabButton
@@ -780,7 +884,7 @@ export function ModalNovoIncidente({
           onRemove={onRemoveAnexo}
           disabled={salvando}
           t={t}
-          hint={ANEXO_HINT}
+          hint={anexoHint}
         />
 
         {erro ? (
@@ -826,7 +930,7 @@ export function ModalNovoIncidente({
               opacity: salvando ? 0.75 : 1,
             }}
           >
-            {salvando ? "Salvando…" : "Registrar Incidente"}
+            {salvando ? "Salvando…" : isEdit ? "Salvar Alterações" : "Registrar Incidente"}
           </button>
         </div>
       </div>

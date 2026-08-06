@@ -10,6 +10,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Pencil,
   Shuffle,
   UserRound,
   Users,
@@ -160,8 +161,9 @@ export default function Incidentes() {
   const dataTable = useDataTableBlock();
 
   const isProprios = perm.canView === "proprios";
-  /** Produto: Novo Incidente só com Editar = Sim (não Próprios). */
-  const canNovo = perm.canEditar === "sim";
+  /** Produto: Novo / Editar Incidente só com Editar = Sim (não Próprios). */
+  const canEditarSim = perm.canEditar === "sim";
+  const canNovo = canEditarSim;
 
   const meses = useMemo(() => getMesesDisponiveis(INCIDENTES_MES_INICIO), []);
   const [mesIdx, setMesIdx] = useState(() => getIdxMesCarrosselPadrao(meses));
@@ -184,6 +186,7 @@ export default function Incidentes() {
 
   const [verIncidente, setVerIncidente] = useState<EstudioIncidenteRow | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
+  const [editarIncidente, setEditarIncidente] = useState<EstudioIncidenteRow | null>(null);
 
   const mesAtual = meses[mesIdx] ?? meses[meses.length - 1];
   const podeVer = perm.canView === "sim" || perm.canView === "proprios";
@@ -624,10 +627,18 @@ export default function Incidentes() {
                           <td style={dataTable.tdCenter}>{r.tipo}</td>
                           {!isProprios ? <td style={dataTable.tdCenter}>{r.relator_nome}</td> : null}
                           <td style={dataTable.tdCenter}>
-                            <div style={{ display: "flex", justifyContent: "center" }}>
+                            <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
                               <BtnIconeAcaoLinha label={tooltipAcao("Ver Incidente")} onClick={() => setVerIncidente(r)}>
                                 <Eye size={13} aria-hidden />
                               </BtnIconeAcaoLinha>
+                              {canEditarSim ? (
+                                <BtnIconeAcaoLinha
+                                  label={tooltipAcao("Editar Incidente")}
+                                  onClick={() => setEditarIncidente(r)}
+                                >
+                                  <Pencil size={13} aria-hidden />
+                                </BtnIconeAcaoLinha>
+                              ) : null}
                             </div>
                           </td>
                         </tr>
@@ -659,6 +670,18 @@ export default function Incidentes() {
             setBusca("");
             setStaffFiltroId("");
             setTimeTab("todos");
+            void carregarDados();
+          }}
+        />
+      ) : null}
+
+      {editarIncidente ? (
+        <ModalNovoIncidente
+          mesas={mesasParaForm}
+          editando={editarIncidente}
+          onClose={() => setEditarIncidente(null)}
+          onSaved={() => {
+            setEditarIncidente(null);
             void carregarDados();
           }}
         />
