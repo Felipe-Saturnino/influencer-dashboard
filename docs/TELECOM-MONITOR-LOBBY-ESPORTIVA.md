@@ -1,8 +1,44 @@
 # Telecom — Monitor Lobby Esportiva Bet
 
-Job horário que lê o Cassino ao Vivo da Esportiva (`api-esportiva-betbr.bs2bet.com`) e envia o snapshot para a Edge `monitor-lobby-esportiva` gravar em `lobby_monitor_*`.
+Job horário que lê a prateleira **Cassino Ao Vivo** da **home** Esportiva e envia o snapshot para a Edge `monitor-lobby-esportiva`.
 
-**Agregador:** Good Game Labs (GG Labs). IDs no formato `good-game-v2:…` cadastrados em **Gestão de Estúdios → ID Esportiva Bet**.
+**Agregador das mesas Spin:** Good Game Labs.  
+IDs = `child[].id` da seção home — cadastrados em **Gestão de Estúdios → ID Esportiva Bet**.
+
+---
+
+## Endpoint correto (F12)
+
+| Item | Valor |
+|------|--------|
+| Host | `https://painel.esportivabet.cloud` |
+| Request | `GET /api/home-sections/public` |
+| URL completa | `https://painel.esportivabet.cloud/api/home-sections/public` |
+| Seção | `title` = **`Cassino Ao Vivo`** (`type` = `games-fixed`) |
+| Ordem | índice de `child[]` (1º item = posição 1) |
+
+**Não usar** `GET /api/casino-games/filter?categories[]=cassino-ao-vivo` — esse é o **catálogo completo** (~559 jogos) e gera posições ~100+ que **não** batem com a home.
+
+### Como achar no DevTools
+
+1. Abrir `https://esportiva.bet.br/` (home).
+2. F12 → **Rede** → limpar → filtrar: `home-sections` ou `painel.esportivabet`.
+3. Recarregar a página.
+4. Abrir a resposta → achar o objeto com `"title":"Cassino Ao Vivo"`.
+5. Em `child[]`, as mesas Spin (Good Game Labs) devem estar no **topo** (hoje P1–P4).
+
+Mesas Spin esperadas (IDs atuais da home — atualizar Gestão de Estúdios se divergir):
+
+| `id` (cadastrar) | Nome na home | Slug |
+|------------------|--------------|------|
+| `good-game-v2:live-cardmatchup` | Futebol Brasileiro | `goodgame/futebol-brasileiro` |
+| `good-game-v2:live-roulette` | Roulette | `goodgame/roulette` |
+| `5685` | Blackjack | `goodgame/blackjack` |
+| `good-game-v2:live-baccarat` | Baccarat | `goodgame/baccarat` |
+
+**Nota Blackjack:** no catálogo BS2Bet o mesmo jogo aparece como `good-game-v2:live-blackjack`; na home o CMS usa **`5685`**. Preferir cadastrar **`5685`**. O monitor aceita os dois como alias.
+
+---
 
 ## O que a Telecom precisa
 
@@ -10,10 +46,16 @@ Job horário que lê o Cassino ao Vivo da Esportiva (`api-esportiva-betbr.bs2bet
 |------|--------|
 | Script | `scripts/monitor-lobby-esportiva-run.mjs` |
 | Wrapper Windows | `scripts/run-monitor-lobby-esportiva.ps1` |
-| Frequência | A cada **1 hora** (fuso `America/Sao_Paulo`) |
-| Rede | Escritório / IP BR (se a API bloquear datacenter — mesmo padrão Blaze) |
-| Env | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (mesmo `.env.monitor` do Blaze/CDA) |
-| Cookie | **Não** precisa (diferente da CDA) |
+| Frequência | A cada **1 hora** (`America/Sao_Paulo`) |
+| Rede | Escritório / IP BR |
+| Env | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (mesmo `.env.monitor` do Blaze) |
+| Cookie | **Não** precisa |
+
+Defaults do script:
+
+- URL: `https://painel.esportivabet.cloud/api/home-sections/public`
+- Seção: `Cassino Ao Vivo`
+- Override opcional: `ESPORTIVA_LOBBY_HOME_SECTIONS_URL`, `ESPORTIVA_LOBBY_HOME_SECTION_TITLE`
 
 ## Teste
 
@@ -21,29 +63,12 @@ Job horário que lê o Cassino ao Vivo da Esportiva (`api-esportiva-betbr.bs2bet
 node scripts/monitor-lobby-esportiva-run.mjs --dry-run
 ```
 
-Esperado: `mesas_encontradas` = quantidade de IDs cadastrados (ou `parcial` se algum ID não aparecer no filtro).
+Esperado: `mesas_encontradas` alinhado aos IDs da home (P1–P4 para as quatro mesas Spin, se a curadoria da Esportiva mantiver o topo).
 
-Produção (grava):
+Produção:
 
 ```bash
 node scripts/monitor-lobby-esportiva-run.mjs
 ```
 
-## Query da API
-
-Default: `category=cassino-ao-vivo` em  
-`https://api-esportiva-betbr.bs2bet.com/v2/casino-games/filter`
-
-Se o F12 mostrar outro parâmetro, sobrescrever:
-
-```env
-ESPORTIVA_LOBBY_FILTER_QUERY=...
-```
-
-## Spin (já feito no repo)
-
-- Edge `monitor-lobby-esportiva`
-- Migration `integrations` slug `lobby_esportiva`
-- UI Posicionamento + Status Técnico
-
-Setup interno: `docs/SETUP-MONITOR-LOBBY-ESPORTIVA.md`
+Setup interno Spin: `docs/SETUP-MONITOR-LOBBY-ESPORTIVA.md`

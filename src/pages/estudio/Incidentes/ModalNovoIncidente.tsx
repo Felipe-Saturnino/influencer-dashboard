@@ -30,7 +30,7 @@ import {
 import {
   compareNumeroMesaIncidente,
   hojeIsoDateLocal,
-  labelPrestadorIncidente,
+  labelPrestadorIncidentePorTime,
   normalizarHoraRodadaTexto,
   normalizarTipoJogoIncidente,
   tiposIncidenteParaForm,
@@ -47,7 +47,8 @@ export type NovoIncidenteMesaOption = {
 const ERRO_GENERICO =
   "Não foi possível registrar o incidente. Se o problema persistir, entre em contato com o suporte.";
 
-const ANEXO_HINT = "Vários arquivos · tamanho máximo por arquivo: 10 MB";
+const ANEXO_HINT =
+  "Imagem ou vídeo · cole (Ctrl+V), arraste ou adicione · máx. 50 MB por arquivo";
 
 type AnexoPendente = { key: string; file: File };
 
@@ -353,16 +354,16 @@ export function ModalNovoIncidente({
     () =>
       staffOptions.map((s) => ({
         id: s.id,
-        label: labelPrestadorIncidente(s.nome, s.nickname),
+        label: labelPrestadorIncidentePorTime(timeAlvo, s.nome, s.nickname),
         buscaExtras: [s.nome, s.nickname ?? ""],
       })),
-    [staffOptions],
+    [staffOptions, timeAlvo],
   );
 
   function onAddAnexos(files: File[]) {
     const oversized = files.find((f) => f.size > ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES);
     if (oversized) {
-      setErro(`O anexo «${oversized.name}» excede o tamanho máximo de 10 MB.`);
+      setErro(`O anexo «${oversized.name}» excede o tamanho máximo de 50 MB.`);
       return;
     }
     setErro(null);
@@ -417,7 +418,7 @@ export function ModalNovoIncidente({
     }
     for (const a of anexos) {
       if (a.file.size > ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES) {
-        setErro(`O anexo «${a.file.name}» excede o tamanho máximo de 10 MB.`);
+        setErro(`O anexo «${a.file.name}» excede o tamanho máximo de 50 MB.`);
         return;
       }
     }

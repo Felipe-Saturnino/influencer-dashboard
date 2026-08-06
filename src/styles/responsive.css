@@ -242,6 +242,27 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 }
 
+/**
+ * Overview Spin → Posicionamento (Todas Operadoras): 4 cards de operadora.
+ * Desktop: no máximo 2 colunas (2×2). Mobile: 1 coluna. Evita auto-fit em 4 colunas estreitas.
+ */
+.app-grid-pos-operadoras {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-grid-pos-operadoras > * {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .app-grid-pos-operadoras {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /** Formulários longos (Dados de Cadastro) — 1 col mobile, 2 cols fixas; evita auto-fit >2 colunas. */
 .app-grid-form {
   display: grid;

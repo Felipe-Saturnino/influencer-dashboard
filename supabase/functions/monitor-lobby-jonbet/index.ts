@@ -1,47 +1,38 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 /**
- * Edge Function: monitor-lobby-esportiva
- * Lê a prateleira «Cassino Ao Vivo» da home Esportiva Bet (CMS painel),
- * grava posição das mesas Spin e concorrentes do mesmo tipo à frente.
+ * Edge Function: monitor-lobby-jonbet
+ * Lê o lobby público Cassino Ao Vivo da Jonbet, grava posição das mesas Spin
+ * e concorrentes do mesmo tipo à frente.
  *
  * Fontes de ID (união, dedupe por mesa Spin):
- * 1. `mesas_spin_operadora_identificacao` onde operadora_slug = esportiva_bet
- * 2. Legado: `mesas_spin_cadastro.operadora_slug = esportiva_bet` + mesa_identificacao_operadora
+ * 1. `mesas_spin_operadora_identificacao` onde operadora_slug = jonbet (Gestão de Estúdios — ID Jonbet)
+ * 2. Legado: `mesas_spin_cadastro.operadora_slug = jonbet` + coluna mesa_identificacao_operadora
  *
- * Match: `child[].id` de home-sections ↔ ID na Gestão de Estúdios.
- * Alias: Blackjack home `5685` ↔ catálogo `good-game-v2:live-blackjack`.
- * Concorrentes: mesmo tipo de jogo cujo id NÃO está na lista Spin.
- *
- * Chamada: POST {} ou { dry_run?: boolean, esportiva_lobby?: LobbyGame[] }
- * Segurança: MONITOR_LOBBY_ESPORTIVA_INGEST_SECRET (header x-monitor-lobby-esportiva-secret)
+ * Chamada: POST {} ou { dry_run?: boolean }
+ * Segurança: MONITOR_LOBBY_JONBET_INGEST_SECRET (header x-monitor-lobby-jonbet-secret)
  *   ou Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>
  *
- * Deploy: supabase functions deploy monitor-lobby-esportiva
+ * Deploy: supabase functions deploy monitor-lobby-jonbet
  */
 
-const OPERADORA_SLUG = "esportiva_bet";
-const INTEGRACAO_SLUG = "lobby_esportiva";
-/** CMS da home (F12 → Rede → home-sections / painel.esportivabet). */
-const HOME_SECTIONS_URL =
-  "https://painel.esportivabet.cloud/api/home-sections/public";
-const HOME_SECTION_TITLE = "Cassino Ao Vivo";
-const PAGE_REFERER = "https://esportiva.bet.br/";
-const PAGE_ORIGIN = "https://esportiva.bet.br";
+const OPERADORA_SLUG = "jonbet";
+const INTEGRACAO_SLUG = "lobby_jonbet";
+const LIMIT = 30;
+const SEARCH_QUERY =
+  "limit=30&search=&game_category_slugs=live-casino&xp_enabled=false&game_provider_slugs=&bonus_betting_enabled=false";
+const JONBET_SEARCH_URL = "https://jonbet.bet.br/api/games/search";
+const JONBET_PAGE_REFERER =
+  "https://jonbet.bet.br/pt/games/category/live-casino";
 
-/** IDs equivalentes na home vs catálogo BS2Bet (mesmo jogo). */
-const GAME_ID_ALIASES: Record<string, string[]> = {
-  "5685": ["good-game-v2:live-blackjack"],
-  "good-game-v2:live-blackjack": ["5685"],
-};
-
-function esportivaFetchHeaders(): Record<string, string> {
+/** Headers de browser — UA de bot/datacenter costuma receber HTTP 451 na Edge. */
+function jonbetFetchHeaders(): Record<string, string> {
   return {
     Accept: "application/json, text/plain, */*",
     "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-    Referer: PAGE_REFERER,
-    Origin: PAGE_ORIGIN,
+    Referer: JONBET_PAGE_REFERER,
+    Origin: "https://jonbet.bet.br",
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
   };
@@ -49,9 +40,9 @@ function esportivaFetchHeaders(): Record<string, string> {
 
 interface MonitorBody {
   dry_run?: boolean;
-  /** Lobby já obtido fora da Edge (Telecom) — contorna bloqueio de IP. */
-  esportiva_lobby?: LobbyGame[];
-  esportiva_paginas_lidas?: number;
+  /** Lobby já obtido fora da Edge (ex.: GitHub Actions) — contorna bloqueio 451. */
+  jonbet_lobby?: LobbyGame[];
+  jonbet_paginas_lidas?: number;
 }
 
 type TipoLobby = "roleta" | "baccarat" | "blackjack" | "blackjack_vip" | "other";
@@ -93,7 +84,7 @@ function unwrapCadastroEmbed(
   return row;
 }
 
-function mergeMesasMonitorEsportiva(
+function mergeMesasMonitorJonbet(
   junctionRows: JunctionEmbed[],
   legadoRows: MesaCadastroComId[],
 ): MesaCadastro[] {
@@ -133,7 +124,7 @@ function mergeMesasMonitorEsportiva(
   );
 }
 
-async function carregarMesasMonitorEsportiva(
+async function carregarMesasMonitorJonbet(
   supabase: ReturnType<typeof createClient>,
 ): Promise<{ mesas: MesaCadastro[]; erro: string | null }> {
   const [juncRes, legadoRes] = await Promise.all([
@@ -154,7 +145,7 @@ async function carregarMesasMonitorEsportiva(
   if (legadoRes.error) return { mesas: [], erro: legadoRes.error.message };
 
   return {
-    mesas: mergeMesasMonitorEsportiva(
+    mesas: mergeMesasMonitorJonbet(
       (juncRes.data ?? []) as JunctionEmbed[],
       (legadoRes.data ?? []) as MesaCadastroComId[],
     ),
@@ -162,38 +153,33 @@ async function carregarMesasMonitorEsportiva(
   };
 }
 
-/** Posição na prateleira home; game_id = child[].id (ex. good-game-v2:live-roulette). */
 interface LobbyGame {
   posicao: number;
-  game_id: string;
+  game_id: number;
   name: string;
   slug: string;
   provider_name: string;
   provider_slug: string;
-  order?: number;
 }
 
-interface HomeSectionChild {
-  id: string;
-  name?: string;
-  slug?: string;
+interface JonbetRecord {
+  id: number;
+  name: string;
+  slug: string;
   provider?: {
-    id?: number;
     name?: string;
+    slug?: string;
   };
 }
 
-interface HomeSection {
-  title?: string;
-  type?: string;
-  active?: boolean;
-  maxItems?: number;
-  child?: HomeSectionChild[];
+interface JonbetSearchResponse {
+  records?: JonbetRecord[];
+  meta?: { total_pages?: number; total_records?: number };
 }
 
 interface ConcorrenteJson {
   posicao: number;
-  game_id: string;
+  game_id: number;
   name: string;
   slug: string;
   provider_name: string;
@@ -206,7 +192,7 @@ function corsHeaders(req: Request): Record<string, string> {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-monitor-lobby-esportiva-secret",
+      "authorization, x-client-info, apikey, content-type, x-monitor-lobby-jonbet-secret",
     "Access-Control-Max-Age": "86400",
   };
 }
@@ -219,11 +205,11 @@ function json(data: unknown, req: Request, status = 200) {
 }
 
 function autorizado(req: Request): boolean {
-  const secret = Deno.env.get("MONITOR_LOBBY_ESPORTIVA_INGEST_SECRET")?.trim();
+  const secret = Deno.env.get("MONITOR_LOBBY_JONBET_INGEST_SECRET")?.trim();
   if (!secret) return true;
   const h =
-    req.headers.get("x-monitor-lobby-esportiva-secret") ??
-    req.headers.get("X-Monitor-Lobby-Esportiva-Secret");
+    req.headers.get("x-monitor-lobby-jonbet-secret") ??
+    req.headers.get("X-monitor-lobby-jonbet-Secret");
   if (h === secret) return true;
   const auth = req.headers.get("Authorization") ?? "";
   const sr = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
@@ -255,39 +241,11 @@ function tipoLobbyFromJogo(name: string, slug: string): TipoLobby {
   return "other";
 }
 
-function idsSpinSet(mesas: MesaCadastro[]): Set<string> {
-  return new Set(
-    mesas.map((m) => m.mesa_identificacao_operadora!.trim()).filter(Boolean),
-  );
-}
-
-function expandGameIds(id: string): string[] {
-  const base = String(id);
-  const aliases = GAME_ID_ALIASES[base] ?? [];
-  return [base, ...aliases];
-}
-
-/** True se o id do lobby (ou alias) está cadastrado como ID Esportiva. */
-function idSpinMatches(gameId: string, idsSpin: Set<string>): boolean {
-  return expandGameIds(gameId).some((id) => idsSpin.has(id));
-}
-
-function providerSlugFromName(name: string): string {
-  const n = name.toLowerCase();
-  if (n.includes("good game")) return "goodgame";
-  if (n.includes("evolution")) return "evolution";
-  if (n.includes("pragmatic")) return "pragmaticplay";
-  if (n.includes("playtech")) return "playtech";
-  return n.replace(/\s+/g, "") || "unknown";
-}
-
-/** Concorrente = mesmo tipo e id fora da lista Spin. */
 function isConcorrente(
   jogo: LobbyGame,
   tipoAlvo: TipoLobby,
-  idsSpin: Set<string>,
 ): boolean {
-  if (idSpinMatches(String(jogo.game_id), idsSpin)) return false;
+  if (jogo.provider_slug === "spin") return false;
   return tipoLobbyFromJogo(jogo.name, jogo.slug) === tipoAlvo;
 }
 
@@ -295,10 +253,9 @@ function concorrentesAFrente(
   lobby: LobbyGame[],
   posicao: number,
   tipoAlvo: TipoLobby,
-  idsSpin: Set<string>,
 ): ConcorrenteJson[] {
   return lobby
-    .filter((g) => g.posicao < posicao && isConcorrente(g, tipoAlvo, idsSpin))
+    .filter((g) => g.posicao < posicao && isConcorrente(g, tipoAlvo))
     .map((g) => toConcorrenteJson(g));
 }
 
@@ -313,15 +270,13 @@ function toConcorrenteJson(g: LobbyGame): ConcorrenteJson {
   };
 }
 
+/** Todos os jogos não-Spin com P menor que a mesa Spin mais atrás (vitrine acima dela). */
 function jogosAFrentePiorMesaSpin(
   lobby: LobbyGame[],
   posicaoPiorMesa: number,
-  idsSpin: Set<string>,
 ): ConcorrenteJson[] {
   return lobby
-    .filter(
-      (g) => g.posicao < posicaoPiorMesa && !idSpinMatches(String(g.game_id), idsSpin),
-    )
+    .filter((g) => g.posicao < posicaoPiorMesa && g.provider_slug !== "spin")
     .sort((a, b) => a.posicao - b.posicao)
     .map((g) => toConcorrenteJson(g));
 }
@@ -348,45 +303,30 @@ function piorMesaSpinLinhas(
   return worst;
 }
 
-async function fetchHomeSections(): Promise<HomeSection[]> {
-  const res = await fetch(HOME_SECTIONS_URL, { headers: esportivaFetchHeaders() });
+async function fetchPagina(page: number): Promise<JonbetSearchResponse> {
+  const url = `${JONBET_SEARCH_URL}?page=${page}&${SEARCH_QUERY}`;
+  const res = await fetch(url, { headers: jonbetFetchHeaders() });
   if (!res.ok) {
-    throw new Error(
-      `Esportiva home-sections HTTP ${res.status}. Se bloquear datacenter, use o script Telecom com esportiva_lobby.`,
-    );
+    const hint = res.status === 451
+      ? " Jonbet bloqueia IPs de datacenter (Edge). Use o script Telecom ou POST com jonbet_lobby."
+      : "";
+    throw new Error(`Jonbet search HTTP ${res.status} (page=${page}).${hint}`);
   }
-  const data = await res.json();
-  if (!Array.isArray(data)) {
-    throw new Error("Esportiva home-sections: resposta não é array.");
-  }
-  return data as HomeSection[];
-}
-
-function sectionChildrenToLobby(children: HomeSectionChild[]): LobbyGame[] {
-  return children.map((r, i) => {
-    const providerName = r.provider?.name ?? "";
-    return {
-      posicao: i + 1,
-      game_id: String(r.id),
-      name: r.name ?? "",
-      slug: r.slug ?? "",
-      provider_name: providerName || "Good Game Labs",
-      provider_slug: providerSlugFromName(providerName) || "goodgame",
-    };
-  });
+  return (await res.json()) as JonbetSearchResponse;
 }
 
 function posicoesFromLobby(
   mesasEsperadas: MesaCadastro[],
   lobby: LobbyGame[],
 ): Map<string, number> {
-  const idsEsperados = idsSpinSet(mesasEsperadas);
+  const idsEsperados = new Set(
+    mesasEsperadas.map((m) => m.mesa_identificacao_operadora!.trim()),
+  );
   const posicoes = new Map<string, number>();
   for (const g of lobby) {
-    for (const id of expandGameIds(String(g.game_id))) {
-      if (idsEsperados.has(id) && !posicoes.has(id)) {
-        posicoes.set(id, g.posicao);
-      }
+    const idStr = String(g.game_id);
+    if (idsEsperados.has(idStr)) {
+      posicoes.set(idStr, g.posicao);
     }
   }
   return posicoes;
@@ -399,26 +339,42 @@ async function escanearLobby(
   posicoes: Map<string, number>;
   paginasLidas: number;
 }> {
-  const sections = await fetchHomeSections();
-  const section = sections.find(
-    (s) =>
-      String(s.title ?? "").trim() === HOME_SECTION_TITLE && s.active !== false,
+  const idsEsperados = new Set(
+    mesasEsperadas.map((m) => m.mesa_identificacao_operadora!.trim()),
   );
-  if (!section) {
-    throw new Error(
-      `Seção «${HOME_SECTION_TITLE}» não encontrada em home-sections/public.`,
-    );
+  const lobby: LobbyGame[] = [];
+  const posicoes = new Map<string, number>();
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    const data = await fetchPagina(page);
+    if (page === 1) {
+      totalPages = Math.max(1, data.meta?.total_pages ?? 1);
+    }
+    const records = data.records ?? [];
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      const posicao = (page - 1) * LIMIT + i + 1;
+      const item: LobbyGame = {
+        posicao,
+        game_id: r.id,
+        name: r.name,
+        slug: r.slug,
+        provider_name: r.provider?.name ?? "",
+        provider_slug: r.provider?.slug ?? "",
+      };
+      lobby.push(item);
+      const idStr = String(r.id);
+      if (idsEsperados.has(idStr)) {
+        posicoes.set(idStr, posicao);
+      }
+    }
+    if (posicoes.size >= idsEsperados.size) break;
+    page++;
   }
-  const children = Array.isArray(section.child) ? section.child : [];
-  if (children.length === 0) {
-    throw new Error(`Seção «${HOME_SECTION_TITLE}» sem jogos (child vazio).`);
-  }
-  const lobby = sectionChildrenToLobby(children);
-  return {
-    lobby,
-    posicoes: posicoesFromLobby(mesasEsperadas, lobby),
-    paginasLidas: 1,
-  };
+
+  return { lobby, posicoes, paginasLidas: page };
 }
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
@@ -447,7 +403,7 @@ async function gravarSyncLogLobby(
       periodo_fim: hoje,
     });
   } catch (e) {
-    console.error("[monitor-lobby-esportiva] Falha ao gravar sync_logs:", e);
+    console.error("[monitor-lobby-jonbet] Falha ao gravar sync_logs:", e);
   }
 }
 
@@ -480,8 +436,7 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
   const inicioMs = Date.now();
 
-  const { mesas: mesasList, erro: mesasLoadErr } =
-    await carregarMesasMonitorEsportiva(supabase);
+  const { mesas: mesasList, erro: mesasLoadErr } = await carregarMesasMonitorJonbet(supabase);
   if (mesasLoadErr) {
     return json({ ok: false, erro: mesasLoadErr }, req, 500);
   }
@@ -491,7 +446,7 @@ serve(async (req) => {
       ok: false,
       status: "erro_config",
       erro:
-        `Nenhuma mesa Esportiva com ID: preencha ID Esportiva Bet em Gestão de Estúdios (operadora_slug=${OPERADORA_SLUG})`,
+        `Nenhuma mesa Jonbet com ID: preencha ID Jonbet em Gestão de Estúdios ou legado mesas_spin_cadastro.operadora_slug=${OPERADORA_SLUG}`,
     }, req, 200);
   }
 
@@ -509,19 +464,14 @@ serve(async (req) => {
     }, req, 200);
   }
 
-  const idsSpin = idsSpinSet(mesasList);
   let lobby: LobbyGame[] = [];
   let posicoes = new Map<string, number>();
   let paginasLidas = 0;
   let apiErro: string | null = null;
 
-  if (Array.isArray(body.esportiva_lobby) && body.esportiva_lobby.length > 0) {
-    lobby = body.esportiva_lobby.map((g, i) => ({
-      ...g,
-      game_id: String(g.game_id),
-      posicao: typeof g.posicao === "number" ? g.posicao : i + 1,
-    }));
-    paginasLidas = body.esportiva_paginas_lidas ?? 1;
+  if (Array.isArray(body.jonbet_lobby) && body.jonbet_lobby.length > 0) {
+    lobby = body.jonbet_lobby;
+    paginasLidas = body.jonbet_paginas_lidas ?? 1;
     posicoes = posicoesFromLobby(mesasList, lobby);
   } else {
     try {
@@ -547,7 +497,7 @@ serve(async (req) => {
     const pos = posicoes.get(idOperadora) ?? null;
     const tipo = tipoLobbyFromCadastro(m.tipo_jogo, m.nome_mesa);
     const concorrentes = pos != null
-      ? concorrentesAFrente(lobby, pos, tipo, idsSpin)
+      ? concorrentesAFrente(lobby, pos, tipo)
       : [];
     return {
       operadora_slug: OPERADORA_SLUG,
@@ -563,9 +513,7 @@ serve(async (req) => {
 
   const piorMesaDry = piorMesaSpinLinhas(linhasPosicao);
   const jogosVitrineDry =
-    piorMesaDry != null
-      ? jogosAFrentePiorMesaSpin(lobby, piorMesaDry.posicao, idsSpin)
-      : [];
+    piorMesaDry != null ? jogosAFrentePiorMesaSpin(lobby, piorMesaDry.posicao) : [];
 
   if (dryRun) {
     return json({

@@ -800,6 +800,29 @@ export function arpuComparativoFromGgrUap(ggr: number | null, uap: number | null
   return Number(ggr) / Number(uap);
 }
 
+/**
+ * Snapshot MoM do mês anterior para KPIs consolidados (Overview / Dedicado / Network).
+ * Financeiro: daily na janela MTD / mês fechado (`dailyDataPrevMonth`).
+ * UAP/ARPU: UAP do `monthly_summary` do mês civil anterior (período completo) —
+ * mesma regra nas três abas; só muda a origem (soma Overview vs canal).
+ */
+export function montarKpiAnteriorMoM(opts: {
+  historico: boolean;
+  dailyDataPrevMonth: DailyRow[];
+  monthlyUapArpuPrev: { uap: number | null; arpu: number | null } | null;
+}): MonthlyKpiSnapshot | null {
+  const { historico, dailyDataPrevMonth, monthlyUapArpuPrev } = opts;
+  if (historico || dailyDataPrevMonth.length === 0) return null;
+  const base = aggDailyMesKpi(dailyDataPrevMonth);
+  if (!base) return null;
+  const u = monthlyUapArpuPrev?.uap ?? null;
+  return {
+    ...base,
+    uap: u,
+    arpu: arpuComparativoFromGgrUap(base.ggr, u),
+  };
+}
+
 /** Métricas por jogo no comparativo (UAP vem de `relatorio_uap_por_jogo`). */
 export type CelulaJogoMetricas = {
   ggr: number | null;

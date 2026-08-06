@@ -1,37 +1,36 @@
-/**
- * Busca o lobby Blaze e chama monitor-lobby-blaze (com blaze_lobby no body).
+﻿/**
+ * Busca o lobby Jonbet e chama monitor-lobby-jonbet (com jonbet_lobby no body).
  *
- * A Blaze retorna HTTP 451 em IPs de datacenter (Supabase Edge, GitHub-hosted).
- * Rode este script em rede residencial/escritório (Brasil) ou use runner self-hosted.
+ * Mesmo padrão SoftSwiss da Blaze (`/api/games/search`). Rede BR recomendada (risco HTTP 451).
  *
  * Uso:
- *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/monitor-lobby-blaze-run.mjs
+ *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/monitor-lobby-jonbet-run.mjs
  *   ... --dry-run
  *
- * Opcional: HTTPS_PROXY=http://user:pass@host:port (proxy residencial BR)
+ * Doc: docs/TELECOM-MONITOR-LOBBY-JONBET.md
  */
 
 const LIMIT = 30;
 const SEARCH_QUERY =
   "limit=30&search=&game_category_slugs=live-casino&xp_enabled=false&game_provider_slugs=&bonus_betting_enabled=false";
-const BLAZE_ORIGIN = "https://blaze.bet.br";
-const BLAZE_SEARCH_URL = `${BLAZE_ORIGIN}/api/games/search`;
-const BLAZE_PAGE_URL = `${BLAZE_ORIGIN}/pt/games/category/live-casino`;
-const OPERADORA = "blaze";
+const JONBET_ORIGIN = "https://jonbet.bet.br";
+const JONBET_SEARCH_URL = `${JONBET_ORIGIN}/api/games/search`;
+const JONBET_PAGE_URL = `${JONBET_ORIGIN}/pt/games/category/live-casino`;
+const OPERADORA = "jonbet";
 
 const dryRun = process.argv.includes("--dry-run");
 
 /** @type {string | undefined} */
-let blazeCookieJar;
+let jonbetCookieJar;
 
-function blazeBrowserHeaders(extra = {}) {
+function jonbetBrowserHeaders(extra = {}) {
   return {
     Accept: "application/json, text/plain, */*",
     "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
     "Cache-Control": "no-cache",
     Pragma: "no-cache",
-    Referer: BLAZE_PAGE_URL,
-    Origin: BLAZE_ORIGIN,
+    Referer: JONBET_PAGE_URL,
+    Origin: JONBET_ORIGIN,
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
@@ -59,19 +58,19 @@ function collectCookies(res) {
     }
   }
   if (parts.length === 0) return;
-  const merged = [...(blazeCookieJar ? blazeCookieJar.split("; ") : []), ...parts];
+  const merged = [...(jonbetCookieJar ? jonbetCookieJar.split("; ") : []), ...parts];
   const map = new Map();
   for (const p of merged) {
     const eq = p.indexOf("=");
     if (eq > 0) map.set(p.slice(0, eq), p);
   }
-  blazeCookieJar = [...map.values()].join("; ");
+  jonbetCookieJar = [...map.values()].join("; ");
 }
 
-async function blazeFetch(url, init = {}) {
-  const headers = blazeBrowserHeaders(init.headers ?? {});
-  if (blazeCookieJar) {
-    headers.Cookie = blazeCookieJar;
+async function jonbetFetch(url, init = {}) {
+  const headers = jonbetBrowserHeaders(init.headers ?? {});
+  if (jonbetCookieJar) {
+    headers.Cookie = jonbetCookieJar;
   }
   const opts = {
     ...init,
@@ -91,8 +90,8 @@ async function blazeFetch(url, init = {}) {
   return fetch(url, opts);
 }
 
-async function iniciarSessaoBlaze() {
-  const res = await blazeFetch(BLAZE_PAGE_URL, {
+async function iniciarSessaoJonbet() {
+  const res = await jonbetFetch(JONBET_PAGE_URL, {
     headers: {
       Accept:
         "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -103,34 +102,34 @@ async function iniciarSessaoBlaze() {
   });
   collectCookies(res);
   if (!res.ok) {
-    console.warn(`Aviso: página Blaze HTTP ${res.status} (cookies podem faltar).`);
+    console.warn(`Aviso: página Jonbet HTTP ${res.status} (cookies podem faltar).`);
   }
 }
 
-function erro451(page) {
+function erro451Jonbet(page) {
   return new Error(
-    `Blaze search HTTP 451 (page=${page}). A Blaze bloqueia IPs de datacenter ` +
+    `Jonbet search HTTP 451 (page=${page}). A Jonbet bloqueia IPs de datacenter ` +
       `(GitHub Actions / Supabase Edge). Soluções: (1) rodar este script no seu PC ` +
       `com Agendador de Tarefas; (2) GitHub Actions self-hosted no Windows; ` +
-      `(3) secret HTTPS_PROXY com proxy residencial BR. Ver docs/SETUP-MONITOR-LOBBY-BLAZE.md`,
+      `(3) secret HTTPS_PROXY com proxy residencial BR. Ver docs/SETUP-monitor-lobby-jonbet.md`,
   );
 }
 
 async function fetchPagina(page) {
-  const url = `${BLAZE_SEARCH_URL}?page=${page}&${SEARCH_QUERY}`;
-  const res = await blazeFetch(url);
+  const url = `${JONBET_SEARCH_URL}?page=${page}&${SEARCH_QUERY}`;
+  const res = await jonbetFetch(url);
   collectCookies(res);
   if (res.status === 451) {
-    throw erro451(page);
+    throw erro451Jonbet(page);
   }
   if (!res.ok) {
-    throw new Error(`Blaze search HTTP ${res.status} (page=${page})`);
+    throw new Error(`Jonbet search HTTP ${res.status} (page=${page})`);
   }
   return res.json();
 }
 
 async function escanearLobby(idsEsperados) {
-  await iniciarSessaoBlaze();
+  await iniciarSessaoJonbet();
 
   const lobby = [];
   const posicoes = new Map();
@@ -179,8 +178,6 @@ async function main() {
     process.exit(1);
   }
 
-  // União: Gestão de Estúdios (junction) + legado cadastro blaze.
-  // Network (Sports Club) costuma ter só ID Blaze na junction.
   const [juncRes, legadoRes] = await Promise.all([
     fetch(
       `${supabaseUrl}/rest/v1/mesas_spin_operadora_identificacao?operadora_slug=eq.${OPERADORA}&mesa_identificacao_operadora=not.is.null&select=mesa_identificacao_operadora`,
@@ -219,33 +216,38 @@ async function main() {
   }
   const junc = await juncRes.json();
   const legado = await legadoRes.json();
-  const ids = new Set([
+  const idsList = [
     ...junc.map((m) => m.mesa_identificacao_operadora?.trim()).filter(Boolean),
     ...legado.map((m) => m.mesa_identificacao_operadora?.trim()).filter(Boolean),
-  ]);
+  ];
+  const ids = new Set(idsList);
   if (ids.size === 0) {
     console.error(
-      "Nenhuma mesa com ID Blaze (Gestão de Estúdios → ID Blaze).",
+      "Nenhuma mesa com ID Jonbet (Gestão de Estúdios → ID Jonbet).",
     );
     process.exit(1);
   }
 
-  console.log(`Buscando lobby Blaze (${ids.size} mesas no cadastro)...`);
+  console.log(`Buscando lobby Jonbet (${ids.size} mesas no cadastro)...`);
   const { lobby, paginasLidas } = await escanearLobby(ids);
   console.log(`Lobby: ${lobby.length} jogos, ${paginasLidas} página(s).`);
 
-  const fnUrl = `${supabaseUrl}/functions/v1/monitor-lobby-blaze`;
+  const fnUrl = `${supabaseUrl}/functions/v1/monitor-lobby-jonbet`;
+  const headers = {
+    Authorization: `Bearer ${serviceKey}`,
+    apikey: serviceKey,
+    "Content-Type": "application/json",
+  };
+  const secret = process.env.MONITOR_LOBBY_JONBET_INGEST_SECRET?.trim();
+  if (secret) headers["x-monitor-lobby-jonbet-secret"] = secret;
+
   const ingestRes = await fetch(fnUrl, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${serviceKey}`,
-      apikey: serviceKey,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       dry_run: dryRun,
-      blaze_lobby: lobby,
-      blaze_paginas_lidas: paginasLidas,
+      jonbet_lobby: lobby,
+      jonbet_paginas_lidas: paginasLidas,
     }),
   });
 

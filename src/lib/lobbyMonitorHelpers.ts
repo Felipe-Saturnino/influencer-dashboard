@@ -388,6 +388,41 @@ export function deltaPosicao(
   return atual - anterior;
 }
 
+/**
+ * Última posição distinta da atual na janela `[desdeDiaKey … hoje]`.
+ * Percorre execuções da mais recente à mais antiga (exceto a execução atual).
+ * Se não houver posição diferente na janela, devolve `null` (UI: —).
+ */
+export function ultimaPosicaoDiferenteNaJanela(
+  mesaIdentificacao: string,
+  posicaoAtual: number | null,
+  execucaoAtualId: string | undefined,
+  execucoes: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+  desdeDiaKey: string,
+): number | null {
+  const mesaId = mesaIdentificacao.trim();
+  if (!mesaId) return null;
+
+  const ordenadas = [...execucoes].sort(
+    (a, b) => new Date(b.executado_em).getTime() - new Date(a.executado_em).getTime(),
+  );
+
+  for (const ex of ordenadas) {
+    if (execucaoAtualId && ex.id === execucaoAtualId) continue;
+    const dia = isoDateBrasilFromInstant(ex.executado_em);
+    if (!dia || dia < desdeDiaKey) continue;
+    const row = (posByExec.get(ex.id) ?? []).find(
+      (p) => p.mesa_identificacao.trim() === mesaId,
+    );
+    if (row?.posicao == null) continue;
+    if (posicaoAtual == null || row.posicao !== posicaoAtual) {
+      return row.posicao;
+    }
+  }
+  return null;
+}
+
 export type BucketHistorico = { key: string; label: string; execucaoIds: string[] };
 
 export function bucketsHistorico(
@@ -837,6 +872,10 @@ export function visibilidadePorCategoriaCompleta(
 export interface AlertaPos {
   tipo: "atencao" | "positivo";
   texto: string;
+  /** Dia civil da alteração (YYYY-MM-DD) — ordenação / merge consolidado. */
+  dataIso?: string;
+  /** Instant da execução nova (ms) — ordenação mais recente primeiro. */
+  sortTs?: number;
 }
 
 export function gerarAlertas(
@@ -882,6 +921,75 @@ export function gerarAlertas(
   }
 
   return alertas.slice(0, 12);
+}
+
+function fmtDiaMesIso(isoYmd: string): string {
+  const [, m, d] = isoYmd.split("-");
+  if (!m || !d) return isoYmd;
+  return `${d}/${m}`;
+}
+
+/**
+ * Lista mudanças de posição por mesa na janela civil `[desdeDiaKey … ateDiaKey]`.
+ * Usa a **última leitura de cada dia** e emite uma linha quando o dia seguinte
+ * difere do anterior (evita ruído de polls intra-dia). Mais recente primeiro.
+ */
+export function gerarAlertasAlteracoesJanela(
+  execucoes: LobbyExecucaoRow[],
+  posByExec: Map<string, LobbyPosicaoRow[]>,
+  desdeDiaKey: string,
+  ateDiaKey: string,
+): AlertaPos[] {
+  const naJanela = execucoes
+    .filter((ex) => {
+      const dia = isoDateBrasilFromInstant(ex.executado_em);
+      return !!dia && dia >= desdeDiaKey && dia <= ateDiaKey;
+    })
+    .sort((a, b) => new Date(a.executado_em).getTime() - new Date(b.executado_em).getTime());
+
+  if (naJanela.length === 0) return [];
+
+  /** mesa → dia → última leitura do dia */
+  const porMesaDia = new Map<string, Map<string, { posicao: number; executadoEm: string; label: string }>>();
+
+  for (const ex of naJanela) {
+    const dia = isoDateBrasilFromInstant(ex.executado_em);
+    if (!dia) continue;
+    for (const row of posByExec.get(ex.id) ?? []) {
+      if (row.posicao == null || !Number.isFinite(row.posicao)) continue;
+      const mid = row.mesa_identificacao.trim();
+      if (!mid) continue;
+      let dias = porMesaDia.get(mid);
+      if (!dias) {
+        dias = new Map();
+        porMesaDia.set(mid, dias);
+      }
+      dias.set(dia, {
+        posicao: Number(row.posicao),
+        executadoEm: ex.executado_em,
+        label: labelMesaPosicionamentoRow(row),
+      });
+    }
+  }
+
+  const alertas: AlertaPos[] = [];
+  for (const dias of porMesaDia.values()) {
+    const diasOrdenados = [...dias.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    for (let i = 1; i < diasOrdenados.length; i++) {
+      const [, ant] = diasOrdenados[i - 1];
+      const [diaAtual, atual] = diasOrdenados[i];
+      if (ant.posicao === atual.posicao) continue;
+      const melhorou = atual.posicao < ant.posicao;
+      alertas.push({
+        tipo: melhorou ? "positivo" : "atencao",
+        texto: `${fmtDiaMesIso(diaAtual)} · ${atual.label}: ${fmtPosicao(ant.posicao)} → ${fmtPosicao(atual.posicao)}.`,
+        dataIso: diaAtual,
+        sortTs: new Date(atual.executadoEm).getTime(),
+      });
+    }
+  }
+
+  return alertas.sort((a, b) => (b.sortTs ?? 0) - (a.sortTs ?? 0));
 }
 
 export const LINE_COLORS = [

@@ -29,7 +29,13 @@ Antes de implementar ou alterar **qualquer envio de e-mail** (Edge Functions, cr
 2. **`emails.mdc` (Envio de e-mail)** — template HTML, remetente/destinatários (Secrets), `sendResendEmail`, layout canônico.
 3. **`docs/SETUP-RESEND.md`** — secrets e deploy.
 
-**Não** duplicar regras de marca no Global nem regras de secção no Brand. Secções **não** citam outras secções para padrões transversais — citam Global + Brand (+ **`emails.mdc`** quando o fluxo enviar e-mail).
+Antes de criar ou alterar **job Telecom / monitor de lobby** (`scripts/monitor-lobby-*`, Edge `monitor-lobby-*`, docs `TELECOM-MONITOR-*`):
+
+1. **`business.mdc`** — operadora vs estúdio, dedicada vs network.
+2. **`telecom.mdc`** — padrão do script (IDs só no Data Intelligence; expansão sem redeploy Telecom).
+3. Handoff `docs/TELECOM-MONITOR-LOBBY-*.md` / `docs/SETUP-MONITOR-LOBBY-*.md`.
+
+**Não** duplicar regras de marca no Global nem regras de secção no Brand. Secções **não** citam outras secções para padrões transversais — citam Global + Brand (+ **`emails.mdc`** quando o fluxo enviar e-mail; + **`telecom.mdc`** quando o fluxo for job de lobby Telecom).
 
 | MDC | Conteúdo |
 |-----|----------|
@@ -37,6 +43,7 @@ Antes de implementar ou alterar **qualquer envio de e-mail** (Edge Functions, cr
 | **Global** | Semântica de dados, **identidade visual por jogo**, **linguagem e copy (PT-BR)**, `t.*`, formulários, tabelas (estrutura + ordenação), filtros (comportamento), permissões, estados, a11y mínima, formatos, **build Vite / deploy Cloudflare** |
 | **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** whitelabel para jogos Spin (ver Global § Identidade por jogo) — **não** inclui `vite.config` nem chunks de produção |
 | **Emails** | **Envio de e-mail** — Resend + Edge Functions: template HTML (crons), secrets remetente/destinatários, `sendResendEmail`, formatos de data — **`emails.mdc`** (consultar em todo fluxo que envia e-mail) |
+| **Telecom** | Jobs de monitor de lobby (máquina Telecom + Edge) — IDs só na Gestão de Estúdios; um script por operadora; expansão sem novo desenvolvimento Telecom — **`telecom.mdc`** |
 | **Secção** | Personas, modais, fluxos, validações e exceções da pasta |
 
 ### Manutenção dos MDCs de secção
@@ -866,8 +873,9 @@ Em **todo** modal (ou painel dentro de modal) que permita o usuário enviar arqu
 | Peça | Regra |
 |------|--------|
 | Componente | **`CampoUploadArquivos`** — **proibido** `<input type="file">` nativo visível, label dashed ad hoc ou dropzone visual própria em código novo |
-| Layout | Label do campo + botão (ícone + `buttonLabel`) + microcopy **ou arraste e solte aqui** + lista de itens (nome, badge **Pendente** se ainda não persistido, `X` remover) + empty «Nenhum arquivo adicionado.» |
+| Layout | Label do campo + botão (ícone + `buttonLabel`) + microcopy **ou arraste, solte ou cole (Ctrl+V) aqui** + lista de itens (nome, badge **Pendente** se ainda não persistido, `X` remover) + empty «Nenhum arquivo adicionado.» |
 | Drag-and-drop | **Incluído no componente** — área ao redor do botão aceita soltar arquivos; feedback visual (borda dashed + tint de marca) enquanto arrasta; respeita `accept`, `multiple` e `disabled`. **Proibido** reinventar dropzone fora deste componente |
+| Colar (clipboard) | **Incluído no componente** — com a área focada (clique na box), **Ctrl+V** / **Cmd+V** adiciona imagem ou vídeo da área de transferência (ex.: captura de tela sem salvar no disco); arquivos sem nome recebem `captura-…` / `video-…`; respeita `accept`, `multiple` e `disabled`. Não intercepta colar em `<input>` / `<textarea>` fora da área |
 | `buttonLabel` / `label` | **Do domínio da página** — não unificar textos (ex.: «Selecionar PDF», «Enviar vídeo da avaliação», «Adicionar anexo», «Anexar arquivo») |
 | `accept`, tamanho, `multiple`, upload imediato vs. no save | **Da página** — o componente **não** padroniza regras de negócio; só o jeito/layout do seletor |
 | `hint` | Opcional — orientação de tipo/tamanho (ex.: máx. 15 MB) fica na página via prop |

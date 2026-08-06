@@ -39,6 +39,8 @@ import {
   LABEL_UI_COMERCIAL_DOMINIO_VALIDACAO,
   LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE,
   LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
+  LABEL_UI_LOBBY_ESPORTIVA,
+  LABEL_UI_LOBBY_JONBET,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_COMERCIAL_CNPJ,
@@ -135,6 +137,8 @@ interface FluxoDia {
   lobbyCda: number;
   /** Mesas localizadas no lobby Esportiva (sync_logs lobby_esportiva). */
   lobbyEsportiva: number;
+  /** Mesas localizadas no lobby Jonbet (sync_logs lobby_jonbet). */
+  lobbyJonbet: number;
   /** Empresas enriquecidas (cidade/UF) — sync_logs comercial_cnpj_enriquecimento. */
   comercialCnpj: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
@@ -290,7 +294,7 @@ export default function StatusTecnico() {
     setRegistrosHoje(count ?? 0);
 
     // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails (datas civis em SP)
-    const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync, resLobbyEsportivaSync, resComercialCnpjSync] = await Promise.all([
+    const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync, resLobbyEsportivaSync, resLobbyJonbetSync, resComercialCnpjSync] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
       supabase.from("email_envios").select("data, tipo, destinatarios_count, created_at").gte("data", dataInicioStr),
@@ -319,6 +323,13 @@ export default function StatusTecnico() {
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_esportiva")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_jonbet")
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
@@ -354,6 +365,9 @@ export default function StatusTecnico() {
     );
     const lobbyEsportivaPorData = agregarSyncPorData(
       (resLobbyEsportivaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    );
+    const lobbyJonbetPorData = agregarSyncPorData(
+      (resLobbyJonbetSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
     );
     const comercialCnpjPorData = agregarSyncPorData(
       (resComercialCnpjSync.data ?? []) as {
@@ -398,6 +412,7 @@ export default function StatusTecnico() {
       ...Object.keys(lobbyBlazePorData),
       ...Object.keys(lobbyCdaPorData),
       ...Object.keys(lobbyEsportivaPorData),
+      ...Object.keys(lobbyJonbetPorData),
       ...Object.keys(comercialCnpjPorData),
       ...Object.keys(emailsPorData),
       hoje,
@@ -412,6 +427,7 @@ export default function StatusTecnico() {
         const lobbyBlaze = lobbyBlazePorData[data] ?? 0;
         const lobbyCda = lobbyCdaPorData[data] ?? 0;
         const lobbyEsportiva = lobbyEsportivaPorData[data] ?? 0;
+        const lobbyJonbet = lobbyJonbetPorData[data] ?? 0;
         const comercialCnpj = comercialCnpjPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
@@ -423,9 +439,10 @@ export default function StatusTecnico() {
           lobbyBlaze,
           lobbyCda,
           lobbyEsportiva,
+          lobbyJonbet,
           comercialCnpj,
           emails,
-          total: cda + social + spinRss + lobbyBlaze + lobbyCda + lobbyEsportiva + comercialCnpj + emailTotal,
+          total: cda + social + spinRss + lobbyBlaze + lobbyCda + lobbyEsportiva + lobbyJonbet + comercialCnpj + emailTotal,
         };
       });
     setFluxoDados(fluxoArray);
@@ -1332,6 +1349,9 @@ export default function StatusTecnico() {
   const ultimoSyncLobbyEsportivaLog = syncLogs.find((l) => l.integracao_slug === "lobby_esportiva");
   const lobbyEsportivaStatusOk = ultimoSyncLobbyEsportivaLog?.status === "ok";
 
+  const ultimoSyncLobbyJonbetLog = syncLogs.find((l) => l.integracao_slug === "lobby_jonbet");
+  const lobbyJonbetStatusOk = ultimoSyncLobbyJonbetLog?.status === "ok";
+
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
@@ -1378,10 +1398,11 @@ export default function StatusTecnico() {
     lobbyBlazeStatusOk,
     lobbyCdaStatusOk,
     lobbyEsportivaStatusOk,
+    lobbyJonbetStatusOk,
     emailStatusDiretoriaOk,
     emailStatusAgendaOk,
   ].filter(Boolean).length;
-  const totalIntegracoes = 12;
+  const totalIntegracoes = 13;
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
@@ -1410,6 +1431,9 @@ export default function StatusTecnico() {
   if (ultimoSyncLobbyCdaLog?.executado_em) timestamps.push({ ts: ultimoSyncLobbyCdaLog.executado_em, label: "Lobby CDA" });
   if (ultimoSyncLobbyEsportivaLog?.executado_em) {
     timestamps.push({ ts: ultimoSyncLobbyEsportivaLog.executado_em, label: "Lobby Esportiva Bet" });
+  }
+  if (ultimoSyncLobbyJonbetLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyJonbetLog.executado_em, label: "Lobby Jonbet" });
   }
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
@@ -1446,6 +1470,10 @@ export default function StatusTecnico() {
   const lobbyEsportivaFalhas = syncLogs.filter(
     (l) => l.integracao_slug === "lobby_esportiva" && l.status === "falha",
   ).length;
+  const lobbyJonbetTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_jonbet").length;
+  const lobbyJonbetFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_jonbet" && l.status === "falha",
+  ).length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
@@ -1465,6 +1493,7 @@ export default function StatusTecnico() {
     lobbyBlazeTotal +
     lobbyCdaTotal +
     lobbyEsportivaTotal +
+    lobbyJonbetTotal +
     socialTotal +
     Math.max(emailTotal, 1);
   const totalFalhas =
@@ -1477,6 +1506,7 @@ export default function StatusTecnico() {
     lobbyBlazeFalhas +
     lobbyCdaFalhas +
     lobbyEsportivaFalhas +
+    lobbyJonbetFalhas +
     socialFalhas +
     emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
@@ -1782,6 +1812,35 @@ export default function StatusTecnico() {
     });
   }
 
+  // ── Lobby Jonbet ──
+  const syncLogsLobbyJonbet = syncLogs.filter((l) => l.integracao_slug === "lobby_jonbet");
+  const ultimoSyncLobbyJonbetOk = syncLogsLobbyJonbet.find((l) => l.status === "ok");
+  const ultimoSyncLobbyJonbetFalha = syncLogsLobbyJonbet.find((l) => l.status === "falha");
+  const taxaErroLobbyJonbet =
+    syncLogsLobbyJonbet.length > 0
+      ? ((syncLogsLobbyJonbet.filter((l) => l.status === "falha").length /
+          syncLogsLobbyJonbet.length) *
+          100).toFixed(1)
+      : "0";
+
+  if (syncLogsLobbyJonbet.length > 0 && !ultimoSyncLobbyJonbetOk && ultimoSyncLobbyJonbetFalha) {
+    alertas.push({ nivel: "erro", msg: "Nenhuma coleta Lobby Jonbet com sucesso" });
+  } else if (ultimoSyncLobbyJonbetOk) {
+    const exec = new Date(ultimoSyncLobbyJonbetOk.executado_em);
+    if (exec < vinteQuatroHoras) {
+      alertas.push({
+        nivel: "aviso",
+        msg: "Coleta Lobby Jonbet atrasada (> 24h sem execução OK)",
+      });
+    }
+  }
+  if (parseFloat(taxaErroLobbyJonbet) > 5 && syncLogsLobbyJonbet.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no Lobby Jonbet (${taxaErroLobbyJonbet}%)`,
+    });
+  }
+
   // Status por integração (última execução)
   const statusPorIntegracao = useMemo(
     () =>
@@ -1817,6 +1876,8 @@ export default function StatusTecnico() {
                   ? ("lobby_cda" as const)
                   : int.slug === "lobby_esportiva"
                     ? ("lobby_esportiva" as const)
+                    : int.slug === "lobby_jonbet"
+                      ? ("lobby_jonbet" as const)
                   : ("none" as const);
         return {
           ...int,
@@ -1920,56 +1981,86 @@ export default function StatusTecnico() {
     [statusPorIntegracao],
   );
 
-  /** Sempre visível na tabela Externas — fallback se a migration de `integrations` ainda não rodou. */
-  const csAtendimentoOutlookRow = useMemo((): StatusIntegracaoRow => {
-    const fromDb = statusPorIntegracao.find((i) => i.slug === "cs_atendimento_outlook");
-    if (fromDb) {
+  /** Linha a partir de sync_logs quando o slug ainda não está em `integrations`. */
+  const rowFromSyncLogsFallback = useCallback(
+    (
+      slug: string,
+      nomeFallback: string,
+      syncTipo: StatusIntegracaoRow["syncTipo"],
+    ): StatusIntegracaoRow => {
+      const fromDb = statusPorIntegracao.find((i) => i.slug === slug);
+      if (fromDb) {
+        return {
+          slug: fromDb.slug,
+          nome: nomeIntegracaoStatusTecnicoUi(fromDb.slug, fromDb.nome),
+          ultimoSync: fromDb.ultimoSync,
+          registrosHoje: fromDb.registrosHoje,
+          erros: fromDb.erros,
+          status: fromDb.status,
+          syncTipo,
+        };
+      }
+
+      const logsInt = syncLogs.filter((l) => l.integracao_slug === slug);
+      const ultimo = logsInt[0];
+      const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
+      const regsHoje = syncsHoje.reduce(
+        (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
+        0,
+      );
+      const regsExibir =
+        regsHoje ||
+        (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
+      let status: "ok" | "warning" | "falha" = "ok";
+      if (!ultimo) status = "falha";
+      else if (ultimo.status === "falha") status = "falha";
+      else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+
       return {
-        slug: fromDb.slug,
-        nome: nomeIntegracaoStatusTecnicoUi(fromDb.slug, fromDb.nome),
-        ultimoSync: fromDb.ultimoSync,
-        registrosHoje: fromDb.registrosHoje,
-        erros: fromDb.erros,
-        status: fromDb.status,
-        syncTipo: "cs_outlook",
+        slug,
+        nome: nomeFallback,
+        ultimoSync: ultimo?.executado_em ?? null,
+        registrosHoje: regsExibir,
+        erros: ultimo?.erros_count ?? 0,
+        status,
+        syncTipo,
       };
-    }
+    },
+    [statusPorIntegracao, syncLogs, hojeIso],
+  );
 
-    const logsInt = syncLogs.filter((l) => l.integracao_slug === "cs_atendimento_outlook");
-    const ultimo = logsInt[0];
-    const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
-    const regsHoje = syncsHoje.reduce(
-      (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
-      0,
-    );
-    const regsExibir =
-      regsHoje ||
-      (ultimo?.status === "ok" ? (ultimo.registros_inseridos ?? 0) + (ultimo.registros_atualizados ?? 0) : 0);
-    let status: "ok" | "warning" | "falha" = "ok";
-    if (!ultimo) status = "falha";
-    else if (ultimo.status === "falha") status = "falha";
-    else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+  /** Sempre visível na tabela Externas — fallback se a migration de `integrations` ainda não rodou. */
+  const csAtendimentoOutlookRow = useMemo(
+    () => rowFromSyncLogsFallback("cs_atendimento_outlook", LABEL_UI_CS_ATENDIMENTO_OUTLOOK, "cs_outlook"),
+    [rowFromSyncLogsFallback],
+  );
 
-    return {
-      slug: "cs_atendimento_outlook",
-      nome: LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
-      ultimoSync: ultimo?.executado_em ?? null,
-      registrosHoje: regsExibir,
-      erros: ultimo?.erros_count ?? 0,
-      status,
-      syncTipo: "cs_outlook",
-    };
-  }, [statusPorIntegracao, syncLogs, hojeIso]);
+  /** Lobby Esportiva / Jonbet — sempre na tabela Operadoras (mesmo sem row em `integrations`). */
+  const lobbyEsportivaRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_esportiva", LABEL_UI_LOBBY_ESPORTIVA, "lobby_esportiva"),
+    [rowFromSyncLogsFallback],
+  );
+  const lobbyJonbetRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_jonbet", LABEL_UI_LOBBY_JONBET, "lobby_jonbet"),
+    [rowFromSyncLogsFallback],
+  );
 
   const linhasOperadoras = useMemo(
     () =>
       ordenarLinhasIntegracao(
-        (["casa_apostas", "casa_apostas_afiliados", "lobby_blaze", "lobby_cda", "lobby_esportiva"] as const)
-          .map((slug) => pickIntegracaoRow(slug))
-          .filter(Boolean) as StatusIntegracaoRow[],
+        (
+          [
+            pickIntegracaoRow("casa_apostas"),
+            pickIntegracaoRow("casa_apostas_afiliados"),
+            pickIntegracaoRow("lobby_blaze"),
+            pickIntegracaoRow("lobby_cda"),
+            lobbyEsportivaRow,
+            lobbyJonbetRow,
+          ] as (StatusIntegracaoRow | null)[]
+        ).filter(Boolean) as StatusIntegracaoRow[],
         sortOperadoras,
       ),
-    [pickIntegracaoRow, sortOperadoras],
+    [pickIntegracaoRow, lobbyEsportivaRow, lobbyJonbetRow, sortOperadoras],
   );
 
   const linhasExternas = useMemo(
@@ -2052,6 +2143,8 @@ export default function StatusTecnico() {
                 ? "Lobby Casa de Apostas"
                 : log.integracao_slug === "lobby_esportiva"
                   ? "Lobby Esportiva Bet"
+                  : log.integracao_slug === "lobby_jonbet"
+                    ? "Lobby Jonbet"
                 : log.integracao_slug);
         return nomeIntegracaoStatusTecnicoUi(log.integracao_slug, nomeDb);
       }
@@ -2076,6 +2169,7 @@ export default function StatusTecnico() {
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
           lobby_esportiva: "Lobby Esportiva Bet",
+          lobby_jonbet: "Lobby Jonbet",
           diagnostico_plataforma: "Diagnóstico da plataforma",
           diagnostico_ok: "Diagnóstico da plataforma",
           diagnostico_aviso: "Diagnóstico da plataforma",
@@ -2122,6 +2216,7 @@ export default function StatusTecnico() {
       lobby_blaze: "Lobby Blaze",
       lobby_cda: "Lobby CDA",
       lobby_esportiva: "Lobby Esportiva Bet",
+      lobby_jonbet: "Lobby Jonbet",
       relatorio_diretoria: "E-mail: Relatório",
       email_agenda_diaria: "E-mail: Agenda",
       boas_vindas: "E-mail: Boas-vindas",
@@ -2136,6 +2231,7 @@ export default function StatusTecnico() {
       lobby_blaze: "#f97316",
       lobby_cda: "#0ea5e9",
       lobby_esportiva: "#22c55e",
+      lobby_jonbet: "#a855f7",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
       boas_vindas: "#8b5cf6",
@@ -2473,6 +2569,7 @@ export default function StatusTecnico() {
             { key: "lobby_blaze", label: "Lobby Blaze" },
             { key: "lobby_cda", label: "Lobby CDA" },
             { key: "lobby_esportiva", label: "Lobby Esportiva" },
+            { key: "lobby_jonbet", label: "Lobby Jonbet" },
             { key: "comercial_cnpj", label: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE },
             { key: "relatorio_diretoria", label: "E-mail de Relatório" },
             { key: "email_agenda_diaria", label: "E-mail de Agenda" },
@@ -2546,6 +2643,12 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.lobbyEsportiva)}%`, minWidth: f.lobbyEsportiva > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_esportiva"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.lobbyJonbet > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_jonbet")}: ${f.lobbyJonbet.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyJonbet)}%`, minWidth: f.lobbyJonbet > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_jonbet"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {f.comercialCnpj > 0 && (
                       <div
                         title={`${fluxoLabel("comercial_cnpj")}: ${f.comercialCnpj.toLocaleString("pt-BR")}`}
@@ -2590,6 +2693,7 @@ export default function StatusTecnico() {
                       {f.lobbyBlaze > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_blaze"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_blaze")}: {f.lobbyBlaze.toLocaleString("pt-BR")}</div>}
                       {f.lobbyCda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_cda"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_cda")}: {f.lobbyCda.toLocaleString("pt-BR")}</div>}
                       {f.lobbyEsportiva > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_esportiva"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_esportiva")}: {f.lobbyEsportiva.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyJonbet > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_jonbet"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_jonbet")}: {f.lobbyJonbet.toLocaleString("pt-BR")}</div>}
                       {f.comercialCnpj > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("comercial_cnpj"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("comercial_cnpj")}: {f.comercialCnpj.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
@@ -2967,6 +3071,9 @@ export default function StatusTecnico() {
                   ["Nenhuma coleta Lobby Esportiva Bet com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_esportiva)"],
                   ["Coleta Lobby Esportiva Bet atrasada", "> 24h sem sync_logs OK"],
                   ["Taxa de erro alta no Lobby Esportiva Bet", "> 5% em sync_logs (slug lobby_esportiva)"],
+                  ["Nenhuma coleta Lobby Jonbet com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_jonbet)"],
+                  ["Coleta Lobby Jonbet atrasada", "> 24h sem sync_logs OK"],
+                  ["Taxa de erro alta no Lobby Jonbet", "> 5% em sync_logs (slug lobby_jonbet)"],
                 ].map(([alerta, condicao], idx) => (
                   <tr
                     key={alerta}

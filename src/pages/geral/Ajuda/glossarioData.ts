@@ -936,7 +936,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "KPIs de Mesa",
         definicao:
-          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Dealing/Reaction, cooperação na Roleta e incidentes. Shuffler: só incidentes (sem Roleta). Service Manager: placeholder; Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
+          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Velocidade, Reação, Bola/Cilindro (só Roleta) e incidentes. Shuffler: só incidentes (sem Roleta). Service Manager: placeholder; Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
         referencia: "Overview Prestador",
       },
       {
@@ -1116,7 +1116,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Sync manual",
         definicao:
-          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico. Lobby Blaze, Lobby CDA e Lobby Esportiva Bet rodam por job automatizado e não têm essa ação.",
+          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet rodam por job automatizado e não têm essa ação.",
         referencia: "Status Técnico",
       },
       {

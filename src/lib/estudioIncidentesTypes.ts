@@ -191,7 +191,7 @@ export const TIPOS_INCIDENTE_SHUFFLER: string[] = [
   "Wrong procedure",
 ];
 
-export const ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES = 10 * 1024 * 1024;
+export const ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES = 50 * 1024 * 1024;
 export const ESTUDIO_INCIDENTES_STORAGE_BUCKET = "estudio-incidentes";
 
 /** Carrossel começa em julho/2026 (produto). */

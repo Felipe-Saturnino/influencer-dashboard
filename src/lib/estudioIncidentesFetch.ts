@@ -115,7 +115,7 @@ export async function uploadEstudioIncidenteAnexos(
     if (file.size > ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES) {
       return {
         ok: false,
-        error: "Um ou mais anexos excedem o tamanho máximo de 10 MB.",
+        error: "Um ou mais anexos excedem o tamanho máximo de 50 MB.",
       };
     }
     const safe = sanitizeStorageFileName(file.name);

@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useRef, useState, type ClipboardEvent, type DragEvent, type ReactNode } from "react";
 import { Plus, X, type LucideIcon } from "lucide-react";
 import { FONT } from "../constants/theme";
 import { CampoObrigatorioMark } from "./CampoObrigatorioMark";
@@ -62,16 +62,78 @@ function fileMatchesAccept(file: File, accept?: string): boolean {
   });
 }
 
-function filesFromDataTransfer(dt: DataTransfer, accept: string | undefined, multiple: boolean): File[] {
-  const raw = Array.from(dt.files ?? []).filter((f) => fileMatchesAccept(f, accept));
-  if (raw.length === 0) return [];
-  return multiple ? raw : raw.slice(0, 1);
+function extFromMime(mime: string): string {
+  const m = mime.toLowerCase();
+  if (m === "image/png") return "png";
+  if (m === "image/jpeg" || m === "image/jpg") return "jpg";
+  if (m === "image/webp") return "webp";
+  if (m === "image/gif") return "gif";
+  if (m === "image/bmp") return "bmp";
+  if (m === "video/mp4") return "mp4";
+  if (m === "video/webm") return "webm";
+  if (m === "video/quicktime") return "mov";
+  if (m.startsWith("image/")) return m.slice(6) || "img";
+  if (m.startsWith("video/")) return m.slice(6) || "vid";
+  return "bin";
+}
+
+function stampArquivoLocal(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+
+/** Print Screen / captura costuma chegar sem nome útil — gera um nome estável. */
+function ensureNamedClipboardFile(file: File): File {
+  const raw = (file.name || "").trim();
+  if (raw && raw !== "blob" && raw !== "image.png" && raw !== "untitled") {
+    return file;
+  }
+  // `image.png` genérico do Windows Snipping: renomear para distinguir múltiplas capturas
+  if (raw === "image.png" || !raw || raw === "blob" || raw === "untitled") {
+    const ext = extFromMime(file.type || "image/png");
+    const prefix = (file.type || "").startsWith("video/") ? "video" : "captura";
+    return new File([file], `${prefix}-${stampArquivoLocal()}.${ext}`, {
+      type: file.type || (ext === "mp4" ? "video/mp4" : "image/png"),
+      lastModified: file.lastModified || Date.now(),
+    });
+  }
+  return file;
+}
+
+function collectFilesFromDataTransfer(
+  dt: DataTransfer | null | undefined,
+  accept: string | undefined,
+  multiple: boolean,
+  fromClipboard: boolean,
+): File[] {
+  if (!dt) return [];
+  const seen = new Set<string>();
+  const out: File[] = [];
+
+  const add = (file: File | null) => {
+    if (!file) return;
+    if (!fileMatchesAccept(file, accept)) return;
+    const named = fromClipboard ? ensureNamedClipboardFile(file) : file;
+    const key = `${named.name}:${named.size}:${named.type}:${named.lastModified}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(named);
+  };
+
+  for (const item of Array.from(dt.items ?? [])) {
+    if (item.kind === "file") add(item.getAsFile());
+  }
+  for (const f of Array.from(dt.files ?? [])) add(f);
+
+  if (out.length === 0) return [];
+  return multiple ? out : out.slice(0, 1);
 }
 
 /**
  * Upload em modal — layout canónico (Portal Academy).
  * Só padroniza a UI; accept, tamanho, upload imediato vs. no save e regras de domínio ficam na página.
- * Inclui seleção por botão e arrastar/soltar na área do campo.
+ * Inclui seleção por botão, arrastar/soltar e colar (Ctrl+V) imagem/vídeo da área de transferência.
  */
 export function CampoUploadArquivos({
   id,
@@ -94,16 +156,28 @@ export function CampoUploadArquivos({
   footer,
 }: CampoUploadArquivosProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const zoneRef = useRef<HTMLDivElement>(null);
   const dragDepthRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
-  const borderColor = hasError ? "#e84025" : isDragging ? "var(--brand-primary, #7c3aed)" : t.cardBorder;
-  const dropZoneBg = isDragging
+  const [pasteFlash, setPasteFlash] = useState(false);
+  const activeHighlight = isDragging || pasteFlash;
+  const borderColor = hasError
+    ? "#e84025"
+    : activeHighlight
+      ? "var(--brand-primary, #7c3aed)"
+      : t.cardBorder;
+  const dropZoneBg = activeHighlight
     ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 10%, transparent)"
     : t.inputBg;
 
   function resetDrag() {
     dragDepthRef.current = 0;
     setIsDragging(false);
+  }
+
+  function flashPaste() {
+    setPasteFlash(true);
+    window.setTimeout(() => setPasteFlash(false), 450);
   }
 
   function onDragEnter(e: DragEvent) {
@@ -137,9 +211,19 @@ export function CampoUploadArquivos({
       resetDrag();
       return;
     }
-    const files = filesFromDataTransfer(e.dataTransfer, accept, multiple);
+    const files = collectFilesFromDataTransfer(e.dataTransfer, accept, multiple, false);
     resetDrag();
     if (files.length > 0) onAdd(files);
+  }
+
+  function onPaste(e: ClipboardEvent) {
+    if (disabled) return;
+    const files = collectFilesFromDataTransfer(e.clipboardData, accept, multiple, true);
+    if (files.length === 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    flashPaste();
+    onAdd(files);
   }
 
   return (
@@ -180,19 +264,30 @@ export function CampoUploadArquivos({
         aria-label={buttonLabel}
       />
       <div
+        ref={zoneRef}
         role="group"
-        aria-label={`${buttonLabel} — arraste arquivos para esta área`}
+        tabIndex={disabled ? -1 : 0}
+        aria-label={`${buttonLabel} — arraste, solte ou cole (Ctrl+V) imagem ou vídeo nesta área`}
         aria-disabled={disabled || undefined}
         onDragEnter={onDragEnter}
         onDragLeave={onDragLeave}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onPaste={onPaste}
+        onMouseDown={(e) => {
+          // Foca a área para Ctrl+V (sem roubar clique do botão de seleção).
+          if (disabled) return;
+          const target = e.target as HTMLElement;
+          if (target.closest("button")) return;
+          zoneRef.current?.focus();
+        }}
         style={{
           borderRadius: 10,
-          border: `1px ${isDragging ? "dashed" : "solid"} ${borderColor}`,
+          border: `1px ${activeHighlight ? "dashed" : "solid"} ${borderColor}`,
           background: dropZoneBg,
           padding: 12,
           transition: "border-color 120ms ease, background 120ms ease",
+          outline: "none",
         }}
       >
         <button
@@ -220,7 +315,11 @@ export function CampoUploadArquivos({
         </button>
         {!disabled ? (
           <div style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-            {isDragging ? "Solte os arquivos aqui." : "ou arraste e solte aqui"}
+            {isDragging
+              ? "Solte os arquivos aqui."
+              : pasteFlash
+                ? "Arquivo colado."
+                : "ou arraste, solte ou cole (Ctrl+V) aqui"}
           </div>
         ) : null}
         {hint ? (

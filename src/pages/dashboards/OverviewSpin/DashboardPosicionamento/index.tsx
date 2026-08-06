@@ -12,8 +12,9 @@ import {
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { FONT } from "../../../../constants/theme";
-import { createDataTableBlockStyles, getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
+import { getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
@@ -32,7 +33,7 @@ import {
   SEMANTIC,
   labelMesaPosicionamentoRow,
 } from "../../../../lib/lobbyMonitorHelpers";
-import { useLobbyPosicionamentoData } from "./useLobbyPosicionamentoData";
+import { useLobbyPosicionamentoData, POS_COMPARACAO_DIFERENTE_DIAS } from "./useLobbyPosicionamentoData";
 import {
   getPageContentBoxShellStyle,
   getPageContentBoxStyle,
@@ -232,12 +233,38 @@ function ConcorrentesCountHover({
   );
 }
 
+function PosicaoBadge({ posicao }: { posicao: number | null | undefined }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minWidth: 40,
+        padding: "4px 8px",
+        borderRadius: 8,
+        textAlign: "center",
+        fontWeight: 700,
+        fontSize: 12,
+        fontFamily: FONT.body,
+        background: posicaoBgColor(posicao),
+        color: posicaoTextColor(posicao),
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {fmtPosicao(posicao)}
+    </span>
+  );
+}
+
 function PosicaoAtualMesasBlock({
   titulo,
   loading,
   semDados,
   mesasOrdenadas,
   prevMap,
+  prevDiferenteMap,
+  layout = "operadora",
   ultimaExecutadoEm,
   cardStyle,
 }: {
@@ -246,10 +273,15 @@ function PosicaoAtualMesasBlock({
   semDados: boolean;
   mesasOrdenadas: LobbyPosicaoRow[];
   prevMap: Map<string, number | null>;
+  /** Vista consolidada: última posição ≠ atual nos últimos 7 dias. */
+  prevDiferenteMap?: Map<string, number | null>;
+  /** `consolidado` = Todas Operadoras (mini-tabela Atual / Estúdio / Mesa / Anterior). */
+  layout?: "operadora" | "consolidado";
   ultimaExecutadoEm: string | undefined;
   cardStyle: CSSProperties;
 }) {
   const { theme: t } = useApp();
+  const dataTable = useDataTableBlock();
 
   if (loading) {
     return (
@@ -284,6 +316,78 @@ function PosicaoAtualMesasBlock({
     );
   }
 
+  if (layout === "consolidado") {
+    return (
+      <div style={cardStyle}>
+        <SectionTitle sub={fmtUltimaAtualizacao(ultimaExecutadoEm)}>{titulo}</SectionTitle>
+        <div className="app-table-wrap" style={{ ...getDataTableWrapStyle(), overflowX: "visible" }}>
+          <table style={getDataTableStyle({ width: "100%", minWidth: 0, tableLayout: "fixed" })}>
+            <caption style={{ display: "none" }}>{`Posição das mesas — ${titulo}`}</caption>
+            <thead>
+              <tr>
+                <th scope="col" style={{ ...dataTable.thHeader, width: "18%" }}>
+                  Atual
+                </th>
+                <th scope="col" style={{ ...dataTable.thHeader, width: "28%" }}>
+                  Estúdio
+                </th>
+                <th scope="col" style={{ ...dataTable.thHeader, width: "36%" }}>
+                  Mesa
+                </th>
+                <th scope="col" style={{ ...dataTable.thHeader, width: "18%" }}>
+                  Anterior
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {mesasOrdenadas.map((m, i) => {
+                const estudo = m.nome_estudio?.trim() || "—";
+                const mesa = m.nome_mesa?.trim() || "—";
+                const prevDif = prevDiferenteMap?.get(m.mesa_identificacao) ?? null;
+                return (
+                  <tr key={m.mesa_identificacao} style={{ background: dataTable.zebraRow(i) }}>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <PosicaoBadge posicao={m.posicao} />
+                      </div>
+                    </td>
+                    <td
+                      style={{
+                        ...dataTable.tdCenter,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={estudo}
+                    >
+                      {estudo}
+                    </td>
+                    <td
+                      style={{
+                        ...dataTable.tdCenter,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={mesa}
+                    >
+                      {mesa}
+                    </td>
+                    <td style={dataTable.tdCenter}>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <PosicaoBadge posicao={prevDif} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={cardStyle}>
       <SectionTitle sub={fmtUltimaAtualizacao(ultimaExecutadoEm)}>{titulo}</SectionTitle>
@@ -291,7 +395,7 @@ function PosicaoAtualMesasBlock({
         {mesasOrdenadas.map((m) => {
           const pa = prevMap.get(m.mesa_identificacao) ?? null;
           const d = deltaPosicao(m.posicao, pa);
-          const label = labelMesaPosicionamentoRow(m);
+          const labelCompleto = labelMesaPosicionamentoRow(m);
           return (
             <li
               key={m.mesa_identificacao}
@@ -305,33 +409,20 @@ function PosicaoAtualMesasBlock({
                 fontSize: 13,
               }}
             >
-              <span
-                style={{
-                  minWidth: 40,
-                  padding: "4px 8px",
-                  borderRadius: 8,
-                  textAlign: "center",
-                  fontWeight: 700,
-                  fontSize: 12,
-                  background: posicaoBgColor(m.posicao),
-                  color: posicaoTextColor(m.posicao),
-                }}
-              >
-                {fmtPosicao(m.posicao)}
-              </span>
+              <PosicaoBadge posicao={m.posicao} />
               <span
                 style={{ flex: 1, color: t.text, overflow: "hidden", textOverflow: "ellipsis" }}
-                title={label}
+                title={labelCompleto}
               >
-                {label}
+                {labelCompleto}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 2, minWidth: 28, justifyContent: "flex-end" }}>
                 {d == null || d === 0 ? (
                   <Minus size={14} color={SEMANTIC.cinza} aria-label="Sem variação de posição" />
                 ) : d < 0 ? (
-                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label={`${label} melhorou posição`} />
+                  <ArrowUp size={14} color={SEMANTIC.verde} aria-label={`${labelCompleto} melhorou posição`} />
                 ) : (
-                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label={`${label} piorou posição`} />
+                  <ArrowDown size={14} color={SEMANTIC.vermelho} aria-label={`${labelCompleto} piorou posição`} />
                 )}
               </span>
             </li>
@@ -345,16 +436,34 @@ function PosicaoAtualMesasBlock({
 function AlertasPeriodoBlock({
   alertas,
   cardStyle,
+  loadingHistorico,
+  sub,
 }: {
   alertas: AlertaPos[];
   cardStyle: CSSProperties;
+  loadingHistorico?: boolean;
+  sub?: string;
 }) {
   const { theme: t } = useApp();
 
   return (
     <div style={cardStyle}>
-      <SectionTitle>Alertas do período</SectionTitle>
-      {alertas.length === 0 ? (
+      <SectionTitle sub={sub}>Alertas do período</SectionTitle>
+      {loadingHistorico ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: t.textMuted,
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          <Clock size={12} aria-hidden />
+          <span>Carregando…</span>
+        </div>
+      ) : alertas.length === 0 ? (
         <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: 0 }}>
           Nenhum alerta automático para o período.
         </p>
@@ -362,7 +471,7 @@ function AlertasPeriodoBlock({
         <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
           {alertas.map((a, i) => (
             <li
-              key={i}
+              key={`${a.sortTs ?? i}-${a.texto}`}
               style={{
                 padding: "10px 14px",
                 borderRadius: 10,
@@ -374,7 +483,11 @@ function AlertasPeriodoBlock({
                     ? "color-mix(in srgb, #22c55e 14%, transparent)"
                     : "color-mix(in srgb, #f59e0b 16%, transparent)",
                 color: t.text,
-                border: `1px solid ${a.tipo === "positivo" ? "color-mix(in srgb, #22c55e 30%, transparent)" : "color-mix(in srgb, #f59e0b 35%, transparent)"}`,
+                border: `1px solid ${
+                  a.tipo === "positivo"
+                    ? "color-mix(in srgb, #22c55e 30%, transparent)"
+                    : "color-mix(in srgb, #f59e0b 35%, transparent)"
+                }`,
               }}
             >
               {a.texto}
@@ -395,9 +508,20 @@ function DashboardPosicionamentoTodas({
   slugToNome: (slug: string) => string;
   card: CSSProperties;
 }) {
-  const blaze = useLobbyPosicionamentoData("blaze", refDate, { historico: false });
-  const cda = useLobbyPosicionamentoData("casa_apostas", refDate, { historico: false });
-  const esportiva = useLobbyPosicionamentoData("esportiva_bet", refDate, { historico: false });
+  const optsConsolidados = {
+    historico: true as const,
+    historicoDias: POS_COMPARACAO_DIFERENTE_DIAS,
+  };
+  const blaze = useLobbyPosicionamentoData("blaze", refDate, optsConsolidados);
+  const cda = useLobbyPosicionamentoData("casa_apostas", refDate, optsConsolidados);
+  const esportiva = useLobbyPosicionamentoData("esportiva_bet", refDate, optsConsolidados);
+  const jonbet = useLobbyPosicionamentoData("jonbet", refDate, optsConsolidados);
+
+  const loadingHistoricoAlertas =
+    blaze.loadingHistorico ||
+    cda.loadingHistorico ||
+    esportiva.loadingHistorico ||
+    jonbet.loadingHistorico;
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -406,44 +530,73 @@ function DashboardPosicionamentoTodas({
         texto: `${slugToNome(slug)} — ${a.texto}`,
       }));
     return [
-      ...prefix("blaze", blaze.alertas),
-      ...prefix("casa_apostas", cda.alertas),
-      ...prefix("esportiva_bet", esportiva.alertas),
-    ];
-  }, [blaze.alertas, cda.alertas, esportiva.alertas, slugToNome]);
+      ...prefix("blaze", blaze.alertasAlteracoes7d),
+      ...prefix("casa_apostas", cda.alertasAlteracoes7d),
+      ...prefix("esportiva_bet", esportiva.alertasAlteracoes7d),
+      ...prefix("jonbet", jonbet.alertasAlteracoes7d),
+    ].sort((a, b) => (b.sortTs ?? 0) - (a.sortTs ?? 0));
+  }, [
+    blaze.alertasAlteracoes7d,
+    cda.alertasAlteracoes7d,
+    esportiva.alertasAlteracoes7d,
+    jonbet.alertasAlteracoes7d,
+    slugToNome,
+  ]);
 
   return (
     <>
-      <div className="app-grid-3" style={getPageKpiSectionGapStyle()}>
+      <div className="app-grid-pos-operadoras" style={getPageKpiSectionGapStyle()}>
         <PosicaoAtualMesasBlock
-          titulo={`Posição atual das Mesas ${slugToNome("blaze")}`}
+          titulo={`Mesas ${slugToNome("blaze")}`}
           loading={blaze.loading}
           semDados={blaze.semDados}
           mesasOrdenadas={blaze.mesasOrdenadas}
           prevMap={blaze.prevMap}
+          prevDiferenteMap={blaze.prevDiferenteMap}
+          layout="consolidado"
           ultimaExecutadoEm={blaze.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
         <PosicaoAtualMesasBlock
-          titulo={`Posição atual das Mesas ${slugToNome("casa_apostas")}`}
+          titulo={`Mesas ${slugToNome("casa_apostas")}`}
           loading={cda.loading}
           semDados={cda.semDados}
           mesasOrdenadas={cda.mesasOrdenadas}
           prevMap={cda.prevMap}
+          prevDiferenteMap={cda.prevDiferenteMap}
+          layout="consolidado"
           ultimaExecutadoEm={cda.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
         <PosicaoAtualMesasBlock
-          titulo={`Posição atual das Mesas ${slugToNome("esportiva_bet")}`}
+          titulo={`Mesas ${slugToNome("esportiva_bet")}`}
           loading={esportiva.loading}
           semDados={esportiva.semDados}
           mesasOrdenadas={esportiva.mesasOrdenadas}
           prevMap={esportiva.prevMap}
+          prevDiferenteMap={esportiva.prevDiferenteMap}
+          layout="consolidado"
           ultimaExecutadoEm={esportiva.ultimaNoDia?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("jonbet")}`}
+          loading={jonbet.loading}
+          semDados={jonbet.semDados}
+          mesasOrdenadas={jonbet.mesasOrdenadas}
+          prevMap={jonbet.prevMap}
+          prevDiferenteMap={jonbet.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={jonbet.ultimaNoDia?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
       </div>
-      <AlertasPeriodoBlock alertas={alertasConsolidados} cardStyle={card} />
+      <AlertasPeriodoBlock
+        alertas={alertasConsolidados}
+        cardStyle={card}
+        loadingHistorico={loadingHistoricoAlertas}
+        sub="todas as alterações dos últimos 7 dias"
+      />
     </>
   );
 }
@@ -458,7 +611,6 @@ function DashboardPosicionamentoOperadora({
   card: CSSProperties;
 }) {
   const { theme: t } = useApp();
-  const brand = useDashboardBrand();
   const [historicoModo, setHistoricoModo] = useState<HeatmapHistoricoModo>("dia");
   const [sortCatVis, setSortCatVis] = useState<{ col: CatVisSortCol; dir: SortDir }>({
     col: "top10",
@@ -554,7 +706,7 @@ function DashboardPosicionamentoOperadora({
     return arr;
   }, [cats, sortCatVis]);
 
-  const dataTable = useMemo(() => createDataTableBlockStyles(t, brand), [t, brand]);
+  const dataTable = useDataTableBlock();
 
   const thHistMesa: CSSProperties = {
     ...dataTable.thHeaderSticky,

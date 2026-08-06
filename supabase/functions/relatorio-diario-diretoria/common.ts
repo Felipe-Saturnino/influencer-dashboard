@@ -91,7 +91,7 @@ export function corGGR(v: number): string {
 
 export function secao(titulo: string, conteudo: string, borderTop = true): string {
   return `
-  <div style="padding:28px 32px;${borderTop ? 'border-top:1px solid #e5e7eb;' : ''}">
+  <div class="email-section" style="padding:28px 32px;${borderTop ? 'border-top:1px solid #e5e7eb;' : ''}">
     ${titulo}
     ${conteudo}
   </div>`
@@ -109,18 +109,30 @@ export function tituloSubSecao(txt: string): string {
   return `<h3 style="margin:20px 0 4px;font-size:13px;font-weight:700;color:#4a2082;text-transform:uppercase;letter-spacing:0.08em;">${txt}</h3>`
 }
 
+/** Largura máxima do card do relatório (PC/tablet); no mobile fica 100%. */
+export const EMAIL_CARD_MAX_WIDTH_PX = 960
+
 export function emailHeaderStyles(): string {
   return `
+    .email-card { width:100%; max-width:${EMAIL_CARD_MAX_WIDTH_PX}px; margin:0 auto; border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(74,32,130,0.13); border:1px solid #e5e7eb; }
     .email-header { background-color:#4a2082; background:linear-gradient(135deg,#4a2082 0%,#1e36f8 100%); padding:28px 32px; text-align:center; }
     .email-header h1, .email-header .subtitle { color:#ffffff !important; }
     .email-header .subtitle { color:rgba(255,255,255,0.80) !important; }
     .header-logo-dark { display:block !important; }
     .header-logo-light { display:none !important; }
+    .email-section { padding:28px 32px; }
+    .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; width:100%; }
     @media (prefers-color-scheme: light) {
       .email-header { background:#f0eef8 !important; background-color:#f0eef8 !important; }
       .email-header h1 { color:#4a2082 !important; }
       .email-header .subtitle { color:#6b7280 !important; }
       .header-logo-dark { display:none !important; }
       .header-logo-light { display:block !important; }
+    }
+    @media only screen and (max-width:640px) {
+      .email-card { border-radius:0 !important; box-shadow:none !important; border-left:none !important; border-right:none !important; }
+      .email-header { padding:20px 16px !important; }
+      .email-section { padding:20px 16px !important; }
+      .email-footer { padding:12px 16px !important; }
     }`
 }

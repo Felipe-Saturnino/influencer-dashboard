@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   aggDailyMesKpi,
   arpuComparativoFromGgrUap,
+  montarKpiAnteriorMoM,
   type DailyRow,
   type LinhaDetalheTab,
   type MonthlyKpiSnapshot,
@@ -79,18 +80,15 @@ export function useOverviewSpinKpiExibir({
     };
   }, [historico, tabelaRows, dailyData, monthlyUapArpuSel, modoAgregadoTodasOperadoras]);
 
-  const kpiAntExibir = useMemo((): KpiExibirSnapshot | null => {
-    const base =
-      historico || dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
-    if (!base) return null;
-    if (historico) return base;
-    const u = monthlyUapArpuPrev?.uap ?? null;
-    return {
-      ...base,
-      uap: u,
-      arpu: arpuComparativoFromGgrUap(base.ggr, u),
-    };
-  }, [historico, dailyDataPrevMonth, monthlyUapArpuPrev]);
+  const kpiAntExibir = useMemo(
+    (): KpiExibirSnapshot | null =>
+      montarKpiAnteriorMoM({
+        historico,
+        dailyDataPrevMonth,
+        monthlyUapArpuPrev,
+      }),
+    [historico, dailyDataPrevMonth, monthlyUapArpuPrev],
+  );
 
   const isHistoricoKpi = historico || dailyDataPrevMonth.length === 0;
 

@@ -15,6 +15,7 @@ export type StatusIntegracaoSyncTipo =
   | "lobby_blaze"
   | "lobby_cda"
   | "lobby_esportiva"
+  | "lobby_jonbet"
   | "email"
   | "email_agenda"
   | "email_track"

@@ -24,12 +24,19 @@ import {
   concorrentesPorJogoDetalhe,
   visibilidadePorCategoriaDia,
   gerarAlertas,
+  gerarAlertasAlteracoesJanela,
   toDateKey,
   POS_MONITOR_DIA_MIN,
   rankingConcorrentesFromPosicoes,
+  ultimaPosicaoDiferenteNaJanela,
 } from "../../../../lib/lobbyMonitorHelpers";
 
-export const LOBBY_POS_SLUGS_CONSOLIDADOS = ["blaze", "casa_apostas", "esportiva_bet"] as const;
+export const LOBBY_POS_SLUGS_CONSOLIDADOS = [
+  "blaze",
+  "casa_apostas",
+  "esportiva_bet",
+  "jonbet",
+] as const;
 
 export type LobbyPosSlugConsolidado = (typeof LOBBY_POS_SLUGS_CONSOLIDADOS)[number];
 
@@ -40,6 +47,9 @@ export type LobbyPosSlugConsolidado = (typeof LOBBY_POS_SLUGS_CONSOLIDADOS)[numb
  */
 const POS_HISTORICO_DIAS = 29;
 
+/** Janela padrão da vista consolidada (última posição diferente). */
+export const POS_COMPARACAO_DIFERENTE_DIAS = 6;
+
 /** Concorrência dos lotes de posições do histórico (carga em background). */
 const POS_HISTORICO_CONCORRENCIA = 4;
 
@@ -49,6 +59,11 @@ interface UseLobbyPosicionamentoDataOpts {
    * só hoje + ontem (KPIs, snapshot, alertas, heatmap Dia). Default `true`.
    */
   historico?: boolean;
+  /**
+   * Dias atrás do `refDate` para a fase 2 (além de hoje/ontem da fase 1).
+   * Default `POS_HISTORICO_DIAS` (29). Vista consolidada usa `6` (= 7 dias civis).
+   */
+  historicoDias?: number;
 }
 
 export function useLobbyPosicionamentoData(
@@ -57,6 +72,7 @@ export function useLobbyPosicionamentoData(
   opts?: UseLobbyPosicionamentoDataOpts,
 ) {
   const comHistorico = opts?.historico ?? true;
+  const historicoDias = opts?.historicoDias ?? POS_HISTORICO_DIAS;
   const [loading, setLoading] = useState(true);
   const [loadingHistorico, setLoadingHistorico] = useState(comHistorico);
   const [execRecentes, setExecRecentes] = useState<LobbyExecucaoRow[]>([]);
@@ -180,7 +196,7 @@ export function useLobbyPosicionamentoData(
       return;
     }
     try {
-      const fetchStartKey = subDiasIso(dayKey, POS_HISTORICO_DIAS);
+      const fetchStartKey = subDiasIso(dayKey, historicoDias);
       const fetchInicioKey = fetchStartKey < minKey ? minKey : fetchStartKey;
       if (fetchInicioKey >= inicioRecenteKey) return;
 
@@ -236,7 +252,7 @@ export function useLobbyPosicionamentoData(
     } finally {
       setLoadingHistorico(false);
     }
-  }, [operadoraSlug, dayKey, skip, comHistorico]);
+  }, [operadoraSlug, dayKey, skip, comHistorico, historicoDias]);
 
   useEffect(() => {
     void carregar();
@@ -302,6 +318,26 @@ export function useLobbyPosicionamentoData(
     [snapshotOntem],
   );
 
+  /** Última posição ≠ atual nos últimos 7 dias civis (vista consolidada). */
+  const prevDiferenteMap = useMemo(() => {
+    const desdeKey = subDiasIso(dayKey, POS_COMPARACAO_DIFERENTE_DIAS);
+    const map = new Map<string, number | null>();
+    for (const m of snapshotAtual) {
+      map.set(
+        m.mesa_identificacao,
+        ultimaPosicaoDiferenteNaJanela(
+          m.mesa_identificacao,
+          m.posicao,
+          ultimaNoDia?.id,
+          execucoesAll,
+          posByExec,
+          desdeKey,
+        ),
+      );
+    }
+    return map;
+  }, [snapshotAtual, ultimaNoDia?.id, execucoesAll, posByExec, dayKey]);
+
   const concorrentesJogo = useMemo(
     () => concorrentesPorJogoDetalhe(snapshotAtual),
     [snapshotAtual],
@@ -322,6 +358,12 @@ export function useLobbyPosicionamentoData(
     [snapshotAtual, snapshotOntem, execDia, posByExec],
   );
 
+  /** Todas as mudanças de posição nos últimos 7 dias civis (vista consolidada). */
+  const alertasAlteracoes7d = useMemo(() => {
+    const desdeKey = subDiasIso(dayKey, POS_COMPARACAO_DIFERENTE_DIAS);
+    return gerarAlertasAlteracoesJanela(execucoesAll, posByExec, desdeKey, dayKey);
+  }, [execucoesAll, posByExec, dayKey]);
+
   const semDados =
     skip || (!loading && (!ultimaNoDia || snapshotAtual.length === 0));
 
@@ -336,6 +378,7 @@ export function useLobbyPosicionamentoData(
     snapshotAtual,
     mesasOrdenadas,
     prevMap,
+    prevDiferenteMap,
     visAtual,
     visOntem,
     top10Atual,
@@ -346,5 +389,6 @@ export function useLobbyPosicionamentoData(
     rankingJogos,
     cats,
     alertas,
+    alertasAlteracoes7d,
   };
 }

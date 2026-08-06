@@ -170,14 +170,20 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 ### Modais
 
 - **`ModalVerIncidente`** — somente leitura, abas **Dados do Incidente** / **Descrição**; carrega anexos via `fetchEstudioIncidenteAnexos` + `urlAssinadaAnexoIncidente` (URL assinada, bucket `estudio-incidentes`).
+  - **Dados (Ver = Sim):** Abertura de Incidente (`ocorrido_em`) / Relator → Data da Rodada / Hora da Rodada → ID da Rodada (linha inteira, `overflow-wrap`) → Mesa / Prestador (`Nome - Nickname`) / Time.
+  - **Dados (Ver = Próprios):** sem Relator, Prestador e Time — layout readequado sem células vazias: Abertura (largura total) → Data / Hora da Rodada → ID → Mesa (largura total).
+  - **Descrição (GP):** Resolução / Payout → Descrição → Anexos.
+  - **Descrição (Shuffler):** Resolução / Payout / Local do Shoe → Descrição → Anexos.
+  - Anexos exibem **Arquivo 1**, **Arquivo 2**, … (nome original só em `title` / `aria-label`).
+  - Prop `ocultarPrestadorTimeRelator` quando `canView === "proprios"`.
 - **`ModalNovoIncidente`** (`maxWidth` 920) — Time (GP/Shuffler) no topo; layout por linhas:
   - **GP:** Mesa / Tipo → Incidente / Resolução / Payout → Prestador / ID da Rodada → Data / Hora → Descrição → Anexos.
   - **Shuffler:** Mesa / Tipo → Incidente / Resolução → Payout / Local do Shoe → Prestador / ID da Rodada → Data / Hora → Descrição → Anexos.
   - **Mesa:** combo buscável ordenado por **número da mesa**; Roleta omitida quando `time_alvo = "shuf"`.
-  - **Prestador:** combo buscável com barra **Pesquisar por nome ou nickname...** (`forceSearch`); opções = prestadores ativos/indisponíveis do time GP ou Shuffler em Gestão de Staff (`fetchStaffFormIncidente` via `rh_org_times` + `org_time_id`, sem SM/SL/Academy).
+  - **Prestador:** combo buscável com barra **Pesquisar por nome ou nickname...** (`forceSearch`); opções = prestadores ativos/indisponíveis do time GP ou Shuffler em Gestão de Staff (`fetchStaffFormIncidente` via `rh_org_times` + `org_time_id`). Rótulo: **GP** = `Nickname - Nome`; **Shuffler** = `Nome - Nickname` (`labelPrestadorIncidentePorTime`).
   - **ID da Rodada:** obrigatório salvo checkbox **Não tem ID** (grava `INCIDENTE_ID_RODADA_SEM_ID` = `—`).
   - **Hora da Rodada:** campo **texto**, placeholder `#HH:MM:SS` (sem legenda auxiliar); normalizado para `time` no insert.
-  - Anexos via **`CampoUploadArquivos`** (`buttonLabel` **Adicionar anexo**, drag-and-drop, múltiplos, 10 MB). Relator = usuário logado; grava via `insertEstudioIncidente` + `uploadEstudioIncidenteAnexos`.
+  - Anexos via **`CampoUploadArquivos`** (`buttonLabel` **Adicionar anexo**, drag-and-drop + **colar Ctrl+V** imagem/vídeo, múltiplos, **50 MB** — `ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES` alinhado ao `file_size_limit` do bucket `estudio-incidentes`). Relator = usuário logado; grava via `insertEstudioIncidente` + `uploadEstudioIncidenteAnexos`.
 
 ### Exceções — identidade de jogo
 

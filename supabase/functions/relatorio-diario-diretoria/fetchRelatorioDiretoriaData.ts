@@ -49,35 +49,46 @@ export interface MidiasMtdRow {
   impressoes: number
 }
 
-export interface PosicaoMesaRow {
+/** Linha Mesas Dedicadas: posição no lobby Blaze / CDA (null → —). */
+export interface PosicaoMesaDedicadaRow {
   mesa: string
-  posicao: number | null
-  concorrentes: number
+  blaze: number | null
+  cda: number | null
 }
 
-export interface PosicionamentoOperadora {
-  titulo: string
-  ultimaLeituraFmt: string | null
-  mesas: PosicaoMesaRow[]
+/** Linha Mesas Network: posição no lobby Blaze / CDA / Esportiva / Jonbet (null → —). */
+export interface PosicaoMesaNetworkRow {
+  mesa: string
+  blaze: number | null
+  cda: number | null
+  esportiva: number | null
+  jonbet: number | null
 }
 
 export interface RelatorioDiretoriaData {
   dataHoje: string
   dataOntem: string
+  /** Última data com linha em daily Dedicado ou Network no MTD (Overview Spin → Overview). */
+  dataAteMtd: string
   agenda: LiveAgenda[]
   influencersRows: ResultadoInfluencer[]
+  /** MTD por operadora = Dedicado + Network (mesma regra da aba Overview). */
   operadorasMtd: OperadoraMtdRow[]
   streamersMtd: StreamersMtdRow
   midiasMtd: MidiasMtdRow
-  posicionamento: PosicionamentoOperadora[]
+  posicionamentoUltimaLeituraFmt: string | null
+  mesasDedicadas: PosicaoMesaDedicadaRow[]
+  mesasNetwork: PosicaoMesaNetworkRow[]
 }
 
-const LOBBY_SLUGS = ['blaze', 'casa_apostas', 'esportiva_bet'] as const
-const LOBBY_TITULOS: Record<string, string> = {
-  blaze: 'Posição Atual das Mesas Blaze',
-  casa_apostas: 'Posição Atual das Mesas Casa de Apostas',
-  esportiva_bet: 'Posição Atual das Mesas Esportiva Bet',
-}
+/** Slugs de lobby usados no bloco Posicionamento. */
+const LOBBY_SLUGS = ['blaze', 'casa_apostas', 'esportiva_bet', 'jonbet'] as const
+
+/**
+ * Estúdio network provisório cadastrado como operadora — não entra no consolidado
+ * financeiro (business.mdc).
+ */
+const OPERADORAS_EXCLUIDAS_MTD = new Set(['sports_club'])
 
 async function fetchAllPages<T>(
   fetchPage: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
@@ -126,6 +137,35 @@ function totaisKpiOrganic(rows: Array<{ impressions?: number; posts_published?: 
   )
 }
 
+function normNomeMesa(s: string): string {
+  return s.trim().toLocaleLowerCase('pt-BR')
+}
+
+type LobbyPosRow = {
+  mesa_identificacao: string
+  nome_mesa: string
+  posicao: number | null
+}
+
+function indexPosicoesLobby(rows: LobbyPosRow[]): {
+  byId: Map<string, number | null>
+  byNome: Map<string, number | null>
+} {
+  const byId = new Map<string, number | null>()
+  const byNome = new Map<string, number | null>()
+  for (const r of rows) {
+    const id = (r.mesa_identificacao ?? '').trim()
+    const nome = (r.nome_mesa ?? '').trim()
+    const pos = r.posicao != null ? Number(r.posicao) : null
+    if (id) byId.set(id, pos)
+    if (nome) {
+      const key = normNomeMesa(nome)
+      if (!byNome.has(key)) byNome.set(key, pos)
+    }
+  }
+  return { byId, byNome }
+}
+
 export async function fetchRelatorioDiretoriaData(
   supabase: SupabaseClient,
 ): Promise<RelatorioDiretoriaData> {
@@ -139,7 +179,9 @@ export async function fetchRelatorioDiretoriaData(
     metricasOntemRes,
     livesOntemRes,
     dailyRes,
+    dailyNetworkRes,
     monthlyRes,
+    monthlyNetworkRes,
     operadorasRes,
     metMtdRes,
     livesMtdRes,
@@ -147,6 +189,8 @@ export async function fetchRelatorioDiretoriaData(
     kpiDailyRes,
     campRes,
     lobbyExecRes,
+    estudiosRes,
+    mesasCadRes,
   ] = await Promise.all([
     supabase
       .from('lives')
@@ -170,8 +214,18 @@ export async function fetchRelatorioDiretoriaData(
       .select('data, turnover, ggr, apostas, operadora_slug')
       .gte('data', inicioMes)
       .lte('data', dataOntem),
+    /** Overview Spin (aba Overview) = Dedicado + Network por operadora. */
+    supabase
+      .from('relatorio_network_daily_summary')
+      .select('data, turnover, ggr, apostas, operadora_slug')
+      .gte('data', inicioMes)
+      .lte('data', dataOntem),
     supabase
       .from('relatorio_monthly_summary')
+      .select('mes, uap, operadora_slug')
+      .eq('mes', inicioMes),
+    supabase
+      .from('relatorio_network_monthly_summary')
       .select('mes, uap, operadora_slug')
       .eq('mes', inicioMes),
     supabase.from('operadoras').select('slug, nome').eq('ativo', true).order('nome'),
@@ -207,13 +261,21 @@ export async function fetchRelatorioDiretoriaData(
       .in('operadora_slug', [...LOBBY_SLUGS])
       .in('status', ['ok', 'parcial'])
       .order('executado_em', { ascending: false })
-      .limit(100),
+      .limit(200),
+    supabase.from('estudios_spin').select('slug, tipo, ativo').eq('ativo', true),
+    supabase
+      .from('mesas_spin_cadastro')
+      .select('nome_mesa, mesa_identificacao, estudio_slug'),
   ])
 
   const nameMap: Record<string, string> = {}
   const nomePorSlug = new Map<string, string>()
+  const operadorasAtivasMtd: { slug: string; nome: string }[] = []
   for (const o of (operadorasRes.data ?? []) as { slug: string; nome: string }[]) {
     nomePorSlug.set(o.slug, o.nome)
+    if (!OPERADORAS_EXCLUIDAS_MTD.has(o.slug)) {
+      operadorasAtivasMtd.push({ slug: o.slug, nome: o.nome })
+    }
   }
 
   const infIdsAgenda = [...new Set((livesHojeRes.data ?? []).map((l: { influencer_id: string }) => l.influencer_id))]
@@ -309,45 +371,103 @@ export async function fetchRelatorioDiretoriaData(
   }
 
   const uapPorSlug = new Map<string, number | null>()
-  for (const r of (monthlyRes.data ?? []) as { mes: string; uap: number | null; operadora_slug: string }[]) {
-    if (String(r.mes).slice(0, 7) !== ym) continue
-    uapPorSlug.set(r.operadora_slug, r.uap != null ? Number(r.uap) : null)
+  const addUapMensal = (
+    rows: Array<{ mes: string; uap: number | null; operadora_slug: string }> | null | undefined,
+  ) => {
+    for (const r of rows ?? []) {
+      if (String(r.mes).slice(0, 7) !== ym) continue
+      if (OPERADORAS_EXCLUIDAS_MTD.has(r.operadora_slug)) continue
+      if (r.uap == null) continue
+      const slug = r.operadora_slug
+      uapPorSlug.set(slug, (uapPorSlug.get(slug) ?? 0) + Number(r.uap))
+    }
   }
+  addUapMensal(
+    (monthlyRes.data ?? []) as { mes: string; uap: number | null; operadora_slug: string }[],
+  )
+  addUapMensal(
+    (monthlyNetworkRes.data ?? []) as { mes: string; uap: number | null; operadora_slug: string }[],
+  )
 
   const bySlugDaily = new Map<string, Array<{ turnover: number; ggr: number; apostas: number }>>()
-  for (const r of (dailyRes.data ?? []) as {
-    data: string
-    turnover: number
-    ggr: number
-    apostas: number
-    operadora_slug: string
-  }[]) {
-    const d = String(r.data).slice(0, 10)
-    if (d < inicioMes || d > dataOntem) continue
-    const slug = r.operadora_slug
-    if (!bySlugDaily.has(slug)) bySlugDaily.set(slug, [])
-    bySlugDaily.get(slug)!.push({
-      turnover: Number(r.turnover) || 0,
-      ggr: Number(r.ggr) || 0,
-      apostas: Number(r.apostas) || 0,
+  let dataAteMtd = inicioMes
+  const ingestDaily = (
+    rows: Array<{
+      data: string
+      turnover: number
+      ggr: number
+      apostas: number
+      operadora_slug: string
+    }> | null | undefined,
+  ) => {
+    for (const r of rows ?? []) {
+      const d = String(r.data).slice(0, 10)
+      if (d < inicioMes || d > dataOntem) continue
+      if (d > dataAteMtd) dataAteMtd = d
+      const slug = r.operadora_slug
+      if (OPERADORAS_EXCLUIDAS_MTD.has(slug)) continue
+      if (!bySlugDaily.has(slug)) bySlugDaily.set(slug, [])
+      bySlugDaily.get(slug)!.push({
+        turnover: Number(r.turnover) || 0,
+        ggr: Number(r.ggr) || 0,
+        apostas: Number(r.apostas) || 0,
+      })
+    }
+  }
+  ingestDaily(
+    (dailyRes.data ?? []) as {
+      data: string
+      turnover: number
+      ggr: number
+      apostas: number
+      operadora_slug: string
+    }[],
+  )
+  ingestDaily(
+    (dailyNetworkRes.data ?? []) as {
+      data: string
+      turnover: number
+      ggr: number
+      apostas: number
+      operadora_slug: string
+    }[],
+  )
+  if (!(dailyRes.data ?? []).length && !(dailyNetworkRes.data ?? []).length) {
+    dataAteMtd = dataOntem
+  }
+
+  const metricasPorSlug = new Map<string, OperadoraMtdRow>()
+  for (const [slug, dias] of bySlugDaily.entries()) {
+    const turnover = dias.reduce((a, x) => a + x.turnover, 0)
+    const ggr = dias.reduce((a, x) => a + x.ggr, 0)
+    const apostas = dias.reduce((a, x) => a + x.apostas, 0)
+    const uap = uapPorSlug.get(slug) ?? null
+    metricasPorSlug.set(slug, {
+      nome: nomePorSlug.get(slug) ?? slug,
+      ggr,
+      turnover,
+      margem: turnover !== 0 ? (ggr / turnover) * 100 : null,
+      apostas,
+      apostaMedia: apostas !== 0 ? turnover / apostas : null,
+      uap,
+      arpu: arpuFromGgrUap(ggr, uap),
     })
   }
 
-  const operadorasLinhas: OperadoraMtdRow[] = [...bySlugDaily.entries()]
-    .map(([slug, dias]) => {
-      const turnover = dias.reduce((a, x) => a + x.turnover, 0)
-      const ggr = dias.reduce((a, x) => a + x.ggr, 0)
-      const apostas = dias.reduce((a, x) => a + x.apostas, 0)
-      const uap = uapPorSlug.get(slug) ?? null
+  /** Todas as operadoras ativas (parceiras), mesmo sem linha no daily no mês. */
+  const operadorasLinhas: OperadoraMtdRow[] = operadorasAtivasMtd
+    .map((op) => {
+      const m = metricasPorSlug.get(op.slug)
+      if (m) return { ...m, nome: op.nome }
       return {
-        nome: nomePorSlug.get(slug) ?? slug,
-        ggr,
-        turnover,
-        margem: turnover !== 0 ? (ggr / turnover) * 100 : null,
-        apostas,
-        apostaMedia: apostas !== 0 ? turnover / apostas : null,
-        uap,
-        arpu: arpuFromGgrUap(ggr, uap),
+        nome: op.nome,
+        ggr: 0,
+        turnover: 0,
+        margem: null,
+        apostas: 0,
+        apostaMedia: null,
+        uap: uapPorSlug.get(op.slug) ?? null,
+        arpu: arpuFromGgrUap(0, uapPorSlug.get(op.slug) ?? null),
       }
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
@@ -445,6 +565,36 @@ export async function fetchRelatorioDiretoriaData(
     impressoes: kpiTotais.impressoes + impressoesMeta,
   }
 
+  // ── Posicionamento: Dedicadas × Network ──
+  const tipoPorEstudio = new Map<string, 'dedicado' | 'network'>()
+  for (const e of (estudiosRes.data ?? []) as { slug: string; tipo: string | null; ativo: boolean }[]) {
+    if (!e.ativo) continue
+    const t = e.tipo === 'network' ? 'network' : e.tipo === 'dedicado' ? 'dedicado' : null
+    if (t) tipoPorEstudio.set(e.slug, t)
+  }
+
+  const nomesDedicadas = new Map<string, string>() // norm → display
+  const networkPorId = new Map<string, string>() // mesa_identificacao → nome
+
+  for (const m of (mesasCadRes.data ?? []) as {
+    nome_mesa: string
+    mesa_identificacao: string
+    estudio_slug: string | null
+  }[]) {
+    const est = (m.estudio_slug ?? '').trim()
+    const tipo = tipoPorEstudio.get(est)
+    if (!tipo) continue
+    const nome = (m.nome_mesa ?? '').trim()
+    const id = (m.mesa_identificacao ?? '').trim()
+    if (!nome) continue
+    if (tipo === 'dedicado') {
+      const key = normNomeMesa(nome)
+      if (!nomesDedicadas.has(key)) nomesDedicadas.set(key, nome)
+    } else if (id) {
+      if (!networkPorId.has(id)) networkPorId.set(id, nome)
+    }
+  }
+
   const execs = (lobbyExecRes.data ?? []) as Array<{
     id: string
     operadora_slug: string
@@ -457,9 +607,7 @@ export async function fetchRelatorioDiretoriaData(
     }
   }
 
-  const posicionamento: PosicionamentoOperadora[] = []
   let ultimaLeituraGlobal: string | null = null
-
   for (const slug of LOBBY_SLUGS) {
     const exec = ultimaPorSlug.get(slug)
     if (exec && (!ultimaLeituraGlobal || exec.executado_em > ultimaLeituraGlobal)) {
@@ -467,40 +615,57 @@ export async function fetchRelatorioDiretoriaData(
     }
   }
 
+  const idxPorSlug = new Map<string, ReturnType<typeof indexPosicoesLobby>>()
   for (const slug of LOBBY_SLUGS) {
     const exec = ultimaPorSlug.get(slug)
-    let mesas: PosicaoMesaRow[] = []
-    if (exec) {
-      const posRows = await fetchAllPages<{ nome_mesa: string; posicao: number | null; qtd_concorrentes_a_frente: number }>(
-        (from, to) =>
-          supabase
-            .from('lobby_monitor_posicao')
-            .select('nome_mesa, posicao, qtd_concorrentes_a_frente')
-            .eq('execucao_id', exec.id)
-            .order('nome_mesa', { ascending: true })
-            .range(from, to),
-      )
-      mesas = posRows.map((p) => ({
-        mesa: p.nome_mesa ?? '—',
-        posicao: p.posicao != null ? Number(p.posicao) : null,
-        concorrentes: Number(p.qtd_concorrentes_a_frente) || 0,
-      }))
+    if (!exec) {
+      idxPorSlug.set(slug, { byId: new Map(), byNome: new Map() })
+      continue
     }
-    posicionamento.push({
-      titulo: LOBBY_TITULOS[slug] ?? slug,
-      ultimaLeituraFmt: ultimaLeituraGlobal ? fmtUltimaLeitura(ultimaLeituraGlobal) : null,
-      mesas,
-    })
+    const posRows = await fetchAllPages<LobbyPosRow>((from, to) =>
+      supabase
+        .from('lobby_monitor_posicao')
+        .select('mesa_identificacao, nome_mesa, posicao')
+        .eq('execucao_id', exec.id)
+        .range(from, to),
+    )
+    idxPorSlug.set(slug, indexPosicoesLobby(posRows))
   }
+
+  const blazeIdx = idxPorSlug.get('blaze')!
+  const cdaIdx = idxPorSlug.get('casa_apostas')!
+  const esportivaIdx = idxPorSlug.get('esportiva_bet')!
+  const jonbetIdx = idxPorSlug.get('jonbet')!
+
+  const mesasDedicadas: PosicaoMesaDedicadaRow[] = [...nomesDedicadas.entries()]
+    .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
+    .map(([key, mesa]) => ({
+      mesa,
+      blaze: blazeIdx.byNome.get(key) ?? null,
+      cda: cdaIdx.byNome.get(key) ?? null,
+    }))
+
+  const mesasNetwork: PosicaoMesaNetworkRow[] = [...networkPorId.entries()]
+    .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
+    .map(([id, mesa]) => ({
+      mesa,
+      blaze: blazeIdx.byId.get(id) ?? blazeIdx.byNome.get(normNomeMesa(mesa)) ?? null,
+      cda: cdaIdx.byId.get(id) ?? cdaIdx.byNome.get(normNomeMesa(mesa)) ?? null,
+      esportiva: esportivaIdx.byId.get(id) ?? esportivaIdx.byNome.get(normNomeMesa(mesa)) ?? null,
+      jonbet: jonbetIdx.byId.get(id) ?? jonbetIdx.byNome.get(normNomeMesa(mesa)) ?? null,
+    }))
 
   return {
     dataHoje,
     dataOntem,
+    dataAteMtd,
     agenda,
     influencersRows,
     operadorasMtd,
     streamersMtd,
     midiasMtd,
-    posicionamento,
+    posicionamentoUltimaLeituraFmt: ultimaLeituraGlobal ? fmtUltimaLeitura(ultimaLeituraGlobal) : null,
+    mesasDedicadas,
+    mesasNetwork,
   }
 }

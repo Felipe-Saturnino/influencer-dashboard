@@ -7,14 +7,18 @@ E-mail automático enviado **todo dia pela manhã (~6h BRT via GitHub Actions)**
 ## Conteúdo
 
 1. **Consolidado de Resultados (MTD)** — mês de referência = mês de `dataOntem`
-   - Resultado por Operadoras (linha TOTAL + operadoras)
+   - Legenda: `Consolidado MTD - até dia {última data com linha no Overview Spin}`
+   - Resultado por Operadoras (linha TOTAL + **todas as operadoras ativas** parceiras)
    - Resultado de Streamers (visão global)
    - Resultado de Mídias Sociais (investimento = Meta Ads)
-2. **Posicionamento** — última leitura antes do envio (Mesas Blaze e Casa de Apostas)
+2. **Posicionamento** — última leitura antes do envio
+   - **Mesas Dedicadas:** Mesa · Blaze · CDA (nomes únicos de estúdios dedicados)
+   - **Mesas Network:** Mesa · CDA · Esportiva · Jonbet (mesas de estúdio network)
 3. **Streamers**
    - Agenda do dia (`dataHoje`)
    - Resultado de Influencers do dia anterior (`dataOntem`)
 
+**Layout:** card fluido `max-width: 960px` (100% no mobile).
 ---
 
 ## Configuração
@@ -76,9 +80,9 @@ Invoke-RestMethod -Uri $url -Method Post -Headers @{
 ## Conteúdo do e-mail
 
 - **Header:** Relatório Diário — Aquisição + data
-- **Bloco 1:** Consolidado MTD (operadoras, streamers, mídias sociais)
-- **Bloco 2:** Posicionamento de mesas (Blaze e Casa de Apostas)
+- **Bloco 1:** Consolidado MTD até a última data do Overview Spin (operadoras ativas, streamers, mídias sociais)
+- **Bloco 2:** Posicionamento — Mesas Dedicadas + Mesas Network
 - **Bloco 3:** Agenda do dia + influencers D-1
 - **Footer:** Timestamp de envio
 
-Layout profissional, adequado para apresentação à diretoria.
+Layout amplo (`960px`) e responsivo para PC, tablet e celular.

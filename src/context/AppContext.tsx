@@ -18,6 +18,7 @@ import {
 } from "../lib/appRoutes";
 import { isPublicUnauthenticatedPath } from "../lib/publicRoutes";
 import { writeIdleSessionLastActivity } from "../lib/idleSessionConstants";
+import { podeAcessarStagingLogin } from "../lib/stagingLoginAllowlist";
 import {
   ROLES_SEM_RESTRICAO_ESCOPO,
   ROLES_OVERVIEW_INFLUENCER_PADRAO_SIM,
@@ -869,6 +870,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
             .eq("id", session.user.id)
             .single();
           if (profile) {
+            const emailSessao = (
+              profile.email ??
+              session.user.email ??
+              ""
+            )
+              .toLowerCase()
+              .trim();
+            if (!podeAcessarStagingLogin(emailSessao)) {
+              await supabase.auth.signOut();
+              setUserState(null);
+              setChecking(false);
+              return;
+            }
             if (profile.ativo === false) {
               await supabase.auth.signOut();
               setUserState(null);

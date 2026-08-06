@@ -1,6 +1,7 @@
 import type { RelatorioDiretoriaData } from './fetchRelatorioDiretoriaData.ts'
 import { MARCA_PRODUTO, subtituloEmailComData } from './emailBrand.ts'
 import {
+  EMAIL_CARD_MAX_WIDTH_PX,
   TD,
   TD_C,
   TD_R,
@@ -19,6 +20,10 @@ import {
   tituloSubSecao,
   trStyle,
 } from './common.ts'
+
+function fmtPos(v: number | null): string {
+  return v != null && Number.isFinite(v) ? `P${Math.round(v)}` : '—'
+}
 
 function tabelaOperadoras(rows: RelatorioDiretoriaData['operadorasMtd']): string {
   if (rows.length === 0) {
@@ -40,8 +45,8 @@ function tabelaOperadoras(rows: RelatorioDiretoriaData['operadorasMtd']): string
   }).join('')
 
   return `
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-      <table style="width:100%;min-width:720px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+    <div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table style="width:100%;min-width:640px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
         <thead>
           <tr>
             <th style="${TH}text-align:left;">Operadora</th>
@@ -59,7 +64,7 @@ function tabelaOperadoras(rows: RelatorioDiretoriaData['operadorasMtd']): string
     </div>`
 }
 
-function tabelaLinhaUnica(headers: string[], cells: string[], minWidth = 640): string {
+function tabelaLinhaUnica(headers: string[], cells: string[], minWidth = 560): string {
   const ths = headers.map((h, idx) => {
     const align = idx === 0 ? 'right' : h.includes('Lives') || h.includes('Horas') || h.includes('Registros') || h.includes('FTDs') || h.includes('Postagens') || h.includes('Impressões')
       ? 'center'
@@ -70,7 +75,7 @@ function tabelaLinhaUnica(headers: string[], cells: string[], minWidth = 640): s
   }).join('')
   const tds = cells.join('')
   return `
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+    <div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
       <table style="width:100%;min-width:${minWidth}px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
         <thead><tr>${ths}</tr></thead>
         <tbody><tr>${tds}</tr></tbody>
@@ -110,27 +115,58 @@ function tabelaMidias(m: RelatorioDiretoriaData['midiasMtd']): string {
   )
 }
 
-function tabelaPosicionamento(bloco: RelatorioDiretoriaData['posicionamento'][0]): string {
-  const linhas = bloco.mesas.length === 0
+function tabelaMesasDedicadas(rows: RelatorioDiretoriaData['mesasDedicadas']): string {
+  const linhas = rows.length === 0
     ? `<tr><td colspan="3" style="${TD}color:#9ca3af;font-style:italic;">Sem leitura disponível.</td></tr>`
-    : bloco.mesas.map((m, i) => `
+    : rows.map((m, i) => `
         <tr style="${trStyle(i)}">
           <td style="${TD}font-weight:600;">${m.mesa}</td>
-          <td style="${TD_C}font-weight:700;color:#4a2082;">${m.posicao ?? '—'}</td>
-          <td style="${TD_C}">${fmtNum(m.concorrentes)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.blaze)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.cda)}</td>
         </tr>`).join('')
 
   return `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:8px;">
-      <thead>
-        <tr>
-          <th style="${TH}text-align:left;">Mesa</th>
-          <th style="${TH}text-align:center;">Posição</th>
-          <th style="${TH}text-align:center;">Concorrentes à Frente</th>
-        </tr>
-      </thead>
-      <tbody>${linhas}</tbody>
-    </table>`
+    <div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:8px;">
+      <table style="width:100%;min-width:360px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+        <thead>
+          <tr>
+            <th style="${TH}text-align:left;">Mesa</th>
+            <th style="${TH}text-align:center;">Blaze</th>
+            <th style="${TH}text-align:center;">CDA</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`
+}
+
+function tabelaMesasNetwork(rows: RelatorioDiretoriaData['mesasNetwork']): string {
+  const linhas = rows.length === 0
+    ? `<tr><td colspan="5" style="${TD}color:#9ca3af;font-style:italic;">Sem leitura disponível.</td></tr>`
+    : rows.map((m, i) => `
+        <tr style="${trStyle(i)}">
+          <td style="${TD}font-weight:600;">${m.mesa}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.blaze)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.cda)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.esportiva)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.jonbet)}</td>
+        </tr>`).join('')
+
+  return `
+    <div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:8px;">
+      <table style="width:100%;min-width:480px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+        <thead>
+          <tr>
+            <th style="${TH}text-align:left;">Mesa</th>
+            <th style="${TH}text-align:center;">Blaze</th>
+            <th style="${TH}text-align:center;">CDA</th>
+            <th style="${TH}text-align:center;">Esportiva</th>
+            <th style="${TH}text-align:center;">Jonbet</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`
 }
 
 function tabelaAgenda(agenda: RelatorioDiretoriaData['agenda'], dataHojeFmt: string): string {
@@ -152,17 +188,19 @@ function tabelaAgenda(agenda: RelatorioDiretoriaData['agenda'], dataHojeFmt: str
 
   return `
     ${subtitulo(`Lives agendadas para hoje (${dataHojeFmt})`)}
-    <table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
-      <thead>
-        <tr>
-          <th style="${TH}text-align:left;">Horário</th>
-          <th style="${TH}text-align:left;">Influencer</th>
-          <th style="${TH}text-align:left;">Plataforma</th>
-          <th style="${TH}text-align:right;">Link</th>
-        </tr>
-      </thead>
-      <tbody>${linhasAgenda}</tbody>
-    </table>
+    <div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table style="width:100%;min-width:420px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+        <thead>
+          <tr>
+            <th style="${TH}text-align:left;">Horário</th>
+            <th style="${TH}text-align:left;">Influencer</th>
+            <th style="${TH}text-align:left;">Plataforma</th>
+            <th style="${TH}text-align:right;">Link</th>
+          </tr>
+        </thead>
+        <tbody>${linhasAgenda}</tbody>
+      </table>
+    </div>
     <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;font-style:italic;">
       ⚠️ Os horários informados são previstos e podem sofrer alterações ou atrasos ao longo do dia.
     </p>`
@@ -186,8 +224,8 @@ function tabelaInfluencersD1(rows: RelatorioDiretoriaData['influencersRows'], da
 
   return `
     ${subtitulo(dataOntemFmt)}
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-      <table style="width:100%;min-width:560px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+    <div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table style="width:100%;min-width:520px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
         <thead>
           <tr>
             <th style="${TH}text-align:left;">Influencer</th>
@@ -210,8 +248,9 @@ export function gerarHTMLRelatorioDiretoria(
 ): string {
   const dataHojeFmt = formatarData(data.dataHoje)
   const dataOntemFmt = formatarData(data.dataOntem)
+  const dataAteMtdFmt = formatarData(data.dataAteMtd)
   const mesFmt = mesExtenso(data.dataOntem)
-  const ultimaLeitura = data.posicionamento.find((p) => p.ultimaLeituraFmt)?.ultimaLeituraFmt
+  const ultimaLeitura = data.posicionamentoUltimaLeituraFmt
 
   const logoDarkMode = logoUrl
     ? `<img src="${logoUrl}" alt="Spin Gaming" width="160" class="header-logo header-logo-dark" style="display:block;margin:0 auto 20px;max-width:160px;" />`
@@ -219,10 +258,6 @@ export function gerarHTMLRelatorioDiretoria(
   const logoLightMode = logoUrlDark
     ? `<img src="${logoUrlDark}" alt="Spin Gaming" width="160" class="header-logo header-logo-light" style="display:none;margin:0 auto 20px;max-width:160px;" />`
     : ''
-
-  const blocoPosicionamento = data.posicionamento.map((b) =>
-    tituloSubSecao(b.titulo) + tabelaPosicionamento(b),
-  ).join('')
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -234,9 +269,12 @@ export function gerarHTMLRelatorioDiretoria(
   <title>Relatório Diário — ${dataHojeFmt}</title>
   <style>${emailHeaderStyles()}</style>
 </head>
-<body style="margin:0;padding:24px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0eef8;">
+<body style="margin:0;padding:16px 12px;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f0eef8;">
 
-  <div style="max-width:740px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(74,32,130,0.13);border:1px solid #e5e7eb;">
+  <!--[if mso]>
+  <table role="presentation" width="${EMAIL_CARD_MAX_WIDTH_PX}" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td>
+  <![endif]-->
+  <div class="email-card" style="max-width:${EMAIL_CARD_MAX_WIDTH_PX}px;width:100%;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(74,32,130,0.13);border:1px solid #e5e7eb;">
 
     <div class="email-header">
       ${logoDarkMode}${logoLightMode}
@@ -252,7 +290,7 @@ export function gerarHTMLRelatorioDiretoria(
 
       ${secao(
         tituloSecao(`📊 Consolidado de Resultados — ${mesFmt}`),
-        subtitulo('Consolidado MTD') +
+        subtitulo(`Consolidado MTD - até dia ${dataAteMtdFmt}`) +
         tituloSubSecao('Resultado por Operadoras') +
         tabelaOperadoras(data.operadorasMtd) +
         tituloSubSecao('Resultado de Streamers') +
@@ -264,7 +302,11 @@ export function gerarHTMLRelatorioDiretoria(
 
       ${secao(
         tituloSecao('📍 Posicionamento'),
-        (ultimaLeitura ? subtitulo(`Última leitura: ${ultimaLeitura}`) : '') + blocoPosicionamento,
+        (ultimaLeitura ? subtitulo(`Última leitura: ${ultimaLeitura}`) : '') +
+        tituloSubSecao('Mesas Dedicadas') +
+        tabelaMesasDedicadas(data.mesasDedicadas) +
+        tituloSubSecao('Mesas Network') +
+        tabelaMesasNetwork(data.mesasNetwork),
       )}
 
       ${secao(
@@ -290,7 +332,7 @@ export function gerarHTMLRelatorioDiretoria(
 
     </div>
 
-    <div style="background:#f9f7ff;padding:14px 32px;border-top:1px solid #e5e7eb;">
+    <div class="email-footer" style="background:#f9f7ff;padding:14px 32px;border-top:1px solid #e5e7eb;">
       <p style="margin:0;font-size:11px;color:#9ca3af;text-align:center;">
         ${MARCA_PRODUTO} · Relatório automático ·
         Enviado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
@@ -298,6 +340,9 @@ export function gerarHTMLRelatorioDiretoria(
     </div>
 
   </div>
+  <!--[if mso]>
+  </td></tr></table>
+  <![endif]-->
 </body>
 </html>`
 }

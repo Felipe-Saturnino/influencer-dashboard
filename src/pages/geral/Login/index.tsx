@@ -7,6 +7,10 @@ import {
   LOGIN_ACCESS_CONTACT_LINK_COLOR,
   LOGIN_ACCESS_CONTACT_MAILTO,
 } from "../../../lib/loginAccessContact";
+import {
+  STAGING_LOGIN_BLOQUEADO_MSG,
+  podeAcessarStagingLogin,
+} from "../../../lib/stagingLoginAllowlist";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { AUTH_PLATFORM_TAGLINE, AUTH_TAGLINE_STYLE } from "../../../constants/authScreen";
 import { useApp } from "../../../context/AppContext";
@@ -34,9 +38,15 @@ export default function Login({ onLogin }: Props) {
     if (!/\S+@\S+\.\S+/.test(email)) return setError("E-mail inválido.");
     if (!password) return setError("Informe sua senha.");
 
+    const emailNorm = email.toLowerCase().trim();
+    if (!podeAcessarStagingLogin(emailNorm)) {
+      setError(STAGING_LOGIN_BLOQUEADO_MSG);
+      return;
+    }
+
     setLoading(true);
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(),
+      email: emailNorm,
       password,
     });
     if (authError) {
@@ -67,6 +77,13 @@ export default function Login({ onLogin }: Props) {
     }
     if (profile.ativo === false) {
       setError("Sua conta foi desativada. Entre em contato com o administrador.");
+      await supabase.auth.signOut();
+      setLoading(false);
+      return;
+    }
+    const emailPerfil = (profile.email ?? emailNorm).toLowerCase().trim();
+    if (!podeAcessarStagingLogin(emailPerfil)) {
+      setError(STAGING_LOGIN_BLOQUEADO_MSG);
       await supabase.auth.signOut();
       setLoading(false);
       return;

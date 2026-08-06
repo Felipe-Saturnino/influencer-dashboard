@@ -14,6 +14,11 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
       texto:
         "Isso acontece logo após uma nova versão da plataforma entrar no ar: o navegador ainda tem em cache a versão anterior e não encontra um dos arquivos atualizados.\n\nA plataforma tenta se atualizar sozinha. Se a mensagem **Nova versão disponível** permanecer, clique em **Recarregar página**.\n\nSe continuar, force a atualização com **Ctrl+Shift+R** (ou **Cmd+Shift+R** no Mac) e, em último caso, abra numa janela anônima. Persistindo, entre em contato com o suporte.",
     },
+    {
+      subtitulo: "No endereço de staging (pages.dev) aparece que não tenho acesso ao ambiente?",
+      texto:
+        "O ambiente de preview/staging restringe o login a uma lista de e-mails definida pela equipe (variável de build no Cloudflare Pages — Preview). Produção e o uso local não usam essa lista. Quem não está autorizado vê a mensagem de acesso negado e não entra nas features em desenvolvimento. Integrações e rotas `/api/*` (formulários do site, webhooks) **não** são bloqueadas por essa regra. Se você precisa de acesso ao staging, peça inclusão do seu e-mail ao administrador.",
+    },
   ],
 } as const;
 
@@ -84,7 +89,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA / Lobby Esportiva Bet) ainda não executou hoje, aguarde a próxima coleta — confira em **Status Técnico** se as integrações **Lobby Blaze**, **Lobby CDA** e **Lobby Esportiva Bet** estão com status OK. Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze, Casa de Apostas e Esportiva Bet aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso na liberação de permissão da página ou uma coleta registrada sem as posições das mesas.",
+          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA / Lobby Esportiva Bet / Lobby Jonbet) ainda não executou hoje, aguarde a próxima coleta — confira em **Status Técnico** se as integrações de lobby estão com status OK. Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze, Casa de Apostas, Esportiva Bet e Jonbet aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso na liberação de permissão da página ou uma coleta registrada sem as posições das mesas.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
@@ -209,7 +214,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs de Mesa sem números?",
         texto:
-          "Os cards e tabelas aparecem mesmo sem registros (valores em 0). Confirme o mês no carrossel e se o filtro **Time** / **Staff** cobre o prestador certo. **Game Presenter:** rodadas e tempos vêm do Grafana (`gp_kpi_diario`) — o prestador precisa de **ID operacional** em Gestão de Staff. **Incidentes** (GP e Shuffler) vêm da página Incidentes no mesmo período (`data da rodada`). Sem linhas de detalhe diário: \"Sem dados para o período selecionado.\"",
+          "Os cards e tabelas aparecem mesmo sem registros (valores em 0). Confirme o mês no carrossel e se o filtro **Time** / **Staff** cobre o prestador certo. **Game Presenter:** rodadas e tempos vêm do Grafana (`gp_kpi_diario`) — o prestador precisa de **ID operacional** em Gestão de Staff. **Incidentes** (GP e Shuffler) usam a data da rodada, com o mesmo fechamento **D-1** das rodadas: o que foi registrado hoje só aparece amanhã nesta aba (na página Incidentes continua visível no dia). Sem linhas de detalhe diário: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -674,7 +679,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O anexo não foi enviado ao salvar o incidente?",
         texto:
-          "Cada arquivo tem limite de 10 MB. Se o arquivo exceder esse tamanho, uma mensagem indica qual anexo excedeu o limite — reduza o tamanho do arquivo ou envie um formato mais leve e tente novamente.",
+          "Cada arquivo tem limite de 50 MB. Se o arquivo exceder esse tamanho, uma mensagem indica qual anexo excedeu o limite — reduza o tamanho do arquivo ou envie um formato mais leve e tente novamente.",
       },
       {
         subtitulo: "Não vejo as colunas Prestador, Time ou Relator na tabela?",
@@ -709,7 +714,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite é **500 MB** por arquivo. Se a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.\n\nO envio só acontece ao clicar em **Salvar** ou **Concluir** — enquanto o botão mostra **Enviando…**, mantenha a aba aberta.",
+          "O limite é **500 MB** por arquivo. Se a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…** nos botões). Mantenha a aba aberta até o fim. Se aparecer falha de conexão, tente de novo — o envio pode retomar de onde parou.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",
@@ -1274,7 +1279,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA e Lobby Esportiva Bet operam via job automatizado externo e não têm ação disponível na interface.",
+          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet operam via job automatizado externo e não têm ação disponível na interface.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
@@ -1436,6 +1441,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
   rh_calendario: {
     titulo: "Calendário",
     blocos: [
+      {
+        subtitulo: "Não vejo Calendário no menu (perfil Prestador)?",
+        texto:
+          "Para o perfil **Prestador**, a página só aparece no menu se as **duas** liberações estiverem ok:\n\n1. **Gestão de Usuários → Permissões** — perfil Prestador com Ver em **Próprios** ou **Sim** no Calendário.\n2. **Gestão de Usuários → Escopos → Prestadores** — a página **Calendário** marcada na(s) **área(s) de atuação** do usuário (Escritório, Estúdio, Facilities, TI).\n\nO menu efetivo é a interseção das duas. Se só a Permissão estiver liberada e o Escopo da área não tiver Calendário marcado, a página continua oculta. Confirme também se o usuário tem área de atuação no cadastro (escopo `prestador_tipo`). Depois de salvar, o prestador precisa **sair e entrar de novo** — as permissões do menu são carregadas no login.",
+      },
       {
         subtitulo: "Turnos não aparecem no calendário?",
         texto:
