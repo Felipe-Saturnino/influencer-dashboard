@@ -846,6 +846,7 @@ export function ModalNovoIncidente({
         title={isEdit ? "Editar Incidente" : "Novo Incidente"}
         onClose={onClose}
         sticky
+        closeMatchesTitle
       />
 
       <div style={{ display: "grid", gap: 18 }}>
@@ -1062,24 +1063,6 @@ export function ModalNovoIncidente({
             flexWrap: "wrap",
           }}
         >
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={salvando}
-            style={{
-              padding: "10px 20px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: "transparent",
-              color: t.text,
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: FONT.body,
-              cursor: salvando ? "not-allowed" : "pointer",
-            }}
-          >
-            Cancelar
-          </button>
           {!isEdit ? (
             <button
               type="button"

@@ -110,10 +110,16 @@ export function ModalHeader({
    * Prévia em Incidentes — após aprovação, tornar padrão em todos os modais com X.
    */
   sticky = false,
+  /**
+   * X na mesma cor/peso do título (`t.text`, traço mais grosso).
+   * Prévia em Novo Incidente — após aprovação, tornar padrão com o header sticky.
+   */
+  closeMatchesTitle = false,
 }: {
   title: string;
   onClose: () => void;
   sticky?: boolean;
+  closeMatchesTitle?: boolean;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -169,12 +175,12 @@ export function ModalHeader({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: t.textMuted,
+          color: closeMatchesTitle ? t.text : t.textMuted,
           flexShrink: 0,
         }}
         {...propsBotaoFecharModal()}
       >
-        <X size={20} strokeWidth={2} aria-hidden />
+        <X size={closeMatchesTitle ? 22 : 20} strokeWidth={closeMatchesTitle ? 2.75 : 2} aria-hidden />
       </button>
     </div>
   );
