@@ -330,6 +330,10 @@ Três níveis dentro do corpo branco:
 
 Ordem típica Relatório Diretoria: **Consolidado MTD** (até última data Overview Spin) → **Posicionamento** (Dedicadas / Network) → **Streamers** (agenda + D-1).
 
+**Resultado por Operadoras:** mesma regra da aba **Overview** do Overview Spin — soma **Dedicado** (`relatorio_daily_summary` + `relatorio_monthly_summary`) **+ Network** (`relatorio_network_*`) por `operadora_slug`. Sem Network no fetch, parceiras só-network (ex. Esportiva Bet) aparecem zeradas.
+
+**Posicionamento — Mesas Network:** colunas **Blaze | CDA | Esportiva | Jonbet**. Células de posição com prefixo **`P`** (ex. `P3`), igual às Dedicadas.
+
 **Largura do card:** `EMAIL_CARD_MAX_WIDTH_PX = 960` em `common.ts` (`width:100%` + media query ≤640px).
 ---
 

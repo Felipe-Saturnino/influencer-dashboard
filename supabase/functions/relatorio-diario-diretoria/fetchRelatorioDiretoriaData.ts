@@ -56,9 +56,10 @@ export interface PosicaoMesaDedicadaRow {
   cda: number | null
 }
 
-/** Linha Mesas Network: posição no lobby CDA / Esportiva / Jonbet (null → —). */
+/** Linha Mesas Network: posição no lobby Blaze / CDA / Esportiva / Jonbet (null → —). */
 export interface PosicaoMesaNetworkRow {
   mesa: string
+  blaze: number | null
   cda: number | null
   esportiva: number | null
   jonbet: number | null
@@ -67,10 +68,11 @@ export interface PosicaoMesaNetworkRow {
 export interface RelatorioDiretoriaData {
   dataHoje: string
   dataOntem: string
-  /** Última data com linha em `relatorio_daily_summary` no MTD (Overview Spin). */
+  /** Última data com linha em daily Dedicado ou Network no MTD (Overview Spin → Overview). */
   dataAteMtd: string
   agenda: LiveAgenda[]
   influencersRows: ResultadoInfluencer[]
+  /** MTD por operadora = Dedicado + Network (mesma regra da aba Overview). */
   operadorasMtd: OperadoraMtdRow[]
   streamersMtd: StreamersMtdRow
   midiasMtd: MidiasMtdRow
@@ -177,7 +179,9 @@ export async function fetchRelatorioDiretoriaData(
     metricasOntemRes,
     livesOntemRes,
     dailyRes,
+    dailyNetworkRes,
     monthlyRes,
+    monthlyNetworkRes,
     operadorasRes,
     metMtdRes,
     livesMtdRes,
@@ -210,8 +214,18 @@ export async function fetchRelatorioDiretoriaData(
       .select('data, turnover, ggr, apostas, operadora_slug')
       .gte('data', inicioMes)
       .lte('data', dataOntem),
+    /** Overview Spin (aba Overview) = Dedicado + Network por operadora. */
+    supabase
+      .from('relatorio_network_daily_summary')
+      .select('data, turnover, ggr, apostas, operadora_slug')
+      .gte('data', inicioMes)
+      .lte('data', dataOntem),
     supabase
       .from('relatorio_monthly_summary')
+      .select('mes, uap, operadora_slug')
+      .eq('mes', inicioMes),
+    supabase
+      .from('relatorio_network_monthly_summary')
       .select('mes, uap, operadora_slug')
       .eq('mes', inicioMes),
     supabase.from('operadoras').select('slug, nome').eq('ativo', true).order('nome'),
@@ -357,33 +371,70 @@ export async function fetchRelatorioDiretoriaData(
   }
 
   const uapPorSlug = new Map<string, number | null>()
-  for (const r of (monthlyRes.data ?? []) as { mes: string; uap: number | null; operadora_slug: string }[]) {
-    if (String(r.mes).slice(0, 7) !== ym) continue
-    uapPorSlug.set(r.operadora_slug, r.uap != null ? Number(r.uap) : null)
+  const addUapMensal = (
+    rows: Array<{ mes: string; uap: number | null; operadora_slug: string }> | null | undefined,
+  ) => {
+    for (const r of rows ?? []) {
+      if (String(r.mes).slice(0, 7) !== ym) continue
+      if (OPERADORAS_EXCLUIDAS_MTD.has(r.operadora_slug)) continue
+      if (r.uap == null) continue
+      const slug = r.operadora_slug
+      uapPorSlug.set(slug, (uapPorSlug.get(slug) ?? 0) + Number(r.uap))
+    }
   }
+  addUapMensal(
+    (monthlyRes.data ?? []) as { mes: string; uap: number | null; operadora_slug: string }[],
+  )
+  addUapMensal(
+    (monthlyNetworkRes.data ?? []) as { mes: string; uap: number | null; operadora_slug: string }[],
+  )
 
   const bySlugDaily = new Map<string, Array<{ turnover: number; ggr: number; apostas: number }>>()
   let dataAteMtd = inicioMes
-  for (const r of (dailyRes.data ?? []) as {
-    data: string
-    turnover: number
-    ggr: number
-    apostas: number
-    operadora_slug: string
-  }[]) {
-    const d = String(r.data).slice(0, 10)
-    if (d < inicioMes || d > dataOntem) continue
-    if (d > dataAteMtd) dataAteMtd = d
-    const slug = r.operadora_slug
-    if (OPERADORAS_EXCLUIDAS_MTD.has(slug)) continue
-    if (!bySlugDaily.has(slug)) bySlugDaily.set(slug, [])
-    bySlugDaily.get(slug)!.push({
-      turnover: Number(r.turnover) || 0,
-      ggr: Number(r.ggr) || 0,
-      apostas: Number(r.apostas) || 0,
-    })
+  const ingestDaily = (
+    rows: Array<{
+      data: string
+      turnover: number
+      ggr: number
+      apostas: number
+      operadora_slug: string
+    }> | null | undefined,
+  ) => {
+    for (const r of rows ?? []) {
+      const d = String(r.data).slice(0, 10)
+      if (d < inicioMes || d > dataOntem) continue
+      if (d > dataAteMtd) dataAteMtd = d
+      const slug = r.operadora_slug
+      if (OPERADORAS_EXCLUIDAS_MTD.has(slug)) continue
+      if (!bySlugDaily.has(slug)) bySlugDaily.set(slug, [])
+      bySlugDaily.get(slug)!.push({
+        turnover: Number(r.turnover) || 0,
+        ggr: Number(r.ggr) || 0,
+        apostas: Number(r.apostas) || 0,
+      })
+    }
   }
-  if (!(dailyRes.data ?? []).length) dataAteMtd = dataOntem
+  ingestDaily(
+    (dailyRes.data ?? []) as {
+      data: string
+      turnover: number
+      ggr: number
+      apostas: number
+      operadora_slug: string
+    }[],
+  )
+  ingestDaily(
+    (dailyNetworkRes.data ?? []) as {
+      data: string
+      turnover: number
+      ggr: number
+      apostas: number
+      operadora_slug: string
+    }[],
+  )
+  if (!(dailyRes.data ?? []).length && !(dailyNetworkRes.data ?? []).length) {
+    dataAteMtd = dataOntem
+  }
 
   const metricasPorSlug = new Map<string, OperadoraMtdRow>()
   for (const [slug, dias] of bySlugDaily.entries()) {
@@ -598,6 +649,7 @@ export async function fetchRelatorioDiretoriaData(
     .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
     .map(([id, mesa]) => ({
       mesa,
+      blaze: blazeIdx.byId.get(id) ?? blazeIdx.byNome.get(normNomeMesa(mesa)) ?? null,
       cda: cdaIdx.byId.get(id) ?? cdaIdx.byNome.get(normNomeMesa(mesa)) ?? null,
       esportiva: esportivaIdx.byId.get(id) ?? esportivaIdx.byNome.get(normNomeMesa(mesa)) ?? null,
       jonbet: jonbetIdx.byId.get(id) ?? jonbetIdx.byNome.get(normNomeMesa(mesa)) ?? null,
