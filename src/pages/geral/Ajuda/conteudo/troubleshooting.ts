@@ -111,6 +111,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Essas abas só aparecem quando existe mesa cadastrada do tipo correspondente em Gestão de Estúdios para a(s) operadora(s) do seu escopo (ou no catálogo global se a permissão de Ver for **Sim**). Se a operadora opera só em estúdio network, a aba Estúdio Dedicado fica oculta — e o contrário também.",
       },
+      {
+        subtitulo: "Não vejo a aba Overview?",
+        texto:
+          "A aba Overview soma Dedicado e Network. Ela só aparece quando o seu escopo tem mesas nos dois tipos de estúdio. Se a operadora opera só em Network (ou só em Dedicado), você vê o canal correspondente e Posicionamento — a soma Overview não faz sentido nesse caso.",
+      },
     ],
   },
   dash_midias_sociais: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCatalogoCanaisMesas, podeVerAbaCanalCatalogo } from "./overviewSpinCatalogo";
+import { buildCatalogoCanaisMesas, podeVerAbaCanalCatalogo, podeVerAbaOverviewCatalogo } from "./overviewSpinCatalogo";
 
 describe("buildCatalogoCanaisMesas", () => {
   it("classifica operadoras por tipo de estúdio com mesas", () => {
@@ -29,6 +29,15 @@ describe("buildCatalogoCanaisMesas", () => {
     );
     expect(cat.slugsComMesaDedicada).toEqual(["blaze"]);
     expect(cat.slugsComMesaNetwork).toEqual(["blaze", "esportiva_bet"]);
+  });
+});
+
+describe("podeVerAbaOverviewCatalogo", () => {
+  it("só mostra Overview quando Dedicado e Network estão visíveis", () => {
+    expect(podeVerAbaOverviewCatalogo(true, true)).toBe(true);
+    expect(podeVerAbaOverviewCatalogo(false, true)).toBe(false);
+    expect(podeVerAbaOverviewCatalogo(true, false)).toBe(false);
+    expect(podeVerAbaOverviewCatalogo(false, false)).toBe(false);
   });
 });
 

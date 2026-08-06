@@ -61,10 +61,11 @@ export default function OverviewSpin() {
     operadorasVisiveis: escoposVisiveis.operadorasVisiveis,
   });
 
-  /** Evita flash: enquanto o catálogo não resolve, mantém as 4 abas (Overview + Dedicado + Network + Posicionamento). */
+  /** Overview só com Dedicado e Network; Posicionamento sempre. Evita flash com as 4 abas enquanto o catálogo resolve. */
   const tabsVisiveis = useMemo((): OverviewSpinTab[] => {
     if (loadingCatalogo) return [...TAB_IDS_SPIN_TODAS];
     return TAB_IDS_SPIN_TODAS.filter((id) => {
+      if (id === "overview") return verAbaDedicado && verAbaNetwork;
       if (id === "estudio_dedicado") return verAbaDedicado;
       if (id === "estudio_network") return verAbaNetwork;
       return true;
@@ -74,7 +75,7 @@ export default function OverviewSpin() {
   useEffect(() => {
     if (loadingCatalogo) return;
     if (!tabsVisiveis.includes(aba)) {
-      setAba("overview");
+      setAba(tabsVisiveis[0] ?? "posicionamento");
     }
   }, [aba, tabsVisiveis, setAba, loadingCatalogo]);
 

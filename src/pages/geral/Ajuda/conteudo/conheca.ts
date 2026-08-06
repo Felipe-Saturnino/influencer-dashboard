@@ -33,12 +33,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo por operadora — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página tem quatro abas: **Overview** (soma Dedicado + Network), **Estúdio Dedicado**, **Estúdio Network** e **Posicionamento** (visibilidade no lobby).",
+          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo por operadora — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página pode ter até quatro abas: **Overview** (soma Dedicado + Network), **Estúdio Dedicado**, **Estúdio Network** e **Posicionamento** (visibilidade no lobby). A aba Overview só aparece quando o seu escopo tem mesas nos dois tipos de estúdio; se a operadora opera só em Network (ou só em Dedicado), essa aba fica oculta.",
       },
       {
         subtitulo: "Abas Estúdio Dedicado e Estúdio Network",
         texto:
-          "Estúdio Dedicado mostra só as mesas de estúdios dedicados; Estúdio Network só as de estúdios network (ex.: Sports Club), sempre pela fatia da operadora parceira.\n\nAs abas Dedicado e Network só aparecem se a operadora do seu escopo tiver ao menos uma mesa daquele tipo cadastrada em Gestão de Estúdios. Quem tem permissão de Ver **Sim** vê o filtro completo de operadoras elegíveis; com Ver **Próprios**, o filtro fica travado no escopo. Administrador vê tudo.",
+          "Estúdio Dedicado mostra só as mesas de estúdios dedicados; Estúdio Network só as de estúdios network (ex.: Sports Club), sempre pela fatia da operadora parceira.\n\nAs abas Dedicado e Network só aparecem se a operadora do seu escopo tiver ao menos uma mesa daquele tipo cadastrada em Gestão de Estúdios. Quem tem permissão de Ver **Sim** vê o filtro completo de operadoras elegíveis; com Ver **Próprios**, o filtro fica travado no escopo. Administrador vê tudo.\n\nSe só um canal existir no escopo, a aba Overview (soma) não aparece — restam o canal disponível e Posicionamento.",
       },
       {
         subtitulo: "Filtros e Navegação",
