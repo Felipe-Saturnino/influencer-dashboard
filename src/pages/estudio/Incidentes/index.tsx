@@ -131,7 +131,7 @@ function sortRows(rows: EstudioIncidenteRow[], col: SortCol, dir: SortDir): Estu
   copy.sort((a, b) => {
     switch (col) {
       case "data":
-        return compareLocaleTexto(a.ocorrido_em, b.ocorrido_em, dir);
+        return compareLocaleTexto(a.created_at, b.created_at, dir);
       case "protocolo":
         return compareLocaleTexto(a.protocolo, b.protocolo, dir);
       case "prestador":
@@ -576,7 +576,7 @@ export default function Incidentes() {
                       return (
                         <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
                           <td style={dataTable.tdSticky({ rowIndex: i, fontWeight: 700 })}>{r.protocolo}</td>
-                          <td style={dataTable.tdCenter}>{formatDataHoraIncidente(r.ocorrido_em)}</td>
+                          <td style={dataTable.tdCenter}>{formatDataHoraIncidente(r.created_at)}</td>
                           {!isProprios ? <td style={dataTable.tdCenter}>{r.prestador_nome}</td> : null}
                           {!isProprios ? <td style={dataTable.tdCenter}>{timeAlvoLabel(r.time_alvo)}</td> : null}
                           <td style={dataTable.tdCenter}>
@@ -656,6 +656,9 @@ export default function Incidentes() {
           onClose={() => setNovoOpen(false)}
           onSaved={() => {
             setNovoOpen(false);
+            setBusca("");
+            setStaffFiltroId("");
+            setTimeTab("todos");
             void carregarDados();
           }}
         />

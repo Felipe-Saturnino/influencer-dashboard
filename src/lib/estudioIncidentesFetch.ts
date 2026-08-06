@@ -13,23 +13,25 @@ import {
   ESTUDIO_INCIDENTES_STORAGE_BUCKET,
 } from "./estudioIncidentesTypes";
 import { sanitizeStorageFileName } from "./rhVagaCandidaturaFiles";
+import { fimDiaBrasilUtcIso, inicioDiaBrasilUtcIso } from "./dateBrasil";
 
 const INCIDENTE_SELECT =
   "id, protocolo, ocorrido_em, time_alvo, prestador_id, prestador_nome, mesa_id, mesa_label, estudio_slug, jogo, incidente, tipo, id_rodada, data_rodada, hora_rodada, local_mesa, resolucao, payout_necessario, descricao, relator_user_id, relator_nome, created_by, created_at, updated_at";
 
+/** Lista da página Incidentes — período pelo momento do registro (`created_at`), dias civis America/Sao_Paulo. */
 export async function fetchEstudioIncidentesPeriodo(opts: {
   dataIni: string;
   dataFim: string;
 }): Promise<EstudioIncidenteRow[]> {
-  const ini = `${opts.dataIni}T00:00:00.000Z`;
-  const fim = `${opts.dataFim}T23:59:59.999Z`;
+  const ini = inicioDiaBrasilUtcIso(opts.dataIni);
+  const fim = fimDiaBrasilUtcIso(opts.dataFim);
   return fetchAllPages<EstudioIncidenteRow>(async (from, to) =>
     supabase
       .from("estudio_incidentes")
       .select(INCIDENTE_SELECT)
-      .gte("ocorrido_em", ini)
-      .lte("ocorrido_em", fim)
-      .order("ocorrido_em", { ascending: false })
+      .gte("created_at", ini)
+      .lte("created_at", fim)
+      .order("created_at", { ascending: false })
       .range(from, to),
   );
 }

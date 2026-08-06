@@ -1,115 +1,66 @@
 # Job Telecom — Monitor de lobby Casa de Apostas (CDA)
 
-Documento para a equipe de **Telecom** operar o job horário de posicionamento das mesas Spin no cassino da CDA. O processamento e gravação ficam na **Edge Function Supabase** (`monitor-lobby-cda`); este script só **busca o JSON** na CDA e envia o payload.
+Documento para a equipe de **Telecom** operar o job horário de posicionamento das mesas Spin no cassino da **Casa de Apostas**.
 
-Modelo idêntico ao **Lobby Blaze** (`scripts/monitor-lobby-blaze-run.mjs`).
+O script **só busca o JSON** na CDA e envia para a plataforma. O cálculo de posição e a gravação ficam na **Edge Function** `monitor-lobby-cda`.
 
----
+**Expansão:** novas mesas (dedicadas ou Network) **não** exigem alteração deste job. A Spin cadastra o ID CDA em **Gestão de Estúdios**; o próximo ciclo já rastreia.
 
-## Objetivo
-
-A cada **1 hora** (sugestão: minuto `5` de cada hora, fuso `America/Sao_Paulo`):
-
-1. Chamar a API de categorias do cassino CDA.
-2. Enviar o JSON para a plataforma Spin (`monitor-lobby-cda`).
-3. A plataforma calcula a posição de cada mesa **dentro da categoria** (Roleta, Baccarat, BlackJack & Poker) e grava no banco.
+**Diferença vs Blaze:** este job **exige cookie de sessão** (`CDA_LOBBY_COOKIE`). Sem cookie válido a API responde **401**.
 
 ---
 
-## Arquivo a executar
+## 1. Objetivo
+
+A cada **1 hora** (fuso `America/Sao_Paulo`):
+
+1. Chamar a API de categorias do cassino CDA (com Cookie).
+2. Enviar o JSON para a Spin (`monitor-lobby-cda`).
+3. A plataforma calcula a posição de cada mesa **dentro da categoria** (Roleta, Baccarat, BlackJack & Poker, etc.) e grava no banco.
+
+---
+
+## 2. Arquivo a executar
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `scripts/monitor-lobby-cda-run.mjs` | Script Node.js (único necessário do repositório) |
+| `scripts/monitor-lobby-cda-run.mjs` | Script Node.js (único ficheiro do job) |
 
-**Requisito:** Node.js **18+** (com `fetch` nativo).
+**Requisito:** Node.js **18+**.
+
+**Rede:** escritório / IP com acesso estável a `casadeapostas.bet.br` (conta de serviço acordada com a Spin).
 
 ---
 
-## Variáveis de ambiente (fornecidas pela Spin)
+## 3. Variáveis de ambiente
 
-Criar um arquivo de ambiente no servidor da Telecom (ex.: `.env.monitor-cda`) — **não versionar**, **não enviar por e-mail em texto claro** (usar cofre de secrets).
+Arquivo sugerido: **`.env.monitor-cda`** (na pasta do script ou na raiz do pacote). **Não** versionar; **não** enviar por e-mail em texto claro.
 
 | Variável | Obrigatória | Descrição |
 |----------|-------------|-----------|
-| `SUPABASE_URL` | Sim | URL do projeto Supabase (ex.: `https://xxxxx.supabase.co`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Sim | Service role key (Settings → API) |
-| `CDA_LOBBY_COOKIE` | Sim | Header `Cookie` completo de uma sessão válida em casadeapostas.bet.br |
-| `MONITOR_LOBBY_CDA_INGEST_SECRET` | Se a Spin configurar | Mesmo valor do secret na Edge; enviado como header `x-monitor-lobby-cda-secret` |
-| `CDA_LOBBY_CATEGORIES_URL` | Não | Default: `https://casadeapostas.bet.br/api/content/casino-categories?languageId=21` |
+| `SUPABASE_URL` | Sim | URL do projeto Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sim | Service role key |
+| `CDA_LOBBY_COOKIE` | **Sim** | Header `Cookie` completo de sessão válida |
+| `MONITOR_LOBBY_CDA_INGEST_SECRET` | Se a Spin configurar | Header `x-monitor-lobby-cda-secret` |
+| `CDA_LOBBY_CATEGORIES_URL` | Não | Default abaixo |
 
 ### Como obter / renovar `CDA_LOBBY_COOKIE`
 
-1. Navegador Chrome, acesso ao site **logado** (conta de serviço acordada com a Spin).
+1. Chrome, site **logado** (conta de serviço acordada com a Spin).
 2. Abrir `https://www.casadeapostas.bet.br/br/casino`
-3. F12 → **Rede** → filtrar `casino-categories`
-4. Recarregar a página → clicar no request → **Cabeçalhos** → copiar o valor completo de **`Cookie`**
-5. Atualizar a variável no agendador da Telecom.
+3. F12 → **Rede** → limpar → filtrar: `casino-categories`
+4. Recarregar → clicar no request → **Cabeçalhos** → copiar o valor completo de **`Cookie`**
+5. Atualizar `CDA_LOBBY_COOKIE` no ambiente / agendador
 
-**Sem cookie válido a API responde HTTP 401** e o job falha.
+**Sem cookie válido → HTTP 401** e o job falha.
 
-Recomendação: revisar o cookie **pelo menos 1× por semana** ou ao primeiro 401 consecutivo.
-
-### Como achar IDs das mesas (mesmo request)
-
-No mesmo F12 → Rede → **`casino-categories`** → **Resposta**:
-
-- Cada categoria tem `competitions[]`
-- Mesas Spin: `providerName` = **GamesGlobal**
-- Cadastrar em Gestão de Estúdios (ID CDA) o campo **`id`** da competition (ex. `3304`)
-
-Cadastro na plataforma (Spin): Gestão de Estúdios → mesa → ID CDA. O monitor passa a incluir mesas dedicadas **e** Network com esse ID preenchido.
+Recomendação: revisar o cookie **pelo menos 1× por semana** ou no primeiro 401 consecutivo.
 
 ---
 
-## Comandos
+## 4. Endpoints / como achar no F12
 
-Diretório de trabalho: pasta onde está o script (ou clone mínimo do repo com `scripts/`).
-
-### 1) Teste (não grava no banco)
-
-```bash
-node monitor-lobby-cda-run.mjs --dry-run
-```
-
-**Sucesso esperado (stdout):**
-
-- `Edge HTTP 200`
-- JSON com `"dry_run": true`
-- `"mesas_encontradas": 5` (ou o número de mesas com ID CDA no cadastro — dedicadas + Network)
-- `"status": "ok"` (ou `"parcial"` se alguma mesa não aparecer no lobby)
-
-### 2) Produção (grava snapshot)
-
-```bash
-node monitor-lobby-cda-run.mjs
-```
-
-**Sucesso esperado:**
-
-- `Edge HTTP 200`
-- `"execucao_id": "<uuid>"`
-- `"mesas_encontradas": 5`
-
-**Código de saída:** `0` = OK; qualquer outro = falha (alertar Spin).
-
----
-
-## Agendamento sugerido
-
-| Item | Valor |
-|------|--------|
-| Frequência | A cada **1 hora** |
-| Cron (ex.) | `5 * * * *` |
-| Fuso | `America/Sao_Paulo` |
-| Timeout | ≥ 120 s |
-| Retentativas | 2 com intervalo 5 min em caso de falha de rede |
-
-No **Windows** (Task Scheduler): equivalente ao script Blaze — executar `node` com o `.mjs` e variáveis de ambiente carregadas do arquivo local.
-
----
-
-## API CDA (referência)
+### URL usada pelo script
 
 ```text
 GET https://casadeapostas.bet.br/api/content/casino-categories?languageId=21
@@ -121,32 +72,79 @@ Headers mínimos (o script já envia):
 - `Referer: https://www.casadeapostas.bet.br/br/casino`
 - `Cookie: <CDA_LOBBY_COOKIE>`
 
-Resposta: **array JSON** de categorias; cada uma com `name` e `competitions[]`.
+Resposta: **array** de categorias; cada uma com `name` e `competitions[]`.
+
+### Como achar IDs das mesas (mesmo request — só para Spin)
+
+No F12 → **`casino-categories`** → **Resposta**:
+
+- Cada categoria tem `competitions[]`
+- Mesas Spin: `providerName` = **GamesGlobal**
+- ID a cadastrar na plataforma: campo **`id`** da competition (ex.: `3304`)
+
+Telecom **não** cadastra IDs — só usa o cookie e roda o script.
 
 ---
 
-## O que a Spin grava (visibilidade)
+## 5. Onde cadastrar IDs (Spin — não Telecom)
 
-- Tabelas: `lobby_monitor_execucao`, `lobby_monitor_posicao`
-- Log de integração: `sync_logs` com `integracao_slug = lobby_cda`
-- Dashboard: **Overview Spin → aba Posicionamento** (filtro Casa de Apostas)
-- **Status Técnico → Lobby Casa de Apostas** (sem botão Sync manual)
+| Quem | O quê |
+|------|--------|
+| **Spin / Data Intelligence** | Gestão de Estúdios → mesa → **ID CDA** |
+| **Telecom** | **Não** mantém lista de mesas nem IDs |
+
+O monitor inclui automaticamente dedicadas **e** Network com ID CDA preenchido.
 
 ---
 
-## Troubleshooting
+## 6. Comandos
+
+Diretório: raiz do pacote / pasta com o script.
+
+### Teste (não grava)
+
+```bash
+node scripts/monitor-lobby-cda-run.mjs --dry-run
+```
+
+**Sucesso esperado:**
+
+- `Edge HTTP 200`
+- `"dry_run": true`
+- `"mesas_encontradas"` = mesas com ID CDA no cadastro
+- `"status": "ok"` ou `"parcial"`
+
+### Produção
+
+```bash
+node scripts/monitor-lobby-cda-run.mjs
+```
+
+Agendar: comando `node` acima com as variáveis de ambiente já definidas no agendador (incluir `CDA_LOBBY_COOKIE`).
+
+**Exit code:** `0` = OK; outro = falha (alertar Spin).
+
+---
+
+## 7. Agendamento
+
+| Item | Valor |
+|------|--------|
+| Frequência | A cada **1 hora** |
+| Cron (ex.) | `5 * * * *` |
+| Fuso | `America/Sao_Paulo` |
+| Timeout | ≥ 120 s |
+| Retentativas | 2 ×, intervalo 5 min (rede / 401 pontual) |
+
+---
+
+## 8. Falhas comuns
 
 | Sintoma | Ação |
 |---------|------|
-| `CDA HTTP 401` | Renovar `CDA_LOBBY_COOKIE` (sessão expirada) |
-| `Nenhuma mesa com mesa_identificacao_operadora` | Spin deve rodar SQL de cadastro (ver checklist interno) |
-| `Edge HTTP 401` | Conferir `SUPABASE_SERVICE_ROLE_KEY` e `MONITOR_LOBBY_CDA_INGEST_SECRET` |
-| `mesas_encontradas` &lt; 5 | Mesas Spin fora do lobby ou IDs desatualizados — avisar Spin |
-| `status: parcial` | Job gravou o que achou; Spin analisa `mensagem_erro` no log |
+| `CDA HTTP 401` | Renovar `CDA_LOBBY_COOKIE` (passo a passo na §3) |
+| `Nenhuma mesa com ID CDA` | Spin ainda não cadastrou — avisar Spin |
+| `Edge HTTP 401` | Conferir `SUPABASE_SERVICE_ROLE_KEY` / secret de ingest |
+| `status: parcial` / poucas mesas | IDs desatualizados ou mesa fora do lobby — avisar Spin |
 
----
-
-## Contato
-
-Dúvidas de cadastro de mesas, Supabase ou dashboard: equipe **Spin / Data Intelligence**.  
-Renovação de credenciais CDA: conforme acordo operacional com a casa.
+**Contato:** Spin / Data Intelligence (cadastro, Supabase, dashboard). Renovação de credenciais CDA: conforme acordo operacional com a casa.

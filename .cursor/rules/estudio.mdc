@@ -170,8 +170,9 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 ### Modais
 
 - **`ModalVerIncidente`** — somente leitura, abas **Dados do Incidente** / **Descrição**; carrega anexos via `fetchEstudioIncidenteAnexos` + `urlAssinadaAnexoIncidente` (URL assinada, bucket `estudio-incidentes`).
-  - **Dados (Ver = Sim):** Abertura de Incidente (`ocorrido_em`) / Relator → Data da Rodada / Hora da Rodada → ID da Rodada (linha inteira, `overflow-wrap`) → Mesa / Prestador (`Nome - Nickname`) / Time.
+  - **Dados (Ver = Sim):** Abertura de Incidente (`created_at` — momento do registro, **não** data/hora da rodada) / Relator → Data da Rodada / Hora da Rodada → ID da Rodada (linha inteira, `overflow-wrap`) → Mesa / Prestador (`Nome - Nickname`) / Time.
   - **Dados (Ver = Próprios):** sem Relator, Prestador e Time — layout readequado sem células vazias: Abertura (largura total) → Data / Hora da Rodada → ID → Mesa (largura total).
+  - Coluna **Data/Hora** da tabela e filtro do carrossel usam `created_at` (registro), com limites de dia em **America/Sao_Paulo** (`inicioDiaBrasilUtcIso` / `fimDiaBrasilUtcIso`) — evita registro “sumir” à noite por deslocamento UTC. `data_rodada` / `hora_rodada` são só da rodada. No insert, `ocorrido_em` = agora (alinhado ao registro); **proibido** gravar data/hora da rodada em `ocorrido_em`.
   - **Descrição (GP):** Resolução / Payout → Descrição → Anexos.
   - **Descrição (Shuffler):** Resolução / Payout / Local do Shoe → Descrição → Anexos.
   - Anexos exibem **Arquivo 1**, **Arquivo 2**, … (nome original só em `title` / `aria-label`).
@@ -182,7 +183,7 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
   - **Mesa:** combo buscável ordenado por **número da mesa**; Roleta omitida quando `time_alvo = "shuf"`.
   - **Prestador:** combo buscável com barra **Pesquisar por nome ou nickname...** (`forceSearch`); opções = prestadores ativos/indisponíveis do time GP ou Shuffler em Gestão de Staff (`fetchStaffFormIncidente` via `rh_org_times` + `org_time_id`). Rótulo: **GP** = `Nickname - Nome`; **Shuffler** = `Nome - Nickname` (`labelPrestadorIncidentePorTime`).
   - **ID da Rodada:** obrigatório salvo checkbox **Não tem ID** (grava `INCIDENTE_ID_RODADA_SEM_ID` = `—`).
-  - **Hora da Rodada:** campo **texto**, placeholder `#HH:MM:SS` (sem legenda auxiliar); normalizado para `time` no insert.
+  - **Hora da Rodada:** campo **texto**, placeholder `#HH:MM:SS`, **máx. 9 caracteres**; colar valor maior exibe `Campo "Hora da Rodada" parece incorreta, verifique` (também no Registrar se o formato for inválido); normalizado para `time` no insert.
   - Anexos via **`CampoUploadArquivos`** (`buttonLabel` **Adicionar anexo**, drag-and-drop + **colar Ctrl+V** imagem/vídeo, múltiplos, **50 MB** — `ESTUDIO_INCIDENTES_ANEXO_MAX_BYTES` alinhado ao `file_size_limit` do bucket `estudio-incidentes`). Relator = usuário logado; grava via `insertEstudioIncidente` + `uploadEstudioIncidenteAnexos`.
 
 ### Exceções — identidade de jogo

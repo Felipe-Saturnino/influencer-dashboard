@@ -47,8 +47,12 @@ export type NovoIncidenteMesaOption = {
 const ERRO_GENERICO =
   "Não foi possível registrar o incidente. Se o problema persistir, entre em contato com o suporte.";
 
-const ANEXO_HINT =
-  "Imagem ou vídeo · cole (Ctrl+V), arraste ou adicione · máx. 50 MB por arquivo";
+const ANEXO_HINT = "Imagem ou vídeo · máx. 50 MB por arquivo";
+
+/** Placeholder `#HH:MM:SS` = 9 caracteres — evita colar IDs longos no campo de hora. */
+const HORA_RODADA_MAX_CHARS = 9;
+
+const ERRO_HORA_RODADA = 'Campo "Hora da Rodada" parece incorreta, verifique';
 
 type AnexoPendente = { key: string; file: File };
 
@@ -367,13 +371,20 @@ export function ModalNovoIncidente({
       return;
     }
     setErro(null);
-    setAnexos((prev) => [
-      ...prev,
-      ...files.map((file) => ({
-        key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
-        file,
-      })),
-    ]);
+    setAnexos((prev) => {
+      const seen = new Set(prev.map((a) => `${a.file.size}:${a.file.type || "unknown"}`));
+      const novos: AnexoPendente[] = [];
+      for (const file of files) {
+        const k = `${file.size}:${file.type || "unknown"}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        novos.push({
+          key: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
+          file,
+        });
+      }
+      return novos.length === 0 ? prev : [...prev, ...novos];
+    });
   }
 
   function onRemoveAnexo(key: string) {
@@ -395,9 +406,10 @@ export function ModalNovoIncidente({
       setErro("Informe a data da rodada.");
       return;
     }
-    const horaNorm = normalizarHoraRodadaTexto(horaRodada);
+    const horaRaw = horaRodada.trim();
+    const horaNorm = horaRaw.length <= HORA_RODADA_MAX_CHARS ? normalizarHoraRodadaTexto(horaRaw) : null;
     if (!horaNorm) {
-      setErro("Informe a hora da rodada no formato HH:MM:SS.");
+      setErro(ERRO_HORA_RODADA);
       return;
     }
     if (!prestadorId) {
@@ -430,12 +442,12 @@ export function ModalNovoIncidente({
     }
 
     const relatorNome = user?.name?.trim() || user?.email || "Usuário";
-    const ocorridoEm = `${dataRodada}T${horaNorm}`;
 
     setSalvando(true);
     try {
       const { data, error } = await insertEstudioIncidente({
-        ocorrido_em: new Date(ocorridoEm).toISOString(),
+        // Momento do registro (não a data/hora da rodada — essas vão em data_rodada / hora_rodada).
+        ocorrido_em: new Date().toISOString(),
         time_alvo: timeAlvo,
         prestador_id: prestador.id,
         prestador_nome: prestador.nome,
@@ -667,7 +679,19 @@ export function ModalNovoIncidente({
       <input
         type="text"
         value={horaRodada}
-        onChange={(e) => setHoraRodada(e.target.value)}
+        onChange={(e) => {
+          setHoraRodada(e.target.value.slice(0, HORA_RODADA_MAX_CHARS));
+          setErro((prev) => (prev === ERRO_HORA_RODADA ? null : prev));
+        }}
+        onPaste={(e) => {
+          const pasted = e.clipboardData.getData("text") ?? "";
+          if (pasted.length > HORA_RODADA_MAX_CHARS) {
+            e.preventDefault();
+            setHoraRodada(pasted.slice(0, HORA_RODADA_MAX_CHARS));
+            setErro(ERRO_HORA_RODADA);
+          }
+        }}
+        maxLength={HORA_RODADA_MAX_CHARS}
         placeholder="#HH:MM:SS"
         inputMode="numeric"
         autoComplete="off"
