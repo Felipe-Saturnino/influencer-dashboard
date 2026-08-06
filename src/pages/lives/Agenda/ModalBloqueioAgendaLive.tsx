@@ -142,15 +142,17 @@ export default function ModalBloqueioAgendaLive({
               background: "none",
               border: "none",
               cursor: "pointer",
-              color: t.textMuted,
+              color: t.text,
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               padding: 4,
+              flexShrink: 0,
             }}
             aria-label="Fechar modal"
             title="Fechar modal"
           >
-            <X size={20} />
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
 

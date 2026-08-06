@@ -311,23 +311,7 @@ export function ModalVerSolicitacao({ open, onClose, row, t }: ModalVerSolicitac
         <div style={{ padding: "0 20px 20px" }}>{corpoDetalhes(row, t)}</div>
       )}
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 20px 20px" }}>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            padding: "10px 20px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Fechar
-        </button>
+        
       </div>
     </ModalBase>
   );
@@ -515,24 +499,7 @@ export function ModalAtenderSolicitacao({ open, onClose, row, t, brand, onSaved 
       </ModalTabPanel>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "0 20px 20px" }}>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={saving}
-          style={{
-            padding: "10px 20px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: saving ? "not-allowed" : "pointer",
-          }}
-        >
-          Cancelar
-        </button>
+        
         <button
           type="button"
           onClick={() => void salvar()}

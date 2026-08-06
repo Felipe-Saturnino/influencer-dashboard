@@ -2114,24 +2114,6 @@ function ModalStaffEditar({
       <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
         <button
           type="button"
-          onClick={onClose}
-          disabled={saving}
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.textMuted,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            cursor: saving ? "not-allowed" : "pointer",
-          }}
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
           onClick={() => void salvar()}
           disabled={saving}
           style={{

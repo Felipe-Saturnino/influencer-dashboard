@@ -585,15 +585,35 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
           overflowY: "auto",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 18,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: brand.blockBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <h2 id="modal-af-net-viz-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
               {row.nome}
             </h2>
             <StatusAfiliadoBadge value={row.status} />
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} aria-hidden="true" />
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
         <ProspectoRegistroMeta
@@ -906,12 +926,32 @@ function ModalEditar({
           overflowY: "auto",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 18,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: brand.blockBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <h2 id="modal-af-net-edit-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
             {row ? "Editar afiliado" : "Novo afiliado"}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} aria-hidden="true" />
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
 
@@ -1109,9 +1149,7 @@ function ModalEditar({
             />
           )}
           <div style={{ flex: 1, minWidth: 0 }} />
-          <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>
-            Cancelar
-          </button>
+          
           <button
             type="button"
             onClick={() => void handleSave()}

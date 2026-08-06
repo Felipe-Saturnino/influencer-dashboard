@@ -240,12 +240,24 @@ export function ModalAtenderDenuncia({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "18px 20px", borderBottom: `1px solid ${t.cardBorder}` }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            padding: "18px 20px",
+            borderBottom: `1px solid ${t.cardBorder}`,
+            position: "sticky",
+            top: 0,
+            zIndex: 2,
+            background: t.cardBg,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <h2 id="modal-atender-titulo" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: t.text }}>
             {row.protocolo}
           </h2>
-          <button type="button" aria-label="Fechar modal" title="Fechar modal" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted }}>
-            <X size={20} />
+          <button type="button" aria-label="Fechar modal" title="Fechar modal" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
         <div

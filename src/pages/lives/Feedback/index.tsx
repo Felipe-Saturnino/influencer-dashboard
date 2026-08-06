@@ -789,7 +789,27 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
       >
 
         {/* Cabeçalho — primária */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 6,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: brand.blockBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
               width: 28, height: 28, borderRadius: 8,
@@ -802,8 +822,8 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
               Editar Feedback
             </h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} aria-hidden="true" />
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
 
@@ -920,9 +940,7 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
 
         {/* Botões */}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
-          <button type="button" onClick={onClose} style={{ padding: "10px 20px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "none", color: t.text, cursor: "pointer", fontFamily: FONT.body, fontSize: 13 }}>
-            Cancelar
-          </button>
+          
           <button
             type="button"
             onClick={() => void handleSave()}

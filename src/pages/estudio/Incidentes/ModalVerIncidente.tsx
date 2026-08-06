@@ -140,7 +140,7 @@ export function ModalVerIncidente({
 
   return (
     <ModalBase onClose={onClose} maxWidth={720}>
-      <ModalHeader title={incidente.protocolo} onClose={onClose} sticky />
+      <ModalHeader title={incidente.protocolo} onClose={onClose} />
       <p
         style={{
           margin: "-14px 0 16px",

@@ -214,24 +214,7 @@ export function ModalCampanha({ editando, operadoras, onClose, onSalvo }: ModalC
       ) : null}
 
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-        <button
-          type="button"
-          onClick={() => {
-            if (!salvando) onClose();
-          }}
-          style={{
-            background: "transparent",
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 10,
-            padding: "9px 18px",
-            cursor: "pointer",
-            fontFamily: FONT.body,
-            fontSize: 13,
-            color: t.text,
-          }}
-        >
-          Cancelar
-        </button>
+        
         <button
           type="button"
           onClick={() => void salvar()}

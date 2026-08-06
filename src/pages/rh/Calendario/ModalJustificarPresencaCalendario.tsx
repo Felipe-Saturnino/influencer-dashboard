@@ -396,9 +396,6 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
       ) : null}
 
       <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", gap: 10 }}>
-        <button type="button" onClick={onClose} disabled={salvando} style={btnSecundario}>
-          Cancelar
-        </button>
         {motivo ? (
           <button type="button" onClick={() => void salvar()} disabled={salvando} style={btnPrimario}>
             {salvando ? "Salvando…" : "Salvar"}

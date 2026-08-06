@@ -107,24 +107,7 @@ export function ModalEditarVisibilidadeTutorial({
             marginTop: 20,
           }}
         >
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            style={{
-              padding: "10px 18px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: FONT.body,
-              cursor: saving ? "default" : "pointer",
-            }}
-          >
-            Cancelar
-          </button>
+          
           <button
             type="button"
             onClick={() => void salvar()}

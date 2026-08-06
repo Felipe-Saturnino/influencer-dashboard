@@ -842,12 +842,7 @@ export function ModalNovoIncidente({
   return (
     <>
     <ModalBase onClose={onClose} maxWidth={920}>
-      <ModalHeader
-        title={isEdit ? "Editar Incidente" : "Novo Incidente"}
-        onClose={onClose}
-        sticky
-        closeMatchesTitle
-      />
+      <ModalHeader title={isEdit ? "Editar Incidente" : "Novo Incidente"} onClose={onClose} />
 
       <div style={{ display: "grid", gap: 18 }}>
         {isEdit && editando ? (

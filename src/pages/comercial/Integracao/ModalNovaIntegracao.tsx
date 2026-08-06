@@ -348,23 +348,7 @@ export function ModalNovaIntegracao({
           marginTop: 20,
         }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontSize: 13,
-            fontWeight: 600,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
-        >
-          Cancelar
-        </button>
+        
         <button
           type="button"
           disabled={salvando || !canCriar || !marcaSel}

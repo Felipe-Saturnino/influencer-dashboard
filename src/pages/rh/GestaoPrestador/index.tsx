@@ -3169,23 +3169,7 @@ export default function RhPrestadoresPage() {
             ) : null}
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-              <button
-                type="button"
-                disabled={acaoSalvando}
-                onClick={fecharModalRegistrarAcao}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  cursor: acaoSalvando ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                }}
-              >
-                Cancelar
-              </button>
+              
               <button
                 type="button"
                 disabled={acaoSalvando || !acaoTipo}
@@ -3370,23 +3354,7 @@ export default function RhPrestadoresPage() {
               ) : null}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-              <button
-                type="button"
-                disabled={rtSalvando}
-                onClick={fecharModalRhTalks}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  cursor: rtSalvando ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                }}
-              >
-                Cancelar
-              </button>
+              
               <button
                 type="button"
                 disabled={rtSalvando || rtTalksCarregando || rtTalksOpcoes.length === 0}
@@ -3490,23 +3458,7 @@ export default function RhPrestadoresPage() {
               />
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-              <button
-                type="button"
-                disabled={anSalvando}
-                onClick={fecharModalRegistrarAnotacao}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  cursor: anSalvando ? "not-allowed" : "pointer",
-                  fontFamily: FONT.body,
-                  fontSize: 13,
-                }}
-              >
-                Cancelar
-              </button>
+              
               <button
                 type="button"
                 disabled={anSalvando}

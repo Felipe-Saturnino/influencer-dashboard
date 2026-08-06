@@ -682,13 +682,6 @@ export function ModalOperadora({
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
         <button
           type="button"
-          onClick={tryClose}
-          style={{ background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, padding: "9px 18px", cursor: "pointer", fontFamily: FONT.body, fontSize: 13, color: t.text }}
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
           onClick={salvar}
           disabled={salvando}
           style={{

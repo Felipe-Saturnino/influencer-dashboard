@@ -542,24 +542,7 @@ export function ModalAlterarEscala({
         ) : null}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-          <button
-            type="button"
-            disabled={salvando}
-            onClick={onClose}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontWeight: 600,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              cursor: salvando ? "not-allowed" : "pointer",
-            }}
-          >
-            Cancelar
-          </button>
+          
           {prestador && canEditar ? (
             <button
               type="button"

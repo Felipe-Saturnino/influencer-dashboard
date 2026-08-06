@@ -269,9 +269,7 @@ export default function SimuladorLogin() {
               marginTop: 24,
             }}
           >
-            <button type="button" onClick={fecharModal} disabled={iniciando} style={btnSecundario(t)}>
-              Cancelar
-            </button>
+            
             <button
               type="button"
               disabled={modalConfirmDisabled}

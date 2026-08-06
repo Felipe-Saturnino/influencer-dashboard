@@ -159,7 +159,27 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
         style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "90dvh", overflowY: "auto" }}
       >
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "18px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 18,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: brand.blockBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginBottom: "4px" }}>
               <h2 id="modal-perfil-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>
@@ -169,8 +189,8 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
             </div>
             <div style={{ fontSize: "12px", color: t.textMuted, fontFamily: FONT.body }}>{influencer.email}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} aria-hidden="true" />
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
 

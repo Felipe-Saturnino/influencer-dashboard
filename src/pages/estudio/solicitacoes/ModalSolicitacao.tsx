@@ -155,23 +155,7 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
         </div>
       ) : null}
       <div style={{ marginTop: 18, display: "flex", gap: 10, justifyContent: "flex-end" }}>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={onClose}
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: "transparent",
-            color: t.textMuted,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
-        >
-          Cancelar
-        </button>
+        
         <button
           type="button"
           disabled={loading}

@@ -1030,18 +1030,6 @@ export default function RhOrganogramaPage() {
             <button
               type="button"
               disabled={salvandoDir}
-              onClick={() => {
-                setMdDir(null);
-                setDraftDirId(null);
-                setSobreDiretoria("");
-              }}
-              style={{ ...btnSecondaryStyle, cursor: salvandoDir ? "not-allowed" : "pointer", opacity: salvandoDir ? 0.65 : 1 }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              disabled={salvandoDir}
               onClick={() => void salvarDiretoria()}
               style={{
                 ...inputStyle,
@@ -1140,18 +1128,6 @@ export default function RhOrganogramaPage() {
             <button
               type="button"
               disabled={salvandoGer}
-              onClick={() => {
-                setMdGer(null);
-                setDraftGerId(null);
-                setSobreGerencia("");
-              }}
-              style={{ ...btnSecondaryStyle, cursor: salvandoGer ? "not-allowed" : "pointer", opacity: salvandoGer ? 0.65 : 1 }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              disabled={salvandoGer}
               onClick={() => void salvarGerencia()}
               style={{
                 ...inputStyle,
@@ -1231,17 +1207,6 @@ export default function RhOrganogramaPage() {
             </select>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-            <button
-              type="button"
-              disabled={salvandoTime}
-              onClick={() => {
-                setMdTime(null);
-                setDraftTimeId(null);
-              }}
-              style={{ ...btnSecondaryStyle, cursor: salvandoTime ? "not-allowed" : "pointer", opacity: salvandoTime ? 0.65 : 1 }}
-            >
-              Cancelar
-            </button>
             <button
               type="button"
               disabled={salvandoTime}

@@ -375,24 +375,7 @@ export function ModalMesa({
           ))}
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 22 }}>
-        <button
-          type="button"
-          onClick={tryClose}
-          disabled={salvando}
-          style={{
-            padding: "9px 18px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: "transparent",
-            color: t.text,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: salvando ? "not-allowed" : "pointer",
-          }}
-        >
-          Cancelar
-        </button>
+        
         <button
           type="button"
           onClick={() => void salvar()}

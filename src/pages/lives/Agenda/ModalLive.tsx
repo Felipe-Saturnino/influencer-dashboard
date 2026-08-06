@@ -266,7 +266,27 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
       >
 
         {/* Cabeçalho */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 20,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: t.cardBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{
               width: 28, height: 28, borderRadius: 8,
@@ -281,8 +301,8 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               {isEdit ? "Editar Live" : "Nova Live"}
             </h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} />
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
 

@@ -1722,24 +1722,6 @@ export default function GaleriaFotos() {
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
             <button
               type="button"
-              onClick={() => setModalEvento(false)}
-              disabled={salvandoEvento}
-              style={{
-                padding: "10px 18px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg,
-                color: t.text,
-                fontWeight: 600,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
               onClick={() => void salvarEvento()}
               disabled={salvandoEvento}
               style={{
@@ -1870,25 +1852,7 @@ export default function GaleriaFotos() {
                 />
               ) : null}
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => setModalEditarEvento(false)}
-                disabled={salvandoEditEvento || excluindoEvento}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: t.inputBg,
-                  color: t.text,
-                  fontWeight: 600,
-                  fontSize: 13,
-                  fontFamily: FONT.body,
-                  cursor: "pointer",
-                }}
-              >
-                Cancelar
-              </button>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
                 type="button"
                 onClick={() => void salvarEditarEvento()}
