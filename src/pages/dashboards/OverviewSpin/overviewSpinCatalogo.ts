@@ -83,3 +83,11 @@ export function podeVerAbaCanalCatalogo(opts: {
   // proprios: interseção com escopo
   return opts.operadorasVisiveis.some((s) => pool.includes(s));
 }
+
+/**
+ * Aba Overview (soma Dedicado + Network) só quando o escopo tem os dois canais.
+ * Operadora só Network → Network + Posicionamento; só Dedicado → Dedicado + Posicionamento.
+ */
+export function podeVerAbaOverviewCatalogo(verAbaDedicado: boolean, verAbaNetwork: boolean): boolean {
+  return verAbaDedicado && verAbaNetwork;
+}

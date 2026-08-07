@@ -806,13 +806,33 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
         aria-labelledby="modal-scout-viz-title"
         style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: "20px", padding: "28px", width: "100%", maxWidth: "520px", maxHeight: "90dvh", overflowY: "auto" }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 18,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: brand.blockBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <h2 id="modal-scout-viz-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout.nome_artistico}</h2>
             <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, background: `${STATUS_SCOUT_COLOR[scout.status]}22`, color: STATUS_SCOUT_COLOR[scout.status], fontSize: 12, fontWeight: 700, fontFamily: FONT.body }}>{STATUS_SCOUT_LABEL[scout.status]}</span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} aria-hidden="true" />
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
         <ProspectoRegistroMeta
@@ -1247,10 +1267,30 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
         aria-labelledby="modal-scout-edit-title"
         style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 540, maxHeight: "90dvh", overflowY: "auto" }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 18,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: brand.blockBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <h2 id="modal-scout-edit-title" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE, letterSpacing: "0.03em" }}>{scout ? "Editar" : "Novo"} Prospecto</h2>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, display: "flex", alignItems: "center", padding: 4 }}>
-            <X size={18} aria-hidden="true" />
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}>
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
 
@@ -1460,7 +1500,7 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
             />
           )}
           <div style={{ flex: 1, minWidth: 0 }} />
-          <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
+          
           <button type="button" onClick={() => void handleSave()} disabled={saving}
             style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: getCtaCriarGradient(brand), color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
             {saving && criandoUsuario ? (

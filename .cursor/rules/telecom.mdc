@@ -2,7 +2,6 @@
 description: Padrão dos jobs Telecom (monitor de lobby) — script único por operadora, mesas só no Data Intelligence, expansão sem redeploy Telecom.
 globs:
   - scripts/monitor-lobby-*-run.mjs
-  - scripts/run-monitor-lobby-*.ps1
   - scripts/env.monitor*.example
   - docs/TELECOM-MONITOR-LOBBY-*.md
   - docs/SETUP-MONITOR-LOBBY-*.md
@@ -43,7 +42,7 @@ Exceção legítima de constante no código: **URL/query da API do lobby**, tít
 
 ```
 [Agendador Telecom 1h]
-    → script monitor-lobby-<operadora>-run.mjs
+    → node monitor-lobby-<operadora>-run.mjs
         1. Lê IDs esperados no Supabase (junction ∪ legado)
         2. Busca o lobby na API da operadora (rede BR / cookie se preciso)
         3. POST body com o lobby para Edge monitor-lobby-<operadora>
@@ -53,13 +52,14 @@ Exceção legítima de constante no código: **URL/query da API do lobby**, tít
 | Peça | Caminho |
 |------|---------|
 | Script | `scripts/monitor-lobby-<slug>-run.mjs` |
-| Wrapper Windows | `scripts/run-monitor-lobby-<slug>.ps1` (ou `*-telecom.ps1`) |
 | Edge | `supabase/functions/monitor-lobby-<slug>/` |
 | Handoff Telecom | `docs/TELECOM-MONITOR-LOBBY-<SLUG>.md` |
 | Setup Spin | `docs/SETUP-MONITOR-LOBBY-<SLUG>.md` |
-| Env exemplo | `scripts/env.monitor*.example` / `.env.monitor` (não versionar secrets) |
+| Env | `.env.monitor` / variáveis no agendador (não versionar secrets) |
 
 `<slug>` = operadora parceira (`blaze`, `cda`, `jonbet`, `esportiva`) — **não** o estúdio network.
+
+**Não** incluir `.ps1` no pacote Telecom. O agendador chama `node …/monitor-lobby-<slug>-run.mjs` com env já injetado.
 
 ---
 
@@ -79,18 +79,19 @@ Referência de implementação: `monitor-lobby-jonbet-run.mjs` / `monitor-lobby-
 
 ## 4. Pacote completo para a Telecom (entrega padrão)
 
-Quando o produto pedir um **novo provedor/lobby** (ou atualização de um existente), o agente gera o **pacote inteiro** para o Felipe enviar à Telecom — **não** só o `.mjs` solto.
+Quando o produto pedir um **novo provedor/lobby** (ou atualização de um existente), o agente gera o **pacote** para o Felipe enviar à Telecom.
 
 | Entrega | Ficheiro | Conteúdo |
 |---------|----------|----------|
 | **1. Handoff operacional** | `docs/TELECOM-MONITOR-LOBBY-<SLUG>.md` | O que configurar, env, F12/endpoints, comandos, agendamento, falhas |
 | **2. Script técnico** | `scripts/monitor-lobby-<slug>-run.mjs` | Fetch do lobby + ingest na Edge |
-| **3. Wrapper Windows** | `scripts/run-monitor-lobby-<slug>.ps1` | Carrega `.env.monitor` e chama o `.mjs` |
-| **4. Setup Spin (interno)** | `docs/SETUP-MONITOR-LOBBY-<SLUG>.md` | IDs, deploy Edge, secrets — **não** é o handoff principal da Telecom |
+| **3. Setup Spin (interno)** | `docs/SETUP-MONITOR-LOBBY-<SLUG>.md` | IDs, deploy Edge, secrets — **não** é o handoff principal da Telecom |
+
+**Proibido no pacote Telecom:** wrappers `.ps1` / `.bat` — Telecom agenda `node` + env no próprio agendador.
 
 **Input do produto (Felipe):** caminho do novo provedor — URL do site, request F12 (ou indício), slug da operadora no DI, restrições (cookie, home vs catálogo, 451, etc.).
 
-**Output:** pacote acima + Edge `monitor-lobby-<slug>` alinhada. Telecom recebe sobretudo **(1)+(2)+(3)**; secrets `SUPABASE_*` à parte (cofre).
+**Output:** pacote acima + Edge `monitor-lobby-<slug>` alinhada. Telecom recebe **(1)+(2)**; secrets `SUPABASE_*` à parte (cofre).
 
 **Diferenças por provedor (obrigatório no handoff):** o *formato* do pacote é sempre o mesmo (env, dry-run, 1h, IDs só no DI), mas a **consulta ao lobby** muda — e isso deve estar **explícito e completo** no `TELECOM-MONITOR-LOBBY-*.md` e no script. **Não** assumir “é igual à Blaze”. Exemplos em produção:
 
@@ -105,12 +106,12 @@ No material para a Telecom: secção clara de **autenticação / cookie / proxy*
 Todo handoff `TELECOM-MONITOR-LOBBY-*.md` deve ter, nesta ordem:
 
 1. **Objetivo** — 1h, fuso `America/Sao_Paulo`, o que o script faz vs o que a Edge faz  
-2. **Arquivo a executar** — um `.mjs` (+ `.ps1` se Windows)  
+2. **Arquivo a executar** — só o `.mjs`  
 3. **Env** — tabela `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, secrets específicos do lobby (cookie, etc.)  
 4. **Endpoints / como achar no F12** — host, path, filtro Rede (sem ambiguidade de seção errada)  
 5. **Onde cadastrar IDs** — Gestão de Estúdios → ID da operadora (Spin faz; Telecom **não** edita lista de mesas)  
 6. **Comandos** — `--dry-run` depois produção; exit `0` = OK  
-7. **Agendamento** — frequência 1h  
+7. **Agendamento** — frequência 1h (`node` + env)  
 8. **Falhas comuns** — 401/451/cookie, contactar Spin  
 
 Tom: operacional, PT-BR, **sem** pedir à Telecom para recompilar quando a Spin cadastrar mesa nova.
@@ -127,6 +128,7 @@ Tom: operacional, PT-BR, **sem** pedir à Telecom para recompilar quando a Spin 
 - [ ] Secret opcional `MONITOR_LOBBY_<SLUG>_INGEST_SECRET` + header `x-monitor-lobby-<slug>-secret`
 - [ ] Integration slug em `sync_logs` / Status Técnico alinhado
 - [ ] Docs TELECOM + SETUP; TELECOM deixa claro: **expansão = cadastro na plataforma**
+- [ ] Pacote Telecom = handoff + `.mjs` (**sem** `.ps1`)
 - [ ] Deploy Edge; Telecom só troca ficheiro `.mjs` / env **se** mudar API do provedor — não por mesa nova
 
 ---
@@ -139,14 +141,15 @@ Tom: operacional, PT-BR, **sem** pedir à Telecom para recompilar quando a Spin 
 - Pedir à Telecom um job novo por estúdio no **mesmo** lobby da mesma operadora
 - Documentar “atualize o script quando entrarem mesas novas” em vez de “cadastre o ID na Gestão de Estúdios”
 - Confundir catálogo completo com prateleira da home (caso Esportiva) — a métrica de produto define a fonte; a expansão de mesas continua só no DI
+- Incluir `.ps1` / `.bat` no pacote padrão para a Telecom
 
 ---
 
 ## 7. Inventário atual
 
-| Operadora | Script | Edge | Nota de fonte |
-|-----------|--------|------|----------------|
-| Blaze | `monitor-lobby-blaze-run.mjs` | `monitor-lobby-blaze` | `/api/games/search` live-casino |
-| CDA | `monitor-lobby-cda-run.mjs` | `monitor-lobby-cda` | cookie + casino-categories |
-| Jonbet | `monitor-lobby-jonbet-run.mjs` | `monitor-lobby-jonbet` | espelha Blaze |
-| Esportiva | `monitor-lobby-esportiva-run.mjs` | `monitor-lobby-esportiva` | `home-sections/public` (prateleira home) |
+| Operadora | Handoff Telecom | Script | Edge |
+|-----------|-----------------|--------|------|
+| Blaze | `TELECOM-MONITOR-LOBBY-BLAZE.md` | `monitor-lobby-blaze-run.mjs` | `monitor-lobby-blaze` |
+| CDA | `TELECOM-MONITOR-LOBBY-CDA.md` | `monitor-lobby-cda-run.mjs` | `monitor-lobby-cda` |
+| Jonbet | `TELECOM-MONITOR-LOBBY-JONBET.md` | `monitor-lobby-jonbet-run.mjs` | `monitor-lobby-jonbet` |
+| Esportiva | `TELECOM-MONITOR-LOBBY-ESPORTIVA.md` | `monitor-lobby-esportiva-run.mjs` | `monitor-lobby-esportiva` |

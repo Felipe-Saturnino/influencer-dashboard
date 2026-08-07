@@ -111,7 +111,10 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Atendimento", "cs_atendimento", "Atendimento"),
   page("Gestão de Dealers", "gestao_dealers", "GestaoDeDealers"),
   page("Roteiro de Mesa", "roteiro_mesa", "RoteiroDeMesa"),
-  page("Incidentes", "incidentes", "Incidentes"),
+  page("Incidentes", "incidentes", "Incidentes", [
+    { tabId: "tickets", slug: "Tickets", label: "Tickets", access: "always" },
+    { tabId: "sinais", slug: "Sinais", label: "Sinais", access: "always" },
+  ]),
   page("Escala Estúdio", "rh_gestao_escala", "EscalaEstudio"),
   page("Escala Escritório", "escala_escritorio", "EscalaEscritorio"),
   page("Gestão de Staff", "rh_staff", "GestaoDeStaff"),

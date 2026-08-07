@@ -5,7 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { propsBotaoFecharModal } from "../../../lib/iconOnlyButtonA11y";
-import { useDialogTitleId } from "../../../components/OperacoesModal";
+import { MODAL_BASE_PADDING_PX, useDialogTitleId } from "../../../components/OperacoesModal";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 
 export function RhFuncModalHeaderDetalhes({
@@ -32,6 +32,7 @@ export function RhFuncModalHeaderDetalhes({
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
   const titleId = useDialogTitleId();
+  const pad = MODAL_BASE_PADDING_PX;
   return (
     <div
       style={{
@@ -39,7 +40,20 @@ export function RhFuncModalHeaderDetalhes({
         justifyContent: "space-between",
         alignItems: "flex-start",
         gap: 12,
+        position: "sticky",
+        top: -pad,
+        zIndex: 2,
+        marginTop: -pad,
+        marginLeft: -pad,
+        marginRight: -pad,
         marginBottom: 20,
+        paddingTop: pad,
+        paddingLeft: pad,
+        paddingRight: pad,
+        paddingBottom: 16,
+        background: brand.blockBg,
+        borderBottom: `1px solid ${t.cardBorder}`,
+        boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
       }}
     >
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
@@ -113,11 +127,12 @@ export function RhFuncModalHeaderDetalhes({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: t.textMuted,
+            color: t.text,
+            flexShrink: 0,
           }}
           {...propsBotaoFecharModal()}
         >
-          <X size={20} strokeWidth={2} aria-hidden />
+          <X size={22} strokeWidth={2.75} aria-hidden="true" />
         </button>
       </div>
     </div>

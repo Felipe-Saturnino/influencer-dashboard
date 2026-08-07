@@ -358,23 +358,7 @@ export function ModalVerChamado({ open, onClose, row, historico, loadingHistoric
       </ModalTabPanel>
 
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 20px 20px" }}>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            padding: "10px 20px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Fechar
-        </button>
+        
       </div>
     </ModalBase>
   );
@@ -562,23 +546,7 @@ export function ModalAtenderChamado({
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "0 20px 20px" }}>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={saving}
-          style={{
-            padding: "10px 18px",
-            border: "none",
-            background: "transparent",
-            color: t.textMuted,
-            fontWeight: 600,
-            cursor: "pointer",
-            fontSize: 13,
-            fontFamily: FONT.body,
-          }}
-        >
-          Cancelar
-        </button>
+        
         <button
           type="button"
           onClick={() => void salvar()}

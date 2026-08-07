@@ -33,12 +33,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo por operadora — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página tem quatro abas: **Overview** (soma Dedicado + Network), **Estúdio Dedicado**, **Estúdio Network** e **Posicionamento** (visibilidade no lobby).",
+          "O Overview Spin reúne os resultados financeiros e operacionais das mesas ao vivo por operadora — Baccarat, Roleta, Blackjack e Futebol Brasileiro. A página pode ter até quatro abas: **Overview** (soma Dedicado + Network), **Estúdio Dedicado**, **Estúdio Network** e **Posicionamento** (visibilidade no lobby). A aba Overview só aparece quando o seu escopo tem mesas nos dois tipos de estúdio; se a operadora opera só em Network (ou só em Dedicado), essa aba fica oculta.",
       },
       {
         subtitulo: "Abas Estúdio Dedicado e Estúdio Network",
         texto:
-          "Estúdio Dedicado mostra só as mesas de estúdios dedicados; Estúdio Network só as de estúdios network (ex.: Sports Club), sempre pela fatia da operadora parceira.\n\nAs abas Dedicado e Network só aparecem se a operadora do seu escopo tiver ao menos uma mesa daquele tipo cadastrada em Gestão de Estúdios. Quem tem permissão de Ver **Sim** vê o filtro completo de operadoras elegíveis; com Ver **Próprios**, o filtro fica travado no escopo. Administrador vê tudo.",
+          "Estúdio Dedicado mostra só as mesas de estúdios dedicados; Estúdio Network só as de estúdios network (ex.: Sports Club), sempre pela fatia da operadora parceira.\n\nAs abas Dedicado e Network só aparecem se a operadora do seu escopo tiver ao menos uma mesa daquele tipo cadastrada em Gestão de Estúdios. Quem tem permissão de Ver **Sim** vê o filtro completo de operadoras elegíveis; com Ver **Próprios**, o filtro fica travado no escopo. Administrador vê tudo.\n\nSe só um canal existir no escopo, a aba Overview (soma) não aparece — restam o canal disponível e Posicionamento.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -203,12 +203,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos times de estúdio. A aba **Escala** está disponível para todos os times; a aba **KPIs de Mesa** aparece para **Game Presenter** e **Shuffler** (layout de incidentes), **Service Manager** (placeholder) e fica oculta para **Shift Leader**.",
+          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos times de estúdio. A aba **Escala** está disponível para todos os times; a segunda aba aparece como **KPIs de Mesa** para **Game Presenter** e **Shuffler**, como **KPIs de OCR** para **Service Manager**, e fica oculta para **Shift Leader**.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual (na Escala e nos KPIs de Mesa).\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
+          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual (na Escala, nos KPIs de Mesa e nos KPIs de OCR).\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
       },
       {
         subtitulo: "Visão de time vs individual",
@@ -238,7 +238,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de Mesa",
         texto:
-          "A aba **KPIs de Mesa** depende do time:\n\n— **Game Presenter:** cards de Rodadas, médias por jogo (Blackjack, Baccarat, Futebol Brasileiro, Roleta) e Incidentes; **Por Jogo** com Rodadas, Velocidade, Reação e Incidentes — **Bola e Cilindro só na Roleta** (nos demais jogos aparece «—»); **Detalhamento Diário** com Data, Rodadas, Total de Incidentes, Casos, Erros e Outros. Na visão de time (Staff vazio), os totais somam o time, as médias usam as amostras do time e há **Pontos de atenção** por prestador.\n\n— **Shuffler:** cards e tabelas só de incidentes (Incidentes, Casos, Erros, Outros), sem Roleta em Por Jogo; na visão de time há Pontos de atenção.\n\n— **Service Manager:** placeholder («Conteúdo em desenvolvimento.»).\n\n— **Shift Leader:** a aba não aparece.\n\n**Erros** = Erro + Não Avisados + Avisado/Não Resolvido. **Outros** = Oculto + Avisado/Resolvido (substitui a antiga coluna Graves). Período = mês civil completo (sem recorte MTD), com fechamento **D-1**: rodadas/Grafana e Incidentes só incluem até o dia anterior (Incidentes cadastrados hoje entram amanhã). Sem linhas: \"Sem dados para o período selecionado.\"",
+          "A aba **KPIs de Mesa** (Game Presenter e Shuffler) depende do time:\n\n— **Game Presenter:** cards de Rodadas, médias por jogo (Blackjack, Baccarat, Futebol Brasileiro, Roleta) e Incidentes; **Por Jogo** com Rodadas, Velocidade, Reação e Incidentes — **Bola e Cilindro só na Roleta** (nos demais jogos aparece «—»). Na visão **individual** (Staff selecionado ou Ver = Próprios), ao lado de Velocidade/Reação (e Bola/Cilindro na Roleta) aparece um ícone colorido (verde → amarelo → vermelho → roxo) conforme faixas de tempo (s) ou % — sem texto de avaliação. Na visão de time (Staff vazio) os ícones não aparecem; há **Pontos de atenção** por prestador. **Detalhamento Diário** com Data, Rodadas, Total de Incidentes, Casos, Erros e Outros.\n\n— **Shuffler:** cards e tabelas só de incidentes (Incidentes, Casos, Erros, Outros), sem Roleta em Por Jogo; na visão de time há Pontos de atenção.\n\n**Erros** = Erro + Não Avisados + Avisado/Não Resolvido. **Outros** = Oculto + Avisado/Resolvido. Período = mês civil completo (sem recorte MTD), com fechamento **D-1**: rodadas/Grafana e Incidentes só incluem até o dia anterior. Sem linhas: \"Sem dados para o período selecionado.\"",
+      },
+      {
+        subtitulo: "Aba KPIs de OCR",
+        texto:
+          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos (`sm_sinais`) pelo SM selecionado — ou por todos os SMs do time quando o Staff está vazio. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); sem Staff, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas, a partir dos sinais e dos tickets com mesa), **Equipe** (só na visão de time / Staff vazio — ranking por SM, com coluna Performance) e **Detalhamento Diário**. O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
       },
     ],
   },
@@ -476,17 +481,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Catálogo de **Game Presenters** (dealers) em operação no estúdio, sincronizado com RH. A operadora consulta especialidades, turno e estúdio e envia solicitações ao estúdio — não cadastra nem edita perfil aqui.\n\n**Fluxo:** RH cadastra e define a função em **Gestão de Prestadores** → gestor de estúdio configura perfil, estúdio e horários em **Gestão de Staff** → o card aparece aqui para a operadora vinculada ao estúdio.",
+          "Catálogo de **Game Presenters** (dealers) em operação, sincronizado com **Gestão de Staff**. A operadora consulta especialidades, turno e **estúdio** e envia solicitações — não cadastra nem edita perfil aqui.\n\n**Fluxo:** RH cadastra e define a função em **Gestão de Prestadores** → gestor configura perfil, estúdio e horários em **Gestão de Staff** → o card aparece aqui com o **mesmo estúdio** configurado no Staff (ex.: Sports Club mostra só a tag Sports Club).",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nAo lado do carrossel fica o filtro de **estúdio** (**Todos Estúdios** por padrão, com a opção **Nenhum estúdio** para dealers ainda sem vínculo). Perfis com escopo de um único estúdio já entram com ele selecionado, sem o agregador.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname.",
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nAo lado do carrossel fica o filtro de **estúdio** (**Todos Estúdios** por padrão, com a opção **Nenhum estúdio** para dealers ainda sem vínculo). Perfis Operador veem no filtro os estúdios ligados à sua operadora em Gestão de Estúdios — por exemplo, Blaze vê **Blaze** e **Sports Club** (network). Com um único estúdio no escopo, ele já entra selecionado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname.",
       },
       {
         subtitulo: "Cards de Dealers",
         texto:
-          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, tags dos jogos de especialidade, bio e, na base, as tags de gênero, **estúdio** e — quando houver vínculo — operadora.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, estúdio e bio do dealer.",
+          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, tags dos jogos de especialidade, bio e, na base, as tags de gênero e **estúdio** (o mesmo definido em Gestão de Staff). Não há tag de operadora no card — o vínculo visível é o estúdio.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, estúdio e bio do dealer.",
       },
       {
         subtitulo: "Solicitações ao Estúdio (perfil Operador)",
@@ -501,7 +506,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Visibilidade por Perfil",
         texto:
-          "— Gestor / Admin: visualização do elenco de todos os estúdios e do histórico de solicitações de todas as operadoras.\n— Operador: visualiza os dealers do estúdio que atende a sua operadora. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer, sempre restrito à própria operadora.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
+          "— Gestor / Admin: visualização do elenco de todos os estúdios e do histórico de solicitações de todas as operadoras.\n— Operador: visualiza os dealers dos **estúdios associados à sua operadora** (dedicado e network — ex.: Blaze + Sports Club). A tag do card indica em qual estúdio o GP está. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer, sempre restrito à própria operadora.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
       },
     ],
   },
@@ -742,12 +747,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e KPIs",
         texto:
-          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período), o filtro de **Estúdio** e os seis cards de KPI (um por categoria) resumem a quantidade de incidentes do período e do escopo selecionado, comparando com o mês anterior.\n\nAs abas **Todos Times / Game Presenters / Shuffler** e o filtro de **Staff** restringem a lista e os KPIs a um time ou prestador específico. Usuários com permissão de Ver = Próprios não veem essas abas — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca localiza incidentes por protocolo, prestador, nickname ou mesa."
+          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período) e o filtro de **Estúdio**. As abas **Tickets** e **Sinais** organizam a página.\n\nNa aba **Tickets**, o filtro de **Time** (**Todos Times**, **Game Presenter** ou **Shuffler**) e os filtros de **Staff**, **Incidente**, **Tipo** e **Relator** restringem a lista e os KPIs. Usuários com permissão de Ver = Próprios não veem Staff e Relator — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca da aba Tickets localiza incidentes por protocolo, prestador, nickname ou mesa."
+      },
+      {
+        subtitulo: "Aba Sinais",
+        texto:
+          "A aba **Sinais** mostra os sinais resolvidos pelos Service Managers (origem Grafana). No bloco de filtros: busca, **Todos Staff** (SM que atendeu) e **Todos Relatores** (quem abriu o sinal). Os KPIs consolidam, no período e com os filtros aplicados: **Totais de Sinais**, **TMA Total** (Issued → Resolved), **TMA de Atendimento** (Issued → Taken) e **TMA de Resolução** (Taken → Resolved), cada um com comparativo do mês anterior.\n\nO **Detalhamento Diário** resume por dia (America/Sao_Paulo): quantidade de sinais e as médias de TMA Total, de Atendimento e de Resolução.",
       },
       {
         subtitulo: "Registrar um incidente",
         texto:
-          "Clique em **Novo Incidente** e informe: time (Game Presenter ou Shuffler), mesa e tipo, categoria e resolução (e, para Shuffler, local do shoe), prestador (lista do time na Gestão de Staff — pesquisa por nome ou nickname; em Game Presenter a lista mostra **Nickname - Nome**, em Shuffler **Nome - Nickname**), ID da rodada (ou marque **Não tem ID**), data e hora da rodada (hora em texto, placeholder `#HH:MM:SS`), se houve necessidade de payout e uma descrição do ocorrido. É possível anexar arquivos de evidência (botão, arrastar e soltar ou **colar com Ctrl+V** uma imagem/vídeo da área de transferência, como uma captura de tela; tamanho máximo de 50 MB por arquivo).",
+          "Clique em **Novo Incidente** e informe: time (Game Presenter ou Shuffler), mesa e tipo, categoria e resolução (e, para Shuffler, local do shoe), prestador (lista do time na Gestão de Staff — pesquisa por nome ou nickname; em Game Presenter a lista mostra **Nickname - Nome**, em Shuffler **Nome - Nickname**), ID da rodada (ou marque **Não tem ID**), data e hora da rodada (hora em texto, placeholder `#HH:MM:SS`), se houve necessidade de payout e uma descrição do ocorrido.\n\nPara vários tipos, a **Descrição** oferece scripts prontos (templates) acima do campo — use um deles, edite o texto ou escreva do zero. Se a descrição já tiver conteúdo, aplicar outro script pede confirmação antes de substituir. É possível anexar arquivos de evidência (botão, arrastar e soltar ou **colar com Ctrl+V** uma imagem/vídeo da área de transferência; tamanho máximo de 50 MB por arquivo).\n\nSe for registrar vários tickets seguidos, use **Registrar e criar outro**: o incidente é salvo, o modal permanece aberto e alguns campos (como mesa e prestador) são mantidos para acelerar o próximo registro.",
       },
       {
         subtitulo: "Consultar um incidente",
@@ -755,9 +765,14 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator, data/hora da rodada, ID da rodada, mesa, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir).",
       },
       {
+        subtitulo: "Editar um incidente",
+        texto:
+          "Com permissão de Editar = Sim, clique no ícone de lápis na coluna Ações. O formulário abre com os dados preenchidos — o **Protocolo** aparece só para consulta e não pode ser alterado. Os demais campos podem ser corrigidos; novos anexos são adicionados aos já existentes. Ao concluir, use **Salvar Alterações**.",
+      },
+      {
         subtitulo: "Permissões",
         texto:
-          "O acesso é definido em Gestão de Usuários → Permissões para a página Incidentes:\n— **Ver = Sim**: consulta todos os incidentes do escopo.\n— **Ver = Próprios**: consulta apenas os incidentes em que o prestador está envolvido (sem colunas de Prestador, Time e Relator).\n— **Editar = Sim**: exibe o botão **Novo Incidente**.\n\nSem Editar, a página fica em modo consulta.",
+          "O acesso é definido em Gestão de Usuários → Permissões para a página Incidentes:\n— **Ver = Sim**: consulta todos os incidentes do escopo.\n— **Ver = Próprios**: consulta apenas os incidentes em que o prestador está envolvido (sem colunas de Prestador, Time e Relator).\n— **Editar = Sim**: exibe o botão **Novo Incidente** e o ícone **Editar** na tabela.\n\nSem Editar = Sim, a página fica em modo consulta.",
       },
     ],
   },
@@ -805,6 +820,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         texto:
           "Lista e edita prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa — turnos, siglas e dados operacionais usados na escala e no calendário.",
+      },
+      {
+        subtitulo: "ID TOS (Service Manager)",
+        texto:
+          "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) guarda o UUID do colaborador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters.",
       },
       {
         subtitulo: "Permissões",

@@ -174,24 +174,7 @@ export function ModalExperienciaProfissional({
         ) : null}
       </div>
       <div style={{ display: "flex", gap: 10 }}>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={loading}
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.textMuted,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
-        >
-          Cancelar
-        </button>
+        
         <button
           type="button"
           onClick={() => void submit()}

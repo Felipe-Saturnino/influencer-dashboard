@@ -80,20 +80,13 @@ export function ModalAprovarBanca({
         />
       </div>
       {err ? <div style={{ color: "#ef4444", fontSize: 12, marginTop: 12, fontFamily: FONT.body }}>{err}</div> : null}
-      <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{ flex: 1, padding: 12, borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: t.inputBg, color: t.textMuted, fontWeight: 700, fontFamily: FONT.body, cursor: "pointer" }}
-        >
-          Cancelar
-        </button>
+      <div style={{ display: "flex", gap: 10, marginTop: 24, justifyContent: "flex-end" }}>
         <button
           type="button"
           onClick={handleConfirmar}
           disabled={saving || valorNum <= 0}
           style={{
-            flex: 2, padding: 12, borderRadius: 10, border: "none", fontWeight: 700, fontFamily: FONT.body,
+            flex: 1, padding: 12, borderRadius: 10, border: "none", fontWeight: 700, fontFamily: FONT.body,
             cursor: saving || valorNum <= 0 ? "not-allowed" : "pointer", opacity: saving || valorNum <= 0 ? 0.6 : 1,
             background: brand.useBrand ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))" : `linear-gradient(135deg, ${BASE_COLORS.purple}, ${BASE_COLORS.blue})`,
             color: "#fff",

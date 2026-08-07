@@ -490,7 +490,27 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
   return (
     <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="af-mod-v-t" style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 520, maxHeight: "min(92vh, 90dvh)", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 18,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: brand.blockBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
               <h2 id="af-mod-v-t" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{p?.nome_artistico || row.name}</h2>
@@ -498,7 +518,7 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
             </div>
             <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{row.email}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}><X size={18} aria-hidden="true" /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}><X size={22} strokeWidth={2.75} aria-hidden="true" /></button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, background: brand.useBrand ? "color-mix(in srgb, var(--brand-accent) 8%, transparent)" : `${BRAND.azul}0d`, border: brand.useBrand ? `1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)` : `1px solid ${BRAND.azul}30`, fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginBottom: 18 }}>
           <Eye size={13} aria-hidden="true" style={{ color: brand.primary }} /> Modo visualização — somente leitura. Dados sensíveis protegidos.
@@ -671,7 +691,27 @@ function ModalEditar({
   return (
     <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="af-mod-e-t" style={{ background: brand.blockBg, border: `1px solid ${t.cardBorder}`, borderRadius: 20, padding: 28, width: "100%", maxWidth: 520, maxHeight: "min(92vh, 90dvh)", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
+            marginBottom: 18,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: brand.blockBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+          }}
+        >
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
               <h2 id="af-mod-e-t" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text, fontFamily: FONT_TITLE }}>{form.nome_artistico?.trim() || row.name}</h2>
@@ -679,7 +719,7 @@ function ModalEditar({
             </div>
             <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>{row.email}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, padding: 4 }}><X size={18} aria-hidden="true" /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar modal" title="Fechar modal" style={{ background: "none", border: "none", cursor: "pointer", color: t.text, display: "flex", alignItems: "center", justifyContent: "center", padding: 4, flexShrink: 0 }}><X size={22} strokeWidth={2.75} aria-hidden="true" /></button>
         </div>
 
         <AfiliadoModalTabs tabs={tabs} tab={tab} setTab={setTab} tabIdPrefix="tab-af-ed-" panelIdPrefix="panel-af-ed-" />
@@ -761,7 +801,7 @@ function ModalEditar({
         )}
 
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
-          <button type="button" onClick={onClose} style={{ padding: "10px 18px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.text, fontSize: 13, fontWeight: 600, fontFamily: FONT.body, cursor: "pointer" }}>Cancelar</button>
+          
           <button type="button" onClick={() => void handleSave()} disabled={saving} style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, background: ctaSalvar, color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: FONT.body, display: "flex", alignItems: "center", gap: 6 }}>
             {saving ? <><Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color="#fff" /> Salvando…</> : "Salvar"}
           </button>

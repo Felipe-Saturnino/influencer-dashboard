@@ -131,24 +131,7 @@ export function ModalManutencaoPeca({
           {err}
         </div>
       ) : null}
-      <div style={{ display: "flex", gap: 10 }}>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.textMuted,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
-        >
-          Cancelar
-        </button>
+      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <button
           type="button"
           disabled={loading}

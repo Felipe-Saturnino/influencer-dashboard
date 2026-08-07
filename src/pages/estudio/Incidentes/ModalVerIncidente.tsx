@@ -189,10 +189,10 @@ export function ModalVerIncidente({
       <ModalTabPanel active={aba === "dados"} id="panel-ver-incidente-dados" labelledBy="tab-ver-incidente-dados">
         <div style={{ display: "grid", gap: 14 }}>
           {ocultarPrestadorTimeRelator ? (
-            <Campo label="Abertura de Incidente" value={formatDataHoraIncidente(incidente.ocorrido_em)} fullWidth />
+            <Campo label="Abertura de Incidente" value={formatDataHoraIncidente(incidente.created_at)} fullWidth />
           ) : (
             <div style={row2}>
-              <Campo label="Abertura de Incidente" value={formatDataHoraIncidente(incidente.ocorrido_em)} />
+              <Campo label="Abertura de Incidente" value={formatDataHoraIncidente(incidente.created_at)} />
               <Campo label="Relator" value={incidente.relator_nome} />
             </div>
           )}

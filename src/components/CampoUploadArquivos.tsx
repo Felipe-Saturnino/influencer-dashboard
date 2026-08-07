@@ -115,16 +115,31 @@ function collectFilesFromDataTransfer(
     if (!file) return;
     if (!fileMatchesAccept(file, accept)) return;
     const named = fromClipboard ? ensureNamedClipboardFile(file) : file;
-    const key = `${named.name}:${named.size}:${named.type}:${named.lastModified}`;
+    // Clipboard: items e files espelham o mesmo payload com lastModified/nome diferentes — dedupe por size+type.
+    const key = fromClipboard
+      ? `${named.size}:${named.type || "unknown"}`
+      : `${named.name}:${named.size}:${named.type}:${named.lastModified}`;
     if (seen.has(key)) return;
     seen.add(key);
     out.push(named);
   };
 
-  for (const item of Array.from(dt.items ?? [])) {
-    if (item.kind === "file") add(item.getAsFile());
+  if (fromClipboard) {
+    // Preferir `items`; `files` costuma duplicar a mesma captura/vídeo colado.
+    for (const item of Array.from(dt.items ?? [])) {
+      if (item.kind === "file") add(item.getAsFile());
+    }
+    if (out.length === 0) {
+      for (const f of Array.from(dt.files ?? [])) add(f);
+    }
+  } else {
+    for (const f of Array.from(dt.files ?? [])) add(f);
+    if (out.length === 0) {
+      for (const item of Array.from(dt.items ?? [])) {
+        if (item.kind === "file") add(item.getAsFile());
+      }
+    }
   }
-  for (const f of Array.from(dt.files ?? [])) add(f);
 
   if (out.length === 0) return [];
   return multiple ? out : out.slice(0, 1);
@@ -158,6 +173,7 @@ export function CampoUploadArquivos({
   const inputRef = useRef<HTMLInputElement>(null);
   const zoneRef = useRef<HTMLDivElement>(null);
   const dragDepthRef = useRef(0);
+  const lastPasteAtRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
   const [pasteFlash, setPasteFlash] = useState(false);
   const activeHighlight = isDragging || pasteFlash;
@@ -218,10 +234,18 @@ export function CampoUploadArquivos({
 
   function onPaste(e: ClipboardEvent) {
     if (disabled) return;
+    const now = Date.now();
+    // Evita disparo duplo (bubble / reentrada do mesmo Ctrl+V).
+    if (now - lastPasteAtRef.current < 400) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const files = collectFilesFromDataTransfer(e.clipboardData, accept, multiple, true);
     if (files.length === 0) return;
     e.preventDefault();
     e.stopPropagation();
+    lastPasteAtRef.current = now;
     flashPaste();
     onAdd(files);
   }

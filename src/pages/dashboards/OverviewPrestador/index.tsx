@@ -10,6 +10,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { OverviewPrestadorAbaEscala } from "./OverviewPrestadorAbaEscala";
 import { OverviewPrestadorAbaKpisMesa } from "./OverviewPrestadorAbaKpisMesa";
+import { OverviewPrestadorAbaKpisOcr } from "./OverviewPrestadorAbaKpisOcr";
 import { OverviewPrestadorFiltroBar } from "./OverviewPrestadorFiltroBar";
 import { useOverviewPrestadorDados, type OverviewPrestadorTab } from "./useOverviewPrestadorDados";
 
@@ -23,6 +24,7 @@ export default function OverviewPrestador() {
 
   const kpisMesaMode = dados.caps.kpisMesaMode;
   const showAbaKpisMesa = kpisMesaMode !== "hidden";
+  const labelAbaKpis = kpisMesaMode === "sm" ? "KPIs de OCR" : "KPIs de Mesa";
 
   useEffect(() => {
     if (!showAbaKpisMesa && aba === "kpis_mesa") setAba("escala");
@@ -87,6 +89,7 @@ export default function OverviewPrestador() {
         aba={aba}
         onSelectAba={selecionarAba}
         showAbaKpisMesa={showAbaKpisMesa}
+        labelAbaKpis={labelAbaKpis}
         historico={dados.historico}
         onToggleHistorico={dados.toggleHistorico}
         labelCarrossel={labelCarrossel}
@@ -122,7 +125,18 @@ export default function OverviewPrestador() {
           />
         )}
 
-        {aba === "kpis_mesa" && showAbaKpisMesa && (
+        {aba === "kpis_mesa" && showAbaKpisMesa && kpisMesaMode === "sm" && (
+          <OverviewPrestadorAbaKpisOcr
+            funcionarioIds={dados.idsEscopo}
+            prestadores={prestadoresKpi}
+            visaoTime={dados.visaoTime}
+            mesSelecionado={dados.mesSelecionado}
+            historico={dados.historico}
+            staffNome={staffNome}
+          />
+        )}
+
+        {aba === "kpis_mesa" && showAbaKpisMesa && (kpisMesaMode === "gp" || kpisMesaMode === "shuffler") && (
           <OverviewPrestadorAbaKpisMesa
             funcionarioIds={dados.idsEscopo}
             prestadores={prestadoresKpi}

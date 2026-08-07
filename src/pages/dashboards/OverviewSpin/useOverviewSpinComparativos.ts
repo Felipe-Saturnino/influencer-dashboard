@@ -16,6 +16,7 @@ import {
   isMesaBlackjackComparativo,
   isMesaFutebolBrasileiro,
   jogoComparativoKeysFromCadastroMesa,
+  jogoComparativoKeysFromPorTabelaRows,
   labelMesaCda,
   linhaComparativoJogoAgregadaMes,
   linhaMesaPorDiaFromRow,
@@ -175,7 +176,10 @@ export function useOverviewSpinComparativos(p: Params) {
     ],
   );
 
-  /** Jogos exibidos no Comparativo de Jogo conforme catálogo de mesas das operadoras no escopo do filtro. */
+  /**
+   * Jogos no Comparativo / Dados por mesa: união do catálogo no escopo + jogos presentes no relatório.
+   * Mesas network costumam ter `operadora_slug` null no cadastro — sem a união, Futebol some para o operador.
+   */
   const jogosComparativoAtivos = useMemo(() => {
     const keys = new Set<JogoComparativoKey>();
     const rowsCadastro =
@@ -189,29 +193,16 @@ export function useOverviewSpinComparativos(p: Params) {
       }
     }
 
-    const fromCadastro = JOGOS_COMPARATIVO.filter((j) => keys.has(j.key));
-    if (fromCadastro.length > 0) return fromCadastro;
-
-    // Fallback: perfil sem escopo e catálogo vazio (RLS legado) — exibir colunas por jogo quando houver dados.
-    if (escoposVisiveis.semRestricaoEscopo === true) {
-      const withData = new Set<JogoComparativoKey>();
-      const srcRows = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
-      for (const r of srcRows) {
-        const lbl = labelMesaCda(r, operadorasListFmt);
-        if (isMesaBlackjackComparativo(r, operadorasListFmt)) withData.add("blackjack");
-        if (lbl === "Roleta") withData.add("roleta");
-        if (lbl === "Speed Baccarat") withData.add("baccarat");
-        if (isMesaFutebolBrasileiro(r, operadorasListFmt)) withData.add("futebol_brasileiro");
-      }
-      if (withData.size > 0) return JOGOS_COMPARATIVO.filter((j) => withData.has(j.key));
+    const srcRows = historico ? porTabelaFiltradasHist : porTabelaFiltradas;
+    for (const k of jogoComparativoKeysFromPorTabelaRows(srcRows, operadorasListFmt)) {
+      keys.add(k);
     }
 
-    return fromCadastro;
+    return JOGOS_COMPARATIVO.filter((j) => keys.has(j.key));
   }, [
     mesasCadastro,
     slugListEscopoComparativo,
     podeVerOperadora,
-    escoposVisiveis.semRestricaoEscopo,
     historico,
     porTabelaFiltradasHist,
     porTabelaFiltradas,

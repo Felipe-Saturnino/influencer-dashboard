@@ -322,24 +322,7 @@ export function ModalCriarInformativo({
             ) : null}
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={salvando}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: `1px solid ${t.cardBorder}`,
-                  background: "transparent",
-                  color: t.text,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: FONT.body,
-                }}
-              >
-                Cancelar
-              </button>
+              
               <button
                 type="button"
                 disabled={salvando}

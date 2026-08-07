@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { X } from "lucide-react";
-import { ModalBase } from "../../../components/OperacoesModal";
+import { ModalBase, MODAL_BASE_PADDING_PX } from "../../../components/OperacoesModal";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
 import { truncPreviewHtml } from "../../../lib/academyPortalWorkflow";
 import {
@@ -78,17 +78,39 @@ function MidiaAmpliadaModal({
     };
   }, [paths]);
 
+  const brand = useDashboardBrand();
+  const pad = MODAL_BASE_PADDING_PX;
+
   return (
     <ModalBase onClose={onClose} maxWidth={920} zIndex={1100}>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          position: "sticky",
+          top: -pad,
+          zIndex: 2,
+          marginTop: -pad,
+          marginLeft: -pad,
+          marginRight: -pad,
+          marginBottom: 8,
+          paddingTop: pad,
+          paddingLeft: pad,
+          paddingRight: pad,
+          paddingBottom: 16,
+          background: brand.blockBg,
+          borderBottom: `1px solid ${t.cardBorder}`,
+          boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+        }}
+      >
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar modal"
           title="Fechar modal"
-          style={{ border: "none", background: "transparent", cursor: "pointer", color: t.textMuted, padding: 4 }}
+          style={{ border: "none", background: "transparent", cursor: "pointer", color: t.text, padding: 4, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
         >
-          <X size={22} aria-hidden />
+          <X size={22} strokeWidth={2.75} aria-hidden="true" />
         </button>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

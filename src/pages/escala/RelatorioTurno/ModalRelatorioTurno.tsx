@@ -391,22 +391,6 @@ export function ModalRelatorioTurno({
       >
         <button
           type="button"
-          onClick={onClose}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: FONT.body,
-          }}
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
           disabled={salvando || loadingEst}
           onClick={() => void publicar()}
           style={{

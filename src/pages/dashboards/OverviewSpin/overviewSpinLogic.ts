@@ -1184,6 +1184,22 @@ export function jogoComparativoKeysFromCadastroMesa(tipoJogo: string, nomeMesa: 
   return [...keys];
 }
 
+/** Chaves de jogo presentes nas linhas do relatório (por tabela) — usada para unir ao catálogo. */
+export function jogoComparativoKeysFromPorTabelaRows(
+  rows: PorTabelaRow[],
+  operadorasList: { slug: string; nome: string }[],
+): Set<JogoComparativoKey> {
+  const keys = new Set<JogoComparativoKey>();
+  for (const r of rows) {
+    const lbl = labelMesaCda(r, operadorasList);
+    if (isMesaBlackjackComparativo(r, operadorasList)) keys.add("blackjack");
+    if (lbl === "Roleta") keys.add("roleta");
+    if (lbl === "Speed Baccarat") keys.add("baccarat");
+    if (isMesaFutebolBrasileiro(r, operadorasList)) keys.add("futebol_brasileiro");
+  }
+  return keys;
+}
+
 export function calcularPctComparativoOficial(
   valorJogo: number | null,
   row: LinhaComparativoJogoTab,

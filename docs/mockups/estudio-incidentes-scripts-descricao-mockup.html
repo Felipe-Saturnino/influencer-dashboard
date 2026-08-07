@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Scripts na Descrição · Novo Incidente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-action: #7c3aed;
+      --brand-contrast: #1e36f8;
+      --bg: #e8e8f2;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --input-bg: #f8f8fc;
+      --pos: #22c55e;
+      --neg: #e84025;
+      --warn: #f59e0b;
+      --shadow: 0 20px 50px rgba(0,0,0,0.28);
+      --font-body: "DM Sans", system-ui, sans-serif;
+      --font-title: "Outfit", system-ui, sans-serif;
+    }
+    body[data-theme="dark"] {
+      --bg: #0c0c16;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --text: #ffffff;
+      --text-muted: #c8c4d4;
+      --input-bg: rgba(255,255,255,0.07);
+      --shadow: 0 20px 50px rgba(0,0,0,0.55);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 13px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .mock-bar {
+      position: sticky; top: 0; z-index: 40;
+      background: color-mix(in srgb, var(--bg) 90%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 10px 20px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    }
+    .mock-bar__label {
+      font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--text-muted); margin-right: 2px;
+    }
+    .mock-btn {
+      font: inherit; font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 999px; cursor: pointer;
+      background: var(--input-bg); color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+    .mock-btn[aria-pressed="true"] {
+      border-color: var(--brand-action);
+      background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+      font-weight: 700;
+    }
+
+    .stage {
+      min-height: calc(100vh - 52px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 28px 16px 40px;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--brand-action) 18%, transparent), transparent),
+        var(--bg);
+    }
+
+    .overlay {
+      width: min(920px, 100%);
+      max-height: 90dvh;
+      overflow: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .modal-head { margin-bottom: 18px; }
+    .modal-head-row {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .modal-head h1 {
+      font-family: var(--font-title); font-size: 16px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); letter-spacing: 0.02em;
+    }
+    .modal-sub { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+
+    .btn-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); cursor: pointer; flex-shrink: 0;
+    }
+
+    .grid { display: grid; gap: 18px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 720px) {
+      .row2, .row3 { grid-template-columns: 1fr; }
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
+    }
+    .req { color: var(--neg); margin-left: 2px; }
+
+    .field select, .field input[type="text"], .field input[type="date"],
+    .field textarea {
+      width: 100%; padding: 9px 12px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); font: inherit; font-size: 13px;
+    }
+    .field textarea {
+      min-height: 120px; resize: vertical; line-height: 1.5;
+    }
+    .field select:disabled {
+      opacity: 0.55; cursor: not-allowed;
+    }
+
+    .seg { display: flex; gap: 8px; flex-wrap: wrap; }
+    .seg button {
+      padding: 10px 18px; min-height: 44px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); font: inherit; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .seg button.active {
+      color: var(--brand-contrast); font-weight: 700;
+      border-color: color-mix(in srgb, var(--brand-contrast) 45%, transparent);
+      background: color-mix(in srgb, var(--brand-contrast) 15%, transparent);
+    }
+
+    /* ── Bloco Scripts (proposta) ── */
+    .desc-block {
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--brand-action) 4%, var(--card-bg));
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .desc-block > .field { margin: 0; }
+    .desc-block textarea {
+      background: var(--card-bg);
+      min-height: 140px;
+    }
+
+    .scripts-strip {
+      display: grid;
+      gap: 8px;
+    }
+    .scripts-strip[hidden] { display: none !important; }
+
+    .scripts-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap;
+    }
+    .scripts-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--text-muted);
+    }
+    .scripts-title strong {
+      color: var(--brand-primary); font-weight: 800;
+    }
+    .scripts-hint {
+      font-size: 11px; color: var(--text-muted); font-weight: 400;
+    }
+
+    .script-chips {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .script-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; min-height: 40px; border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      color: var(--text); font: inherit; font-size: 12px; font-weight: 600;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, color .15s;
+    }
+    .script-chip:hover {
+      border-color: color-mix(in srgb, var(--brand-action) 50%, transparent);
+      color: var(--brand-action);
+    }
+    .script-chip[aria-pressed="true"] {
+      border-color: color-mix(in srgb, var(--brand-action) 55%, transparent);
+      background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+      color: var(--brand-action);
+      font-weight: 700;
+    }
+    .script-chip svg { flex-shrink: 0; opacity: 0.85; }
+
+    .scripts-empty-tipo {
+      font-size: 12px; color: var(--text-muted);
+      padding: 8px 10px; border-radius: 10px;
+      border: 1px dashed var(--card-border);
+      background: var(--input-bg);
+    }
+    .scripts-empty-tipo[hidden] { display: none !important; }
+
+    .anexo-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    .modal-foot {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding-top: 4px;
+    }
+    .btn-ghost {
+      padding: 10px 20px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: transparent; color: var(--text); font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .btn-primary {
+      padding: 10px 20px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+    }
+
+    /* Confirm overlay */
+    .confirm-overlay {
+      position: fixed; inset: 0; z-index: 80;
+      background: rgba(15, 15, 26, 0.5);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .confirm-overlay[hidden] { display: none !important; }
+    .confirm-box {
+      width: min(400px, 100%);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .confirm-box h2 {
+      font-family: var(--font-title); font-size: 15px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); margin-bottom: 8px;
+    }
+    .confirm-box p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+    .legend {
+      max-width: 920px; margin: 0 auto 16px; padding: 0 4px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .legend strong { color: var(--text); }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 90;
+      padding: 12px 16px; border-radius: 12px;
+      background: var(--card-bg); border: 1px solid color-mix(in srgb, var(--pos) 40%, transparent);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      font-size: 13px; font-weight: 600; color: var(--pos);
+      display: none;
+    }
+    .toast.show { display: block; }
+  </style>
+</head>
+<body data-theme="light">
+
+<div class="mock-bar">
+  <span class="mock-bar__label">Tema</span>
+  <button type="button" class="mock-btn" id="btn-theme" aria-pressed="false">Dark</button>
+
+  <span class="mock-bar__label" style="margin-left:10px">Cenário do Tipo</span>
+  <button type="button" class="mock-btn" data-cenario="sem-tipo" aria-pressed="true">Sem tipo</button>
+  <button type="button" class="mock-btn" data-cenario="um" aria-pressed="false">1 script</button>
+  <button type="button" class="mock-btn" data-cenario="varios" aria-pressed="false">2+ scripts</button>
+  <button type="button" class="mock-btn" data-cenario="nenhum" aria-pressed="false">Tipo sem script</button>
+</div>
+
+<div class="stage">
+  <div style="width:min(920px,100%)">
+    <p class="legend">
+      <strong>Proposta:</strong> faixa de scripts <em>dentro</em> do bloco Descrição.
+      Use a barra acima para trocar cenários. Clique num chip para aplicar o texto (editável depois).
+    </p>
+
+    <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="novo-title">
+      <div class="modal-head">
+        <div class="modal-head-row">
+          <div>
+            <h1 id="novo-title">Novo Incidente</h1>
+            <p class="modal-sub">Preencha os campos conforme o time envolvido</p>
+          </div>
+          <button type="button" class="btn-icon" aria-label="Fechar modal" title="Fechar modal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- Time -->
+        <div class="field">
+          <label>Time</label>
+          <div class="seg" role="tablist" aria-label="Time">
+            <button type="button" class="active" data-time="gp">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Game Presenter
+            </button>
+            <button type="button" data-time="shuf">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+              Shuffler
+            </button>
+          </div>
+        </div>
+
+        <!-- Mesa / Tipo -->
+        <div class="row2">
+          <div class="field">
+            <label>Mesa <span class="req">*</span></label>
+            <select id="f-mesa" aria-label="Mesa">
+              <option value="bj1">Blackjack 1</option>
+              <option value="bj2">Blackjack 2</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tipo <span class="req">*</span></label>
+            <select id="f-tipo" aria-label="Tipo">
+              <option value="">Selecione…</option>
+              <option value="card">Card not scanned</option>
+              <option value="misscan">Misscan</option>
+              <option value="wrong">Game(s) instead of the shoe change</option>
+              <option value="floor">Card(s) on the floor</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Incidente / Resolução / Payout -->
+        <div class="row3">
+          <div class="field">
+            <label>Incidente <span class="req">*</span></label>
+            <select aria-label="Incidente">
+              <option>Erro</option>
+              <option>Caso</option>
+              <option>Não Avisado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Resolução <span class="req">*</span></label>
+            <select aria-label="Resolução">
+              <option>Jogo Cancelado</option>
+              <option>Resolvido</option>
+              <option>Não afetado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Payout necessário <span class="req">*</span></label>
+            <div class="seg" role="group" aria-label="Payout">
+              <button type="button">SIM</button>
+              <button type="button" class="active">NÃO</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prestador / ID -->
+        <div class="row2">
+          <div class="field">
+            <label>Prestador <span class="req">*</span></label>
+            <select aria-label="Prestador">
+              <option>Luna - Ana Silva</option>
+              <option>Ace - Bruno Costa</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>ID da Rodada <span class="req">*</span></label>
+            <input type="text" value="RND-88421" aria-label="ID da Rodada" />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>Data da Rodada <span class="req">*</span></label>
+            <input type="date" value="2026-08-06" aria-label="Data da Rodada" />
+          </div>
+          <div class="field">
+            <label>Hora da Rodada <span class="req">*</span></label>
+            <input type="text" value="14:32:08" placeholder="#HH:MM:SS" maxlength="9" aria-label="Hora da Rodada" />
+          </div>
+        </div>
+
+        <!-- ═══════ DESCRIÇÃO + SCRIPTS (foco da proposta) ═══════ -->
+        <div class="desc-block" id="desc-block">
+          <div class="scripts-strip" id="scripts-strip" hidden>
+            <div class="scripts-head">
+              <span class="scripts-title">
+                Scripts para <strong id="scripts-tipo-label">—</strong>
+              </span>
+              <span class="scripts-hint">Opcional — edite ou complemente após aplicar</span>
+            </div>
+            <div class="script-chips" id="script-chips" role="group" aria-label="Scripts de descrição"></div>
+          </div>
+
+          <div class="scripts-empty-tipo" id="scripts-sem" hidden>
+            Este tipo não tem script cadastrado. Escreva a descrição livremente.
+          </div>
+
+          <div class="field">
+            <label for="f-desc">Descrição <span class="req">*</span></label>
+            <textarea id="f-desc" placeholder="Descreva o ocorrido na mesa… ou use um script acima." aria-label="Descrição"></textarea>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Anexos</label>
+          <div style="padding:14px;border:1px dashed var(--card-border);border-radius:10px;background:var(--input-bg);color:var(--text-muted);font-size:12px;text-align:center">
+            Adicionar anexo · arrastar ou colar (Ctrl+V) · máx. 50 MB
+          </div>
+          <p class="anexo-hint">Imagem ou vídeo · máx. 50 MB por arquivo</p>
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost">Cancelar</button>
+          <button type="button" class="btn-primary">Registrar Incidente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmação de substituição -->
+<div class="confirm-overlay" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="confirm-box">
+    <h2 id="confirm-title">Substituir descrição?</h2>
+    <p>A descrição já tem texto. Deseja substituir pelo script selecionado? O conteúdo atual será perdido.</p>
+    <div class="confirm-actions">
+      <button type="button" class="btn-ghost" id="confirm-cancel">Cancelar</button>
+      <button type="button" class="btn-primary" id="confirm-ok">Substituir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status">Script aplicado — você pode editar o texto</div>
+
+<script>
+(function () {
+  const SCRIPTS = {
+    card: [
+      {
+        id: "card-not-scanned",
+        titulo: "Padrão",
+        corpo:
+          "O Game Presenter falhou em escanear a carta pedida (hit), e a carta seguinte foi escaneada. O Service Manager instruiu o Game Presenter a abrir todas as cartas, e cancelou o jogo.\nO Vídeo/Imagem está anexado.",
+      },
+    ],
+    misscan: [
+      {
+        id: "misscan-rescan",
+        titulo: "Rescan",
+        corpo:
+          "O Game Presenter falhou em escanear a carta e a próxima carta foi escaneada. O Service Manager instruiu o Game Presenter a fazer o procedimento de \"rescan\", após isso, o jogo foi resumido.\nO Vídeo/Imagem está anexado.",
+      },
+      {
+        id: "misscan-cancelou",
+        titulo: "Cancelou",
+        corpo:
+          "Game Presenter falhou em escanear a carta e a próxima carta foi escaneada. O Service Manager instruiu o Game Presenter a abrir a carta escondida da banca e cancelou o jogo(rodada).\nO Vídeo/Imagem está anexado.",
+      },
+    ],
+    wrong: [
+      {
+        id: "shoe-iniciado",
+        titulo: "Jogo Iniciado",
+        corpo:
+          "O Game Presenter não fez a troca de sapato requerida e procedeu com um novo jogo. O Service Manager instruiu o Game Presenter a finalizar o jogo e após isso, realizar a troca de sapato.\nO Vídeo/Imagem está anexado.",
+      },
+      {
+        id: "shoe-nao",
+        titulo: "Jogo não Iniciado",
+        corpo:
+          "O Game Presenter não fez a troca de sapato requerida e não procedeu com um novo jogo. O Service Manager instruiu o Game Presenter a trocar o sapato durante o tempo de apostas do próximo jogo.\nO Vídeo/Imagem está anexado.",
+      },
+    ],
+    floor: [],
+  };
+
+  const tipoSelect = document.getElementById("f-tipo");
+  const desc = document.getElementById("f-desc");
+  const strip = document.getElementById("scripts-strip");
+  const chipsEl = document.getElementById("script-chips");
+  const tipoLabel = document.getElementById("scripts-tipo-label");
+  const semScript = document.getElementById("scripts-sem");
+  const confirmEl = document.getElementById("confirm");
+  const toast = document.getElementById("toast");
+
+  let pendingScript = null;
+  let activeScriptId = null;
+
+  function showToast() {
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2200);
+  }
+
+  function renderScripts(tipoKey) {
+    activeScriptId = null;
+    chipsEl.innerHTML = "";
+    semScript.hidden = true;
+    strip.hidden = true;
+
+    if (!tipoKey) return;
+
+    const opt = tipoSelect.options[tipoSelect.selectedIndex];
+    tipoLabel.textContent = opt ? opt.text : tipoKey;
+
+    const list = SCRIPTS[tipoKey] || [];
+    if (list.length === 0) {
+      semScript.hidden = false;
+      return;
+    }
+
+    strip.hidden = false;
+    list.forEach((s) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "script-chip";
+      btn.setAttribute("aria-pressed", "false");
+      btn.dataset.scriptId = s.id;
+      btn.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' +
+        s.titulo;
+      btn.addEventListener("click", () => tryApply(s));
+      chipsEl.appendChild(btn);
+    });
+  }
+
+  function markActive(id) {
+    activeScriptId = id;
+    chipsEl.querySelectorAll(".script-chip").forEach((b) => {
+      b.setAttribute("aria-pressed", b.dataset.scriptId === id ? "true" : "false");
+    });
+  }
+
+  function applyScript(s) {
+    desc.value = s.corpo;
+    markActive(s.id);
+    showToast();
+  }
+
+  function tryApply(s) {
+    const hasText = desc.value.trim().length > 0;
+    if (hasText && desc.value !== s.corpo) {
+      pendingScript = s;
+      confirmEl.hidden = false;
+      return;
+    }
+    applyScript(s);
+  }
+
+  document.getElementById("confirm-cancel").addEventListener("click", () => {
+    pendingScript = null;
+    confirmEl.hidden = true;
+  });
+  document.getElementById("confirm-ok").addEventListener("click", () => {
+    if (pendingScript) applyScript(pendingScript);
+    pendingScript = null;
+    confirmEl.hidden = true;
+  });
+  confirmEl.addEventListener("click", (e) => {
+    if (e.target === confirmEl) {
+      pendingScript = null;
+      confirmEl.hidden = true;
+    }
+  });
+
+  tipoSelect.addEventListener("change", () => {
+    renderScripts(tipoSelect.value);
+  });
+
+  /* Cenários da barra */
+  function setCenario(key) {
+    document.querySelectorAll("[data-cenario]").forEach((b) => {
+      b.setAttribute("aria-pressed", b.dataset.cenario === key ? "true" : "false");
+    });
+    desc.value = "";
+    if (key === "sem-tipo") {
+      tipoSelect.value = "";
+      renderScripts("");
+    } else if (key === "um") {
+      tipoSelect.value = "card";
+      renderScripts("card");
+    } else if (key === "varios") {
+      tipoSelect.value = "misscan";
+      renderScripts("misscan");
+    } else if (key === "nenhum") {
+      tipoSelect.value = "floor";
+      renderScripts("floor");
+    }
+  }
+
+  document.querySelectorAll("[data-cenario]").forEach((b) => {
+    b.addEventListener("click", () => setCenario(b.dataset.cenario));
+  });
+
+  document.querySelectorAll("[data-time]").forEach((b) => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll("[data-time]").forEach((x) => x.classList.remove("active"));
+      b.classList.add("active");
+    });
+  });
+
+  document.getElementById("btn-theme").addEventListener("click", () => {
+    const dark = document.body.getAttribute("data-theme") === "dark";
+    document.body.setAttribute("data-theme", dark ? "light" : "dark");
+    const btn = document.getElementById("btn-theme");
+    btn.setAttribute("aria-pressed", dark ? "false" : "true");
+    btn.textContent = dark ? "Dark" : "Light";
+  });
+
+  setCenario("varios");
+})();
+</script>
+</body>
+</html>

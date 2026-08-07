@@ -11,7 +11,7 @@ export type OverviewPrestadorTimeRotulo = (typeof OVERVIEW_PRESTADOR_TIMES_ORDEM
 export const OVERVIEW_PRESTADOR_TIME_DEFAULT: OverviewPrestadorTimeRotulo = "Game Presenter";
 
 /** Layout da aba KPIs de Mesa conforme o time. */
-export type OverviewPrestadorKpisMesaMode = "gp" | "shuffler" | "placeholder" | "hidden";
+export type OverviewPrestadorKpisMesaMode = "gp" | "shuffler" | "sm" | "hidden";
 
 export type OverviewPrestadorTimeCaps = {
   /** Negocia turno no Marketplace (troca / venda / compra). */
@@ -63,7 +63,7 @@ const CAPS: Record<OverviewPrestadorTimeRotulo, OverviewPrestadorTimeCaps> = {
     negocia: true,
     porEstudio: false,
     distribuicaoEstudioIndividual: false,
-    kpisMesaMode: "placeholder",
+    kpisMesaMode: "sm",
     turnos: [
       { key: "MRN", label: "Diurno (08h–20h)" },
       { key: "NGT", label: "Noturno (20h–08h)" },

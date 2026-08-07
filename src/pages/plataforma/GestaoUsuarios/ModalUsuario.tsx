@@ -466,22 +466,7 @@ export function ModalUsuario({ editando, operadoras, onClose, onSalvo }: ModalUs
           </div>
         )}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: 8,
-              padding: "9px 18px",
-              cursor: "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              color: t.text,
-            }}
-          >
-            Cancelar
-          </button>
+          
           <button
             type="button"
             onClick={salvar}

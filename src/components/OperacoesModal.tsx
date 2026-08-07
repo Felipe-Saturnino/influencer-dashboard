@@ -17,6 +17,9 @@ import { propsBotaoFecharModal } from "../lib/iconOnlyButtonA11y";
 
 const DialogTitleIdContext = createContext<string>("");
 
+/** Padding interno do painel `ModalBase` — usar em `ModalHeader` sticky para alinhar ao topo. */
+export const MODAL_BASE_PADDING_PX = 28;
+
 export function useDialogTitleId() {
   return useContext(DialogTitleIdContext);
 }
@@ -85,7 +88,7 @@ export function ModalBase({
           background: brand.blockBg,
           border: `1px solid ${t.cardBorder}`,
           borderRadius: "20px",
-          padding: "28px",
+          padding: MODAL_BASE_PADDING_PX,
           width: "100%",
           maxWidth,
           minWidth: 0,
@@ -99,6 +102,11 @@ export function ModalBase({
   );
 }
 
+/**
+ * Cabeçalho canónico de modal: título + X.
+ * Sticky no scroll do painel; X na mesma cor/peso do título.
+ * Fechar = X (sem botão Cancelar redundante no rodapé de criar/editar/ver).
+ */
 export function ModalHeader({
   title,
   onClose,
@@ -107,14 +115,29 @@ export function ModalHeader({
   onClose: () => void;
 }) {
   const { theme: t } = useApp();
+  const brand = useDashboardBrand();
   const titleId = useDialogTitleId();
+  const pad = MODAL_BASE_PADDING_PX;
   return (
     <div
       style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "20px",
+        position: "sticky",
+        top: -pad,
+        zIndex: 2,
+        marginTop: -pad,
+        marginLeft: -pad,
+        marginRight: -pad,
+        marginBottom: 20,
+        paddingTop: pad,
+        paddingLeft: pad,
+        paddingRight: pad,
+        paddingBottom: 16,
+        background: brand.blockBg,
+        borderBottom: `1px solid ${t.cardBorder}`,
+        boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
       }}
     >
       <h2
@@ -140,11 +163,12 @@ export function ModalHeader({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: t.textMuted,
+          color: t.text,
+          flexShrink: 0,
         }}
         {...propsBotaoFecharModal()}
       >
-        <X size={20} strokeWidth={2} aria-hidden />
+        <X size={22} strokeWidth={2.75} aria-hidden />
       </button>
     </div>
   );
@@ -178,9 +202,7 @@ export function ModalConfirmDelete({
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const loadingText =
-    loadingLabel ??
-    (destructive ? "Excluindo..." : "Aguarde...");
+  const loadingText = loadingLabel ?? (destructive ? "Excluindo…" : "Aguarde…");
   function handleClose() {
     if (loading) return;
     onCancel();
@@ -205,7 +227,7 @@ export function ModalConfirmDelete({
           role="alert"
           aria-live="polite"
           style={{
-            color: "#ef4444",
+            color: "#e84025",
             fontSize: 12,
             fontFamily: FONT.body,
             marginTop: -12,
@@ -314,7 +336,7 @@ export function ModalConfirmArquivarPadrao({
       texto={textoModalArquivar(descricaoItem)}
       confirmLabel="Arquivar"
       destructive={false}
-      loadingLabel="Arquivando..."
+      loadingLabel="Arquivando…"
       onCancel={onCancel}
       onConfirm={onConfirm}
       loading={loading}

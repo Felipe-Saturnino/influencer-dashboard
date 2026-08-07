@@ -1158,10 +1158,7 @@ export default function GestaoLinks() {
             ) : null}
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button type="button" onClick={solicitarFecharModal}
-                style={{ padding: "9px 20px", background: "transparent", border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 13, fontFamily: FONT.body, cursor: salvando ? "not-allowed" : "pointer" }}>
-                Cancelar
-              </button>
+              
               <button
                 type="button"
                 onClick={() => void confirmarMapeamento()}

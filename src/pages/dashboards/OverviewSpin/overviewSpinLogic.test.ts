@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   getMesesDisponiveis,
+  jogoComparativoKeysFromPorTabelaRows,
   montarKpiAnteriorMoM,
   type DailyRow,
+  type PorTabelaRow,
 } from "./overviewSpinLogic";
 
 describe("getMesesDisponiveis do Overview Spin", () => {
@@ -55,5 +57,27 @@ describe("montarKpiAnteriorMoM", () => {
         monthlyUapArpuPrev: { uap: 213, arpu: 151 },
       }),
     ).toBeNull();
+  });
+});
+
+describe("jogoComparativoKeysFromPorTabelaRows", () => {
+  it("detecta Futebol Brasileiro a partir da coluna mesa (network Blaze)", () => {
+    const row: PorTabelaRow = {
+      data_relatorio: "2026-08-05",
+      nome_tabela: "Blaze Futebol Brasileiro",
+      mesaRaw: "Futebol Brasileiro",
+      operadora: "blaze",
+      ggr_d1: 130,
+      turnover_d1: 476,
+      bets_d1: 368,
+      ggr_d2: null,
+      turnover_d2: null,
+      bets_d2: null,
+      ggr_mtd: null,
+      turnover_mtd: null,
+      bets_mtd: null,
+    };
+    const keys = jogoComparativoKeysFromPorTabelaRows([row], [{ slug: "blaze", nome: "Blaze" }]);
+    expect([...keys]).toEqual(["futebol_brasileiro"]);
   });
 });

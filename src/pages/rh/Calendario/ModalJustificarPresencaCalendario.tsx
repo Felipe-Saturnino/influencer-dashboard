@@ -124,18 +124,6 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
 
   if (!open || !alvo) return null;
 
-  const btnSecundario: CSSProperties = {
-    padding: "10px 18px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg,
-    color: t.text,
-    fontWeight: 700,
-    fontFamily: FONT.body,
-    fontSize: 13,
-    cursor: "pointer",
-  };
-
   const btnPrimario: CSSProperties = {
     padding: "10px 18px",
     borderRadius: 10,
@@ -396,9 +384,6 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
       ) : null}
 
       <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", gap: 10 }}>
-        <button type="button" onClick={onClose} disabled={salvando} style={btnSecundario}>
-          Cancelar
-        </button>
         {motivo ? (
           <button type="button" onClick={() => void salvar()} disabled={salvando} style={btnPrimario}>
             {salvando ? "Salvando…" : "Salvar"}

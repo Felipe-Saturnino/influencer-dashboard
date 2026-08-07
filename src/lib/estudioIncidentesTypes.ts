@@ -78,6 +78,26 @@ export type EstudioIncidenteInsert = {
   created_by: string | null;
 };
 
+/** Campos editáveis — protocolo / created_at / relator não entram no patch. */
+export type EstudioIncidenteUpdate = {
+  time_alvo: IncidenteTimeAlvo;
+  prestador_id: string;
+  prestador_nome: string;
+  mesa_id: string | null;
+  mesa_label: string;
+  estudio_slug: string | null;
+  jogo: string;
+  incidente: IncidenteCategoria;
+  tipo: string;
+  id_rodada: string;
+  data_rodada: string;
+  hora_rodada: string;
+  local_mesa: IncidenteLocalMesa | null;
+  resolucao: IncidenteResolucao;
+  payout_necessario: boolean;
+  descricao: string;
+};
+
 export type IncidenteStaffOption = {
   id: string;
   nome: string;

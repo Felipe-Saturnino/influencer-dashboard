@@ -966,9 +966,6 @@ export function ModalAvaliarPerformanceHub({
           </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" onClick={onClose} style={btnSecundario(t)}>
-              Cancelar
-            </button>
             {!somenteLeitura && tipoAvaliacao === "performance_coach" ? (
               <>
                 <button

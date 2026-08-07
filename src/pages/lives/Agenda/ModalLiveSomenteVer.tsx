@@ -89,7 +89,20 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
             justifyContent: "space-between",
             alignItems: "center",
             gap: 12,
+            position: "sticky",
+            top: -28,
+            zIndex: 2,
+            marginTop: -28,
+            marginLeft: -28,
+            marginRight: -28,
             marginBottom: 6,
+            paddingTop: 28,
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingBottom: 16,
+            background: t.cardBg,
+            borderBottom: `1px solid ${t.cardBorder}`,
+            boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
           }}
         >
           <h2
@@ -115,14 +128,15 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
               background: "none",
               border: "none",
               cursor: "pointer",
-              color: t.textMuted,
+              color: t.text,
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               flexShrink: 0,
               padding: 4,
             }}
           >
-            <X size={18} aria-hidden="true" />
+            <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
         <p

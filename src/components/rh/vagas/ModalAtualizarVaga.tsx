@@ -405,23 +405,6 @@ export function ModalAtualizarVaga({
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end" }}>
             <button
               type="button"
-              onClick={fechar}
-              style={{
-                padding: "10px 18px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg,
-                color: t.text,
-                fontWeight: 600,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                cursor: "pointer",
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
               disabled={!accao}
               onClick={irParaFormulario}
               style={{
@@ -714,25 +697,6 @@ export function ModalAtualizarVaga({
           ) : null}
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-            <button
-              type="button"
-              onClick={fechar}
-              disabled={salvando}
-              style={{
-                padding: "10px 18px",
-                borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg,
-                color: t.text,
-                fontWeight: 600,
-                fontSize: 13,
-                fontFamily: FONT.body,
-                cursor: salvando ? "not-allowed" : "pointer",
-                opacity: salvando ? 0.6 : 1,
-              }}
-            >
-              Cancelar
-            </button>
             <button
               type="button"
               onClick={() => void salvar()}

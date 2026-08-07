@@ -448,7 +448,6 @@ function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opPa
         ) : null}
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
           <button
             type="button"
             onClick={() => void handleSalvar()}
@@ -681,7 +680,6 @@ function ModalCampanha({ estudioSlug, estudiosList, onClose, onSalvo, opParaEstu
         ) : null}
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.textMuted, fontFamily: FONT.body, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
           <button
             type="button"
             onClick={() => void handleSalvar()}

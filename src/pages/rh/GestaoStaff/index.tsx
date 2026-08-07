@@ -78,6 +78,7 @@ import {
   staffUiTimeEstudioForcadoTodos,
   staffUiTimeOcultarEstudio,
   staffUiTimeSemOperadoraHorarioModaisRestritos,
+  staffUiTimeServiceManager,
   staffUiTimeShufflerOcultarBioFotosVer,
 } from "./gestaoStaffHelpers";
 import { StaffKpiResumo } from "./StaffKpiResumo";
@@ -1306,6 +1307,7 @@ function ModalStaffVer({
   t: ReturnType<typeof useApp>["theme"];
 }) {
   const estudioForcadoTodos = staffUiTimeEstudioForcadoTodos(nomeTimeOrganograma);
+  const staffEhServiceManager = staffUiTimeServiceManager(nomeTimeOrganograma);
   const [aba, setAba] = useState<VerAba>("pessoal");
   const verAbas = useMemo(() => staffVerAbasVisiveis(exibirAbaHistorico), [exibirAbaHistorico]);
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
@@ -1427,6 +1429,9 @@ function ModalStaffVer({
           ) : null}
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
+          {staffEhServiceManager ? (
+            <CampoLeitura k="ID TOS" v={row.staff_id_tos ?? ""} t={t} />
+          ) : null}
           {!dadosFuncaoOcultarBioFotos ? (
             <>
               <CampoLeitura k="Bio do Dealer" v={readStaffDealerBioForUi(row) || "—"} t={t} />
@@ -1612,6 +1617,7 @@ function ModalStaffEditar({
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
   const staffEhGamePresenter = useMemo(() => isGamePresenterTimeNome(nomeTimeOrganograma), [nomeTimeOrganograma]);
+  const staffEhServiceManager = useMemo(() => staffUiTimeServiceManager(nomeTimeOrganograma), [nomeTimeOrganograma]);
   const estudioForcadoTodos = staffUiTimeEstudioForcadoTodos(nomeTimeOrganograma);
   const [aba, setAba] = useState<EditarAba>("funcao");
   const [nick, setNick] = useState(row.staff_nickname ?? "");
@@ -1621,6 +1627,7 @@ function ModalStaffEditar({
   );
   const [barcode, setBarcode] = useState(row.staff_barcode ?? "");
   const [idOperacional, setIdOperacional] = useState(row.staff_id_operacional ?? "");
+  const [idTos, setIdTos] = useState(row.staff_id_tos ?? "");
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
   const [liveNoEstudio, setLiveNoEstudio] = useState(() => dataIsoParaInputDate(row.staff_live_no_estudio));
   const [err, setErr] = useState("");
@@ -1640,6 +1647,7 @@ function ModalStaffEditar({
     );
     setBarcode(row.staff_barcode ?? "");
     setIdOperacional(row.staff_id_operacional ?? "");
+    setIdTos(row.staff_id_tos ?? "");
     setSkills(normalizarSkills(row.staff_skills as Record<string, unknown>));
     setLiveNoEstudio(dataIsoParaInputDate(row.staff_live_no_estudio));
     setAba("funcao");
@@ -1658,6 +1666,7 @@ function ModalStaffEditar({
     nomeTimeOrganograma,
     row.staff_barcode,
     row.staff_id_operacional,
+    row.staff_id_tos,
     row.staff_skills,
     row.staff_live_no_estudio,
     row.staff_dealer_genero,
@@ -1743,6 +1752,7 @@ function ModalStaffEditar({
       estudio: estudioAntes,
       barcode: (row.staff_barcode ?? "").trim(),
       idOp: (row.staff_id_operacional ?? "").trim(),
+      idTos: (row.staff_id_tos ?? "").trim().toLowerCase(),
       horario: (row.staff_horario_turno ?? "").trim(),
       skills: stringifySkills(normalizarSkills(row.staff_skills as Record<string, unknown>)),
       live: dataIsoParaInputDate(row.staff_live_no_estudio),
@@ -1753,6 +1763,7 @@ function ModalStaffEditar({
       estudio: estudioDepois,
       barcode: barcode.trim(),
       idOp: idOperacional.trim(),
+      idTos: staffEhServiceManager ? idTos.trim().toLowerCase() : antes.idTos,
       horario: "",
       skills: stringifySkills(skills),
       live: liveNoEstudio.trim(),
@@ -1776,6 +1787,9 @@ function ModalStaffEditar({
     }
     if (antes.barcode !== depois.barcode) alteracoes.push({ campo: "Barcode", antes: antes.barcode || "—", depois: depois.barcode || "—" });
     if (antes.idOp !== depois.idOp) alteracoes.push({ campo: "ID operacional", antes: antes.idOp || "—", depois: depois.idOp || "—" });
+    if (staffEhServiceManager && antes.idTos !== depois.idTos) {
+      alteracoes.push({ campo: "ID TOS", antes: antes.idTos || "—", depois: depois.idTos || "—" });
+    }
     if (antes.skills !== depois.skills) alteracoes.push({ campo: "Skills", antes: antes.skills, depois: depois.skills });
     if (antes.live !== depois.live) {
       alteracoes.push({
@@ -1823,6 +1837,7 @@ function ModalStaffEditar({
       staff_operadora_slug: operadoraSync,
       staff_barcode: depois.barcode || null,
       staff_id_operacional: depois.idOp || null,
+      ...(staffEhServiceManager ? { staff_id_tos: depois.idTos || null } : {}),
       staff_skills: skillsParaJson(skills),
       staff_live_no_estudio: depois.live ? depois.live : null,
       ...(staffEhGamePresenter
@@ -1836,7 +1851,14 @@ function ModalStaffEditar({
 
     const { data: updated, error } = await supabase.from("rh_funcionarios").update(patch).eq("id", row.id).select("*").single();
     if (error) {
-      setErr("Não foi possível salvar. Tente novamente.");
+      const duplicadoTos =
+        staffEhServiceManager &&
+        (error.code === "23505" || /staff_id_tos|idx_rh_funcionarios_staff_id_tos/i.test(error.message ?? ""));
+      setErr(
+        duplicadoTos
+          ? "Este ID TOS já está cadastrado em outro Service Manager."
+          : "Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.",
+      );
       setSaving(false);
       return;
     }
@@ -1958,6 +1980,26 @@ function ModalStaffEditar({
               Código ou número usado na operação
             </div>
           </div>
+          {staffEhServiceManager ? (
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle} htmlFor="staff-id-tos">
+                ID TOS
+              </label>
+              <input
+                id="staff-id-tos"
+                type="text"
+                value={idTos}
+                onChange={(e) => setIdTos(e.target.value)}
+                style={inputStyle}
+                aria-describedby="staff-id-tos-hint"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                autoComplete="off"
+              />
+              <div id="staff-id-tos-hint" style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                UUID do Service Manager no TOS
+              </div>
+            </div>
+          ) : null}
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-barcode">
               Barcode
@@ -2112,24 +2154,6 @@ function ModalStaffEditar({
       ) : null}
 
       <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={saving}
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.textMuted,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            cursor: saving ? "not-allowed" : "pointer",
-          }}
-        >
-          Cancelar
-        </button>
         <button
           type="button"
           onClick={() => void salvar()}

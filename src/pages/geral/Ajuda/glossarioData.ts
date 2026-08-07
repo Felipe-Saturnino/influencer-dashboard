@@ -647,7 +647,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Profissional de cassino ao vivo no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e o **estúdio** onde atua.",
         nota:
-          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil e estúdio em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página. O catálogo é filtrado por estúdio; a operadora entra apenas nas solicitações e no vínculo comercial.",
+          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil e estúdio em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página. O card espelha o estúdio do Staff (sem tag de operadora). O Operador vê os estúdios associados à sua parceira (dedicado e network) e filtra por eles; solicitações usam o vínculo comercial da operadora.",
         referencia: "Gestão de Dealers · Gestão de Staff · Gestão de Prestadores",
       },
       {
@@ -721,6 +721,18 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "Local do Shoe",
         definicao:
           "Indica se o erro do Shuffler ocorreu Em Jogo (durante a rodada, com o shoe em mesa) ou Fora de Jogo (na preparação do shoe antes de entrar em mesa). Aplicável apenas a incidentes de Shuffler.",
+        referencia: "Incidentes",
+      },
+      {
+        termo: "Sinal",
+        definicao:
+          "Chamado operacional aberto na mesa (Grafana / TOS) e atendido por um Service Manager. Na aba Sinais de Incidentes, cada linha é um sinal resolvido, com motivo, tempos de atendimento/resolução e conclusão.",
+        referencia: "Incidentes",
+      },
+      {
+        termo: "TMA",
+        definicao:
+          "Tempo médio de atendimento ou resolução dos sinais. Na aba Sinais: TMA de Atendimento (Issued → Taken), TMA de Resolução (Taken → Resolved) e TMA Total (Issued → Resolved).",
         referencia: "Incidentes",
       },
     ],
@@ -912,7 +924,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Gestão de Staff",
         definicao:
-          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. Para **Game Presenters** (dealers), o gestor de estúdio configura nickname, turno, estúdio(s), skills, fotos e bio — dados que alimentam **Gestão de Dealers**. Cards consolidados (somente GP) indicam lacunas operacionais, cadastrais ou de jogo.",
+          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. Para **Game Presenters** (dealers), o gestor de estúdio configura nickname, turno, estúdio(s), skills, fotos e bio — dados que alimentam **Gestão de Dealers**. Cards consolidados (somente GP) indicam lacunas operacionais, cadastrais ou de jogo. No time **Service Manager**, o **ID TOS** é o UUID do SM no TOS/Proxylive para vincular sinais atendidos.",
+        referencia: "Gestão de Staff",
+      },
+      {
+        termo: "ID TOS",
+        definicao:
+          "UUID do Service Manager no sistema TOS. Cadastrado em Gestão de Staff (modais Ver/Editar do time Service Manager); usado no de-para dos sinais (`sm_sinais`).",
         referencia: "Gestão de Staff",
       },
       {
@@ -930,13 +948,19 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Overview Prestador",
         definicao:
-          "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio. A aba **KPIs de Mesa** cobre Game Presenter (Grafana + incidentes) e Shuffler (incidentes).",
+          "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio. A aba **KPIs de Mesa** cobre Game Presenter (Grafana + incidentes) e Shuffler (incidentes); a aba **KPIs de OCR** cobre Service Manager (sinais + tickets como relator).",
         referencia: "Overview Prestador",
       },
       {
         termo: "KPIs de Mesa",
         definicao:
-          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Velocidade, Reação, Bola/Cilindro (só Roleta) e incidentes. Shuffler: só incidentes (sem Roleta). Service Manager: placeholder; Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
+          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Velocidade, Reação, Bola/Cilindro (só Roleta) e incidentes. Shuffler: só incidentes (sem Roleta). Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
+        referencia: "Overview Prestador",
+      },
+      {
+        termo: "KPIs de OCR",
+        definicao:
+          "Aba do Overview Prestador para o time Service Manager: Sinais atendidos, TMAs (Total, Atendimento, Resolução) e Tickets em que o SM é o relator. Staff vazio = consolidado do time (bloco **Equipe**); Staff ou Próprios = só aquele SM (sem Equipe).",
         referencia: "Overview Prestador",
       },
       {

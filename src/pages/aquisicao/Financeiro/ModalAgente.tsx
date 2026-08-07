@@ -125,24 +125,7 @@ export function ModalAgente({ cicloId, filterOperadora, operadorasList, podeVerO
         ) : null}
       </div>
       <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            flex: 1,
-            padding: "12px",
-            borderRadius: "10px",
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.textMuted,
-            fontSize: "13px",
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            cursor: "pointer",
-          }}
-        >
-          Cancelar
-        </button>
+        
         <button
           type="button"
           onClick={() => void handleConfirm()}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
   BellOff,
@@ -10,13 +11,13 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  Shuffle,
-  UserRound,
-  Users,
+  Pencil,
+  Ticket,
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
@@ -30,10 +31,12 @@ import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import {
   CtaCriarButton,
+  FiltroBarCampoSelect,
   FiltroBarTabButton,
   FiltroEntidadeBarSelect,
   FiltroEstudioSelect,
   FiltroHistoricoButton,
+  FILTRO_BAR_TAB_ICON_PROPS,
   KpiCard,
   onFiltroBarTabsKeyDown,
   SectionTitle,
@@ -59,8 +62,13 @@ import type { EstudioSpinRow, MesaSpinCadastroRow } from "../../plataforma/Gesta
 import { fetchEstudioIncidentesPeriodo, fetchStaffFiltroIncidentes } from "../../../lib/estudioIncidentesFetch";
 import {
   INCIDENTE_CATEGORIA_META,
+  INCIDENTE_CATEGORIA_OPTIONS,
   INCIDENTES_MES_INICIO,
   INCIDENTES_PAGE_SUBTITLE,
+  TIPOS_INCIDENTE_BACCARAT_FB,
+  TIPOS_INCIDENTE_BLACKJACK,
+  TIPOS_INCIDENTE_ROLETA,
+  TIPOS_INCIDENTE_SHUFFLER,
   type EstudioIncidenteRow,
   type IncidenteCategoria,
   type IncidenteStaffOption,
@@ -79,6 +87,7 @@ import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentit
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { ModalVerIncidente } from "./ModalVerIncidente";
 import { ModalNovoIncidente, type NovoIncidenteMesaOption } from "./ModalNovoIncidente";
+import { useIncidentesAbaSinais } from "./IncidentesAbaSinais";
 
 const ERRO_CARREGAR =
   "Não foi possível carregar os incidentes. Se o problema persistir, entre em contato com o suporte.";
@@ -86,8 +95,16 @@ const ERRO_CARREGAR =
 const INCIDENTES_PAGE_SUBTITLE_PROPRIOS =
   "Acompanhe os incidentes registrados sobre a sua operação em mesa.";
 
-type TimeTab = "todos" | IncidenteTimeAlvo;
+type TimeFiltro = "todos" | IncidenteTimeAlvo;
+type AbaIncidentes = "tickets" | "sinais";
 type SortCol = "protocolo" | "data" | "prestador" | "time" | "jogo" | "incidente" | "tipo" | "relator";
+
+const TIME_FILTRO_OPTIONS: { value: TimeFiltro; label: string }[] = [
+  { value: "gp", label: "Game Presenter" },
+  { value: "shuf", label: "Shuffler" },
+];
+
+const ABAS_INCIDENTES: AbaIncidentes[] = ["tickets", "sinais"];
 
 const CATEGORIAS_KPI: IncidenteCategoria[] = [
   "caso",
@@ -106,6 +123,17 @@ const CATEGORIA_ICON: Record<IncidenteCategoria, ReactNode> = {
   avisado_resolvido: <CheckCircle2 size={16} aria-hidden />,
   avisado_nao_resolvido: <AlertCircle size={16} aria-hidden />,
 };
+
+const TIPOS_FILTRO_OPTIONS = Array.from(
+  new Set([
+    ...TIPOS_INCIDENTE_BLACKJACK,
+    ...TIPOS_INCIDENTE_BACCARAT_FB,
+    ...TIPOS_INCIDENTE_ROLETA,
+    ...TIPOS_INCIDENTE_SHUFFLER,
+  ]),
+)
+  .sort((a, b) => a.localeCompare(b, "pt-BR"))
+  .map((tipo) => ({ id: tipo, name: tipo }));
 
 function gameIdentityKeyFromJogo(jogo: string) {
   const k = normalizarTipoJogoIncidente(jogo);
@@ -131,7 +159,7 @@ function sortRows(rows: EstudioIncidenteRow[], col: SortCol, dir: SortDir): Estu
   copy.sort((a, b) => {
     switch (col) {
       case "data":
-        return compareLocaleTexto(a.ocorrido_em, b.ocorrido_em, dir);
+        return compareLocaleTexto(a.created_at, b.created_at, dir);
       case "protocolo":
         return compareLocaleTexto(a.protocolo, b.protocolo, dir);
       case "prestador":
@@ -160,15 +188,20 @@ export default function Incidentes() {
   const dataTable = useDataTableBlock();
 
   const isProprios = perm.canView === "proprios";
-  /** Produto: Novo Incidente só com Editar = Sim (não Próprios). */
-  const canNovo = perm.canEditar === "sim";
+  /** Produto: Novo / Editar Incidente só com Editar = Sim (não Próprios). */
+  const canEditarSim = perm.canEditar === "sim";
+  const canNovo = canEditarSim;
 
   const meses = useMemo(() => getMesesDisponiveis(INCIDENTES_MES_INICIO), []);
   const [mesIdx, setMesIdx] = useState(() => getIdxMesCarrosselPadrao(meses));
   const [historico, setHistorico] = useState(false);
   const [estudioFiltro, setEstudioFiltro] = useState("todos");
-  const [timeTab, setTimeTab] = useState<TimeTab>("todos");
+  const [aba, setAba] = useRouteTab("incidentes", "tickets", ABAS_INCIDENTES);
+  const [timeFiltro, setTimeFiltro] = useState<TimeFiltro>("todos");
   const [staffFiltroId, setStaffFiltroId] = useState("");
+  const [incidenteFiltro, setIncidenteFiltro] = useState("");
+  const [tipoFiltro, setTipoFiltro] = useState("");
+  const [relatorFiltroId, setRelatorFiltroId] = useState("");
   const [busca, setBusca] = useState("");
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
 
@@ -184,6 +217,7 @@ export default function Incidentes() {
 
   const [verIncidente, setVerIncidente] = useState<EstudioIncidenteRow | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
+  const [editarIncidente, setEditarIncidente] = useState<EstudioIncidenteRow | null>(null);
 
   const mesAtual = meses[mesIdx] ?? meses[meses.length - 1];
   const podeVer = perm.canView === "sim" || perm.canView === "proprios";
@@ -198,6 +232,16 @@ export default function Incidentes() {
     if (historico || !mesAtual) return null;
     return getPeriodoComparativoMoM(mesAtual.ano, mesAtual.mes).anterior;
   }, [historico, mesAtual]);
+
+  const sinaisAba = useIncidentesAbaSinais({
+    periodoAtual,
+    periodoAnterior,
+    historico,
+    estudioFiltro,
+    isProprios,
+    meusIds,
+    active: aba === "sinais",
+  });
 
   const carregarDados = useCallback(async () => {
     setErro(null);
@@ -281,20 +325,48 @@ export default function Incidentes() {
   );
 
   const staffFiltroOptions = useMemo(
-    () => (timeTab === "todos" ? staffOptions : staffOptions.filter((s) => s.timeKey === timeTab)),
-    [staffOptions, timeTab],
+    () => (timeFiltro === "todos" ? staffOptions : staffOptions.filter((s) => s.timeKey === timeFiltro)),
+    [staffOptions, timeFiltro],
   );
+
+  const relatoresFiltroOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of rowsAtual) {
+      const nome = (r.relator_nome ?? "").trim();
+      if (!nome) continue;
+      const id = r.relator_user_id?.trim() || `nome:${nome}`;
+      if (!map.has(id)) map.set(id, nome);
+    }
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [rowsAtual]);
 
   const aplicarFiltrosEscopo = useCallback(
     (rows: EstudioIncidenteRow[]) =>
       rows.filter((r) => {
-        if (timeTab !== "todos" && r.time_alvo !== timeTab) return false;
+        if (timeFiltro !== "todos" && r.time_alvo !== timeFiltro) return false;
         if (staffFiltroId && r.prestador_id !== staffFiltroId) return false;
         if (estudioFiltro !== "todos" && r.estudio_slug !== estudioFiltro) return false;
+        if (incidenteFiltro && r.incidente !== incidenteFiltro) return false;
+        if (tipoFiltro && r.tipo !== tipoFiltro) return false;
+        if (relatorFiltroId) {
+          const key = r.relator_user_id?.trim() || `nome:${(r.relator_nome ?? "").trim()}`;
+          if (key !== relatorFiltroId) return false;
+        }
         if (isProprios && !meusIds.includes(r.prestador_id)) return false;
         return true;
       }),
-    [timeTab, staffFiltroId, estudioFiltro, isProprios, meusIds],
+    [
+      timeFiltro,
+      staffFiltroId,
+      estudioFiltro,
+      incidenteFiltro,
+      tipoFiltro,
+      relatorFiltroId,
+      isProprios,
+      meusIds,
+    ],
   );
 
   const rowsAtualEscopo = useMemo(() => aplicarFiltrosEscopo(rowsAtual), [rowsAtual, aplicarFiltrosEscopo]);
@@ -332,8 +404,6 @@ export default function Incidentes() {
   function onSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" }));
   }
-
-  const timeTabs: TimeTab[] = ["todos", "gp", "shuf"];
 
   function th(col: SortCol, label: string, style?: CSSProperties) {
     return (
@@ -421,67 +491,110 @@ export default function Incidentes() {
           </div>
         </div>
 
-        {!isProprios ? (
-          <div
-            role="tablist"
-            aria-label="Time"
-            style={{ ...getFilterBarRowStyle(), marginTop: 10 }}
-            onKeyDown={(e) => onFiltroBarTabsKeyDown(e, timeTabs, setTimeTab, (k) => `tab-incidentes-time-${k}`)}
+        <div
+          role="tablist"
+          aria-label="Seções de Incidentes"
+          style={{ ...getFilterBarRowStyle(), marginTop: 10 }}
+          onKeyDown={(e) => onFiltroBarTabsKeyDown(e, ABAS_INCIDENTES, setAba, (k) => `tab-incidentes-${k}`)}
+        >
+          <FiltroBarTabButton
+            id="tab-incidentes-tickets"
+            active={aba === "tickets"}
+            aria-controls="panel-incidentes-tickets"
+            onClick={() => setAba("tickets")}
+            icon={<Ticket {...FILTRO_BAR_TAB_ICON_PROPS} />}
           >
-            <FiltroBarTabButton
-              id="tab-incidentes-time-todos"
-              active={timeTab === "todos"}
-              onClick={() => setTimeTab("todos")}
-              icon={<Users size={16} strokeWidth={2} aria-hidden />}
-            >
-              Todos Times
-            </FiltroBarTabButton>
-            <FiltroBarTabButton
-              id="tab-incidentes-time-gp"
-              active={timeTab === "gp"}
-              onClick={() => setTimeTab("gp")}
-              icon={<UserRound size={16} strokeWidth={2} aria-hidden />}
-            >
-              Game Presenters
-            </FiltroBarTabButton>
-            <FiltroBarTabButton
-              id="tab-incidentes-time-shuf"
-              active={timeTab === "shuf"}
-              onClick={() => setTimeTab("shuf")}
-              icon={<Shuffle size={16} strokeWidth={2} aria-hidden />}
-            >
-              Shuffler
-            </FiltroBarTabButton>
-          </div>
-        ) : null}
+            Tickets
+          </FiltroBarTabButton>
+          <FiltroBarTabButton
+            id="tab-incidentes-sinais"
+            active={aba === "sinais"}
+            aria-controls="panel-incidentes-sinais"
+            onClick={() => setAba("sinais")}
+            icon={<Activity {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            Sinais
+          </FiltroBarTabButton>
+        </div>
 
-        <div style={{ ...getFilterBarRowStyle(), marginTop: 10 }}>
-          <BarraPesquisaPagina
-            value={busca}
-            onChange={setBusca}
-            placeholder={PAGE_SEARCH.incidentes}
-            aria-label="Buscar incidentes por protocolo, prestador, nickname ou mesa"
-            wrapperStyle={{ flex: "1 1 260px", maxWidth: 420 }}
-          />
-          {!isProprios ? (
+        {aba === "tickets" ? (
+          <div style={{ ...getFilterBarRowStyle(), marginTop: 10 }}>
+            <BarraPesquisaPagina
+              value={busca}
+              onChange={setBusca}
+              placeholder={PAGE_SEARCH.incidentes}
+              aria-label="Buscar incidentes por protocolo, prestador, nickname ou mesa"
+              wrapperStyle={{ flex: "1 1 260px", maxWidth: 420 }}
+            />
+            <FiltroBarCampoSelect
+              value={timeFiltro}
+              onChange={(v) => {
+                setTimeFiltro((v as TimeFiltro) || "todos");
+                setStaffFiltroId("");
+              }}
+              options={TIME_FILTRO_OPTIONS}
+              icon={FilterBarIcons.time}
+              ariaLabel="Times"
+              todasValue="todos"
+              todasLabel="Todos Times"
+              minWidth={180}
+            />
+            <FiltroBarCampoSelect
+              value={incidenteFiltro}
+              onChange={setIncidenteFiltro}
+              options={INCIDENTE_CATEGORIA_OPTIONS}
+              icon={FilterBarIcons.figurinoCategoria}
+              ariaLabel="Incidentes"
+              todasValue=""
+              todasLabel="Todos Incidentes"
+              minWidth={180}
+            />
             <FiltroEntidadeBarSelect
               mode="single"
-              selected={staffFiltroId ? [staffFiltroId] : []}
-              onChange={(v) => setStaffFiltroId(v[0] ?? "")}
-              items={staffFiltroOptions.map((s) => ({
-                id: s.id,
-                name: labelPrestadorIncidente(s.nome, s.nickname),
-              }))}
-              icon={FilterBarIcons.staff}
-              triggerEmptyLabel="Todos Staff"
-              ariaFilterPrefix="Filtrar por staff"
-              listboxAriaLabel="Staff"
+              selected={tipoFiltro ? [tipoFiltro] : []}
+              onChange={(v) => setTipoFiltro(v[0] ?? "")}
+              items={TIPOS_FILTRO_OPTIONS}
+              icon={FilterBarIcons.acaoSolicitacao}
+              triggerEmptyLabel="Todos Tipos"
+              ariaFilterPrefix="Filtrar por tipo"
+              listboxAriaLabel="Tipos"
             />
-          ) : null}
-        </div>
+            {!isProprios ? (
+              <FiltroEntidadeBarSelect
+                mode="single"
+                selected={staffFiltroId ? [staffFiltroId] : []}
+                onChange={(v) => setStaffFiltroId(v[0] ?? "")}
+                items={staffFiltroOptions.map((s) => ({
+                  id: s.id,
+                  name: labelPrestadorIncidente(s.nome, s.nickname),
+                }))}
+                icon={FilterBarIcons.staff}
+                triggerEmptyLabel="Todos Staff"
+                ariaFilterPrefix="Filtrar por staff"
+                listboxAriaLabel="Staff"
+              />
+            ) : null}
+            {!isProprios ? (
+              <FiltroEntidadeBarSelect
+                mode="single"
+                selected={relatorFiltroId ? [relatorFiltroId] : []}
+                onChange={(v) => setRelatorFiltroId(v[0] ?? "")}
+                items={relatoresFiltroOptions}
+                icon={FilterBarIcons.influencer}
+                triggerEmptyLabel="Todos Relatores"
+                ariaFilterPrefix="Filtrar por relator"
+                listboxAriaLabel="Relatores"
+              />
+            ) : null}
+          </div>
+        ) : (
+          sinaisAba.filterBar
+        )}
       </div>
 
-      {erro ? (
+      {aba === "sinais" ? (
+        sinaisAba.panel
+      ) : erro ? (
         <div
           role="alert"
           aria-live="polite"
@@ -490,7 +603,7 @@ export default function Incidentes() {
           {erro}
         </div>
       ) : (
-        <>
+        <div id="panel-incidentes-tickets" role="tabpanel" aria-labelledby="tab-incidentes-tickets">
           <div style={getPageContentBoxStyle(brand, t)}>
             <SectionTitle>KPIs Consolidados</SectionTitle>
             <div className="app-grid-kpi-6">
@@ -556,9 +669,9 @@ export default function Incidentes() {
                   <thead>
                     <tr>
                       {th("protocolo", "Protocolo", dataTable.thHeaderSticky)}
-                      {th("data", "Data/Hora")}
+                      {th("data", "Abertura")}
                       {!isProprios ? th("prestador", "Prestador") : null}
-                      {!isProprios ? th("time", "Time") : null}
+                      {!isProprios && timeFiltro === "todos" ? th("time", "Time") : null}
                       {th("jogo", "Jogo")}
                       {th("incidente", "Incidente")}
                       {th("tipo", "Tipo")}
@@ -576,9 +689,11 @@ export default function Incidentes() {
                       return (
                         <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
                           <td style={dataTable.tdSticky({ rowIndex: i, fontWeight: 700 })}>{r.protocolo}</td>
-                          <td style={dataTable.tdCenter}>{formatDataHoraIncidente(r.ocorrido_em)}</td>
+                          <td style={dataTable.tdCenter}>{formatDataHoraIncidente(r.created_at)}</td>
                           {!isProprios ? <td style={dataTable.tdCenter}>{r.prestador_nome}</td> : null}
-                          {!isProprios ? <td style={dataTable.tdCenter}>{timeAlvoLabel(r.time_alvo)}</td> : null}
+                          {!isProprios && timeFiltro === "todos" ? (
+                            <td style={dataTable.tdCenter}>{timeAlvoLabel(r.time_alvo)}</td>
+                          ) : null}
                           <td style={dataTable.tdCenter}>
                             {gameKey && chip ? (
                               <span
@@ -624,10 +739,18 @@ export default function Incidentes() {
                           <td style={dataTable.tdCenter}>{r.tipo}</td>
                           {!isProprios ? <td style={dataTable.tdCenter}>{r.relator_nome}</td> : null}
                           <td style={dataTable.tdCenter}>
-                            <div style={{ display: "flex", justifyContent: "center" }}>
+                            <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
                               <BtnIconeAcaoLinha label={tooltipAcao("Ver Incidente")} onClick={() => setVerIncidente(r)}>
                                 <Eye size={13} aria-hidden />
                               </BtnIconeAcaoLinha>
+                              {canEditarSim ? (
+                                <BtnIconeAcaoLinha
+                                  label={tooltipAcao("Editar Incidente")}
+                                  onClick={() => setEditarIncidente(r)}
+                                >
+                                  <Pencil size={13} aria-hidden />
+                                </BtnIconeAcaoLinha>
+                              ) : null}
                             </div>
                           </td>
                         </tr>
@@ -638,7 +761,7 @@ export default function Incidentes() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {verIncidente ? (
@@ -654,8 +777,24 @@ export default function Incidentes() {
         <ModalNovoIncidente
           mesas={mesasParaForm}
           onClose={() => setNovoOpen(false)}
-          onSaved={() => {
+          onSaved={(_protocolo, opts) => {
+            void carregarDados();
+            if (opts?.criarOutro) return;
             setNovoOpen(false);
+            setBusca("");
+            setStaffFiltroId("");
+            setTimeFiltro("todos");
+          }}
+        />
+      ) : null}
+
+      {editarIncidente ? (
+        <ModalNovoIncidente
+          mesas={mesasParaForm}
+          editando={editarIncidente}
+          onClose={() => setEditarIncidente(null)}
+          onSaved={() => {
+            setEditarIncidente(null);
             void carregarDados();
           }}
         />

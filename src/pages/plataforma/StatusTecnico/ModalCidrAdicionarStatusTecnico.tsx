@@ -174,23 +174,7 @@ export function ModalCidrAdicionarStatusTecnico({
           />
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button
-            type="button"
-            disabled={salvando}
-            onClick={() => !salvando && onClose()}
-            style={{
-              background: "transparent",
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: 10,
-              padding: "9px 16px",
-              cursor: salvando ? "not-allowed" : "pointer",
-              fontFamily: FONT.body,
-              fontSize: 13,
-              color: t.text,
-            }}
-          >
-            Cancelar
-          </button>
+          
           <button
             type="button"
             disabled={salvando}
