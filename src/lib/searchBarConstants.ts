@@ -37,4 +37,5 @@ export const PAGE_SEARCH = {
   integracao: `Buscar por operador, caminho ou PAM${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   utmSource: `Buscar por UTM Source${SEARCH_PLACEHOLDER_ELLIPSIS}`,
   incidentes: `Buscar por protocolo, prestador, nickname ou mesa${SEARCH_PLACEHOLDER_ELLIPSIS}`,
+  sinais: `Buscar por ID do sinal, motivo, mesa, SM ou relator${SEARCH_PLACEHOLDER_ELLIPSIS}`,
 } as const;

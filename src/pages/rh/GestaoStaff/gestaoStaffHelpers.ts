@@ -49,7 +49,7 @@ export function staffUiTimeEstudioForcadoTodos(nomeTime: string): boolean {
   );
 }
 
-/** Time Service Manager — exibe e edita o campo ID TOS (UUID Proxylive / sinais). */
+/** Time Service Manager — exibe e edita o campo ID TOS nos modais Ver/Editar. */
 export function staffUiTimeServiceManager(nomeTime: string): boolean {
   const n = normStaffNomeTimeUi(nomeTime);
   return n === "service manager" || n.startsWith("service manager ");

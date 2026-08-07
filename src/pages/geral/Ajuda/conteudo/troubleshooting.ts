@@ -667,6 +667,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Confirme que está na aba **Tickets**, o mês selecionado no carrossel (ou **Histórico**) e os filtros de Estúdio, Time, Staff, Incidente, Tipo e Relator — cada um restringe a lista e os KPIs. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
       },
       {
+        subtitulo: "A aba Sinais está vazia?",
+        texto:
+          "Confirme o mês (ou **Histórico**), o filtro de **Estúdio** e, se visíveis, **Staff** (SM) e **Relator**. A busca também restringe a tabela. Os sinais vêm da sincronização com o Grafana — se o período deveria ter dados e a lista continua vazia, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "O botão Novo Incidente não aparece?",
         texto:
           "O botão exige permissão de **Editar** = Sim na página Incidentes (Gestão de Usuários → Permissões). Sem ela, a página fica em modo consulta. Solicite a liberação ao administrador se precisar registrar incidentes.",
@@ -1464,12 +1469,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo o campo ID TOS?",
         texto:
-          "O **ID TOS** aparece só no time **Service Manager** (carrossel de time, coluna na tabela e aba Função nos modais Ver/Editar). Em outros times o campo não é exibido. Se a migração ainda não foi aplicada no Supabase, o salvamento pode falhar — nesse caso entre em contato com o suporte.",
+          "O **ID TOS** aparece só no time **Service Manager**, na aba Função dos modais **Ver** e **Editar** — não há coluna na tabela da listagem. Em outros times o campo não é exibido. Se a migração ainda não foi aplicada no Supabase, o salvamento pode falhar — nesse caso entre em contato com o suporte.",
       },
       {
         subtitulo: "Mensagem «Este ID TOS já está cadastrado»?",
         texto:
-          "Cada UUID TOS só pode estar em um Service Manager. Confira se o mesmo Employee ID do Grafana não foi colado em outro SM. Corrija o cadastro duplicado e salve de novo.",
+          "Cada UUID TOS só pode estar em um Service Manager. Confira se o mesmo ID não foi colado em outro SM. Corrija o cadastro duplicado e salve de novo.",
       },
     ],
   },

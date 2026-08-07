@@ -723,6 +723,18 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Indica se o erro do Shuffler ocorreu Em Jogo (durante a rodada, com o shoe em mesa) ou Fora de Jogo (na preparação do shoe antes de entrar em mesa). Aplicável apenas a incidentes de Shuffler.",
         referencia: "Incidentes",
       },
+      {
+        termo: "Sinal",
+        definicao:
+          "Chamado operacional aberto na mesa (Grafana / TOS) e atendido por um Service Manager. Na aba Sinais de Incidentes, cada linha é um sinal resolvido, com motivo, tempos de atendimento/resolução e conclusão.",
+        referencia: "Incidentes",
+      },
+      {
+        termo: "TMA",
+        definicao:
+          "Tempo médio de atendimento ou resolução dos sinais. Na aba Sinais: TMA de Atendimento (Issued → Taken), TMA de Resolução (Taken → Resolved) e TMA Total (Issued → Resolved).",
+        referencia: "Incidentes",
+      },
     ],
   },
   {
@@ -918,7 +930,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "ID TOS",
         definicao:
-          "UUID do Service Manager no sistema TOS (Employee ID no Grafana S&SM Reports / ClickHouse `signal_resolver_id`). Cadastrado em Gestão de Staff no time Service Manager; usado no de-para dos sinais (`sm_sinais`).",
+          "UUID do Service Manager no sistema TOS. Cadastrado em Gestão de Staff (modais Ver/Editar do time Service Manager); usado no de-para dos sinais (`sm_sinais`).",
         referencia: "Gestão de Staff",
       },
       {

@@ -742,12 +742,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e KPIs",
         texto:
-          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período) e o filtro de **Estúdio**. As abas **Tickets** e **Sinais** organizam a página: em **Tickets** ficam os KPIs e a tabela de incidentes; em **Sinais** a área de sinais do Grafana ficará disponível em breve.\n\nNa aba Tickets, o filtro de **Time** (**Todos Times**, **Game Presenter** ou **Shuffler**) e os filtros de **Staff**, **Incidente**, **Tipo** e **Relator** restringem a lista e os KPIs. Usuários com permissão de Ver = Próprios não veem Staff e Relator — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca localiza incidentes por protocolo, prestador, nickname ou mesa."
+          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período) e o filtro de **Estúdio**. As abas **Tickets** e **Sinais** organizam a página.\n\nNa aba **Tickets**, o filtro de **Time** (**Todos Times**, **Game Presenter** ou **Shuffler**) e os filtros de **Staff**, **Incidente**, **Tipo** e **Relator** restringem a lista e os KPIs. Usuários com permissão de Ver = Próprios não veem Staff e Relator — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca da aba Tickets localiza incidentes por protocolo, prestador, nickname ou mesa."
       },
       {
         subtitulo: "Aba Sinais",
         texto:
-          "A aba **Sinais** receberá os dados captados do Grafana. Por enquanto aparece apenas a mensagem de conteúdo em desenvolvimento.",
+          "A aba **Sinais** mostra os sinais resolvidos pelos Service Managers (origem Grafana). No bloco de filtros: busca, **Todos Staff** (SM que atendeu) e **Todos Relatores** (quem abriu o sinal). Os KPIs consolidam, no período e com os filtros aplicados: **Totais de Sinais**, **TMA Total** (Issued → Resolved), **TMA de Atendimento** (Issued → Taken) e **TMA de Resolução** (Taken → Resolved), cada um com comparativo do mês anterior.\n\nA tabela lista data/hora em America/Sao_Paulo, TMAs, motivo do sinal, jogo, estúdio e SM. O ícone **Ver** abre o detalhe com horários em UTC, relator, atendente, mesa e conclusão da resolução.",
       },
       {
         subtitulo: "Registrar um incidente",
@@ -819,7 +819,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "ID TOS (Service Manager)",
         texto:
-          "No time **Service Manager**, o campo **ID TOS** guarda o UUID do colaborador no sistema TOS (Employee ID do Grafana / sinais). Esse valor liga os sinais atendidos ao cadastro do SM. Copie o UUID da coluna Employee ID no relatório S&SM do Grafana e cole aqui. O **ID operacional** continua sendo o Work ID usado por Game Presenters.",
+          "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) guarda o UUID do colaborador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters.",
       },
       {
         subtitulo: "Permissões",

@@ -87,6 +87,7 @@ import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentit
 import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { ModalVerIncidente } from "./ModalVerIncidente";
 import { ModalNovoIncidente, type NovoIncidenteMesaOption } from "./ModalNovoIncidente";
+import { useIncidentesAbaSinais } from "./IncidentesAbaSinais";
 
 const ERRO_CARREGAR =
   "Não foi possível carregar os incidentes. Se o problema persistir, entre em contato com o suporte.";
@@ -231,6 +232,16 @@ export default function Incidentes() {
     if (historico || !mesAtual) return null;
     return getPeriodoComparativoMoM(mesAtual.ano, mesAtual.mes).anterior;
   }, [historico, mesAtual]);
+
+  const sinaisAba = useIncidentesAbaSinais({
+    periodoAtual,
+    periodoAnterior,
+    historico,
+    estudioFiltro,
+    isProprios,
+    meusIds,
+    active: aba === "sinais",
+  });
 
   const carregarDados = useCallback(async () => {
     setErro(null);
@@ -576,29 +587,13 @@ export default function Incidentes() {
               />
             ) : null}
           </div>
-        ) : null}
+        ) : (
+          sinaisAba.filterBar
+        )}
       </div>
 
       {aba === "sinais" ? (
-        <div
-          id="panel-incidentes-sinais"
-          role="tabpanel"
-          aria-labelledby="tab-incidentes-sinais"
-          style={getPageContentBoxStyle(brand, t)}
-        >
-          <SectionTitle sub="Integração com sinais do Grafana em desenvolvimento">Sinais</SectionTitle>
-          <div
-            style={{
-              padding: "40px 0",
-              textAlign: "center",
-              color: t.textMuted,
-              fontSize: 13,
-              fontFamily: FONT.body,
-            }}
-          >
-            Conteúdo em desenvolvimento.
-          </div>
-        </div>
+        sinaisAba.panel
       ) : erro ? (
         <div
           role="alert"

@@ -151,15 +151,26 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 ### Abas (URL)
 
 - **`useRouteTab`** + `APP_ROUTE_CATALOG`: **Tickets** (`/Incidentes/Tickets`) e **Sinais** (`/Incidentes/Sinais`).
-- **Tickets** — layout atual (KPIs + tabela + filtros de ticket); respeita o filtro **Time**.
-- **Sinais** — placeholder («Conteúdo em desenvolvimento.») para sinais Grafana; filtros de ticket ocultos nesta aba.
+- **Tickets** — KPIs por categoria + tabela de incidentes + filtros de ticket; respeita o filtro **Time**.
+- **Sinais** — dados de `sm_sinais` (Grafana / ClickHouse); filtros de ticket ocultos; ver subsecção **Aba Sinais** abaixo.
 
 ### Filtros
 
 - Carrossel de mês (início em `INCIDENTES_MES_INICIO` — julho/2026) + **`FiltroHistoricoButton`** + **`FiltroEstudioSelect`** (**Todos Estúdios**) na primeira linha, com **`AjudaContextualAcoes`**.
 - Segunda linha — abas de módulo **Tickets** / **Sinais** (`FiltroBarTabButton` + ícones `Ticket` / `Activity`).
 - Terceira linha (só aba **Tickets**) — **`BarraPesquisaPagina`** + filtros pill: **Time** (`FiltroBarCampoSelect`, **Todos Times** / Game Presenter / Shuffler, ícone `FilterBarIcons.time`), **Incidente**, **Tipo**, **Staff** (restrito ao time selecionado) e **Relator**. **Staff** e **Relator** ficam ocultos quando `canView === "proprios"`; o filtro **Time** permanece disponível.
-- Filtro de escopo (time, staff, estúdio, incidente, tipo, relator) e busca são **client-side** sobre o período já buscado no servidor (`fetchEstudioIncidentesPeriodo`). Entram no mesmo escopo dos KPIs da aba Tickets.
+- Terceira linha (só aba **Sinais**) — **`BarraPesquisaPagina`** (`PAGE_SEARCH.sinais`) + **Staff** (Service Managers do organograma — `resolver_funcionario_id`) + **Relator** (criadores do período — `creator_funcionario_id` / screen name). **Staff** e **Relator** ocultos quando `canView === "proprios"`.
+- Filtro de escopo Tickets (time, staff, estúdio, incidente, tipo, relator) e busca são **client-side** sobre o período já buscado no servidor (`fetchEstudioIncidentesPeriodo`). Entram no mesmo escopo dos KPIs da aba Tickets.
+- Filtro de escopo Sinais (estúdio, staff SM, relator) e busca são **client-side** sobre `fetchSmSinaisPeriodo` (janela por `dia_brt`).
+
+### Aba Sinais
+
+- Fonte: tabela **`sm_sinais`** (`lib/smSinaisFetch.ts`, `lib/smSinaisHelpers.ts`, `lib/smSinaisTypes.ts`). Ingestão via script Grafana (fora da UI). Durações **não** gravadas — calculadas na UI.
+- Período: `dia_brt` (America/Sao_Paulo) alinhado ao carrossel / Histórico; MoM com mês anterior quando não Histórico.
+- **KPIs Consolidados** (`app-grid-kpi-4`, `KpiCard` com MoM; TMA com `isInverso`): **Totais de Sinais**; **TMA Total** (`timer_stopped_at − issued_at`); **TMA de Atendimento** (`taken_at − issued_at`); **TMA de Resolução** (`timer_stopped_at − taken_at`). Médias ignoram linhas sem timestamps necessários. Formato `MM:SS` ou `HH:MM:SS`.
+- **Tabela Sinais:** Data/Hora do Sinal (`issued_at_brt`), TMA de Atendimento, Data/Hora do Atendimento (`taken_at_brt`), TMA de Resolução, Data/Hora da Resolução (`timer_stopped_at_brt`), TMA Total, Sinal (`signal_type`), Jogo (chip identidade quando aplicável), Estúdio, SM (nome do resolver), Ações (`Eye` → **`ModalVerSinal`**). Ordenação padrão: data do sinal desc.
+- **`ModalVerSinal`:** ID do Sinal / Data/Hora **UTC** Issued; Motivo / Relator; Data/Hora **UTC** Taken / Atendente (SM); Mesa / Jogo / Estúdio; Data/Hora **UTC** Resolved / Resolução (`resolution_conclusion`).
+- **Ver = Próprios:** restringe a sinais em que o usuário é creator ou resolver (`creator_funcionario_id` / `resolver_funcionario_id` ∈ `meusIds`).
 
 ### Permissões
 

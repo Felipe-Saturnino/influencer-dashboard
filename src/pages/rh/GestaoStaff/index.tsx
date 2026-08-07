@@ -251,8 +251,7 @@ type StaffTabelaSortCol =
   | "horario_turno"
   | "estudio"
   | "status"
-  | "id_op"
-  | "id_tos";
+  | "id_op";
 
 function CampoLeitura({ k, v, t }: { k: string; v: string; t: { textMuted: string; text: string } }) {
   return (
@@ -741,14 +740,8 @@ export default function RhGestaoStaffPage() {
   const timeAtualForcaTodosEstudio =
     !todosTimes && times[idxTime] ? staffUiTimeEstudioForcadoTodos(times[idxTime]!.nome) : false;
 
-  /** Coluna ID TOS só na vista do time Service Manager (UUID Proxylive / sinais). */
-  const layoutTabelaMostrarIdTos =
-    !todosTimes && times[idxTime] ? staffUiTimeServiceManager(times[idxTime]!.nome) : false;
-
   const colSpanTabelaStaff =
-    9 +
-    (layoutTabelaSemEstudioComHorario || !layoutTabelaOcultarColunaEstudio ? 1 : 0) +
-    (layoutTabelaMostrarIdTos ? 1 : 0);
+    9 + (layoutTabelaSemEstudioComHorario || !layoutTabelaOcultarColunaEstudio ? 1 : 0);
 
   const slugsEstudioParaFetchHorarioTabela = useMemo(() => {
     if (!layoutTabelaSemEstudioComHorario) return [] as string[];
@@ -781,13 +774,12 @@ export default function RhGestaoStaffPage() {
 
   useEffect(() => {
     setSortCol((c) => {
-      if (!layoutTabelaMostrarIdTos && c === "id_tos") return "nome";
       if (layoutTabelaSemEstudioComHorario || layoutTabelaOcultarColunaEstudio) {
         return c === "estudio" ? "nome" : c;
       }
       return c === "horario_turno" ? "nome" : c;
     });
-  }, [layoutTabelaSemEstudioComHorario, layoutTabelaOcultarColunaEstudio, layoutTabelaMostrarIdTos]);
+  }, [layoutTabelaSemEstudioComHorario, layoutTabelaOcultarColunaEstudio]);
 
   const handleSortStaff = useCallback((col: StaffTabelaSortCol) => {
     setSortCol((prev) => {
@@ -843,9 +835,6 @@ export default function RhGestaoStaffPage() {
           break;
         case "id_op":
           cmp = (a.staff_id_operacional ?? "").localeCompare(b.staff_id_operacional ?? "", "pt-BR");
-          break;
-        case "id_tos":
-          cmp = (a.staff_id_tos ?? "").localeCompare(b.staff_id_tos ?? "", "pt-BR");
           break;
         default:
           cmp = 0;
@@ -1146,17 +1135,6 @@ export default function RhGestaoStaffPage() {
                   thStyle={dataTable.thHeader}
                   align="center"
                 />
-                {layoutTabelaMostrarIdTos ? (
-                  <SortTableTh
-                    label="ID TOS"
-                    col="id_tos"
-                    sortCol={sortCol}
-                    sortDir={sortDir}
-                    onSort={handleSortStaff}
-                    thStyle={dataTable.thHeader}
-                    align="center"
-                  />
-                ) : null}
                 <th scope="col" style={dataTable.thHeader}>
                   Ações
                 </th>
@@ -1210,20 +1188,6 @@ export default function RhGestaoStaffPage() {
                       <td style={dataTable.tdCenter} title={row.staff_id_operacional?.trim() || undefined}>
                         {row.staff_id_operacional?.trim() || "—"}
                       </td>
-                      {layoutTabelaMostrarIdTos ? (
-                        <td
-                          style={{
-                            ...dataTable.tdCenter,
-                            maxWidth: 140,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                          title={row.staff_id_tos?.trim() || undefined}
-                        >
-                          {row.staff_id_tos?.trim() || "—"}
-                        </td>
-                      ) : null}
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                           <BtnIconeAcaoLinha
@@ -2032,7 +1996,7 @@ function ModalStaffEditar({
                 autoComplete="off"
               />
               <div id="staff-id-tos-hint" style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
-                UUID do Service Manager no TOS (Employee ID do Grafana / sinais)
+                UUID do Service Manager no TOS
               </div>
             </div>
           ) : null}
