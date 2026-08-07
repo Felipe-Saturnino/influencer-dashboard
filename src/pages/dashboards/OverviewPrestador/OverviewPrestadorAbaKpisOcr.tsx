@@ -30,7 +30,7 @@ type Props = {
 
 type SortJogoCol = "jogo" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets";
 type SortEstCol = "estudio" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets";
-type SortAtencaoCol = "nome" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets";
+type SortAtencaoCol = "nome" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets" | "performance";
 type SortDiaCol = "dia" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets";
 
 function fmtDiaBr(iso: string): string {
@@ -238,6 +238,8 @@ function OverviewPrestadorAbaKpisOcrConteudo({
           return compareNumber(numOrNeg(a.tmaResolucaoMs), numOrNeg(b.tmaResolucaoMs), dir);
         case "tickets":
           return compareNumber(a.tickets, b.tickets, dir);
+        case "performance":
+          return 0;
         default:
           return 0;
       }
@@ -512,15 +514,15 @@ function OverviewPrestadorAbaKpisOcrConteudo({
         </div>
       ) : null}
 
-      {!loading ? (
+      {!loading && visaoTime ? (
         <div style={pageBox}>
-          <SectionTitle sub="service managers com sinais ou tickets no período">Pontos de atenção</SectionTitle>
+          <SectionTitle sub="service managers do time com sinais ou tickets no período">Equipe</SectionTitle>
           {atencaoOrdenados.length === 0 ? (
             vazio
           ) : (
             <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-              <table style={getDataTableStyle({ minWidth: 720 })}>
-                <caption style={{ display: "none" }}>KPIs de OCR por prestador</caption>
+              <table style={getDataTableStyle({ minWidth: 780 })}>
+                <caption style={{ display: "none" }}>KPIs de OCR por prestador da equipe</caption>
                 <thead>
                   <tr>
                     <SortTableTh label="Prestador" col="nome" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "asc" }))} thStyle={dataTable.thHeader} align="center" />
@@ -529,6 +531,7 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                     <SortTableTh label="TMA de Atendimento" col="tmaAtend" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                     <SortTableTh label="TMA de Resolução" col="tmaRes" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                     <SortTableTh label="Tickets" col="tickets" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
+                    <SortTableTh label="Performance" col="performance" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "asc" }))} thStyle={dataTable.thHeader} align="center" />
                   </tr>
                 </thead>
                 <tbody>
@@ -540,6 +543,7 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                       <td style={dataTable.tdCenter}>{fmtDuracaoMs(r.tmaAtendimentoMs)}</td>
                       <td style={dataTable.tdCenter}>{fmtDuracaoMs(r.tmaResolucaoMs)}</td>
                       <td style={dataTable.tdCenter}>{r.tickets.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>—</td>
                     </tr>
                   ))}
                 </tbody>

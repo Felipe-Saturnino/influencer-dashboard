@@ -41,12 +41,47 @@ function metricasDeSinaisETickets(sinais: SmSinalRow[], tickets: number): SmOcrM
   return { ...k, tickets };
 }
 
-function jogoKeyDeSinal(r: SmSinalRow): GameIdentityKey | "outro" {
+function jogoKeyDeSinal(
+  r: SmSinalRow,
+  tipoJogoPorMesaId?: Record<string, string>,
+  tipoJogoPorTableId?: Record<string, string>,
+): GameIdentityKey | "outro" {
   const fromType = normalizarTipoJogoGpKpi(r.game_type);
   if (fromType) return fromType;
-  const fromMesa = normalizarTipoJogoGpKpi(r.mesa?.tipo_jogo);
-  if (fromMesa) return fromMesa;
+  const mid = (r.mesa_id ?? "").trim();
+  if (mid && tipoJogoPorMesaId?.[mid]) {
+    const fromMesa = normalizarTipoJogoGpKpi(tipoJogoPorMesaId[mid]);
+    if (fromMesa) return fromMesa;
+  }
+  const tid = (r.table_id ?? "").trim().toLowerCase();
+  if (tid && tipoJogoPorTableId?.[tid]) {
+    const fromTable = normalizarTipoJogoGpKpi(tipoJogoPorTableId[tid]);
+    if (fromTable) return fromTable;
+  }
+  const fromEmbed = normalizarTipoJogoGpKpi(r.mesa?.tipo_jogo);
+  if (fromEmbed) return fromEmbed;
+  // Fallback: prefixo do table_id Spin (ex.: bac-cmuSG6116, bj-…)
+  const fromTableId = normalizarTipoJogoGpKpi(tid) ?? inferirJogoPorTableId(tid);
+  if (fromTableId) return fromTableId;
   return "outro";
+}
+
+/** Heurística para `table_id` Grafana/Spin quando `game_type` e cadastro falham. */
+function inferirJogoPorTableId(tableId: string): GameIdentityKey | null {
+  const t = tableId.trim().toLowerCase();
+  if (!t) return null;
+  if (t.startsWith("bj") || t.startsWith("blackjack")) return "blackjack";
+  if (t.startsWith("bac") || t.startsWith("baccarat")) return "baccarat";
+  if (t.startsWith("rou") || t.startsWith("roulette") || t.startsWith("roleta")) return "roleta";
+  if (
+    t.startsWith("fb") ||
+    t.startsWith("fut") ||
+    t.startsWith("football") ||
+    t.startsWith("soccer")
+  ) {
+    return "futebol_brasileiro";
+  }
+  return null;
 }
 
 function jogoKeyDeTicket(r: EstudioIncidenteRow): GameIdentityKey | "outro" {
@@ -145,12 +180,14 @@ export function funcionarioIdDoRelatorTicket(
 export function agregarSmOcrPorJogo(
   sinais: SmSinalRow[],
   tickets: EstudioIncidenteRow[],
+  tipoJogoPorMesaId?: Record<string, string>,
+  tipoJogoPorTableId?: Record<string, string>,
 ): SmOcrJogoLinha[] {
   const ordem: Array<GameIdentityKey | "outro"> = [...GP_KPI_JOGOS_ORDEM, "outro"];
   const sinaisMap = new Map<GameIdentityKey | "outro", SmSinalRow[]>();
   const ticketsMap = new Map<GameIdentityKey | "outro", number>();
   for (const r of sinais) {
-    const k = jogoKeyDeSinal(r);
+    const k = jogoKeyDeSinal(r, tipoJogoPorMesaId, tipoJogoPorTableId);
     const list = sinaisMap.get(k) ?? [];
     list.push(r);
     sinaisMap.set(k, list);

@@ -153,30 +153,72 @@ async function carregarMapaRelatorSm(funcionarioIds: string[]): Promise<{
   };
 }
 
-async function carregarNomesMesas(mesaIds: string[]): Promise<Record<string, string>> {
-  const ids = [...new Set(mesaIds.map((x) => x.trim()).filter(Boolean))];
-  if (ids.length === 0) return {};
-  const nomes: Record<string, string> = {};
+async function carregarCatalogoMesas(opts: {
+  mesaIds: string[];
+  tableIds: string[];
+}): Promise<{
+  nomesPorId: Record<string, string>;
+  tipoJogoPorMesaId: Record<string, string>;
+  tipoJogoPorTableId: Record<string, string>;
+}> {
+  const nomesPorId: Record<string, string> = {};
+  const tipoJogoPorMesaId: Record<string, string> = {};
+  const tipoJogoPorTableId: Record<string, string> = {};
+  const ids = [...new Set(opts.mesaIds.map((x) => x.trim()).filter(Boolean))];
+  const tableIds = [...new Set(opts.tableIds.map((x) => x.trim()).filter(Boolean))];
+
+  const ingest = (rows: unknown[]) => {
+    for (const raw of rows) {
+      const row = raw as {
+        id: string;
+        nome_mesa: string | null;
+        numero_mesa: string | null;
+        tipo_jogo: string | null;
+        mesa_identificacao: string | null;
+      };
+      const id = String(row.id);
+      const nome = (row.nome_mesa ?? "").trim();
+      const num = (row.numero_mesa ?? "").trim();
+      const tipo = (row.tipo_jogo ?? "").trim();
+      const ident = (row.mesa_identificacao ?? "").trim().toLowerCase();
+      nomesPorId[id] = nome || (num ? `Mesa ${num}` : id);
+      if (tipo) {
+        tipoJogoPorMesaId[id] = tipo;
+        if (ident) tipoJogoPorTableId[ident] = tipo;
+      }
+    }
+  };
+
   const CHUNK = 150;
   for (let i = 0; i < ids.length; i += CHUNK) {
     const slice = ids.slice(i, i + CHUNK);
     const { data, error } = await supabase
       .from("mesas_spin_cadastro")
-      .select("id, nome_mesa, numero_mesa")
+      .select("id, nome_mesa, numero_mesa, tipo_jogo, mesa_identificacao")
       .in("id", slice);
     if (error) {
-      console.error("[Overview OCR] mesas:", error);
+      console.error("[Overview OCR] mesas por id:", error);
       continue;
     }
-    for (const raw of data ?? []) {
-      const row = raw as { id: string; nome_mesa: string | null; numero_mesa: string | null };
-      const id = String(row.id);
-      const nome = (row.nome_mesa ?? "").trim();
-      const num = (row.numero_mesa ?? "").trim();
-      nomes[id] = nome || (num ? `Mesa ${num}` : id);
-    }
+    ingest(data ?? []);
   }
-  return nomes;
+
+  // table_id do Grafana costuma = mesa_identificacao; busca o que ainda falta
+  const faltam = tableIds.filter((t) => !tipoJogoPorTableId[t.toLowerCase()]);
+  for (let i = 0; i < faltam.length; i += CHUNK) {
+    const slice = faltam.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from("mesas_spin_cadastro")
+      .select("id, nome_mesa, numero_mesa, tipo_jogo, mesa_identificacao")
+      .in("mesa_identificacao", slice);
+    if (error) {
+      console.error("[Overview OCR] mesas por table_id:", error);
+      continue;
+    }
+    ingest(data ?? []);
+  }
+
+  return { nomesPorId, tipoJogoPorMesaId, tipoJogoPorTableId };
 }
 
 export function useOverviewPrestadorSmOcr(opts: {
@@ -193,6 +235,8 @@ export function useOverviewPrestadorSmOcr(opts: {
   const [ticketsAnt, setTicketsAnt] = useState<EstudioIncidenteRow[]>([]);
   const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
   const [mesaNomes, setMesaNomes] = useState<Record<string, string>>({});
+  const [tipoJogoPorMesaId, setTipoJogoPorMesaId] = useState<Record<string, string>>({});
+  const [tipoJogoPorTableId, setTipoJogoPorTableId] = useState<Record<string, string>>({});
   const [profileIdPorFuncionario, setProfileIdPorFuncionario] = useState(() => new Map<string, string>());
   const [funcionarioIdPorProfile, setFuncionarioIdPorProfile] = useState(() => new Map<string, string>());
   const [nomePorFuncionario, setNomePorFuncionario] = useState(() => new Map<string, string>());
@@ -259,11 +303,16 @@ export function useOverviewPrestadorSmOcr(opts: {
           setSinaisAnt([]);
           setTicketsAtual(tickets);
           setTicketsAnt([]);
-          const mesaIds = [
-            ...sinais.map((s) => s.mesa_id ?? ""),
-            ...tickets.map((t) => t.mesa_id ?? ""),
-          ];
-          setMesaNomes(await carregarNomesMesas(mesaIds));
+          const cat = await carregarCatalogoMesas({
+            mesaIds: [
+              ...sinais.map((s) => s.mesa_id ?? ""),
+              ...tickets.map((t) => t.mesa_id ?? ""),
+            ],
+            tableIds: sinais.map((s) => s.table_id ?? ""),
+          });
+          setMesaNomes(cat.nomesPorId);
+          setTipoJogoPorMesaId(cat.tipoJogoPorMesaId);
+          setTipoJogoPorTableId(cat.tipoJogoPorTableId);
         } else if (mesSelecionado) {
           const mom = getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
           const [atual, ant] = await Promise.all([
@@ -275,13 +324,21 @@ export function useOverviewPrestadorSmOcr(opts: {
           setSinaisAnt(ant.sinais);
           setTicketsAtual(atual.tickets);
           setTicketsAnt(ant.tickets);
-          const mesaIds = [
-            ...atual.sinais.map((s) => s.mesa_id ?? ""),
-            ...atual.tickets.map((t) => t.mesa_id ?? ""),
-            ...ant.sinais.map((s) => s.mesa_id ?? ""),
-            ...ant.tickets.map((t) => t.mesa_id ?? ""),
-          ];
-          setMesaNomes(await carregarNomesMesas(mesaIds));
+          const cat = await carregarCatalogoMesas({
+            mesaIds: [
+              ...atual.sinais.map((s) => s.mesa_id ?? ""),
+              ...atual.tickets.map((t) => t.mesa_id ?? ""),
+              ...ant.sinais.map((s) => s.mesa_id ?? ""),
+              ...ant.tickets.map((t) => t.mesa_id ?? ""),
+            ],
+            tableIds: [
+              ...atual.sinais.map((s) => s.table_id ?? ""),
+              ...ant.sinais.map((s) => s.table_id ?? ""),
+            ],
+          });
+          setMesaNomes(cat.nomesPorId);
+          setTipoJogoPorMesaId(cat.tipoJogoPorMesaId);
+          setTipoJogoPorTableId(cat.tipoJogoPorTableId);
         }
       } catch (e) {
         console.error(e);
@@ -346,8 +403,8 @@ export function useOverviewPrestadorSmOcr(opts: {
   }, [sinaisEscopoAnt, ticketsEscopoAnt]);
 
   const porJogo = useMemo(
-    () => agregarSmOcrPorJogo(sinaisEscopo, ticketsEscopo),
-    [sinaisEscopo, ticketsEscopo],
+    () => agregarSmOcrPorJogo(sinaisEscopo, ticketsEscopo, tipoJogoPorMesaId, tipoJogoPorTableId),
+    [sinaisEscopo, ticketsEscopo, tipoJogoPorMesaId, tipoJogoPorTableId],
   );
   const porEstudio = useMemo(
     () => agregarSmOcrPorEstudio(sinaisEscopo, ticketsEscopo, estudiosNome, mesaNomes),
