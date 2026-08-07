@@ -224,7 +224,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs de OCR sem números?",
         texto:
-          "Confirme o mês (ou Histórico), o time **Service Manager** e o Staff. **Sinais** usam os atendimentos resolvidos pelo SM; **Tickets** usam incidentes em que o SM é o **relator**. Sem Staff, o consolidado cobre todos os SMs do time. Os números fecham em **D-1**. Se o SM não tiver ID TOS / vínculo de e-mail com o login, o de-para de sinais ou tickets pode ficar incompleto — confira Gestão de Staff. Sem linhas: \"Sem dados para o período selecionado.\"",
+          "Confirme o mês (ou Histórico), o time **Service Manager** e o Staff. **Sinais** usam os atendimentos resolvidos pelo SM; **Tickets** usam incidentes em que o SM é o **relator**. Sem Staff, o consolidado cobre todos os SMs do time. O mês corrente inclui até **hoje** (igual à aba Sinais em Incidentes). Se o SM não tiver ID TOS em Gestão de Staff, o vínculo do sinal pode falhar — cadastre o ID TOS. Sem linhas: \"Sem dados para o período selecionado.\"",
       },
     ],
   },

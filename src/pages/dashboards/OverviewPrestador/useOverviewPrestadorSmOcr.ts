@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import {
-  getOntemIsoLocal,
+  fmtDate,
   getPeriodoComparativoMesCompleto,
   getPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
@@ -21,9 +21,10 @@ import {
 } from "../../../lib/overviewPrestadorSmOcr";
 import type { MesCarrosselEscalaEntry } from "../../../lib/escalaMesCarrosselOverviewStyle";
 
-function fimPeriodoD1(fim: string): string {
-  const ontem = getOntemIsoLocal();
-  return fim > ontem ? ontem : fim;
+/** Fecha o período no dia civil de hoje (paridade com Incidentes → Sinais). Não usa D-1 do GP. */
+function fimPeriodoAteHoje(fim: string): string {
+  const hoje = fmtDate(new Date());
+  return fim > hoje ? hoje : fim;
 }
 
 async function carregarMapaRelatorSm(funcionarioIds: string[]): Promise<{
@@ -31,33 +32,62 @@ async function carregarMapaRelatorSm(funcionarioIds: string[]): Promise<{
   funcionarioIdPorProfile: Map<string, string>;
   nomePorFuncionario: Map<string, string>;
   funcionarioIdPorNome: Map<string, string>;
+  staffIdTosPorFuncionario: Map<string, string>;
+  funcionarioIdPorTos: Map<string, string>;
 }> {
   const profileIdPorFuncionario = new Map<string, string>();
   const funcionarioIdPorProfile = new Map<string, string>();
   const nomePorFuncionario = new Map<string, string>();
   const funcionarioIdPorNome = new Map<string, string>();
+  const staffIdTosPorFuncionario = new Map<string, string>();
+  const funcionarioIdPorTos = new Map<string, string>();
   const ids = [...new Set(funcionarioIds.map((x) => x.trim()).filter(Boolean))];
   if (ids.length === 0) {
-    return { profileIdPorFuncionario, funcionarioIdPorProfile, nomePorFuncionario, funcionarioIdPorNome };
+    return {
+      profileIdPorFuncionario,
+      funcionarioIdPorProfile,
+      nomePorFuncionario,
+      funcionarioIdPorNome,
+      staffIdTosPorFuncionario,
+      funcionarioIdPorTos,
+    };
   }
 
   const { data: funcs, error } = await supabase
     .from("rh_funcionarios")
-    .select("id, nome, email, email_spin")
+    .select("id, nome, email, email_spin, staff_id_tos")
     .in("id", ids);
   if (error) {
     console.error("[Overview OCR] funcionarios:", error);
-    return { profileIdPorFuncionario, funcionarioIdPorProfile, nomePorFuncionario, funcionarioIdPorNome };
+    return {
+      profileIdPorFuncionario,
+      funcionarioIdPorProfile,
+      nomePorFuncionario,
+      funcionarioIdPorNome,
+      staffIdTosPorFuncionario,
+      funcionarioIdPorTos,
+    };
   }
 
   const emails = new Set<string>();
   for (const raw of funcs ?? []) {
-    const row = raw as { id: string; nome: string; email: string | null; email_spin: string | null };
+    const row = raw as {
+      id: string;
+      nome: string;
+      email: string | null;
+      email_spin: string | null;
+      staff_id_tos: string | null;
+    };
     const fid = String(row.id);
     const nome = (row.nome ?? "").trim();
     if (nome) {
       nomePorFuncionario.set(fid, nome);
       funcionarioIdPorNome.set(nome.toLowerCase(), fid);
+    }
+    const tos = (row.staff_id_tos ?? "").trim().toLowerCase();
+    if (tos) {
+      staffIdTosPorFuncionario.set(fid, tos);
+      funcionarioIdPorTos.set(tos, fid);
     }
     const e1 = (row.email ?? "").trim().toLowerCase();
     const e2 = (row.email_spin ?? "").trim().toLowerCase();
@@ -66,7 +96,14 @@ async function carregarMapaRelatorSm(funcionarioIds: string[]): Promise<{
   }
 
   if (emails.size === 0) {
-    return { profileIdPorFuncionario, funcionarioIdPorProfile, nomePorFuncionario, funcionarioIdPorNome };
+    return {
+      profileIdPorFuncionario,
+      funcionarioIdPorProfile,
+      nomePorFuncionario,
+      funcionarioIdPorNome,
+      staffIdTosPorFuncionario,
+      funcionarioIdPorTos,
+    };
   }
 
   const { data: profiles, error: errP } = await supabase
@@ -75,7 +112,14 @@ async function carregarMapaRelatorSm(funcionarioIds: string[]): Promise<{
     .in("email", [...emails]);
   if (errP) {
     console.error("[Overview OCR] profiles:", errP);
-    return { profileIdPorFuncionario, funcionarioIdPorProfile, nomePorFuncionario, funcionarioIdPorNome };
+    return {
+      profileIdPorFuncionario,
+      funcionarioIdPorProfile,
+      nomePorFuncionario,
+      funcionarioIdPorNome,
+      staffIdTosPorFuncionario,
+      funcionarioIdPorTos,
+    };
   }
 
   const profileByEmail = new Map<string, string>();
@@ -99,7 +143,40 @@ async function carregarMapaRelatorSm(funcionarioIds: string[]): Promise<{
     }
   }
 
-  return { profileIdPorFuncionario, funcionarioIdPorProfile, nomePorFuncionario, funcionarioIdPorNome };
+  return {
+    profileIdPorFuncionario,
+    funcionarioIdPorProfile,
+    nomePorFuncionario,
+    funcionarioIdPorNome,
+    staffIdTosPorFuncionario,
+    funcionarioIdPorTos,
+  };
+}
+
+async function carregarNomesMesas(mesaIds: string[]): Promise<Record<string, string>> {
+  const ids = [...new Set(mesaIds.map((x) => x.trim()).filter(Boolean))];
+  if (ids.length === 0) return {};
+  const nomes: Record<string, string> = {};
+  const CHUNK = 150;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from("mesas_spin_cadastro")
+      .select("id, nome_mesa, numero_mesa")
+      .in("id", slice);
+    if (error) {
+      console.error("[Overview OCR] mesas:", error);
+      continue;
+    }
+    for (const raw of data ?? []) {
+      const row = raw as { id: string; nome_mesa: string | null; numero_mesa: string | null };
+      const id = String(row.id);
+      const nome = (row.nome_mesa ?? "").trim();
+      const num = (row.numero_mesa ?? "").trim();
+      nomes[id] = nome || (num ? `Mesa ${num}` : id);
+    }
+  }
+  return nomes;
 }
 
 export function useOverviewPrestadorSmOcr(opts: {
@@ -115,10 +192,13 @@ export function useOverviewPrestadorSmOcr(opts: {
   const [ticketsAtual, setTicketsAtual] = useState<EstudioIncidenteRow[]>([]);
   const [ticketsAnt, setTicketsAnt] = useState<EstudioIncidenteRow[]>([]);
   const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
+  const [mesaNomes, setMesaNomes] = useState<Record<string, string>>({});
   const [profileIdPorFuncionario, setProfileIdPorFuncionario] = useState(() => new Map<string, string>());
   const [funcionarioIdPorProfile, setFuncionarioIdPorProfile] = useState(() => new Map<string, string>());
   const [nomePorFuncionario, setNomePorFuncionario] = useState(() => new Map<string, string>());
   const [funcionarioIdPorNome, setFuncionarioIdPorNome] = useState(() => new Map<string, string>());
+  const [staffIdTosPorFuncionario, setStaffIdTosPorFuncionario] = useState(() => new Map<string, string>());
+  const [funcionarioIdPorTos, setFuncionarioIdPorTos] = useState(() => new Map<string, string>());
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -150,6 +230,8 @@ export function useOverviewPrestadorSmOcr(opts: {
         setFuncionarioIdPorProfile(mapa.funcionarioIdPorProfile);
         setNomePorFuncionario(mapa.nomePorFuncionario);
         setFuncionarioIdPorNome(mapa.funcionarioIdPorNome);
+        setStaffIdTosPorFuncionario(mapa.staffIdTosPorFuncionario);
+        setFuncionarioIdPorTos(mapa.funcionarioIdPorTos);
         const nomes: Record<string, string> = {};
         for (const e of estudios.data ?? []) {
           const slug = String((e as { slug: string }).slug ?? "").trim();
@@ -158,13 +240,13 @@ export function useOverviewPrestadorSmOcr(opts: {
         setEstudiosNome(nomes);
 
         const fetchPar = async (ini: string, fim: string) => {
-          const fimD1 = fimPeriodoD1(fim);
-          if (fimD1 < ini) {
+          const fimCap = fimPeriodoAteHoje(fim);
+          if (fimCap < ini) {
             return { sinais: [] as SmSinalRow[], tickets: [] as EstudioIncidenteRow[] };
           }
           const [sinaisAll, ticketsAll] = await Promise.all([
-            fetchSmSinaisPeriodoOcr({ dataIni: ini, dataFim: fimD1 }),
-            fetchEstudioIncidentesPorDataRodada({ dataIni: ini, dataFim: fimD1 }),
+            fetchSmSinaisPeriodoOcr({ dataIni: ini, dataFim: fimCap }),
+            fetchEstudioIncidentesPorDataRodada({ dataIni: ini, dataFim: fimCap }),
           ]);
           return { sinais: sinaisAll, tickets: ticketsAll };
         };
@@ -177,6 +259,11 @@ export function useOverviewPrestadorSmOcr(opts: {
           setSinaisAnt([]);
           setTicketsAtual(tickets);
           setTicketsAnt([]);
+          const mesaIds = [
+            ...sinais.map((s) => s.mesa_id ?? ""),
+            ...tickets.map((t) => t.mesa_id ?? ""),
+          ];
+          setMesaNomes(await carregarNomesMesas(mesaIds));
         } else if (mesSelecionado) {
           const mom = getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
           const [atual, ant] = await Promise.all([
@@ -188,6 +275,13 @@ export function useOverviewPrestadorSmOcr(opts: {
           setSinaisAnt(ant.sinais);
           setTicketsAtual(atual.tickets);
           setTicketsAnt(ant.tickets);
+          const mesaIds = [
+            ...atual.sinais.map((s) => s.mesa_id ?? ""),
+            ...atual.tickets.map((t) => t.mesa_id ?? ""),
+            ...ant.sinais.map((s) => s.mesa_id ?? ""),
+            ...ant.tickets.map((t) => t.mesa_id ?? ""),
+          ];
+          setMesaNomes(await carregarNomesMesas(mesaIds));
         }
       } catch (e) {
         console.error(e);
@@ -212,12 +306,12 @@ export function useOverviewPrestadorSmOcr(opts: {
   }, [enabled, idsKey, mesSelecionado, historico]);
 
   const sinaisEscopo = useMemo(
-    () => filtrarSinaisPorResolvers(sinaisAtual, funcionarioIds),
-    [sinaisAtual, funcionarioIds],
+    () => filtrarSinaisPorResolvers(sinaisAtual, funcionarioIds, staffIdTosPorFuncionario),
+    [sinaisAtual, funcionarioIds, staffIdTosPorFuncionario],
   );
   const sinaisEscopoAnt = useMemo(
-    () => filtrarSinaisPorResolvers(sinaisAnt, funcionarioIds),
-    [sinaisAnt, funcionarioIds],
+    () => filtrarSinaisPorResolvers(sinaisAnt, funcionarioIds, staffIdTosPorFuncionario),
+    [sinaisAnt, funcionarioIds, staffIdTosPorFuncionario],
   );
 
   const ticketsEscopo = useMemo(
@@ -256,8 +350,8 @@ export function useOverviewPrestadorSmOcr(opts: {
     [sinaisEscopo, ticketsEscopo],
   );
   const porEstudio = useMemo(
-    () => agregarSmOcrPorEstudio(sinaisEscopo, ticketsEscopo, estudiosNome),
-    [sinaisEscopo, ticketsEscopo, estudiosNome],
+    () => agregarSmOcrPorEstudio(sinaisEscopo, ticketsEscopo, estudiosNome, mesaNomes),
+    [sinaisEscopo, ticketsEscopo, estudiosNome, mesaNomes],
   );
   const porPrestador = useMemo(
     () =>
@@ -267,8 +361,16 @@ export function useOverviewPrestadorSmOcr(opts: {
         prestadores,
         funcionarioIdPorProfile,
         funcionarioIdPorNome,
+        funcionarioIdPorTos,
       ),
-    [sinaisEscopo, ticketsEscopo, prestadores, funcionarioIdPorProfile, funcionarioIdPorNome],
+    [
+      sinaisEscopo,
+      ticketsEscopo,
+      prestadores,
+      funcionarioIdPorProfile,
+      funcionarioIdPorNome,
+      funcionarioIdPorTos,
+    ],
   );
   const porDia = useMemo(
     () => agregarSmOcrPorDia(sinaisEscopo, ticketsEscopo),

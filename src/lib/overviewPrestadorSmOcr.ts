@@ -73,16 +73,29 @@ function mesaKey(r: SmSinalRow): string {
   return `t:${(r.table_id ?? "").trim() || "?"}`;
 }
 
-/** Filtra sinais do SM (resolver) no escopo. */
+/**
+ * Filtra sinais do SM (resolver) no escopo.
+ * Aceita `resolver_funcionario_id` e, em fallback, `resolver_id` = ID TOS (`staff_id_tos`).
+ */
 export function filtrarSinaisPorResolvers(
   rows: SmSinalRow[],
   funcionarioIds: string[],
+  staffIdTosPorFuncionario?: Map<string, string>,
 ): SmSinalRow[] {
-  const set = new Set(funcionarioIds.map((x) => x.trim()).filter(Boolean));
-  if (set.size === 0) return [];
+  const setFunc = new Set(funcionarioIds.map((x) => x.trim()).filter(Boolean));
+  if (setFunc.size === 0) return [];
+  const setTos = new Set<string>();
+  if (staffIdTosPorFuncionario) {
+    for (const fid of setFunc) {
+      const tos = (staffIdTosPorFuncionario.get(fid) ?? "").trim().toLowerCase();
+      if (tos) setTos.add(tos);
+    }
+  }
   return rows.filter((r) => {
-    const id = (r.resolver_funcionario_id ?? "").trim();
-    return id && set.has(id);
+    const fid = (r.resolver_funcionario_id ?? "").trim();
+    if (fid && setFunc.has(fid)) return true;
+    const tos = (r.resolver_id ?? "").trim().toLowerCase();
+    return Boolean(tos && setTos.has(tos));
   });
 }
 
@@ -160,9 +173,20 @@ export function agregarSmOcrPorEstudio(
   sinais: SmSinalRow[],
   tickets: EstudioIncidenteRow[],
   estudioNomePorSlug: Record<string, string>,
+  /** Nomes de mesa do cadastro (`mesas_spin_cadastro.id` → rótulo). */
+  mesaNomePorId?: Record<string, string>,
 ): SmOcrEstudioLinha[] {
+  type MesaAcc = {
+    key: string;
+    label: string;
+    mesaId: string | null;
+    tableId: string;
+    sinais: SmSinalRow[];
+    tickets: number;
+  };
+
   const sinaisPorEst = new Map<string, SmSinalRow[]>();
-  const ticketsPorEst = new Map<string, number>();
+  const ticketsPorEst = new Map<string, EstudioIncidenteRow[]>();
   for (const r of sinais) {
     const slug = (r.estudio_slug ?? "").trim() || "_sem_estudio";
     const list = sinaisPorEst.get(slug) ?? [];
@@ -171,50 +195,60 @@ export function agregarSmOcrPorEstudio(
   }
   for (const r of tickets) {
     const slug = (r.estudio_slug ?? "").trim() || "_sem_estudio";
-    ticketsPorEst.set(slug, (ticketsPorEst.get(slug) ?? 0) + 1);
+    const list = ticketsPorEst.get(slug) ?? [];
+    list.push(r);
+    ticketsPorEst.set(slug, list);
   }
   const slugs = new Set([...sinaisPorEst.keys(), ...ticketsPorEst.keys()]);
   const out: SmOcrEstudioLinha[] = [];
   for (const slug of slugs) {
     const sinaisEst = sinaisPorEst.get(slug) ?? [];
-    const ticketsEst = ticketsPorEst.get(slug) ?? 0;
-    const porMesa = new Map<string, SmSinalRow[]>();
-    for (const s of sinaisEst) {
-      const mk = mesaKey(s);
-      const list = porMesa.get(mk) ?? [];
-      list.push(s);
-      porMesa.set(mk, list);
-    }
-    // Tickets sem mesa no drilldown de sinais — agrupa em linha “Tickets (sem sinal)” se houver tickets sem mesa match
-    const mesas: SmOcrMesaLinha[] = [...porMesa.entries()]
-      .map(([mk, list]) => {
-        const sample = list[0]!;
-        return {
-          key: mk,
-          label: mesaLabel(sample),
-          mesaId: (sample.mesa_id ?? "").trim() || null,
-          tableId: (sample.table_id ?? "").trim(),
-          ...metricasDeSinaisETickets(list, 0),
-        };
-      })
-      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    const ticketsEstList = ticketsPorEst.get(slug) ?? [];
+    const ticketsEst = ticketsEstList.length;
+    const mesasMap = new Map<string, MesaAcc>();
 
-    // Distribui tickets por mesa_id quando possível
-    const ticketsPorMesa = new Map<string, number>();
+    const ensureMesa = (key: string, label: string, mesaId: string | null, tableId: string) => {
+      let row = mesasMap.get(key);
+      if (!row) {
+        row = { key, label, mesaId, tableId, sinais: [], tickets: 0 };
+        mesasMap.set(key, row);
+      }
+      return row;
+    };
+
+    for (const s of sinaisEst) {
+      const mid = (s.mesa_id ?? "").trim();
+      const mk = mesaKey(s);
+      const labelFromCadastro = mid && mesaNomePorId?.[mid] ? mesaNomePorId[mid]! : null;
+      const row = ensureMesa(mk, labelFromCadastro ?? mesaLabel(s), mid || null, (s.table_id ?? "").trim());
+      row.sinais.push(s);
+    }
+
     let ticketsSemMesa = 0;
-    for (const t of tickets) {
-      const tSlug = (t.estudio_slug ?? "").trim() || "_sem_estudio";
-      if (tSlug !== slug) continue;
+    for (const t of ticketsEstList) {
       const mid = (t.mesa_id ?? "").trim();
       if (!mid) {
         ticketsSemMesa += 1;
         continue;
       }
-      ticketsPorMesa.set(mid, (ticketsPorMesa.get(mid) ?? 0) + 1);
+      const label =
+        (mesaNomePorId?.[mid] ?? "").trim() ||
+        (t.mesa_label ?? "").trim() ||
+        `Mesa ${mid.slice(0, 8)}`;
+      const row = ensureMesa(mid, label, mid, "");
+      row.tickets += 1;
     }
-    for (const m of mesas) {
-      if (m.mesaId) m.tickets = ticketsPorMesa.get(m.mesaId) ?? 0;
-    }
+
+    const mesas: SmOcrMesaLinha[] = [...mesasMap.values()]
+      .map((m) => ({
+        key: m.key,
+        label: m.label,
+        mesaId: m.mesaId,
+        tableId: m.tableId,
+        ...metricasDeSinaisETickets(m.sinais, m.tickets),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+
     if (ticketsSemMesa > 0) {
       mesas.push({
         key: `${slug}:tickets-sem-mesa`,
@@ -249,10 +283,15 @@ export function agregarSmOcrPorPrestador(
   prestadores: { id: string; nome: string }[],
   funcionarioIdPorProfile: Map<string, string>,
   funcionarioIdPorNome: Map<string, string>,
+  funcionarioIdPorTos?: Map<string, string>,
 ): SmOcrPrestadorLinha[] {
   const sinaisPor = new Map<string, SmSinalRow[]>();
   for (const r of sinais) {
-    const id = (r.resolver_funcionario_id ?? "").trim();
+    let id = (r.resolver_funcionario_id ?? "").trim();
+    if (!id && funcionarioIdPorTos) {
+      const tos = (r.resolver_id ?? "").trim().toLowerCase();
+      id = (tos && funcionarioIdPorTos.get(tos)) || "";
+    }
     if (!id) continue;
     const list = sinaisPor.get(id) ?? [];
     list.push(r);
