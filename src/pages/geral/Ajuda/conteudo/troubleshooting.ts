@@ -212,14 +212,19 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Métricas de escala e presença dependem de escala publicada e registros no Calendário. Verifique se o prestador ou time selecionado tem turnos no período e se justificativas pendentes não estão bloqueando o fechamento.",
       },
       {
-        subtitulo: "Não vejo a aba KPIs de Mesa?",
+        subtitulo: "Não vejo a aba KPIs de Mesa ou KPIs de OCR?",
         texto:
-          "A aba aparece conforme o time: **Game Presenter** e **Shuffler** (conteúdo completo), **Service Manager** (placeholder) e **não** aparece para **Shift Leader**. Com Ver = Próprios, o time vem do Organograma do seu cadastro.",
+          "A segunda aba aparece conforme o time: **Game Presenter** e **Shuffler** → **KPIs de Mesa**; **Service Manager** → **KPIs de OCR**; **Shift Leader** → a aba não aparece. Com Ver = Próprios, o time vem do Organograma do seu cadastro.",
       },
       {
         subtitulo: "KPIs de Mesa sem números?",
         texto:
           "Os cards e tabelas aparecem mesmo sem registros (valores em 0). Confirme o mês no carrossel e se o filtro **Time** / **Staff** cobre o prestador certo. **Game Presenter:** rodadas e tempos vêm do Grafana (`gp_kpi_diario`) — o prestador precisa de **ID operacional** em Gestão de Staff. **Incidentes** (GP e Shuffler) usam a data da rodada, com o mesmo fechamento **D-1** das rodadas: o que foi registrado hoje só aparece amanhã nesta aba (na página Incidentes continua visível no dia). Sem linhas de detalhe diário: \"Sem dados para o período selecionado.\"",
+      },
+      {
+        subtitulo: "KPIs de OCR sem números?",
+        texto:
+          "Confirme o mês (ou Histórico), o time **Service Manager** e o Staff. **Sinais** usam os atendimentos resolvidos pelo SM; **Tickets** usam incidentes em que o SM é o **relator**. Sem Staff, o consolidado cobre todos os SMs do time. Os números fecham em **D-1**. Se o SM não tiver ID TOS / vínculo de e-mail com o login, o de-para de sinais ou tickets pode ficar incompleto — confira Gestão de Staff. Sem linhas: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -669,7 +674,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Sinais está vazia?",
         texto:
-          "Confirme o mês (ou **Histórico**), o filtro de **Estúdio** e, se visíveis, **Staff** (SM) e **Relator**. A busca também restringe a tabela. Os sinais vêm da sincronização com o Grafana — se o período deveria ter dados e a lista continua vazia, entre em contato com o suporte.",
+          "Confirme o mês (ou **Histórico**), o filtro de **Estúdio** e, se visíveis, **Staff** (SM) e **Relator**. A busca também restringe os KPIs e o Detalhamento Diário. Os sinais vêm da sincronização com o Grafana — se o período deveria ter dados e a lista continua vazia, entre em contato com o suporte.",
       },
       {
         subtitulo: "O botão Novo Incidente não aparece?",

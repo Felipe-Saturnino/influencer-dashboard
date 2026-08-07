@@ -25,6 +25,8 @@ type Props = {
   aba: OverviewPrestadorTab;
   onSelectAba: (tab: OverviewPrestadorTab) => void;
   showAbaKpisMesa: boolean;
+  /** Rótulo da 2ª aba — «KPIs de Mesa» (GP/Shuffler) ou «KPIs de OCR» (Service Manager). */
+  labelAbaKpis?: string;
   historico: boolean;
   onToggleHistorico: () => void;
   labelCarrossel: string;
@@ -44,7 +46,6 @@ type Props = {
 };
 
 const TAB_ESCALA = { key: "escala" as const, label: "Escala", icon: CalendarRange };
-const TAB_KPIS = { key: "kpis_mesa" as const, label: "KPIs de Mesa", icon: LayoutGrid };
 
 export function OverviewPrestadorFiltroBar({
   brand,
@@ -52,6 +53,7 @@ export function OverviewPrestadorFiltroBar({
   aba,
   onSelectAba,
   showAbaKpisMesa,
+  labelAbaKpis = "KPIs de Mesa",
   historico,
   onToggleHistorico,
   labelCarrossel,
@@ -69,7 +71,9 @@ export function OverviewPrestadorFiltroBar({
   onFiltroStaffChange,
   loading,
 }: Props) {
-  const tabs = showAbaKpisMesa ? [TAB_ESCALA, TAB_KPIS] : [TAB_ESCALA];
+  const tabs = showAbaKpisMesa
+    ? [TAB_ESCALA, { key: "kpis_mesa" as const, label: labelAbaKpis, icon: LayoutGrid }]
+    : [TAB_ESCALA];
 
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>

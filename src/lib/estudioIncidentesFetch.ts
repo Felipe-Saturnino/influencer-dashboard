@@ -37,6 +37,22 @@ export async function fetchEstudioIncidentesPeriodo(opts: {
   );
 }
 
+/** Incidentes no período por `data_rodada` (sem filtro de prestador) — Overview Prestador OCR. */
+export async function fetchEstudioIncidentesPorDataRodada(opts: {
+  dataIni: string;
+  dataFim: string;
+}): Promise<EstudioIncidenteRow[]> {
+  return fetchAllPages<EstudioIncidenteRow>(async (from, to) =>
+    supabase
+      .from("estudio_incidentes")
+      .select(INCIDENTE_SELECT)
+      .gte("data_rodada", opts.dataIni)
+      .lte("data_rodada", opts.dataFim)
+      .order("data_rodada", { ascending: false })
+      .range(from, to),
+  );
+}
+
 /** Incidentes de um prestador no período, filtrados por `data_rodada` (alinhado ao dia operacional). */
 export async function fetchEstudioIncidentesPrestadorPeriodo(opts: {
   prestadorId: string;

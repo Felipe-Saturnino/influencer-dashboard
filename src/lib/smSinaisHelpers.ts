@@ -1,32 +1,5 @@
-import { labelPrestadorIncidente, labelTipoJogoIncidente } from "./estudioIncidentesHelpers";
+import { labelPrestadorIncidente } from "./estudioIncidentesHelpers";
 import type { SmSinalRow } from "./smSinaisTypes";
-
-/** Relógio de parede America/Sao_Paulo (`*_at_brt` — timestamp sem fuso). */
-export function formatTimestampBrtWall(ts: string | null | undefined): string {
-  if (!ts) return "—";
-  const m = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/.exec(ts.trim());
-  if (!m) return "—";
-  const sec = m[6] ?? "00";
-  return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}:${sec}`;
-}
-
-/** Instantes UTC (`*_at` timestamptz) para o modal Ver. */
-export function formatTimestampUtc(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  const s = d.toLocaleString("pt-BR", {
-    timeZone: "UTC",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  return `${s} UTC`;
-}
 
 export function msEntre(inicioIso: string | null | undefined, fimIso: string | null | undefined): number | null {
   if (!inicioIso || !fimIso) return null;
@@ -71,33 +44,6 @@ export function mediaMs(valores: Array<number | null>): number | null {
   return sum / n;
 }
 
-export function labelSmSinal(row: SmSinalRow): string {
-  return (row.signal_type ?? "").trim() || "—";
-}
-
-export function labelJogoSinal(row: SmSinalRow): string {
-  const fromMesa = row.mesa?.tipo_jogo?.trim();
-  const raw = fromMesa || (row.game_type ?? "").trim();
-  if (!raw) return "—";
-  return labelTipoJogoIncidente(raw);
-}
-
-export function labelEstudioSinal(row: SmSinalRow): string {
-  const nome = (row.estudio?.nome ?? "").trim();
-  if (nome) return nome;
-  return (row.estudio_slug ?? "").trim() || "—";
-}
-
-export function labelMesaSinal(row: SmSinalRow): string {
-  const numero = (row.mesa?.numero_mesa ?? "").trim();
-  const nome = (row.mesa?.nome_mesa ?? "").trim();
-  if (numero || nome) {
-    const n = numero ? numero.padStart(2, "0") : "—";
-    return `${n} — ${nome || "—"}`;
-  }
-  return (row.table_id ?? "").trim() || "—";
-}
-
 /** SM que atendeu (resolver). */
 export function labelSmAtendente(row: SmSinalRow): string {
   const emb = row.resolver;
@@ -136,6 +82,37 @@ export function calcularKpisSinais(rows: SmSinalRow[]): SmSinalKpis {
     tmaAtendimentoMs: mediaMs(rows.map(tmaAtendimentoMs)),
     tmaResolucaoMs: mediaMs(rows.map(tmaResolucaoMs)),
   };
+}
+
+/** Agregação diária (`dia_brt`) para o bloco Detalhamento Diário. */
+export type SmSinalDiaAgg = {
+  diaBrt: string;
+  sinais: number;
+  tmaTotalMs: number | null;
+  tmaAtendimentoMs: number | null;
+  tmaResolucaoMs: number | null;
+};
+
+export function agregarSinaisPorDia(rows: SmSinalRow[]): SmSinalDiaAgg[] {
+  const byDia = new Map<string, SmSinalRow[]>();
+  for (const r of rows) {
+    const dia = (r.dia_brt ?? "").slice(0, 10);
+    if (!dia) continue;
+    const list = byDia.get(dia);
+    if (list) list.push(r);
+    else byDia.set(dia, [r]);
+  }
+  const out: SmSinalDiaAgg[] = [];
+  for (const [diaBrt, list] of byDia) {
+    out.push({
+      diaBrt,
+      sinais: list.length,
+      tmaTotalMs: mediaMs(list.map(tmaTotalMs)),
+      tmaAtendimentoMs: mediaMs(list.map(tmaAtendimentoMs)),
+      tmaResolucaoMs: mediaMs(list.map(tmaResolucaoMs)),
+    });
+  }
+  return out;
 }
 
 /** Valor numérico para MoM no KpiCard (segundos; 0 se sem amostra). */

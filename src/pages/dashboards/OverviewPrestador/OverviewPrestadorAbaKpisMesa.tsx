@@ -275,18 +275,7 @@ export function OverviewPrestadorAbaKpisMesa({
   const pageBox = getPageContentBoxStyle(brand, t);
   const isDark = Boolean(t.isDark);
 
-  if (mode === "placeholder") {
-    return (
-      <div style={pageBox}>
-        <SectionTitle sub="em desenvolvimento">KPIs de Mesa</SectionTitle>
-        <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          Conteúdo em desenvolvimento.
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === "hidden") return null;
+  if (mode === "hidden" || mode === "sm") return null;
 
   if (funcionarioIds.length === 0) {
     return (

@@ -948,13 +948,19 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Overview Prestador",
         definicao:
-          "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio. A aba **KPIs de Mesa** cobre Game Presenter (Grafana + incidentes) e Shuffler (incidentes).",
+          "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio. A aba **KPIs de Mesa** cobre Game Presenter (Grafana + incidentes) e Shuffler (incidentes); a aba **KPIs de OCR** cobre Service Manager (sinais + tickets como relator).",
         referencia: "Overview Prestador",
       },
       {
         termo: "KPIs de Mesa",
         definicao:
-          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Velocidade, Reação, Bola/Cilindro (só Roleta) e incidentes. Shuffler: só incidentes (sem Roleta). Service Manager: placeholder; Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
+          "Aba do Overview Prestador com performance na mesa e incidentes. Game Presenter: Rodadas, Velocidade, Reação, Bola/Cilindro (só Roleta) e incidentes. Shuffler: só incidentes (sem Roleta). Shift Leader: aba oculta. Colunas de incidentes: Casos, Erros (Erro + Não Avisados + Avisado/Não Resolvido) e Outros (Oculto + Avisado/Resolvido).",
+        referencia: "Overview Prestador",
+      },
+      {
+        termo: "KPIs de OCR",
+        definicao:
+          "Aba do Overview Prestador para o time Service Manager: Sinais atendidos, TMAs (Total, Atendimento, Resolução) e Tickets em que o SM é o relator. Staff vazio = consolidado do time; Staff ou Próprios = só aquele SM.",
         referencia: "Overview Prestador",
       },
       {

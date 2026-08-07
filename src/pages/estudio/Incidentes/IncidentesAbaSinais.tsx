@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { Activity, Clock, Eye, Loader2, Timer } from "lucide-react";
+import { Activity, Clock, Loader2, Timer } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
-import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
-import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import {
   FiltroEntidadeBarSelect,
   KpiCard,
@@ -21,78 +19,38 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
-import { labelPrestadorIncidente, normalizarTipoJogoIncidente } from "../../../lib/estudioIncidentesHelpers";
+import { formatDataIsoBr, labelPrestadorIncidente } from "../../../lib/estudioIncidentesHelpers";
 import { fetchSmSinaisPeriodo, fetchStaffFiltroSinaisSm } from "../../../lib/smSinaisFetch";
 import type { SmSinalRow, SmSinalStaffOption } from "../../../lib/smSinaisTypes";
 import {
+  agregarSinaisPorDia,
   calcularKpisSinais,
   fmtDuracaoMs,
-  formatTimestampBrtWall,
   kpiMsParaComparativo,
-  labelEstudioSinal,
-  labelJogoSinal,
   labelRelatorSinal,
   labelSmAtendente,
-  labelSmSinal,
-  tmaAtendimentoMs,
-  tmaResolucaoMs,
-  tmaTotalMs,
+  type SmSinalDiaAgg,
 } from "../../../lib/smSinaisHelpers";
-import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
-import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
-import { ModalVerSinal } from "./ModalVerSinal";
 
 const ERRO_CARREGAR =
   "Não foi possível carregar os sinais. Se o problema persistir, entre em contato com o suporte.";
 
-type SortCol =
-  | "issued"
-  | "tmaAtend"
-  | "taken"
-  | "tmaRes"
-  | "resolved"
-  | "tmaTotal"
-  | "sinal"
-  | "jogo"
-  | "estudio"
-  | "sm";
+type SortCol = "data" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes";
 
-function gameIdentityKeyFromJogo(jogo: string) {
-  const k = normalizarTipoJogoIncidente(jogo);
-  const candidato = k === "fb" ? "futebol_brasileiro" : k;
-  return isGameIdentityKey(candidato) ? candidato : null;
-}
-
-function labelMesaBusca(r: SmSinalRow): string {
-  const n = (r.mesa?.numero_mesa ?? "").trim();
-  const nome = (r.mesa?.nome_mesa ?? "").trim();
-  return `${n} ${nome} ${r.table_id}`;
-}
-
-function sortSinais(rows: SmSinalRow[], col: SortCol, dir: SortDir): SmSinalRow[] {
+function sortDias(rows: SmSinalDiaAgg[], col: SortCol, dir: SortDir): SmSinalDiaAgg[] {
   const copy = [...rows];
   copy.sort((a, b) => {
     switch (col) {
-      case "issued":
-        return compareLocaleTexto(a.issued_at, b.issued_at, dir);
-      case "taken":
-        return compareLocaleTexto(a.taken_at ?? "", b.taken_at ?? "", dir);
-      case "resolved":
-        return compareLocaleTexto(a.timer_stopped_at, b.timer_stopped_at, dir);
-      case "tmaAtend":
-        return compareNumber(tmaAtendimentoMs(a) ?? -1, tmaAtendimentoMs(b) ?? -1, dir);
-      case "tmaRes":
-        return compareNumber(tmaResolucaoMs(a) ?? -1, tmaResolucaoMs(b) ?? -1, dir);
+      case "data":
+        return compareLocaleTexto(a.diaBrt, b.diaBrt, dir);
+      case "sinais":
+        return compareNumber(a.sinais, b.sinais, dir);
       case "tmaTotal":
-        return compareNumber(tmaTotalMs(a) ?? -1, tmaTotalMs(b) ?? -1, dir);
-      case "sinal":
-        return compareLocaleTexto(labelSmSinal(a), labelSmSinal(b), dir);
-      case "jogo":
-        return compareLocaleTexto(labelJogoSinal(a), labelJogoSinal(b), dir);
-      case "estudio":
-        return compareLocaleTexto(labelEstudioSinal(a), labelEstudioSinal(b), dir);
-      case "sm":
-        return compareLocaleTexto(labelSmAtendente(a), labelSmAtendente(b), dir);
+        return compareNumber(a.tmaTotalMs ?? -1, b.tmaTotalMs ?? -1, dir);
+      case "tmaAtend":
+        return compareNumber(a.tmaAtendimentoMs ?? -1, b.tmaAtendimentoMs ?? -1, dir);
+      case "tmaRes":
+        return compareNumber(a.tmaResolucaoMs ?? -1, b.tmaResolucaoMs ?? -1, dir);
       default:
         return 0;
     }
@@ -116,14 +74,13 @@ export function useIncidentesAbaSinais(opts: {
   const [busca, setBusca] = useState("");
   const [staffFiltroId, setStaffFiltroId] = useState("");
   const [relatorFiltroId, setRelatorFiltroId] = useState("");
-  const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "issued", dir: "desc" });
+  const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
 
   const [rowsAtual, setRowsAtual] = useState<SmSinalRow[]>([]);
   const [rowsAnterior, setRowsAnterior] = useState<SmSinalRow[]>([]);
   const [staffOptions, setStaffOptions] = useState<SmSinalStaffOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [verSinal, setVerSinal] = useState<SmSinalRow | null>(null);
 
   const carregar = useCallback(async () => {
     if (!opts.active) return;
@@ -206,25 +163,42 @@ export function useIncidentesAbaSinais(opts: {
   const rowsAtualEscopo = useMemo(() => aplicarFiltros(rowsAtual), [rowsAtual, aplicarFiltros]);
   const rowsAnteriorEscopo = useMemo(() => aplicarFiltros(rowsAnterior), [rowsAnterior, aplicarFiltros]);
 
-  const kpiAtual = useMemo(() => calcularKpisSinais(rowsAtualEscopo), [rowsAtualEscopo]);
-  const kpiAnterior = useMemo(() => calcularKpisSinais(rowsAnteriorEscopo), [rowsAnteriorEscopo]);
+  const rowsBusca = useMemo(
+    () =>
+      rowsAtualEscopo.filter((r) =>
+        textoContemBuscaEmAlgum(
+          busca,
+          r.signal_id,
+          r.signal_type,
+          r.table_id,
+          r.estudio_slug ?? "",
+          labelSmAtendente(r),
+          labelRelatorSinal(r),
+        ),
+      ),
+    [rowsAtualEscopo, busca],
+  );
 
-  const rowsTabela = useMemo(() => {
-    const filtradas = rowsAtualEscopo.filter((r) =>
+  const kpiAtual = useMemo(() => calcularKpisSinais(rowsBusca), [rowsBusca]);
+  const kpiAnterior = useMemo(() => {
+    const ant = rowsAnteriorEscopo.filter((r) =>
       textoContemBuscaEmAlgum(
         busca,
         r.signal_id,
         r.signal_type,
         r.table_id,
-        labelMesaBusca(r),
+        r.estudio_slug ?? "",
         labelSmAtendente(r),
         labelRelatorSinal(r),
-        labelJogoSinal(r),
-        labelEstudioSinal(r),
       ),
     );
-    return sortSinais(filtradas, sort.col, sort.dir);
-  }, [rowsAtualEscopo, busca, sort]);
+    return calcularKpisSinais(ant);
+  }, [rowsAnteriorEscopo, busca]);
+
+  const rowsTabela = useMemo(
+    () => sortDias(agregarSinaisPorDia(rowsBusca), sort.col, sort.dir),
+    [rowsBusca, sort],
+  );
 
   function onSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" }));
@@ -366,7 +340,7 @@ export function useIncidentesAbaSinais(opts: {
         </div>
 
         <div style={getPageContentBoxStyle(brand, t)}>
-          <SectionTitle sub="Sinais resolvidos no período">Sinais</SectionTitle>
+          <SectionTitle sub="dia a dia">Detalhamento Diário</SectionTitle>
           {rowsTabela.length === 0 ? (
             <div
               style={{
@@ -381,76 +355,34 @@ export function useIncidentesAbaSinais(opts: {
             </div>
           ) : (
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-              <table style={getDataTableStyle({ minWidth: 1280 })}>
-                <caption style={{ display: "none" }}>Sinais do período com TMA e Service Manager</caption>
+              <table style={getDataTableStyle({ minWidth: 640 })}>
+                <caption style={{ display: "none" }}>Sinais e TMA por dia America/Sao_Paulo</caption>
                 <thead>
                   <tr>
-                    {th("issued", "Data/Hora do Sinal", dataTable.thHeaderSticky)}
-                    {th("tmaAtend", "TMA de Atendimento")}
-                    {th("taken", "Data/Hora do Atendimento")}
-                    {th("tmaRes", "TMA de Resolução")}
-                    {th("resolved", "Data/Hora da Resolução")}
+                    {th("data", "Data", dataTable.thHeaderSticky)}
+                    {th("sinais", "Sinais")}
                     {th("tmaTotal", "TMA Total")}
-                    {th("sinal", "Sinal")}
-                    {th("jogo", "Jogo")}
-                    {th("estudio", "Estúdio")}
-                    {th("sm", "SM")}
-                    <th scope="col" style={dataTable.thHeader}>
-                      Ações
-                    </th>
+                    {th("tmaAtend", "TMA de Atendimento")}
+                    {th("tmaRes", "TMA de Resolução")}
                   </tr>
                 </thead>
                 <tbody>
-                  {rowsTabela.map((r, i) => {
-                    const jogoLabel = labelJogoSinal(r);
-                    const gameKey = gameIdentityKeyFromJogo(r.mesa?.tipo_jogo || r.game_type || "");
-                    return (
-                      <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
-                        <td style={dataTable.tdSticky({ rowIndex: i })}>
-                          {formatTimestampBrtWall(r.issued_at_brt)}
-                        </td>
-                        <td style={dataTable.tdCenter}>{fmtDuracaoMs(tmaAtendimentoMs(r))}</td>
-                        <td style={dataTable.tdCenter}>{formatTimestampBrtWall(r.taken_at_brt)}</td>
-                        <td style={dataTable.tdCenter}>{fmtDuracaoMs(tmaResolucaoMs(r))}</td>
-                        <td style={dataTable.tdCenter}>{formatTimestampBrtWall(r.timer_stopped_at_brt)}</td>
-                        <td style={dataTable.tdCenter}>{fmtDuracaoMs(tmaTotalMs(r))}</td>
-                        <td style={dataTable.tdCenter}>{labelSmSinal(r)}</td>
-                        <td style={dataTable.tdCenter}>
-                          {gameKey ? (
-                            <span
-                              style={{
-                                ...getGameTagChipStyle(gameKey, t.isDark),
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                justifyContent: "center",
-                              }}
-                            >
-                              {GAME_IDENTITY_ICONS[gameKey]}
-                              {jogoLabel}
-                            </span>
-                          ) : (
-                            jogoLabel
-                          )}
-                        </td>
-                        <td style={dataTable.tdCenter}>{labelEstudioSinal(r)}</td>
-                        <td style={dataTable.tdCenter}>{labelSmAtendente(r)}</td>
-                        <td style={dataTable.tdCenter}>
-                          <div style={{ display: "flex", justifyContent: "center" }}>
-                            <BtnIconeAcaoLinha label={tooltipAcao("Ver Sinal")} onClick={() => setVerSinal(r)}>
-                              <Eye size={13} aria-hidden />
-                            </BtnIconeAcaoLinha>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {rowsTabela.map((row, i) => (
+                    <tr key={row.diaBrt} style={{ background: dataTable.zebraRow(i) }}>
+                      <td style={dataTable.tdSticky({ rowIndex: i, fontWeight: 600 })}>
+                        {formatDataIsoBr(row.diaBrt)}
+                      </td>
+                      <td style={dataTable.tdCenter}>{row.sinais.toLocaleString("pt-BR")}</td>
+                      <td style={dataTable.tdCenter}>{fmtDuracaoMs(row.tmaTotalMs)}</td>
+                      <td style={dataTable.tdCenter}>{fmtDuracaoMs(row.tmaAtendimentoMs)}</td>
+                      <td style={dataTable.tdCenter}>{fmtDuracaoMs(row.tmaResolucaoMs)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
         </div>
-        {verSinal ? <ModalVerSinal sinal={verSinal} onClose={() => setVerSinal(null)} /> : null}
       </div>
     );
   }

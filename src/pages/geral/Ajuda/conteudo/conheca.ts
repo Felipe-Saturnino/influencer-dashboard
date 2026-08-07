@@ -203,12 +203,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos times de estúdio. A aba **Escala** está disponível para todos os times; a aba **KPIs de Mesa** aparece para **Game Presenter** e **Shuffler** (layout de incidentes), **Service Manager** (placeholder) e fica oculta para **Shift Leader**.",
+          "O Overview Prestador consolida escala, presença, absenteísmo e movimentações de turno dos times de estúdio. A aba **Escala** está disponível para todos os times; a segunda aba aparece como **KPIs de Mesa** para **Game Presenter** e **Shuffler**, como **KPIs de OCR** para **Service Manager**, e fica oculta para **Shift Leader**.",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual (na Escala e nos KPIs de Mesa).\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
+          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual (na Escala, nos KPIs de Mesa e nos KPIs de OCR).\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
       },
       {
         subtitulo: "Visão de time vs individual",
@@ -238,7 +238,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de Mesa",
         texto:
-          "A aba **KPIs de Mesa** depende do time:\n\n— **Game Presenter:** cards de Rodadas, médias por jogo (Blackjack, Baccarat, Futebol Brasileiro, Roleta) e Incidentes; **Por Jogo** com Rodadas, Velocidade, Reação e Incidentes — **Bola e Cilindro só na Roleta** (nos demais jogos aparece «—»); **Detalhamento Diário** com Data, Rodadas, Total de Incidentes, Casos, Erros e Outros. Na visão de time (Staff vazio), os totais somam o time, as médias usam as amostras do time e há **Pontos de atenção** por prestador.\n\n— **Shuffler:** cards e tabelas só de incidentes (Incidentes, Casos, Erros, Outros), sem Roleta em Por Jogo; na visão de time há Pontos de atenção.\n\n— **Service Manager:** placeholder («Conteúdo em desenvolvimento.»).\n\n— **Shift Leader:** a aba não aparece.\n\n**Erros** = Erro + Não Avisados + Avisado/Não Resolvido. **Outros** = Oculto + Avisado/Resolvido (substitui a antiga coluna Graves). Período = mês civil completo (sem recorte MTD), com fechamento **D-1**: rodadas/Grafana e Incidentes só incluem até o dia anterior (Incidentes cadastrados hoje entram amanhã). Sem linhas: \"Sem dados para o período selecionado.\"",
+          "A aba **KPIs de Mesa** (Game Presenter e Shuffler) depende do time:\n\n— **Game Presenter:** cards de Rodadas, médias por jogo (Blackjack, Baccarat, Futebol Brasileiro, Roleta) e Incidentes; **Por Jogo** com Rodadas, Velocidade, Reação e Incidentes — **Bola e Cilindro só na Roleta** (nos demais jogos aparece «—»); **Detalhamento Diário** com Data, Rodadas, Total de Incidentes, Casos, Erros e Outros. Na visão de time (Staff vazio), os totais somam o time, as médias usam as amostras do time e há **Pontos de atenção** por prestador.\n\n— **Shuffler:** cards e tabelas só de incidentes (Incidentes, Casos, Erros, Outros), sem Roleta em Por Jogo; na visão de time há Pontos de atenção.\n\n**Erros** = Erro + Não Avisados + Avisado/Não Resolvido. **Outros** = Oculto + Avisado/Resolvido. Período = mês civil completo (sem recorte MTD), com fechamento **D-1**: rodadas/Grafana e Incidentes só incluem até o dia anterior. Sem linhas: \"Sem dados para o período selecionado.\"",
+      },
+      {
+        subtitulo: "Aba KPIs de OCR",
+        texto:
+          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos (`sm_sinais`) pelo SM selecionado — ou por todos os SMs do time quando o Staff está vazio. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); sem Staff, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas), **Pontos de atenção** (por prestador, também na visão individual) e **Detalhamento Diário**. Período = mês civil completo com fechamento **D-1**. Shift Leader não tem esta aba.",
       },
     ],
   },
@@ -747,7 +752,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Sinais",
         texto:
-          "A aba **Sinais** mostra os sinais resolvidos pelos Service Managers (origem Grafana). No bloco de filtros: busca, **Todos Staff** (SM que atendeu) e **Todos Relatores** (quem abriu o sinal). Os KPIs consolidam, no período e com os filtros aplicados: **Totais de Sinais**, **TMA Total** (Issued → Resolved), **TMA de Atendimento** (Issued → Taken) e **TMA de Resolução** (Taken → Resolved), cada um com comparativo do mês anterior.\n\nA tabela lista data/hora em America/Sao_Paulo, TMAs, motivo do sinal, jogo, estúdio e SM. O ícone **Ver** abre o detalhe com horários em UTC, relator, atendente, mesa e conclusão da resolução.",
+          "A aba **Sinais** mostra os sinais resolvidos pelos Service Managers (origem Grafana). No bloco de filtros: busca, **Todos Staff** (SM que atendeu) e **Todos Relatores** (quem abriu o sinal). Os KPIs consolidam, no período e com os filtros aplicados: **Totais de Sinais**, **TMA Total** (Issued → Resolved), **TMA de Atendimento** (Issued → Taken) e **TMA de Resolução** (Taken → Resolved), cada um com comparativo do mês anterior.\n\nO **Detalhamento Diário** resume por dia (America/Sao_Paulo): quantidade de sinais e as médias de TMA Total, de Atendimento e de Resolução.",
       },
       {
         subtitulo: "Registrar um incidente",
