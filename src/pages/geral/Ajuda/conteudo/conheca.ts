@@ -476,17 +476,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Catálogo de **Game Presenters** (dealers) em operação no estúdio, sincronizado com RH. A operadora consulta especialidades, turno e estúdio e envia solicitações ao estúdio — não cadastra nem edita perfil aqui.\n\n**Fluxo:** RH cadastra e define a função em **Gestão de Prestadores** → gestor de estúdio configura perfil, estúdio e horários em **Gestão de Staff** → o card aparece aqui para a operadora vinculada ao estúdio.",
+          "Catálogo de **Game Presenters** (dealers) em operação, sincronizado com **Gestão de Staff**. A operadora consulta especialidades, turno e **estúdio** e envia solicitações — não cadastra nem edita perfil aqui.\n\n**Fluxo:** RH cadastra e define a função em **Gestão de Prestadores** → gestor configura perfil, estúdio e horários em **Gestão de Staff** → o card aparece aqui com o **mesmo estúdio** configurado no Staff (ex.: Sports Club mostra só a tag Sports Club).",
       },
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nAo lado do carrossel fica o filtro de **estúdio** (**Todos Estúdios** por padrão, com a opção **Nenhum estúdio** para dealers ainda sem vínculo). Perfis com escopo de um único estúdio já entram com ele selecionado, sem o agregador.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname.",
+          "O carrossel de turnos no topo da página filtra o elenco por período de trabalho — Manhã, Tarde ou Noite. Use as setas laterais para alternar o turno; o rótulo central mostra o turno ativo. Quando o rótulo exibe 'Todos os turnos', nenhum filtro de turno está aplicado.\n\nAo lado do carrossel fica o filtro de **estúdio** (**Todos Estúdios** por padrão, com a opção **Nenhum estúdio** para dealers ainda sem vínculo). Perfis Operador veem no filtro os estúdios ligados à sua operadora em Gestão de Estúdios — por exemplo, Blaze vê **Blaze** e **Sports Club** (network). Com um único estúdio no escopo, ele já entra selecionado.\n\nO bloco consolidado abaixo exibe o total de dealers que atendem aos filtros ativos, com chips de gênero (Feminino / Masculino) e jogo (Blackjack / Roleta / Baccarat / Futebol Brasileiro) para refinar ainda mais a listagem. Cada chip mostra a contagem parcial e pode ser ativado ou desativado com um clique.\n\nO campo de busca aceita nome real ou nickname.",
       },
       {
         subtitulo: "Cards de Dealers",
         texto:
-          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, tags dos jogos de especialidade, bio e, na base, as tags de gênero, **estúdio** e — quando houver vínculo — operadora.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, estúdio e bio do dealer.",
+          "Cada dealer é exibido em um card com foto (ou inicial quando não há foto), badges de status e VIP sobre a imagem, turno no rodapé da foto e, no corpo, nome artístico, nome real, tags dos jogos de especialidade, bio e, na base, as tags de gênero e **estúdio** (o mesmo definido em Gestão de Staff). Não há tag de operadora no card — o vínculo visível é o estúdio.\n\nQuando o dealer tem mais de uma foto cadastrada, setas de navegação aparecem sobre a imagem — use-as para ver todas as fotos do carrossel. O indicador de posição ('1 / 3', por exemplo) aparece no rodapé da foto.\n\nClique em Ver para abrir o perfil completo em modo somente leitura, incluindo gênero, turno, jogos, estúdio e bio do dealer.",
       },
       {
         subtitulo: "Solicitações ao Estúdio (perfil Operador)",
@@ -501,7 +501,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Visibilidade por Perfil",
         texto:
-          "— Gestor / Admin: visualização do elenco de todos os estúdios e do histórico de solicitações de todas as operadoras.\n— Operador: visualiza os dealers do estúdio que atende a sua operadora. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer, sempre restrito à própria operadora.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
+          "— Gestor / Admin: visualização do elenco de todos os estúdios e do histórico de solicitações de todas as operadoras.\n— Operador: visualiza os dealers dos **estúdios associados à sua operadora** (dedicado e network — ex.: Blaze + Sports Club). A tag do card indica em qual estúdio o GP está. Pode **Solicitar** troca ou feedback e abrir **Histórico** de solicitações por dealer, sempre restrito à própria operadora.\n— Executivo: visualização completa, sem ações de escrita nesta página.\n\nO botão Solicitar só aparece para perfil Operador com operadora ativa no escopo. O botão Histórico exige permissão de visualização na Central de Notificações.",
       },
     ],
   },
@@ -742,7 +742,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e KPIs",
         texto:
-          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período), o filtro de **Estúdio** e os seis cards de KPI (um por categoria) resumem a quantidade de incidentes do período e do escopo selecionado, comparando com o mês anterior.\n\nAs abas **Todos Times / Game Presenters / Shuffler** e o filtro de **Staff** restringem a lista e os KPIs a um time ou prestador específico. Usuários com permissão de Ver = Próprios não veem essas abas — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca localiza incidentes por protocolo, prestador, nickname ou mesa."
+          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período) e o filtro de **Estúdio**. As abas **Tickets** e **Sinais** organizam a página: em **Tickets** ficam os KPIs e a tabela de incidentes; em **Sinais** a área de sinais do Grafana ficará disponível em breve.\n\nNa aba Tickets, o filtro de **Time** (**Todos Times**, **Game Presenter** ou **Shuffler**) e os filtros de **Staff**, **Incidente**, **Tipo** e **Relator** restringem a lista e os KPIs. Usuários com permissão de Ver = Próprios não veem Staff e Relator — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca localiza incidentes por protocolo, prestador, nickname ou mesa."
+      },
+      {
+        subtitulo: "Aba Sinais",
+        texto:
+          "A aba **Sinais** receberá os dados captados do Grafana. Por enquanto aparece apenas a mensagem de conteúdo em desenvolvimento.",
       },
       {
         subtitulo: "Registrar um incidente",
@@ -810,6 +815,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         texto:
           "Lista e edita prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa — turnos, siglas e dados operacionais usados na escala e no calendário.",
+      },
+      {
+        subtitulo: "ID TOS (Service Manager)",
+        texto:
+          "No time **Service Manager**, o campo **ID TOS** guarda o UUID do colaborador no sistema TOS (Employee ID do Grafana / sinais). Esse valor liga os sinais atendidos ao cadastro do SM. Copie o UUID da coluna Employee ID no relatório S&SM do Grafana e cole aqui. O **ID operacional** continua sendo o Work ID usado por Game Presenters.",
       },
       {
         subtitulo: "Permissões",

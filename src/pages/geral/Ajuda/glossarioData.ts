@@ -647,7 +647,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Profissional de cassino ao vivo no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e o **estúdio** onde atua.",
         nota:
-          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil e estúdio em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página. O catálogo é filtrado por estúdio; a operadora entra apenas nas solicitações e no vínculo comercial.",
+          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil e estúdio em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página. O card espelha o estúdio do Staff (sem tag de operadora). O Operador vê os estúdios associados à sua parceira (dedicado e network) e filtra por eles; solicitações usam o vínculo comercial da operadora.",
         referencia: "Gestão de Dealers · Gestão de Staff · Gestão de Prestadores",
       },
       {
@@ -912,7 +912,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Gestão de Staff",
         definicao:
-          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. Para **Game Presenters** (dealers), o gestor de estúdio configura nickname, turno, estúdio(s), skills, fotos e bio — dados que alimentam **Gestão de Dealers**. Cards consolidados (somente GP) indicam lacunas operacionais, cadastrais ou de jogo.",
+          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. Para **Game Presenters** (dealers), o gestor de estúdio configura nickname, turno, estúdio(s), skills, fotos e bio — dados que alimentam **Gestão de Dealers**. Cards consolidados (somente GP) indicam lacunas operacionais, cadastrais ou de jogo. No time **Service Manager**, o **ID TOS** é o UUID do SM no TOS/Proxylive para vincular sinais atendidos.",
+        referencia: "Gestão de Staff",
+      },
+      {
+        termo: "ID TOS",
+        definicao:
+          "UUID do Service Manager no sistema TOS (Employee ID no Grafana S&SM Reports / ClickHouse `signal_resolver_id`). Cadastrado em Gestão de Staff no time Service Manager; usado no de-para dos sinais (`sm_sinais`).",
         referencia: "Gestão de Staff",
       },
       {

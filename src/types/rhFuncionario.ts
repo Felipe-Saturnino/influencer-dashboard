@@ -113,6 +113,11 @@ export interface RhFuncionario {
   staff_barcode?: string | null;
   /** ID de staff definido pela operação (não é o UUID da plataforma). */
   staff_id_operacional?: string | null;
+  /**
+   * UUID TOS/Proxylive do Service Manager (`stats_signals.signal_resolver_id`).
+   * Preenchido em Gestão de Staff — time Service Manager.
+   */
+  staff_id_tos?: string | null;
   /** Turno operacional (Gestão de Staff); distinto de `escala` (4x2/3x3 — Gestão de Prestadores). */
   staff_turno?: string | null;
   /** Intervalo do turno (chave, ex. 08-20, 18-06) para escalas 3x3 e 5x2; 4x2/5x1 usam operadoras. */

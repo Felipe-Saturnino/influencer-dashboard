@@ -75,7 +75,8 @@ alwaysApply: false
 - Label **“Bio do Dealer”** — nunca “Perfil do Influencer”.
 - Query `dealer_observacoes`: sempre `.limit(20)`.
 - Filtros: carrossel de turnos (rótulo “Todos os turnos” via estado — sem pill redundante); **`FiltroEstudioSelect`** (**Todos Estúdios**, opção **Nenhum estúdio**); gênero/jogo com `aria-pressed`.
-- Coluna/badge de vínculo: **Estúdio** (`dealerEstudioLabelFromRow` com fallback operadora→estúdio). **`OperadoraTag`** nos cards e modais usa `operadoras.nome` + `brand_action` (cadastro de Gestão de Operadoras — helper `lib/operadoraLabels.ts`), nunca o slug bruto. `operadora_slug` mantido para **solicitações** (Central / `dealer_solicitacoes`).
+- **Fonte de verdade do vínculo:** o estúdio do card = o configurado em **Gestão de Staff** (`dealers.estudio_slug` via `syncGamePresenterDealerFromRhFuncionario`). Badge no card/modal **Ver**: só **Estúdio** (`dealerEstudioLabelFromRow` — fallback legado operadora→estúdio se `estudio_slug` vazio). **Proibido** exibir tag/pill de **operadora** no catálogo (card ou modal Ver) — a operadora não é o vínculo visível do GP.
+- **Escopo Operador:** filtro e elenco pelos **estúdios** ligados à(s) operadora(s) do escopo via `estudios_spin_operadoras` (`buildEstudiosSlugsParaOperadoras`) — dedicado **e** network (ex.: Blaze vê estúdios **Blaze** e **Sports Club**). Cards mostram a tag do estúdio em que o GP está (Blaze vs Sports Club). `operadora_slug` no registro dealer permanece só para **solicitações** (Central / `dealer_solicitacoes`).
 - **Tags de jogo** (filtro consolidado + badges nos cards): **`getGameTagChipStyle`** (`lib/gameIdentityColors.ts`) + ícones **`GAME_IDENTITY_ICONS`** — Global § Identidade por jogo (BJ verde, Roleta ouro, Baccarat azul, FB laranja); **não** pill amarela única nem roxo de marca. **Exceção:** só com pedido explícito — «Exceções — identidade de jogo» neste MDC.
 - **Handoff:** solicitar/histórico por operadora, upload de foto.
 
@@ -147,24 +148,30 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 - 6 cards (`app-grid-kpi-6`) — um por categoria, ordem **Caso → Erro → Oculto → Não Avisado → Avisado/Resolvido → Avisado/Não Resolvido**; `KpiCard` com `isInverso` (queda é positiva) e `isHistorico={historico}`; ícones: `AlertTriangle` (Caso), `CircleAlert` (Erro), `EyeOff` (Oculto), `BellOff` (Não Avisado), `CheckCircle2` (Avisado/Resolvido), `AlertCircle` (Avisado/Não Resolvido).
 - MoM: `getPeriodoComparativoMoM` (mês civil) para atual/anterior; Histórico usa `getPeriodoHistoricoCompetencias` (13 competências) e desativa o comparativo (`isHistorico`).
 
+### Abas (URL)
+
+- **`useRouteTab`** + `APP_ROUTE_CATALOG`: **Tickets** (`/Incidentes/Tickets`) e **Sinais** (`/Incidentes/Sinais`).
+- **Tickets** — layout atual (KPIs + tabela + filtros de ticket); respeita o filtro **Time**.
+- **Sinais** — placeholder («Conteúdo em desenvolvimento.») para sinais Grafana; filtros de ticket ocultos nesta aba.
+
 ### Filtros
 
 - Carrossel de mês (início em `INCIDENTES_MES_INICIO` — julho/2026) + **`FiltroHistoricoButton`** + **`FiltroEstudioSelect`** (**Todos Estúdios**) na primeira linha, com **`AjudaContextualAcoes`**.
-- Segunda linha — **abas de Time** (`FiltroBarTabButton`: Todos Times `Users`, Game Presenters `UserRound`, Shuffler `Shuffle`) — **oculta** quando `canView === "proprios"` (prestador só vê os próprios incidentes, sem necessidade de trocar de time).
-- Terceira linha — **`BarraPesquisaPagina`** (protocolo, prestador, mesa) + **`FiltroEntidadeBarSelect`** `mode="single"` para **Staff** (ícone `FilterBarIcons.staff`, agregadora **Todos Staff**) — lista de staff restrita ao time selecionado na aba; **oculta** quando `canView === "proprios"`.
-- Filtro de escopo (time, staff, estúdio) e busca são **client-side** sobre o período já buscado no servidor (`fetchEstudioIncidentesPeriodo`).
+- Segunda linha — abas de módulo **Tickets** / **Sinais** (`FiltroBarTabButton` + ícones `Ticket` / `Activity`).
+- Terceira linha (só aba **Tickets**) — **`BarraPesquisaPagina`** + filtros pill: **Time** (`FiltroBarCampoSelect`, **Todos Times** / Game Presenter / Shuffler, ícone `FilterBarIcons.time`), **Incidente**, **Tipo**, **Staff** (restrito ao time selecionado) e **Relator**. **Staff** e **Relator** ficam ocultos quando `canView === "proprios"`; o filtro **Time** permanece disponível.
+- Filtro de escopo (time, staff, estúdio, incidente, tipo, relator) e busca são **client-side** sobre o período já buscado no servidor (`fetchEstudioIncidentesPeriodo`). Entram no mesmo escopo dos KPIs da aba Tickets.
 
 ### Permissões
 
 | Ação | Regra |
 |---|---|
-| **Ver = Sim** | Vê todos os incidentes do período/escopo — abas de Time e filtro Staff visíveis. |
-| **Ver = Próprios** | `canView === "proprios"` — lista e KPIs restritos aos incidentes cujo `prestador_id` corresponde ao próprio usuário (`buscarRhFuncionarioIdsPorEmailLogin`); tabela **omite** colunas Prestador, Time e Relator; `ModalVerIncidente` recebe `ocultarPrestadorTimeRelator`; abas de Time e filtro Staff ficam ocultos. |
+| **Ver = Sim** | Vê todos os incidentes do período/escopo — filtros Staff e Relator visíveis na aba Tickets. |
+| **Ver = Próprios** | `canView === "proprios"` — lista e KPIs restritos aos incidentes cujo `prestador_id` corresponde ao próprio usuário (`buscarRhFuncionarioIdsPorEmailLogin`); tabela **omite** colunas Prestador, Time e Relator; `ModalVerIncidente` recebe `ocultarPrestadorTimeRelator`; filtros Staff e Relator ficam ocultos. |
 | **Editar = Sim** (`canEditar === "sim"`) | Mostra o CTA **Novo Incidente** (`CtaCriarButton`) e o botão **Editar** (`Pencil`) na coluna Ações — produto trata criação e edição como ação de Editar; **Editar = Próprios** não libera nenhum dos dois. |
 
 ### Tabela
 
-- Colunas: Protocolo (1ª coluna fixa), Data/Hora, Prestador, Time, Jogo (chip `getGameTagChipStyle` + `GAME_IDENTITY_ICONS` quando o jogo mapear para `GameIdentityKey`), Incidente (badge com `INCIDENTE_CATEGORIA_META.color`), Tipo, Relator, Ações (`BtnIconeAcaoLinha` + `Eye` → `ModalVerIncidente`; com **Editar = Sim**, também `Pencil` → `ModalNovoIncidente` em modo edição). Colunas Prestador/Time/Relator omitidas em **Ver = Próprios**.
+- Colunas: Protocolo (1ª coluna fixa), **Abertura** (`created_at`), Prestador, Time, Jogo (chip `getGameTagChipStyle` + `GAME_IDENTITY_ICONS` quando o jogo mapear para `GameIdentityKey`), Incidente (badge com `INCIDENTE_CATEGORIA_META.color`), Tipo, Relator, Ações (`BtnIconeAcaoLinha` + `Eye` → `ModalVerIncidente`; com **Editar = Sim**, também `Pencil` → `ModalNovoIncidente` em modo edição). Colunas Prestador/Time/Relator omitidas em **Ver = Próprios**. Coluna **Time** também omitida quando o filtro Time ≠ **Todos Times** (GP ou Shuffler).
 - Ordenação padrão: `data` desc (`SortTableTh`); demais colunas ordenáveis.
 
 ### Modais
@@ -172,7 +179,7 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 - **`ModalVerIncidente`** — somente leitura, abas **Dados do Incidente** / **Descrição**; carrega anexos via `fetchEstudioIncidenteAnexos` + `urlAssinadaAnexoIncidente` (URL assinada, bucket `estudio-incidentes`).
   - **Dados (Ver = Sim):** Abertura de Incidente (`created_at` — momento do registro, **não** data/hora da rodada) / Relator → Data da Rodada / Hora da Rodada → ID da Rodada (linha inteira, `overflow-wrap`) → Mesa / Prestador (`Nome - Nickname`) / Time.
   - **Dados (Ver = Próprios):** sem Relator, Prestador e Time — layout readequado sem células vazias: Abertura (largura total) → Data / Hora da Rodada → ID → Mesa (largura total).
-  - Coluna **Data/Hora** da tabela e filtro do carrossel usam `created_at` (registro), com limites de dia em **America/Sao_Paulo** (`inicioDiaBrasilUtcIso` / `fimDiaBrasilUtcIso`) — evita registro “sumir” à noite por deslocamento UTC. `data_rodada` / `hora_rodada` são só da rodada. No insert, `ocorrido_em` = agora (alinhado ao registro); **proibido** gravar data/hora da rodada em `ocorrido_em`.
+  - Coluna **Abertura** da tabela e filtro do carrossel usam `created_at` (registro), com limites de dia em **America/Sao_Paulo** (`inicioDiaBrasilUtcIso` / `fimDiaBrasilUtcIso`) — evita registro “sumir” à noite por deslocamento UTC. `data_rodada` / `hora_rodada` são só da rodada. No insert, `ocorrido_em` = agora (alinhado ao registro); **proibido** gravar data/hora da rodada em `ocorrido_em`.
   - **Descrição (GP):** Resolução / Payout → Descrição → Anexos.
   - **Descrição (Shuffler):** Resolução / Payout / Local do Shoe → Descrição → Anexos.
   - Anexos exibem **Arquivo 1**, **Arquivo 2**, … (nome original só em `title` / `aria-label`).
@@ -224,6 +231,6 @@ Nenhuma exceção documentada nesta secção. Chip de jogo na tabela usa paleta 
 - Query de observações sem `.limit()`.
 - Figurinos: `<select>` nativo para categoria/tamanho/cor/gênero — usar `FiltroFigurinosCategoriaSelect` / `FiltroFigurinosTamanhoSelect` / `FiltroFigurinosCorSelect` / `FiltroFigurinosGeneroSelect` (**Todas Categorias** / **Todos Tamanhos** / **Todas Cores** / **Todos Gêneros**). Filtro de estúdio: **`FiltroEstudioSelect`** (**Todos Estúdios**), não `FiltroOperadoraSelect`.
 - Aba **Disponíveis** — colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação, Ações (sem data de aquisição).
-- Incidentes: abas de Time / filtro Staff visíveis para usuário com `canView === "proprios"` — devem ficar ocultas (o prestador só vê os próprios registros, sem necessidade de trocar de time ou staff).
+- Incidentes: filtros Staff / Relator visíveis para usuário com `canView === "proprios"` — devem ficar ocultos (o prestador só vê os próprios registros).
 - Incidentes: tratar CTA **Novo Incidente** e botão **Editar** na tabela como ação de **Criar** — o produto define ambos como **Editar = Sim** (`canEditar === "sim"`); não gatear por `canCriarOk` nem por `canEditarOk` (Próprios não libera).
 - Incidentes: tornar o **Protocolo** editável no modal de edição — o protocolo é gerado no banco e permanece somente leitura.

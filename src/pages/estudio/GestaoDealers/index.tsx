@@ -584,7 +584,6 @@ export default function GestaoDealers() {
               key={d.id}
               dealer={d}
               estudioLabel={dealerEstudioLabelFromRow(d, estudiosNome, opParaEstudio)}
-              operadoraBySlug={operadoraBySlug}
               onVer={() => setModalVer(d)}
               onSolicitar={operadoraSlugAtiva && permCentral.canEditarOk ? () => setModalSolicitacao(d) : undefined}
               onHistoricoSolicitacoes={
@@ -604,7 +603,6 @@ export default function GestaoDealers() {
         <ModalVer
           dealer={modalVer}
           estudioLabel={dealerEstudioLabelFromRow(modalVer, estudiosNome, opParaEstudio)}
-          operadoraBySlug={operadoraBySlug}
           onClose={() => setModalVer(null)}
         />
       )}
@@ -746,14 +744,12 @@ function DealerFotoCarrossel({
 function DealerCard({
   dealer,
   estudioLabel,
-  operadoraBySlug,
   onVer,
   onSolicitar,
   onHistoricoSolicitacoes,
 }: {
   dealer: Dealer;
   estudioLabel: string;
-  operadoraBySlug: Record<string, OperadoraLabelRow>;
   onVer: () => void;
   /** Só operador com escopo de operadora definido. */
   onSolicitar?: () => void;
@@ -763,8 +759,6 @@ function DealerCard({
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
-  const operadoraSlug = (dealer.operadora_slug ?? "").trim();
-  const operadoraRow = operadoraSlug ? operadoraBySlug[operadoraSlug] : undefined;
 
   return (
     <article
@@ -890,12 +884,6 @@ function DealerCard({
             >
               {estudioLabel}
             </span>
-          ) : null}
-          {operadoraSlug ? (
-            <OperadoraTag
-              label={labelOperadoraFromSlug(operadoraSlug, operadoraBySlug)}
-              corPrimaria={operadoraRow?.brand_action}
-            />
           ) : null}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1094,18 +1082,14 @@ function ModalHistoricoSolicitacoesDealer({
 function ModalVer({
   dealer,
   estudioLabel,
-  operadoraBySlug,
   onClose,
 }: {
   dealer: Dealer;
   estudioLabel: string;
-  operadoraBySlug: Record<string, OperadoraLabelRow>;
   onClose: () => void;
 }) {
   const { theme: t } = useApp();
   const fotosUrls = (dealer.fotos ?? []).filter((u): u is string => typeof u === "string" && u.length > 0);
-  const operadoraSlug = (dealer.operadora_slug ?? "").trim();
-  const operadoraRow = operadoraSlug ? operadoraBySlug[operadoraSlug] : undefined;
 
   return (
     <ModalBase onClose={onClose} maxWidth={480}>
@@ -1147,16 +1131,6 @@ function ModalVer({
           <br />
           <span style={{ fontSize: 14, color: t.text }}>{estudioLabel}</span>
         </div>
-        {operadoraSlug ? (
-          <div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Operadora</span>
-            <br />
-            <OperadoraTag
-              label={labelOperadoraFromSlug(operadoraSlug, operadoraBySlug)}
-              corPrimaria={operadoraRow?.brand_action}
-            />
-          </div>
-        ) : null}
         {dealer.perfil_influencer && (
           <div>
             <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: "uppercase" }}>Bio do Dealer</span>

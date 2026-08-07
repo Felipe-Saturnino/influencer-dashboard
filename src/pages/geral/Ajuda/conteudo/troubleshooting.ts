@@ -474,12 +474,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um dealer não aparece na listagem?",
         texto:
-          "A página lista apenas Game Presenters (dealers) com prestador **ativo** ou **indisponível** no time Game Presenter. Se o colaborador existe em RH mas não aparece aqui, confira o organograma em **Gestão de Prestadores** e o perfil em **Gestão de Staff** — não use esta página para cadastrar dealer.\n\nVerifique também filtros ativos — turno, gênero, jogo, estúdio ou busca por nome/nickname podem restringir o elenco. Para escopo de operadora restrito, só entram dealers do estúdio vinculado à parceira.",
+          "A página lista apenas Game Presenters (dealers) com prestador **ativo** ou **indisponível** no time Game Presenter. Se o colaborador existe em RH mas não aparece aqui, confira o organograma em **Gestão de Prestadores** e o **estúdio** em **Gestão de Staff** — o card espelha o que está no Staff. Não use esta página para cadastrar dealer.\n\nVerifique também filtros ativos — turno, gênero, jogo, estúdio ou busca por nome/nickname. Perfil Operador só vê dealers dos estúdios ligados à sua operadora (ex.: Blaze vê GPs da Blaze e do Sports Club).",
+      },
+      {
+        subtitulo: "O card mostra a operadora em vez do estúdio?",
+        texto:
+          "No catálogo, a tag visível é só de **estúdio** (o mesmo configurado em Gestão de Staff). Não há tag de operadora no card. Se o estúdio estiver errado, corrija o campo Estúdio no Staff e salve — o sync atualiza o elenco de Dealers.",
       },
       {
         subtitulo: "O botão Solicitar não aparece no card?",
         texto:
-          "O botão Solicitar só é exibido para o perfil Operador e apenas quando a operadora ativa está definida no escopo do usuário. Se o botão não aparece, verifique:\n\n— Se o usuário tem o perfil Operador configurado na Gestão de Usuários.\n— Se o escopo de operadora está atribuído corretamente ao usuário.\n— Se o **filtro de estúdio** na barra está no estúdio da sua operadora — quando o usuário atende mais de uma parceira, o estúdio correspondente precisa estar selecionado para o botão aparecer com a operadora certa.",
+          "O botão Solicitar só é exibido para o perfil Operador e apenas quando a operadora ativa está definida no escopo do usuário. Se o botão não aparece, verifique:\n\n— Se o usuário tem o perfil Operador configurado na Gestão de Usuários.\n— Se o escopo de operadora está atribuído corretamente ao usuário.\n— Se o **filtro de estúdio** na barra está em um dos estúdios do seu escopo — com mais de um estúdio (ex.: Blaze e Sports Club), selecione o desejado ou **Todos Estúdios**.",
       },
       {
         subtitulo: "O botão Histórico não aparece?",
@@ -659,7 +664,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A lista de incidentes está vazia?",
         texto:
-          "Confirme o mês selecionado no carrossel (ou ative **Histórico** para ver todo o período) e revise os filtros de Estúdio, Time e Staff — cada um restringe a lista. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
+          "Confirme que está na aba **Tickets**, o mês selecionado no carrossel (ou **Histórico**) e os filtros de Estúdio, Time, Staff, Incidente, Tipo e Relator — cada um restringe a lista e os KPIs. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
       },
       {
         subtitulo: "O botão Novo Incidente não aparece?",
@@ -1455,6 +1460,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não vejo Gestão de Staff no menu?",
         texto:
           "Confirme permissão de **Ver** e escopo de menu em Gestão de Usuários. A página lista prestadores operacionais — perfis sem escopo de estúdio/escala podem não ter a rota liberada.",
+      },
+      {
+        subtitulo: "Não vejo o campo ID TOS?",
+        texto:
+          "O **ID TOS** aparece só no time **Service Manager** (carrossel de time, coluna na tabela e aba Função nos modais Ver/Editar). Em outros times o campo não é exibido. Se a migração ainda não foi aplicada no Supabase, o salvamento pode falhar — nesse caso entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Mensagem «Este ID TOS já está cadastrado»?",
+        texto:
+          "Cada UUID TOS só pode estar em um Service Manager. Confira se o mesmo Employee ID do Grafana não foi colado em outro SM. Corrija o cadastro duplicado e salve de novo.",
       },
     ],
   },

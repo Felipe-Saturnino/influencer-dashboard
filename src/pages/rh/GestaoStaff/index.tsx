@@ -78,6 +78,7 @@ import {
   staffUiTimeEstudioForcadoTodos,
   staffUiTimeOcultarEstudio,
   staffUiTimeSemOperadoraHorarioModaisRestritos,
+  staffUiTimeServiceManager,
   staffUiTimeShufflerOcultarBioFotosVer,
 } from "./gestaoStaffHelpers";
 import { StaffKpiResumo } from "./StaffKpiResumo";
@@ -250,7 +251,8 @@ type StaffTabelaSortCol =
   | "horario_turno"
   | "estudio"
   | "status"
-  | "id_op";
+  | "id_op"
+  | "id_tos";
 
 function CampoLeitura({ k, v, t }: { k: string; v: string; t: { textMuted: string; text: string } }) {
   return (
@@ -739,8 +741,14 @@ export default function RhGestaoStaffPage() {
   const timeAtualForcaTodosEstudio =
     !todosTimes && times[idxTime] ? staffUiTimeEstudioForcadoTodos(times[idxTime]!.nome) : false;
 
+  /** Coluna ID TOS só na vista do time Service Manager (UUID Proxylive / sinais). */
+  const layoutTabelaMostrarIdTos =
+    !todosTimes && times[idxTime] ? staffUiTimeServiceManager(times[idxTime]!.nome) : false;
+
   const colSpanTabelaStaff =
-    9 + (layoutTabelaSemEstudioComHorario || !layoutTabelaOcultarColunaEstudio ? 1 : 0);
+    9 +
+    (layoutTabelaSemEstudioComHorario || !layoutTabelaOcultarColunaEstudio ? 1 : 0) +
+    (layoutTabelaMostrarIdTos ? 1 : 0);
 
   const slugsEstudioParaFetchHorarioTabela = useMemo(() => {
     if (!layoutTabelaSemEstudioComHorario) return [] as string[];
@@ -773,12 +781,13 @@ export default function RhGestaoStaffPage() {
 
   useEffect(() => {
     setSortCol((c) => {
+      if (!layoutTabelaMostrarIdTos && c === "id_tos") return "nome";
       if (layoutTabelaSemEstudioComHorario || layoutTabelaOcultarColunaEstudio) {
         return c === "estudio" ? "nome" : c;
       }
       return c === "horario_turno" ? "nome" : c;
     });
-  }, [layoutTabelaSemEstudioComHorario, layoutTabelaOcultarColunaEstudio]);
+  }, [layoutTabelaSemEstudioComHorario, layoutTabelaOcultarColunaEstudio, layoutTabelaMostrarIdTos]);
 
   const handleSortStaff = useCallback((col: StaffTabelaSortCol) => {
     setSortCol((prev) => {
@@ -834,6 +843,9 @@ export default function RhGestaoStaffPage() {
           break;
         case "id_op":
           cmp = (a.staff_id_operacional ?? "").localeCompare(b.staff_id_operacional ?? "", "pt-BR");
+          break;
+        case "id_tos":
+          cmp = (a.staff_id_tos ?? "").localeCompare(b.staff_id_tos ?? "", "pt-BR");
           break;
         default:
           cmp = 0;
@@ -1134,6 +1146,17 @@ export default function RhGestaoStaffPage() {
                   thStyle={dataTable.thHeader}
                   align="center"
                 />
+                {layoutTabelaMostrarIdTos ? (
+                  <SortTableTh
+                    label="ID TOS"
+                    col="id_tos"
+                    sortCol={sortCol}
+                    sortDir={sortDir}
+                    onSort={handleSortStaff}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                  />
+                ) : null}
                 <th scope="col" style={dataTable.thHeader}>
                   Ações
                 </th>
@@ -1187,6 +1210,20 @@ export default function RhGestaoStaffPage() {
                       <td style={dataTable.tdCenter} title={row.staff_id_operacional?.trim() || undefined}>
                         {row.staff_id_operacional?.trim() || "—"}
                       </td>
+                      {layoutTabelaMostrarIdTos ? (
+                        <td
+                          style={{
+                            ...dataTable.tdCenter,
+                            maxWidth: 140,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={row.staff_id_tos?.trim() || undefined}
+                        >
+                          {row.staff_id_tos?.trim() || "—"}
+                        </td>
+                      ) : null}
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                           <BtnIconeAcaoLinha
@@ -1306,6 +1343,7 @@ function ModalStaffVer({
   t: ReturnType<typeof useApp>["theme"];
 }) {
   const estudioForcadoTodos = staffUiTimeEstudioForcadoTodos(nomeTimeOrganograma);
+  const staffEhServiceManager = staffUiTimeServiceManager(nomeTimeOrganograma);
   const [aba, setAba] = useState<VerAba>("pessoal");
   const verAbas = useMemo(() => staffVerAbasVisiveis(exibirAbaHistorico), [exibirAbaHistorico]);
   const [hist, setHist] = useState<RhFuncionarioHistorico[]>([]);
@@ -1427,6 +1465,9 @@ function ModalStaffVer({
           ) : null}
           <CampoLeitura k="Barcode" v={row.staff_barcode ?? ""} t={t} />
           <CampoLeitura k="ID operacional" v={row.staff_id_operacional ?? ""} t={t} />
+          {staffEhServiceManager ? (
+            <CampoLeitura k="ID TOS" v={row.staff_id_tos ?? ""} t={t} />
+          ) : null}
           {!dadosFuncaoOcultarBioFotos ? (
             <>
               <CampoLeitura k="Bio do Dealer" v={readStaffDealerBioForUi(row) || "—"} t={t} />
@@ -1612,6 +1653,7 @@ function ModalStaffEditar({
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
   const staffEhGamePresenter = useMemo(() => isGamePresenterTimeNome(nomeTimeOrganograma), [nomeTimeOrganograma]);
+  const staffEhServiceManager = useMemo(() => staffUiTimeServiceManager(nomeTimeOrganograma), [nomeTimeOrganograma]);
   const estudioForcadoTodos = staffUiTimeEstudioForcadoTodos(nomeTimeOrganograma);
   const [aba, setAba] = useState<EditarAba>("funcao");
   const [nick, setNick] = useState(row.staff_nickname ?? "");
@@ -1621,6 +1663,7 @@ function ModalStaffEditar({
   );
   const [barcode, setBarcode] = useState(row.staff_barcode ?? "");
   const [idOperacional, setIdOperacional] = useState(row.staff_id_operacional ?? "");
+  const [idTos, setIdTos] = useState(row.staff_id_tos ?? "");
   const [skills, setSkills] = useState<Record<StaffSkillKey, StaffSkillStatus>>(() => normalizarSkills(row.staff_skills as Record<string, unknown>));
   const [liveNoEstudio, setLiveNoEstudio] = useState(() => dataIsoParaInputDate(row.staff_live_no_estudio));
   const [err, setErr] = useState("");
@@ -1640,6 +1683,7 @@ function ModalStaffEditar({
     );
     setBarcode(row.staff_barcode ?? "");
     setIdOperacional(row.staff_id_operacional ?? "");
+    setIdTos(row.staff_id_tos ?? "");
     setSkills(normalizarSkills(row.staff_skills as Record<string, unknown>));
     setLiveNoEstudio(dataIsoParaInputDate(row.staff_live_no_estudio));
     setAba("funcao");
@@ -1658,6 +1702,7 @@ function ModalStaffEditar({
     nomeTimeOrganograma,
     row.staff_barcode,
     row.staff_id_operacional,
+    row.staff_id_tos,
     row.staff_skills,
     row.staff_live_no_estudio,
     row.staff_dealer_genero,
@@ -1743,6 +1788,7 @@ function ModalStaffEditar({
       estudio: estudioAntes,
       barcode: (row.staff_barcode ?? "").trim(),
       idOp: (row.staff_id_operacional ?? "").trim(),
+      idTos: (row.staff_id_tos ?? "").trim().toLowerCase(),
       horario: (row.staff_horario_turno ?? "").trim(),
       skills: stringifySkills(normalizarSkills(row.staff_skills as Record<string, unknown>)),
       live: dataIsoParaInputDate(row.staff_live_no_estudio),
@@ -1753,6 +1799,7 @@ function ModalStaffEditar({
       estudio: estudioDepois,
       barcode: barcode.trim(),
       idOp: idOperacional.trim(),
+      idTos: staffEhServiceManager ? idTos.trim().toLowerCase() : antes.idTos,
       horario: "",
       skills: stringifySkills(skills),
       live: liveNoEstudio.trim(),
@@ -1776,6 +1823,9 @@ function ModalStaffEditar({
     }
     if (antes.barcode !== depois.barcode) alteracoes.push({ campo: "Barcode", antes: antes.barcode || "—", depois: depois.barcode || "—" });
     if (antes.idOp !== depois.idOp) alteracoes.push({ campo: "ID operacional", antes: antes.idOp || "—", depois: depois.idOp || "—" });
+    if (staffEhServiceManager && antes.idTos !== depois.idTos) {
+      alteracoes.push({ campo: "ID TOS", antes: antes.idTos || "—", depois: depois.idTos || "—" });
+    }
     if (antes.skills !== depois.skills) alteracoes.push({ campo: "Skills", antes: antes.skills, depois: depois.skills });
     if (antes.live !== depois.live) {
       alteracoes.push({
@@ -1823,6 +1873,7 @@ function ModalStaffEditar({
       staff_operadora_slug: operadoraSync,
       staff_barcode: depois.barcode || null,
       staff_id_operacional: depois.idOp || null,
+      ...(staffEhServiceManager ? { staff_id_tos: depois.idTos || null } : {}),
       staff_skills: skillsParaJson(skills),
       staff_live_no_estudio: depois.live ? depois.live : null,
       ...(staffEhGamePresenter
@@ -1836,7 +1887,14 @@ function ModalStaffEditar({
 
     const { data: updated, error } = await supabase.from("rh_funcionarios").update(patch).eq("id", row.id).select("*").single();
     if (error) {
-      setErr("Não foi possível salvar. Tente novamente.");
+      const duplicadoTos =
+        staffEhServiceManager &&
+        (error.code === "23505" || /staff_id_tos|idx_rh_funcionarios_staff_id_tos/i.test(error.message ?? ""));
+      setErr(
+        duplicadoTos
+          ? "Este ID TOS já está cadastrado em outro Service Manager."
+          : "Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.",
+      );
       setSaving(false);
       return;
     }
@@ -1958,6 +2016,26 @@ function ModalStaffEditar({
               Código ou número usado na operação
             </div>
           </div>
+          {staffEhServiceManager ? (
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle} htmlFor="staff-id-tos">
+                ID TOS
+              </label>
+              <input
+                id="staff-id-tos"
+                type="text"
+                value={idTos}
+                onChange={(e) => setIdTos(e.target.value)}
+                style={inputStyle}
+                aria-describedby="staff-id-tos-hint"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                autoComplete="off"
+              />
+              <div id="staff-id-tos-hint" style={{ fontSize: 11, color: t.textMuted, marginTop: 6, fontFamily: FONT.body }}>
+                UUID do Service Manager no TOS (Employee ID do Grafana / sinais)
+              </div>
+            </div>
+          ) : null}
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="staff-barcode">
               Barcode
