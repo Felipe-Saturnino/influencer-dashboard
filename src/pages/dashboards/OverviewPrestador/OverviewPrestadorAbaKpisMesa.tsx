@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   CircleAlert,
+  CircleCheck,
+  CircleX,
   FileWarning,
   Hash,
   Layers,
+  Meh,
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -28,6 +31,13 @@ import {
   SHUFFLER_KPI_JOGOS_ORDEM,
   type GpKpiJogoLinha,
 } from "../../../lib/gpKpiMetrics";
+import {
+  classificarGpKpiStatus,
+  GP_KPI_STATUS_COR,
+  GP_KPI_STATUS_LABEL,
+  type GpKpiStatusFaixa,
+  type GpKpiStatusMetrica,
+} from "../../../lib/gpKpiStatusFaixa";
 import type { OverviewPrestadorKpisMesaMode } from "../../../lib/overviewPrestadorTeamConfig";
 import { KpiCard, SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { OverviewPrestadorKpiDuplaCard } from "./OverviewPrestadorKpiDuplaCard";
@@ -60,6 +70,72 @@ function fmtDiaBr(iso: string): string {
 
 function numOrNeg(v: number | null): number {
   return v == null || !Number.isFinite(v) ? Number.NEGATIVE_INFINITY : v;
+}
+
+function GpKpiStatusIcon({ status }: { status: GpKpiStatusFaixa }) {
+  const cor = GP_KPI_STATUS_COR[status];
+  const label = GP_KPI_STATUS_LABEL[status];
+  const props = { size: 14, color: cor, "aria-hidden": true as const, strokeWidth: 2.25 };
+  let icon: ReactNode;
+  switch (status) {
+    case "bom":
+      icon = <CircleCheck {...props} />;
+      break;
+    case "ok":
+      icon = <Meh {...props} />;
+      break;
+    case "ruim":
+      icon = <AlertTriangle {...props} />;
+      break;
+    case "muito_ruim":
+      icon = <CircleX {...props} />;
+      break;
+    default:
+      icon = null;
+  }
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}
+    >
+      {icon}
+    </span>
+  );
+}
+
+function CelulaMetricaComStatus({
+  texto,
+  jogoKey,
+  metrica,
+  valor,
+  mostrarStatus,
+}: {
+  texto: string;
+  jogoKey: GameIdentityKey;
+  metrica: GpKpiStatusMetrica;
+  valor: number | null;
+  mostrarStatus: boolean;
+}) {
+  const status = mostrarStatus ? classificarGpKpiStatus(jogoKey, metrica, valor) : null;
+  if (!status) {
+    return <>{texto}</>;
+  }
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {texto}
+      <GpKpiStatusIcon status={status} />
+    </span>
+  );
 }
 
 function JogoChip({ jogoKey, isDark }: { jogoKey: GameIdentityKey; isDark: boolean }) {
@@ -581,10 +657,42 @@ function OverviewPrestadorAbaKpisMesaConteudo({
                       </div>
                     </td>
                     <td style={dataTable.tdCenter}>{row.rodadas.toLocaleString("pt-BR")}</td>
-                    <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.dealingSeg)}</td>
-                    <td style={dataTable.tdCenter}>{fmtMediaSegundos(row.reactionSeg)}</td>
-                    <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopVelPct)}</td>
-                    <td style={dataTable.tdCenter}>{fmtPctCoop(row.coopRodaPct)}</td>
+                    <td style={dataTable.tdCenter}>
+                      <CelulaMetricaComStatus
+                        texto={fmtMediaSegundos(row.dealingSeg)}
+                        jogoKey={row.jogoKey}
+                        metrica="velocidade"
+                        valor={row.dealingSeg}
+                        mostrarStatus={!visaoTime}
+                      />
+                    </td>
+                    <td style={dataTable.tdCenter}>
+                      <CelulaMetricaComStatus
+                        texto={fmtMediaSegundos(row.reactionSeg)}
+                        jogoKey={row.jogoKey}
+                        metrica="reacao"
+                        valor={row.reactionSeg}
+                        mostrarStatus={!visaoTime}
+                      />
+                    </td>
+                    <td style={dataTable.tdCenter}>
+                      <CelulaMetricaComStatus
+                        texto={fmtPctCoop(row.coopVelPct)}
+                        jogoKey={row.jogoKey}
+                        metrica="bola"
+                        valor={row.coopVelPct}
+                        mostrarStatus={!visaoTime}
+                      />
+                    </td>
+                    <td style={dataTable.tdCenter}>
+                      <CelulaMetricaComStatus
+                        texto={fmtPctCoop(row.coopRodaPct)}
+                        jogoKey={row.jogoKey}
+                        metrica="cilindro"
+                        valor={row.coopRodaPct}
+                        mostrarStatus={!visaoTime}
+                      />
+                    </td>
                     <td style={dataTable.tdCenter}>{row.incidentes.toLocaleString("pt-BR")}</td>
                   </tr>
                 ))}
