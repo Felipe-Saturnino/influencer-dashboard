@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   CircleAlert,
@@ -34,7 +34,6 @@ import {
 import {
   classificarGpKpiStatus,
   GP_KPI_STATUS_COR,
-  GP_KPI_STATUS_LABEL,
   type GpKpiStatusFaixa,
   type GpKpiStatusMetrica,
 } from "../../../lib/gpKpiStatusFaixa";
@@ -74,35 +73,19 @@ function numOrNeg(v: number | null): number {
 
 function GpKpiStatusIcon({ status }: { status: GpKpiStatusFaixa }) {
   const cor = GP_KPI_STATUS_COR[status];
-  const label = GP_KPI_STATUS_LABEL[status];
   const props = { size: 14, color: cor, "aria-hidden": true as const, strokeWidth: 2.25 };
-  let icon: ReactNode;
   switch (status) {
     case "bom":
-      icon = <CircleCheck {...props} />;
-      break;
+      return <CircleCheck {...props} />;
     case "ok":
-      icon = <Meh {...props} />;
-      break;
+      return <Meh {...props} />;
     case "ruim":
-      icon = <AlertTriangle {...props} />;
-      break;
+      return <AlertTriangle {...props} />;
     case "muito_ruim":
-      icon = <CircleX {...props} />;
-      break;
+      return <CircleX {...props} />;
     default:
-      icon = null;
+      return null;
   }
-  return (
-    <span
-      role="img"
-      aria-label={label}
-      title={label}
-      style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}
-    >
-      {icon}
-    </span>
-  );
 }
 
 function CelulaMetricaComStatus({

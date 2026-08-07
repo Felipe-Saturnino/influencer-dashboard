@@ -9,19 +9,12 @@ export type GpKpiStatusFaixa = "bom" | "ok" | "ruim" | "muito_ruim";
 
 export type GpKpiStatusMetrica = "velocidade" | "reacao" | "bola" | "cilindro";
 
-/** Cores semânticas Global — só o ícone. */
+/** Cores semânticas Global — só o ícone (sem rótulo/tooltip de julgamento ao prestador). */
 export const GP_KPI_STATUS_COR: Record<GpKpiStatusFaixa, string> = {
   bom: "#22c55e",
   ok: "#f59e0b",
   ruim: "#e84025",
   muito_ruim: "#a78bfa",
-};
-
-export const GP_KPI_STATUS_LABEL: Record<GpKpiStatusFaixa, string> = {
-  bom: "Bom",
-  ok: "Ok",
-  ruim: "Ruim",
-  muito_ruim: "Muito ruim",
 };
 
 /** Menor é melhor: BOM se &lt; bomMax; OK até okMax; RUIM até ruimMax; senão MUITO RUIM. */
