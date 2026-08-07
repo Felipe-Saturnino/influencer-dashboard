@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import {
-  fmtDate,
+  getHojeIsoLocal,
   getPeriodoComparativoMesCompleto,
   getPeriodoHistoricoCompetencias,
+  preencherDetalhamentoDiarioZerado,
 } from "../../../lib/dashboardHelpers";
 import { fetchEstudioIncidentesPorDataRodada } from "../../../lib/estudioIncidentesFetch";
 import type { EstudioIncidenteRow } from "../../../lib/estudioIncidentesTypes";
@@ -23,7 +24,7 @@ import type { MesCarrosselEscalaEntry } from "../../../lib/escalaMesCarrosselOve
 
 /** Fecha o período no dia civil de hoje (paridade com Incidentes → Sinais). Não usa D-1 do GP. */
 function fimPeriodoAteHoje(fim: string): string {
-  const hoje = fmtDate(new Date());
+  const hoje = getHojeIsoLocal();
   return fim > hoje ? hoje : fim;
 }
 
@@ -429,10 +430,35 @@ export function useOverviewPrestadorSmOcr(opts: {
       funcionarioIdPorTos,
     ],
   );
-  const porDia = useMemo(
-    () => agregarSmOcrPorDia(sinaisEscopo, ticketsEscopo),
-    [sinaisEscopo, ticketsEscopo],
-  );
+  const periodoGradeDiaria = useMemo(() => {
+    if (historico) {
+      const { inicio, fim } = getPeriodoHistoricoCompetencias();
+      return { inicio, fim: fimPeriodoAteHoje(fim) };
+    }
+    if (!mesSelecionado) return null;
+    const mom = getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
+    return { inicio: mom.atual.inicio, fim: fimPeriodoAteHoje(mom.atual.fim) };
+  }, [historico, mesSelecionado]);
+
+  const porDia = useMemo(() => {
+    const base = agregarSmOcrPorDia(sinaisEscopo, ticketsEscopo);
+    if (!periodoGradeDiaria) return base;
+    return preencherDetalhamentoDiarioZerado({
+      rows: base,
+      getDia: (r) => r.dia,
+      inicio: periodoGradeDiaria.inicio,
+      fim: periodoGradeDiaria.fim,
+      fimMax: getHojeIsoLocal(),
+      criarVazio: (dia) => ({
+        dia,
+        total: 0,
+        tmaTotalMs: null,
+        tmaAtendimentoMs: null,
+        tmaResolucaoMs: null,
+        tickets: 0,
+      }),
+    });
+  }, [sinaisEscopo, ticketsEscopo, periodoGradeDiaria]);
 
   return {
     loading,

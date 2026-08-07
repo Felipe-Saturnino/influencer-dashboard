@@ -5,6 +5,7 @@ import {
   getOntemIsoLocal,
   getPeriodoComparativoMesCompleto,
   getPeriodoHistoricoCompetencias,
+  preencherDetalhamentoDiarioZerado,
 } from "../../../lib/dashboardHelpers";
 import { fetchEstudioIncidentesPrestadoresPeriodo } from "../../../lib/estudioIncidentesFetch";
 import type { EstudioIncidenteRow } from "../../../lib/estudioIncidentesTypes";
@@ -153,11 +154,12 @@ function mergePorJogoGp(
 function mergePorDia(
   rowsKpi: GpKpiDiarioRow[],
   incRows: EstudioIncidenteRow[],
+  periodo: { inicio: string; fim: string } | null,
 ): GpKpiDiaComIncidentes[] {
   const kpiPorDia = new Map(agruparGpKpiPorDia(rowsKpi).map((d) => [d.dia_brt, d.rodadas]));
   const incPorDia = new Map(agruparIncidentesPorDia(incRows).map((d) => [d.dia, d]));
   const dias = new Set([...kpiPorDia.keys(), ...incPorDia.keys()]);
-  return [...dias]
+  const merged = [...dias]
     .sort((a, b) => b.localeCompare(a))
     .map((dia) => {
       const inc = incPorDia.get(dia) ?? { ...INCIDENTE_AGG_ZERO, dia };
@@ -170,6 +172,22 @@ function mergePorDia(
         outros: inc.outros,
       };
     });
+  if (!periodo) return merged;
+  return preencherDetalhamentoDiarioZerado({
+    rows: merged,
+    getDia: (r) => r.dia_brt,
+    inicio: periodo.inicio,
+    fim: periodo.fim,
+    fimMax: getOntemIsoLocal(),
+    criarVazio: (dia) => ({
+      dia_brt: dia,
+      rodadas: 0,
+      totalIncidentes: 0,
+      casos: 0,
+      erros: 0,
+      outros: 0,
+    }),
+  });
 }
 
 /**
@@ -315,8 +333,32 @@ export function useOverviewPrestadorGpKpi(opts: {
     () => agruparIncidentesPorJogo(incAtual, SHUFFLER_KPI_JOGOS_ORDEM, true),
     [incAtual],
   );
-  const porDia = useMemo(() => mergePorDia(rowsAtual, incAtual), [rowsAtual, incAtual]);
-  const porDiaShuffler = useMemo(() => agruparIncidentesPorDia(incAtual), [incAtual]);
+  const periodoGradeDiaria = useMemo(() => {
+    if (historico) {
+      const { inicio, fim } = getPeriodoHistoricoCompetencias();
+      return { inicio, fim: fimPeriodoKpisMesaD1(fim) };
+    }
+    if (!mesSelecionado) return null;
+    const mom = getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
+    return { inicio: mom.atual.inicio, fim: fimPeriodoKpisMesaD1(mom.atual.fim) };
+  }, [historico, mesSelecionado]);
+
+  const porDia = useMemo(
+    () => mergePorDia(rowsAtual, incAtual, periodoGradeDiaria),
+    [rowsAtual, incAtual, periodoGradeDiaria],
+  );
+  const porDiaShuffler = useMemo(() => {
+    const base = agruparIncidentesPorDia(incAtual);
+    if (!periodoGradeDiaria) return base;
+    return preencherDetalhamentoDiarioZerado({
+      rows: base,
+      getDia: (r) => r.dia,
+      inicio: periodoGradeDiaria.inicio,
+      fim: periodoGradeDiaria.fim,
+      fimMax: getOntemIsoLocal(),
+      criarVazio: (dia) => ({ dia, ...INCIDENTE_AGG_ZERO }),
+    });
+  }, [incAtual, periodoGradeDiaria]);
 
   const pontosAtencao: IncidentePrestadorLinha[] = useMemo(
     () => agruparIncidentesPorPrestador(incAtual, prestadores),

@@ -110,6 +110,63 @@ export function getOntemIsoLocal(ref: Date = new Date()): string {
   return fmtDate(ontem);
 }
 
+/** Hoje no fuso local (YYYY-MM-DD). */
+export function getHojeIsoLocal(ref: Date = new Date()): string {
+  const d = new Date(ref);
+  d.setHours(0, 0, 0, 0);
+  return fmtDate(d);
+}
+
+/**
+ * Lista de dias `YYYY-MM-DD` de `inicio` a `fim` inclusive (crescente).
+ * Vazio se `fim` < `inicio` ou datas inválidas.
+ */
+export function listarDiasIsoInclusive(inicio: string, fim: string): string[] {
+  const a = inicio.slice(0, 10);
+  const b = fim.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(a) || !/^\d{4}-\d{2}-\d{2}$/.test(b) || b < a) return [];
+  const [y1, m1, d1] = a.split("-").map(Number);
+  const [y2, m2, d2] = b.split("-").map(Number);
+  const cur = new Date(y1!, m1! - 1, d1!);
+  const end = new Date(y2!, m2! - 1, d2!);
+  const out: string[] = [];
+  while (cur <= end) {
+    out.push(fmtDate(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+/**
+ * Completa o detalhamento diário com uma linha por dia do intervalo (zeros quando sem dado).
+ * `fimMax` é o último dia permitido — nunca inclui o dia seguinte a este (nem futuro além do período).
+ * Resultado ordenado do mais novo para o mais antigo.
+ */
+export function preencherDetalhamentoDiarioZerado<T>(opts: {
+  rows: T[];
+  getDia: (row: T) => string;
+  inicio: string;
+  fim: string;
+  fimMax: string;
+  criarVazio: (dia: string) => T;
+}): T[] {
+  const inicio = opts.inicio.slice(0, 10);
+  const fimPeriodo = opts.fim.slice(0, 10);
+  const fimMax = opts.fimMax.slice(0, 10);
+  const fimEfetivo = fimPeriodo > fimMax ? fimMax : fimPeriodo;
+  if (!inicio || !fimEfetivo || fimEfetivo < inicio) return [];
+
+  const byDia = new Map<string, T>();
+  for (const r of opts.rows) {
+    const d = opts.getDia(r).slice(0, 10);
+    if (d && d >= inicio && d <= fimEfetivo) byDia.set(d, r);
+  }
+
+  return listarDiasIsoInclusive(inicio, fimEfetivo)
+    .map((dia) => byDia.get(dia) ?? opts.criarVazio(dia))
+    .sort((a, b) => opts.getDia(b).localeCompare(opts.getDia(a)));
+}
+
 /**
  * Período principal do carrossel e período de comparação (mês civil anterior alinhado).
  * - Mês civil atual: atual = 1..hoje; anterior = 1..mesmo dia no mês anterior (cap no último dia).
