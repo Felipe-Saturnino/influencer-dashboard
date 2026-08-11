@@ -393,7 +393,7 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 | **Jogo** (chip tab) | `GAME_IDENTITY_ICONS` 13px | **`FiltroSemanticoTabPill`** + `gameIdentityTextColor` — Roteiro de Mesa, Gestão de Dealers; **não** marca (Global § Identidade por jogo) |
 | Campanha / UTM (legado) | `Megaphone` / `Link2` | `SelectComIcone` fora da barra canónica |
 | Busca (página) | `Search` 16px | **`BarraPesquisaPagina`** |
-| Busca (painel dropdown) | `Search` 14px | **`BarraPesquisaFiltroPainel`** |
+| Busca (painel dropdown) | `Search` 14px | **`BarraPesquisaFiltroPainel`** — ao abrir o painel, o input recebe foco automaticamente (`autoFocusOnMount` default `true`; Global § Pesquisa dentro do filtro) |
 | Carregando | `Clock` 12px | Texto “Carregando…” na barra |
 
 **Botão Histórico na barra:** usar **`FiltroHistoricoButton`** (Overview Influencer) — `Calendar` 15px + texto “Histórico”, `aria-pressed`, labels em `HISTORICO_FILTRO_ARIA_LABEL_*`. Não duplicar estilos inline nem trocar por `History` só por estética.
@@ -616,6 +616,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - Substituir verde/vermelho de GGR/ROI por `--brand-primary` por estética.
 - Tag, filtro, KPI, faixa de título ou série de gráfico **por jogo** com `--brand-*`, `brand.accent` ou hex local — usar Global § Identidade visual por jogo (exceção só com pedido explícito no MDC da secção).
 - `FiltroSemanticoTabPill` de **jogo** ativo em cor de marca ou pill única para todos os jogos.
+- Painel de filtro/select com `BarraPesquisaFiltroPainel` sem foco automático ao abrir (Global § Pesquisa dentro do filtro — `autoFocusOnMount`).
 
 ---
 
@@ -629,6 +630,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas + lista **antigo → recente** (§7)
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Abas de módulo: `FiltroBarTabButton` + ícone Lucide 16px **por aba** + `onFiltroBarTabsKeyDown` no `tablist`
+- [ ] Filtro/select com busca no painel: `BarraPesquisaFiltroPainel` (foco automático ao abrir — Global § Pesquisa dentro do filtro)
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
 - [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (`borderRadius` 10, `10px 20px`, `Plus` 14) — não confundir com pills filtro `999` / `6px 14px`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA

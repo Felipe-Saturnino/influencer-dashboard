@@ -76,30 +76,6 @@ function useActiveFilterStyle(isActive: boolean) {
   return getFiltroBarPillStateStyle(t, brand, isActive);
 }
 
-function FiltroPainelSearchFocus({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => inputRef.current?.focus());
-    return () => cancelAnimationFrame(id);
-  }, []);
-  return (
-    <BarraPesquisaFiltroPainel
-      inputRef={inputRef}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-    />
-  );
-}
-
 /**
  * Filtro de afiliados padronizado: pill 999, ícone Users 15px, agregadora "Todos Afiliados",
  * pesquisa no painel quando há mais de 5 opções. Modos `single` e `multiple` — regras de negócio na página.
@@ -272,7 +248,7 @@ export function FiltroAfiliadoSelect(props: FiltroAfiliadoSelectProps) {
           style={panelStyle}
         >
           {enableSearch ? (
-            <FiltroPainelSearchFocus
+            <BarraPesquisaFiltroPainel
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder={FILTER_SEARCH_AFILIADO}

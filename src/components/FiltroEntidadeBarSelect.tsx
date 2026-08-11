@@ -66,7 +66,6 @@ export function FiltroEntidadeBarSelect({
   const [searchQuery, setSearchQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const uid = useId();
   const listboxId = `filtro-entidade-bar-${uid.replace(/:/g, "")}`;
 
@@ -95,15 +94,8 @@ export function FiltroEntidadeBarSelect({
   }, [closePanel]);
 
   useEffect(() => {
-    if (!open) {
-      setSearchQuery("");
-      return;
-    }
-    if (enableSearch) {
-      const id = requestAnimationFrame(() => searchInputRef.current?.focus());
-      return () => cancelAnimationFrame(id);
-    }
-  }, [open, enableSearch]);
+    if (!open) setSearchQuery("");
+  }, [open]);
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim();
@@ -256,7 +248,6 @@ export function FiltroEntidadeBarSelect({
         >
           {enableSearch ? (
             <BarraPesquisaFiltroPainel
-              inputRef={searchInputRef}
               value={searchQuery}
               onChange={setSearchQuery}
               placeholder={searchPlaceholder}
