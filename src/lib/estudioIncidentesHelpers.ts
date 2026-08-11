@@ -69,6 +69,19 @@ export function incidenteCategoriaLabel(cat: IncidenteCategoria): string {
   return INCIDENTE_CATEGORIA_META[cat]?.label ?? cat;
 }
 
+/** Prefixo de protocolo da categoria: CASO | OCULTO | ERRO. */
+export function incidenteProtocoloFamilia(cat: IncidenteCategoria): "CASO" | "OCULTO" | "ERRO" {
+  return INCIDENTE_CATEGORIA_META[cat]?.prefix ?? "ERRO";
+}
+
+/** True quando a edição muda a família do protocolo (ex.: Caso → Erro). */
+export function incidenteProtocoloPrecisaRegenerar(
+  categoriaAtual: IncidenteCategoria,
+  categoriaNova: IncidenteCategoria,
+): boolean {
+  return incidenteProtocoloFamilia(categoriaAtual) !== incidenteProtocoloFamilia(categoriaNova);
+}
+
 export function timeAlvoLabel(t: IncidenteTimeAlvo): string {
   return t === "gp" ? "Game Presenter" : "Shuffler";
 }

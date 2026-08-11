@@ -707,7 +707,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Protocolo de Incidente",
         definicao:
-          "Código único gerado automaticamente para cada incidente registrado na página Incidentes — identifica o registro em conversas com a operadora e no histórico do estúdio.",
+          "Código único gerado automaticamente para cada incidente (séries CASO-, OCULTO- ou ERRO- conforme a categoria). Se na edição a categoria Incidente mudar de família, um novo protocolo é gerado na série correspondente.",
         referencia: "Incidentes",
       },
       {

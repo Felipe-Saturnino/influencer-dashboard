@@ -767,7 +767,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Editar um incidente",
         texto:
-          "Com permissão de Editar = Sim, clique no ícone de lápis na coluna Ações. O formulário abre com os dados preenchidos — o **Protocolo** aparece só para consulta e não pode ser alterado. Os demais campos podem ser corrigidos; novos anexos são adicionados aos já existentes. Ao concluir, use **Salvar Alterações**.",
+          "Com permissão de Editar = Sim, clique no ícone de lápis na coluna Ações. O formulário abre com os dados preenchidos — o **Protocolo** permanece somente leitura. Se você alterar a categoria **Incidente** para outra família (Caso, Erro ou Oculto), ao salvar o sistema gera um novo protocolo na série correspondente; o modal avisa antes. Trocar só o **Tipo** (texto do catálogo do jogo) não muda o protocolo. Novos anexos são adicionados aos já existentes. Ao concluir, use **Salvar Alterações**.",
       },
       {
         subtitulo: "Permissões",

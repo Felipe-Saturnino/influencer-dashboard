@@ -689,7 +689,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Posso alterar o protocolo ao editar?",
         texto:
-          "Não. O protocolo é gerado automaticamente no registro e permanece fixo — no modal de edição ele aparece somente para consulta.",
+          "O protocolo não é digitado à mão — permanece somente leitura. Se você mudar a categoria **Incidente** para outra família (Caso ↔ Erro ↔ Oculto), ao salvar o sistema gera um novo protocolo na série correspondente (ex.: de `CASO-` para `ERRO-`). Trocar só o **Tipo** (ex.: Game before time → Ball out) ou mudar entre categorias da mesma família Erro (Erro, Não Avisado, Avisado/Resolvido, Avisado/Não Resolvido) mantém o mesmo protocolo.",
       },
       {
         subtitulo: "O campo Tipo não tem opções ou está vazio?",
