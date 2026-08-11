@@ -751,6 +751,8 @@ export default function RhCalendarioPage() {
 
   const [pontoEstado, setPontoEstado] = useState<PrestadorPontoEstado | null>(null);
   const [pontoEstadoLoading, setPontoEstadoLoading] = useState(false);
+  /** Invalida respostas atrasadas de `obterPrestadorPontoEstado` (evita sobrescrever Check-out). */
+  const pontoEstadoSeqRef = useRef(0);
   const [pontoSubmitting, setPontoSubmitting] = useState(false);
   const [pontoMsgModal, setPontoMsgModal] = useState<string | null>(null);
   const [pontoSucessoModal, setPontoSucessoModal] = useState<PontoSucessoModalData | null>(null);
@@ -1143,18 +1145,19 @@ export default function RhCalendarioPage() {
     if (loadingEscala) return;
     let cancelled = false;
     async function loadPonto() {
+      const seq = ++pontoEstadoSeqRef.current;
       setPontoEstadoLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const tok = session?.access_token;
         if (!tok) {
-          if (!cancelled) setPontoEstado(null);
+          if (!cancelled && seq === pontoEstadoSeqRef.current) setPontoEstado(null);
           return;
         }
         const est = await obterPrestadorPontoEstado(tok);
-        if (!cancelled) setPontoEstado(est);
+        if (!cancelled && seq === pontoEstadoSeqRef.current) setPontoEstado(est);
       } finally {
-        if (!cancelled) setPontoEstadoLoading(false);
+        if (!cancelled && seq === pontoEstadoSeqRef.current) setPontoEstadoLoading(false);
       }
     }
     void loadPonto();
@@ -2305,13 +2308,22 @@ export default function RhCalendarioPage() {
     try {
       const res = await registrarPrestadorPonto(tok);
       if (res.ok && res.estado) {
+        // Invalida loads em voo que ainda podem devolver o estado pré-check-in.
+        const seq = ++pontoEstadoSeqRef.current;
         setPontoEstado(res.estado);
+        setPontoEstadoLoading(false);
         const diaRegistro = String(
           res.registro?.diaSp ?? res.estado.turnoDiaSp ?? res.estado.diaSp ?? "",
         ).slice(0, 10);
         const createdAtReg = res.registro?.createdAt ?? new Date().toISOString();
-        if (diaRegistro && (tipoRegistro === "check_in" || tipoRegistro === "check_out")) {
-          // Atualização otimista: evita tela vazia se a RPC ainda resolver Auth pelo e-mail errado.
+        const meuFidPonto = res.estado.rhFuncionarioId ?? null;
+        if (
+          diaRegistro &&
+          (tipoRegistro === "check_in" || tipoRegistro === "check_out") &&
+          meuFidPonto &&
+          pontoMesStaffIdRef.current === meuFidPonto
+        ) {
+          // Atualização otimista só no próprio Controle de Presença.
           setPontoMesLinhas((prev) => {
             const idx = prev.findIndex((r) => r.dia_sp.slice(0, 10) === diaRegistro);
             if (idx >= 0) {
@@ -2336,6 +2348,11 @@ export default function RhCalendarioPage() {
           });
         }
         setPontoMesTick((x) => x + 1);
+        // Confirma estado no servidor (mesma seq — não perde para o interval).
+        const estFresh = await obterPrestadorPontoEstado(tok);
+        if (seq === pontoEstadoSeqRef.current && estFresh) {
+          setPontoEstado(estFresh);
+        }
         if (tipoRegistro === "check_in" || tipoRegistro === "check_out") {
           const agora = new Date();
           const subtitulo = formatarSubtituloPontoRealizado(agora);
@@ -2382,7 +2399,10 @@ export default function RhCalendarioPage() {
       } else {
         setPontoMsgModal(res.error ?? "Não foi possível registrar.");
       }
-      if (res.estado) setPontoEstado(res.estado);
+      if (res.estado) {
+        pontoEstadoSeqRef.current += 1;
+        setPontoEstado(res.estado);
+      }
     } finally {
       setPontoSubmitting(false);
     }
@@ -2739,7 +2759,9 @@ export default function RhCalendarioPage() {
         acoesBase.acaoPrimaria === "justificar"
           ? podeJustificarPresencaStaff(fid)
           : acoesBase.acaoPrimaria === "aprovar"
-            ? gestaoDia?.justificativa?.motivo === "outro" && gestaoDia.statusGestao === "em_analise"
+            ? gestaoDia?.justificativa?.motivo === "outro" &&
+                gestaoDia.statusGestao === "em_analise" &&
+                !gestaoDia.correcao
               ? podeAnalisarCorrecaoPresencaStaff(fid)
               : podeGerirPresencaStaff(fid)
             : true;
@@ -3714,7 +3736,8 @@ export default function RhCalendarioPage() {
                       );
                       const aprovarExigeLider =
                         gestaoDia?.justificativa?.motivo === "outro" &&
-                        gestaoDia.statusGestao === "em_analise";
+                        gestaoDia.statusGestao === "em_analise" &&
+                        !gestaoDia.correcao;
                       const mostrarAprovarTurno =
                         acoesLinha.acaoPrimaria === "aprovar" &&
                         (aprovarExigeLider

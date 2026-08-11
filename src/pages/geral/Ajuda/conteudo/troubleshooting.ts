@@ -104,17 +104,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo selecionar operadoras no filtro?",
         texto:
-          "O filtro de operadoras aparece para Administrador e para quem tem permissão de Ver **Sim** em Overview Spin (Gestão de Usuários). Com Ver **Próprios**, o seletor não aparece e os dados ficam travados no escopo da operadora. Nas abas Estúdio Dedicado e Estúdio Network, a lista só inclui operadoras com mesas daquele tipo em Gestão de Estúdios.",
+          "O filtro de operadoras aparece para Administrador e para quem tem permissão de Ver **Sim** em Overview Spin (Gestão de Usuários). Com Ver **Próprios**, o seletor não aparece e os dados ficam travados no escopo da operadora. Nas abas Estúdio Dedicado e Estúdio Network, a lista só inclui operadoras com estúdio daquele tipo vinculado em Gestão de Estúdios."
       },
       {
         subtitulo: "Não vejo a aba Estúdio Dedicado ou Estúdio Network?",
         texto:
-          "Essas abas só aparecem quando existe mesa cadastrada do tipo correspondente em Gestão de Estúdios para a(s) operadora(s) do seu escopo (ou no catálogo global se a permissão de Ver for **Sim**). Se a operadora opera só em estúdio network, a aba Estúdio Dedicado fica oculta — e o contrário também.",
+          "Essas abas aparecem conforme os estúdios vinculados à operadora em Gestão de Estúdios (tipo dedicado ou network). Se a operadora opera só em estúdio network, a aba Estúdio Dedicado fica oculta — e o contrário também. Se nenhuma das abas financeiras aparecer e só Posicionamento estiver visível, confira se os estúdios estão ativos e ligados à operadora na Gestão de Estúdios e se a permissão de Ver em Overview Spin está liberada.",
       },
       {
         subtitulo: "Não vejo a aba Overview?",
         texto:
-          "A aba Overview soma Dedicado e Network. Ela só aparece quando o seu escopo tem mesas nos dois tipos de estúdio. Se a operadora opera só em Network (ou só em Dedicado), você vê o canal correspondente e Posicionamento — a soma Overview não faz sentido nesse caso.",
+          "A aba Overview soma Dedicado e Network. Ela só aparece quando o seu escopo tem estúdios nos dois tipos. Se a operadora opera só em Network (ou só em Dedicado), você vê o canal correspondente e Posicionamento — a soma Overview não faz sentido nesse caso.",
       },
     ],
   },
@@ -1519,7 +1519,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo registrar presença ou justificativa?",
         texto:
-          "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença registrada com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). **Correções** de horário (Esquecimento / Correção) e a justificativa **Outro** só o **líder imediato** (ou Editar Sim) analisa — o próprio prestador não aprova a própria correção. Atestado **Médico** é atendido em **Solicitações** (RH). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
+          "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença registrada com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). **Correções** de horário (**Esquecimento**, **Outro** ou Correção) só o **líder imediato** (ou Editar Sim) analisa por campo — o próprio prestador não aprova a própria correção. Atestado **Médico** é atendido em **Solicitações** (RH). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
       },
       {
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",

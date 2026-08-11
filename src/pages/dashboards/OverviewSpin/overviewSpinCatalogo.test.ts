@@ -1,34 +1,44 @@
 import { describe, expect, it } from "vitest";
-import { buildCatalogoCanaisMesas, podeVerAbaCanalCatalogo, podeVerAbaOverviewCatalogo } from "./overviewSpinCatalogo";
+import { buildCatalogoCanaisMesas, podeVerAbaCanalCatalogo, podeVerAbaOverviewCatalogo, type EstudioCatalogoRow } from "./overviewSpinCatalogo";
+
+const estudiosBlazeSports: EstudioCatalogoRow[] = [
+  {
+    slug: "blaze",
+    tipo: "dedicado",
+    ativo: true,
+    estudios_spin_operadoras: [{ operadora_slug: "blaze" }],
+  },
+  {
+    slug: "sports_club",
+    tipo: "network",
+    ativo: true,
+    estudios_spin_operadoras: [
+      { operadora_slug: "blaze" },
+      { operadora_slug: "esportiva_bet" },
+    ],
+  },
+];
 
 describe("buildCatalogoCanaisMesas", () => {
-  it("classifica operadoras por tipo de estúdio com mesas", () => {
+  it("classifica operadoras pelo vínculo com estúdio (junction), sem exigir mesas", () => {
+    const cat = buildCatalogoCanaisMesas(estudiosBlazeSports, []);
+    expect(cat.slugsComMesaDedicada).toEqual(["blaze"]);
+    expect(cat.slugsComMesaNetwork).toEqual(["blaze", "esportiva_bet"]);
+  });
+
+  it("enriquece com operadora_slug legado nas mesas", () => {
     const cat = buildCatalogoCanaisMesas(
       [
         {
           slug: "blaze",
           tipo: "dedicado",
           ativo: true,
-          estudios_spin_operadoras: [{ operadora_slug: "blaze" }],
-        },
-        {
-          slug: "sports_club",
-          tipo: "network",
-          ativo: true,
-          estudios_spin_operadoras: [
-            { operadora_slug: "blaze" },
-            { operadora_slug: "esportiva_bet" },
-          ],
+          estudios_spin_operadoras: [],
         },
       ],
-      [
-        { estudio_slug: "blaze", operadora_slug: "blaze" },
-        { estudio_slug: "sports_club", operadora_slug: null },
-        { estudio_slug: "sports_club", operadora_slug: null },
-      ],
+      [{ estudio_slug: "blaze", operadora_slug: "blaze" }],
     );
     expect(cat.slugsComMesaDedicada).toEqual(["blaze"]);
-    expect(cat.slugsComMesaNetwork).toEqual(["blaze", "esportiva_bet"]);
   });
 });
 
@@ -47,7 +57,7 @@ describe("podeVerAbaCanalCatalogo", () => {
     slugsComMesaNetwork: ["esportiva_bet"],
   };
 
-  it("proprios só vê aba se escopo tiver mesa do tipo", () => {
+  it("proprios só vê aba se escopo tiver canal do tipo", () => {
     expect(
       podeVerAbaCanalCatalogo({
         canal: "network",
@@ -66,6 +76,29 @@ describe("podeVerAbaCanalCatalogo", () => {
         catalogo,
       }),
     ).toBe(false);
+  });
+
+  it("Blaze com Dedicado+Network no catálogo vê as duas abas", () => {
+    const cat = buildCatalogoCanaisMesas(estudiosBlazeSports, []);
+    expect(
+      podeVerAbaCanalCatalogo({
+        canal: "dedicado",
+        isAdmin: false,
+        canView: "proprios",
+        operadorasVisiveis: ["blaze"],
+        catalogo: cat,
+      }),
+    ).toBe(true);
+    expect(
+      podeVerAbaCanalCatalogo({
+        canal: "network",
+        isAdmin: false,
+        canView: "proprios",
+        operadorasVisiveis: ["blaze"],
+        catalogo: cat,
+      }),
+    ).toBe(true);
+    expect(podeVerAbaOverviewCatalogo(true, true)).toBe(true);
   });
 
   it("sim vê aba se houver catálogo global do tipo", () => {

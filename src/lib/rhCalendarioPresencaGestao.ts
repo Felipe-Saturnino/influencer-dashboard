@@ -740,7 +740,8 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
         mostrarTravessaoAcoes: !temHist,
       };
     }
-    if (gestao.justificativa?.motivo === "outro") {
+    // Legado: Outro só com observação (sem correção de horário) — líder aprova na linha.
+    if (gestao.justificativa?.motivo === "outro" && !gestao.correcao) {
       return {
         acaoPrimaria: "aprovar",
         mostrarHistorico: temHist,

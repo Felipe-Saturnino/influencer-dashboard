@@ -34,7 +34,7 @@ export type PresencaJustificativaSubmitPayload =
       observacao: string;
     }
   | { motivo: "esquecimento"; entrada: string; saida: string }
-  | { motivo: "outro"; observacao: string };
+  | { motivo: "outro"; entrada: string; saida: string };
 
 type Props = {
   open: boolean;
@@ -169,7 +169,7 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
       return;
     }
 
-    if (motivo === "esquecimento") {
+    if (motivo === "esquecimento" || motivo === "outro") {
       const ent = normalizarHorarioPresencaHHMM(entradaEsquecimento);
       const sai = normalizarHorarioPresencaHHMM(saidaEsquecimento);
       if (!validarHorarioPresencaHHMM(ent)) {
@@ -181,23 +181,12 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
         return;
       }
       setSalvando(true);
-      const ok = await onSalvar({ motivo: "esquecimento", entrada: ent, saida: sai });
+      const ok = await onSalvar({ motivo, entrada: ent, saida: sai });
       setSalvando(false);
       if (!ok) {
         setErr("Não foi possível salvar a justificativa. Se o problema persistir, entre em contato com o suporte.");
       }
       return;
-    }
-
-    if (!observacao.trim()) {
-      setErr("Informe a observação.");
-      return;
-    }
-    setSalvando(true);
-    const ok = await onSalvar({ motivo: "outro", observacao: observacao.trim() });
-    setSalvando(false);
-    if (!ok) {
-      setErr("Não foi possível salvar a justificativa. Se o problema persistir, entre em contato com o suporte.");
     }
   };
 
@@ -308,7 +297,7 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
         </>
       ) : null}
 
-      {motivo === "esquecimento" ? (
+      {motivo === "esquecimento" || motivo === "outro" ? (
         <>
           <p
             style={{
@@ -358,23 +347,6 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
             />
           </div>
         </>
-      ) : null}
-
-      {motivo === "outro" ? (
-        <div style={{ marginBottom: 8 }}>
-          <label htmlFor="pres-just-obs-outro" style={labelField}>
-            Observação
-            <CampoObrigatorioMark />
-          </label>
-          <textarea
-            id="pres-just-obs-outro"
-            rows={4}
-            value={observacao}
-            onChange={(e) => setObservacao(e.target.value)}
-            style={{ ...inputField(t), resize: "vertical" }}
-            aria-required="true"
-          />
-        </div>
       ) : null}
 
       {err ? (

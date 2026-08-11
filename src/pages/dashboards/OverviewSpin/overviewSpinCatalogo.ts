@@ -1,5 +1,7 @@
 /**
- * Catálogo Gestão de Estúdios → quais operadoras têm mesa Dedicada / Network.
+ * Catálogo Gestão de Estúdios → quais operadoras têm canal Dedicado / Network.
+ * Fonte principal: estúdios ativos + junction `estudios_spin_operadoras` (tipo do estúdio).
+ * Mesas em `mesas_spin_cadastro` só enriquecem legado (operadora_slug na mesa).
  */
 
 export type EstudioCatalogoRow = {
@@ -15,7 +17,9 @@ export type MesaCatalogoRow = {
 };
 
 export type OverviewSpinCatalogoCanais = {
+  /** Operadoras com ≥1 estúdio dedicado vinculado (ou mesa dedicada legado). */
   slugsComMesaDedicada: string[];
+  /** Operadoras com ≥1 estúdio network vinculado (ou mesa network legado). */
   slugsComMesaNetwork: string[];
 };
 
@@ -28,37 +32,34 @@ function unwrapJunction(
 
 export function buildCatalogoCanaisMesas(
   estudios: EstudioCatalogoRow[],
-  mesas: MesaCatalogoRow[],
+  mesas: MesaCatalogoRow[] = [],
 ): OverviewSpinCatalogoCanais {
+  const dedicada = new Set<string>();
+  const network = new Set<string>();
   const tipoPorEstudio = new Map<string, "dedicado" | "network">();
-  const opsPorEstudio = new Map<string, Set<string>>();
 
   for (const e of estudios) {
     if (!e.ativo) continue;
     const tipo = e.tipo === "network" ? "network" : e.tipo === "dedicado" ? "dedicado" : null;
     if (!tipo) continue;
     tipoPorEstudio.set(e.slug, tipo);
-    const set = new Set<string>();
+    const target = tipo === "network" ? network : dedicada;
     for (const j of unwrapJunction(e.estudios_spin_operadoras)) {
       const s = j.operadora_slug?.trim();
-      if (s) set.add(s);
+      if (s) target.add(s);
     }
-    opsPorEstudio.set(e.slug, set);
   }
 
-  const dedicada = new Set<string>();
-  const network = new Set<string>();
-
+  // Legado: mesa com operadora_slug e estúdio tipado (junction incompleta no passado).
   for (const m of mesas) {
     const estSlug = m.estudio_slug?.trim();
     if (!estSlug) continue;
     const tipo = tipoPorEstudio.get(estSlug);
     if (!tipo) continue;
-    const ops = new Set(opsPorEstudio.get(estSlug) ?? []);
     const legado = m.operadora_slug?.trim();
-    if (legado) ops.add(legado);
+    if (!legado) continue;
     const target = tipo === "network" ? network : dedicada;
-    for (const op of ops) target.add(op);
+    target.add(legado);
   }
 
   return {
