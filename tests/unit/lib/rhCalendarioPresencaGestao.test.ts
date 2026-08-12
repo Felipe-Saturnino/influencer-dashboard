@@ -155,3 +155,61 @@ describe("computePresencaKpisConsolidados — Troca, Venda e Compra", () => {
     expect(kpis.trocas).toBe(1);
   });
 });
+
+describe("resolverStatusPresencaLinha — atestado aprovado", () => {
+  const justAprovado = (abono: "sim" | "nao") => ({
+    statusGestao: "aprovado" as const,
+    justificativa: {
+      motivo: "medico" as const,
+      atestadoInicio: "2026-07-10",
+      atestadoFim: "2026-07-12",
+      atestadoStatus: "aprovado" as const,
+      abonoRemunerado: abono,
+    },
+  });
+
+  it("com abono remunerado mostra Abonado", () => {
+    expect(
+      resolverStatusPresencaLinha({
+        situacao: "Escalado",
+        diaIso: "2026-07-10",
+        entEsc: "08:00",
+        saiEsc: "16:00",
+        temCheckIn: false,
+        temCheckOut: false,
+        statusBase: "Falta",
+        gestao: justAprovado("sim"),
+      }),
+    ).toBe("Abonado");
+  });
+
+  it("sem abono remunerado mostra Atestado", () => {
+    expect(
+      resolverStatusPresencaLinha({
+        situacao: "Atestado",
+        diaIso: "2026-07-11",
+        entEsc: "—",
+        saiEsc: "—",
+        temCheckIn: false,
+        temCheckOut: false,
+        statusBase: "Folga",
+        gestao: justAprovado("nao"),
+      }),
+    ).toBe("Atestado");
+  });
+
+  it("Troca com abono também vira Abonado", () => {
+    expect(
+      resolverStatusPresencaLinha({
+        situacao: "Troca",
+        diaIso: "2026-07-10",
+        entEsc: "—",
+        saiEsc: "—",
+        temCheckIn: false,
+        temCheckOut: false,
+        statusBase: "Sem horário",
+        gestao: justAprovado("sim"),
+      }),
+    ).toBe("Abonado");
+  });
+});

@@ -47,6 +47,18 @@ export function situacaoPresencaComoEscalado(situacao: string): boolean {
   return situacao === "Escalado" || situacaoEhCompraMarketplace(situacao);
 }
 
+/**
+ * Dias em que Status do Calendário vira **Abonado** (atestado com abono remunerado):
+ * Escalado, Troca ou Compra.
+ */
+export function situacaoPresencaAbonavelAtestado(situacao: string): boolean {
+  return (
+    situacao === "Escalado" ||
+    situacao === "Troca" ||
+    situacaoEhCompraMarketplace(situacao)
+  );
+}
+
 /** Situação de dia livre: Folga ou Venda (Marketplace). */
 export function situacaoPresencaComoFolga(situacao: string): boolean {
   return situacao === "Folga" || situacao === "Venda";
@@ -296,15 +308,30 @@ export function presencaJustificativaMedicoAplicavelAoDia(
   justificativa: PresencaJustificativaMeta,
 ): boolean {
   if (justificativa.motivo !== "medico") return false;
-  if (!situacaoPresencaComoEscalado(situacao)) return false;
   const ini = justificativa.atestadoInicio;
   const fim = justificativa.atestadoFim;
   if (!ini || !fim) return false;
-  if (!atestadoMedicoPeriodoMultiploDias(ini, fim)) {
-    const registro = (justificativa.atestadoDiaRegistro ?? ini).slice(0, 10);
-    return diaIso === registro;
+  const noPeriodo = !atestadoMedicoPeriodoMultiploDias(ini, fim)
+    ? diaIso === (justificativa.atestadoDiaRegistro ?? ini).slice(0, 10)
+    : diaIsoNoIntervaloAtestado(diaIso, ini, fim);
+  if (!noPeriodo) return false;
+
+  const st = justificativa.atestadoStatus ?? "em_analise";
+  const abono = justificativa.abonoRemunerado;
+
+  // Grade já reescrita como Atestado: com abono=nao o sync cria gestão em todos os dias;
+  // com abono=sim não propagar via índice (só linhas criadas no servidor para jornada/troca/compra).
+  if (situacao === "Atestado") {
+    return st === "aprovado" && abono === "nao";
   }
-  return diaIsoNoIntervaloAtestado(diaIso, ini, fim);
+
+  // Sem abono remunerado aprovado: Status Atestado também em Folga/Venda.
+  if (st === "aprovado" && abono === "nao") {
+    return situacaoPresencaAbonavelAtestado(situacao) || situacaoPresencaComoFolga(situacao);
+  }
+
+  // Em análise / rejeitado / abono=sim: só Escalado, Troca ou Compra.
+  return situacaoPresencaAbonavelAtestado(situacao);
 }
 
 export type PresencaGestaoChaveValor = {
@@ -361,7 +388,9 @@ export function fundirGestaoPresencaComJustificativaMedico(
   }
 
   const propagada = indice.get(diaIso);
-  if (!propagada || situacao !== "Escalado") return gestao;
+  if (!propagada || !presencaJustificativaMedicoAplicavelAoDia(diaIso, situacao, propagada)) {
+    return gestao;
+  }
 
   const st = presencaJustificativaMedicoStatusEfetivo(propagada);
   const statusGestao: PresencaGestaoStatus | undefined =
@@ -683,6 +712,21 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
 
   if (situacao === "—") {
     return { acaoPrimaria: null, mostrarHistorico: false, mostrarTravessaoAcoes: true };
+  }
+
+  if (situacao === "Atestado") {
+    if (presencaJustificativaMedicoAprovada(gestao)) {
+      return {
+        acaoPrimaria: null,
+        mostrarHistorico: true,
+        mostrarTravessaoAcoes: false,
+      };
+    }
+    return {
+      acaoPrimaria: null,
+      mostrarHistorico: temHistorico,
+      mostrarTravessaoAcoes: !temHistorico,
+    };
   }
 
   if (situacaoPresencaComoEscalado(situacao) && diaIsoEhAmanhaOuFuturo(diaIso, agora)) {

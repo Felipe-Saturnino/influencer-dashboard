@@ -39,7 +39,7 @@ export const TUTORIAL_RH_SOLICITACOES_APROVAR: TutorialDef = {
     {
       titulo: "3. Aprovar um atestado",
       texto:
-        "1. Clique na aba Atendimento.\n2. Em Status, escolha Aprovado.\n3. Em Abono remunerado?, selecione SIM ou NÃO.\n4. Preencha Observação do RH (obrigatória ao mudar o status).\n5. Clique em Salvar.",
+        "1. Clique na aba Atendimento.\n2. Em Status, escolha Aprovado.\n3. Em Abono remunerado?, selecione SIM ou NÃO.\n4. Preencha Observação do RH (obrigatória ao mudar o status).\n5. Clique em Salvar.\n6. Com SIM, no Calendário o Status fica Abonado nos dias Escalado/Troca/Compra; com NÃO, fica Atestado em todos os dias do período. Em ambos os casos a Escala mostra Atestado em todo o período e vendas de Folga abertas no Marketplace nesse intervalo são canceladas.",
       imagens: [
         {
           src: `${IMG}/03-atender-atestado-aprovacao.png`,

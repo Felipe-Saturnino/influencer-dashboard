@@ -417,6 +417,7 @@ function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
 function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   const v = (valor ?? "").trim();
   if (!v) return null;
+  if (v === "Atestado") return "Atestado";
   if (valorCelulaEhFolgaOperacional(v)) return null;
   return turnoOperacionalValorGrade(v) ?? (v === "Compra" || v === "Troca" ? v : null);
 }
@@ -424,13 +425,14 @@ function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
 type OpTurnosHorarioPick = TurnosDealersPick;
 
 function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
-  return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca";
+  return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca" || turnoNome === "Atestado";
 }
 
 /** Situação na grade (Gestão de Escala) para o dia — Folga vs escalado de turno; CVT mantém o rótulo. */
 function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | undefined): string {
   const v = (valorCelulaRaw ?? "").trim();
   if (!v) return "—";
+  if (v === "Atestado") return "Atestado";
   if (valorCelulaEhFolgaOperacional(v)) return v.toLowerCase() === "venda" ? "Venda" : "Folga";
   if (v.startsWith("Compra - ")) return v;
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
