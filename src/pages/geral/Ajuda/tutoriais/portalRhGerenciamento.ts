@@ -61,5 +61,5 @@ export const TUTORIAL_PORTAL_RH_GERENCIAMENTO: TutorialDef = {
     },
   ],
   notasFinais:
-    "— A aba Gerenciamento de Postagens só aparece com permissão de Editar nesta página.\n— Postagens arquivadas continuam visíveis no Gerenciamento (filtro Status) e no histórico da postagem.",
+    "— Postagens arquivadas continuam visíveis no Gerenciamento (filtro Status) e no histórico da postagem.",
 };

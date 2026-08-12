@@ -18,7 +18,7 @@ export const TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS: TutorialDef = {
     {
       titulo: "1. Abrir a aba Comunicados",
       texto:
-        "1. No menu, seção Conteúdo, clique em Portal de RH.\n2. Clique na aba Comunicados.\n3. Use o carrossel de mês, o Histórico ou a busca para encontrar o comunicado.\n4. Em cada card, com permissão de Editar nesta página, aparece o botão Ver Lidos ao lado de Lido.",
+        "1. No menu, seção Conteúdo, clique em Portal de RH.\n2. Clique na aba Comunicados.\n3. Use o carrossel de mês, o Histórico ou a busca para encontrar o comunicado.\n4. Em cada card, aparece o botão Ver Lidos ao lado de Lido.",
       imagens: [
         {
           src: `${IMG}/01-comunicados-ver-lidos.png`,
@@ -39,5 +39,5 @@ export const TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS: TutorialDef = {
     },
   ],
   notasFinais:
-    "— O botão Ver Lidos só aparece com permissão de Editar no Portal de RH.\n— A lista reflete quem clicou em Lido naquele comunicado.",
+    "— A lista reflete quem clicou em Lido naquele comunicado.",
 };
