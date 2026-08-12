@@ -27,6 +27,8 @@ export function useHomeStaffLidoCollapse(userId: string | undefined, bucket: Hom
     [lidos, expandidosSessao],
   );
 
+  const isLido = useCallback((itemId: string) => lidos.has(itemId), [lidos]);
+
   const marcarLido = useCallback(
     (itemId: string) => {
       if (!userId) return;
@@ -45,5 +47,5 @@ export function useHomeStaffLidoCollapse(userId: string | undefined, bucket: Hom
     setExpandidosSessao((prev) => new Set(prev).add(itemId));
   }, []);
 
-  return { isRecolhido, marcarLido, expandir };
+  return { isRecolhido, isLido, marcarLido, expandir };
 }
