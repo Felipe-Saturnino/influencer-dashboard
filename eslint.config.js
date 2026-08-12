@@ -57,6 +57,18 @@ export default tseslint.config(
     },
   },
   {
+    /** IIFEs injetados no Chrome/CDP (fetch, WebSocket, location) — não Node. */
+    files: ['scripts/**/*-browser.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: globals.browser,
+    },
+    rules: {
+      'no-useless-assignment': 'off',
+    },
+  },
+  {
     files: ['supabase/functions/**/*.ts'],
     languageOptions: {
       globals: {

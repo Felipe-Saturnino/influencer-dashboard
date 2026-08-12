@@ -233,7 +233,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Detalhamento Diário",
         texto:
-          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time). Ocorrências: Troca, Atestado, Atraso, Esquecimento, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
+          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time). Ocorrências: Troca, Atestado, Atraso, Esquecimento, Outro, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
       },
       {
         subtitulo: "Aba KPIs de Mesa",
@@ -762,7 +762,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Consultar um incidente",
         texto:
-          "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator, data/hora da rodada, ID da rodada, mesa, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir).",
+          "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator (nickname cadastrado na Gestão de Staff), data/hora da rodada, ID da rodada, mesa, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir).",
       },
       {
         subtitulo: "Editar um incidente",

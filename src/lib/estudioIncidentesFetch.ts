@@ -288,3 +288,105 @@ export async function fetchStaffFormIncidente(
   const times = await fetchOrgTimesGpShuffler();
   return fetchFuncionariosPorOrgTimes(times, timeAlvo);
 }
+
+/**
+ * Nickname de Gestão de Staff (`staff_nickname`) por `profiles.id` do relator.
+ * Resolve via e-mail de login (e-mail / e-mail Spin) → `rh_funcionarios`.
+ */
+export async function fetchNicknameStaffPorProfileIds(
+  profileIds: string[],
+): Promise<Record<string, string>> {
+  const ids = [...new Set(profileIds.map((x) => x.trim()).filter(Boolean))];
+  if (ids.length === 0) return {};
+
+  const { data: profs, error: errProfs } = await supabase.from("profiles").select("id, email").in("id", ids);
+  if (errProfs) {
+    console.error("[Incidentes] profiles relator:", errProfs);
+    return {};
+  }
+
+  type ProfRow = { id: string; email: string | null };
+  const emailLcToProfileIds = new Map<string, string[]>();
+  const emailsOriginais: string[] = [];
+  for (const raw of (profs ?? []) as ProfRow[]) {
+    const em = (raw.email ?? "").trim();
+    if (!em) continue;
+    const lc = em.toLowerCase();
+    const list = emailLcToProfileIds.get(lc) ?? [];
+    list.push(raw.id);
+    emailLcToProfileIds.set(lc, list);
+    emailsOriginais.push(em);
+  }
+  const emailsUnicos = [...new Set(emailsOriginais)];
+  if (emailsUnicos.length === 0) return {};
+
+  type FuncNickRow = { email: string | null; email_spin: string | null; staff_nickname: string | null };
+  const nickByEmailLc = new Map<string, string>();
+
+  await fetchInBatched(emailsUnicos, 80, async (slice) => {
+    const [byEmail, bySpin] = await Promise.all([
+      supabase
+        .from("rh_funcionarios")
+        .select("email, email_spin, staff_nickname")
+        .in("status", ["ativo", "indisponivel"])
+        .in("email", slice),
+      supabase
+        .from("rh_funcionarios")
+        .select("email, email_spin, staff_nickname")
+        .in("status", ["ativo", "indisponivel"])
+        .in("email_spin", slice),
+    ]);
+    if (byEmail.error) console.error("[Incidentes] nickname por email:", byEmail.error);
+    if (bySpin.error) console.error("[Incidentes] nickname por email_spin:", bySpin.error);
+    for (const raw of [...(byEmail.data ?? []), ...(bySpin.data ?? [])] as FuncNickRow[]) {
+      const nick = (raw.staff_nickname ?? "").trim();
+      if (!nick) continue;
+      const e1 = (raw.email ?? "").trim().toLowerCase();
+      const e2 = (raw.email_spin ?? "").trim().toLowerCase();
+      if (e1) nickByEmailLc.set(e1, nick);
+      if (e2) nickByEmailLc.set(e2, nick);
+    }
+    return [];
+  });
+
+  const out: Record<string, string> = {};
+  for (const [emailLc, profileIdsForEmail] of emailLcToProfileIds) {
+    const nick = nickByEmailLc.get(emailLc);
+    if (!nick) continue;
+    for (const pid of profileIdsForEmail) out[pid] = nick;
+  }
+  return out;
+}
+
+/** Nickname de Gestão de Staff do login atual (para gravar em `relator_nome`). */
+export async function fetchNicknameStaffDoLogin(
+  emailRaw: string | null | undefined,
+): Promise<string | null> {
+  const email = emailRaw?.trim();
+  if (!email) return null;
+  const emailLc = email.toLowerCase();
+  const [byEmail, bySpin] = await Promise.all([
+    supabase
+      .from("rh_funcionarios")
+      .select("email, email_spin, staff_nickname")
+      .ilike("email", email)
+      .in("status", ["ativo", "indisponivel"]),
+    supabase
+      .from("rh_funcionarios")
+      .select("email, email_spin, staff_nickname")
+      .not("email_spin", "is", null)
+      .ilike("email_spin", email)
+      .in("status", ["ativo", "indisponivel"]),
+  ]);
+  if (byEmail.error || bySpin.error) return null;
+  type Row = { email: string | null; email_spin: string | null; staff_nickname: string | null };
+  const rows = [...(byEmail.data ?? []), ...(bySpin.data ?? [])] as Row[];
+  for (const r of rows) {
+    const em = (r.email ?? "").trim().toLowerCase();
+    const sp = (r.email_spin ?? "").trim().toLowerCase();
+    if (em !== emailLc && sp !== emailLc) continue;
+    const nick = (r.staff_nickname ?? "").trim();
+    if (nick) return nick;
+  }
+  return null;
+}

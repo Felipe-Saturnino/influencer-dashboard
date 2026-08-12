@@ -211,3 +211,19 @@ export function labelLocalMesaIncidente(local: string | null | undefined): strin
   if (local === "fora_mesa") return "Fora de Jogo";
   return "—";
 }
+
+/** Relator na UI: nickname de Gestão de Staff quando conhecido; senão `relator_nome` gravado. */
+export function labelRelatorIncidente(
+  row: { relator_user_id: string | null; relator_nome: string },
+  nicknamePorProfileId: Record<string, string> | Map<string, string>,
+): string {
+  const uid = (row.relator_user_id ?? "").trim();
+  if (uid) {
+    const nick =
+      nicknamePorProfileId instanceof Map
+        ? nicknamePorProfileId.get(uid)
+        : nicknamePorProfileId[uid];
+    if ((nick ?? "").trim()) return nick!.trim();
+  }
+  return (row.relator_nome ?? "").trim() || "—";
+}

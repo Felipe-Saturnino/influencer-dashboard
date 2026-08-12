@@ -59,7 +59,7 @@ import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioL
 import { fetchEstudiosSpinRows, fetchMesasSpinCadastroRows } from "../../plataforma/GestaoMesas/gestaoMesasFetch";
 import { nomeEstudioJoin } from "../../plataforma/GestaoMesas/gestaoMesasUi";
 import type { EstudioSpinRow, MesaSpinCadastroRow } from "../../plataforma/GestaoMesas/gestaoMesasUi";
-import { fetchEstudioIncidentesPeriodo, fetchStaffFiltroIncidentes } from "../../../lib/estudioIncidentesFetch";
+import { fetchEstudioIncidentesPeriodo, fetchNicknameStaffPorProfileIds, fetchStaffFiltroIncidentes } from "../../../lib/estudioIncidentesFetch";
 import {
   INCIDENTE_CATEGORIA_META,
   INCIDENTE_CATEGORIA_OPTIONS,
@@ -79,6 +79,7 @@ import {
   incidenteCategoriaLabel,
   labelMesaIncidente,
   labelPrestadorIncidente,
+  labelRelatorIncidente,
   labelTipoJogoIncidente,
   normalizarTipoJogoIncidente,
   timeAlvoLabel,
@@ -154,7 +155,12 @@ function contarPorCategoria(rows: EstudioIncidenteRow[]): Record<IncidenteCatego
   return out;
 }
 
-function sortRows(rows: EstudioIncidenteRow[], col: SortCol, dir: SortDir): EstudioIncidenteRow[] {
+function sortRows(
+  rows: EstudioIncidenteRow[],
+  col: SortCol,
+  dir: SortDir,
+  nicknamePorRelator: Record<string, string>,
+): EstudioIncidenteRow[] {
   const copy = [...rows];
   copy.sort((a, b) => {
     switch (col) {
@@ -173,7 +179,11 @@ function sortRows(rows: EstudioIncidenteRow[], col: SortCol, dir: SortDir): Estu
       case "tipo":
         return compareLocaleTexto(a.tipo, b.tipo, dir);
       case "relator":
-        return compareLocaleTexto(a.relator_nome, b.relator_nome, dir);
+        return compareLocaleTexto(
+          labelRelatorIncidente(a, nicknamePorRelator),
+          labelRelatorIncidente(b, nicknamePorRelator),
+          dir,
+        );
       default:
         return 0;
     }
@@ -211,6 +221,7 @@ export default function Incidentes() {
   const [estudiosRows, setEstudiosRows] = useState<EstudioSpinRow[]>([]);
   const [staffOptions, setStaffOptions] = useState<IncidenteStaffOption[]>([]);
   const [meusIds, setMeusIds] = useState<string[]>([]);
+  const [nicknamePorRelator, setNicknamePorRelator] = useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -303,6 +314,22 @@ export default function Incidentes() {
     };
   }, [perm.loading, isProprios, user?.email]);
 
+  useEffect(() => {
+    const ids = rowsAtual.map((r) => r.relator_user_id).filter((x): x is string => Boolean(x?.trim()));
+    if (ids.length === 0) {
+      setNicknamePorRelator({});
+      return;
+    }
+    let cancel = false;
+    void (async () => {
+      const map = await fetchNicknameStaffPorProfileIds(ids);
+      if (!cancel) setNicknamePorRelator(map);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [rowsAtual]);
+
   function toggleHistorico() {
     setHistorico((h) => {
       if (h) setMesIdx(getIdxMesCarrosselPadrao(meses));
@@ -332,15 +359,15 @@ export default function Incidentes() {
   const relatoresFiltroOptions = useMemo(() => {
     const map = new Map<string, string>();
     for (const r of rowsAtual) {
-      const nome = (r.relator_nome ?? "").trim();
-      if (!nome) continue;
+      const nome = labelRelatorIncidente(r, nicknamePorRelator);
+      if (!nome || nome === "—") continue;
       const id = r.relator_user_id?.trim() || `nome:${nome}`;
       if (!map.has(id)) map.set(id, nome);
     }
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  }, [rowsAtual]);
+  }, [rowsAtual, nicknamePorRelator]);
 
   const aplicarFiltrosEscopo = useCallback(
     (rows: EstudioIncidenteRow[]) =>
@@ -396,10 +423,11 @@ export default function Incidentes() {
         r.mesa_label,
         r.prestador_nome,
         nicknamePorPrestadorId.get(r.prestador_id) ?? "",
+        labelRelatorIncidente(r, nicknamePorRelator),
       ),
     );
-    return sortRows(filtradas, sort.col, sort.dir);
-  }, [rowsAtualEscopo, busca, sort, nicknamePorPrestadorId]);
+    return sortRows(filtradas, sort.col, sort.dir, nicknamePorRelator);
+  }, [rowsAtualEscopo, busca, sort, nicknamePorPrestadorId, nicknamePorRelator]);
 
   function onSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" }));
@@ -737,7 +765,9 @@ export default function Incidentes() {
                             </span>
                           </td>
                           <td style={dataTable.tdCenter}>{r.tipo}</td>
-                          {!isProprios ? <td style={dataTable.tdCenter}>{r.relator_nome}</td> : null}
+                          {!isProprios ? (
+                            <td style={dataTable.tdCenter}>{labelRelatorIncidente(r, nicknamePorRelator)}</td>
+                          ) : null}
                           <td style={dataTable.tdCenter}>
                             <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
                               <BtnIconeAcaoLinha label={tooltipAcao("Ver Incidente")} onClick={() => setVerIncidente(r)}>
@@ -768,6 +798,7 @@ export default function Incidentes() {
         <ModalVerIncidente
           incidente={verIncidente}
           prestadorNickname={nicknamePorPrestadorId.get(verIncidente.prestador_id) ?? null}
+          relatorLabel={labelRelatorIncidente(verIncidente, nicknamePorRelator)}
           ocultarPrestadorTimeRelator={isProprios}
           onClose={() => setVerIncidente(null)}
         />

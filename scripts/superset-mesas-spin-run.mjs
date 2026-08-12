@@ -18,7 +18,8 @@
  * e SUPABASE_SERVICE_ROLE_KEY no .env.
  *
  * Regras: TO/GGR arredondados por mesa (Math.round); daily = soma das mesas;
- * UAP daily = UAP_TOT (não somar uap_por_jogo); monthly = MTD corrente.
+ * UAP daily = UAP_TOT (não somar uap_por_jogo); monthly = MTD do mês de DE
+ * (extract usa dia 1 → ATE exclusivo — ver MONTHLY_TIME_RANGE no browser script).
  */
 
 import { readFileSync, writeFileSync } from "node:fs";

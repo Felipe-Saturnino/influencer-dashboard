@@ -8,10 +8,12 @@
  * MODO:
  *   network  — Sports Club × Esportiva / Casa / Blaze.br / jonbet.bet.br
  *   dedicado — mesas Casa / Blaze (sem brand)
- *   monthly  — UAP MTD do mês de DE (slice 461)
+ *   monthly  — UAP MTD do mês de DE (slice 461): time_range = dia 1 do mês → ATE
+ *              (ATE exclusivo). Não usar DE mid-month — evita UAP parcial no monthly_summary.
  *
  * ATE é exclusivo no time_range do Superset (usar o dia seguinte ao último dia).
  * Ex.: 04–11/08 → DE='2026-08-04', ATE='2026-08-13'
+ *      monthly nesse caso → '2026-08-01 : 2026-08-13'
  */
 (async () => {
   const MODO = "network"; // "network" | "dedicado" | "monthly"
@@ -42,6 +44,8 @@
 
   const SLICES = { TO: 450, GGR: 421, BET: 451, UAP: 449, UAP_TOT: 461 };
   const TIME_RANGE = `${DE} : ${ATE}`;
+  /** MTD do mês de DE: sempre do dia 1 até ATE (exclusivo). */
+  const MONTHLY_TIME_RANGE = `${DE.slice(0, 7)}-01 : ${ATE}`;
 
   const SCENARIOS = {
     network: [
@@ -227,6 +231,7 @@
   if (MODO === "monthly") {
     const mesUtc = Date.UTC(Number(DE.slice(0, 4)), Number(DE.slice(5, 7)) - 1, 1);
     out.mes = `${DE.slice(0, 7)}-01`;
+    out.monthlyTimeRange = MONTHLY_TIME_RANGE;
     for (const sc of SCENARIOS.monthly) {
       const slice = sliceById[SLICES.UAP_TOT];
       const filters = [
@@ -241,7 +246,7 @@
           subject: "at",
           operator: "TEMPORAL_RANGE",
           operatorId: "TEMPORAL_RANGE",
-          comparator: TIME_RANGE,
+          comparator: MONTHLY_TIME_RANGE,
           expressionType: "SIMPLE",
           isExtra: true,
         },
@@ -295,7 +300,7 @@
             row_limit: 10000,
             series_limit: 0,
             group_others_when_limit_reached: false,
-            time_range: TIME_RANGE,
+            time_range: MONTHLY_TIME_RANGE,
           },
         ],
         form_data: fm,

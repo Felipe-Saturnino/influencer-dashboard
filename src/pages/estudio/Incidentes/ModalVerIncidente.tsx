@@ -87,12 +87,15 @@ const row3 = {
 export function ModalVerIncidente({
   incidente,
   prestadorNickname,
+  relatorLabel,
   ocultarPrestadorTimeRelator,
   onClose,
 }: {
   incidente: EstudioIncidenteRow;
   /** Nickname do staff (Gestão de Staff), se conhecido. */
   prestadorNickname?: string | null;
+  /** Relator exibido — preferir nickname de Gestão de Staff. */
+  relatorLabel?: string | null;
   ocultarPrestadorTimeRelator: boolean;
   onClose: () => void;
 }) {
@@ -193,7 +196,7 @@ export function ModalVerIncidente({
           ) : (
             <div style={row2}>
               <Campo label="Abertura de Incidente" value={formatDataHoraIncidente(incidente.created_at)} />
-              <Campo label="Relator" value={incidente.relator_nome} />
+              <Campo label="Relator" value={(relatorLabel ?? "").trim() || incidente.relator_nome} />
             </div>
           )}
           <div style={row2}>

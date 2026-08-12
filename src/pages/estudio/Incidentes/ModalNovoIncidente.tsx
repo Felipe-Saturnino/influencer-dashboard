@@ -13,6 +13,7 @@ import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import {
   fetchEstudioIncidenteAnexos,
+  fetchNicknameStaffDoLogin,
   fetchStaffFormIncidente,
   insertEstudioIncidente,
   updateEstudioIncidente,
@@ -585,7 +586,8 @@ export function ModalNovoIncidente({
         protocoloSalvo = data.protocolo;
         incidenteId = data.id;
       } else {
-        const relatorNome = user?.name?.trim() || user?.email || "Usuário";
+        const nickStaff = await fetchNicknameStaffDoLogin(user?.email);
+        const relatorNome = nickStaff || user?.name?.trim() || user?.email || "Usuário";
         const { data, error } = await insertEstudioIncidente({
           ocorrido_em: new Date().toISOString(),
           ...payloadBase,
