@@ -62,5 +62,5 @@ export const TUTORIAL_NOVO_INCIDENTE: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Novo Incidente e Editar só aparecem com permissão de Editar = Sim em Incidentes.\n— O Relator do ticket criado é o usuário logado; a data de Abertura na tabela é o momento do registro, não a data/hora da rodada.",
+    "— O Relator do ticket criado é o usuário logado; a data de Abertura na tabela é o momento do registro, não a data/hora da rodada.",
 };

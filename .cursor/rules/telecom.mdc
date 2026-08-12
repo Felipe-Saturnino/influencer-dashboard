@@ -73,7 +73,7 @@ União, dedupe; **nunca** só o legado:
 
 Referência de implementação: `monitor-lobby-jonbet-run.mjs` / `monitor-lobby-blaze-run.mjs` (pós-Network).
 
-**Paginação do lobby:** continuar até achar **todos** os IDs esperados **ou** esgotar páginas. Parar cedo só com dedicadas no set faz o job **omitir** Network no fim do ranking (anti-pattern Blaze pré-correção).
+**Paginação do lobby:** sempre varrer **todas** as páginas (sem early-break). Parar na 1ª página ao achar só dedicadas omite Network (~P290+) e gera «30 jogos / 1 página / parcial».
 
 ---
 
@@ -137,7 +137,7 @@ Tom: operacional, PT-BR, **sem** pedir à Telecom para recompilar quando a Spin 
 
 - Hardcodar mesas no script “para facilitar o dry-run”
 - Script que só consulta `mesas_spin_cadastro` do slug dedicado e ignora Network na junction
-- Early-break de paginação quando ainda faltam IDs esperados
+- Early-break de paginação (parar na 1ª página ao achar só dedicadas) — Network no fim do ranking fica `null`
 - Pedir à Telecom um job novo por estúdio no **mesmo** lobby da mesma operadora
 - Documentar “atualize o script quando entrarem mesas novas” em vez de “cadastre o ID na Gestão de Estúdios”
 - Confundir catálogo completo com prateleira da home (caso Esportiva) — a métrica de produto define a fonte; a expansão de mesas continua só no DI

@@ -25,7 +25,7 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
@@ -106,6 +106,11 @@ const TIME_FILTRO_OPTIONS: { value: TimeFiltro; label: string }[] = [
 ];
 
 const ABAS_INCIDENTES: AbaIncidentes[] = ["tickets", "sinais"];
+
+const TUTORIAL_NOVO_INCIDENTE: AjudaContextualTutorial = {
+  id: "novo-incidente",
+  urlSlug: "NovoIncidente",
+};
 
 const CATEGORIAS_KPI: IncidenteCategoria[] = [
   "caso",
@@ -515,7 +520,10 @@ export default function Incidentes() {
             <FiltroEstudioSelect value={estudioFiltro} onChange={setEstudioFiltro} estudios={estudiosOptions} />
           </div>
           <div className="app-marketplace-filtro-minhas__cta">
-            <AjudaContextualAcoes pageKey="incidentes" />
+            <AjudaContextualAcoes
+              pageKey="incidentes"
+              tutorial={aba === "tickets" ? TUTORIAL_NOVO_INCIDENTE : null}
+            />
           </div>
         </div>
 

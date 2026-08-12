@@ -152,6 +152,21 @@ Agendar no Windows/Linux: comando `node` acima com as variáveis de ambiente já
 | `Nenhuma mesa com ID Blaze` | Spin ainda não cadastrou IDs — avisar Spin |
 | `Edge HTTP 401` | Conferir `SUPABASE_SERVICE_ROLE_KEY` / secret de ingest |
 | `status: parcial` / `mesas_encontradas` menor que o esperado | IDs desatualizados ou mesa fora do lobby — avisar Spin |
-| Timeout | Aumentar timeout; confirmar paginação até Network |
+| Timeout | Aumentar timeout (≥ 180 s); no stdout deve haver **várias páginas** e **centenas** de jogos |
+| `30 jogos / 1 página` com 9 mesas no cadastro | Script **antigo** ainda em uso — substituir pelo `.mjs` atual e conferir stdout abaixo |
+
+### Como validar que o script novo está a correr (stdout)
+
+No dry-run / produção, o log **deve** parecer com isto (números aproximados):
+
+```text
+Buscando lobby Blaze (9 mesas no cadastro)...
+IDs: 500615, 500616, 500617, 501109, 501110, 542819, 542820, 542821, 542822
+Blaze meta: total_pages=12 total_records=339
+IDs encontrados no lobby: 9/9
+Lobby: 339 jogos, 12 página(s).
+```
+
+Se aparecer `5 mesas`, `Lobby: 30 jogos, 1 página(s)` → **não** é o ficheiro atual. Network (IDs `542819`–`542822`) fica `null` na plataforma.
 
 **Contato:** Spin / Data Intelligence (cadastro, Supabase, dashboard). Telecom: operação do job e rede.

@@ -136,10 +136,16 @@ async function escanearLobby(idsEsperados) {
   let page = 1;
   let totalPages = 1;
 
+  // Sempre varrer todas as páginas (Network pode estar longe no ranking).
   while (page <= totalPages) {
     const data = await fetchPagina(page);
     if (page === 1) {
       totalPages = Math.max(1, data.meta?.total_pages ?? 1);
+      const totalRecords = data.meta?.total_records;
+      console.log(
+        `Jonbet meta: total_pages=${totalPages}` +
+          (totalRecords != null ? ` total_records=${totalRecords}` : ""),
+      );
     }
     const records = data.records ?? [];
     for (let i = 0; i < records.length; i++) {
@@ -159,11 +165,17 @@ async function escanearLobby(idsEsperados) {
         posicoes.set(idStr, posicao);
       }
     }
-    if (posicoes.size >= idsEsperados.size) break;
     page++;
   }
 
-  return { lobby, paginasLidas: page };
+  console.log(
+    `IDs encontrados no lobby: ${posicoes.size}/${idsEsperados.size}` +
+      (posicoes.size < idsEsperados.size
+        ? ` (faltam: ${[...idsEsperados].filter((id) => !posicoes.has(id)).join(", ")})`
+        : ""),
+  );
+
+  return { lobby, paginasLidas: totalPages };
 }
 
 async function main() {
