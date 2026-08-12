@@ -143,7 +143,7 @@ export function GerenciamentoPostagensFiltrosTipoStatus({
 function acoesPorStatus(status: RhPostagemStatus): ("editar" | "aprovar" | "arquivar" | "historico")[] {
   switch (status) {
     case "publicado":
-      return ["arquivar", "historico"];
+      return ["editar", "arquivar", "historico"];
     case "rascunho":
       return ["editar", "historico"];
     case "aprovacao":

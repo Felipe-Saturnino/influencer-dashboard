@@ -962,6 +962,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Após aprovar, a página atualiza automaticamente. Se a postagem não aparecer nos publicados, verifique o filtro de mês ativo — ela pode ter sido publicada em um mês diferente do selecionado. Mude o carrossel para o mês de publicação ou use a aba Gerenciamento com filtro Status: Publicado.",
       },
       {
+        subtitulo: "Não aparece o botão Ver Lidos no comunicado?",
+        texto:
+          "O botão **Ver Lidos** só aparece com permissão de **Editar = Sim** no Portal de RH. Com apenas Ver, você marca a própria leitura com **Lido**, mas não consulta a lista de leitores.",
+      },
+      {
+        subtitulo: "O time do autor no card está errado?",
+        texto:
+          "O rodapé do card usa o **time** do organograma ligado ao e-mail do autor em Gestão de Prestadores. Se aparecer a diretoria (ex.: Studio Operations) em vez do time (ex.: RH), confira o vínculo de organograma desse prestador. Se o cadastro estiver correto e o erro persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Não consigo editar uma postagem já publicada?",
+        texto:
+          "Na aba Gerenciamento, postagens com status Publicado têm o ícone de editar (lápis). A aba Gerenciamento exige Editar = Sim. Após abrir o modal, use **Salvar alterações** para gravar o conteúdo sem desarquivar nem republicar.",
+      },
+      {
         subtitulo: "Não consigo arquivar uma postagem publicada?",
         texto:
           "O botão Arquivar (ícone de arquivo) abre um pop-up pedindo confirmação. Toque em Arquivar no pop-up para concluir ou Cancelar para voltar. A ação não pode ser desfeita pela plataforma.",

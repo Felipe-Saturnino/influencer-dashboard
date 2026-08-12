@@ -436,14 +436,16 @@ export function ModalCriarPostagem({
     }
     const novoStatus: RhPostagemStatus =
       acao === "salvar"
-        ? "rascunho"
+        ? statusAtual === "publicado" && modo === "editar"
+          ? "publicado"
+          : "rascunho"
         : tipoPostagem === "politica"
           ? statusPosPublicar(
               legadoPolitica ? requerAprovacaoEhSim(requerAprovacao) : requerAprovacaoEhSim(normativo.requerAprovacao),
             )
           : "publicado";
 
-    if (acao === "publicar") {
+    if (acao === "publicar" || (acao === "salvar" && statusAtual === "publicado" && modo === "editar")) {
       let errs: Record<string, string> = {};
       if (tipoPostagem === "comunicado") {
         errs = validarPublicarComunicado({ tipoComunicado, assunto, descricao });
@@ -480,6 +482,12 @@ export function ModalCriarPostagem({
     const now = new Date().toISOString();
     const ct = contentTypeFromTipoUi(tipoPostagem);
     const statusAnterior = modo === "editar" ? statusAtual : null;
+    const camposPublicacao =
+      novoStatus !== "publicado"
+        ? { published_at: null as string | null, published_by: null as string | null }
+        : statusAnterior === "publicado"
+          ? {}
+          : { published_at: now, published_by: user.id };
     const registrarEdicoesRascunho = async (contentId: string) => {
       if (modo !== "editar" || statusAnterior !== "rascunho" || !snapshotEdicao || !user?.id) return;
       const depois = buildSnapshot({ imagem: up.imagem, anexo: up.anexo, anexoNome: up.anexoNomeOut });
@@ -497,7 +505,7 @@ export function ModalCriarPostagem({
           setSalvando(false);
           return;
         }
-        const payload = {
+        const payloadBase = {
           titulo: assunto.trim() || "Rascunho",
           corpo: descricao,
           categoria_id: catId,
@@ -505,12 +513,12 @@ export function ModalCriarPostagem({
           imagem_storage_path: up.imagem,
           anexo_storage_path: up.anexo,
           anexo_nome: up.anexoNomeOut,
-          created_by: user.id,
-          published_at: novoStatus === "publicado" ? now : null,
-          published_by: novoStatus === "publicado" ? user.id : null,
         };
         if (modo === "editar" && editRef) {
-          const { error } = await supabase.from("rh_portal_comunicado").update(payload).eq("id", editRef.id);
+          const { error } = await supabase
+            .from("rh_portal_comunicado")
+            .update({ ...payloadBase, ...camposPublicacao })
+            .eq("id", editRef.id);
           if (error) {
             console.error("[ModalCriarPostagem] salvar comunicado:", error);
             setSalvando(false);
@@ -522,7 +530,12 @@ export function ModalCriarPostagem({
             await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
           }
         } else {
-          const { error } = await supabase.from("rh_portal_comunicado").insert(payload);
+          const { error } = await supabase.from("rh_portal_comunicado").insert({
+            ...payloadBase,
+            created_by: user.id,
+            published_at: novoStatus === "publicado" ? now : null,
+            published_by: novoStatus === "publicado" ? user.id : null,
+          });
           if (error) {
             console.error("[ModalCriarPostagem] inserir comunicado:", error);
             setSalvando(false);
@@ -539,7 +552,7 @@ export function ModalCriarPostagem({
             return;
           }
           const reqApr = requerAprovacaoEhSim(requerAprovacao);
-          const payload = {
+          const payloadBase = {
             titulo: assunto.trim() || "Rascunho",
             corpo: descricao,
             introducao: introducao.trim() || null,
@@ -549,12 +562,13 @@ export function ModalCriarPostagem({
             imagem_storage_path: up.imagem,
             anexo_storage_path: up.anexo,
             anexo_nome: up.anexoNomeOut,
-            created_by: user.id,
-            published_at: novoStatus === "publicado" ? now : null,
             updated_by: user.id,
           };
           if (modo === "editar" && editRef) {
-            const { error } = await supabase.from("rh_portal_documento").update(payload).eq("id", editRef.id);
+            const { error } = await supabase
+              .from("rh_portal_documento")
+              .update({ ...payloadBase, ...camposPublicacao })
+              .eq("id", editRef.id);
             if (error) {
               console.error("[ModalCriarPostagem] salvar documento legado:", error);
               setSalvando(false);
@@ -566,7 +580,11 @@ export function ModalCriarPostagem({
               await registrarHistoricoStatus(supabase, ct, editRef.id, statusAnterior, novoStatus, user.id);
             }
           } else {
-            const { error } = await supabase.from("rh_portal_documento").insert(payload);
+            const { error } = await supabase.from("rh_portal_documento").insert({
+              ...payloadBase,
+              created_by: user.id,
+              published_at: novoStatus === "publicado" ? now : null,
+            });
             if (error) {
               console.error("[ModalCriarPostagem] inserir documento legado:", error);
               setSalvando(false);
@@ -590,8 +608,10 @@ export function ModalCriarPostagem({
           }
           const reqApr = requerAprovacaoEhSim(normativo.requerAprovacao);
           const dataEmissaoSalvar =
-            novoStatus === "publicado" ? fmtDataEmissaoDocumentoPortal(new Date()) : dataEmissaoPersistida;
-          const payload = {
+            novoStatus === "publicado" && statusAnterior !== "publicado"
+              ? fmtDataEmissaoDocumentoPortal(new Date())
+              : dataEmissaoPersistida;
+          const payloadBase = {
             titulo: normativo.titulo.trim() || "Rascunho",
             codigo: normativo.codigo.trim() ? normativo.codigo.trim().toUpperCase() : null,
             versao: normativo.versao.trim() || "1.0",
@@ -614,13 +634,14 @@ export function ModalCriarPostagem({
             anexo_nome: pdfNome,
             storage_path: pdfPath,
             imagem_storage_path: null,
-            created_by: user.id,
-            published_at: novoStatus === "publicado" ? now : null,
             updated_by: user.id,
           };
           let docId = editRef?.id ?? "";
           if (modo === "editar" && editRef) {
-            const { error } = await supabase.from("rh_portal_documento").update(payload).eq("id", editRef.id);
+            const { error } = await supabase
+              .from("rh_portal_documento")
+              .update({ ...payloadBase, ...camposPublicacao })
+              .eq("id", editRef.id);
             if (error) {
               console.error("[ModalCriarPostagem] salvar documento normativo:", error);
               setSalvando(false);
@@ -633,7 +654,15 @@ export function ModalCriarPostagem({
               await registrarHistoricoStatus(supabase, ct, docId, statusAnterior, novoStatus, user.id);
             }
           } else {
-            const { data: inserted, error } = await supabase.from("rh_portal_documento").insert(payload).select("id").single();
+            const { data: inserted, error } = await supabase
+              .from("rh_portal_documento")
+              .insert({
+                ...payloadBase,
+                created_by: user.id,
+                published_at: novoStatus === "publicado" ? now : null,
+              })
+              .select("id")
+              .single();
             if (error || !inserted) {
               console.error("[ModalCriarPostagem] inserir documento normativo:", error);
               setSalvando(false);
@@ -651,7 +680,7 @@ export function ModalCriarPostagem({
           }
         }
       } else {
-        const payload = {
+        const payloadBase = {
           titulo: assunto.trim() || "Rascunho",
           corpo: descricao,
           introducao: introducao.trim() || null,
@@ -660,11 +689,13 @@ export function ModalCriarPostagem({
           imagem_storage_path: up.imagem,
           anexo_storage_path: up.anexo,
           anexo_nome: up.anexoNomeOut,
-          created_by: user.id,
-          published_at: novoStatus === "publicado" ? now : null,
-          data_reuniao: novoStatus === "publicado" ? now.slice(0, 10) : null,
-          duracao_min: 0,
         };
+        const camposTalkPublicacao =
+          novoStatus !== "publicado"
+            ? { published_at: null as string | null, data_reuniao: null as string | null }
+            : statusAnterior === "publicado"
+              ? {}
+              : { published_at: now, data_reuniao: now.slice(0, 10) };
         if (modo === "editar" && editRef) {
           let numeroExtra: { numero?: number } = {};
           if (novoStatus === "publicado") {
@@ -674,7 +705,7 @@ export function ModalCriarPostagem({
           }
           const { error } = await supabase
             .from("rh_portal_rh_talk")
-            .update({ ...payload, ...numeroExtra })
+            .update({ ...payloadBase, ...camposTalkPublicacao, ...numeroExtra })
             .eq("id", editRef.id);
           if (error) {
             console.error("[ModalCriarPostagem] salvar rh_talk:", error);
@@ -688,7 +719,11 @@ export function ModalCriarPostagem({
           }
         } else {
           const insertPayload = {
-            ...payload,
+            ...payloadBase,
+            created_by: user.id,
+            published_at: novoStatus === "publicado" ? now : null,
+            data_reuniao: novoStatus === "publicado" ? now.slice(0, 10) : null,
+            duracao_min: 0,
             numero: novoStatus === "publicado" ? await proximoNumeroTalk() : null,
           };
           const { error } = await supabase.from("rh_portal_rh_talk").insert(insertPayload);
@@ -997,53 +1032,80 @@ export function ModalCriarPostagem({
       )}
 
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20, flexWrap: "wrap" }}>
-        
-        <button
-          type="button"
-          onClick={() => void persistir("salvar")}
-          disabled={salvando || !tipoPostagem || loadingData}
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: salvando ? "not-allowed" : "pointer",
-            opacity: salvando ? 0.6 : 1,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          {salvando ? <Loader2 className="app-lucide-spin" size={14} color={t.text} aria-hidden /> : null}
-          {salvando ? "Salvando…" : "Salvar"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void persistir("publicar")}
-          disabled={salvando || !tipoPostagem || loadingData}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 10,
-            border: "none",
-            background: ctaGradientPortalRh(brand),
-            color: "#fff",
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: salvando ? "not-allowed" : "pointer",
-            opacity: salvando ? 0.6 : 1,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          {salvando ? <Loader2 className="app-lucide-spin" size={14} color="#fff" aria-hidden /> : null}
-          Publicar
-        </button>
+        {modo === "editar" && statusAtual === "publicado" ? (
+          <button
+            type="button"
+            onClick={() => void persistir("salvar")}
+            disabled={salvando || !tipoPostagem || loadingData}
+            style={{
+              padding: "10px 18px",
+              borderRadius: 10,
+              border: "none",
+              background: ctaGradientPortalRh(brand),
+              color: "#fff",
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: salvando ? "not-allowed" : "pointer",
+              opacity: salvando ? 0.6 : 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {salvando ? <Loader2 className="app-lucide-spin" size={14} color="#fff" aria-hidden /> : null}
+            {salvando ? "Salvando…" : "Salvar alterações"}
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => void persistir("salvar")}
+              disabled={salvando || !tipoPostagem || loadingData}
+              style={{
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                background: t.inputBg,
+                color: t.text,
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: salvando ? "not-allowed" : "pointer",
+                opacity: salvando ? 0.6 : 1,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {salvando ? <Loader2 className="app-lucide-spin" size={14} color={t.text} aria-hidden /> : null}
+              {salvando ? "Salvando…" : "Salvar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void persistir("publicar")}
+              disabled={salvando || !tipoPostagem || loadingData}
+              style={{
+                padding: "10px 18px",
+                borderRadius: 10,
+                border: "none",
+                background: ctaGradientPortalRh(brand),
+                color: "#fff",
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: salvando ? "not-allowed" : "pointer",
+                opacity: salvando ? 0.6 : 1,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {salvando ? <Loader2 className="app-lucide-spin" size={14} color="#fff" aria-hidden /> : null}
+              Publicar
+            </button>
+          </>
+        )}
       </div>
     </ModalBase>
   );

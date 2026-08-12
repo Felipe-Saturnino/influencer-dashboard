@@ -30,6 +30,7 @@ import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from 
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 import { ComunicadoCard, RhTalkCard } from "./PortalRhCards";
+import { ModalLidosPostagem } from "./ModalLidosPostagem";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { ModalVisualizarDocumento } from "./ModalVisualizarDocumento";
 import { PortalRhDocumentosTabela } from "./PortalRhDocumentosTabela";
@@ -375,6 +376,7 @@ export default function PortalRhPage() {
 
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
+  const [modalLidos, setModalLidos] = useState<{ id: string; titulo: string } | null>(null);
   const [setoresUsuarioAplicavel, setSetoresUsuarioAplicavel] = useState<string[]>([]);
   const [usuarioCadastradoGestaoPrestadores, setUsuarioCadastradoGestaoPrestadores] = useState(false);
   const [sortDoc, setSortDoc] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
@@ -1076,6 +1078,10 @@ export default function PortalRhPage() {
                       dataPublicacao={comunicadoPinned.published_at}
                       isNovo={!receipts.get(receiptKey("comunicado", comunicadoPinned.id))?.read_at}
                       onMarcarLido={() => void marcarLidoComunicado(comunicadoPinned.id)}
+                      podeVerLidos={podeGerenciarPostagens}
+                      onVerLidos={() =>
+                        setModalLidos({ id: comunicadoPinned.id, titulo: comunicadoPinned.titulo })
+                      }
                       cardShadow={cardShadow}
                     />
                   </div>
@@ -1109,6 +1115,8 @@ export default function PortalRhPage() {
                             dataPublicacao={c.published_at}
                             isNovo={isNovoCard}
                             onMarcarLido={() => void marcarLidoComunicado(c.id)}
+                            podeVerLidos={podeGerenciarPostagens}
+                            onVerLidos={() => setModalLidos({ id: c.id, titulo: c.titulo })}
                             cardShadow={cardShadow}
                           />
                         </li>
@@ -1247,6 +1255,16 @@ export default function PortalRhPage() {
           dataPublicacao={modalTalk.published_at ?? modalTalk.data_reuniao}
           podeVer={podeVerAta(modalTalk)}
           onClose={() => setModalTalk(null)}
+        />
+      ) : null}
+
+      {podeGerenciarPostagens ? (
+        <ModalLidosPostagem
+          open={Boolean(modalLidos)}
+          titulo={modalLidos?.titulo ?? ""}
+          contentType={modalLidos ? "comunicado" : null}
+          contentId={modalLidos?.id ?? null}
+          onClose={() => setModalLidos(null)}
         />
       ) : null}
 

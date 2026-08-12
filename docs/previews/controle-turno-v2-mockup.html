@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Turno — Mockup v2</title>
+<style>
+  :root {
+    --primary: #4a2082;
+    --accent: #1e36f8;
+    --border: #e5e7eb;
+    --muted: #6b7280;
+    --bg: #f4f2f8;
+    --card: #ffffff;
+    --ok: #22c55e;
+    --warn: #f59e0b;
+    --bad: #e84025;
+    --input: #f9fafb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: #1e1b2e;
+    font-size: 13px;
+  }
+  .wrap { display: flex; min-height: 100vh; }
+  .side {
+    width: 220px;
+    background: #1a1228;
+    color: #e8e4f0;
+    padding: 20px 0;
+    flex-shrink: 0;
+  }
+  .side b { display: block; padding: 0 16px 16px; color: #c4b5fd; font-size: 12px; letter-spacing: 0.04em; }
+  .side .s {
+    padding: 14px 16px 6px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #8b8099;
+    text-transform: uppercase;
+  }
+  .side a {
+    display: block;
+    padding: 8px 16px;
+    color: #c9c0d8;
+    text-decoration: none;
+  }
+  .side a.on {
+    background: #3b1d6b;
+    color: #fff;
+    border-left: 3px solid #a78bfa;
+  }
+  .main { flex: 1; padding: 24px; max-width: 1100px; }
+  .page-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .badge {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: #ede9fe; border: 1px solid #ddd6fe;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: var(--primary); font-size: 11px;
+  }
+  h1 { margin: 0; font-size: 18px; color: var(--primary); text-transform: uppercase; }
+  .sub { margin: 6px 0 18px 40px; color: var(--muted); }
+  .box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .row + .row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--input);
+    cursor: pointer;
+    color: #1e1b2e;
+    font: inherit;
+  }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn.on {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, white);
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .btn-sq {
+    width: 32px; height: 32px; padding: 0;
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .tab {
+    padding: 10px 18px;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--input);
+    cursor: pointer;
+    color: var(--muted);
+    font: inherit;
+    font-weight: 500;
+  }
+  .tab.on {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, white);
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .search {
+    width: 100%;
+    max-width: 420px;
+    padding: 10px 12px 10px 38px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--input);
+    font: inherit;
+  }
+  .search-wrap { position: relative; width: 100%; max-width: 420px; }
+  .search-wrap::before {
+    content: "⌕";
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .period { min-width: 140px; text-align: center; font-size: 18px; font-weight: 800; }
+  .panel { display: none; }
+  .panel.on { display: block; }
+  .hidden { display: none !important; }
+  .sec-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .tit {
+    font-size: 14px; font-weight: 800; color: var(--primary);
+    text-transform: uppercase; margin: 0;
+  }
+  .tit span {
+    font-weight: 400; font-size: 11px; color: var(--muted);
+    text-transform: none; margin-left: 8px;
+  }
+  .cta {
+    padding: 10px 20px;
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4a2082, #1e36f8);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    font: inherit;
+  }
+  .cta.sec {
+    background: var(--input);
+    color: var(--primary);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, white);
+  }
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 800px) {
+    .g2, .g3, .g4 { grid-template-columns: 1fr; }
+    .side { display: none; }
+  }
+  .kpi {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    background: #faf8ff;
+  }
+  .kpi h3 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .kpi .n { font-size: 28px; font-weight: 800; line-height: 1.1; }
+  .kpi .lbl { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex; align-items: center;
+    padding: 3px 9px; border-radius: 20px;
+    font-size: 10px; font-weight: 700;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .pill.ok { background: #22c55e22; color: #166534; border-color: #22c55e44; }
+  .pill.warn { background: #f59e0b22; color: #b45309; border-color: #f59e0b44; }
+  .pill.bad { background: #e8402522; color: #b91c1c; border-color: #e8402544; }
+  .pill.neu { background: #6b728022; color: #4b5563; border-color: #6b728044; }
+  .pill.info { background: #1e36f822; color: #1e36f8; border-color: #1e36f844; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .tw {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: auto;
+  }
+  th {
+    background: color-mix(in srgb, #fff 86%, #7c3aed 14%);
+    padding: 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+    text-align: center;
+    font-weight: 700;
+  }
+  td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  tr:nth-child(even) td { background: color-mix(in srgb, #fff 92%, #7c3aed 8%); }
+  tr:last-child td { border-bottom: 0; }
+  .left { text-align: left; }
+  .bloco {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: #faf8ff;
+    position: relative;
+  }
+  .bloco-ver {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+  }
+  .bloco.has-ver {
+    padding-top: 44px; /* espaço sob o ícone Ver no canto */
+  }
+  .bloco-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .bloco h3 {
+    margin: 0;
+    font-size: 12px;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .mini-tit {
+    font-size: 12px; font-weight: 700; margin: 0 0 6px;
+  }
+  .stat-n { font-size: 20px; font-weight: 800; }
+  .stat-l { font-size: 10px; color: var(--muted); }
+  .field { margin-bottom: 10px; }
+  .field .k { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+  .field .v { font-size: 13px; }
+  .field .v.empty { color: var(--muted); }
+  .empty-center {
+    text-align: center;
+    color: var(--muted);
+    padding: 36px 12px;
+    font-size: 13px;
+  }
+  .status-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
+    text-align: center;
+  }
+  .status-card .name { font-weight: 700; margin-bottom: 10px; font-size: 14px; }
+  .note {
+    font-size: 11px; color: var(--muted); margin-top: 10px;
+  }
+  .chip {
+    display: inline-flex; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--input);
+    font-size: 12px; cursor: pointer;
+  }
+  .chip.on {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, white);
+    color: var(--primary); font-weight: 700;
+  }
+  .banner {
+    background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; font-size: 12px;
+  }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 800px) { .compare { grid-template-columns: 1fr; } }
+  .compare ul { margin: 0; padding-left: 18px; }
+  .compare li { margin: 4px 0; }
+
+  /* Ajuda contextual — padrão plataforma (AjudaContextualAcoes) */
+  .filter-line {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .filter-line__center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-line__actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .ajuda-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .ajuda-btn svg { width: 15px; height: 15px; }
+  .ajuda-btn.conheca {
+    color: #1631c4;
+    background: color-mix(in srgb, #1e36f8 12%, transparent);
+    border-color: color-mix(in srgb, #1e36f8 30%, transparent);
+  }
+  .ajuda-btn.troubleshooting {
+    color: #a16207;
+    background: color-mix(in srgb, #f59e0b 12%, transparent);
+    border-color: color-mix(in srgb, #f59e0b 30%, transparent);
+  }
+
+  .btn-icone {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--input);
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .btn-icone:hover { color: var(--primary); border-color: #c4b5fd; }
+  .btn-icone svg { width: 14px; height: 14px; }
+
+  .rel-head-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rel-footer {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .ov {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 20;
+  }
+  .ov.on { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90dvh;
+    overflow: auto;
+  }
+  .mh {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mh h2 { margin: 0; font-size: 16px; color: var(--primary); }
+  .mb { padding: 18px; }
+  .hist-item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #faf8ff;
+  }
+  .hist-item:last-child { margin-bottom: 0; }
+  .hist-meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .hist-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .hist-diff {
+    font-size: 12px;
+    margin-top: 6px;
+    padding: 8px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid var(--border);
+  }
+  .hist-diff .old { color: var(--bad); text-decoration: line-through; }
+  .hist-diff .new { color: #166534; font-weight: 700; }
+
+  /* Modal Gerar / Editar Relatório */
+  .modal.wide { max-width: 760px; }
+  .mf {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: #fff;
+    position: sticky;
+    bottom: 0;
+  }
+  .btn-ghost {
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--input);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cta.outline {
+    background: #fff;
+    color: var(--primary);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, white);
+  }
+  .modal-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .f { margin-bottom: 14px; }
+  .f label.fl {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .f-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .f-head .fl {
+    margin-bottom: 0;
+  }
+  .f-head .chk-line {
+    margin-top: 0;
+    font-weight: 500;
+    color: #374151;
+    white-space: nowrap;
+  }
+  .f .req { color: var(--bad); margin-left: 2px; }
+  .f input[type=text],
+  .f input[type=time],
+  .f textarea,
+  .f select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--input);
+    box-sizing: border-box;
+    font: inherit;
+  }
+  .f textarea { min-height: 88px; resize: vertical; }
+  .f.disabled-field input,
+  .f.disabled-field textarea {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .chk-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .chk-list label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .multi-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: var(--input);
+    max-height: 160px;
+    overflow: auto;
+  }
+  .msel {
+    position: relative;
+  }
+  .msel-trigger {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--input);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+  }
+  .msel-trigger:hover { border-color: #c4b5fd; }
+  .msel-placeholder {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .msel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, #1e36f8 12%, white);
+    border: 1px solid color-mix(in srgb, #1e36f8 30%, white);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .msel-chip button {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0 2px;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .msel-panel {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 5;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    overflow: hidden;
+  }
+  .msel-panel.on { display: block; }
+  .msel-search {
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--input);
+    font: inherit;
+    box-sizing: border-box;
+  }
+  .msel-opts {
+    max-height: 220px;
+    overflow: auto;
+  }
+  .msel-opt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid #f3f4f6;
+    background: #fff;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+  }
+  .msel-opt:hover { background: #faf8ff; }
+  .msel-opt.on {
+    background: color-mix(in srgb, #1e36f8 8%, white);
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .msel-opt .mark { color: var(--ok); font-size: 12px; }
+  .mesa-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 10px;
+    background: #faf8ff;
+  }
+  .mesa-card.herdado {
+    border-color: #f59e0b88;
+    background: #fffbeb;
+  }
+  .mesa-card h4 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--primary);
+    text-transform: uppercase;
+  }
+  .mesa-card .tag-herdado {
+    font-size: 10px;
+    font-weight: 700;
+    color: #b45309;
+    margin-left: 6px;
+  }
+  .alert-form {
+    display: none;
+    color: var(--bad);
+    font-size: 12px;
+    margin-bottom: 12px;
+    align-items: center;
+    gap: 6px;
+  }
+  .alert-form.on { display: flex; }
+  .hint-pub {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .tab-pane { display: none; }
+  .tab-pane.on { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="side">
+    <b>DATA INTELLIGENCE</b>
+    <div class="s">Estúdio</div>
+    <a class="on" href="#">Controle de Turno</a>
+    <a href="#">Gestão de Dealers</a>
+    <a href="#">Central de Notificações</a>
+    <a href="#">Figurinos</a>
+    <a href="#">Roteiro de Mesa</a>
+    <div class="s">Escala</div>
+    <a href="#">Escala Estúdio</a>
+    <a href="#">Gestão de Staff</a>
+    <a href="#">Calendário</a>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div class="badge">CT</div>
+      <h1>Controle de Turno</h1>
+    </div>
+    <p class="sub">Acompanhe rotação, escala/presença e relatórios do turno da operação.</p>
+
+    <!-- FILTRO -->
+    <div class="box">
+      <div class="filter-line">
+        <div aria-hidden="true"></div>
+        <div class="filter-line__center">
+          <button class="btn btn-sq" type="button" aria-label="Dia anterior">‹</button>
+          <span class="period" id="diaLabel">12/08/2026</span>
+          <button class="btn btn-sq" type="button" aria-label="Próximo dia">›</button>
+          <span id="turnoWrap">
+            <button class="btn on" type="button" data-turno="manha" onclick="setTurno('manha')">Manhã</button>
+            <button class="btn" type="button" data-turno="tarde" onclick="setTurno('tarde')">Tarde</button>
+            <button class="btn" type="button" data-turno="noite" onclick="setTurno('noite')">Noite</button>
+          </span>
+        </div>
+        <div class="filter-line__actions" role="group" aria-label="Ajuda contextual">
+          <a class="ajuda-btn conheca" href="#" title="Conheça esta página" aria-label="Conheça esta página" onclick="return false;">
+            <!-- BookOpen -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+          </a>
+          <a class="ajuda-btn troubleshooting" href="#" title="Troubleshooting desta página" aria-label="Troubleshooting desta página" onclick="return false;">
+            <!-- LifeBuoy -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="row" role="tablist" aria-label="Abas">
+        <button class="tab" type="button" id="tab-rotacao" onclick="setAba('rotacao')">Rotação</button>
+        <button class="tab on" type="button" id="tab-escala" onclick="setAba('escala')">Escala do Turno</button>
+        <button class="tab" type="button" id="tab-relatorio" onclick="setAba('relatorio')">Relatório de Turno</button>
+      </div>
+      <div class="row" id="searchRow">
+        <div class="search-wrap">
+          <input
+            class="search"
+            type="search"
+            id="pageSearch"
+            placeholder="Pesquisar por Nome ou Nickname..."
+            aria-label="Pesquisar por Nome ou Nickname"
+            oninput="filtrarBuscaPagina()"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA ESCALA -->
+    <div class="panel on" id="panel-escala">
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Consolidado <span id="escalaSub">— Manhã · 12/08</span></p>
+        </div>
+        <div class="g2">
+          <div class="kpi">
+            <h3>Game Presenters</h3>
+            <div class="n">12</div>
+            <div class="lbl">Escalados</div>
+            <div class="pills">
+              <span class="pill ok">Presentes 9</span>
+              <span class="pill bad">Faltas 2</span>
+              <span class="pill warn">Atestados 1</span>
+            </div>
+          </div>
+          <div class="kpi">
+            <h3>Shuffler</h3>
+            <div class="n">4</div>
+            <div class="lbl">Escalados</div>
+            <div class="pills">
+              <span class="pill ok">Presentes 3</span>
+              <span class="pill bad">Faltas 0</span>
+              <span class="pill warn">Atestados 1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Controle de Presença <span>— prestadores do dia/turno</span></p>
+        </div>
+        <div class="tw">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Nickname</th>
+                <th>Time</th>
+                <th>Entrada realizada</th>
+                <th>Saída realizada</th>
+                <th>Horas trabalhadas</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="escalaPresencaBody">
+              <tr data-nome="Ana Souza" data-nick="AnaS">
+                <td class="left">Ana Souza</td>
+                <td>AnaS</td>
+                <td>Game Presenter</td>
+                <td>06:58</td>
+                <td>—</td>
+                <td>—</td>
+                <td><span class="pill ok">Presente</span></td>
+                <td><button class="btn" type="button">···</button></td>
+              </tr>
+              <tr data-nome="Bruno Lima" data-nick="BrunoL">
+                <td class="left">Bruno Lima</td>
+                <td>BrunoL</td>
+                <td>Game Presenter</td>
+                <td>07:12</td>
+                <td>—</td>
+                <td>—</td>
+                <td><span class="pill warn">Atraso</span></td>
+                <td><button class="btn" type="button">···</button></td>
+              </tr>
+              <tr data-nome="Carla Dias" data-nick="CarlaD">
+                <td class="left">Carla Dias</td>
+                <td>CarlaD</td>
+                <td>Game Presenter</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td><span class="pill bad">Falta</span></td>
+                <td><button class="btn" type="button">···</button></td>
+              </tr>
+              <tr data-nome="Diego Alves" data-nick="DiegoA">
+                <td class="left">Diego Alves</td>
+                <td>DiegoA</td>
+                <td>Shuffler</td>
+                <td>06:55</td>
+                <td>—</td>
+                <td>—</td>
+                <td><span class="pill ok">Presente</span></td>
+                <td><button class="btn" type="button">···</button></td>
+              </tr>
+              <tr data-nome="Elena Costa" data-nick="ElenaC">
+                <td class="left">Elena Costa</td>
+                <td>ElenaC</td>
+                <td>Shuffler</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td><span class="pill neu">Pendente</span></td>
+                <td><button class="btn" type="button">···</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Modais de ação ficam para a próxima iteração.</p>
+      </div>
+    </div>
+
+    <!-- ABA ROTAÇÃO -->
+    <div class="panel" id="panel-rotacao">
+      <div class="banner">
+        Proposta UX: uma superfície (sem Gerar/Atual), turno herdado do filtro, chips de estúdio,
+        sugestão automática se ainda não houver publicação — caminho feliz ≈ 1 clique (Publicar).
+      </div>
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Antes × Depois</p>
+        </div>
+        <div class="compare">
+          <div class="bloco">
+            <h3>Antes (hoje)</h3>
+            <ul>
+              <li>Abrir página Rotação</li>
+              <li>Aba Gerar Rotação</li>
+              <li>Selecionar estúdio</li>
+              <li>Ajustar turno (default Noite)</li>
+              <li>Gerar prévia</li>
+              <li>Ajustar faltas / mover GPs</li>
+              <li>Publicar → ir à aba Atual</li>
+            </ul>
+          </div>
+          <div class="bloco">
+            <h3>Depois (nesta aba)</h3>
+            <ul>
+              <li>Dia + turno já certos (turno atual)</li>
+              <li>Grade já carregada (publicada ou sugestão)</li>
+              <li>Chips de estúdio no topo</li>
+              <li>Editar inline</li>
+              <li>Um CTA: Publicar / Atualizar</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Grade unificada <span id="rotacaoSub">— Manhã · Sports Club</span></p>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span class="pill info">Sugestão gerada</span>
+            <button class="cta" type="button">Publicar</button>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-start;margin-bottom:12px">
+          <span class="chip on">Sports Club</span>
+          <span class="chip">Blaze</span>
+          <span class="chip">CDA</span>
+          <span style="color:var(--muted);font-size:12px;margin-left:8px">Pool: 8 GPs · 3 mesas · cobertura ok</span>
+        </div>
+        <div class="tw">
+          <table>
+            <thead>
+              <tr><th>Slot</th><th>Mesa 1</th><th>Mesa 2</th><th>Mesa 3</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>07:00</td><td>Ana S.</td><td>Bruno L.</td><td>Carla D.</td></tr>
+              <tr><td>07:30</td><td>Bruno L.</td><td>Carla D.</td><td>Ana S.</td></tr>
+              <tr><td>08:00</td><td>Carla D.</td><td>Ana S.</td><td>Bruno L.</td></tr>
+              <tr><td>08:30</td><td>Ana S.</td><td>Bruno L.</td><td>— (falta)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA RELATÓRIO -->
+    <div class="panel" id="panel-relatorio">
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Controle dos Turnos <span>— 12/08/2026</span></p>
+        </div>
+        <div class="g3">
+          <div class="status-card">
+            <div class="name">Manhã</div>
+            <span class="pill ok">Publicado</span>
+          </div>
+          <div class="status-card">
+            <div class="name">Tarde</div>
+            <span class="pill warn">Rascunho</span>
+          </div>
+          <div class="status-card">
+            <div class="name">Noite</div>
+            <span class="pill bad">Não iniciado</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manhã publicado -->
+      <div class="box rel-turno-box" data-relator="Ana Costa" data-keywords="2 SOS na mesa BJ VIP — resolvidos às 10:40. Não houveram trocas de Figurino no Turno Headset mesa 2 com áudio intermitente — trocado. Não houveram fechamento de Mesas no Turno Roletas Blaze e CDA concluídas · Troca de Cartas Sports Club · CC Machine realizado. Turno estável. Sem incidentes críticos.">
+        <div class="bloco-head">
+          <p class="tit" style="margin:0">Turno da Manhã</p>
+          <span class="pill ok">Publicado</span>
+        </div>
+        <div class="bloco has-ver">
+          <button class="btn-icone bloco-ver" type="button" title="Ver histórico" aria-label="Ver histórico" onclick="abrirHistorico('manha')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <div class="mini-tit">Game Presenters</div>
+          <div class="g4" style="margin-bottom:12px">
+            <div><div class="stat-n">12</div><div class="stat-l">Escalados</div></div>
+            <div><div class="stat-n" style="color:var(--ok)">11</div><div class="stat-l">Presentes</div></div>
+            <div><div class="stat-n" style="color:var(--warn)">1</div><div class="stat-l">Atrasados</div></div>
+            <div><div class="stat-n" style="color:var(--bad)">0</div><div class="stat-l">Faltas</div></div>
+          </div>
+          <div class="mini-tit">Shuffler</div>
+          <div class="g4" style="margin-bottom:14px">
+            <div><div class="stat-n">4</div><div class="stat-l">Escalados</div></div>
+            <div><div class="stat-n" style="color:var(--ok)">4</div><div class="stat-l">Presentes</div></div>
+            <div><div class="stat-n" style="color:var(--warn)">0</div><div class="stat-l">Atrasados</div></div>
+            <div><div class="stat-n" style="color:var(--bad)">0</div><div class="stat-l">Faltas</div></div>
+          </div>
+          <div class="g2">
+            <div class="field"><div class="k">SOSs</div><div class="v">2 SOS na mesa BJ VIP — resolvidos às 10:40.</div></div>
+            <div class="field"><div class="k">Figurino</div><div class="v empty">Não houveram trocas de Figurino no Turno</div></div>
+            <div class="field"><div class="k">Equipamentos</div><div class="v">Headset mesa 2 com áudio intermitente — trocado.</div></div>
+            <div class="field"><div class="k">Fechamento de Mesa</div><div class="v empty">Não houveram fechamento de Mesas no Turno</div></div>
+          </div>
+          <div class="field"><div class="k">Manutenção</div><div class="v">Roletas Blaze e CDA concluídas · Troca de Cartas Sports Club · CC Machine realizado.</div></div>
+          <div class="field"><div class="k">Comentários Gerais</div><div class="v">Turno estável. Sem incidentes críticos.</div></div>
+          <div class="rel-footer">Ana Costa — 12/08/2026 14:52 — Publicado</div>
+        </div>
+      </div>
+
+      <!-- Tarde rascunho -->
+      <div class="box rel-turno-box" data-relator="Bruno Lima" data-keywords="Não houveram SOS no Turno Troca de blazer GP #4 às 16:20. Não houveram problemas com Equipamentos no Turno Não houveram fechamento de Mesas no Turno Não houveram Manutenções no Turno Rascunho — falta fechar comentários de equipamentos.">
+        <div class="bloco-head">
+          <p class="tit" style="margin:0">Turno da Tarde</p>
+          <button class="cta sec" type="button" onclick="abrirModalRelatorio('tarde','editar')">Editar Rascunho</button>
+        </div>
+        <div class="bloco has-ver">
+          <button class="btn-icone bloco-ver" type="button" title="Ver histórico" aria-label="Ver histórico" onclick="abrirHistorico('tarde')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <div class="mini-tit">Game Presenters</div>
+          <div class="g4" style="margin-bottom:12px">
+            <div><div class="stat-n">11</div><div class="stat-l">Escalados</div></div>
+            <div><div class="stat-n" style="color:var(--ok)">9</div><div class="stat-l">Presentes</div></div>
+            <div><div class="stat-n" style="color:var(--warn)">1</div><div class="stat-l">Atrasados</div></div>
+            <div><div class="stat-n" style="color:var(--bad)">1</div><div class="stat-l">Faltas</div></div>
+          </div>
+          <div class="mini-tit">Shuffler</div>
+          <div class="g4" style="margin-bottom:14px">
+            <div><div class="stat-n">3</div><div class="stat-l">Escalados</div></div>
+            <div><div class="stat-n" style="color:var(--ok)">3</div><div class="stat-l">Presentes</div></div>
+            <div><div class="stat-n" style="color:var(--warn)">0</div><div class="stat-l">Atrasados</div></div>
+            <div><div class="stat-n" style="color:var(--bad)">0</div><div class="stat-l">Faltas</div></div>
+          </div>
+          <div class="g2">
+            <div class="field"><div class="k">SOSs</div><div class="v empty">Não houveram SOS no Turno</div></div>
+            <div class="field"><div class="k">Figurino</div><div class="v">Troca de blazer GP #4 às 16:20.</div></div>
+            <div class="field"><div class="k">Equipamentos</div><div class="v empty">Não houveram problemas com Equipamentos no Turno</div></div>
+            <div class="field"><div class="k">Fechamento de Mesa</div><div class="v empty">Não houveram fechamento de Mesas no Turno</div></div>
+          </div>
+          <div class="field"><div class="k">Manutenção</div><div class="v empty">Não houveram Manutenções no Turno</div></div>
+          <div class="field"><div class="k">Comentários Gerais</div><div class="v">Rascunho — falta fechar comentários de equipamentos.</div></div>
+          <div class="rel-footer">Bruno Lima — 12/08/2026 18:10 — Rascunho</div>
+        </div>
+      </div>
+
+      <!-- Noite não iniciado -->
+      <div class="box rel-turno-box" data-relator="" data-keywords="Aguardando geração do Relatório">
+        <div class="bloco-head">
+          <p class="tit" style="margin:0">Turno da Noite</p>
+          <button class="cta" type="button" onclick="abrirModalRelatorio('noite','gerar')">Gerar Relatório</button>
+        </div>
+        <div class="empty-center">Aguardando geração do Relatório</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal histórico -->
+<div class="ov" id="modalHistorico" onclick="if(event.target===this)fecharHistorico()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <div class="mh">
+      <h2 id="histTitle">Histórico do Relatório</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharHistorico()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb" id="histBody"></div>
+  </div>
+</div>
+
+<!-- Modal Gerar / Editar Relatório -->
+<div class="ov" id="modalRelatorio" onclick="if(event.target===this)fecharModalRelatorio()">
+  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="relTitle">
+    <div class="mh">
+      <h2 id="relTitle">Gerar Relatório</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalRelatorio()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb">
+      <div class="alert-form" id="relErro" role="alert"></div>
+
+      <div class="modal-tabs" role="tablist" aria-label="Abas do relatório">
+        <button type="button" class="tab on" id="mtab-andamento" onclick="setModalAba('andamento')">Andamento do Turno</button>
+        <button type="button" class="tab" id="mtab-manutencao" onclick="setModalAba('manutencao')">Manutenção</button>
+        <button type="button" class="tab" id="mtab-anotacoes" onclick="setModalAba('anotacoes')">Anotações</button>
+      </div>
+
+      <!-- Andamento -->
+      <div class="tab-pane on" id="mpane-andamento">
+        <div class="f" id="wrap-sos">
+          <div class="f-head">
+            <label class="fl" for="f-sos">SOS <span class="req">*</span></label>
+            <label class="chk-line"><input type="checkbox" id="chk-sos" onchange="toggleSemEvento('sos')"> Não houveram SOS</label>
+          </div>
+          <textarea id="f-sos" placeholder="Descreva os SOS do turno…"></textarea>
+        </div>
+        <div class="f" id="wrap-figurino">
+          <div class="f-head">
+            <label class="fl" for="f-figurino">Figurino <span class="req">*</span></label>
+            <label class="chk-line"><input type="checkbox" id="chk-figurino" onchange="toggleSemEvento('figurino')"> Não houveram situações com Figurino</label>
+          </div>
+          <textarea id="f-figurino" placeholder="Descreva situações de figurino…"></textarea>
+        </div>
+        <div class="f" id="wrap-equipamentos">
+          <div class="f-head">
+            <label class="fl" for="f-equipamentos">Equipamentos <span class="req">*</span></label>
+            <label class="chk-line"><input type="checkbox" id="chk-equipamentos" onchange="toggleSemEvento('equipamentos')"> Não houveram situações com Equipamentos</label>
+          </div>
+          <textarea id="f-equipamentos" placeholder="Descreva situações de equipamentos…"></textarea>
+        </div>
+        <div class="f">
+          <label class="fl">Fechamento de Mesa</label>
+          <div class="msel" id="msel-mesas">
+            <button type="button" class="msel-trigger" id="msel-trigger" onclick="toggleMsel(event)" aria-haspopup="listbox" aria-expanded="false">
+              <span class="msel-placeholder" id="msel-ph">Selecionar mesas...</span>
+            </button>
+            <div class="msel-panel" id="msel-panel" role="listbox" onclick="event.stopPropagation()">
+              <input class="msel-search" type="search" id="msel-search" placeholder="Pesquisar mesa..." oninput="filtrarMsel()" onclick="event.stopPropagation()">
+              <div class="msel-opts" id="msel-opts"></div>
+            </div>
+          </div>
+          <div id="mesas-detalhes"></div>
+        </div>
+      </div>
+
+      <!-- Manutenção -->
+      <div class="tab-pane" id="mpane-manutencao">
+        <div class="f">
+          <label class="fl">Limpeza das Roletas</label>
+          <div class="chk-list" id="list-roletas"></div>
+        </div>
+        <div class="f">
+          <label class="fl">Limpeza das Mesas</label>
+          <div class="chk-list" id="list-limpeza-mesas"></div>
+        </div>
+        <div class="f">
+          <label class="fl">Trocas de Cartas</label>
+          <div class="chk-list" id="list-troca-cartas"></div>
+        </div>
+        <div class="f">
+          <label class="fl">Limpeza da CC Machine</label>
+          <label class="chk-line"><input type="checkbox" id="chk-cc"> Realizado</label>
+        </div>
+        <div class="f">
+          <label class="fl">Cartas Contadas</label>
+          <label class="chk-line"><input type="checkbox" id="chk-cartas"> Realizado</label>
+        </div>
+      </div>
+
+      <!-- Anotações -->
+      <div class="tab-pane" id="mpane-anotacoes">
+        <div class="f">
+          <label class="fl">Comentários Gerais <span class="req">*</span></label>
+          <textarea id="f-comentarios" placeholder="Comentários gerais do turno…" style="min-height:140px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button type="button" class="btn-ghost" onclick="fecharModalRelatorio()">Cancelar</button>
+      <button type="button" class="cta outline" onclick="salvarRelatorio(false)">Salvar Rascunho</button>
+      <button type="button" class="cta" onclick="salvarRelatorio(true)">Publicar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var turnoAtual = "manha";
+  var abaAtual = "escala";
+  var labels = { manha: "Manhã", tarde: "Tarde", noite: "Noite" };
+  var modalTurno = null;
+  var modalModo = "gerar";
+  var snapshotInicial = null;
+
+  var ESTUDIOS = [
+    { slug: "blaze", nome: "Blaze" },
+    { slug: "cda", nome: "CDA" },
+    { slug: "sports_club", nome: "Sports Club" }
+  ];
+
+  var MESAS_CADASTRO = [
+    { id: "b-bj1", label: "Blaze - 1" },
+    { id: "b-bj2", label: "Blaze - 2" },
+    { id: "b-bj3", label: "Blaze - 3" },
+    { id: "b-rl1", label: "Blaze - Roleta 6140" },
+    { id: "c-bj1", label: "CDA - 1" },
+    { id: "c-bj2", label: "CDA - 2" },
+    { id: "c-rl1", label: "CDA - Roleta 6130" },
+    { id: "s-bj1", label: "Sports Club - 1" },
+    { id: "s-bj2", label: "Sports Club - 2" },
+    { id: "s-bj3", label: "Sports Club - 3" },
+    { id: "s-bj4", label: "Sports Club - 4" },
+    { id: "s-rl1", label: "Sports Club - Roleta 6115" }
+  ];
+
+  /* estado: id -> { fechamento, reabertura, naoReaberta, herdado } */
+  var mesasSelecionadas = {};
+
+  var ROLETAS = [
+    { id: "r-b", label: "Blaze - Roleta 6140" },
+    { id: "r-c", label: "CDA - Roleta 6130" },
+    { id: "r-s", label: "Sports Club - Roleta 6115" }
+  ];
+
+  /* Mesa fechada no turno da Tarde sem reabertura → herda na Noite */
+  var MESAS_PENDENTES_REABERTURA = {
+    noite: [{ id: "s-bj2", fechamento: "06:40" }]
+  };
+
+  var RASCUNHOS = {
+    tarde: {
+      sos: "",
+      sosNao: true,
+      figurino: "Troca de blazer GP #4 às 16:20.",
+      figurinoNao: false,
+      equipamentos: "",
+      equipamentosNao: true,
+      mesas: {},
+      roletas: {},
+      limpezaMesas: {},
+      trocaCartas: {},
+      cc: false,
+      cartas: false,
+      comentarios: "Rascunho — falta fechar comentários de equipamentos."
+    }
+  };
+
+  var HISTORICOS = {
+    manha: {
+      titulo: "Histórico — Turno da Manhã",
+      itens: [
+        { tipo: "Rascunho criado", quem: "Ana Costa", quando: "12/08/2026 11:05", detalhe: null },
+        { tipo: "Campo editado — Equipamentos", quem: "Ana Costa", quando: "12/08/2026 12:20", detalhe: { campo: "Equipamentos", antigo: "(vazio)", novo: "Headset mesa 2 com áudio intermitente — trocado." } },
+        { tipo: "Campo editado — Comentários Gerais", quem: "Ana Costa", quando: "12/08/2026 14:40", detalhe: { campo: "Comentários Gerais", antigo: "Turno ok.", novo: "Turno estável. Sem incidentes críticos." } },
+        { tipo: "Publicado", quem: "Ana Costa", quando: "12/08/2026 14:52", detalhe: null }
+      ]
+    },
+    tarde: {
+      titulo: "Histórico — Turno da Tarde",
+      itens: [
+        { tipo: "Rascunho criado", quem: "Bruno Lima", quando: "12/08/2026 16:05", detalhe: null },
+        { tipo: "Campo editado — Figurino", quem: "Bruno Lima", quando: "12/08/2026 17:30", detalhe: { campo: "Figurino", antigo: "(vazio)", novo: "Troca de blazer GP #4 às 16:20." } },
+        { tipo: "Campo editado — Comentários Gerais", quem: "Bruno Lima", quando: "12/08/2026 18:10", detalhe: { campo: "Comentários Gerais", antigo: "(vazio)", novo: "Rascunho — falta fechar comentários de equipamentos." } }
+      ]
+    }
+  };
+
+  function setTurno(t) {
+    turnoAtual = t;
+    document.querySelectorAll("#turnoWrap .btn").forEach(function (b) {
+      b.classList.toggle("on", b.getAttribute("data-turno") === t);
+    });
+    var sub = "— " + labels[t] + " · 12/08";
+    var el = document.getElementById("escalaSub");
+    if (el) el.textContent = sub;
+    var r = document.getElementById("rotacaoSub");
+    if (r) r.textContent = "— " + labels[t] + " · Sports Club";
+  }
+
+  function normalizarBusca(s) {
+    return String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .trim();
+  }
+
+  function textoContem(haystack, q) {
+    if (!q) return true;
+    return normalizarBusca(haystack).indexOf(q) !== -1;
+  }
+
+  function atualizarPlaceholderBusca() {
+    var inp = document.getElementById("pageSearch");
+    var row = document.getElementById("searchRow");
+    if (!inp || !row) return;
+    if (abaAtual === "escala") {
+      row.classList.remove("hidden");
+      inp.placeholder = "Pesquisar por Nome ou Nickname...";
+      inp.setAttribute("aria-label", "Pesquisar por Nome ou Nickname");
+    } else if (abaAtual === "relatorio") {
+      row.classList.remove("hidden");
+      inp.placeholder = "Pesquisar por Relator ou palavras-chave...";
+      inp.setAttribute("aria-label", "Pesquisar por Relator ou palavras-chave");
+    } else {
+      row.classList.add("hidden");
+      inp.value = "";
+    }
+  }
+
+  function filtrarBuscaPagina() {
+    var q = normalizarBusca(document.getElementById("pageSearch").value);
+
+    if (abaAtual === "escala") {
+      document.querySelectorAll("#escalaPresencaBody tr").forEach(function (tr) {
+        var ok = textoContem(tr.getAttribute("data-nome"), q) || textoContem(tr.getAttribute("data-nick"), q);
+        tr.style.display = ok ? "" : "none";
+      });
+      return;
+    }
+
+    if (abaAtual === "relatorio") {
+      document.querySelectorAll(".rel-turno-box").forEach(function (box) {
+        var hay =
+          (box.getAttribute("data-relator") || "") + " " +
+          (box.getAttribute("data-keywords") || "");
+        box.style.display = textoContem(hay, q) ? "" : "none";
+      });
+    }
+  }
+
+  function setAba(a) {
+    abaAtual = a;
+    ["rotacao", "escala", "relatorio"].forEach(function (k) {
+      document.getElementById("tab-" + k).classList.toggle("on", k === a);
+      document.getElementById("panel-" + k).classList.toggle("on", k === a);
+    });
+    document.getElementById("turnoWrap").classList.toggle("hidden", a === "relatorio");
+    var inp = document.getElementById("pageSearch");
+    if (inp) inp.value = "";
+    /* reset visibilidade ao trocar de aba */
+    document.querySelectorAll("#escalaPresencaBody tr").forEach(function (tr) { tr.style.display = ""; });
+    document.querySelectorAll(".rel-turno-box").forEach(function (box) { box.style.display = ""; });
+    atualizarPlaceholderBusca();
+  }
+
+  function abrirHistorico(turno) {
+    var data = HISTORICOS[turno];
+    if (!data) return;
+    document.getElementById("histTitle").textContent = data.titulo;
+    var html = "";
+    data.itens.forEach(function (item) {
+      html += '<div class="hist-item">';
+      html += '<div class="hist-title">' + item.tipo + "</div>";
+      html += '<div class="hist-meta">' + item.quem + " · " + item.quando + "</div>";
+      if (item.detalhe) {
+        html += '<div class="hist-diff"><strong>' + item.detalhe.campo + "</strong><br>";
+        html += '<span class="old">' + item.detalhe.antigo + "</span> → ";
+        html += '<span class="new">' + item.detalhe.novo + "</span></div>";
+      }
+      html += "</div>";
+    });
+    document.getElementById("histBody").innerHTML = html;
+    document.getElementById("modalHistorico").classList.add("on");
+  }
+
+  function fecharHistorico() {
+    document.getElementById("modalHistorico").classList.remove("on");
+  }
+
+  function setModalAba(a) {
+    ["andamento", "manutencao", "anotacoes"].forEach(function (k) {
+      document.getElementById("mtab-" + k).classList.toggle("on", k === a);
+      document.getElementById("mpane-" + k).classList.toggle("on", k === a);
+    });
+  }
+
+  function toggleSemEvento(campo) {
+    var chk = document.getElementById("chk-" + campo);
+    var wrap = document.getElementById("wrap-" + campo);
+    var ta = document.getElementById("f-" + campo);
+    if (chk.checked) {
+      wrap.classList.add("disabled-field");
+      ta.value = "";
+    } else {
+      wrap.classList.remove("disabled-field");
+    }
+  }
+
+  function mesaLabel(id) {
+    var m = MESAS_CADASTRO.find(function (x) { return x.id === id; });
+    return m ? m.label : id;
+  }
+
+  function toggleMsel(e) {
+    e.stopPropagation();
+    var panel = document.getElementById("msel-panel");
+    var open = !panel.classList.contains("on");
+    panel.classList.toggle("on", open);
+    document.getElementById("msel-trigger").setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) {
+      document.getElementById("msel-search").value = "";
+      filtrarMsel();
+      setTimeout(function () { document.getElementById("msel-search").focus(); }, 30);
+    }
+  }
+
+  function fecharMsel() {
+    document.getElementById("msel-panel").classList.remove("on");
+    document.getElementById("msel-trigger").setAttribute("aria-expanded", "false");
+  }
+
+  function filtrarMsel() {
+    var q = (document.getElementById("msel-search").value || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+    var box = document.getElementById("msel-opts");
+    box.innerHTML = MESAS_CADASTRO.filter(function (m) {
+      var hay = m.label.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+      return !q || hay.indexOf(q) !== -1;
+    }).map(function (m) {
+      var on = !!mesasSelecionadas[m.id];
+      return '<button type="button" class="msel-opt' + (on ? " on" : "") + '" role="option" aria-selected="' + on + '" onclick="toggleMesa(\'' + m.id + '\')">' +
+        m.label + (on ? '<span class="mark">✓</span>' : "") + "</button>";
+    }).join("") || '<div style="padding:12px;color:#6b7280;font-size:12px">Nenhuma mesa encontrada.</div>';
+  }
+
+  function toggleMesa(id) {
+    if (mesasSelecionadas[id]) {
+      delete mesasSelecionadas[id];
+    } else {
+      mesasSelecionadas[id] = { fechamento: "", reabertura: "", naoReaberta: false, herdado: false };
+    }
+    renderMselTrigger();
+    filtrarMsel();
+    renderMesasDetalhes();
+  }
+
+  function removerMesaChip(id, ev) {
+    ev.stopPropagation();
+    delete mesasSelecionadas[id];
+    renderMselTrigger();
+    filtrarMsel();
+    renderMesasDetalhes();
+  }
+
+  function renderMselTrigger() {
+    var trigger = document.getElementById("msel-trigger");
+    var ids = Object.keys(mesasSelecionadas);
+    if (!ids.length) {
+      trigger.innerHTML = '<span class="msel-placeholder" id="msel-ph">Selecionar mesas...</span>';
+      return;
+    }
+    trigger.innerHTML = ids.map(function (id) {
+      return '<span class="msel-chip">' + mesaLabel(id) +
+        ' <button type="button" aria-label="Remover" onclick="removerMesaChip(\'' + id + '\', event)">×</button></span>';
+    }).join("");
+  }
+
+  function montarListasEstaticas() {
+    document.getElementById("list-roletas").innerHTML = ROLETAS.map(function (r) {
+      return '<label><input type="checkbox" data-roleta="' + r.id + '"> ' + r.label + "</label>";
+    }).join("");
+
+    document.getElementById("list-limpeza-mesas").innerHTML = ESTUDIOS.map(function (e) {
+      return '<label><input type="checkbox" data-limp="' + e.slug + '"> ' + e.nome + "</label>";
+    }).join("");
+
+    document.getElementById("list-troca-cartas").innerHTML = ESTUDIOS.map(function (e) {
+      return '<label><input type="checkbox" data-troca="' + e.slug + '"> ' + e.nome + "</label>";
+    }).join("");
+
+    filtrarMsel();
+    renderMselTrigger();
+  }
+
+  function renderMesasDetalhes() {
+    /* Persistir horários digitados */
+    document.querySelectorAll("#mesas-detalhes input[data-fech-for]").forEach(function (inp) {
+      var id = inp.getAttribute("data-fech-for");
+      if (mesasSelecionadas[id] && !mesasSelecionadas[id].herdado) {
+        mesasSelecionadas[id].fechamento = inp.value;
+      }
+    });
+    document.querySelectorAll("#mesas-detalhes input[data-reab-for]").forEach(function (inp) {
+      var id = inp.getAttribute("data-reab-for");
+      if (mesasSelecionadas[id]) mesasSelecionadas[id].reabertura = inp.value;
+    });
+    document.querySelectorAll("#mesas-detalhes input[data-naoreab-for]").forEach(function (inp) {
+      var id = inp.getAttribute("data-naoreab-for");
+      if (mesasSelecionadas[id]) mesasSelecionadas[id].naoReaberta = inp.checked;
+    });
+
+    var box = document.getElementById("mesas-detalhes");
+    var html = "";
+    Object.keys(mesasSelecionadas).forEach(function (id) {
+      var st = mesasSelecionadas[id];
+      var h = !!st.herdado;
+      html += '<div class="mesa-card' + (h ? " herdado" : "") + '">';
+      html += "<h4>" + mesaLabel(id) + (h ? '<span class="tag-herdado">Herdado do turno anterior</span>' : "") + "</h4>";
+      html += '<div class="g2">';
+      html += '<div class="f"><label class="fl">Hora de Fechamento <span class="req">*</span></label>';
+      html += '<input type="time" data-fech-for="' + id + '" value="' + (st.fechamento || "") + '"' + (h ? " disabled" : "") + "></div>";
+      html += '<div class="f"><label class="fl">Hora de Reabertura <span class="req">*</span></label>';
+      html += '<input type="time" data-reab-for="' + id + '" value="' + (st.reabertura || "") + '"' + (st.naoReaberta ? " disabled" : "") + "></div>";
+      html += "</div>";
+      html += '<label class="chk-line"><input type="checkbox" data-naoreab-for="' + id + '"' + (st.naoReaberta ? " checked" : "") + ' onchange="toggleNaoReaberta(\'' + id + '\')"> Mesa ainda não foi reaberta</label>';
+      html += "</div>";
+    });
+    box.innerHTML = html;
+  }
+
+  function toggleNaoReaberta(id) {
+    var chk = document.querySelector('input[data-naoreab-for="' + id + '"]');
+    var reab = document.querySelector('input[data-reab-for="' + id + '"]');
+    if (!chk || !reab || !mesasSelecionadas[id]) return;
+    mesasSelecionadas[id].naoReaberta = chk.checked;
+    if (chk.checked) {
+      mesasSelecionadas[id].reabertura = "";
+      reab.value = "";
+      reab.disabled = true;
+    } else {
+      reab.disabled = false;
+    }
+  }
+
+  function limparFormulario() {
+    ["sos", "figurino", "equipamentos"].forEach(function (c) {
+      document.getElementById("f-" + c).value = "";
+      document.getElementById("chk-" + c).checked = false;
+      document.getElementById("wrap-" + c).classList.remove("disabled-field");
+    });
+    document.getElementById("f-comentarios").value = "";
+    document.getElementById("chk-cc").checked = false;
+    document.getElementById("chk-cartas").checked = false;
+    mesasSelecionadas = {};
+    document.querySelectorAll("#list-roletas input, #list-limpeza-mesas input, #list-troca-cartas input").forEach(function (cb) {
+      cb.checked = false;
+    });
+    document.getElementById("mesas-detalhes").innerHTML = "";
+    renderMselTrigger();
+    fecharMsel();
+    document.getElementById("relErro").classList.remove("on");
+    document.getElementById("relErro").textContent = "";
+  }
+
+  function aplicarDados(dados) {
+    if (!dados) return;
+    function applyTxt(campo, val, nao) {
+      document.getElementById("chk-" + campo).checked = !!nao;
+      document.getElementById("f-" + campo).value = nao ? "" : (val || "");
+      toggleSemEvento(campo);
+    }
+    applyTxt("sos", dados.sos, dados.sosNao);
+    applyTxt("figurino", dados.figurino, dados.figurinoNao);
+    applyTxt("equipamentos", dados.equipamentos, dados.equipamentosNao);
+    document.getElementById("f-comentarios").value = dados.comentarios || "";
+    document.getElementById("chk-cc").checked = !!dados.cc;
+    document.getElementById("chk-cartas").checked = !!dados.cartas;
+
+    mesasSelecionadas = {};
+    Object.keys(dados.mesas || {}).forEach(function (id) {
+      var m = dados.mesas[id];
+      mesasSelecionadas[id] = {
+        fechamento: m.fechamento || "",
+        reabertura: m.reabertura || "",
+        naoReaberta: !!m.naoReaberta,
+        herdado: !!m.herdado
+      };
+    });
+
+    Object.keys(dados.roletas || {}).forEach(function (id) {
+      var cb = document.querySelector('#list-roletas input[data-roleta="' + id + '"]');
+      if (cb) cb.checked = !!dados.roletas[id];
+    });
+    Object.keys(dados.limpezaMesas || {}).forEach(function (slug) {
+      var cb = document.querySelector('#list-limpeza-mesas input[data-limp="' + slug + '"]');
+      if (cb) cb.checked = !!dados.limpezaMesas[slug];
+    });
+    Object.keys(dados.trocaCartas || {}).forEach(function (slug) {
+      var cb = document.querySelector('#list-troca-cartas input[data-troca="' + slug + '"]');
+      if (cb) cb.checked = !!dados.trocaCartas[slug];
+    });
+    renderMselTrigger();
+    renderMesasDetalhes();
+  }
+
+  function aplicarHerdados() {
+    var herd = MESAS_PENDENTES_REABERTURA[modalTurno] || [];
+    herd.forEach(function (h) {
+      mesasSelecionadas[h.id] = {
+        fechamento: h.fechamento,
+        reabertura: "",
+        naoReaberta: true,
+        herdado: true
+      };
+    });
+    if (herd.length) {
+      renderMselTrigger();
+      renderMesasDetalhes();
+    }
+  }
+
+  function lerFormulario() {
+    function txt(campo) {
+      var nao = document.getElementById("chk-" + campo).checked;
+      return { val: nao ? "" : document.getElementById("f-" + campo).value.trim(), nao: nao };
+    }
+    var sos = txt("sos");
+    var fig = txt("figurino");
+    var eq = txt("equipamentos");
+
+    /* sync times from DOM */
+    document.querySelectorAll("#mesas-detalhes input[data-fech-for]").forEach(function (inp) {
+      var id = inp.getAttribute("data-fech-for");
+      if (mesasSelecionadas[id] && !mesasSelecionadas[id].herdado) {
+        mesasSelecionadas[id].fechamento = inp.value;
+      }
+    });
+    document.querySelectorAll("#mesas-detalhes input[data-reab-for]").forEach(function (inp) {
+      var id = inp.getAttribute("data-reab-for");
+      if (mesasSelecionadas[id]) mesasSelecionadas[id].reabertura = inp.value;
+    });
+    document.querySelectorAll("#mesas-detalhes input[data-naoreab-for]").forEach(function (inp) {
+      var id = inp.getAttribute("data-naoreab-for");
+      if (mesasSelecionadas[id]) mesasSelecionadas[id].naoReaberta = inp.checked;
+    });
+
+    var mesas = {};
+    Object.keys(mesasSelecionadas).forEach(function (id) {
+      var st = mesasSelecionadas[id];
+      mesas[id] = {
+        fechamento: st.fechamento || "",
+        reabertura: st.reabertura || "",
+        naoReaberta: !!st.naoReaberta,
+        herdado: !!st.herdado
+      };
+    });
+
+    var roletas = {};
+    document.querySelectorAll("#list-roletas input").forEach(function (cb) {
+      roletas[cb.getAttribute("data-roleta")] = cb.checked;
+    });
+    var limpezaMesas = {};
+    document.querySelectorAll("#list-limpeza-mesas input").forEach(function (cb) {
+      limpezaMesas[cb.getAttribute("data-limp")] = cb.checked;
+    });
+    var trocaCartas = {};
+    document.querySelectorAll("#list-troca-cartas input").forEach(function (cb) {
+      trocaCartas[cb.getAttribute("data-troca")] = cb.checked;
+    });
+    return {
+      sos: sos.val, sosNao: sos.nao,
+      figurino: fig.val, figurinoNao: fig.nao,
+      equipamentos: eq.val, equipamentosNao: eq.nao,
+      mesas: mesas,
+      roletas: roletas,
+      limpezaMesas: limpezaMesas,
+      trocaCartas: trocaCartas,
+      cc: document.getElementById("chk-cc").checked,
+      cartas: document.getElementById("chk-cartas").checked,
+      comentarios: document.getElementById("f-comentarios").value.trim()
+    };
+  }
+
+  function validarPublicar(dados) {
+    if (!dados.sosNao && !dados.sos) return "Preencha SOS ou marque que não houveram SOS.";
+    if (!dados.figurinoNao && !dados.figurino) return "Preencha Figurino ou marque que não houveram situações.";
+    if (!dados.equipamentosNao && !dados.equipamentos) return "Preencha Equipamentos ou marque que não houveram situações.";
+    var mesaIds = Object.keys(dados.mesas);
+    /* Fechamento: se nenhuma mesa, ok (pode não ter fechamento). Se marcada, horários obrigatórios. */
+    for (var i = 0; i < mesaIds.length; i++) {
+      var m = dados.mesas[mesaIds[i]];
+      if (!m.fechamento) return "Informe a Hora de Fechamento de todas as mesas selecionadas.";
+      if (!m.naoReaberta && !m.reabertura) return "Informe a Hora de Reabertura ou marque que a mesa ainda não foi reaberta.";
+    }
+    if (!dados.comentarios) return "Preencha Comentários Gerais.";
+    return null;
+  }
+
+  function registrarAuditoria(antes, depois) {
+    if (!HISTORICOS[modalTurno]) {
+      HISTORICOS[modalTurno] = { titulo: "Histórico — Turno da " + labels[modalTurno], itens: [] };
+    }
+    var agora = new Date();
+    var quando =
+      String(agora.getDate()).padStart(2, "0") + "/" +
+      String(agora.getMonth() + 1).padStart(2, "0") + "/" +
+      agora.getFullYear() + " " +
+      String(agora.getHours()).padStart(2, "0") + ":" +
+      String(agora.getMinutes()).padStart(2, "0");
+    var quem = "Você (mock)";
+
+    function pushEdit(campo, a, b) {
+      if (String(a) === String(b)) return;
+      HISTORICOS[modalTurno].itens.push({
+        tipo: "Campo editado — " + campo,
+        quem: quem,
+        quando: quando,
+        detalhe: { campo: campo, antigo: a || "(vazio)", novo: b || "(vazio)" }
+      });
+    }
+
+    if (!antes) {
+      HISTORICOS[modalTurno].itens.push({ tipo: "Rascunho criado", quem: quem, quando: quando, detalhe: null });
+      return;
+    }
+
+    pushEdit("SOS", antes.sosNao ? "(não houveram)" : antes.sos, depois.sosNao ? "(não houveram)" : depois.sos);
+    pushEdit("Figurino", antes.figurinoNao ? "(não houveram)" : antes.figurino, depois.figurinoNao ? "(não houveram)" : depois.figurino);
+    pushEdit("Equipamentos", antes.equipamentosNao ? "(não houveram)" : antes.equipamentos, depois.equipamentosNao ? "(não houveram)" : depois.equipamentos);
+    pushEdit("Comentários Gerais", antes.comentarios, depois.comentarios);
+    pushEdit("Fechamento de Mesa", JSON.stringify(antes.mesas || {}), JSON.stringify(depois.mesas || {}));
+    pushEdit("Manutenção", JSON.stringify({
+      roletas: antes.roletas, limpeza: antes.limpezaMesas, troca: antes.trocaCartas, cc: antes.cc, cartas: antes.cartas
+    }), JSON.stringify({
+      roletas: depois.roletas, limpeza: depois.limpezaMesas, troca: depois.trocaCartas, cc: depois.cc, cartas: depois.cartas
+    }));
+  }
+
+  function abrirModalRelatorio(turno, modo) {
+    modalTurno = turno;
+    modalModo = modo;
+    document.getElementById("relTitle").textContent =
+      modo === "editar" ? "Editar Rascunho — " + labels[turno] : "Gerar Relatório — " + labels[turno];
+    limparFormulario();
+    montarListasEstaticas();
+    setModalAba("andamento");
+
+    if (modo === "editar" && RASCUNHOS[turno]) {
+      aplicarDados(RASCUNHOS[turno]);
+      snapshotInicial = JSON.parse(JSON.stringify(RASCUNHOS[turno]));
+    } else {
+      snapshotInicial = null;
+      aplicarHerdados();
+    }
+
+    document.getElementById("modalRelatorio").classList.add("on");
+  }
+
+  function fecharModalRelatorio() {
+    document.getElementById("modalRelatorio").classList.remove("on");
+  }
+
+  function salvarRelatorio(publicar) {
+    var dados = lerFormulario();
+    var errBox = document.getElementById("relErro");
+    errBox.classList.remove("on");
+    errBox.textContent = "";
+
+    if (publicar) {
+      var erro = validarPublicar(dados);
+      if (erro) {
+        errBox.textContent = erro;
+        errBox.classList.add("on");
+        return;
+      }
+    }
+
+    registrarAuditoria(snapshotInicial, dados);
+    RASCUNHOS[modalTurno] = dados;
+
+    if (publicar) {
+      var agora = new Date();
+      var quando =
+        String(agora.getDate()).padStart(2, "0") + "/" +
+        String(agora.getMonth() + 1).padStart(2, "0") + "/" +
+        agora.getFullYear() + " " +
+        String(agora.getHours()).padStart(2, "0") + ":" +
+        String(agora.getMinutes()).padStart(2, "0");
+      if (!HISTORICOS[modalTurno]) {
+        HISTORICOS[modalTurno] = { titulo: "Histórico — Turno da " + labels[modalTurno], itens: [] };
+      }
+      HISTORICOS[modalTurno].itens.push({
+        tipo: "Publicado",
+        quem: "Você (mock)",
+        quando: quando,
+        detalhe: null
+      });
+      alert("Mock: relatório de " + labels[modalTurno] + " publicado. Histórico atualizado.");
+    } else {
+      alert("Mock: rascunho de " + labels[modalTurno] + " salvo. Alterações registradas no histórico.");
+    }
+    fecharModalRelatorio();
+  }
+
+  document.addEventListener("click", function (e) {
+    var root = document.getElementById("msel-mesas");
+    if (root && !root.contains(e.target)) fecharMsel();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      var panel = document.getElementById("msel-panel");
+      if (panel && panel.classList.contains("on")) {
+        fecharMsel();
+        return;
+      }
+      fecharHistorico();
+      fecharModalRelatorio();
+    }
+  });
+
+  setTurno("manha");
+  setAba("escala");
+</script>
+</body>
+</html>
