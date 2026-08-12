@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { FiltroHistoricoButton } from "../../../components/dashboard";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -40,6 +40,7 @@ export function PortalRhBlocoFiltros({
   buscaAriaLabel = "Pesquisar postagens por palavras-chave",
   linhaAbas,
   linhaSubabas,
+  tutorial,
 }: {
   meses: MesCarrosselEntry[];
   idxMes: number;
@@ -54,6 +55,8 @@ export function PortalRhBlocoFiltros({
   linhaAbas?: ReactNode;
   /** Sub-abas de categoria ou filtros de tipo/status (linha 3, ao lado da busca). */
   linhaSubabas?: ReactNode;
+  /** Tutorial contextual da aba ativa (Comunicados ou Gerenciamento). */
+  tutorial?: AjudaContextualTutorial | null;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -97,7 +100,7 @@ export function PortalRhBlocoFiltros({
           />
         </div>
         <div className="app-marketplace-filtro-minhas__cta">
-          <AjudaContextualAcoes pageKey="rh_portal" />
+          <AjudaContextualAcoes pageKey="rh_portal" tutorial={tutorial} />
         </div>
       </div>
 

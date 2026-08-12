@@ -9,6 +9,8 @@ import { TUTORIAL_GESTAO_STAFF_EDITAR } from "./gestaoStaffEditar";
 import { TUTORIAL_IMPRIMIR_IDS_STAFF } from "./imprimirIdsStaff";
 import { TUTORIAL_MARKETPLACE_OFERTAS } from "./marketplaceOfertas";
 import { TUTORIAL_NOVO_INCIDENTE } from "./novoIncidente";
+import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "./portalRhComunicadosLidos";
+import { TUTORIAL_PORTAL_RH_GERENCIAMENTO } from "./portalRhGerenciamento";
 import { TUTORIAL_POSTAGEM_ACADEMY_APROVACAO } from "./postagemAcademyAprovacao";
 import type { TutorialDef, TutorialSecaoNav } from "./types";
 
@@ -17,6 +19,8 @@ export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_NOVO_INCIDENTE,
   TUTORIAL_GESTAO_STAFF_EDITAR,
   TUTORIAL_IMPRIMIR_IDS_STAFF,
+  TUTORIAL_PORTAL_RH_GERENCIAMENTO,
+  TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS,
   TUTORIAL_CALENDARIO_PRESTADOR,
   TUTORIAL_CONTROLE_PRESENCA,
   TUTORIAL_ALTERAR_ESCALA,

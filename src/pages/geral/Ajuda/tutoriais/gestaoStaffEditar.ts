@@ -65,5 +65,5 @@ export const TUTORIAL_GESTAO_STAFF_EDITAR: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Os cards Perfis sem dados operacionais / cadastrais / de jogo ajudam a priorizar quem ainda falta completar.\n— Service Manager também pode ter o campo ID TOS na aba Dados de função.",
+    "— Os cards Perfis sem dados operacionais / cadastrais / de jogo ajudam a priorizar quem ainda falta completar.",
 };

@@ -34,6 +34,9 @@ import { ModalLidosPostagem } from "./ModalLidosPostagem";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { ModalVisualizarDocumento } from "./ModalVisualizarDocumento";
 import { PortalRhDocumentosTabela } from "./PortalRhDocumentosTabela";
+import type { AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
+import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "../../geral/Ajuda/tutoriais/portalRhComunicadosLidos";
+import { TUTORIAL_PORTAL_RH_GERENCIAMENTO } from "../../geral/Ajuda/tutoriais/portalRhGerenciamento";
 import {
   RH_DOCUMENTO_FILTRO_SUBTABS,
   documentoExigeCienciaDoUsuario,
@@ -64,6 +67,16 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { FiltroBarTabButton, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
 import { FILTRO_BAR_TAB_ICON_PROPS } from "../../../lib/filterBarStyles";
 import { getPageContentBoxShadow } from "../../../lib/pageContentBoxStyles";
+
+const TUTORIAL_CTX_GERENCIAMENTO: AjudaContextualTutorial = {
+  id: TUTORIAL_PORTAL_RH_GERENCIAMENTO.id,
+  urlSlug: TUTORIAL_PORTAL_RH_GERENCIAMENTO.urlSlug,
+};
+
+const TUTORIAL_CTX_COMUNICADOS_LIDOS: AjudaContextualTutorial = {
+  id: TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS.id,
+  urlSlug: TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS.urlSlug,
+};
 
 type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
 
@@ -1023,6 +1036,13 @@ export default function PortalRhPage() {
           </div>
         }
         linhaSubabas={linhaSubabasFiltro ?? undefined}
+        tutorial={
+          aba === "gerenciamento"
+            ? TUTORIAL_CTX_GERENCIAMENTO
+            : aba === "comunicados"
+              ? TUTORIAL_CTX_COMUNICADOS_LIDOS
+              : null
+        }
       />
 
       {erro ? (

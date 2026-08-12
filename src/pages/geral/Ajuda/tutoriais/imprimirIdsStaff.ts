@@ -49,5 +49,5 @@ export const TUTORIAL_IMPRIMIR_IDS_STAFF: TutorialDef = {
     },
   ],
   notasFinais:
-    "— O atalho do tutorial fica no próprio modal Imprimir IDs (ícone ao lado do fechar), não na barra da página.\n— Cadastre o barcode na edição do Staff (aba Dados de função) antes de imprimir.\n— Se o PDF não baixar, permita downloads neste site; se o problema persistir, entre em contato com o suporte.",
+    "— Cadastre o barcode na edição do Staff (aba Dados de função) antes de imprimir.\n— Se o PDF não baixar, permita downloads neste site; se o problema persistir, entre em contato com o suporte.",
 };
