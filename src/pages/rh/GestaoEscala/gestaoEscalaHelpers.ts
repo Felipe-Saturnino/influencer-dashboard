@@ -65,7 +65,8 @@ export type EscalaCelulaStatusCorKey =
   | "venda"
   | "folga"
   | "troca"
-  | "compra";
+  | "compra"
+  | "atestado";
 
 export function chaveCorCelulaEscalaDiaria(textoCelula: string): EscalaCelulaStatusCorKey | null {
   const v = (textoCelula ?? "").trim();
@@ -73,6 +74,7 @@ export function chaveCorCelulaEscalaDiaria(textoCelula: string): EscalaCelulaSta
   if (v === "Folga") return "folga";
   if (v === "Venda") return "venda";
   if (v === "Troca") return "troca";
+  if (v === "Atestado") return "atestado";
   if (v === "Comercial" || v === "Compra - Comercial") return "comercial";
   if (v === "Manhã" || v === "Compra - Manhã") return "manha";
   if (v === "Tarde" || v === "Compra - Tarde") return "tarde";
@@ -91,6 +93,8 @@ const ESCALA_CELULA_STATUS_BG: Record<EscalaCelulaStatusCorKey, { light: string;
   folga: { light: "rgba(148, 163, 184, 0.22)", dark: "rgba(148, 163, 184, 0.28)" },
   troca: { light: "rgba(245, 158, 11, 0.32)", dark: "rgba(245, 158, 11, 0.36)" },
   compra: { light: "rgba(236, 72, 153, 0.28)", dark: "rgba(236, 72, 153, 0.34)" },
+  /** Amarelo semântico (atenção) — atestado aprovado em Solicitações RH. */
+  atestado: { light: "rgba(245, 158, 11, 0.28)", dark: "rgba(245, 158, 11, 0.34)" },
 };
 
 export function fundoCelulaStatusEscalaDiaria(
@@ -920,13 +924,14 @@ export function sanitizarValorCelulaGerar(
   if (modo === "escritorio") {
     if (v === "F" || v.toLowerCase() === "folga") return "Folga";
     if (v === "Comercial" || v.toLowerCase() === "comercial") return "Comercial";
+    if (v === "Atestado") return "Atestado";
     if (!v) return "";
     return "";
   }
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  if (v === "Compra" || v === "Venda" || v === "Troca" || v === "Atestado") return v;
   if (v === "F" || v.toLowerCase() === "folga") return "Folga";
   const work = valorTurnoTrabalhoInternoParaLinha(siglaTurnoStaff, turnoStaffNome);
-  const permit = new Set<string>(["", "Folga", "Compra", "Venda", "Troca"]);
+  const permit = new Set<string>(["", "Folga", "Compra", "Venda", "Troca", "Atestado"]);
   if (work) permit.add(work);
   if (areaEscalaPermiteCelulaComercial(modo, areaKey)) {
     permit.add("Comercial");
@@ -1011,7 +1016,7 @@ export function labelExibicaoCelulaEscala(
   if (!v) return "—";
   if (v === "Folga") return "Folga";
   if (v === "Comercial") return "Comercial";
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  if (v === "Compra" || v === "Venda" || v === "Troca" || v === "Atestado") return v;
   if (v === "MRN") return "Manhã";
   if (v === "AFT") return "Tarde";
   if (v === "NGT") return "Noite";

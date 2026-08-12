@@ -7,7 +7,8 @@ import type { RhOrgPrestadorVinculoOpcao, RhOrgTimeOpcao } from "../types/rhOrga
 
 export type PortalRhAutorInfo = {
   nome: string;
-  diretoria: string;
+  /** Time (ou gerência/diretoria se o vínculo for nesse nível) — nunca só a diretoria pai quando há time. */
+  time: string;
 };
 
 /** Formato de rodapé: DD/MM/AA - HH:MM */
@@ -25,22 +26,28 @@ export function fmtDataHoraPortalRh(iso: string | null | undefined): string {
 
 export function linhaMetaAutorPortalRh(info: PortalRhAutorInfo | undefined, dataIso: string | null | undefined): string {
   const nome = (info?.nome ?? "").trim() || "Equipe";
-  const diretoria = (info?.diretoria ?? "").trim() || "—";
-  return `${nome} - ${diretoria} - ${fmtDataHoraPortalRh(dataIso)}`;
+  const time = (info?.time ?? "").trim() || "—";
+  return `${nome} - ${time} - ${fmtDataHoraPortalRh(dataIso)}`;
 }
 
-/** Mesma resolução de diretoria que Gestão de Prestadores (`orgMetaLinha`). */
-function diretoriaNomeParaFuncionario(
-  row: Pick<RhFuncionario, "org_time_id" | "org_gerencia_id" | "org_diretoria_id">,
+/** Nó mais específico do organograma: time → gerência → diretoria; fallback `setor`. */
+export function timeNomeParaFuncionario(
+  row: Pick<RhFuncionario, "org_time_id" | "org_gerencia_id" | "org_diretoria_id" | "setor">,
   vinculos: RhOrgPrestadorVinculoOpcao[],
   opcoesTimes: RhOrgTimeOpcao[],
 ): string {
   const o = encontrarVinculoParaFuncionarioRow(row, vinculos);
-  if (o) return o.diretoriaNome;
+  if (o) {
+    if (o.nivel === "time" && o.timeNome.trim()) return o.timeNome.trim();
+    if (o.nivel === "gerencia" && o.gerenciaNome.trim()) return o.gerenciaNome.trim();
+    if (o.diretoriaNome.trim()) return o.diretoriaNome.trim();
+  }
   if (row.org_time_id) {
     const time = opcoesTimes.find((x) => x.timeId === row.org_time_id);
-    if (time) return time.diretoriaNome;
+    if (time?.timeNome.trim()) return time.timeNome.trim();
   }
+  const setor = (row.setor ?? "").trim();
+  if (setor) return setor;
   return "—";
 }
 
@@ -53,7 +60,7 @@ export async function carregarMetaAutoresPortalRh(userIds: string[]): Promise<Re
     carregarOpcoesTimesOrganograma(),
     supabase
       .from("rh_funcionarios")
-      .select("id, nome, email, email_spin, org_time_id, org_gerencia_id, org_diretoria_id")
+      .select("id, nome, email, email_spin, setor, org_time_id, org_gerencia_id, org_diretoria_id")
       .in("status", ["ativo", "indisponivel"]),
   ]);
 
@@ -66,19 +73,19 @@ export async function carregarMetaAutoresPortalRh(userIds: string[]): Promise<Re
   for (const p of profs ?? []) {
     const row = p as { id: string; name: string | null; email: string | null };
     const emailLogin = (row.email ?? "").trim();
-    let diretoria = "—";
+    let time = "—";
     let nome = (row.name ?? "").trim() || "Equipe";
 
     if (emailLogin) {
       const matches = filtraFuncionariosParaLoginEmail(prestadores, emailLogin);
       const func = matches[0];
       if (func) {
-        diretoria = diretoriaNomeParaFuncionario(func, vinculos, opcoesTimes);
+        time = timeNomeParaFuncionario(func, vinculos, opcoesTimes);
         if ((func.nome ?? "").trim()) nome = func.nome.trim();
       }
     }
 
-    out[row.id] = { nome, diretoria };
+    out[row.id] = { nome, time };
   }
 
   return out;

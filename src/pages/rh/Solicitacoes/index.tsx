@@ -17,7 +17,8 @@ import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
+import { TUTORIAL_RH_SOLICITACOES_APROVAR } from "../../geral/Ajuda/tutoriais/rhSolicitacoesAprovar";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -67,6 +68,11 @@ const RH_SOLICITACOES_SELECT = `
   atendente:profiles!rh_solicitacoes_atendido_por_fkey ( id, name ),
   vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
+
+const TUTORIAL_CTX_RH_SOLICITACOES: AjudaContextualTutorial = {
+  id: TUTORIAL_RH_SOLICITACOES_APROVAR.id,
+  urlSlug: TUTORIAL_RH_SOLICITACOES_APROVAR.urlSlug,
+};
 
 type SortCol = "data" | "solicitante" | "tipo" | "status" | "descricao" | "atendido" | "atendimento";
 
@@ -297,7 +303,7 @@ export default function RhSolicitacoesPage() {
           </div>
 
           <div className="app-marketplace-filtro-minhas__cta">
-            <AjudaContextualAcoes pageKey="rh_solicitacoes" />
+            <AjudaContextualAcoes pageKey="rh_solicitacoes" tutorial={TUTORIAL_CTX_RH_SOLICITACOES} />
           </div>
         </div>
       </div>

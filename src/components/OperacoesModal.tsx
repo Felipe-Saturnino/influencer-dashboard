@@ -110,9 +110,12 @@ export function ModalBase({
 export function ModalHeader({
   title,
   onClose,
+  trailing,
 }: {
   title: string;
   onClose: () => void;
+  /** Conteúdo à esquerda do X (ex.: atalho de tutorial no modal). */
+  trailing?: ReactNode;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -152,24 +155,27 @@ export function ModalHeader({
       >
         {title}
       </h2>
-      <button
-        type="button"
-        onClick={onClose}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: 4,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: t.text,
-          flexShrink: 0,
-        }}
-        {...propsBotaoFecharModal()}
-      >
-        <X size={22} strokeWidth={2.75} aria-hidden />
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        {trailing}
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: t.text,
+            flexShrink: 0,
+          }}
+          {...propsBotaoFecharModal()}
+        >
+          <X size={22} strokeWidth={2.75} aria-hidden />
+        </button>
+      </div>
     </div>
   );
 }

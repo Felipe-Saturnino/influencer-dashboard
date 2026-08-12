@@ -10,7 +10,6 @@ import {
 import {
   adicionarMinutosAoRelogioHHMM,
   escalaComHorarioTurnoEditavelNaStaff,
-  escalaComHorarioTurnoSomenteOperadora,
   formatarHoraInicioOperadora,
   staffHorarioResolvidoParaTurnoDoDia,
 } from "./rhStaffHorarioTurno";
@@ -74,6 +73,7 @@ export function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
 export function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   const v = (valor ?? "").trim();
   if (!v) return null;
+  if (v === "Atestado") return "Atestado";
   if (valorCelulaEhFolgaOperacional(v)) return null;
   return turnoOperacionalValorGrade(v) ?? (v === "Compra" || v === "Troca" ? v : null);
 }
@@ -81,6 +81,7 @@ export function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
 export function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | undefined): string {
   const v = (valorCelulaRaw ?? "").trim();
   if (!v) return "—";
+  if (v === "Atestado") return "Atestado";
   if (valorCelulaEhFolgaOperacional(v)) return v.toLowerCase() === "venda" ? "Venda" : "Folga";
   if (v.startsWith("Compra - ")) return v;
   if (v === "Compra" || v === "Venda" || v === "Troca") return v;
@@ -88,7 +89,7 @@ export function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | unde
 }
 
 export function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
-  return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca";
+  return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca" || turnoNome === "Atestado";
 }
 
 /**
@@ -167,7 +168,7 @@ export function mesclarGradeComHorarioComercialSintetico(
     }
     if (sinteticoPorId.has(r.funcionario_id) && !comGradeEscritorio.has(r.funcionario_id)) {
       const v = (r.valor ?? "").trim();
-      if (v === "Compra" || v === "Venda" || v === "Troca") {
+      if (v === "Compra" || v === "Venda" || v === "Troca" || v === "Atestado") {
         movimentosPorChave.set(`${r.funcionario_id}|${diaIsoChaveGrade(r)}`, v);
       }
       continue;
@@ -229,7 +230,7 @@ export function primeiroValorGradeDiaParaPrestador(
     return primeiroValorGradeDia(rows, funcionarioId, iso);
   }
   const fromRows = primeiroValorGradeDia(rows, funcionarioId, iso);
-  if (fromRows === "Compra" || fromRows === "Venda" || fromRows === "Troca") return fromRows;
+  if (fromRows === "Compra" || fromRows === "Venda" || fromRows === "Troca" || fromRows === "Atestado") return fromRows;
   return valorCelulaHorarioComercialSintetico(iso);
 }
 
@@ -308,10 +309,10 @@ export function obterEntradaSaidaEscaladasPrestadorDia(
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
     const hor = staffHorarioResolvidoParaTurnoDoDia(escala, turnoNome, p.staff_horario_turno);
     const parsed = parseHorarioStaffValorParaHHMM(hor);
-    return parsed ?? { entrada: "—", saida: "—" };
+    if (parsed) return parsed;
   }
 
-  if (escalaComHorarioTurnoSomenteOperadora(escala) && op) {
+  if (op) {
     const k = normalizarEscalaCadastro(escala);
     const durMin = k === "5x1" ? 6 * 60 + 30 : 8 * 60;
     let iniDb: string | null = null;

@@ -106,3 +106,49 @@ export function AjudaContextualAcoes({ pageKey, tutorial }: AjudaContextualAcoes
     </div>
   );
 }
+
+/**
+ * Só o ícone de tutorial (ex.: no cabeçalho de um modal, à esquerda do X).
+ * Respeita a mesma regra de visibilidade por perfil.
+ */
+export function AjudaContextualTutorialAtalho({
+  tutorial,
+  label = "Abrir tutorial desta seção",
+}: {
+  tutorial: AjudaContextualTutorial;
+  label?: string;
+}) {
+  const {
+    theme: t,
+    effectiveRole,
+    navigateTo,
+    tutorialVisibility,
+    tutorialVisibilityLoaded,
+  } = useApp();
+
+  const visivel =
+    tutorialVisibilityLoaded &&
+    tutorialVisivelParaRole(
+      tutorial.id,
+      effectiveRole,
+      tutorialVisibility,
+      effectiveRole === "admin",
+    );
+  if (!visivel) return null;
+
+  const href = buildAppPath("ajuda", "Tutoriais", tutorial.urlSlug);
+  return (
+    <a
+      href={href}
+      aria-label={label}
+      title={label}
+      onClick={(event) => {
+        event.preventDefault();
+        navigateTo("ajuda", "Tutoriais", { detailSlug: tutorial.urlSlug });
+      }}
+      style={getAjudaContextualAcaoStyle("tutorial", t.isDark)}
+    >
+      <GraduationCap size={AJUDA_CONTEXTUAL_ICON_SIZE} aria-hidden="true" />
+    </a>
+  );
+}

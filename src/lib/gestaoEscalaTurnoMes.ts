@@ -77,10 +77,11 @@ export function sanitizarValorCelulaAlterarEscala(
   if (v === "F" || v.toLowerCase() === "folga") return "Folga";
   const permiteComercial = modo === "escritorio" || areaKey === "academy";
   if (permiteComercial && (v === "Comercial" || v.toLowerCase() === "comercial")) return "Comercial";
+  if (v === "Atestado") return "Atestado";
   if (modo === "escritorio") return "";
   if (/^Compra - (Manhã|Tarde|Noite)$/.test(v)) return v;
   if (areaKey === "academy" && v === "Compra - Comercial") return v;
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  if (v === "Compra" || v === "Venda" || v === "Troca" || v === "Atestado") return v;
   if (v === "MRN" || v === "AFT" || v === "NGT") return v;
   if (v === "Manhã" || v.toLowerCase() === "manha") return "MRN";
   if (v === "Tarde") return "AFT";
@@ -99,7 +100,7 @@ export function labelExibicaoCelulaAlterarEscala(
   if (v === "Folga") return "Folga";
   if (v === "Comercial") return "Comercial";
   if (v.startsWith("Compra - ")) return v;
-  if (v === "Compra" || v === "Venda" || v === "Troca") return v;
+  if (v === "Compra" || v === "Venda" || v === "Troca" || v === "Atestado") return v;
   if (v === "MRN") return "Manhã";
   if (v === "AFT") return "Tarde";
   if (v === "NGT") return "Noite";

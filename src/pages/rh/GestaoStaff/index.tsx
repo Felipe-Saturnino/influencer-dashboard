@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Printer, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { fetchTurnosPorEstudioSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
 import { useApp } from "../../../context/AppContext";
@@ -36,7 +36,7 @@ import {
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -82,6 +82,8 @@ import {
   staffUiTimeShufflerOcultarBioFotosVer,
 } from "./gestaoStaffHelpers";
 import { StaffKpiResumo } from "./StaffKpiResumo";
+import { ModalImprimirIdsStaff } from "./ModalImprimirIdsStaff";
+import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
@@ -203,6 +205,11 @@ function labelCampoHistorico(campo: string): string {
 type VerAba = "pessoal" | "funcao" | "skills" | "historico";
 
 type EditarAba = "funcao" | "skills" | "dealer";
+
+const TUTORIAL_GESTAO_STAFF_EDITAR: AjudaContextualTutorial = {
+  id: "gestao-staff-editar",
+  urlSlug: "GestaoDeStaffEditar",
+};
 
 const STAFF_VER_TAB_ICONS: Record<VerAba, ReactNode> = {
   pessoal: <User {...FILTRO_BAR_TAB_ICON_PROPS} />,
@@ -533,6 +540,7 @@ export default function RhGestaoStaffPage() {
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
   const [modalAnotacoes, setModalAnotacoes] = useState<RhFuncionario | null>(null);
+  const [modalImprimirIds, setModalImprimirIds] = useState(false);
   const [estudioTurnosPorSlug, setEstudioTurnosPorSlug] = useState<Record<string, OpTurnosStaffPick | null>>({});
 
   const [sortCol, setSortCol] = useState<StaffTabelaSortCol>("nome");
@@ -964,7 +972,7 @@ export default function RhGestaoStaffPage() {
             ) : null}
           </div>
           <div className="app-filter-bar-tabs-cta__actions">
-            <AjudaContextualAcoes pageKey="rh_staff" />
+            <AjudaContextualAcoes pageKey="rh_staff" tutorial={TUTORIAL_GESTAO_STAFF_EDITAR} />
           </div>
           </div>
 
@@ -975,7 +983,16 @@ export default function RhGestaoStaffPage() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 10,
+                rowGap: 10,
+                width: "100%",
+              }}
+            >
               <div
                 role="group"
                 aria-label="Filtros de pesquisa, estúdio e turno"
@@ -983,10 +1000,10 @@ export default function RhGestaoStaffPage() {
                   display: "flex",
                   flexWrap: "wrap",
                   alignItems: "center",
-                  justifyContent: "center",
                   gap: 10,
                   rowGap: 10,
-                  maxWidth: "100%",
+                  flex: "1 1 auto",
+                  minWidth: 0,
                 }}
               >
                 <BarraPesquisaPagina
@@ -1022,6 +1039,21 @@ export default function RhGestaoStaffPage() {
                   />
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setModalImprimirIds(true)}
+                aria-label="Imprimir IDs"
+                title="Imprimir IDs"
+                style={{
+                  ...getCtaCriarButtonStyle(brand),
+                  color: "#fff",
+                  flex: "0 0 auto",
+                  marginLeft: "auto",
+                }}
+              >
+                <Printer size={14} aria-hidden />
+                Imprimir IDs
+              </button>
             </div>
           </div>
       </div>
@@ -1276,6 +1308,15 @@ export default function RhGestaoStaffPage() {
           t={t}
           brand={brand}
           canEditarOk={perm.canEditarOk}
+        />
+      ) : null}
+
+      {modalImprimirIds ? (
+        <ModalImprimirIdsStaff
+          open
+          onClose={() => setModalImprimirIds(false)}
+          prestadores={prestadores}
+          times={times}
         />
       ) : null}
     </div>

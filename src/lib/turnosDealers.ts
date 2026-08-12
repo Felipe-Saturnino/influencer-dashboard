@@ -6,6 +6,43 @@ export type TurnosDealersPick = {
   turno_noite_inicio: string | null;
 };
 
+/** Slug de estúdio para horários 4x2/5x1 (ignora «todos»). */
+export function pickStaffEstudioSlugParaTurnos(p: {
+  staff_estudio_slug?: string | null;
+  staff_estudio_slugs?: string[] | null;
+}): string | null {
+  const fromArray = Array.isArray(p.staff_estudio_slugs)
+    ? p.staff_estudio_slugs.map((x) => String(x).trim()).filter(Boolean)
+    : [];
+  if (fromArray.includes("todos")) return null;
+  if (fromArray[0]) return fromArray[0]!;
+  const legado = (p.staff_estudio_slug ?? "").trim();
+  return legado || null;
+}
+
+/**
+ * Horários Manhã/Tarde/Noite: preferência operadora (junction/legado), senão estúdio Spin do Staff.
+ * Alinha Calendário / Overview ao que a Gestão de Staff já faz.
+ */
+export function resolveTurnosHorarioPrestador(
+  p: {
+    staff_operadora_slug?: string | null;
+    staff_estudio_slug?: string | null;
+    staff_estudio_slugs?: string[] | null;
+  },
+  mapPorOperadora: Map<string, TurnosDealersPick>,
+  mapPorEstudio: Map<string, TurnosDealersPick>,
+): TurnosDealersPick | null {
+  const opSlug = (p.staff_operadora_slug ?? "").trim();
+  if (opSlug) {
+    const fromOp = mapPorOperadora.get(opSlug);
+    if (fromOp) return fromOp;
+  }
+  const estudioSlug = pickStaffEstudioSlugParaTurnos(p);
+  if (estudioSlug) return mapPorEstudio.get(estudioSlug) ?? null;
+  return null;
+}
+
 export function timeDbToInput(v: string | null | undefined): string {
   if (!v || typeof v !== "string") return "";
   const m = v.match(/^(\d{1,2}):(\d{2})/);

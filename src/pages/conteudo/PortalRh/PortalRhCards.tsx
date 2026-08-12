@@ -2,7 +2,6 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { Lock, X } from "lucide-react";
 import { ModalBase } from "../../../components/OperacoesModal";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
-import { truncPreviewHtml } from "../../../lib/portalRhWorkflow";
 import { urlAssinadaPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
 import { linhaMetaAutorPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
 import { PortalRhAssetLink } from "./PortalRhAssetLink";
@@ -11,8 +10,6 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
-
-const PREVIEW_LEN = 200;
 
 function tagStyle(accent: string): CSSProperties {
   return {
@@ -82,6 +79,8 @@ export function ComunicadoCard({
   dataPublicacao,
   isNovo,
   onMarcarLido,
+  podeVerLidos,
+  onVerLidos,
   cardShadow,
 }: {
   titulo: string;
@@ -94,6 +93,9 @@ export function ComunicadoCard({
   dataPublicacao: string | null | undefined;
   isNovo: boolean;
   onMarcarLido: () => void;
+  /** Editar = Sim — lista quem registrou leitura. */
+  podeVerLidos?: boolean;
+  onVerLidos?: () => void;
   cardShadow: string;
 }) {
   const { theme: t } = useApp();
@@ -136,7 +138,7 @@ export function ComunicadoCard({
           </div>
           <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{titulo}</div>
           <div style={{ fontSize: 13, color: t.textMuted, marginTop: 8, lineHeight: 1.45 }}>
-            <CorpoHtmlPortalRh html={truncPreviewHtml(corpo, PREVIEW_LEN)} color={t.textMuted} />
+            <CorpoHtmlPortalRh html={corpo} color={t.textMuted} />
           </div>
           {anexoStoragePath ? (
             <p style={{ margin: "10px 0 0", fontSize: 13, fontFamily: FONT.body }}>
@@ -156,6 +158,17 @@ export function ComunicadoCard({
                 style={btnCtaPrimario(brand)}
               >
                 Lido
+              </button>
+            ) : null}
+            {podeVerLidos && onVerLidos ? (
+              <button
+                type="button"
+                onClick={onVerLidos}
+                aria-label={`Ver quem leu: ${titulo}`}
+                title={tooltipAcao("Ver Lidos")}
+                style={ctaOutline(t)}
+              >
+                Ver Lidos
               </button>
             ) : null}
             <span style={{ fontSize: 12, color: t.textMuted }}>{linhaMetaAutorPortalRh(autorInfo, dataPublicacao)}</span>
