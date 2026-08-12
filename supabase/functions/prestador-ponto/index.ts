@@ -189,14 +189,26 @@ async function montarEstado(
   const fid = await rhFuncionarioIdPorEmail(svc, email)
   const escaladoHoje = await funcionarioEscaladoNoDia(svc, fid, diaSp)
 
-  const { data: recentRaw } = await svc
-    .from('prestador_ponto_registros')
-    .select('tipo, dia_sp, created_at')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(40)
-
-  const recent = (recentRaw ?? []) as PontoRegistroRow[]
+  // Preferir funcionario_id (várias contas Auth no mesmo RH); fallback user_id.
+  let recent: PontoRegistroRow[] = []
+  if (fid) {
+    const { data: byFid } = await svc
+      .from('prestador_ponto_registros')
+      .select('tipo, dia_sp, created_at')
+      .eq('funcionario_id', fid)
+      .order('created_at', { ascending: false })
+      .limit(40)
+    recent = (byFid ?? []) as PontoRegistroRow[]
+  }
+  if (recent.length === 0) {
+    const { data: recentRaw } = await svc
+      .from('prestador_ponto_registros')
+      .select('tipo, dia_sp, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(40)
+    recent = (recentRaw ?? []) as PontoRegistroRow[]
+  }
   const { proximoTipo, turnoDiaSp, checkInAbertoAt, concluidoHoje } = resolverProximoPonto(
     recent,
     diaSp,

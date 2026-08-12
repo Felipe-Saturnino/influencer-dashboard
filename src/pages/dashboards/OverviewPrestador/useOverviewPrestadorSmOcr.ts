@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import {
-  getHojeIsoLocal,
   getPeriodoComparativoMesCompleto,
   getPeriodoHistoricoCompetencias,
   preencherDetalhamentoDiarioZerado,
 } from "../../../lib/dashboardHelpers";
+import { hojeIsoBrasil } from "../../../lib/dateBrasil";
 import { fetchEstudioIncidentesPorDataRodada } from "../../../lib/estudioIncidentesFetch";
 import type { EstudioIncidenteRow } from "../../../lib/estudioIncidentesTypes";
 import { fetchSmSinaisPeriodoOcr } from "../../../lib/smSinaisFetch";
@@ -22,9 +22,9 @@ import {
 } from "../../../lib/overviewPrestadorSmOcr";
 import type { MesCarrosselEscalaEntry } from "../../../lib/escalaMesCarrosselOverviewStyle";
 
-/** Fecha o período no dia civil de hoje (paridade com Incidentes → Sinais). Não usa D-1 do GP. */
+/** Fecha o período no dia civil de Brasília (paridade com `dia_brt` / Incidentes → Sinais). Não usa D-1 do GP. */
 function fimPeriodoAteHoje(fim: string): string {
-  const hoje = getHojeIsoLocal();
+  const hoje = hojeIsoBrasil();
   return fim > hoje ? hoje : fim;
 }
 
@@ -448,7 +448,7 @@ export function useOverviewPrestadorSmOcr(opts: {
       getDia: (r) => r.dia,
       inicio: periodoGradeDiaria.inicio,
       fim: periodoGradeDiaria.fim,
-      fimMax: getHojeIsoLocal(),
+      fimMax: hojeIsoBrasil(),
       criarVazio: (dia) => ({
         dia,
         total: 0,

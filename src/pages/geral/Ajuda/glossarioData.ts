@@ -707,7 +707,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Protocolo de Incidente",
         definicao:
-          "Código único gerado automaticamente para cada incidente registrado na página Incidentes — identifica o registro em conversas com a operadora e no histórico do estúdio.",
+          "Código único gerado automaticamente para cada incidente (séries CASO-, OCULTO- ou ERRO- conforme a categoria). Se na edição a categoria Incidente mudar de família, um novo protocolo é gerado na série correspondente.",
         referencia: "Incidentes",
       },
       {
@@ -1171,7 +1171,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Home staff (Estúdio / Escritório)",
         definicao:
-          "Painel pós-login com boas-vindas, atualização cadastral, aniversários, Informações, Blogueiro Spin e acesso rápido. Perfis de Estúdio incluem também a Central Academy (entre Informações e Blogueiro Spin).",
+          "Painel pós-login com boas-vindas, atualização cadastral, aniversários, Informações (Informativos + Portal de RH), Blogueiro Spin e acesso rápido. Perfis de Estúdio incluem também a Central Academy (entre Informações e Blogueiro Spin).",
         referencia: "Home",
       },
       {
@@ -1183,7 +1183,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Informativos na Home",
         definicao:
-          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso.",
+          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso. O mesmo bloco também lista postagens do Portal de RH (Comunicados, Políticas e RH Talks): essas só saem da lista após «Li e Ocultar», sem limite de 10 dias.",
         referencia: "Informativos · Home",
       },
       {

@@ -38,7 +38,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas Estúdio Dedicado e Estúdio Network",
         texto:
-          "Estúdio Dedicado mostra só as mesas de estúdios dedicados; Estúdio Network só as de estúdios network (ex.: Sports Club), sempre pela fatia da operadora parceira.\n\nAs abas Dedicado e Network só aparecem se a operadora do seu escopo tiver ao menos uma mesa daquele tipo cadastrada em Gestão de Estúdios. Quem tem permissão de Ver **Sim** vê o filtro completo de operadoras elegíveis; com Ver **Próprios**, o filtro fica travado no escopo. Administrador vê tudo.\n\nSe só um canal existir no escopo, a aba Overview (soma) não aparece — restam o canal disponível e Posicionamento.",
+          "Estúdio Dedicado mostra só as mesas de estúdios dedicados; Estúdio Network só as de estúdios network (ex.: Sports Club), sempre pela fatia da operadora parceira.\n\nAs abas Dedicado e Network aparecem conforme os **estúdios vinculados** à operadora em Gestão de Estúdios (tipo dedicado ou network). Quem tem permissão de Ver **Sim** vê o filtro completo de operadoras elegíveis; com Ver **Próprios**, o filtro fica travado no escopo. Administrador vê tudo.\n\nSe só um canal existir no escopo, a aba Overview (soma) não aparece — restam o canal disponível e Posicionamento.",
       },
       {
         subtitulo: "Filtros e Navegação",
@@ -233,7 +233,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Detalhamento Diário",
         texto:
-          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time). Ocorrências: Troca, Atestado, Atraso, Esquecimento, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
+          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time). Ocorrências: Troca, Atestado, Atraso, Esquecimento, Outro, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
       },
       {
         subtitulo: "Aba KPIs de Mesa",
@@ -762,12 +762,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Consultar um incidente",
         texto:
-          "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator, data/hora da rodada, ID da rodada, mesa, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir).",
+          "Clique no ícone de olho na linha da tabela para abrir os detalhes. Em **Dados do Incidente**: abertura, relator (nickname cadastrado na Gestão de Staff), data/hora da rodada, ID da rodada, mesa, prestador (**Nome - Nickname**) e time. Em **Descrição**: resolução, payout (e **Local do Shoe** para Shuffler), texto da descrição e anexos listados como **Arquivo 1**, **Arquivo 2**, … (com link para abrir).",
       },
       {
         subtitulo: "Editar um incidente",
         texto:
-          "Com permissão de Editar = Sim, clique no ícone de lápis na coluna Ações. O formulário abre com os dados preenchidos — o **Protocolo** aparece só para consulta e não pode ser alterado. Os demais campos podem ser corrigidos; novos anexos são adicionados aos já existentes. Ao concluir, use **Salvar Alterações**.",
+          "Com permissão de Editar = Sim, clique no ícone de lápis na coluna Ações. O formulário abre com os dados preenchidos — o **Protocolo** permanece somente leitura. Se você alterar a categoria **Incidente** para outra família (Caso, Erro ou Oculto), ao salvar o sistema gera um novo protocolo na série correspondente; o modal avisa antes. Trocar só o **Tipo** (texto do catálogo do jogo) não muda o protocolo. Novos anexos são adicionados aos já existentes. Ao concluir, use **Salvar Alterações**.",
       },
       {
         subtitulo: "Permissões",
@@ -848,7 +848,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Check-in e Check-out",
         texto:
-          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga** ou **Venda**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga/Venda; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. Dias com **Compra** (ou Compra - Turno) seguem as mesmas regras de **Escalado** no Controle de Presença (Falta, Justificar e Aprovar).\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.\n\nCorreções de horário (Esquecimento ou Correção) ficam **Em análise**: o líder imediato aprova **entrada e saída separadamente** no ícone de comentário de cada coluna. O próprio prestador não aprova a própria correção. Justificativa **Médico** segue para **Solicitações** (RH).",
+          "O ponto pode ser registrado mesmo quando o dia estiver como **Folga** ou **Venda**, inclusive em fins de semana e plantões emergenciais. A Situação permanece Folga/Venda; Entrada e Saída realizadas ficam registradas para aprovação posterior do gestor. Dias com **Compra** (ou Compra - Turno) seguem as mesmas regras de **Escalado** no Controle de Presença (Falta, Justificar e Aprovar).\n\nNa aba **Controle de Presença**, cada linha é o turno do dia — não o dia civil do relógio. Se o check-in for à noite (ex.: 20h) e a saída na manhã seguinte (ex.: 08h), o check-out fica na mesma linha do dia do check-in. O botão **Fazer Check-out** permanece disponível por 20 horas após o check-in.\n\nCorreções de horário (**Esquecimento**, **Outro** ou Correção) ficam **Em análise**: o líder imediato aprova **entrada e saída separadamente** no ícone de comentário de cada coluna. O próprio prestador não aprova a própria correção. Justificativa **Médico** segue para **Solicitações** (RH).",
       },
       {
         subtitulo: "Cards de Escalados, Trocas, Venda e Compra",

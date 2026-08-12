@@ -78,7 +78,8 @@ export type EstudioIncidenteInsert = {
   created_by: string | null;
 };
 
-/** Campos editáveis — protocolo / created_at / relator não entram no patch. */
+/** Campos editáveis — relator / created_at não entram no patch.
+ * Protocolo é gerado/regenerado no banco se a família da categoria (CASO/OCULTO/ERRO) mudar. */
 export type EstudioIncidenteUpdate = {
   time_alvo: IncidenteTimeAlvo;
   prestador_id: string;

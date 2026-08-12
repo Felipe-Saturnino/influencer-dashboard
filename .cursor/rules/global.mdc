@@ -598,9 +598,10 @@ setBuscaDeb(normalizarTextoBusca(busca));
 - Se o filtro (seleção única ou multi) tiver **mais de 5** opções vindas de cadastro/lista, incluir **campo de busca** dentro do painel do filtro por defeito.
 - **Influencer na barra:** `FiltroInfluencerSelect` aplica a regra automaticamente (`influencers.length > 5`) com **`BarraPesquisaFiltroPainel`**.
 - **Staff / Time / entidade na barra:** `FiltroCalendarioStaffSelect`, `FiltroCalendarioTimeSelect` ou `FiltroEntidadeBarSelect` — busca no painel via **`BarraPesquisaFiltroPainel`** quando `> 5` opções; placeholder Staff: **`Pesquisar Staff...`** (`FILTER_SEARCH_STAFF`).
-- **Outros domínios:** `BarraPesquisaFiltroPainel` ou equivalente; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
+- **Outros domínios / selects em modal:** `BarraPesquisaFiltroPainel` ou equivalente; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
 - Placeholder no painel do filtro: **`Pesquisar [Nome do filtro]...`** (nome = rótulo do controlo: Influencer, Staff, …) — helper `placeholderPesquisaFiltro("Influencer")` em `searchBarConstants.ts`.
 - Filtrar por correspondência parcial no nome — **com** `textoContemBusca` / `textoContemBuscaEmAlgum` (§ Comportamento da busca — insensível a acentos).
+- **Foco ao abrir (obrigatório):** ao abrir o painel/dropdown que contém barra de pesquisa, o cursor deve ir **direto** para o input de busca (sem clique extra). Contrato: `BarraPesquisaFiltroPainel` com **`autoFocusOnMount` default `true`** — montar a barra **só com o painel aberto** (não deixar montada e oculta). Prop `autoFocusOnMount={false}` **somente** se a barra for permanente na página/modal e o foco inicial for outro campo. **Proibido** reimplementar `requestAnimationFrame`/`focus` local em cada filtro; usar o componente canónico.
 
 ---
 
@@ -1357,6 +1358,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` no lugar de `Calendar`, ou pill retangular).
 - Carrossel de período com lista do **corrente para trás** — seta esquerda deixa de ser “anterior” no tempo (Brand §7 / Global § Carrossel de período).
 - Lista >5 opções sem busca no painel do filtro.
+- Painel/dropdown com barra de pesquisa sem foco automático no input ao abrir (`BarraPesquisaFiltroPainel` / `autoFocusOnMount`) — força clique extra para digitar.
 - Busca textual client-side com `toLowerCase().includes` ou `normalize("NFD")` duplicado em vez de `lib/searchText.ts` (`textoContemBusca`, `textoContemBuscaEmAlgum`, `normalizarTextoBusca`).
 - Fileira de chips/status/plataforma no bloco de filtros com `justifyContent: "flex-start"` sem pedido explícito de produto (usar `center` + `width: "100%"` — § Alinhamento no bloco de filtros).
 - Tabela ordenável sem `SortTableTh` / sem default desc em coluna de data.

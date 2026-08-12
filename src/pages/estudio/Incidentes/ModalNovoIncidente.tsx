@@ -13,6 +13,7 @@ import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import {
   fetchEstudioIncidenteAnexos,
+  fetchNicknameStaffDoLogin,
   fetchStaffFormIncidente,
   insertEstudioIncidente,
   updateEstudioIncidente,
@@ -34,6 +35,8 @@ import {
   compareNumeroMesaIncidente,
   formatHoraRodada,
   hojeIsoDateLocal,
+  incidenteProtocoloFamilia,
+  incidenteProtocoloPrecisaRegenerar,
   labelPrestadorIncidentePorTime,
   normalizarHoraRodadaTexto,
   normalizarTipoJogoIncidente,
@@ -583,7 +586,8 @@ export function ModalNovoIncidente({
         protocoloSalvo = data.protocolo;
         incidenteId = data.id;
       } else {
-        const relatorNome = user?.name?.trim() || user?.email || "Usuário";
+        const nickStaff = await fetchNicknameStaffDoLogin(user?.email);
+        const relatorNome = nickStaff || user?.name?.trim() || user?.email || "Usuário";
         const { data, error } = await insertEstudioIncidente({
           ocorrido_em: new Date().toISOString(),
           ...payloadBase,
@@ -839,6 +843,12 @@ export function ModalNovoIncidente({
       ? `${ANEXO_HINT} · ${anexosExistentesCount} anexo(s) já no incidente — novos arquivos serão adicionados`
       : ANEXO_HINT;
 
+  const regeneraProtocolo =
+    isEdit &&
+    editando &&
+    incidenteProtocoloPrecisaRegenerar(editando.incidente, incidenteCategoria);
+  const novaFamiliaProtocolo = incidenteProtocoloFamilia(incidenteCategoria);
+
   return (
     <>
     <ModalBase onClose={onClose} maxWidth={920}>
@@ -859,6 +869,20 @@ export function ModalNovoIncidente({
                 opacity: 0.9,
               }}
             />
+            {regeneraProtocolo ? (
+              <p
+                role="status"
+                style={{
+                  margin: "8px 0 0",
+                  fontSize: 12,
+                  fontFamily: FONT.body,
+                  color: "#f59e0b",
+                  lineHeight: 1.4,
+                }}
+              >
+                Ao salvar, o protocolo será regenerado na série {novaFamiliaProtocolo}- (a categoria Incidente mudou de família).
+              </p>
+            ) : null}
           </Campo>
         ) : null}
 

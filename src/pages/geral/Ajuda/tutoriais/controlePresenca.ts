@@ -39,7 +39,7 @@ export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
     {
       titulo: "4. Justificar (Falta ou Pendente)",
       texto:
-        "Use quando o status for Falta ou Pendente (após o limite) e existir o ícone Justificar na coluna Ações.\n\n1. Clique em Justificar na linha do dia.\n2. Confira a data no título do modal.\n3. Em Motivo, escolha uma opção:\n\n— Médico: início e fim do atestado, anexo e observação opcional. Ao salvar, o RH recebe uma solicitação de Atestado em Solicitações (Em análise).\n— Esquecimento: informe Correção de Entrada e Correção de Saída (HH:MM). Após salvar, a correção segue para aprovação do líder.\n— Outro: observação obrigatória descrevendo o caso.\n\n4. Clique em Salvar (ou Cancelar para sair sem registrar).\n5. Depois de salvar com sucesso, o botão Justificar some naquela linha.",
+        "Use quando o status for Falta ou Pendente (após o limite) e existir o ícone Justificar na coluna Ações.\n\n1. Clique em Justificar na linha do dia.\n2. Confira a data no título do modal.\n3. Em Motivo, escolha uma opção:\n\n— Médico: início e fim do atestado, anexo e observação opcional. Ao salvar, o RH recebe uma solicitação de Atestado em Solicitações (Em análise).\n— Esquecimento ou Outro: informe Correção de Entrada e Correção de Saída (HH:MM). Após salvar, a correção segue para aprovação do líder (por campo); só muda o tipo da justificativa.\n\n4. Clique em Salvar (ou Cancelar para sair sem registrar).\n5. Depois de salvar com sucesso, o botão Justificar some naquela linha.",
       imagens: [
         { src: `${IMG}/07-modal-justificar.png`, alt: "Modal Justificar — escolher motivo" },
         { src: `${IMG}/08-justificar-medico.png`, alt: "Justificar — motivo Médico" },

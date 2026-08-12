@@ -69,6 +69,19 @@ export function incidenteCategoriaLabel(cat: IncidenteCategoria): string {
   return INCIDENTE_CATEGORIA_META[cat]?.label ?? cat;
 }
 
+/** Prefixo de protocolo da categoria: CASO | OCULTO | ERRO. */
+export function incidenteProtocoloFamilia(cat: IncidenteCategoria): "CASO" | "OCULTO" | "ERRO" {
+  return INCIDENTE_CATEGORIA_META[cat]?.prefix ?? "ERRO";
+}
+
+/** True quando a edição muda a família do protocolo (ex.: Caso → Erro). */
+export function incidenteProtocoloPrecisaRegenerar(
+  categoriaAtual: IncidenteCategoria,
+  categoriaNova: IncidenteCategoria,
+): boolean {
+  return incidenteProtocoloFamilia(categoriaAtual) !== incidenteProtocoloFamilia(categoriaNova);
+}
+
 export function timeAlvoLabel(t: IncidenteTimeAlvo): string {
   return t === "gp" ? "Game Presenter" : "Shuffler";
 }
@@ -197,4 +210,20 @@ export function labelLocalMesaIncidente(local: string | null | undefined): strin
   if (local === "em_mesa") return "Em Jogo";
   if (local === "fora_mesa") return "Fora de Jogo";
   return "—";
+}
+
+/** Relator na UI: nickname de Gestão de Staff quando conhecido; senão `relator_nome` gravado. */
+export function labelRelatorIncidente(
+  row: { relator_user_id: string | null; relator_nome: string },
+  nicknamePorProfileId: Record<string, string> | Map<string, string>,
+): string {
+  const uid = (row.relator_user_id ?? "").trim();
+  if (uid) {
+    const nick =
+      nicknamePorProfileId instanceof Map
+        ? nicknamePorProfileId.get(uid)
+        : nicknamePorProfileId[uid];
+    if ((nick ?? "").trim()) return nick!.trim();
+  }
+  return (row.relator_nome ?? "").trim() || "—";
 }

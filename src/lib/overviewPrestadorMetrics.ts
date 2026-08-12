@@ -38,6 +38,7 @@ export type OverviewPrestadorOcorrencia =
   | "Atestado"
   | "Atraso"
   | "Esquecimento"
+  | "Outro"
   | "Compra"
   | "Venda";
 
@@ -272,7 +273,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
         }
       }
 
-      if (just?.motivo === "esquecimento") {
+      if (just?.motivo === "esquecimento" || just?.motivo === "outro") {
         const faltouCheckIn = !temCheckIn;
         const faltouCheckOut = !temCheckOut;
         if (faltouCheckIn) checkInNaoRegistrado += 1;
@@ -283,7 +284,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
         if (partes.length > 0) {
           detalhamento.push({
             dataIso: iso,
-            ocorrencia: "Esquecimento",
+            ocorrencia: just.motivo === "outro" ? "Outro" : "Esquecimento",
             detalhe: partes.join(" e "),
           });
         }

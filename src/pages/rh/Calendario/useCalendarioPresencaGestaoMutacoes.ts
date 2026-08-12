@@ -405,7 +405,7 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
         return true;
       }
 
-      if (payload.motivo === "esquecimento") {
+      if (payload.motivo === "esquecimento" || payload.motivo === "outro") {
         let base = appendHistoricoPresenca(atual, {
           tipo: "justificativa",
           em,
@@ -417,7 +417,7 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
           por: nomeUsuarioPresencaGestao,
         });
         const justificativa: PresencaJustificativaMeta = {
-          motivo: "esquecimento",
+          motivo: payload.motivo,
           registradoPorNome: nomeUsuarioPresencaGestao,
           registradoEm: em,
         };
@@ -448,44 +448,18 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
         };
         const result = await persistirPresencaGestao(fid, diaIso, novo);
         if (!result.ok) return false;
-        const patchGestaoEsq = (prev: Map<string, PresencaDiaGestao>) => {
+        const patchGestaoHorario = (prev: Map<string, PresencaDiaGestao>) => {
           const next = new Map(prev);
           next.set(chave, novo);
           return next;
         };
-        setPresencaGestaoPorChave(patchGestaoEsq);
-        setGestaoRelatorioPorChave(patchGestaoEsq);
+        setPresencaGestaoPorChave(patchGestaoHorario);
+        setGestaoRelatorioPorChave(patchGestaoHorario);
         setPresencaJustificarAlvo(null);
         return true;
       }
 
-      const comHistorico = appendHistoricoPresenca(atual, {
-        tipo: "justificativa",
-        em,
-        por: nomeUsuarioPresencaGestao,
-      });
-      const justificativa: PresencaJustificativaMeta = {
-        motivo: "outro",
-        registradoPorNome: nomeUsuarioPresencaGestao,
-        registradoEm: em,
-        observacao: payload.observacao,
-      };
-      const novo: PresencaDiaGestao = {
-        ...comHistorico,
-        statusGestao: "em_analise",
-        justificativa,
-      };
-      const result = await persistirPresencaGestao(fid, diaIso, novo);
-      if (!result.ok) return false;
-      const patchGestaoOutro = (prev: Map<string, PresencaDiaGestao>) => {
-        const next = new Map(prev);
-        next.set(chave, novo);
-        return next;
-      };
-      setPresencaGestaoPorChave(patchGestaoOutro);
-      setGestaoRelatorioPorChave(patchGestaoOutro);
-      setPresencaJustificarAlvo(null);
-      return true;
+      return false;
     },
     [
       presencaJustificarAlvo,
