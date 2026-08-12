@@ -978,7 +978,16 @@ export default function RhGestaoStaffPage() {
               borderTop: `1px solid ${t.cardBorder}`,
             }}
           >
-            <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 10,
+                rowGap: 10,
+                width: "100%",
+              }}
+            >
               <div
                 role="group"
                 aria-label="Filtros de pesquisa, estúdio e turno"
@@ -986,10 +995,10 @@ export default function RhGestaoStaffPage() {
                   display: "flex",
                   flexWrap: "wrap",
                   alignItems: "center",
-                  justifyContent: "center",
                   gap: 10,
                   rowGap: 10,
-                  maxWidth: "100%",
+                  flex: "1 1 auto",
+                  minWidth: 0,
                 }}
               >
                 <BarraPesquisaPagina
@@ -1024,21 +1033,22 @@ export default function RhGestaoStaffPage() {
                     minWidth={200}
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setModalImprimirIds(true)}
-                  aria-label="Imprimir IDs"
-                  title="Imprimir IDs"
-                  style={{
-                    ...getCtaCriarButtonStyle(brand),
-                    color: "#fff",
-                    flex: "0 0 auto",
-                  }}
-                >
-                  <Printer size={14} aria-hidden />
-                  Imprimir IDs
-                </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setModalImprimirIds(true)}
+                aria-label="Imprimir IDs"
+                title="Imprimir IDs"
+                style={{
+                  ...getCtaCriarButtonStyle(brand),
+                  color: "#fff",
+                  flex: "0 0 auto",
+                  marginLeft: "auto",
+                }}
+              >
+                <Printer size={14} aria-hidden />
+                Imprimir IDs
+              </button>
             </div>
           </div>
       </div>

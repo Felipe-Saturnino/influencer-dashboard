@@ -22,6 +22,7 @@ import { getAppRouteByPageKey, getAppRouteByPageSlug } from "../../../lib/appRou
 import { CONTEUDO_CONHECA } from "./conteudo/conheca";
 import { CONTEUDO_TROUBLE, TROUBLESHOOTING_TRANSVERSAL } from "./conteudo/troubleshooting";
 import { TutoriaisPanel } from "./TutoriaisPanel";
+import { AjudaBlocoRecolhivel } from "./AjudaBlocoRecolhivel";
 
 type Aba = "conheca" | "troubleshooting" | "glossario" | "tutoriais";
 
@@ -195,9 +196,24 @@ export default function Ajuda() {
 
   const renderAjudaBlocos = (
     blocos: { subtitulo?: string; texto: string }[],
-    opts?: { pageKeyLink?: PageKey; skipLink?: boolean },
-  ) =>
-    blocos.map((bloco, i) => (
+    opts?: {
+      pageKeyLink?: PageKey;
+      skipLink?: boolean;
+      /** Conheça: 1.º bloco fixo; demais recolhidos. Troubleshooting: todos recolhidos. */
+      modo?: "conheca" | "troubleshooting";
+    },
+  ) => {
+    const modo = opts?.modo;
+    const textoBlocoStyle = {
+      fontSize: 14,
+      lineHeight: 1.75,
+      color: t.text,
+      fontFamily: FONT.body,
+      margin: 0,
+      whiteSpace: "pre-line" as const,
+    };
+
+    const renderTextoFixo = (bloco: { subtitulo?: string; texto: string }, i: number, total: number) => (
       <div key={`${bloco.subtitulo ?? "bloco"}-${i}`}>
         {bloco.subtitulo ? (
           <p
@@ -214,32 +230,62 @@ export default function Ajuda() {
             {bloco.subtitulo}
           </p>
         ) : null}
-        <p
-          style={{
-            fontSize: 14,
-            lineHeight: 1.75,
-            color: t.text,
-            fontFamily: FONT.body,
-            margin: 0,
-            whiteSpace: "pre-line",
-          }}
-        >
-          {renderAjudaTexto(bloco.texto)}
-        </p>
+        <p style={textoBlocoStyle}>{renderAjudaTexto(bloco.texto)}</p>
         {!opts?.skipLink && i === 0 && opts?.pageKeyLink ? (
           <AjudaPaginaAcessoLink pageKey={opts.pageKeyLink} />
         ) : null}
-        {i < blocos.length - 1 ? (
-          <div
-            style={{
-              height: 1,
-              background: t.cardBorder,
-              marginTop: 20,
-            }}
-          />
+        {modo !== "conheca" && modo !== "troubleshooting" && i < total - 1 ? (
+          <div style={{ height: 1, background: t.cardBorder, marginTop: 20 }} />
         ) : null}
       </div>
-    ));
+    );
+
+    if (modo === "conheca") {
+      const primeiro = blocos[0];
+      const resto = blocos.slice(1);
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {primeiro ? renderTextoFixo(primeiro, 0, blocos.length) : null}
+          {resto.map((bloco, i) => (
+            <AjudaBlocoRecolhivel
+              key={`${bloco.subtitulo ?? "bloco"}-${i + 1}`}
+              titulo={bloco.subtitulo?.trim() || `Seção ${i + 2}`}
+              t={t}
+              accentColor={brand.accent}
+              defaultAberto={false}
+            >
+              {renderAjudaTexto(bloco.texto)}
+            </AjudaBlocoRecolhivel>
+          ))}
+        </div>
+      );
+    }
+
+    if (modo === "troubleshooting") {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {!opts?.skipLink && opts?.pageKeyLink ? (
+            <div style={{ marginBottom: 4 }}>
+              <AjudaPaginaAcessoLink pageKey={opts.pageKeyLink} />
+            </div>
+          ) : null}
+          {blocos.map((bloco, i) => (
+            <AjudaBlocoRecolhivel
+              key={`${bloco.subtitulo ?? "bloco"}-${i}`}
+              titulo={bloco.subtitulo?.trim() || `Pergunta ${i + 1}`}
+              t={t}
+              accentColor={brand.accent}
+              defaultAberto={false}
+            >
+              {renderAjudaTexto(bloco.texto)}
+            </AjudaBlocoRecolhivel>
+          ))}
+        </div>
+      );
+    }
+
+    return blocos.map((bloco, i) => renderTextoFixo(bloco, i, blocos.length));
+  };
 
   return (
     <div className="app-page-shell" style={{ maxWidth: "1100px", margin: "0 auto" }}>
@@ -499,7 +545,10 @@ export default function Ajuda() {
                         />
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                        {renderAjudaBlocos([...TROUBLESHOOTING_TRANSVERSAL.blocos], { skipLink: true })}
+                        {renderAjudaBlocos([...TROUBLESHOOTING_TRANSVERSAL.blocos], {
+                          skipLink: true,
+                          modo: "troubleshooting",
+                        })}
                       </div>
                     </div>
                     {dadosConteudo ? (
@@ -540,8 +589,11 @@ export default function Ajuda() {
                       />
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                      {renderAjudaBlocos(dadosConteudo.blocos, { pageKeyLink: paginaSelecionada })}
+                    <div key={`ajuda-blocos-${aba}-${paginaSelecionada}`} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                      {renderAjudaBlocos(dadosConteudo.blocos, {
+                        pageKeyLink: paginaSelecionada,
+                        modo: aba === "conheca" ? "conheca" : "troubleshooting",
+                      })}
                     </div>
                   </>
                 ) : aba === "troubleshooting" ? null : (

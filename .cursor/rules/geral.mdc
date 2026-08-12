@@ -38,6 +38,12 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 
 **Abas:** Conheça a Plataforma · Troubleshooting · Glossário · **Tutoriais**.
 
+### Conheça e Troubleshooting — blocos recolhíveis
+
+- Componente **`AjudaBlocoRecolhivel`** (seta `ChevronRight` como no Glossário; fechado por defeito).
+- **Conheça:** 1.º bloco do conteúdo da página **sempre visível** (intro + link «Acesse a página AQUI»); cada bloco seguinte (com `subtitulo`) é um acordeão independente, **recolhido** por defeito.
+- **Troubleshooting:** **todos** os blocos (incl. transversal **Plataforma** e os da página) em acordeão, **recolhidos** por defeito. Título da secção (`h2`) permanece fora do acordeão.
+
 ### Tutoriais
 
 - Catálogo em `tutoriais/catalog.ts` + um ficheiro por tutorial (ex.: `controlePresenca.ts`, `alterarEscala.ts`).
