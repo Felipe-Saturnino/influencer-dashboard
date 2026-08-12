@@ -824,7 +824,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Imprimir IDs",
         texto:
-          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** abre um modal para selecionar **Game Presenters**. Ao gerar, a plataforma baixa um PDF em **folha A4** com até **8 etiquetas de 8×6 cm** por página (grade 2×4), com guia de corte: código de barras centralizado, número do barcode e nickname. Só entram na lista de impressão os GPs que já têm barcode cadastrado no modal de edição.",
+          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** abre um modal para selecionar prestadores de **todos os times** da Gestão de Staff (Game Presenter, Shuffler, Shift Leader, Service Manager e demais times da página). Ao gerar, a plataforma baixa um PDF em **folha A4** com até **8 etiquetas de 8×6 cm** por página (grade 2×4), com guia de corte: código de barras centralizado, número do barcode e nickname. Só entram na impressão quem já tem barcode cadastrado no modal de edição.",
       },
       {
         subtitulo: "ID TOS (Service Manager)",

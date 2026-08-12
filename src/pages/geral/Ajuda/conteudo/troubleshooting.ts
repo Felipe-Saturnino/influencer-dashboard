@@ -1499,7 +1499,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo imprimir o ID de um Game Presenter?",
         texto:
-          "No modal **Imprimir IDs**, só entram GPs com o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. GPs sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
+          "No modal **Imprimir IDs**, a lista inclui todos os times da Gestão de Staff. Só entram na impressão quem tem o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. Prestadores sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
       },
     ],
   },

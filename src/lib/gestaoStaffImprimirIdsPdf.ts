@@ -1,4 +1,4 @@
-/** Impressão de IDs de Game Presenter — várias etiquetas 8×6 cm numa folha A4. */
+/** Impressão de IDs do staff (Gestão de Staff) — várias etiquetas 8×6 cm numa folha A4. */
 
 export type StaffIdEtiquetaPdf = {
   barcode: string;

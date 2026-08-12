@@ -6,7 +6,6 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { baixarImprimirIdsStaffPdf } from "../../../lib/gestaoStaffImprimirIdsPdf";
-import { isGamePresenterTimeNome } from "../../../lib/rhGamePresenterDealerSync";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { FONT } from "../../../constants/theme";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
@@ -34,31 +33,39 @@ export function ModalImprimirIdsStaff({
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const gps = useMemo(() => {
-    const timeNomePorId = new Map(times.map((x) => [x.id, x.nome]));
+  const timeNomePorId = useMemo(() => new Map(times.map((x) => [x.id, x.nome])), [times]);
+  const timeIdsStaff = useMemo(() => new Set(times.map((x) => x.id)), [times]);
+
+  const staffLista = useMemo(() => {
     return prestadores
       .filter((p) => {
         if (p.status !== "ativo" && p.status !== "indisponivel") return false;
-        const tn = p.org_time_id ? timeNomePorId.get(p.org_time_id) : null;
-        return isGamePresenterTimeNome(tn);
+        if (!p.org_time_id || !timeIdsStaff.has(p.org_time_id)) return false;
+        return true;
       })
       .slice()
       .sort((a, b) => {
-        const na = (a.staff_nickname ?? a.nome ?? "").localeCompare(b.staff_nickname ?? b.nome ?? "", "pt-BR");
-        return na;
+        const ta = (a.org_time_id ? timeNomePorId.get(a.org_time_id) : "") ?? "";
+        const tb = (b.org_time_id ? timeNomePorId.get(b.org_time_id) : "") ?? "";
+        const byTime = ta.localeCompare(tb, "pt-BR");
+        if (byTime !== 0) return byTime;
+        return (a.staff_nickname ?? a.nome ?? "").localeCompare(b.staff_nickname ?? b.nome ?? "", "pt-BR");
       });
-  }, [prestadores, times]);
+  }, [prestadores, timeIdsStaff, timeNomePorId]);
 
-  const gpsFiltrados = useMemo(() => {
-    if (!busca.trim()) return gps;
-    return gps.filter((p) => textoContemBuscaEmAlgum(busca, p.nome, p.staff_nickname, p.staff_barcode));
-  }, [gps, busca]);
+  const staffFiltrados = useMemo(() => {
+    if (!busca.trim()) return staffLista;
+    return staffLista.filter((p) => {
+      const nomeTime = p.org_time_id ? timeNomePorId.get(p.org_time_id) ?? "" : "";
+      return textoContemBuscaEmAlgum(busca, p.nome, p.staff_nickname, p.staff_barcode, nomeTime);
+    });
+  }, [staffLista, busca, timeNomePorId]);
 
   const comBarcode = useMemo(
-    () => gpsFiltrados.filter((p) => Boolean((p.staff_barcode ?? "").trim())),
-    [gpsFiltrados],
+    () => staffFiltrados.filter((p) => Boolean((p.staff_barcode ?? "").trim())),
+    [staffFiltrados],
   );
-  const semBarcodeCount = gpsFiltrados.length - comBarcode.length;
+  const semBarcodeCount = staffFiltrados.length - comBarcode.length;
 
   if (!open) return null;
 
@@ -79,7 +86,7 @@ export function ModalImprimirIdsStaff({
 
   const gerar = async () => {
     setErro(null);
-    const escolhidos = gps.filter((p) => selecionados.has(p.id));
+    const escolhidos = staffLista.filter((p) => selecionados.has(p.id));
     const comCodigo = escolhidos
       .map((p) => ({
         barcode: (p.staff_barcode ?? "").trim(),
@@ -87,7 +94,7 @@ export function ModalImprimirIdsStaff({
       }))
       .filter((x) => x.barcode);
     if (comCodigo.length === 0) {
-      setErro("Selecione ao menos um Game Presenter com barcode cadastrado.");
+      setErro("Selecione ao menos um prestador com barcode cadastrado.");
       return;
     }
     setGerando(true);
@@ -114,15 +121,15 @@ export function ModalImprimirIdsStaff({
       <ModalHeader title="Imprimir IDs" onClose={onClose} />
 
       <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 }}>
-        Selecione os Game Presenters. Será gerado um único PDF com etiquetas de 8×6 cm (código de barras, número e
-        nickname) para impressão.
+        Selecione os prestadores dos times de Gestão de Staff. Será gerado um único PDF com etiquetas de 8×6 cm (código
+        de barras, número e nickname) para impressão.
       </p>
 
       <BarraPesquisaPagina
         value={busca}
         onChange={setBusca}
-        placeholder="Pesquisar por nickname, nome ou barcode..."
-        aria-label="Pesquisar Game Presenters"
+        placeholder="Pesquisar por nickname, nome, time ou barcode..."
+        aria-label="Pesquisar prestadores"
         wrapperStyle={{ width: "100%", marginBottom: 12 }}
       />
 
@@ -169,7 +176,7 @@ export function ModalImprimirIdsStaff({
 
       {semBarcodeCount > 0 ? (
         <p style={{ margin: "0 0 8px", fontSize: 12, color: "#f59e0b", fontFamily: FONT.body }}>
-          {semBarcodeCount} GP(s) sem barcode cadastrado — não entram na impressão.
+          {semBarcodeCount} prestador(es) sem barcode cadastrado — não entram na impressão.
         </p>
       ) : null}
 
@@ -190,15 +197,16 @@ export function ModalImprimirIdsStaff({
           borderRadius: 10,
         }}
       >
-        {gpsFiltrados.length === 0 ? (
+        {staffFiltrados.length === 0 ? (
           <li style={{ padding: 20, textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-            Nenhum Game Presenter encontrado.
+            Nenhum prestador encontrado.
           </li>
         ) : (
-          gpsFiltrados.map((p) => {
+          staffFiltrados.map((p) => {
             const barcode = (p.staff_barcode ?? "").trim();
             const semCodigo = !barcode;
             const nick = (p.staff_nickname ?? "").trim() || "—";
+            const nomeTime = p.org_time_id ? timeNomePorId.get(p.org_time_id) ?? "" : "";
             const checked = selecionados.has(p.id);
             return (
               <li
@@ -231,6 +239,7 @@ export function ModalImprimirIdsStaff({
                     <span style={{ display: "block", fontWeight: 700, color: t.text }}>{nick}</span>
                     <span style={{ display: "block", fontSize: 12, color: t.textMuted }}>
                       {p.nome}
+                      {nomeTime ? ` · ${nomeTime}` : ""}
                       {semCodigo ? " · Sem barcode" : ` · ${barcode}`}
                     </span>
                   </span>
