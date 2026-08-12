@@ -10,7 +10,6 @@ import {
 import {
   adicionarMinutosAoRelogioHHMM,
   escalaComHorarioTurnoEditavelNaStaff,
-  escalaComHorarioTurnoSomenteOperadora,
   formatarHoraInicioOperadora,
   staffHorarioResolvidoParaTurnoDoDia,
 } from "./rhStaffHorarioTurno";
@@ -308,10 +307,10 @@ export function obterEntradaSaidaEscaladasPrestadorDia(
   if (escalaComHorarioTurnoEditavelNaStaff(escala)) {
     const hor = staffHorarioResolvidoParaTurnoDoDia(escala, turnoNome, p.staff_horario_turno);
     const parsed = parseHorarioStaffValorParaHHMM(hor);
-    return parsed ?? { entrada: "—", saida: "—" };
+    if (parsed) return parsed;
   }
 
-  if (escalaComHorarioTurnoSomenteOperadora(escala) && op) {
+  if (op) {
     const k = normalizarEscalaCadastro(escala);
     const durMin = k === "5x1" ? 6 * 60 + 30 : 8 * 60;
     let iniDb: string | null = null;

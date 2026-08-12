@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
-import { fetchTurnosPorOperadoraSlugs } from "../../../lib/turnosDealers";
+import {
+  fetchTurnosPorEstudioSlugs,
+  fetchTurnosPorOperadoraSlugs,
+  pickStaffEstudioSlugParaTurnos,
+  resolveTurnosHorarioPrestador,
+} from "../../../lib/turnosDealers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
   normalizarSelecaoUnica,
@@ -100,6 +105,7 @@ export function useOverviewPrestadorDados(
     Map<string, OverviewPrestadorMovimentacaoCelula>
   >(() => new Map());
   const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosHorarioPick>>(() => new Map());
+  const [mapEstudioTurnos, setMapEstudioTurnos] = useState<Map<string, OpTurnosHorarioPick>>(() => new Map());
   const [estudiosNome, setEstudiosNome] = useState<Record<string, string>>({});
   const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
   const [loadingGrade, setLoadingGrade] = useState(false);
@@ -499,26 +505,44 @@ export function useOverviewPrestadorDados(
   }, [idsEscopo, mesesParaCarga, caps.negocia]);
 
   useEffect(() => {
-    const slugs = [...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean))];
-    if (slugs.length === 0) {
+    const opSlugs = [...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean))];
+    const estudioSlugs = [
+      ...new Set(
+        prestadores
+          .map((p) => pickStaffEstudioSlugParaTurnos(p))
+          .filter((s): s is string => Boolean(s)),
+      ),
+    ];
+    if (opSlugs.length === 0 && estudioSlugs.length === 0) {
       setMapOpTurnos(new Map());
+      setMapEstudioTurnos(new Map());
       return;
     }
     let cancelled = false;
-    void fetchTurnosPorOperadoraSlugs(slugs).then((turnosMap) => {
+    void Promise.all([
+      opSlugs.length > 0
+        ? fetchTurnosPorOperadoraSlugs(opSlugs)
+        : Promise.resolve(new Map<string, OpTurnosHorarioPick>()),
+      estudioSlugs.length > 0
+        ? fetchTurnosPorEstudioSlugs(estudioSlugs)
+        : Promise.resolve(new Map<string, OpTurnosHorarioPick>()),
+    ]).then(([opMap, estMap]) => {
       if (cancelled) return;
-      const m = new Map<string, OpTurnosHorarioPick>();
-      for (const slug of slugs) {
-        const turnos = turnosMap.get(slug);
-        if (turnos) m.set(slug, turnos);
-      }
-      setMapOpTurnos(m);
+      setMapOpTurnos(opMap);
+      setMapEstudioTurnos(estMap);
     });
     return () => {
       cancelled = true;
     };
   }, [prestadores]);
 
+  const turnosHorarioPrestador = useCallback(
+    (p: { staff_operadora_slug?: string | null; staff_estudio_slug?: string | null; staff_estudio_slugs?: string[] | null } | undefined | null) => {
+      if (!p) return null;
+      return resolveTurnosHorarioPrestador(p, mapOpTurnos, mapEstudioTurnos);
+    },
+    [mapOpTurnos, mapEstudioTurnos],
+  );
   const pontoRowsPorFuncionario = useCallback(
     (fid: string): RpcPontoMesRow[] => {
       const rows: RpcPontoMesRow[] = [];
@@ -534,8 +558,7 @@ export function useOverviewPrestadorDados(
     const map = new Map<string, OverviewPrestadorMetricas>();
     for (const fid of idsEscopo) {
       const pRow = prestadorPorId.get(fid);
-      const slug = (pRow?.staff_operadora_slug ?? "").trim();
-      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+      const opRow = turnosHorarioPrestador(pRow);
       map.set(
         fid,
         calcularMetricasPrestadorPeriodo({
@@ -556,7 +579,7 @@ export function useOverviewPrestadorDados(
   }, [
     idsEscopo,
     prestadorPorId,
-    mapOpTurnos,
+    turnosHorarioPrestador,
     gradeRows,
     pontoRowsPorFuncionario,
     presencaGestaoPorChave,
@@ -588,8 +611,7 @@ export function useOverviewPrestadorDados(
     if (historico || idsEscopo.length === 0) return OVERVIEW_PRESTADOR_METRICAS_ZERO;
     const partes = idsEscopo.map((fid) => {
       const pRow = prestadorPorId.get(fid);
-      const slug = (pRow?.staff_operadora_slug ?? "").trim();
-      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+      const opRow = turnosHorarioPrestador(pRow);
       return calcularMetricasPrestadorPeriodo({
         funcionarioId: fid,
         prestador: pRow,
@@ -608,7 +630,7 @@ export function useOverviewPrestadorDados(
     historico,
     idsEscopo,
     prestadorPorId,
-    mapOpTurnos,
+    turnosHorarioPrestador,
     gradeRows,
     pontoRowsPorFuncionario,
     presencaGestaoPorChave,
@@ -641,8 +663,7 @@ export function useOverviewPrestadorDados(
     const opTurnosPorFuncionario = new Map<string, OpTurnosHorarioPick | null>();
     for (const fid of idsEscopo) {
       const p = prestadorPorId.get(fid);
-      const slug = (p?.staff_operadora_slug ?? "").trim();
-      opTurnosPorFuncionario.set(fid, slug ? mapOpTurnos.get(slug) ?? null : null);
+      opTurnosPorFuncionario.set(fid, turnosHorarioPrestador(p));
     }
     return calcularCoberturaPrestadorPeriodo({
       funcionarioIds: idsEscopo,
@@ -663,7 +684,7 @@ export function useOverviewPrestadorDados(
     visaoTime,
     idsEscopo,
     prestadorPorId,
-    mapOpTurnos,
+    turnosHorarioPrestador,
     gradeRows,
     pontoPorChave,
     presencaGestaoPorChave,
@@ -678,11 +699,10 @@ export function useOverviewPrestadorDados(
   const distribuicaoEstudio: OverviewPrestadorEstudioFatia[] = useMemo(() => {
     if (visaoTime || !staffSelecionadoId || !caps.distribuicaoEstudioIndividual) return [];
     const pRow = prestadorPorId.get(staffSelecionadoId);
-    const slug = (pRow?.staff_operadora_slug ?? "").trim();
     return calcularDistribuicaoEstudioIndividual({
       funcionarioId: staffSelecionadoId,
       prestador: pRow,
-      opTurnos: slug ? mapOpTurnos.get(slug) ?? null : null,
+      opTurnos: turnosHorarioPrestador(pRow),
       gradeRows,
       pontoRows: pontoRowsPorFuncionario(staffSelecionadoId),
       presencaGestao: presencaGestaoPorChave,
@@ -698,7 +718,7 @@ export function useOverviewPrestadorDados(
     staffSelecionadoId,
     caps.distribuicaoEstudioIndividual,
     prestadorPorId,
-    mapOpTurnos,
+    turnosHorarioPrestador,
     gradeRows,
     pontoRowsPorFuncionario,
     presencaGestaoPorChave,

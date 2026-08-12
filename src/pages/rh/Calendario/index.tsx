@@ -24,7 +24,13 @@ import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
-import { fetchTurnosPorOperadoraSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
+import {
+  fetchTurnosPorEstudioSlugs,
+  fetchTurnosPorOperadoraSlugs,
+  pickStaffEstudioSlugParaTurnos,
+  resolveTurnosHorarioPrestador,
+  type TurnosDealersPick,
+} from "../../../lib/turnosDealers";
 import {
   MSG_PRESTADOR_PONTO_REDE,
   obterPrestadorPontoEstado,
@@ -37,7 +43,6 @@ import { chaveTurnoMes, type EscalaTurnoMesMap } from "../../../lib/gestaoEscala
 import {
   adicionarMinutosAoRelogioHHMM,
   escalaComHorarioTurnoEditavelNaStaff,
-  escalaComHorarioTurnoSomenteOperadora,
   formatarHoraInicioOperadora,
   labelHorarioTurnoStaffPorValor,
   staffHorarioResolvidoParaTurnoDoDia,
@@ -416,7 +421,6 @@ function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   return turnoOperacionalValorGrade(v) ?? (v === "Compra" || v === "Troca" ? v : null);
 }
 
-type OpTurnosCalPick = { slug: string } & TurnosDealersPick;
 type OpTurnosHorarioPick = TurnosDealersPick;
 
 function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
@@ -458,10 +462,11 @@ function resumoHorarioTurnoModalCalendario(
       horarioStaffOverride ?? p.staff_horario_turno,
     );
     const lbl = labelHorarioTurnoStaffPorValor(hor);
-    return lbl !== "—" ? lbl : null;
+    if (lbl !== "—") return lbl;
   }
 
-  if (escalaComHorarioTurnoSomenteOperadora(escala) && op) {
+  // 4x2/5x1 ou 3x3 sem opção para o turno do dia (ex.: Tarde) — estúdio/operadora.
+  if (op) {
     const k = normalizarEscalaCadastro(escala);
     const durMin = k === "5x1" ? 6 * 60 + 30 : 8 * 60;
     let iniDb: string | null = null;
@@ -559,10 +564,11 @@ function obterEntradaSaidaEscaladasPrestadorDia(
       horarioStaffOverride ?? p.staff_horario_turno,
     );
     const parsed = parseHorarioStaffValorParaHHMM(hor);
-    return parsed ?? { entrada: "—", saida: "—" };
+    if (parsed) return parsed;
   }
 
-  if (escalaComHorarioTurnoSomenteOperadora(escala) && op) {
+  // 4x2/5x1 ou fallback quando o turno do dia não tem opção editável (ex.: 3x3 + Tarde).
+  if (op) {
     const k = normalizarEscalaCadastro(escala);
     const durMin = k === "5x1" ? 6 * 60 + 30 : 8 * 60;
     let iniDb: string | null = null;
@@ -747,7 +753,8 @@ export default function RhCalendarioPage() {
   /** Funcionário ligado ao login atual (e-mail / e-mail Spin). */
   const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
   const [funcionariosGerenciaveisIds, setFuncionariosGerenciaveisIds] = useState<Set<string>>(() => new Set());
-  const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, OpTurnosCalPick>>(() => new Map());
+  const [mapOpTurnos, setMapOpTurnos] = useState<Map<string, TurnosDealersPick>>(() => new Map());
+  const [mapEstudioTurnos, setMapEstudioTurnos] = useState<Map<string, TurnosDealersPick>>(() => new Map());
 
   const [pontoEstado, setPontoEstado] = useState<PrestadorPontoEstado | null>(null);
   const [pontoEstadoLoading, setPontoEstadoLoading] = useState(false);
@@ -1457,28 +1464,44 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
-    const slugs = [
+    const opSlugs = [
       ...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean)),
     ];
-    if (slugs.length === 0) {
+    const estudioSlugs = [
+      ...new Set(
+        prestadores
+          .map((p) => pickStaffEstudioSlugParaTurnos(p))
+          .filter((s): s is string => Boolean(s)),
+      ),
+    ];
+    if (opSlugs.length === 0 && estudioSlugs.length === 0) {
       setMapOpTurnos(new Map());
+      setMapEstudioTurnos(new Map());
       return;
     }
     let cancelled = false;
-    void fetchTurnosPorOperadoraSlugs(slugs).then((turnosMap) => {
+    void Promise.all([
+      opSlugs.length > 0 ? fetchTurnosPorOperadoraSlugs(opSlugs) : Promise.resolve(new Map<string, TurnosDealersPick>()),
+      estudioSlugs.length > 0
+        ? fetchTurnosPorEstudioSlugs(estudioSlugs)
+        : Promise.resolve(new Map<string, TurnosDealersPick>()),
+    ]).then(([opMap, estMap]) => {
       if (cancelled) return;
-      const m = new Map<string, OpTurnosCalPick>();
-      for (const slug of slugs) {
-        const turnos = turnosMap.get(slug);
-        if (turnos) m.set(slug, { slug, ...turnos });
-      }
-      setMapOpTurnos(m);
+      setMapOpTurnos(opMap);
+      setMapEstudioTurnos(estMap);
     });
     return () => {
       cancelled = true;
     };
   }, [prestadores, perm.loading, perm.canView]);
 
+  const turnosHorarioPrestador = useCallback(
+    (p: RhFuncionario | undefined | null): TurnosDealersPick | null => {
+      if (!p) return null;
+      return resolveTurnosHorarioPrestador(p, mapOpTurnos, mapEstudioTurnos);
+    },
+    [mapOpTurnos, mapEstudioTurnos],
+  );
   const compromissosPorDiaIso = useMemo(() => {
     const filtroStaff = compFilterStaffIds.length > 0 ? new Set(compFilterStaffIds) : null;
     const optsTime = {
@@ -1724,13 +1747,12 @@ export default function RhCalendarioPage() {
   function horarioSubtituloParaCompromissoCal(comp: CompromissoEscalaCal, diaIso?: string): string | undefined {
     if (turnoCalendarioEhCompraVendaTroca(comp.turno)) return undefined;
     const pRow = prestadorPorId.get(comp.prestadorId);
-    const slug = (pRow?.staff_operadora_slug ?? "").trim();
-    const opRow = slug ? mapOpTurnos.get(slug) : undefined;
+    const opRow = turnosHorarioPrestador(pRow);
     const area = diaIso ? areaKeyGradeDia(rawGradeRows, comp.prestadorId, diaIso) : null;
     const horario = resumoHorarioTurnoModalCalendario(
       pRow,
       comp.turno,
-      opRow ?? null,
+      opRow,
       horarioStaffTurnoMesSnap(comp.prestadorId, area),
     );
     return horario ?? "—";
@@ -2505,12 +2527,11 @@ export default function RhCalendarioPage() {
     const ultimoDia = diasDoMesPresenca[diasDoMesPresenca.length - 1]!;
     const iso = toISO(ultimoDia);
     const pRow = prestadorPorId.get(fid);
-    const slug = (pRow?.staff_operadora_slug ?? "").trim();
-    const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+    const opRow = turnosHorarioPrestador(pRow);
     const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
     return obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- helper local do render (rawGradeRows/turnoMesMap já nas deps)
-  }, [mesPresencaFechado, diasDoMesPresenca, presencaFilterStaffIds, prestadorPorId, mapOpTurnos, rawGradeRows, turnoMesMap]);
+  }, [mesPresencaFechado, diasDoMesPresenca, presencaFilterStaffIds, prestadorPorId, turnosHorarioPrestador, rawGradeRows, turnoMesMap]);
 
   const exibirCheckInMesFechadoExcecao = useMemo(() => {
     if (!mesPresencaFechado) return false;
@@ -2585,8 +2606,7 @@ export default function RhCalendarioPage() {
     const fid = presencaFilterStaffIds[0];
     if (!fid) return [];
     const pRow = prestadorPorId.get(fid);
-    const slug = (pRow?.staff_operadora_slug ?? "").trim();
-    const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+    const opRow = turnosHorarioPrestador(pRow);
     const out: PresencaMesAprovacaoLinha[] = [];
     for (const dia of diasDoMesPresenca) {
       const iso = toISO(dia);
@@ -2639,7 +2659,7 @@ export default function RhCalendarioPage() {
     presencaFilterStaffIds,
     diasDoMesPresenca,
     prestadorPorId,
-    mapOpTurnos,
+    turnosHorarioPrestador,
     rawGradeRows,
     mapaPontoPorDiaIso,
     presencaGestaoPorChave,
@@ -2651,8 +2671,7 @@ export default function RhCalendarioPage() {
       const fid = presencaFilterStaffIds[0];
       if (!fid) return PRESENCA_KPIS_ZERO;
       const pRow = prestadorPorId.get(fid);
-      const slug = (pRow?.staff_operadora_slug ?? "").trim();
-      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+      const opRow = turnosHorarioPrestador(pRow);
       const diasInput = diasReferenciaMesPresenca(refMes).map((dia) => {
         const iso = toISO(dia);
         const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
@@ -2693,7 +2712,7 @@ export default function RhCalendarioPage() {
       mapaPontoPorDiaIso,
       presencaGestaoPorChave,
       prestadorPorId,
-      mapOpTurnos,
+      turnosHorarioPrestador,
       indiceJustificativaMedicoPresenca,
       movimentacoesPresencaPorChave,
     ],
@@ -2714,8 +2733,7 @@ export default function RhCalendarioPage() {
     for (const pRow of prestadoresRelatorioTime) {
       const fid = pRow.id;
       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
-      const slug = (pRow.staff_operadora_slug ?? "").trim();
-      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+      const opRow = turnosHorarioPrestador(pRow);
       const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
       const pt = pontoRelatorioPorFid.get(fid);
       const entEsc = esc ? esc.entrada : "—";
@@ -2834,7 +2852,7 @@ export default function RhCalendarioPage() {
     relatorioDia,
     prestadoresRelatorioTime,
     rawGradeRows,
-    mapOpTurnos,
+    turnosHorarioPrestador,
     pontoRelatorioPorFid,
     gestaoRelatorioPorChave,
     podeGerirPresencaStaff,
@@ -3657,8 +3675,7 @@ export default function RhCalendarioPage() {
                           ? primeiroValorGradeDia(rawGradeRows, fid, isoAnterior)
                           : null;
                       const pRow = prestadorPorId.get(fid);
-                      const slug = (pRow?.staff_operadora_slug ?? "").trim();
-                      const opRow = slug ? mapOpTurnos.get(slug) ?? null : null;
+                      const opRow = turnosHorarioPrestador(pRow);
                       const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
                       const pt = mapaPontoPorDiaIso.get(iso);
                       const entEsc = esc ? esc.entrada : "—";
