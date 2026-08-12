@@ -5,6 +5,8 @@ import { TUTORIAL_ALTERAR_ESCALA } from "./alterarEscala";
 import { TUTORIAL_CALENDARIO_PRESTADOR } from "./calendarioPrestador";
 import { TUTORIAL_CIENCIA_MANUAIS_ACADEMY } from "./cienciaManuaisAcademy";
 import { TUTORIAL_CONTROLE_PRESENCA } from "./controlePresenca";
+import { TUTORIAL_GESTAO_STAFF_EDITAR } from "./gestaoStaffEditar";
+import { TUTORIAL_IMPRIMIR_IDS_STAFF } from "./imprimirIdsStaff";
 import { TUTORIAL_MARKETPLACE_OFERTAS } from "./marketplaceOfertas";
 import { TUTORIAL_NOVO_INCIDENTE } from "./novoIncidente";
 import { TUTORIAL_POSTAGEM_ACADEMY_APROVACAO } from "./postagemAcademyAprovacao";
@@ -13,6 +15,8 @@ import type { TutorialDef, TutorialSecaoNav } from "./types";
 /** Catálogo de tutoriais — ordem das secções alinhada ao menu quando possível. */
 export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_NOVO_INCIDENTE,
+  TUTORIAL_GESTAO_STAFF_EDITAR,
+  TUTORIAL_IMPRIMIR_IDS_STAFF,
   TUTORIAL_CALENDARIO_PRESTADOR,
   TUTORIAL_CONTROLE_PRESENCA,
   TUTORIAL_ALTERAR_ESCALA,

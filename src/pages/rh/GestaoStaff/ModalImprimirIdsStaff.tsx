@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Loader2, Printer } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { AjudaContextualTutorialAtalho } from "../../../components/AjudaContextualAcoes";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -9,6 +10,7 @@ import { baixarImprimirIdsStaffPdf } from "../../../lib/gestaoStaffImprimirIdsPd
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { FONT } from "../../../constants/theme";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
+import { TUTORIAL_IMPRIMIR_IDS_STAFF } from "../../geral/Ajuda/tutoriais/imprimirIdsStaff";
 
 type TimeRef = { id: string; nome: string };
 
@@ -118,7 +120,19 @@ export function ModalImprimirIdsStaff({
 
   return (
     <ModalBase maxWidth={560} onClose={onClose} zIndex={1100}>
-      <ModalHeader title="Imprimir IDs" onClose={onClose} />
+      <ModalHeader
+        title="Imprimir IDs"
+        onClose={onClose}
+        trailing={
+          <AjudaContextualTutorialAtalho
+            tutorial={{
+              id: TUTORIAL_IMPRIMIR_IDS_STAFF.id,
+              urlSlug: TUTORIAL_IMPRIMIR_IDS_STAFF.urlSlug,
+            }}
+            label="Abrir tutorial de Imprimir IDs"
+          />
+        }
+      />
 
       <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body, lineHeight: 1.45 }}>
         Selecione os prestadores dos times de Gestão de Staff. Será gerado um único PDF com etiquetas de 8×6 cm (código

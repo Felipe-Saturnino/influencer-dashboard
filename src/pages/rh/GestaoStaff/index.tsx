@@ -36,7 +36,7 @@ import {
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -205,6 +205,11 @@ function labelCampoHistorico(campo: string): string {
 type VerAba = "pessoal" | "funcao" | "skills" | "historico";
 
 type EditarAba = "funcao" | "skills" | "dealer";
+
+const TUTORIAL_GESTAO_STAFF_EDITAR: AjudaContextualTutorial = {
+  id: "gestao-staff-editar",
+  urlSlug: "GestaoDeStaffEditar",
+};
 
 const STAFF_VER_TAB_ICONS: Record<VerAba, ReactNode> = {
   pessoal: <User {...FILTRO_BAR_TAB_ICON_PROPS} />,
@@ -967,7 +972,7 @@ export default function RhGestaoStaffPage() {
             ) : null}
           </div>
           <div className="app-filter-bar-tabs-cta__actions">
-            <AjudaContextualAcoes pageKey="rh_staff" />
+            <AjudaContextualAcoes pageKey="rh_staff" tutorial={TUTORIAL_GESTAO_STAFF_EDITAR} />
           </div>
           </div>
 
