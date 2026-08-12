@@ -52,7 +52,7 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - Se o usuário **não** tiver nenhum tutorial liberado para o perfil efetivo, a aba **Tutoriais** **não aparece** na Ajuda (URL `/Ajuda/Tutoriais` redireciona para Conheça).
 - Ao gravar novo tutorial: adicionar ao catálogo, imagens em `public/tutoriais/<secao>/<id>/`, seed/linha em `ajuda_tutorial_visibilidade` (ou o Admin configura na UI).
 - Tutoriais atuais: **Controle de Presença** (`controle-presenca`, Escala) · **Alterar Escala** (`alterar-escala`, Escala — seed SM/SL) · **Marketplace** (`marketplace-ofertas`, Escala — seed GP/Shuffler) · **Dicas Academy** (`postagem-academy-aprovacao`, Academy — seed perfis Estúdio).
-- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `Calendario`, `ControledePresenca`, `AlterarEscala`, `MarketplaceOfertas`, `CienciaManuaisAcademy`, `DicasAcademy`, `NovoIncidente`, `GestaoDeStaffEditar`, `ImprimirIdsStaff`, `PortalRhGerenciamentoPostagens`, `PortalRhComunicadosLidos`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
+- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `Calendario`, `ControledePresenca`, `AlterarEscala`, `MarketplaceOfertas`, `CienciaManuaisAcademy`, `DicasAcademy`, `NovoIncidente`, `GestaoDeStaffEditar`, `ImprimirIdsStaff`, `PortalRhGerenciamentoPostagens`, `PortalRhComunicadosLidos`, `RhSolicitacoesAprovar`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
 
 ### Ajuda contextual nas páginas
 
@@ -77,7 +77,7 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 | **Estúdio** | Gestão de Dealers, Central de Notificações, Figurinos, Roteiro de Mesa, Incidentes | Incidentes → `novo-incidente` |
 | **Academy** | Performance Hub, Portal da Academy | Portal: **Manuais** → `ciencia-manuais-academy`; **Gerenciamento** → `postagem-academy-aprovacao` |
 | **Escala** | Gestão de Staff, Relatório de Turno, Solicitações, Escala Estúdio, Rotação, Calendário, Marketplace | Escala Estúdio → `alterar-escala` (**nunca** Escritório); Marketplace → `marketplace-ofertas`; Calendário → Compromissos / Controle de Presença; Gestão de Staff → `gestao-staff-editar` (página) + `imprimir-ids-staff` (só no modal Imprimir IDs) |
-| **RH** | Gestão de Prestadores, Dados de Cadastro, Organograma, Escala Escritório, Vagas, Solicitações, Central de Denúncias | Escala Escritório: só Conheça + Troubleshooting |
+| **RH** | Gestão de Prestadores, Dados de Cadastro, Organograma, Escala Escritório, Vagas, Solicitações, Central de Denúncias | Solicitações → `rh-solicitacoes-aprovar`; Escala Escritório: só Conheça + Troubleshooting |
 | **Conteúdo** | Playbook Influencers, Links e Materiais, Spin na Rede, Portal de RH, Informativos | Portal de RH: **Gerenciamento** → `portal-rh-gerenciamento-postagens`; **Comunicados** → `portal-rh-comunicados-lidos` |
 | **Tech Ops** | Gestão de Estoque, Ordem de Saída | — |
 | **Plataforma** | Gestão de Usuários, Gestão de Operadoras, Gestão de Estúdios, Status Técnico | — |

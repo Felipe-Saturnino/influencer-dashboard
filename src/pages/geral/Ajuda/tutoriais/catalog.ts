@@ -12,6 +12,7 @@ import { TUTORIAL_NOVO_INCIDENTE } from "./novoIncidente";
 import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "./portalRhComunicadosLidos";
 import { TUTORIAL_PORTAL_RH_GERENCIAMENTO } from "./portalRhGerenciamento";
 import { TUTORIAL_POSTAGEM_ACADEMY_APROVACAO } from "./postagemAcademyAprovacao";
+import { TUTORIAL_RH_SOLICITACOES_APROVAR } from "./rhSolicitacoesAprovar";
 import type { TutorialDef, TutorialSecaoNav } from "./types";
 
 /** Catálogo de tutoriais — ordem das secções alinhada ao menu quando possível. */
@@ -21,6 +22,7 @@ export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_IMPRIMIR_IDS_STAFF,
   TUTORIAL_PORTAL_RH_GERENCIAMENTO,
   TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS,
+  TUTORIAL_RH_SOLICITACOES_APROVAR,
   TUTORIAL_CALENDARIO_PRESTADOR,
   TUTORIAL_CONTROLE_PRESENCA,
   TUTORIAL_ALTERAR_ESCALA,
