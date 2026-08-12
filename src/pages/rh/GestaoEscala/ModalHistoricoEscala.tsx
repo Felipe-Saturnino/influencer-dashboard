@@ -5,6 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { supabase } from "../../../lib/supabase";
+import { labelExibicaoCelulaAlterarEscala } from "../../../lib/gestaoEscalaTurnoMes";
 
 export type EscalaHistoricoAcao =
   | "sugestao"
@@ -16,6 +17,8 @@ export type EscalaHistoricoAcao =
 export type EscalaHistoricoDetalhes = {
   prestador_nome?: string;
   dia_iso?: string;
+  valor_anterior?: string | null;
+  valor_novo?: string | null;
   observacao?: string | null;
 };
 
@@ -64,9 +67,36 @@ function parseDetalhes(raw: unknown): EscalaHistoricoDetalhes {
   return {
     prestador_nome: typeof o.prestador_nome === "string" ? o.prestador_nome : undefined,
     dia_iso: typeof o.dia_iso === "string" ? o.dia_iso : undefined,
+    valor_anterior:
+      o.valor_anterior === null || typeof o.valor_anterior === "string"
+        ? (o.valor_anterior as string | null)
+        : undefined,
+    valor_novo:
+      o.valor_novo === null || typeof o.valor_novo === "string"
+        ? (o.valor_novo as string | null)
+        : undefined,
     observacao:
       o.observacao === null || typeof o.observacao === "string" ? (o.observacao as string | null) : undefined,
   };
+}
+
+/** Rótulo amigável do valor da célula no Histórico (Manhã / Folga / …). */
+function labelValorHistoricoEscala(raw: string | null | undefined, areaKey: string): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "—";
+  const modo = areaKey.startsWith("eo_") ? "escritorio" : "estudio";
+  return labelExibicaoCelulaAlterarEscala(v, modo, areaKey);
+}
+
+function fmtValorAlteracaoHistorico(
+  anterior: string | null | undefined,
+  novo: string | null | undefined,
+  areaKey: string,
+): string {
+  const a = labelValorHistoricoEscala(anterior, areaKey);
+  const n = labelValorHistoricoEscala(novo, areaKey);
+  if (a === "—" && n === "—") return "—";
+  return `${a} → ${n}`;
 }
 
 function historicoCardStyle(acao: EscalaHistoricoAcao, brandAccent: string, useBrand: boolean): CSSProperties {
@@ -257,6 +287,12 @@ export function ModalHistoricoEscala({
                       <CampoHistorico
                         label="Dia Alterado"
                         valor={fmtDiaIso(det.dia_iso)}
+                        t={t}
+                        accent={t.text}
+                      />
+                      <CampoHistorico
+                        label="Valor"
+                        valor={fmtValorAlteracaoHistorico(det.valor_anterior, det.valor_novo, areaKey)}
                         t={t}
                         accent={t.text}
                       />

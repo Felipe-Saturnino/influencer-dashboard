@@ -822,6 +822,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Lista e edita prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa — turnos, siglas e dados operacionais usados na escala e no calendário.",
       },
       {
+        subtitulo: "Imprimir IDs",
+        texto:
+          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** abre um modal para selecionar **Game Presenters**. Ao gerar, a plataforma baixa um PDF único com uma etiqueta de **8×6 cm** por GP selecionado: código de barras (campo **Barcode**), o número do barcode e o nickname — pronto para uma única impressão. Só entram na lista de impressão os GPs que já têm barcode cadastrado no modal de edição.",
+      },
+      {
         subtitulo: "ID TOS (Service Manager)",
         texto:
           "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) guarda o UUID do colaborador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters.",

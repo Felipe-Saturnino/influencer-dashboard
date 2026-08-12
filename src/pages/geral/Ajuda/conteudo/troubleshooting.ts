@@ -1496,6 +1496,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Cada UUID TOS só pode estar em um Service Manager. Confira se o mesmo ID não foi colado em outro SM. Corrija o cadastro duplicado e salve de novo.",
       },
+      {
+        subtitulo: "Não consigo imprimir o ID de um Game Presenter?",
+        texto:
+          "No modal **Imprimir IDs**, só entram GPs com o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. GPs sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
+      },
     ],
   },
   rh_calendario: {

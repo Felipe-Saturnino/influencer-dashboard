@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Printer, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { fetchTurnosPorEstudioSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
 import { useApp } from "../../../context/AppContext";
@@ -82,6 +82,8 @@ import {
   staffUiTimeShufflerOcultarBioFotosVer,
 } from "./gestaoStaffHelpers";
 import { StaffKpiResumo } from "./StaffKpiResumo";
+import { ModalImprimirIdsStaff } from "./ModalImprimirIdsStaff";
+import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 
 type StaffTimeRow = { id: string; nome: string; gerencia_id: string; gerencia_nome: string };
 
@@ -533,6 +535,7 @@ export default function RhGestaoStaffPage() {
   const [modalVer, setModalVer] = useState<RhFuncionario | null>(null);
   const [modalEditar, setModalEditar] = useState<RhFuncionario | null>(null);
   const [modalAnotacoes, setModalAnotacoes] = useState<RhFuncionario | null>(null);
+  const [modalImprimirIds, setModalImprimirIds] = useState(false);
   const [estudioTurnosPorSlug, setEstudioTurnosPorSlug] = useState<Record<string, OpTurnosStaffPick | null>>({});
 
   const [sortCol, setSortCol] = useState<StaffTabelaSortCol>("nome");
@@ -1021,6 +1024,20 @@ export default function RhGestaoStaffPage() {
                     minWidth={200}
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setModalImprimirIds(true)}
+                  aria-label="Imprimir IDs"
+                  title="Imprimir IDs"
+                  style={{
+                    ...getCtaCriarButtonStyle(brand),
+                    color: "#fff",
+                    flex: "0 0 auto",
+                  }}
+                >
+                  <Printer size={14} aria-hidden />
+                  Imprimir IDs
+                </button>
               </div>
             </div>
           </div>
@@ -1276,6 +1293,15 @@ export default function RhGestaoStaffPage() {
           t={t}
           brand={brand}
           canEditarOk={perm.canEditarOk}
+        />
+      ) : null}
+
+      {modalImprimirIds ? (
+        <ModalImprimirIdsStaff
+          open
+          onClose={() => setModalImprimirIds(false)}
+          prestadores={prestadores}
+          times={times}
         />
       ) : null}
     </div>
