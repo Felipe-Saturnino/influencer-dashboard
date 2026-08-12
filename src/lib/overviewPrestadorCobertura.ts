@@ -20,6 +20,7 @@ import {
   obterEntradaSaidaEscaladasPrestadorDia,
   primeiroValorGradeDiaParaPrestador,
   situacaoGestaoEscalaParaDia,
+  situacaoOverviewContaComoEscalado,
   statusPresencaNoDia,
   toIsoLocal,
   type OpTurnosHorarioPick,
@@ -104,7 +105,7 @@ function diaRealizado(
   mapaPonto: Map<string, RpcPontoMesRow>,
   presencaGestao: Map<string, PresencaDiaGestao>,
 ): boolean {
-  if (situacao !== "Escalado" && !situacao.startsWith("Compra")) return false;
+  if (situacao !== "Escalado" && situacao !== "Atestado" && !situacao.startsWith("Compra")) return false;
   const esc = obterEntradaSaidaEscaladasPrestadorDia(
     prestador,
     valorG,
@@ -219,10 +220,9 @@ export function calcularCoberturaPrestadorPeriodo(input: CoberturaInput): {
         if (!isoEstaNoPeriodo(iso, periodoInicio, periodoFim)) continue;
         const valorG = primeiroValorGradeDiaParaPrestador(gradeRows, funcionarioId, iso, prestador);
         const situacao = situacaoGestaoEscalaParaDia(valorG);
-        const ehTrabalho =
-          situacao === "Escalado" ||
-          situacao === "Troca" ||
-          situacaoEhCompraLocal(situacao);
+        const ehJornada =
+          situacaoOverviewContaComoEscalado(situacao) || situacaoEhCompraLocal(situacao);
+        const ehTrabalho = ehJornada || situacao === "Troca";
         if (!ehTrabalho && situacao !== "Venda") continue;
 
         const sigla = valorG ? siglaTurnoDaCelula(valorG) : null;
@@ -237,22 +237,19 @@ export function calcularCoberturaPrestadorPeriodo(input: CoberturaInput): {
 
         const movDia =
           situacao === "Troca" || situacao === "Venda" || situacaoEhCompraLocal(situacao) ? 1 : 0;
-        const realizado =
-          situacao === "Escalado" || situacaoEhCompraLocal(situacao)
-            ? diaRealizado(
-                funcionarioId,
-                iso,
-                situacao,
-                valorG,
-                prestador,
-                opTurnos,
-                gradeRows,
-                pontoPorChave,
-                presencaGestao,
-              )
-            : false;
-
-        const ehJornada = situacao === "Escalado" || situacaoEhCompraLocal(situacao);
+        const realizado = ehJornada
+          ? diaRealizado(
+              funcionarioId,
+              iso,
+              situacao,
+              valorG,
+              prestador,
+              opTurnos,
+              gradeRows,
+              pontoPorChave,
+              presencaGestao,
+            )
+          : false;
 
         if (turnoKey && (ehJornada || situacao === "Troca")) {
           const acc = porTurno.get(turnoKey)!;
@@ -355,7 +352,7 @@ export function calcularDistribuicaoEstudioIndividual(input: {
       if (!isoEstaNoPeriodo(iso, periodoInicio, periodoFim)) continue;
       const valorG = primeiroValorGradeDiaParaPrestador(gradeRows, funcionarioId, iso, prestador);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
-      if (situacao !== "Escalado" && !situacaoEhCompraLocal(situacao)) continue;
+      if (!situacaoOverviewContaComoEscalado(situacao) && !situacaoEhCompraLocal(situacao)) continue;
       const realizado = diaRealizado(
         funcionarioId,
         iso,
