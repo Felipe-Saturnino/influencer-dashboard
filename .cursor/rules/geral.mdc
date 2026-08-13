@@ -4,6 +4,7 @@ globs:
   - src/pages/geral/**/*.tsx
   - src/pages/geral/**/*.ts
   - src/pages/public/CanalDenunciasSpinPage.tsx
+  - src/pages/public/PainelNoticiasPage.tsx
 alwaysApply: false
 ---
 
@@ -205,9 +206,12 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 
 - Rota **`/painel-noticias`** — `isPainelNoticiasPublicPath()` / `detectPublicUnauthenticatedRoute()`.
 - **Sem** login, menu, `PageHeader`, `usePermission`.
-- Dados: `painel_noticia` via anon (RLS); ingestão RSS horária (`sync-painel-noticias-rss`).
-- UI: fundo dark fixo, assunto + detalhe (sem URL/imagem), carrossel vertical **20 s** por slide (sobe), polling 60 s.
+- Dados: `painel_noticia` via **anon e authenticated** (RLS `painel_noticia_select_publico`); ingestão RSS horária (`sync-painel-noticias-rss`).
+- UI: fundo dark fixo, assunto + detalhe (sem URL/imagem), carrossel vertical **20 s** por slide (sobe), polling 60 s; **sem** zoom da plataforma (`--app-ui-zoom: 1`); título da aba **Painel de Notícias**; detalhe limitado a ~4–6 linhas.
+- Carrossel: todas as frescas (janela 4 h), **mínimo 5** (completa com vencidas) e **teto 15** (`PAINEL_NOTICIAS_MAX_EXIBICAO`).
 - Purge físico na base após janela de 4 h quando fora do conjunto mínimo de 5 exibíveis.
+- Ingestão: só feeds de `PAINEL_NOTICIAS_RSS_URLS` (body **não** substitui a lista). Cron/GitHub exige `PAINEL_NOTICIAS_INGEST_SECRET`. Status Técnico → Sync dispara a mesma função com a sessão logada.
+- Primeira carga com falha: mensagem **Não foi possível carregar as notícias. Tentando novamente…** (não fica em Carregando…).
 
 ---
 

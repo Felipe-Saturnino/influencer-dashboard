@@ -966,7 +966,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Marketplace",
         definicao:
-          "Única ponta onde o prestador de estúdio publica e aceita negociações de turno — Venda de Turno, Venda de Folga e Oferta de Troca. O aceite é **imediato**, sem aprovação de gestor, e grava Compra, Venda ou Troca na Escala Estúdio aprovada. Só entre prestadores do **mesmo time**, em dias futuros e respeitando **12h** entre turnos.",
+          "Única ponta onde o prestador de estúdio publica e aceita negociações de turno — Venda de Turno, Venda de Folga e Oferta de Troca. O aceite é **imediato**, sem aprovação de gestor, e grava Compra, Venda ou Troca na Escala Estúdio aprovada. Só entre prestadores do **mesmo time**. Publicar exige **4h** até o início do turno; aceitar no mesmo dia é permitido até **2h** antes. Oferta ainda aberta é cancelada automaticamente com menos de **2h**. Respeita **12h** entre turnos.",
         referencia: "Marketplace",
       },
       {
@@ -1134,13 +1134,21 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Integração (Status Técnico)",
         definicao:
-          "Pipeline automático de dados monitorado na página Status Técnico — CDA Influencers, CDA Afiliados, Social Media, Spin na Rede, automações do Pipeline B2B, Lobby e envios de e-mail — com horário da última execução, volume processado e erros.",
+          "Pipeline automático de dados monitorado na página Status Técnico — CDA Influencers, CDA Afiliados, Social Media, Spin na Rede, Painel de Notícias RSS, automações do Pipeline B2B, Lobby e envios de e-mail — com horário da última execução, volume processado e erros.",
         referencia: "Status Técnico",
+      },
+      {
+        termo: "Painel de Notícias",
+        definicao:
+          "Tela pública de TV (`/painel-noticias`), sem login, que mostra notícias RSS em carrossel (até 15 matérias, 20 s cada). Fora do menu lateral — use o endereço direto para ligar a TV.",
+        nota:
+          "A carga dos feeds é horária; em Status Técnico a linha Painel de Notícias (RSS) tem Sync manual. Quem já está logado na plataforma também consegue ver a TV no mesmo navegador.",
+        referencia: "Status Técnico · /painel-noticias",
       },
       {
         termo: "Sync manual",
         definicao:
-          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet rodam por job automatizado e não têm essa ação.",
+          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico (inclui Painel de Notícias RSS). Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet rodam por job automatizado e não têm essa ação.",
         referencia: "Status Técnico",
       },
       {

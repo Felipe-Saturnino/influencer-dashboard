@@ -59,6 +59,10 @@ verify_jwt = false
 [functions.sync-spin-na-rede-rss]
 verify_jwt = false
 
+[functions.sync-painel-noticias-rss]
+verify_jwt = false
+# Ingestão RSS → painel_noticia. Cron exige PAINEL_NOTICIAS_INGEST_SECRET; Status Técnico usa JWT autenticado.
+
 [functions.monitor-lobby-blaze]
 verify_jwt = false
 # Lobby Cassino Ao Vivo Blaze (API pública); grava lobby_monitor_* via service_role.

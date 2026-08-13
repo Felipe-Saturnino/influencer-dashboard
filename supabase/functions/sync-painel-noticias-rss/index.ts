@@ -8,7 +8,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
  * Secrets:
  *   PAINEL_NOTICIAS_RSS_URLS — feeds (vírgula ou quebra de linha); vazio = falha controlada no log.
  *   PAINEL_NOTICIAS_CONTEM_ALGUM / CONTEM_TODOS / EXCLUIR / ALLOWLIST_HOSTS — opcionais (vazios = sem filtro).
- *   PAINEL_NOTICIAS_INGEST_SECRET — opcional; header x-painel-noticias-ingest-secret ou Bearer service_role.
+ *   PAINEL_NOTICIAS_INGEST_SECRET — obrigatório para cron/GitHub (header x-painel-noticias-ingest-secret).
+ *   Chamada logada (Status Técnico) aceita JWT role=authenticated; service_role também.
+ *   Feeds só de PAINEL_NOTICIAS_RSS_URLS — o body não pode substituir a lista.
  */
 
 const MAX_TITLE = 2000;
@@ -26,7 +28,6 @@ interface ParsedItem {
 
 interface IngestBody {
   dry_run?: boolean;
-  rss_urls?: string[];
 }
 
 interface DbRow {
@@ -111,17 +112,41 @@ function hostMatchesAllowlist(host: string | null, allowlist: string[]): boolean
   return false;
 }
 
-function autorizado(req: Request): boolean {
+function jwtRoleClaim(token: string): string | null {
+  if (!token || !token.includes(".")) return null;
+  try {
+    const part = token.split(".")[1]?.replace(/-/g, "+").replace(/_/g, "/") ?? "";
+    const pad = part.length % 4 === 0 ? "" : "=".repeat(4 - (part.length % 4));
+    const payload = JSON.parse(atob(part + pad)) as Record<string, unknown>;
+    return typeof payload.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
+}
+
+async function autorizado(req: Request): Promise<boolean> {
   const secret = Deno.env.get("PAINEL_NOTICIAS_INGEST_SECRET")?.trim();
-  if (!secret) return true;
   const h =
     req.headers.get("x-painel-noticias-ingest-secret") ??
     req.headers.get("X-Painel-Noticias-Ingest-Secret");
-  if (h === secret) return true;
+  if (secret && h === secret) return true;
+
   const auth = req.headers.get("Authorization") ?? "";
+  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : auth.trim();
   const sr = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
-  if (sr && auth === `Bearer ${sr}`) return true;
-  return false;
+  if (sr && bearer === sr) return true;
+
+  if (jwtRoleClaim(bearer) !== "authenticated") return false;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  if (!supabaseUrl || !sr || !bearer) return false;
+  try {
+    const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${bearer}`, apikey: sr },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 function unescapeXml(s: string): string {
@@ -570,7 +595,7 @@ serve(async (req) => {
   if (!supabaseUrl || !serviceKey) {
     return json({ ok: false, erro: "SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY em falta." }, req, 500);
   }
-  if (!autorizado(req)) {
+  if (!(await autorizado(req))) {
     return json({ ok: false, erro: "Não autorizado." }, req, 401);
   }
 
@@ -582,11 +607,7 @@ serve(async (req) => {
     body = {};
   }
 
-  const envUrls = parseUrlList(Deno.env.get("PAINEL_NOTICIAS_RSS_URLS"));
-  const rss_urls =
-    Array.isArray(body.rss_urls) && body.rss_urls.length > 0
-      ? body.rss_urls.map((u) => String(u).trim()).filter((u) => u.startsWith("http"))
-      : envUrls;
+  const rss_urls = parseUrlList(Deno.env.get("PAINEL_NOTICIAS_RSS_URLS"));
 
   const contemAlgum = parseCommaPhrases(Deno.env.get("PAINEL_NOTICIAS_CONTEM_ALGUM"));
   const contemTodos = parseCommaPhrases(Deno.env.get("PAINEL_NOTICIAS_CONTEM_TODOS"));

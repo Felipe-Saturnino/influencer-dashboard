@@ -8,6 +8,7 @@ export type StatusIntegracaoSyncTipo =
   | "cda_afiliados"
   | "social"
   | "spin_rss"
+  | "painel_rss"
   | "cs_outlook"
   | "comercial_spa"
   | "comercial_dominio"

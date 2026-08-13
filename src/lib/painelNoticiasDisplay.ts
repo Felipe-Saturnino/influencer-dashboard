@@ -21,6 +21,9 @@ export {
 /** Mínimo de notícias no ciclo do painel TV quando há histórico suficiente. */
 export const PAINEL_NOTICIAS_MIN_EXIBICAO = 5;
 
+/** Teto do carrossel: todas as frescas, no máximo as 15 mais recentes. */
+export const PAINEL_NOTICIAS_MAX_EXIBICAO = 15;
+
 export type PainelNoticiaRow = {
   id: string;
   titulo: string;
@@ -49,7 +52,7 @@ export function ordenarPainelNoticias<T extends { visivel_desde: string }>(rows:
 
 /**
  * Conjunto exibido no painel:
- * - Todas com visivel_ate > now(), ou
+ * - Frescas (visivel_ate > now()), até PAINEL_NOTICIAS_MAX_EXIBICAO (15), ou
  * - Se < 5 frescas, completar com vencidas (mais recentes primeiro) até 5.
  */
 export function calcularPainelNoticiasExibicao(
@@ -61,7 +64,9 @@ export function calcularPainelNoticiasExibicao(
     itemElegivelPainelNoticia(r.titulo, r.resumo),
   );
   const frescas = elegiveis.filter((r) => parseMs(r.visivel_ate) > nowMs);
-  if (frescas.length >= PAINEL_NOTICIAS_MIN_EXIBICAO) return frescas;
+  if (frescas.length >= PAINEL_NOTICIAS_MIN_EXIBICAO) {
+    return frescas.slice(0, PAINEL_NOTICIAS_MAX_EXIBICAO);
+  }
   const vencidas = elegiveis.filter((r) => parseMs(r.visivel_ate) <= nowMs);
   const faltam = PAINEL_NOTICIAS_MIN_EXIBICAO - frescas.length;
   return [...frescas, ...vencidas.slice(0, faltam)];
@@ -79,8 +84,8 @@ export function idsPainelNoticiasParaPurga(
     .map((r) => r.id);
 }
 
-/** Limite de caracteres do detalhe na TV (~6–8 linhas a 3 m). */
-export const PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES = 1500;
+/** Limite de caracteres do detalhe na TV (~4–6 linhas a 3 m). */
+export const PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES = 480;
 
 export function stripHtmlPainelNoticia(s: string): string {
   return sanitizePainelNoticiaHtml(s);

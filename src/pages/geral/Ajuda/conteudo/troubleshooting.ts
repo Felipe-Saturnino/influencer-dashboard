@@ -1339,7 +1339,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet operam via job automatizado externo e não têm ação disponível na interface.",
+          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Painel de Notícias RSS**, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet operam via job automatizado externo e não têm ação disponível na interface.\n\nSe a TV em `/painel-noticias` ficar vazia ou em «Aguardando notícias…», use **Sync** na linha Painel de Notícias (RSS) e confira se o job horário está ativo.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
@@ -1594,12 +1594,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Ao publicar aparece erro genérico ou de horário do turno?",
         texto:
-          "A publicação precisa resolver o **horário de início** do turno (antecedência de 4h e expiração de 2h). Em Game Presenter e Shuffler esse horário vem do **estúdio** (Gestão de Estúdios → turnos Manhã/Tarde/Noite), não da operadora. Confirme que o estúdio do Staff tem os horários preenchidos; Shuffler com **Todos Estúdios** usa o primeiro estúdio ativo com horário. Depois da correção no banco, tente publicar de novo — se persistir, entre em contato com o suporte.",
+          "A publicação precisa resolver o **horário de início** do turno (antecedência de 4h para criar e expiração de 2h). Em Game Presenter e Shuffler esse horário vem do **estúdio** (Gestão de Estúdios → turnos Manhã/Tarde/Noite), não da operadora. Confirme que o estúdio do Staff tem os horários preenchidos; Shuffler com **Todos Estúdios** usa o primeiro estúdio ativo com horário. Depois da correção no banco, tente publicar de novo — se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Minha oferta foi cancelada sem ninguém aceitar?",
         texto:
-          "Ofertas ainda abertas e propostas de troca **Em análise** são canceladas automaticamente quando faltam **menos de 2h para o início do turno**. Na troca, isso significa que o ofertante não aprovou a proposta a tempo: os dias reservados são liberados e nenhuma célula da escala é alterada. Se o cancelamento ocorreu antes dessa janela, confirme o horário do turno no cadastro do **estúdio** (Gestão de Estúdios) ou na Gestão de Staff e, se persistir, entre em contato com o suporte.",
+          "Ofertas ainda abertas e propostas de troca **Em análise** são canceladas automaticamente quando faltam **menos de 2h para o início do turno** ou quando a **data da oferta já passou**. Na troca, isso significa que o ofertante não aprovou a proposta a tempo: os dias reservados são liberados e nenhuma célula da escala é alterada. Se o cancelamento ocorreu antes dessa janela, confirme o horário do turno no cadastro do **estúdio** (Gestão de Estúdios) ou na Gestão de Staff e, se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
@@ -1609,7 +1609,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo aceitar uma oferta?",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta, e o dia precisa ser futuro com a escala do mês **aprovada**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar.",
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta. Dá para aceitar **no mesmo dia**, com pelo menos **2h até o início do turno** e a escala do mês **aprovada**. Publicar exige **4h**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar. Se a oferta já passou da janela de 2h ou a data é antiga, ela é cancelada automaticamente.",
       },
       {
         subtitulo: "Só vejo ofertas do meu time?",

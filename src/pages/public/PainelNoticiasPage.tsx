@@ -65,6 +65,29 @@ function usePainelNoticiasNoIndex() {
   }, []);
 }
 
+function usePainelNoticiasTituloAba() {
+  useEffect(() => {
+    const anterior = document.title;
+    document.title = "Painel de Notícias";
+    return () => {
+      document.title = anterior;
+    };
+  }, []);
+}
+
+/** TV em tamanho real — ignora o zoom da plataforma logada. */
+function usePainelNoticiasZoomReal() {
+  useEffect(() => {
+    const html = document.documentElement;
+    const anterior = html.style.getPropertyValue("--app-ui-zoom");
+    html.style.setProperty("--app-ui-zoom", "1");
+    return () => {
+      if (anterior) html.style.setProperty("--app-ui-zoom", anterior);
+      else html.style.removeProperty("--app-ui-zoom");
+    };
+  }, []);
+}
+
 function exibirNoticia(row: PainelNoticiaRow) {
   return prepararExibicaoPainelNoticia(row);
 }
@@ -112,6 +135,10 @@ function PainelNoticiaConteudo({ titulo, detalhe }: { titulo: string; detalhe: s
             maxWidth: "min(1100px, 90vw)",
             wordBreak: "break-word",
             whiteSpace: "pre-line",
+            display: "-webkit-box",
+            WebkitLineClamp: 6,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
           }}
         >
           {detalhe}
@@ -246,6 +273,8 @@ function PainelNoticiasCarrossel({ itens }: { itens: PainelNoticiaRow[] }) {
 export default function PainelNoticiasPage() {
   usePainelNoticiasViewportBg();
   usePainelNoticiasNoIndex();
+  usePainelNoticiasTituloAba();
+  usePainelNoticiasZoomReal();
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -262,6 +291,7 @@ export default function PainelNoticiasPage() {
     if (error) {
       console.error("[PainelNoticias]", error.message);
       setErro(true);
+      setLoading(false);
       return;
     }
     setErro(false);

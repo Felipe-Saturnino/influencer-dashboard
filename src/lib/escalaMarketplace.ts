@@ -6,10 +6,12 @@
  * O escopo também é do servidor — Ver = Sim devolve todos os times, Ver = Próprios
  * só o time do prestador.
  *
- * Antecedência: ≥4h entre a publicação e o **início do turno** ofertado/desejado
- * (`turnoRespeitaAntecedencia4h`). Ex.: às 6h, a Manhã de hoje (início 7h) não
- * pode ser ofertada; a Tarde (início 15h) pode. O banco confirma a mesma janela
- * em `escala_marketplace_oferta_criar` via `inicio_turno_at`.
+ * Antecedência: ≥4h para **publicar** (`turnoRespeitaAntecedencia4h`); ≥2h para
+ * **aceitar**. Ex.: às 6h, a Manhã de hoje (início 7h) não pode ser ofertada; a
+ * Tarde (início 15h) pode ser publicada e aceita no mesmo dia. O banco confirma
+ * criar via `inicio_turno_at` (≥4h) e aceite/expiração (≥2h). Oferta ainda
+ * aberta (ou troca Em análise) é cancelada automaticamente com menos de 2h ou
+ * se o dia já passou.
  *
  * Gap entre turnos: produto pede ≥12h entre o fim de um turno e o início do
  * seguinte, verificado nas duas pontas do dia negociado (`gapEntreTurnosOk`).
@@ -699,8 +701,9 @@ const MSG_ERRO_GENERICO =
 const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   forbidden: "Você não tem permissão para esta ação no Marketplace.",
   antecedencia_minima:
-    "A oferta precisa de pelo menos 4h até o início do turno ofertado ou desejado.",
-  dia_nao_futuro: "Só é possível ofertar a partir de hoje, com 4h até o início do turno.",
+    "É necessário ter pelo menos 4h até o início do turno ofertado ou desejado.",
+  dia_nao_futuro:
+    "Só é possível publicar oferta a partir de hoje, com pelo menos 4h até o início do turno.",
   prestador_nao_encontrado:
     "Não encontramos o seu cadastro de prestador de estúdio. Entre em contato com o suporte.",
   area_invalida: "O seu time não está configurado na Escala Estúdio. Entre em contato com o suporte.",
@@ -720,7 +723,8 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   aceitante_em_negociacao: "O seu dia já está em negociação na escala (Compra, Venda ou Troca).",
   turno_diferente: "O turno oferecido não é o mesmo do seu turno neste dia.",
   dia_interesse_obrigatorio: "Escolha o dia que você oferece em troca.",
-  dia_interesse_nao_futuro: "O dia oferecido em troca deve ser futuro.",
+  dia_interesse_nao_futuro:
+    "O dia oferecido em troca precisa ser a partir de hoje e diferente do dia da oferta.",
   escala_interesse_nao_aprovada:
     "A escala do mês do dia oferecido em troca ainda não está aprovada.",
   dia_interesse_sem_turno: "O dia oferecido em troca não tem turno na sua escala.",
@@ -737,7 +741,7 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   invalid_tipo: "Tipo de oferta inválido. Atualize a página e tente novamente.",
   turno_invalido: "Turno inválido para esta oferta. Atualize a página e tente novamente.",
   oferta_expirada:
-    "Esta oferta foi cancelada porque faltam menos de 2h para o início do turno.",
+    "Esta oferta foi cancelada porque faltam menos de 2h para o início do turno ou a data já passou.",
 };
 
 /** Mensagem de produto para o código devolvido pelas RPCs do Marketplace. */

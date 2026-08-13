@@ -29,6 +29,7 @@ export function StatusIntegracaoTable({
   syncAfiliadosExecutando,
   syncSocialExecutando,
   syncSpinRssExecutando,
+  syncPainelRssExecutando,
   syncCsOutlookExecutando,
   syncComercialSpaExecutando,
   syncComercialDominioExecutando,
@@ -54,6 +55,7 @@ export function StatusIntegracaoTable({
   syncAfiliadosExecutando: boolean;
   syncSocialExecutando: boolean;
   syncSpinRssExecutando: boolean;
+  syncPainelRssExecutando: boolean;
   syncCsOutlookExecutando: boolean;
   syncComercialSpaExecutando: boolean;
   syncComercialDominioExecutando: boolean;
@@ -61,7 +63,7 @@ export function StatusIntegracaoTable({
   emailEnviando: boolean;
   emailAgendaEnviando: boolean;
   canEditarOk: boolean;
-  onConfirmarSync: (tipo: "cda" | "cda_afiliados" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") => void;
+  onConfirmarSync: (tipo: "cda" | "cda_afiliados" | "social" | "spin_rss" | "painel_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") => void;
   onConfirmarEmail: (tipo: "diretoria" | "agenda") => void;
 }) {
   const handleSort = (col: IntegracaoSortCol) => {
@@ -73,6 +75,7 @@ export function StatusIntegracaoTable({
     const isCdaAfiliados = row.syncTipo === "cda_afiliados";
     const isSocial = row.syncTipo === "social";
     const isSpinRss = row.syncTipo === "spin_rss";
+    const isPainelRss = row.syncTipo === "painel_rss";
     const isCsOutlook = row.syncTipo === "cs_outlook";
     const isComercialSpa = row.syncTipo === "comercial_spa";
     const isComercialDominio = row.syncTipo === "comercial_dominio";
@@ -87,6 +90,8 @@ export function StatusIntegracaoTable({
         ? syncSocialExecutando
         : isSpinRss
           ? syncSpinRssExecutando
+          : isPainelRss
+            ? syncPainelRssExecutando
           : isCsOutlook
             ? syncCsOutlookExecutando
           : isComercialSpa
@@ -97,7 +102,7 @@ export function StatusIntegracaoTable({
                 ? syncComercialCnpjExecutando
             : false;
 
-    if (isCda || isCdaAfiliados || isSocial || isSpinRss || isCsOutlook || isComercialSpa || isComercialDominio || isComercialCnpj) {
+    if (isCda || isCdaAfiliados || isSocial || isSpinRss || isPainelRss || isCsOutlook || isComercialSpa || isComercialDominio || isComercialCnpj) {
       return (
         <button
           type="button"
@@ -117,6 +122,8 @@ export function StatusIntegracaoTable({
                       ? "comercial_dominio"
                       : isComercialCnpj
                         ? "comercial_cnpj"
+                      : isPainelRss
+                        ? "painel_rss"
                       : "spin_rss",
             )
           }

@@ -4,6 +4,7 @@ import {
   formatDetalhePainelNoticia,
   idsPainelNoticiasParaPurga,
   PAINEL_NOTICIAS_DETALHE_MAX_CARACTERES,
+  PAINEL_NOTICIAS_MAX_EXIBICAO,
   prepararExibicaoPainelNoticia,
   type PainelNoticiaRow,
 } from "@/lib/painelNoticiasDisplay";
@@ -28,7 +29,7 @@ function row(
 describe("calcularPainelNoticiasExibicao", () => {
   const now = new Date("2026-06-03T12:00:00.000Z");
 
-  it("retorna todas frescas quando >= 5", () => {
+  it("retorna todas frescas quando >= 5 e abaixo do teto", () => {
     const rows = Array.from({ length: 6 }, (_, i) =>
       row(
         String(i),
@@ -37,6 +38,20 @@ describe("calcularPainelNoticiasExibicao", () => {
       ),
     );
     expect(calcularPainelNoticiasExibicao(rows, now)).toHaveLength(6);
+  });
+
+  it("limita frescas ao teto de 15 mais recentes", () => {
+    const rows = Array.from({ length: 18 }, (_, i) =>
+      row(
+        String(i),
+        `2026-06-03T${String(i).padStart(2, "0")}:00:00.000Z`,
+        "2026-06-03T20:00:00.000Z",
+      ),
+    );
+    const exibir = calcularPainelNoticiasExibicao(rows, now);
+    expect(exibir).toHaveLength(PAINEL_NOTICIAS_MAX_EXIBICAO);
+    expect(exibir[0]?.id).toBe("17");
+    expect(exibir[14]?.id).toBe("3");
   });
 
   it("completa com vencidas até 5", () => {

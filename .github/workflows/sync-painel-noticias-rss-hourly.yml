@@ -1,6 +1,7 @@
 # Painel de Notícias — ingestão RSS via Edge Function `sync-painel-noticias-rss`
 # A cada hora (minuto 5 UTC — ajuste conforme necessário)
-# Secrets: SUPABASE_URL, SUPABASE_ANON_KEY
+# Secrets: SUPABASE_URL, SUPABASE_ANON_KEY, PAINEL_NOTICIAS_INGEST_SECRET
+# (o mesmo valor de PAINEL_NOTICIAS_INGEST_SECRET deve existir nos Secrets da Edge Function)
 name: Sync Painel Notícias RSS (hourly)
 
 on:
@@ -16,16 +17,22 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PAINEL_NOTICIAS_INGEST_SECRET: ${{ secrets.PAINEL_NOTICIAS_INGEST_SECRET }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
             echo "Defina os secrets SUPABASE_URL e SUPABASE_ANON_KEY em Settings → Secrets and variables → Actions."
             exit 1
           fi
+          if [ -z "${PAINEL_NOTICIAS_INGEST_SECRET:-}" ]; then
+            echo "Defina o secret PAINEL_NOTICIAS_INGEST_SECRET (mesmo valor da Edge Function)."
+            exit 1
+          fi
           URL="${SUPABASE_URL%/}/functions/v1/sync-painel-noticias-rss"
           RES=$(curl -sS -w "\n%{http_code}" -X POST "$URL" \
             -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
             -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "x-painel-noticias-ingest-secret: ${PAINEL_NOTICIAS_INGEST_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{}')
           HTTP=$(echo "$RES" | tail -n1)

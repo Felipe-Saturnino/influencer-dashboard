@@ -47,6 +47,7 @@ import {
   ERRO_SYNC_LOBBY_BLAZE,
   ERRO_SYNC_SOCIAL,
   ERRO_SYNC_SPIN_RSS,
+  ERRO_SYNC_PAINEL_RSS,
   ERRO_SYNC_CS_OUTLOOK,
   formatarErroRespostaCsOutlook,
   HORARIO_AGENDADO_BR,
@@ -165,6 +166,8 @@ export default function StatusTecnico() {
   const [syncSocialMensagem, setSyncSocialMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncSpinRssExecutando, setSyncSpinRssExecutando] = useState(false);
   const [syncSpinRssMensagem, setSyncSpinRssMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [syncPainelRssExecutando, setSyncPainelRssExecutando] = useState(false);
+  const [syncPainelRssMensagem, setSyncPainelRssMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncCsOutlookExecutando, setSyncCsOutlookExecutando] = useState(false);
   const [syncCsOutlookMensagem, setSyncCsOutlookMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [syncComercialSpaExecutando, setSyncComercialSpaExecutando] = useState(false);
@@ -206,7 +209,7 @@ export default function StatusTecnico() {
   type LogSortCol = "hora" | "integracao" | "tipo" | "descricao";
   const [sortLog, setSortLog] = useState<{ col: LogSortCol; dir: SortDir }>({ col: "hora", dir: "desc" });
   const [fluxoHover, setFluxoHover] = useState<string | null>(null);
-  const [confirmarSync, setConfirmarSync] = useState<"cda" | "cda_afiliados" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "lobby_blaze" | null>(null);
+  const [confirmarSync, setConfirmarSync] = useState<"cda" | "cda_afiliados" | "social" | "spin_rss" | "painel_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj" | "lobby_blaze" | null>(null);
   const [confirmarDiagnostico, setConfirmarDiagnostico] = useState(false);
   const [diagnosticoExecutando, setDiagnosticoExecutando] = useState(false);
   const [diagnosticoMensagem, setDiagnosticoMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
@@ -680,6 +683,68 @@ export default function StatusTecnico() {
       setSyncSpinRssMensagem({ tipo: "erro", texto: ERRO_SYNC_SPIN_RSS });
     } finally {
       setSyncSpinRssExecutando(false);
+    }
+  };
+
+  const executarSyncPainelRss = async () => {
+    if (syncPainelRssExecutando || !perm.canEditarOk) return;
+    setSyncPainelRssExecutando(true);
+    setSyncPainelRssMensagem(null);
+    try {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setSyncPainelRssMensagem({
+          tipo: "erro",
+          texto: "Configuração do Supabase incompleta. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.",
+        });
+        setSyncPainelRssExecutando(false);
+        return;
+      }
+      const { data: resDataRaw, error: invokeError } = await supabase.functions.invoke("sync-painel-noticias-rss", {
+        body: {},
+      });
+      const resData = (resDataRaw ?? {}) as {
+        ok?: boolean;
+        erro?: string;
+        linhas_upsert?: number;
+        items_parseados?: number;
+        erros_feed?: string[];
+        erros_db?: string[];
+      };
+
+      if (invokeError) {
+        const im = invokeError.message ?? "";
+        let texto =
+          typeof resData.erro === "string" && resData.erro.length > 0 ? resData.erro : ERRO_SYNC_PAINEL_RSS;
+        if (im.includes("Failed to fetch") || im.includes("fetch")) {
+          texto = ERRO_REDE_EDGE;
+        }
+        setSyncPainelRssMensagem({ tipo: "erro", texto });
+        setSyncPainelRssExecutando(false);
+        return;
+      }
+
+      if (!resData?.ok) {
+        const extra = [resData?.erro, ...(resData?.erros_feed ?? []), ...(resData?.erros_db ?? [])].filter(Boolean).join(" — ");
+        setSyncPainelRssMensagem({
+          tipo: "erro",
+          texto: extra.length > 0 ? extra : "Ingestão RSS concluída com erros (ver resposta da função).",
+        });
+        setSyncPainelRssExecutando(false);
+        return;
+      }
+
+      const ups = resData?.linhas_upsert ?? 0;
+      const parsed = resData?.items_parseados ?? 0;
+      setSyncPainelRssMensagem({
+        tipo: "ok",
+        texto: `Painel de Notícias RSS: ${ups} linha(s) gravadas (${parsed} itens parseados nos feeds).`,
+      });
+      void carregar();
+    } catch (e) {
+      console.error(e);
+      setSyncPainelRssMensagem({ tipo: "erro", texto: ERRO_SYNC_PAINEL_RSS });
+    } finally {
+      setSyncPainelRssExecutando(false);
     }
   };
 
@@ -1862,6 +1927,8 @@ export default function StatusTecnico() {
               ? ("cda_afiliados" as const)
             : int.slug === "spin_na_rede_rss"
               ? ("spin_rss" as const)
+            : int.slug === "painel_noticias_rss"
+              ? ("painel_rss" as const)
               : int.slug === "cs_atendimento_outlook"
                 ? ("cs_outlook" as const)
               : int.slug === "comercial_spa_lista"
@@ -2277,6 +2344,7 @@ export default function StatusTecnico() {
     syncAfiliadosExecutando,
     syncSocialExecutando,
     syncSpinRssExecutando,
+    syncPainelRssExecutando,
     syncCsOutlookExecutando,
     syncComercialSpaExecutando,
     syncComercialDominioExecutando,
@@ -2284,7 +2352,7 @@ export default function StatusTecnico() {
     emailEnviando,
     emailAgendaEnviando,
     canEditarOk: perm.canEditarOk,
-    onConfirmarSync: (tipo: "cda" | "cda_afiliados" | "social" | "spin_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") =>
+    onConfirmarSync: (tipo: "cda" | "cda_afiliados" | "social" | "spin_rss" | "painel_rss" | "cs_outlook" | "comercial_spa" | "comercial_dominio" | "comercial_cnpj") =>
       setConfirmarSync(tipo),
     onConfirmarEmail: (tipo: "diretoria" | "agenda") => setConfirmarEmail(tipo),
   };
@@ -2440,6 +2508,7 @@ export default function StatusTecnico() {
         syncAfiliadosMensagem ||
         syncSocialMensagem ||
         syncSpinRssMensagem ||
+        syncPainelRssMensagem ||
         syncCsOutlookMensagem ||
         syncComercialSpaMensagem ||
         syncComercialDominioMensagem ||
@@ -2455,6 +2524,7 @@ export default function StatusTecnico() {
               syncAfiliadosMensagem && { prefix: "Sync CDA Afiliados", msg: syncAfiliadosMensagem },
               syncSocialMensagem && { prefix: "Sync Social", msg: syncSocialMensagem },
               syncSpinRssMensagem && { prefix: "Spin na Rede RSS", msg: syncSpinRssMensagem },
+              syncPainelRssMensagem && { prefix: "Painel de Notícias RSS", msg: syncPainelRssMensagem },
               syncCsOutlookMensagem && { prefix: LABEL_UI_CS_ATENDIMENTO_OUTLOOK, msg: syncCsOutlookMensagem },
               syncComercialSpaMensagem && { prefix: LABEL_UI_COMERCIAL_SPA_LISTA, msg: syncComercialSpaMensagem },
               syncComercialDominioMensagem && {
@@ -3134,6 +3204,7 @@ export default function StatusTecnico() {
               {confirmarSync === "cda_afiliados" && "Confirmar Sync CDA — Afiliados"}
               {confirmarSync === "social" && "Confirmar Sync Social"}
               {confirmarSync === "spin_rss" && "Confirmar ingestão Spin na Rede (RSS)"}
+              {confirmarSync === "painel_rss" && "Confirmar ingestão Painel de Notícias (RSS)"}
               {confirmarSync === "cs_outlook" && `Confirmar ingestão ${LABEL_UI_CS_ATENDIMENTO_OUTLOOK}`}
               {confirmarSync === "comercial_spa" && `Confirmar importação ${LABEL_UI_COMERCIAL_SPA_LISTA}`}
               {confirmarSync === "comercial_dominio" &&
@@ -3191,6 +3262,9 @@ export default function StatusTecnico() {
                   } else if (confirmarSync === "spin_rss") {
                     setConfirmarSync(null);
                     void executarSyncSpinRss();
+                  } else if (confirmarSync === "painel_rss") {
+                    setConfirmarSync(null);
+                    void executarSyncPainelRss();
                   } else if (confirmarSync === "cs_outlook") {
                     setConfirmarSync(null);
                     void executarSyncCsOutlook();
