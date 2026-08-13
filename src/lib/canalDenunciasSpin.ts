@@ -12,6 +12,48 @@ export function isCanalDenunciasPublicPath(): boolean {
 
 export const STORAGE_BUCKET = "canal-denuncias-spin";
 
+export const CANAL_DENUNCIA_ANEXO_MAX_BYTES = 20 * 1024 * 1024;
+
+/** Tipos aceitos no envio público (PDF, JPG, PNG, MP4). */
+export const CANAL_DENUNCIA_ANEXO_ACCEPT =
+  ".pdf,.jpg,.jpeg,.png,.mp4,application/pdf,image/jpeg,image/png,video/mp4";
+
+const CANAL_DENUNCIA_ANEXO_EXT = [".pdf", ".jpg", ".jpeg", ".png", ".mp4"] as const;
+const CANAL_DENUNCIA_ANEXO_MIME = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "video/mp4",
+]);
+
+export function arquivoCanalDenunciaPermitido(file: { name: string; type?: string; size?: number }): boolean {
+  const name = file.name.toLowerCase();
+  const type = (file.type || "").toLowerCase();
+  const extOk = CANAL_DENUNCIA_ANEXO_EXT.some((e) => name.endsWith(e));
+  const mimeOk = type.length > 0 && CANAL_DENUNCIA_ANEXO_MIME.has(type);
+  if (!extOk && !mimeOk) return false;
+  if (typeof file.size === "number" && file.size > CANAL_DENUNCIA_ANEXO_MAX_BYTES) return false;
+  return true;
+}
+
+const PROTOCOLO_CANAL_LEGADO_RE = /^CDSPIN[0-9]{5}$/;
+const PROTOCOLO_CANAL_SIGILO_RE = /^CDSPIN-[0-9A-F]{16}$/;
+
+export function normalizarProtocoloCanal(raw: string): string {
+  return raw.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+export function isProtocoloCanalFormatoValido(protocolo: string): boolean {
+  return PROTOCOLO_CANAL_LEGADO_RE.test(protocolo) || PROTOCOLO_CANAL_SIGILO_RE.test(protocolo);
+}
+
+export const PROTOCOLO_CANAL_PLACEHOLDER = "Informe o protocolo recebido no envio";
+
+export const MSG_CANAL_RATE_LIMITED = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+export const MSG_CANAL_PROTOCOLO_NAO_ENCONTRADO =
+  "Protocolo não encontrado. Se você se identificou, confira também o e-mail usado no envio.";
+
 export type DenunciaStatusDb = "relatado" | "em_avaliacao" | "procedente" | "nao_procedente";
 
 export const STATUS_OPTIONS: { value: DenunciaStatusDb; label: string }[] = [

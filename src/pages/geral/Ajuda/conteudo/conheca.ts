@@ -616,7 +616,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.",
+          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.\n\nPara encaminhar o canal a quem **não** tem login, use a página pública **/canal-denuncias-spin** no mesmo endereço da plataforma (sem menu). Quem relata recebe um protocolo para consultar o andamento; se se identificar, precisa do mesmo e-mail na consulta.",
       },
       {
         subtitulo: "Período",
@@ -968,7 +968,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra; com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma); com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
       },
       {
         subtitulo: "Status e ações",
@@ -1717,7 +1717,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Alterar Senha",
         texto:
-          "Informe a senha atual, a nova senha e a confirmação. A nova senha deve ter pelo menos 8 caracteres, combinar maiúsculas e minúsculas, incluir número e caractere especial, e ser diferente da senha atual.\n\nUm indicador de força (Fraca / Média / Forte) ajuda a validar o preenchimento antes de salvar.",
+          "Informe a senha atual, a nova senha e a confirmação. A nova senha deve ter pelo menos 8 caracteres, combinar maiúsculas e minúsculas, incluir número e caractere especial, e ser diferente da senha atual.\n\nUm indicador de força (Fraca / Média / Forte) ajuda a validar o preenchimento antes de salvar.\n\nNo primeiro acesso (após reset de senha), a mesma regra vale na tela **Troque sua senha**: o botão só libera quando todos os requisitos estão ok. Depois de definir a senha, a plataforma abre a **Home**."
       },
       {
         subtitulo: "Permissões",
@@ -1736,12 +1736,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Como iniciar",
         texto:
-          "Escolha um perfil na lista (agrupado por tipo: gerenciais, estúdio, escritório, externos, etc.). Alguns perfis pedem um passo extra:\n\n— **Operador:** selecione a operadora (ativas e inativas; inativas aparecem com o rótulo correspondente).\n— **Prestador** (e áreas equivalentes): selecione a área de atuação.\n\nApós confirmar, a plataforma abre a Home no modo simulado e exibe um banner para encerrar a visualização.",
+          "Escolha um perfil na lista (agrupado por tipo: gerenciais, estúdio, escritório, externos, etc.). Em seguida a plataforma pede um **usuário ativo** daquele perfil (a lista é atual: quem está ativo hoje; o mais recente no login vem pré-selecionado). Alguns perfis pedem um passo extra antes do usuário:\n\n— **Operador:** selecione a operadora (ativas e inativas; inativas aparecem com o rótulo correspondente).\n— **Prestador** (e áreas equivalentes): selecione a área de atuação.\n\nSe já houver uma visualização ativa, a plataforma pede confirmação para substituir. Após confirmar, abre a Home no modo simulado e exibe a faixa **Encerrar visualização**.",
       },
       {
         subtitulo: "O que você vê na simulação",
         texto:
-          "O menu e as permissões seguem o perfil simulado (e o escopo de operadora ou área, quando aplicável). Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nPáginas sensíveis de administração (como Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado.",
+          "O menu e as permissões seguem o perfil simulado, o usuário ativo escolhido e o escopo de operadora ou área, quando aplicável. A sua conta (nome no avatar) não muda. Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nPáginas sensíveis de administração (Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado. Gestão de Estúdios continua visível se o perfil simulado tiver acesso.",
       },
       {
         subtitulo: "Quem pode usar e o que aparece na lista",
@@ -1751,7 +1751,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Encerrar",
         texto:
-          "Use **Encerrar visualização** no banner ou no bloco de status da página. A sessão volta ao seu perfil real e às permissões originais.",
+          "Use **Encerrar visualização** na faixa amarela no topo ou no bloco de status da página. A sessão volta ao seu perfil real e às permissões originais. Se a volta falhar, a faixa permanece e aparece um aviso para recarregar.",
       },
     ],
   },

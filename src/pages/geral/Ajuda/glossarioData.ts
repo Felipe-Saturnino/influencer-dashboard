@@ -1099,9 +1099,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Canal de Denúncias (público)",
         definicao:
-          "Formulário em URL pública da Spin, fora do menu lateral — envio anônimo ou identificado sem login na plataforma. Não substitui a Central de Denúncias interna.",
+          "Formulário em URL pública da Spin (`/canal-denuncias-spin`), fora do menu lateral — envio anônimo ou identificado sem login na plataforma. Não substitui a Central de Denúncias interna.",
         nota:
-          "Quem já tem acesso logado deve usar a Central de Denúncias no menu RH para acompanhar protocolos internos.",
+          "Quem relata recebe um protocolo imprevisível para consultar o andamento. Se se identificar, a consulta pede também o e-mail do envio. Quem já tem acesso logado usa a Central de Denúncias no menu RH.",
         referencia: "Canal público Spin (fora do menu lateral)",
       },
     ],
@@ -1369,7 +1369,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Ferramenta para visualizar a plataforma com o menu e a identidade de outro perfil, sem trocar a conta real. A simulação é somente leitura e pode ser encerrada a qualquer momento.",
         nota:
-          "Os perfis disponíveis dependem da matriz em Gestão de Usuários → Simulador de Login. Operador e prestador pedem operadora ou área no início da simulação.",
+          "Os perfis disponíveis dependem da matriz em Gestão de Usuários → Simulador de Login. A simulação usa um usuário ativo daquele perfil (lista atual, contas rotativas). Operador e prestador pedem operadora ou área antes do usuário.",
         referencia: "Simulador de Login · Gestão de Usuários",
       },
       {

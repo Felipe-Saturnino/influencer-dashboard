@@ -3,7 +3,7 @@ import type { TutorialDef } from "./types";
 
 const IMG = "/tutoriais/escala/controle-presenca";
 
-/** Tutorial: Check-in, Check-out e Justificativa — visão Próprios (sem liderança). */
+/** Tutorial: Check-in e Check-out no Controle de Presença. */
 export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
   id: "controle-presenca",
   urlSlug: "ControledePresenca",
@@ -12,12 +12,12 @@ export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
   icon: CalendarClock,
   relatedPageKey: "rh_calendario",
   relatedTabId: "presenca",
-  objetivo: "Realizar o Check-in / Check-out e justificar faltas ou pendências.",
+  objetivo: "Realizar o Check-in e o Check-out no Controle de Presença.",
   passos: [
     {
       titulo: "1. Abrir a aba Controle de Presença",
       texto:
-        "1. No menu, seção Escala, clique em Calendário.\n2. Clique na aba Controle de Presença.\n3. Veja o resumo (Escalados, Trocas, Venda, Compra) e a tabela do mês:\n— Situação: Escalado ou Folga\n— Entrada / Saída: Escalada vs Realizada (horário realizado em vermelho quando diverge)\n— Status: Folga, Falta, Pendente, Registrado, Em aberto, etc.\n— Ações: ícone Justificar quando o dia permite",
+        "1. No menu, seção Escala, clique em Calendário.\n2. Clique na aba Controle de Presença.\n3. Veja o resumo (Escalados, Trocas, Venda, Compra) e a tabela do mês:\n— Situação: Escalado ou Folga\n— Entrada / Saída: Escalada vs Realizada (horário realizado em vermelho quando diverge)\n— Status: Folga, Falta, Pendente, Registrado, Em aberto, etc.",
       imagens: [{ src: `${IMG}/02-controle-presenca.png`, alt: "Tabela Controle de Presença" }],
     },
     {
@@ -36,18 +36,7 @@ export const TUTORIAL_CONTROLE_PRESENCA: TutorialDef = {
         "1. Ao encerrar o turno, clique em Fazer Check-out.\n2. Confirme o modal Check-out Realizado (horário + horas cumpridas no turno).\n3. Clique em Fechar.\n4. O status da linha tende a Registrado (ou Pendente, conforme regras do dia). O botão volta a Fazer Check-in (pode ficar desabilitado por um tempo se o fluxo do dia já estiver fechado).",
       imagens: [{ src: `${IMG}/06-modal-check-out-realizado.png`, alt: "Modal Check-out Realizado" }],
     },
-    {
-      titulo: "4. Justificar (Falta ou Pendente)",
-      texto:
-        "Use quando o status for Falta ou Pendente (após o limite) e existir o ícone Justificar na coluna Ações.\n\n1. Clique em Justificar na linha do dia.\n2. Confira a data no título do modal.\n3. Em Motivo, escolha uma opção:\n\n— Médico: início e fim do atestado, anexo e observação opcional. Ao salvar, o RH recebe uma solicitação de Atestado em Solicitações (Em análise).\n— Esquecimento ou Outro: informe Correção de Entrada e Correção de Saída (HH:MM). Após salvar, a correção segue para aprovação do líder (por campo); só muda o tipo da justificativa.\n\n4. Clique em Salvar (ou Cancelar para sair sem registrar).\n5. Depois de salvar com sucesso, o botão Justificar some naquela linha.",
-      imagens: [
-        { src: `${IMG}/07-modal-justificar.png`, alt: "Modal Justificar — escolher motivo" },
-        { src: `${IMG}/08-justificar-medico.png`, alt: "Justificar — motivo Médico" },
-        { src: `${IMG}/09-justificar-esquecimento.png`, alt: "Justificar — motivo Esquecimento" },
-        { src: `${IMG}/10-justificar-outro.png`, alt: "Justificar — motivo Outro" },
-      ],
-    },
   ],
   notasFinais:
-    "— Realize a aprovação ou justificativa dos dias até o último dia do mês, pois as datas serão consideradas no cálculo do pagamento de horas trabalhadas.\n— Após justificar ou realizar a correção do dia, o líder imediato terá de aprovar para confirmar que aquele foi o horário realizado.",
+    "— Realize a aprovação dos dias até o último dia do mês, pois as datas serão consideradas no cálculo do pagamento de horas trabalhadas.\n— Para justificar Falta ou Pendente (atestado ou esquecimento), use o tutorial Justificativa de Presença.",
 };

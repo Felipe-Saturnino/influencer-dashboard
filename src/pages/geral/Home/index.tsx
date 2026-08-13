@@ -148,7 +148,7 @@ const ROLE_LABELS: Record<Role, string> = {
   comunicacao: "Comunicação",
   performance_coach: "Performance Coach",
   rh: "RH",
-  influencer: "Influencer",
+  influencer: "Influenciador",
   afiliado: "Afiliado",
   investidor: "Investidor",
   operador: "Operador",
@@ -311,7 +311,18 @@ type PerfilRow = {
 };
 
 export default function Home() {
-  const { theme: t, user, effectiveRole, permissions, permissionsAcoes, operadoraBrand, isDark } = useApp();
+  const {
+    theme: t,
+    user,
+    effectiveRole,
+    permissions,
+    permissionsAcoes,
+    operadoraBrand,
+    isDark,
+    simulacaoLogin,
+    simulacaoSomenteLeitura,
+    dadosUsuarioEfetivo,
+  } = useApp();
   const { propsFor } = useAppPageNav();
 
   const [influencerHomeReady, setInfluencerHomeReady] = useState(false);
@@ -330,7 +341,7 @@ export default function Home() {
       return;
     }
     const permEditar = permissionsAcoes.rh_dados_cadastro?.editar ?? null;
-    if (!usuarioSujeitoGateRevisaoCadastral(user.role, permEditar)) {
+    if (simulacaoSomenteLeitura || !usuarioSujeitoGateRevisaoCadastral(user.role, permEditar)) {
       setRevisaoCadastralPendenteHome(false);
       setRevisaoCadastralHomeReady(true);
       return;
@@ -355,16 +366,21 @@ export default function Home() {
       cancelled = true;
       window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
     };
-  }, [user, permissionsAcoes.rh_dados_cadastro?.editar]);
+  }, [user, permissionsAcoes.rh_dados_cadastro?.editar, simulacaoSomenteLeitura]);
 
   useEffect(() => {
-    if (!user || !roleParidadeInfluencer(user.role)) {
+    const roleDados = effectiveRole ?? user?.role;
+    if (!user || !roleParidadeInfluencer(roleDados)) {
       setInfluencerHomeReady(true);
+      setPerfilRow(null);
+      setPlaybookPendente(false);
+      setLivesFuturas([]);
+      setLivesRealizadasRecentes([]);
       return;
     }
 
     let cancelled = false;
-    const uid = user.id;
+    const uid = dadosUsuarioEfetivo?.id ?? user.id;
 
     async function loadInfluencerHome() {
       setInfluencerHomeReady(false);
@@ -429,7 +445,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, effectiveRole, dadosUsuarioEfetivo?.id]);
 
   if (!user) return null;
 
@@ -519,8 +535,10 @@ export default function Home() {
   const accentColor = useBrand ? "var(--brand-primary)" : BRAND.roxoVivo;
   const cardBg = useBrand && operadoraBrand?.brand_bg ? operadoraBrand.brand_bg : t.cardBg;
 
-  const nomePerfil = perfilRow?.nome_artistico?.trim() || user.name;
-  const welcomeAvatarLabel = perfilRow?.nome_artistico?.trim() || user.name || user.email || "?";
+  const nomePerfil = perfilRow?.nome_artistico?.trim() || dadosUsuarioEfetivo?.name || user.name;
+  const welcomeAvatarLabel = simulacaoSomenteLeitura
+    ? (user.name || user.email || "?")
+    : (perfilRow?.nome_artistico?.trim() || user.name || user.email || "?");
   const welcomeInitial = welcomeAvatarLabel[0]?.toUpperCase() ?? "?";
 
   const showPerfilIncompleto =
@@ -621,6 +639,11 @@ export default function Home() {
             <p style={{ margin: 0, fontSize: 14, color: t.textMuted, lineHeight: 1.5 }}>
               {welcome.subtitle}
             </p>
+            {simulacaoLogin ? (
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
+                Sua conta não muda — você continua como {user.name}. Visualização: {simulacaoLogin.labelExibicao}.
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -683,8 +706,9 @@ export default function Home() {
               AÇÃO NECESSÁRIA
             </div>
             <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
-              Você ainda não concluiu o seu cadastro, isso impede o pagamento das lives realizadas. Acesse a página
-              Influencers e preencha todos os itens pendentes das suas informações.
+              {simulacaoLogin
+                ? `Cadastro incompleto no usuário visualizado${simulacaoLogin.userName ? ` (${simulacaoLogin.userName})` : ""}. Na visualização, o menu segue esse perfil (somente leitura).`
+                : "Você ainda não concluiu o seu cadastro, isso impede o pagamento das lives realizadas. Acesse a página Influencers e preencha todos os itens pendentes das suas informações."}
             </p>
             <a
               {...propsFor("influencers")}
@@ -725,9 +749,15 @@ export default function Home() {
               AÇÃO NECESSÁRIA
             </div>
             <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
-              Você ainda não confirmou todos os itens obrigatórios do Playbook. Acesse as abas{" "}
-              <strong>Dealers</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para dar
-              sua ciência.
+              {simulacaoLogin ? (
+                `Playbook pendente no usuário visualizado${simulacaoLogin.userName ? ` (${simulacaoLogin.userName})` : ""}. A visualização é somente leitura.`
+              ) : (
+                <>
+                  Você ainda não confirmou todos os itens obrigatórios do Playbook. Acesse as abas{" "}
+                  <strong>Dealers</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para
+                  dar sua ciência.
+                </>
+              )}
             </p>
             <a
               {...propsFor("playbook_influencers")}

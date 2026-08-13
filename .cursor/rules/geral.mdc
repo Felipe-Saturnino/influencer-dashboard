@@ -52,7 +52,7 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 - Se o usuário **não** tiver nenhum tutorial liberado para o perfil efetivo, a aba **Tutoriais** **não aparece** na Ajuda (URL `/Ajuda/Tutoriais` redireciona para Conheça).
 - Ao gravar novo tutorial: adicionar ao catálogo, imagens em `public/tutoriais/<secao>/<id>/`, seed/linha em `ajuda_tutorial_visibilidade` (ou o Admin configura na UI).
 - Tutoriais atuais: **Controle de Presença** (`controle-presenca`, Escala) · **Alterar Escala** (`alterar-escala`, Escala — seed SM/SL) · **Marketplace** (`marketplace-ofertas`, Escala — seed GP/Shuffler) · **Dicas Academy** (`postagem-academy-aprovacao`, Academy — seed perfis Estúdio).
-- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `Calendario`, `ControledePresenca`, `AlterarEscala`, `MarketplaceOfertas`, `CienciaManuaisAcademy`, `DicasAcademy`, `NovoIncidente`, `GestaoDeStaffEditar`, `ImprimirIdsStaff`, `PortalRhGerenciamentoPostagens`, `PortalRhComunicadosLidos`, `RhSolicitacoesAprovar`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
+- **URL individual:** cada definição tem `urlSlug`; rota canônica `/Ajuda/Tutoriais/{urlSlug}`. Atuais: `Calendario`, `ControledePresenca`, `JustificativaPresenca`, `AlterarEscala`, `MarketplaceOfertas`, `CienciaManuaisAcademy`, `DicasAcademy`, `NovoIncidente`, `GestaoDeStaffEditar`, `ImprimirIdsStaff`, `PortalRhGerenciamentoPostagens`, `PortalRhComunicadosLidos`, `RhSolicitacoesAprovar`. A seleção no menu lateral atualiza o histórico do navegador e link direto restaura o tutorial visível para o perfil.
 
 ### Ajuda contextual nas páginas
 
@@ -76,7 +76,7 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 | **Customer Success** | Atendimento | — |
 | **Estúdio** | Gestão de Dealers, Central de Notificações, Figurinos, Roteiro de Mesa, Incidentes | Incidentes → `novo-incidente` |
 | **Academy** | Performance Hub, Portal da Academy | Portal: **Manuais** → `ciencia-manuais-academy`; **Gerenciamento** → `postagem-academy-aprovacao` |
-| **Escala** | Gestão de Staff, Relatório de Turno, Solicitações, Escala Estúdio, Rotação, Calendário, Marketplace | Escala Estúdio → `alterar-escala` (**nunca** Escritório); Marketplace → `marketplace-ofertas`; Calendário → Compromissos / Controle de Presença; Gestão de Staff → `gestao-staff-editar` (página) + `imprimir-ids-staff` (só no modal Imprimir IDs) |
+| **Escala** | Gestão de Staff, Relatório de Turno, Solicitações, Escala Estúdio, Rotação, Calendário, Marketplace | Escala Estúdio → `alterar-escala` (**nunca** Escritório); Marketplace → `marketplace-ofertas`; Calendário → Compromissos / Controle de Presença (`controle-presenca`) + Justificativa (`justificativa-presenca`); Gestão de Staff → `gestao-staff-editar` (página) + `imprimir-ids-staff` (só no modal Imprimir IDs) |
 | **RH** | Gestão de Prestadores, Dados de Cadastro, Organograma, Escala Escritório, Vagas, Solicitações, Central de Denúncias | Solicitações → `rh-solicitacoes-aprovar`; Escala Escritório: só Conheça + Troubleshooting |
 | **Conteúdo** | Playbook Influencers, Links e Materiais, Spin na Rede, Portal de RH, Informativos | Portal de RH: **Gerenciamento** → `portal-rh-gerenciamento-postagens`; **Comunicados** → `portal-rh-comunicados-lidos` |
 | **Tech Ops** | Gestão de Estoque, Ordem de Saída | — |
@@ -165,8 +165,16 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 
 - Fora do `app-page-shell` logado.
 - CTA com gradiente Brand; spinner `#fff` dentro do botão.
+- **Destino após login:** sempre a **Home** (não restaura o endereço anterior nem `after_login`). Refresh de sessão já autenticada continua na página atual.
 - **Esqueci senha:** link «Esqueceu sua senha?» abaixo do campo senha → modal «Reset de senha» → Edge `recuperar-senha` (senha padrão + e-mail Resend + `must_change_password`). E-mail inexistente: mensagem explícita + link «entre em contato» (`lib/loginAccessContact.ts`).
 - **Handoff:** fluxos whitelabel adicionais, erros inline.
+
+## Trocar senha obrigatória (`geral/TrocarSenhaObrigatorio/`)
+
+- Gate bloqueante após login com `must_change_password`.
+- Botão **Definir nova senha** só habilita com os 4 requisitos (8+ caracteres, maiúsculas e minúsculas, número, caractere especial) e confirmação igual; Enter envia o formulário.
+- Cartão com scroll (`app-auth-card-scroll`) para o botão permanecer acessível.
+- Após sucesso: `finalizarTrocaSenhaObrigatoria()` → Home (sem recarregar permissões).
 
 ---
 
@@ -181,18 +189,13 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Permissão:** Gestão de Usuários → **Simulador de Login** → Ver = Sim (ou Próprios); admin acesso implícito; demais perfis seed `Não`.
 - **Perfis simuláveis:** catálogo em `ROLES_SIMULAVEIS` (`ROLES` menos `admin`/`executivo`). **Quem vê o quê** na página do simulador: matriz **`simulador_login_roles`** configurável em **Gestão de Usuários → aba Simulador de Login** (perfil viewer × perfis simuláveis). Admin ignora a matriz (vê todos do catálogo).
 - **Checklist perfil novo:** incluir em `ROLES` + `FILTROS_PERFIL_LINHAS`; marcar na aba **Simulador de Login** quais viewers podem simulá-lo; seed opcional na migration.
-- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`. Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
+- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`; busca no painel se >5. Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
 - **Gestor / Prestadores:** modal de tipo ou área; menu = `role_permissions` ∩ `gestor_tipo_pages` ou `prestador_tipo_pages`.
+- **Usuário ativo (obrigatório):** após o perfil (e operadora/área, quando houver), a simulação escolhe um **usuário ativo** daquele perfil no momento — lista dinâmica (`profiles.ativo !== false`, exclui a conta viewer), pré-seleciona o de login mais recente (contas rotativas; sem pessoa fixa). Busca no painel se >5. Sem usuário ativo: mensagem específica (perfil / operadora / área). Restaurar sessão revalida se o usuário ainda está ativo.
 - **Quem usa o simulador** precisa ler as matrizes de escopo no Supabase — políticas RLS `_pode_usar_simulador_login()` em `operadora_pages`, `gestor_tipo_pages`, `prestador_tipo_pages` (migration `20260708160000_simulador_login_rls_scope_pages.sql`).
-- **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner`; sessão em `sessionStorage`.
-- **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado).
-
----
-
-## Trocar senha obrigatória (`geral/TrocarSenhaObrigatorio/`)
-
-- Fluxo bloqueante; mesmo padrão de CTA/spinner do Login.
-- **Handoff:** validações e mensagens de erro.
+- **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner` (texto **Encerrar visualização**); sessão em `sessionStorage`. Trocar de perfil com visualização ativa pede confirmação **Substituir visualização**. Encerrar só limpa a faixa depois de restaurar o perfil real; falha mostra aviso.
+- **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado). **Gestão de Estúdios** permanece visível se o perfil simulado tiver acesso.
+- **Identidade:** o nome no avatar/Home continua o da conta real («sua conta não muda»). Alertas pessoais da Home (cadastro/playbook) usam o usuário visualizado, sem misturar com a conta viewer.
 
 ---
 
@@ -219,7 +222,13 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - Tipos compartilhados com a Central interna via `TIPOS_DENUNCIA`; **Elogios** (`elogios`) segue o mesmo envio, protocolo e atendimento dos demais tipos.
 - Privacidade: não expor detalhes técnicos em mensagens de erro; na consulta, mensagens do RH aparecem como **Equipe RH** (sem nome do staff).
 
-**Consulta por protocolo (`consultar_denuncia_spin`):** status + linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta (`responder_denuncia_spin`) com anexos opcionais enquanto o status não estiver encerrado (Procedente / Não procedente).
+**Protocolo:** novos registros usam código imprevisível (`CDSPIN-` + 16 hex). Protocolos legados `CDSPIN00001…` continuam válidos. Consulta e resposta (`consultar_denuncia_spin` / `responder_denuncia_spin`) exigem o **mesmo e-mail do envio** quando o relato foi identificado; anônimo consulta só com o protocolo. Erro genérico «não encontrado» (não revelar se o protocolo existe).
+
+**Limite de tentativas:** RPCs públicos com rate limit por IP (hash) + honeypot `p_hp` no registro. Insert da denúncia **só via RPC** (sem política INSERT anon/auth na tabela).
+
+**Consulta por protocolo:** status + linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta com anexos opcionais (`CampoUploadArquivos`, PDF/JPG/PNG/MP4, 20MB) enquanto o status não estiver encerrado (Procedente / Não procedente). Enter no protocolo/e-mail dispara a pesquisa.
+
+**Upload no envio:** `CampoUploadArquivos` (exceção Global — canal público usa o componente por pedido de produto).
 
 **Handoff:** campos do formulário, anonimato, confirmação pós-envio, a11y embed.
 

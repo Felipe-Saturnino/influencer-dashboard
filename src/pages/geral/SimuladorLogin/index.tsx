@@ -3,11 +3,13 @@ import { Eye, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { PageHeader } from "../../../components/PageHeader";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { supabase } from "../../../lib/supabase";
+import { FILTER_SEARCH_OPERADORA, FILTER_SEARCH_USUARIO } from "../../../lib/searchBarConstants";
+import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import {
   PRESTADOR_TIPOS,
   roleLabel,
@@ -15,28 +17,46 @@ import {
 import type { PrestadorTipoSlug, Role } from "../../../types";
 import type { Theme } from "../../../constants/theme";
 import {
+  carregarOperadorasParaSimulacao,
+  carregarUsuariosAtivosParaSimulacao,
   filtrarLinhasSimuladorPorRoles,
+  mensagemVazioUsuariosSimulacao,
+  MSG_NENHUMA_OPERADORA_ENCONTRADA,
   roleExigeOperadoraNaSimulacao,
   roleExigePrestadorTipoNaSimulacao,
+  type OperadoraSimulacaoOpt,
+  type UsuarioSimulavelOpt,
 } from "../../../lib/simuladorLogin";
 
-type OperadoraOpt = { slug: string; nome: string; ativo: boolean };
-
-type ModalOpcaoPerfil = "operadora" | "prestador_tipo";
+type ModalOpcaoPerfil = "confirmar_troca" | "operadora" | "prestador_tipo" | "usuario";
 
 export default function SimuladorLogin() {
-  const { theme: t, simulacaoLogin, simuladorRolesPermitidos, iniciarSimulacaoLogin, encerrarSimulacaoLogin, navigateTo } = useApp();
+  const {
+    theme: t,
+    user,
+    simulacaoLogin,
+    simuladorRolesPermitidos,
+    iniciarSimulacaoLogin,
+    encerrarSimulacaoLogin,
+    navigateTo,
+  } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("simulador_login");
 
   const [modalOpcao, setModalOpcao] = useState<ModalOpcaoPerfil | null>(null);
   const [rolePendente, setRolePendente] = useState<Role | null>(null);
-  const [operadoras, setOperadoras] = useState<OperadoraOpt[]>([]);
+  const [operadoras, setOperadoras] = useState<OperadoraSimulacaoOpt[]>([]);
   const [carregandoOperadoras, setCarregandoOperadoras] = useState(false);
+  const [erroOperadoras, setErroOperadoras] = useState("");
   const [operadoraSlug, setOperadoraSlug] = useState("");
   const [prestadorTipo, setPrestadorTipo] = useState<PrestadorTipoSlug | "">("");
+  const [usuarios, setUsuarios] = useState<UsuarioSimulavelOpt[]>([]);
+  const [carregandoUsuarios, setCarregandoUsuarios] = useState(false);
+  const [erroUsuarios, setErroUsuarios] = useState("");
+  const [usuarioId, setUsuarioId] = useState("");
   const [err, setErr] = useState("");
   const [iniciando, setIniciando] = useState(false);
+  const [encerrando, setEncerrando] = useState(false);
 
   const pageBox = getPageContentBoxStyle(brand, t);
 
@@ -47,56 +67,99 @@ export default function SimuladorLogin() {
 
   const carregarOperadoras = useCallback(async () => {
     setCarregandoOperadoras(true);
-    const { data } = await supabase.from("operadoras").select("slug, nome, ativo").order("nome");
-    setOperadoras((data ?? []) as OperadoraOpt[]);
+    setErroOperadoras("");
+    const { operadoras: lista, erro } = await carregarOperadorasParaSimulacao();
+    setOperadoras(lista);
+    setErroOperadoras(erro ?? "");
     setCarregandoOperadoras(false);
   }, []);
 
+  const carregarUsuarios = useCallback(
+    async (role: Role, extra?: { operadoraSlug?: string; prestadorTipoSlug?: PrestadorTipoSlug }) => {
+      if (!user?.id) return;
+      setCarregandoUsuarios(true);
+      setErroUsuarios("");
+      setUsuarios([]);
+      setUsuarioId("");
+      const { usuarios: lista, erro } = await carregarUsuariosAtivosParaSimulacao({
+        role,
+        viewerUserId: user.id,
+        operadoraSlug: extra?.operadoraSlug,
+        prestadorTipoSlug: extra?.prestadorTipoSlug,
+      });
+      setUsuarios(lista);
+      setErroUsuarios(erro ?? "");
+      if (!erro && lista[0]) setUsuarioId(lista[0].id);
+      setCarregandoUsuarios(false);
+    },
+    [user?.id],
+  );
+
   useEffect(() => {
-    if (modalOpcao === "operadora" && operadoras.length === 0) {
+    if (modalOpcao === "operadora") {
       void carregarOperadoras();
     }
-  }, [modalOpcao, operadoras.length, carregarOperadoras]);
+  }, [modalOpcao, carregarOperadoras]);
+
+  useEffect(() => {
+    if (modalOpcao !== "usuario" || !rolePendente) return;
+    void carregarUsuarios(rolePendente, {
+      operadoraSlug: operadoraSlug || undefined,
+      prestadorTipoSlug: prestadorTipo || undefined,
+    });
+  }, [modalOpcao, rolePendente, operadoraSlug, prestadorTipo, carregarUsuarios]);
 
   function fecharModal() {
     setModalOpcao(null);
     setRolePendente(null);
     setOperadoraSlug("");
     setPrestadorTipo("");
+    setUsuarios([]);
+    setUsuarioId("");
     setErr("");
+    setErroOperadoras("");
+    setErroUsuarios("");
   }
 
-  function abrirModalOpcao(role: Role, tipo: ModalOpcaoPerfil) {
+  function abrirFluxo(role: Role) {
     setErr("");
     setRolePendente(role);
     setOperadoraSlug("");
     setPrestadorTipo("");
-    setModalOpcao(tipo);
+    setUsuarioId("");
+    setUsuarios([]);
+    if (roleExigeOperadoraNaSimulacao(role)) {
+      setModalOpcao("operadora");
+      return;
+    }
+    if (roleExigePrestadorTipoNaSimulacao(role)) {
+      setModalOpcao("prestador_tipo");
+      return;
+    }
+    setModalOpcao("usuario");
   }
 
   function selecionarPerfil(role: Role) {
     setErr("");
-    if (roleExigeOperadoraNaSimulacao(role)) {
-      abrirModalOpcao(role, "operadora");
+    setRolePendente(role);
+    if (simulacaoLogin) {
+      setModalOpcao("confirmar_troca");
       return;
     }
-    if (roleExigePrestadorTipoNaSimulacao(role)) {
-      abrirModalOpcao(role, "prestador_tipo");
-      return;
-    }
-    void confirmarInicio(role);
+    abrirFluxo(role);
   }
 
   async function confirmarInicio(
     role: Role,
-    extra?: { operadoraSlug?: string; prestadorTipoSlug?: PrestadorTipoSlug },
+    extra: { userId: string; operadoraSlug?: string; prestadorTipoSlug?: PrestadorTipoSlug },
   ) {
     setErr("");
     setIniciando(true);
     const erro = await iniciarSimulacaoLogin({
       role,
-      operadoraSlug: extra?.operadoraSlug,
-      prestadorTipoSlug: extra?.prestadorTipoSlug,
+      userId: extra.userId,
+      operadoraSlug: extra.operadoraSlug,
+      prestadorTipoSlug: extra.prestadorTipoSlug,
     });
     setIniciando(false);
     if (erro) {
@@ -109,26 +172,59 @@ export default function SimuladorLogin() {
 
   function confirmarModal() {
     if (!rolePendente || !modalOpcao) return;
+    if (modalOpcao === "confirmar_troca") {
+      abrirFluxo(rolePendente);
+      return;
+    }
     if (modalOpcao === "operadora") {
-      void confirmarInicio(rolePendente, { operadoraSlug });
+      setModalOpcao("usuario");
       return;
     }
     if (modalOpcao === "prestador_tipo" && prestadorTipo) {
-      void confirmarInicio(rolePendente, { prestadorTipoSlug: prestadorTipo });
+      setModalOpcao("usuario");
+      return;
+    }
+    if (modalOpcao === "usuario" && usuarioId) {
+      void confirmarInicio(rolePendente, {
+        userId: usuarioId,
+        operadoraSlug: operadoraSlug || undefined,
+        prestadorTipoSlug: prestadorTipo || undefined,
+      });
     }
   }
 
+  async function encerrar() {
+    if (encerrando) return;
+    setErr("");
+    setEncerrando(true);
+    const falha = await encerrarSimulacaoLogin();
+    setEncerrando(false);
+    if (falha) setErr(falha);
+  }
+
   const modalTitulo =
-    modalOpcao === "operadora"
-      ? "Selecione a operadora"
-      : modalOpcao === "prestador_tipo"
-        ? "Selecione a área de prestador"
-        : "";
+    modalOpcao === "confirmar_troca"
+      ? "Substituir visualização"
+      : modalOpcao === "operadora"
+        ? "Selecione a operadora"
+        : modalOpcao === "prestador_tipo"
+          ? "Selecione a área de prestador"
+          : modalOpcao === "usuario"
+            ? "Selecione o usuário ativo"
+            : "";
+
+  const modalConfirmLabel =
+    modalOpcao === "confirmar_troca"
+      ? "Substituir"
+      : modalOpcao === "usuario"
+        ? "Iniciar visualização"
+        : "Continuar";
 
   const modalConfirmDisabled =
     iniciando ||
-    (modalOpcao === "operadora" && (!operadoraSlug || carregandoOperadoras)) ||
-    (modalOpcao === "prestador_tipo" && !prestadorTipo);
+    (modalOpcao === "operadora" && (!operadoraSlug || carregandoOperadoras || !!erroOperadoras)) ||
+    (modalOpcao === "prestador_tipo" && !prestadorTipo) ||
+    (modalOpcao === "usuario" && (!usuarioId || carregandoUsuarios || !!erroUsuarios));
 
   if (perm.canView === "nao") {
     return (
@@ -143,8 +239,20 @@ export default function SimuladorLogin() {
 
   if (perm.loading) {
     return (
-      <div className="app-page-shell" style={{ display: "flex", justifyContent: "center", padding: 48 }}>
+      <div
+        className="app-page-shell"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 400,
+          color: t.textMuted,
+          fontFamily: FONT.body,
+        }}
+      >
         <Loader2 className="app-lucide-spin" size={24} color="var(--brand-primary, #7c3aed)" aria-hidden />
+        <div style={{ fontSize: 13, marginTop: 12 }}>Carregando…</div>
       </div>
     );
   }
@@ -158,12 +266,13 @@ export default function SimuladorLogin() {
       />
 
       {simulacaoLogin ? (
-        <div style={{ ...pageBox, marginBottom: 14 }}>
+        <div style={pageBox}>
           <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, fontFamily: FONT.body }}>
-            Visualização ativa: <strong>{simulacaoLogin.labelExibicao}</strong> (somente leitura).
+            Visualização ativa: <strong>{simulacaoLogin.labelExibicao}</strong> (somente leitura). Sua conta não
+            muda.
           </p>
-          <button type="button" onClick={() => void encerrarSimulacaoLogin()} style={btnSecundario(t)}>
-            Encerrar visualização
+          <button type="button" onClick={() => void encerrar()} disabled={encerrando} style={btnSecundario(t)}>
+            {encerrando ? "Encerrando…" : "Encerrar visualização"}
           </button>
         </div>
       ) : null}
@@ -200,7 +309,7 @@ export default function SimuladorLogin() {
                 <button
                   key={role}
                   type="button"
-                  disabled={iniciando}
+                  disabled={iniciando || encerrando}
                   onClick={() => selecionarPerfil(role)}
                   style={btnPerfil(t, brand)}
                 >
@@ -220,6 +329,12 @@ export default function SimuladorLogin() {
             Perfil: <strong style={{ color: t.text }}>{roleLabel(rolePendente)}</strong>
           </p>
 
+          {modalOpcao === "confirmar_troca" ? (
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: t.text, fontFamily: FONT.body, lineHeight: 1.55 }}>
+              Já há uma visualização ativa: <strong>{simulacaoLogin?.labelExibicao}</strong>. Deseja substituir?
+            </p>
+          ) : null}
+
           {err ? (
             <div role="alert" aria-live="polite" style={{ ...alertErro, marginBottom: 14 }}>
               {err}
@@ -232,14 +347,18 @@ export default function SimuladorLogin() {
                 <Loader2 className="app-lucide-spin" size={14} aria-hidden />
                 Carregando…
               </div>
+            ) : erroOperadoras ? (
+              <p style={{ margin: 0, fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>{erroOperadoras}</p>
             ) : operadoras.length === 0 ? (
               <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                Nenhuma operadora ativa encontrada.
+                {MSG_NENHUMA_OPERADORA_ENCONTRADA}
               </p>
             ) : (
               <ListaOpcoesRadio
                 t={t}
                 name="simulador-operadora"
+                ariaLabel="Operadoras"
+                buscaPlaceholder={FILTER_SEARCH_OPERADORA}
                 opcoes={operadoras.map((op) => ({
                   value: op.slug,
                   label: op.ativo ? op.nome : `${op.nome} (inativa)`,
@@ -254,10 +373,42 @@ export default function SimuladorLogin() {
             <ListaOpcoesRadio
               t={t}
               name="simulador-prestador-tipo"
+              ariaLabel="Áreas de prestador"
               opcoes={PRESTADOR_TIPOS.map((tipo) => ({ value: tipo.slug, label: tipo.label }))}
               value={prestadorTipo}
               onChange={(v) => setPrestadorTipo(v as PrestadorTipoSlug)}
             />
+          ) : null}
+
+          {modalOpcao === "usuario" ? (
+            carregandoUsuarios ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.textMuted, fontSize: 13 }}>
+                <Loader2 className="app-lucide-spin" size={14} aria-hidden />
+                Carregando…
+              </div>
+            ) : erroUsuarios ? (
+              <p style={{ margin: 0, fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>{erroUsuarios}</p>
+            ) : usuarios.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+                {mensagemVazioUsuariosSimulacao({
+                  operadoraSlug: operadoraSlug || undefined,
+                  prestadorTipoSlug: prestadorTipo || undefined,
+                })}
+              </p>
+            ) : (
+              <ListaOpcoesRadio
+                t={t}
+                name="simulador-usuario"
+                ariaLabel="Usuários ativos"
+                buscaPlaceholder={FILTER_SEARCH_USUARIO}
+                opcoes={usuarios.map((u) => ({
+                  value: u.id,
+                  label: u.email ? `${u.name} — ${u.email}` : u.name,
+                }))}
+                value={usuarioId}
+                onChange={setUsuarioId}
+              />
+            )
           ) : null}
 
           <div
@@ -269,7 +420,6 @@ export default function SimuladorLogin() {
               marginTop: 24,
             }}
           >
-            
             <button
               type="button"
               disabled={modalConfirmDisabled}
@@ -289,7 +439,7 @@ export default function SimuladorLogin() {
                   Iniciando…
                 </>
               ) : (
-                "Iniciar visualização"
+                modalConfirmLabel
               )}
             </button>
           </div>
@@ -302,37 +452,60 @@ export default function SimuladorLogin() {
 function ListaOpcoesRadio({
   t,
   name,
+  ariaLabel,
   opcoes,
   value,
   onChange,
+  buscaPlaceholder,
 }: {
   t: Theme;
   name: string;
+  ariaLabel: string;
   opcoes: { value: string; label: string }[];
   value: string;
   onChange: (value: string) => void;
+  buscaPlaceholder?: string;
 }) {
+  const [busca, setBusca] = useState("");
+  const mostrarBusca = opcoes.length > 5;
+  const filtradas = mostrarBusca
+    ? opcoes.filter((op) => textoContemBuscaEmAlgum(busca, op.label))
+    : opcoes;
+
   return (
-    <div
-      role="radiogroup"
-      aria-label="Opções"
-      style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "min(52dvh, 360px)", overflowY: "auto" }}
-    >
-      {opcoes.map((op) => (
-        <label
-          key={op.value}
-          style={opcaoRadioStyle(t, value === op.value)}
-        >
-          <input
-            type="radio"
-            name={name}
-            value={op.value}
-            checked={value === op.value}
-            onChange={() => onChange(op.value)}
-          />
-          {op.label}
-        </label>
-      ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {mostrarBusca && buscaPlaceholder ? (
+        <BarraPesquisaFiltroPainel
+          value={busca}
+          onChange={setBusca}
+          placeholder={buscaPlaceholder}
+          aria-label={buscaPlaceholder.replace(/\.{3}$/, "")}
+        />
+      ) : null}
+      <div
+        role="radiogroup"
+        aria-label={ariaLabel}
+        style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "min(52dvh, 360px)", overflowY: "auto" }}
+      >
+        {filtradas.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+            Nenhum resultado para a busca.
+          </p>
+        ) : (
+          filtradas.map((op) => (
+            <label key={op.value} style={opcaoRadioStyle(t, value === op.value)}>
+              <input
+                type="radio"
+                name={name}
+                value={op.value}
+                checked={value === op.value}
+                onChange={() => onChange(op.value)}
+              />
+              {op.label}
+            </label>
+          ))
+        )}
+      </div>
     </div>
   );
 }

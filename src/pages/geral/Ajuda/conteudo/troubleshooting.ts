@@ -19,6 +19,11 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
       texto:
         "O ambiente de preview/staging restringe o login a uma lista de e-mails definida pela equipe (variável de build no Cloudflare Pages — Preview). Produção e o uso local não usam essa lista. Quem não está autorizado vê a mensagem de acesso negado e não entra nas features em desenvolvimento. Integrações e rotas `/api/*` (formulários do site, webhooks) **não** são bloqueadas por essa regra. Se você precisa de acesso ao staging, peça inclusão do seu e-mail ao administrador.",
     },
+    {
+      subtitulo: "Depois de entrar, caí em «Você não tem acesso a esta página» em vez da Home?",
+      texto:
+        "Comportamento esperado: após o login — e após definir a senha no primeiro acesso — a plataforma abre sempre a **Home**, mesmo que o endereço no navegador fosse de outra página.\n\nSe ainda aparecer a tela de sem acesso logo depois de entrar, saia e entre novamente. Se o problema persistir, entre em contato com o suporte.",
+    },
   ],
 } as const;
 
@@ -742,6 +747,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Com **Ver = Próprios**, só entram avaliações com status **Concluída** vinculadas ao seu cadastro. Avaliações pendentes ou em análise não aparecem nesse escopo.",
       },
       {
+        subtitulo: "Alguns prestadores não aparecem para avaliar?",
+        texto:
+          "A lista inclui só prestadores **ativos** ou **indisponíveis** do time **Game Presenter** ou **Shuffler** no Organograma (Gestão de Prestadores). Encerrados não entram.\n\nNa **Agenda de Avaliações**, quem ainda não chegou na data de go-live / início no mês selecionado fica de fora até essa competência — use o carrossel para o mês em que a pessoa já está no estúdio.\n\nSe o colaborador aparece em **Gestão de Staff** no time certo e mesmo assim falta no Performance Hub, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Não encontro o botão Analisar?",
         texto:
           "O botão **Analisar** aparece em status **Em Análise** e **Feedback**. Avaliações **Pendente** e **Concluída** exibem apenas **Ver** e **Histórico** — isso é intencional.\n\nCom escopo **Próprios** o botão não aparece em **Em Análise**, apenas em **Feedback**.",
@@ -749,7 +759,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite é **500 MB** por arquivo. Se a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…** nos botões). Mantenha a aba aberta até o fim. Se aparecer falha de conexão, tente de novo — o envio pode retomar de onde parou.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+          "O limite é **500 MB** por arquivo (cerca de **512.000 KB**). Um vídeo de **300.000 KB** (~293 MB) está **dentro** do limite — se o envio falhar nesse tamanho, não é o teto do arquivo: mantenha a aba aberta até o progresso **Enviando X%…** chegar a 100% e tente de novo se aparecer falha de conexão.\n\nSe a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",
@@ -984,7 +994,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O anexo ou imagem não abre ao clicar?",
         texto:
-          "Os arquivos são abertos em uma nova aba. Verifique se o navegador está bloqueando novas abas desta página e permita o popup. Se o link mostrar 'Carregando…' por mais de 10 segundos, pode ser que o arquivo tenha sido removido do armazenamento. Informe ao responsável pela postagem.",
+          "No celular (Safari ou Chrome), o PDF abre em nova aba após um instante — se nada acontecer, o navegador pode ter bloqueado a nova aba: permita pop-ups para este site e toque de novo em **Ver arquivo**. Se aparecer mensagem vermelha sob o link, leia a orientação (pop-up bloqueado ou falha ao gerar o link). Não é necessário estar na Rede Spin / VPN: o arquivo usa link temporário autenticado. Se o erro continuar, entre em contato com o suporte.",
       },
     ],
   },
@@ -1789,7 +1799,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Central de Denúncias no menu?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários. O canal público de denúncias (sem login) é distinto — protocolos internos são tratados nesta página logada.",
+          "Confirme permissão de **Ver** em Gestão de Usuários. O canal público de denúncias (sem login) é distinto — protocolos internos são tratados nesta página logada. O endereço público é **/canal-denuncias-spin** no mesmo domínio da plataforma; encaminhe esse link a terceiros que precisem relatar sem acessar o menu.",
       },
       {
         subtitulo: "O relator diz que não vê minhas anotações na consulta pública?",
@@ -1854,7 +1864,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao alterar a senha?",
         texto:
-          "Confirme a senha atual e que a nova senha atende aos requisitos (8+ caracteres, maiúsculas e minúsculas, número e caractere especial) e é diferente da atual. Se a sessão estiver inválida, saia e entre novamente. Se o problema persistir, entre em contato com o suporte.",
+          "Confirme a senha atual e que a nova senha atende aos requisitos (8+ caracteres, maiúsculas e minúsculas, número e caractere especial) e é diferente da atual. Na tela de primeiro acesso, o botão **Definir nova senha** só habilita quando todos os requisitos estão marcados e as duas senhas coincidem. Se a sessão estiver inválida, saia e entre novamente. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },
@@ -1872,6 +1882,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Nenhum perfil simulável foi liberado para o seu perfil viewer. Peça ao administrador para marcar as opções em **Gestão de Usuários → Simulador de Login**. Administradores veem o catálogo completo sem essa matriz.",
       },
       {
+        subtitulo: "Não aparece nenhum usuário ativo?",
+        texto:
+          "A simulação só lista contas **ativas** daquele perfil no momento (quem está desativado não entra). No Operador, o usuário também precisa ter a operadora escolhida no escopo; no Prestador, a área escolhida. Se a equipe rotacionou, escolha outro usuário da lista — ela é atualizada a cada abertura do modal.",
+      },
+      {
         subtitulo: "Não consigo criar ou editar nada durante a simulação?",
         texto:
           "Comportamento esperado: a simulação é somente leitura. Encerrar a visualização restaura as permissões da sua conta real.",
@@ -1884,7 +1899,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Como sair da simulação?",
         texto:
-          "Clique em **Encerrar visualização** no banner no topo da plataforma ou no bloco correspondente na página Simulador de Login.",
+          "Clique em **Encerrar visualização** na faixa amarela no topo da plataforma ou no bloco correspondente na página Simulador de Login. Se a faixa não sumir, recarregue a página. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },

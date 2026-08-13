@@ -29,10 +29,11 @@ import {
   type SimulacaoLoginState,
   aplicarOverridesPermissoesSimulacao,
   aplicarSomenteLeituraAcoes,
-  buildEscoposSimulacao,
   carregarRolesSimulaveisParaViewer,
+  carregarUsuarioAtivoSimulavel,
   montarLabelSimulacao,
   readSimulacaoSession,
+  recortarEscoposSimulacao,
   resolverOperadoraNome,
   toSimulacaoState,
   validarInputSimulacao,
@@ -92,7 +93,9 @@ interface AppContextValue {
   /** Perfis que o usuário real pode simular (matriz Gestão de Usuários → Simulador de Login). */
   simuladorRolesPermitidos: Role[];
   iniciarSimulacaoLogin: (input: IniciarSimulacaoInput) => Promise<string | null>;
-  encerrarSimulacaoLogin: () => Promise<void>;
+  encerrarSimulacaoLogin: () => Promise<string | null>;
+  /** Identidade para dados da UI: usuário ativo da simulação, ou a conta real. */
+  dadosUsuarioEfetivo: { id: string; name: string; email: string } | null;
   /** Permissões do usuário real (não simuladas). */
   permissionsReais: PermissoesMapa;
   permissionsAcoesReais: PermissoesAcoesMapa;
@@ -110,6 +113,8 @@ interface AppContextValue {
     options?: { replace?: boolean; detailSlug?: string | null },
   ) => void;
   applyPathFromLocation: (options?: { replace?: boolean }) => void;
+  /** Após troca obrigatória de senha: libera o gate e abre a Home (sem recarregar permissões). */
+  finalizarTrocaSenhaObrigatoria: () => void;
   goToSemAcesso: (reason: "not_found" | "forbidden", options?: { replace?: boolean }) => void;
   tutorialVisibility: TutorialVisibilidadeMap;
   tutorialVisibilityLoaded: boolean;
@@ -336,7 +341,8 @@ async function carregarContextoSimulado(
   permissions: PermissoesMapa;
   permissionsAcoes: PermissoesAcoesMapa;
 }> {
-  const escopos = buildEscoposSimulacao(state);
+  const escoposBase = await carregarEscoposVisiveis(state.userId, state.role);
+  const escopos = recortarEscoposSimulacao(escoposBase, state);
   const [perms, acoes] = await Promise.all([
     carregarPermissoes(state.role, {
       operadorasVisiveis: state.role === "operador" ? escopos.operadorasVisiveis : undefined,
@@ -512,6 +518,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const parsed = parseAppPathname(window.location.pathname);
       const u = userRef.current;
 
+      if (u?.must_change_password) {
+        return;
+      }
+
       if (parsed.kind === "empty") {
         if (u) navigateTo("home", null, { replace: true });
         return;
@@ -637,6 +647,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [operadoraBrand?.font_url]);
 
   const simulacaoSomenteLeitura = simulacaoLogin != null;
+  const dadosUsuarioEfetivo = useMemo(() => {
+    if (!user) return null;
+    if (simulacaoLogin?.userId) {
+      return {
+        id: simulacaoLogin.userId,
+        name: simulacaoLogin.userName || user.name,
+        email: simulacaoLogin.userEmail || user.email,
+      };
+    }
+    return { id: user.id, name: user.name, email: user.email };
+  }, [user, simulacaoLogin]);
   const podeAcessarSimuladorLogin = podeVerSimuladorLoginMapa(user?.role, permissionsReais);
 
   const restaurarContextoReal = useCallback(async (u: User) => {
@@ -686,16 +707,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const validationErr = validarInputSimulacao(input, simuladorRolesPermitidosRef.current);
       if (validationErr) return validationErr;
 
+      const usuario = await carregarUsuarioAtivoSimulavel(input.userId, input.role);
+      if (!usuario) {
+        return "Este usuário não está mais ativo. Escolha outro usuário ativo.";
+      }
+
       let operadoraNome: string | undefined;
       if (input.operadoraSlug) {
         operadoraNome = (await resolverOperadoraNome(input.operadoraSlug)) ?? input.operadoraSlug;
       }
-      const labelExibicao = montarLabelSimulacao(input, operadoraNome);
-      const state = toSimulacaoState(
-        { ...input, operadoraSlug: input.operadoraSlug },
+      const labelExibicao = montarLabelSimulacao(input, {
+        operadoraNome,
+        userName: usuario.name,
+      });
+      const state = toSimulacaoState(input, {
         labelExibicao,
-      );
-      if (operadoraNome) state.operadoraNome = operadoraNome;
+        userName: usuario.name,
+        userEmail: usuario.email,
+        operadoraNome,
+      });
 
       try {
         await aplicarSimulacaoAtiva(state, u);
@@ -708,18 +738,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [aplicarSimulacaoAtiva, permissionsReais],
   );
 
-  const encerrarSimulacaoLogin = useCallback(async () => {
+  const encerrarSimulacaoLogin = useCallback(async (): Promise<string | null> => {
     const u = userRef.current;
-    if (!u || !simulacaoLoginRef.current) return;
-    setSimulacaoLogin(null);
-    simulacaoLoginRef.current = null;
-    effectiveRoleRef.current = u.role;
-    writeSimulacaoSession(null);
+    if (!u || !simulacaoLoginRef.current) return null;
     try {
       await restaurarContextoReal(u);
+      setSimulacaoLogin(null);
+      simulacaoLoginRef.current = null;
+      effectiveRoleRef.current = u.role;
+      writeSimulacaoSession(null);
       navigateTo("simulador_login");
+      return null;
     } catch (err) {
       console.error("Erro ao encerrar simulação de login:", err);
+      return "Não foi possível voltar ao seu perfil. Recarregue a página. Se o problema persistir, entre em contato com o suporte.";
     }
   }, [navigateTo, restaurarContextoReal]);
 
@@ -734,6 +766,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const validationErr = validarInputSimulacao(
         {
           role: saved.role,
+          userId: saved.userId,
           operadoraSlug: saved.operadoraSlug,
           prestadorTipoSlug: saved.prestadorTipoSlug,
         },
@@ -743,8 +776,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         writeSimulacaoSession(null);
         return;
       }
+      const usuarioAtivo = await carregarUsuarioAtivoSimulavel(saved.userId, saved.role);
+      if (!usuarioAtivo) {
+        writeSimulacaoSession(null);
+        return;
+      }
       try {
-        await aplicarSimulacaoAtiva(saved, u);
+        await aplicarSimulacaoAtiva(
+          {
+            ...saved,
+            userName: usuarioAtivo.name,
+            userEmail: usuarioAtivo.email,
+          },
+          u,
+        );
       } catch (err) {
         console.error("Erro ao restaurar simulação de login:", err);
         writeSimulacaoSession(null);
@@ -801,24 +846,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             syncAuthRefs(u, perms, acoes);
           }
 
-          const pendingReturn = sessionStorage.getItem(PENDING_RETURN_PATH_KEY);
-          if (pendingReturn) {
-            sessionStorage.removeItem(PENDING_RETURN_PATH_KEY);
-            try {
-              const url = new URL(pendingReturn, window.location.origin);
-              syncHistory(`${url.pathname}${url.search}`, true);
-            } catch {
-              syncHistory(pendingReturn, true);
-            }
-          }
-
-          const params = new URLSearchParams(window.location.search);
-          const afterLogin = params.get("after_login")?.trim();
-          if (afterLogin === "rh_dados_cadastro") {
-            syncHistory(buildAppPath("rh_dados_cadastro"), true);
-          } else if (params.toString()) {
-            syncHistory(window.location.pathname, true);
-          }
+          sessionStorage.removeItem(PENDING_RETURN_PATH_KEY);
+          sessionStorage.removeItem(SEM_ACESSO_REASON_KEY);
         } catch (err) {
           console.error("Erro ao carregar permissões/escopos após login:", err);
           const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
@@ -829,7 +858,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           syncAuthRefs(u, emptyPerms, emptyAcoes);
         }
         setRouteReady(true);
-        applyPathFromLocation({ replace: true });
+        if (u.must_change_password) {
+          syncHistory(buildLoginPath(), true);
+        } else {
+          navigateTo("home", null, { replace: true });
+        }
       } else {
         const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
         const emptyAcoes = emptyAcoesMapa();
@@ -850,8 +883,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         syncHistory(buildLoginPath(), true);
       }
     },
-    [applyPathFromLocation, tentarRestaurarSimulacaoSessao],
+    [navigateTo, tentarRestaurarSimulacaoSessao],
   );
+
+  const finalizarTrocaSenhaObrigatoria = useCallback(() => {
+    const atual = userRef.current;
+    if (!atual) return;
+    const next = { ...atual, must_change_password: false };
+    setUserState(next);
+    userRef.current = next;
+    sessionStorage.removeItem(PENDING_RETURN_PATH_KEY);
+    sessionStorage.removeItem(SEM_ACESSO_REASON_KEY);
+    navigateTo("home", null, { replace: true });
+  }, [navigateTo]);
 
   useEffect(() => {
     // Carrega fontes
@@ -1038,6 +1082,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       simuladorRolesPermitidos,
       iniciarSimulacaoLogin,
       encerrarSimulacaoLogin,
+      dadosUsuarioEfetivo,
       permissionsReais,
       permissionsAcoesReais,
       activePage,
@@ -1047,6 +1092,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActivePage,
       navigateTo,
       applyPathFromLocation,
+      finalizarTrocaSenhaObrigatoria,
       goToSemAcesso,
       tutorialVisibility,
       tutorialVisibilityLoaded,
@@ -1075,6 +1121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       simuladorRolesPermitidos,
       iniciarSimulacaoLogin,
       encerrarSimulacaoLogin,
+      dadosUsuarioEfetivo,
       permissionsReais,
       permissionsAcoesReais,
       activePage,
@@ -1084,6 +1131,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActivePage,
       navigateTo,
       applyPathFromLocation,
+      finalizarTrocaSenhaObrigatoria,
       goToSemAcesso,
       tutorialVisibility,
       tutorialVisibilityLoaded,

@@ -8,14 +8,14 @@ import {
 } from "../../../../lib/aniversarioHoje";
 
 export function useHomePrestadorCelebracoes() {
-  const { user } = useApp();
+  const { user, dadosUsuarioEfetivo } = useApp();
   const [loading, setLoading] = useState(true);
   const [primeiroNome, setPrimeiroNome] = useState("");
   const [aniversarioPessoal, setAniversarioPessoal] = useState(false);
   const [aniversarioEmpresa, setAniversarioEmpresa] = useState(false);
 
   useEffect(() => {
-    const email = user?.email?.trim();
+    const email = (dadosUsuarioEfetivo?.email ?? user?.email)?.trim();
     if (!email) {
       setLoading(false);
       setAniversarioPessoal(false);
@@ -31,7 +31,7 @@ export function useHomePrestadorCelebracoes() {
         const row = await buscarRhFuncionarioAtivoPorEmailLogin(email);
         if (cancelled) return;
 
-        const nomeCadastro = row?.nome?.trim() || user?.name?.trim() || "Prestador";
+        const nomeCadastro = row?.nome?.trim() || dadosUsuarioEfetivo?.name?.trim() || user?.name?.trim() || "Prestador";
         const primeiro = extrairPrimeiroNome(nomeCadastro) || "Prestador";
         setPrimeiroNome(primeiro);
         setAniversarioPessoal(isAniversarioHoje(row?.data_nascimento));
@@ -51,7 +51,7 @@ export function useHomePrestadorCelebracoes() {
     return () => {
       cancelled = true;
     };
-  }, [user?.email, user?.name]);
+  }, [user?.email, user?.name, dadosUsuarioEfetivo?.email, dadosUsuarioEfetivo?.name]);
 
   return { loading, primeiroNome, aniversarioPessoal, aniversarioEmpresa };
 }

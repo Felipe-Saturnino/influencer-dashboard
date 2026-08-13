@@ -22,3 +22,10 @@ export async function urlAssinadaPortalRhAsset(storagePath: string | null | unde
   if (error || !data?.signedUrl) return null;
   return data.signedUrl;
 }
+
+export {
+  abrirAssetAssinadoEmNovaAba,
+  ERRO_ABRIR_ASSET_POPUP,
+  ERRO_ABRIR_ASSET_URL,
+} from "./abrirAssetAssinadoEmNovaAba";
+export type { AbrirAssetAssinadoResultado } from "./abrirAssetAssinadoEmNovaAba";

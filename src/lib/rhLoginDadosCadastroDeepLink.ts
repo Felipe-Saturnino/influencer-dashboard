@@ -1,7 +1,8 @@
 import { buildLoginPath } from "./appRoutes";
 
 /**
- * URL de login com e-mail pré-preenchido → após sucesso abre Dados de Cadastro.
+ * URL de login com e-mail pré-preenchido.
+ * Após o login a plataforma abre sempre a Home (revisão cadastral pendente aparece lá).
  * O e-mail Spin deve ser o mesmo do login em `profiles` / Supabase Auth para casar com `rh_funcionarios.email_spin`.
  */
 export function buildLoginUrlComPrefillDadosCadastro(emailSpin: string): string {
@@ -10,7 +11,6 @@ export function buildLoginUrlComPrefillDadosCadastro(emailSpin: string): string 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const q = new URLSearchParams({
     login_email: e,
-    after_login: "rh_dados_cadastro",
   });
   return `${origin}${buildLoginPath()}?${q.toString()}`;
 }

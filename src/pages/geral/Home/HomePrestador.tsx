@@ -8,11 +8,13 @@ import { AtalhosPrestador } from "./prestador/AtalhosPrestador";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
 
 export default function HomePrestador() {
-  const { theme: t, user } = useApp();
+  const { theme: t, user, dadosUsuarioEfetivo, simulacaoLogin } = useApp();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Prestador";
+  const nome = simulacaoLogin
+    ? user.name?.trim() || "Prestador"
+    : dadosUsuarioEfetivo?.name?.trim() || user.name?.trim() || "Prestador";
 
   return (
     <div

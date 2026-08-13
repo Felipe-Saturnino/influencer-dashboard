@@ -88,6 +88,14 @@ export function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | unde
   return "Escalado";
 }
 
+/**
+ * Overview Prestador — dias de jornada no quadro (KPI Escalados / cobertura).
+ * Inclui **Atestado** quando a grade foi reescrita após atestado aprovado (antes caía em Escalado).
+ */
+export function situacaoOverviewContaComoEscalado(situacao: string): boolean {
+  return situacao === "Escalado" || situacao === "Atestado";
+}
+
 export function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
   return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca" || turnoNome === "Atestado";
 }

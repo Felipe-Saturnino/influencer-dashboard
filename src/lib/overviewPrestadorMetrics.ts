@@ -26,6 +26,7 @@ import {
   primeiroValorGradeDiaParaPrestador,
   saidaAntecipadaMais5Min,
   situacaoGestaoEscalaParaDia,
+  situacaoOverviewContaComoEscalado,
   statusPresencaNoDia,
   toIsoLocal,
   type OpTurnosHorarioPick,
@@ -290,7 +291,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
         }
       }
 
-      if (situacao === "Escalado") {
+      if (situacaoOverviewContaComoEscalado(situacao)) {
         diasEscalado += 1;
         const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
         if (escMin != null) horasEscaladasMin += escMin;

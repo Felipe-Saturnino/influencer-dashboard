@@ -26,7 +26,7 @@ function mapPasswordUpdateError(raw: string | undefined): string {
  * Não permite pular — usuário acabou de logar com a senha temporária.
  */
 export default function TrocarSenhaObrigatorio() {
-  const { user, setUser, theme: t } = useApp();
+  const { user, finalizarTrocaSenhaObrigatoria, theme: t } = useApp();
   const [newPass, setNewPass] = useState("");
   const [confPass, setConfPass] = useState("");
   const [err, setErr] = useState("");
@@ -63,6 +63,13 @@ export default function TrocarSenhaObrigatorio() {
     setErr("");
     setOk(false);
     if (newPass.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
+    if (!(/[a-z]/.test(newPass) && /[A-Z]/.test(newPass))) {
+      return setErr("A senha deve combinar letras maiúsculas e minúsculas.");
+    }
+    if (!/\d/.test(newPass)) return setErr("A senha deve ter pelo menos um número.");
+    if (!/[^a-zA-Z0-9]/.test(newPass)) {
+      return setErr("A senha deve ter pelo menos um caractere especial.");
+    }
     if (newPass !== confPass) return setErr("As senhas não coincidem.");
 
     setSaving(true);
@@ -85,15 +92,15 @@ export default function TrocarSenhaObrigatorio() {
     setOk(true);
     setNewPass("");
     setConfPass("");
-    const u = { ...user!, must_change_password: false };
     if (redirectTimerRef.current != null) clearTimeout(redirectTimerRef.current);
     redirectTimerRef.current = setTimeout(() => {
       redirectTimerRef.current = null;
-      setUser(u);
+      finalizarTrocaSenhaObrigatoria();
     }, 1500);
   }
 
-  const submitDisabled = saving || newPass.length < 8 || newPass !== confPass;
+  const requisitosOk = reqs.every((r) => r.ok);
+  const submitDisabled = saving || !requisitosOk || newPass !== confPass || confPass.length === 0;
 
   const inputStyle: CSSProperties = {
     width: "100%",
@@ -240,6 +247,12 @@ export default function TrocarSenhaObrigatorio() {
             </div>
           )}
 
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!submitDisabled) void handleTrocar();
+            }}
+          >
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>Nova senha</label>
             <div style={{ position: "relative" }}>
@@ -376,8 +389,7 @@ export default function TrocarSenhaObrigatorio() {
           </div>
 
           <button
-            type="button"
-            onClick={handleTrocar}
+            type="submit"
             disabled={submitDisabled}
             aria-busy={saving}
             aria-disabled={submitDisabled}
@@ -414,6 +426,7 @@ export default function TrocarSenhaObrigatorio() {
               </>
             )}
           </button>
+          </form>
         </div>
       </div>
     </div>

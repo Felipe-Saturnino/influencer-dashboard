@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { fetchAllPages } from "../lib/supabasePaginate";
 import { buildOperadoraParaEstudioMap } from "../pages/rh/GestaoStaff/gestaoStaffEstudioHelpers";
 import { fetchEstudiosSpinRows, fetchMesasSpinCadastroRows } from "../pages/plataforma/GestaoMesas/gestaoMesasFetch";
 import type { RhFuncionario } from "../types/rhFuncionario";
@@ -7,6 +8,7 @@ import type {
   PerformanceHubDadosPrefill,
   PerformanceHubEstudioCadastro,
   PerformanceHubMesaCadastro,
+  RhFuncionarioPerformanceHubCadastro,
 } from "../lib/academyPerformanceHubCadastroPrefill";
 import type { PerformanceHubStaffOption, PerformanceHubTimeSlug } from "../lib/academyPerformanceHubTypes";
 import type { PerformanceHubStaffAgendaFonte } from "../lib/academyPerformanceHubAgenda";
@@ -15,13 +17,13 @@ import {
   mapRhFuncionarioParaPerformanceHubDados,
   mapTurnoRhParaPerformanceHub,
 } from "../lib/academyPerformanceHubCadastroPrefill";
+import {
+  agruparTimeIdsPorSlugPerformanceHub,
+  slugTimePerformanceHubDeId,
+  type PerformanceHubOrgTimeRow,
+} from "../lib/academyPerformanceHubStaffTimes";
 
-type StaffTimeRow = { id: string; nome: string };
-
-const TIME_NOME_POR_SLUG: Record<PerformanceHubTimeSlug, string> = {
-  game_presenter: "Game Presenter",
-  shuffler: "Shuffler",
-};
+type StaffTimeRow = PerformanceHubOrgTimeRow;
 
 function normalizarNomeStaff(nome: string): string {
   return nome.trim().toLowerCase();
@@ -55,8 +57,9 @@ export function usePerformanceHubCadastro() {
     async function carregar() {
       setLoading(true);
 
-      const [timesRes, estudiosRows, mesasRows] = await Promise.all([
+      const [timesRes, timesOrgRes, estudiosRows, mesasRows] = await Promise.all([
         supabase.rpc("rh_staff_times_filtrados"),
+        supabase.from("rh_org_times").select("id, nome").eq("status", "ativo"),
         fetchEstudiosSpinRows(),
         fetchMesasSpinCadastroRows(),
       ]);
@@ -86,30 +89,39 @@ export function usePerformanceHubCadastro() {
         mesa_identificacao: m.mesa_identificacao ?? "",
       }));
 
-      const times = (timesRes.data ?? []) as StaffTimeRow[];
-      const timeIdPorSlug: Partial<Record<PerformanceHubTimeSlug, string>> = {};
-      for (const slug of Object.keys(TIME_NOME_POR_SLUG) as PerformanceHubTimeSlug[]) {
-        const alvo = TIME_NOME_POR_SLUG[slug].toLowerCase();
-        const found = times.find((t) => t.nome.trim().toLowerCase() === alvo);
-        if (found) timeIdPorSlug[slug] = found.id;
+      if (timesRes.error) {
+        console.error("Performance Hub: falha ao carregar times (RPC)", timesRes.error);
+      }
+      if (timesOrgRes.error) {
+        console.error("Performance Hub: falha ao carregar times (organograma)", timesOrgRes.error);
       }
 
-      const timeIds = Object.values(timeIdPorSlug).filter(Boolean);
-      let funcionarios: RhFuncionario[] = [];
+      const timesPorId = new Map<string, StaffTimeRow>();
+      for (const row of [...((timesRes.data ?? []) as StaffTimeRow[]), ...((timesOrgRes.data ?? []) as StaffTimeRow[])]) {
+        const id = row.id?.trim();
+        if (!id) continue;
+        timesPorId.set(id, { id, nome: row.nome ?? "" });
+      }
+      const idsPorSlug = agruparTimeIdsPorSlugPerformanceHub([...timesPorId.values()]);
+      const timeIds = [...idsPorSlug.game_presenter, ...idsPorSlug.shuffler];
+      let funcionarios: RhFuncionarioPerformanceHubCadastro[] = [];
 
       if (timeIds.length > 0) {
-        const { data, error } = await supabase
-          .from("rh_funcionarios")
-          .select(
-            "id, nome, status, escala, staff_turno, staff_estudio_slug, staff_estudio_slugs, staff_operadora_slug, staff_skills, org_time_id, staff_live_no_estudio, data_inicio",
-          )
-          .in("org_time_id", timeIds)
-          .in("status", ["ativo", "indisponivel"]);
-
-        if (error) {
+        try {
+          funcionarios = await fetchAllPages<RhFuncionarioPerformanceHubCadastro>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("rh_funcionarios")
+              .select(
+                "id, nome, status, escala, staff_turno, staff_estudio_slug, staff_estudio_slugs, staff_operadora_slug, staff_skills, org_time_id, staff_live_no_estudio, data_inicio",
+              )
+              .in("org_time_id", timeIds)
+              .in("status", ["ativo", "indisponivel"])
+              .order("nome", { ascending: true })
+              .range(from, to);
+            return { data: (data ?? null) as RhFuncionarioPerformanceHubCadastro[] | null, error };
+          });
+        } catch (error) {
           console.error("Performance Hub: falha ao carregar prestadores", error);
-        } else {
-          funcionarios = (data ?? []) as RhFuncionario[];
         }
       }
 
@@ -128,8 +140,7 @@ export function usePerformanceHubCadastro() {
       const nextStaffIdNome: Record<string, string> = {};
 
       for (const row of funcionarios) {
-        const timeSlug = (Object.entries(timeIdPorSlug).find(([, id]) => id === row.org_time_id)?.[0] ??
-          null) as PerformanceHubTimeSlug | null;
+        const timeSlug = slugTimePerformanceHubDeId(row.org_time_id, idsPorSlug);
         if (!timeSlug) continue;
 
         const turno = turnoLabelStaff(row);

@@ -5,6 +5,7 @@ import { getPeriodoHistoricoCompetencias } from "../../../../lib/dashboardHelper
 import {
   autorIdPostagem,
   carregarMetaAutoresPortalRh,
+  type PortalRhAutorInfo,
 } from "../../../../lib/portalRhAutorMeta";
 import {
   documentoVisivelPorPermissaoPortalRh,
@@ -80,8 +81,20 @@ export function useHomePortalRhFeed() {
           "id, titulo, status, published_at, created_by, published_by, aplicavel_a";
         const talkCols = "id, titulo, status, published_at, created_by, published_by";
 
-        const [comData, docData, talkData, funcionario, org] = await Promise.all([
-          fetchAllPages<PostagemRow & { is_pinned?: boolean | null }>(async (from, to) => {
+        const fetchPortalSafe = async <T,>(
+          label: string,
+          run: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
+        ): Promise<{ rows: T[]; falhou: boolean }> => {
+          try {
+            return { rows: await fetchAllPages(run), falhou: false };
+          } catch (e) {
+            console.error(`[Home] Portal RH feed (${label}):`, e);
+            return { rows: [], falhou: true };
+          }
+        };
+
+        const [comRes, docRes, talkRes, funcionario, org] = await Promise.all([
+          fetchPortalSafe<PostagemRow & { is_pinned?: boolean | null }>("comunicados", async (from, to) => {
             const { data, error } = await supabase
               .from("rh_portal_comunicado")
               .select(comCols)
@@ -92,7 +105,7 @@ export function useHomePortalRhFeed() {
               .range(from, to);
             return { data: (data ?? []) as (PostagemRow & { is_pinned?: boolean | null })[], error };
           }),
-          fetchAllPages<DocRow>(async (from, to) => {
+          fetchPortalSafe<DocRow>("politicas", async (from, to) => {
             const { data, error } = await supabase
               .from("rh_portal_documento")
               .select(docCols)
@@ -103,7 +116,7 @@ export function useHomePortalRhFeed() {
               .range(from, to);
             return { data: (data ?? []) as DocRow[], error };
           }),
-          fetchAllPages<PostagemRow>(async (from, to) => {
+          fetchPortalSafe<PostagemRow>("rh-talks", async (from, to) => {
             const { data, error } = await supabase
               .from("rh_portal_rh_talk")
               .select(talkCols)
@@ -114,13 +127,24 @@ export function useHomePortalRhFeed() {
               .range(from, to);
             return { data: (data ?? []) as PostagemRow[], error };
           }),
-          user.email?.trim()
-            ? buscarRhFuncionarioAtivoPorEmailLogin(user.email)
-            : Promise.resolve(null),
+          (async () => {
+            if (!user.email?.trim()) return null;
+            try {
+              return await buscarRhFuncionarioAtivoPorEmailLogin(user.email);
+            } catch (e) {
+              console.error("[Home] Portal RH feed (funcionario):", e);
+              return null;
+            }
+          })(),
           carregarOpcoesTimesOrganograma(),
         ]);
 
         if (cancelled) return;
+
+        const comData = comRes.rows;
+        const docData = docRes.rows;
+        const talkData = talkRes.rows;
+        const fontesFalharam = comRes.falhou && docRes.falhou && talkRes.falhou;
 
         const setores = funcionario
           ? setoresAplicavelDoUsuario(funcionario, flattenVinculosDeGrupos(org.grupos))
@@ -172,7 +196,12 @@ export function useHomePortalRhFeed() {
         }
 
         const autorIds = drafts.map((d) => d.autorId).filter((id): id is string => !!id);
-        const meta = await carregarMetaAutoresPortalRh(autorIds);
+        let meta: Record<string, PortalRhAutorInfo> = {};
+        try {
+          meta = await carregarMetaAutoresPortalRh(autorIds);
+        } catch (e) {
+          console.error("[Home] Portal RH feed (autores):", e);
+        }
         if (cancelled) return;
 
         const listaFinal: HomePortalRhItem[] = drafts
@@ -186,6 +215,7 @@ export function useHomePortalRhFeed() {
           .sort((a, b) => tsItem(b) - tsItem(a));
 
         setLista(listaFinal);
+        setErro(fontesFalharam && listaFinal.length === 0);
       } catch (e) {
         console.error("[Home] Portal RH feed:", e);
         if (!cancelled) {
