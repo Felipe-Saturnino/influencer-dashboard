@@ -217,6 +217,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Métricas de escala e presença dependem de escala publicada e registros no Calendário. Verifique se o prestador ou time selecionado tem turnos no período e se justificativas pendentes não estão bloqueando o fechamento.",
       },
       {
+        subtitulo: "A Presença parece baixa no meio do mês?",
+        texto:
+          "No mês corrente, **realizado**, Presença, Pontualidade e Controle de Presença fecham em **hoje**. As jornadas ainda não trabalhadas (dias futuros da escala publicada) não entram no denominador. O card de jornadas/dias **escalados** continua o mês publicado, alinhado à Escala Estúdio.",
+      },
+      {
+        subtitulo: "A página demora ou mostra Carregando… na barra de filtros?",
+        texto:
+          "O resumo do mês selecionado aparece primeiro. O comparativo com o mês anterior e o Histórico seguem em segundo plano — o relógio na barra indica essa carga. Se a mensagem de erro persistir, use **Tentar de novo**. Se o problema continuar, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Não vejo a aba KPIs de Mesa ou KPIs de OCR?",
         texto:
           "A segunda aba aparece conforme o time: **Game Presenter** e **Shuffler** → **KPIs de Mesa**; **Service Manager** → **KPIs de OCR**; **Shift Leader** → a aba não aparece. Com Ver = Próprios, o time vem do Organograma do seu cadastro.",
@@ -229,7 +239,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs de OCR sem números?",
         texto:
-          "Confirme o mês (ou Histórico), o time **Service Manager** e o Staff. **Sinais** usam os atendimentos resolvidos pelo SM; **Tickets** usam incidentes em que o SM é o **relator**. Sem Staff, o consolidado cobre todos os SMs do time. O mês corrente inclui até **hoje** (igual à aba Sinais em Incidentes). Se o SM não tiver ID TOS em Gestão de Staff, o vínculo do sinal pode falhar — cadastre o ID TOS. Sem linhas: \"Sem dados para o período selecionado.\"",
+          "Confirme o mês (ou Histórico), o time **Service Manager** e o Staff (**Todo o time** = consolidado). **Sinais** usam os atendimentos resolvidos pelo SM; **Tickets** usam incidentes em que o SM é o **relator**. O mês corrente inclui até **hoje** (igual à aba Sinais em Incidentes). Se o SM não tiver ID TOS em Gestão de Staff, o vínculo do sinal pode falhar — cadastre o ID TOS. Sem linhas: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -759,7 +769,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite é **500 MB** por arquivo (cerca de **512.000 KB**). Um vídeo de **300.000 KB** (~293 MB) está **dentro** do limite — se o envio falhar nesse tamanho, não é o teto do arquivo: mantenha a aba aberta até o progresso **Enviando X%…** chegar a 100% e tente de novo se aparecer falha de conexão.\n\nSe a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+          "O limite é **500 MB** por arquivo (cerca de **512.000 KB**). Um vídeo de **300.000 KB** (~293 MB) está **dentro** do limite — se o envio falhar nesse tamanho, não é o teto do arquivo.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão ou «Não foi possível enviar o vídeo», tente de novo na mesma avaliação.\n\nSe a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",

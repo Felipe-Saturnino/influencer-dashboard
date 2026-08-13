@@ -208,7 +208,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual (na Escala, nos KPIs de Mesa e nos KPIs de OCR).\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
+          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: vazio mostra **Todo o time** (consolidado); ao escolher um prestador, a visão passa a ser individual (na Escala, nos KPIs de Mesa e nos KPIs de OCR).\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
       },
       {
         subtitulo: "Visão de time vs individual",
@@ -218,7 +218,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Escala — Resumo e aderência",
         texto:
-          "Quatro cards com o **mês civil completo** (não só até hoje) e comparativo ao mês anterior inteiro (sem MoM no Histórico): jornadas/dias e horas escaladas vs realizadas — alinhados à Escala Estúdio do período.\n\nEm seguida, Aderência (time) ou Absenteísmo (individual): Presença (só no time), Pontualidade, **Controle de Presença** (check-in/check-out não registrados) e Atestados.",
+          "Quatro cards com comparativo ao mês anterior inteiro (sem MoM no Histórico): jornadas/dias e horas **escaladas** no mês publicado (alinhadas à Escala Estúdio) vs **realizadas** só até **hoje** no mês corrente — dias futuros da escala não entram em presença, pontualidade nem controle de presença.\n\nEm seguida, Aderência (time) ou Absenteísmo (individual): Presença (só no time, realizadas ÷ escaladas até hoje), Pontualidade, **Controle de Presença** (check-in/check-out não registrados) e Atestados.",
       },
       {
         subtitulo: "Aproveitamento, movimentações e estúdio",
@@ -233,7 +233,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Detalhamento Diário",
         texto:
-          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time). Ocorrências: Troca, Atestado, Atraso, Esquecimento, Outro, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
+          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time), ordenável e paginada. Ocorrências: Troca, Atestado, Atraso, Esquecimento, Outro, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
       },
       {
         subtitulo: "Aba KPIs de Mesa",
@@ -243,7 +243,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de OCR",
         texto:
-          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos (`sm_sinais`) pelo SM selecionado — ou por todos os SMs do time quando o Staff está vazio. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); sem Staff, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas, a partir dos sinais e dos tickets com mesa), **Equipe** (só na visão de time / Staff vazio — ranking por SM, com coluna Performance) e **Detalhamento Diário**. O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
+          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos pelo SM selecionado — ou por todos os SMs do time quando o filtro está em **Todo o time**. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); em Todo o time, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior em formato de relógio nos TMAs; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas) e **Equipe** (só na visão de time — ranking por SM: sinais, TMAs e tickets) e **Detalhamento Diário**. O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
       },
     ],
   },

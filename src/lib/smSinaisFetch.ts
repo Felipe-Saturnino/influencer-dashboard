@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { fetchAllPages } from "./supabasePaginate";
+import { fetchAllPages, fetchInBatched } from "./supabasePaginate";
 import type { SmSinalRow, SmSinalStaffOption } from "./smSinaisTypes";
 
 function orgTimeEhServiceManager(nome: string): boolean {
@@ -88,22 +88,86 @@ export async function fetchSmSinaisPeriodo(opts: {
   return rows.map(mapSmSinalLeve);
 }
 
-/** Sinais com jogo/mesa — Overview Prestador → KPIs de OCR. */
+/** Sinais com jogo/mesa — Overview Prestador → KPIs de OCR. Filtra no servidor por SM. */
 export async function fetchSmSinaisPeriodoOcr(opts: {
   dataIni: string;
   dataFim: string;
+  funcionarioIds?: string[];
+  resolverTosIds?: string[];
 }): Promise<SmSinalRow[]> {
-  const rows = await fetchAllPages<Record<string, unknown>>(async (from, to) => {
-    const { data, error } = await supabase
-      .from("sm_sinais")
-      .select(SM_SINAL_SELECT_OCR)
-      .gte("dia_brt", opts.dataIni)
-      .lte("dia_brt", opts.dataFim)
-      .order("dia_brt", { ascending: false })
-      .range(from, to);
-    return { data: (data as Record<string, unknown>[] | null) ?? null, error };
-  });
-  return rows.map(mapSmSinalLeve);
+  const fids = [...new Set((opts.funcionarioIds ?? []).map((x) => x.trim()).filter(Boolean))];
+  const tos = [...new Set((opts.resolverTosIds ?? []).map((x) => x.trim()).filter(Boolean))];
+  if ((opts.funcionarioIds || opts.resolverTosIds) && fids.length === 0 && tos.length === 0) {
+    return [];
+  }
+
+  const porId = new Map<string, SmSinalRow>();
+  const ingest = (rows: Record<string, unknown>[]) => {
+    for (const raw of rows) {
+      const mapped = mapSmSinalLeve(raw);
+      if (mapped.id) porId.set(mapped.id, mapped);
+    }
+  };
+
+  if (fids.length === 0 && tos.length === 0) {
+    ingest(
+      await fetchAllPages<Record<string, unknown>>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("sm_sinais")
+          .select(SM_SINAL_SELECT_OCR)
+          .gte("dia_brt", opts.dataIni)
+          .lte("dia_brt", opts.dataFim)
+          .order("dia_brt", { ascending: false })
+          .range(from, to);
+        return { data: (data as Record<string, unknown>[] | null) ?? null, error };
+      }),
+    );
+    return [...porId.values()];
+  }
+
+  if (fids.length > 0) {
+    ingest(
+      await fetchInBatched(
+        fids,
+        80,
+        (slice) =>
+          fetchAllPages<Record<string, unknown>>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("sm_sinais")
+              .select(SM_SINAL_SELECT_OCR)
+              .gte("dia_brt", opts.dataIni)
+              .lte("dia_brt", opts.dataFim)
+              .in("resolver_funcionario_id", slice)
+              .order("dia_brt", { ascending: false })
+              .range(from, to);
+            return { data: (data as Record<string, unknown>[] | null) ?? null, error };
+          }),
+        2,
+      ),
+    );
+  }
+  if (tos.length > 0) {
+    ingest(
+      await fetchInBatched(
+        tos,
+        80,
+        (slice) =>
+          fetchAllPages<Record<string, unknown>>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("sm_sinais")
+              .select(SM_SINAL_SELECT_OCR)
+              .gte("dia_brt", opts.dataIni)
+              .lte("dia_brt", opts.dataFim)
+              .in("resolver_id", slice)
+              .order("dia_brt", { ascending: false })
+              .range(from, to);
+            return { data: (data as Record<string, unknown>[] | null) ?? null, error };
+          }),
+        2,
+      ),
+    );
+  }
+  return [...porId.values()];
 }
 
 /** Service Managers ativos/indisponíveis — filtro Staff da aba Sinais. */

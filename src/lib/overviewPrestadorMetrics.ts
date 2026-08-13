@@ -68,6 +68,11 @@ export type OverviewPrestadorMetricas = {
   turnosVendidos: number;
   /** Ofertas venda_folga — célula Venda do interessado (sem espelhar a Compra). */
   folgasVendidas: number;
+  /**
+   * Jornadas escaladas até `periodoFimAderencia` (hoje no mês corrente).
+   * Denominador de Presença / Pontualidade / Controle de Presença.
+   */
+  diasEscaladoAderencia: number;
   detalhamento: OverviewPrestadorDetalheLinha[];
 };
 
@@ -84,6 +89,7 @@ export const OVERVIEW_PRESTADOR_METRICAS_ZERO: OverviewPrestadorMetricas = {
   trocas: 0,
   turnosVendidos: 0,
   folgasVendidas: 0,
+  diasEscaladoAderencia: 0,
   detalhamento: [],
 };
 
@@ -98,6 +104,11 @@ export type CalcularMetricasPrestadorInput = {
   movimentacoes?: Map<string, OverviewPrestadorMovimentacaoCelula>;
   periodoInicio: string;
   periodoFim: string;
+  /**
+   * Fecha presença/realizado (hoje no mês corrente). Escalado publicado usa `periodoFim`.
+   * Default = `periodoFim`.
+   */
+  periodoFimAderencia?: string;
   /** Meses a iterar (ano, mes0) — ex.: mês do carrossel ou todos no histórico. */
   mesesRef: { ano: number; mes: number }[];
 };
@@ -154,8 +165,10 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
     movimentacoes,
     periodoInicio,
     periodoFim,
+    periodoFimAderencia: periodoFimAderenciaRaw,
     mesesRef,
   } = input;
+  const periodoFimAderencia = periodoFimAderenciaRaw ?? periodoFim;
 
   const mapaPonto = pontoPorDia(pontoRows);
   const detalhamento: OverviewPrestadorDetalheLinha[] = [];
@@ -173,11 +186,13 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
   let trocas = 0;
   let turnosVendidos = 0;
   let folgasVendidas = 0;
+  let diasEscaladoAderencia = 0;
 
   for (const { ano, mes } of mesesRef) {
     for (const dia of diasDoMesRef(ano, mes)) {
       const iso = toIsoLocal(dia);
       if (!isoEstaNoPeriodo(iso, periodoInicio, periodoFim)) continue;
+      const noAderencia = iso > periodoFimAderencia;
 
       const valorG = primeiroValorGradeDiaParaPrestador(gradeRows, funcionarioId, iso, prestador);
       const situacao = situacaoGestaoEscalaParaDia(valorG);
@@ -261,20 +276,22 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
             just.atestadoInicio,
             just.atestadoFim,
             periodoInicio,
-            periodoFim,
+            periodoFimAderencia,
           );
           if (dias > 0) {
             diasAtestado += dias;
-            detalhamento.push({
-              dataIso: iso,
-              ocorrencia: "Atestado",
-              detalhe: `${dias} ${dias === 1 ? "dia" : "dias"}`,
-            });
+            if (!noAderencia) {
+              detalhamento.push({
+                dataIso: iso,
+                ocorrencia: "Atestado",
+                detalhe: `${dias} ${dias === 1 ? "dia" : "dias"}`,
+              });
+            }
           }
         }
       }
 
-      if (just?.motivo === "esquecimento" || just?.motivo === "outro") {
+      if (!noAderencia && (just?.motivo === "esquecimento" || just?.motivo === "outro")) {
         const faltouCheckIn = !temCheckIn;
         const faltouCheckOut = !temCheckOut;
         if (faltouCheckIn) checkInNaoRegistrado += 1;
@@ -295,19 +312,29 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
         diasEscalado += 1;
         const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
         if (escMin != null) horasEscaladasMin += escMin;
+        if (!noAderencia) diasEscaladoAderencia += 1;
 
-        if (temCheckIn || status === "Aprovado" || status === "Atestado" || status === "Abonado") {
+        if (
+          !noAderencia &&
+          (temCheckIn || status === "Aprovado" || status === "Atestado" || status === "Abonado")
+        ) {
           diasRealizado += 1;
         }
 
         const realMin =
           duracaoMinutosEntreTimestampsIso(checkInIso, checkOutIso) ??
           duracaoMinutosRelogioHHMM(entRealExib, saiRealExib);
-        if (realMin != null && temCheckIn && temCheckOut) {
+        if (!noAderencia && realMin != null && temCheckIn && temCheckOut) {
           horasRealizadasMin += realMin;
         }
 
-        if (temCheckIn && entEsc !== "—" && entRealExib !== "—" && entradaAtrasadaMais5Min(entEsc, entRealExib)) {
+        if (
+          !noAderencia &&
+          temCheckIn &&
+          entEsc !== "—" &&
+          entRealExib !== "—" &&
+          entradaAtrasadaMais5Min(entEsc, entRealExib)
+        ) {
           entradasAtrasadas += 1;
           const diff = (() => {
             const m1 = /^(\d{1,2}):(\d{2})$/.exec(entEsc.trim());
@@ -322,7 +349,13 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
           });
         }
 
-        if (temCheckOut && saiEsc !== "—" && saiRealExib !== "—" && saidaAntecipadaMais5Min(saiEsc, saiRealExib)) {
+        if (
+          !noAderencia &&
+          temCheckOut &&
+          saiEsc !== "—" &&
+          saiRealExib !== "—" &&
+          saidaAntecipadaMais5Min(saiEsc, saiRealExib)
+        ) {
           saidasAntecipadas += 1;
           const diff = (() => {
             const m1 = /^(\d{1,2}):(\d{2})$/.exec(saiEsc.trim());
@@ -358,6 +391,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
     trocas,
     turnosVendidos,
     folgasVendidas,
+    diasEscaladoAderencia,
     detalhamento,
   };
 }
@@ -379,6 +413,7 @@ export function somarMetricasPrestador(
     out.trocas += m.trocas;
     out.turnosVendidos += m.turnosVendidos;
     out.folgasVendidas += m.folgasVendidas;
+    out.diasEscaladoAderencia += m.diasEscaladoAderencia;
     out.detalhamento.push(...m.detalhamento);
   }
   out.detalhamento.sort((a, b) => b.dataIso.localeCompare(a.dataIso));
@@ -397,8 +432,9 @@ export type OverviewPrestadorAtencaoLinha = {
 };
 
 export function severidadeAtencaoPrestador(m: OverviewPrestadorMetricas): "alta" | "media" | "ok" {
+  const denom = m.diasEscaladoAderencia > 0 ? m.diasEscaladoAderencia : m.diasEscalado;
   const presenca =
-    m.diasEscalado > 0 ? (m.diasRealizado / m.diasEscalado) * 100 : null;
+    denom > 0 ? (m.diasRealizado / denom) * 100 : null;
   const ocorrencias =
     m.entradasAtrasadas +
     m.saidasAntecipadas +
@@ -416,8 +452,9 @@ export function montarLinhaAtencao(
   timeRotulo: string,
   m: OverviewPrestadorMetricas,
 ): OverviewPrestadorAtencaoLinha {
+  const denom = m.diasEscaladoAderencia > 0 ? m.diasEscaladoAderencia : m.diasEscalado;
   const presencaPct =
-    m.diasEscalado > 0 ? Math.round((m.diasRealizado / m.diasEscalado) * 1000) / 10 : null;
+    denom > 0 ? Math.round((m.diasRealizado / denom) * 1000) / 10 : null;
   return {
     prestadorId,
     nome,
@@ -435,6 +472,8 @@ export type OverviewPrestadorCoberturaLinha = {
   label: string;
   prestadores: number;
   jornadasEscaladas: number;
+  /** Escaladas até hoje no mês corrente — denominador da coluna Presença. */
+  jornadasEscaladasAderencia: number;
   jornadasRealizadas: number;
   movimentacoes: number;
 };

@@ -960,7 +960,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "KPIs de OCR",
         definicao:
-          "Aba do Overview Prestador para o time Service Manager: Sinais atendidos, TMAs (Total, Atendimento, Resolução) e Tickets em que o SM é o relator. Staff vazio = consolidado do time (bloco **Equipe**); Staff ou Próprios = só aquele SM (sem Equipe).",
+          "Aba do Overview Prestador para o time Service Manager: Sinais atendidos, TMAs (Total, Atendimento, Resolução) e Tickets em que o SM é o relator. Filtro em **Todo o time** = consolidado do time (bloco **Equipe**); Staff ou Próprios = só aquele SM (sem Equipe).",
         referencia: "Overview Prestador",
       },
       {

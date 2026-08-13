@@ -30,7 +30,7 @@ type Props = {
 
 type SortJogoCol = "jogo" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets";
 type SortEstCol = "estudio" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets";
-type SortAtencaoCol = "nome" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets" | "performance";
+type SortAtencaoCol = "nome" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets";
 type SortDiaCol = "dia" | "sinais" | "tmaTotal" | "tmaAtend" | "tmaRes" | "tickets";
 
 function fmtDiaBr(iso: string): string {
@@ -92,7 +92,7 @@ export function OverviewPrestadorAbaKpisOcr({
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           {visaoTime
             ? "Selecione um time para visualizar os resultados."
-            : "Selecione um prestador no filtro Staff para ver os KPIs de OCR."}
+            : "Selecione um prestador no filtro para ver os KPIs de OCR."}
         </div>
       </div>
     );
@@ -238,8 +238,6 @@ function OverviewPrestadorAbaKpisOcrConteudo({
           return compareNumber(numOrNeg(a.tmaResolucaoMs), numOrNeg(b.tmaResolucaoMs), dir);
         case "tickets":
           return compareNumber(a.tickets, b.tickets, dir);
-        case "performance":
-          return 0;
         default:
           return 0;
       }
@@ -342,6 +340,7 @@ function OverviewPrestadorAbaKpisOcrConteudo({
               isHistorico={historico}
               isInverso
               vsLegendaSuffix="mês ant."
+              formatAnterior={(s) => fmtDuracaoMs(s * 1000)}
             />
             <KpiCard
               label="TMA de Atendimento"
@@ -353,6 +352,7 @@ function OverviewPrestadorAbaKpisOcrConteudo({
               isHistorico={historico}
               isInverso
               vsLegendaSuffix="mês ant."
+              formatAnterior={(s) => fmtDuracaoMs(s * 1000)}
             />
             <KpiCard
               label="TMA de Resolução"
@@ -364,6 +364,7 @@ function OverviewPrestadorAbaKpisOcrConteudo({
               isHistorico={historico}
               isInverso
               vsLegendaSuffix="mês ant."
+              formatAnterior={(s) => fmtDuracaoMs(s * 1000)}
             />
             <KpiCard
               label="Tickets"
@@ -531,7 +532,6 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                     <SortTableTh label="TMA de Atendimento" col="tmaAtend" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                     <SortTableTh label="TMA de Resolução" col="tmaRes" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
                     <SortTableTh label="Tickets" col="tickets" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "desc" }))} thStyle={dataTable.thHeader} align="center" />
-                    <SortTableTh label="Performance" col="performance" sortCol={sortAtencao.col} sortDir={sortAtencao.dir} onSort={(c) => setSortAtencao((p) => (p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortAtencaoCol, dir: "asc" }))} thStyle={dataTable.thHeader} align="center" />
                   </tr>
                 </thead>
                 <tbody>
@@ -543,7 +543,6 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                       <td style={dataTable.tdCenter}>{fmtDuracaoMs(r.tmaAtendimentoMs)}</td>
                       <td style={dataTable.tdCenter}>{fmtDuracaoMs(r.tmaResolucaoMs)}</td>
                       <td style={dataTable.tdCenter}>{r.tickets.toLocaleString("pt-BR")}</td>
-                      <td style={dataTable.tdCenter}>—</td>
                     </tr>
                   ))}
                 </tbody>

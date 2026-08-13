@@ -119,6 +119,7 @@ export function OverviewPrestadorFiltroBar({
             selected={filtroStaffIds}
             onChange={onFiltroStaffChange}
             items={staffItems}
+            triggerEmptyLabel="Todo o time"
           />
         )}
 

@@ -78,16 +78,26 @@ export function videoPerformanceHubPodeAssistir(value: string | null | undefined
   return true;
 }
 
+export function statusCodigoNaMensagemTus(message: string): number | null {
+  const match = message.match(/response code:\s*(\d+)/i);
+  if (match) return Number(match[1]);
+  if (/response code:\s*n\/a/i.test(message)) return 0;
+  return null;
+}
+
 export function detalheErroUploadVideo(error: unknown): { message: string; status: number | null } {
-  const message =
-    error && typeof error === "object" && "message" in error
-      ? String((error as { message: unknown }).message ?? "")
-      : String(error ?? "");
+  const partes: string[] = [];
+  if (error && typeof error === "object" && "message" in error) {
+    partes.push(String((error as { message: unknown }).message ?? ""));
+  } else if (error != null) {
+    partes.push(String(error));
+  }
   let status: number | null = null;
   if (error && typeof error === "object") {
     const rec = error as {
       statusCode?: string | number;
-      originalResponse?: { getStatus?: () => number } | null;
+      originalResponse?: { getStatus?: () => number; getBody?: () => string } | null;
+      causingError?: unknown;
     };
     if (typeof rec.statusCode === "number") status = rec.statusCode;
     else if (typeof rec.statusCode === "string" && /^\d+$/.test(rec.statusCode)) {
@@ -95,18 +105,30 @@ export function detalheErroUploadVideo(error: unknown): { message: string; statu
     }
     const fromRes = rec.originalResponse?.getStatus?.();
     if (typeof fromRes === "number" && fromRes > 0) status = fromRes;
+    const body = rec.originalResponse?.getBody?.();
+    if (body?.trim()) partes.push(body.trim());
+    if (rec.causingError != null) {
+      const cause =
+        rec.causingError instanceof Error
+          ? rec.causingError.message
+          : String(rec.causingError);
+      if (cause.trim()) partes.push(cause);
+    }
   }
+  const message = partes.filter(Boolean).join(" ");
+  if (status == null) status = statusCodigoNaMensagemTus(message);
   return { message, status };
 }
 
 export function mensagemErroUploadVideo(error: { message?: string; statusCode?: string | number } | null): string {
   const raw = `${error?.message ?? ""} ${error?.statusCode ?? ""}`.toLowerCase();
-  const status =
+  let status =
     typeof error?.statusCode === "number"
       ? error.statusCode
       : typeof error?.statusCode === "string" && /^\d+$/.test(error.statusCode)
         ? Number(error.statusCode)
         : null;
+  if (status == null) status = statusCodigoNaMensagemTus(error?.message ?? "");
 
   if (raw.includes("bucket") && (raw.includes("not found") || raw.includes("does not exist"))) {
     return "Armazenamento de vídeo ainda não está configurado. Entre em contato com o suporte.";
@@ -120,7 +142,10 @@ export function mensagemErroUploadVideo(error: { message?: string; statusCode?: 
   if (raw.includes("file size limit") || raw.includes("exceeded the maximum allowed size")) {
     return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO;
   }
-  if (status === 409 || raw.includes("409") || raw.includes("conflict")) {
+  if (raw.includes("invalid compact jws") || raw.includes("malformed jwt") || raw.includes("invalid jwt")) {
+    return ERRO_SESSAO;
+  }
+  if (status === 409 || raw.includes("409") || raw.includes("conflict") || raw.includes("already exists")) {
     return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE;
   }
   if (
@@ -129,18 +154,30 @@ export function mensagemErroUploadVideo(error: { message?: string; statusCode?: 
     raw.includes("row-level security") ||
     raw.includes("violates") ||
     raw.includes("permission") ||
-    raw.includes("not authorized")
+    raw.includes("not authorized") ||
+    raw.includes("unauthorized")
   ) {
     return "Você não tem permissão para enviar o vídeo desta avaliação. Se o problema persistir, entre em contato com o suporte.";
   }
   if (
+    status === 0 ||
+    status === 400 ||
+    status === 404 ||
+    status === 408 ||
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    raw.includes("tus:") ||
     raw.includes("network") ||
     raw.includes("timeout") ||
     raw.includes("failed to fetch") ||
     raw.includes("aborted") ||
     raw.includes("econnreset") ||
     raw.includes("load failed") ||
-    raw.includes("cors")
+    raw.includes("cors") ||
+    raw.includes("chunkloaderror")
   ) {
     return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE;
   }
@@ -152,8 +189,8 @@ function mensagemErroDesconhecido(e: unknown): string {
   return mensagemErroUploadVideo({ message, statusCode: status ?? undefined });
 }
 
-function isErroRede(msg: string): boolean {
-  return msg === ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE;
+function deveTentarOutroEndpointTus(msg: string): boolean {
+  return msg === ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE || msg === ERRO_GENERICO;
 }
 
 /** Host direto do Storage (`*.storage.supabase.co`) — melhor para uploads grandes. */
@@ -173,6 +210,16 @@ export function endpointResumableVideoPerformanceHubApi(baseUrl: string = supaba
   return `${baseUrl.replace(/\/$/, "")}/storage/v1/upload/resumable`;
 }
 
+/** JWT compacto (três partes). O Storage rejeita qualquer outro valor com «Invalid Compact JWS». */
+export function tokenJwtCompactValido(token: string | null | undefined): boolean {
+  const raw = (token ?? "").replace(/^Bearer\s+/i, "").trim();
+  return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(raw);
+}
+
+function jwtCompactDaSessao(token: string): string {
+  return token.replace(/^Bearer\s+/i, "").trim();
+}
+
 async function tokenSessaoVideo(): Promise<string | null> {
   const atual = await supabase.auth.getSession();
   let session = atual.data.session;
@@ -181,7 +228,8 @@ async function tokenSessaoVideo(): Promise<string | null> {
     const refreshed = await supabase.auth.refreshSession();
     session = refreshed.data.session ?? session;
   }
-  return session?.access_token?.trim() || null;
+  const jwt = jwtCompactDaSessao(session?.access_token ?? "");
+  return tokenJwtCompactValido(jwt) ? jwt : null;
 }
 
 async function uploadVideoSimples(
@@ -214,7 +262,13 @@ async function uploadVideoResumavelEm(
   if (!accessToken) return { path: "", error: ERRO_SESSAO };
   if (!supabaseUrl) return { path: "", error: ERRO_GENERICO };
 
-  const { Upload } = await import("tus-js-client");
+  let Upload: (typeof import("tus-js-client"))["Upload"];
+  try {
+    ({ Upload } = await import("tus-js-client"));
+  } catch (e) {
+    console.error("Performance Hub: falha ao carregar cliente TUS", e);
+    return { path: "", error: ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE };
+  }
 
   return new Promise((resolve) => {
     let settled = false;
@@ -226,13 +280,13 @@ async function uploadVideoResumavelEm(
 
     const upload = new Upload(file, {
       endpoint,
-      retryDelays: [0, 2000, 5000, 10000, 20000],
+      retryDelays: [0, 3000, 5000, 10000, 20000],
       headers: {
         authorization: `Bearer ${accessToken}`,
-        apikey: supabaseAnonKey,
-        "x-upsert": "false",
+        ...(supabaseAnonKey ? { apikey: supabaseAnonKey } : {}),
+        "x-upsert": "true",
       },
-      uploadDataDuringCreation: false,
+      uploadDataDuringCreation: true,
       storeFingerprintForResuming: false,
       removeFingerprintOnSuccess: true,
       metadata: {
@@ -247,21 +301,22 @@ async function uploadVideoResumavelEm(
         const modified = "lastModified" in fileRef ? String(fileRef.lastModified) : "";
         return Promise.resolve(`ph-video-${path}-${fileRef.size}-${modified}-${nome}`);
       },
-      async onBeforeRequest(req) {
-        const token = await tokenSessaoVideo();
-        if (token) req.setHeader("Authorization", `Bearer ${token}`);
-        if (supabaseAnonKey) req.setHeader("apikey", supabaseAnonKey);
-      },
       onShouldRetry(error, _retryAttempt, _options) {
-        const status = error.originalResponse?.getStatus() ?? 0;
+        const status = error.originalResponse?.getStatus() ?? statusCodigoNaMensagemTus(error.message) ?? 0;
         if (status === 400 || status === 401 || status === 403 || status === 404 || status === 413) {
           return false;
         }
         return true;
       },
       onError(error) {
-        console.error("Performance Hub: falha ao enviar vídeo (resumável)", endpoint, error);
-        finish({ path: "", error: mensagemErroDesconhecido(error) });
+        const detalhe = detalheErroUploadVideo(error);
+        console.error("Performance Hub: falha ao enviar vídeo (resumável)", {
+          endpoint,
+          status: detalhe.status,
+          message: detalhe.message,
+          error,
+        });
+        finish({ path: "", error: mensagemErroUploadVideo({ message: detalhe.message, statusCode: detalhe.status ?? undefined }) });
       },
       onProgress(bytesUploaded, bytesTotal) {
         if (!bytesTotal || !onProgress) return;
@@ -288,8 +343,8 @@ async function uploadVideoResumavel(
   const viaApi = endpointResumableVideoPerformanceHubApi();
   const primeiro = await uploadVideoResumavelEm(direto, path, file, contentType, onProgress);
   if (!primeiro.error) return primeiro;
-  if (direto !== viaApi && isErroRede(primeiro.error)) {
-    console.warn("Performance Hub: retry TUS via API host");
+  if (direto !== viaApi && deveTentarOutroEndpointTus(primeiro.error)) {
+    console.warn("Performance Hub: retry TUS via API host", primeiro.error);
     return uploadVideoResumavelEm(viaApi, path, file, contentType, onProgress);
   }
   return primeiro;

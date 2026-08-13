@@ -48,6 +48,7 @@ import {
   type OverviewPrestadorTimeRotulo,
 } from "../../../lib/overviewPrestadorTeamConfig";
 import {
+  capFimAderenciaMesCorrente,
   refMesPrimeiroDiaISO,
   type OpTurnosHorarioPick,
   type RpcGradeCalendarioRow,
@@ -63,7 +64,13 @@ import type { OverviewPrestadorMovimentacaoCelula } from "../../../lib/overviewP
 
 export type OverviewPrestadorTab = "escala" | "kpis_mesa";
 
-const CONCURRENCY_STAFF = 4;
+const CONCURRENCY_STAFF = 8;
+
+const STAFF_SELECT_OVERVIEW =
+  "id, nome, email, email_spin, org_time_id, status, staff_operadora_slug, staff_estudio_slug, staff_estudio_slugs, staff_id_tos, area_atuacao, escala, staff_turno, staff_horario_turno";
+
+const ERRO_CARGA_ESCALA =
+  "Não foi possível carregar a escala. Se o problema persistir, entre em contato com o suporte.";
 
 async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   if (items.length === 0) return [];
@@ -110,6 +117,9 @@ export function useOverviewPrestadorDados(
   const [opParaEstudio, setOpParaEstudio] = useState<Record<string, string>>({});
   const [loadingGrade, setLoadingGrade] = useState(false);
   const [loadingStaffDados, setLoadingStaffDados] = useState(false);
+  const [loadingSecundario, setLoadingSecundario] = useState(false);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   const mesSelecionado: MesCarrosselEscalaEntry | undefined = mesesDisponiveis[idxMes];
   const isPrimeiro = idxMes <= 0;
@@ -198,7 +208,7 @@ export function useOverviewPrestadorDados(
     return () => {
       cancelled = true;
     };
-  }, [permLoading, permCanView, userEmail]);
+  }, [permLoading, permCanView, userEmail, reloadTick]);
 
   useEffect(() => {
     if (permLoading || permCanView === "nao" || soProprios) return;
@@ -211,12 +221,14 @@ export function useOverviewPrestadorDados(
       }
       const { data, error } = await supabase
         .from("rh_funcionarios")
-        .select("*")
+        .select(STAFF_SELECT_OVERVIEW)
         .in("org_time_id", idsStaff)
         .in("status", ["ativo", "indisponivel"])
         .order("nome", { ascending: true });
       if (cancelled) return;
       if (error) {
+        console.error(error);
+        setErroCarga(ERRO_CARGA_ESCALA);
         setPrestadores([]);
         return;
       }
@@ -227,7 +239,7 @@ export function useOverviewPrestadorDados(
     return () => {
       cancelled = true;
     };
-  }, [permLoading, permCanView, soProprios, times]);
+  }, [permLoading, permCanView, soProprios, times, reloadTick]);
 
   useEffect(() => {
     if (permCanView === "proprios" && meuRhFuncionarioId) {
@@ -421,37 +433,59 @@ export function useOverviewPrestadorDados(
     return [{ ano, mes: mes - 1 }];
   }, [historico, mesSelecionado, periodoComparativo.anterior.inicio]);
 
-  const mesesParaCarga = useMemo(() => {
-    const unicos = new Map<string, { ano: number; mes: number }>();
-    for (const ref of [...mesesMetricasAtual, ...mesesMetricasAnterior]) {
-      unicos.set(`${ref.ano}-${ref.mes}`, ref);
-    }
-    return [...unicos.values()];
+  const mesesSecundarios = useMemo(() => {
+    const chave = (m: { ano: number; mes: number }) => `${m.ano}-${m.mes}`;
+    const essenciais = new Set(mesesMetricasAtual.map(chave));
+    return mesesMetricasAnterior.filter((m) => !essenciais.has(chave(m)));
   }, [mesesMetricasAtual, mesesMetricasAnterior]);
+
+  const periodoFimAderenciaAtual = useMemo(
+    () => capFimAderenciaMesCorrente(periodoComparativo.atual.fim, historico),
+    [periodoComparativo.atual.fim, historico],
+  );
 
   useEffect(() => {
     if (permLoading || permCanView === "nao") return;
     let cancelled = false;
     setLoadingGrade(true);
+    setErroCarga(null);
     void (async () => {
       try {
         const grupos = await Promise.all(
-          mesesParaCarga.map(({ ano, mes }) =>
-            fetchOverviewPrestadorGradeMes(refMesPrimeiroDiaISO(new Date(ano, mes, 1))).catch(() => []),
+          mesesMetricasAtual.map(({ ano, mes }) =>
+            fetchOverviewPrestadorGradeMes(refMesPrimeiroDiaISO(new Date(ano, mes, 1))),
           ),
         );
-        if (!cancelled) setRawGradeRows(grupos.flat());
+        if (cancelled) return;
+        setRawGradeRows(grupos.flat());
+        setLoadingGrade(false);
+        if (mesesSecundarios.length === 0) return;
+        setLoadingSecundario(true);
+        const extra = await Promise.all(
+          mesesSecundarios.map(({ ano, mes }) =>
+            fetchOverviewPrestadorGradeMes(refMesPrimeiroDiaISO(new Date(ano, mes, 1))),
+          ),
+        );
+        if (cancelled) return;
+        setRawGradeRows((prev) => [...prev, ...extra.flat()]);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) {
+          setErroCarga(ERRO_CARGA_ESCALA);
+          setRawGradeRows([]);
+          setLoadingGrade(false);
+        }
       } finally {
-        if (!cancelled) setLoadingGrade(false);
+        if (!cancelled) setLoadingSecundario(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [mesesParaCarga, permLoading, permCanView]);
+  }, [mesesMetricasAtual, mesesSecundarios, permLoading, permCanView, reloadTick]);
 
   useEffect(() => {
-    if (idsEscopo.length === 0 || mesesParaCarga.length === 0) {
+    if (idsEscopo.length === 0 || mesesMetricasAtual.length === 0) {
       setPontoPorChave(new Map());
       setPresencaGestaoPorChave(new Map());
       setMovimentacoesPorChave(new Map());
@@ -460,49 +494,77 @@ export function useOverviewPrestadorDados(
     }
     let cancelled = false;
     setLoadingStaffDados(true);
-    void (async () => {
-      try {
-        const jobs = idsEscopo.flatMap((fid) =>
-          mesesParaCarga.map((ref) => ({ fid, ref })),
-        );
-        const resultados = await mapPool(jobs, CONCURRENCY_STAFF, async ({ fid, ref }) => {
-          const refMes = refMesPrimeiroDiaISO(new Date(ref.ano, ref.mes, 1));
-          const [ponto, presenca, mov] = await Promise.all([
-            fetchOverviewPrestadorPontoMes(fid, refMes).catch(() => [] as RpcPontoMesRow[]),
-            fetchOverviewPrestadorPresencaMes(fid, refMes).catch(
-              () => new Map<string, PresencaDiaGestao>(),
-            ),
-            caps.negocia
-              ? fetchOverviewPrestadorMovimentacoesMes(fid, refMes).catch(
-                  () => new Map<string, OverviewPrestadorMovimentacaoCelula>(),
-                )
-              : Promise.resolve(new Map<string, OverviewPrestadorMovimentacaoCelula>()),
-          ]);
-          return { fid, ponto, presenca, mov };
-        });
-        if (cancelled) return;
-        const nextPonto = new Map<string, RpcPontoMesRow>();
-        const nextPresenca = new Map<string, PresencaDiaGestao>();
-        const nextMov = new Map<string, OverviewPrestadorMovimentacaoCelula>();
+    setErroCarga(null);
+
+    const carregarMeses = async (meses: { ano: number; mes: number }[]) => {
+      const jobs = idsEscopo.flatMap((fid) => meses.map((ref) => ({ fid, ref })));
+      return mapPool(jobs, CONCURRENCY_STAFF, async ({ fid, ref }) => {
+        const refMes = refMesPrimeiroDiaISO(new Date(ref.ano, ref.mes, 1));
+        const [ponto, presenca, mov] = await Promise.all([
+          fetchOverviewPrestadorPontoMes(fid, refMes),
+          fetchOverviewPrestadorPresencaMes(fid, refMes),
+          caps.negocia
+            ? fetchOverviewPrestadorMovimentacoesMes(fid, refMes)
+            : Promise.resolve(new Map<string, OverviewPrestadorMovimentacaoCelula>()),
+        ]);
+        return { fid, ponto, presenca, mov };
+      });
+    };
+
+    const aplicar = (
+      resultados: Awaited<ReturnType<typeof carregarMeses>>,
+      merge: boolean,
+    ) => {
+      setPontoPorChave((prev) => {
+        const next = merge ? new Map(prev) : new Map<string, RpcPontoMesRow>();
         for (const r of resultados) {
           for (const pt of r.ponto) {
             const iso = (pt.dia_sp ?? "").slice(0, 10);
-            if (iso) nextPonto.set(`${r.fid}|${iso}`, pt);
+            if (iso) next.set(`${r.fid}|${iso}`, pt);
           }
-          r.presenca.forEach((v, k) => nextPresenca.set(k, v));
-          r.mov.forEach((v, k) => nextMov.set(k, v));
         }
-        setPontoPorChave(nextPonto);
-        setPresencaGestaoPorChave(nextPresenca);
-        setMovimentacoesPorChave(nextMov);
+        return next;
+      });
+      setPresencaGestaoPorChave((prev) => {
+        const next = merge ? new Map(prev) : new Map<string, PresencaDiaGestao>();
+        for (const r of resultados) r.presenca.forEach((v, k) => next.set(k, v));
+        return next;
+      });
+      setMovimentacoesPorChave((prev) => {
+        const next = merge ? new Map(prev) : new Map<string, OverviewPrestadorMovimentacaoCelula>();
+        for (const r of resultados) r.mov.forEach((v, k) => next.set(k, v));
+        return next;
+      });
+    };
+
+    void (async () => {
+      try {
+        const fase1 = await carregarMeses(mesesMetricasAtual);
+        if (cancelled) return;
+        aplicar(fase1, false);
+        setLoadingStaffDados(false);
+        if (mesesSecundarios.length === 0) return;
+        setLoadingSecundario(true);
+        const fase2 = await carregarMeses(mesesSecundarios);
+        if (cancelled) return;
+        aplicar(fase2, true);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) {
+          setErroCarga(ERRO_CARGA_ESCALA);
+          setPontoPorChave(new Map());
+          setPresencaGestaoPorChave(new Map());
+          setMovimentacoesPorChave(new Map());
+          setLoadingStaffDados(false);
+        }
       } finally {
-        if (!cancelled) setLoadingStaffDados(false);
+        if (!cancelled) setLoadingSecundario(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [idsEscopo, mesesParaCarga, caps.negocia]);
+  }, [idsEscopo, mesesMetricasAtual, mesesSecundarios, caps.negocia, reloadTick]);
 
   useEffect(() => {
     const opSlugs = [...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean))];
@@ -571,6 +633,7 @@ export function useOverviewPrestadorDados(
           movimentacoes: movimentacoesPorChave,
           periodoInicio: periodoComparativo.atual.inicio,
           periodoFim: periodoComparativo.atual.fim,
+          periodoFimAderencia: periodoFimAderenciaAtual,
           mesesRef: mesesMetricasAtual,
         }),
       );
@@ -585,6 +648,7 @@ export function useOverviewPrestadorDados(
     presencaGestaoPorChave,
     movimentacoesPorChave,
     periodoComparativo.atual,
+    periodoFimAderenciaAtual,
     mesesMetricasAtual,
   ]);
 
@@ -675,6 +739,7 @@ export function useOverviewPrestadorDados(
       movimentacoes: movimentacoesPorChave,
       periodoInicio: periodoComparativo.atual.inicio,
       periodoFim: periodoComparativo.atual.fim,
+      periodoFimAderencia: periodoFimAderenciaAtual,
       mesesRef: mesesMetricasAtual,
       caps,
       opParaEstudio,
@@ -690,6 +755,7 @@ export function useOverviewPrestadorDados(
     presencaGestaoPorChave,
     movimentacoesPorChave,
     periodoComparativo.atual,
+    periodoFimAderenciaAtual,
     mesesMetricasAtual,
     caps,
     opParaEstudio,
@@ -708,7 +774,7 @@ export function useOverviewPrestadorDados(
       presencaGestao: presencaGestaoPorChave,
       movimentacoes: movimentacoesPorChave,
       periodoInicio: periodoComparativo.atual.inicio,
-      periodoFim: periodoComparativo.atual.fim,
+      periodoFim: periodoFimAderenciaAtual,
       mesesRef: mesesMetricasAtual,
       opParaEstudio,
       estudiosNome,
@@ -724,6 +790,7 @@ export function useOverviewPrestadorDados(
     presencaGestaoPorChave,
     movimentacoesPorChave,
     periodoComparativo.atual,
+    periodoFimAderenciaAtual,
     mesesMetricasAtual,
     opParaEstudio,
     estudiosNome,
@@ -749,6 +816,10 @@ export function useOverviewPrestadorDados(
   }, [filtroStaffIds]);
 
   const isLoading = loadingStaff || loadingGrade || loadingStaffDados;
+  const recarregar = useCallback(() => {
+    setErroCarga(null);
+    setReloadTick((n) => n + 1);
+  }, []);
   const prontoParaExibir = soProprios ? Boolean(staffSelecionadoId) : filtroTimeAtivo;
 
   return {
@@ -783,5 +854,8 @@ export function useOverviewPrestadorDados(
     distribuicaoEstudio,
     prontoParaExibir,
     isLoading,
+    loadingSecundario,
+    erroCarga,
+    recarregar,
   };
 }

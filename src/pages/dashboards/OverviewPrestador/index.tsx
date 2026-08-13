@@ -105,7 +105,7 @@ export default function OverviewPrestador() {
         onFiltroTimeChange={dados.setFiltroTimeIds}
         filtroStaffIds={dados.filtroStaffIds}
         onFiltroStaffChange={dados.setFiltroStaffIds}
-        loading={dados.isLoading}
+        loading={dados.isLoading || dados.loadingSecundario}
       />
 
       <div role="tabpanel" id={`panel-overview-prestador-${aba}`} aria-labelledby={`tab-overview-prestador-${aba}`}>
@@ -122,6 +122,8 @@ export default function OverviewPrestador() {
             coberturaPorTurno={dados.coberturaPorTurno}
             coberturaPorEstudio={dados.coberturaPorEstudio}
             distribuicaoEstudio={dados.distribuicaoEstudio}
+            erroCarga={dados.erroCarga}
+            onRecarregar={dados.recarregar}
           />
         )}
 

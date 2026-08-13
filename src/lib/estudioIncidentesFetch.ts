@@ -53,6 +53,67 @@ export async function fetchEstudioIncidentesPorDataRodada(opts: {
   );
 }
 
+/** Tickets OCR cujo relator é um dos SMs do escopo (`relator_user_id` ou `relator_nome`). */
+export async function fetchEstudioIncidentesPorRelatores(opts: {
+  dataIni: string;
+  dataFim: string;
+  relatorUserIds?: string[];
+  relatorNomes?: string[];
+}): Promise<EstudioIncidenteRow[]> {
+  const userIds = [...new Set((opts.relatorUserIds ?? []).map((x) => x.trim()).filter(Boolean))];
+  const nomes = [...new Set((opts.relatorNomes ?? []).map((x) => x.trim()).filter(Boolean))];
+  if (userIds.length === 0 && nomes.length === 0) return [];
+
+  const porId = new Map<string, EstudioIncidenteRow>();
+  const ingest = (rows: EstudioIncidenteRow[]) => {
+    for (const r of rows) {
+      if (r.id) porId.set(r.id, r);
+    }
+  };
+
+  if (userIds.length > 0) {
+    ingest(
+      await fetchInBatched(
+        userIds,
+        ESTUDIO_INCIDENTES_PRESTADOR_IN_CHUNK,
+        (slice) =>
+          fetchAllPages<EstudioIncidenteRow>(async (from, to) =>
+            supabase
+              .from("estudio_incidentes")
+              .select(INCIDENTE_SELECT)
+              .gte("data_rodada", opts.dataIni)
+              .lte("data_rodada", opts.dataFim)
+              .in("relator_user_id", slice)
+              .order("data_rodada", { ascending: false })
+              .range(from, to),
+          ),
+        2,
+      ),
+    );
+  }
+  if (nomes.length > 0) {
+    ingest(
+      await fetchInBatched(
+        nomes,
+        ESTUDIO_INCIDENTES_PRESTADOR_IN_CHUNK,
+        (slice) =>
+          fetchAllPages<EstudioIncidenteRow>(async (from, to) =>
+            supabase
+              .from("estudio_incidentes")
+              .select(INCIDENTE_SELECT)
+              .gte("data_rodada", opts.dataIni)
+              .lte("data_rodada", opts.dataFim)
+              .in("relator_nome", slice)
+              .order("data_rodada", { ascending: false })
+              .range(from, to),
+          ),
+        2,
+      ),
+    );
+  }
+  return [...porId.values()];
+}
+
 /** Incidentes de um prestador no período, filtrados por `data_rodada` (alinhado ao dia operacional). */
 export async function fetchEstudioIncidentesPrestadorPeriodo(opts: {
   prestadorId: string;
