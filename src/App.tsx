@@ -22,7 +22,6 @@ import { detectPublicUnauthenticatedRoute } from "./lib/publicRoutes";
 import {
   buildLoginPath,
   parseAppPathname,
-  PENDING_RETURN_PATH_KEY,
 } from "./lib/appRoutes";
 
 // Helper: retry automático em falhas de carregamento de chunk (ex.: rede instável)
@@ -340,10 +339,6 @@ function Root() {
     if (checking || !routeReady || user || publicRoute) return;
     const parsed = parseAppPathname(window.location.pathname);
     if (parsed.kind === "special" && parsed.special === "login") return;
-    if (parsed.kind === "app") {
-      const full = `${window.location.pathname}${window.location.search}`;
-      sessionStorage.setItem(PENDING_RETURN_PATH_KEY, full);
-    }
     const loginPath = buildLoginPath();
     if (window.location.pathname !== loginPath) {
       window.history.replaceState({}, "", loginPath);

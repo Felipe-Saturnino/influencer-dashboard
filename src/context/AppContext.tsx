@@ -110,6 +110,8 @@ interface AppContextValue {
     options?: { replace?: boolean; detailSlug?: string | null },
   ) => void;
   applyPathFromLocation: (options?: { replace?: boolean }) => void;
+  /** Após troca obrigatória de senha: libera o gate e abre a Home (sem recarregar permissões). */
+  finalizarTrocaSenhaObrigatoria: () => void;
   goToSemAcesso: (reason: "not_found" | "forbidden", options?: { replace?: boolean }) => void;
   tutorialVisibility: TutorialVisibilidadeMap;
   tutorialVisibilityLoaded: boolean;
@@ -512,6 +514,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const parsed = parseAppPathname(window.location.pathname);
       const u = userRef.current;
 
+      if (u?.must_change_password) {
+        return;
+      }
+
       if (parsed.kind === "empty") {
         if (u) navigateTo("home", null, { replace: true });
         return;
@@ -801,24 +807,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             syncAuthRefs(u, perms, acoes);
           }
 
-          const pendingReturn = sessionStorage.getItem(PENDING_RETURN_PATH_KEY);
-          if (pendingReturn) {
-            sessionStorage.removeItem(PENDING_RETURN_PATH_KEY);
-            try {
-              const url = new URL(pendingReturn, window.location.origin);
-              syncHistory(`${url.pathname}${url.search}`, true);
-            } catch {
-              syncHistory(pendingReturn, true);
-            }
-          }
-
-          const params = new URLSearchParams(window.location.search);
-          const afterLogin = params.get("after_login")?.trim();
-          if (afterLogin === "rh_dados_cadastro") {
-            syncHistory(buildAppPath("rh_dados_cadastro"), true);
-          } else if (params.toString()) {
-            syncHistory(window.location.pathname, true);
-          }
+          sessionStorage.removeItem(PENDING_RETURN_PATH_KEY);
+          sessionStorage.removeItem(SEM_ACESSO_REASON_KEY);
         } catch (err) {
           console.error("Erro ao carregar permissões/escopos após login:", err);
           const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
@@ -829,7 +819,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           syncAuthRefs(u, emptyPerms, emptyAcoes);
         }
         setRouteReady(true);
-        applyPathFromLocation({ replace: true });
+        if (u.must_change_password) {
+          syncHistory(buildLoginPath(), true);
+        } else {
+          navigateTo("home", null, { replace: true });
+        }
       } else {
         const emptyPerms = Object.fromEntries(ALL_PAGE_KEYS.map((k) => [k, null])) as PermissoesMapa;
         const emptyAcoes = emptyAcoesMapa();
@@ -850,8 +844,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         syncHistory(buildLoginPath(), true);
       }
     },
-    [applyPathFromLocation, tentarRestaurarSimulacaoSessao],
+    [navigateTo, tentarRestaurarSimulacaoSessao],
   );
+
+  const finalizarTrocaSenhaObrigatoria = useCallback(() => {
+    const atual = userRef.current;
+    if (!atual) return;
+    const next = { ...atual, must_change_password: false };
+    setUserState(next);
+    userRef.current = next;
+    sessionStorage.removeItem(PENDING_RETURN_PATH_KEY);
+    sessionStorage.removeItem(SEM_ACESSO_REASON_KEY);
+    navigateTo("home", null, { replace: true });
+  }, [navigateTo]);
 
   useEffect(() => {
     // Carrega fontes
@@ -1047,6 +1052,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActivePage,
       navigateTo,
       applyPathFromLocation,
+      finalizarTrocaSenhaObrigatoria,
       goToSemAcesso,
       tutorialVisibility,
       tutorialVisibilityLoaded,
@@ -1084,6 +1090,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActivePage,
       navigateTo,
       applyPathFromLocation,
+      finalizarTrocaSenhaObrigatoria,
       goToSemAcesso,
       tutorialVisibility,
       tutorialVisibilityLoaded,

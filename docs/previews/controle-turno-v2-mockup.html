@@ -200,6 +200,51 @@
   .pill.bad { background: #e8402522; color: #b91c1c; border-color: #e8402544; }
   .pill.neu { background: #6b728022; color: #4b5563; border-color: #6b728044; }
   .pill.info { background: #1e36f822; color: #1e36f8; border-color: #1e36f844; }
+  .pill.special { background: #a78bfa22; color: #6d28d9; border-color: #a78bfa44; }
+  .cel-hora {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .cmt-wrap { position: relative; display: inline-flex; }
+  .cmt-ico {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #22c55e;
+    cursor: help;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cmt-ico svg { width: 12px; height: 12px; }
+  .cmt-tip {
+    display: none;
+    position: absolute;
+    z-index: 12;
+    right: 0;
+    bottom: calc(100% + 6px);
+    width: 240px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #111827;
+    background: color-mix(in srgb, #22c55e 12%, #ffffff);
+    border: 1px solid rgba(34,197,94,0.45);
+    box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  }
+  .cmt-wrap:hover .cmt-tip,
+  .cmt-wrap:focus-within .cmt-tip { display: block; }
+  .cmt-tip b { display: block; margin-bottom: 6px; font-size: 12px; }
+  .cmt-tip .muted { color: #6b7280; }
+  .cmt-tip p { margin: 0 0 4px; line-height: 1.4; }
   table { width: 100%; border-collapse: separate; border-spacing: 0; }
   .tw {
     border: 1px solid var(--border);
@@ -775,61 +820,9 @@
                 <th>Ações</th>
               </tr>
             </thead>
-            <tbody id="escalaPresencaBody">
-              <tr data-nome="Ana Souza" data-nick="AnaS">
-                <td class="left">Ana Souza</td>
-                <td>AnaS</td>
-                <td>Game Presenter</td>
-                <td>06:58</td>
-                <td>—</td>
-                <td>—</td>
-                <td><span class="pill ok">Presente</span></td>
-                <td><button class="btn" type="button">···</button></td>
-              </tr>
-              <tr data-nome="Bruno Lima" data-nick="BrunoL">
-                <td class="left">Bruno Lima</td>
-                <td>BrunoL</td>
-                <td>Game Presenter</td>
-                <td>07:12</td>
-                <td>—</td>
-                <td>—</td>
-                <td><span class="pill warn">Atraso</span></td>
-                <td><button class="btn" type="button">···</button></td>
-              </tr>
-              <tr data-nome="Carla Dias" data-nick="CarlaD">
-                <td class="left">Carla Dias</td>
-                <td>CarlaD</td>
-                <td>Game Presenter</td>
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-                <td><span class="pill bad">Falta</span></td>
-                <td><button class="btn" type="button">···</button></td>
-              </tr>
-              <tr data-nome="Diego Alves" data-nick="DiegoA">
-                <td class="left">Diego Alves</td>
-                <td>DiegoA</td>
-                <td>Shuffler</td>
-                <td>06:55</td>
-                <td>—</td>
-                <td>—</td>
-                <td><span class="pill ok">Presente</span></td>
-                <td><button class="btn" type="button">···</button></td>
-              </tr>
-              <tr data-nome="Elena Costa" data-nick="ElenaC">
-                <td class="left">Elena Costa</td>
-                <td>ElenaC</td>
-                <td>Shuffler</td>
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-                <td><span class="pill neu">Pendente</span></td>
-                <td><button class="btn" type="button">···</button></td>
-              </tr>
-            </tbody>
+            <tbody id="escalaPresencaBody"></tbody>
           </table>
         </div>
-        <p class="note">Modais de ação ficam para a próxima iteração.</p>
       </div>
     </div>
 
@@ -1114,6 +1107,63 @@
   </div>
 </div>
 
+<!-- Modal Registrar presença -->
+<div class="ov" id="modalRegistrar" onclick="if(event.target===this)fecharModalRegistrar()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="regTitle">
+    <div class="mh">
+      <h2 id="regTitle">Registrar</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalRegistrar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb">
+      <div class="alert-form" id="regErro" role="alert"></div>
+      <p class="note" id="regPessoa" style="margin-top:0;margin-bottom:14px"></p>
+      <div class="f">
+        <label class="fl" for="reg-status">Status <span class="req">*</span></label>
+        <select id="reg-status" aria-label="Status" onchange="onRegStatusChange()">
+          <option value="">Selecionar...</option>
+          <option value="falta">Falta</option>
+          <option value="saida_antecipada">Saída Antecipada</option>
+          <option value="hora_adicional">Hora Adicional</option>
+          <option value="registrar_horario">Registrar Horário</option>
+        </select>
+      </div>
+      <div id="reg-horarios" class="hidden">
+        <div class="g2">
+          <div class="f">
+            <label class="fl" for="reg-entrada">Entrada realizada <span class="req">*</span></label>
+            <input type="time" id="reg-entrada">
+          </div>
+          <div class="f">
+            <label class="fl" for="reg-saida">Saída realizada <span class="req">*</span></label>
+            <input type="time" id="reg-saida">
+          </div>
+        </div>
+      </div>
+      <div class="f hidden" id="reg-wrap-falta">
+        <label class="fl" for="reg-motivo-falta">Motivo da Falta <span class="req">*</span></label>
+        <textarea id="reg-motivo-falta" placeholder="Descreva o motivo da falta..."></textarea>
+      </div>
+      <div class="f hidden" id="reg-wrap-saida">
+        <label class="fl" for="reg-motivo-saida">Motivo da Saída Antecipada <span class="req">*</span></label>
+        <textarea id="reg-motivo-saida" placeholder="Descreva o motivo da saída antecipada..."></textarea>
+      </div>
+      <div class="f hidden" id="reg-wrap-hora">
+        <label class="fl" for="reg-motivo-hora">Motivo da Hora Adicional <span class="req">*</span></label>
+        <textarea id="reg-motivo-hora" placeholder="Descreva o motivo da hora adicional..."></textarea>
+      </div>
+      <div class="f hidden" id="reg-wrap-comentario">
+        <label class="fl" for="reg-comentario">Comentário <span class="req">*</span></label>
+        <textarea id="reg-comentario" placeholder="Comentário sobre o horário..."></textarea>
+      </div>
+    </div>
+    <div class="mf">
+      <button type="button" class="cta" onclick="salvarRegistrar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script>
   var turnoAtual = "manha";
   var abaAtual = "escala";
@@ -1173,6 +1223,32 @@
       cartas: false,
       comentarios: "Rascunho — falta fechar comentários de equipamentos."
     }
+  };
+
+  var PRESENCA = [
+    { id: "ana", nome: "Ana Souza", nick: "AnaS", time: "Game Presenter", entrada: "06:58", saida: "", status: "presente", registrado: false, comentario: null },
+    { id: "bruno", nome: "Bruno Lima", nick: "BrunoL", time: "Game Presenter", entrada: "07:12", saida: "", status: "atraso", registrado: false, comentario: null },
+    { id: "carla", nome: "Carla Dias", nick: "CarlaD", time: "Game Presenter", entrada: "", saida: "", status: "falta", registrado: false, comentario: null },
+    { id: "diego", nome: "Diego Alves", nick: "DiegoA", time: "Shuffler", entrada: "06:55", saida: "15:02", status: "presente", registrado: false, comentario: null },
+    { id: "elena", nome: "Elena Costa", nick: "ElenaC", time: "Shuffler", entrada: "", saida: "", status: "pendente", registrado: false, comentario: null }
+  ];
+  var registrarAlvoId = null;
+
+  var STATUS_PRESENCA = {
+    presente: { label: "Presente", cls: "ok" },
+    atraso: { label: "Atraso", cls: "warn" },
+    falta: { label: "Falta", cls: "bad" },
+    atestado: { label: "Atestado", cls: "warn" },
+    pendente: { label: "Pendente", cls: "neu" },
+    saida_antecipada: { label: "Saída Antecipada", cls: "warn" },
+    hora_adicional: { label: "Hora Adicional", cls: "special" }
+  };
+
+  var TIPO_REG_LABEL = {
+    falta: "Falta",
+    saida_antecipada: "Saída Antecipada",
+    hora_adicional: "Hora Adicional",
+    registrar_horario: "Registrar Horário"
   };
 
   var HISTORICOS = {
@@ -1257,6 +1333,193 @@
         box.style.display = textoContem(hay, q) ? "" : "none";
       });
     }
+  }
+
+  function escHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function horasTrabalhadas(ent, sai) {
+    if (!ent || !sai) return "—";
+    var p1 = ent.split(":").map(Number);
+    var p2 = sai.split(":").map(Number);
+    if (p1.length < 2 || p2.length < 2) return "—";
+    var a = p1[0] * 60 + p1[1];
+    var b = p2[0] * 60 + p2[1];
+    if (b < a) b += 24 * 60;
+    var d = b - a;
+    var hh = Math.floor(d / 60);
+    var mm = d % 60;
+    return String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+  }
+
+  function agoraLabel() {
+    var agora = new Date();
+    return (
+      String(agora.getDate()).padStart(2, "0") + "/" +
+      String(agora.getMonth() + 1).padStart(2, "0") + "/" +
+      agora.getFullYear() + " " +
+      String(agora.getHours()).padStart(2, "0") + ":" +
+      String(agora.getMinutes()).padStart(2, "0")
+    );
+  }
+
+  function comentarioHtml(cmt) {
+    if (!cmt) return "";
+    var rotuloMotivo =
+      cmt.tipo === "falta" ? "Motivo da Falta:" :
+      cmt.tipo === "saida_antecipada" ? "Motivo da Saída Antecipada:" :
+      cmt.tipo === "hora_adicional" ? "Motivo da Hora Adicional:" :
+      "Comentário:";
+    return (
+      '<span class="cmt-wrap">' +
+        '<button type="button" class="cmt-ico" title="Ver comentário" aria-label="Ver comentário">' +
+          '<svg viewBox="0 0 24 24" fill="color-mix(in srgb, #22c55e 18%, transparent)" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+        "</button>" +
+        '<span class="cmt-tip" role="tooltip">' +
+          "<b>" + escHtml(TIPO_REG_LABEL[cmt.tipo] || "Registro") + " — Aprovado</b>" +
+          '<p><span class="muted">' + rotuloMotivo + "</span> " + escHtml(cmt.texto) + "</p>" +
+          '<p><span class="muted">Registrado por:</span> ' + escHtml(cmt.quem) + "</p>" +
+          '<p><span class="muted">Data/Hora:</span> ' + escHtml(cmt.quando) + "</p>" +
+        "</span>" +
+      "</span>"
+    );
+  }
+
+  function celHora(valor, cmt, campo) {
+    var v = valor || "—";
+    var ico = cmt && cmt.campos.indexOf(campo) !== -1 ? comentarioHtml(cmt) : "";
+    return '<span class="cel-hora"><span>' + escHtml(v) + "</span>" + ico + "</span>";
+  }
+
+  function svgClipboardPlus() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14h6"/><path d="M12 11v6"/></svg>';
+  }
+
+  function renderPresenca() {
+    var body = document.getElementById("escalaPresencaBody");
+    if (!body) return;
+    body.innerHTML = PRESENCA.map(function (r) {
+      var st = STATUS_PRESENCA[r.status] || STATUS_PRESENCA.pendente;
+      var faltaEntradaOuSaida = !r.entrada || !r.saida;
+      var showReg = !r.registrado && faltaEntradaOuSaida;
+      var acao = showReg
+        ? '<button type="button" class="btn-icone" title="Registrar" aria-label="Registrar" onclick="abrirModalRegistrar(\'' + r.id + '\')">' + svgClipboardPlus() + "</button>"
+        : "";
+      return (
+        '<tr data-nome="' + escHtml(r.nome) + '" data-nick="' + escHtml(r.nick) + '">' +
+          '<td class="left">' + escHtml(r.nome) + "</td>" +
+          "<td>" + escHtml(r.nick) + "</td>" +
+          "<td>" + escHtml(r.time) + "</td>" +
+          "<td>" + celHora(r.entrada, r.comentario, "entrada") + "</td>" +
+          "<td>" + celHora(r.saida, r.comentario, "saida") + "</td>" +
+          "<td>" + horasTrabalhadas(r.entrada, r.saida) + "</td>" +
+          '<td><span class="pill ' + st.cls + '">' + st.label + "</span></td>" +
+          "<td>" + acao + "</td>" +
+        "</tr>"
+      );
+    }).join("");
+    filtrarBuscaPagina();
+  }
+
+  function limparErroReg() {
+    var box = document.getElementById("regErro");
+    box.classList.remove("on");
+    box.textContent = "";
+  }
+
+  function abrirModalRegistrar(id) {
+    var row = PRESENCA.find(function (r) { return r.id === id; });
+    if (!row || row.registrado) return;
+    registrarAlvoId = id;
+    document.getElementById("regPessoa").textContent = row.nome + " · " + row.nick;
+    document.getElementById("reg-status").value = "";
+    document.getElementById("reg-entrada").value = row.entrada || "";
+    document.getElementById("reg-saida").value = row.saida || "";
+    document.getElementById("reg-motivo-falta").value = "";
+    document.getElementById("reg-motivo-saida").value = "";
+    document.getElementById("reg-motivo-hora").value = "";
+    document.getElementById("reg-comentario").value = "";
+    limparErroReg();
+    onRegStatusChange();
+    document.getElementById("modalRegistrar").classList.add("on");
+  }
+
+  function fecharModalRegistrar() {
+    document.getElementById("modalRegistrar").classList.remove("on");
+    registrarAlvoId = null;
+  }
+
+  function onRegStatusChange() {
+    var st = document.getElementById("reg-status").value;
+    document.getElementById("reg-horarios").classList.toggle("hidden", st === "" || st === "falta");
+    document.getElementById("reg-wrap-falta").classList.toggle("hidden", st !== "falta");
+    document.getElementById("reg-wrap-saida").classList.toggle("hidden", st !== "saida_antecipada");
+    document.getElementById("reg-wrap-hora").classList.toggle("hidden", st !== "hora_adicional");
+    document.getElementById("reg-wrap-comentario").classList.toggle("hidden", st !== "registrar_horario");
+  }
+
+  function salvarRegistrar() {
+    var row = PRESENCA.find(function (r) { return r.id === registrarAlvoId; });
+    if (!row) return;
+    var st = document.getElementById("reg-status").value;
+    var errBox = document.getElementById("regErro");
+    function fail(msg) {
+      errBox.textContent = msg;
+      errBox.classList.add("on");
+    }
+    limparErroReg();
+    if (!st) return fail("Selecione o Status.");
+
+    var texto = "";
+    if (st === "falta") {
+      texto = document.getElementById("reg-motivo-falta").value.trim();
+      if (!texto) return fail("Preencha o Motivo da Falta.");
+      row.entrada = "";
+      row.saida = "";
+      row.status = "falta";
+      row.comentario = {
+        tipo: st,
+        texto: texto,
+        quem: "Você (mock)",
+        quando: agoraLabel(),
+        campos: ["entrada", "saida"]
+      };
+    } else {
+      var ent = document.getElementById("reg-entrada").value;
+      var sai = document.getElementById("reg-saida").value;
+      if (!ent) return fail("Informe a Entrada realizada.");
+      if (!sai) return fail("Informe a Saída realizada.");
+      if (st === "saida_antecipada") {
+        texto = document.getElementById("reg-motivo-saida").value.trim();
+        if (!texto) return fail("Preencha o Motivo da Saída Antecipada.");
+        row.status = "saida_antecipada";
+      } else if (st === "hora_adicional") {
+        texto = document.getElementById("reg-motivo-hora").value.trim();
+        if (!texto) return fail("Preencha o Motivo da Hora Adicional.");
+        row.status = "hora_adicional";
+      } else {
+        texto = document.getElementById("reg-comentario").value.trim();
+        if (!texto) return fail("Preencha o Comentário.");
+        row.status = "presente";
+      }
+      row.entrada = ent;
+      row.saida = sai;
+      row.comentario = {
+        tipo: st,
+        texto: texto,
+        quem: "Você (mock)",
+        quando: agoraLabel(),
+        campos: ["entrada", "saida"]
+      };
+    }
+    row.registrado = true;
+    renderPresenca();
+    fecharModalRegistrar();
   }
 
   function setAba(a) {
@@ -1724,6 +1987,10 @@
         fecharMsel();
         return;
       }
+      if (document.getElementById("modalRegistrar").classList.contains("on")) {
+        fecharModalRegistrar();
+        return;
+      }
       fecharHistorico();
       fecharModalRelatorio();
     }
@@ -1731,6 +1998,7 @@
 
   setTurno("manha");
   setAba("escala");
+  renderPresenca();
 </script>
 </body>
 </html>

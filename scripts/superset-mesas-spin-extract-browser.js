@@ -17,7 +17,7 @@
  */
 (async () => {
   const MODO = "network"; // "network" | "dedicado" | "monthly"
-  const DE = "2026-08-04";
+  const DE = "2026-08-12";
   const ATE = "2026-08-13";
 
   const SC = [
@@ -97,12 +97,31 @@
 
   const isoDay = (ms) => new Date(Number(ms)).toISOString().slice(0, 10);
 
+  function metricValue(row, valueKey) {
+    if (row[valueKey] != null) return row[valueKey];
+    const aliases = {
+      TO: ["Turnover", "TO"],
+      GGR: ["GGR"],
+      BET: ["BET", "Bet Count"],
+      UAP: ["UAP"],
+    };
+    for (const k of aliases[valueKey] || []) {
+      if (row[k] != null) return row[k];
+    }
+    const skip = new Set(["f", "at", "game_type", "table_name"]);
+    for (const [k, v] of Object.entries(row)) {
+      if (!skip.has(k) && typeof v === "number") return v;
+    }
+    return undefined;
+  }
+
   function byDayFrom(data, valueKey, dimKey) {
     const byDay = {};
     for (const row of data || []) {
       const day = isoDay(row.at);
+      if (day < DE || day >= ATE) continue;
       if (!byDay[day]) byDay[day] = [];
-      byDay[day].push({ [valueKey]: row[valueKey], f: row[dimKey] ?? null });
+      byDay[day].push({ [valueKey]: metricValue(row, valueKey), f: row[dimKey] ?? null });
     }
     return byDay;
   }

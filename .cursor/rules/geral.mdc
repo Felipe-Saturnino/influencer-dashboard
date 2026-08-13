@@ -165,8 +165,16 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 
 - Fora do `app-page-shell` logado.
 - CTA com gradiente Brand; spinner `#fff` dentro do botão.
+- **Destino após login:** sempre a **Home** (não restaura o endereço anterior nem `after_login`). Refresh de sessão já autenticada continua na página atual.
 - **Esqueci senha:** link «Esqueceu sua senha?» abaixo do campo senha → modal «Reset de senha» → Edge `recuperar-senha` (senha padrão + e-mail Resend + `must_change_password`). E-mail inexistente: mensagem explícita + link «entre em contato» (`lib/loginAccessContact.ts`).
 - **Handoff:** fluxos whitelabel adicionais, erros inline.
+
+## Trocar senha obrigatória (`geral/TrocarSenhaObrigatorio/`)
+
+- Gate bloqueante após login com `must_change_password`.
+- Botão **Definir nova senha** só habilita com os 4 requisitos (8+ caracteres, maiúsculas e minúsculas, número, caractere especial) e confirmação igual; Enter envia o formulário.
+- Cartão com scroll (`app-auth-card-scroll`) para o botão permanecer acessível.
+- Após sucesso: `finalizarTrocaSenhaObrigatoria()` → Home (sem recarregar permissões).
 
 ---
 
@@ -186,13 +194,6 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Quem usa o simulador** precisa ler as matrizes de escopo no Supabase — políticas RLS `_pode_usar_simulador_login()` em `operadora_pages`, `gestor_tipo_pages`, `prestador_tipo_pages` (migration `20260708160000_simulador_login_rls_scope_pages.sql`).
 - **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner`; sessão em `sessionStorage`.
 - **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado).
-
----
-
-## Trocar senha obrigatória (`geral/TrocarSenhaObrigatorio/`)
-
-- Fluxo bloqueante; mesmo padrão de CTA/spinner do Login.
-- **Handoff:** validações e mensagens de erro.
 
 ---
 

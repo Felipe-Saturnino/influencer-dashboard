@@ -159,9 +159,9 @@ export function InformacoesStaffHome({
   }, [info.lista, portal.lista, isLido]);
 
   const loading = info.loading || portal.loading;
-  const erro = info.erro || portal.erro;
+  const erroTotal = lista.length === 0 && (info.erro || portal.erro);
 
-  if (!loading && !erro && lista.length === 0) return null;
+  if (!loading && !erroTotal && lista.length === 0) return null;
 
   return (
     <section style={box} aria-labelledby={titleId}>
@@ -174,7 +174,7 @@ export function InformacoesStaffHome({
           <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden />
           <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
         </div>
-      ) : erro ? (
+      ) : erroTotal ? (
         <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>
           Não foi possível carregar as informações. Se o problema persistir, entre em contato com o suporte.
         </p>

@@ -1717,7 +1717,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Alterar Senha",
         texto:
-          "Informe a senha atual, a nova senha e a confirmação. A nova senha deve ter pelo menos 8 caracteres, combinar maiúsculas e minúsculas, incluir número e caractere especial, e ser diferente da senha atual.\n\nUm indicador de força (Fraca / Média / Forte) ajuda a validar o preenchimento antes de salvar.",
+          "Informe a senha atual, a nova senha e a confirmação. A nova senha deve ter pelo menos 8 caracteres, combinar maiúsculas e minúsculas, incluir número e caractere especial, e ser diferente da senha atual.\n\nUm indicador de força (Fraca / Média / Forte) ajuda a validar o preenchimento antes de salvar.\n\nNo primeiro acesso (após reset de senha), a mesma regra vale na tela **Troque sua senha**: o botão só libera quando todos os requisitos estão ok. Depois de definir a senha, a plataforma abre a **Home**."
       },
       {
         subtitulo: "Permissões",

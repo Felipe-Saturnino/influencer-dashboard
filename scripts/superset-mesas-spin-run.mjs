@@ -139,11 +139,29 @@ function diasDe(metric) {
   return Object.keys(metric?.byDay ?? {}).sort();
 }
 
+function valorMetrica(row, valueKey) {
+  if (row[valueKey] != null) return row[valueKey];
+  const aliases = {
+    TO: ["Turnover", "TO"],
+    GGR: ["GGR"],
+    BET: ["BET", "Bet Count"],
+    UAP: ["UAP"],
+  };
+  for (const k of aliases[valueKey] || []) {
+    if (row[k] != null) return row[k];
+  }
+  const skip = new Set(["f", "at", "game_type", "table_name"]);
+  for (const [k, v] of Object.entries(row)) {
+    if (!skip.has(k) && typeof v === "number") return v;
+  }
+  return undefined;
+}
+
 function mapaCampo(rows, valueKey) {
   const m = new Map();
   for (const r of rows || []) {
     if (r.f == null) continue;
-    m.set(String(r.f), r[valueKey]);
+    m.set(String(r.f), valorMetrica(r, valueKey));
   }
   return m;
 }

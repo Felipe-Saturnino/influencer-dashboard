@@ -19,6 +19,11 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
       texto:
         "O ambiente de preview/staging restringe o login a uma lista de e-mails definida pela equipe (variável de build no Cloudflare Pages — Preview). Produção e o uso local não usam essa lista. Quem não está autorizado vê a mensagem de acesso negado e não entra nas features em desenvolvimento. Integrações e rotas `/api/*` (formulários do site, webhooks) **não** são bloqueadas por essa regra. Se você precisa de acesso ao staging, peça inclusão do seu e-mail ao administrador.",
     },
+    {
+      subtitulo: "Depois de entrar, caí em «Você não tem acesso a esta página» em vez da Home?",
+      texto:
+        "Comportamento esperado: após o login — e após definir a senha no primeiro acesso — a plataforma abre sempre a **Home**, mesmo que o endereço no navegador fosse de outra página.\n\nSe ainda aparecer a tela de sem acesso logo depois de entrar, saia e entre novamente. Se o problema persistir, entre em contato com o suporte.",
+    },
   ],
 } as const;
 
@@ -1854,7 +1859,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao alterar a senha?",
         texto:
-          "Confirme a senha atual e que a nova senha atende aos requisitos (8+ caracteres, maiúsculas e minúsculas, número e caractere especial) e é diferente da atual. Se a sessão estiver inválida, saia e entre novamente. Se o problema persistir, entre em contato com o suporte.",
+          "Confirme a senha atual e que a nova senha atende aos requisitos (8+ caracteres, maiúsculas e minúsculas, número e caractere especial) e é diferente da atual. Na tela de primeiro acesso, o botão **Definir nova senha** só habilita quando todos os requisitos estão marcados e as duas senhas coincidem. Se a sessão estiver inválida, saia e entre novamente. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },
