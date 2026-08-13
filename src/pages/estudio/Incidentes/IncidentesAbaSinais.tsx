@@ -4,7 +4,6 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
-import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import {
   FiltroEntidadeBarSelect,
   KpiCard,
@@ -17,18 +16,17 @@ import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
-import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
-import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { formatDataIsoBr, labelPrestadorIncidente } from "../../../lib/estudioIncidentesHelpers";
-import { fetchSmSinaisPeriodo, fetchStaffFiltroSinaisSm } from "../../../lib/smSinaisFetch";
-import type { SmSinalRow, SmSinalStaffOption } from "../../../lib/smSinaisTypes";
+import { tableRowHoverBg } from "../../plataforma/GestaoMesas/gestaoMesasUi";
+import { fetchSmSinaisResumoPeriodo, fetchStaffFiltroSinaisSm } from "../../../lib/smSinaisFetch";
+import type { SmSinalResumoRow, SmSinalStaffOption } from "../../../lib/smSinaisTypes";
 import {
-  agregarSinaisPorDia,
-  calcularKpisSinais,
+  agregarResumoPorDia,
+  calcularKpisResumo,
+  chaveRelatorResumo,
   fmtDuracaoMs,
   kpiMsParaComparativo,
-  labelRelatorSinal,
-  labelSmAtendente,
+  labelRelatorResumo,
   type SmSinalDiaAgg,
 } from "../../../lib/smSinaisHelpers";
 
@@ -71,45 +69,61 @@ export function useIncidentesAbaSinais(opts: {
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
 
-  const [busca, setBusca] = useState("");
   const [staffFiltroId, setStaffFiltroId] = useState("");
   const [relatorFiltroId, setRelatorFiltroId] = useState("");
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
 
-  const [rowsAtual, setRowsAtual] = useState<SmSinalRow[]>([]);
-  const [rowsAnterior, setRowsAnterior] = useState<SmSinalRow[]>([]);
+  const [rowsAtual, setRowsAtual] = useState<SmSinalResumoRow[]>([]);
+  const [rowsAnterior, setRowsAnterior] = useState<SmSinalResumoRow[]>([]);
   const [staffOptions, setStaffOptions] = useState<SmSinalStaffOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMoM, setLoadingMoM] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-
-  const carregar = useCallback(async () => {
-    if (!opts.active) return;
-    setErro(null);
-    try {
-      const [atual, anterior] = await Promise.all([
-        fetchSmSinaisPeriodo({ dataIni: opts.periodoAtual.inicio, dataFim: opts.periodoAtual.fim }),
-        opts.periodoAnterior
-          ? fetchSmSinaisPeriodo({
-              dataIni: opts.periodoAnterior.inicio,
-              dataFim: opts.periodoAnterior.fim,
-            })
-          : Promise.resolve([] as SmSinalRow[]),
-      ]);
-      setRowsAtual(atual);
-      setRowsAnterior(anterior);
-    } catch (e) {
-      console.error("Sinais: falha ao carregar período", e);
-      setErro(ERRO_CARREGAR);
-    } finally {
-      setLoading(false);
-    }
-  }, [opts.active, opts.periodoAtual, opts.periodoAnterior]);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     if (!opts.active) return;
+    let cancel = false;
+    setErro(null);
     setLoading(true);
-    void carregar();
-  }, [opts.active, carregar]);
+    setLoadingMoM(false);
+    void (async () => {
+      try {
+        const atual = await fetchSmSinaisResumoPeriodo({
+          dataIni: opts.periodoAtual.inicio,
+          dataFim: opts.periodoAtual.fim,
+        });
+        if (cancel) return;
+        setRowsAtual(atual);
+        setLoading(false);
+        if (!opts.periodoAnterior) {
+          setRowsAnterior([]);
+          return;
+        }
+        setLoadingMoM(true);
+        try {
+          const anterior = await fetchSmSinaisResumoPeriodo({
+            dataIni: opts.periodoAnterior.inicio,
+            dataFim: opts.periodoAnterior.fim,
+          });
+          if (!cancel) setRowsAnterior(anterior);
+        } catch (eMom) {
+          console.error("Sinais: falha ao carregar mês anterior", eMom);
+          if (!cancel) setRowsAnterior([]);
+        }
+      } catch (e) {
+        if (cancel) return;
+        console.error("Sinais: falha ao carregar período", e);
+        setErro(ERRO_CARREGAR);
+        setLoading(false);
+      } finally {
+        if (!cancel) setLoadingMoM(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [opts.active, opts.periodoAtual, opts.periodoAnterior, reload]);
 
   useEffect(() => {
     if (!opts.active) return;
@@ -130,10 +144,11 @@ export function useIncidentesAbaSinais(opts: {
   const relatoresOptions = useMemo(() => {
     const map = new Map<string, string>();
     for (const r of rowsAtual) {
-      const nome = labelRelatorSinal(r);
+      const nome = labelRelatorResumo(r);
       if (!nome || nome === "—") continue;
-      const id = r.creator_funcionario_id?.trim() || `nome:${nome}`;
-      if (!map.has(id)) map.set(id, nome);
+      const id = chaveRelatorResumo(r);
+      if (!id || map.has(id)) continue;
+      map.set(id, nome);
     }
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
@@ -141,14 +156,11 @@ export function useIncidentesAbaSinais(opts: {
   }, [rowsAtual]);
 
   const aplicarFiltros = useCallback(
-    (rows: SmSinalRow[]) =>
+    (rows: SmSinalResumoRow[]) =>
       rows.filter((r) => {
-        if (opts.estudioFiltro !== "todos" && r.estudio_slug !== opts.estudioFiltro) return false;
+        if (opts.estudioFiltro !== "todos" && (r.estudio_slug || "") !== opts.estudioFiltro) return false;
         if (staffFiltroId && r.resolver_funcionario_id !== staffFiltroId) return false;
-        if (relatorFiltroId) {
-          const key = r.creator_funcionario_id?.trim() || `nome:${labelRelatorSinal(r)}`;
-          if (key !== relatorFiltroId) return false;
-        }
+        if (relatorFiltroId && chaveRelatorResumo(r) !== relatorFiltroId) return false;
         if (opts.isProprios) {
           const cid = r.creator_funcionario_id;
           const rid = r.resolver_funcionario_id;
@@ -163,41 +175,12 @@ export function useIncidentesAbaSinais(opts: {
   const rowsAtualEscopo = useMemo(() => aplicarFiltros(rowsAtual), [rowsAtual, aplicarFiltros]);
   const rowsAnteriorEscopo = useMemo(() => aplicarFiltros(rowsAnterior), [rowsAnterior, aplicarFiltros]);
 
-  const rowsBusca = useMemo(
-    () =>
-      rowsAtualEscopo.filter((r) =>
-        textoContemBuscaEmAlgum(
-          busca,
-          r.signal_id,
-          r.signal_type,
-          r.table_id,
-          r.estudio_slug ?? "",
-          labelSmAtendente(r),
-          labelRelatorSinal(r),
-        ),
-      ),
-    [rowsAtualEscopo, busca],
-  );
-
-  const kpiAtual = useMemo(() => calcularKpisSinais(rowsBusca), [rowsBusca]);
-  const kpiAnterior = useMemo(() => {
-    const ant = rowsAnteriorEscopo.filter((r) =>
-      textoContemBuscaEmAlgum(
-        busca,
-        r.signal_id,
-        r.signal_type,
-        r.table_id,
-        r.estudio_slug ?? "",
-        labelSmAtendente(r),
-        labelRelatorSinal(r),
-      ),
-    );
-    return calcularKpisSinais(ant);
-  }, [rowsAnteriorEscopo, busca]);
+  const kpiAtual = useMemo(() => calcularKpisResumo(rowsAtualEscopo), [rowsAtualEscopo]);
+  const kpiAnterior = useMemo(() => calcularKpisResumo(rowsAnteriorEscopo), [rowsAnteriorEscopo]);
 
   const rowsTabela = useMemo(
-    () => sortDias(agregarSinaisPorDia(rowsBusca), sort.col, sort.dir),
-    [rowsBusca, sort],
+    () => sortDias(agregarResumoPorDia(rowsAtualEscopo), sort.col, sort.dir),
+    [rowsAtualEscopo, sort],
   );
 
   function onSort(col: SortCol) {
@@ -219,44 +202,53 @@ export function useIncidentesAbaSinais(opts: {
     );
   }
 
-  const filterBar = (
-    <div style={{ ...getFilterBarRowStyle(), marginTop: 10 }}>
-      <BarraPesquisaPagina
-        value={busca}
-        onChange={setBusca}
-        placeholder={PAGE_SEARCH.sinais}
-        aria-label="Buscar sinais por ID, motivo, mesa, SM ou relator"
-        wrapperStyle={{ flex: "1 1 260px", maxWidth: 420 }}
-      />
+  const filterBar =
+    opts.isProprios && !loadingMoM ? null : (
+    <div style={{ ...getFilterBarRowStyle(), marginTop: 10, width: "100%" }}>
       {!opts.isProprios ? (
-        <FiltroEntidadeBarSelect
-          mode="single"
-          selected={staffFiltroId ? [staffFiltroId] : []}
-          onChange={(v) => setStaffFiltroId(v[0] ?? "")}
-          items={staffOptions.map((s) => ({
-            id: s.id,
-            name: labelPrestadorIncidente(s.nome, s.nickname),
-          }))}
-          icon={FilterBarIcons.staff}
-          triggerEmptyLabel="Todos Staff"
-          ariaFilterPrefix="Filtrar por staff"
-          listboxAriaLabel="Staff"
-        />
+        <>
+          <FiltroEntidadeBarSelect
+            mode="single"
+            selected={staffFiltroId ? [staffFiltroId] : []}
+            onChange={(v) => setStaffFiltroId(v[0] ?? "")}
+            items={staffOptions.map((s) => ({
+              id: s.id,
+              name: labelPrestadorIncidente(s.nome, s.nickname),
+            }))}
+            icon={FilterBarIcons.staff}
+            triggerEmptyLabel="Todos Staff"
+            ariaFilterPrefix="Filtrar por staff"
+            listboxAriaLabel="Staff"
+          />
+          <FiltroEntidadeBarSelect
+            mode="single"
+            selected={relatorFiltroId ? [relatorFiltroId] : []}
+            onChange={(v) => setRelatorFiltroId(v[0] ?? "")}
+            items={relatoresOptions}
+            icon={FilterBarIcons.influencer}
+            triggerEmptyLabel="Todos Relatores"
+            ariaFilterPrefix="Filtrar por relator"
+            listboxAriaLabel="Relatores"
+          />
+        </>
       ) : null}
-      {!opts.isProprios ? (
-        <FiltroEntidadeBarSelect
-          mode="single"
-          selected={relatorFiltroId ? [relatorFiltroId] : []}
-          onChange={(v) => setRelatorFiltroId(v[0] ?? "")}
-          items={relatoresOptions}
-          icon={FilterBarIcons.influencer}
-          triggerEmptyLabel="Todos Relatores"
-          ariaFilterPrefix="Filtrar por relator"
-          listboxAriaLabel="Relatores"
-        />
+      {loadingMoM ? (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            color: t.textMuted,
+            fontSize: 12,
+            fontFamily: FONT.body,
+          }}
+        >
+          <Clock size={12} aria-hidden />
+          Carregando…
+        </span>
       ) : null}
     </div>
-  );
+    );
 
   let panel: ReactNode;
   if (loading) {
@@ -285,9 +277,37 @@ export function useIncidentesAbaSinais(opts: {
         <div
           role="alert"
           aria-live="polite"
-          style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, padding: "20px 0", textAlign: "center" }}
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            padding: "20px 0",
+            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
-          {erro}
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={() => setReload((n) => n + 1)}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       </div>
     );
@@ -315,6 +335,7 @@ export function useIncidentesAbaSinais(opts: {
               anterior={kpiMsParaComparativo(kpiAnterior.tmaTotalMs)}
               isHistorico={opts.historico}
               isInverso
+              formatAnterior={(s) => fmtDuracaoMs(s * 1000)}
             />
             <KpiCard
               label="TMA de Atendimento"
@@ -325,6 +346,7 @@ export function useIncidentesAbaSinais(opts: {
               anterior={kpiMsParaComparativo(kpiAnterior.tmaAtendimentoMs)}
               isHistorico={opts.historico}
               isInverso
+              formatAnterior={(s) => fmtDuracaoMs(s * 1000)}
             />
             <KpiCard
               label="TMA de Resolução"
@@ -335,6 +357,7 @@ export function useIncidentesAbaSinais(opts: {
               anterior={kpiMsParaComparativo(kpiAnterior.tmaResolucaoMs)}
               isHistorico={opts.historico}
               isInverso
+              formatAnterior={(s) => fmtDuracaoMs(s * 1000)}
             />
           </div>
         </div>
@@ -367,8 +390,19 @@ export function useIncidentesAbaSinais(opts: {
                   </tr>
                 </thead>
                 <tbody>
-                  {rowsTabela.map((row, i) => (
-                    <tr key={row.diaBrt} style={{ background: dataTable.zebraRow(i) }}>
+                  {rowsTabela.map((row, i) => {
+                    const zebra = dataTable.zebraRow(i);
+                    return (
+                    <tr
+                      key={row.diaBrt}
+                      style={{ background: zebra }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = zebra;
+                      }}
+                    >
                       <td style={dataTable.tdSticky({ rowIndex: i, fontWeight: 600 })}>
                         {formatDataIsoBr(row.diaBrt)}
                       </td>
@@ -377,7 +411,8 @@ export function useIncidentesAbaSinais(opts: {
                       <td style={dataTable.tdCenter}>{fmtDuracaoMs(row.tmaAtendimentoMs)}</td>
                       <td style={dataTable.tdCenter}>{fmtDuracaoMs(row.tmaResolucaoMs)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

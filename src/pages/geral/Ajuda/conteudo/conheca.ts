@@ -747,12 +747,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e KPIs",
         texto:
-          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período) e o filtro de **Estúdio**. As abas **Tickets** e **Sinais** organizam a página.\n\nNa aba **Tickets**, o filtro de **Time** (**Todos Times**, **Game Presenter** ou **Shuffler**) e os filtros de **Staff**, **Incidente**, **Tipo** e **Relator** restringem a lista e os KPIs. Usuários com permissão de Ver = Próprios não veem Staff e Relator — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca da aba Tickets localiza incidentes por protocolo, prestador, nickname ou mesa."
+          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período) e o filtro de **Estúdio**. As abas **Tickets** e **Sinais** organizam a página.\n\nNa aba **Tickets**, o filtro de **Time** (**Todos Times**, **Game Presenter** ou **Shuffler**) e os filtros de **Staff**, **Incidente**, **Tipo** e **Relator** restringem a lista e os KPIs. Usuários com permissão de Ver = Próprios não veem Staff e Relator — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca da aba Tickets localiza incidentes por protocolo, prestador, nickname ou mesa. A tabela pagina a lista (50 por página). Depois de registrar um incidente, os filtros que você tinha escolhido permanecem."
       },
       {
         subtitulo: "Aba Sinais",
         texto:
-          "A aba **Sinais** mostra os sinais resolvidos pelos Service Managers (origem Grafana). No bloco de filtros: busca, **Todos Staff** (SM que atendeu) e **Todos Relatores** (quem abriu o sinal). Os KPIs consolidam, no período e com os filtros aplicados: **Totais de Sinais**, **TMA Total** (Issued → Resolved), **TMA de Atendimento** (Issued → Taken) e **TMA de Resolução** (Taken → Resolved), cada um com comparativo do mês anterior.\n\nO **Detalhamento Diário** resume por dia (America/Sao_Paulo): quantidade de sinais e as médias de TMA Total, de Atendimento e de Resolução.",
+          "A aba **Sinais** mostra os totais dos sinais resolvidos pelos Service Managers (origem Grafana). No bloco de filtros, centralizados: **Todos Staff** (SM que atendeu) e **Todos Relatores** (quem abriu o sinal) — não há busca por ID ou mesa. Os KPIs consolidam, no período e com os filtros aplicados: **Totais de Sinais**, **TMA Total** (Issued → Resolved), **TMA de Atendimento** (Issued → Taken) e **TMA de Resolução** (Taken → Resolved), cada um com comparativo do mês anterior **no mesmo formato de relógio** (ex.: 00:54).\n\nO **Detalhamento Diário** resume por dia (America/Sao_Paulo): quantidade de sinais e as médias de TMA Total, de Atendimento e de Resolução.",
       },
       {
         subtitulo: "Registrar um incidente",

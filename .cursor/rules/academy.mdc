@@ -256,7 +256,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 | Regra | Valor |
 |---|---|
-| Tamanho máximo | **500 MB** por arquivo — `ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES` (`lib/academyPerformanceHubVideoFiles.ts`) alinhado ao `file_size_limit` do bucket |
+| Tamanho máximo | **500 MB** por arquivo — `ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES` alinhado ao `file_size_limit` do bucket **e** ao **limite global** do Storage no Dashboard (Storage → Settings). O TUS usa o **mínimo** dos dois; global em 50 MB (default) recusa vídeo de ~126 MB com `Maximum size exceeded` mesmo com o bucket em 500 MB |
 | Validação | No `onChange` do campo (rejeita antes do upload) **e** antes de enviar ao Storage |
 | Orientação no campo | `ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO` — grave em 720p; texto único abaixo do input |
 | Upload | Arquivos **≥ 6 MB** usam TUS (`tus-js-client` build **browser**): contrato oficial Supabase (`uploadDataDuringCreation: true`, `x-upsert: true`, chunks 6 MB, **um** header `Authorization: Bearer <JWT>` — sem `onBeforeRequest` duplicado, senão o Storage devolve `Invalid Compact JWS`), host `*.storage.supabase.co` com fallback no host da API. Menores usam `storage.upload` simples. Progresso `%` nos botões Salvar/Concluir. TUS exige políticas Storage **INSERT + UPDATE** |
@@ -297,4 +297,5 @@ Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `aca
 - Gravar `video_removido_em` a partir da UI — a coluna é da retenção (Edge Function).
 - Upload de vídeo grande (≥ 6 MB) via `storage.upload` simples — usar TUS resumável (`uploadVideoPerformanceHub`).
 - Bucket de vídeo sem política Storage **UPDATE** — o TUS faz PATCH e falha em arquivos ~300 MB mesmo abaixo de 500 MB.
+- Subir o `file_size_limit` do bucket para 500 MB **sem** subir o **limite global** do Storage no Dashboard — o TUS usa o mínimo e devolve `Maximum size exceeded` (ex.: vídeo de 126 MB com global em 50 MB).
 - Apagar o arquivo do Storage direto no modal ao trocar de vídeo — o antigo vira órfão e é recolhido pela purga semanal.

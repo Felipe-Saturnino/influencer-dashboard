@@ -1231,7 +1231,7 @@ Quando a UI pode renderizar **dezenas/centenas de linhas** (ou linha × muitas c
 | Grade editável densa (Escala Diária) | Paginar **linhas** na vista; save/sugestão/aprovação continuam sobre **todas** as linhas; cachear opções de `<select>` por tipo de turno (não alocar array novo por célula) |
 | Virtualização (`react-virtual` etc.) | Só com pedido explícito — risco alto em tabela editável (foco, sticky, campos desmontados) |
 
-Constantes: `TABELA_PAGE_SIZE_PRESTADORES` (50), `TABELA_PAGE_SIZE_ESCALA` (40).
+Constantes: `TABELA_PAGE_SIZE_PRESTADORES` (50), `TABELA_PAGE_SIZE_ESCALA` (40), `TABELA_PAGE_SIZE_INCIDENTES` (50).
 
 **Referências:** Fase 7 (fetch) — Ordem de Saída, Relatório de Turno, Performance Hub, Headcount, Portais. Fase 8 (DOM) — Gestão de Prestadores, Gestão de Escala.
 

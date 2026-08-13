@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_LIMITE_SERVIDOR,
   ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE,
-  ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO,
   ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES,
   detalheErroUploadVideo,
   endpointResumableVideoPerformanceHub,
@@ -32,11 +32,11 @@ describe("academyPerformanceHubVideoFiles", () => {
       ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE,
     );
     expect(mensagemErroUploadVideo({ message: "Maximum size exceeded", statusCode: "413" })).toBe(
-      ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE,
+      ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_LIMITE_SERVIDOR,
     );
     expect(
       mensagemErroUploadVideo({ message: "The object exceeded the maximum allowed size" }),
-    ).toBe(ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO);
+    ).toBe(ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_LIMITE_SERVIDOR);
   });
 
   it("mapeia conflito TUS e rede sem citar o teto de tamanho", () => {

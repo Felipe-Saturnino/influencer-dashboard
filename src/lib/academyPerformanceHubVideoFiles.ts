@@ -27,6 +27,10 @@ export const ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO =
 export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO =
   `O vídeo ultrapassa o tamanho máximo de ${ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL}. Envie um arquivo menor.`;
 
+/** Servidor recusou o tamanho (ex.: limite global 50 MB) mesmo com o arquivo abaixo de 500 MB no cliente. */
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_LIMITE_SERVIDOR =
+  `Não foi possível enviar o vídeo: o armazenamento recusou o tamanho do arquivo. Se o vídeo está abaixo de ${ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL}, entre em contato com o suporte.`;
+
 const ERRO_GENERICO =
   "Não foi possível enviar o vídeo. Se o problema persistir, entre em contato com o suporte.";
 
@@ -136,11 +140,15 @@ export function mensagemErroUploadVideo(error: { message?: string; statusCode?: 
   if (raw.includes("mime") || raw.includes("not supported") || raw.includes("invalid content")) {
     return "Formato de vídeo não suportado. Use MP4, MOV ou WebM.";
   }
+  if (
+    raw.includes("maximum size exceeded") ||
+    raw.includes("file size limit") ||
+    raw.includes("exceeded the maximum allowed size")
+  ) {
+    return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_LIMITE_SERVIDOR;
+  }
   if (status === 413 || raw.includes("payload too large") || raw.includes("entity too large")) {
     return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE;
-  }
-  if (raw.includes("file size limit") || raw.includes("exceeded the maximum allowed size")) {
-    return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO;
   }
   if (raw.includes("invalid compact jws") || raw.includes("malformed jwt") || raw.includes("invalid jwt")) {
     return ERRO_SESSAO;

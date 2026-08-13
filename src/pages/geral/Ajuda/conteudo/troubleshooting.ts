@@ -684,12 +684,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A lista de incidentes está vazia?",
         texto:
-          "Confirme que está na aba **Tickets**, o mês selecionado no carrossel (ou **Histórico**) e os filtros de Estúdio, Time, Staff, Incidente, Tipo e Relator — cada um restringe a lista e os KPIs. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
+          "Confirme que está na aba **Tickets**, o mês selecionado no carrossel (ou **Histórico**) e os filtros de Estúdio, Time, Staff, Incidente, Tipo e Relator — cada um restringe a lista e os KPIs. Se aparecer mensagem de erro, use **Tentar de novo**. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
       },
       {
         subtitulo: "A aba Sinais está vazia?",
         texto:
-          "Confirme o mês (ou **Histórico**), o filtro de **Estúdio** e, se visíveis, **Staff** (SM) e **Relator**. A busca também restringe os KPIs e o Detalhamento Diário. Os sinais vêm da sincronização com o Grafana — se o período deveria ter dados e a lista continua vazia, entre em contato com o suporte.",
+          "Confirme o mês (ou **Histórico**), o filtro de **Estúdio** e, se visíveis, **Staff** (SM) e **Relator**. Esta aba não tem busca por ID ou mesa. Os totais vêm da sincronização com o Grafana. Se aparecer mensagem de erro, use **Tentar de novo**. Se o período deveria ter dados e a lista continua vazia, entre em contato com o suporte."
       },
       {
         subtitulo: "O botão Novo Incidente não aparece?",
@@ -769,7 +769,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite é **500 MB** por arquivo (cerca de **512.000 KB**). Um vídeo de **300.000 KB** (~293 MB) está **dentro** do limite — se o envio falhar nesse tamanho, não é o teto do arquivo.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão ou «Não foi possível enviar o vídeo», tente de novo na mesma avaliação.\n\nSe a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",

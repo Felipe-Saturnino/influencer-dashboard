@@ -152,26 +152,27 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 ### Abas (URL)
 
 - **`useRouteTab`** + `APP_ROUTE_CATALOG`: **Tickets** (`/Incidentes/Tickets`) e **Sinais** (`/Incidentes/Sinais`).
-- **Tickets** — KPIs por categoria + tabela de incidentes + filtros de ticket; respeita o filtro **Time**.
-- **Sinais** — dados de `sm_sinais` (Grafana / ClickHouse); filtros de ticket ocultos; ver subsecção **Aba Sinais** abaixo.
+- **Tickets** — KPIs por categoria + tabela de incidentes + filtros de ticket; respeita o filtro **Time**. Fetch **só com a aba Tickets ativa**; mês atual primeiro, MoM em background (`Clock` + `Carregando…` na barra). Catálogo de mesas só ao abrir **Novo/Editar Incidente**.
+- **Sinais** — totais em `sm_sinais_resumo_diario`; filtros de ticket ocultos; ver subsecção **Aba Sinais** abaixo. Fetch só com a aba Sinais ativa; MoM em background.
 
 ### Filtros
 
 - Carrossel de mês (início em `INCIDENTES_MES_INICIO` — julho/2026) + **`FiltroHistoricoButton`** + **`FiltroEstudioSelect`** (**Todos Estúdios**) na primeira linha, com **`AjudaContextualAcoes`**.
 - Segunda linha — abas de módulo **Tickets** / **Sinais** (`FiltroBarTabButton` + ícones `Ticket` / `Activity`).
 - Terceira linha (só aba **Tickets**) — **`BarraPesquisaPagina`** + filtros pill: **Time** (`FiltroBarCampoSelect`, **Todos Times** / Game Presenter / Shuffler, ícone `FilterBarIcons.time`), **Incidente**, **Tipo**, **Staff** (restrito ao time selecionado) e **Relator**. **Staff** e **Relator** ficam ocultos quando `canView === "proprios"`; o filtro **Time** permanece disponível.
-- Terceira linha (só aba **Sinais**) — **`BarraPesquisaPagina`** (`PAGE_SEARCH.sinais`) + **Staff** (Service Managers do organograma — `resolver_funcionario_id`) + **Relator** (criadores do período — `creator_funcionario_id` / screen name). **Staff** e **Relator** ocultos quando `canView === "proprios"`.
+- Terceira linha (só aba **Sinais**) — **Staff** e **Relator** centralizados (`getFilterBarRowStyle`); **sem** barra de pesquisa. Staff = Service Managers do organograma (`resolver_funcionario_id`); Relator = criadores do período (`creator_funcionario_id` / screen name). **Staff** e **Relator** ocultos quando `canView === "proprios"`.
 - Filtro de escopo Tickets (time, staff, estúdio, incidente, tipo, relator) e busca são **client-side** sobre o período já buscado no servidor (`fetchEstudioIncidentesPeriodo`). Entram no mesmo escopo dos KPIs da aba Tickets.
-- Filtro de escopo Sinais (estúdio, staff SM, relator) e busca são **client-side** sobre `fetchSmSinaisPeriodo` (janela por `dia_brt`).
+- Filtro de escopo Sinais (estúdio, staff SM, relator) é **client-side** sobre `fetchSmSinaisResumoPeriodo` (`sm_sinais_resumo_diario`).
 
 ### Aba Sinais
 
-- Fonte: tabela **`sm_sinais`** (`lib/smSinaisFetch.ts`, `lib/smSinaisHelpers.ts`, `lib/smSinaisTypes.ts`). Ingestão via script Grafana (fora da UI). Durações **não** gravadas — calculadas na UI.
+- Fonte da **UI**: tabela **`sm_sinais_resumo_diario`** (`fetchSmSinaisResumoPeriodo`) — totais por dia × estúdio × SM × relator. A ingestão Grafana continua gravando **`sm_sinais`**; trigger `trg_sm_sinais_resumo_*` recalcula o resumo dos dias tocados. SQL da primeira vez: `supabase/sql_editor_sm_sinais_resumo_diario.sql` (colar no Editor; preenche o passado).
+- Helpers: `calcularKpisResumo` / `agregarResumoPorDia` (`lib/smSinaisHelpers.ts`) — TMA = soma de ms ÷ n de amostras (não média de médias). Durações **não** gravadas no sinal individual; o resumo guarda soma + n.
 - Período: `dia_brt` (America/Sao_Paulo) alinhado ao carrossel / Histórico; MoM com mês anterior quando não Histórico.
-- **KPIs Consolidados** (`app-grid-kpi-4`, `KpiCard` com MoM; TMA com `isInverso`): **Totais de Sinais**; **TMA Total** (`timer_stopped_at − issued_at`); **TMA de Atendimento** (`taken_at − issued_at`); **TMA de Resolução** (`timer_stopped_at − taken_at`). Médias ignoram linhas sem timestamps necessários. Formato `MM:SS` ou `HH:MM:SS`.
-- **Detalhamento Diário:** agregação por `dia_brt` — colunas Data (DD/MM/YYYY), Sinais (qtd), TMA Total / Atendimento / Resolução (médias do dia). Ordenação padrão: Data desc. **Sem** lista sinal a sinal nem modal Ver (performance).
-- Fetch leve (`fetchSmSinaisPeriodo`): só colunas necessárias a KPIs/filtros/agregação — **sem** embeds de mesa/estúdio/funcionário.
-- **Ver = Próprios:** restringe a sinais em que o usuário é creator ou resolver (`creator_funcionario_id` / `resolver_funcionario_id` ∈ `meusIds`).
+- **KPIs Consolidados** (`app-grid-kpi-4`, `KpiCard` com MoM; TMA com `isInverso` + **`formatAnterior`** em relógio via `fmtDuracaoMs`): **Totais de Sinais**; **TMA Total**; **TMA de Atendimento**; **TMA de Resolução**. Formato `MM:SS` ou `HH:MM:SS` no valor e no “vs”.
+- **Detalhamento Diário:** colunas Data (DD/MM/YYYY), Sinais (qtd), TMA Total / Atendimento / Resolução (médias do dia). Ordenação padrão: Data desc. Hover nas linhas. **Sem** lista sinal a sinal, **sem** busca por ID/mesa/motivo, **sem** modal Ver. Erro de carga: mensagem + **Tentar de novo**.
+- **Ver = Próprios:** restringe o resumo em que o usuário é creator ou resolver (`creator_funcionario_id` / `resolver_funcionario_id` ∈ `meusIds`).
+- Overview Prestador → OCR continua a ler **`sm_sinais`** (`fetchSmSinaisPeriodoOcr`) — não usa o resumo neste ciclo.
 
 ### Permissões
 
@@ -185,6 +186,8 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 
 - Colunas: Protocolo (1ª coluna fixa), **Abertura** (`created_at`), Prestador, Time, Jogo (chip `getGameTagChipStyle` + `GAME_IDENTITY_ICONS` quando o jogo mapear para `GameIdentityKey`), Incidente (badge com `INCIDENTE_CATEGORIA_META.color`), Tipo, **Relator** (`staff_nickname` da Gestão de Staff via `fetchNicknameStaffPorProfileIds` / `labelRelatorIncidente`; fallback `relator_nome`), Ações (`BtnIconeAcaoLinha` + `Eye` → `ModalVerIncidente`; com **Editar = Sim**, também `Pencil` → `ModalNovoIncidente` em modo edição). Colunas Prestador/Time/Relator omitidas em **Ver = Próprios**. Coluna **Time** também omitida quando o filtro Time ≠ **Todos Times** (GP ou Shuffler).
 - Ordenação padrão: `data` desc (`SortTableTh`); demais colunas ordenáveis.
+- Paginação client-side (`TabelaPaginacaoBar`, `TABELA_PAGE_SIZE_INCIDENTES` = 50). Hover nas linhas (`tableRowHoverBg`). Erro de carga: mensagem + **Tentar de novo**.
+- Após **Registrar** / **Salvar Alterações**: atualiza a lista **sem** zerar busca, Time nem Staff.
 
 ### Modais
 
@@ -248,3 +251,4 @@ Nenhuma exceção documentada nesta secção. Chip de jogo na tabela usa paleta 
 - Incidentes: filtros Staff / Relator visíveis para usuário com `canView === "proprios"` — devem ficar ocultos (o prestador só vê os próprios registros).
 - Incidentes: tratar CTA **Novo Incidente** e botão **Editar** na tabela como ação de **Criar** — o produto define ambos como **Editar = Sim** (`canEditar === "sim"`); não gatear por `canCriarOk` nem por `canEditarOk` (Próprios não libera).
 - Incidentes: tornar o **Protocolo** editável manualmente no modal — o protocolo é gerado/regenerado no banco (somente leitura na UI); regeneração automática só quando a família da categoria Incidente muda.
+- Incidentes → Sinais: baixar `sm_sinais` linha a linha na UI — usar `sm_sinais_resumo_diario`. Não reintroduzir barra de pesquisa nesta aba.

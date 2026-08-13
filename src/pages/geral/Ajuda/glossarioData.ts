@@ -726,7 +726,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Sinal",
         definicao:
-          "Chamado operacional aberto na mesa (Grafana / TOS) e atendido por um Service Manager. Na aba Sinais de Incidentes, cada linha é um sinal resolvido, com motivo, tempos de atendimento/resolução e conclusão.",
+          "Chamado operacional aberto na mesa (Grafana / TOS) e atendido por um Service Manager. Na aba Sinais de Incidentes, a tela mostra totais e TMA por dia (não a lista de cada sinal).",
         referencia: "Incidentes",
       },
       {

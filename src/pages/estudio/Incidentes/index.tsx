@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  Clock,
   Eye,
   EyeOff,
   Loader2,
@@ -28,7 +29,9 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_INCIDENTES } from "../../../lib/tablePagination";
 import {
   CtaCriarButton,
   FiltroBarCampoSelect,
@@ -57,7 +60,7 @@ import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import { fetchEstudiosSpinRows, fetchMesasSpinCadastroRows } from "../../plataforma/GestaoMesas/gestaoMesasFetch";
-import { nomeEstudioJoin } from "../../plataforma/GestaoMesas/gestaoMesasUi";
+import { nomeEstudioJoin, tableRowHoverBg } from "../../plataforma/GestaoMesas/gestaoMesasUi";
 import type { EstudioSpinRow, MesaSpinCadastroRow } from "../../plataforma/GestaoMesas/gestaoMesasUi";
 import { fetchEstudioIncidentesPeriodo, fetchNicknameStaffPorProfileIds, fetchStaffFiltroIncidentes } from "../../../lib/estudioIncidentesFetch";
 import {
@@ -229,7 +232,10 @@ export default function Incidentes() {
   const [nicknamePorRelator, setNicknamePorRelator] = useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(true);
+  const [loadingMoM, setLoadingMoM] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [pagina, setPagina] = useState(0);
+  const [ticketsReload, setTicketsReload] = useState(0);
 
   const [verIncidente, setVerIncidente] = useState<EstudioIncidenteRow | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
@@ -259,47 +265,78 @@ export default function Incidentes() {
     active: aba === "sinais",
   });
 
-  const carregarDados = useCallback(async () => {
-    setErro(null);
-    try {
-      const [atual, anterior] = await Promise.all([
-        fetchEstudioIncidentesPeriodo({ dataIni: periodoAtual.inicio, dataFim: periodoAtual.fim }),
-        periodoAnterior
-          ? fetchEstudioIncidentesPeriodo({ dataIni: periodoAnterior.inicio, dataFim: periodoAnterior.fim })
-          : Promise.resolve([]),
-      ]);
-      setRowsAtual(atual);
-      setRowsAnterior(anterior);
-    } catch (e) {
-      console.error("Incidentes: falha ao carregar dados do período", e);
-      setErro(ERRO_CARREGAR);
-    } finally {
-      setLoading(false);
-    }
-  }, [periodoAtual, periodoAnterior]);
-
   useEffect(() => {
-    if (perm.loading || !podeVer) return;
+    if (perm.loading || !podeVer || aba !== "tickets") return;
+    let cancel = false;
+    setErro(null);
     setLoading(true);
-    void carregarDados();
-  }, [perm.loading, podeVer, carregarDados]);
+    setLoadingMoM(false);
+    void (async () => {
+      try {
+        const atual = await fetchEstudioIncidentesPeriodo({
+          dataIni: periodoAtual.inicio,
+          dataFim: periodoAtual.fim,
+        });
+        if (cancel) return;
+        setRowsAtual(atual);
+        setLoading(false);
+        if (!periodoAnterior) {
+          setRowsAnterior([]);
+          return;
+        }
+        setLoadingMoM(true);
+        try {
+          const anterior = await fetchEstudioIncidentesPeriodo({
+            dataIni: periodoAnterior.inicio,
+            dataFim: periodoAnterior.fim,
+          });
+          if (!cancel) setRowsAnterior(anterior);
+        } catch (eMom) {
+          console.error("Incidentes: falha ao carregar mês anterior", eMom);
+          if (!cancel) setRowsAnterior([]);
+        }
+      } catch (e) {
+        if (cancel) return;
+        console.error("Incidentes: falha ao carregar dados do período", e);
+        setErro(ERRO_CARREGAR);
+        setLoading(false);
+      } finally {
+        if (!cancel) setLoadingMoM(false);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [perm.loading, podeVer, aba, periodoAtual, periodoAnterior, ticketsReload]);
+
+  const recarregarTickets = useCallback(() => {
+    setTicketsReload((n) => n + 1);
+  }, []);
+
+  const garantirMesas = useCallback(async () => {
+    if (mesasRows.length > 0) return;
+    try {
+      const rows = await fetchMesasSpinCadastroRows();
+      setMesasRows(rows);
+    } catch (e) {
+      console.error("Incidentes: falha ao carregar mesas", e);
+    }
+  }, [mesasRows.length]);
 
   useEffect(() => {
     if (perm.loading || !podeVer) return;
     let cancel = false;
     void (async () => {
       try {
-        const [mesasRes, estudiosRes, staffRes] = await Promise.all([
-          fetchMesasSpinCadastroRows(),
+        const [estudiosRes, staffRes] = await Promise.all([
           fetchEstudiosSpinRows(),
           fetchStaffFiltroIncidentes(),
         ]);
         if (cancel) return;
-        setMesasRows(mesasRes);
         setEstudiosRows(estudiosRes);
         setStaffOptions(staffRes);
       } catch (e) {
-        console.error("Incidentes: falha ao carregar mesas/estúdios/staff", e);
+        console.error("Incidentes: falha ao carregar estúdios/staff", e);
       }
     })();
     return () => {
@@ -434,6 +471,27 @@ export default function Incidentes() {
     return sortRows(filtradas, sort.col, sort.dir, nicknamePorRelator);
   }, [rowsAtualEscopo, busca, sort, nicknamePorPrestadorId, nicknamePorRelator]);
 
+  useEffect(() => {
+    setPagina(0);
+  }, [
+    busca,
+    timeFiltro,
+    staffFiltroId,
+    estudioFiltro,
+    incidenteFiltro,
+    tipoFiltro,
+    relatorFiltroId,
+    sort,
+    periodoAtual,
+    historico,
+  ]);
+
+  const paginaSafe = clampPageIndex(pagina, rowsTabela.length, TABELA_PAGE_SIZE_INCIDENTES);
+  const rowsPagina = useMemo(
+    () => slicePage(rowsTabela, paginaSafe, TABELA_PAGE_SIZE_INCIDENTES),
+    [rowsTabela, paginaSafe],
+  );
+
   function onSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "desc" }));
   }
@@ -518,6 +576,21 @@ export default function Incidentes() {
             </button>
             <FiltroHistoricoButton active={historico} onClick={toggleHistorico} />
             <FiltroEstudioSelect value={estudioFiltro} onChange={setEstudioFiltro} estudios={estudiosOptions} />
+            {aba === "tickets" && loadingMoM ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  color: t.textMuted,
+                  fontSize: 12,
+                  fontFamily: FONT.body,
+                }}
+              >
+                <Clock size={12} aria-hidden />
+                Carregando…
+              </span>
+            ) : null}
           </div>
           <div className="app-marketplace-filtro-minhas__cta">
             <AjudaContextualAcoes
@@ -634,9 +707,37 @@ export default function Incidentes() {
         <div
           role="alert"
           aria-live="polite"
-          style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, padding: "20px 0", textAlign: "center" }}
+          style={{
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            padding: "20px 0",
+            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
         >
-          {erro}
+          <span>{erro}</span>
+          <button
+            type="button"
+            onClick={recarregarTickets}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : (
         <div id="panel-incidentes-tickets" role="tabpanel" aria-labelledby="tab-incidentes-tickets">
@@ -675,7 +776,13 @@ export default function Incidentes() {
             >
               <SectionTitle compact>Incidentes</SectionTitle>
               {canNovo ? (
-                <CtaCriarButton type="button" onClick={() => setNovoOpen(true)}>
+                <CtaCriarButton
+                  type="button"
+                  onClick={() => {
+                    setNovoOpen(true);
+                    void garantirMesas();
+                  }}
+                >
                   Novo Incidente
                 </CtaCriarButton>
               ) : null}
@@ -718,12 +825,22 @@ export default function Incidentes() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rowsTabela.map((r, i) => {
+                    {rowsPagina.map((r, i) => {
+                      const zebra = dataTable.zebraRow(i);
                       const gameKey = gameIdentityKeyFromJogo(r.jogo);
                       const chip = gameKey ? getGameTagChipStyle(gameKey, t.isDark) : null;
                       const categoriaMeta = INCIDENTE_CATEGORIA_META[r.incidente];
                       return (
-                        <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                        <tr
+                          key={r.id}
+                          style={{ background: zebra }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = tableRowHoverBg(t.isDark);
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = zebra;
+                          }}
+                        >
                           <td style={dataTable.tdSticky({ rowIndex: i, fontWeight: 700 })}>{r.protocolo}</td>
                           <td style={dataTable.tdCenter}>{formatDataHoraIncidente(r.created_at)}</td>
                           {!isProprios ? <td style={dataTable.tdCenter}>{r.prestador_nome}</td> : null}
@@ -784,7 +901,10 @@ export default function Incidentes() {
                               {canEditarSim ? (
                                 <BtnIconeAcaoLinha
                                   label={tooltipAcao("Editar Incidente")}
-                                  onClick={() => setEditarIncidente(r)}
+                                  onClick={() => {
+                                    setEditarIncidente(r);
+                                    void garantirMesas();
+                                  }}
                                 >
                                   <Pencil size={13} aria-hidden />
                                 </BtnIconeAcaoLinha>
@@ -798,6 +918,15 @@ export default function Incidentes() {
                 </table>
               </div>
             )}
+            {!loading && rowsTabela.length > 0 ? (
+              <TabelaPaginacaoBar
+                t={t}
+                page={paginaSafe}
+                pageSize={TABELA_PAGE_SIZE_INCIDENTES}
+                totalItems={rowsTabela.length}
+                onPageChange={setPagina}
+              />
+            ) : null}
           </div>
         </div>
       )}
@@ -817,12 +946,9 @@ export default function Incidentes() {
           mesas={mesasParaForm}
           onClose={() => setNovoOpen(false)}
           onSaved={(_protocolo, opts) => {
-            void carregarDados();
+            recarregarTickets();
             if (opts?.criarOutro) return;
             setNovoOpen(false);
-            setBusca("");
-            setStaffFiltroId("");
-            setTimeFiltro("todos");
           }}
         />
       ) : null}
@@ -834,7 +960,7 @@ export default function Incidentes() {
           onClose={() => setEditarIncidente(null)}
           onSaved={() => {
             setEditarIncidente(null);
-            void carregarDados();
+            recarregarTickets();
           }}
         />
       ) : null}
