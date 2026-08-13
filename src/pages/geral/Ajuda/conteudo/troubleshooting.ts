@@ -984,7 +984,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O anexo ou imagem não abre ao clicar?",
         texto:
-          "Os arquivos são abertos em uma nova aba. Verifique se o navegador está bloqueando novas abas desta página e permita o popup. Se o link mostrar 'Carregando…' por mais de 10 segundos, pode ser que o arquivo tenha sido removido do armazenamento. Informe ao responsável pela postagem.",
+          "No celular (Safari ou Chrome), o PDF abre em nova aba após um instante — se nada acontecer, o navegador pode ter bloqueado a nova aba: permita pop-ups para este site e toque de novo em **Ver arquivo**. Se aparecer mensagem vermelha sob o link, leia a orientação (pop-up bloqueado ou falha ao gerar o link). Não é necessário estar na Rede Spin / VPN: o arquivo usa link temporário autenticado. Se o erro continuar, entre em contato com o suporte.",
       },
     ],
   },
