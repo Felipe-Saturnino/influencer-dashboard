@@ -14,8 +14,10 @@ import { SkeletonKpiCard } from "../../../components/dashboard";
 import { BRAND } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import {
+  KPI_ARPU_VS_LEGENDA,
   KPI_UAP_VS_LEGENDA,
   fmtPct,
+  momAnteriorComparavel,
   nKpi,
 } from "./overviewSpinLogic";
 import type { KpiExibirSnapshot } from "./useOverviewSpinKpiExibir";
@@ -30,6 +32,16 @@ type Props = {
   isHistoricoKpi: boolean;
 };
 
+function ocultarMoM(
+  historico: boolean,
+  atual: number | null | undefined,
+  anterior: number | null | undefined,
+) {
+  return historico || !momAnteriorComparavel(atual, anterior);
+}
+
+const fmtMargemAnterior = (v: number) => fmtPct(v);
+
 export function OverviewSpinKpisConsolidados({
   contentBoxStyle,
   loading,
@@ -39,11 +51,33 @@ export function OverviewSpinKpisConsolidados({
   kpiAntExibir,
   isHistoricoKpi,
 }: Props) {
+  const histGgr = ocultarMoM(historico || isHistoricoKpi, kpiExibir?.ggr, kpiAntExibir?.ggr);
+  const histTurnover = ocultarMoM(
+    historico || isHistoricoKpi,
+    kpiExibir?.turnover,
+    kpiAntExibir?.turnover,
+  );
+  const histMargem = ocultarMoM(
+    historico || isHistoricoKpi,
+    kpiExibir?.margin_pct,
+    kpiAntExibir?.margin_pct,
+  );
+  const histBets = ocultarMoM(historico || isHistoricoKpi, kpiExibir?.bets, kpiAntExibir?.bets);
+  const histBetSize = ocultarMoM(
+    historico || isHistoricoKpi,
+    kpiExibir?.bet_size,
+    kpiAntExibir?.bet_size,
+  );
+  const histUap = ocultarMoM(historico, kpiExibir?.uap, kpiAntExibir?.uap);
+  const histArpu = ocultarMoM(historico, kpiExibir?.arpu, kpiAntExibir?.arpu);
+
   return (
     <div style={contentBoxStyle}>
       <SectionTitle
         sub={
-          historico ? "acumulado" : "comparativo MTD vs mesmo período do mês anterior"
+          historico
+            ? "acumulado"
+            : "GGR e volume até D-1 vs mesmo recorte; UAP e ARPU vs mês anterior completo"
         }
       >
         KPIs Consolidados
@@ -87,7 +121,7 @@ export function OverviewSpinKpisConsolidados({
               atual={nKpi(kpiExibir?.ggr)}
               anterior={nKpi(kpiAntExibir?.ggr)}
               isBRL
-              isHistorico={isHistoricoKpi}
+              isHistorico={histGgr}
             />
             <KpiCard
               label="Turnover"
@@ -98,7 +132,7 @@ export function OverviewSpinKpisConsolidados({
               atual={nKpi(kpiExibir?.turnover)}
               anterior={nKpi(kpiAntExibir?.turnover)}
               isBRL
-              isHistorico={isHistoricoKpi}
+              isHistorico={histTurnover}
             />
             <KpiCard
               label="Margem"
@@ -107,7 +141,8 @@ export function OverviewSpinKpisConsolidados({
               accentColor={BRAND.amarelo}
               atual={nKpi(kpiExibir?.margin_pct)}
               anterior={nKpi(kpiAntExibir?.margin_pct)}
-              isHistorico={isHistoricoKpi}
+              isHistorico={histMargem}
+              formatAnterior={fmtMargemAnterior}
             />
           </div>
           <div className="app-grid-kpi-4" style={{ gap: 12 }}>
@@ -119,7 +154,7 @@ export function OverviewSpinKpisConsolidados({
               accentColor={BRAND.azul}
               atual={nKpi(kpiExibir?.bets)}
               anterior={nKpi(kpiAntExibir?.bets)}
-              isHistorico={isHistoricoKpi}
+              isHistorico={histBets}
             />
             <KpiCard
               label="Aposta média"
@@ -130,7 +165,7 @@ export function OverviewSpinKpisConsolidados({
               atual={nKpi(kpiExibir?.bet_size)}
               anterior={nKpi(kpiAntExibir?.bet_size)}
               isBRL
-              isHistorico={isHistoricoKpi}
+              isHistorico={histBetSize}
             />
             <KpiCard
               label="UAP"
@@ -140,7 +175,7 @@ export function OverviewSpinKpisConsolidados({
               accentColor={BRAND.roxo}
               atual={nKpi(kpiExibir?.uap)}
               anterior={nKpi(kpiAntExibir?.uap)}
-              isHistorico={isHistoricoKpi}
+              isHistorico={histUap}
               vsLegendaSuffix={KPI_UAP_VS_LEGENDA}
             />
             <KpiCard
@@ -152,7 +187,8 @@ export function OverviewSpinKpisConsolidados({
               atual={nKpi(kpiExibir?.arpu)}
               anterior={nKpi(kpiAntExibir?.arpu)}
               isBRL
-              isHistorico={isHistoricoKpi}
+              isHistorico={histArpu}
+              vsLegendaSuffix={KPI_ARPU_VS_LEGENDA}
             />
           </div>
         </>
@@ -167,7 +203,7 @@ export function OverviewSpinKpisConsolidados({
               atual={nKpi(kpiExibir?.ggr)}
               anterior={nKpi(kpiAntExibir?.ggr)}
               isBRL
-              isHistorico={isHistoricoKpi}
+              isHistorico={histGgr}
             />
             <KpiCard
               label="Turnover"
@@ -178,7 +214,7 @@ export function OverviewSpinKpisConsolidados({
               atual={nKpi(kpiExibir?.turnover)}
               anterior={nKpi(kpiAntExibir?.turnover)}
               isBRL
-              isHistorico={isHistoricoKpi}
+              isHistorico={histTurnover}
             />
             <KpiCard
               label="Apostas"
@@ -188,7 +224,7 @@ export function OverviewSpinKpisConsolidados({
               accentColor={BRAND.azul}
               atual={nKpi(kpiExibir?.bets)}
               anterior={nKpi(kpiAntExibir?.bets)}
-              isHistorico={isHistoricoKpi}
+              isHistorico={histBets}
             />
             <KpiCard
               label="Margem"
@@ -197,7 +233,8 @@ export function OverviewSpinKpisConsolidados({
               accentColor={BRAND.amarelo}
               atual={nKpi(kpiExibir?.margin_pct)}
               anterior={nKpi(kpiAntExibir?.margin_pct)}
-              isHistorico={isHistoricoKpi}
+              isHistorico={histMargem}
+              formatAnterior={fmtMargemAnterior}
             />
           </div>
           <div className="app-grid-kpi-3" style={{ gap: 12 }}>
@@ -210,7 +247,7 @@ export function OverviewSpinKpisConsolidados({
               atual={nKpi(kpiExibir?.bet_size)}
               anterior={nKpi(kpiAntExibir?.bet_size)}
               isBRL
-              isHistorico={isHistoricoKpi}
+              isHistorico={histBetSize}
             />
             <KpiCard
               label="UAP"
@@ -220,7 +257,7 @@ export function OverviewSpinKpisConsolidados({
               accentColor={BRAND.roxo}
               atual={nKpi(kpiExibir?.uap)}
               anterior={nKpi(kpiAntExibir?.uap)}
-              isHistorico={isHistoricoKpi}
+              isHistorico={histUap}
               vsLegendaSuffix={KPI_UAP_VS_LEGENDA}
             />
             <KpiCard
@@ -232,7 +269,8 @@ export function OverviewSpinKpisConsolidados({
               atual={nKpi(kpiExibir?.arpu)}
               anterior={nKpi(kpiAntExibir?.arpu)}
               isBRL
-              isHistorico={isHistoricoKpi}
+              isHistorico={histArpu}
+              vsLegendaSuffix={KPI_ARPU_VS_LEGENDA}
             />
           </div>
         </>

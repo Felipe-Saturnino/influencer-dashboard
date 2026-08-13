@@ -1,9 +1,10 @@
 import { Fragment, Suspense, lazy, type Dispatch, type SetStateAction } from "react";
 import { Table2, ChartColumnBig } from "lucide-react";
-import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import { FONT } from "../../../constants/theme";
 import {
   createDataTableBlockStyles,
+  dataTableRowHoverHandlers,
   getDataTableStyle,
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
@@ -358,8 +359,9 @@ export function OverviewSpinComparativoJogoInterativo(props: OverviewSpinCompara
                     })()}
                     {linhasComparativoJogo.map((row, i) => {
                       const totaisOficiais = row.totaisOficiais;
+                      const zebra = dataTable.zebraRow(i);
                       return (
-                        <tr key={row.dataIso} style={{ background: dataTable.zebraRow(i) }}>
+                        <tr key={row.dataIso} style={{ background: zebra }} {...dataTableRowHoverHandlers(zebra)}>
                           <th scope="row" style={dataTable.tdSticky({ rowIndex: i })}>
                             {row.labelData}
                           </th>
@@ -435,7 +437,7 @@ export function OverviewSpinComparativoJogoInterativo(props: OverviewSpinCompara
                 fontFamily: FONT.body,
               }}
             >
-              {MSG_SEM_DADOS_FILTRO}
+              {MSG_SEM_DADOS_PERIODO}
             </div>
           ) : (
             <>

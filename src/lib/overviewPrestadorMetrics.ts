@@ -71,8 +71,11 @@ export type OverviewPrestadorMetricas = {
   /**
    * Jornadas escaladas até `periodoFimAderencia` (hoje no mês corrente).
    * Denominador de Presença / Pontualidade / Controle de Presença.
+   * Zero é ausência de jornada no recorte — não cair para `diasEscalado`.
    */
   diasEscaladoAderencia: number;
+  /** Horas escaladas no mesmo recorte de `diasEscaladoAderencia` (gráfico Aproveitamento). */
+  horasEscaladasAderenciaMin: number;
   detalhamento: OverviewPrestadorDetalheLinha[];
 };
 
@@ -90,8 +93,18 @@ export const OVERVIEW_PRESTADOR_METRICAS_ZERO: OverviewPrestadorMetricas = {
   turnosVendidos: 0,
   folgasVendidas: 0,
   diasEscaladoAderencia: 0,
+  horasEscaladasAderenciaMin: 0,
   detalhamento: [],
 };
+
+/**
+ * Presença = realizadas ÷ escaladas até hoje.
+ * Denominador 0 (início do mês / ainda sem jornada) → sem % — nunca usar o mês publicado.
+ */
+export function pctPresencaAderencia(realizadas: number, escaladasAderencia: number): number | null {
+  if (escaladasAderencia <= 0) return null;
+  return Math.round((realizadas / escaladasAderencia) * 1000) / 10;
+}
 
 export type CalcularMetricasPrestadorInput = {
   funcionarioId: string;
@@ -187,6 +200,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
   let turnosVendidos = 0;
   let folgasVendidas = 0;
   let diasEscaladoAderencia = 0;
+  let horasEscaladasAderenciaMin = 0;
 
   for (const { ano, mes } of mesesRef) {
     for (const dia of diasDoMesRef(ano, mes)) {
@@ -311,7 +325,10 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
       if (situacaoOverviewContaComoEscalado(situacao)) {
         diasEscalado += 1;
         const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
-        if (escMin != null) horasEscaladasMin += escMin;
+        if (escMin != null) {
+          horasEscaladasMin += escMin;
+          if (!noAderencia) horasEscaladasAderenciaMin += escMin;
+        }
         if (!noAderencia) diasEscaladoAderencia += 1;
 
         if (
@@ -392,6 +409,7 @@ export function calcularMetricasPrestadorPeriodo(input: CalcularMetricasPrestado
     turnosVendidos,
     folgasVendidas,
     diasEscaladoAderencia,
+    horasEscaladasAderenciaMin,
     detalhamento,
   };
 }
@@ -414,6 +432,7 @@ export function somarMetricasPrestador(
     out.turnosVendidos += m.turnosVendidos;
     out.folgasVendidas += m.folgasVendidas;
     out.diasEscaladoAderencia += m.diasEscaladoAderencia;
+    out.horasEscaladasAderenciaMin += m.horasEscaladasAderenciaMin;
     out.detalhamento.push(...m.detalhamento);
   }
   out.detalhamento.sort((a, b) => b.dataIso.localeCompare(a.dataIso));
@@ -432,9 +451,7 @@ export type OverviewPrestadorAtencaoLinha = {
 };
 
 export function severidadeAtencaoPrestador(m: OverviewPrestadorMetricas): "alta" | "media" | "ok" {
-  const denom = m.diasEscaladoAderencia > 0 ? m.diasEscaladoAderencia : m.diasEscalado;
-  const presenca =
-    denom > 0 ? (m.diasRealizado / denom) * 100 : null;
+  const presenca = pctPresencaAderencia(m.diasRealizado, m.diasEscaladoAderencia);
   const ocorrencias =
     m.entradasAtrasadas +
     m.saidasAntecipadas +
@@ -452,9 +469,7 @@ export function montarLinhaAtencao(
   timeRotulo: string,
   m: OverviewPrestadorMetricas,
 ): OverviewPrestadorAtencaoLinha {
-  const denom = m.diasEscaladoAderencia > 0 ? m.diasEscaladoAderencia : m.diasEscalado;
-  const presencaPct =
-    denom > 0 ? Math.round((m.diasRealizado / denom) * 1000) / 10 : null;
+  const presencaPct = pctPresencaAderencia(m.diasRealizado, m.diasEscaladoAderencia);
   return {
     prestadorId,
     nome,

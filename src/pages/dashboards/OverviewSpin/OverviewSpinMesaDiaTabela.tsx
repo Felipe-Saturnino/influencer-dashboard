@@ -1,8 +1,9 @@
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { FONT } from "../../../constants/theme";
 import {
   createDataTableBlockStyles,
+  dataTableRowHoverHandlers,
   getDataTableStyle,
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
@@ -66,7 +67,7 @@ export function OverviewSpinMesaDiaTabela({
               {linhas.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ ...dataTable.tdCenter, color: t.textMuted }}>
-                    {MSG_SEM_DADOS_FILTRO}
+                    {MSG_SEM_DADOS_PERIODO}
                   </td>
                 </tr>
               ) : (
@@ -119,8 +120,9 @@ export function OverviewSpinMesaDiaTabela({
                   })()}
                   {linhas.map((row, i) => {
                     const ggr = row.ggr ?? 0;
+                    const zebra = dataTable.zebraRow(i);
                     return (
-                      <tr key={row.dataIso} style={{ background: dataTable.zebraRow(i) }}>
+                      <tr key={row.dataIso} style={{ background: zebra }} {...dataTableRowHoverHandlers(zebra)}>
                         <td style={dataTable.tdSticky({ rowIndex: i })}>{row.labelData}</td>
                         <td
                           style={{

@@ -1,10 +1,11 @@
 import { Fragment, Suspense, lazy, type Dispatch, type SetStateAction } from "react";
 import { ChevronDown, Table2, ChartColumnBig } from "lucide-react";
-import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { BRAND, MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { FONT } from "../../../constants/theme";
 import {
   createDataTableBlockStyles,
+  dataTableRowHoverHandlers,
   getDataTableStyle,
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
@@ -244,9 +245,10 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                           ).filter((sl) => podeVerOperadora(sl.operadora_slug))
                         : [];
                     const rowKey = drillId ?? `${r.label}-${i}`;
+                    const zebra = dataTable.zebraRow(i);
                     return (
                       <Fragment key={rowKey}>
-                        <tr style={{ background: dataTable.zebraRow(i) }}>
+                        <tr style={{ background: zebra }} {...dataTableRowHoverHandlers(zebra)}>
                           <td style={dataTable.tdSticky({ rowIndex: i })}>
                             <div
                               style={{
@@ -338,13 +340,15 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                           aberto &&
                           subLinhas.map((sl, j) => {
                             const gg = sl.ggr ?? 0;
+                            const zebraSub = dataTable.zebraRow(i + j + 1, "action");
                             return (
                               <tr
                                 key={`${rowKey}-${sl.operadora_slug}`}
                                 style={{
-                                  background: dataTable.zebraRow(i + j + 1, "action"),
+                                  background: zebraSub,
                                   borderTop: j === 0 ? `1px solid ${t.cardBorder}` : undefined,
                                 }}
+                                {...dataTableRowHoverHandlers(zebraSub)}
                               >
                                 <th
                                   scope="row"
@@ -408,7 +412,7 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                 fontFamily: FONT.body,
               }}
             >
-              {MSG_SEM_DADOS_FILTRO}
+              {MSG_SEM_DADOS_PERIODO}
             </div>
           ) : (
             <>

@@ -450,6 +450,7 @@ export function useOverviewPrestadorDados(
     setLoadingGrade(true);
     setErroCarga(null);
     void (async () => {
+      let fase1Ok = false;
       try {
         const grupos = await Promise.all(
           mesesMetricasAtual.map(({ ano, mes }) =>
@@ -459,6 +460,7 @@ export function useOverviewPrestadorDados(
         if (cancelled) return;
         setRawGradeRows(grupos.flat());
         setLoadingGrade(false);
+        fase1Ok = true;
         if (mesesSecundarios.length === 0) return;
         setLoadingSecundario(true);
         const extra = await Promise.all(
@@ -470,7 +472,7 @@ export function useOverviewPrestadorDados(
         setRawGradeRows((prev) => [...prev, ...extra.flat()]);
       } catch (e) {
         console.error(e);
-        if (!cancelled) {
+        if (!cancelled && !fase1Ok) {
           setErroCarga(ERRO_CARGA_ESCALA);
           setRawGradeRows([]);
           setLoadingGrade(false);
@@ -538,11 +540,13 @@ export function useOverviewPrestadorDados(
     };
 
     void (async () => {
+      let fase1Ok = false;
       try {
         const fase1 = await carregarMeses(mesesMetricasAtual);
         if (cancelled) return;
         aplicar(fase1, false);
         setLoadingStaffDados(false);
+        fase1Ok = true;
         if (mesesSecundarios.length === 0) return;
         setLoadingSecundario(true);
         const fase2 = await carregarMeses(mesesSecundarios);
@@ -550,7 +554,7 @@ export function useOverviewPrestadorDados(
         aplicar(fase2, true);
       } catch (e) {
         console.error(e);
-        if (!cancelled) {
+        if (!cancelled && !fase1Ok) {
           setErroCarga(ERRO_CARGA_ESCALA);
           setPontoPorChave(new Map());
           setPresencaGestaoPorChave(new Map());

@@ -209,6 +209,53 @@ export function getPeriodoComparativoMoM(
 }
 
 /**
+ * MoM do Overview Spin: mês corrente recorta até **D-1** (ETL fecha ontem),
+ * alinhado ao Detalhamento Diário. O mês anterior usa o mesmo dia-do-mês de D-1.
+ * Mês fechado = mês civil completo vs mês civil anterior completo.
+ * No dia 1, ainda não há D-1 no mês corrente — janela atual fica vazia (fim anterior ao início).
+ */
+export function getPeriodoComparativoMoMDmenos1(
+  anoSel: number,
+  mesSel: number,
+  ref: Date = new Date(),
+): { atual: PeriodoDashboardMoM; anterior: PeriodoDashboardMoM } {
+  let anoAnt = anoSel;
+  let mesAnt = mesSel - 1;
+  if (mesAnt < 0) {
+    mesAnt = 11;
+    anoAnt--;
+  }
+
+  if (!isCarrosselMesCivilAtual(anoSel, mesSel, ref)) {
+    return {
+      atual: getDatasDoMes(anoSel, mesSel),
+      anterior: getDatasDoMes(anoAnt, mesAnt),
+    };
+  }
+
+  const inicioAtual = fmtDate(new Date(anoSel, mesSel, 1));
+  const ontemIso = getOntemIsoLocal(ref);
+
+  if (ontemIso < inicioAtual) {
+    return {
+      atual: { inicio: inicioAtual, fim: fmtDate(new Date(anoSel, mesSel, 0)) },
+      anterior: getDatasDoMes(anoAnt, mesAnt),
+    };
+  }
+
+  const diaFim = Number(ontemIso.slice(8, 10));
+  const ultimoDiaAnt = new Date(anoAnt, mesAnt + 1, 0).getDate();
+  const diaFimAnt = Math.min(diaFim, ultimoDiaAnt);
+  return {
+    atual: { inicio: inicioAtual, fim: ontemIso },
+    anterior: {
+      inicio: fmtDate(new Date(anoAnt, mesAnt, 1)),
+      fim: fmtDate(new Date(anoAnt, mesAnt, diaFimAnt)),
+    },
+  };
+}
+
+/**
  * MoM com **mês civil completo** no atual e no anterior — sem recorte MTD.
  * Usar em dashboards de escala/planejamento (ex.: Overview Prestador → Escala),
  * onde a grade do mês já está publicada e o KPI deve refletir o período inteiro.

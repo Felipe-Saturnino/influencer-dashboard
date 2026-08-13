@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { FONT } from "../../../constants/theme";
-import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import {
   GAME_IDENTITY_HEX,
   getGameMesaTituloStripStyle,
@@ -21,6 +21,7 @@ export type OverviewSpinDadosPorMesaProps = {
   /** Aba Estúdio Network: Blackjack + Roleta em cima; Speed Baccarat + Futebol embaixo. Sem Comparativo de mesa. */
   layoutNetwork: boolean;
   state: "loading" | "empty" | "ready";
+  emptyMessage?: string;
   colTempo: "Data" | "Mês";
   mesSelecionadoLabel: string;
   linhasBlackjack: LinhaMesaPorDia[];
@@ -37,6 +38,7 @@ export type OverviewSpinDadosPorMesaProps = {
 export function OverviewSpinDadosPorMesa({
   layoutNetwork,
   state,
+  emptyMessage = MSG_SEM_DADOS_PERIODO,
   colTempo,
   mesSelecionadoLabel,
   linhasBlackjack,
@@ -88,7 +90,7 @@ export function OverviewSpinDadosPorMesa({
         </div>
       ) : state === "empty" ? (
         <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-          {MSG_SEM_DADOS_FILTRO}
+          {emptyMessage}
         </div>
       ) : layoutNetwork ? (
         <>

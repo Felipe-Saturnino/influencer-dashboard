@@ -17,7 +17,9 @@ import {
   mapPosicoesPorExecucao,
   mesasNoTop10Snapshot,
   ultimaExecucaoNoDia,
+  ultimaExecucaoValida,
   execucaoMesmoHorarioDiaAnterior,
+  execucaoAnteriorImediata,
   calcVisibilidadeLeituras,
   melhorPosicaoComCategoria,
   maiorQuedaEntreSnapshots,
@@ -75,6 +77,7 @@ export function useLobbyPosicionamentoData(
   const historicoDias = opts?.historicoDias ?? POS_HISTORICO_DIAS;
   const [loading, setLoading] = useState(true);
   const [loadingHistorico, setLoadingHistorico] = useState(comHistorico);
+  const [erro, setErro] = useState<string | null>(null);
   const [execRecentes, setExecRecentes] = useState<LobbyExecucaoRow[]>([]);
   const [posRecentes, setPosRecentes] = useState<LobbyPosicaoRow[]>([]);
   const [execHist, setExecHist] = useState<LobbyExecucaoRow[]>([]);
@@ -94,11 +97,13 @@ export function useLobbyPosicionamentoData(
       setPosRecentes([]);
       setExecHist([]);
       setPosHist([]);
+      setErro(null);
       setLoading(false);
       setLoadingHistorico(false);
       return;
     }
     setLoading(true);
+    setErro(null);
     setLoadingHistorico(comHistorico);
     setExecHist([]);
     setPosHist([]);
@@ -126,7 +131,20 @@ export function useLobbyPosicionamentoData(
           .range(from, to),
       );
 
-      const execucoes = execRows as LobbyExecucaoRow[];
+      let execucoes = execRows as LobbyExecucaoRow[];
+      if (execucoes.length === 0) {
+        const { data: lastRows, error: lastErr } = await supabase
+          .from("lobby_monitor_execucao")
+          .select(
+            "id, operadora_slug, executado_em, status, pior_mesa_nome, pior_mesa_identificacao, pior_mesa_posicao, jogos_a_frente_pior_mesa",
+          )
+          .eq("operadora_slug", operadoraSlug)
+          .in("status", ["ok", "parcial"])
+          .order("executado_em", { ascending: false })
+          .limit(1);
+        if (lastErr) throw lastErr;
+        execucoes = (lastRows ?? []) as LobbyExecucaoRow[];
+      }
       if (execucoes.length === 0) {
         setExecRecentes([]);
         setPosRecentes([]);
@@ -144,18 +162,25 @@ export function useLobbyPosicionamentoData(
                 .range(from, to),
             ),
           ),
-          supabase.from("mesas_spin_cadastro").select("mesa_identificacao, estudio_slug"),
-          supabase.from("estudios_spin").select("slug, nome"),
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("mesas_spin_cadastro")
+              .select("mesa_identificacao, estudio_slug")
+              .range(from, to),
+          ),
+          fetchAllPages(async (from, to) =>
+            supabase.from("estudios_spin").select("slug, nome").range(from, to),
+          ),
         ]);
 
         const nomeEstudioPorSlug = new Map<string, string>();
-        for (const e of estudiosCad.data ?? []) {
+        for (const e of estudiosCad) {
           const slug = typeof e.slug === "string" ? e.slug.trim() : "";
           const nome = typeof e.nome === "string" ? e.nome.trim() : "";
           if (slug && nome) nomeEstudioPorSlug.set(slug, nome);
         }
         const nomeEstudioPorMesaSpin = new Map<string, string>();
-        for (const m of mesasCad.data ?? []) {
+        for (const m of mesasCad) {
           const mid = typeof m.mesa_identificacao === "string" ? m.mesa_identificacao.trim() : "";
           const estSlug = typeof m.estudio_slug === "string" ? m.estudio_slug.trim() : "";
           if (!mid || !estSlug) continue;
@@ -186,6 +211,9 @@ export function useLobbyPosicionamentoData(
       console.error("[useLobbyPosicionamentoData]", operadoraSlug, err);
       setExecRecentes([]);
       setPosRecentes([]);
+      setErro(
+        "Não foi possível carregar o posicionamento. Se o problema persistir, entre em contato com o suporte.",
+      );
     } finally {
       setLoading(false);
     }
@@ -278,19 +306,24 @@ export function useLobbyPosicionamentoData(
     () => ultimaExecucaoNoDia(execucoesAll, dayKey),
     [execucoesAll, dayKey],
   );
-  const execOntemMesmoHorario = useMemo(
-    () => (ultimaNoDia ? execucaoMesmoHorarioDiaAnterior(ultimaNoDia, execucoesAll) : null),
+  const snapshotExec = useMemo(
+    () => ultimaNoDia ?? ultimaExecucaoValida(execucoesAll),
     [ultimaNoDia, execucoesAll],
   );
+  const usaSnapshotFallback = Boolean(snapshotExec && !ultimaNoDia);
+  const execComparacao = useMemo(() => {
+    if (!snapshotExec) return null;
+    if (ultimaNoDia) return execucaoMesmoHorarioDiaAnterior(ultimaNoDia, execucoesAll);
+    return execucaoAnteriorImediata(snapshotExec, execucoesAll);
+  }, [snapshotExec, ultimaNoDia, execucoesAll]);
 
   const snapshotAtual = useMemo(
-    () => (ultimaNoDia ? (posByExec.get(ultimaNoDia.id) ?? []) : []),
-    [ultimaNoDia, posByExec],
+    () => (snapshotExec ? (posByExec.get(snapshotExec.id) ?? []) : []),
+    [snapshotExec, posByExec],
   );
   const snapshotOntem = useMemo(
-    () =>
-      execOntemMesmoHorario ? (posByExec.get(execOntemMesmoHorario.id) ?? []) : [],
-    [execOntemMesmoHorario, posByExec],
+    () => (execComparacao ? (posByExec.get(execComparacao.id) ?? []) : []),
+    [execComparacao, posByExec],
   );
 
   const visAtual = useMemo(() => calcVisibilidadeLeituras(snapshotAtual), [snapshotAtual]);
@@ -328,7 +361,7 @@ export function useLobbyPosicionamentoData(
         ultimaPosicaoDiferenteNaJanela(
           m.mesa_identificacao,
           m.posicao,
-          ultimaNoDia?.id,
+          snapshotExec?.id,
           execucoesAll,
           posByExec,
           desdeKey,
@@ -336,7 +369,7 @@ export function useLobbyPosicionamentoData(
       );
     }
     return map;
-  }, [snapshotAtual, ultimaNoDia?.id, execucoesAll, posByExec, dayKey]);
+  }, [snapshotAtual, snapshotExec?.id, execucoesAll, posByExec, dayKey]);
 
   const concorrentesJogo = useMemo(
     () => concorrentesPorJogoDetalhe(snapshotAtual),
@@ -365,16 +398,20 @@ export function useLobbyPosicionamentoData(
   }, [execucoesAll, posByExec, dayKey]);
 
   const semDados =
-    skip || (!loading && (!ultimaNoDia || snapshotAtual.length === 0));
+    skip || (!loading && !erro && (!snapshotExec || snapshotAtual.length === 0));
 
   return {
     loading: skip ? false : loading,
     loadingHistorico: skip ? false : loadingHistorico,
+    erro: skip ? null : erro,
+    recarregar: carregar,
     semDados,
     execucoesAll,
     posByExec,
     execDia,
     ultimaNoDia,
+    snapshotExec,
+    usaSnapshotFallback,
     snapshotAtual,
     mesasOrdenadas,
     prevMap,

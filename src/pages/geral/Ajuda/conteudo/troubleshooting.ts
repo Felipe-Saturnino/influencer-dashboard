@@ -89,12 +89,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O Comparativo de Mesa não aparece mesmo com dados no mês?",
         texto:
-          "O Comparativo de Mesa só é exibido quando uma operadora específica está selecionada (não com **Todas Operadoras** no filtro). Selecione uma operadora no filtro e verifique se há dados de mesa individuais cadastrados para o período. Se não houver registros de mesas individuais (somente resumo diário), a seção permanece vazia.",
+          "Com **Todas Operadoras**, o Comparativo de mesa e Dados por mesa pedem que você selecione uma operadora. Escolha uma operadora no filtro e verifique se há dados de mesa individuais no período. Se não houver registros de mesas (somente resumo diário), a seção permanece vazia.",
       },
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA / Lobby Esportiva Bet / Lobby Jonbet) ainda não executou hoje, aguarde a próxima coleta — confira em **Status Técnico** se as integrações de lobby estão com status OK. Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze, Casa de Apostas, Esportiva Bet e Jonbet aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso na liberação de permissão da página ou uma coleta registrada sem as posições das mesas.",
+          "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet estão OK. Com **Todas Operadoras**, as quatro parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",

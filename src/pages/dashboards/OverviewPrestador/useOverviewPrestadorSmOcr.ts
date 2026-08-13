@@ -265,6 +265,7 @@ export function useOverviewPrestadorSmOcr(opts: {
     setErro(null);
 
     void (async () => {
+      let fase1Ok = false;
       try {
         const [mapa, estudios] = await Promise.all([
           carregarMapaRelatorSm(funcionarioIds),
@@ -329,6 +330,7 @@ export function useOverviewPrestadorSmOcr(opts: {
           setSinaisAnt([]);
           setTicketsAtual(tickets);
           setTicketsAnt([]);
+          fase1Ok = true;
           await aplicarCatalogo(sinais, tickets);
         } else if (mesSelecionado) {
           const mom = getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
@@ -339,6 +341,7 @@ export function useOverviewPrestadorSmOcr(opts: {
           setSinaisAnt([]);
           setTicketsAnt([]);
           setLoading(false);
+          fase1Ok = true;
           await aplicarCatalogo(atual.sinais, atual.tickets);
           const ant = await fetchPar(mom.anterior.inicio, mom.anterior.fim);
           if (cancelled) return;
@@ -348,7 +351,7 @@ export function useOverviewPrestadorSmOcr(opts: {
         }
       } catch (e) {
         console.error(e);
-        if (!cancelled) {
+        if (!cancelled && !fase1Ok) {
           setSinaisAtual([]);
           setSinaisAnt([]);
           setTicketsAtual([]);
