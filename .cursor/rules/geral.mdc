@@ -222,7 +222,13 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - Tipos compartilhados com a Central interna via `TIPOS_DENUNCIA`; **Elogios** (`elogios`) segue o mesmo envio, protocolo e atendimento dos demais tipos.
 - Privacidade: não expor detalhes técnicos em mensagens de erro; na consulta, mensagens do RH aparecem como **Equipe RH** (sem nome do staff).
 
-**Consulta por protocolo (`consultar_denuncia_spin`):** status + linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta (`responder_denuncia_spin`) com anexos opcionais enquanto o status não estiver encerrado (Procedente / Não procedente).
+**Protocolo:** novos registros usam código imprevisível (`CDSPIN-` + 16 hex). Protocolos legados `CDSPIN00001…` continuam válidos. Consulta e resposta (`consultar_denuncia_spin` / `responder_denuncia_spin`) exigem o **mesmo e-mail do envio** quando o relato foi identificado; anônimo consulta só com o protocolo. Erro genérico «não encontrado» (não revelar se o protocolo existe).
+
+**Limite de tentativas:** RPCs públicos com rate limit por IP (hash) + honeypot `p_hp` no registro. Insert da denúncia **só via RPC** (sem política INSERT anon/auth na tabela).
+
+**Consulta por protocolo:** status + linha do tempo + **Comunicação com o RH** (anotações com `visivel_externo`) + formulário de resposta com anexos opcionais (`CampoUploadArquivos`, PDF/JPG/PNG/MP4, 20MB) enquanto o status não estiver encerrado (Procedente / Não procedente). Enter no protocolo/e-mail dispara a pesquisa.
+
+**Upload no envio:** `CampoUploadArquivos` (exceção Global — canal público usa o componente por pedido de produto).
 
 **Handoff:** campos do formulário, anonimato, confirmação pós-envio, a11y embed.
 

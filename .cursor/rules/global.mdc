@@ -926,7 +926,7 @@ import { Paperclip } from "lucide-react";
 />
 ```
 
-**Fora deste contrato (não migrar para o padrão sem pedido de produto):** upload **fora de modal** — Galeria de Fotos (aba Upload), Dados de Cadastro → Documentos (página), Canal público de denúncias.
+**Fora deste contrato (não migrar para o padrão sem pedido de produto):** upload **fora de modal** — Galeria de Fotos (aba Upload), Dados de Cadastro → Documentos (página). **Canal público de denúncias** usa `CampoUploadArquivos` na página (pedido de produto — QA ciclo 3).
 
 **Proibido em modal novo:** input file estilizado como campo de formulário nativo; dropzone dashed ad hoc fora de `CampoUploadArquivos`; duplicar markup do componente localmente.
 

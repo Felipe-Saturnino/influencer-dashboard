@@ -616,7 +616,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.",
+          "Canal interno (logado) para registrar, acompanhar e tratar protocolos de denúncia. KPIs, filtros por período, tipo e status, e atendimento pelos perfis autorizados — distinto do formulário público anônimo da Spin.\n\nPara encaminhar o canal a quem **não** tem login, use a página pública **/canal-denuncias-spin** no mesmo endereço da plataforma (sem menu). Quem relata recebe um protocolo para consultar o andamento; se se identificar, precisa do mesmo e-mail na consulta.",
       },
       {
         subtitulo: "Período",
@@ -968,7 +968,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra; com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma); com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
       },
       {
         subtitulo: "Status e ações",

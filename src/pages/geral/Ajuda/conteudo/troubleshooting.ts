@@ -747,6 +747,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Com **Ver = Próprios**, só entram avaliações com status **Concluída** vinculadas ao seu cadastro. Avaliações pendentes ou em análise não aparecem nesse escopo.",
       },
       {
+        subtitulo: "Alguns prestadores não aparecem para avaliar?",
+        texto:
+          "A lista inclui só prestadores **ativos** ou **indisponíveis** do time **Game Presenter** ou **Shuffler** no Organograma (Gestão de Prestadores). Encerrados não entram.\n\nNa **Agenda de Avaliações**, quem ainda não chegou na data de go-live / início no mês selecionado fica de fora até essa competência — use o carrossel para o mês em que a pessoa já está no estúdio.\n\nSe o colaborador aparece em **Gestão de Staff** no time certo e mesmo assim falta no Performance Hub, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Não encontro o botão Analisar?",
         texto:
           "O botão **Analisar** aparece em status **Em Análise** e **Feedback**. Avaliações **Pendente** e **Concluída** exibem apenas **Ver** e **Histórico** — isso é intencional.\n\nCom escopo **Próprios** o botão não aparece em **Em Análise**, apenas em **Feedback**.",
@@ -1794,7 +1799,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Central de Denúncias no menu?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários. O canal público de denúncias (sem login) é distinto — protocolos internos são tratados nesta página logada.",
+          "Confirme permissão de **Ver** em Gestão de Usuários. O canal público de denúncias (sem login) é distinto — protocolos internos são tratados nesta página logada. O endereço público é **/canal-denuncias-spin** no mesmo domínio da plataforma; encaminhe esse link a terceiros que precisem relatar sem acessar o menu.",
       },
       {
         subtitulo: "O relator diz que não vê minhas anotações na consulta pública?",

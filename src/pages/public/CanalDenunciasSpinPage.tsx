@@ -9,13 +9,18 @@ import {
   STORAGE_BUCKET,
   sanitizeStorageFileName,
   labelAutorMensagemPublica,
+  arquivoCanalDenunciaPermitido,
+  CANAL_DENUNCIA_ANEXO_ACCEPT,
+  MSG_CANAL_PROTOCOLO_NAO_ENCONTRADO,
+  MSG_CANAL_RATE_LIMITED,
+  PROTOCOLO_CANAL_PLACEHOLDER,
+  normalizarProtocoloCanal,
   type TipoDenunciaKey,
   type CanalDenunciaMensagemPublica,
 } from "../../lib/canalDenunciasSpin";
 import { buildLoginPath } from "../../lib/appRoutes";
 import { CampoUploadArquivos } from "../../components/CampoUploadArquivos";
-
-const MAX_ANEXO_BYTES = 20 * 1024 * 1024;
+import { formatarTelefoneBr } from "../../lib/rhFuncionarioValidators";
 
 const BADGES: {
   Icon: typeof Lock;
@@ -115,12 +120,15 @@ export default function CanalDenunciasSpinPage() {
   const [tiposSel, setTiposSel] = useState<Set<TipoDenunciaKey>>(new Set());
   const [outroTexto, setOutroTexto] = useState("");
   const [relato, setRelato] = useState("");
-  const [arquivos, setArquivos] = useState<FileList | null>(null);
+  const [arquivosEnvio, setArquivosEnvio] = useState<{ id: string; file: File }[]>([]);
+  const [honeypot, setHoneypot] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [protocoloOk, setProtocoloOk] = useState<string | null>(null);
+  const [avisoAnexoEnvio, setAvisoAnexoEnvio] = useState<string | null>(null);
 
   const [protocoloConsulta, setProtocoloConsulta] = useState("");
+  const [emailConsulta, setEmailConsulta] = useState("");
   const [consultando, setConsultando] = useState(false);
   const [consultaErro, setConsultaErro] = useState<string | null>(null);
   const [consultaData, setConsultaData] = useState<ConsultaPublicOk | null>(null);
@@ -159,15 +167,14 @@ export default function CanalDenunciasSpinPage() {
     if (tiposSel.has("outro") && !outroTexto.trim()) return setErroEnvio("Descreva o motivo em «Outro».");
     if (!relato.trim()) return setErroEnvio("Preencha o relato do ocorrido.");
 
-    if (arquivos && arquivos.length > 0) {
-      for (let i = 0; i < arquivos.length; i++) {
-        if (arquivos[i].size > MAX_ANEXO_BYTES) {
-          return setErroEnvio("Cada anexo deve ter no máximo 20MB.");
-        }
+    for (const nf of arquivosEnvio) {
+      if (!arquivoCanalDenunciaPermitido(nf.file)) {
+        return setErroEnvio("Anexe apenas PDF, JPG, PNG ou MP4, com no máximo 20MB por arquivo.");
       }
     }
 
     setEnviando(true);
+    setAvisoAnexoEnvio(null);
     try {
       const tiposArr = [...tiposSel];
       const row = {
@@ -187,6 +194,7 @@ export default function CanalDenunciasSpinPage() {
         p_tipos_denuncia: row.tipos_denuncia,
         p_tipo_outro_descricao: row.tipo_outro_descricao,
         p_relato: row.relato,
+        p_hp: honeypot,
       });
       if (rpcErr) {
         setErroEnvio("Não foi possível registrar a denúncia. Tente novamente.");
@@ -197,17 +205,19 @@ export default function CanalDenunciasSpinPage() {
       if (!ins?.ok || !ins.id || !ins.protocolo) {
         const code = ins?.error;
         const msg =
-          code === "identificacao_incompleta"
-            ? "Preencha nome, e-mail e telefone para se identificar."
-            : code === "outro_sem_descricao"
-              ? "Descreva o motivo em «Outro»."
-              : code === "tipos_vazio"
-                ? "Selecione ao menos um tipo de relato."
-                : code === "relato_vazio"
-                  ? "Preencha o relato do ocorrido."
-                  : code === "tipo_invalido"
-                    ? "Tipo de relato inválido. Atualize a página e tente novamente."
-                    : "Não foi possível registrar a denúncia. Tente novamente.";
+          code === "rate_limited"
+            ? MSG_CANAL_RATE_LIMITED
+            : code === "identificacao_incompleta"
+              ? "Preencha nome, e-mail e telefone para se identificar."
+              : code === "outro_sem_descricao"
+                ? "Descreva o motivo em «Outro»."
+                : code === "tipos_vazio"
+                  ? "Selecione ao menos um tipo de relato."
+                  : code === "relato_vazio"
+                    ? "Preencha o relato do ocorrido."
+                    : code === "tipo_invalido"
+                      ? "Tipo de relato inválido. Atualize a página e tente novamente."
+                      : "Não foi possível registrar a denúncia. Tente novamente.";
         setErroEnvio(msg);
         setEnviando(false);
         return;
@@ -215,9 +225,10 @@ export default function CanalDenunciasSpinPage() {
       const denunciaId = ins.id;
       const prot = ins.protocolo;
 
-      if (arquivos && arquivos.length > 0) {
-        for (let i = 0; i < arquivos.length; i++) {
-          const f = arquivos[i];
+      let falhaAnexo = false;
+      if (arquivosEnvio.length > 0) {
+        for (let i = 0; i < arquivosEnvio.length; i++) {
+          const f = arquivosEnvio[i].file;
           const safe = sanitizeStorageFileName(f.name);
           const path = `${denunciaId}/${Date.now()}_${i}_${safe}`;
           const { error: upErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, f, {
@@ -225,12 +236,10 @@ export default function CanalDenunciasSpinPage() {
             upsert: false,
           });
           if (upErr) {
-            setErroEnvio("Denúncia registrada, mas houve falha no envio de um ou mais anexos. Guarde o protocolo e contate o RH.");
-            setProtocoloOk(prot);
-            setEnviando(false);
-            return;
+            falhaAnexo = true;
+            continue;
           }
-          await supabase.from("canal_denuncia_anexos").insert({
+          const { error: insAnexoErr } = await supabase.from("canal_denuncia_anexos").insert({
             denuncia_id: denunciaId,
             anotacao_id: null,
             storage_path: path,
@@ -238,15 +247,26 @@ export default function CanalDenunciasSpinPage() {
             content_type: f.type || null,
             file_size: f.size,
           });
+          if (insAnexoErr) falhaAnexo = true;
         }
       }
 
+      if (falhaAnexo) {
+        setAvisoAnexoEnvio(
+          "A denúncia foi registrada, mas um ou mais anexos não acompanharam o protocolo. Guarde o número e, se precisar, envie as evidências na aba «Consultar denúncia».",
+        );
+      }
       setProtocoloOk(prot);
     } catch {
       setErroEnvio("Erro inesperado. Tente novamente.");
     } finally {
       setEnviando(false);
     }
+  }
+
+  function emailConsultaRpc(): string | null {
+    const e = emailConsulta.trim().toLowerCase();
+    return e || null;
   }
 
   async function handleConsultar() {
@@ -256,21 +276,28 @@ export default function CanalDenunciasSpinPage() {
     setRespostaOk(null);
     setRespostaTexto("");
     setRespostaFiles([]);
-    const p = protocoloConsulta.trim().toUpperCase();
+    const p = normalizarProtocoloCanal(protocoloConsulta);
     if (!p) {
       setConsultaErro("Informe o protocolo.");
       return;
     }
     setConsultando(true);
-    const { data, error } = await supabase.rpc("consultar_denuncia_spin", { p_protocolo: p });
+    const { data, error } = await supabase.rpc("consultar_denuncia_spin", {
+      p_protocolo: p,
+      p_email: emailConsultaRpc(),
+    });
     setConsultando(false);
     if (error) {
       setConsultaErro("Não foi possível consultar. Tente novamente.");
       return;
     }
     const j = data as { ok?: boolean; error?: string } | null;
+    if (j?.error === "rate_limited") {
+      setConsultaErro(MSG_CANAL_RATE_LIMITED);
+      return;
+    }
     if (!j?.ok || j.error === "not_found") {
-      setConsultaErro("Protocolo não encontrado");
+      setConsultaErro(MSG_CANAL_PROTOCOLO_NAO_ENCONTRADO);
       return;
     }
     const ok = j as ConsultaPublicOk;
@@ -283,7 +310,7 @@ export default function CanalDenunciasSpinPage() {
   async function handleEnviarResposta() {
     setRespostaErro(null);
     setRespostaOk(null);
-    const p = protocoloConsulta.trim().toUpperCase();
+    const p = normalizarProtocoloCanal(protocoloConsulta);
     const txt = respostaTexto.trim();
     if (!p) {
       setRespostaErro("Informe o protocolo.");
@@ -294,8 +321,8 @@ export default function CanalDenunciasSpinPage() {
       return;
     }
     for (const nf of respostaFiles) {
-      if (nf.file.size > MAX_ANEXO_BYTES) {
-        setRespostaErro("Cada anexo deve ter no máximo 20MB.");
+      if (!arquivoCanalDenunciaPermitido(nf.file)) {
+        setRespostaErro("Anexe apenas PDF, JPG, PNG ou MP4, com no máximo 20MB por arquivo.");
         return;
       }
     }
@@ -304,6 +331,7 @@ export default function CanalDenunciasSpinPage() {
       const { data, error } = await supabase.rpc("responder_denuncia_spin", {
         p_protocolo: p,
         p_texto: txt,
+        p_email: emailConsultaRpc(),
       });
       if (error) {
         setRespostaErro("Não foi possível enviar a mensagem. Tente novamente.");
@@ -311,10 +339,12 @@ export default function CanalDenunciasSpinPage() {
       }
       const res = data as { ok?: boolean; error?: string; id?: string; denuncia_id?: string } | null;
       if (!res?.ok) {
-        if (res?.error === "closed") {
+        if (res?.error === "rate_limited") {
+          setRespostaErro(MSG_CANAL_RATE_LIMITED);
+        } else if (res?.error === "closed") {
           setRespostaErro("Esta denúncia já foi encerrada. Não é possível enviar novas mensagens.");
         } else if (res?.error === "not_found") {
-          setRespostaErro("Protocolo não encontrado");
+          setRespostaErro(MSG_CANAL_PROTOCOLO_NAO_ENCONTRADO);
         } else {
           setRespostaErro("Não foi possível enviar a mensagem. Tente novamente.");
         }
@@ -333,9 +363,9 @@ export default function CanalDenunciasSpinPage() {
             .upload(path, f, { contentType: f.type || undefined });
           if (upErr) {
             falhaAnexo = true;
-            break;
+            continue;
           }
-          await supabase.from("canal_denuncia_anexos").insert({
+          const { error: insAnexoErr } = await supabase.from("canal_denuncia_anexos").insert({
             denuncia_id: denunciaId,
             anotacao_id: anotacaoId,
             storage_path: path,
@@ -343,18 +373,22 @@ export default function CanalDenunciasSpinPage() {
             content_type: f.type || null,
             file_size: f.size,
           });
+          if (insAnexoErr) falhaAnexo = true;
         }
       }
       setRespostaTexto("");
       setRespostaFiles([]);
       if (falhaAnexo) {
         setRespostaErro(
-          "Mensagem enviada, mas houve falha no envio de um ou mais anexos. A equipe RH já pode ver o texto.",
+          "Mensagem enviada, mas um ou mais anexos não acompanharam. A equipe RH já pode ver o texto.",
         );
       } else {
         setRespostaOk("Mensagem enviada. A equipe RH receberá sua resposta na Central de Denúncias.");
       }
-      const { data: refreshed } = await supabase.rpc("consultar_denuncia_spin", { p_protocolo: p });
+      const { data: refreshed } = await supabase.rpc("consultar_denuncia_spin", {
+        p_protocolo: p,
+        p_email: emailConsultaRpc(),
+      });
       const j = refreshed as ConsultaPublicOk | null;
       if (j?.ok) {
         setConsultaData({
@@ -507,12 +541,23 @@ export default function CanalDenunciasSpinPage() {
                   Protocolo: {protocoloOk}
                 </p>
                 <p style={{ fontSize: 13, color: "#a89bc4", lineHeight: 1.55, maxWidth: 420, margin: "0 auto 20px" }}>
-                  Guarde este protocolo para acompanhar a tratativa no futuro, na aba «Consultar denúncia» desta mesma página.
+                  Guarde este protocolo. Na aba «Consultar denúncia», informe o número
+                  {desejaIdentificar === "sim"
+                    ? " e o mesmo e-mail usado no envio"
+                    : ""}
+                  {" "}
+                  para acompanhar a tratativa.
                 </p>
+                {avisoAnexoEnvio ? (
+                  <div role="alert" style={{ ...alertBox, margin: "0 auto 20px", maxWidth: 480, textAlign: "left" }}>
+                    {avisoAnexoEnvio}
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
                     setProtocoloOk(null);
+                    setAvisoAnexoEnvio(null);
                     setDesejaIdentificar("");
                     setNome("");
                     setTelefone("");
@@ -520,7 +565,8 @@ export default function CanalDenunciasSpinPage() {
                     setTiposSel(new Set());
                     setOutroTexto("");
                     setRelato("");
-                    setArquivos(null);
+                    setArquivosEnvio([]);
+                    setHoneypot("");
                   }}
                   style={{
                     padding: "12px 20px",
@@ -566,17 +612,56 @@ export default function CanalDenunciasSpinPage() {
 
                 {desejaIdentificar === "sim" && (
                   <>
-                    <Campo label="Nome" obrigatorio>
-                      <input value={nome} onChange={(e) => setNome(e.target.value)} style={inp} />
+                    <Campo label="Nome" obrigatorio htmlFor="canal-denuncia-nome">
+                      <input
+                        id="canal-denuncia-nome"
+                        value={nome}
+                        onChange={(e) => setNome(e.target.value)}
+                        autoComplete="name"
+                        aria-label="Nome"
+                        style={inp}
+                      />
                     </Campo>
-                    <Campo label="Telefone" obrigatorio>
-                      <input value={telefone} onChange={(e) => setTelefone(e.target.value)} style={inp} />
+                    <Campo label="Telefone" obrigatorio htmlFor="canal-denuncia-telefone">
+                      <input
+                        id="canal-denuncia-telefone"
+                        type="tel"
+                        inputMode="numeric"
+                        value={telefone}
+                        onChange={(e) => setTelefone(formatarTelefoneBr(e.target.value))}
+                        placeholder="(11) 99999-9999"
+                        autoComplete="tel"
+                        aria-label="Telefone"
+                        style={inp}
+                      />
                     </Campo>
-                    <Campo label="E-mail" obrigatorio>
-                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inp} />
+                    <Campo label="E-mail" obrigatorio htmlFor="canal-denuncia-email">
+                      <input
+                        id="canal-denuncia-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="email"
+                        aria-label="E-mail"
+                        style={inp}
+                      />
                     </Campo>
                   </>
                 )}
+
+                <div
+                  aria-hidden
+                  style={{ position: "absolute", left: -10000, width: 1, height: 1, overflow: "hidden" }}
+                >
+                  <label htmlFor="canal-denuncia-empresa">Empresa</label>
+                  <input
+                    id="canal-denuncia-empresa"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
 
                 <div style={{ marginBottom: 18 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>
@@ -639,16 +724,34 @@ export default function CanalDenunciasSpinPage() {
                 </Campo>
 
                 <div style={{ marginBottom: 20 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#fff", display: "block", marginBottom: 8 }}>Anexo</span>
-                  <input
-                    type="file"
+                  <CampoUploadArquivos
+                    id="canal-denuncia-anexos"
+                    label="Anexo"
+                    buttonLabel="Adicionar anexo"
+                    accept={CANAL_DENUNCIA_ANEXO_ACCEPT}
                     multiple
-                    onChange={(e) => setArquivos(e.target.files)}
-                    style={{ fontSize: 13, color: "#c4b5d4" }}
+                    items={arquivosEnvio.map((nf) => ({
+                      key: nf.id,
+                      label: nf.file.name,
+                      pendente: true,
+                    }))}
+                    onAdd={(files) => {
+                      const ok = files.filter((f) => arquivoCanalDenunciaPermitido(f));
+                      if (ok.length < files.length) {
+                        setErroEnvio("Anexe apenas PDF, JPG, PNG ou MP4, com no máximo 20MB por arquivo.");
+                      }
+                      if (ok.length === 0) return;
+                      setArquivosEnvio((prev) => [
+                        ...prev,
+                        ...ok.map((file) => ({ id: crypto.randomUUID(), file })),
+                      ]);
+                    }}
+                    onRemove={(key) => setArquivosEnvio((prev) => prev.filter((nf) => nf.id !== key))}
+                    disabled={enviando}
+                    t={uploadTheme}
+                    hint="PDF, JPG, PNG ou MP4 · até 20MB por arquivo"
+                    pendingHint="Anexos serão enviados junto com a denúncia."
                   />
-                  <p style={{ fontSize: 11, color: "#9b8ab8", marginTop: 8, lineHeight: 1.45 }}>
-                    Documentos, fotos ou vídeos como evidências. Formatos aceitos: PDF, JPG, PNG, MP4. Tamanho máximo: 20MB por arquivo.
-                  </p>
                 </div>
 
                 {erroEnvio && (
@@ -671,7 +774,7 @@ export default function CanalDenunciasSpinPage() {
                 >
                   <Info size={20} color="var(--brand-icon, #70cae4)" aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
                   <p style={{ margin: 0, fontSize: 13, color: "#d4c4e8", lineHeight: 1.55 }}>
-                    Após o envio, você receberá um número de protocolo. Use-o na aba «Consultar denúncia» para acompanhar o andamento.
+                    Após o envio, você receberá um protocolo. Guarde-o. Se se identificar, use também o mesmo e-mail na aba «Consultar denúncia».
                   </p>
                 </div>
 
@@ -699,7 +802,7 @@ export default function CanalDenunciasSpinPage() {
                   {enviando ? (
                     <>
                       <Loader2 className="app-lucide-spin" size={20} color="#fff" aria-hidden />
-                      Enviando...
+                      Enviando…
                     </>
                   ) : (
                     "Enviar"
@@ -722,20 +825,30 @@ export default function CanalDenunciasSpinPage() {
               background: "rgba(15,15,26,0.88)",
             }}
           >
-            <label style={{ fontSize: 13, fontWeight: 600, color: "#fff", display: "block", marginBottom: 8 }}>
+            <label
+              htmlFor="canal-consulta-protocolo"
+              style={{ fontSize: 13, fontWeight: 600, color: "#fff", display: "block", marginBottom: 8 }}
+            >
               Protocolo
             </label>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <input
+                id="canal-consulta-protocolo"
                 value={protocoloConsulta}
                 onChange={(e) => setProtocoloConsulta(e.target.value)}
-                placeholder="Ex.: CDSPIN00001"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleConsultar();
+                  }
+                }}
+                placeholder={PROTOCOLO_CANAL_PLACEHOLDER}
                 aria-label="Protocolo da denúncia"
                 style={{ ...inp, flex: "1 1 200px", maxWidth: 320 }}
               />
               <button
                 type="button"
-                onClick={handleConsultar}
+                onClick={() => void handleConsultar()}
                 disabled={consultando}
                 style={{
                   padding: "12px 18px",
@@ -755,6 +868,31 @@ export default function CanalDenunciasSpinPage() {
                 Pesquisar
               </button>
             </div>
+            <label
+              htmlFor="canal-consulta-email"
+              style={{ fontSize: 13, fontWeight: 600, color: "#fff", display: "block", margin: "16px 0 8px" }}
+            >
+              E-mail do envio
+            </label>
+            <input
+              id="canal-consulta-email"
+              type="email"
+              value={emailConsulta}
+              onChange={(e) => setEmailConsulta(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleConsultar();
+                }
+              }}
+              placeholder="Se você se identificou, informe o mesmo e-mail"
+              aria-label="E-mail usado no envio da denúncia"
+              autoComplete="email"
+              style={{ ...inp, maxWidth: 320 }}
+            />
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: "#9b8ab8", lineHeight: 1.45, maxWidth: 480 }}>
+              Obrigatório somente se você se identificou no registro. Relatos anônimos consultam só com o protocolo.
+            </p>
             {consultaErro && (
               <div role="alert" style={{ ...alertBox, marginTop: 16 }}>
                 {consultaErro}
@@ -894,22 +1032,28 @@ export default function CanalDenunciasSpinPage() {
                         id="resposta-anexos"
                         label="Anexos"
                         buttonLabel="Adicionar evidências"
+                        accept={CANAL_DENUNCIA_ANEXO_ACCEPT}
                         multiple
                         items={respostaFiles.map((nf) => ({
                           key: nf.id,
                           label: nf.file.name,
                           pendente: true,
                         }))}
-                        onAdd={(files) =>
+                        onAdd={(files) => {
+                          const ok = files.filter((f) => arquivoCanalDenunciaPermitido(f));
+                          if (ok.length < files.length) {
+                            setRespostaErro("Anexe apenas PDF, JPG, PNG ou MP4, com no máximo 20MB por arquivo.");
+                          }
+                          if (ok.length === 0) return;
                           setRespostaFiles((prev) => [
                             ...prev,
-                            ...files.map((file) => ({ id: crypto.randomUUID(), file })),
-                          ])
-                        }
+                            ...ok.map((file) => ({ id: crypto.randomUUID(), file })),
+                          ]);
+                        }}
                         onRemove={(key) => setRespostaFiles((prev) => prev.filter((nf) => nf.id !== key))}
                         disabled={enviandoResposta}
                         t={uploadTheme}
-                        hint="Opcional · até 20MB por arquivo"
+                        hint="Opcional · PDF, JPG, PNG ou MP4 · até 20MB por arquivo"
                         pendingHint="Anexos serão enviados junto com a mensagem."
                       />
                     </div>
@@ -1001,16 +1145,21 @@ function Campo({
   label,
   obrigatorio,
   legenda,
+  htmlFor,
   children,
 }: {
   label: string;
   obrigatorio?: boolean;
   legenda?: string;
+  htmlFor?: string;
   children: ReactNode;
 }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <label style={{ fontSize: 13, fontWeight: 600, color: "#fff", display: "block", marginBottom: 8 }}>
+      <label
+        htmlFor={htmlFor}
+        style={{ fontSize: 13, fontWeight: 600, color: "#fff", display: "block", marginBottom: 8 }}
+      >
         {label}
         {obrigatorio ? <CampoObrigatorioMark /> : null}
       </label>

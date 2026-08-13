@@ -245,7 +245,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 | Fonte | Tabela / RPC | Uso |
 |-------|----------------|-----|
-| Prestadores por time | `rh_funcionarios` + `rh_staff_times_filtrados` | Filtro Staff, prefill Dados, **Agenda de Avaliações** |
+| Prestadores por time | `rh_funcionarios` + `rh_org_times` + `rh_staff_times_filtrados` | Filtro Staff, prefill Dados, **Agenda de Avaliações**. Match por `timeOrganogramaIndicaGamePresenter` / `Shuffler` (singular/plural); **todos** os `org_time_id` do slug, não só o primeiro nome exacto. `fetchAllPages`. RLS: `_academy_performance_hub_perm('view')` |
 | Go-live | `rh_funcionarios.staff_live_no_estudio` (fallback `data_inicio`) | Coluna Go-live na agenda |
 | Avaliações | `academy_performance_hub_avaliacao` | Abas Avaliações e Analisar; vazio até carga histórica |
 | Pesos do scoring | `academy_performance_hub_scoring_config` | Configuração por time; aplicada a novas avaliações |
@@ -291,6 +291,7 @@ Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `aca
 - Pesos de scoring hardcoded na página — usar `PERFORMANCE_HUB_SCORING_POR_TIME` / estado de Configuração por time.
 - Exibir filtro Staff na aba **Configuração**.
 - Misturar consolidados GP e Shuffler no mesmo bloco (sempre filtrar por `time` selecionado).
+- Lista de staff GP/Shuffler com `nome === "Game Presenter"` (só o primeiro time) — usar `agruparTimeIdsPorSlugPerformanceHub` / `timeOrganogramaIndica*`.
 - Hex local para identidade de jogo na dimensão Mesa — usar `gameIdentityColors` se distinguir jogos na UI.
 - Limite de tamanho de vídeo hardcoded na página ou em mensagem de erro — usar as constantes de `academyPerformanceHubVideoFiles.ts` (ficam alinhadas ao bucket).
 - Gravar `video_removido_em` a partir da UI — a coluna é da retenção (Edge Function).

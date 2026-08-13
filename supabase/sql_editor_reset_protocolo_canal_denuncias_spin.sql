@@ -1,50 +1,26 @@
 -- =============================================================================
--- Reset do contador de protocolo (CDSPIN00001 …) — Canal de Denúncias Spin
--- Executar manualmente no SQL Editor do Supabase (não é migration automática).
+-- Protocolo do Canal de Denúncias Spin — notas (SQL Editor, não é migration)
 -- =============================================================================
 --
--- O número final do protocolo vem da sequência: public.canal_denuncia_spin_protocol_seq
--- (cada INSERT chama nextval; testes repetidos fazem o contador subir.)
+-- A partir de 20261113120000 os NOVOS protocolos são imprevisíveis:
+--   CDSPIN- + 16 caracteres hex (ex.: CDSPIN-A1B2C3D4E5F67890)
+-- A sequência public.canal_denuncia_spin_protocol_seq NÃO é mais usada.
+-- Protocolos antigos no formato CDSPIN00001… continuam válidos na consulta.
 --
--- A coluna `protocolo` tem UNIQUE: só pode voltar a CDSPIN00001 se não existir
--- nenhuma linha com esse protocolo (ou apagar as denúncias de teste antes).
+-- Resetar a sequência não altera o gerador novo. Só faz sentido em ambiente
+-- de teste se ainda existirem linhas no formato legado e alguém for recriar
+-- denúncias pelo código antigo (não aplicar em produção).
 --
 -- -----------------------------------------------------------------------------
--- Opção A — Ambiente de teste: apagar todas as denúncias e recomeçar do 00001
+-- Ambiente de teste: apagar denúncias de teste (CUIDADO — produção = real)
 -- -----------------------------------------------------------------------------
--- CUIDADO: apaga denúncias, histórico de status, anotações e referências a anexos
--- no storage ainda precisam ser limpos pela app ou manualmente no bucket.
+-- CUIDADO: apaga denúncias, histórico de status, anotações. Limpe o bucket
+-- canal-denuncias-spin à parte se houver arquivos.
 /*
 BEGIN;
 
 TRUNCATE TABLE public.canal_denuncias_spin CASCADE;
-
-SELECT setval('public.canal_denuncia_spin_protocol_seq', 1, false);
--- Próximo protocolo gerado: CDSPIN00001
+TRUNCATE TABLE public.canal_denuncia_spin_rate_event;
 
 COMMIT;
-*/
-
--- -----------------------------------------------------------------------------
--- Opção B — Manter denúncias: alinhar a sequência ao maior número em uso
--- (não “rebaixa” o contador; o próximo protocolo será max+1.)
--- -----------------------------------------------------------------------------
-/*
-WITH mx AS (
-  SELECT COALESCE(MAX(SUBSTRING(protocolo FROM 7 FOR 5)::int), 0) AS n
-  FROM public.canal_denuncias_spin
-  WHERE protocolo ~ '^CDSPIN[0-9]{5}$'
-)
-SELECT setval(
-  'public.canal_denuncia_spin_protocol_seq',
-  (SELECT GREATEST(n, 1) FROM mx),
-  (SELECT n > 0 FROM mx)
-);
-*/
-
--- -----------------------------------------------------------------------------
--- Opção C — Só reposicionar para 00001 sem apagar (só se a tabela estiver vazia)
--- -----------------------------------------------------------------------------
-/*
-SELECT setval('public.canal_denuncia_spin_protocol_seq', 1, false);
 */
