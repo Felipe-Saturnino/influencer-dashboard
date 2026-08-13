@@ -759,7 +759,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite é **500 MB** por arquivo. Se a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…** nos botões). Mantenha a aba aberta até o fim. Se aparecer falha de conexão, tente de novo — o envio pode retomar de onde parou.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+          "O limite é **500 MB** por arquivo (cerca de **512.000 KB**). Um vídeo de **300.000 KB** (~293 MB) está **dentro** do limite — se o envio falhar nesse tamanho, não é o teto do arquivo: mantenha a aba aberta até o progresso **Enviando X%…** chegar a 100% e tente de novo se aparecer falha de conexão.\n\nSe a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",

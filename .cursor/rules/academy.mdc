@@ -259,7 +259,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 | Tamanho máximo | **500 MB** por arquivo — `ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES` (`lib/academyPerformanceHubVideoFiles.ts`) alinhado ao `file_size_limit` do bucket |
 | Validação | No `onChange` do campo (rejeita antes do upload) **e** antes de enviar ao Storage |
 | Orientação no campo | `ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO` — grave em 720p; texto único abaixo do input |
-| Upload | Arquivos **≥ 6 MB** usam TUS resumável (`tus-js-client`, host `*.storage.supabase.co`, chunks de 6 MB); menores usam `storage.upload` simples. Progresso `%` nos botões Salvar/Concluir |
+| Upload | Arquivos **≥ 6 MB** usam TUS (`tus-js-client` build **browser**, host `*.storage.supabase.co` com fallback no host da API, chunks de 6 MB, sem retomar path antigo); menores usam `storage.upload` simples. Progresso `%` nos botões Salvar/Concluir. TUS exige políticas Storage **INSERT + UPDATE** |
 | Retenção | **90 dias após a conclusão** — `ACADEMY_PERFORMANCE_HUB_VIDEO_RETENCAO_DIAS`; `concluida_em` marca o início do prazo (trigger `trg_academy_performance_hub_avaliacao_concluida_em`) |
 | Purga | Edge Function **`purge-academy-performance-hub-videos`** + cron semanal (`purge-academy-performance-hub-videos-semanal`, domingos 04:20 UTC) — apaga o arquivo, limpa `video_url` e grava `video_removido_em`; `video_nome` permanece |
 | Órfãos | A mesma function apaga arquivos do bucket que nenhuma avaliação referencia (troca de vídeo, upload não salvo) com mais de 24 h |
@@ -268,7 +268,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 Reabrir uma avaliação concluída (status sai de `concluida`) zera `concluida_em` e reinicia o prazo. Simulação sem apagar nada: `POST` na function com `{ "dry_run": true }` e a service role key no `Authorization`.
 
-Migrações: `20261103120000_academy_performance_hub_videos_retencao.sql` (limite 500 MB, colunas, trigger) e `20261103123000_academy_performance_hub_videos_purge_cron.sql` (cron). Pré-requisito do cron: secrets `supabase_project_url` e `supabase_service_role_key` no Vault.
+Migrações: `20261103120000_academy_performance_hub_videos_retencao.sql` (limite 500 MB, colunas, trigger), `20261103123000_academy_performance_hub_videos_purge_cron.sql` (cron) e `20261114140000_academy_performance_hub_videos_tus.sql` (recria UPDATE/DELETE no bucket — TUS PATCH). Pré-requisito do cron: secrets `supabase_project_url` e `supabase_service_role_key` no Vault.
 
 **RLS mesas/estúdios:** leitura de `mesas_spin_cadastro` e `estudios_spin` inclui quem tem **Ver** em `academy_performance_hub` (`_academy_performance_hub_perm` — migração `20261017120000`); sem isso, os selects Estúdio/Jogo/Mesa do modal ficam vazios para Performance Coach.
 
@@ -296,4 +296,5 @@ Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `aca
 - Limite de tamanho de vídeo hardcoded na página ou em mensagem de erro — usar as constantes de `academyPerformanceHubVideoFiles.ts` (ficam alinhadas ao bucket).
 - Gravar `video_removido_em` a partir da UI — a coluna é da retenção (Edge Function).
 - Upload de vídeo grande (≥ 6 MB) via `storage.upload` simples — usar TUS resumável (`uploadVideoPerformanceHub`).
+- Bucket de vídeo sem política Storage **UPDATE** — o TUS faz PATCH e falha em arquivos ~300 MB mesmo abaixo de 500 MB.
 - Apagar o arquivo do Storage direto no modal ao trocar de vídeo — o antigo vira órfão e é recolhido pela purga semanal.

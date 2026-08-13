@@ -8,6 +8,7 @@ import type {
   PerformanceHubDadosPrefill,
   PerformanceHubEstudioCadastro,
   PerformanceHubMesaCadastro,
+  RhFuncionarioPerformanceHubCadastro,
 } from "../lib/academyPerformanceHubCadastroPrefill";
 import type { PerformanceHubStaffOption, PerformanceHubTimeSlug } from "../lib/academyPerformanceHubTypes";
 import type { PerformanceHubStaffAgendaFonte } from "../lib/academyPerformanceHubAgenda";
@@ -103,12 +104,12 @@ export function usePerformanceHubCadastro() {
       }
       const idsPorSlug = agruparTimeIdsPorSlugPerformanceHub([...timesPorId.values()]);
       const timeIds = [...idsPorSlug.game_presenter, ...idsPorSlug.shuffler];
-      let funcionarios: RhFuncionario[] = [];
+      let funcionarios: RhFuncionarioPerformanceHubCadastro[] = [];
 
       if (timeIds.length > 0) {
         try {
-          funcionarios = await fetchAllPages<RhFuncionario>(async (from, to) =>
-            supabase
+          funcionarios = await fetchAllPages<RhFuncionarioPerformanceHubCadastro>(async (from, to) => {
+            const { data, error } = await supabase
               .from("rh_funcionarios")
               .select(
                 "id, nome, status, escala, staff_turno, staff_estudio_slug, staff_estudio_slugs, staff_operadora_slug, staff_skills, org_time_id, staff_live_no_estudio, data_inicio",
@@ -116,8 +117,9 @@ export function usePerformanceHubCadastro() {
               .in("org_time_id", timeIds)
               .in("status", ["ativo", "indisponivel"])
               .order("nome", { ascending: true })
-              .range(from, to),
-          );
+              .range(from, to);
+            return { data: (data ?? null) as RhFuncionarioPerformanceHubCadastro[] | null, error };
+          });
         } catch (error) {
           console.error("Performance Hub: falha ao carregar prestadores", error);
         }

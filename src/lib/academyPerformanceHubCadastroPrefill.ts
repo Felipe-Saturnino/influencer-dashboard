@@ -39,6 +39,23 @@ export type PerformanceHubDadosPrefill = {
   jogosStaff: PerformanceHubJogoKey[];
 };
 
+/** Colunas de `rh_funcionarios` usadas no cadastro do Performance Hub (select explícito). */
+export type RhFuncionarioPerformanceHubCadastro = Pick<
+  RhFuncionario,
+  | "id"
+  | "nome"
+  | "status"
+  | "escala"
+  | "staff_turno"
+  | "staff_estudio_slug"
+  | "staff_estudio_slugs"
+  | "staff_operadora_slug"
+  | "staff_skills"
+  | "org_time_id"
+  | "staff_live_no_estudio"
+  | "data_inicio"
+>;
+
 const TURNOS_PERFORMANCE_HUB: PerformanceHubTurno[] = ["Manhã", "Tarde", "Noite"];
 
 function isPerformanceHubTurno(value: string): value is PerformanceHubTurno {
@@ -143,7 +160,7 @@ export function mapMesaSugeridaPerformanceHub(
 }
 
 export function mapRhFuncionarioParaPerformanceHubDados(
-  row: RhFuncionario,
+  row: RhFuncionarioPerformanceHubCadastro,
   opParaEstudio: Record<string, string>,
   mesas: readonly PerformanceHubMesaCadastro[],
 ): PerformanceHubDadosPrefill {

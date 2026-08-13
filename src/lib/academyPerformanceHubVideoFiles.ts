@@ -33,7 +33,7 @@ const ERRO_GENERICO =
 const ERRO_SESSAO =
   "Sua sessão expirou. Faça login novamente e tente enviar o vídeo.";
 
-const ERRO_REDE =
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE =
   "Não foi possível enviar o vídeo (falha de conexão ou tempo esgotado). Verifique a internet e tente novamente.";
 
 const MIME_POR_EXTENSAO: Record<string, string> = {
@@ -78,33 +78,58 @@ export function videoPerformanceHubPodeAssistir(value: string | null | undefined
   return true;
 }
 
-function mensagemErroUploadVideo(error: { message?: string; statusCode?: string | number } | null): string {
+export function detalheErroUploadVideo(error: unknown): { message: string; status: number | null } {
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message: unknown }).message ?? "")
+      : String(error ?? "");
+  let status: number | null = null;
+  if (error && typeof error === "object") {
+    const rec = error as {
+      statusCode?: string | number;
+      originalResponse?: { getStatus?: () => number } | null;
+    };
+    if (typeof rec.statusCode === "number") status = rec.statusCode;
+    else if (typeof rec.statusCode === "string" && /^\d+$/.test(rec.statusCode)) {
+      status = Number(rec.statusCode);
+    }
+    const fromRes = rec.originalResponse?.getStatus?.();
+    if (typeof fromRes === "number" && fromRes > 0) status = fromRes;
+  }
+  return { message, status };
+}
+
+export function mensagemErroUploadVideo(error: { message?: string; statusCode?: string | number } | null): string {
   const raw = `${error?.message ?? ""} ${error?.statusCode ?? ""}`.toLowerCase();
+  const status =
+    typeof error?.statusCode === "number"
+      ? error.statusCode
+      : typeof error?.statusCode === "string" && /^\d+$/.test(error.statusCode)
+        ? Number(error.statusCode)
+        : null;
+
   if (raw.includes("bucket") && (raw.includes("not found") || raw.includes("does not exist"))) {
     return "Armazenamento de vídeo ainda não está configurado. Entre em contato com o suporte.";
   }
   if (raw.includes("mime") || raw.includes("not supported") || raw.includes("invalid content")) {
     return "Formato de vídeo não suportado. Use MP4, MOV ou WebM.";
   }
-  // Limite real do bucket / validação de tamanho — não confundir com 413 de gateway.
-  if (
-    (raw.includes("maximum") && (raw.includes("size") || raw.includes("file"))) ||
-    raw.includes("entity too large") ||
-    raw.includes("file size") ||
-    raw.includes("exceeded the maximum")
-  ) {
+  if (status === 413 || raw.includes("payload too large") || raw.includes("entity too large")) {
+    return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE;
+  }
+  if (raw.includes("file size limit") || raw.includes("exceeded the maximum allowed size")) {
     return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO;
   }
-  if (raw.includes("413") || raw.includes("payload too large")) {
-    return ERRO_REDE;
+  if (status === 409 || raw.includes("409") || raw.includes("conflict")) {
+    return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE;
   }
   if (
+    status === 401 ||
+    status === 403 ||
     raw.includes("row-level security") ||
     raw.includes("violates") ||
     raw.includes("permission") ||
-    raw.includes("not authorized") ||
-    raw.includes("403") ||
-    raw.includes("401")
+    raw.includes("not authorized")
   ) {
     return "Você não tem permissão para enviar o vídeo desta avaliação. Se o problema persistir, entre em contato com o suporte.";
   }
@@ -113,18 +138,22 @@ function mensagemErroUploadVideo(error: { message?: string; statusCode?: string 
     raw.includes("timeout") ||
     raw.includes("failed to fetch") ||
     raw.includes("aborted") ||
-    raw.includes("econnreset")
+    raw.includes("econnreset") ||
+    raw.includes("load failed") ||
+    raw.includes("cors")
   ) {
-    return ERRO_REDE;
+    return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE;
   }
   return ERRO_GENERICO;
 }
 
 function mensagemErroDesconhecido(e: unknown): string {
-  if (e && typeof e === "object" && "message" in e) {
-    return mensagemErroUploadVideo({ message: String((e as { message: unknown }).message) });
-  }
-  return ERRO_GENERICO;
+  const { message, status } = detalheErroUploadVideo(e);
+  return mensagemErroUploadVideo({ message, statusCode: status ?? undefined });
+}
+
+function isErroRede(msg: string): boolean {
+  return msg === ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_REDE;
 }
 
 /** Host direto do Storage (`*.storage.supabase.co`) — melhor para uploads grandes. */
@@ -138,6 +167,21 @@ export function endpointResumableVideoPerformanceHub(baseUrl: string = supabaseU
   } catch {
     return `${baseUrl.replace(/\/$/, "")}/storage/v1/upload/resumable`;
   }
+}
+
+export function endpointResumableVideoPerformanceHubApi(baseUrl: string = supabaseUrl): string {
+  return `${baseUrl.replace(/\/$/, "")}/storage/v1/upload/resumable`;
+}
+
+async function tokenSessaoVideo(): Promise<string | null> {
+  const atual = await supabase.auth.getSession();
+  let session = atual.data.session;
+  const expiraEmMs = (session?.expires_at ?? 0) * 1000;
+  if (!session?.access_token || expiraEmMs < Date.now() + 5 * 60 * 1000) {
+    const refreshed = await supabase.auth.refreshSession();
+    session = refreshed.data.session ?? session;
+  }
+  return session?.access_token?.trim() || null;
 }
 
 async function uploadVideoSimples(
@@ -159,35 +203,37 @@ async function uploadVideoSimples(
   return { path, error: null };
 }
 
-async function uploadVideoResumavel(
+async function uploadVideoResumavelEm(
+  endpoint: string,
   path: string,
   file: File,
   contentType: string,
   onProgress?: UploadVideoPerformanceHubProgress,
 ): Promise<{ path: string; error: string | null }> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const accessToken = session?.access_token?.trim();
-  if (!accessToken) {
-    return { path: "", error: ERRO_SESSAO };
-  }
-  if (!supabaseUrl) {
-    return { path: "", error: ERRO_GENERICO };
-  }
+  const accessToken = await tokenSessaoVideo();
+  if (!accessToken) return { path: "", error: ERRO_SESSAO };
+  if (!supabaseUrl) return { path: "", error: ERRO_GENERICO };
 
   const { Upload } = await import("tus-js-client");
 
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (result: { path: string; error: string | null }) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
     const upload = new Upload(file, {
-      endpoint: endpointResumableVideoPerformanceHub(),
-      retryDelays: [0, 3000, 5000, 10000, 20000],
+      endpoint,
+      retryDelays: [0, 2000, 5000, 10000, 20000],
       headers: {
         authorization: `Bearer ${accessToken}`,
         apikey: supabaseAnonKey,
         "x-upsert": "false",
       },
-      uploadDataDuringCreation: true,
+      uploadDataDuringCreation: false,
+      storeFingerprintForResuming: false,
       removeFingerprintOnSuccess: true,
       metadata: {
         bucketName: ACADEMY_PERFORMANCE_HUB_VIDEOS_BUCKET,
@@ -196,9 +242,26 @@ async function uploadVideoResumavel(
         cacheControl: "3600",
       },
       chunkSize: TUS_CHUNK_SIZE_BYTES,
+      fingerprint(fileRef: File) {
+        const nome = "name" in fileRef ? String(fileRef.name) : "";
+        const modified = "lastModified" in fileRef ? String(fileRef.lastModified) : "";
+        return Promise.resolve(`ph-video-${path}-${fileRef.size}-${modified}-${nome}`);
+      },
+      async onBeforeRequest(req) {
+        const token = await tokenSessaoVideo();
+        if (token) req.setHeader("Authorization", `Bearer ${token}`);
+        if (supabaseAnonKey) req.setHeader("apikey", supabaseAnonKey);
+      },
+      onShouldRetry(error, _retryAttempt, _options) {
+        const status = error.originalResponse?.getStatus() ?? 0;
+        if (status === 400 || status === 401 || status === 403 || status === 404 || status === 413) {
+          return false;
+        }
+        return true;
+      },
       onError(error) {
-        console.error("Performance Hub: falha ao enviar vídeo (resumável)", error);
-        resolve({ path: "", error: mensagemErroDesconhecido(error) });
+        console.error("Performance Hub: falha ao enviar vídeo (resumável)", endpoint, error);
+        finish({ path: "", error: mensagemErroDesconhecido(error) });
       },
       onProgress(bytesUploaded, bytesTotal) {
         if (!bytesTotal || !onProgress) return;
@@ -207,21 +270,29 @@ async function uploadVideoResumavel(
       },
       onSuccess() {
         onProgress?.(100);
-        resolve({ path, error: null });
+        finish({ path, error: null });
       },
     });
 
-    void upload
-      .findPreviousUploads()
-      .then((previous) => {
-        if (previous.length > 0) upload.resumeFromPreviousUpload(previous[0]);
-        upload.start();
-      })
-      .catch((e) => {
-        console.error("Performance Hub: falha ao iniciar upload resumável", e);
-        resolve({ path: "", error: mensagemErroDesconhecido(e) });
-      });
+    upload.start();
   });
+}
+
+async function uploadVideoResumavel(
+  path: string,
+  file: File,
+  contentType: string,
+  onProgress?: UploadVideoPerformanceHubProgress,
+): Promise<{ path: string; error: string | null }> {
+  const direto = endpointResumableVideoPerformanceHub();
+  const viaApi = endpointResumableVideoPerformanceHubApi();
+  const primeiro = await uploadVideoResumavelEm(direto, path, file, contentType, onProgress);
+  if (!primeiro.error) return primeiro;
+  if (direto !== viaApi && isErroRede(primeiro.error)) {
+    console.warn("Performance Hub: retry TUS via API host");
+    return uploadVideoResumavelEm(viaApi, path, file, contentType, onProgress);
+  }
+  return primeiro;
 }
 
 export async function uploadVideoPerformanceHub(
