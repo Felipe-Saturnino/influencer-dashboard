@@ -1,6 +1,8 @@
 /**
  * Extrai sinais de Service Manager do ClickHouse (Grafana S&SM Reports / stats_signals)
  * e grava em public.sm_sinais.
+ * O trigger trg_sm_sinais_resumo_* atualiza sm_sinais_resumo_diario no mesmo momento
+ * (aba Incidentes → Sinais). Não é preciso um segundo comando.
  *
  * Uso:
  *   node scripts/grafana-sm-sinais-run.mjs --arquivo=tmp/sm-sinais.json --dry-run

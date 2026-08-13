@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   CalendarCheck,
   CalendarDays,
@@ -35,7 +35,14 @@ import type {
 import type { OverviewPrestadorTimeCaps } from "../../../lib/overviewPrestadorTeamConfig";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
-import { KpiCard, SectionTitle, SkeletonKpiCard } from "../../../components/dashboard";
+import { KpiCard, SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
+import {
+  clampPageIndex,
+  slicePage,
+  TABELA_PAGE_SIZE_OVERVIEW_PRESTADOR,
+} from "../../../lib/tablePagination";
 
 type Props = {
   metricas: OverviewPrestadorMetricas;
@@ -49,7 +56,11 @@ type Props = {
   coberturaPorTurno: OverviewPrestadorCoberturaLinha[];
   coberturaPorEstudio: OverviewPrestadorCoberturaLinha[];
   distribuicaoEstudio: OverviewPrestadorEstudioFatia[];
+  erroCarga?: string | null;
+  onRecarregar?: () => void;
 };
+
+type SortDetalheCol = "data" | "prestador" | "ocorrencia" | "detalhe";
 
 const MOV_CORES = {
   trocas: "#1e36f8",
@@ -220,9 +231,8 @@ function tabelaCobertura(
         <tbody>
           {rows.map((r, i) => {
             const isTotal = r.chave === "__total__";
-            const pct = r.jornadasEscaladas > 0
-              ? (r.jornadasRealizadas / r.jornadasEscaladas) * 100
-              : null;
+            const denom = r.jornadasEscaladasAderencia > 0 ? r.jornadasEscaladasAderencia : r.jornadasEscaladas;
+            const pct = denom > 0 ? (r.jornadasRealizadas / denom) * 100 : null;
             return (
               <tr
                 key={r.chave}
@@ -259,6 +269,8 @@ export function OverviewPrestadorAbaEscala({
   coberturaPorTurno,
   coberturaPorEstudio,
   distribuicaoEstudio,
+  erroCarga,
+  onRecarregar,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -272,8 +284,11 @@ export function OverviewPrestadorAbaEscala({
   const labelDiasEsc = visaoTime ? "Jornadas escaladas" : "Dias Escalados";
   const labelDiasReal = visaoTime ? "Jornadas realizadas" : "Dias Realizados";
 
+  const denomAderencia =
+    metricas.diasEscaladoAderencia > 0 ? metricas.diasEscaladoAderencia : metricas.diasEscalado;
+
   const dadosAproveitamentoDias = [
-    { nome: "Escalados", valor: metricas.diasEscalado, fill: "var(--brand-action, #7c3aed)" },
+    { nome: "Escalados", valor: denomAderencia, fill: "var(--brand-action, #7c3aed)" },
     { nome: "Realizados", valor: metricas.diasRealizado, fill: "#22c55e" },
   ];
 
@@ -318,8 +333,8 @@ export function OverviewPrestadorAbaEscala({
   const totalDiasEstudio = distribuicaoEstudio.reduce((s, e) => s + e.dias, 0);
 
   const presencaPct =
-    metricas.diasEscalado > 0
-      ? Math.round((metricas.diasRealizado / metricas.diasEscalado) * 1000) / 10
+    denomAderencia > 0
+      ? Math.round((metricas.diasRealizado / denomAderencia) * 1000) / 10
       : null;
   const pontualidadeOcorr = metricas.entradasAtrasadas + metricas.saidasAntecipadas;
   const controlePresencaOcorr = metricas.checkInNaoRegistrado + metricas.checkOutNaoRegistrado;
@@ -341,10 +356,83 @@ export function OverviewPrestadorAbaEscala({
     </div>
   );
 
+  const [sortDetalhe, setSortDetalhe] = useState<{ col: SortDetalheCol; dir: SortDir }>({
+    col: "data",
+    dir: "desc",
+  });
+  const [paginaDetalhe, setPaginaDetalhe] = useState(0);
+
+  const detalheOrdenado = useMemo(() => {
+    const rows = [...metricas.detalhamento];
+    const dir = sortDetalhe.dir;
+    rows.sort((a, b) => {
+      switch (sortDetalhe.col) {
+        case "prestador":
+          return compareLocaleTexto(a.prestadorNome ?? "", b.prestadorNome ?? "", dir);
+        case "ocorrencia":
+          return compareLocaleTexto(a.ocorrencia, b.ocorrencia, dir);
+        case "detalhe":
+          return compareLocaleTexto(a.detalhe, b.detalhe, dir);
+        default:
+          return compareLocaleTexto(a.dataIso, b.dataIso, dir);
+      }
+    });
+    return rows;
+  }, [metricas.detalhamento, sortDetalhe]);
+
+  useEffect(() => {
+    setPaginaDetalhe(0);
+  }, [metricas.detalhamento, visaoTime, sortDetalhe]);
+
+  const paginaDetalheSafe = clampPageIndex(
+    paginaDetalhe,
+    detalheOrdenado.length,
+    TABELA_PAGE_SIZE_OVERVIEW_PRESTADOR,
+  );
+  const detalhePagina = slicePage(detalheOrdenado, paginaDetalheSafe, TABELA_PAGE_SIZE_OVERVIEW_PRESTADOR);
+
   return (
     <>
+      {erroCarga ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...pageBox,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroCarga}</span>
+          {onRecarregar ? (
+            <button
+              type="button"
+              onClick={onRecarregar}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div style={pageBox}>
-        <SectionTitle sub={visaoTime ? "consolidado do time · mês completo vs mês anterior" : "mês completo vs mês anterior"}>
+        <SectionTitle sub={visaoTime ? "consolidado do time · presença até hoje no mês corrente" : "presença até hoje no mês corrente"}>
           {visaoTime ? "Resumo operacional" : "KPIs Consolidados"}
         </SectionTitle>
         {loading ? (
@@ -424,7 +512,7 @@ export function OverviewPrestadorAbaEscala({
                   {fmtPct(presencaPct)}
                 </div>
                 <div style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
-                  {metricas.diasRealizado} de {metricas.diasEscalado} jornadas
+                  {metricas.diasRealizado} de {denomAderencia} jornadas
                 </div>
               </div>
             ) : null}
@@ -434,9 +522,9 @@ export function OverviewPrestadorAbaEscala({
                 Pontualidade
               </div>
               <div style={{ fontSize: 26, fontWeight: 800, fontFamily: FONT.body, color: t.text, marginBottom: 8 }}>
-                {visaoTime && metricas.diasEscalado > 0
+                {visaoTime && denomAderencia > 0
                   ? fmtPct(
-                      Math.round((1 - pontualidadeOcorr / Math.max(metricas.diasEscalado, 1)) * 1000) / 10,
+                      Math.round((1 - pontualidadeOcorr / Math.max(denomAderencia, 1)) * 1000) / 10,
                     )
                   : pontualidadeOcorr}
               </div>
@@ -451,9 +539,9 @@ export function OverviewPrestadorAbaEscala({
                 Controle de Presença
               </div>
               <div style={{ fontSize: 26, fontWeight: 800, fontFamily: FONT.body, color: t.text, marginBottom: 8 }}>
-                {visaoTime && metricas.diasEscalado > 0
+                {visaoTime && denomAderencia > 0
                   ? fmtPct(
-                      Math.round((1 - controlePresencaOcorr / Math.max(metricas.diasEscalado * 2, 1)) * 1000) / 10,
+                      Math.round((1 - controlePresencaOcorr / Math.max(denomAderencia * 2, 1)) * 1000) / 10,
                     )
                   : controlePresencaOcorr}
               </div>
@@ -657,34 +745,107 @@ export function OverviewPrestadorAbaEscala({
         </SectionTitle>
         {!prontoParaExibir || loading ? (
           blocoVazioOuLoading()
-        ) : metricas.detalhamento.length === 0 ? (
+        ) : detalheOrdenado.length === 0 ? (
           <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             Sem dados para o período selecionado.
           </div>
         ) : (
-          <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: visaoTime ? 640 : 520 })}>
-              <caption style={{ display: "none" }}>Detalhamento diário de ocorrências</caption>
-              <thead>
-                <tr>
-                  <th scope="col" style={dataTable.thHeader}>Data</th>
-                  {visaoTime ? <th scope="col" style={dataTable.thHeader}>Prestador</th> : null}
-                  <th scope="col" style={dataTable.thHeader}>Ocorrência</th>
-                  <th scope="col" style={dataTable.thHeader}>Detalhe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metricas.detalhamento.map((row, i) => (
-                  <tr key={`${row.dataIso}-${row.ocorrencia}-${row.prestadorId ?? ""}-${i}`} style={{ background: dataTable.zebraRow(i) }}>
-                    <td style={dataTable.tdCenter}>{fmtDataPt(row.dataIso)}</td>
-                    {visaoTime ? <td style={dataTable.tdCenter}>{row.prestadorNome ?? "—"}</td> : null}
-                    <td style={dataTable.tdCenter}>{row.ocorrencia}</td>
-                    <td style={dataTable.tdCenter}>{row.detalhe}</td>
+          <>
+            <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+              <table style={getDataTableStyle({ minWidth: visaoTime ? 640 : 520 })}>
+                <caption style={{ display: "none" }}>Detalhamento diário de ocorrências</caption>
+                <thead>
+                  <tr>
+                    <SortTableTh
+                      label="Data"
+                      col="data"
+                      sortCol={sortDetalhe.col}
+                      sortDir={sortDetalhe.dir}
+                      onSort={(c) =>
+                        setSortDetalhe((p) =>
+                          p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortDetalheCol, dir: "desc" },
+                        )
+                      }
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
+                    {visaoTime ? (
+                      <SortTableTh
+                        label="Prestador"
+                        col="prestador"
+                        sortCol={sortDetalhe.col}
+                        sortDir={sortDetalhe.dir}
+                        onSort={(c) =>
+                          setSortDetalhe((p) =>
+                            p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortDetalheCol, dir: "asc" },
+                          )
+                        }
+                        thStyle={dataTable.thHeader}
+                        align="center"
+                      />
+                    ) : null}
+                    <SortTableTh
+                      label="Ocorrência"
+                      col="ocorrencia"
+                      sortCol={sortDetalhe.col}
+                      sortDir={sortDetalhe.dir}
+                      onSort={(c) =>
+                        setSortDetalhe((p) =>
+                          p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortDetalheCol, dir: "asc" },
+                        )
+                      }
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
+                    <SortTableTh
+                      label="Detalhe"
+                      col="detalhe"
+                      sortCol={sortDetalhe.col}
+                      sortDir={sortDetalhe.dir}
+                      onSort={(c) =>
+                        setSortDetalhe((p) =>
+                          p.col === c ? { col: c, dir: p.dir === "asc" ? "desc" : "asc" } : { col: c as SortDetalheCol, dir: "asc" },
+                        )
+                      }
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                    />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {detalhePagina.map((row, i) => {
+                    const zebra = dataTable.zebraRow(i);
+                    return (
+                      <tr
+                        key={`${row.dataIso}-${row.ocorrencia}-${row.prestadorId ?? ""}-${i}`}
+                        style={{ background: zebra }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = t.isDark
+                            ? "rgba(255,255,255,0.04)"
+                            : "rgba(0,0,0,0.02)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = zebra;
+                        }}
+                      >
+                        <td style={dataTable.tdCenter}>{fmtDataPt(row.dataIso)}</td>
+                        {visaoTime ? <td style={dataTable.tdCenter}>{row.prestadorNome ?? "—"}</td> : null}
+                        <td style={dataTable.tdCenter}>{row.ocorrencia}</td>
+                        <td style={dataTable.tdCenter}>{row.detalhe}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <TabelaPaginacaoBar
+              t={t}
+              page={paginaDetalheSafe}
+              pageSize={TABELA_PAGE_SIZE_OVERVIEW_PRESTADOR}
+              totalItems={detalheOrdenado.length}
+              onPageChange={setPaginaDetalhe}
+            />
+          </>
         )}
       </div>
     </>

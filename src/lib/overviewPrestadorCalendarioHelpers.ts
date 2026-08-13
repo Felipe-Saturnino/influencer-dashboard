@@ -2,6 +2,7 @@
  * Helpers partilhados entre Calendário RH e Overview Prestador (escala / presença).
  */
 import { fmtHorasTotal } from "./dashboardHelpers";
+import { hojeIsoBrasil } from "./dateBrasil";
 import { ehFeriadoSaoPauloCapital } from "./feriadosSaoPauloCapital";
 import {
   normalizarEscalaCadastro,
@@ -430,4 +431,14 @@ export function diasDoMesRef(ano: number, mes0: number): Date[] {
 
 export function isoEstaNoPeriodo(iso: string, inicio: string, fim: string): boolean {
   return iso >= inicio && iso <= fim;
+}
+
+/**
+ * No mês corrente, presença/realizado fecha em hoje (Brasília).
+ * Histórico e competências já fechadas usam o fim do período.
+ */
+export function capFimAderenciaMesCorrente(periodoFim: string, historico: boolean): string {
+  if (historico) return periodoFim;
+  const hoje = hojeIsoBrasil();
+  return periodoFim > hoje ? hoje : periodoFim;
 }

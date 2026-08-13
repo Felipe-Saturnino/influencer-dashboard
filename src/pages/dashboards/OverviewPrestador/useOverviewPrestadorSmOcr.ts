@@ -6,7 +6,7 @@ import {
   preencherDetalhamentoDiarioZerado,
 } from "../../../lib/dashboardHelpers";
 import { hojeIsoBrasil } from "../../../lib/dateBrasil";
-import { fetchEstudioIncidentesPorDataRodada } from "../../../lib/estudioIncidentesFetch";
+import { fetchEstudioIncidentesPorRelatores } from "../../../lib/estudioIncidentesFetch";
 import type { EstudioIncidenteRow } from "../../../lib/estudioIncidentesTypes";
 import { fetchSmSinaisPeriodoOcr } from "../../../lib/smSinaisFetch";
 import type { SmSinalRow } from "../../../lib/smSinaisTypes";
@@ -85,10 +85,10 @@ async function carregarMapaRelatorSm(funcionarioIds: string[]): Promise<{
       nomePorFuncionario.set(fid, nome);
       funcionarioIdPorNome.set(nome.toLowerCase(), fid);
     }
-    const tos = (row.staff_id_tos ?? "").trim().toLowerCase();
+    const tos = (row.staff_id_tos ?? "").trim();
     if (tos) {
       staffIdTosPorFuncionario.set(fid, tos);
-      funcionarioIdPorTos.set(tos, fid);
+      funcionarioIdPorTos.set(tos.toLowerCase(), fid);
     }
     const e1 = (row.email ?? "").trim().toLowerCase();
     const e2 = (row.email_spin ?? "").trim().toLowerCase();
@@ -284,16 +284,41 @@ export function useOverviewPrestadorSmOcr(opts: {
         }
         setEstudiosNome(nomes);
 
+        const tosIds = [...mapa.staffIdTosPorFuncionario.values()].filter(Boolean);
+        const relatorUserIds = [...mapa.profileIdPorFuncionario.values()].filter(Boolean);
+        const relatorNomes = [...mapa.nomePorFuncionario.values()].filter(Boolean);
+
         const fetchPar = async (ini: string, fim: string) => {
           const fimCap = fimPeriodoAteHoje(fim);
           if (fimCap < ini) {
             return { sinais: [] as SmSinalRow[], tickets: [] as EstudioIncidenteRow[] };
           }
           const [sinaisAll, ticketsAll] = await Promise.all([
-            fetchSmSinaisPeriodoOcr({ dataIni: ini, dataFim: fimCap }),
-            fetchEstudioIncidentesPorDataRodada({ dataIni: ini, dataFim: fimCap }),
+            fetchSmSinaisPeriodoOcr({
+              dataIni: ini,
+              dataFim: fimCap,
+              funcionarioIds,
+              resolverTosIds: tosIds,
+            }),
+            fetchEstudioIncidentesPorRelatores({
+              dataIni: ini,
+              dataFim: fimCap,
+              relatorUserIds,
+              relatorNomes,
+            }),
           ]);
           return { sinais: sinaisAll, tickets: ticketsAll };
+        };
+
+        const aplicarCatalogo = async (sinais: SmSinalRow[], tickets: EstudioIncidenteRow[]) => {
+          const cat = await carregarCatalogoMesas({
+            mesaIds: [...sinais.map((s) => s.mesa_id ?? ""), ...tickets.map((t) => t.mesa_id ?? "")],
+            tableIds: sinais.map((s) => s.table_id ?? ""),
+          });
+          if (cancelled) return;
+          setMesaNomes((prev) => ({ ...prev, ...cat.nomesPorId }));
+          setTipoJogoPorMesaId((prev) => ({ ...prev, ...cat.tipoJogoPorMesaId }));
+          setTipoJogoPorTableId((prev) => ({ ...prev, ...cat.tipoJogoPorTableId }));
         };
 
         if (historico) {
@@ -304,42 +329,22 @@ export function useOverviewPrestadorSmOcr(opts: {
           setSinaisAnt([]);
           setTicketsAtual(tickets);
           setTicketsAnt([]);
-          const cat = await carregarCatalogoMesas({
-            mesaIds: [
-              ...sinais.map((s) => s.mesa_id ?? ""),
-              ...tickets.map((t) => t.mesa_id ?? ""),
-            ],
-            tableIds: sinais.map((s) => s.table_id ?? ""),
-          });
-          setMesaNomes(cat.nomesPorId);
-          setTipoJogoPorMesaId(cat.tipoJogoPorMesaId);
-          setTipoJogoPorTableId(cat.tipoJogoPorTableId);
+          await aplicarCatalogo(sinais, tickets);
         } else if (mesSelecionado) {
           const mom = getPeriodoComparativoMesCompleto(mesSelecionado.ano, mesSelecionado.mes);
-          const [atual, ant] = await Promise.all([
-            fetchPar(mom.atual.inicio, mom.atual.fim),
-            fetchPar(mom.anterior.inicio, mom.anterior.fim),
-          ]);
+          const atual = await fetchPar(mom.atual.inicio, mom.atual.fim);
           if (cancelled) return;
           setSinaisAtual(atual.sinais);
-          setSinaisAnt(ant.sinais);
           setTicketsAtual(atual.tickets);
+          setSinaisAnt([]);
+          setTicketsAnt([]);
+          setLoading(false);
+          await aplicarCatalogo(atual.sinais, atual.tickets);
+          const ant = await fetchPar(mom.anterior.inicio, mom.anterior.fim);
+          if (cancelled) return;
+          setSinaisAnt(ant.sinais);
           setTicketsAnt(ant.tickets);
-          const cat = await carregarCatalogoMesas({
-            mesaIds: [
-              ...atual.sinais.map((s) => s.mesa_id ?? ""),
-              ...atual.tickets.map((t) => t.mesa_id ?? ""),
-              ...ant.sinais.map((s) => s.mesa_id ?? ""),
-              ...ant.tickets.map((t) => t.mesa_id ?? ""),
-            ],
-            tableIds: [
-              ...atual.sinais.map((s) => s.table_id ?? ""),
-              ...ant.sinais.map((s) => s.table_id ?? ""),
-            ],
-          });
-          setMesaNomes(cat.nomesPorId);
-          setTipoJogoPorMesaId(cat.tipoJogoPorMesaId);
-          setTipoJogoPorTableId(cat.tipoJogoPorTableId);
+          await aplicarCatalogo(ant.sinais, ant.tickets);
         }
       } catch (e) {
         console.error(e);

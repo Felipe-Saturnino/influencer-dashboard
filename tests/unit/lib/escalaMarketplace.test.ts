@@ -425,6 +425,7 @@ describe("mensagemErroOfertaMarketplace", () => {
     );
     expect(mensagemErroOfertaMarketplace("turno_diferente")).toContain("mesmo do seu turno");
     expect(mensagemErroOfertaMarketplace("oferta_expirada")).toContain("menos de 2h");
+    expect(mensagemErroOfertaMarketplace("dia_nao_futuro")).toContain("publicar oferta");
     expect(mensagemErroOfertaMarketplace("horario_turno_indisponivel")).toContain(
       "horário de início",
     );

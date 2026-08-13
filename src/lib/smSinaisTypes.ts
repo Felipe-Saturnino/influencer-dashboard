@@ -53,3 +53,22 @@ export type SmSinalStaffOption = {
   nome: string;
   nickname: string | null;
 };
+
+/** Linha da tabela-resumo diária — aba Sinais (não é um sinal individual). */
+export type SmSinalResumoRow = {
+  dia_brt: string;
+  estudio_slug: string;
+  resolver_funcionario_id: string | null;
+  creator_funcionario_id: string | null;
+  resolver_id: string;
+  creator_id: string;
+  resolver_screen_name: string | null;
+  creator_screen_name: string | null;
+  sinais_qtd: number;
+  tma_total_sum_ms: number;
+  tma_total_n: number;
+  tma_atend_sum_ms: number;
+  tma_atend_n: number;
+  tma_res_sum_ms: number;
+  tma_res_n: number;
+};

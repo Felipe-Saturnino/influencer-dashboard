@@ -20,6 +20,8 @@ interface Props {
   isInverso?: boolean;
   /** Sufixo da legenda “vs … · …” (período de referência do valor anterior). */
   vsLegendaSuffix?: string;
+  /** Formata o valor “vs …” (ex.: TMA em relógio). Default: locale pt-BR ou BRL. */
+  formatAnterior?: (valor: number) => string;
 }
 
 export default function KpiCard({
@@ -35,6 +37,7 @@ export default function KpiCard({
   subValue,
   isInverso,
   vsLegendaSuffix,
+  formatAnterior,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -155,7 +158,13 @@ export default function KpiCard({
               {up ? "↑" : "↓"} {pct !== null ? `${Math.abs(pct).toFixed(0)}%` : "—"}
             </span>
             <span style={{ color: t.textMuted, fontSize: 10 }}>
-              vs {isBRL ? fmtBRL(anterior) : anterior.toLocaleString("pt-BR")} ·{" "}
+              vs{" "}
+              {formatAnterior
+                ? formatAnterior(anterior)
+                : isBRL
+                  ? fmtBRL(anterior)
+                  : anterior.toLocaleString("pt-BR")}{" "}
+              ·{" "}
               {vsLegendaSuffix ?? "mesmo período mês ant."}
             </span>
           </div>

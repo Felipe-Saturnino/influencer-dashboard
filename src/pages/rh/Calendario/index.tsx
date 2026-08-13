@@ -177,15 +177,29 @@ import {
   type OverviewPrestadorMovimentacaoCelula,
 } from "../../../lib/overviewPrestadorMovimentacoes";
 import { useCalendarioPresencaGestaoMutacoes } from "./useCalendarioPresencaGestaoMutacoes";
+import { TUTORIAL_CALENDARIO_PRESTADOR } from "../../geral/Ajuda/tutoriais/calendarioPrestador";
+import { TUTORIAL_CONTROLE_PRESENCA as DEF_TUTORIAL_CONTROLE_PRESENCA } from "../../geral/Ajuda/tutoriais/controlePresenca";
+import { TUTORIAL_JUSTIFICATIVA_PRESENCA } from "../../geral/Ajuda/tutoriais/justificativaPresenca";
 
 const TUTORIAL_CALENDARIO: AjudaContextualTutorial = {
-  id: "calendario-prestador",
-  urlSlug: "Calendario",
+  id: TUTORIAL_CALENDARIO_PRESTADOR.id,
+  urlSlug: TUTORIAL_CALENDARIO_PRESTADOR.urlSlug,
+  titulo: TUTORIAL_CALENDARIO_PRESTADOR.titulo,
+  descricao: TUTORIAL_CALENDARIO_PRESTADOR.objetivo,
 };
 
 const TUTORIAL_CONTROLE_PRESENCA: AjudaContextualTutorial = {
-  id: "controle-presenca",
-  urlSlug: "ControledePresenca",
+  id: DEF_TUTORIAL_CONTROLE_PRESENCA.id,
+  urlSlug: DEF_TUTORIAL_CONTROLE_PRESENCA.urlSlug,
+  titulo: DEF_TUTORIAL_CONTROLE_PRESENCA.titulo,
+  descricao: DEF_TUTORIAL_CONTROLE_PRESENCA.objetivo,
+};
+
+const TUTORIAL_JUSTIFICATIVA_PRESENCA_CTX: AjudaContextualTutorial = {
+  id: TUTORIAL_JUSTIFICATIVA_PRESENCA.id,
+  urlSlug: TUTORIAL_JUSTIFICATIVA_PRESENCA.urlSlug,
+  titulo: TUTORIAL_JUSTIFICATIVA_PRESENCA.titulo,
+  descricao: TUTORIAL_JUSTIFICATIVA_PRESENCA.objetivo,
 };
 
 const MONTHS = [
@@ -3313,7 +3327,7 @@ export default function RhCalendarioPage() {
                   abaPrincipal === "compromissos"
                     ? TUTORIAL_CALENDARIO
                     : abaPrincipal === "presenca"
-                      ? TUTORIAL_CONTROLE_PRESENCA
+                      ? [TUTORIAL_CONTROLE_PRESENCA, TUTORIAL_JUSTIFICATIVA_PRESENCA_CTX]
                       : null
                 }
               />

@@ -80,6 +80,7 @@ type AccBucket = {
   label: string;
   prestadores: Set<string>;
   jornadasEscaladas: number;
+  jornadasEscaladasAderencia: number;
   jornadasRealizadas: number;
   movimentacoes: number;
 };
@@ -89,6 +90,7 @@ function emptyAcc(label: string): AccBucket {
     label,
     prestadores: new Set(),
     jornadasEscaladas: 0,
+    jornadasEscaladasAderencia: 0,
     jornadasRealizadas: 0,
     movimentacoes: 0,
   };
@@ -145,6 +147,8 @@ export type CoberturaInput = {
   movimentacoes?: Map<string, OverviewPrestadorMovimentacaoCelula>;
   periodoInicio: string;
   periodoFim: string;
+  /** Fecha realizadas/presença (hoje no mês corrente). Default = `periodoFim`. */
+  periodoFimAderencia?: string;
   mesesRef: { ano: number; mes: number }[];
   caps: OverviewPrestadorTimeCaps;
   opParaEstudio: Record<string, string>;
@@ -155,6 +159,7 @@ function toLinhas(map: Map<string, AccBucket>, ordem: { chave: string; label: st
   const rows: OverviewPrestadorCoberturaLinha[] = [];
   const totalPrest = new Set<string>();
   let totalEsc = 0;
+  let totalEscAder = 0;
   let totalReal = 0;
   let totalMov = 0;
   for (const o of ordem) {
@@ -165,11 +170,13 @@ function toLinhas(map: Map<string, AccBucket>, ordem: { chave: string; label: st
       label: o.label,
       prestadores: acc.prestadores.size,
       jornadasEscaladas: acc.jornadasEscaladas,
+      jornadasEscaladasAderencia: acc.jornadasEscaladasAderencia,
       jornadasRealizadas: acc.jornadasRealizadas,
       movimentacoes: acc.movimentacoes,
     });
     acc.prestadores.forEach((id) => totalPrest.add(id));
     totalEsc += acc.jornadasEscaladas;
+    totalEscAder += acc.jornadasEscaladasAderencia;
     totalReal += acc.jornadasRealizadas;
     totalMov += acc.movimentacoes;
   }
@@ -179,6 +186,7 @@ function toLinhas(map: Map<string, AccBucket>, ordem: { chave: string; label: st
     label: "Total",
     prestadores: totalPrest.size,
     jornadasEscaladas: totalEsc,
+    jornadasEscaladasAderencia: totalEscAder,
     jornadasRealizadas: totalReal,
     movimentacoes: totalMov,
   });
@@ -200,11 +208,13 @@ export function calcularCoberturaPrestadorPeriodo(input: CoberturaInput): {
     movimentacoes,
     periodoInicio,
     periodoFim,
+    periodoFimAderencia: periodoFimAderenciaRaw,
     mesesRef,
     caps,
     opParaEstudio,
     estudiosNome,
   } = input;
+  const periodoFimAderencia = periodoFimAderenciaRaw ?? periodoFim;
 
   const porTurno = new Map<string, AccBucket>();
   for (const t of caps.turnos) porTurno.set(t.key, emptyAcc(t.label));
@@ -218,6 +228,7 @@ export function calcularCoberturaPrestadorPeriodo(input: CoberturaInput): {
       for (const dia of diasDoMesRef(ano, mes)) {
         const iso = toIsoLocal(dia);
         if (!isoEstaNoPeriodo(iso, periodoInicio, periodoFim)) continue;
+        const noAderencia = iso > periodoFimAderencia;
         const valorG = primeiroValorGradeDiaParaPrestador(gradeRows, funcionarioId, iso, prestador);
         const situacao = situacaoGestaoEscalaParaDia(valorG);
         const ehJornada =
@@ -257,7 +268,8 @@ export function calcularCoberturaPrestadorPeriodo(input: CoberturaInput): {
           if (ehJornada) {
             acc.prestadores.add(funcionarioId);
             acc.jornadasEscaladas += 1;
-            if (realizado) acc.jornadasRealizadas += 1;
+            if (!noAderencia) acc.jornadasEscaladasAderencia += 1;
+            if (!noAderencia && realizado) acc.jornadasRealizadas += 1;
           }
           acc.movimentacoes += movDia;
         }
@@ -282,7 +294,8 @@ export function calcularCoberturaPrestadorPeriodo(input: CoberturaInput): {
           if (ehJornada) {
             accE.prestadores.add(funcionarioId);
             accE.jornadasEscaladas += 1;
-            if (realizado) accE.jornadasRealizadas += 1;
+            if (!noAderencia) accE.jornadasEscaladasAderencia += 1;
+            if (!noAderencia && realizado) accE.jornadasRealizadas += 1;
           }
           accE.movimentacoes += movDia;
         }

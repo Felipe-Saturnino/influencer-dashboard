@@ -26,6 +26,7 @@ export const SYNC_LOG_SLUGS_GARANTIDOS = [
   "casa_apostas",
   "casa_apostas_afiliados",
   "spin_na_rede_rss",
+  "painel_noticias_rss",
   "comercial_spa_lista",
   "comercial_dominio_validacao",
   "comercial_cnpj_enriquecimento",
@@ -104,6 +105,8 @@ export const ERRO_SYNC_SOCIAL =
   "Não foi possível disparar o sync de Social Media. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_SPIN_RSS =
   "Não foi possível sincronizar o feed Spin na Rede. Verifique a Edge Function e tente novamente.";
+export const ERRO_SYNC_PAINEL_RSS =
+  "Não foi possível sincronizar o Painel de Notícias. Verifique a Edge Function e tente novamente.";
 export const ERRO_SYNC_CS_OUTLOOK =
   "Não foi possível ingerir e-mails do CS Atendimento. Verifique a Edge Function, secrets do Graph e tente novamente.";
 

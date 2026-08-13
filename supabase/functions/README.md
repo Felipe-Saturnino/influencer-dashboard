@@ -39,6 +39,8 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `trigger-social-kpis` |
 | `purge-academy-performance-hub-videos` |
 
+**`sync-painel-noticias-rss`:** ingestão RSS → `painel_noticia` (TV `/painel-noticias`). Secret **`PAINEL_NOTICIAS_INGEST_SECRET`** (mesmo valor no GitHub Actions e nos Secrets da Edge). Cron envia o header `x-painel-noticias-ingest-secret`. Status Técnico → Sync usa a sessão logada (JWT). Feeds só de `PAINEL_NOTICIAS_RSS_URLS` — o body **não** substitui a lista. Sem o secret, o job horário falha com 401.
+
 **`purge-academy-performance-hub-videos`:** retenção dos vídeos do Performance Hub (cron semanal). Sem secrets próprios — usa `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`, e só aceita chamada cujo `Authorization` seja a service role key. Simulação: `{"dry_run": true}` no body. Regras: `.cursor/rules/academy.mdc` § Vídeo — limite e retenção.
 
 **`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser CSV/XLSX inline). Testes locais: `src/lib/comercialSpaCsvParser.ts` + `src/lib/comercialSpaXlsx.ts`. A página gov.br publica **`planilha-de-autorizacoes.xlsx`** (rótulo “CSV”); a Edge descoberta esse URL automaticamente.
@@ -234,6 +236,7 @@ Com permissão **Editar** em Status Técnico, use **Executar** (com confirmaçã
 - **Sync CDA** → `sync-metricas-cda`
 - **Social KPIs** → `trigger-social-kpis`
 - **Spin na Rede RSS** → `sync-spin-na-rede-rss`
+- **Painel de Notícias RSS** → `sync-painel-noticias-rss` (secret `PAINEL_NOTICIAS_INGEST_SECRET` no cron; TV em `/painel-noticias`)
 - **Lobby Blaze** → `monitor-lobby-blaze`
 
 E-mails cron (enviam de verdade): botões de teste na mesma página → `relatorio-diario-diretoria`, `email-agenda-diaria` (use destinatário de teste se configurado).

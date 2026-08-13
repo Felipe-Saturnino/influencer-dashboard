@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
-import { fetchAllPages } from "./supabasePaginate";
-import type { SmSinalRow, SmSinalStaffOption } from "./smSinaisTypes";
+import { fetchAllPages, fetchInBatched } from "./supabasePaginate";
+import type { SmSinalResumoRow, SmSinalRow, SmSinalStaffOption } from "./smSinaisTypes";
 
 function orgTimeEhServiceManager(nome: string): boolean {
   const n = nome
@@ -70,6 +70,77 @@ function mapSmSinalLeve(raw: Record<string, unknown>): SmSinalRow {
   };
 }
 
+function numResumo(v: unknown): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim()) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+function strOrNull(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s || null;
+}
+
+function mapSmSinalResumo(raw: Record<string, unknown>): SmSinalResumoRow {
+  return {
+    dia_brt: String(raw.dia_brt ?? "").slice(0, 10),
+    estudio_slug: String(raw.estudio_slug ?? ""),
+    resolver_funcionario_id: strOrNull(raw.resolver_funcionario_id),
+    creator_funcionario_id: strOrNull(raw.creator_funcionario_id),
+    resolver_id: String(raw.resolver_id ?? ""),
+    creator_id: String(raw.creator_id ?? ""),
+    resolver_screen_name: strOrNull(raw.resolver_screen_name),
+    creator_screen_name: strOrNull(raw.creator_screen_name),
+    sinais_qtd: numResumo(raw.sinais_qtd),
+    tma_total_sum_ms: numResumo(raw.tma_total_sum_ms),
+    tma_total_n: numResumo(raw.tma_total_n),
+    tma_atend_sum_ms: numResumo(raw.tma_atend_sum_ms),
+    tma_atend_n: numResumo(raw.tma_atend_n),
+    tma_res_sum_ms: numResumo(raw.tma_res_sum_ms),
+    tma_res_n: numResumo(raw.tma_res_n),
+  };
+}
+
+const SM_SINAL_RESUMO_SELECT = [
+  "dia_brt",
+  "estudio_slug",
+  "resolver_funcionario_id",
+  "creator_funcionario_id",
+  "resolver_id",
+  "creator_id",
+  "resolver_screen_name",
+  "creator_screen_name",
+  "sinais_qtd",
+  "tma_total_sum_ms",
+  "tma_total_n",
+  "tma_atend_sum_ms",
+  "tma_atend_n",
+  "tma_res_sum_ms",
+  "tma_res_n",
+].join(", ");
+
+/** Totais diários da aba Sinais — não baixa sinais individuais. */
+export async function fetchSmSinaisResumoPeriodo(opts: {
+  dataIni: string;
+  dataFim: string;
+}): Promise<SmSinalResumoRow[]> {
+  const rows = await fetchAllPages<Record<string, unknown>>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("sm_sinais_resumo_diario")
+      .select(SM_SINAL_RESUMO_SELECT)
+      .gte("dia_brt", opts.dataIni)
+      .lte("dia_brt", opts.dataFim)
+      .order("dia_brt", { ascending: false })
+      .range(from, to);
+    return { data: (data as Record<string, unknown>[] | null) ?? null, error };
+  });
+  return rows.map(mapSmSinalResumo);
+}
+
 /** Lista leve de sinais no período — filtro por `dia_brt` (America/Sao_Paulo). */
 export async function fetchSmSinaisPeriodo(opts: {
   dataIni: string;
@@ -88,22 +159,86 @@ export async function fetchSmSinaisPeriodo(opts: {
   return rows.map(mapSmSinalLeve);
 }
 
-/** Sinais com jogo/mesa — Overview Prestador → KPIs de OCR. */
+/** Sinais com jogo/mesa — Overview Prestador → KPIs de OCR. Filtra no servidor por SM. */
 export async function fetchSmSinaisPeriodoOcr(opts: {
   dataIni: string;
   dataFim: string;
+  funcionarioIds?: string[];
+  resolverTosIds?: string[];
 }): Promise<SmSinalRow[]> {
-  const rows = await fetchAllPages<Record<string, unknown>>(async (from, to) => {
-    const { data, error } = await supabase
-      .from("sm_sinais")
-      .select(SM_SINAL_SELECT_OCR)
-      .gte("dia_brt", opts.dataIni)
-      .lte("dia_brt", opts.dataFim)
-      .order("dia_brt", { ascending: false })
-      .range(from, to);
-    return { data: (data as Record<string, unknown>[] | null) ?? null, error };
-  });
-  return rows.map(mapSmSinalLeve);
+  const fids = [...new Set((opts.funcionarioIds ?? []).map((x) => x.trim()).filter(Boolean))];
+  const tos = [...new Set((opts.resolverTosIds ?? []).map((x) => x.trim()).filter(Boolean))];
+  if ((opts.funcionarioIds || opts.resolverTosIds) && fids.length === 0 && tos.length === 0) {
+    return [];
+  }
+
+  const porId = new Map<string, SmSinalRow>();
+  const ingest = (rows: Record<string, unknown>[]) => {
+    for (const raw of rows) {
+      const mapped = mapSmSinalLeve(raw);
+      if (mapped.id) porId.set(mapped.id, mapped);
+    }
+  };
+
+  if (fids.length === 0 && tos.length === 0) {
+    ingest(
+      await fetchAllPages<Record<string, unknown>>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("sm_sinais")
+          .select(SM_SINAL_SELECT_OCR)
+          .gte("dia_brt", opts.dataIni)
+          .lte("dia_brt", opts.dataFim)
+          .order("dia_brt", { ascending: false })
+          .range(from, to);
+        return { data: (data as Record<string, unknown>[] | null) ?? null, error };
+      }),
+    );
+    return [...porId.values()];
+  }
+
+  if (fids.length > 0) {
+    ingest(
+      await fetchInBatched(
+        fids,
+        80,
+        (slice) =>
+          fetchAllPages<Record<string, unknown>>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("sm_sinais")
+              .select(SM_SINAL_SELECT_OCR)
+              .gte("dia_brt", opts.dataIni)
+              .lte("dia_brt", opts.dataFim)
+              .in("resolver_funcionario_id", slice)
+              .order("dia_brt", { ascending: false })
+              .range(from, to);
+            return { data: (data as Record<string, unknown>[] | null) ?? null, error };
+          }),
+        2,
+      ),
+    );
+  }
+  if (tos.length > 0) {
+    ingest(
+      await fetchInBatched(
+        tos,
+        80,
+        (slice) =>
+          fetchAllPages<Record<string, unknown>>(async (from, to) => {
+            const { data, error } = await supabase
+              .from("sm_sinais")
+              .select(SM_SINAL_SELECT_OCR)
+              .gte("dia_brt", opts.dataIni)
+              .lte("dia_brt", opts.dataFim)
+              .in("resolver_id", slice)
+              .order("dia_brt", { ascending: false })
+              .range(from, to);
+            return { data: (data as Record<string, unknown>[] | null) ?? null, error };
+          }),
+        2,
+      ),
+    );
+  }
+  return [...porId.values()];
 }
 
 /** Service Managers ativos/indisponíveis — filtro Staff da aba Sinais. */

@@ -208,7 +208,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: com Staff vazio você vê o **consolidado do time**; ao escolher um prestador, a visão passa a ser individual (na Escala, nos KPIs de Mesa e nos KPIs de OCR).\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
+          "Use as setas para navegar entre os meses disponíveis (a partir de julho/2026). O botão Histórico exibe o acumulado das competências na janela canônica, o rótulo central do carrossel passa a \"Todo o período\" e as setas ficam desabilitadas.\n\nPara perfis com escopo amplo: filtro **Time** com Game Presenter (padrão), Shuffler, Shift Leader e Service Manager — não há opção \"Todos os Times\". O filtro **Staff** é opcional: vazio mostra **Todo o time** (consolidado); ao escolher um prestador, a visão passa a ser individual (na Escala, nos KPIs de Mesa e nos KPIs de OCR).\n\nCom permissão de **Ver** em **Próprios**, os filtros de Time e Staff não aparecem — os resultados ficam fixos no cadastro vinculado ao seu login.",
       },
       {
         subtitulo: "Visão de time vs individual",
@@ -218,7 +218,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Escala — Resumo e aderência",
         texto:
-          "Quatro cards com o **mês civil completo** (não só até hoje) e comparativo ao mês anterior inteiro (sem MoM no Histórico): jornadas/dias e horas escaladas vs realizadas — alinhados à Escala Estúdio do período.\n\nEm seguida, Aderência (time) ou Absenteísmo (individual): Presença (só no time), Pontualidade, **Controle de Presença** (check-in/check-out não registrados) e Atestados.",
+          "Quatro cards com comparativo ao mês anterior inteiro (sem MoM no Histórico): jornadas/dias e horas **escaladas** no mês publicado (alinhadas à Escala Estúdio) vs **realizadas** só até **hoje** no mês corrente — dias futuros da escala não entram em presença, pontualidade nem controle de presença.\n\nEm seguida, Aderência (time) ou Absenteísmo (individual): Presença (só no time, realizadas ÷ escaladas até hoje), Pontualidade, **Controle de Presença** (check-in/check-out não registrados) e Atestados.",
       },
       {
         subtitulo: "Aproveitamento, movimentações e estúdio",
@@ -233,7 +233,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Detalhamento Diário",
         texto:
-          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time). Ocorrências: Troca, Atestado, Atraso, Esquecimento, Outro, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
+          "Tabela com Data, Ocorrência e Detalhe (e Prestador na visão de time), ordenável e paginada. Ocorrências: Troca, Atestado, Atraso, Esquecimento, Outro, Compra e Venda — conforme o time. Troca/Compra/Venda mostram o colega da negociação no Marketplace quando houver snapshot. Estado vazio: \"Sem dados para o período selecionado.\"",
       },
       {
         subtitulo: "Aba KPIs de Mesa",
@@ -243,7 +243,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba KPIs de OCR",
         texto:
-          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos (`sm_sinais`) pelo SM selecionado — ou por todos os SMs do time quando o Staff está vazio. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); sem Staff, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas, a partir dos sinais e dos tickets com mesa), **Equipe** (só na visão de time / Staff vazio — ranking por SM, com coluna Performance) e **Detalhamento Diário**. O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
+          "No time **Service Manager**, a segunda aba chama-se **KPIs de OCR** e avalia o desempenho dos SMs no atendimento.\n\n**Sinais** vêm dos sinais resolvidos pelo SM selecionado — ou por todos os SMs do time quando o filtro está em **Todo o time**. **Tickets** são os incidentes em que o SM é o **relator** (quem abriu o ticket); em Todo o time, entram todos os tickets relatados pelos SMs do time.\n\nCards: Sinais, TMA Total, TMA de Atendimento, TMA de Resolução e Tickets (com comparativo ao mês anterior em formato de relógio nos TMAs; tempos e tickets usam semântica inversa — menor é melhor). Tabelas: **Por Jogo**, **Por Estúdio** (expanda o estúdio para ver as mesas) e **Equipe** (só na visão de time — ranking por SM: sinais, TMAs e tickets) e **Detalhamento Diário**. O período do mês corrente inclui até **hoje** (mesmo critério da aba Sinais em Incidentes). Shift Leader não tem esta aba.",
       },
     ],
   },
@@ -747,12 +747,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e KPIs",
         texto:
-          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período) e o filtro de **Estúdio**. As abas **Tickets** e **Sinais** organizam a página.\n\nNa aba **Tickets**, o filtro de **Time** (**Todos Times**, **Game Presenter** ou **Shuffler**) e os filtros de **Staff**, **Incidente**, **Tipo** e **Relator** restringem a lista e os KPIs. Usuários com permissão de Ver = Próprios não veem Staff e Relator — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca da aba Tickets localiza incidentes por protocolo, prestador, nickname ou mesa."
+          "No topo, o carrossel de mês (com opção **Histórico** para ver todo o período) e o filtro de **Estúdio**. As abas **Tickets** e **Sinais** organizam a página.\n\nNa aba **Tickets**, o filtro de **Time** (**Todos Times**, **Game Presenter** ou **Shuffler**) e os filtros de **Staff**, **Incidente**, **Tipo** e **Relator** restringem a lista e os KPIs. Usuários com permissão de Ver = Próprios não veem Staff e Relator — a página já mostra só os incidentes em que estão envolvidos.\n\nA busca da aba Tickets localiza incidentes por protocolo, prestador, nickname ou mesa. A tabela pagina a lista (50 por página). Depois de registrar um incidente, os filtros que você tinha escolhido permanecem."
       },
       {
         subtitulo: "Aba Sinais",
         texto:
-          "A aba **Sinais** mostra os sinais resolvidos pelos Service Managers (origem Grafana). No bloco de filtros: busca, **Todos Staff** (SM que atendeu) e **Todos Relatores** (quem abriu o sinal). Os KPIs consolidam, no período e com os filtros aplicados: **Totais de Sinais**, **TMA Total** (Issued → Resolved), **TMA de Atendimento** (Issued → Taken) e **TMA de Resolução** (Taken → Resolved), cada um com comparativo do mês anterior.\n\nO **Detalhamento Diário** resume por dia (America/Sao_Paulo): quantidade de sinais e as médias de TMA Total, de Atendimento e de Resolução.",
+          "A aba **Sinais** mostra os totais dos sinais resolvidos pelos Service Managers (origem Grafana). No bloco de filtros, centralizados: **Todos Staff** (SM que atendeu) e **Todos Relatores** (quem abriu o sinal) — não há busca por ID ou mesa. Os KPIs consolidam, no período e com os filtros aplicados: **Totais de Sinais**, **TMA Total** (Issued → Resolved), **TMA de Atendimento** (Issued → Taken) e **TMA de Resolução** (Taken → Resolved), cada um com comparativo do mês anterior **no mesmo formato de relógio** (ex.: 00:54).\n\nO **Detalhamento Diário** resume por dia (America/Sao_Paulo): quantidade de sinais e as médias de TMA Total, de Atendimento e de Resolução.",
       },
       {
         subtitulo: "Registrar um incidente",
@@ -892,7 +892,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitar uma oferta",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. Se o aceite — ou a aprovação final da troca — não for concluído, a oferta é **cancelada automaticamente quando faltam menos de 2h para o início do turno**, liberando as reservas sem alterar a escala. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
+          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Dá para aceitar **no mesmo dia**, desde que restem pelo menos **2h até o início do turno**. Publicar uma oferta nova exige **4h**. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. Se o aceite — ou a aprovação final da troca — não for concluído, a oferta é **cancelada automaticamente quando faltam menos de 2h para o início do turno** ou quando a **data já passou**, liberando as reservas sem alterar a escala. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
         },
       {
         subtitulo: "Intervalo mínimo de 12h",
@@ -1542,7 +1542,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Painel de integrações",
         texto:
-          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e preenche município e UF no cadastro da empresa (execução diária, por volta das 8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos e falhas de credenciais ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.",
+          "Exibe o status de cada pipeline de dados (**CDA Influencers**, **CDA Afiliados**, Social Media, Spin na Rede RSS, **Painel de Notícias RSS**, automações do Pipeline B2B — **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** por CNPJ — Lobby, e-mails agendados e transacionais) e a linha **Diagnóstico da Plataforma**, com horário da última execução, volume de verificações/envios e erros. **Estado / Cidade** consulta a Brasil API e preenche município e UF no cadastro da empresa (execução diária, por volta das 8h30). E-mails de **Relatório** e **Agenda** têm ação **Enviar**; **Boas-vindas** e **Reset de senha** são só acompanhamento (disparo automático ao criar conta ou redefinir senha). O diagnóstico manual fica **OK** quando a execução conclui; achados (avisos e falhas de credenciais ou integrações) aparecem na coluna Erros e em **Logs Recentes**. Com permissão de Editar, use **Executar** na linha de diagnóstico ou **Sync** nas integrações com botão.\n\nA TV do **Painel de Notícias** abre no endereço público `/painel-noticias` (sem login). O Sync do Painel de Notícias RSS atualiza as matérias dessa tela.",
       },
       {
         subtitulo: "Logs Recentes",

@@ -217,6 +217,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Métricas de escala e presença dependem de escala publicada e registros no Calendário. Verifique se o prestador ou time selecionado tem turnos no período e se justificativas pendentes não estão bloqueando o fechamento.",
       },
       {
+        subtitulo: "A Presença parece baixa no meio do mês?",
+        texto:
+          "No mês corrente, **realizado**, Presença, Pontualidade e Controle de Presença fecham em **hoje**. As jornadas ainda não trabalhadas (dias futuros da escala publicada) não entram no denominador. O card de jornadas/dias **escalados** continua o mês publicado, alinhado à Escala Estúdio.",
+      },
+      {
+        subtitulo: "A página demora ou mostra Carregando… na barra de filtros?",
+        texto:
+          "O resumo do mês selecionado aparece primeiro. O comparativo com o mês anterior e o Histórico seguem em segundo plano — o relógio na barra indica essa carga. Se a mensagem de erro persistir, use **Tentar de novo**. Se o problema continuar, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Não vejo a aba KPIs de Mesa ou KPIs de OCR?",
         texto:
           "A segunda aba aparece conforme o time: **Game Presenter** e **Shuffler** → **KPIs de Mesa**; **Service Manager** → **KPIs de OCR**; **Shift Leader** → a aba não aparece. Com Ver = Próprios, o time vem do Organograma do seu cadastro.",
@@ -229,7 +239,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs de OCR sem números?",
         texto:
-          "Confirme o mês (ou Histórico), o time **Service Manager** e o Staff. **Sinais** usam os atendimentos resolvidos pelo SM; **Tickets** usam incidentes em que o SM é o **relator**. Sem Staff, o consolidado cobre todos os SMs do time. O mês corrente inclui até **hoje** (igual à aba Sinais em Incidentes). Se o SM não tiver ID TOS em Gestão de Staff, o vínculo do sinal pode falhar — cadastre o ID TOS. Sem linhas: \"Sem dados para o período selecionado.\"",
+          "Confirme o mês (ou Histórico), o time **Service Manager** e o Staff (**Todo o time** = consolidado). **Sinais** usam os atendimentos resolvidos pelo SM; **Tickets** usam incidentes em que o SM é o **relator**. O mês corrente inclui até **hoje** (igual à aba Sinais em Incidentes). Se o SM não tiver ID TOS em Gestão de Staff, o vínculo do sinal pode falhar — cadastre o ID TOS. Sem linhas: \"Sem dados para o período selecionado.\"",
       },
     ],
   },
@@ -674,12 +684,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A lista de incidentes está vazia?",
         texto:
-          "Confirme que está na aba **Tickets**, o mês selecionado no carrossel (ou **Histórico**) e os filtros de Estúdio, Time, Staff, Incidente, Tipo e Relator — cada um restringe a lista e os KPIs. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
+          "Confirme que está na aba **Tickets**, o mês selecionado no carrossel (ou **Histórico**) e os filtros de Estúdio, Time, Staff, Incidente, Tipo e Relator — cada um restringe a lista e os KPIs. Se aparecer mensagem de erro, use **Tentar de novo**. Se você tem permissão de Ver = Próprios, a página mostra apenas os incidentes em que você está envolvido como prestador.",
       },
       {
         subtitulo: "A aba Sinais está vazia?",
         texto:
-          "Confirme o mês (ou **Histórico**), o filtro de **Estúdio** e, se visíveis, **Staff** (SM) e **Relator**. A busca também restringe os KPIs e o Detalhamento Diário. Os sinais vêm da sincronização com o Grafana — se o período deveria ter dados e a lista continua vazia, entre em contato com o suporte.",
+          "Confirme o mês (ou **Histórico**), o filtro de **Estúdio** e, se visíveis, **Staff** (SM) e **Relator**. Esta aba não tem busca por ID ou mesa. Os totais vêm da sincronização com o Grafana. Se aparecer mensagem de erro, use **Tentar de novo**. Se o período deveria ter dados e a lista continua vazia, entre em contato com o suporte."
       },
       {
         subtitulo: "O botão Novo Incidente não aparece?",
@@ -759,7 +769,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite é **500 MB** por arquivo (cerca de **512.000 KB**). Um vídeo de **300.000 KB** (~293 MB) está **dentro** do limite — se o envio falhar nesse tamanho, não é o teto do arquivo: mantenha a aba aberta até o progresso **Enviando X%…** chegar a 100% e tente de novo se aparecer falha de conexão.\n\nSe a mensagem citar o tamanho, grave a sessão em **720p** — a mesma duração costuma ocupar de três a quatro vezes menos espaço — ou envie um trecho mais curto.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",
@@ -1339,7 +1349,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet operam via job automatizado externo e não têm ação disponível na interface.",
+          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Painel de Notícias RSS**, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet operam via job automatizado externo e não têm ação disponível na interface.\n\nSe a TV em `/painel-noticias` ficar vazia ou em «Aguardando notícias…», use **Sync** na linha Painel de Notícias (RSS) e confira se o job horário está ativo.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
@@ -1594,12 +1604,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Ao publicar aparece erro genérico ou de horário do turno?",
         texto:
-          "A publicação precisa resolver o **horário de início** do turno (antecedência de 4h e expiração de 2h). Em Game Presenter e Shuffler esse horário vem do **estúdio** (Gestão de Estúdios → turnos Manhã/Tarde/Noite), não da operadora. Confirme que o estúdio do Staff tem os horários preenchidos; Shuffler com **Todos Estúdios** usa o primeiro estúdio ativo com horário. Depois da correção no banco, tente publicar de novo — se persistir, entre em contato com o suporte.",
+          "A publicação precisa resolver o **horário de início** do turno (antecedência de 4h para criar e expiração de 2h). Em Game Presenter e Shuffler esse horário vem do **estúdio** (Gestão de Estúdios → turnos Manhã/Tarde/Noite), não da operadora. Confirme que o estúdio do Staff tem os horários preenchidos; Shuffler com **Todos Estúdios** usa o primeiro estúdio ativo com horário. Depois da correção no banco, tente publicar de novo — se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Minha oferta foi cancelada sem ninguém aceitar?",
         texto:
-          "Ofertas ainda abertas e propostas de troca **Em análise** são canceladas automaticamente quando faltam **menos de 2h para o início do turno**. Na troca, isso significa que o ofertante não aprovou a proposta a tempo: os dias reservados são liberados e nenhuma célula da escala é alterada. Se o cancelamento ocorreu antes dessa janela, confirme o horário do turno no cadastro do **estúdio** (Gestão de Estúdios) ou na Gestão de Staff e, se persistir, entre em contato com o suporte.",
+          "Ofertas ainda abertas e propostas de troca **Em análise** são canceladas automaticamente quando faltam **menos de 2h para o início do turno** ou quando a **data da oferta já passou**. Na troca, isso significa que o ofertante não aprovou a proposta a tempo: os dias reservados são liberados e nenhuma célula da escala é alterada. Se o cancelamento ocorreu antes dessa janela, confirme o horário do turno no cadastro do **estúdio** (Gestão de Estúdios) ou na Gestão de Staff e, se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "O turno que eu quero trabalhar não aparece na Venda de Folga?",
@@ -1609,7 +1619,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo aceitar uma oferta?",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta, e o dia precisa ser futuro com a escala do mês **aprovada**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar.",
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta. Dá para aceitar **no mesmo dia**, com pelo menos **2h até o início do turno** e a escala do mês **aprovada**. Publicar exige **4h**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar. Se a oferta já passou da janela de 2h ou a data é antiga, ela é cancelada automaticamente.",
       },
       {
         subtitulo: "Só vejo ofertas do meu time?",

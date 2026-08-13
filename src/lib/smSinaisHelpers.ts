@@ -1,5 +1,5 @@
 import { labelPrestadorIncidente } from "./estudioIncidentesHelpers";
-import type { SmSinalRow } from "./smSinaisTypes";
+import type { SmSinalResumoRow, SmSinalRow } from "./smSinaisTypes";
 
 export function msEntre(inicioIso: string | null | undefined, fimIso: string | null | undefined): number | null {
   if (!inicioIso || !fimIso) return null;
@@ -119,4 +119,72 @@ export function agregarSinaisPorDia(rows: SmSinalRow[]): SmSinalDiaAgg[] {
 export function kpiMsParaComparativo(ms: number | null): number {
   if (ms == null || !Number.isFinite(ms)) return 0;
   return ms / 1000;
+}
+
+export function mediaPonderadaMs(sumMs: number, n: number): number | null {
+  if (!Number.isFinite(sumMs) || !Number.isFinite(n) || n <= 0) return null;
+  return sumMs / n;
+}
+
+/** KPIs a partir do resumo diário (médias ponderadas pelas amostras). */
+export function calcularKpisResumo(rows: SmSinalResumoRow[]): SmSinalKpis {
+  let total = 0;
+  let sumTotal = 0;
+  let nTotal = 0;
+  let sumAtend = 0;
+  let nAtend = 0;
+  let sumRes = 0;
+  let nRes = 0;
+  for (const r of rows) {
+    total += r.sinais_qtd;
+    sumTotal += r.tma_total_sum_ms;
+    nTotal += r.tma_total_n;
+    sumAtend += r.tma_atend_sum_ms;
+    nAtend += r.tma_atend_n;
+    sumRes += r.tma_res_sum_ms;
+    nRes += r.tma_res_n;
+  }
+  return {
+    total,
+    tmaTotalMs: mediaPonderadaMs(sumTotal, nTotal),
+    tmaAtendimentoMs: mediaPonderadaMs(sumAtend, nAtend),
+    tmaResolucaoMs: mediaPonderadaMs(sumRes, nRes),
+  };
+}
+
+export function agregarResumoPorDia(rows: SmSinalResumoRow[]): SmSinalDiaAgg[] {
+  const byDia = new Map<string, SmSinalResumoRow[]>();
+  for (const r of rows) {
+    const dia = (r.dia_brt ?? "").slice(0, 10);
+    if (!dia) continue;
+    const list = byDia.get(dia);
+    if (list) list.push(r);
+    else byDia.set(dia, [r]);
+  }
+  const out: SmSinalDiaAgg[] = [];
+  for (const [diaBrt, list] of byDia) {
+    const k = calcularKpisResumo(list);
+    out.push({
+      diaBrt,
+      sinais: k.total,
+      tmaTotalMs: k.tmaTotalMs,
+      tmaAtendimentoMs: k.tmaAtendimentoMs,
+      tmaResolucaoMs: k.tmaResolucaoMs,
+    });
+  }
+  return out;
+}
+
+export function chaveRelatorResumo(row: SmSinalResumoRow): string {
+  const fid = (row.creator_funcionario_id ?? "").trim();
+  if (fid) return fid;
+  const nome = (row.creator_screen_name ?? "").trim();
+  return nome ? `nome:${nome}` : "";
+}
+
+export function labelRelatorResumo(row: SmSinalResumoRow): string {
+  const screen = (row.creator_screen_name ?? "").trim();
+  if (screen) return screen;
+  const cid = (row.creator_id ?? "").trim();
+  return cid || "—";
 }
