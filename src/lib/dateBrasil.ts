@@ -6,6 +6,28 @@ export function hojeIsoBrasil(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: TIMEZONE_BRASIL });
 }
 
+/** Partes do dia civil atual em São Paulo (mês 1–12). */
+export function hojePartesBrasil(agora = new Date()): { y: number; m: number; day: number } {
+  const iso = agora.toLocaleDateString("en-CA", { timeZone: TIMEZONE_BRASIL });
+  const [y, m, day] = iso.split("-").map(Number);
+  return { y, m, day };
+}
+
+/**
+ * `Date` local com ano/mês/dia iguais ao civil de Brasília (para carrosséis e mês fechado).
+ * Não usar `.toISOString()` deste valor para chave de dia — preferir `hojeIsoBrasil` / `toISO` local.
+ */
+export function dateCivilBrasilHoje(agora = new Date()): Date {
+  const { y, m, day } = hojePartesBrasil(agora);
+  return new Date(y, m - 1, day);
+}
+
+/** Primeiro dia do mês civil atual em Brasília (Date local dia 1). */
+export function primeiroDiaMesCivilBrasil(agora = new Date()): Date {
+  const { y, m } = hojePartesBrasil(agora);
+  return new Date(y, m - 1, 1);
+}
+
 /** Data civil YYYY-MM-DD em São Paulo a partir de instante ISO (UTC). */
 export function isoDateBrasilFromInstant(iso: string | null | undefined): string | null {
   if (!iso?.trim()) return null;

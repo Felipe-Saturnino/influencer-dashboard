@@ -1,5 +1,5 @@
-import { useRef, useState, type ClipboardEvent, type DragEvent, type ReactNode } from "react";
-import { Plus, X, type LucideIcon } from "lucide-react";
+import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type ReactNode } from "react";
+import { FileText, Film, Plus, X, type LucideIcon } from "lucide-react";
 import { FONT } from "../constants/theme";
 import { CampoObrigatorioMark } from "./CampoObrigatorioMark";
 import { tooltipAcao } from "../lib/iconOnlyButtonA11y";
@@ -9,6 +9,10 @@ export type CampoUploadArquivoItem = {
   label: string;
   /** `true` = ainda não persistido (badge Pendente + hint de envio no save). */
   pendente?: boolean;
+  /** Arquivo local — gera miniatura de imagem/vídeo em `listVariant="cards"`. */
+  file?: File | null;
+  /** URL remota (assinada) para preview quando não há `file`. */
+  previewUrl?: string | null;
 };
 
 export type CampoUploadArquivosTheme = {
@@ -39,6 +43,11 @@ export type CampoUploadArquivosProps = {
   hint?: ReactNode;
   /** Exibe a lista / empty state. `false` quando a lista de arquivos fica noutro sítio (ex.: coluna da tabela). Default `true`. */
   showList?: boolean;
+  /**
+   * `list` — linhas (padrão Academy).
+   * `cards` — miniaturas com nome (referência Jira / Incidentes).
+   */
+  listVariant?: "list" | "cards";
   emptyLabel?: string;
   /** Hint quando há item `pendente`. Default: mensagem Academy. */
   pendingHint?: string;
@@ -145,10 +154,164 @@ function collectFilesFromDataTransfer(
   return multiple ? out : out.slice(0, 1);
 }
 
+function mimePreviewKind(mime: string | undefined, urlHint?: string | null): "image" | "video" | "other" {
+  const m = (mime ?? "").toLowerCase();
+  if (m.startsWith("image/")) return "image";
+  if (m.startsWith("video/")) return "video";
+  const u = (urlHint ?? "").toLowerCase();
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i.test(u)) return "image";
+  if (/\.(mp4|webm|mov|m4v)(\?|$)/i.test(u)) return "video";
+  return "other";
+}
+
+function AnexoPreviewCard({
+  item,
+  t,
+  disabled,
+  onRemove,
+}: {
+  item: CampoUploadArquivoItem;
+  t: CampoUploadArquivosTheme;
+  disabled?: boolean;
+  onRemove: (key: string) => void;
+}) {
+  const kind = mimePreviewKind(item.file?.type, item.previewUrl);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (item.previewUrl) {
+      setObjectUrl(null);
+      return;
+    }
+    if (!item.file || (kind !== "image" && kind !== "video")) {
+      setObjectUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(item.file);
+    setObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [item.file, item.previewUrl, kind]);
+
+  const src = item.previewUrl || objectUrl;
+
+  return (
+    <li
+      style={{
+        width: 120,
+        borderRadius: 10,
+        border: `1px solid ${t.cardBorder}`,
+        background: t.inputBg,
+        overflow: "hidden",
+        position: "relative",
+        fontFamily: FONT.body,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          height: 88,
+          background: `color-mix(in srgb, ${t.cardBorder} 55%, ${t.inputBg})`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
+        {kind === "image" && src ? (
+          <img
+            src={src}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        ) : kind === "video" && src ? (
+          <video
+            src={src}
+            muted
+            playsInline
+            preload="metadata"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        ) : kind === "video" ? (
+          <Film size={28} color={t.textMuted} aria-hidden />
+        ) : (
+          <FileText size={28} color={t.textMuted} aria-hidden />
+        )}
+      </div>
+      <div
+        style={{
+          padding: "8px 8px 10px",
+          background: t.inputBg,
+          borderTop: `1px solid ${t.cardBorder}`,
+          minHeight: 40,
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            color: t.text,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            lineHeight: 1.3,
+          }}
+          title={item.label}
+        >
+          {item.label}
+        </span>
+        {item.pendente ? (
+          <span
+            style={{
+              alignSelf: "flex-start",
+              fontSize: 9,
+              fontWeight: 700,
+              padding: "1px 6px",
+              borderRadius: 20,
+              background: "rgba(245,158,11,0.15)",
+              color: "#f59e0b",
+              border: "1px solid rgba(245,158,11,0.35)",
+            }}
+          >
+            Pendente
+          </span>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onRemove(item.key)}
+        aria-label={tooltipAcao("Remover arquivo")}
+        title={tooltipAcao("Remover arquivo")}
+        style={{
+          position: "absolute",
+          top: 6,
+          right: 6,
+          width: 26,
+          height: 26,
+          borderRadius: 8,
+          border: `1px solid ${t.cardBorder}`,
+          background: t.inputBg,
+          color: t.textMuted,
+          cursor: disabled ? "not-allowed" : "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <X size={13} aria-hidden />
+      </button>
+    </li>
+  );
+}
+
 /**
  * Upload em modal — layout canónico (Portal Academy).
  * Só padroniza a UI; accept, tamanho, upload imediato vs. no save e regras de domínio ficam na página.
  * Inclui seleção por botão, arrastar/soltar e colar (Ctrl+V) imagem/vídeo da área de transferência.
+ * `listVariant="cards"`: miniaturas com nome (Incidentes / referência Jira).
  */
 export function CampoUploadArquivos({
   id,
@@ -166,6 +329,7 @@ export function CampoUploadArquivos({
   hasError = false,
   hint,
   showList = true,
+  listVariant = "list",
   emptyLabel = "Nenhum arquivo adicionado.",
   pendingHint = "Arquivos serão enviados ao salvar ou publicar.",
   footer,
@@ -353,6 +517,28 @@ export function CampoUploadArquivos({
       {showList ? (
         items.length === 0 ? (
           <p style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{emptyLabel}</p>
+        ) : listVariant === "cards" ? (
+          <>
+            <ul
+              style={{
+                margin: "12px 0 0",
+                padding: 0,
+                listStyle: "none",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+              }}
+            >
+              {items.map((item) => (
+                <AnexoPreviewCard key={item.key} item={item} t={t} disabled={disabled} onRemove={onRemove} />
+              ))}
+            </ul>
+            {items.some((i) => i.pendente) && pendingHint ? (
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                {pendingHint}
+              </p>
+            ) : null}
+          </>
         ) : (
           <>
             <ul

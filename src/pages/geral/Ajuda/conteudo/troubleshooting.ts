@@ -821,6 +821,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "No **Gerenciamento**, use o campo **Imagem/Vídeo** (não só Anexo) e publique a postagem. Ao abrir **Visualizar** na aba Manuais, a mídia deve aparecer abaixo da descrição. Se o arquivo não subir ao salvar, tente outro formato (JPG, PNG, MP4, WebM) ou entre em contato com o suporte.",
       },
+      {
+        subtitulo: "Não aparece o botão Ver ciência no manual?",
+        texto:
+          "O botão **Ver ciência** nos cards de Manuais só aparece com permissão de **Editar = Sim** no Portal da Academy. Com apenas Ver, você registra a própria ciência no modal (**Lido e Ciente**), mas não consulta quem já aceitou.",
+      },
     ],
   },
   playbook_influencers: {
@@ -985,6 +990,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não aparece o botão Ver Lidos no comunicado?",
         texto:
           "O botão **Ver Lidos** só aparece com permissão de **Editar = Sim** no Portal de RH. Com apenas Ver, você marca a própria leitura com **Lido**, mas não consulta a lista de leitores.",
+      },
+      {
+        subtitulo: "Não aparece o botão Ver ciência no documento?",
+        texto:
+          "O botão **Ver ciência** nos cards de Políticas e normativas só aparece com permissão de **Editar = Sim**. Com apenas Ver, você registra a própria ciência no modal do PDF (**Li e estou ciente**), mas não consulta quem já aceitou.",
       },
       {
         subtitulo: "O time do autor no card está errado?",
@@ -1544,7 +1554,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Ao trocar o Staff, o Controle de Presença ainda mostra o check-in do anterior?",
         texto:
-          "Atualize a página (Ctrl+Shift+R). Se o problema continuar após o deploy, entre em contato com o suporte — o ponto do prestador anterior não deve ser reaproveitado ao mudar o filtro de Staff.",
+          "Atualize a página (Ctrl+Shift+R). Se o problema continuar após o deploy, entre em contato com o suporte — o registro de presença do prestador anterior não deve ser reaproveitado ao mudar o filtro de Staff.",
       },
       {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
@@ -1564,15 +1574,15 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
         texto:
-          "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar após o deploy da função **prestador-ponto**, peça ao suporte para revisar registros antigos gravados no dia civil errado.",
+          "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar, peça ao suporte para revisar os **registros de presença** daquele dia.",
       },
       {
         subtitulo: "O pop-up confirma o check-in, mas o horário realizado não aparece?",
         texto:
-          "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e é o mesmo usado para acessar a plataforma. A leitura do ponto depende desse vínculo — com e-mail pessoal e e-mail Spin em contas diferentes, o registro não é associado ao prestador. Após corrigir o cadastro, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
+          "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e é o mesmo usado para acessar a plataforma. A leitura do registro de presença depende desse vínculo — com e-mail pessoal e e-mail Spin em contas diferentes, o registro não é associado ao prestador. Após corrigir o cadastro, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
       },
       {
-        subtitulo: "Posso registrar ponto em uma Folga?",
+        subtitulo: "Posso fazer Check-in em uma Folga?",
         texto:
           "Sim. Check-in e Check-out ficam disponíveis independentemente da Situação do dia para coberturas e plantões emergenciais. O dia continua identificado como **Folga**, e os horários realizados ficam pendentes de aprovação do gestor.",
       },

@@ -1050,7 +1050,8 @@ export function ModalNovoIncidente({
           buttonLabel="Adicionar anexo"
           icon={Paperclip}
           multiple
-          items={anexos.map((a) => ({ key: a.key, label: a.file.name, pendente: true }))}
+          listVariant="cards"
+          items={anexos.map((a) => ({ key: a.key, label: a.file.name, pendente: true, file: a.file }))}
           onAdd={onAddAnexos}
           onRemove={onRemoveAnexo}
           disabled={salvando}

@@ -3,75 +3,56 @@ import { Loader2 } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
-import { fmtDataHoraPortalRh } from "../../../lib/portalRhAutorMeta";
+import { fmtDataHoraPortalAcademy } from "../../../lib/academyPortalAutorMeta";
 import { supabase } from "../../../lib/supabase";
 
-export type ModalLidosContentType = "comunicado" | "documento";
-
-type LidoRow = {
+type CienciaRow = {
   userId: string;
   nome: string;
-  readAt: string;
+  acknowledgedAt: string;
 };
-
-const ERRO_LIDOS =
-  "Não foi possível carregar quem marcou como lido. Se o problema persistir, entre em contato com o suporte.";
 
 const ERRO_CIENCIA =
   "Não foi possível carregar quem registrou ciência. Se o problema persistir, entre em contato com o suporte.";
 
-export function ModalLidosPostagem({
+/** Lista quem registrou ciência no manual — só Editar = Sim (espelho Ver Lidos do Portal RH). */
+export function ModalCienciaManualAcademy({
   open,
   titulo,
-  contentType,
   contentId,
   onClose,
 }: {
   open: boolean;
   titulo: string;
-  contentType: ModalLidosContentType | null;
   contentId: string | null;
   onClose: () => void;
 }) {
   const { theme: t } = useApp();
-  const [itens, setItens] = useState<LidoRow[]>([]);
+  const [itens, setItens] = useState<CienciaRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const isDocumento = contentType === "documento";
-
   const carregar = useCallback(async () => {
-    if (!contentType || !contentId) return;
+    if (!contentId) return;
     setLoading(true);
     setErro(null);
 
-    let query = supabase
-      .from("rh_portal_read_receipt")
-      .select("user_id, read_at, acknowledged_at")
-      .eq("content_type", contentType)
-      .eq("content_id", contentId);
-
-    if (isDocumento) {
-      query = query.not("acknowledged_at", "is", null).order("acknowledged_at", { ascending: false });
-    } else {
-      query = query.not("read_at", "is", null).order("read_at", { ascending: false });
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from("academy_portal_read_receipt")
+      .select("user_id, acknowledged_at")
+      .eq("content_id", contentId)
+      .not("acknowledged_at", "is", null)
+      .order("acknowledged_at", { ascending: false });
 
     if (error) {
-      console.error("[ModalLidosPostagem] carregar:", error);
+      console.error("[ModalCienciaManualAcademy] carregar:", error);
       setLoading(false);
-      setErro(isDocumento ? ERRO_CIENCIA : ERRO_LIDOS);
+      setErro(ERRO_CIENCIA);
       setItens([]);
       return;
     }
 
-    const rows = (data ?? []) as {
-      user_id: string;
-      read_at: string | null;
-      acknowledged_at: string | null;
-    }[];
+    const rows = (data ?? []) as { user_id: string; acknowledged_at: string }[];
     const ids = [...new Set(rows.map((r) => r.user_id).filter(Boolean))];
     const nomes: Record<string, string> = {};
     if (ids.length > 0) {
@@ -86,34 +67,26 @@ export function ModalLidosPostagem({
       rows.map((r) => ({
         userId: r.user_id,
         nome: nomes[r.user_id] ?? "Usuário",
-        readAt: (isDocumento ? r.acknowledged_at : r.read_at) ?? "",
+        acknowledgedAt: r.acknowledged_at,
       })),
     );
     setLoading(false);
-  }, [contentType, contentId, isDocumento]);
+  }, [contentId]);
 
   useEffect(() => {
-    if (!open || !contentType || !contentId) {
+    if (!open || !contentId) {
       setItens([]);
       setErro(null);
       return;
     }
     void carregar();
-  }, [open, contentType, contentId, carregar]);
+  }, [open, contentId, carregar]);
 
-  if (!open || !contentType || !contentId) return null;
-
-  const tituloModal = isDocumento
-    ? `Ciência — ${titulo || "Documento"}`
-    : `Lidos — ${titulo || "Comunicado"}`;
-
-  const vazio = isDocumento
-    ? "Ninguém registrou ciência neste documento ainda."
-    : "Ninguém marcou este comunicado como lido ainda.";
+  if (!open || !contentId) return null;
 
   return (
     <ModalBase maxWidth={480} onClose={onClose} zIndex={1102}>
-      <ModalHeader title={tituloModal} onClose={onClose} />
+      <ModalHeader title={`Ciência — ${titulo || "Manual"}`} onClose={onClose} />
 
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
@@ -126,13 +99,13 @@ export function ModalLidosPostagem({
         </div>
       ) : itens.length === 0 ? (
         <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-          {vazio}
+          Ninguém registrou ciência neste manual ainda.
         </div>
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: "min(50dvh, 360px)", overflowY: "auto" }}>
           {itens.map((row) => (
             <li
-              key={`${row.userId}-${row.readAt}`}
+              key={`${row.userId}-${row.acknowledgedAt}`}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -145,7 +118,7 @@ export function ModalLidosPostagem({
             >
               <span style={{ color: t.text, fontWeight: 600 }}>{row.nome}</span>
               <span style={{ color: t.textMuted, whiteSpace: "nowrap" }}>
-                {row.readAt ? fmtDataHoraPortalRh(row.readAt) : "—"}
+                {fmtDataHoraPortalAcademy(row.acknowledgedAt)}
               </span>
             </li>
           ))}

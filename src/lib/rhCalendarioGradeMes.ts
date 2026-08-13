@@ -5,6 +5,7 @@ import type { RpcGradeCalendarioRow } from "./overviewPrestadorCalendarioHelpers
  * Grade do Calendário: `rh_calendario_grade_mes` (Estúdio aprovado + eo_/eog_).
  * A RPC devolve jsonb (array completo) — evita o limite PostgREST ~1000 linhas
  * de `RETURNS TABLE` (N prestadores × 31 dias).
+ * `funcionarioIds` opcional restringe o payload (Meu Calendário / Time / Staff).
  * Escritório / horário comercial é mesclado no cliente via `mesclarGradeComHorarioComercialSintetico`.
  * Fallback para `rh_calendario_grade_escala_mes` se a RPC nova falhar.
  */
@@ -40,7 +41,6 @@ function unwrapGradePayload(data: unknown): unknown {
       return [];
     }
   }
-  // Dupla serialização ocasional
   if (typeof payload === "string") {
     try {
       payload = JSON.parse(payload) as unknown;
@@ -53,7 +53,6 @@ function unwrapGradePayload(data: unknown): unknown {
     const obj = payload as Record<string, unknown>;
     if (Array.isArray(obj.data)) return obj.data;
     if (Array.isArray(obj.rows)) return obj.rows;
-    // Resposta envelopada pelo nome da função
     for (const key of ["rh_calendario_grade_mes", "rh_calendario_grade_escala_mes"] as const) {
       const inner = obj[key];
       if (Array.isArray(inner)) return inner;
@@ -91,12 +90,56 @@ function logRpcError(nome: string, error: { message?: string; code?: string; det
   });
 }
 
-export async function carregarRhCalendarioGradeMes(refMesIso: string): Promise<{
+function rpcArgs(refMesIso: string, funcionarioIds?: string[] | null): Record<string, unknown> {
+  const args: Record<string, unknown> = { p_ref_mes: refMesIso };
+  if (funcionarioIds && funcionarioIds.length > 0) {
+    args.p_funcionario_ids = funcionarioIds;
+  }
+  return args;
+}
+
+/** Erro típico quando a migração com `p_funcionario_ids` ainda não foi aplicada. */
+function erroParametroFuncionarioIds(message: string | undefined): boolean {
+  const m = (message ?? "").toLowerCase();
+  return (
+    m.includes("p_funcionario_ids") ||
+    m.includes("funcionario_ids") ||
+    m.includes("could not find") ||
+    m.includes("does not exist") ||
+    m.includes("no function matches")
+  );
+}
+
+async function rpcGradeMes(
+  nome: "rh_calendario_grade_mes" | "rh_calendario_grade_escala_mes",
+  refMesIso: string,
+  funcionarioIds?: string[] | null,
+): Promise<{ data: unknown; error: { message?: string } | null }> {
+  const comFiltro = await supabase.rpc(nome, rpcArgs(refMesIso, funcionarioIds));
+  if (
+    !comFiltro.error ||
+    !funcionarioIds?.length ||
+    !erroParametroFuncionarioIds(comFiltro.error.message)
+  ) {
+    return comFiltro;
+  }
+  // Migração ainda não aplicada: busca completa e filtra no cliente.
+  const semFiltro = await supabase.rpc(nome, { p_ref_mes: refMesIso });
+  if (semFiltro.error) return semFiltro;
+  const ids = new Set(funcionarioIds);
+  const rows = parseRhCalendarioGradeMesPayload(semFiltro.data).filter((r) => ids.has(r.funcionario_id));
+  return { data: rows, error: null };
+}
+
+export async function carregarRhCalendarioGradeMes(
+  refMesIso: string,
+  funcionarioIds?: string[] | null,
+): Promise<{
   rows: RpcGradeCalendarioRow[];
   error: Error | null;
   usedFallback: boolean;
 }> {
-  const primary = await supabase.rpc("rh_calendario_grade_mes", { p_ref_mes: refMesIso });
+  const primary = await rpcGradeMes("rh_calendario_grade_mes", refMesIso, funcionarioIds);
   if (!primary.error) {
     return {
       rows: parseRhCalendarioGradeMesPayload(primary.data),
@@ -107,7 +150,7 @@ export async function carregarRhCalendarioGradeMes(refMesIso: string): Promise<{
 
   logRpcError("rh_calendario_grade_mes", primary.error);
 
-  const legacy = await supabase.rpc("rh_calendario_grade_escala_mes", { p_ref_mes: refMesIso });
+  const legacy = await rpcGradeMes("rh_calendario_grade_escala_mes", refMesIso, funcionarioIds);
   if (!legacy.error) {
     return {
       rows: parseRhCalendarioGradeMesPayload(legacy.data),

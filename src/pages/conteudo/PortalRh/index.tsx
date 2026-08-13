@@ -30,10 +30,10 @@ import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from 
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 import { ComunicadoCard, RhTalkCard } from "./PortalRhCards";
-import { ModalLidosPostagem } from "./ModalLidosPostagem";
+import { ModalLidosPostagem, type ModalLidosContentType } from "./ModalLidosPostagem";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { ModalVisualizarDocumento } from "./ModalVisualizarDocumento";
-import { PortalRhDocumentosTabela } from "./PortalRhDocumentosTabela";
+import { PortalRhDocumentosCards } from "./PortalRhDocumentosCards";
 import type { AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
 import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "../../geral/Ajuda/tutoriais/portalRhComunicadosLidos";
 import { TUTORIAL_PORTAL_RH_GERENCIAMENTO } from "../../geral/Ajuda/tutoriais/portalRhGerenciamento";
@@ -389,13 +389,13 @@ export default function PortalRhPage() {
 
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
   const [modalTalk, setModalTalk] = useState<RhPortalRhTalk | null>(null);
-  const [modalLidos, setModalLidos] = useState<{ id: string; titulo: string } | null>(null);
+  const [modalLidos, setModalLidos] = useState<{
+    id: string;
+    titulo: string;
+    contentType: ModalLidosContentType;
+  } | null>(null);
   const [setoresUsuarioAplicavel, setSetoresUsuarioAplicavel] = useState<string[]>([]);
   const [usuarioCadastradoGestaoPrestadores, setUsuarioCadastradoGestaoPrestadores] = useState(false);
-  const [sortDoc, setSortDoc] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
-    col: "codigo",
-    dir: "asc",
-  });
 
   const cardShadow = getPageContentBoxShadow(t.isDark);
 
@@ -958,13 +958,6 @@ export default function PortalRhPage() {
     setModalDoc(doc);
   }
 
-  function handleSortDoc(col: "codigo" | "titulo" | "versao" | "ciencia") {
-    setSortDoc((prev) => ({
-      col,
-      dir: prev.col === col && prev.dir === "asc" ? "desc" : "asc",
-    }));
-  }
-
   function podeVerAta(tk: RhPortalRhTalk): boolean {
     const n = talkCounts[tk.id] ?? 0;
     if (n === 0) return true;
@@ -1100,7 +1093,11 @@ export default function PortalRhPage() {
                       onMarcarLido={() => void marcarLidoComunicado(comunicadoPinned.id)}
                       podeVerLidos={podeGerenciarPostagens}
                       onVerLidos={() =>
-                        setModalLidos({ id: comunicadoPinned.id, titulo: comunicadoPinned.titulo })
+                        setModalLidos({
+                          id: comunicadoPinned.id,
+                          titulo: comunicadoPinned.titulo,
+                          contentType: "comunicado",
+                        })
                       }
                       cardShadow={cardShadow}
                     />
@@ -1136,7 +1133,9 @@ export default function PortalRhPage() {
                             isNovo={isNovoCard}
                             onMarcarLido={() => void marcarLidoComunicado(c.id)}
                             podeVerLidos={podeGerenciarPostagens}
-                            onVerLidos={() => setModalLidos({ id: c.id, titulo: c.titulo })}
+                            onVerLidos={() =>
+                              setModalLidos({ id: c.id, titulo: c.titulo, contentType: "comunicado" })
+                            }
                             cardShadow={cardShadow}
                           />
                         </li>
@@ -1154,7 +1153,7 @@ export default function PortalRhPage() {
                       : "Sem dados para o período selecionado."}
                   </div>
                 ) : (
-                  <PortalRhDocumentosTabela
+                  <PortalRhDocumentosCards
                     rows={documentosFiltrados.map((d) => ({
                       id: d.id,
                       codigo: d.codigo ?? null,
@@ -1173,10 +1172,12 @@ export default function PortalRhPage() {
                     cienciaPendenteIds={cienciaPendenteDocIds}
                     cienciaExigidaIds={cienciaExigidaDocIds}
                     cienciaRegistradaEm={cienciaRegistradaEm}
-                    mostrarColunaCiencia={usuarioVeColunaCiencia}
+                    mostrarStatusCiencia={usuarioVeColunaCiencia}
+                    podeVerCiencia={podeGerenciarPostagens}
                     onAbrir={(id) => void abrirDocumento(id)}
-                    sort={sortDoc}
-                    onSort={handleSortDoc}
+                    onVerCiencia={(row) =>
+                      setModalLidos({ id: row.id, titulo: row.titulo, contentType: "documento" })
+                    }
                   />
                 )}
               </div>
@@ -1282,7 +1283,7 @@ export default function PortalRhPage() {
         <ModalLidosPostagem
           open={Boolean(modalLidos)}
           titulo={modalLidos?.titulo ?? ""}
-          contentType={modalLidos ? "comunicado" : null}
+          contentType={modalLidos?.contentType ?? null}
           contentId={modalLidos?.id ?? null}
           onClose={() => setModalLidos(null)}
         />

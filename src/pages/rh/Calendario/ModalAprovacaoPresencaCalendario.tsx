@@ -308,7 +308,7 @@ export function ModalAprovacaoPresencaCalendario({
 
   return (
     <ModalBase maxWidth={560} onClose={onClose} zIndex={1200}>
-      <ModalHeader title="APROVAÇÃO DE TURNO" onClose={onClose} />
+      <ModalHeader title="Aprovar turno" onClose={onClose} />
       <p
         style={{
           margin: "0 0 16px",

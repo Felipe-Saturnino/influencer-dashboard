@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
-  BookOpen,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -12,7 +11,6 @@ import {
   Clock,
   FileDown,
   Loader2,
-  MessageSquare,
   Users,
   X,
 } from "lucide-react";
@@ -70,6 +68,8 @@ import {
 } from "../../../lib/pageContentBoxStyles";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
+import { primeiroDiaMesCivilBrasil } from "../../../lib/dateBrasil";
 import { getCtaCriarButtonStyle } from "../../../lib/ctaCriarStyles";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
@@ -92,7 +92,11 @@ import {
   tituloModalReuniaoRhCalendario,
 } from "../../../lib/rhCalendarioReuniaoRhUi";
 import type { RhSolicitacaoStatus } from "../../../types/rhSolicitacao";
-import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import {
+  dataTableRowHoverHandlers,
+  getDataTableWrapStyle,
+  getDataTableStyle,
+} from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
 import {
@@ -229,8 +233,7 @@ function dataInicialCarrosselCalendarioRh(): Date {
 
 /** Mês inicial: mês civil atual (ou mínimo do produto), e nunca acima do limite do carrossel. */
 function mesInicialCalendarioRhNaEntrada(): Date {
-  const hoje = new Date();
-  const primeiroDoMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const primeiroDoMesAtual = primeiroDiaMesCivilBrasil();
   const minimo = dataInicialCarrosselCalendarioRh();
   const maximo = mesMaximoCarrosselCalendarioRh();
   let d = primeiroDoMesAtual < minimo ? minimo : primeiroDoMesAtual;
@@ -247,10 +250,9 @@ function podeRetrocederMesCalendario(c: Date): boolean {
   return c.getFullYear() > CALENDARIO_ANO_MIN || (c.getFullYear() === CALENDARIO_ANO_MIN && c.getMonth() > CALENDARIO_MES0_MIN);
 }
 
-/** Primeiro dia do mês civil «hoje» (fuso local). */
+/** Primeiro dia do mês civil «hoje» (fuso America/Sao_Paulo). */
 function primeiroDiaMesCivilHoje(): Date {
-  const h = new Date();
-  return new Date(h.getFullYear(), h.getMonth(), 1);
+  return primeiroDiaMesCivilBrasil();
 }
 
 /**
@@ -358,12 +360,9 @@ type CompromissoAgendaExtra = {
   };
 };
 
-/** Ordem na grelha do dia: eventos → reuniões → treinamentos → feedback → turnos. */
+/** Ordem na grelha do dia: reuniões → turnos. */
 type LinhaCalendarioDia =
-  | { tipo: "evento"; item: CompromissoAgendaExtra }
   | { tipo: "reuniao"; item: CompromissoAgendaExtra }
-  | { tipo: "treinamento"; item: CompromissoAgendaExtra }
-  | { tipo: "feedback"; item: CompromissoAgendaExtra }
   | { tipo: "turno"; comp: CompromissoEscalaCal };
 
 /** Peso para ordenar turnos na mesma categoria: Comercial, Manhã, Tarde, Noite; depois Compra/Venda/Troca. */
@@ -759,6 +758,8 @@ export default function RhCalendarioPage() {
     () => new Map(),
   );
   const [loadingRelatorioPresenca, setLoadingRelatorioPresenca] = useState(false);
+  const [erroRelatorioPresenca, setErroRelatorioPresenca] = useState<string | null>(null);
+  const [relatorioReloadTick, setRelatorioReloadTick] = useState(0);
   const [sortRelatorioNomeDir, setSortRelatorioNomeDir] = useState<SortDir>("asc");
 
   const [rawGradeRowsRpc, setRawGradeRowsRpc] = useState<RpcGradeCalendarioRow[]>([]);
@@ -766,6 +767,7 @@ export default function RhCalendarioPage() {
   const [turnoMesMap, setTurnoMesMap] = useState<EscalaTurnoMesMap>({});
   const [loadingEscala, setLoadingEscala] = useState(false);
   const [erroEscala, setErroEscala] = useState<string | null>(null);
+  const [gradeReloadTick, setGradeReloadTick] = useState(0);
   /** Funcionário ligado ao login atual (e-mail / e-mail Spin). */
   const [meuRhFuncionarioId, setMeuRhFuncionarioId] = useState<string | null>(null);
   const [funcionariosGerenciaveisIds, setFuncionariosGerenciaveisIds] = useState<Set<string>>(() => new Set());
@@ -785,6 +787,7 @@ export default function RhCalendarioPage() {
   const presencaGestaoStaffIdRef = useRef<string | null>(null);
   const movimentacoesPresencaStaffIdRef = useRef<string | null>(null);
   const [loadingPontoMes, setLoadingPontoMes] = useState(false);
+  const [erroPontoMes, setErroPontoMes] = useState<string | null>(null);
   const [pontoMesTick, setPontoMesTick] = useState(0);
   const [reunioesMesRaw, setReunioesMesRaw] = useState<RpcReuniaoMesRow[]>([]);
   const [reunioesMesTick, setReunioesMesTick] = useState(0);
@@ -918,6 +921,18 @@ export default function RhCalendarioPage() {
     setPresencaFilterStaffIds([meuRhFuncionarioId]);
     setRelatorioFilterStaffIds([meuRhFuncionarioId]);
   }, [soPropriosCal, meuRhFuncionarioId]);
+
+  /**
+   * Ver = Sim: entrar já em «Meu Calendário» (uma vez por sessão da página).
+   * Sem filtro a grade do mês inteiro seria pesada e ilegível — o usuário limpa se quiser outro recorte.
+   */
+  const meuCalendarioPadraoAplicadoRef = useRef(false);
+  useEffect(() => {
+    if (meuCalendarioPadraoAplicadoRef.current) return;
+    if (!meuRhFuncionarioId || soPropriosCal || prestadores.length <= 1) return;
+    meuCalendarioPadraoAplicadoRef.current = true;
+    setCompFilterStaffIds((prev) => (prev.length > 0 ? prev : [meuRhFuncionarioId]));
+  }, [meuRhFuncionarioId, soPropriosCal, prestadores.length]);
 
   const filtroTimeIdsReais = useMemo(() => {
     const allowed = new Set(timeIds);
@@ -1089,8 +1104,54 @@ export default function RhCalendarioPage() {
     [current, mesAnteriorPresencaRef],
   );
 
+  /**
+   * Funcionários carregados na grade do mês.
+   * `null` = nenhum recorte ativo → não buscar nada (a grade completa é pesada e ilegível).
+   */
+  const funcionarioIdsGrade = useMemo<string[] | null>(() => {
+    if (soPropriosCal) return meuRhFuncionarioId ? [meuRhFuncionarioId] : null;
+
+    if (abaPrincipal === "presenca") {
+      const fid = presencaFilterStaffIds[0];
+      return fid ? [fid] : null;
+    }
+
+    if (abaPrincipal === "relatorio") {
+      if (!relatorioFiltroTimeAtivo && !relatorioFiltroStaffAtivo) return null;
+      const ids = prestadoresRelatorioTime.map((p) => p.id);
+      return ids.length > 0 ? ids : null;
+    }
+
+    if (compFilterStaffIds.length > 0) return compFilterStaffIds;
+    if (compFilterTimeIds.length > 0) {
+      const opts = { filtroAtivo: true, filtroTimeIdsReais };
+      const ids = prestadores.filter((p) => prestadorAtendeFiltroTime(p, opts)).map((p) => p.id);
+      return ids.length > 0 ? ids : null;
+    }
+    return null;
+  }, [
+    soPropriosCal,
+    meuRhFuncionarioId,
+    abaPrincipal,
+    presencaFilterStaffIds,
+    relatorioFiltroTimeAtivo,
+    relatorioFiltroStaffAtivo,
+    prestadoresRelatorioTime,
+    compFilterStaffIds,
+    compFilterTimeIds,
+    filtroTimeIdsReais,
+    prestadores,
+  ]);
+
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
+    if (funcionarioIdsGrade === null) {
+      setRawGradeRowsRpc([]);
+      setTurnoMesMap({});
+      setLoadingEscala(false);
+      setErroEscala(null);
+      return;
+    }
     let cancelled = false;
     setLoadingEscala(true);
     setErroEscala(null);
@@ -1104,7 +1165,7 @@ export default function RhCalendarioPage() {
         const resultados = await Promise.all(
           mesesRefISOConsulta.map(async (refIso) => {
             const [{ rows, error }, turnoRes] = await Promise.all([
-              carregarRhCalendarioGradeMes(refIso),
+              carregarRhCalendarioGradeMes(refIso, funcionarioIdsGrade),
               supabase.rpc("rh_gestao_escala_turno_mes_listar", { p_ref_mes: refIso }),
             ]);
             return { refIso, rows, error, turnoRes };
@@ -1150,7 +1211,7 @@ export default function RhCalendarioPage() {
     return () => {
       cancelled = true;
     };
-  }, [mesesRefISOConsulta, perm.loading, perm.canView]);
+  }, [mesesRefISOConsulta, perm.loading, perm.canView, funcionarioIdsGrade, gradeReloadTick]);
 
   /** Escritório: mês completo no cliente (RPC truncava em ~1000 linhas). */
   const rawGradeRows = useMemo(
@@ -1258,6 +1319,7 @@ export default function RhCalendarioPage() {
     if (perm.loading || perm.canView === "nao") {
       pontoMesStaffIdRef.current = null;
       setPontoMesLinhas([]);
+      setErroPontoMes(null);
       return;
     }
     if (abaPrincipal !== "presenca") return;
@@ -1265,6 +1327,7 @@ export default function RhCalendarioPage() {
     if (!fid) {
       pontoMesStaffIdRef.current = null;
       setPontoMesLinhas([]);
+      setErroPontoMes(null);
       return;
     }
     const trocouStaff = pontoMesStaffIdRef.current !== fid;
@@ -1275,16 +1338,22 @@ export default function RhCalendarioPage() {
     }
     let cancelled = false;
     setLoadingPontoMes(true);
+    setErroPontoMes(null);
     const refIsos = [refMesPrimeiroDiaISO(current), refMesPrimeiroDiaISO(mesAnteriorPresencaRef)];
     void (async () => {
       const merged: RpcPontoMesRow[] = [];
       let hadError = false;
-      for (const refIso of refIsos) {
-        const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
-          p_funcionario_id: fid,
-          p_ref_mes: refIso,
-        });
-        if (cancelled) return;
+      // Mês do carrossel + mês anterior (virada de turno) em paralelo.
+      const respostas = await Promise.all(
+        refIsos.map((refIso) =>
+          supabase.rpc("rh_calendario_ponto_registros_mes", {
+            p_funcionario_id: fid,
+            p_ref_mes: refIso,
+          }),
+        ),
+      );
+      if (cancelled) return;
+      for (const { data, error } of respostas) {
         if (error) {
           hadError = true;
           continue;
@@ -1302,6 +1371,9 @@ export default function RhCalendarioPage() {
       setLoadingPontoMes(false);
       if (hadError && merged.length === 0) {
         setPontoMesLinhas([]);
+        setErroPontoMes(
+          "Não foi possível carregar os registros de ponto do mês. Se o problema persistir, entre em contato com o suporte.",
+        );
         return;
       }
       // Merge otimista só no mesmo Staff (ex.: pós check-in se a RPC ainda vier sem horário).
@@ -1384,9 +1456,12 @@ export default function RhCalendarioPage() {
     void (async () => {
       const merged = new Map<string, PresencaDiaGestao>();
       let hadError = false;
-      for (const refIso of refIsos) {
-        const { mapa, error } = await carregarPresencaGestaoMes(supabase, fid, refIso);
-        if (cancelled) return;
+      // Mês do carrossel + mês anterior (virada de turno) em paralelo.
+      const respostas = await Promise.all(
+        refIsos.map((refIso) => carregarPresencaGestaoMes(supabase, fid, refIso)),
+      );
+      if (cancelled) return;
+      for (const { mapa, error } of respostas) {
         if (error) {
           hadError = true;
           continue;
@@ -1436,6 +1511,7 @@ export default function RhCalendarioPage() {
       setPontoRelatorioPorFid(new Map());
       setGestaoRelatorioPorChave(new Map());
       setLoadingRelatorioPresenca(false);
+      setErroRelatorioPresenca(null);
       return;
     }
     const fids =
@@ -1446,10 +1522,12 @@ export default function RhCalendarioPage() {
       setPontoRelatorioPorFid(new Map());
       setGestaoRelatorioPorChave(new Map());
       setLoadingRelatorioPresenca(false);
+      setErroRelatorioPresenca(null);
       return;
     }
     let cancelled = false;
     setLoadingRelatorioPresenca(true);
+    setErroRelatorioPresenca(null);
     const diaIso = toISO(relatorioDia);
     void (async () => {
       // 2 RPCs em lote (antes: 3N — ponto mês + gestão mês atual + gestão mês anterior por fid).
@@ -1458,9 +1536,21 @@ export default function RhCalendarioPage() {
         carregarPresencaGestaoDiaLote(supabase, fids, diaIso),
       ]);
       if (cancelled) return;
+      setLoadingRelatorioPresenca(false);
+      if (pontoRes.error || gestaoRes.error) {
+        console.error("[calendario-relatorio-presenca]", {
+          ponto: pontoRes.error,
+          gestao: gestaoRes.error,
+        });
+        setPontoRelatorioPorFid(new Map());
+        setGestaoRelatorioPorChave(new Map());
+        setErroRelatorioPresenca(
+          "Não foi possível carregar o relatório de presença do dia. Se o problema persistir, entre em contato com o suporte.",
+        );
+        return;
+      }
       setPontoRelatorioPorFid(pontoRes.mapa);
       setGestaoRelatorioPorChave(gestaoRes.mapa);
-      setLoadingRelatorioPresenca(false);
     })();
     return () => {
       cancelled = true;
@@ -1476,6 +1566,7 @@ export default function RhCalendarioPage() {
     relatorioDia,
     presencaGestaoTick,
     pontoMesTick,
+    relatorioReloadTick,
   ]);
 
   useEffect(() => {
@@ -1632,54 +1723,28 @@ export default function RhCalendarioPage() {
     [reunioesItemsPorIso],
   );
 
-  function treinamentosAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
-    return [];
-  }
-  function feedbackAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
-    return [];
-  }
-  function eventosAgendaDoDia(_iso: string): CompromissoAgendaExtra[] {
-    return [];
-  }
-
   function turnosAgendadosNoDia(date: Date): CompromissoEscalaCal[] {
     return ordenarTurnosCalendario(compromissosPorDiaIso.get(toISO(date)) ?? []);
   }
 
-  /** Linhas do dia na grelha: Eventos → Reuniões → Treinamentos → Feedback → Turnos. */
+  /** Linhas do dia na grelha: Reuniões → Turnos. */
   function linhasCompromissosDiaCalendario(date: Date): LinhaCalendarioDia[] {
     const iso = toISO(date);
     const turnosOrd = ordenarTurnosCalendario(compromissosPorDiaIso.get(iso) ?? []);
     const turnLinhas: LinhaCalendarioDia[] = turnosOrd.map((comp) => ({ tipo: "turno", comp }));
-    const ev: LinhaCalendarioDia[] = eventosAgendaDoDia(iso).map((item) => ({ tipo: "evento", item }));
     const r: LinhaCalendarioDia[] = obterReunioesDiaIso(iso).map((item) => ({ tipo: "reuniao", item }));
-    const tr: LinhaCalendarioDia[] = treinamentosAgendaDoDia(iso).map((item) => ({ tipo: "treinamento", item }));
-    const fb: LinhaCalendarioDia[] = feedbackAgendaDoDia(iso).map((item) => ({ tipo: "feedback", item }));
 
-    if (filtroTipoCompromisso === "todos") {
-      return [...ev, ...r, ...tr, ...fb, ...turnLinhas];
-    }
-    if (filtroTipoCompromisso === "eventos") return ev;
+    if (filtroTipoCompromisso === "todos") return [...r, ...turnLinhas];
     if (filtroTipoCompromisso === "reunioes") return r;
-    if (filtroTipoCompromisso === "treinamentos") return tr;
-    if (filtroTipoCompromisso === "feedback") return fb;
     return turnLinhas;
   }
 
   function contagemItensCalendarioNoDia(date: Date): number {
     const iso = toISO(date);
     const turnos = compromissosPorDiaIso.get(iso) ?? [];
-    const ev = eventosAgendaDoDia(iso);
     const r = obterReunioesDiaIso(iso);
-    const tr = treinamentosAgendaDoDia(iso);
-    const fb = feedbackAgendaDoDia(iso);
-    if (filtroTipoCompromisso === "todos") {
-      return turnos.length + ev.length + r.length + tr.length + fb.length;
-    }
-    if (filtroTipoCompromisso === "eventos") return ev.length;
+    if (filtroTipoCompromisso === "todos") return turnos.length + r.length;
     if (filtroTipoCompromisso === "reunioes") return r.length;
-    if (filtroTipoCompromisso === "treinamentos") return tr.length;
-    if (filtroTipoCompromisso === "feedback") return fb.length;
     return turnos.length;
   }
 
@@ -1752,6 +1817,37 @@ export default function RhCalendarioPage() {
 
   const contentBox = getPageContentBoxStyle(brand, t);
   const cardShadow = isDark ? "0 4px 20px rgba(0,0,0,0.25)" : "0 2px 8px rgba(0,0,0,0.07)";
+
+  const bannerErroCalendarioStyle: CSSProperties = {
+    marginBottom: 14,
+    padding: "12px 16px",
+    borderRadius: 12,
+    border: "1px solid rgba(232,64,37,0.35)",
+    background: isDark ? "rgba(232,64,37,0.12)" : "rgba(232,64,37,0.08)",
+    color: "#e84025",
+    fontSize: 13,
+    fontFamily: FONT.body,
+    lineHeight: 1.45,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+  };
+
+  const botaoTentarDeNovoStyle = (carregando: boolean): CSSProperties => ({
+    padding: "6px 14px",
+    borderRadius: 999,
+    border: "1px solid rgba(232,64,37,0.45)",
+    background: "transparent",
+    color: "#e84025",
+    fontSize: 12,
+    fontWeight: 700,
+    fontFamily: FONT.body,
+    cursor: carregando ? "not-allowed" : "pointer",
+    opacity: carregando ? 0.6 : 1,
+    whiteSpace: "nowrap",
+  });
 
   /** Início/fim do turno (ou "—"); `undefined` para Compra/Venda/Troca. */
   function horarioStaffTurnoMesSnap(funcionarioId: string, areaKey: string | null | undefined): string | null {
@@ -2001,25 +2097,15 @@ export default function RhCalendarioPage() {
   function AgendaExtraDiaChip({
     linha,
   }: {
-    linha: Extract<
-      LinhaCalendarioDia,
-      { tipo: "evento" } | { tipo: "reuniao" } | { tipo: "treinamento" } | { tipo: "feedback" }
-    >;
+    linha: Extract<LinhaCalendarioDia, { tipo: "reuniao" }>;
   }) {
-    const { tipo, item } = linha;
+    const { item } = linha;
     const temSubtitulo = Boolean(item.subtituloChip?.trim());
-    const etiqueta =
-      tipo === "evento"
-        ? "Evento"
-        : tipo === "reuniao"
-          ? "Reunião"
-          : tipo === "treinamento"
-            ? "Treinamento"
-            : "Feedback";
-    const Icon = tipo === "evento" ? CalendarDays : tipo === "reuniao" ? Users : tipo === "treinamento" ? BookOpen : MessageSquare;
-    const cor = tipo === "evento" ? "#a78bfa" : "#f59e0b";
-    const bg = tipo === "evento" ? (isDark ? "rgba(167,139,250,0.12)" : "rgba(167,139,250,0.08)") : isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)";
-    const border = tipo === "evento" ? "rgba(167,139,250,0.45)" : "rgba(245,158,11,0.35)";
+    const etiqueta = "Reunião";
+    const Icon = Users;
+    const cor = "#f59e0b";
+    const bg = isDark ? "rgba(245,158,11,0.10)" : "rgba(245,158,11,0.08)";
+    const border = "rgba(245,158,11,0.35)";
     return (
       <div
         role="listitem"
@@ -2446,10 +2532,17 @@ export default function RhCalendarioPage() {
     }
   }, [pontoEstado?.proximoTipo, mapaPontoPorDiaIso]);
 
+  /** Com a grade restrita ao recorte ativo, só alertar quando o próprio recorte tem gente de estúdio. */
   const gradeEstudioAusenteNoMes =
     !loadingEscala &&
     !erroEscala &&
-    prestadores.some((p) => p.area_atuacao !== "escritorio" && !prestadorUsaHorarioComercialSintetico(p)) &&
+    funcionarioIdsGrade !== null &&
+    prestadores.some(
+      (p) =>
+        funcionarioIdsGrade.includes(p.id) &&
+        p.area_atuacao !== "escritorio" &&
+        !prestadorUsaHorarioComercialSintetico(p),
+    ) &&
     !rawGradeRows.some((r) => {
       const ak = (r.area_key ?? "").trim().toLowerCase();
       return ak !== "escritorio" && ak !== AREA_KEY_HORARIO_COMERCIAL_SINTETICO;
@@ -2569,8 +2662,10 @@ export default function RhCalendarioPage() {
     pontoEstado?.proximoTipo,
   ]);
 
+  /** Sem colaborador RH ligado ao login o registro seria sempre rejeitado — não mostrar o botão. */
   const mostrarBotaoCheckInPresenca =
     mostrarBotaoPontoCalendario &&
+    Boolean(meuRhFuncionarioId ?? pontoEstado?.rhFuncionarioId) &&
     !mesPresencaFuturo &&
     (!mesPresencaFechado || exibirCheckInMesFechadoExcecao);
 
@@ -2934,7 +3029,7 @@ export default function RhCalendarioPage() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="rh_calendario" />}
         title={getPageMenuLabel("rh_calendario")}
-        subtitle="Organize a rotina operacional com visibilidade completa de turnos, trocas e compromissos."
+        subtitle={getPageCanonicalSubtitle("rh_calendario")}
         brand={brand}
         t={t}
       />
@@ -2996,13 +3091,8 @@ export default function RhCalendarioPage() {
                     fontFamily: FONT.body,
                   }}
                 >
-                  <Loader2
-                    size={14}
-                    className="app-lucide-spin"
-                    aria-hidden="true"
-                    color="var(--brand-primary, #7c3aed)"
-                  />
-                  Atualizando escala…
+                  <Clock size={12} aria-hidden="true" />
+                  Carregando…
                 </span>
               ) : null}
 
@@ -3017,13 +3107,8 @@ export default function RhCalendarioPage() {
                     fontFamily: FONT.body,
                   }}
                 >
-                  <Loader2
-                    size={14}
-                    className="app-lucide-spin"
-                    aria-hidden="true"
-                    color="var(--brand-primary, #7c3aed)"
-                  />
-                  {soPropriosCal ? "Carregando…" : "Carregando staff…"}
+                  <Clock size={12} aria-hidden="true" />
+                  Carregando…
                 </span>
               ) : erroStaff ? (
                 <span style={{ color: BRAND.vermelho, fontSize: 12, fontFamily: FONT.body }}>{erroStaff}</span>
@@ -3061,6 +3146,7 @@ export default function RhCalendarioPage() {
                 <>
                   {showTimeFilterPresenca ? (
                     <FiltroCalendarioTimeSelect
+                      mode="single"
                       selected={relatorioFilterTimeIds}
                       onChange={(ids) => setRelatorioFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
                       items={timeMultiselectItems}
@@ -3068,6 +3154,7 @@ export default function RhCalendarioPage() {
                   ) : null}
                   {!soPropriosCal && staffRelatorioMultiselectItems.length > 0 ? (
                     <FiltroCalendarioStaffSelect
+                      mode="single"
                       selected={relatorioFilterStaffIds}
                       onChange={(ids) =>
                         setRelatorioFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))
@@ -3098,6 +3185,7 @@ export default function RhCalendarioPage() {
                   ) : null}
                   {showTimeFilterPresenca ? (
                     <FiltroCalendarioTimeSelect
+                      mode="single"
                       selected={presencaFilterTimeIds}
                       onChange={(ids) => setPresencaFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
                       items={timeMultiselectItems}
@@ -3105,6 +3193,7 @@ export default function RhCalendarioPage() {
                   ) : null}
                   {showStaffFilterPresenca ? (
                     <FiltroCalendarioStaffSelect
+                      mode="single"
                       selected={presencaFilterStaffIds}
                       onChange={(ids) => setPresencaFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
                       items={staffPresencaMultiselectItems}
@@ -3355,22 +3444,44 @@ export default function RhCalendarioPage() {
       )}
 
       {erroEscala ? (
-        <div
-          role="alert"
-          aria-live="polite"
-          style={{
-            marginBottom: 14,
-            padding: "12px 16px",
-            borderRadius: 12,
-            border: "1px solid rgba(232,64,37,0.35)",
-            background: isDark ? "rgba(232,64,37,0.12)" : "rgba(232,64,37,0.08)",
-            color: "#e84025",
-            fontSize: 13,
-            fontFamily: FONT.body,
-            lineHeight: 1.45,
-          }}
-        >
-          {erroEscala}
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroEscala}</span>
+          <button
+            type="button"
+            onClick={() => setGradeReloadTick((x) => x + 1)}
+            disabled={loadingEscala}
+            style={botaoTentarDeNovoStyle(loadingEscala)}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {abaPrincipal === "presenca" && erroPontoMes ? (
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroPontoMes}</span>
+          <button
+            type="button"
+            onClick={() => setPontoMesTick((x) => x + 1)}
+            disabled={loadingPontoMes}
+            style={botaoTentarDeNovoStyle(loadingPontoMes)}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
+
+      {abaPrincipal === "relatorio" && erroRelatorioPresenca ? (
+        <div role="alert" aria-live="polite" style={bannerErroCalendarioStyle}>
+          <span>{erroRelatorioPresenca}</span>
+          <button
+            type="button"
+            onClick={() => setRelatorioReloadTick((x) => x + 1)}
+            disabled={loadingRelatorioPresenca}
+            style={botaoTentarDeNovoStyle(loadingRelatorioPresenca)}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
@@ -3468,6 +3579,19 @@ export default function RhCalendarioPage() {
               <Loader2 size={16} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
               Carregando…
             </div>
+          ) : funcionarioIdsGrade === null && !soPropriosCal ? (
+            <div
+              role="status"
+              style={{
+                padding: "40px 0",
+                textAlign: "center",
+                color: t.textMuted,
+                fontSize: 13,
+                fontFamily: FONT.body,
+              }}
+            >
+              Selecione Meu Calendário, um Time ou um Staff para ver a grade.
+            </div>
           ) : (
             <ViewMes />
           )}
@@ -3551,7 +3675,9 @@ export default function RhCalendarioPage() {
           </div>
 
           <div style={contentBox}>
-            <SectionTitle>Controle de Presença</SectionTitle>
+            <SectionTitle sub="Entrada, saída e status do mês selecionado">
+              Controle de Presença
+            </SectionTitle>
             {presencaFilterStaffIds.length === 0 ? (
               <div
                 style={{
@@ -3799,14 +3925,14 @@ export default function RhCalendarioPage() {
                         saiEscDiaAnterior: saiEscAnterior,
                         diaIsoEscalonadoAnterior: isoAnterior ?? undefined,
                       });
+                      const fundoLinhaPresenca = isDestaqueHojePresenca
+                        ? fundoLinhaPresencaDiaHoje(dataTable.colBg, isDark)
+                        : dataTable.zebraRow(i);
                       return (
                         <tr
                           key={iso}
-                          style={{
-                            background: isDestaqueHojePresenca
-                              ? fundoLinhaPresencaDiaHoje(dataTable.colBg, isDark)
-                              : dataTable.zebraRow(i),
-                          }}
+                          style={{ background: fundoLinhaPresenca }}
+                          {...dataTableRowHoverHandlers(fundoLinhaPresenca)}
                         >
                           <td
                             style={{
@@ -3920,7 +4046,7 @@ export default function RhCalendarioPage() {
                                 <>
                                   {mostrarAprovarTurno ? (
                                     <BtnIconeAcaoLinha
-                                      label={tooltipAcao("APROVAÇÃO DE TURNO")}
+                                      label={tooltipAcao("Aprovar turno")}
                                       onClick={() => {
                                         setPresencaAlvoModal({
                                           funcionarioId: fid,
@@ -3993,29 +4119,9 @@ export default function RhCalendarioPage() {
               const iso = toISO(modalDia);
               const mostrarTipo = (ch: Exclude<TipoCompromissoCalFiltroValue, "todos">) =>
                 filtroTipoCompromisso === "todos" || filtroTipoCompromisso === ch;
-              const ev = eventosAgendaDoDia(iso);
               const r = obterReunioesDiaIso(iso);
-              const tr = treinamentosAgendaDoDia(iso);
-              const fb = feedbackAgendaDoDia(iso);
               const turnos = turnosAgendadosNoDia(modalDia);
               const partes: { key: string; node: ReactNode }[] = [];
-              if (mostrarTipo("eventos") && ev.length > 0) {
-                partes.push({
-                  key: "eventos",
-                  node: (
-                    <div key="eventos" style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
-                        Eventos
-                      </div>
-                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                        {ev.map((x) => (
-                          <li key={x.id}>{x.titulo}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ),
-                });
-              }
               if (mostrarTipo("reunioes") && r.length > 0) {
                 partes.push({
                   key: "reunioes",
@@ -4129,40 +4235,6 @@ export default function RhCalendarioPage() {
                           );
                         })}
                       </div>
-                    </div>
-                  ),
-                });
-              }
-              if (mostrarTipo("treinamentos") && tr.length > 0) {
-                partes.push({
-                  key: "treinamentos",
-                  node: (
-                    <div key="treinamentos" style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
-                        Treinamentos
-                      </div>
-                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                        {tr.map((x) => (
-                          <li key={x.id}>{x.titulo}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ),
-                });
-              }
-              if (mostrarTipo("feedback") && fb.length > 0) {
-                partes.push({
-                  key: "feedback",
-                  node: (
-                    <div key="feedback" style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: t.textMuted, marginBottom: 10, fontFamily: FONT_TITLE }}>
-                        Feedback
-                      </div>
-                      <ul style={{ margin: 0, paddingLeft: 18, fontFamily: FONT.body, fontSize: 13, color: t.text }}>
-                        {fb.map((x) => (
-                          <li key={x.id}>{x.titulo}</li>
-                        ))}
-                      </ul>
                     </div>
                   ),
                 });
@@ -4306,25 +4378,6 @@ export default function RhCalendarioPage() {
           <p style={{ margin: 0, color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.55 }}>
             {pontoSucessoModal.corpo}
           </p>
-          <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              onClick={() => setPontoSucessoModal(null)}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 10,
-                border: "none",
-                background: brand.accent.startsWith("var(") ? "var(--brand-action, #7c3aed)" : String(brand.accent),
-                color: "#fff",
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              Fechar
-            </button>
-          </div>
         </ModalBase>
       ) : null}
 
@@ -4334,25 +4387,6 @@ export default function RhCalendarioPage() {
           <p style={{ margin: 0, color: t.text, fontSize: 14, fontFamily: FONT.body, lineHeight: 1.55 }}>
             {pontoMsgModal}
           </p>
-          <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              onClick={() => setPontoMsgModal(null)}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 10,
-                border: "none",
-                background: brand.accent.startsWith("var(") ? "var(--brand-action, #7c3aed)" : String(brand.accent),
-                color: "#fff",
-                fontWeight: 700,
-                fontFamily: FONT.body,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              Fechar
-            </button>
-          </div>
         </ModalBase>
       ) : null}
     </div>
