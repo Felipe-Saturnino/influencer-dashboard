@@ -1877,6 +1877,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Nenhum perfil simulável foi liberado para o seu perfil viewer. Peça ao administrador para marcar as opções em **Gestão de Usuários → Simulador de Login**. Administradores veem o catálogo completo sem essa matriz.",
       },
       {
+        subtitulo: "Não aparece nenhum usuário ativo?",
+        texto:
+          "A simulação só lista contas **ativas** daquele perfil no momento (quem está desativado não entra). No Operador, o usuário também precisa ter a operadora escolhida no escopo; no Prestador, a área escolhida. Se a equipe rotacionou, escolha outro usuário da lista — ela é atualizada a cada abertura do modal.",
+      },
+      {
         subtitulo: "Não consigo criar ou editar nada durante a simulação?",
         texto:
           "Comportamento esperado: a simulação é somente leitura. Encerrar a visualização restaura as permissões da sua conta real.",
@@ -1889,7 +1894,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Como sair da simulação?",
         texto:
-          "Clique em **Encerrar visualização** no banner no topo da plataforma ou no bloco correspondente na página Simulador de Login.",
+          "Clique em **Encerrar visualização** na faixa amarela no topo da plataforma ou no bloco correspondente na página Simulador de Login. Se a faixa não sumir, recarregue a página. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },

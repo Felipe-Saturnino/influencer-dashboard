@@ -8,14 +8,14 @@ import {
 } from "../../../../lib/rhCadastroRevisao";
 
 export function useHomeAtualizacaoCadastral() {
-  const { user, permissionsAcoes } = useApp();
+  const { user, permissionsAcoes, simulacaoSomenteLeitura } = useApp();
   const [loading, setLoading] = useState(true);
   const [pendente, setPendente] = useState(false);
   const [primeiroNome, setPrimeiroNome] = useState("");
 
   useEffect(() => {
     const email = user?.email?.trim();
-    if (!email) {
+    if (!email || simulacaoSomenteLeitura) {
       setLoading(false);
       setPendente(false);
       return;
@@ -62,7 +62,7 @@ export function useHomeAtualizacaoCadastral() {
       cancelled = true;
       window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
     };
-  }, [user, permissionsAcoes.rh_dados_cadastro?.editar]);
+  }, [user, permissionsAcoes.rh_dados_cadastro?.editar, simulacaoSomenteLeitura]);
 
   return { loading, pendente, primeiroNome };
 }

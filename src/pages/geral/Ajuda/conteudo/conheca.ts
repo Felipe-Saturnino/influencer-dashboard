@@ -1736,12 +1736,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Como iniciar",
         texto:
-          "Escolha um perfil na lista (agrupado por tipo: gerenciais, estúdio, escritório, externos, etc.). Alguns perfis pedem um passo extra:\n\n— **Operador:** selecione a operadora (ativas e inativas; inativas aparecem com o rótulo correspondente).\n— **Prestador** (e áreas equivalentes): selecione a área de atuação.\n\nApós confirmar, a plataforma abre a Home no modo simulado e exibe um banner para encerrar a visualização.",
+          "Escolha um perfil na lista (agrupado por tipo: gerenciais, estúdio, escritório, externos, etc.). Em seguida a plataforma pede um **usuário ativo** daquele perfil (a lista é atual: quem está ativo hoje; o mais recente no login vem pré-selecionado). Alguns perfis pedem um passo extra antes do usuário:\n\n— **Operador:** selecione a operadora (ativas e inativas; inativas aparecem com o rótulo correspondente).\n— **Prestador** (e áreas equivalentes): selecione a área de atuação.\n\nSe já houver uma visualização ativa, a plataforma pede confirmação para substituir. Após confirmar, abre a Home no modo simulado e exibe a faixa **Encerrar visualização**.",
       },
       {
         subtitulo: "O que você vê na simulação",
         texto:
-          "O menu e as permissões seguem o perfil simulado (e o escopo de operadora ou área, quando aplicável). Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nPáginas sensíveis de administração (como Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado.",
+          "O menu e as permissões seguem o perfil simulado, o usuário ativo escolhido e o escopo de operadora ou área, quando aplicável. A sua conta (nome no avatar) não muda. Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nPáginas sensíveis de administração (Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado. Gestão de Estúdios continua visível se o perfil simulado tiver acesso.",
       },
       {
         subtitulo: "Quem pode usar e o que aparece na lista",
@@ -1751,7 +1751,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Encerrar",
         texto:
-          "Use **Encerrar visualização** no banner ou no bloco de status da página. A sessão volta ao seu perfil real e às permissões originais.",
+          "Use **Encerrar visualização** na faixa amarela no topo ou no bloco de status da página. A sessão volta ao seu perfil real e às permissões originais. Se a volta falhar, a faixa permanece e aparece um aviso para recarregar.",
       },
     ],
   },

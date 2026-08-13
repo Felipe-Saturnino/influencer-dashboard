@@ -378,14 +378,28 @@ describe("turnosOfertaveisNaFolgaMarketplace", () => {
     ["2026-08-13", "Folga"],
     ["2026-08-14", "Folga"],
   ]);
+  // Congela o relógio: sem isto, no próprio 13/08 o CI (UTC) corta a Noite pela regra de 4h.
+  const agora = new Date(2026, 7, 10, 8, 0);
 
   it("no dia seguinte ao turno da noite sobra apenas a noite", () => {
-    const turnos = turnosOfertaveisNaFolgaMarketplace("2026-08-13", grade, HORARIO_4X2, OPERADORA);
+    const turnos = turnosOfertaveisNaFolgaMarketplace(
+      "2026-08-13",
+      grade,
+      HORARIO_4X2,
+      OPERADORA,
+      agora,
+    );
     expect(turnos).toEqual(["Noite"]);
   });
 
   it("dois dias depois todos os turnos voltam a caber", () => {
-    const turnos = turnosOfertaveisNaFolgaMarketplace("2026-08-14", grade, HORARIO_4X2, OPERADORA);
+    const turnos = turnosOfertaveisNaFolgaMarketplace(
+      "2026-08-14",
+      grade,
+      HORARIO_4X2,
+      OPERADORA,
+      agora,
+    );
     expect(turnos).toEqual(["Manhã", "Tarde", "Noite"]);
   });
 
@@ -397,6 +411,7 @@ describe("turnosOfertaveisNaFolgaMarketplace", () => {
       comProximo,
       HORARIO_4X2,
       OPERADORA,
+      agora,
     );
     expect(turnos).not.toContain("Noite");
     expect(turnos).toContain("Manhã");

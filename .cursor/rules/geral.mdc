@@ -189,11 +189,13 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Permissão:** Gestão de Usuários → **Simulador de Login** → Ver = Sim (ou Próprios); admin acesso implícito; demais perfis seed `Não`.
 - **Perfis simuláveis:** catálogo em `ROLES_SIMULAVEIS` (`ROLES` menos `admin`/`executivo`). **Quem vê o quê** na página do simulador: matriz **`simulador_login_roles`** configurável em **Gestão de Usuários → aba Simulador de Login** (perfil viewer × perfis simuláveis). Admin ignora a matriz (vê todos do catálogo).
 - **Checklist perfil novo:** incluir em `ROLES` + `FILTROS_PERFIL_LINHAS`; marcar na aba **Simulador de Login** quais viewers podem simulá-lo; seed opcional na migration.
-- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`. Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
+- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`; busca no painel se >5. Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
 - **Gestor / Prestadores:** modal de tipo ou área; menu = `role_permissions` ∩ `gestor_tipo_pages` ou `prestador_tipo_pages`.
+- **Usuário ativo (obrigatório):** após o perfil (e operadora/área, quando houver), a simulação escolhe um **usuário ativo** daquele perfil no momento — lista dinâmica (`profiles.ativo !== false`, exclui a conta viewer), pré-seleciona o de login mais recente (contas rotativas; sem pessoa fixa). Busca no painel se >5. Sem usuário ativo: mensagem específica (perfil / operadora / área). Restaurar sessão revalida se o usuário ainda está ativo.
 - **Quem usa o simulador** precisa ler as matrizes de escopo no Supabase — políticas RLS `_pode_usar_simulador_login()` em `operadora_pages`, `gestor_tipo_pages`, `prestador_tipo_pages` (migration `20260708160000_simulador_login_rls_scope_pages.sql`).
-- **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner`; sessão em `sessionStorage`.
-- **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado).
+- **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner` (texto **Encerrar visualização**); sessão em `sessionStorage`. Trocar de perfil com visualização ativa pede confirmação **Substituir visualização**. Encerrar só limpa a faixa depois de restaurar o perfil real; falha mostra aviso.
+- **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado). **Gestão de Estúdios** permanece visível se o perfil simulado tiver acesso.
+- **Identidade:** o nome no avatar/Home continua o da conta real («sua conta não muda»). Alertas pessoais da Home (cadastro/playbook) usam o usuário visualizado, sem misturar com a conta viewer.
 
 ---
 

@@ -1369,7 +1369,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Ferramenta para visualizar a plataforma com o menu e a identidade de outro perfil, sem trocar a conta real. A simulação é somente leitura e pode ser encerrada a qualquer momento.",
         nota:
-          "Os perfis disponíveis dependem da matriz em Gestão de Usuários → Simulador de Login. Operador e prestador pedem operadora ou área no início da simulação.",
+          "Os perfis disponíveis dependem da matriz em Gestão de Usuários → Simulador de Login. A simulação usa um usuário ativo daquele perfil (lista atual, contas rotativas). Operador e prestador pedem operadora ou área antes do usuário.",
         referencia: "Simulador de Login · Gestão de Usuários",
       },
       {
