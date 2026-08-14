@@ -727,6 +727,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A lista de prestadores é filtrada pelo time selecionado (Game Presenter ou Shuffler) e inclui apenas funcionários ativos ou indisponíveis vinculados a esse time (ou papéis de apoio como Service Manager, Shift Leader, Performance Coach e Academy). Verifique o cadastro em Gestão de Prestadores se o nome não aparece.",
       },
       {
+        subtitulo: "As setas ou a tecla Tab não funcionam como esperado no formulário?",
+        texto:
+          "Nos campos pesquisáveis **Mesa** e **Prestador**, clique no campo e comece a digitar. Use **↑/↓** para destacar um resultado e **Enter** para selecionar; **Escape** fecha a lista. A tecla **Tab** avança para o próximo controle do formulário sem percorrer cada opção. Se o navegador mantiver um comportamento antigo, atualize a página e tente novamente.",
+      },
+      {
         subtitulo: "O anexo não foi enviado ao salvar o incidente?",
         texto:
           "Cada arquivo tem limite de 50 MB. Se o arquivo exceder esse tamanho, uma mensagem indica qual anexo excedeu o limite — reduza o tamanho do arquivo ou envie um formato mais leve e tente novamente.",
@@ -1474,7 +1479,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo salvar ou aprovar a escala?",
         texto:
-          "Salvar e aprovar exigem permissão de **Criar**. **Alterar Escala** (após aprovada) exige **Editar**. Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+          "Salvar e aprovar exigem permissão de **Criar**. **Alterar Escala** (após aprovada) exige **Editar**. Se aparecer aviso de que a escala foi atualizada por outra pessoa, use **Tentar de novo** (ou recarregue) antes de salvar. Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+      },
+      {
+        subtitulo: "Só vejo uma aba de time?",
+        texto:
+          "Com permissão de **Ver = Próprios**, a Escala Estúdio mostra apenas a aba do seu time no Organograma (a grade dessa aba continua com todo o time). Com **Ver = Sim**, aparecem todas as áreas (Game Presenter, Shuffler, etc.). Ajuste em Gestão de Usuários → Permissões.",
+      },
+      {
+        subtitulo: "A lista da Escala Diária não bate com o número do Consolidado?",
+        texto:
+          "O clique no turno do Consolidado filtra pela **situação do dia** (Manhã, Compra - Manhã, etc.), não pelo turno cadastrado na Staff. Quem teve Compra ou Alterar Escala para outro turno no dia entra na contagem e na lista desse turno.",
       },
       {
         subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",

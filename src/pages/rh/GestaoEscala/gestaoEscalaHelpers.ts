@@ -201,12 +201,16 @@ export function carregarEscalaMesGravada(
   }
 }
 
+/**
+ * Grava rascunho local do mês. Retorna `false` se o armazenamento falhar
+ * (quota, modo privado, etc.) — a UI deve avisar para salvar na plataforma.
+ */
 export function gravarEscalaMes(
   ano: number,
   mes0: number,
   est: Record<string, EscalaGerarEstadoFiltro>,
   modo: EscalaGradeModo = "estudio",
-): void {
+): boolean {
   try {
     const stripped: Record<string, EscalaGerarEstadoFiltro> = {};
     for (const [k, v] of Object.entries(est)) {
@@ -218,6 +222,47 @@ export function gravarEscalaMes(
       stripped[k] = rest;
     }
     localStorage.setItem(chaveStorageEscalaMes(ano, mes0, modo), JSON.stringify(stripped));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Remove rascunhos locais fora da janela (mês atual + competências anteriores).
+ * Default: 2 competências (atual + anterior).
+ */
+export function limparRascunhosEscalaLocaisAntigos(
+  modo: EscalaGradeModo,
+  anoAtual: number,
+  mes0Atual: number,
+  retencaoMeses = 2,
+): void {
+  const keep = new Set<string>();
+  let y = anoAtual;
+  let m = mes0Atual;
+  for (let i = 0; i < Math.max(1, retencaoMeses); i++) {
+    keep.add(chaveStorageEscalaMes(y, m, modo));
+    m -= 1;
+    if (m < 0) {
+      m = 11;
+      y -= 1;
+    }
+  }
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (modo === "escritorio") {
+        if (!k.startsWith("rh_gestao_escala_v1_escritorio_")) continue;
+      } else {
+        if (!k.startsWith("rh_gestao_escala_v1_")) continue;
+        if (k.startsWith("rh_gestao_escala_v1_escritorio_")) continue;
+      }
+      if (!keep.has(k)) toRemove.push(k);
+    }
+    for (const k of toRemove) localStorage.removeItem(k);
   } catch {
     /* quota / privado */
   }
@@ -449,16 +494,49 @@ export type AbaEscalaTime = {
   tipo: AbaEscalaTipo;
 };
 
-/** Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado (turno da Staff). */
+/**
+ * Filtro da Escala Diária acionado pelas linhas clicáveis do Consolidado.
+ * Critério = status do dia (mesma regra da contagem), não o turno da Staff.
+ */
 export type FiltroTurnoConsolidadoRh = "manha" | "tarde" | "noite" | "comercial";
 
 export type EscalaDiariaSortCol = "nome" | "nickname" | "turno";
 
+export function siglaConsolidadoFromFiltroTurno(
+  filtro: FiltroTurnoConsolidadoRh,
+): "MRN" | "AFT" | "NGT" | "Comercial" {
+  switch (filtro) {
+    case "manha":
+      return "MRN";
+    case "tarde":
+      return "AFT";
+    case "noite":
+      return "NGT";
+    case "comercial":
+      return "Comercial";
+  }
+}
+
+/**
+ * Inclui o colaborador se tiver ao menos um dia no mês com status que conta
+ * no Consolidado daquele turno (inclui Compra - Turno).
+ */
 export function linhaColaboradorNoFiltroTurnoConsolidado(
   row: LinhaColaborador,
   filtro: FiltroTurnoConsolidadoRh | null,
+  opts?: { celulas?: Record<string, string>; dias?: DiaMes[] },
 ): boolean {
   if (filtro == null) return true;
+  const sigla = siglaConsolidadoFromFiltroTurno(filtro);
+  const celulas = opts?.celulas;
+  const dias = opts?.dias;
+  if (celulas && dias && dias.length > 0) {
+    return dias.some((dia) => {
+      const k = chaveCelulaGerar(row.id, dia.iso);
+      return celulaConsolidadoContaComoSigla(celulas[k] ?? "", sigla);
+    });
+  }
+  /** Fallback sem grade carregada — turno da Staff. */
   const nome = (row.turnoStaffNome ?? "").trim();
   switch (filtro) {
     case "manha":
@@ -472,6 +550,18 @@ export function linhaColaboradorNoFiltroTurnoConsolidado(
     default:
       return true;
   }
+}
+
+/** `area_key` da aba de escala a partir do vínculo Organograma do prestador. */
+export function areaKeyDoPrestadorEscala(
+  modo: EscalaGradeModo,
+  p: Pick<RpcPrestadorEscala, "org_time_id" | "org_gerencia_id" | "nome_time">,
+): AreaEscalaKey | null {
+  const timeId = (p.org_time_id ?? "").trim();
+  if (timeId) return areaKeyFromOrgTime(modo, timeId, p.nome_time);
+  const gerId = (p.org_gerencia_id ?? "").trim();
+  if (gerId) return areaKeyFromOrgGerencia(modo, gerId, p.nome_time);
+  return areaKeyLegadoFromNomeTime(p.nome_time);
 }
 
 /** Ordem dos botões de área abaixo do carrossel do mês (Escala Estúdio). */

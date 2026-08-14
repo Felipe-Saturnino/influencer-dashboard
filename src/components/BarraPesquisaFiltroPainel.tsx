@@ -1,4 +1,10 @@
-import { useEffect, useRef, type Ref, type RefCallback } from "react";
+import {
+  useEffect,
+  useRef,
+  type KeyboardEventHandler,
+  type Ref,
+  type RefCallback,
+} from "react";
 import { Search } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import {
@@ -12,6 +18,8 @@ export type BarraPesquisaFiltroPainelProps = {
   placeholder: string;
   "aria-label"?: string;
   inputRef?: Ref<HTMLInputElement>;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  "aria-activedescendant"?: string;
   /**
    * Ao montar, foca o input para digitar sem clique extra.
    * Default `true` — obrigatório em painéis de filtro/select com busca.
@@ -36,6 +44,8 @@ export function BarraPesquisaFiltroPainel({
   placeholder,
   "aria-label": ariaLabel = "Pesquisar na lista",
   inputRef,
+  onKeyDown,
+  "aria-activedescendant": ariaActiveDescendant,
   autoFocusOnMount = true,
 }: BarraPesquisaFiltroPainelProps) {
   const { theme: t } = useApp();
@@ -60,6 +70,8 @@ export function BarraPesquisaFiltroPainel({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        aria-activedescendant={ariaActiveDescendant}
+        onKeyDown={onKeyDown}
         autoComplete="off"
         className="app-barra-pesquisa-pagina-input"
         style={getBarraPesquisaFiltroPainelInputStyle(t)}
