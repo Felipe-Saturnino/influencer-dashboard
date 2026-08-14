@@ -4,6 +4,8 @@ import { capFimAderenciaMesCorrente } from "../../../src/lib/overviewPrestadorCa
 import {
   calcularMetricasPrestadorPeriodo,
   OVERVIEW_PRESTADOR_METRICAS_ZERO,
+  pctPresencaAderencia,
+  severidadeAtencaoPrestador,
 } from "../../../src/lib/overviewPrestadorMetrics";
 
 describe("capFimAderenciaMesCorrente", () => {
@@ -35,6 +37,48 @@ describe("calcularMetricasPrestadorPeriodo — aderência até hoje", () => {
     expect(m.diasEscalado).toBe(2);
     expect(m.diasEscaladoAderencia).toBe(1);
     expect(m.diasRealizado).toBe(1);
+    expect(m.horasEscaladasAderenciaMin).toBeLessThanOrEqual(m.horasEscaladasMin);
     expect(OVERVIEW_PRESTADOR_METRICAS_ZERO.diasEscaladoAderencia).toBe(0);
+    expect(OVERVIEW_PRESTADOR_METRICAS_ZERO.horasEscaladasAderenciaMin).toBe(0);
+  });
+
+  it("não trata aderência zero como mês publicado (início do mês / só jornadas futuras)", () => {
+    const m = {
+      ...OVERVIEW_PRESTADOR_METRICAS_ZERO,
+      diasEscalado: 12,
+      diasEscaladoAderencia: 0,
+      diasRealizado: 0,
+      horasEscaladasMin: 720,
+      horasEscaladasAderenciaMin: 0,
+    };
+    expect(pctPresencaAderencia(m.diasRealizado, m.diasEscaladoAderencia)).toBeNull();
+    expect(severidadeAtencaoPrestador(m)).toBe("ok");
+  });
+
+  it("conta horas escaladas no recorte de aderência, não no mês futuro", () => {
+    const m = calcularMetricasPrestadorPeriodo({
+      funcionarioId: "f1",
+      prestador: { id: "f1", escala: "4x2", area_atuacao: "estudio" } as never,
+      opTurnos: {
+        turno_manha_inicio: "14:00",
+        turno_tarde_inicio: "14:00",
+        turno_noite_inicio: "22:00",
+      },
+      gradeRows: [
+        { funcionario_id: "f1", dia_iso: "2026-08-10", area_key: "game_presenter", valor: "MRN" },
+        { funcionario_id: "f1", dia_iso: "2026-08-20", area_key: "game_presenter", valor: "MRN" },
+      ],
+      pontoRows: [],
+      presencaGestao: new Map(),
+      periodoInicio: "2026-08-01",
+      periodoFim: "2026-08-31",
+      periodoFimAderencia: "2026-08-13",
+      mesesRef: [{ ano: 2026, mes: 7 }],
+    });
+    expect(m.diasEscalado).toBe(2);
+    expect(m.diasEscaladoAderencia).toBe(1);
+    expect(m.horasEscaladasMin).toBeGreaterThan(0);
+    expect(m.horasEscaladasAderenciaMin).toBeGreaterThan(0);
+    expect(m.horasEscaladasAderenciaMin).toBeLessThan(m.horasEscaladasMin);
   });
 });

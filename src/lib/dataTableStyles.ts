@@ -251,3 +251,18 @@ export function createDataTableStickyCol(
     tdSticky: tdStickyLegacy,
   };
 }
+
+/** Hover de linha em tabela canónica — restaura o fundo zebra no `mouseLeave`. */
+export function dataTableRowHoverHandlers(zebraBg: string): {
+  onMouseEnter: (e: { currentTarget: HTMLElement }) => void;
+  onMouseLeave: (e: { currentTarget: HTMLElement }) => void;
+} {
+  return {
+    onMouseEnter: (e) => {
+      e.currentTarget.style.background = `color-mix(in srgb, var(--brand-action, #7c3aed) 8%, ${zebraBg})`;
+    },
+    onMouseLeave: (e) => {
+      e.currentTarget.style.background = zebraBg;
+    },
+  };
+}

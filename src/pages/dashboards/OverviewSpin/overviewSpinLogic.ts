@@ -1,13 +1,28 @@
 import type { ReactNode } from "react";
-import { fmtBRL, getPeriodoComparativoMoM } from "../../../lib/dashboardHelpers";
+import { fmtBRL, getPeriodoComparativoMoMDmenos1 } from "../../../lib/dashboardHelpers";
 import {
   JOGOS_IDENTIDADE_LISTA,
   type GameIdentityKey,
 } from "../../../lib/gameIdentityColors";
 import { supabase } from "../../../lib/supabase";
 
-/** Legenda MoM do card UAP: referência é o mês anterior fechado (mensal), não o recorte MTD. */
+/** Legenda MoM de UAP e ARPU: referência é o mês anterior fechado (mensal), não o recorte MTD. */
 export const KPI_UAP_VS_LEGENDA = "período completo do mês ant.";
+export const KPI_ARPU_VS_LEGENDA = KPI_UAP_VS_LEGENDA;
+
+/** Anterior irrisório face ao atual (~1%) — não exibir % MoM (ex.: GGR residual de canal novo). */
+export const MOM_ANTERIOR_IRRISO_FRACAO = 0.01;
+
+export function momAnteriorComparavel(
+  atual: number | null | undefined,
+  anterior: number | null | undefined,
+): boolean {
+  if (atual == null || anterior == null) return false;
+  if (!Number.isFinite(atual) || !Number.isFinite(anterior)) return false;
+  if (anterior === 0) return false;
+  if (atual === 0) return true;
+  return Math.abs(anterior) >= Math.abs(atual) * MOM_ANTERIOR_IRRISO_FRACAO;
+}
 
 /** Zebras por coluna nas tabelas de mesa — alinhado a tokens de marca. */
 export interface DailyRow {
@@ -667,7 +682,7 @@ export function buildUapPorJogoQuery(
     slugList,
   );
   if (!historico && mesRef) {
-    const { inicio, fim } = getPeriodoComparativoMoM(mesRef.ano, mesRef.mes).atual;
+    const { inicio, fim } = getPeriodoComparativoMoMDmenos1(mesRef.ano, mesRef.mes).atual;
     q = q.gte("data", inicio).lte("data", fim);
   }
   return q;
@@ -802,9 +817,9 @@ export function arpuComparativoFromGgrUap(ggr: number | null, uap: number | null
 
 /**
  * Snapshot MoM do mês anterior para KPIs consolidados (Overview / Dedicado / Network).
- * Financeiro: daily na janela MTD / mês fechado (`dailyDataPrevMonth`).
- * UAP/ARPU: UAP do `monthly_summary` do mês civil anterior (período completo) —
- * mesma regra nas três abas; só muda a origem (soma Overview vs canal).
+ * Financeiro: daily na janela MTD D-1 / mês fechado (`dailyDataPrevMonth`).
+ * UAP e ARPU: valores do `monthly_summary` do mês civil anterior **fechado**
+ * (não misturar GGR MTD do mês anterior com UAP mensal).
  */
 export function montarKpiAnteriorMoM(opts: {
   historico: boolean;
@@ -812,14 +827,20 @@ export function montarKpiAnteriorMoM(opts: {
   monthlyUapArpuPrev: { uap: number | null; arpu: number | null } | null;
 }): MonthlyKpiSnapshot | null {
   const { historico, dailyDataPrevMonth, monthlyUapArpuPrev } = opts;
-  if (historico || dailyDataPrevMonth.length === 0) return null;
-  const base = aggDailyMesKpi(dailyDataPrevMonth);
-  if (!base) return null;
+  if (historico) return null;
+  const base =
+    dailyDataPrevMonth.length === 0 ? null : aggDailyMesKpi(dailyDataPrevMonth);
   const u = monthlyUapArpuPrev?.uap ?? null;
+  const arpuMensal = monthlyUapArpuPrev?.arpu ?? null;
+  if (!base && u == null && arpuMensal == null) return null;
   return {
-    ...base,
+    turnover: base?.turnover ?? null,
+    ggr: base?.ggr ?? null,
+    margin_pct: base?.margin_pct ?? null,
+    bets: base?.bets ?? null,
+    bet_size: base?.bet_size ?? null,
     uap: u,
-    arpu: arpuComparativoFromGgrUap(base.ggr, u),
+    arpu: arpuMensal,
   };
 }
 

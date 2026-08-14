@@ -26,11 +26,12 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
 import { BRAND } from "../../../lib/dashboardConstants";
 import { horasLabelFromMinutos } from "../../../lib/overviewPrestadorCalendarioHelpers";
-import type {
-  OverviewPrestadorAtencaoLinha,
-  OverviewPrestadorCoberturaLinha,
-  OverviewPrestadorEstudioFatia,
-  OverviewPrestadorMetricas,
+import {
+  pctPresencaAderencia,
+  type OverviewPrestadorAtencaoLinha,
+  type OverviewPrestadorCoberturaLinha,
+  type OverviewPrestadorEstudioFatia,
+  type OverviewPrestadorMetricas,
 } from "../../../lib/overviewPrestadorMetrics";
 import type { OverviewPrestadorTimeCaps } from "../../../lib/overviewPrestadorTeamConfig";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -231,8 +232,7 @@ function tabelaCobertura(
         <tbody>
           {rows.map((r, i) => {
             const isTotal = r.chave === "__total__";
-            const denom = r.jornadasEscaladasAderencia > 0 ? r.jornadasEscaladasAderencia : r.jornadasEscaladas;
-            const pct = denom > 0 ? (r.jornadasRealizadas / denom) * 100 : null;
+            const pct = pctPresencaAderencia(r.jornadasRealizadas, r.jornadasEscaladasAderencia);
             return (
               <tr
                 key={r.chave}
@@ -284,8 +284,7 @@ export function OverviewPrestadorAbaEscala({
   const labelDiasEsc = visaoTime ? "Jornadas escaladas" : "Dias Escalados";
   const labelDiasReal = visaoTime ? "Jornadas realizadas" : "Dias Realizados";
 
-  const denomAderencia =
-    metricas.diasEscaladoAderencia > 0 ? metricas.diasEscaladoAderencia : metricas.diasEscalado;
+  const denomAderencia = metricas.diasEscaladoAderencia;
 
   const dadosAproveitamentoDias = [
     { nome: "Escalados", valor: denomAderencia, fill: "var(--brand-action, #7c3aed)" },
@@ -295,7 +294,7 @@ export function OverviewPrestadorAbaEscala({
   const dadosAproveitamentoHoras = [
     {
       nome: "Escaladas",
-      valor: Math.round(metricas.horasEscaladasMin / 60),
+      valor: Math.round(metricas.horasEscaladasAderenciaMin / 60),
       fill: "var(--brand-action, #7c3aed)",
     },
     {
@@ -332,10 +331,7 @@ export function OverviewPrestadorAbaEscala({
   }));
   const totalDiasEstudio = distribuicaoEstudio.reduce((s, e) => s + e.dias, 0);
 
-  const presencaPct =
-    denomAderencia > 0
-      ? Math.round((metricas.diasRealizado / denomAderencia) * 1000) / 10
-      : null;
+  const presencaPct = pctPresencaAderencia(metricas.diasRealizado, denomAderencia);
   const pontualidadeOcorr = metricas.entradasAtrasadas + metricas.saidasAntecipadas;
   const controlePresencaOcorr = metricas.checkInNaoRegistrado + metricas.checkOutNaoRegistrado;
 

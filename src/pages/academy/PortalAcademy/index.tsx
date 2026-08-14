@@ -24,7 +24,8 @@ import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from 
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalAcademyCarrossel";
 import { PortalAcademyBlocoFiltros } from "./PortalAcademyBlocoFiltros";
 import { PostagemAcademyCard } from "./PortalAcademyCards";
-import { AcademyPortalManuaisTabela } from "./AcademyPortalManuaisTabela";
+import { AcademyPortalManuaisCards } from "./AcademyPortalManuaisCards";
+import { ModalCienciaManualAcademy } from "./ModalCienciaManualAcademy";
 import { ModalLerConteudo } from "./ModalLerConteudo";
 import {
   academyManualReceiptKey,
@@ -346,11 +347,8 @@ export default function PortalAcademyPage() {
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalManual, setModalManual] = useState<ManualRow | null>(null);
+  const [modalCiencia, setModalCiencia] = useState<{ id: string; titulo: string } | null>(null);
   const [setoresUsuarioAplicavel, setSetoresUsuarioAplicavel] = useState<string[]>([]);
-  const [sortManual, setSortManual] = useState<{ col: "codigo" | "titulo" | "versao" | "ciencia"; dir: "asc" | "desc" }>({
-    col: "codigo",
-    dir: "asc",
-  });
 
   const cardShadow = getPageContentBoxShadow(t.isDark);
   const pageBox = getPageContentBoxStyle(brand, t);
@@ -647,13 +645,6 @@ export default function PortalAcademyPage() {
     setModalManual(manual);
   }
 
-  function handleSortManual(col: "codigo" | "titulo" | "versao" | "ciencia") {
-    setSortManual((prev) => ({
-      col,
-      dir: prev.col === col && prev.dir === "asc" ? "desc" : "asc",
-    }));
-  }
-
   const linhaAbas = (
     <div
       role="tablist"
@@ -886,26 +877,27 @@ export default function PortalAcademyPage() {
           manuaisFiltrados.length === 0 ? (
             renderListaVazia()
           ) : (
-            <AcademyPortalManuaisTabela
+            <AcademyPortalManuaisCards
               rows={manuaisFiltrados.map((m) => ({
                 id: m.id,
                 codigo: m.codigo ?? null,
                 versao: m.versao ?? null,
                 titulo: m.titulo,
+                introducao: m.introducao ?? null,
                 categoriaLabel: m.categoria?.label ?? null,
                 categoriaAccent: m.categoria?.accent_hex ?? null,
                 jogosMesa: m.jogo_mesa ?? null,
                 published_at: m.published_at ?? null,
                 updated_at: m.updated_at,
-                requires_acknowledgment: m.requires_acknowledgment !== false,
+                requires_acknowledgment: m.requires_acknowledgment === true,
               }))}
               cienciaPendenteIds={cienciaPendenteManualIds}
               cienciaExigidaIds={cienciaExigidaManualIds}
               cienciaRegistradaEm={cienciaRegistradaEm}
-              mostrarColunaCiencia={usuarioVeColunaCiencia}
+              mostrarStatusCiencia={usuarioVeColunaCiencia}
+              podeVerCiencia={perm.canEditarOk}
               onAbrir={abrirManual}
-              sort={sortManual}
-              onSort={handleSortManual}
+              onVerCiencia={(row) => setModalCiencia({ id: row.id, titulo: row.titulo })}
             />
           )
         ) : null}
@@ -942,6 +934,15 @@ export default function PortalAcademyPage() {
           jaCiente={Boolean(receipts.get(academyManualReceiptKey(modalManual.id))?.acknowledged_at)}
           onClose={() => setModalManual(null)}
           onLidoECiente={() => void marcarLidoECienteManual(modalManual.id)}
+        />
+      ) : null}
+
+      {perm.canEditarOk ? (
+        <ModalCienciaManualAcademy
+          open={Boolean(modalCiencia)}
+          titulo={modalCiencia?.titulo ?? ""}
+          contentId={modalCiencia?.id ?? null}
+          onClose={() => setModalCiencia(null)}
         />
       ) : null}
     </div>

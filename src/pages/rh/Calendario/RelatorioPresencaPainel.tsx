@@ -4,7 +4,7 @@ import { FONT } from "../../../constants/theme";
 import { SectionTitle, SortTableTh } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
-import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { getDataTableStyle, getDataTableWrapStyle, dataTableRowHoverHandlers } from "../../../lib/dataTableStyles";
 import type { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import type { Theme } from "../../../constants/theme";
 import type { PresencaAcoesLinha, PresencaCorrecaoMeta, PresencaJustificativaMeta } from "../../../lib/rhCalendarioPresencaGestao";
@@ -88,7 +88,9 @@ export function RelatorioPresencaPainel({
 
   return (
     <div style={contentBox}>
-      <SectionTitle sub="Presença dos prestadores no dia selecionado">Controle de Presença</SectionTitle>
+      <SectionTitle sub="Presença dos prestadores no dia selecionado. Atestado de vários dias: confira também o mês no Controle de Presença.">
+        Controle de Presença
+      </SectionTitle>
       {semTime ? (
         <div
           style={{
@@ -237,8 +239,10 @@ export function RelatorioPresencaPainel({
                 </tr>
               </thead>
               <tbody>
-                {linhas.map((row, i) => (
-                  <tr key={row.funcionarioId} style={{ background: dataTable.zebraRow(i) }}>
+                {linhas.map((row, i) => {
+                  const zebraBg = dataTable.zebraRow(i);
+                  return (
+                  <tr key={row.funcionarioId} style={{ background: zebraBg }} {...dataTableRowHoverHandlers(zebraBg)}>
                     <td style={dataTable.tdCenter} title={row.nome}>
                       {row.nome}
                     </td>
@@ -323,7 +327,7 @@ export function RelatorioPresencaPainel({
                           <>
                             {row.acoesLinha.acaoPrimaria === "aprovar" ? (
                               <BtnIconeAcaoLinha
-                                label={tooltipAcao("APROVAÇÃO DE TURNO")}
+                                label={tooltipAcao("Aprovar turno")}
                                 onClick={() => onAprovarTurno(row)}
                               >
                                 <Check size={14} aria-hidden />
@@ -347,7 +351,8 @@ export function RelatorioPresencaPainel({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}

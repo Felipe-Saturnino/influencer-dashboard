@@ -6,6 +6,7 @@ import {
   getDatasDoMes,
   getIdxMesCarrosselPadrao,
   getPeriodoComparativoMoM,
+  getPeriodoComparativoMoMDmenos1,
   getPeriodoHistoricoCompetencias,
   HISTORICO_COMPETENCIAS_MESES,
   isDataNoPeriodoHistoricoCompetencias,
@@ -126,6 +127,28 @@ describe("getPeriodoComparativoMoM", () => {
     const { atual, anterior } = getPeriodoComparativoMoM(2026, 3);
     expect(atual).toEqual({ inicio: "2026-04-01", fim: "2026-04-15" });
     expect(anterior).toEqual({ inicio: "2026-03-01", fim: "2026-03-15" });
+  });
+});
+
+describe("getPeriodoComparativoMoMDmenos1", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("mês corrente: recorta até ontem e alinha o mês anterior ao mesmo dia", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 13));
+    const { atual, anterior } = getPeriodoComparativoMoMDmenos1(2026, 7);
+    expect(atual).toEqual({ inicio: "2026-08-01", fim: "2026-08-12" });
+    expect(anterior).toEqual({ inicio: "2026-07-01", fim: "2026-07-12" });
+  });
+
+  it("mês fechado: mês inteiro vs mês civil anterior inteiro", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 13));
+    const { atual, anterior } = getPeriodoComparativoMoMDmenos1(2026, 6);
+    expect(atual).toEqual({ inicio: "2026-07-01", fim: "2026-07-31" });
+    expect(anterior).toEqual({ inicio: "2026-06-01", fim: "2026-06-30" });
   });
 });
 

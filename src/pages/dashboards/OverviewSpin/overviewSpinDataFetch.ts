@@ -1,5 +1,5 @@
 import {
-  getPeriodoComparativoMoM,
+  getPeriodoComparativoMoMDmenos1,
   getPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
@@ -61,16 +61,48 @@ export const OVERVIEW_SPIN_DADOS_VAZIO: OverviewSpinDadosSnapshot = {
   monthlyRawUnmerged: [],
 };
 
+export type OverviewSpinDadosEssenciais = Pick<
+  OverviewSpinDadosSnapshot,
+  | "dailyData"
+  | "monthlyData"
+  | "monthlyUapArpuSel"
+  | "monthlyUapArpuPrev"
+  | "dailyDataPrevMonth"
+  | "dailyRawUnmerged"
+  | "monthlyRawUnmerged"
+>;
+
+export type OverviewSpinDadosSecundarios = Pick<
+  OverviewSpinDadosSnapshot,
+  "porTabelaRows" | "porTabelaHistAll" | "uapPorJogoRows"
+>;
+
+export const OVERVIEW_SPIN_ESSENCIAIS_VAZIO: OverviewSpinDadosEssenciais = {
+  dailyData: [],
+  monthlyData: [],
+  monthlyUapArpuSel: null,
+  monthlyUapArpuPrev: null,
+  dailyDataPrevMonth: [],
+  dailyRawUnmerged: [],
+  monthlyRawUnmerged: [],
+};
+
+export const OVERVIEW_SPIN_SECUNDARIOS_VAZIO: OverviewSpinDadosSecundarios = {
+  porTabelaRows: [],
+  porTabelaHistAll: [],
+  uapPorJogoRows: [],
+};
+
 export function getOverviewSpinHistoricoPeriodo(ref = new Date()): { inicio: string; fim: string } {
   return getPeriodoHistoricoCompetencias(ref);
 }
 
-async function fetchCanalHistorico(
+async function fetchCanalHistoricoEssencial(
   tabelas: ReturnType<typeof tabelasRelatorioDoCanal>,
   slugList: string[] | null,
   periodo: { inicio: string; fim: string },
 ) {
-  const [monthlyRaw, dailyRaw, porAllRaw, uapRaw] = await Promise.all([
+  const [monthlyRaw, dailyRaw] = await Promise.all([
     fetchAllPages(async (from, to) =>
       applyMesasOperadoraSlugFilter(
         supabase
@@ -95,6 +127,19 @@ async function fetchCanalHistorico(
         slugList,
       ),
     ),
+  ]);
+  return {
+    monthlyRaw: monthlyRaw as MonthlyRawRow[],
+    dailyRaw: dailyRaw as DailyRawRow[],
+  };
+}
+
+async function fetchCanalHistoricoSecundario(
+  tabelas: ReturnType<typeof tabelasRelatorioDoCanal>,
+  slugList: string[] | null,
+  periodo: { inicio: string; fim: string },
+) {
+  const [porAllRaw, uapRaw] = await Promise.all([
     fetchAllPages(async (from, to) =>
       applyMesasOperadoraSlugFilter(
         supabase
@@ -114,23 +159,21 @@ async function fetchCanalHistorico(
     ),
   ]);
   return {
-    monthlyRaw: monthlyRaw as MonthlyRawRow[],
-    dailyRaw: dailyRaw as DailyRawRow[],
     porAllRaw: porAllRaw as PorTabelaRaw[],
     uapRaw: uapRaw as UapRawRow[],
   };
 }
 
-async function fetchCanalMes(
+async function fetchCanalMesEssencial(
   tabelas: ReturnType<typeof tabelasRelatorioDoCanal>,
   slugList: string[] | null,
   mesSelecionado: { ano: number; mes: number },
 ) {
-  const { atual, anterior } = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+  const { atual, anterior } = getPeriodoComparativoMoMDmenos1(mesSelecionado.ano, mesSelecionado.mes);
   const { inicio, fim } = atual;
   const { inicio: pi, fim: pf } = anterior;
 
-  const [dailyRaw, dailyPrevRaw, mesasMesRaw, uapRaw, mSelResult, mPrevResult] = await Promise.all([
+  const [dailyRaw, dailyPrevRaw, mSelResult, mPrevResult] = await Promise.all([
     fetchAllPages(async (from, to) =>
       applyMesasOperadoraSlugFilter(
         supabase
@@ -155,22 +198,6 @@ async function fetchCanalMes(
         slugList,
       ),
     ),
-    fetchAllPages(async (from, to) =>
-      applyMesasOperadoraSlugFilter(
-        supabase
-          .from(tabelas.porTabela)
-          .select("dia, operadora, operadora_slug, mesa, ggr, turnover, apostas")
-          .gte("dia", inicio)
-          .lte("dia", fim)
-          .order("dia", { ascending: true })
-          .order("mesa", { ascending: true })
-          .range(from, to),
-        slugList,
-      ),
-    ),
-    fetchAllPages(async (from, to) =>
-      buildUapPorJogoQuery(false, mesSelecionado, from, to, slugList, tabelas.uapJogo),
-    ),
     applyMesasOperadoraSlugFilter(
       supabase.from(tabelas.monthly).select("uap, arpu, operadora_slug").eq("mes", inicio),
       slugList,
@@ -187,20 +214,55 @@ async function fetchCanalMes(
   return {
     dailyRaw: dailyRaw as DailyRawRow[],
     dailyPrevRaw: dailyPrevRaw as DailyRawRow[],
-    mesasMesRaw: mesasMesRaw as PorTabelaRaw[],
-    uapRaw: uapRaw as UapRawRow[],
     mSelRows: (mSelResult.data ?? []) as MonthlyUapArpuRaw[],
     mPrevRows: (mPrevResult.data ?? []) as MonthlyUapArpuRaw[],
   };
 }
 
-export async function fetchOverviewSpinDados(params: {
+async function fetchCanalMesSecundario(
+  tabelas: ReturnType<typeof tabelasRelatorioDoCanal>,
+  slugList: string[] | null,
+  mesSelecionado: { ano: number; mes: number },
+) {
+  const { atual } = getPeriodoComparativoMoMDmenos1(mesSelecionado.ano, mesSelecionado.mes);
+  const { inicio, fim } = atual;
+
+  const [mesasMesRaw, uapRaw] = await Promise.all([
+    fetchAllPages(async (from, to) =>
+      applyMesasOperadoraSlugFilter(
+        supabase
+          .from(tabelas.porTabela)
+          .select("dia, operadora, operadora_slug, mesa, ggr, turnover, apostas")
+          .gte("dia", inicio)
+          .lte("dia", fim)
+          .order("dia", { ascending: true })
+          .order("mesa", { ascending: true })
+          .range(from, to),
+        slugList,
+      ),
+    ),
+    fetchAllPages(async (from, to) =>
+      buildUapPorJogoQuery(false, mesSelecionado, from, to, slugList, tabelas.uapJogo),
+    ),
+  ]);
+
+  return {
+    mesasMesRaw: mesasMesRaw as PorTabelaRaw[],
+    uapRaw: uapRaw as UapRawRow[],
+  };
+}
+
+type FetchParams = {
   canal: OverviewSpinCanal;
   slugList: string[] | null;
   historico: boolean;
   mesSelecionado: { ano: number; mes: number } | undefined;
   agregadoTodas: boolean;
-}): Promise<OverviewSpinDadosSnapshot> {
+};
+
+export async function fetchOverviewSpinDadosEssenciais(
+  params: FetchParams,
+): Promise<OverviewSpinDadosEssenciais> {
   const { canal, slugList, historico, mesSelecionado, agregadoTodas } = params;
   const tabDed = tabelasRelatorioDoCanal("dedicado");
   const tabNet = tabelasRelatorioDoCanal("network");
@@ -209,28 +271,26 @@ export async function fetchOverviewSpinDados(params: {
     const periodo = getOverviewSpinHistoricoPeriodo();
     let monthlyRaw: MonthlyRawRow[];
     let dailyRaw: DailyRawRow[];
-    let porAllRaw: PorTabelaRaw[];
-    let uapRaw: UapRawRow[];
 
     if (canal === "consolidado") {
       const [d, n] = await Promise.all([
-        fetchCanalHistorico(tabDed, slugList, periodo),
-        fetchCanalHistorico(tabNet, slugList, periodo),
+        fetchCanalHistoricoEssencial(tabDed, slugList, periodo),
+        fetchCanalHistoricoEssencial(tabNet, slugList, periodo),
       ]);
       monthlyRaw = mergeMonthlyRawEntreCanais(d.monthlyRaw, n.monthlyRaw);
       dailyRaw = mergeDailyRawEntreCanais(d.dailyRaw, n.dailyRaw);
-      porAllRaw = [...d.porAllRaw, ...n.porAllRaw];
-      uapRaw = mergeUapRawEntreCanais(d.uapRaw, n.uapRaw);
     } else {
-      const one = await fetchCanalHistorico(tabelasRelatorioDoCanal(canal), slugList, periodo);
+      const one = await fetchCanalHistoricoEssencial(
+        tabelasRelatorioDoCanal(canal),
+        slugList,
+        periodo,
+      );
       monthlyRaw = one.monthlyRaw;
       dailyRaw = one.dailyRaw;
-      porAllRaw = one.porAllRaw;
-      uapRaw = one.uapRaw;
     }
 
     return {
-      ...OVERVIEW_SPIN_DADOS_VAZIO,
+      ...OVERVIEW_SPIN_ESSENCIAIS_VAZIO,
       monthlyRawUnmerged: monthlyRaw,
       dailyRawUnmerged: dailyRaw,
       monthlyData: agregadoTodas
@@ -239,29 +299,23 @@ export async function fetchOverviewSpinDados(params: {
       dailyData: agregadoTodas
         ? mergeDailyRowsAgregadoTodasOperadoras(dailyRaw)
         : mergeDailyRowsPorData(dailyRaw),
-      porTabelaHistAll: porAllRaw.map(mapPorTabelaV2),
-      uapPorJogoRows: mergeUapPorJogoRows(uapRaw),
     };
   }
 
-  if (!mesSelecionado) return OVERVIEW_SPIN_DADOS_VAZIO;
+  if (!mesSelecionado) return OVERVIEW_SPIN_ESSENCIAIS_VAZIO;
 
   let dailyRaw: DailyRawRow[];
   let dailyPrevRaw: DailyRawRow[];
-  let mesasMesRaw: PorTabelaRaw[];
-  let uapRaw: UapRawRow[];
   let mSelRows: MonthlyUapArpuRaw[];
   let mPrevRows: MonthlyUapArpuRaw[];
 
   if (canal === "consolidado") {
     const [d, n] = await Promise.all([
-      fetchCanalMes(tabDed, slugList, mesSelecionado),
-      fetchCanalMes(tabNet, slugList, mesSelecionado),
+      fetchCanalMesEssencial(tabDed, slugList, mesSelecionado),
+      fetchCanalMesEssencial(tabNet, slugList, mesSelecionado),
     ]);
     dailyRaw = mergeDailyRawEntreCanais(d.dailyRaw, n.dailyRaw);
     dailyPrevRaw = mergeDailyRawEntreCanais(d.dailyPrevRaw, n.dailyPrevRaw);
-    mesasMesRaw = [...d.mesasMesRaw, ...n.mesasMesRaw];
-    uapRaw = mergeUapRawEntreCanais(d.uapRaw, n.uapRaw);
     mSelRows = mergeMonthlyRawEntreCanais(
       d.mSelRows.map((r) => ({ ...r, mes: "" })),
       n.mSelRows.map((r) => ({ ...r, mes: "" })),
@@ -271,17 +325,19 @@ export async function fetchOverviewSpinDados(params: {
       n.mPrevRows.map((r) => ({ ...r, mes: "" })),
     ).map(({ uap, arpu, operadora_slug }) => ({ uap, arpu, operadora_slug }));
   } else {
-    const one = await fetchCanalMes(tabelasRelatorioDoCanal(canal), slugList, mesSelecionado);
+    const one = await fetchCanalMesEssencial(
+      tabelasRelatorioDoCanal(canal),
+      slugList,
+      mesSelecionado,
+    );
     dailyRaw = one.dailyRaw;
     dailyPrevRaw = one.dailyPrevRaw;
-    mesasMesRaw = one.mesasMesRaw;
-    uapRaw = one.uapRaw;
     mSelRows = one.mSelRows;
     mPrevRows = one.mPrevRows;
   }
 
   return {
-    ...OVERVIEW_SPIN_DADOS_VAZIO,
+    ...OVERVIEW_SPIN_ESSENCIAIS_VAZIO,
     dailyRawUnmerged: dailyRaw,
     dailyData: agregadoTodas
       ? mergeDailyRowsAgregadoTodasOperadoras(dailyRaw)
@@ -289,13 +345,76 @@ export async function fetchOverviewSpinDados(params: {
     dailyDataPrevMonth: agregadoTodas
       ? mergeDailyRowsAgregadoTodasOperadoras(dailyPrevRaw)
       : mergeDailyRowsPorData(dailyPrevRaw),
-    porTabelaRows: mesasMesRaw.map(mapPorTabelaV2),
-    uapPorJogoRows: mergeUapPorJogoRows(uapRaw),
     monthlyUapArpuSel: agregadoTodas
       ? mergeMonthlyUapArpuAgregadoTodas(mSelRows)
       : mergeMonthlyUapArpuSingleMonth(mSelRows),
     monthlyUapArpuPrev: agregadoTodas
       ? mergeMonthlyUapArpuAgregadoTodas(mPrevRows)
       : mergeMonthlyUapArpuSingleMonth(mPrevRows),
+  };
+}
+
+export async function fetchOverviewSpinDadosSecundarios(
+  params: FetchParams,
+): Promise<OverviewSpinDadosSecundarios> {
+  const { canal, slugList, historico, mesSelecionado } = params;
+  const tabDed = tabelasRelatorioDoCanal("dedicado");
+  const tabNet = tabelasRelatorioDoCanal("network");
+
+  if (historico) {
+    const periodo = getOverviewSpinHistoricoPeriodo();
+    let porAllRaw: PorTabelaRaw[];
+    let uapRaw: UapRawRow[];
+
+    if (canal === "consolidado") {
+      const [d, n] = await Promise.all([
+        fetchCanalHistoricoSecundario(tabDed, slugList, periodo),
+        fetchCanalHistoricoSecundario(tabNet, slugList, periodo),
+      ]);
+      porAllRaw = [...d.porAllRaw, ...n.porAllRaw];
+      uapRaw = mergeUapRawEntreCanais(d.uapRaw, n.uapRaw);
+    } else {
+      const one = await fetchCanalHistoricoSecundario(
+        tabelasRelatorioDoCanal(canal),
+        slugList,
+        periodo,
+      );
+      porAllRaw = one.porAllRaw;
+      uapRaw = one.uapRaw;
+    }
+
+    return {
+      porTabelaRows: [],
+      porTabelaHistAll: porAllRaw.map(mapPorTabelaV2),
+      uapPorJogoRows: mergeUapPorJogoRows(uapRaw),
+    };
+  }
+
+  if (!mesSelecionado) return OVERVIEW_SPIN_SECUNDARIOS_VAZIO;
+
+  let mesasMesRaw: PorTabelaRaw[];
+  let uapRaw: UapRawRow[];
+
+  if (canal === "consolidado") {
+    const [d, n] = await Promise.all([
+      fetchCanalMesSecundario(tabDed, slugList, mesSelecionado),
+      fetchCanalMesSecundario(tabNet, slugList, mesSelecionado),
+    ]);
+    mesasMesRaw = [...d.mesasMesRaw, ...n.mesasMesRaw];
+    uapRaw = mergeUapRawEntreCanais(d.uapRaw, n.uapRaw);
+  } else {
+    const one = await fetchCanalMesSecundario(
+      tabelasRelatorioDoCanal(canal),
+      slugList,
+      mesSelecionado,
+    );
+    mesasMesRaw = one.mesasMesRaw;
+    uapRaw = one.uapRaw;
+  }
+
+  return {
+    porTabelaRows: mesasMesRaw.map(mapPorTabelaV2),
+    porTabelaHistAll: [],
+    uapPorJogoRows: mergeUapPorJogoRows(uapRaw),
   };
 }

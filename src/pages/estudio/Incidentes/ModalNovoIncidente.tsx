@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, Paperclip, Shuffle, UserRound } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -111,7 +111,11 @@ function ComboBuscavel({
   const brand = useDashboardBrand();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const listboxId = useId();
 
   useEffect(() => {
     function onClickFora(e: MouseEvent) {
@@ -120,10 +124,6 @@ function ComboBuscavel({
     document.addEventListener("mousedown", onClickFora);
     return () => document.removeEventListener("mousedown", onClickFora);
   }, []);
-
-  useEffect(() => {
-    if (!open) setQuery("");
-  }, [open]);
 
   const selecionado = options.find((o) => o.id === value);
   const showSearch = forceSearch || options.length > 5;
@@ -134,16 +134,56 @@ function ComboBuscavel({
     );
   }, [options, query]);
 
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+    const selectedIndex = filtered.findIndex((o) => o.id === value);
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [open, query, filtered, value]);
+
+  useEffect(() => {
+    if (!open || filtered.length === 0) return;
+    optionRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, filtered.length, open]);
+
+  function selecionarOpcao(option: ComboOption) {
+    onChange(option.id);
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }
+
+  function navegarOpcoes(delta: 1 | -1) {
+    if (filtered.length === 0) return;
+    setActiveIndex((current) => {
+      const next = current + delta;
+      if (next < 0) return filtered.length - 1;
+      if (next >= filtered.length) return 0;
+      return next;
+    });
+  }
+
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button
+        ref={triggerRef}
         type="button"
         id={id}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listboxId : undefined}
         aria-label={label}
         onClick={() => !disabled && setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (disabled) return;
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            if (!open) setOpen(true);
+            else navegarOpcoes(e.key === "ArrowDown" ? 1 : -1);
+          }
+        }}
         style={{
           width: "100%",
           textAlign: "left",
@@ -170,6 +210,7 @@ function ComboBuscavel({
 
       {open ? (
         <div
+          id={listboxId}
           role="listbox"
           aria-label={label}
           style={{
@@ -193,6 +234,26 @@ function ComboBuscavel({
                 value={query}
                 onChange={setQuery}
                 placeholder={searchPlaceholder ?? placeholderPesquisaFiltro(label)}
+                aria-activedescendant={
+                  filtered[activeIndex] ? `${listboxId}-option-${activeIndex}` : undefined
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    navegarOpcoes(e.key === "ArrowDown" ? 1 : -1);
+                    return;
+                  }
+                  if (e.key === "Enter" && filtered[activeIndex]) {
+                    e.preventDefault();
+                    selecionarOpcao(filtered[activeIndex]);
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setOpen(false);
+                    requestAnimationFrame(() => triggerRef.current?.focus());
+                  }
+                }}
               />
             </div>
           ) : null}
@@ -209,22 +270,19 @@ function ComboBuscavel({
               Nenhum resultado.
             </div>
           ) : (
-            filtered.map((o) => (
+            filtered.map((o, index) => (
               <div
                 key={o.id}
+                id={`${listboxId}-option-${index}`}
+                ref={(node) => {
+                  optionRefs.current[index] = node;
+                }}
                 role="option"
                 aria-selected={o.id === value}
-                tabIndex={0}
+                tabIndex={-1}
+                onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => {
-                  onChange(o.id);
-                  setOpen(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onChange(o.id);
-                    setOpen(false);
-                  }
+                  selecionarOpcao(o);
                 }}
                 style={{
                   padding: "8px 10px",
@@ -235,9 +293,13 @@ function ComboBuscavel({
                   color: o.id === value ? brand.primary : t.text,
                   fontWeight: o.id === value ? 700 : 400,
                   background:
-                    o.id === value
+                    index === activeIndex || o.id === value
                       ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
                       : "transparent",
+                  outline:
+                    index === activeIndex
+                      ? "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 45%, transparent)"
+                      : "none",
                 }}
               >
                 {o.label}
@@ -352,6 +414,15 @@ export function ModalNovoIncidente({
   const [scriptAtivoId, setScriptAtivoId] = useState<string | null>(null);
   const [scriptPendente, setScriptPendente] = useState<IncidenteScript | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      document.getElementById(`tab-novo-incidente-${timeAlvo}`)?.focus();
+    }, 100);
+    return () => window.clearTimeout(id);
+    // Foco inicial do modal; mudanças posteriores de Time não devem roubar o foco.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scriptsDisponiveis = useMemo(
     () => scriptsParaIncidente(timeAlvo, tipo),
@@ -702,6 +773,7 @@ export function ModalNovoIncidente({
         <button
           type="button"
           aria-pressed={payoutNecessario}
+          tabIndex={payoutNecessario ? 0 : -1}
           onClick={() => setPayoutNecessario(true)}
           style={getFiltroBarTabButtonStyle(t, brand, payoutNecessario)}
         >
@@ -710,6 +782,7 @@ export function ModalNovoIncidente({
         <button
           type="button"
           aria-pressed={!payoutNecessario}
+          tabIndex={!payoutNecessario ? 0 : -1}
           onClick={() => setPayoutNecessario(false)}
           style={getFiltroBarTabButtonStyle(t, brand, !payoutNecessario)}
         >
@@ -725,6 +798,7 @@ export function ModalNovoIncidente({
         <button
           type="button"
           aria-pressed={localMesa === "em_mesa"}
+          tabIndex={localMesa === "em_mesa" ? 0 : -1}
           onClick={() => setLocalMesa("em_mesa")}
           style={getFiltroBarTabButtonStyle(t, brand, localMesa === "em_mesa")}
         >
@@ -733,6 +807,7 @@ export function ModalNovoIncidente({
         <button
           type="button"
           aria-pressed={localMesa === "fora_mesa"}
+          tabIndex={localMesa === "fora_mesa" ? 0 : -1}
           onClick={() => setLocalMesa("fora_mesa")}
           style={getFiltroBarTabButtonStyle(t, brand, localMesa === "fora_mesa")}
         >
@@ -861,6 +936,7 @@ export function ModalNovoIncidente({
               type="text"
               value={editando.protocolo}
               readOnly
+              tabIndex={-1}
               aria-readonly="true"
               style={{
                 ...inputBaseStyle(t),
@@ -1050,7 +1126,8 @@ export function ModalNovoIncidente({
           buttonLabel="Adicionar anexo"
           icon={Paperclip}
           multiple
-          items={anexos.map((a) => ({ key: a.key, label: a.file.name, pendente: true }))}
+          listVariant="cards"
+          items={anexos.map((a) => ({ key: a.key, label: a.file.name, pendente: true, file: a.file }))}
           onAdd={onAddAnexos}
           onRemove={onRemoveAnexo}
           disabled={salvando}

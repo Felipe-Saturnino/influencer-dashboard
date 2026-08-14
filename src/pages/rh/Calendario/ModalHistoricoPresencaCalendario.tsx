@@ -115,25 +115,6 @@ export function ModalHistoricoPresencaCalendario({
           </table>
         </div>
       )}
-      <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            padding: "9px 18px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontWeight: 700,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            cursor: "pointer",
-          }}
-        >
-          Fechar
-        </button>
-      </div>
     </ModalBase>
   );
 }

@@ -15,17 +15,11 @@ export const TIPO_COMPROMISSO_CAL_ARIA_LABEL = "Compromissos";
 
 export type TipoCompromissoCalFiltroValue =
   | typeof TIPO_COMPROMISSO_CAL_TODOS_VALUE
-  | "eventos"
   | "reunioes"
-  | "treinamentos"
-  | "feedback"
   | "turnos";
 
 const OPCOES_TIPO: { value: Exclude<TipoCompromissoCalFiltroValue, "todos">; label: string }[] = [
-  { value: "eventos", label: "Eventos" },
   { value: "reunioes", label: "Reuniões" },
-  { value: "treinamentos", label: "Treinamentos" },
-  { value: "feedback", label: "Feedback" },
   { value: "turnos", label: "Turnos" },
 ];
 

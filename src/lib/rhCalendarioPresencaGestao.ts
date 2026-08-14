@@ -922,17 +922,21 @@ const MESES_PT_TITULO = [
   "Dezembro",
 ] as const;
 
-/** Mês civil estritamente anterior ao mês atual (fuso local). */
+/** Mês civil estritamente anterior ao mês atual (America/Sao_Paulo). */
 export function mesCalendarioPresencaFechado(refMes: Date, hoje = new Date()): boolean {
   const ref = new Date(refMes.getFullYear(), refMes.getMonth(), 1);
-  const atual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const iso = hoje.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const [y, m] = iso.split("-").map(Number);
+  const atual = new Date(y, m - 1, 1);
   return ref.getTime() < atual.getTime();
 }
 
-/** Mês civil estritamente posterior ao mês atual (fuso local). */
+/** Mês civil estritamente posterior ao mês atual (America/Sao_Paulo). */
 export function mesCalendarioPresencaFuturo(refMes: Date, hoje = new Date()): boolean {
   const ref = new Date(refMes.getFullYear(), refMes.getMonth(), 1);
-  const atual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const iso = hoje.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const [y, m] = iso.split("-").map(Number);
+  const atual = new Date(y, m - 1, 1);
   return ref.getTime() > atual.getTime();
 }
 

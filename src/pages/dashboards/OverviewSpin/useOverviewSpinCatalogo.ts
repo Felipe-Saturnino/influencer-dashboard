@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import {
   buildCatalogoCanaisMesas,
   type EstudioCatalogoRow,
@@ -22,18 +23,21 @@ export function useOverviewSpinCatalogo(opts: {
   const catalogoQuery = useQuery({
     queryKey: ["overview-spin", "catalogo-canais"],
     queryFn: async () => {
-      const [estRes, mesasRes] = await Promise.all([
-        supabase
-          .from("estudios_spin")
-          .select("slug, tipo, ativo, estudios_spin_operadoras(operadora_slug)")
-          .eq("ativo", true),
-        supabase.from("mesas_spin_cadastro").select("estudio_slug, operadora_slug"),
+      const [estRows, mesasRows] = await Promise.all([
+        fetchAllPages(async (from, to) =>
+          supabase
+            .from("estudios_spin")
+            .select("slug, tipo, ativo, estudios_spin_operadoras(operadora_slug)")
+            .eq("ativo", true)
+            .range(from, to),
+        ),
+        fetchAllPages(async (from, to) =>
+          supabase.from("mesas_spin_cadastro").select("estudio_slug, operadora_slug").range(from, to),
+        ),
       ]);
-      if (estRes.error) throw estRes.error;
-      if (mesasRes.error) throw mesasRes.error;
       return buildCatalogoCanaisMesas(
-        (estRes.data ?? []) as EstudioCatalogoRow[],
-        (mesasRes.data ?? []) as MesaCatalogoRow[],
+        estRows as EstudioCatalogoRow[],
+        mesasRows as MesaCatalogoRow[],
       );
     },
     staleTime: 10 * 60 * 1000,

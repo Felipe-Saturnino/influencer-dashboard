@@ -30,6 +30,9 @@ export type StatusLabel = (typeof STATUS_ORDEM)[number];
 /** Empty state quando não há dados para o período e filtros atuais (tabelas, gráficos, KPIs). */
 export const MSG_SEM_DADOS_FILTRO = "Sem dados para o filtro selecionado";
 
+/** Empty state canónico (Global) — período sem linhas. Preferir em dashboards novos. */
+export const MSG_SEM_DADOS_PERIODO = "Sem dados para o período selecionado.";
+
 /**
  * Cores do funil (4 etapas). Duas primeiras: brand; duas últimas: semânticas (@semantic).
  * Usado por `FunilVisual` e alinhado ao whitelabel Opção C.

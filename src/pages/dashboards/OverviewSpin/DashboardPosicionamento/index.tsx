@@ -14,7 +14,11 @@ import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { FONT } from "../../../../constants/theme";
-import { getDataTableStyle, getDataTableWrapStyle } from "../../../../lib/dataTableStyles";
+import {
+  dataTableRowHoverHandlers,
+  getDataTableStyle,
+  getDataTableWrapStyle,
+} from "../../../../lib/dataTableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
 import { SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
@@ -47,6 +51,7 @@ interface Props {
 }
 
 const VS_ONTEM = "vs ontem (mesmo horário)";
+const VS_ULTIMO_HORARIO = "vs último horário";
 
 const HISTORICO_MODOS: { id: HeatmapHistoricoModo; label: string }[] = [
   { id: "dia", label: "Dia" },
@@ -261,6 +266,8 @@ function PosicaoAtualMesasBlock({
   titulo,
   loading,
   semDados,
+  erro,
+  onRetry,
   mesasOrdenadas,
   prevMap,
   prevDiferenteMap,
@@ -271,6 +278,8 @@ function PosicaoAtualMesasBlock({
   titulo: string;
   loading: boolean;
   semDados: boolean;
+  erro?: string | null;
+  onRetry?: () => void;
   mesasOrdenadas: LobbyPosicaoRow[];
   prevMap: Map<string, number | null>;
   /** Vista consolidada: última posição ≠ atual nos últimos 7 dias. */
@@ -299,7 +308,50 @@ function PosicaoAtualMesasBlock({
           }}
         >
           <Loader2 size={16} className="app-lucide-spin" color="var(--brand-action, #7c3aed)" aria-hidden />
-          <span>Carregando posicionamento…</span>
+          <span>Carregando…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div style={cardStyle}>
+        <SectionTitle>{titulo}</SectionTitle>
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            marginTop: 12,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erro}</span>
+          {onRetry ? (
+            <button
+              type="button"
+              onClick={() => onRetry()}
+              style={{
+                fontFamily: FONT.body,
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       </div>
     );
@@ -345,7 +397,7 @@ function PosicaoAtualMesasBlock({
                 const mesa = m.nome_mesa?.trim() || "—";
                 const prevDif = prevDiferenteMap?.get(m.mesa_identificacao) ?? null;
                 return (
-                  <tr key={m.mesa_identificacao} style={{ background: dataTable.zebraRow(i) }}>
+                  <tr key={m.mesa_identificacao} style={{ background: dataTable.zebraRow(i) }} {...dataTableRowHoverHandlers(dataTable.zebraRow(i))}>
                     <td style={dataTable.tdCenter}>
                       <div style={{ display: "flex", justifyContent: "center" }}>
                         <PosicaoBadge posicao={m.posicao} />
@@ -550,44 +602,52 @@ function DashboardPosicionamentoTodas({
           titulo={`Mesas ${slugToNome("blaze")}`}
           loading={blaze.loading}
           semDados={blaze.semDados}
+          erro={blaze.erro}
+          onRetry={() => void blaze.recarregar()}
           mesasOrdenadas={blaze.mesasOrdenadas}
           prevMap={blaze.prevMap}
           prevDiferenteMap={blaze.prevDiferenteMap}
           layout="consolidado"
-          ultimaExecutadoEm={blaze.ultimaNoDia?.executado_em}
+          ultimaExecutadoEm={blaze.snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
         <PosicaoAtualMesasBlock
           titulo={`Mesas ${slugToNome("casa_apostas")}`}
           loading={cda.loading}
           semDados={cda.semDados}
+          erro={cda.erro}
+          onRetry={() => void cda.recarregar()}
           mesasOrdenadas={cda.mesasOrdenadas}
           prevMap={cda.prevMap}
           prevDiferenteMap={cda.prevDiferenteMap}
           layout="consolidado"
-          ultimaExecutadoEm={cda.ultimaNoDia?.executado_em}
+          ultimaExecutadoEm={cda.snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
         <PosicaoAtualMesasBlock
           titulo={`Mesas ${slugToNome("esportiva_bet")}`}
           loading={esportiva.loading}
           semDados={esportiva.semDados}
+          erro={esportiva.erro}
+          onRetry={() => void esportiva.recarregar()}
           mesasOrdenadas={esportiva.mesasOrdenadas}
           prevMap={esportiva.prevMap}
           prevDiferenteMap={esportiva.prevDiferenteMap}
           layout="consolidado"
-          ultimaExecutadoEm={esportiva.ultimaNoDia?.executado_em}
+          ultimaExecutadoEm={esportiva.snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
         <PosicaoAtualMesasBlock
           titulo={`Mesas ${slugToNome("jonbet")}`}
           loading={jonbet.loading}
           semDados={jonbet.semDados}
+          erro={jonbet.erro}
+          onRetry={() => void jonbet.recarregar()}
           mesasOrdenadas={jonbet.mesasOrdenadas}
           prevMap={jonbet.prevMap}
           prevDiferenteMap={jonbet.prevDiferenteMap}
           layout="consolidado"
-          ultimaExecutadoEm={jonbet.ultimaNoDia?.executado_em}
+          ultimaExecutadoEm={jonbet.snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
       </div>
@@ -625,10 +685,13 @@ function DashboardPosicionamentoOperadora({
   const {
     loading,
     loadingHistorico,
+    erro,
+    recarregar,
     semDados,
     execucoesAll,
     posByExec,
-    ultimaNoDia,
+    snapshotExec,
+    usaSnapshotFallback,
     mesasOrdenadas,
     prevMap,
     visAtual,
@@ -732,6 +795,46 @@ function DashboardPosicionamentoOperadora({
     );
   }
 
+  if (erro) {
+    return (
+      <div
+        role="alert"
+        aria-live="polite"
+        style={{
+          padding: "40px 0",
+          textAlign: "center",
+          color: "#e84025",
+          fontSize: 13,
+          fontFamily: FONT.body,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <span>{erro}</span>
+        <button
+          type="button"
+          onClick={() => void recarregar()}
+          style={{
+            fontFamily: FONT.body,
+            fontSize: 13,
+            fontWeight: 700,
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "transparent",
+            color: "#e84025",
+            cursor: "pointer",
+          }}
+        >
+          Tentar de novo
+        </button>
+      </div>
+    );
+  }
+
   if (semDados) {
     return (
       <div
@@ -748,6 +851,8 @@ function DashboardPosicionamentoOperadora({
     );
   }
 
+  const vsLabel = usaSnapshotFallback ? VS_ULTIMO_HORARIO : VS_ONTEM;
+
   const deltaVisPp = visAtual != null && visOntem != null ? visAtual - visOntem : null;
   const deltaTop10 = top10Atual.noTop10 - top10Ontem.noTop10;
 
@@ -762,7 +867,7 @@ function DashboardPosicionamentoOperadora({
               ? `${deltaVisPp >= 0 ? "+" : ""}${deltaVisPp.toFixed(0)}pp`
               : null
           }
-          deltaLabel={VS_ONTEM}
+          deltaLabel={vsLabel}
           positivo={deltaVisPp == null ? null : deltaVisPp >= 0}
           icon={<Eye size={16} aria-hidden="true" />}
         />
@@ -770,7 +875,7 @@ function DashboardPosicionamentoOperadora({
           label="Mesas no top 10"
           value={`${top10Atual.noTop10} / ${top10Atual.total || "—"}`}
           delta={deltaTop10 !== 0 ? `${deltaTop10 >= 0 ? "+" : ""}${deltaTop10}` : null}
-          deltaLabel={VS_ONTEM}
+          deltaLabel={vsLabel}
           positivo={deltaTop10 >= 0}
           icon={<Trophy size={16} aria-hidden="true" />}
         />
@@ -796,12 +901,12 @@ function DashboardPosicionamentoOperadora({
           semDados={false}
           mesasOrdenadas={mesasOrdenadas}
           prevMap={prevMap}
-          ultimaExecutadoEm={ultimaNoDia?.executado_em}
+          ultimaExecutadoEm={snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle sub={fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}>
+          <SectionTitle sub={fmtUltimaAtualizacao(snapshotExec?.executado_em)}>
             Concorrentes à frente
           </SectionTitle>
           {concorrentesJogo.length === 0 ? (
@@ -915,7 +1020,7 @@ function DashboardPosicionamentoOperadora({
               {heatMesasOrdenadas.map((mid, rowIdx) => {
                 const nome = nomeMesaHist(mid);
                 return (
-                  <tr key={mid} style={{ background: dataTable.zebraRow(rowIdx) }}>
+                  <tr key={mid} style={{ background: dataTable.zebraRow(rowIdx) }} {...dataTableRowHoverHandlers(dataTable.zebraRow(rowIdx))}>
                     <td style={tdHistMesa(rowIdx)} title={nome}>
                       {nome}
                     </td>
@@ -951,7 +1056,7 @@ function DashboardPosicionamentoOperadora({
 
       <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle sub={fmtUltimaAtualizacao(ultimaNoDia?.executado_em)}>
+          <SectionTitle sub={fmtUltimaAtualizacao(snapshotExec?.executado_em)}>
             Ranking de concorrentes
           </SectionTitle>
           {rankingJogos.length === 0 ? (
@@ -1049,7 +1154,7 @@ function DashboardPosicionamentoOperadora({
               </thead>
               <tbody>
                 {catsOrdenadas.map((c, i) => (
-                  <tr key={c.categoria} style={{ background: dataTable.zebraRow(i) }}>
+                  <tr key={c.categoria} style={{ background: dataTable.zebraRow(i) }} {...dataTableRowHoverHandlers(dataTable.zebraRow(i))}>
                     <td style={dataTable.tdCenter}>{c.categoria}</td>
                     <td style={dataTable.tdCenter}>{c.pctTop3.toFixed(0)}%</td>
                     <td style={dataTable.tdCenter}>{c.pctTop10.toFixed(0)}%</td>

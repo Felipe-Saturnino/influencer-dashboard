@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { ChevronLeft, ChevronRight, Download, History, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -62,6 +70,7 @@ import {
   STICKY_W_TURNO_STAFF,
   Z_CONSOLIDADO_STICKY_HEAD,
   Z_CONSOLIDADO_STICKY_ROW,
+  areaKeyDoPrestadorEscala,
   bucketEstudioConsolidado,
   buildAbasEscalaFromTimes,
   buildCelulasSnapshotGrade,
@@ -89,6 +98,7 @@ import {
   labelAreaEscala,
   labelExibicaoCelulaEscala,
   labelMesAno,
+  limparRascunhosEscalaLocaisAntigos,
   linhaColaboradorNoFiltroTurnoConsolidado,
   linhaComTurnoMesArea,
   linhaPassaFiltrosColunaDiaEscala,
@@ -112,7 +122,6 @@ import {
   type EscalaDiariaSortCol,
   type EscalaGerarEstadoFiltro,
   type EscalaGradeModo,
-  type EscalaMarketplaceCelulaComentario,
   type FiltroTurnoConsolidadoRh,
   type GradeStatusMetaDb,
   type RpcAlteracaoUltimaRow,
@@ -165,9 +174,11 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   /** `todos` | `nenhum` | slug do estúdio. */
   const [filtroEstudioEscala, setFiltroEstudioEscala] = useState<string>(FILTRO_STAFF_ESTUDIO_TODOS);
   const [erroSalvarGrade, setErroSalvarGrade] = useState<string | null>(null);
+  const [avisoRascunhoLocal, setAvisoRascunhoLocal] = useState<string | null>(null);
   const [erroDownloadEscala, setErroDownloadEscala] = useState<string | null>(null);
   const [salvandoGrade, setSalvandoGrade] = useState(false);
   const [novaEscalaModalArea, setNovaEscalaModalArea] = useState<AreaEscalaKey | null>(null);
+  const [aprovarEscalaModalArea, setAprovarEscalaModalArea] = useState<AreaEscalaKey | null>(null);
   const [alterarEscalaModalAberto, setAlterarEscalaModalAberto] = useState(false);
   const [historicoModalAberto, setHistoricoModalAberto] = useState(false);
   const [resetandoGrade, setResetandoGrade] = useState(false);
@@ -196,6 +207,11 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const [gerarPorFiltro, setGerarPorFiltro] = useState<Record<string, EscalaGerarEstadoFiltro>>({});
   /** Turno/horário congelados na aprovação (`rh_gestao_escala_turno_mes`). */
   const [turnoMesMap, setTurnoMesMap] = useState<EscalaTurnoMesMap>({});
+  const [loadingGrade, setLoadingGrade] = useState(false);
+  const [erroGrade, setErroGrade] = useState<string | null>(null);
+  /** Força novo fetch da área ativa (retry). */
+  const [gradeReloadToken, setGradeReloadToken] = useState(0);
+  const [hoverLinhaEscalaId, setHoverLinhaEscalaId] = useState<string | null>(null);
 
   useEffect(() => {
     setFiltroNicknameEscala("");
@@ -204,6 +220,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     setConsolidadoTurnoExpandido({});
     setSortEscalaDiaria({ col: modo === "escritorio" ? "nome" : "turno", dir: "asc" });
     setPaginaEscalaDiaria(0);
+    if (filtroArea !== "game_presenter") {
+      setFiltroEstudioEscala(FILTRO_STAFF_ESTUDIO_TODOS);
+    }
   }, [filtroArea, modo]);
 
   useEffect(() => {
@@ -217,18 +236,22 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     setLoadingPrestadores(true);
     setErroPrestadores(null);
     const pAreaAtuacao = modo === "escritorio" ? "escritorio" : "estudio";
-    const [timesRes, prestRes] = await Promise.all([
+    const [timesRes, prestRes, meuIdRes] = await Promise.all([
       supabase.rpc("rh_escala_times_por_area_atuacao", { p_area_atuacao: pAreaAtuacao }),
       supabase.rpc("rh_escala_prestadores_por_area_atuacao", { p_area_atuacao: pAreaAtuacao }),
+      perm.canView === "proprios"
+        ? supabase.rpc("rh_calendario_meu_funcionario_id")
+        : Promise.resolve({ data: null as string | null, error: null }),
     ]);
     if (prestRes.error) {
       setErroPrestadores(
-        "Não foi possível carregar o staff para a gestão de escala. Verifique permissões e se as migrations foram aplicadas.",
+        "Não foi possível carregar o staff. Se o problema persistir, entre em contato com o suporte.",
       );
       setPrestadoresRaw([]);
       setAbasTimes([]);
     } else {
-      setPrestadoresRaw((prestRes.data ?? []) as RpcPrestadorEscala[]);
+      const prestadores = (prestRes.data ?? []) as RpcPrestadorEscala[];
+      setPrestadoresRaw(prestadores);
       const times = timesRes.error
         ? []
         : ((timesRes.data ?? []) as { id: string; nome: string; tipo?: string }[]).map((row) => ({
@@ -236,19 +259,38 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             nome: String(row.nome ?? ""),
             tipo: row.tipo === "gerencia" ? ("gerencia" as const) : ("time" as const),
           }));
-      const abas = buildAbasEscalaFromTimes(modo, times);
-      setAbasTimes(abas);
-      setFiltroArea((prev) => {
-        if (abas.some((a) => a.areaKey === prev)) return prev;
-        if (modo === "estudio" && abas.some((a) => a.areaKey === DEFAULT_AREA_ESCALA)) {
-          return DEFAULT_AREA_ESCALA;
+      let abas = buildAbasEscalaFromTimes(modo, times);
+      if (perm.canView === "proprios") {
+        const meuIdRaw = meuIdRes.data;
+        const meuId =
+          typeof meuIdRaw === "string"
+            ? meuIdRaw
+            : meuIdRaw != null
+              ? String(meuIdRaw)
+              : "";
+        const eu = meuId ? prestadores.find((p) => p.id === meuId) : undefined;
+        const myArea = eu ? areaKeyDoPrestadorEscala(modo, eu) : null;
+        abas = myArea ? abas.filter((a) => a.areaKey === myArea) : [];
+        setAbasTimes(abas);
+        if (myArea) {
+          setFiltroArea(myArea);
+        } else if (abas[0]) {
+          setFiltroArea(abas[0].areaKey);
         }
-        if (abas[0]) return abas[0].areaKey;
-        return modo === "estudio" ? DEFAULT_AREA_ESCALA : prev;
-      });
+      } else {
+        setAbasTimes(abas);
+        setFiltroArea((prev) => {
+          if (abas.some((a) => a.areaKey === prev)) return prev;
+          if (modo === "estudio" && abas.some((a) => a.areaKey === DEFAULT_AREA_ESCALA)) {
+            return DEFAULT_AREA_ESCALA;
+          }
+          if (abas[0]) return abas[0].areaKey;
+          return modo === "estudio" ? DEFAULT_AREA_ESCALA : prev;
+        });
+      }
     }
     setLoadingPrestadores(false);
-  }, [modo]);
+  }, [modo, perm.canView]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -372,11 +414,31 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   }, [hoje]);
 
   const mesHydratingRef = useRef(false);
+  /** Áreas já hidratadas da BD no mês corrente (`refMes|areaKey`). */
+  const areasHydratedRef = useRef<Set<string>>(new Set());
+  /** Snapshot da grade ao hidratar (conflito save/aprovar quando sync local é null). */
+  const gradeSnapshotAoCarregarRef = useRef<Record<string, Record<string, string> | null>>({});
 
-  /** Novo mês: carrega rascunhos gravados no navegador para aquele mês. */
+  const chaveHydrateArea = useCallback(
+    (areaKey: string) => `${refMesISO(ano, mes)}|${areaKey}`,
+    [ano, mes],
+  );
+
+  const recarregarGradeAtiva = useCallback(() => {
+    areasHydratedRef.current.delete(chaveHydrateArea(filtroArea));
+    setErroGrade(null);
+    setGradeReloadToken((n) => n + 1);
+  }, [chaveHydrateArea, filtroArea]);
+
+  /** Novo mês: limpa rascunhos antigos e carrega o do mês aberto. */
   useEffect(() => {
     setErroSalvarGrade(null);
+    setAvisoRascunhoLocal(null);
+    setErroGrade(null);
     mesHydratingRef.current = true;
+    areasHydratedRef.current = new Set();
+    gradeSnapshotAoCarregarRef.current = {};
+    limparRascunhosEscalaLocaisAntigos(modo, ano, mes);
     setGerarPorFiltro(carregarEscalaMesGravada(ano, mes, modo));
   }, [ano, mes, modo]);
 
@@ -385,111 +447,130 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       mesHydratingRef.current = false;
       return;
     }
-    gravarEscalaMes(ano, mes, gerarPorFiltro, modo);
+    const timer = window.setTimeout(() => {
+      const ok = gravarEscalaMes(ano, mes, gerarPorFiltro, modo);
+      if (!ok) {
+        setAvisoRascunhoLocal(
+          "Não foi possível salvar o rascunho local. Salve na plataforma.",
+        );
+      }
+    }, 400);
+    return () => window.clearTimeout(timer);
   }, [gerarPorFiltro, ano, mes, modo]);
 
-  /** Mescla na grade de cada área os valores persistidos na base e o status (`rh_gestao_escala_grade_status`). */
+  /**
+   * Lazy load: só a área ativa (`filtroArea`) + meta + turno_mes.
+   * Ao trocar de aba, carrega se ainda não hidratada no mês; no mês novo a hidratação é limpa.
+   */
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || loadingPrestadores) return;
-    const areas = abasTimes.map((a) => a.areaKey);
-    if (areas.length === 0) return;
+    if (abasTimes.length === 0) return;
+    const areaKey = filtroArea;
+    if (!abasTimes.some((a) => a.areaKey === areaKey)) return;
+    const hydrateKey = chaveHydrateArea(areaKey);
+    if (areasHydratedRef.current.has(hydrateKey)) {
+      setErroGrade(null);
+      setLoadingGrade(false);
+      return;
+    }
+
     let cancelled = false;
     const ref = refMesISO(ano, mes);
+    setLoadingGrade(true);
+    setErroGrade(null);
+
     void (async () => {
-      const [{ data: metaData, error: metaError }, { data: turnoMesData }, ...results] = await Promise.all([
+      const [metaRes, turnoMesRes, gradeRes, alterRes, marketplaceRes] = await Promise.all([
         supabase.rpc("rh_gestao_escala_grade_meta_listar", { p_ref_mes: ref }),
         supabase.rpc("rh_gestao_escala_turno_mes_listar", { p_ref_mes: ref }),
-        ...areas.map(async (areaKey) => {
-          const [gradeRes, alterRes, marketplaceRes] = await Promise.all([
-            supabase.rpc("rh_gestao_escala_grade_carregar", {
-              p_ref_mes: ref,
-              p_area_key: areaKey,
-            }),
-            supabase.rpc("rh_gestao_escala_grade_alteracoes_ultimas", {
-              p_ref_mes: ref,
-              p_area_key: areaKey,
-            }),
-            modo === "estudio"
-              ? supabase.rpc("rh_gestao_escala_marketplace_comentarios", {
-                  p_ref_mes: ref,
-                  p_area_key: areaKey,
-                })
-              : Promise.resolve({ data: [], error: null }),
-          ]);
-          return { areaKey, gradeRes, alterRes, marketplaceRes };
+        supabase.rpc("rh_gestao_escala_grade_carregar", {
+            p_ref_mes: ref,
+            p_area_key: areaKey,
         }),
+        supabase.rpc("rh_gestao_escala_grade_alteracoes_ultimas", {
+          p_ref_mes: ref,
+          p_area_key: areaKey,
+        }),
+        modo === "estudio"
+          ? supabase.rpc("rh_gestao_escala_marketplace_comentarios", {
+              p_ref_mes: ref,
+              p_area_key: areaKey,
+            })
+          : Promise.resolve({ data: [] as unknown, error: null }),
       ]);
       if (cancelled) return;
+
+      if (gradeRes.error) {
+        setErroGrade(
+          "Não foi possível carregar a escala. Se o problema persistir, entre em contato com o suporte.",
+        );
+        setLoadingGrade(false);
+        return;
+      }
+
+      const turnoMesData = turnoMesRes.data;
       if (turnoMesData) {
         setTurnoMesMap(mapTurnoMesRowsParaEstado(turnoMesData as RpcTurnoMesListarRow[]));
       } else {
         setTurnoMesMap({});
       }
-      const metaPorArea: Record<string, RpcGradeMetaRow> = {};
-      if (!metaError && metaData) {
-        for (const row of metaData as RpcGradeMetaRow[]) {
-          const ak = (row.area_key ?? "").trim();
-          if (ak && areas.includes(ak)) metaPorArea[ak] = row;
-        }
-      }
-      const fromDbPorArea: Record<string, Record<string, string>> = {};
-      const alteracoesPorArea: Record<string, Record<string, EscalaAlteracaoCelulaMeta>> = {};
-      const marketplacePorArea: Record<string, Record<string, EscalaMarketplaceCelulaComentario>> = {};
-      for (const { areaKey, gradeRes, alterRes, marketplaceRes } of results) {
-        if (!gradeRes.error) {
-          fromDbPorArea[areaKey] = mapaCelulasFromGradeCarregarPayload(gradeRes.data);
-        }
-        if (!alterRes.error && alterRes.data) {
-          alteracoesPorArea[areaKey] = mapAlteracoesUltimasPorCelula(alterRes.data as RpcAlteracaoUltimaRow[]);
-        }
-        if (!marketplaceRes.error) {
-          marketplacePorArea[areaKey] = mapMarketplaceComentariosPorCelula(marketplaceRes.data);
-        }
-      }
-      if (modo !== "escritorio" && Object.keys(fromDbPorArea).length === 0 && Object.keys(metaPorArea).length === 0) {
-        return;
-      }
       const turnoMapAtual = turnoMesData
         ? mapTurnoMesRowsParaEstado(turnoMesData as RpcTurnoMesListarRow[])
         : {};
 
-      /** Escala Escritório: grade padrão Comercial/Folga e status aprovado (sem fluxo de rascunho). */
+      const metaPorArea: Record<string, RpcGradeMetaRow> = {};
+      if (!metaRes.error && metaRes.data) {
+        for (const row of metaRes.data as RpcGradeMetaRow[]) {
+          const ak = (row.area_key ?? "").trim();
+          if (ak) metaPorArea[ak] = row;
+        }
+      }
+      const fromDb = mapaCelulasFromGradeCarregarPayload(gradeRes.data);
+      const alteracoesArea =
+        !alterRes.error && alterRes.data
+          ? mapAlteracoesUltimasPorCelula(alterRes.data as RpcAlteracaoUltimaRow[])
+          : {};
+      const marketplaceArea =
+        !marketplaceRes.error ? mapMarketplaceComentariosPorCelula(marketplaceRes.data) : {};
+
+      const meta = metaPorArea[areaKey];
+
+      /** Escala Escritório: auto-aprova só a área carregada. */
       if (modo === "escritorio") {
-        const nextEscritorio: Record<string, EscalaGerarEstadoFiltro> = {};
-        for (const ak of areas) {
-          const fromDb = fromDbPorArea[ak] ?? {};
-          const meta = metaPorArea[ak];
-          const statusRaw = (meta?.status ?? "").trim().toLowerCase();
-          let aprovadaEfetiva = statusRaw === "aprovada";
-          const linhasF = filtrarPorArea(prestadoresRaw, ak).map((r) =>
-            linhaComTurnoMesArea(r, ak, true, turnoMapAtual),
-          );
-          const celulas = mesclarCelulasEscritorioComPadrao(linhasF, dias, fromDb);
-          if (!aprovadaEfetiva && linhasF.length > 0 && Object.keys(celulas).length > 0) {
-            const { data: saveData, error: saveErr } = await supabase.rpc("rh_gestao_escala_grade_salvar", {
+        const statusRaw = (meta?.status ?? "").trim().toLowerCase();
+        let aprovadaEfetiva = statusRaw === "aprovada";
+        const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
+          linhaComTurnoMesArea(r, areaKey, true, turnoMapAtual),
+        );
+        const celulas = mesclarCelulasEscritorioComPadrao(linhasF, dias, fromDb);
+        if (!aprovadaEfetiva && linhasF.length > 0 && Object.keys(celulas).length > 0) {
+          const { data: saveData, error: saveErr } = await supabase.rpc("rh_gestao_escala_grade_salvar", {
+            p_ref_mes: ref,
+            p_area_key: areaKey,
+            p_celulas: celulas,
+          });
+          if (!cancelled && !saveErr && (saveData as RpcGradeSalvarResult | null)?.ok) {
+            const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
               p_ref_mes: ref,
-              p_area_key: ak,
-              p_celulas: celulas,
+              p_area_key: areaKey,
             });
-            if (!cancelled && !saveErr && (saveData as RpcGradeSalvarResult | null)?.ok) {
-              const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
-                p_ref_mes: ref,
-                p_area_key: ak,
-              });
-              if (!aprovErr && (aprovData as RpcGradeAprovarResult | null)?.ok) {
-                aprovadaEfetiva = true;
-              }
+            if (!aprovErr && (aprovData as RpcGradeAprovarResult | null)?.ok) {
+              aprovadaEfetiva = true;
             }
           }
-          if (cancelled) return;
-          const aprovadoEmIso =
-            meta?.aprovado_em == null
-              ? null
-              : typeof meta.aprovado_em === "string"
-                ? meta.aprovado_em.slice(0, 25)
-                : String(meta.aprovado_em);
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, celulas, true, modo, ak);
-          nextEscritorio[ak] = {
+        }
+        if (cancelled) return;
+        const aprovadoEmIso =
+          meta?.aprovado_em == null
+            ? null
+            : typeof meta.aprovado_em === "string"
+              ? meta.aprovado_em.slice(0, 25)
+              : String(meta.aprovado_em);
+        const snap = buildCelulasSnapshotGrade(linhasF, dias, celulas, true, modo, areaKey);
+        gradeSnapshotAoCarregarRef.current[areaKey] = snap;
+        setGerarPorFiltro((prev) => ({
+          ...prev,
+          [areaKey]: {
             celulas,
             statusGradeDb: aprovadaEfetiva ? "aprovada" : "rascunho",
             aprovadoEmDb: aprovadaEfetiva ? aprovadoEmIso : null,
@@ -497,48 +578,38 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             baseline: aprovadaEfetiva ? { ...celulas } : null,
             posSugestao: true,
             celulasSincronizadasComDb: snap,
-            alteracoesPorCelula: aprovadaEfetiva ? (alteracoesPorArea[ak] ?? {}) : undefined,
+            alteracoesPorCelula: aprovadaEfetiva ? alteracoesArea : undefined,
             comentariosMarketplacePorCelula: undefined,
-          };
-        }
-        if (cancelled) return;
-        setGerarPorFiltro((prev) => ({ ...prev, ...nextEscritorio }));
+          },
+        }));
+        areasHydratedRef.current.add(hydrateKey);
+        setLoadingGrade(false);
         return;
       }
 
-      setGerarPorFiltro((prev) => {
-        const next = { ...prev };
-        for (const ak of areas) {
-          const fromDb = fromDbPorArea[ak];
-          const gradeCarregada = Object.prototype.hasOwnProperty.call(fromDbPorArea, ak);
-          const meta = metaPorArea[ak];
           const statusRaw = (meta?.status ?? "").trim().toLowerCase();
           const statusGradeDb: GradeStatusMetaDb | null =
             statusRaw === "aprovada" || statusRaw === "rascunho" ? statusRaw : null;
           const aprovadaNaBase = statusGradeDb === "aprovada";
-          const cur = next[ak];
-          if (!gradeCarregada && !meta) continue;
-          /**
-           * Grade aprovada: base é a fonte da verdade quando o carregar OK.
-           * Se a RPC falhar (`gradeCarregada` false), preservar células locais —
-           * não zerar a Escala Diária aprovada.
-           */
-          const merged = aprovadaNaBase
-            ? gradeCarregada
-              ? { ...(fromDb ?? {}) }
-              : { ...(cur?.celulas ?? {}) }
-            : { ...(cur?.celulas ?? {}), ...(fromDb ?? {}) };
-          const linhasF = filtrarPorArea(prestadoresRaw, ak).map((r) =>
-            linhaComTurnoMesArea(r, ak, aprovadaNaBase, turnoMapAtual),
-          );
-          const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, aprovadaNaBase, modo, ak);
+      setGerarPorFiltro((prev) => {
+        const cur = prev[areaKey];
+        const merged = aprovadaNaBase
+          ? { ...fromDb }
+          : { ...(cur?.celulas ?? {}), ...fromDb };
+        const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
+          linhaComTurnoMesArea(r, areaKey, aprovadaNaBase, turnoMapAtual),
+        );
+        const snap = buildCelulasSnapshotGrade(linhasF, dias, merged, aprovadaNaBase, modo, areaKey);
+        gradeSnapshotAoCarregarRef.current[areaKey] = snap;
           const aprovadoEmIso =
             meta?.aprovado_em == null
               ? null
               : typeof meta.aprovado_em === "string"
                 ? meta.aprovado_em.slice(0, 25)
                 : String(meta.aprovado_em);
-          next[ak] = {
+        return {
+          ...prev,
+          [areaKey]: {
             celulas: merged,
             statusGradeDb,
             aprovadoEmDb: aprovadaNaBase ? aprovadoEmIso : null,
@@ -547,20 +618,35 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             posSugestao: aprovadaNaBase ? true : cur?.posSugestao ?? cur?.posSugestaoCs ?? false,
             celulasSincronizadasComDb: snap,
             alteracoesPorCelula: aprovadaNaBase
-              ? (alteracoesPorArea[ak] ?? cur?.alteracoesPorCelula ?? {})
+              ? (alteracoesArea ?? cur?.alteracoesPorCelula ?? {})
               : undefined,
             comentariosMarketplacePorCelula: aprovadaNaBase
-              ? (marketplacePorArea[ak] ?? cur?.comentariosMarketplacePorCelula ?? {})
+              ? (marketplaceArea ?? cur?.comentariosMarketplacePorCelula ?? {})
               : undefined,
-          };
-        }
-        return next;
+          },
+        };
       });
+      areasHydratedRef.current.add(hydrateKey);
+      setLoadingGrade(false);
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [ano, mes, dias, perm.loading, perm.canView, loadingPrestadores, prestadoresRaw, abasTimes, modo]);
+  }, [
+    ano,
+    mes,
+    dias,
+    perm.loading,
+    perm.canView,
+    loadingPrestadores,
+    prestadoresRaw,
+    abasTimes,
+    filtroArea,
+    modo,
+    chaveHydrateArea,
+    gradeReloadToken,
+  ]);
 
   const salvarGradeEscalaDb = useCallback(
     async (areaKey: AreaEscalaKey, celulasOverride?: Record<string, string>): Promise<boolean> => {
@@ -573,6 +659,44 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       }
       setSalvandoGrade(true);
       try {
+        {
+          const estSync = gerarPorFiltro[areaKey];
+          const synced = estSync?.celulasSincronizadasComDb ?? null;
+          const baselineLoad = gradeSnapshotAoCarregarRef.current[areaKey] ?? null;
+          const referencia = synced ?? baselineLoad;
+          if (referencia != null) {
+            const refCheck = refMesISO(ano, mes);
+            const { data: remoteData, error: remoteErr } = await supabase.rpc(
+              "rh_gestao_escala_grade_carregar",
+              { p_ref_mes: refCheck, p_area_key: areaKey },
+            );
+            if (remoteErr) {
+              setErroSalvarGrade(
+                "Não foi possível verificar a escala antes de salvar. Se o problema persistir, entre em contato com o suporte.",
+              );
+              return false;
+            }
+            const fromDb = mapaCelulasFromGradeCarregarPayload(remoteData);
+            const aprovada = escalaGradeAprovadaNaBase(estSync);
+            const linhasCheck = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
+              linhaComTurnoMesArea(r, areaKey, aprovada, turnoMesMap),
+            );
+            const snapRemoto = buildCelulasSnapshotGrade(
+              linhasCheck,
+              dias,
+              fromDb,
+              aprovada,
+              modo,
+              areaKey,
+            );
+            if (!celulasIguais(snapRemoto, referencia)) {
+              setErroSalvarGrade(
+                "A escala foi atualizada por outra pessoa. Recarregue antes de salvar.",
+              );
+              return false;
+            }
+          }
+        }
         const ref = refMesISO(ano, mes);
         const { data, error } = await supabase.rpc("rh_gestao_escala_grade_salvar", {
           p_ref_mes: ref,
@@ -604,6 +728,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           );
           const celulasFinais = celulasOverride !== undefined ? celulasOverride : estAtual.celulas;
           const snap = buildCelulasSnapshotGrade(linhasF, dias, celulasFinais, false, modo, areaKey);
+          gradeSnapshotAoCarregarRef.current[areaKey] = snap;
           const next = {
             ...prev,
             [areaKey]: {
@@ -617,9 +742,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           return next;
         });
         return true;
-      } catch (e) {
+      } catch {
         setErroSalvarGrade(
-          e instanceof Error ? e.message : "Erro ao salvar na base de dados. Verifique se a migration foi aplicada.",
+          "Não foi possível salvar a grade. Se o problema persistir, entre em contato com o suporte.",
         );
         return false;
       } finally {
@@ -667,8 +792,13 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
 
   const linhasAposTurnoConsolidado = useMemo(() => {
     if (filtroTurnoConsolidado == null) return linhasAposNickname;
-    return linhasAposNickname.filter((row) => linhaColaboradorNoFiltroTurnoConsolidado(row, filtroTurnoConsolidado));
-  }, [linhasAposNickname, filtroTurnoConsolidado]);
+    return linhasAposNickname.filter((row) =>
+      linhaColaboradorNoFiltroTurnoConsolidado(row, filtroTurnoConsolidado, {
+        celulas: gerarPorFiltro[filtroArea]?.celulas,
+        dias,
+      }),
+    );
+  }, [linhasAposNickname, filtroTurnoConsolidado, gerarPorFiltro, filtroArea, dias]);
 
   const opcoesFiltroPorDiaIso = useMemo(() => {
     const out: Record<string, string[]> = {};
@@ -801,10 +931,10 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   );
 
   const aprovarEscalaGerar = useCallback(
-    async (areaKey: AreaEscalaKey) => {
+    async (areaKey: AreaEscalaKey): Promise<boolean> => {
       const linhasF = linhasPorFiltroGerar(areaKey);
       const cur = gerarPorFiltro[areaKey];
-      if (!cur) return;
+      if (!cur) return false;
       const merged: Record<string, string> = { ...cur.celulas };
       for (const row of linhasF) {
         for (const d of dias) {
@@ -814,7 +944,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       }
       const baseline = { ...merged };
       const ok = await salvarGradeEscalaDb(areaKey, merged);
-      if (!ok) return;
+      if (!ok) return false;
       const ref = refMesISO(ano, mes);
       try {
         const { data: aprovData, error: aprovErr } = await supabase.rpc("rh_gestao_escala_grade_aprovar", {
@@ -834,7 +964,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   ? `Não foi possível aprovar: ${code}.`
                   : "Não foi possível aprovar a escala.",
           );
-          return;
+          return false;
         }
         const aprovadoEmDb = typeof ap.aprovado_em === "string" ? ap.aprovado_em : null;
         const aprovadoPorDb = typeof ap.aprovado_por === "string" ? ap.aprovado_por : null;
@@ -856,6 +986,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         setGerarPorFiltro((prev) => {
           const estAtual = prev[areaKey];
           if (!estAtual) return prev;
+          const snapAprov = buildCelulasSnapshotGrade(linhasAposSnap, dias, merged, true, modo, areaKey);
+          gradeSnapshotAoCarregarRef.current[areaKey] = snapAprov;
           const next = {
             ...prev,
             [areaKey]: {
@@ -866,7 +998,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               aprovadoPorDb,
               baseline,
               posSugestao: true,
-              celulasSincronizadasComDb: buildCelulasSnapshotGrade(linhasAposSnap, dias, merged, true, modo, areaKey),
+              celulasSincronizadasComDb: snapAprov,
             },
           };
           gravarEscalaMes(ano, mes, next, modo);
@@ -878,10 +1010,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             .then(({ gerarPreviewsMesRotacao }) => gerarPreviewsMesRotacao(ref))
             .catch((err) => console.error(err));
         }
-      } catch (e) {
+        return true;
+      } catch {
         setErroSalvarGrade(
-          e instanceof Error ? e.message : "Erro ao aprovar na base de dados. Verifique se a migration foi aplicada.",
+          "Não foi possível aprovar a escala. Se o problema persistir, entre em contato com o suporte.",
         );
+        return false;
       }
     },
     [ano, mes, dias, gerarPorFiltro, linhasPorFiltroGerar, salvarGradeEscalaDb, prestadoresRaw, turnoMesMap, modo],
@@ -927,6 +1061,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           gravarEscalaMes(ano, mes, next, modo);
           return next;
         });
+        gradeSnapshotAoCarregarRef.current[areaKey] = {};
+        areasHydratedRef.current.delete(chaveHydrateArea(areaKey));
         setTurnoMesMap((prev) => {
           const next = { ...prev };
           for (const k of Object.keys(next)) {
@@ -934,17 +1070,18 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           }
           return next;
         });
+        setGradeReloadToken((n) => n + 1);
         return true;
-      } catch (e) {
+      } catch {
         setErroSalvarGrade(
-          e instanceof Error ? e.message : "Erro ao refazer a escala na base de dados. Verifique se a migration foi aplicada.",
+          "Não foi possível refazer a escala. Se o problema persistir, entre em contato com o suporte.",
         );
         return false;
       } finally {
         setResetandoGrade(false);
       }
     },
-    [ano, mes, modo],
+    [ano, mes, modo, chaveHydrateArea],
   );
 
   const atualizarCelulaGerar = useCallback(
@@ -1136,8 +1273,13 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const celulasGerarAtivas = estGradeFiltro?.celulas;
   const alteracoesPorCelulaAtivas = estGradeFiltro?.alteracoesPorCelula;
   const comentariosMarketplaceAtivos = estGradeFiltro?.comentariosMarketplacePorCelula;
+  const toolbarGradeBloqueada = loadingGrade || Boolean(erroGrade);
   const podeEditarCelulasDia = Boolean(
-    modo !== "escritorio" && podeEditarGrade && !escalaGradeAprovadaNaBase(estGradeFiltro),
+    modo !== "escritorio" &&
+      podeEditarGrade &&
+      !escalaGradeAprovadaNaBase(estGradeFiltro) &&
+      !loadingGrade &&
+      !erroGrade,
   );
   const mostrarBotaoAlterarEscala = Boolean(
     mostrarFiltroArea &&
@@ -1153,11 +1295,13 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     return m;
   }, [estudiosAtivosEscala]);
 
+  const gerarPorFiltroDeferred = useDeferredValue(gerarPorFiltro);
+
   const resumoTurnoDias = useMemo(() => {
     if (!mostrarFiltroArea) return null;
     const linhasRpc = filtrarPorArea(prestadoresFiltradosEstudio, filtroArea);
     const linhasF = linhasRpc.map(mapLinhaPrestador);
-    const celulas = gerarPorFiltro[filtroArea]?.celulas;
+    const celulas = gerarPorFiltroDeferred[filtroArea]?.celulas;
     if (modo === "escritorio") {
       const comercial = contarCelulasComSigla(linhasF, dias, celulas, "Comercial");
       return {
@@ -1223,12 +1367,35 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     filtroArea,
     prestadoresFiltradosEstudio,
     dias,
-    gerarPorFiltro,
+    gerarPorFiltroDeferred,
     modo,
     filtroEstudioEscalaEfetivo,
     opParaEstudio,
     estudiosNomeEscala,
   ]);
+
+  const contarCelulasVaziasAprovar = useCallback(
+    (areaKey: AreaEscalaKey) => {
+      const linhasF = linhasPorFiltroGerar(areaKey);
+      const celulas = gerarPorFiltro[areaKey]?.celulas ?? {};
+      let vazias = 0;
+      for (const row of linhasF) {
+        for (const d of dias) {
+          const k = chaveCelulaGerar(row.id, d.iso);
+          const v = sanitizarValorCelulaGerar(
+            row.siglaTurnoStaff,
+            celulas[k] ?? "",
+            row.turnoStaffNome,
+            modo,
+            areaKey,
+          );
+          if (!v.trim()) vazias += 1;
+        }
+      }
+      return vazias;
+    },
+    [linhasPorFiltroGerar, gerarPorFiltro, dias, modo],
+  );
 
   const mostrarSalvarAlteracoes = useMemo(() => {
     if (modo === "escritorio") return false;
@@ -1247,6 +1414,19 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   }, [mostrarFiltroArea, filtroArea, prestadoresRaw, dias, gerarPorFiltro, turnoMesMap, modo]);
 
   const msgTabelaVazia = "Sem dados para o período selecionado.";
+  const staffNaAreaSemFiltroEstudio = useMemo(
+    () => filtrarPorArea(prestadoresRaw, filtroArea).length,
+    [prestadoresRaw, filtroArea],
+  );
+  /** Vazio por filtro de estúdio — não usar a string global de período. */
+  const msgVaziaEscalaDiaria =
+    linhas.length === 0
+      ? filtroEstudioEscalaEfetivo !== FILTRO_STAFF_ESTUDIO_TODOS ||
+        (staffNaAreaSemFiltroEstudio > 0 &&
+          filtrarPorArea(prestadoresFiltradosEstudio, filtroArea).length === 0)
+        ? "Nenhum colaborador com o estúdio selecionado."
+        : msgTabelaVazia
+      : null;
 
   /**
    * Download da escala em XLSX: aba «Consolidado» (turno × estúdio × dias) e
@@ -1712,29 +1892,29 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 gap: 10,
                 flexWrap: "wrap",
                 flex: "1 1 auto",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-                <button
-                  type="button"
-                  onClick={mesAnterior}
-                  disabled={!podeMesAnterior}
-                  aria-label="Mês anterior"
-                  style={getCarouselBtnNavStyle(t, !podeMesAnterior)}
-                >
-                  <ChevronLeft size={14} aria-hidden="true" />
-                </button>
-                <span style={getCarouselPeriodLabelStyle(t, { minWidth: 200 })}>{tituloMes}</span>
-                <button
-                  type="button"
-                  onClick={mesSeguinte}
-                  disabled={!podeMesSeguinte}
-                  aria-label="Próximo mês"
-                  style={getCarouselBtnNavStyle(t, !podeMesSeguinte)}
-                >
-                  <ChevronRight size={14} aria-hidden="true" />
-                </button>
-              </div>
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={mesAnterior}
+                disabled={!podeMesAnterior}
+                aria-label="Mês anterior"
+                style={getCarouselBtnNavStyle(t, !podeMesAnterior)}
+              >
+                <ChevronLeft size={14} aria-hidden="true" />
+              </button>
+              <span style={getCarouselPeriodLabelStyle(t, { minWidth: 200 })}>{tituloMes}</span>
+              <button
+                type="button"
+                onClick={mesSeguinte}
+                disabled={!podeMesSeguinte}
+                aria-label="Próximo mês"
+                style={getCarouselBtnNavStyle(t, !podeMesSeguinte)}
+              >
+                <ChevronRight size={14} aria-hidden="true" />
+              </button>
+            </div>
               {modo !== "escritorio" ? (
                 <FiltroEstudioSelect
                   id="rh-gestao-escala-filtro-estudio"
@@ -1743,7 +1923,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   estudios={estudiosAtivosEscala}
                   todosValue={FILTRO_STAFF_ESTUDIO_TODOS}
                   extraOptions={[{ value: FILTRO_STAFF_ESTUDIO_NENHUM, label: "Nenhum" }]}
-                  minWidth={200}
+              minWidth={200}
                   disabled={filtroArea !== "game_presenter"}
                 />
               ) : null}
@@ -1788,7 +1968,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                       type="button"
                       aria-pressed={ativo}
                       onClick={() => setFiltroArea(key)}
-                      style={{
+            style={{
                         padding: "10px 14px",
                         minHeight: 44,
                         borderRadius: 10,
@@ -1833,9 +2013,89 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             color: "#e84025",
             border: "1px solid rgba(232,64,37,0.35)",
             background: "rgba(232,64,37,0.08)",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
           }}
         >
-          {erroPrestadores}
+          <span>{erroPrestadores}</span>
+          <button
+            type="button"
+            onClick={() => void carregarPrestadores()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+          </div>
+      )}
+
+      {avisoRascunhoLocal && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            color: "#f59e0b",
+            border: "1px solid rgba(245,158,11,0.35)",
+            background: "rgba(245,158,11,0.08)",
+          }}
+        >
+          {avisoRascunhoLocal}
+      </div>
+      )}
+
+      {erroGrade && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontFamily: FONT.body,
+            color: "#e84025",
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "rgba(232,64,37,0.08)",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 12,
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{erroGrade}</span>
+          <button
+            type="button"
+            onClick={recarregarGradeAtiva}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.inputBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       )}
 
@@ -1858,12 +2118,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       )}
 
       <div role="region" aria-label="Gestão de escala por colaborador e dia">
-        {loadingPrestadores ? (
+        {loadingPrestadores || loadingGrade ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200, gap: 10 }}>
             <Loader2 size={22} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-            <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando gestão de escala…</span>
+            <span style={{ color: t.textMuted, fontSize: 13 }}>Carregando…</span>
           </div>
-        ) : (
+        ) : erroGrade ? null : (
           <>
             {resumoTurnoDias && mostrarFiltroArea ? (
               <section
@@ -1899,8 +2159,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           ? "Totais por turno Comercial, Manhã, Tarde, Noite e TOTAL por dia."
                           : "Totais por turno Comercial, Manhã, Noite e TOTAL por dia."
                         : resumoTurnoDias.temLinhaTardeConsolidado
-                          ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
-                          : "Totais por turno Manhã, Noite e TOTAL por dia."}
+                      ? "Totais por turno Manhã, Tarde, Noite e TOTAL por dia."
+                        : "Totais por turno Manhã, Noite e TOTAL por dia."}
                   </caption>
                   <thead>
                     <tr>
@@ -1929,56 +2189,56 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   </thead>
                   <tbody>
                     {resumoTurnoDias.modoEscritorio ? (
-                      <tr>
-                        <th
-                          scope="row"
-                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
-                            fontWeight: 700,
-                            fontSize: CONSOLIDADO_FONT_TURNO,
-                            padding: 0,
-                          })}
-                        >
-                          <button
-                            type="button"
+                    <tr>
+                      <th
+                        scope="row"
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                          fontWeight: 700,
+                          fontSize: CONSOLIDADO_FONT_TURNO,
+                          padding: 0,
+                        })}
+                      >
+                        <button
+                          type="button"
                             aria-pressed={filtroTurnoConsolidado === "comercial"}
                             aria-label="Filtrar Escala Diária pelo turno comercial"
                             onClick={() => alternarFiltroTurnoConsolidado("comercial")}
                             style={estiloBotaoTurnoConsolidado(filtroTurnoConsolidado === "comercial")}
                           >
                             Comercial
-                          </button>
-                        </th>
+                        </button>
+                      </th>
                         {resumoTurnoDias.comercial.map((n, idx) => {
-                          const d = dias[idx]!;
-                          return (
-                            <td
+                        const d = dias[idx]!;
+                        return (
+                          <td
                               key={`resumo-c-${d.iso}`}
-                              style={getTdStyle(t, {
-                                textAlign: "center",
-                                fontVariantNumeric: "tabular-nums",
-                                fontWeight: 700,
-                                ...(diaComDestaqueCalendario(d)
-                                  ? {
-                                      background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
-                                      color: "#f59e0b",
-                                    }
-                                  : {}),
-                              })}
-                            >
-                              {n}
-                            </td>
-                          );
-                        })}
-                      </tr>
+                            style={getTdStyle(t, {
+                              textAlign: "center",
+                              fontVariantNumeric: "tabular-nums",
+                              fontWeight: 700,
+                              ...(diaComDestaqueCalendario(d)
+                                ? {
+                                    background: t.isDark ? "rgba(245,158,11,0.1)" : "rgba(245,158,11,0.12)",
+                                    color: "#f59e0b",
+                                  }
+                                : {}),
+                            })}
+                          >
+                            {n}
+                          </td>
+                        );
+                      })}
+                    </tr>
                     ) : (
                       <>
                     {resumoTurnoDias.mostrarLinhaComercial ? (
-                      <tr>
-                        <th
-                          scope="row"
-                          style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
-                            fontWeight: 700,
-                            fontSize: CONSOLIDADO_FONT_TURNO,
+                    <tr>
+                      <th
+                        scope="row"
+                        style={thConsolidadoTurnoSticky(Z_CONSOLIDADO_STICKY_ROW, fundoStickyConsolidadoTurno, {
+                          fontWeight: 700,
+                          fontSize: CONSOLIDADO_FONT_TURNO,
                             padding: 0,
                           })}
                         >
@@ -2129,33 +2389,19 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                         <>
                           <button
                             type="button"
-                            onClick={() => {
-                              const est = gerarPorFiltro[filtroArea];
-                              if (escalaGradeAprovadaNaBase(est)) {
-                                setNovaEscalaModalArea(filtroArea);
-                                return;
-                              }
-                              setGerarPorFiltro((prev) => ({
-                                ...prev,
-                                [filtroArea]: {
-                                  celulas: {},
-                                  baseline: null,
-                                  celulasSincronizadasComDb: null,
-                                  posSugestao: false,
-                                  posSugestaoCs: false,
-                                  statusGradeDb: null,
-                                  aprovadoEmDb: null,
-                                  aprovadoPorDb: null,
-                                  alteracoesPorCelula: undefined,
-                                },
-                              }));
-                              void registrarHistoricoEscalaAcao(refMesISO(ano, mes), filtroArea, "nova_escala");
-                            }}
+                            disabled={toolbarGradeBloqueada || resetandoGrade}
+                            onClick={() => setNovaEscalaModalArea(filtroArea)}
                             aria-label="Iniciar nova escala em rascunho"
                             style={
                               escalaGradeAprovadaNaBase(gerarPorFiltro[filtroArea])
-                                ? escalaToolbarBtnVermelho({ cursor: "pointer" })
-                                : escalaToolbarBtnNeutro(t, { cursor: "pointer" })
+                                ? escalaToolbarBtnVermelho({
+                                    cursor: toolbarGradeBloqueada ? "not-allowed" : "pointer",
+                                    opacity: toolbarGradeBloqueada ? 0.55 : 1,
+                                  })
+                                : escalaToolbarBtnNeutro(t, {
+                                    cursor: toolbarGradeBloqueada ? "not-allowed" : "pointer",
+                                    opacity: toolbarGradeBloqueada ? 0.55 : 1,
+                                  })
                             }
                           >
                             Nova Escala
@@ -2163,12 +2409,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           {mostrarSalvarAlteracoes ? (
                             <button
                               type="button"
-                              disabled={salvandoGrade}
+                              disabled={salvandoGrade || toolbarGradeBloqueada}
                               onClick={() => void salvarGradeEscalaDb(filtroArea)}
                               aria-label="Salvar alterações da escala na base de dados"
                               style={escalaToolbarBtnAzul({
-                                cursor: salvandoGrade ? "wait" : "pointer",
-                                opacity: salvandoGrade ? 0.65 : 1,
+                                cursor: salvandoGrade || toolbarGradeBloqueada ? "wait" : "pointer",
+                                opacity: salvandoGrade || toolbarGradeBloqueada ? 0.65 : 1,
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: 8,
@@ -2183,12 +2429,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           {!escalaGradeAprovadaNaBase(gerarPorFiltro[filtroArea]) ? (
                             <button
                               type="button"
-                              disabled={salvandoGrade}
-                              onClick={() => void aprovarEscalaGerar(filtroArea)}
+                              disabled={salvandoGrade || toolbarGradeBloqueada}
+                              onClick={() => setAprovarEscalaModalArea(filtroArea)}
                               aria-label="Aprovar escala e bloquear edição manual da grade"
                               style={escalaToolbarBtnVerde({
-                                cursor: salvandoGrade ? "wait" : "pointer",
-                                opacity: salvandoGrade ? 0.65 : 1,
+                                cursor: salvandoGrade || toolbarGradeBloqueada ? "wait" : "pointer",
+                                opacity: salvandoGrade || toolbarGradeBloqueada ? 0.65 : 1,
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: 8,
@@ -2204,6 +2450,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                       ) : acaoGerarNoFiltroSelecionado === "sugestao" ? (
                         <button
                           type="button"
+                          disabled={toolbarGradeBloqueada}
                           onClick={() => void aplicarSugestaoEscalaArea(filtroArea)}
                           aria-label="Gerar sugestão de escala para a área selecionada"
                           style={{
@@ -2217,7 +2464,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                             fontFamily: FONT.body,
                             fontSize: 13,
                             fontWeight: 700,
-                            cursor: "pointer",
+                            cursor: toolbarGradeBloqueada ? "not-allowed" : "pointer",
+                            opacity: toolbarGradeBloqueada ? 0.55 : 1,
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -2226,12 +2474,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                       ) : acaoGerarNoFiltroSelecionado === "aprovar" ? (
                         <button
                           type="button"
-                          disabled={salvandoGrade}
-                          onClick={() => void aprovarEscalaGerar(filtroArea)}
+                          disabled={salvandoGrade || toolbarGradeBloqueada}
+                          onClick={() => setAprovarEscalaModalArea(filtroArea)}
                           aria-label="Aprovar escala da área selecionada"
                           style={escalaToolbarBtnVerde({
-                            cursor: salvandoGrade ? "wait" : "pointer",
-                            opacity: salvandoGrade ? 0.65 : 1,
+                            cursor: salvandoGrade || toolbarGradeBloqueada ? "wait" : "pointer",
+                            opacity: salvandoGrade || toolbarGradeBloqueada ? 0.65 : 1,
                             display: "inline-flex",
                             alignItems: "center",
                             gap: 8,
@@ -2334,7 +2582,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     ? "Grade mensal por colaborador e dia do mês (sem nickname)."
                   : semColunaNome
                     ? "Grade por nickname, turno e dia do mês (coluna Nome oculta nesta área)."
-                    : "Grade mensal por colaborador e dia do mês."}
+                  : "Grade mensal por colaborador e dia do mês."}
               </caption>
               <thead>
                 <tr>
@@ -2363,42 +2611,42 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     />
                   ) : null}
                   {!semColunaNickname ? (
-                    <SortTableTh<EscalaDiariaSortCol>
-                      label="Nickname"
-                      col="nickname"
-                      sortCol={sortEscalaDiaria.col}
-                      sortDir={sortEscalaDiaria.dir}
-                      onSort={onSortEscalaDiaria}
+                  <SortTableTh<EscalaDiariaSortCol>
+                    label="Nickname"
+                    col="nickname"
+                    sortCol={sortEscalaDiaria.col}
+                    sortDir={sortEscalaDiaria.dir}
+                    onSort={onSortEscalaDiaria}
                       thStyle={thSticky(stickyLeftNick, {
-                        minWidth: STICKY_W_NICK,
-                        maxWidth: STICKY_W_NICK,
-                        width: STICKY_W_NICK,
-                        verticalAlign: "middle",
-                        zIndex: semColunaNome ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_NICK,
+                      minWidth: STICKY_W_NICK,
+                      maxWidth: STICKY_W_NICK,
+                      width: STICKY_W_NICK,
+                      verticalAlign: "middle",
+                      zIndex: semColunaNome ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_NICK,
                         ...seloStickyDireita(fundoStickyCabecalho),
-                      })}
-                      align="center"
-                    />
+                    })}
+                    align="center"
+                  />
                   ) : null}
                   {!semColunaTurno ? (
-                    <SortTableTh<EscalaDiariaSortCol>
-                      label="Turno"
-                      col="turno"
-                      sortCol={sortEscalaDiaria.col}
-                      sortDir={sortEscalaDiaria.dir}
-                      onSort={onSortEscalaDiaria}
-                      title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
+                  <SortTableTh<EscalaDiariaSortCol>
+                    label="Turno"
+                    col="turno"
+                    sortCol={sortEscalaDiaria.col}
+                    sortDir={sortEscalaDiaria.dir}
+                    onSort={onSortEscalaDiaria}
+                    title="Referência do cadastro na Gestão de Staff (perfil de turno / contrato)."
                       thStyle={thSticky(stickyLeftTurno, {
-                        minWidth: STICKY_W_TURNO_STAFF,
-                        maxWidth: STICKY_W_TURNO_STAFF,
-                        width: STICKY_W_TURNO_STAFF,
-                        verticalAlign: "middle",
-                        borderRight: `1px solid ${t.cardBorder}`,
-                        boxShadow: sombraColFixa,
+                      minWidth: STICKY_W_TURNO_STAFF,
+                      maxWidth: STICKY_W_TURNO_STAFF,
+                      width: STICKY_W_TURNO_STAFF,
+                      verticalAlign: "middle",
+                      borderRight: `1px solid ${t.cardBorder}`,
+                      boxShadow: sombraColFixa,
                         zIndex: semColunaNome && semColunaNickname ? Z_STICKY_HEAD_NOME : Z_STICKY_HEAD_TURNO,
-                      })}
-                      align="center"
-                    />
+                    })}
+                    align="center"
+                  />
                   ) : null}
                   {dias.map((dia) => (
                     <th
@@ -2414,8 +2662,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           alignItems: "center",
                           gap: 0,
                         }}
-                      >
-                        <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
+                    >
+                      <div style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{dia.dia}</div>
                         <div style={{ fontWeight: 600, textTransform: "lowercase", opacity: 0.95 }}>
                           {dia.dowShort}
                         </div>
@@ -2457,7 +2705,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                         color: t.textMuted,
                       }}
                     >
-                      {msgTabelaVazia}
+                      {msgVaziaEscalaDiaria ?? msgTabelaVazia}
                     </td>
                   </tr>
                 ) : linhasFiltradasEscalaDiaria.length === 0 ? (
@@ -2488,9 +2736,20 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   </tr>
                 ) : (
                   linhasPaginaEscalaDiaria.map((row, i) => {
-                    const bg = zebraBgLinha(paginaEscalaSafe * TABELA_PAGE_SIZE_ESCALA + i);
+                    const zebra = zebraBgLinha(paginaEscalaSafe * TABELA_PAGE_SIZE_ESCALA + i);
+                    const hovered = hoverLinhaEscalaId === row.id;
+                    const bg = hovered
+                      ? t.isDark
+                        ? "color-mix(in srgb, var(--brand-secondary, #4a2082) 22%, #141118)"
+                        : "color-mix(in srgb, var(--brand-secondary, #4a2082) 14%, #f2effa)"
+                      : zebra;
                     return (
-                      <tr key={row.id} style={{ isolation: "isolate" }}>
+                      <tr
+                        key={row.id}
+                        style={{ isolation: "isolate" }}
+                        onMouseEnter={() => setHoverLinhaEscalaId(row.id)}
+                        onMouseLeave={() => setHoverLinhaEscalaId(null)}
+                      >
                         {!semColunaNome ? (
                           <td
                             style={tdSticky(0, bg, Z_BODY_NOME, {
@@ -2521,31 +2780,31 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                               maxWidth: STICKY_W_NICK,
                               ...seloStickyDireita(bg),
                             })}
-                            title={semColunaNome ? row.nomeCompletoCadastro : undefined}
-                          >
-                            {row.nickname}
-                          </td>
+                          title={semColunaNome ? row.nomeCompletoCadastro : undefined}
+                        >
+                          {row.nickname}
+                        </td>
                         ) : null}
                         {!semColunaTurno ? (
-                          <td
-                            style={tdSticky(
+                        <td
+                          style={tdSticky(
                               stickyLeftTurno,
                               bg,
                               semColunaNome && semColunaNickname ? Z_BODY_NOME : Z_BODY_TURNO_STAFF,
-                              {
-                                minWidth: STICKY_W_TURNO_STAFF,
-                                width: STICKY_W_TURNO_STAFF,
-                                maxWidth: STICKY_W_TURNO_STAFF,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                borderRight: `1px solid ${t.cardBorder}`,
-                                boxShadow: sombraColFixa,
-                              },
-                            )}
-                            title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
-                          >
-                            {row.turnoStaffNome || "—"}
-                          </td>
+                            {
+                              minWidth: STICKY_W_TURNO_STAFF,
+                              width: STICKY_W_TURNO_STAFF,
+                              maxWidth: STICKY_W_TURNO_STAFF,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              borderRight: `1px solid ${t.cardBorder}`,
+                              boxShadow: sombraColFixa,
+                            },
+                          )}
+                          title={row.turnoStaffNome || "Sem turno configurado na Staff para esta escala."}
+                        >
+                          {row.turnoStaffNome || "—"}
+                        </td>
                         ) : null}
                         {dias.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
@@ -2558,9 +2817,9 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           const textoCelula = gradeAprovada
                             ? labelExibicaoCelulaAlterarEscala(celulasGerarAtivas?.[ck], modo, filtroArea)
                             : labelExibicaoCelulaEscala(
-                                row.siglaTurnoStaff,
-                                celulasGerarAtivas?.[ck],
-                                row.turnoStaffNome,
+                            row.siglaTurnoStaff,
+                            celulasGerarAtivas?.[ck],
+                            row.turnoStaffNome,
                                 modo,
                                 filtroArea,
                               );
@@ -2608,7 +2867,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                                   style={{
                                     ...selectCelulaGerarStyle,
                                     background: bgStatus
-                                      ? "color-mix(in srgb, #ffffff 35%, transparent)"
+                                      ? `color-mix(in srgb, ${t.isDark ? "#000000" : "#ffffff"} 35%, transparent)`
                                       : selectCelulaGerarStyle.background,
                                   }}
                                 >
@@ -2620,19 +2879,19 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                                 </select>
                               ) : (
                                 <>
-                                  <span
-                                    style={{
-                                      display: "block",
-                                      fontSize: 11,
-                                      fontWeight: 600,
-                                      color: t.text,
-                                      lineHeight: 1.2,
-                                      padding: "2px 0",
+                                <span
+                                  style={{
+                                    display: "block",
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    color: t.text,
+                                    lineHeight: 1.2,
+                                    padding: "2px 0",
                                       textAlign: "center",
-                                    }}
-                                  >
-                                    {textoCelula}
-                                  </span>
+                                  }}
+                                >
+                                  {textoCelula}
+                                </span>
                                   {comentarioMarketplace ? (
                                     <CelulaIndicadorAlteracaoEscala
                                       t={t}
@@ -2753,14 +3012,20 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           }}
         >
           <ModalHeader
-            title="Refazer escala aprovada?"
+            title={
+              escalaGradeAprovadaNaBase(gerarPorFiltro[novaEscalaModalArea])
+                ? "Refazer escala aprovada?"
+                : "Nova Escala?"
+            }
             onClose={() => {
               if (!resetandoGrade) setNovaEscalaModalArea(null);
             }}
           />
           <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
             <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
-              Esta escala já estava aprovada e disponibilizada para os Prestadores, deseja refazer?
+              {escalaGradeAprovadaNaBase(gerarPorFiltro[novaEscalaModalArea])
+                ? "Esta escala já estava aprovada e disponibilizada para os Prestadores, deseja refazer?"
+                : `Deseja limpar o rascunho salvo de ${labelAreaEscala(novaEscalaModalArea, abasTimes)} em ${tituloMes}? Isso também remove a grade gravada na plataforma para este mês.`}
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
               <button
@@ -2788,7 +3053,10 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   const ak = novaEscalaModalArea;
                   void (async () => {
                     const ok = await resetarGradeEscalaDb(ak);
-                    if (ok) setNovaEscalaModalArea(null);
+                    if (ok) {
+                      void registrarHistoricoEscalaAcao(refMesISO(ano, mes), ak, "nova_escala");
+                      setNovaEscalaModalArea(null);
+                    }
                   })();
                 }}
                 style={{
@@ -2810,6 +3078,76 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               >
                 {resetandoGrade ? <Loader2 size={16} className="app-lucide-spin" aria-hidden /> : null}
                 Sim
+              </button>
+            </div>
+          </div>
+        </ModalBase>
+      ) : null}
+
+      {aprovarEscalaModalArea ? (
+        <ModalBase
+          maxWidth={440}
+          onClose={() => {
+            if (!salvandoGrade) setAprovarEscalaModalArea(null);
+          }}
+        >
+          <ModalHeader
+            title="Aprovar escala do mês?"
+            onClose={() => {
+              if (!salvandoGrade) setAprovarEscalaModalArea(null);
+            }}
+          />
+          <div style={{ padding: "0 4px 8px", fontFamily: FONT.body }}>
+            {(() => {
+              const vazias = contarCelulasVaziasAprovar(aprovarEscalaModalArea);
+              return (
+                <p style={{ margin: "0 0 12px", fontSize: 14, color: t.text, lineHeight: 1.5 }}>
+                  {vazias > 0
+                    ? `Há ${vazias.toLocaleString("pt-BR")} célula${vazias === 1 ? "" : "s"} sem status (dias × pessoas). Deseja aprovar mesmo assim a escala de ${labelAreaEscala(aprovarEscalaModalArea, abasTimes)} em ${tituloMes}?`
+                    : `Deseja aprovar a escala de ${labelAreaEscala(aprovarEscalaModalArea, abasTimes)} em ${tituloMes}?`}
+                </p>
+              );
+            })()}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                disabled={salvandoGrade}
+                onClick={() => setAprovarEscalaModalArea(null)}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: `1px solid ${t.cardBorder}`,
+                  background: t.inputBg,
+                  color: t.text,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  cursor: salvandoGrade ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={salvandoGrade}
+                onClick={() => {
+                  const ak = aprovarEscalaModalArea;
+                  void (async () => {
+                    const ok = await aprovarEscalaGerar(ak);
+                    if (ok) setAprovarEscalaModalArea(null);
+                  })();
+                }}
+                style={escalaToolbarBtnVerde({
+                  cursor: salvandoGrade ? "wait" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                })}
+              >
+                {salvandoGrade ? (
+                  <Loader2 size={16} className="app-lucide-spin" color={ESCALA_TOOLBAR_VERDE} aria-hidden />
+                ) : null}
+                Aprovar
               </button>
             </div>
           </div>

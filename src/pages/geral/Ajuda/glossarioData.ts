@@ -455,7 +455,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Jogadores únicos que apostaram nas mesas Spin Gaming no período. Métrica de audiência ativa — quantas pessoas distintas jogaram, independentemente de quantas apostas cada uma fez.",
         nota:
-          "No mês corrente (MTD), o UAP pode aparecer como '—' porque o valor oficial é gerado pelo resumo mensal, publicado ao final do mês. Durante o mês em andamento, o dado ainda não está disponível.",
+          "O UAP vem do resumo mensal (foto sobrescrita — não há histórico dia a dia). No mês corrente é o acumulado até o momento. O comparativo MoM usa o mês anterior completo.",
         referencia: "Overview Spin",
       },
       {
@@ -464,7 +464,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
           "Receita média gerada por cada jogador ativo nas mesas. Indica o valor individual médio de cada UAP no período.",
         formula: "GGR ÷ UAP",
         nota:
-          "O ARPU depende do UAP mensal oficial (snapshot do final do mês). No mês corrente, ambos podem aparecer como '—' até o fechamento do período.",
+          "No Overview Spin, o ARPU do período em tela é GGR (até D-1 no mês corrente) ÷ UAP mensal. O comparativo MoM usa o ARPU oficial do mês anterior completo.",
         referencia: "Overview Spin",
       },
       {

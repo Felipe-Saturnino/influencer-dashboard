@@ -4,7 +4,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
-import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants";
+import { MSG_SEM_DADOS_PERIODO } from "../../../lib/dashboardConstants";
 import { OverviewSpinFiltroBar } from "./OverviewSpinFiltroBar";
 import { OverviewSpinKpisConsolidados } from "./OverviewSpinKpisConsolidados";
 import { useOverviewSpinDados } from "./useOverviewSpinDados";
@@ -36,6 +36,8 @@ import {
 } from "./overviewSpinLogic";
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
+
+const MSG_SELECIONE_OPERADORA_MESAS = "Selecione uma operadora para ver as mesas.";
 
 import { Loader2 } from "lucide-react";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
@@ -98,8 +100,12 @@ export default function OverviewSpin() {
     mesesDisponiveis,
     idxMes,
     historico,
-    setHistorico,
     loading,
+    loadingSecundario,
+    erroCarga,
+    erroSecundario,
+    recarregar,
+    recarregarSecundario,
     modoAgregadoTodasOperadoras,
     mesSelecionado,
     mesasCadastro,
@@ -283,6 +289,35 @@ export default function OverviewSpin() {
     t,
   } as const;
 
+  const blocosMesaTodasOperadoras = (
+    <>
+      {exibirComparativoMesa ? (
+        <div style={contentBox}>
+          <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
+            Comparativo de mesa
+          </SectionTitle>
+          <div
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              fontSize: 13,
+            }}
+          >
+            {MSG_SELECIONE_OPERADORA_MESAS}
+          </div>
+        </div>
+      ) : null}
+      <OverviewSpinDadosPorMesa
+        {...dadosPorMesaCommon}
+        state="empty"
+        emptyMessage={MSG_SELECIONE_OPERADORA_MESAS}
+        colTempo={historico ? "Mês" : "Data"}
+      />
+    </>
+  );
+
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
 
@@ -333,7 +368,6 @@ export default function OverviewSpin() {
 
   function selecionarAbaSpin(key: OverviewSpinTab) {
     setAba(key);
-    if (key === "posicionamento") setHistorico(false);
   }
 
   const selectStyle: React.CSSProperties = {
@@ -400,13 +434,49 @@ export default function OverviewSpin() {
         onFiltroOperadoraChange={setFiltroOperadora}
         operadorasOcr={operadorasDoFiltro}
         podeVerOperadora={podeVerOperadora}
-        loading={loading}
+        loading={loading || loadingSecundario}
         onSelectAba={selecionarAbaSpin}
       />
 
       <div role="tabpanel" id={`panel-overview-spin-${aba}`} aria-labelledby={`tab-overview-spin-${aba}`}>
       {financeira && (
       <>
+      {erroCarga ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...contentBox,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroCarga}</span>
+          <button
+            type="button"
+            onClick={() => recarregar()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : null}
       <OverviewSpinKpisConsolidados
         contentBoxStyle={contentBox}
         loading={loading}
@@ -439,7 +509,7 @@ export default function OverviewSpin() {
           </div>
         ) : tabelaRows.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: t.textMuted }}>
-            {MSG_SEM_DADOS_FILTRO}
+            {MSG_SEM_DADOS_PERIODO}
           </div>
         ) : (
           <OverviewSpinDetalhamentoInterativo
@@ -473,7 +543,42 @@ export default function OverviewSpin() {
 
       {!historico && (
         <>
-          {loading ? (
+          {erroSecundario ? (
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{
+                ...contentBox,
+                color: "#e84025",
+                fontSize: 13,
+                fontFamily: FONT.body,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <span>{erroSecundario}</span>
+              <button
+                type="button"
+                onClick={() => recarregarSecundario()}
+                style={{
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  cursor: "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            </div>
+          ) : loadingSecundario ? (
             <>
               <div style={contentBox}>
                 <SectionTitle sub={mesSelecionado?.label}>
@@ -494,7 +599,9 @@ export default function OverviewSpin() {
                   <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                 </div>
               </div>
-              {!modoAgregadoTodasOperadoras && (
+              {modoAgregadoTodasOperadoras ? (
+                blocosMesaTodasOperadoras
+              ) : (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -528,10 +635,12 @@ export default function OverviewSpin() {
                   Comparativo de Jogo
                 </SectionTitle>
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
+                  {MSG_SEM_DADOS_PERIODO}
                 </div>
               </div>
-              {!modoAgregadoTodasOperadoras && (
+              {modoAgregadoTodasOperadoras ? (
+                blocosMesaTodasOperadoras
+              ) : (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -541,7 +650,7 @@ export default function OverviewSpin() {
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
-                      {MSG_SEM_DADOS_FILTRO}
+                      {MSG_SEM_DADOS_PERIODO}
                     </div>
                   </div>
                   )}
@@ -557,7 +666,7 @@ export default function OverviewSpin() {
                 </SectionTitle>
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    {MSG_SEM_DADOS_FILTRO}
+                    {MSG_SEM_DADOS_PERIODO}
                   </div>
                 ) : (
                   <RenderWhenVisible minHeight={240}>
@@ -589,7 +698,9 @@ export default function OverviewSpin() {
                 )}
               </div>
 
-              {!modoAgregadoTodasOperadoras && (
+              {modoAgregadoTodasOperadoras ? (
+                blocosMesaTodasOperadoras
+              ) : (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -599,7 +710,7 @@ export default function OverviewSpin() {
 
                     {mesasOpcoesBlackjack.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    {MSG_SEM_DADOS_FILTRO}
+                    {MSG_SEM_DADOS_PERIODO}
                   </div>
                 ) : (
                   <>
@@ -716,7 +827,42 @@ export default function OverviewSpin() {
 
       {historico && (
         <>
-          {loading ? (
+          {erroSecundario ? (
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{
+                ...contentBox,
+                color: "#e84025",
+                fontSize: 13,
+                fontFamily: FONT.body,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <span>{erroSecundario}</span>
+              <button
+                type="button"
+                onClick={() => recarregarSecundario()}
+                style={{
+                  fontFamily: FONT.body,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(232,64,37,0.35)",
+                  background: "transparent",
+                  color: "#e84025",
+                  cursor: "pointer",
+                }}
+              >
+                Tentar de novo
+              </button>
+            </div>
+          ) : loadingSecundario ? (
             <>
               <div style={contentBox}>
                 <SectionTitle sub="mês a mês">
@@ -737,7 +883,9 @@ export default function OverviewSpin() {
                   <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                 </div>
               </div>
-              {!modoAgregadoTodasOperadoras && (
+              {modoAgregadoTodasOperadoras ? (
+                blocosMesaTodasOperadoras
+              ) : (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -771,10 +919,12 @@ export default function OverviewSpin() {
                   Comparativo de Jogo
                 </SectionTitle>
                 <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                  {MSG_SEM_DADOS_FILTRO}
+                  {MSG_SEM_DADOS_PERIODO}
                 </div>
               </div>
-              {!modoAgregadoTodasOperadoras && (
+              {modoAgregadoTodasOperadoras ? (
+                blocosMesaTodasOperadoras
+              ) : (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -784,7 +934,7 @@ export default function OverviewSpin() {
                     <div
                       style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                     >
-                      {MSG_SEM_DADOS_FILTRO}
+                      {MSG_SEM_DADOS_PERIODO}
                     </div>
                   </div>
                   )}
@@ -800,7 +950,7 @@ export default function OverviewSpin() {
                 </SectionTitle>
                 {linhasComparativoJogo.length === 0 ? (
                   <div style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-                    {MSG_SEM_DADOS_FILTRO}
+                    {MSG_SEM_DADOS_PERIODO}
                   </div>
                 ) : (
                   <RenderWhenVisible minHeight={240}>
@@ -832,7 +982,9 @@ export default function OverviewSpin() {
                 )}
               </div>
 
-              {!modoAgregadoTodasOperadoras && (
+              {modoAgregadoTodasOperadoras ? (
+                blocosMesaTodasOperadoras
+              ) : (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -844,7 +996,7 @@ export default function OverviewSpin() {
                       <div
                         style={{ padding: 40, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
                       >
-                        {MSG_SEM_DADOS_FILTRO}
+                        {MSG_SEM_DADOS_PERIODO}
                       </div>
                     ) : (
                       <>

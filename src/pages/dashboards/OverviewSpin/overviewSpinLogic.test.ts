@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getMesesDisponiveis,
   jogoComparativoKeysFromPorTabelaRows,
+  momAnteriorComparavel,
   montarKpiAnteriorMoM,
   type DailyRow,
   type PorTabelaRow,
@@ -46,17 +47,31 @@ describe("montarKpiAnteriorMoM", () => {
     });
     expect(snap?.ggr).toBe(100);
     expect(snap?.uap).toBe(213);
-    expect(snap?.arpu).toBeCloseTo(100 / 213);
+    expect(snap?.arpu).toBe(151);
   });
 
-  it("retorna null sem daily do mês anterior", () => {
-    expect(
-      montarKpiAnteriorMoM({
-        historico: false,
-        dailyDataPrevMonth: [],
-        monthlyUapArpuPrev: { uap: 213, arpu: 151 },
-      }),
-    ).toBeNull();
+  it("sem daily do mês anterior ainda devolve UAP e ARPU do monthly fechado", () => {
+    const snap = montarKpiAnteriorMoM({
+      historico: false,
+      dailyDataPrevMonth: [],
+      monthlyUapArpuPrev: { uap: 213, arpu: 151 },
+    });
+    expect(snap?.ggr).toBeNull();
+    expect(snap?.uap).toBe(213);
+    expect(snap?.arpu).toBe(151);
+  });
+});
+
+describe("momAnteriorComparavel", () => {
+  it("esconde comparativo quando o anterior é irrisório (~1%)", () => {
+    expect(momAnteriorComparavel(80334, 215)).toBe(false);
+    expect(momAnteriorComparavel(1000, 0)).toBe(false);
+    expect(momAnteriorComparavel(1000, null)).toBe(false);
+  });
+
+  it("mantém comparativo quando o anterior é material", () => {
+    expect(momAnteriorComparavel(1000, 50)).toBe(true);
+    expect(momAnteriorComparavel(0, 200)).toBe(true);
   });
 });
 

@@ -89,12 +89,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O Comparativo de Mesa não aparece mesmo com dados no mês?",
         texto:
-          "O Comparativo de Mesa só é exibido quando uma operadora específica está selecionada (não com **Todas Operadoras** no filtro). Selecione uma operadora no filtro e verifique se há dados de mesa individuais cadastrados para o período. Se não houver registros de mesas individuais (somente resumo diário), a seção permanece vazia.",
+          "Com **Todas Operadoras**, o Comparativo de mesa e Dados por mesa pedem que você selecione uma operadora. Escolha uma operadora no filtro e verifique se há dados de mesa individuais no período. Se não houver registros de mesas (somente resumo diário), a seção permanece vazia.",
       },
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento exibe o snapshot do **dia civil de Brasília**. Se o monitor horário (Lobby Blaze / Lobby CDA / Lobby Esportiva Bet / Lobby Jonbet) ainda não executou hoje, aguarde a próxima coleta — confira em **Status Técnico** se as integrações de lobby estão com status OK. Na aba, use **Última atualização** no bloco de mesas: se indicar ontem, ainda não houve leitura válida hoje. Com filtro **Todas Operadoras**, Blaze, Casa de Apostas, Esportiva Bet e Jonbet aparecem lado a lado; com operadora específica, só aquela parceira. Se Status Técnico mostra sucesso mas a aba continua vazia após hard refresh (Ctrl+Shift+R), avise o time de produto — pode ser atraso na liberação de permissão da página ou uma coleta registrada sem as posições das mesas.",
+          "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet estão OK. Com **Todas Operadoras**, as quatro parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
@@ -727,6 +727,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A lista de prestadores é filtrada pelo time selecionado (Game Presenter ou Shuffler) e inclui apenas funcionários ativos ou indisponíveis vinculados a esse time (ou papéis de apoio como Service Manager, Shift Leader, Performance Coach e Academy). Verifique o cadastro em Gestão de Prestadores se o nome não aparece.",
       },
       {
+        subtitulo: "As setas ou a tecla Tab não funcionam como esperado no formulário?",
+        texto:
+          "Nos campos pesquisáveis **Mesa** e **Prestador**, clique no campo e comece a digitar. Use **↑/↓** para destacar um resultado e **Enter** para selecionar; **Escape** fecha a lista. A tecla **Tab** avança para o próximo controle do formulário sem percorrer cada opção. Se o navegador mantiver um comportamento antigo, atualize a página e tente novamente.",
+      },
+      {
         subtitulo: "O anexo não foi enviado ao salvar o incidente?",
         texto:
           "Cada arquivo tem limite de 50 MB. Se o arquivo exceder esse tamanho, uma mensagem indica qual anexo excedeu o limite — reduza o tamanho do arquivo ou envie um formato mais leve e tente novamente.",
@@ -820,6 +825,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Imagem ou vídeo do Manual não aparece ao visualizar?",
         texto:
           "No **Gerenciamento**, use o campo **Imagem/Vídeo** (não só Anexo) e publique a postagem. Ao abrir **Visualizar** na aba Manuais, a mídia deve aparecer abaixo da descrição. Se o arquivo não subir ao salvar, tente outro formato (JPG, PNG, MP4, WebM) ou entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Não aparece o botão Ver ciência no manual?",
+        texto:
+          "O botão **Ver ciência** nos cards de Manuais só aparece com permissão de **Editar = Sim** no Portal da Academy. Com apenas Ver, você registra a própria ciência no modal (**Lido e Ciente**), mas não consulta quem já aceitou.",
       },
     ],
   },
@@ -985,6 +995,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não aparece o botão Ver Lidos no comunicado?",
         texto:
           "O botão **Ver Lidos** só aparece com permissão de **Editar = Sim** no Portal de RH. Com apenas Ver, você marca a própria leitura com **Lido**, mas não consulta a lista de leitores.",
+      },
+      {
+        subtitulo: "Não aparece o botão Ver ciência no documento?",
+        texto:
+          "O botão **Ver ciência** nos cards de Políticas e normativas só aparece com permissão de **Editar = Sim**. Com apenas Ver, você registra a própria ciência no modal do PDF (**Li e estou ciente**), mas não consulta quem já aceitou.",
       },
       {
         subtitulo: "O time do autor no card está errado?",
@@ -1464,7 +1479,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo salvar ou aprovar a escala?",
         texto:
-          "Salvar e aprovar exigem permissão de **Criar**. **Alterar Escala** (após aprovada) exige **Editar**. Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+          "Salvar e aprovar exigem permissão de **Criar**. **Alterar Escala** (após aprovada) exige **Editar**. Se aparecer aviso de que a escala foi atualizada por outra pessoa, use **Tentar de novo** (ou recarregue) antes de salvar. Verifique também se o mês ou time selecionado está bloqueado por fluxo de aprovação em andamento.",
+      },
+      {
+        subtitulo: "Só vejo uma aba de time?",
+        texto:
+          "Com permissão de **Ver = Próprios**, a Escala Estúdio mostra apenas a aba do seu time no Organograma (a grade dessa aba continua com todo o time). Com **Ver = Sim**, aparecem todas as áreas (Game Presenter, Shuffler, etc.). Ajuste em Gestão de Usuários → Permissões.",
+      },
+      {
+        subtitulo: "A lista da Escala Diária não bate com o número do Consolidado?",
+        texto:
+          "O clique no turno do Consolidado filtra pela **situação do dia** (Manhã, Compra - Manhã, etc.), não pelo turno cadastrado na Staff. Quem teve Compra ou Alterar Escala para outro turno no dia entra na contagem e na lista desse turno.",
       },
       {
         subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",
@@ -1544,7 +1569,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Ao trocar o Staff, o Controle de Presença ainda mostra o check-in do anterior?",
         texto:
-          "Atualize a página (Ctrl+Shift+R). Se o problema continuar após o deploy, entre em contato com o suporte — o ponto do prestador anterior não deve ser reaproveitado ao mudar o filtro de Staff.",
+          "Atualize a página (Ctrl+Shift+R). Se o problema continuar após o deploy, entre em contato com o suporte — o registro de presença do prestador anterior não deve ser reaproveitado ao mudar o filtro de Staff.",
       },
       {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
@@ -1564,15 +1589,15 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
         texto:
-          "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar após o deploy da função **prestador-ponto**, peça ao suporte para revisar registros antigos gravados no dia civil errado.",
+          "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar, peça ao suporte para revisar os **registros de presença** daquele dia.",
       },
       {
         subtitulo: "O pop-up confirma o check-in, mas o horário realizado não aparece?",
         texto:
-          "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e é o mesmo usado para acessar a plataforma. A leitura do ponto depende desse vínculo — com e-mail pessoal e e-mail Spin em contas diferentes, o registro não é associado ao prestador. Após corrigir o cadastro, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
+          "Confirme se o e-mail de login (ou e-mail Spin) no cadastro do prestador está correto e é o mesmo usado para acessar a plataforma. A leitura do registro de presença depende desse vínculo — com e-mail pessoal e e-mail Spin em contas diferentes, o registro não é associado ao prestador. Após corrigir o cadastro, o horário deve aparecer na linha do turno; se continuar vazio, entre em contato com o suporte.",
       },
       {
-        subtitulo: "Posso registrar ponto em uma Folga?",
+        subtitulo: "Posso fazer Check-in em uma Folga?",
         texto:
           "Sim. Check-in e Check-out ficam disponíveis independentemente da Situação do dia para coberturas e plantões emergenciais. O dia continua identificado como **Folga**, e os horários realizados ficam pendentes de aprovação do gestor.",
       },

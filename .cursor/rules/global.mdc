@@ -900,12 +900,13 @@ Em **todo** modal (ou painel dentro de modal) que permita o usuário enviar arqu
 | Peça | Regra |
 |------|--------|
 | Componente | **`CampoUploadArquivos`** — **proibido** `<input type="file">` nativo visível, label dashed ad hoc ou dropzone visual própria em código novo |
-| Layout | Label do campo + botão (ícone + `buttonLabel`) + microcopy **ou arraste, solte ou cole (Ctrl+V) aqui** + lista de itens (nome, badge **Pendente** se ainda não persistido, `X` remover) + empty «Nenhum arquivo adicionado.» |
+| Layout | Label do campo + botão (ícone + `buttonLabel`) + microcopy **ou arraste, solte ou cole (Ctrl+V) aqui** + lista de itens (nome, badge **Pendente** se ainda não persistido, `X` remover) + empty «Nenhum arquivo adicionado.» · opcional `listVariant="cards"` (miniaturas imagem/vídeo + nome — Incidentes) |
 | Drag-and-drop | **Incluído no componente** — área ao redor do botão aceita soltar arquivos; feedback visual (borda dashed + tint de marca) enquanto arrasta; respeita `accept`, `multiple` e `disabled`. **Proibido** reinventar dropzone fora deste componente |
 | Colar (clipboard) | **Incluído no componente** — com a área focada (clique na box), **Ctrl+V** / **Cmd+V** adiciona imagem ou vídeo da área de transferência (ex.: captura de tela sem salvar no disco); arquivos sem nome recebem `captura-…` / `video-…`; respeita `accept`, `multiple` e `disabled`. Não intercepta colar em `<input>` / `<textarea>` fora da área |
 | `buttonLabel` / `label` | **Do domínio da página** — não unificar textos (ex.: «Selecionar PDF», «Enviar vídeo da avaliação», «Adicionar anexo», «Anexar arquivo») |
 | `accept`, tamanho, `multiple`, upload imediato vs. no save | **Da página** — o componente **não** padroniza regras de negócio; só o jeito/layout do seletor |
 | `hint` | Opcional — orientação de tipo/tamanho (ex.: máx. 15 MB) fica na página via prop |
+| `listVariant` | Default **`list`** (linhas). **`cards`** = grelha de miniaturas (passar `file` ou `previewUrl` no item) — uso em Incidentes |
 | `showList={false}` | Só quando a lista de arquivos já aparece noutro sítio do mesmo modal (ex.: coluna da tabela de documentos, grelha de thumbs de fotos) — o **botão** + drop continuam canónicos |
 | Remover (`X`) | `tooltipAcao("Remover arquivo")` — sem nome do ficheiro no helper |
 

@@ -668,6 +668,34 @@ export function execucaoMesmoHorarioDiaAnterior(
   return best;
 }
 
+/** Última execução ok/parcial por `executado_em` (qualquer dia). */
+export function ultimaExecucaoValida(execucoes: LobbyExecucaoRow[]): LobbyExecucaoRow | null {
+  const ok = execucoes.filter((e) => e.status === "ok" || e.status === "parcial");
+  if (ok.length === 0) return null;
+  return [...ok].sort(
+    (a, b) => new Date(b.executado_em).getTime() - new Date(a.executado_em).getTime(),
+  )[0]!;
+}
+
+/** Execução imediatamente anterior à de referência (último horário antes dela). */
+export function execucaoAnteriorImediata(
+  ref: LobbyExecucaoRow,
+  execucoes: LobbyExecucaoRow[],
+): LobbyExecucaoRow | null {
+  const refTs = new Date(ref.executado_em).getTime();
+  if (!Number.isFinite(refTs)) return null;
+  const before = execucoes.filter((e) => {
+    if (e.id === ref.id) return false;
+    if (e.status !== "ok" && e.status !== "parcial") return false;
+    const ts = new Date(e.executado_em).getTime();
+    return Number.isFinite(ts) && ts < refTs;
+  });
+  if (before.length === 0) return null;
+  return [...before].sort(
+    (a, b) => new Date(b.executado_em).getTime() - new Date(a.executado_em).getTime(),
+  )[0]!;
+}
+
 export function calcVisibilidadeLeituras(posicoes: LobbyPosicaoRow[]): number | null {
   let total = 0;
   let top10 = 0;

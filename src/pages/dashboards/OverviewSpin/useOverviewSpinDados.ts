@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useApp } from "../../../context/AppContext";
 import { getIdxMesCarrosselPadrao } from "../../../lib/dashboardHelpers";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import type { OverviewSpinCanal } from "./overviewSpinCanal";
 import {
   type MesaCadastroComparativoRow,
@@ -10,9 +11,14 @@ import {
   getMesesDisponiveis,
 } from "./overviewSpinLogic";
 import {
-  fetchOverviewSpinDados,
-  OVERVIEW_SPIN_DADOS_VAZIO,
+  fetchOverviewSpinDadosEssenciais,
+  fetchOverviewSpinDadosSecundarios,
+  OVERVIEW_SPIN_ESSENCIAIS_VAZIO,
+  OVERVIEW_SPIN_SECUNDARIOS_VAZIO,
 } from "./overviewSpinDataFetch";
+
+export const MSG_ERRO_OVERVIEW_SPIN =
+  "Não foi possível carregar os dados. Se o problema persistir, entre em contato com o suporte.";
 
 export function useOverviewSpinDados(
   canal: OverviewSpinCanal | null,
@@ -61,11 +67,13 @@ export function useOverviewSpinDados(
   const mesasCadastroQuery = useQuery({
     queryKey: ["overview-spin", "mesas-cadastro"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("mesas_spin_cadastro")
-        .select("operadora_slug, tipo_jogo, nome_mesa");
-      if (error) throw error;
-      return (data ?? []) as MesaCadastroComparativoRow[];
+      const rows = await fetchAllPages(async (from, to) =>
+        supabase
+          .from("mesas_spin_cadastro")
+          .select("operadora_slug, tipo_jogo, nome_mesa")
+          .range(from, to),
+      );
+      return rows as MesaCadastroComparativoRow[];
     },
     staleTime: 10 * 60 * 1000,
   });
@@ -95,35 +103,70 @@ export function useOverviewSpinDados(
   ]);
 
   const semSlugsPermitidos = slugList != null && slugList.length === 0;
-  const dadosQuery = useQuery({
-    queryKey: [
-      "overview-spin",
-      "dados",
-      canal,
-      historico ? "historico-13m" : `${mesSelecionado?.ano ?? 0}-${mesSelecionado?.mes ?? 0}`,
-      slugList == null ? "sem-restricao" : slugList.join("|"),
-      modoAgregadoTodasOperadoras,
-    ],
+  const queryKeyBase = [
+    "overview-spin",
+    "dados",
+    canal,
+    historico ? "historico-13m" : `${mesSelecionado?.ano ?? 0}-${mesSelecionado?.mes ?? 0}`,
+    slugList == null ? "sem-restricao" : slugList.join("|"),
+    modoAgregadoTodasOperadoras,
+  ] as const;
+
+  const fetchParams = {
+    canal: canal!,
+    slugList,
+    historico,
+    mesSelecionado,
+    agregadoTodas: modoAgregadoTodasOperadoras,
+  };
+
+  const essenciaisQuery = useQuery({
+    queryKey: [...queryKeyBase, "essencial"],
     enabled: canal != null && !semSlugsPermitidos,
-    queryFn: () =>
-      fetchOverviewSpinDados({
-        canal: canal!,
-        slugList,
-        historico,
-        mesSelecionado,
-        agregadoTodas: modoAgregadoTodasOperadoras,
-      }),
+    queryFn: () => fetchOverviewSpinDadosEssenciais(fetchParams),
+    staleTime: historico ? 10 * 60 * 1000 : 5 * 60 * 1000,
+  });
+
+  const secundariosQuery = useQuery({
+    queryKey: [...queryKeyBase, "secundario"],
+    enabled: canal != null && !semSlugsPermitidos && essenciaisQuery.isSuccess,
+    queryFn: () => fetchOverviewSpinDadosSecundarios(fetchParams),
     staleTime: historico ? 10 * 60 * 1000 : 5 * 60 * 1000,
   });
 
   useEffect(() => {
-    if (dadosQuery.error) {
-      console.error("[OverviewSpin] carregar dados:", dadosQuery.error);
+    if (essenciaisQuery.error) {
+      console.error("[OverviewSpin] carregar dados essenciais:", essenciaisQuery.error);
     }
-  }, [dadosQuery.error]);
+  }, [essenciaisQuery.error]);
 
-  const dados = semSlugsPermitidos ? OVERVIEW_SPIN_DADOS_VAZIO : (dadosQuery.data ?? OVERVIEW_SPIN_DADOS_VAZIO);
-  const loading = canal != null && !semSlugsPermitidos && dadosQuery.isPending;
+  useEffect(() => {
+    if (secundariosQuery.error) {
+      console.error("[OverviewSpin] carregar dados de mesas:", secundariosQuery.error);
+    }
+  }, [secundariosQuery.error]);
+
+  const essenciais = semSlugsPermitidos
+    ? OVERVIEW_SPIN_ESSENCIAIS_VAZIO
+    : (essenciaisQuery.data ?? OVERVIEW_SPIN_ESSENCIAIS_VAZIO);
+  const secundarios = semSlugsPermitidos
+    ? OVERVIEW_SPIN_SECUNDARIOS_VAZIO
+    : (secundariosQuery.data ?? OVERVIEW_SPIN_SECUNDARIOS_VAZIO);
+
+  const loading = canal != null && !semSlugsPermitidos && essenciaisQuery.isPending;
+  const loadingSecundario =
+    canal != null && !semSlugsPermitidos && (essenciaisQuery.isPending || secundariosQuery.isPending);
+  const erroCarga = essenciaisQuery.isError ? MSG_ERRO_OVERVIEW_SPIN : null;
+  const erroSecundario = secundariosQuery.isError ? MSG_ERRO_OVERVIEW_SPIN : null;
+
+  const recarregar = useCallback(() => {
+    void essenciaisQuery.refetch();
+    void secundariosQuery.refetch();
+  }, [essenciaisQuery, secundariosQuery]);
+
+  const recarregarSecundario = useCallback(() => {
+    void secundariosQuery.refetch();
+  }, [secundariosQuery]);
 
   useEffect(() => {
     if (!operadoraSlugsForcado?.length) return;
@@ -139,19 +182,24 @@ export function useOverviewSpinDados(
     historico,
     setHistorico,
     loading,
+    loadingSecundario,
+    erroCarga,
+    erroSecundario,
+    recarregar,
+    recarregarSecundario,
     modoAgregadoTodasOperadoras,
     mesSelecionado,
     mesasCadastro: mesasCadastroQuery.data ?? [],
-    dailyData: dados.dailyData,
-    monthlyData: dados.monthlyData,
-    porTabelaRows: dados.porTabelaRows,
-    porTabelaHistAll: dados.porTabelaHistAll,
-    monthlyUapArpuSel: dados.monthlyUapArpuSel,
-    monthlyUapArpuPrev: dados.monthlyUapArpuPrev,
-    dailyDataPrevMonth: dados.dailyDataPrevMonth,
-    uapPorJogoRows: dados.uapPorJogoRows,
-    dailyRawUnmerged: dados.dailyRawUnmerged,
-    monthlyRawUnmerged: dados.monthlyRawUnmerged,
+    dailyData: essenciais.dailyData,
+    monthlyData: essenciais.monthlyData,
+    porTabelaRows: secundarios.porTabelaRows,
+    porTabelaHistAll: secundarios.porTabelaHistAll,
+    monthlyUapArpuSel: essenciais.monthlyUapArpuSel,
+    monthlyUapArpuPrev: essenciais.monthlyUapArpuPrev,
+    dailyDataPrevMonth: essenciais.dailyDataPrevMonth,
+    uapPorJogoRows: secundarios.uapPorJogoRows,
+    dailyRawUnmerged: essenciais.dailyRawUnmerged,
+    monthlyRawUnmerged: essenciais.monthlyRawUnmerged,
     irMesAnterior,
     irMesProximo,
     toggleHistorico,
