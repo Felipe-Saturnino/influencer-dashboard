@@ -53,14 +53,6 @@ export function ModalVisualizar({ influencer, operadorasList, onClose, isDark }:
     </span>
   );
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
     <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>

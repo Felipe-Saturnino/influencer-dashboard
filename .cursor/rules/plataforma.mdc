@@ -328,7 +328,7 @@ Botões chip/pill que toggam filtro ativo devem expor `aria-pressed={ativo}`.
 - Matriz de permissões com `overflow: hidden` no tabpanel que corta scroll horizontal.
 - Texto “Carregando…” (elipse Unicode) sem `Loader2` como estado principal de bloco — ou só texto ASCII `Carregando...`.
 - CTA salvando só com reticências — usar `Loader2` `#fff` + texto.
-- Modais sem `dialog` + Escape + foco inicial.
+- Modais sem `dialog` + foco inicial/visível, ou que fechem com **Escape**.
 - `backdropFilter: blur()` em overlay.
 - `maxHeight: "90vh"` em modais — usar **`90dvh`**.
 - Zebra `rgba(74,32,130,0.06)` fixo ou sombra idêntica em light/dark.

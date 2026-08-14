@@ -100,14 +100,6 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   }, [live?.id, isEdit]);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  useEffect(() => {
     if (!isInfluencer) {
       supabase.from("profiles").select("id, name").in("role", [...ROLES_PARIDADE_INFLUENCER]).then(({ data }) => {
         if (data) setInfluencers(data.filter((i: { id: string }) => podeVerInfluencer(i.id)));

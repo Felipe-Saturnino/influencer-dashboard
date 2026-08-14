@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback, type CSSProperties, type Reac
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { useModalEscape } from "../../../hooks/useModalEscape";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
@@ -478,7 +477,6 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const rowS: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | number | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v || "—"}</span>;
-  useModalEscape(onClose, true);
   useEffect(() => { const id = window.setTimeout(() => ref.current?.focus(), 50); return () => window.clearTimeout(id); }, []);
   const tabs = [
     { key: "cadastral" as const, label: "Cadastral" },
@@ -594,7 +592,6 @@ function ModalEditar({
   const ctaSalvar = brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
     : "linear-gradient(135deg, #4a2082, #1e36f8)";
-  useModalEscape(onClose, true);
 
   const [editNomeCompleto, setEditNomeCompleto] = useState(existing?.nome_completo ?? "");
   const [form, setForm] = useState<Perfil>(existing ?? emptyPerfil(row.id));

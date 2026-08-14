@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, Paperclip, Shuffle, UserRound } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation";
 import { FONT } from "../../../constants/theme";
 import { ModalBase, ModalConfirmDelete, ModalHeader } from "../../../components/OperacoesModal";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -111,10 +112,8 @@ function ComboBuscavel({
   const brand = useDashboardBrand();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const optionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const listboxId = useId();
 
   useEffect(() => {
@@ -133,6 +132,15 @@ function ComboBuscavel({
       textoContemBuscaEmAlgum(query, o.label, ...(o.buscaExtras ?? [])),
     );
   }, [options, query]);
+  const {
+    activeIndex,
+    setActiveIndex,
+    optionRefs,
+    onKeyDown: onListboxKeyDown,
+  } = useListboxKeyboardNavigation({
+    items: filtered,
+    onSelect: selecionarOpcao,
+  });
 
   useEffect(() => {
     if (!open) {
@@ -141,27 +149,12 @@ function ComboBuscavel({
     }
     const selectedIndex = filtered.findIndex((o) => o.id === value);
     setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
-  }, [open, query, filtered, value]);
-
-  useEffect(() => {
-    if (!open || filtered.length === 0) return;
-    optionRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex, filtered.length, open]);
+  }, [open, query, filtered, value, setActiveIndex]);
 
   function selecionarOpcao(option: ComboOption) {
     onChange(option.id);
     setOpen(false);
     requestAnimationFrame(() => triggerRef.current?.focus());
-  }
-
-  function navegarOpcoes(delta: 1 | -1) {
-    if (filtered.length === 0) return;
-    setActiveIndex((current) => {
-      const next = current + delta;
-      if (next < 0) return filtered.length - 1;
-      if (next >= filtered.length) return 0;
-      return next;
-    });
   }
 
   return (
@@ -175,13 +168,14 @@ function ComboBuscavel({
         aria-expanded={open}
         aria-controls={open ? listboxId : undefined}
         aria-label={label}
+        className={CAMPO_FOCO_CLASS}
         onClick={() => !disabled && setOpen((o) => !o)}
         onKeyDown={(e) => {
           if (disabled) return;
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
             if (!open) setOpen(true);
-            else navegarOpcoes(e.key === "ArrowDown" ? 1 : -1);
+            else onListboxKeyDown(e);
           }
         }}
         style={{
@@ -235,17 +229,19 @@ function ComboBuscavel({
                 onChange={setQuery}
                 placeholder={searchPlaceholder ?? placeholderPesquisaFiltro(label)}
                 aria-activedescendant={
-                  filtered[activeIndex] ? `${listboxId}-option-${activeIndex}` : undefined
+                  filtered[activeIndex]
+                    ? `${listboxId}-option-${activeIndex}`
+                    : undefined
                 }
                 onKeyDown={(e) => {
-                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                    e.preventDefault();
-                    navegarOpcoes(e.key === "ArrowDown" ? 1 : -1);
-                    return;
-                  }
-                  if (e.key === "Enter" && filtered[activeIndex]) {
-                    e.preventDefault();
-                    selecionarOpcao(filtered[activeIndex]);
+                  if (
+                    e.key === "ArrowDown" ||
+                    e.key === "ArrowUp" ||
+                    e.key === "Home" ||
+                    e.key === "End" ||
+                    e.key === "Enter"
+                  ) {
+                    onListboxKeyDown(e);
                     return;
                   }
                   if (e.key === "Escape") {
@@ -345,9 +341,11 @@ const inputBaseStyle = (t: { cardBorder: string; inputBg?: string; cardBg: strin
   color: t.text,
   fontSize: 13,
   fontFamily: FONT.body,
-  outline: "none",
   boxSizing: "border-box" as const,
 });
+
+/** Anel de foco por teclado (global.css) — todo controle focável do modal usa esta classe. */
+const CAMPO_FOCO_CLASS = "app-campo-foco";
 
 const row2: React.CSSProperties = {
   display: "grid",
@@ -723,6 +721,7 @@ export function ModalNovoIncidente({
         value={tipo}
         onChange={(e) => setTipo(e.target.value)}
         disabled={tiposOptions.length === 0}
+        className={CAMPO_FOCO_CLASS}
         style={inputBaseStyle(t)}
       >
         <option value="">{tiposOptions.length === 0 ? "Selecione a mesa primeiro" : "Selecione o tipo"}</option>
@@ -740,6 +739,7 @@ export function ModalNovoIncidente({
       <select
         value={incidenteCategoria}
         onChange={(e) => setIncidenteCategoria(e.target.value as IncidenteCategoria)}
+        className={CAMPO_FOCO_CLASS}
         style={inputBaseStyle(t)}
       >
         {INCIDENTE_CATEGORIA_OPTIONS.map((o) => (
@@ -756,6 +756,7 @@ export function ModalNovoIncidente({
       <select
         value={resolucao}
         onChange={(e) => setResolucao(e.target.value as IncidenteResolucao)}
+        className={CAMPO_FOCO_CLASS}
         style={inputBaseStyle(t)}
       >
         {INCIDENTE_RESOLUCAO_OPTIONS.map((r) => (
@@ -774,6 +775,7 @@ export function ModalNovoIncidente({
           type="button"
           aria-pressed={payoutNecessario}
           tabIndex={payoutNecessario ? 0 : -1}
+          className={CAMPO_FOCO_CLASS}
           onClick={() => setPayoutNecessario(true)}
           style={getFiltroBarTabButtonStyle(t, brand, payoutNecessario)}
         >
@@ -783,6 +785,7 @@ export function ModalNovoIncidente({
           type="button"
           aria-pressed={!payoutNecessario}
           tabIndex={!payoutNecessario ? 0 : -1}
+          className={CAMPO_FOCO_CLASS}
           onClick={() => setPayoutNecessario(false)}
           style={getFiltroBarTabButtonStyle(t, brand, !payoutNecessario)}
         >
@@ -799,6 +802,7 @@ export function ModalNovoIncidente({
           type="button"
           aria-pressed={localMesa === "em_mesa"}
           tabIndex={localMesa === "em_mesa" ? 0 : -1}
+          className={CAMPO_FOCO_CLASS}
           onClick={() => setLocalMesa("em_mesa")}
           style={getFiltroBarTabButtonStyle(t, brand, localMesa === "em_mesa")}
         >
@@ -808,6 +812,7 @@ export function ModalNovoIncidente({
           type="button"
           aria-pressed={localMesa === "fora_mesa"}
           tabIndex={localMesa === "fora_mesa" ? 0 : -1}
+          className={CAMPO_FOCO_CLASS}
           onClick={() => setLocalMesa("fora_mesa")}
           style={getFiltroBarTabButtonStyle(t, brand, localMesa === "fora_mesa")}
         >
@@ -841,6 +846,7 @@ export function ModalNovoIncidente({
         onChange={(e) => setIdRodada(e.target.value)}
         disabled={semIdRodada || salvando}
         placeholder={semIdRodada ? "Sem ID" : undefined}
+        className={CAMPO_FOCO_CLASS}
         style={{
           ...inputBaseStyle(t),
           opacity: semIdRodada ? 0.6 : 1,
@@ -869,6 +875,7 @@ export function ModalNovoIncidente({
             setSemIdRodada(checked);
             if (checked) setIdRodada("");
           }}
+          className={CAMPO_FOCO_CLASS}
           style={{ width: 15, height: 15, accentColor: "var(--brand-primary, #7c3aed)" }}
         />
         Não tem ID
@@ -882,6 +889,7 @@ export function ModalNovoIncidente({
         type="date"
         value={dataRodada}
         onChange={(e) => setDataRodada(e.target.value)}
+        className={CAMPO_FOCO_CLASS}
         style={inputBaseStyle(t)}
       />
     </Campo>
@@ -908,6 +916,7 @@ export function ModalNovoIncidente({
         placeholder="#HH:MM:SS"
         inputMode="numeric"
         autoComplete="off"
+        className={CAMPO_FOCO_CLASS}
         style={inputBaseStyle(t)}
       />
     </Campo>
@@ -967,6 +976,7 @@ export function ModalNovoIncidente({
             <FiltroBarTabButton
               id="tab-novo-incidente-gp"
               active={timeAlvo === "gp"}
+              className={CAMPO_FOCO_CLASS}
               onClick={() => setTimeAlvo("gp")}
               icon={<UserRound {...FILTRO_BAR_TAB_ICON_PROPS} />}
             >
@@ -975,6 +985,7 @@ export function ModalNovoIncidente({
             <FiltroBarTabButton
               id="tab-novo-incidente-shuf"
               active={timeAlvo === "shuf"}
+              className={CAMPO_FOCO_CLASS}
               onClick={() => setTimeAlvo("shuf")}
               icon={<Shuffle {...FILTRO_BAR_TAB_ICON_PROPS} />}
             >
@@ -1070,6 +1081,7 @@ export function ModalNovoIncidente({
                         type="button"
                         aria-pressed={ativo}
                         disabled={salvando}
+                        className={CAMPO_FOCO_CLASS}
                         onClick={() => tentarAplicarScript(s)}
                         style={{
                           display: "inline-flex",
@@ -1114,6 +1126,7 @@ export function ModalNovoIncidente({
                     ? "Descreva o ocorrido na mesa… ou use um script acima."
                     : "Descreva o ocorrido na mesa…"
                 }
+                className={CAMPO_FOCO_CLASS}
                 style={{ ...inputBaseStyle(t), resize: "vertical" as const, fontFamily: FONT.body }}
               />
             </Campo>
@@ -1164,6 +1177,7 @@ export function ModalNovoIncidente({
               type="button"
               onClick={() => void handleSalvar({ criarOutro: true })}
               disabled={salvando}
+              className={CAMPO_FOCO_CLASS}
               style={{
                 padding: "10px 20px",
                 borderRadius: 10,
@@ -1184,6 +1198,7 @@ export function ModalNovoIncidente({
             type="button"
             onClick={() => void handleSalvar()}
             disabled={salvando}
+            className={CAMPO_FOCO_CLASS}
             style={{
               padding: "10px 20px",
               borderRadius: 10,

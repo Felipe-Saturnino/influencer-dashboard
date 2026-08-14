@@ -711,14 +711,6 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
     return () => window.clearTimeout(id);
   }, []);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const ctaSalvarBg = brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
     : "linear-gradient(135deg, #4a2082, #1e36f8)";

@@ -469,18 +469,19 @@ export function CampoUploadArquivos({
           if (target.closest("button")) return;
           zoneRef.current?.focus();
         }}
+        className="app-campo-foco"
         style={{
           borderRadius: 10,
           border: `1px ${activeHighlight ? "dashed" : "solid"} ${borderColor}`,
           background: dropZoneBg,
           padding: 12,
           transition: "border-color 120ms ease, background 120ms ease",
-          outline: "none",
         }}
       >
         <button
           type="button"
           disabled={disabled}
+          className="app-campo-foco"
           onClick={() => inputRef.current?.click()}
           style={{
             display: "inline-flex",

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { useModalEscape } from "../../../hooks/useModalEscape";
 import { usePermission, type Permissoes } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
@@ -523,7 +522,6 @@ function ModalVisualizar({ row, operadorasList, onClose }: { row: AfiliadoNetwor
   const containerRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<NetworkModalTab>("contato");
   const [anotacoes, setAnotacoes] = useState<AfiliadoAnotacao[]>([]);
-  useModalEscape(onClose, true);
 
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const rowS: CSSProperties = { marginBottom: 14 };
@@ -728,7 +726,6 @@ function ModalEditar({
   const [error, setError] = useState("");
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [atribuirRegistroAMim, setAtribuirRegistroAMim] = useState(false);
-  useModalEscape(onClose, true);
 
   useEffect(() => {
     if (row) {

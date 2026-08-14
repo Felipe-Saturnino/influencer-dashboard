@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
+import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation"
 import { FONT } from "../../../constants/theme"
 import { supabase } from "../../../lib/supabase"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
@@ -81,6 +82,13 @@ export function ModalRetirada({
     if (!q) return prestadores;
     return prestadores.filter((p) => textoContemBuscaEmAlgum(q, p.nome, p.setor));
   }, [prestadores, buscaPrestador]);
+  const prestadoresKeyboard = useListboxKeyboardNavigation({
+    items: prestadoresFiltrados,
+    onSelect: (p) => {
+      setPrestadorSelecionadoId(p.id);
+      setBuscaPrestador("");
+    },
+  });
 
   const confirmar = async () => {
     setErr(null);
@@ -187,6 +195,12 @@ export function ModalRetirada({
               disabled={loadingPrestadores || !!erroCargaPrestadores || prestadores.length === 0}
               placeholder={FILTER_SEARCH_STAFF}
               aria-label="Filtrar prestadores por nome ou setor"
+              aria-activedescendant={
+                prestadoresFiltrados[prestadoresKeyboard.activeIndex]
+                  ? `retirada-prestador-${prestadoresKeyboard.activeIndex}`
+                  : undefined
+              }
+              onKeyDown={prestadoresKeyboard.onKeyDown}
               wrapperStyle={{ width: "100%", marginBottom: 8 }}
             />
             <div
@@ -208,9 +222,15 @@ export function ModalRetirada({
                 prestadoresFiltrados.map((p, i) => (
                   <button
                     key={p.id}
+                    id={`retirada-prestador-${i}`}
+                    ref={(node) => {
+                      prestadoresKeyboard.optionRefs.current[i] = node;
+                    }}
                     type="button"
                     role="option"
                     aria-selected={prestadorSelecionadoId === p.id}
+                    tabIndex={-1}
+                    onMouseEnter={() => prestadoresKeyboard.setActiveIndex(i)}
                     onClick={() => {
                       setPrestadorSelecionadoId(p.id);
                       setBuscaPrestador("");
@@ -223,7 +243,10 @@ export function ModalRetirada({
                       border: "none",
                       borderBottom:
                         i === prestadoresFiltrados.length - 1 ? "none" : `1px solid ${t.cardBorder}`,
-                      background: "transparent",
+                      background:
+                        i === prestadoresKeyboard.activeIndex
+                          ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                          : "transparent",
                       cursor: "pointer",
                       fontFamily: FONT.body,
                     }}

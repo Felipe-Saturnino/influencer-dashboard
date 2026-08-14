@@ -49,15 +49,6 @@ export function ModalCidrAdicionarStatusTecnico({
     return () => window.clearTimeout(id);
   }, [open, inputRef]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !salvando) onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, salvando, onClose]);
-
   if (!open) return null;
 
   return (

@@ -315,3 +315,22 @@ aside *::-webkit-scrollbar-thumb:hover {
   color: inherit;
   opacity: 0.5;
 }
+
+/* Anel de foco por teclado — campos e botões de formulário (Tab / Shift+Tab) */
+.app-campo-foco:focus {
+  outline: none;
+}
+
+.app-campo-foco:focus-visible,
+[role="dialog"] :where(
+  button,
+  input,
+  select,
+  textarea,
+  [role="combobox"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 2px solid var(--brand-primary, #7c3aed) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary, #7c3aed) 20%, transparent) !important;
+}

@@ -729,7 +729,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "As setas ou a tecla Tab não funcionam como esperado no formulário?",
         texto:
-          "Nos campos pesquisáveis **Mesa** e **Prestador**, clique no campo e comece a digitar. Use **↑/↓** para destacar um resultado e **Enter** para selecionar; **Escape** fecha a lista. A tecla **Tab** avança para o próximo controle do formulário sem percorrer cada opção. Se o navegador mantiver um comportamento antigo, atualize a página e tente novamente.",
+          "Nos campos pesquisáveis, clique no campo e comece a digitar. Use **↑/↓** para destacar um resultado, **Home/End** para ir ao início/fim e **Enter** para selecionar. A tecla **Tab** avança para o próximo controle do formulário sem percorrer cada opção — o campo em foco fica com um contorno colorido. **Escape não fecha o modal**, evitando a perda acidental do preenchimento. Se o navegador mantiver um comportamento antigo, atualize a página e tente novamente.",
       },
       {
         subtitulo: "O anexo não foi enviado ao salvar o incidente?",

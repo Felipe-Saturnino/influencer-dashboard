@@ -31,14 +31,6 @@ export function ModalPerfil({ influencer, operadorasList, onClose, onSaved, isDa
     return () => window.clearTimeout(id);
   }, []);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   // Status e Cachê somente Gestores e Admin podem alterar
   const podeAlterarStatusCache =
     !!user?.role && ROLES_STAFF_OPERACOES_LIVES.includes(user.role as Role);

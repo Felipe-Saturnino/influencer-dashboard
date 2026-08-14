@@ -58,15 +58,6 @@ export default function ModalBloqueioAgendaLive({
     return () => window.cancelAnimationFrame(id);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
   if (!open) return null;
 
   const copy = TEXTO_POR_CONTEXTO[contexto];

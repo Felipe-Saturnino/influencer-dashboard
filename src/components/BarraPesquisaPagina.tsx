@@ -1,4 +1,4 @@
-import type { CSSProperties, Ref } from "react";
+import type { CSSProperties, KeyboardEventHandler, Ref } from "react";
 import { Search } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { getBarraPesquisaPaginaIconStyle, getBarraPesquisaPaginaInputStyle } from "../lib/searchBarStyles";
@@ -12,6 +12,8 @@ export type BarraPesquisaPaginaProps = {
   disabled?: boolean;
   autoComplete?: string;
   inputRef?: Ref<HTMLInputElement>;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  "aria-activedescendant"?: string;
   wrapperStyle?: CSSProperties;
   inputStyle?: CSSProperties;
 };
@@ -28,6 +30,8 @@ export function BarraPesquisaPagina({
   disabled,
   autoComplete = "off",
   inputRef,
+  onKeyDown,
+  "aria-activedescendant": ariaActiveDescendant,
   wrapperStyle,
   inputStyle,
 }: BarraPesquisaPaginaProps) {
@@ -51,6 +55,8 @@ export function BarraPesquisaPagina({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        aria-activedescendant={ariaActiveDescendant}
+        onKeyDown={onKeyDown}
         disabled={disabled}
         autoComplete={autoComplete}
         className="app-barra-pesquisa-pagina-input"

@@ -466,20 +466,6 @@ export default function StatusTecnico() {
   }, [carregar, perm.canView]);
 
   useEffect(() => {
-    if (confirmarSync == null && confirmarEmail == null && !confirmarDiagnostico) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setConfirmarSync(null);
-        setConfirmarEmail(null);
-        setConfirmarDiagnostico(false);
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [confirmarSync, confirmarEmail, confirmarDiagnostico]);
-
-  useEffect(() => {
     const onResize = () => setFluxoLabelNarrow(window.innerWidth < 480);
     onResize();
     window.addEventListener("resize", onResize);

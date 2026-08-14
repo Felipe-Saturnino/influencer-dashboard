@@ -216,7 +216,7 @@ const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
 
 ## Modais — Padrão com Acessibilidade
 
-Alinhado ao padrão **Estúdio** (modais densos): sem `backdropFilter: blur()`; overlay escuro; `role="dialog"`, `aria-modal="true"`, `aria-labelledby`; Escape + foco; `maxHeight: "90dvh"`.
+Alinhado ao padrão global de modais densos: sem `backdropFilter: blur()`; overlay escuro; `role="dialog"`, `aria-modal="true"`, `aria-labelledby`; foco inicial e anel `:focus-visible`; **Escape não fecha o modal**; `maxHeight: "90dvh"`.
 
 ```tsx
 style={{
@@ -429,7 +429,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 ### RoteiroMesa (`src/pages/estudio/RoteiroMesa/index.tsx`)
 
 - Exclusão: dois cliques, nunca `window.confirm()`; `aria-label` com identificador do item.
-- Modais: sem blur; ARIA + Escape + foco; Salvar brand-aware (sem `BRAND.azul` / `BRAND.ciano` hardcoded no primário).
+- Modais: sem blur; ARIA + foco inicial e visível; **Escape não fecha o modal**; Salvar brand-aware (sem `BRAND.azul` / `BRAND.ciano` hardcoded no primário).
 - FilterChips: `aria-pressed` sempre; separadores entre grupos — manter.
 - **`ROTEIRO_IDENT_COL_PX = 108`:** constante centralizada; em mobile estreito, `Math.min(108, viewportWidth * 0.30)` se necessário.
 - **`BLOCO_CONFIG` / `TIPO_CONFIG`:** fonte única de cor/gradiente/ícone — não duplicar inline.
