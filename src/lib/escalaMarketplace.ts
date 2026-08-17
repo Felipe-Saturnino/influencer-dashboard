@@ -4,7 +4,7 @@
  * Listagem vem de `escala_marketplace_ofertas_listar` já em jsonb e com nomes
  * resolvidos no servidor: o prestador não lê `rh_funcionarios` de colegas por RLS.
  * O escopo também é do servidor — Ver = Sim devolve todos os times, Ver = Próprios
- * só o time do prestador.
+ * o grupo de negociação (mesmo time, ou Liderança = Shift Leader + Service Manager).
  *
  * Antecedência: ≥4h para **publicar** (`turnoRespeitaAntecedencia4h`); ≥2h para
  * **aceitar**. Ex.: às 6h, a Manhã de hoje (início 7h) não pode ser ofertada; a
@@ -41,6 +41,7 @@ import type { RhCalendarioAcaoTipo } from "./rhCalendarioAcaoHelpers";
 import type {
   EscalaTimeFiltro,
   LinhaOfertaMarketplace,
+  MarketplaceTimeFiltro,
   OfertaStatusUi,
 } from "./escalaTurnosUiConstants";
 
@@ -162,6 +163,25 @@ export function timeKeyFromOrgTimeNome(nome: string | null | undefined): EscalaT
   if (t.includes("shuffler")) return "shuffler";
   if (t.includes("treinamento")) return "treinamento";
   return "todos";
+}
+
+/** `true` se a oferta entra no filtro Time do Marketplace (Liderança = SL + SM). */
+export function ofertaPassaFiltroTimeMarketplace(
+  timeKey: EscalaTimeFiltro,
+  filtro: MarketplaceTimeFiltro,
+): boolean {
+  if (filtro === "todos") return true;
+  if (filtro === "lideranca") return timeKey === "shift_leader" || timeKey === "service_manager";
+  return timeKey === filtro;
+}
+
+/** Shift Leader e Service Manager só negociam Manhã e Noite (turno de 12h). */
+export function turnoMarketplacePermitidoNaArea(
+  areaKey: string | null | undefined,
+  turnoNome: string,
+): boolean {
+  if (areaKey !== "shift_leader" && areaKey !== "service_manager") return true;
+  return turnoNome === "Manhã" || turnoNome === "Noite";
 }
 
 function turnoLabelOferta(row: EscalaMarketplaceOfertaDb): string {
@@ -459,12 +479,15 @@ export function turnosOfertaveisNaFolgaMarketplace(
   horario: PrestadorHorarioCtx,
   operadora: OperadoraTurnosPick | null | undefined,
   agora: Date = new Date(),
+  areaKey?: string | null,
 ): string[] {
-  return turnosBaseOfertaNaFolga(horario.escala).filter(
-    (turnoNome) =>
-      gapEntreTurnosOk({ diaIso: diaFolgaIso, turnoNome, valorPorIso, horario, operadora }) &&
-      turnoRespeitaAntecedencia4h(diaFolgaIso, turnoNome, horario, operadora, agora),
-  );
+  return turnosBaseOfertaNaFolga(horario.escala)
+    .filter((turnoNome) => turnoMarketplacePermitidoNaArea(areaKey, turnoNome))
+    .filter(
+      (turnoNome) =>
+        gapEntreTurnosOk({ diaIso: diaFolgaIso, turnoNome, valorPorIso, horario, operadora }) &&
+        turnoRespeitaAntecedencia4h(diaFolgaIso, turnoNome, horario, operadora, agora),
+    );
 }
 
 // ─── Dias elegíveis para ofertar ────────────────────────────────────────────
@@ -521,6 +544,7 @@ export type DiasOfertaveisMarketplaceOpts = {
   hoje?: Date;
   horario?: PrestadorHorarioCtx | null;
   operadora?: OperadoraTurnosPick | null;
+  areaKey?: string | null;
 };
 
 /**
@@ -555,6 +579,7 @@ export function diasOfertaveisMarketplace(
           opts.horario,
           opts.operadora,
           hoje,
+          opts.areaKey,
         );
         if (turnos.length === 0) continue;
       }
@@ -565,6 +590,7 @@ export function diasOfertaveisMarketplace(
     if (valorCelulaEhFolgaOperacional(valor)) continue;
     const turno = turnoOperacionalValorGrade(valor);
     if (!turno) continue;
+    if (!turnoMarketplacePermitidoNaArea(opts.areaKey, turno)) continue;
     if (
       !turnoRespeitaAntecedencia4h(iso, turno, opts.horario ?? null, opts.operadora, hoje)
     ) {
@@ -717,7 +743,8 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   not_found: "Esta oferta não está mais disponível.",
   status_invalido: "Esta oferta já foi aceita ou encerrada.",
   mesmo_ofertante: "Você não pode aceitar a sua própria oferta.",
-  times_diferentes: "O aceite só é permitido entre prestadores do mesmo time.",
+  times_diferentes:
+    "O aceite só é permitido entre prestadores do mesmo time, ou entre Shift Leader e Service Manager.",
   aceitante_ja_escalado: "Você já tem turno neste dia.",
   aceitante_sem_turno: "Você precisa estar escalado neste dia para aceitar esta oferta.",
   aceitante_em_negociacao: "O seu dia já está em negociação na escala (Compra, Venda ou Troca).",

@@ -966,7 +966,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Marketplace",
         definicao:
-          "Única ponta onde o prestador de estúdio publica e aceita negociações de turno — Venda de Turno, Venda de Folga e Oferta de Troca. O aceite é **imediato**, sem aprovação de gestor, e grava Compra, Venda ou Troca na Escala Estúdio aprovada. Só entre prestadores do **mesmo time**. Publicar exige **4h** até o início do turno; aceitar no mesmo dia é permitido até **2h** antes. Oferta ainda aberta é cancelada automaticamente com menos de **2h**. Respeita **12h** entre turnos.",
+          "Única ponta onde o prestador de estúdio publica e aceita negociações de turno — Venda de Turno, Venda de Folga e Oferta de Troca. O aceite é **imediato**, sem aprovação de gestor, e grava Compra, Venda ou Troca na Escala Estúdio aprovada de **cada** participante. Só entre prestadores do **mesmo time**, ou entre **Shift Leader** e **Service Manager** (grupo Liderança). Publicar exige **4h** até o início do turno; aceitar no mesmo dia é permitido até **2h** antes. Oferta ainda aberta é cancelada automaticamente com menos de **2h**. Respeita **12h** entre turnos.",
         referencia: "Marketplace",
       },
       {
@@ -984,7 +984,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Oferta de Troca",
         definicao:
-          "Oferta em que dois prestadores do mesmo time trocam de dia: quem aceita indica um dia seu com turno e ambos ficam com **Troca** nos dois dias da escala.",
+          "Oferta em que dois prestadores do mesmo grupo de negociação (mesmo time, ou Shift Leader com Service Manager) trocam de dia: quem aceita indica um dia seu com turno; a Escala grava **Venda** e **Compra - Turno** em cada participante.",
         referencia: "Marketplace",
       },
       {

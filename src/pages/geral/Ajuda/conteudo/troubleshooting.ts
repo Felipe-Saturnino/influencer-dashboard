@@ -1527,14 +1527,24 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     titulo: "Gestão de Staff",
     blocos: [
       {
+        subtitulo: "Só vejo o meu time na Gestão de Staff?",
+        texto:
+          "Com permissão de Ver em **Próprios**, a página mostra só o time do seu cadastro de prestador. Para ver todos os times de Game Floor e Operation Management, a permissão de Ver precisa ser **Sim**. Se o seu login não estiver ligado a um prestador desses times, a lista fica vazia — entre em contato com o RH.",
+      },
+      {
+        subtitulo: "Mensagem «Este cadastro foi alterado por outra pessoa»?",
+        texto:
+          "Outra pessoa salvou o mesmo prestador enquanto o modal estava aberto. Feche o modal, recarregue a lista e edite de novo com os dados atuais.",
+      },
+      {
         subtitulo: "Não vejo Gestão de Staff no menu?",
         texto:
-          "Confirme permissão de **Ver** e escopo de menu em Gestão de Usuários. A página lista prestadores operacionais — perfis sem escopo de estúdio/escala podem não ter a rota liberada.",
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Gestão de Staff**. A página lista prestadores dos times de Game Floor e Operation Management. Com Ver em **Próprios**, só aparece o time do seu cadastro — se o login não estiver vinculado a um prestador desse universo, a lista fica vazia. Após alterar permissão, faça logout e login (ou atualize a sessão).",
       },
       {
         subtitulo: "Não vejo o campo ID TOS?",
         texto:
-          "O **ID TOS** aparece só no time **Service Manager**, na aba Função dos modais **Ver** e **Editar** — não há coluna na tabela da listagem. Em outros times o campo não é exibido. Se a migração ainda não foi aplicada no Supabase, o salvamento pode falhar — nesse caso entre em contato com o suporte.",
+          "O **ID TOS** aparece só no time **Service Manager**, na aba Função dos modais **Ver** e **Editar** — não há coluna na tabela da listagem. Em outros times o campo não é exibido. O valor precisa ser um UUID (com hífens). Se o salvamento falhar, entre em contato com o suporte.",
       },
       {
         subtitulo: "Mensagem «Este ID TOS já está cadastrado»?",
@@ -1544,7 +1554,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo imprimir o ID de um Game Presenter?",
         texto:
-          "No modal **Imprimir IDs**, a lista inclui todos os times da Gestão de Staff. Só entram na impressão quem tem o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. Prestadores sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
+          "No modal **Imprimir IDs**, a lista inclui os times visíveis na Gestão de Staff (com **Próprios**, só o seu time). O botão só aparece com permissão de **Editar**. Só entram na impressão quem tem o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. Prestadores sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
       },
     ],
   },
@@ -1644,7 +1654,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo aceitar uma oferta?",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta. Dá para aceitar **no mesmo dia**, com pelo menos **2h até o início do turno** e a escala do mês **aprovada**. Publicar exige **4h**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar. Se a oferta já passou da janela de 2h ou a data é antiga, ela é cancelada automaticamente.",
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma — ou, na **Liderança**, entre Shift Leader e Service Manager — nunca na própria oferta. Dá para aceitar **no mesmo dia**, com pelo menos **2h até o início do turno** e a escala do mês **aprovada** (a de cada participante). Publicar exige **4h**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar. Se a oferta já passou da janela de 2h ou a data é antiga, ela é cancelada automaticamente.",
       },
       {
         subtitulo: "Só vejo ofertas do meu time?",

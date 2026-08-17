@@ -35,6 +35,9 @@ export type EscalaTimeFiltro =
   | "shuffler"
   | "treinamento";
 
+/** Filtro Time do Marketplace: Liderança agrega Shift Leader + Service Manager. */
+export type MarketplaceTimeFiltro = EscalaTimeFiltro | "lideranca";
+
 export const ESCALA_TIME_OPCOES: { value: EscalaTimeFiltro; label: string }[] = [
   { value: "todos", label: "Todos" },
   { value: "service_manager", label: "Service Manager" },
@@ -103,6 +106,6 @@ export type LinhaOfertaMarketplace = {
   souOfertante?: boolean;
   /** Marketplace: o prestador logado aceitou esta oferta. */
   souInteressado?: boolean;
-  /** Marketplace: a oferta é do mesmo time do prestador logado (pré-requisito do aceite). */
+  /** Marketplace: a oferta é do mesmo grupo de negociação (mesmo time, ou Liderança = SL + SM). */
   mesmoTime?: boolean;
 };

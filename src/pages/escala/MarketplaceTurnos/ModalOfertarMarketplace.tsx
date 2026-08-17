@@ -95,6 +95,7 @@ export function ModalOfertarMarketplace({
       diasOfertaveisMarketplace(tipo, grade.valorPorIso, {
         horario: contexto?.horario,
         operadora: contexto?.operadora,
+        areaKey: contexto?.areaKey,
       }).filter((dia) => !diasReservados.has(dia.iso)),
     [tipo, grade.valorPorIso, contexto, diasReservados],
   );
@@ -111,6 +112,8 @@ export function ModalOfertarMarketplace({
           grade.valorPorIso,
           contexto.horario,
           contexto.operadora,
+          new Date(),
+          contexto.areaKey,
         ),
       );
     }

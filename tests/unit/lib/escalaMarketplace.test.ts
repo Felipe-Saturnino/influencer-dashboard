@@ -4,12 +4,14 @@ import {
   gapEntreTurnosOk,
   isDataNoHistoricoMarketplace,
   mensagemErroOfertaMarketplace,
+  ofertaPassaFiltroTimeMarketplace,
   parseMeuContextoMarketplace,
   parseMinhaGradeMarketplace,
   parseOfertasMarketplacePayload,
   primeiroDiaOfertavelIso,
   timeKeyFromOrgTimeNome,
   turnosOfertaveisNaFolgaMarketplace,
+  turnoMarketplacePermitidoNaArea,
   turnoRespeitaAntecedencia4h,
 } from "../../../src/lib/escalaMarketplace";
 
@@ -148,7 +150,33 @@ describe("timeKeyFromOrgTimeNome", () => {
   it("normaliza acentos e prefixos do organograma", () => {
     expect(timeKeyFromOrgTimeNome("Time de Game Presenter")).toBe("game_presenter");
     expect(timeKeyFromOrgTimeNome("Performance Coach")).toBe("performance_coach");
+    expect(timeKeyFromOrgTimeNome("Shift Leader")).toBe("shift_leader");
+    expect(timeKeyFromOrgTimeNome("Service Manager")).toBe("service_manager");
     expect(timeKeyFromOrgTimeNome("Comercial B2B")).toBe("todos");
+  });
+});
+
+describe("ofertaPassaFiltroTimeMarketplace", () => {
+  it("Liderança agrega Shift Leader e Service Manager", () => {
+    expect(ofertaPassaFiltroTimeMarketplace("shift_leader", "lideranca")).toBe(true);
+    expect(ofertaPassaFiltroTimeMarketplace("service_manager", "lideranca")).toBe(true);
+    expect(ofertaPassaFiltroTimeMarketplace("game_presenter", "lideranca")).toBe(false);
+    expect(ofertaPassaFiltroTimeMarketplace("shuffler", "lideranca")).toBe(false);
+  });
+
+  it("filtro específico não cruza times", () => {
+    expect(ofertaPassaFiltroTimeMarketplace("game_presenter", "game_presenter")).toBe(true);
+    expect(ofertaPassaFiltroTimeMarketplace("shift_leader", "game_presenter")).toBe(false);
+    expect(ofertaPassaFiltroTimeMarketplace("shift_leader", "todos")).toBe(true);
+  });
+});
+
+describe("turnoMarketplacePermitidoNaArea", () => {
+  it("Liderança só Manhã e Noite", () => {
+    expect(turnoMarketplacePermitidoNaArea("shift_leader", "Manhã")).toBe(true);
+    expect(turnoMarketplacePermitidoNaArea("service_manager", "Noite")).toBe(true);
+    expect(turnoMarketplacePermitidoNaArea("shift_leader", "Tarde")).toBe(false);
+    expect(turnoMarketplacePermitidoNaArea("game_presenter", "Tarde")).toBe(true);
   });
 });
 
@@ -403,6 +431,18 @@ describe("turnosOfertaveisNaFolgaMarketplace", () => {
     expect(turnos).toEqual(["Manhã", "Tarde", "Noite"]);
   });
 
+  it("Liderança não lista Tarde mesmo com escala 4x2", () => {
+    const turnos = turnosOfertaveisNaFolgaMarketplace(
+      "2026-08-14",
+      grade,
+      HORARIO_4X2,
+      OPERADORA,
+      agora,
+      "shift_leader",
+    );
+    expect(turnos).toEqual(["Manhã", "Noite"]);
+  });
+
   it("respeita também o próximo turno escalado depois da folga", () => {
     const comProximo = new Map(grade);
     comProximo.set("2026-08-15", "MRN");
@@ -426,6 +466,7 @@ describe("mensagemErroOfertaMarketplace", () => {
     expect(mensagemErroOfertaMarketplace("turno_diferente")).toContain("mesmo do seu turno");
     expect(mensagemErroOfertaMarketplace("oferta_expirada")).toContain("menos de 2h");
     expect(mensagemErroOfertaMarketplace("dia_nao_futuro")).toContain("publicar oferta");
+    expect(mensagemErroOfertaMarketplace("times_diferentes")).toContain("Shift Leader e Service Manager");
     expect(mensagemErroOfertaMarketplace("horario_turno_indisponivel")).toContain(
       "horário de início",
     );

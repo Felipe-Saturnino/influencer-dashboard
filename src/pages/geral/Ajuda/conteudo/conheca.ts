@@ -824,17 +824,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Imprimir IDs",
         texto:
-          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** abre um modal para selecionar prestadores de **todos os times** da Gestão de Staff (Game Presenter, Shuffler, Shift Leader, Service Manager e demais times da página). Ao gerar, a plataforma baixa um PDF em **folha A4** com até **8 etiquetas de 8×6 cm** por página (grade 2×4), com guia de corte: código de barras centralizado, número do barcode e nickname. Só entram na impressão quem já tem barcode cadastrado no modal de edição.",
+          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** (permissão de **Editar**) abre um modal para selecionar prestadores dos times visíveis na Gestão de Staff. Com Ver **Próprios**, a lista e a impressão ficam só no **próprio time**. Ao gerar, a plataforma baixa um PDF em **folha A4** com até **8 etiquetas de 8×6 cm** por página (grade 2×4), com guia de corte: código de barras centralizado, número do barcode e nickname. Só entram na impressão quem já tem barcode cadastrado no modal de edição.",
       },
       {
         subtitulo: "ID TOS (Service Manager)",
         texto:
-          "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) guarda o UUID do colaborador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters.",
+          "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) salva o UUID do colaborador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters. O valor deve ser um UUID; o servidor recusa formato inválido.",
       },
       {
         subtitulo: "Permissões",
         texto:
-          "Consulta exige permissão de Ver; alterações de turno ou cadastro operacional exigem Editar. Filtros de operadora e busca restringem a grade antes de salvar alterações em lote.",
+          "Consulta exige permissão de **Ver**; alterações de turno, estúdio, skills, dealer e **Imprimir IDs** exigem **Editar**. Com Ver ou Editar em **Próprios**, a lista, a edição e a impressão ficam só no time do seu cadastro de prestador (Game Floor / Operation Management). **Sim** vê todos os times da página. A busca restringe a tabela na tela — não há alterações em lote. Times **Service Manager**, **Shift Leader** e **Shuffler** ficam sempre em **Todos Estúdios**.",
       },
     ],
   },
@@ -882,7 +882,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O que você vê",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter** e **Shuffler**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha. Na aba **Todas as Ofertas** há ainda o filtro de dia (**Todos os Dias**), que lista somente os dias com oferta no período — com mais de cinco dias, o painel do filtro abre com pesquisa.",
+          "Com permissão de **Ver: Próprios**, a lista traz as ofertas do **seu grupo de negociação** — o próprio time do Organograma ou, para Shift Leader e Service Manager, o grupo **Liderança** (os dois times) — e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter**, **Shuffler** e **Liderança**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha. Na aba **Todas as Ofertas** há ainda o filtro de dia (**Todos os Dias**), que lista somente os dias com oferta no período — com mais de cinco dias, o painel do filtro abre com pesquisa.",
       },
       {
         subtitulo: "Publicar uma oferta",
@@ -892,7 +892,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitar uma oferta",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Dá para aceitar **no mesmo dia**, desde que restem pelo menos **2h até o início do turno**. Publicar uma oferta nova exige **4h**. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. Se o aceite — ou a aprovação final da troca — não for concluído, a oferta é **cancelada automaticamente quando faltam menos de 2h para o início do turno** ou quando a **data já passou**, liberando as reservas sem alterar a escala. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
+          "O aceite só é permitido entre prestadores do **mesmo time** — e, na **Liderança**, entre **Shift Leader** e **Service Manager** (nos dois sentidos) — e nunca na própria oferta. Dá para aceitar **no mesmo dia**, desde que restem pelo menos **2h até o início do turno**. Publicar uma oferta nova exige **4h**. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. Se o aceite — ou a aprovação final da troca — não for concluído, a oferta é **cancelada automaticamente quando faltam menos de 2h para o início do turno** ou quando a **data já passou**, liberando as reservas sem alterar a escala. **Compra - Turno** se comporta como dia escalado e **Venda** como folga. Cada prestador permanece na **própria** Escala Estúdio (Shift Leader e Service Manager não se misturam numa aba só): o Calendário e os cards de Compra/Venda/Trocas refletem o dia de cada um.",
         },
       {
         subtitulo: "Intervalo mínimo de 12h",

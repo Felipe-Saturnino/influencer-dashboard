@@ -11,6 +11,46 @@ type StaffSkillStatus = "ativo" | "treinamento" | "inativo";
 
 const STAFF_SKILL_KEYS: StaffSkillKey[] = ["baccarat", "blackjack", "vip", "roleta", "futebol_brasileiro"];
 
+const UUID_TOS_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Colunas da listagem/KPIs/modais de Staff — sem CPF, banco, endereço ou remuneração. */
+export const STAFF_FUNCIONARIO_LIST_SELECT = [
+  "id",
+  "status",
+  "nome",
+  "telefone",
+  "email",
+  "emerg_nome",
+  "emerg_parentesco",
+  "emerg_telefone",
+  "data_inicio",
+  "org_time_id",
+  "cargo",
+  "escala",
+  "staff_nickname",
+  "staff_estudio_slug",
+  "staff_estudio_slugs",
+  "staff_operadora_slug",
+  "staff_barcode",
+  "staff_id_operacional",
+  "staff_id_tos",
+  "staff_turno",
+  "staff_horario_turno",
+  "staff_skills",
+  "staff_live_no_estudio",
+  "staff_fim_treinamento",
+  "staff_dealer_genero",
+  "staff_dealer_bio",
+  "staff_dealer_fotos",
+  "updated_at",
+].join(", ");
+
+/** Vazio (limpar) ou UUID com hífens. */
+export function staffIdTosValido(raw: string): boolean {
+  const v = raw.trim();
+  return v === "" || UUID_TOS_RE.test(v);
+}
+
 function normStaffNomeTimeUi(nome: string | null | undefined): string {
   return (nome ?? "")
     .trim()

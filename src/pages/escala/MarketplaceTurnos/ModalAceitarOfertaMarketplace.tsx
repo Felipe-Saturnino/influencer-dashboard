@@ -65,6 +65,7 @@ export function ModalAceitarOfertaMarketplace({
     return diasOfertaveisMarketplace("oferta_troca", grade.valorPorIso, {
       horario: contexto.horario,
       operadora: contexto.operadora,
+      areaKey: contexto.areaKey,
     }).filter((dia) => {
       if (dia.iso === oferta.dataOfertaIso || diasReservados.has(dia.iso)) return false;
       const gradeComDiaLiberado = new Map(grade.valorPorIso);
@@ -109,7 +110,7 @@ export function ModalAceitarOfertaMarketplace({
     }
     if (oferta!.souOfertante) return "Você não pode aceitar a sua própria oferta.";
     if (oferta!.mesmoTime === false) {
-      return "O aceite só é permitido entre prestadores do mesmo time.";
+      return mensagemErroOfertaMarketplace("times_diferentes");
     }
 
     if (ehVendaFolga) {

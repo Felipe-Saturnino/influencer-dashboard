@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Eye, Loader2, Pencil, Printer, StickyNote, Trash2, Upload, Users, User, Briefcase, Star, History } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
+import { GAME_IDENTITY_LABEL, getGameTagChipStyle } from "../../../lib/gameIdentityColors";
+import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
+import { mensagemErroStaffSalvar, salvarStaffGestao, type RhStaffSalvarPatch } from "../../../lib/rhStaffSalvar";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_PRESTADORES } from "../../../lib/tablePagination";
+import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { fetchTurnosPorEstudioSlugs, type TurnosDealersPick } from "../../../lib/turnosDealers";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -70,11 +77,12 @@ import { StaffEstudioCampoSelect } from "./StaffEstudioCampoSelect";
 import { SortTableTh, type SortDir } from "../../../components/dashboard/SortTableTh";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
 import {
   calcularResumoStaffCards,
+  STAFF_FUNCIONARIO_LIST_SELECT,
+  staffIdTosValido,
   staffUiTimeEstudioForcadoTodos,
   staffUiTimeOcultarEstudio,
   staffUiTimeSemOperadoraHorarioModaisRestritos,
@@ -103,6 +111,43 @@ const SKILL_STATUS_OPTS: { value: StaffSkillStatus; label: string }[] = [
   { value: "treinamento", label: "Treinamento" },
   { value: "inativo", label: "Inativo" },
 ];
+
+const ERRO_CARREGAR_TIMES =
+  "Não foi possível carregar os times. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_CARREGAR_PRESTADORES =
+  "Não foi possível carregar o staff. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_CARREGAR_ESTUDIOS =
+  "Não foi possível carregar os estúdios. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_CARREGAR_ANOTACOES =
+  "Não foi possível carregar as anotações. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_SALVAR_ANOTACAO =
+  "Não foi possível salvar a anotação. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_UPLOAD_FOTO =
+  "Não foi possível enviar a foto. Se o problema persistir, entre em contato com o suporte.";
+const ERRO_DEALER_APOS_SALVAR =
+  "Cadastro salvo, mas não foi possível atualizar o catálogo de Dealers. Se o problema persistir, entre em contato com o suporte.";
+
+function StaffSkillRotulo({ skillKey, label }: { skillKey: StaffSkillKey; label: string }) {
+  const { theme: t } = useApp();
+  if (!isGameIdentityKey(skillKey)) {
+    return <span>{label}</span>;
+  }
+  const chip = getGameTagChipStyle(skillKey, t.isDark);
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        color: chip.color,
+        fontWeight: 700,
+      }}
+    >
+      {GAME_IDENTITY_ICONS[skillKey]}
+      {GAME_IDENTITY_LABEL[skillKey]}
+    </span>
+  );
+}
 
 function labelStatusPrestador(s: RhFuncionario["status"]): string {
   if (s === "ativo") return "Ativo";
@@ -323,7 +368,7 @@ function ModalStaffAnotacoes({
     if (error) {
       setLista([]);
       setNomesAutor({});
-      setErr(error.message || "Não foi possível carregar as anotações.");
+      setErr(ERRO_CARREGAR_ANOTACOES);
       setLoading(false);
       return;
     }
@@ -366,7 +411,7 @@ function ModalStaffAnotacoes({
       texto: textoTrim,
     });
     if (error) {
-      setErr(error.message || "Não foi possível salvar a anotação.");
+      setErr(ERRO_SALVAR_ANOTACAO);
       setSalvando(false);
       return;
     }
@@ -489,26 +534,6 @@ function ModalStaffAnotacoes({
             ))}
           </ul>
         )}
-
-        <div style={{ marginTop: 16 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontWeight: 700,
-              fontFamily: FONT.body,
-              cursor: "pointer",
-            }}
-          >
-            Fechar
-          </button>
-        </div>
       </div>
     </ModalBase>
   );
@@ -530,6 +555,10 @@ export default function RhGestaoStaffPage() {
   const [operadorasPorEstudio, setOperadorasPorEstudio] = useState<Record<string, string[]>>({});
   const [prestadores, setPrestadores] = useState<RhFuncionario[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
+  const [erroPrestadores, setErroPrestadores] = useState<string | null>(null);
+  const [erroEstudios, setErroEstudios] = useState<string | null>(null);
+  const [paginaTabela, setPaginaTabela] = useState(0);
+  const [hoverLinhaId, setHoverLinhaId] = useState<string | null>(null);
 
   const [todosTimes, setTodosTimes] = useState(true);
   const [idxTime, setIdxTime] = useState(0);
@@ -546,12 +575,15 @@ export default function RhGestaoStaffPage() {
   const [sortCol, setSortCol] = useState<StaffTabelaSortCol>("nome");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
+  const recorteProprios = perm.canView === "proprios";
+  const mostrarTodosTimes = !recorteProprios && times.length > 1;
+
   const carregarTimes = useCallback(async () => {
     setLoadingTimes(true);
     setErroTimes(null);
-    const { data, error } = await supabase.rpc("rh_staff_times_filtrados");
+    const { data, error } = await supabase.rpc("rh_staff_times_visiveis");
     if (error) {
-      setErroTimes("Não foi possível carregar os times. Aplique a migration e verifique a permissão rh_staff.");
+      setErroTimes(ERRO_CARREGAR_TIMES);
       setTimes([]);
     } else {
       setTimes((data ?? []) as StaffTimeRow[]);
@@ -560,12 +592,13 @@ export default function RhGestaoStaffPage() {
   }, []);
 
   const carregarEstudios = useCallback(async () => {
+    setErroEstudios(null);
     const { data, error } = await supabase
       .from("estudios_spin")
       .select("slug, nome, tipo, estudios_spin_operadoras(operadora_slug)")
       .eq("ativo", true);
     if (error) {
-      console.error("Gestão de Staff: falha ao carregar estúdios", error);
+      setErroEstudios(ERRO_CARREGAR_ESTUDIOS);
       return;
     }
     const nomeMap: Record<string, string> = {};
@@ -599,18 +632,28 @@ export default function RhGestaoStaffPage() {
   const carregarPrestadores = useCallback(async (timeIds: string[]) => {
     if (timeIds.length === 0) {
       setPrestadores([]);
+      setErroPrestadores(null);
       setLoadingPrestadores(false);
       return;
     }
     setLoadingPrestadores(true);
-    const { data, error } = await supabase
-      .from("rh_funcionarios")
-      .select("*")
-      .in("org_time_id", timeIds)
-      .in("status", ["ativo", "indisponivel"])
-      .order("nome", { ascending: true });
-    if (error) setPrestadores([]);
-    else setPrestadores((data ?? []) as RhFuncionario[]);
+    setErroPrestadores(null);
+    try {
+      const rows = await fetchAllPages<RhFuncionario>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("rh_funcionarios")
+          .select(STAFF_FUNCIONARIO_LIST_SELECT)
+          .in("org_time_id", timeIds)
+          .in("status", ["ativo", "indisponivel"])
+          .order("nome", { ascending: true })
+          .range(from, to);
+        return { data: ((data as unknown as RhFuncionario[]) ?? []), error };
+      });
+      setPrestadores(rows);
+    } catch {
+      setPrestadores([]);
+      setErroPrestadores(ERRO_CARREGAR_PRESTADORES);
+    }
     setLoadingPrestadores(false);
   }, []);
 
@@ -619,6 +662,10 @@ export default function RhGestaoStaffPage() {
     void carregarTimes();
     void carregarEstudios();
   }, [perm.loading, perm.canView, carregarTimes, carregarEstudios]);
+
+  useEffect(() => {
+    if (recorteProprios) setTodosTimes(false);
+  }, [recorteProprios]);
 
   const timeIds = useMemo(() => times.map((x) => x.id), [times]);
   const timeIdsKey = useMemo(() => [...timeIds].sort().join(","), [timeIds]);
@@ -710,23 +757,12 @@ export default function RhGestaoStaffPage() {
         })
         .in("id", ids);
       if (cancelled || error) return;
-      setPrestadores((lista) =>
-        lista.map((p) =>
-          ids.includes(p.id)
-            ? {
-                ...p,
-                staff_estudio_slugs: [STAFF_ESTUDIO_CADASTRO_TODOS],
-                staff_estudio_slug: null,
-                staff_operadora_slug: null,
-              }
-            : p,
-        ),
-      );
+      await carregarPrestadores(timeIds);
     })();
     return () => {
       cancelled = true;
     };
-  }, [perm.canEditarOk, idsStaffEstudioForcarTodos]);
+  }, [perm.canEditarOk, idsStaffEstudioForcarTodos, carregarPrestadores, timeIds]);
 
   /** Vista time a time: tabela sem coluna Estúdio e com Horário do Turno (times de serviço). */
   const layoutTabelaSemEstudioComHorario = useMemo(() => {
@@ -851,6 +887,21 @@ export default function RhGestaoStaffPage() {
     });
   }, [linhasTabela, sortCol, sortDir, nomePorTimeId, estudioTurnosPorSlug, opParaEstudio, estudiosNome]);
 
+  useEffect(() => {
+    setPaginaTabela(0);
+  }, [linhasTabelaOrdenadas, sortCol, sortDir]);
+
+  const paginaTabelaSafe = clampPageIndex(paginaTabela, linhasTabelaOrdenadas.length, TABELA_PAGE_SIZE_PRESTADORES);
+  const linhasTabelaPagina = useMemo(
+    () => slicePage(linhasTabelaOrdenadas, paginaTabelaSafe, TABELA_PAGE_SIZE_PRESTADORES),
+    [linhasTabelaOrdenadas, paginaTabelaSafe],
+  );
+
+  const recarregarPagina = useCallback(() => {
+    void carregarTimes();
+    void carregarEstudios();
+  }, [carregarTimes, carregarEstudios]);
+
   const resumoStaffCards = useMemo(
     () => calcularResumoStaffCards(linhasTabela, nomePorTimeId),
     [linhasTabela, nomePorTimeId],
@@ -884,7 +935,7 @@ export default function RhGestaoStaffPage() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar esta página.
+        Você não tem permissão para visualizar este dashboard.
       </div>
     );
   }
@@ -908,9 +959,104 @@ export default function RhGestaoStaffPage() {
             color: "#e84025",
             border: "1px solid rgba(232,64,37,0.35)",
             background: "rgba(232,64,37,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          {erroTimes}
+          <span>{erroTimes}</span>
+          <button
+            type="button"
+            onClick={() => recarregarPagina()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      )}
+      {erroPrestadores && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 14,
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            color: "#e84025",
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "rgba(232,64,37,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroPrestadores}</span>
+          <button
+            type="button"
+            onClick={() => void carregarPrestadores(timeIds)}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      )}
+      {erroEstudios && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 14,
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 13,
+            color: "#e84025",
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "rgba(232,64,37,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroEstudios}</span>
+          <button
+            type="button"
+            onClick={() => void carregarEstudios()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              fontWeight: 700,
+              fontFamily: FONT.body,
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       )}
 
@@ -956,13 +1102,15 @@ export default function RhGestaoStaffPage() {
               <ChevronRight size={14} aria-hidden="true" />
             </button>
 
-            <FiltroTodosTimesButton
-              active={todosTimes}
-              onClick={() => {
-                setTodosTimes((v) => !v);
-                setIdxTime(0);
-              }}
-            />
+            {mostrarTodosTimes ? (
+              <FiltroTodosTimesButton
+                active={todosTimes}
+                onClick={() => {
+                  setTodosTimes((v) => !v);
+                  setIdxTime(0);
+                }}
+              />
+            ) : null}
 
             {loadingTimes ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: t.textMuted }}>
@@ -1039,21 +1187,23 @@ export default function RhGestaoStaffPage() {
                   />
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setModalImprimirIds(true)}
-                aria-label="Imprimir IDs"
-                title="Imprimir IDs"
-                style={{
-                  ...getCtaCriarButtonStyle(brand),
-                  color: "#fff",
-                  flex: "0 0 auto",
-                  marginLeft: "auto",
-                }}
-              >
-                <Printer size={14} aria-hidden />
-                Imprimir IDs
-              </button>
+              {perm.canEditarOk ? (
+                <button
+                  type="button"
+                  onClick={() => setModalImprimirIds(true)}
+                  aria-label="Imprimir IDs"
+                  title="Imprimir IDs"
+                  style={{
+                    ...getCtaCriarButtonStyle(brand),
+                    color: "#fff",
+                    flex: "0 0 auto",
+                    marginLeft: "auto",
+                  }}
+                >
+                  <Printer size={14} aria-hidden />
+                  Imprimir IDs
+                </button>
+              ) : null}
             </div>
           </div>
       </div>
@@ -1066,9 +1216,10 @@ export default function RhGestaoStaffPage() {
       ) : times.length === 0 ? (
         <div style={{ padding: "32px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Nenhum time encontrado para as gerências Game Floor ou Operation Management. Ajuste os nomes no organograma ou
-          contacte o RH.
+          entre em contato com o RH.
         </div>
       ) : (
+        <>
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ minWidth: 960 })}>
             <caption style={{ display: "none" }}>Staff por time</caption>
@@ -1180,7 +1331,7 @@ export default function RhGestaoStaffPage() {
                   </td>
                 </tr>
               ) : (
-                linhasTabelaOrdenadas.map((row, i) => {
+                linhasTabelaPagina.map((row, i) => {
                   const nomeTime =
                     row.org_time_id && nomePorTimeId.has(row.org_time_id)
                       ? nomePorTimeId.get(row.org_time_id) ?? "—"
@@ -1190,8 +1341,21 @@ export default function RhGestaoStaffPage() {
                   const estudioNome = forcaTodosEstudio
                     ? "Todos Estúdios"
                     : staffEstudioLabelFromRow(row, estudiosNome, opParaEstudio);
+                  const zebraBg = dataTable.zebraRow(paginaTabelaSafe * TABELA_PAGE_SIZE_PRESTADORES + i);
+                  const hovered = hoverLinhaId === row.id;
                   return (
-                    <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
+                    <tr
+                      key={row.id}
+                      style={{
+                        background: hovered
+                          ? t.isDark
+                            ? "rgba(255,255,255,0.04)"
+                            : "rgba(0,0,0,0.02)"
+                          : zebraBg,
+                      }}
+                      onMouseEnter={() => setHoverLinhaId(row.id)}
+                      onMouseLeave={() => setHoverLinhaId(null)}
+                    >
                       <td style={{ ...dataTable.tdCenter, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.nome}>
                         {row.nome}
                       </td>
@@ -1253,6 +1417,14 @@ export default function RhGestaoStaffPage() {
             </tbody>
           </table>
         </div>
+        <TabelaPaginacaoBar
+          t={t}
+          page={paginaTabelaSafe}
+          pageSize={TABELA_PAGE_SIZE_PRESTADORES}
+          totalItems={linhasTabelaOrdenadas.length}
+          onPageChange={setPaginaTabela}
+        />
+        </>
       )}
 
       {modalVer ? (
@@ -1290,11 +1462,16 @@ export default function RhGestaoStaffPage() {
           ocultarCampoEstudio={staffUiTimeOcultarEstudio(
             modalEditar.org_time_id ? nomePorTimeId.get(modalEditar.org_time_id) ?? "" : "",
           )}
+          estudioCarregamentoErro={Boolean(erroEstudios)}
           onClose={() => setModalEditar(null)}
-          onSalvo={(atualizado) => {
-            setPrestadores((lista) => lista.map((p) => (p.id === atualizado.id ? atualizado : p)));
-            setModalEditar(null);
-            setModalVer(null);
+          onSalvo={(atualizado, fecharModal = true) => {
+            setPrestadores((lista) => lista.map((p) => (p.id === atualizado.id ? { ...p, ...atualizado } : p)));
+            if (fecharModal) {
+              setModalEditar(null);
+              setModalVer(null);
+            } else {
+              setModalEditar(atualizado);
+            }
           }}
           t={t}
           brand={brand}
@@ -1365,7 +1542,7 @@ function ModalStaffVer({
     void (async () => {
       const { data, error } = await supabase
         .from("rh_funcionario_historico")
-        .select("*")
+        .select("id, rh_funcionario_id, tipo, detalhes, anexos, created_at, created_by")
         .eq("rh_funcionario_id", row.id)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -1426,6 +1603,7 @@ function ModalStaffVer({
             key={key}
             id={`staff-ver-tab-${key}`}
             active={aba === key}
+            aria-controls={`staff-ver-panel-${key}`}
             onClick={() => setAba(key)}
             icon={STAFF_VER_TAB_ICONS[key]}
           >
@@ -1434,8 +1612,7 @@ function ModalStaffVer({
         ))}
       </div>
 
-      {aba === "pessoal" && (
-        <div role="tabpanel">
+      <ModalTabPanel active={aba === "pessoal"} id="staff-ver-panel-pessoal" labelledBy="staff-ver-tab-pessoal">
           <CampoLeitura k="Nome" v={row.nome} t={t} />
           <CampoLeitura k="Status" v={labelStatusPrestador(row.status)} t={t} />
           <CampoLeitura k="Data de início" v={fmtDataIsoPtBr(row.data_inicio)} t={t} />
@@ -1445,11 +1622,9 @@ function ModalStaffVer({
           <CampoLeitura k="Contato de emergência — nome" v={row.emerg_nome} t={t} />
           <CampoLeitura k="Contato de emergência — parentesco" v={row.emerg_parentesco} t={t} />
           <CampoLeitura k="Contato de emergência — telefone" v={row.emerg_telefone} t={t} />
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "funcao" && (
-        <div role="tabpanel">
+      <ModalTabPanel active={aba === "funcao"} id="staff-ver-panel-funcao" labelledBy="staff-ver-tab-funcao">
           <CampoLeitura k="Nickname" v={row.staff_nickname ?? ""} t={t} />
           <CampoLeitura k="Função" v={row.cargo} t={t} />
           <CampoLeitura k="Escala" v={row.escala} t={t} />
@@ -1506,11 +1681,9 @@ function ModalStaffVer({
               </div>
             </>
           ) : null}
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "skills" && (
-        <div role="tabpanel">
+      <ModalTabPanel active={aba === "skills"} id="staff-ver-panel-skills" labelledBy="staff-ver-tab-skills">
           <CampoLeitura k="Live no Estúdio" v={fmtDataIsoPtBr(row.staff_live_no_estudio)} t={t} />
           <CampoLeitura k="Fim do Treinamento" v={fmtDataIsoPtBr(row.staff_fim_treinamento)} t={t} />
           <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, fontFamily: FONT.body }}>
@@ -1531,16 +1704,14 @@ function ModalStaffVer({
                   color: t.text,
                 }}
               >
-                <span style={{ fontWeight: 700 }}>{label}</span>
+                <StaffSkillRotulo skillKey={key} label={label} />
                 <span style={{ color: t.textMuted }}>{SKILL_STATUS_OPTS.find((o) => o.value === skills[key])?.label ?? "Inativo"}</span>
               </li>
             ))}
           </ul>
-        </div>
-      )}
+      </ModalTabPanel>
 
-      {aba === "historico" && (
-        <div role="tabpanel" style={{ minWidth: 0, maxWidth: "100%" }}>
+      <ModalTabPanel active={aba === "historico"} id="staff-ver-panel-historico" labelledBy="staff-ver-tab-historico" style={{ minWidth: 0, maxWidth: "100%" }}>
           {histLoading ? (
             <div style={{ color: t.textMuted, fontSize: 13 }}>
               <Loader2 size={16} className="app-lucide-spin" aria-hidden style={{ marginRight: 8, verticalAlign: "middle" }} />
@@ -1624,8 +1795,7 @@ function ModalStaffVer({
               })}
             </ul>
           )}
-        </div>
-      )}
+      </ModalTabPanel>
     </ModalBase>
   );
 }
@@ -1639,6 +1809,7 @@ function ModalStaffEditar({
   opParaEstudio,
   userEmail,
   ocultarCampoEstudio = false,
+  estudioCarregamentoErro = false,
   onClose,
   onSalvo,
   t,
@@ -1652,8 +1823,9 @@ function ModalStaffEditar({
   opParaEstudio: Record<string, string>;
   userEmail: string | null;
   ocultarCampoEstudio?: boolean;
+  estudioCarregamentoErro?: boolean;
   onClose: () => void;
-  onSalvo: (r: RhFuncionario) => void;
+  onSalvo: (r: RhFuncionario, fecharModal?: boolean) => void;
   t: ReturnType<typeof useApp>["theme"];
   brand: ReturnType<typeof useDashboardBrand>;
 }) {
@@ -1676,6 +1848,8 @@ function ModalStaffEditar({
   const [dealerGenero, setDealerGenero] = useState<DealerGenero>(() => readStaffDealerGeneroForUi(row));
   const [dealerBio, setDealerBio] = useState(() => readStaffDealerBioForUi(row));
   const [dealerFotos, setDealerFotos] = useState<string[]>(() => readStaffDealerFotosForUi(row));
+  const [fotosPendentes, setFotosPendentes] = useState<{ key: string; file: File; previewUrl: string }[]>([]);
+  const [fotosRemovidas, setFotosRemovidas] = useState<string[]>([]);
   const [dealerUploading, setDealerUploading] = useState(false);
 
   useEffect(() => {
@@ -1740,35 +1914,35 @@ function ModalStaffEditar({
     boxSizing: "border-box",
   };
 
-  const handleDealerFotosUpload = async (files: File[]) => {
+  const fotosPendentesRef = useRef(fotosPendentes);
+  fotosPendentesRef.current = fotosPendentes;
+  useEffect(() => {
+    return () => {
+      fotosPendentesRef.current.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+    };
+  }, []);
+
+  const handleDealerFotosUpload = (files: File[]) => {
     if (!files.length) return;
-    setDealerUploading(true);
     setErr("");
-    try {
-      const novas: string[] = [];
-      for (const file of files) {
-        const ext = file.name.split(".").pop() ?? "jpg";
-        const path = `${row.id}-${crypto.randomUUID()}.${ext}`;
-        const { data, error } = await supabase.storage.from("dealer-photos").upload(path, file, { upsert: true });
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from("dealer-photos").getPublicUrl(data.path);
-        novas.push(urlData.publicUrl);
-      }
-      setDealerFotos((prev) => [...prev, ...novas]);
-    } catch (uploadErr) {
-      setErr(
-        uploadErr instanceof Error
-          ? uploadErr.message
-          : "Erro ao enviar foto. Verifique se o bucket dealer-photos existe no Storage.",
-      );
-    } finally {
-      setDealerUploading(false);
-    }
+    setFotosPendentes((prev) => [
+      ...prev,
+      ...files.map((file) => ({
+        key: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    ]);
   };
 
   const salvar = async () => {
     setErr("");
     setSaving(true);
+    if (staffEhServiceManager && !staffIdTosValido(idTos)) {
+      setErr("O ID TOS deve ser um UUID válido.");
+      setSaving(false);
+      return;
+    }
     const allowedTurnos = [...opcoesTurnoPorEscalaRh(row.escala ?? "")];
     const turnoStr = turno.trim();
     let turnoFinal: string | null = null;
@@ -1844,7 +2018,7 @@ function ModalStaffEditar({
       const bioAntes = readStaffDealerBioForUi(row).trim();
       const fotosAntes = readStaffDealerFotosForUi(row).length;
       const bioDepois = dealerBio.trim();
-      const fotosDepois = dealerFotos.length;
+      const fotosDepois = dealerFotos.length + fotosPendentes.length;
       if (generoAntes !== dealerGenero) {
         alteracoes.push({
           campo: "Gênero (Dealer)",
@@ -1869,7 +2043,7 @@ function ModalStaffEditar({
       ? primeiraOperadoraDoEstudio(estudioPrimario, operadorasPorEstudio)
       : null;
 
-    const patch = {
+    const patch: RhStaffSalvarPatch = {
       staff_nickname: depois.nick || null,
       staff_turno: turnoFinal,
       staff_horario_turno: null,
@@ -1890,33 +2064,75 @@ function ModalStaffEditar({
         : {}),
     };
 
-    const { data: updated, error } = await supabase.from("rh_funcionarios").update(patch).eq("id", row.id).select("*").single();
-    if (error) {
-      const duplicadoTos =
-        staffEhServiceManager &&
-        (error.code === "23505" || /staff_id_tos|idx_rh_funcionarios_staff_id_tos/i.test(error.message ?? ""));
-      setErr(
-        duplicadoTos
-          ? "Este ID TOS já está cadastrado em outro Service Manager."
-          : "Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.",
-      );
+    let fotosFinais = dealerFotos;
+    if (staffEhGamePresenter && fotosPendentes.length > 0) {
+      setDealerUploading(true);
+      const novas: string[] = [];
+      try {
+        for (const pendente of fotosPendentes) {
+          const ext = pendente.file.name.split(".").pop() ?? "jpg";
+          const path = `${row.id}-${crypto.randomUUID()}.${ext}`;
+          const { data, error } = await supabase.storage.from("dealer-photos").upload(path, pendente.file, { upsert: true });
+          if (error) throw error;
+          const { data: urlData } = supabase.storage.from("dealer-photos").getPublicUrl(data.path);
+          novas.push(urlData.publicUrl);
+        }
+        fotosFinais = [...dealerFotos, ...novas];
+        patch.staff_dealer_fotos = fotosFinais;
+      } catch {
+        setErr(ERRO_UPLOAD_FOTO);
+        setDealerUploading(false);
+        setSaving(false);
+        return;
+      }
+      setDealerUploading(false);
+    }
+
+    const resultado = await salvarStaffGestao({
+      id: row.id,
+      expectedUpdatedAt: row.updated_at,
+      patch,
+      historico:
+        alteracoes.length > 0
+          ? { alteracoes, usuario_label: userEmail ?? "—" }
+          : null,
+    });
+    if (!resultado.ok) {
+      setErr(mensagemErroStaffSalvar(resultado.code));
       setSaving(false);
       return;
     }
-    if (alteracoes.length > 0) {
-      await supabase.from("rh_funcionario_historico").insert({
-        rh_funcionario_id: row.id,
-        tipo: "staff_gestao_edicao",
-        detalhes: {
-          alteracoes,
-          usuario_label: userEmail ?? "—",
-        },
-        anexos: [],
-      });
+
+    if (fotosRemovidas.length > 0) {
+      const paths = fotosRemovidas
+        .map((url) => {
+          const marker = "/dealer-photos/";
+          const i = url.indexOf(marker);
+          if (i < 0) return null;
+          try {
+            return decodeURIComponent(url.slice(i + marker.length).split("?")[0]);
+          } catch {
+            return null;
+          }
+        })
+        .filter((p): p is string => Boolean(p));
+      if (paths.length > 0) {
+        await supabase.storage.from("dealer-photos").remove(paths);
+      }
     }
-    const atualizado = updated as RhFuncionario;
-    await syncGamePresenterDealerFromRhFuncionario(atualizado);
-    onSalvo(atualizado);
+
+    const atualizado: RhFuncionario = {
+      ...row,
+      ...resultado.row,
+      ...(staffEhGamePresenter ? { staff_dealer_fotos: fotosFinais } : {}),
+    };
+    const dealerSync = await syncGamePresenterDealerFromRhFuncionario(atualizado);
+    onSalvo(atualizado, dealerSync.ok !== false);
+    if (!dealerSync.ok) {
+      setErr(ERRO_DEALER_APOS_SALVAR);
+      setSaving(false);
+      return;
+    }
     setSaving(false);
   };
 
@@ -1985,7 +2201,13 @@ function ModalStaffEditar({
                 onChange={setEstudiosSelecionados}
                 estudioSlugs={estudioSlugs}
                 estudiosNome={estudiosNome}
+                disabled={estudioCarregamentoErro}
               />
+              {estudioCarregamentoErro ? (
+                <div style={{ fontSize: 11, color: "#e84025", marginTop: 6, fontFamily: FONT.body }}>
+                  Não foi possível carregar os estúdios. Tente de novo na página antes de alterar este campo.
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div style={{ marginBottom: 14 }}>
@@ -2077,7 +2299,7 @@ function ModalStaffEditar({
           {STAFF_SKILL_KEYS.map(({ key, label }) => (
             <div key={key} style={{ marginBottom: 14 }}>
               <label style={labelStyle} htmlFor={`skill-${key}`}>
-                {label}
+                <StaffSkillRotulo skillKey={key} label={label} />
               </label>
               <select
                 id={`skill-${key}`}
@@ -2147,8 +2369,53 @@ function ModalStaffEditar({
                   <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
                   <button
                     type="button"
-                    aria-label="Remover foto"
-                    onClick={() => setDealerFotos((prev) => prev.filter((_, i) => i !== idx))}
+                    aria-label={tooltipAcao("Remover foto")}
+                    title={tooltipAcao("Remover foto")}
+                    onClick={() => {
+                      setFotosRemovidas((prev) => [...prev, url]);
+                      setDealerFotos((prev) => prev.filter((_, i) => i !== idx));
+                    }}
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: BRAND.vermelho,
+                      border: "none",
+                      color: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Trash2 size={12} aria-hidden />
+                  </button>
+                </div>
+              ))}
+              {fotosPendentes.map((pendente) => (
+                <div
+                  key={pendente.key}
+                  style={{
+                    position: "relative",
+                    width: 80,
+                    height: 80,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    border: `1px dashed ${t.cardBorder}`,
+                  }}
+                >
+                  <img src={pendente.previewUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
+                  <button
+                    type="button"
+                    aria-label={tooltipAcao("Remover foto")}
+                    title={tooltipAcao("Remover foto")}
+                    onClick={() => {
+                      URL.revokeObjectURL(pendente.previewUrl);
+                      setFotosPendentes((prev) => prev.filter((x) => x.key !== pendente.key));
+                    }}
                     style={{
                       position: "absolute",
                       top: 4,
@@ -2179,9 +2446,9 @@ function ModalStaffEditar({
               multiple
               showList={false}
               items={[]}
-              onAdd={(files) => void handleDealerFotosUpload(files)}
+              onAdd={(files) => handleDealerFotosUpload(files)}
               onRemove={() => {}}
-              disabled={dealerUploading}
+              disabled={dealerUploading || saving}
               t={t}
             />
           </div>

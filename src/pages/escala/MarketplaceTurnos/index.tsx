@@ -38,12 +38,11 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   ESCALA_ACAO_TIPO_OPCOES_MINHAS,
   ESCALA_ACAO_TIPO_OPCOES_TODAS,
-  ESCALA_TIME_OPCOES,
   OFERTA_STATUS_LABEL,
   RH_CALENDARIO_ACAO_LABEL_FORMAL,
   type EscalaAcaoFiltro,
-  type EscalaTimeFiltro,
   type LinhaOfertaMarketplace,
+  type MarketplaceTimeFiltro,
 } from "../../../lib/escalaTurnosUiConstants";
 import type { RhCalendarioAcaoTipo } from "../../../lib/rhCalendarioAcaoHelpers";
 import {
@@ -58,6 +57,7 @@ import {
   carregarMinhaGradeMarketplaceMeses,
   carregarOfertasMarketplace,
   isDataNoHistoricoMarketplace,
+  ofertaPassaFiltroTimeMarketplace,
   type MarketplaceMeuContexto,
   type MarketplaceMinhaGrade,
   competenciaAnoMes,
@@ -67,7 +67,7 @@ import { ModalAceitarOfertaMarketplace } from "./ModalAceitarOfertaMarketplace";
 import { ModalCancelarOfertaMarketplace } from "./ModalCancelarOfertaMarketplace";
 import { ModalDecidirTrocaMarketplace } from "./ModalDecidirTrocaMarketplace";
 
-/** Times que negociam turnos no Marketplace (escopo Ver = Sim). */
+/** Times que negociam turnos no Marketplace (escopo Ver = Sim). Liderança = SL + SM. */
 const TUTORIAL_MARKETPLACE_OFERTAS: AjudaContextualTutorial = {
   id: "marketplace-ofertas",
   urlSlug: "MarketplaceOfertas",
@@ -76,10 +76,11 @@ const TUTORIAL_MARKETPLACE_OFERTAS: AjudaContextualTutorial = {
 const MARKETPLACE_TIME_TODOS_VALUE = "todos";
 const MARKETPLACE_TIME_TODOS_LABEL = "Todos Times";
 const MARKETPLACE_TIME_ARIA_LABEL = "Times";
-const MARKETPLACE_TIME_SLUGS: EscalaTimeFiltro[] = ["game_presenter", "shuffler"];
-const MARKETPLACE_TIME_OPCOES = ESCALA_TIME_OPCOES.filter((o) =>
-  MARKETPLACE_TIME_SLUGS.includes(o.value),
-).map((o) => ({ value: o.value, label: o.label }));
+const MARKETPLACE_TIME_OPCOES: { value: MarketplaceTimeFiltro; label: string }[] = [
+  { value: "game_presenter", label: "Game Presenter" },
+  { value: "shuffler", label: "Shuffler" },
+  { value: "lideranca", label: "Liderança" },
+];
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
 
@@ -225,9 +226,8 @@ function passaFiltroTipo(row: LinhaOfertaMarketplace, filtro: EscalaAcaoFiltro):
   return row.tipo === filtro;
 }
 
-function passaFiltroTime(row: LinhaOfertaMarketplace, filtro: EscalaTimeFiltro): boolean {
-  if (filtro === "todos") return true;
-  return row.timeKey === filtro;
+function passaFiltroTime(row: LinhaOfertaMarketplace, filtro: MarketplaceTimeFiltro): boolean {
+  return ofertaPassaFiltroTimeMarketplace(row.timeKey, filtro);
 }
 
 function filtrarPorMesEscala(rows: LinhaOfertaMarketplace[], ano: number, mes0: number): LinhaOfertaMarketplace[] {
@@ -265,7 +265,7 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const [aba, setAba] = useRouteTab("escala_marketplace_turnos", "todas", MARKETPLACE_ABAS);
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
-  const [filtroTimeTodas, setFiltroTimeTodas] = useState<EscalaTimeFiltro>("todos");
+  const [filtroTimeTodas, setFiltroTimeTodas] = useState<MarketplaceTimeFiltro>("todos");
   /** `""` = todos os dias do período (mês do carrossel ou Histórico). */
   const [filtroDiaTodas, setFiltroDiaTodas] = useState("");
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
@@ -591,7 +591,7 @@ export default function EscalaMarketplaceTurnosPage() {
       {podeFiltrarTimes ? (
         <FiltroBarCampoSelect
           value={filtroTimeTodas}
-          onChange={(v) => setFiltroTimeTodas(v as EscalaTimeFiltro)}
+          onChange={(v) => setFiltroTimeTodas(v as MarketplaceTimeFiltro)}
           options={MARKETPLACE_TIME_OPCOES}
           icon={FilterBarIcons.time}
           ariaLabel={MARKETPLACE_TIME_ARIA_LABEL}
