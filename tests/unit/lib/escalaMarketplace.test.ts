@@ -585,6 +585,18 @@ describe("alertasHomeMarketplaceDoPrestador", () => {
     const out = alertasHomeMarketplaceDoPrestador([aceita], "gp-1", agora);
     expect(out).toEqual([{ id: "a1", kind: "lembrete", tipo: "venda_turno", diaIso: "2026-08-20" }]);
   });
+
+  it("esconde lembrete de troca depois do último início (interesse), não no fim do dia", () => {
+    const troca = {
+      ...base,
+      tipo: "oferta_troca",
+      status: "aceita",
+      inicio_turno_at: "2026-08-18T07:00:00-03:00",
+      dia_iso_interesse: "2026-08-18",
+      inicio_turno_interesse_at: "2026-08-18T10:00:00-03:00",
+    };
+    expect(alertasHomeMarketplaceDoPrestador([troca], "gp-1", agora)).toEqual([]);
+  });
 });
 
 describe("fontesAlertaHomeDePayloadListar", () => {
@@ -614,6 +626,8 @@ describe("fontesAlertaHomeDePayloadListar", () => {
       ofertante_funcionario_id: "gp-3",
       interessado_funcionario_id: "gp-1",
       dia_iso_interesse: "2026-08-24",
+      inicio_turno_at: "2026-08-23T07:00:00-03:00",
+      inicio_turno_interesse_at: "2026-08-24T19:00:00-03:00",
     },
   ];
 
@@ -627,6 +641,7 @@ describe("fontesAlertaHomeDePayloadListar", () => {
         ofertante_funcionario_id: "gp-1",
         interessado_funcionario_id: "gp-2",
         inicio_turno_at: null,
+        inicio_turno_interesse_at: null,
         dia_iso_interesse: null,
       },
       {
@@ -636,9 +651,26 @@ describe("fontesAlertaHomeDePayloadListar", () => {
         dia_iso: "2026-08-23",
         ofertante_funcionario_id: "gp-3",
         interessado_funcionario_id: "gp-1",
-        inicio_turno_at: null,
+        inicio_turno_at: "2026-08-23T07:00:00-03:00",
+        inicio_turno_interesse_at: "2026-08-24T19:00:00-03:00",
         dia_iso_interesse: "2026-08-24",
       },
     ]);
+  });
+
+  it("aplica o corte de início de turno no recorte da Home", () => {
+    const agora = new Date("2026-08-23T12:00:00-03:00");
+    const aceita = listar.find((row) => row.id === "aceita-1");
+    const fontes = fontesAlertaHomeDePayloadListar([aceita]);
+    expect(alertasHomeMarketplaceDoPrestador(fontes, "gp-1", agora)).toEqual([
+      {
+        id: "aceita-1",
+        kind: "lembrete",
+        tipo: "oferta_troca",
+        diaIso: "2026-08-23",
+      },
+    ]);
+    const depoisDoTurno = new Date("2026-08-24T20:00:00-03:00");
+    expect(alertasHomeMarketplaceDoPrestador(fontes, "gp-1", depoisDoTurno)).toEqual([]);
   });
 });

@@ -112,6 +112,10 @@ export type EscalaMarketplaceOfertaDb = {
   sou_ofertante?: boolean;
   sou_interessado?: boolean;
   mesmo_time?: boolean;
+  /** Início congelado do turno ofertado (`America/Sao_Paulo`). */
+  inicio_turno_at?: string | null;
+  /** Troca aceita: início do turno de interesse (mesmo helper da Home). */
+  inicio_turno_interesse_at?: string | null;
 };
 
 function isoDate(v: unknown): string {
@@ -807,6 +811,7 @@ export type HomeMarketplaceAlertaFonte = {
   ofertante_funcionario_id: string;
   interessado_funcionario_id: string | null;
   inicio_turno_at?: string | null;
+  inicio_turno_interesse_at?: string | null;
   dia_iso_interesse?: string | null;
 };
 
@@ -828,6 +833,7 @@ export function fontesAlertaHomeDePayloadListar(data: unknown): HomeMarketplaceA
     if (status !== "em_analise" && status !== "aceita") continue;
     const interessado = texto(row.interessado_funcionario_id);
     const inicio = texto(row.inicio_turno_at);
+    const inicioInteresse = texto(row.inicio_turno_interesse_at);
     const diaInteresse = isoDate(row.dia_iso_interesse);
     out.push({
       id,
@@ -837,6 +843,7 @@ export function fontesAlertaHomeDePayloadListar(data: unknown): HomeMarketplaceA
       ofertante_funcionario_id: ofertante,
       interessado_funcionario_id: interessado || null,
       inicio_turno_at: inicio || null,
+      inicio_turno_interesse_at: inicioInteresse || null,
       dia_iso_interesse: diaInteresse || null,
     });
   }
@@ -857,7 +864,7 @@ function fimDoDiaSaoPauloMs(diaIso: string): number | null {
 
 /**
  * Mesma regra de `home_marketplace_alertas`: pendente = ofertante + Em análise;
- * lembrete = aceita e o último início de turno (ou fim do dia da troca) ainda no futuro.
+ * lembrete = aceita enquanto o último início (`inicio_turno_at` / troca) ainda é futuro.
  */
 export function alertasHomeMarketplaceDoPrestador(
   rows: HomeMarketplaceAlertaFonte[],
@@ -883,9 +890,11 @@ export function alertasHomeMarketplaceDoPrestador(
     if (!souParte) continue;
     const inicioOferta =
       instanteMsIso(row.inicio_turno_at) ?? fimDoDiaSaoPauloMs(diaIso) ?? 0;
-    const inicioTroca = row.dia_iso_interesse
-      ? fimDoDiaSaoPauloMs(isoDate(row.dia_iso_interesse)) ?? Number.NEGATIVE_INFINITY
-      : Number.NEGATIVE_INFINITY;
+    const inicioTroca =
+      instanteMsIso(row.inicio_turno_interesse_at) ??
+      (row.dia_iso_interesse
+        ? fimDoDiaSaoPauloMs(isoDate(row.dia_iso_interesse)) ?? Number.NEGATIVE_INFINITY
+        : Number.NEGATIVE_INFINITY);
     if (Math.max(inicioOferta, inicioTroca) > agoraMs) {
       out.push({ id, kind: "lembrete", tipo, diaIso });
     }
@@ -904,8 +913,8 @@ export function alertasHomeMarketplaceDoPrestador(
 /**
  * @param emailEfetivo e-mail da sessão visível. No Simulador `home_marketplace_alertas`
  * usa `auth.uid()` do viewer — listar via `escala_marketplace_ofertas_listar`
- * (SECURITY DEFINER, GRANT authenticated) e recortar no cliente pelo cadastro RH.
- * Proibido `select` direto em `escala_marketplace_oferta` (RLS bloqueia).
+ * (SECURITY DEFINER, GRANT authenticated; jsonb inclui `inicio_turno_at`) e recortar
+ * no cliente pelo cadastro RH. Proibido `select` direto em `escala_marketplace_oferta`.
  */
 export async function carregarHomeMarketplaceAlertas(
   emailEfetivo?: string | null,
