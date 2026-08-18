@@ -907,7 +907,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Avisos na Home",
         texto:
-          "Nas Homes de **Game Presenter**, **Shuffler**, **Shift Leader** e **Service Manager**, a plataforma mostra um card quando há algo para fazer no Marketplace. **Negociação aguardando aprovação** aparece só para quem publicou a oferta, enquanto ela está Em análise — o atalho abre **Marketplace → Minhas Ofertas**. **Não esqueça da sua negociação** aparece para os dois participantes depois da aprovação, até o início do turno — o atalho abre o **Calendário**. Os cards somem sozinhos (não há «Li e Ocultar»).",
+          "Nas Homes de **Game Presenter**, **Shuffler**, **Shift Leader** e **Service Manager**, a plataforma mostra um card quando há algo para fazer no Marketplace. **Negociação aguardando aprovação** aparece só para quem publicou a oferta, enquanto ela está Em análise — o atalho abre **Marketplace → Minhas Ofertas**. **Não esqueça da sua negociação** aparece para os dois participantes depois da aprovação, até o início do turno — o atalho abre o **Calendário**. Os cards somem sozinhos (não há «Li e Ocultar»). No Simulador de Login, os cards seguem a pessoa escolhida.",
       },
       {
         subtitulo: "Intervalo mínimo de 12h",

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Bell, Handshake } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { useAppPageNav } from "../../../../hooks/useAppPageNav";
 import { FONT_TITLE } from "../../../../lib/dashboardConstants";
 import { FONT } from "../../../../constants/theme";
@@ -35,19 +36,21 @@ function textoAlerta(a: HomeMarketplaceAlerta): string {
  */
 export function MarketplaceAlertasStaffHome({ sectionIdPrefix }: { sectionIdPrefix: string }) {
   const { theme: t } = useApp();
+  const { email: emailEfetivo, isSimulacao } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const { propsFor } = useAppPageNav();
   const [alertas, setAlertas] = useState<HomeMarketplaceAlerta[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void carregarHomeMarketplaceAlertas().then((rows) => {
+    const emailOverlay = isSimulacao ? emailEfetivo : null;
+    void carregarHomeMarketplaceAlertas(emailOverlay).then((rows) => {
       if (!cancelled) setAlertas(rows);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isSimulacao, emailEfetivo]);
 
   if (!alertas || alertas.length === 0) return null;
 

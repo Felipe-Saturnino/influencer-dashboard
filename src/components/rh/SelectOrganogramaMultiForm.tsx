@@ -96,6 +96,7 @@ export function SelectOrganogramaMultiForm({
   const listboxKeyboard = useListboxKeyboardNavigation({
     items: filtered,
     onSelect: (option) => toggleOption(option.id),
+    onEscape: () => setOpen(false),
   });
 
   const borderColor = hasError ? "#e84025" : t.cardBorder;
@@ -112,7 +113,14 @@ export function SelectOrganogramaMultiForm({
         aria-label={`${ariaLabel} — ${triggerLabel}`}
         onClick={() => !disabled && setOpen((o) => !o)}
         onKeyDown={(e) => {
-          if (disabled || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
+          if (disabled) return;
+          if (e.key === "Escape" && open) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+            return;
+          }
+          if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
           e.preventDefault();
           setOpen(true);
         }}

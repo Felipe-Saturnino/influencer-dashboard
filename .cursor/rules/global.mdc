@@ -831,10 +831,10 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 | **Tab / Shift+Tab** | Percorrem somente os controles do formulário, na ordem visual. Opções internas de dropdown/listbox usam `tabIndex={-1}` e não viram paradas individuais. |
 | **Indicador visual** | Todo controle focado por teclado dentro de `[role="dialog"]` recebe o anel global `:focus-visible` de `src/styles/global.css` (2px em `--brand-primary` + halo). Não remover com `outline: none` inline. |
 | **Setas em `<select>` nativo** | Mantêm o comportamento nativo do navegador. |
-| **Setas em lista pesquisável customizada** | **↑/↓** percorrem resultados, **Home/End** saltam para início/fim e **Enter** seleciona. Usar `useListboxKeyboardNavigation`; input com `aria-activedescendant`, lista `role="listbox"` e opções `role="option"`. |
+| **Setas em lista pesquisável customizada** | **↑/↓** percorrem resultados, **Home/End** saltam para início/fim e **Enter** seleciona. **Escape** fecha só o painel (`onEscape`) e **não** propaga — nunca fecha o modal. Usar `useListboxKeyboardNavigation`; input com `aria-activedescendant`, lista `role="listbox"` e opções `role="option"`. |
 | **Escape** | **Nunca fecha o modal.** Pode fechar somente um painel/dropdown interno aberto, sem propagar para fechamento do diálogo. |
 
-**Implementação compartilhada:** `useListboxKeyboardNavigation` (`src/hooks/`) + props `onKeyDown` / `aria-activedescendant` de `BarraPesquisaPagina` e `BarraPesquisaFiltroPainel`. Não duplicar índice ativo, wrap de setas e `scrollIntoView` local em novos campos.
+**Implementação compartilhada:** `useListboxKeyboardNavigation` (`src/hooks/`) — setas, Home/End, Enter e Escape (`onEscape` + `stopPropagation`) + props `onKeyDown` / `aria-activedescendant` de `BarraPesquisaPagina` e `BarraPesquisaFiltroPainel`. Não duplicar índice ativo, wrap de setas, `scrollIntoView` nem Escape local em novos campos.
 
 - **Nunca** `window.confirm()` — confirmação de exclusão em lista/card/tabela: **`ModalConfirmExcluirPadrao`** (ver § abaixo); demais fluxos: modal dedicado (ver Brand §8).
 - **Nunca** `alert()` — erros com estado local + bloco inline:

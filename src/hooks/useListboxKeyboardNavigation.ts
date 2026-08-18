@@ -3,15 +3,18 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 type ListboxKeyboardOptions<T> = {
   items: readonly T[];
   onSelect: (item: T) => void;
+  /** Fecha só o painel/dropdown aberto — Escape nunca fecha o modal. */
+  onEscape?: () => void;
 };
 
 /**
- * Navegação canônica para listas pesquisáveis: ↑/↓ percorrem, Home/End saltam
- * e Enter seleciona. As opções ficam fora da sequência de Tab.
+ * Navegação canônica para listas pesquisáveis: ↑/↓ percorrem, Home/End saltam,
+ * Enter seleciona e Escape fecha o painel (`onEscape`) sem propagar.
  */
 export function useListboxKeyboardNavigation<T>({
   items,
   onSelect,
+  onEscape,
 }: ListboxKeyboardOptions<T>) {
   const [activeIndex, setActiveIndex] = useState(0);
   const optionRefs = useRef<(HTMLElement | null)[]>([]);
@@ -25,6 +28,13 @@ export function useListboxKeyboardNavigation<T>({
   }, [activeIndex]);
 
   function onKeyDown(e: KeyboardEvent<HTMLElement>) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      onEscape?.();
+      return;
+    }
+
     if (items.length === 0) return;
 
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {

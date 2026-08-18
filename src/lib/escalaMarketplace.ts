@@ -798,13 +798,109 @@ export function parseHomeMarketplaceAlertas(data: unknown): HomeMarketplaceAlert
   return out;
 }
 
-export async function carregarHomeMarketplaceAlertas(): Promise<HomeMarketplaceAlerta[]> {
-  const { data, error } = await supabase.rpc("home_marketplace_alertas");
+/** Linha mínima para recortar os cards da Home pelo prestador visível (Simulador). */
+export type HomeMarketplaceAlertaFonte = {
+  id: string;
+  tipo: string;
+  status: string;
+  dia_iso: string;
+  ofertante_funcionario_id: string;
+  interessado_funcionario_id: string | null;
+  inicio_turno_at?: string | null;
+  dia_iso_interesse?: string | null;
+};
+
+function instanteMsIso(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Fim do dia em São Paulo — fallback quando a RPC de início do turno da troca não está no cliente. */
+function fimDoDiaSaoPauloMs(diaIso: string): number | null {
+  const ms = Date.parse(`${diaIso}T23:59:59.999-03:00`);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * Mesma regra de `home_marketplace_alertas`: pendente = ofertante + Em análise;
+ * lembrete = aceita e o último início de turno (ou fim do dia da troca) ainda no futuro.
+ */
+export function alertasHomeMarketplaceDoPrestador(
+  rows: HomeMarketplaceAlertaFonte[],
+  funcionarioId: string,
+  agora: Date = new Date(),
+): HomeMarketplaceAlerta[] {
+  const fid = funcionarioId.trim();
+  if (!fid) return [];
+  const agoraMs = agora.getTime();
+  const out: HomeMarketplaceAlerta[] = [];
+  for (const row of rows) {
+    const id = texto(row.id);
+    const tipo = texto(row.tipo);
+    const diaIso = isoDate(row.dia_iso);
+    if (!id || !tipo || !diaIso) continue;
+    if (row.status === "em_analise" && row.ofertante_funcionario_id === fid) {
+      out.push({ id, kind: "pendente", tipo, diaIso });
+      continue;
+    }
+    if (row.status !== "aceita") continue;
+    const souParte =
+      row.ofertante_funcionario_id === fid || row.interessado_funcionario_id === fid;
+    if (!souParte) continue;
+    const inicioOferta =
+      instanteMsIso(row.inicio_turno_at) ?? fimDoDiaSaoPauloMs(diaIso) ?? 0;
+    const inicioTroca = row.dia_iso_interesse
+      ? fimDoDiaSaoPauloMs(isoDate(row.dia_iso_interesse)) ?? Number.NEGATIVE_INFINITY
+      : Number.NEGATIVE_INFINITY;
+    if (Math.max(inicioOferta, inicioTroca) > agoraMs) {
+      out.push({ id, kind: "lembrete", tipo, diaIso });
+    }
+  }
+  out.sort((a, b) => {
+    const ordem = (k: HomeMarketplaceAlertaKind) => (k === "pendente" ? 1 : 2);
+    const c = ordem(a.kind) - ordem(b.kind);
+    if (c !== 0) return c;
+    const d = a.diaIso.localeCompare(b.diaIso);
+    if (d !== 0) return d;
+    return a.id.localeCompare(b.id);
+  });
+  return out;
+}
+
+/**
+ * @param emailEfetivo e-mail da sessão visível. No Simulador a RPC usa `auth.uid()`
+ * do viewer — recortar no cliente pelo cadastro RH desse e-mail.
+ */
+export async function carregarHomeMarketplaceAlertas(
+  emailEfetivo?: string | null,
+): Promise<HomeMarketplaceAlerta[]> {
+  const email = emailEfetivo?.trim();
+  if (!email) {
+    const { data, error } = await supabase.rpc("home_marketplace_alertas");
+    if (error) {
+      console.error("[carregarHomeMarketplaceAlertas]", error);
+      return [];
+    }
+    return parseHomeMarketplaceAlertas(data);
+  }
+  const func = await buscarRhFuncionarioAtivoPorEmailLogin(email);
+  if (!func?.id) return [];
+  const { data, error } = await supabase
+    .from("escala_marketplace_oferta")
+    .select(
+      "id, tipo, status, dia_iso, ofertante_funcionario_id, interessado_funcionario_id, inicio_turno_at, dia_iso_interesse",
+    )
+    .or(`ofertante_funcionario_id.eq.${func.id},interessado_funcionario_id.eq.${func.id}`)
+    .in("status", ["em_analise", "aceita"]);
   if (error) {
-    console.error("[carregarHomeMarketplaceAlertas]", error);
+    console.error("[carregarHomeMarketplaceAlertas] overlay", error);
     return [];
   }
-  return parseHomeMarketplaceAlertas(data);
+  return alertasHomeMarketplaceDoPrestador(
+    (data ?? []) as HomeMarketplaceAlertaFonte[],
+    func.id,
+  );
 }
 
 export type CriarOfertaMarketplaceInput = {

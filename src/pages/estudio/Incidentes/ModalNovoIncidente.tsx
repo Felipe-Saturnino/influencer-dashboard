@@ -140,6 +140,10 @@ function ComboBuscavel({
   } = useListboxKeyboardNavigation({
     items: filtered,
     onSelect: selecionarOpcao,
+    onEscape: () => {
+      setOpen(false);
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    },
   });
 
   useEffect(() => {
@@ -239,15 +243,10 @@ function ComboBuscavel({
                     e.key === "ArrowUp" ||
                     e.key === "Home" ||
                     e.key === "End" ||
-                    e.key === "Enter"
+                    e.key === "Enter" ||
+                    e.key === "Escape"
                   ) {
                     onListboxKeyDown(e);
-                    return;
-                  }
-                  if (e.key === "Escape") {
-                    e.preventDefault();
-                    setOpen(false);
-                    requestAnimationFrame(() => triggerRef.current?.focus());
                   }
                 }}
               />

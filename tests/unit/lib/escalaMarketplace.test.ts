@@ -10,6 +10,7 @@ import {
   formatarDiaIsoPtBr,
   overlayIdentidadeMarketplaceOfertas,
   parseHomeMarketplaceAlertas,
+  alertasHomeMarketplaceDoPrestador,
   parseMeuContextoMarketplace,
   parseMinhaGradeMarketplace,
   parseOfertasMarketplacePayload,
@@ -545,5 +546,36 @@ describe("overlayIdentidadeMarketplaceOfertas", () => {
     const out = overlayIdentidadeMarketplaceOfertas([base], null, "game_presenter");
     expect(out[0]?.souOfertante).toBe(false);
     expect(out[0]?.mesmoTime).toBe(false);
+  });
+});
+
+describe("alertasHomeMarketplaceDoPrestador", () => {
+  const agora = new Date("2026-08-18T12:00:00-03:00");
+  const base = {
+    id: "a1",
+    tipo: "venda_turno",
+    status: "em_analise",
+    dia_iso: "2026-08-20",
+    ofertante_funcionario_id: "gp-1",
+    interessado_funcionario_id: "gp-2" as string | null,
+    inicio_turno_at: "2026-08-20T10:00:00-03:00",
+    dia_iso_interesse: null as string | null,
+  };
+
+  it("mostra pendente só para o ofertante em análise", () => {
+    const out = alertasHomeMarketplaceDoPrestador([base], "gp-1", agora);
+    expect(out).toEqual([{ id: "a1", kind: "pendente", tipo: "venda_turno", diaIso: "2026-08-20" }]);
+    expect(alertasHomeMarketplaceDoPrestador([base], "gp-2", agora)).toEqual([]);
+  });
+
+  it("mostra lembrete de oferta aceita enquanto o turno não começou", () => {
+    const aceita = { ...base, status: "aceita", inicio_turno_at: "2026-08-20T19:00:00-03:00" };
+    const out = alertasHomeMarketplaceDoPrestador([aceita], "gp-2", agora);
+    expect(out).toEqual([{ id: "a1", kind: "lembrete", tipo: "venda_turno", diaIso: "2026-08-20" }]);
+  });
+
+  it("esconde lembrete depois do início do turno", () => {
+    const aceita = { ...base, status: "aceita", inicio_turno_at: "2026-08-18T07:00:00-03:00" };
+    expect(alertasHomeMarketplaceDoPrestador([aceita], "gp-1", agora)).toEqual([]);
   });
 });
