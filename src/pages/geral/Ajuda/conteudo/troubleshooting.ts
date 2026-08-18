@@ -52,6 +52,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "ROI exibe '—' quando não há investimento registrado para o influencer no período. Isso ocorre quando o pagamento ainda não foi confirmado (status Pendente) ou quando o influencer não tem contrato de cachê cadastrado. Apenas pagamentos com status Pago são considerados no cálculo.",
       },
       {
+        subtitulo: "O Investimento do Relatório Diário veio R$ 0 e o Streamers mostra valor?",
+        texto:
+          "O e-mail Relatório Diário (bloco Resultado de Streamers) usa a mesma regra da página Streamers: só pagamentos com status Pago, no mês do consolidado, pela data de fim do ciclo — não pela data em que o pagamento foi marcado como Pago. A visão é global (Todas Operadoras / Todos Influencers).\n\nO valor deve coincidir com o KPI Investimento do Overview Streamers no mês corrente. Não compare com um único ciclo na página Financeiro: o KPI soma todos os ciclos pagos do mês. Se o e-mail do mesmo dia continuar zerado e a página mostrar valor, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "O PVI está como 0 ou parece inconsistente?",
         texto:
           "O PVI (Player Value Index) é calculado com base em três componentes: ticket médio de depósito, GGR por jogador e WD Ratio. Se qualquer um desses dados for zero (ex.: influencer sem depósitos registrados), o PVI não pode ser calculado corretamente e pode aparecer baixo ou zerado. Isso é esperado para influencers com poucos FTDs no período.",

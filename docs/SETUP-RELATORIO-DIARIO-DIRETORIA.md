@@ -9,7 +9,7 @@ E-mail automático enviado **todo dia pela manhã (~6h BRT via GitHub Actions)**
 1. **Consolidado de Resultados (MTD)** — mês de referência = mês de `dataOntem`
    - Legenda: `Consolidado MTD - até dia {última data com linha no Overview Spin}`
    - Resultado por Operadoras (linha TOTAL + **todas as operadoras ativas** parceiras)
-   - Resultado de Streamers (visão global)
+   - Resultado de Streamers (visão global; **Investimento** = `get_investimento_pago`, mesma regra do Overview Streamers — ciclos pagos por `data_fim`)
    - Resultado de Mídias Sociais (investimento = Meta Ads)
 2. **Posicionamento** — última leitura antes do envio
    - **Mesas Dedicadas:** Mesa · Blaze · CDA (nomes únicos de estúdios dedicados)

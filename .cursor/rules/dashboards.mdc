@@ -43,6 +43,7 @@ alwaysApply: false
 - **Loading na FilterBar (modo embed):** cada aba chama `setIsLoading(true/false)` no `StreamersFiltrosContext` durante o fetch; o container (`Streamers/index.tsx`) mostra o indicador quando `sf.isLoading`.
 - **Tabs:** `role="tablist"` / `role="tab"` / `aria-selected`; `tabIndex={ativo ? 0 : -1}` nas abas inativas; **setas ← →** mudam de aba e devolvem foco ao botão da aba destino.
 - **Imports:** ficheiros dentro de `Streamers/*` usam caminhos `../../../../` para `lib/`, `context/`, `components/`, etc.
+- **Investimento:** RPC `get_investimento_pago` via `buscarInvestimentoPago` — só status **Pago**, ciclos cujo `data_fim` está no período. O Relatório Diário (e-mail) usa a mesma RPC em visão global; a função deve aceitar `service_role` (cron).
 
 ---
 

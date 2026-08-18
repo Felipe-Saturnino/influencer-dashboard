@@ -128,6 +128,8 @@ Secret: `EMAIL_AGENDA_DESTINATARIOS` · Remetente: `RESEND_FROM_RELATORIOS`
 
 Secret: `RELATORIO_DIRETORIA_DESTINATARIOS` · Remetente: `RESEND_FROM_RELATORIOS`
 
+**Investimento (bloco Streamers):** RPC `get_investimento_pago` com service role — a função deve aceitar `auth.role() = service_role` (migração `get_investimento_pago_service_role`). Sem isso o e-mail imprime R$ 0. Janela alinhada ao Overview Streamers (mês do consolidado até hoje BRT no mês civil atual).
+
 ---
 
 ### Atendimento CS — ingestão Outlook (cron)

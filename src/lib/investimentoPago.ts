@@ -39,6 +39,21 @@ export function filtrosInvestimentoPorEscopo(
 }
 
 /**
+ * Fim da janela de investimento do Relatório Diário (bloco Streamers).
+ * No mês civil atual, usa hoje (BRT) — mesma regra do Overview Streamers.
+ * No dia 1 (consolidado = mês anterior fechado), usa ontem = último dia daquele mês.
+ * Espelhado em supabase/functions/relatorio-diario-diretoria/common.ts.
+ */
+export function fimPeriodoInvestimentoRelatorioDiretoria(
+  dataHoje: string,
+  inicioMesConsolidado: string,
+  dataOntem: string,
+): string {
+  const mesConsolidado = inicioMesConsolidado.slice(0, 7);
+  return dataHoje.startsWith(mesConsolidado) ? dataHoje : dataOntem;
+}
+
+/**
  * Busca o investimento apenas de pagamentos com status "pago",
  * alinhado ao que é exibido no Financeiro (valores revisados e efetivamente pagos).
  * Usa RPC no servidor para incluir corretamente pagamentos_agentes.

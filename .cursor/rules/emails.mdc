@@ -332,6 +332,8 @@ Ordem típica Relatório Diretoria: **Consolidado MTD** (até última data Overv
 
 **Resultado por Operadoras:** mesma regra da aba **Overview** do Overview Spin — soma **Dedicado** (`relatorio_daily_summary` + `relatorio_monthly_summary`) **+ Network** (`relatorio_network_*`) por `operadora_slug`. Sem Network no fetch, parceiras só-network (ex. Esportiva Bet) aparecem zeradas.
 
+**Resultado de Streamers — Investimento:** RPC **`get_investimento_pago`** (pagamentos + agentes com status **Pago**, ciclos cujo `data_fim` está no período). Visão global (sem filtro de operadora/influencer), igual ao Overview Streamers com **Todas Operadoras** / **Todos Influencers**. A Edge usa **service role** — a RPC precisa aceitar `auth.role() = service_role` (anônimo continua a receber 0). Janela: 1º dia do mês do consolidado até **hoje** (BRT) no mês civil atual (mesma regra `getPeriodoComparativoMoM` do Streamers); no dia 1, mês anterior fechado até ontem.
+
 **Posicionamento — Mesas Network:** colunas **Blaze | CDA | Esportiva | Jonbet**. Células de posição com prefixo **`P`** (ex. `P3`), igual às Dedicadas.
 
 **Largura do card:** `EMAIL_CARD_MAX_WIDTH_PX = 960` em `common.ts` (`width:100%` + media query ≤640px).
