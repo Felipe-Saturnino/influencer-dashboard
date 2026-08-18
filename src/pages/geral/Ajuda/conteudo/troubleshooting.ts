@@ -1597,6 +1597,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença registrada com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). **Correções** de horário (**Esquecimento**, **Outro** ou Correção) só o **líder imediato** (ou Editar Sim) analisa por campo — o próprio prestador não aprova a própria correção. Atestado **Médico** é atendido em **Solicitações** (RH). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
       },
       {
+        subtitulo: "O Status aparece Sem horário e não consigo Justificar?",
+        texto:
+          "No **Controle de Presença**, **Sem horário** aparece quando o turno Escalado (Manhã/Tarde/Noite) não encontra entrada e saída programadas. Em **Shuffler** (e outros times com **Todos Estúdios**), o horário vem do **primeiro estúdio ativo** com turnos preenchidos em Gestão de Estúdios — não da operadora. Se o Status continuar Sem horário, confirme os horários Manhã/Tarde/Noite do estúdio. Em **dias já passados** sem Check-in, o Status passa a **Falta** e o botão **Justificar** fica disponível mesmo sem o horário programado. No próprio dia, o Justificar só aparece depois do fim do turno (ou no dia seguinte, se o horário ainda não estiver cadastrado).",
+      },
+      {
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
         texto:
           "Com a regra atual, o check-out de turno noturno fica na **mesma linha** do dia do check-in (ex.: entrada 20h e saída 08h). O botão **Fazer Check-out** vale por **20 horas** após o check-in. Se o problema continuar, peça ao suporte para revisar os **registros de presença** daquele dia.",
@@ -1774,12 +1779,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo as abas Documentos, Carreira ou Acesso a Plataforma no modal?",
         texto:
-          "Essas abas dependem da permissão do perfil nesta página. A aba **Dados da empresa** aparece apenas quando o contrato do prestador é **PJ**.",
+          "Documentos e Acesso a Plataforma aparecem no modal **Ver** e **Editar**. **Carreira** só aparece no modal **Ver**. A aba **Dados da empresa** aparece apenas quando o contrato do prestador é **PJ**. Enviar ou excluir documentos no Editar fica pendente até clicar em **Salvar**.",
       },
       {
         subtitulo: "Os botões Novo Prestador ou RH Talks não aparecem?",
         texto:
-          "**Novo Prestador** exige permissão de **Criar** e só é exibido na aba **Head Count**. **RH Talks** aparece na aba **Anotações RH** para perfis com a permissão correspondente.",
+          "**Novo Prestador** exige permissão de **Criar** e Ver os dados do cadastro, e só é exibido na aba **Head Count**. **RH Talks** aparece na aba **Anotações RH** para perfis com permissão de **Editar**.",
+      },
+      {
+        subtitulo: "O cadastro salvou, mas o login na plataforma não atualizou?",
+        texto:
+          "O cadastro e o acesso são gravados em etapas. Se a sincronização falhar, a página avisa e o modal permanece aberto para tentar de novo. Confira e-mail Spin ou e-mail pessoal e o organograma. Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "A mensagem pede para recarregar porque outra pessoa alterou o cadastro?",
+        texto:
+          "Alguém salvou o mesmo prestador enquanto o modal estava aberto. Feche, abra de novo e aplique as alterações sobre a versão atual.",
       },
     ],
   },

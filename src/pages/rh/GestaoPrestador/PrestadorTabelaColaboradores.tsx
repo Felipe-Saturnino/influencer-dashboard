@@ -27,6 +27,7 @@ import {
   corStatusPrestador,
   ctaGradient,
   labelStatusPrestador,
+  PRESTADOR_TABELA_VAZIO,
   textoDataFuncaoColunaTabela,
   textoRemuneracaoColunaTabela,
   type PrestadoresSortCol,
@@ -241,7 +242,7 @@ export function PrestadorTabelaColaboradores({
                   colSpan={colunasTabela}
                   style={{ ...dataTable.tdCenter, padding: "40px 16px", color: t.textMuted }}
                 >
-                  Sem dados para o período selecionado.
+                  {PRESTADOR_TABELA_VAZIO}
                 </td>
               </tr>
             ) : (

@@ -23,9 +23,7 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import {
-  fetchTurnosPorEstudioSlugs,
-  fetchTurnosPorOperadoraSlugs,
-  pickStaffEstudioSlugParaTurnos,
+  carregarMapasTurnosHorarioPrestadores,
   resolveTurnosHorarioPrestador,
   type TurnosDealersPick,
 } from "../../../lib/turnosDealers";
@@ -1571,31 +1569,11 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
-    const opSlugs = [
-      ...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean)),
-    ];
-    const estudioSlugs = [
-      ...new Set(
-        prestadores
-          .map((p) => pickStaffEstudioSlugParaTurnos(p))
-          .filter((s): s is string => Boolean(s)),
-      ),
-    ];
-    if (opSlugs.length === 0 && estudioSlugs.length === 0) {
-      setMapOpTurnos(new Map());
-      setMapEstudioTurnos(new Map());
-      return;
-    }
     let cancelled = false;
-    void Promise.all([
-      opSlugs.length > 0 ? fetchTurnosPorOperadoraSlugs(opSlugs) : Promise.resolve(new Map<string, TurnosDealersPick>()),
-      estudioSlugs.length > 0
-        ? fetchTurnosPorEstudioSlugs(estudioSlugs)
-        : Promise.resolve(new Map<string, TurnosDealersPick>()),
-    ]).then(([opMap, estMap]) => {
+    void carregarMapasTurnosHorarioPrestadores(prestadores).then(({ mapPorOperadora, mapPorEstudio }) => {
       if (cancelled) return;
-      setMapOpTurnos(opMap);
-      setMapEstudioTurnos(estMap);
+      setMapOpTurnos(mapPorOperadora);
+      setMapEstudioTurnos(mapPorEstudio);
     });
     return () => {
       cancelled = true;

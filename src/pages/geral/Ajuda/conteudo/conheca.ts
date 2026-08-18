@@ -564,12 +564,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastro e detalhe do prestador",
         texto:
-          "O modal do prestador é organizado em abas: **Dados pessoais**, **Dados de contratação**, **Dados da empresa** (só para contrato PJ), **Dados bancários**, **Documentos**, **Carreira** e **Acesso a Plataforma** — as três últimas conforme permissão do perfil.\n\nOs campos preenchidos em uma aba são mantidos ao alternar entre elas; um único **Salvar** grava tudo.",
+          "O modal do prestador é organizado em abas: **Dados pessoais**, **Dados de contratação**, **Dados da empresa** (só para contrato PJ), **Dados bancários**, **Documentos**, **Carreira** e **Acesso a Plataforma**. Documentos, Carreira e Acesso aparecem no modal Ver ou Editar; a aba **Carreira** só no Ver. Os campos preenchidos em uma aba são mantidos ao alternar entre elas; um único **Salvar** grava o cadastro e os documentos pendentes.",
+      },
+      {
+        subtitulo: "KPIs e revisão cadastral",
+        texto:
+          "Acima dos filtros, os cards mostram o total no filtro atual, cadastros incompletos e revisões cadastrais pendentes (ciclo de 6 meses em Dados de Cadastro). Clique no card para ir ao prestador quando houver permissão de Editar.",
       },
       {
         subtitulo: "Remuneração e dados sensíveis",
         texto:
-          "Quem tem permissão de Ver na página enxerga a coluna **Remuneração** e os dados financeiros no detalhe do prestador. Os valores da tabela ficam ocultos por padrão — use o ícone de olho no cabeçalho da coluna para exibir ou ocultar. Alterar valores continua exigindo permissão de Editar.",
+          "Quem tem permissão de Ver na página enxerga a coluna **Remuneração** e os dados financeiros no detalhe do prestador. Os valores da tabela ficam ocultos por padrão — use o ícone de olho no cabeçalho da coluna para exibir ou ocultar. Alterar valores continua exigindo permissão de Editar. Esta página é de RH e Executivos — use **Sim** ou **Não** em Gestão de Usuários; Próprios não se aplica aqui.",
+      },
+      {
+        subtitulo: "Acesso à plataforma",
+        texto:
+          "Ao salvar um prestador ou registrar Revisão de Contrato / Reativação, a plataforma tenta criar ou atualizar o login conforme o organograma. Se essa sincronização falhar, o cadastro já está gravado — a mensagem pede para tentar de novo. Encerrar a prestação desativa o acesso automaticamente.",
       },
     ],
   },

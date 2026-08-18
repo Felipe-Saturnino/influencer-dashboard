@@ -62,6 +62,18 @@ import {
   syncUsuarioPrestadorAposSalvarRh,
 } from "../../../lib/rhPrestadorUsuarioSync";
 import {
+  buscarPrestadorPorId,
+  ERRO_PRESTADOR_EXCLUIR,
+  ERRO_PRESTADOR_HISTORICO,
+  ERRO_PRESTADOR_SALVAR_GENERICO,
+  ERRO_PRESTADOR_SYNC,
+  ERRO_PRESTADOR_SYNC_DEALER,
+  mensagemErroPrestadorSalvar,
+  PRESTADOR_HISTORICO_SELECT,
+  salvarPrestadorGestao,
+  salvarPrestadorTalksGestao,
+} from "../../../lib/rhPrestadorSalvar";
+import {
   defaultsNovoPrestadorDeVinculoOrganograma,
   defaultsNovoPrestadorSemVinculoOrganograma,
   RH_REMUNERACAO_ORGANOGRAMA_HINT,
@@ -72,7 +84,7 @@ import {
 } from "../../../lib/rhPrestadorAcessoPlataforma";
 import { PrestadorAcessoPlataformaPanel } from "./PrestadorAcessoPlataformaPanel";
 import { PrestadorCarreiraVerPanel } from "./PrestadorCarreiraVerPanel";
-import { PrestadorDocumentosGestaoPanel } from "./PrestadorDocumentosGestaoPanel";
+import { PrestadorDocumentosGestaoPanel, type PrestadorDocumentosGestaoHandle } from "./PrestadorDocumentosGestaoPanel";
 import { CampoUploadArquivos, type CampoUploadArquivosTheme } from "../../../components/CampoUploadArquivos";
 import { ModalHistoricoPrestador } from "./ModalHistoricoPrestador";
 import { podeEnviarDocumentosGestaoPrestador } from "../../../lib/rhPrestadorDocumentosCadastro";
@@ -119,7 +131,6 @@ import {
   historicoPrestadorPassaFiltroTipo,
   labelOpcaoRhTalkPortal,
   labelStatusPrestador,
-  mensagemErroSupabaseRhFuncionarioSalvar,
   type RhPortalRhTalkOpcao,
   sliceContratacaoDeForm,
   sliceContratacaoDeRow,
@@ -223,6 +234,8 @@ export default function RhPrestadoresPage() {
   );
   const [modalForm, setModalForm] = useState<"fechado" | "novo" | "editar" | "ver">("fechado");
   const [editId, setEditId] = useState<string | null>(null);
+  const [editUpdatedAt, setEditUpdatedAt] = useState<string | null>(null);
+  const docsGestaoRef = useRef<PrestadorDocumentosGestaoHandle>(null);
   const [form, setForm] = useState<FormState>(estadoVazioForm);
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
   const [alertaValidacaoModal, setAlertaValidacaoModal] = useState<string | null>(null);
@@ -280,6 +293,8 @@ export default function RhPrestadoresPage() {
   const [histModalRow, setHistModalRow] = useState<RhFuncionario | null>(null);
   const [histModalItems, setHistModalItems] = useState<RhFuncionarioHistorico[]>([]);
   const [histModalLoading, setHistModalLoading] = useState(false);
+  const [histModalErro, setHistModalErro] = useState<string | null>(null);
+  const [histReloadKey, setHistReloadKey] = useState(0);
   const [histModalFiltroTipo, setHistModalFiltroTipo] = useState<FiltroTipoAcaoHistoricoPrestador>("todos");
 
   const [rhTalksOpen, setRhTalksOpen] = useState(false);
@@ -342,20 +357,27 @@ export default function RhPrestadoresPage() {
   useEffect(() => {
     if (!histModalRow) {
       setHistModalItems([]);
+      setHistModalErro(null);
       return;
     }
     setHistModalLoading(true);
+    setHistModalErro(null);
     void (async () => {
       const { data, error } = await supabase
         .from("rh_funcionario_historico")
-        .select("*")
+        .select(PRESTADOR_HISTORICO_SELECT)
         .eq("rh_funcionario_id", histModalRow.id)
         .order("created_at", { ascending: false });
-      if (error) setHistModalItems([]);
-      else setHistModalItems((data ?? []) as RhFuncionarioHistorico[]);
+      if (error) {
+        console.error("[GestaoPrestador] histórico:", error);
+        setHistModalItems([]);
+        setHistModalErro(ERRO_PRESTADOR_HISTORICO);
+      } else {
+        setHistModalItems((data ?? []) as RhFuncionarioHistorico[]);
+      }
       setHistModalLoading(false);
     })();
-  }, [histModalRow]);
+  }, [histModalRow, histReloadKey]);
 
   const histModalItemsFiltrados = useMemo(
     () => histModalItems.filter((h) => historicoPrestadorPassaFiltroTipo(h.tipo, histModalFiltroTipo)),
@@ -480,31 +502,43 @@ export default function RhPrestadoresPage() {
     setAlertaValidacaoModal(null);
     setErroGlobal(null);
     setEditId(null);
+    setEditUpdatedAt(null);
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
     setModalForm("novo");
   };
 
-  const abrirEditar = (row: RhFuncionario) => {
+  const aplicarDetalheNoModal = (row: RhFuncionario) => {
+    setForm(formDeFuncionario(row));
+    setEditId(row.id);
+    setEditUpdatedAt(row.updated_at ?? null);
+  };
+
+  const abrirComDetalhe = async (row: RhFuncionario, modo: "editar" | "ver") => {
+    docsGestaoRef.current?.descartarPendentes();
     setForm(formDeFuncionario(row));
     setFieldErr({});
     setAlertaValidacaoModal(null);
     setErroGlobal(null);
     setEditId(row.id);
+    setEditUpdatedAt(row.updated_at ?? null);
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
-    setModalForm("editar");
+    setModalForm(modo);
+    const { row: det, error } = await buscarPrestadorPorId(row.id);
+    if (error || !det) {
+      setErroGlobal(error ?? ERRO_PRESTADOR_SALVAR_GENERICO);
+      return;
+    }
+    aplicarDetalheNoModal(det);
+  };
+
+  const abrirEditar = (row: RhFuncionario) => {
+    void abrirComDetalhe(row, "editar");
   };
 
   const abrirVer = (row: RhFuncionario) => {
-    setForm(formDeFuncionario(row));
-    setFieldErr({});
-    setAlertaValidacaoModal(null);
-    setErroGlobal(null);
-    setEditId(row.id);
-    setAbaModal("pessoais");
-    setModalVerExibirSensiveis(false);
-    setModalForm("ver");
+    void abrirComDetalhe(row, "ver");
   };
 
   const inserirHistorico = useCallback(
@@ -552,12 +586,22 @@ export default function RhPrestadoresPage() {
     setAcaoFiles([]);
     acaoBaselineRef.current = null;
     setAcaoForm(formDeFuncionario(row));
+    void (async () => {
+      const { row: det, error } = await buscarPrestadorPorId(row.id);
+      if (error || !det) {
+        setErroGlobal(error ?? ERRO_PRESTADOR_SALVAR_GENERICO);
+        return;
+      }
+      setAcaoModalRow(det);
+      setAcaoForm(formDeFuncionario(det));
+    })();
   };
 
   const fecharModalHistorico = () => {
     setHistModalRow(null);
     setHistModalItems([]);
     setHistModalFiltroTipo("todos");
+    setHistModalErro(null);
   };
 
   const abrirModalHistorico = (row: RhFuncionario) => {
@@ -647,16 +691,23 @@ export default function RhPrestadoresPage() {
         data_rh_talks: rtData.trim().slice(0, 10),
         participantes: participantesPayload,
       };
-      for (const p of rtParticipantes) {
-        const err = await inserirHistorico(p.id, "rh_talks", detalhes, []);
-        if (err) throw err;
+      const talks = await salvarPrestadorTalksGestao({
+        funcionarioIds: rtParticipantes.map((p) => p.id),
+        detalhes: {
+          ...detalhes,
+          usuario_label: user?.email ?? String(user?.id ?? "—"),
+        },
+      });
+      if (!talks.ok) {
+        setErroGlobal(mensagemErroPrestadorSalvar(talks.code));
+        return;
       }
       setSucessoMsg("Participação registrada para os prestadores selecionados.");
       fecharModalRhTalks();
       await carregar();
     } catch (e: unknown) {
-      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
-      setErroGlobal(msg);
+      console.error("[GestaoPrestador] RH Talks:", e);
+      setErroGlobal(ERRO_PRESTADOR_SALVAR_GENERICO);
     } finally {
       setRtSalvando(false);
     }
@@ -708,8 +759,8 @@ export default function RhPrestadoresPage() {
       fecharModalRegistrarAnotacao();
       await carregar();
     } catch (e: unknown) {
-      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao salvar.";
-      setErroGlobal(msg);
+      console.error("[GestaoPrestador] anotação:", e);
+      setErroGlobal(ERRO_PRESTADOR_SALVAR_GENERICO);
     } finally {
       setAnSalvando(false);
     }
@@ -896,34 +947,57 @@ export default function RhPrestadoresPage() {
     setErroGlobal(null);
     const payload = montarPayload("ativo");
     const cadastrarOutro = opts?.outro === true;
+    const emailsForm = { emailSpin: form.email_spin.trim(), emailPessoal: form.email.trim() };
+
+    const posSave = async (row: RhFuncionario): Promise<{ syncFalhou: boolean; dealerFalhou: boolean; syncRes: Awaited<ReturnType<typeof syncUsuarioPrestadorAposSalvarRh>> | null }> => {
+      let dealerFalhou = false;
+      try {
+        await syncGamePresenterDealerFromRhFuncionario(row);
+      } catch (e) {
+        console.error("[GestaoPrestador] sync dealer:", e);
+        dealerFalhou = true;
+      }
+      let syncRes: Awaited<ReturnType<typeof syncUsuarioPrestadorAposSalvarRh>> | null = null;
+      let syncFalhou = false;
+      try {
+        syncRes = await dispararSyncUsuarioPrestadorSeEmailSpin(row, emailsForm);
+      } catch (e) {
+        console.error("[GestaoPrestador] sync usuário:", e);
+        syncFalhou = true;
+      }
+      return { syncFalhou, dealerFalhou, syncRes };
+    };
 
     if (modalForm === "novo") {
-      const { data: criado, error } = await supabase.from("rh_funcionarios").insert(payload).select("*").single();
-      setSalvando(false);
-      if (error) {
-        setErroGlobal(mensagemErroSupabaseRhFuncionarioSalvar(error));
+      const criado = await salvarPrestadorGestao({
+        id: null,
+        expectedUpdatedAt: null,
+        patch: payload,
+      });
+      if (!criado.ok) {
+        setSalvando(false);
+        setErroGlobal(mensagemErroPrestadorSalvar(criado.code));
         return;
       }
-      if (criado) await syncGamePresenterDealerFromRhFuncionario(criado as RhFuncionario);
-      if (criado) {
-        try {
-          await dispararSyncUsuarioPrestadorSeEmailSpin(criado as RhFuncionario, {
-            emailSpin: form.email_spin.trim(),
-            emailPessoal: form.email.trim(),
-          });
-        } catch (e) {
-          setErroGlobal(
-            `Funcionário cadastrado, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
-          );
-        }
-      }
-      setSucessoMsg("Funcionário cadastrado.");
+      const { syncFalhou, dealerFalhou, syncRes } = await posSave(criado.row);
+      setSalvando(false);
       await carregar();
+      if (syncFalhou || dealerFalhou) {
+        aplicarDetalheNoModal(criado.row);
+        setModalForm("editar");
+        setErroGlobal(syncFalhou ? ERRO_PRESTADOR_SYNC : ERRO_PRESTADOR_SYNC_DEALER);
+        return;
+      }
+      const extra = mensagemSucessoSyncPrestadorAtualizado(syncRes);
+      setSucessoMsg(extra ? `Prestador cadastrado. ${extra}` : "Prestador cadastrado.");
       if (cadastrarOutro) {
         setForm(estadoVazioForm());
+        setEditId(null);
+        setEditUpdatedAt(null);
         setFieldErr({});
         setAlertaValidacaoModal(null);
         setAbaModal("pessoais");
+        setModalForm("novo");
       } else {
         setModalForm("fechado");
         setAbaModal("pessoais");
@@ -950,40 +1024,43 @@ export default function RhPrestadoresPage() {
               pix: atual.pix,
             }
           : { ...payloadEdit, salario: salarioFinal };
-      /** Não reenviar CPF idêntico no UPDATE: âncora de duplicidade aplica-se ao insert (Novo); evita ruído com índice único. */
       if (atual && somenteDigitos(form.cpf) === somenteDigitos(atual.cpf ?? "")) {
         const { cpf: _omitCpf, ...semCpf } = mesclado;
         void _omitCpf;
         mesclado = semCpf as typeof mesclado;
       }
-      const { data: atualizadoRh, error } = await supabase.from("rh_funcionarios").update(mesclado).eq("id", editId).select("*").single();
-      setSalvando(false);
-      if (error) {
-        setErroGlobal(mensagemErroSupabaseRhFuncionarioSalvar(error));
+      const atualizado = await salvarPrestadorGestao({
+        id: editId,
+        expectedUpdatedAt: editUpdatedAt,
+        patch: mesclado,
+      });
+      if (!atualizado.ok) {
+        setSalvando(false);
+        setErroGlobal(mensagemErroPrestadorSalvar(atualizado.code));
         return;
       }
-      if (atualizadoRh) await syncGamePresenterDealerFromRhFuncionario(atualizadoRh as RhFuncionario);
-      if (atualizadoRh) {
-        try {
-          const syncRes = await dispararSyncUsuarioPrestadorSeEmailSpin(atualizadoRh as RhFuncionario, {
-            emailSpin: form.email_spin.trim(),
-            emailPessoal: form.email.trim(),
-          });
-          const syncOk = mensagemSucessoSyncPrestadorAtualizado(syncRes);
-          setSucessoMsg(syncOk ? `Dados atualizados. ${syncOk}` : "Dados atualizados.");
-        } catch (e) {
-          setErroGlobal(
-            `Dados atualizados, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
-          );
-          setSucessoMsg("Dados atualizados.");
-        }
-      } else {
-        setSucessoMsg("Dados atualizados.");
+      aplicarDetalheNoModal(atualizado.row);
+      const docs = await docsGestaoRef.current?.commitPendentes();
+      if (docs && !docs.ok) {
+        setSalvando(false);
+        setErroGlobal(
+          "O cadastro foi gravado, mas não foi possível salvar os documentos. Se o problema persistir, entre em contato com o suporte.",
+        );
+        return;
       }
+      const { syncFalhou, dealerFalhou, syncRes } = await posSave(atualizado.row);
+      setSalvando(false);
+      await carregar();
+      if (syncFalhou || dealerFalhou) {
+        setErroGlobal(syncFalhou ? ERRO_PRESTADOR_SYNC : ERRO_PRESTADOR_SYNC_DEALER);
+        return;
+      }
+      const syncOk = mensagemSucessoSyncPrestadorAtualizado(syncRes);
+      setSucessoMsg(syncOk ? `Dados atualizados. ${syncOk}` : "Dados atualizados.");
       setModalForm("fechado");
       setAbaModal("pessoais");
       setAlertaValidacaoModal(null);
-      await carregar();
+      docsGestaoRef.current?.descartarPendentes();
       return;
     }
 
@@ -1012,6 +1089,31 @@ export default function RhPrestadoresPage() {
       anexosDb = up.anexos;
     }
     const fmtSal = (c: string) => fmtBRL(numeroDeCentavosStr(c));
+    let rowPosAcao: RhFuncionario | null = null;
+    const persistirAcao = async (
+      patch: Record<string, unknown>,
+      tipo: string,
+      detalhes: Record<string, unknown>,
+      anexos: { name: string; path: string; publicUrl: string }[],
+    ) => {
+      const res = await salvarPrestadorGestao({
+        id: fid,
+        expectedUpdatedAt: acaoModalRow.updated_at,
+        patch,
+        historico: {
+          tipo,
+          detalhes: { ...detalhes, usuario_label: user?.email ?? String(user?.id ?? "—") },
+          anexos,
+        },
+      });
+      if (!res.ok) {
+        const e = new Error(res.code);
+        (e as { code?: string }).code = res.code;
+        throw e;
+      }
+      rowPosAcao = res.row;
+      return res.row;
+    };
     try {
       switch (acaoTipo) {
         case "revisao_contrato": {
@@ -1094,9 +1196,8 @@ export default function RhPrestadoresPage() {
               ? acaoForm.staff_turno.trim() || null
               : null;
           const df = acaoForm.data_funcao.trim().slice(0, 10);
-          const { error: eUp } = await supabase
-            .from("rh_funcionarios")
-            .update({
+          await persistirAcao(
+            {
               org_diretoria_id: acaoForm.org_diretoria_id || null,
               org_gerencia_id: acaoForm.org_gerencia_id || null,
               org_time_id: acaoForm.org_time_id || null,
@@ -1111,11 +1212,11 @@ export default function RhPrestadoresPage() {
               escala: acaoForm.escala.trim(),
               data_funcao: df,
               email_spin: acaoForm.email_spin.trim() ? acaoForm.email_spin.trim().toLowerCase() : null,
-            })
-            .eq("id", fid);
-          if (eUp) throw eUp;
-          const errH = await inserirHistorico(fid, "revisao_contrato", { alteracoes: diff }, anexosDb);
-          if (errH) throw errH;
+            },
+            "revisao_contrato",
+            { alteracoes: diff },
+            anexosDb,
+          );
           break;
         }
         case "periodo_indisponibilidade": {
@@ -1139,11 +1240,8 @@ export default function RhPrestadoresPage() {
             setAcaoSalvando(false);
             return;
           }
-          const { error: eUp } = await supabase.from("rh_funcionarios").update({ status: "indisponivel" }).eq("id", fid);
-          if (eUp) throw eUp;
           const det: Record<string, unknown> = { data_saida: acaoDtSaida, data_retorno: acaoDtRetorno.trim(), observacao: acaoObs.trim() };
-          const errH = await inserirHistorico(fid, "periodo_indisponibilidade", det, anexosDb);
-          if (errH) throw errH;
+          await persistirAcao({ status: "indisponivel" }, "periodo_indisponibilidade", det, anexosDb);
           break;
         }
         case "retorno_indisponibilidade": {
@@ -1152,11 +1250,8 @@ export default function RhPrestadoresPage() {
             setAcaoSalvando(false);
             return;
           }
-          const { error: eUp } = await supabase.from("rh_funcionarios").update({ status: "ativo" }).eq("id", fid);
-          if (eUp) throw eUp;
           const det: Record<string, unknown> = { observacao: acaoObs.trim() };
-          const errH = await inserirHistorico(fid, "retorno_indisponibilidade", det, anexosDb);
-          if (errH) throw errH;
+          await persistirAcao({ status: "ativo" }, "retorno_indisponibilidade", det, anexosDb);
           break;
         }
         case "termino_prestacao": {
@@ -1183,18 +1278,12 @@ export default function RhPrestadoresPage() {
           } catch (e) {
             console.error("Falha ao limpar fotos da Galeria ao encerrar o prestador", e);
           }
-          const { error: eUp } = await supabase
-            .from("rh_funcionarios")
-            .update({ status: "encerrado", data_desligamento: acaoDtTermino })
-            .eq("id", fid);
-          if (eUp) throw eUp;
           const det: Record<string, unknown> = {
             data_termino: acaoDtTermino,
             tipo_termino: acaoTipoTermino,
             observacao: acaoObs.trim(),
           };
-          const errH = await inserirHistorico(fid, "termino_prestacao", det, anexosDb);
-          if (errH) throw errH;
+          await persistirAcao({ status: "encerrado", data_desligamento: acaoDtTermino }, "termino_prestacao", det, anexosDb);
           break;
         }
         case "alinhamento_formal": {
@@ -1204,8 +1293,7 @@ export default function RhPrestadoresPage() {
             return;
           }
           const det: Record<string, unknown> = { observacao: acaoObs.trim() };
-          const errH = await inserirHistorico(fid, "alinhamento_formal", det, anexosDb);
-          if (errH) throw errH;
+          await persistirAcao({}, "alinhamento_formal", det, anexosDb);
           break;
         }
         case "reativacao_prestacao": {
@@ -1303,10 +1391,7 @@ export default function RhPrestadoresPage() {
             });
           }
           const diff = [...alteracoesReativacao, ...diffContrato];
-          const { error: eUp } = await supabase.from("rh_funcionarios").update({ ...mesclado, data_desligamento: null }).eq("id", fid);
-          if (eUp) throw eUp;
-          const errH = await inserirHistorico(fid, "reativacao_prestacao", { alteracoes: diff }, []);
-          if (errH) throw errH;
+          await persistirAcao({ ...mesclado, data_desligamento: null }, "reativacao_prestacao", { alteracoes: diff }, []);
           break;
         }
         default: {
@@ -1316,12 +1401,12 @@ export default function RhPrestadoresPage() {
         }
       }
       try {
-        const { data: rowRhPosAcao } = await supabase.from("rh_funcionarios").select("*").eq("id", fid).maybeSingle();
-        if (rowRhPosAcao) {
-          await syncGamePresenterDealerFromRhFuncionario(rowRhPosAcao as RhFuncionario);
+        if (rowPosAcao) {
+          await syncGamePresenterDealerFromRhFuncionario(rowPosAcao);
         }
       } catch (e) {
-        console.error("Falha ao sincronizar elenco de dealers após ação RH", e);
+        console.error("[GestaoPrestador] sync dealer após ação RH:", e);
+        setErroGlobal(ERRO_PRESTADOR_SYNC_DEALER);
       }
       let resSync: Awaited<ReturnType<typeof syncUsuarioPrestadorAposSalvarRh>> | null = null;
       try {
@@ -1334,9 +1419,8 @@ export default function RhPrestadoresPage() {
         const m = mensagemFeedbackSyncPrestador(resSync);
         if (m) setErroGlobal(m);
       } catch (e) {
-        setErroGlobal(
-          `Ação registrada, mas a sincronização com Gestão de Usuários falhou: ${e instanceof Error ? e.message : String(e)}`,
-        );
+        console.error("[GestaoPrestador] sync usuário após ação RH:", e);
+        setErroGlobal(ERRO_PRESTADOR_SYNC);
       }
       const extraDesativacao = mensagemSucessoDesativacaoPrestadorEncerrado(resSync);
       const extraAtualizacao = mensagemSucessoSyncPrestadorAtualizado(resSync);
@@ -1345,16 +1429,9 @@ export default function RhPrestadoresPage() {
       fecharModalRegistrarAcao();
       await carregar();
     } catch (e: unknown) {
-      let msg = "Erro ao salvar.";
-      if (e && typeof e === "object") {
-        const o = e as { message?: string; code?: string; details?: string };
-        if (typeof o.message === "string" && o.message.trim()) {
-          msg = mensagemErroSupabaseRhFuncionarioSalvar(o);
-        } else if (typeof o.details === "string" && o.details.trim()) {
-          msg = mensagemErroSupabaseRhFuncionarioSalvar({ message: o.details, code: o.code, details: o.details });
-        }
-      }
-      setErroGlobal(msg);
+      console.error("[GestaoPrestador] ação RH:", e);
+      const code = e && typeof e === "object" && "code" in e ? String((e as { code?: string }).code ?? "") : "";
+      setErroGlobal(mensagemErroPrestadorSalvar(code || "erro"));
     } finally {
       setAcaoSalvando(false);
     }
@@ -1458,6 +1535,7 @@ export default function RhPrestadoresPage() {
   const idPanelModal = (k: AbaFuncModal) => `rh-func-panel-${k}`;
   const fecharModalFuncionario = () => {
     if (salvando) return;
+    docsGestaoRef.current?.descartarPendentes();
     setModalForm("fechado");
     setAbaModal("pessoais");
     setModalVerExibirSensiveis(false);
@@ -1467,6 +1545,8 @@ export default function RhPrestadoresPage() {
     setAlertaValidacaoModal(null);
     setFieldErr({});
     setErroGlobal(null);
+    setEditId(null);
+    setEditUpdatedAt(null);
   };
 
   const executarExclusaoPrestador = async () => {
@@ -1482,8 +1562,8 @@ export default function RhPrestadoresPage() {
       setSucessoMsg("Prestador excluído.");
       await carregar();
     } catch (e: unknown) {
-      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "Erro ao excluir.";
-      setErroGlobal(msg);
+      console.error("[GestaoPrestador] excluir:", e);
+      setErroGlobal(ERRO_PRESTADOR_EXCLUIR);
     } finally {
       setExcluindoPrestador(false);
     }
@@ -1527,11 +1607,33 @@ export default function RhPrestadoresPage() {
             fontSize: 13,
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
             gap: 8,
+            flexWrap: "wrap",
           }}
         >
-          <AlertCircle size={14} color="#e84025" aria-hidden />
-          {erroGlobal ?? erroCarregar}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <AlertCircle size={14} color="#e84025" aria-hidden />
+            {erroGlobal ?? erroCarregar}
+          </span>
+          {erroCarregar ? (
+            <button
+              type="button"
+              onClick={() => void carregar()}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -2598,6 +2700,7 @@ export default function RhPrestadoresPage() {
 
             {abaModal === "documentos" ? (
               <PrestadorDocumentosGestaoPanel
+                ref={docsGestaoRef}
                 funcionarioId={editId}
                 tipoContrato={form.tipo_contrato}
                 podeEditar={podeEnviarDocumentos}
@@ -3267,7 +3370,7 @@ export default function RhPrestadoresPage() {
                 value={rtBusca}
                 onChange={setRtBusca}
                 placeholder={FILTER_SEARCH_STAFF}
-                aria-label="Pesquisar funcionários para adicionar como participantes"
+                aria-label="Pesquisar prestadores para adicionar como participantes"
                 wrapperStyle={{ width: "100%", marginBottom: 0 }}
               />
               {rtBusca.trim() ? (
@@ -3492,6 +3595,8 @@ export default function RhPrestadoresPage() {
           items={histModalItems}
           itemsFiltrados={histModalItemsFiltrados}
           loading={histModalLoading}
+          erro={histModalErro}
+          onRetry={() => setHistReloadKey((k) => k + 1)}
           filtroTipo={histModalFiltroTipo}
           onFiltroTipoChange={setHistModalFiltroTipo}
           onClose={fecharModalHistorico}

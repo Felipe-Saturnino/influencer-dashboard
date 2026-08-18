@@ -11,7 +11,7 @@ export async function listarDocumentosPrestador(
 ): Promise<{ rows: RhFuncionarioSelfMedia[]; error: string | null }> {
   const { data, error } = await supabase
     .from("rh_funcionario_self_media")
-    .select("*")
+    .select("id, rh_funcionario_id, kind, document_category, storage_path, file_name, mime_type, created_at, created_by")
     .eq("rh_funcionario_id", funcionarioId)
     .eq("kind", "documento")
     .order("created_at", { ascending: false });
@@ -83,7 +83,7 @@ export async function uploadDocumentoPrestador(opts: {
       file_name: opts.file.name,
       mime_type: contentType ?? null,
     })
-    .select("*")
+    .select("id, rh_funcionario_id, kind, document_category, storage_path, file_name, mime_type, created_at, created_by")
     .single();
 
   if (insErr || !data) {

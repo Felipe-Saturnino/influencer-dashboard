@@ -826,8 +826,74 @@ export function buildRhFuncionarioPayloadFromState(
   };
 }
 
-/** Insert/update em `rh_funcionarios`: mensagens amigáveis sem confundir outras violações de unicidade com CPF. */
-export function mensagemErroSupabaseRhFuncionarioSalvar(error: { code?: string; message?: string; details?: string }): string {
+/** Colunas da listagem/KPIs — sem fotos/skills de dealer (payload pesado). Cadastro incompleto ainda precisa de CPF/endereço/banco. */
+export const PRESTADOR_LISTA_SELECT = [
+  "id",
+  "status",
+  "nome",
+  "rg",
+  "cpf",
+  "telefone",
+  "email",
+  "email_spin",
+  "data_nascimento",
+  "endereco_residencial",
+  "res_cep",
+  "res_logradouro",
+  "res_numero",
+  "res_complemento",
+  "res_cidade",
+  "res_estado",
+  "contato_emergencia",
+  "emerg_nome",
+  "emerg_parentesco",
+  "emerg_telefone",
+  "setor",
+  "org_diretoria_id",
+  "org_gerencia_id",
+  "org_time_id",
+  "cargo",
+  "nivel",
+  "area_atuacao",
+  "remuneracao_hora_centavos",
+  "salario",
+  "data_inicio",
+  "data_funcao",
+  "origem_contratacao",
+  "quem_indicou",
+  "data_desligamento",
+  "observacao_rh",
+  "escala",
+  "tipo_contrato",
+  "nome_empresa",
+  "cnpj",
+  "endereco_empresa",
+  "emp_cep",
+  "emp_logradouro",
+  "emp_numero",
+  "emp_complemento",
+  "emp_cidade",
+  "emp_estado",
+  "banco",
+  "agencia",
+  "conta_corrente",
+  "pix",
+  "staff_turno",
+  "cadastro_revisado_em",
+  "cadastro_revisao_tipo",
+  "created_at",
+  "updated_at",
+].join(", ");
+
+export const PRESTADOR_TABELA_VAZIO = "Nenhum prestador encontrado.";
+export const PRESTADOR_HISTORICO_VAZIO = "Nenhum registro no histórico.";
+
+/** Insert/update em `rh_funcionarios`: mensagens amigáveis sem expor infra na UI. */
+export function mensagemErroSupabaseRhFuncionarioSalvar(error: {
+  code?: string;
+  message?: string;
+  details?: string;
+}): string {
   const raw = error.message ?? "";
   const det = typeof error.details === "string" ? error.details : "";
   const lower = `${raw} ${det}`.toLowerCase();
@@ -842,11 +908,12 @@ export function mensagemErroSupabaseRhFuncionarioSalvar(error: { code?: string; 
       lower.includes("key (cpf)") ||
       (lower.includes("duplicate") && lower.includes("cpf")));
   if (duplicidadeCpf) {
-    return "Já existe um funcionário cadastrado com este CPF.";
+    return "Já existe um prestador cadastrado com este CPF.";
   }
 
-  if (raw.trim()) return raw;
-  if (det.trim()) return det;
-  return "Erro ao salvar.";
+  if (raw.trim() || det.trim()) {
+    console.error("[GestaoPrestador] salvar:", error);
+  }
+  return "Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.";
 }
 
