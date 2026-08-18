@@ -58,26 +58,26 @@ export function PrestadorCarreiraVerPanel({ funcionarioId }: { funcionarioId: st
     const [fRes, iRes, cRes, pRes, eRes] = await Promise.all([
       supabase
         .from("rh_funcionario_formacao")
-        .select("*")
+        .select("id, rh_funcionario_id, curso, instituicao, grau, ano_conclusao, status, created_at, updated_at")
         .eq("rh_funcionario_id", funcionarioId)
         .order("ano_conclusao", { ascending: false, nullsFirst: false }),
       supabase
         .from("rh_funcionario_idioma")
-        .select("*, rh_idiomas(nome)")
+        .select("id, rh_funcionario_id, rh_idioma_id, nivel, created_at, updated_at, rh_idiomas(nome)")
         .eq("rh_funcionario_id", funcionarioId),
       supabase
         .from("rh_funcionario_curso")
-        .select("*")
+        .select("id, rh_funcionario_id, nome, instituicao, carga_horaria_horas, ano, created_at, updated_at")
         .eq("rh_funcionario_id", funcionarioId)
         .order("ano", { ascending: false, nullsFirst: false }),
       supabase
         .from("rh_funcionario_portfolio")
-        .select("*")
+        .select("id, rh_funcionario_id, titulo, tipo, origem, url, storage_path, file_name, mime_type, tamanho_bytes, created_at, updated_at")
         .eq("rh_funcionario_id", funcionarioId)
         .order("created_at", { ascending: false }),
       supabase
         .from("rh_funcionario_experiencia")
-        .select("*")
+        .select("id, rh_funcionario_id, cargo, empresa, mes_ano_inicio, mes_ano_fim, descricao, created_at, updated_at")
         .eq("rh_funcionario_id", funcionarioId)
         .order("mes_ano_fim", { ascending: false, nullsFirst: true })
         .order("mes_ano_inicio", { ascending: false }),
@@ -89,7 +89,7 @@ export function PrestadorCarreiraVerPanel({ funcionarioId }: { funcionarioId: st
     }
     const portRows = (pRes.data ?? []) as RhFuncionarioPortfolio[];
     setFormacoes((fRes.data ?? []) as RhFuncionarioFormacao[]);
-    setIdiomas((iRes.data ?? []) as RhFuncionarioIdioma[]);
+    setIdiomas((iRes.data ?? []) as unknown as RhFuncionarioIdioma[]);
     setCursos((cRes.data ?? []) as RhFuncionarioCurso[]);
     setPortfolio(portRows);
     setExperiencias((eRes.data ?? []) as RhFuncionarioExperiencia[]);
@@ -162,7 +162,24 @@ export function PrestadorCarreiraVerPanel({ funcionarioId }: { funcionarioId: st
   if (erro) {
     return (
       <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
-        {erro}
+        <div>{erro}</div>
+        <button
+          type="button"
+          onClick={() => void carregar()}
+          style={{
+            marginTop: 10,
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: "1px solid rgba(232,64,37,0.35)",
+            background: "transparent",
+            color: "#e84025",
+            fontWeight: 700,
+            fontFamily: FONT.body,
+            cursor: "pointer",
+          }}
+        >
+          Tentar de novo
+        </button>
       </div>
     );
   }

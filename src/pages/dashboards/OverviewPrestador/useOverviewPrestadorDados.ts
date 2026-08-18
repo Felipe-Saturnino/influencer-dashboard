@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import {
-  fetchTurnosPorEstudioSlugs,
-  fetchTurnosPorOperadoraSlugs,
-  pickStaffEstudioSlugParaTurnos,
+  carregarMapasTurnosHorarioPrestadores,
   resolveTurnosHorarioPrestador,
 } from "../../../lib/turnosDealers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
@@ -571,31 +569,11 @@ export function useOverviewPrestadorDados(
   }, [idsEscopo, mesesMetricasAtual, mesesSecundarios, caps.negocia, reloadTick]);
 
   useEffect(() => {
-    const opSlugs = [...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean))];
-    const estudioSlugs = [
-      ...new Set(
-        prestadores
-          .map((p) => pickStaffEstudioSlugParaTurnos(p))
-          .filter((s): s is string => Boolean(s)),
-      ),
-    ];
-    if (opSlugs.length === 0 && estudioSlugs.length === 0) {
-      setMapOpTurnos(new Map());
-      setMapEstudioTurnos(new Map());
-      return;
-    }
     let cancelled = false;
-    void Promise.all([
-      opSlugs.length > 0
-        ? fetchTurnosPorOperadoraSlugs(opSlugs)
-        : Promise.resolve(new Map<string, OpTurnosHorarioPick>()),
-      estudioSlugs.length > 0
-        ? fetchTurnosPorEstudioSlugs(estudioSlugs)
-        : Promise.resolve(new Map<string, OpTurnosHorarioPick>()),
-    ]).then(([opMap, estMap]) => {
+    void carregarMapasTurnosHorarioPrestadores(prestadores).then(({ mapPorOperadora, mapPorEstudio }) => {
       if (cancelled) return;
-      setMapOpTurnos(opMap);
-      setMapEstudioTurnos(estMap);
+      setMapOpTurnos(mapPorOperadora);
+      setMapEstudioTurnos(mapPorEstudio);
     });
     return () => {
       cancelled = true;

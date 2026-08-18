@@ -44,14 +44,6 @@ export default function ModalLiveSomenteVer({ live, onClose }: Props) {
     return () => window.cancelAnimationFrame(id);
   }, [live.id]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
     <div
       style={{

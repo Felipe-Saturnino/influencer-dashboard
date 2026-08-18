@@ -3,6 +3,7 @@ import { Archive, ChevronLeft, ChevronRight, Inbox, Loader2, MoreHorizontal } fr
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import {
@@ -148,7 +149,8 @@ function passaFiltroTime(row: LinhaOfertaMarketplace, filtro: EscalaTimeFiltro):
 }
 
 export default function EscalaSolicitacoesPage() {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("escala_solicitacoes");
   const soProprios = !perm.loading && perm.canView === "proprios";
@@ -219,7 +221,7 @@ export default function EscalaSolicitacoesPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView !== "proprios") return;
-    if (!user?.email?.trim()) {
+    if (!emailEfetivo?.trim()) {
       setPrestadores([]);
       setLoadingStaff(false);
       return;
@@ -227,7 +229,7 @@ export default function EscalaSolicitacoesPage() {
     let cancelled = false;
     setLoadingStaff(true);
     void (async () => {
-      const row = await buscarRhFuncionarioAtivoPorEmailLogin(user.email!);
+      const row = await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo);
       if (cancelled) return;
       if (row) {
         setPrestadores([row]);
@@ -241,7 +243,7 @@ export default function EscalaSolicitacoesPage() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, user?.email]);
+  }, [perm.loading, perm.canView, emailEfetivo]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;

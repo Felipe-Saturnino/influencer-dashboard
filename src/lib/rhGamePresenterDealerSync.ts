@@ -76,7 +76,6 @@ export function staffSkillsParaJogosEVip(skills: Record<string, unknown> | null 
   if (ativo("roleta")) jogos.push("roleta");
   if (ativo("futebol_brasileiro") || ativo("futebol_studio")) jogos.push("futebol_brasileiro");
   const vip = ativo("vip");
-  if (jogos.length === 0) jogos.push("roleta");
   return { jogos, vip };
 }
 

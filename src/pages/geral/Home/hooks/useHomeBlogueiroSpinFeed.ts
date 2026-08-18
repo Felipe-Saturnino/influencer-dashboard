@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import {
   buscarMeuColaboradorGaleria,
   fotoEventoEmbed,
@@ -53,7 +54,10 @@ async function resolverNomesUploaders(ids: string[]): Promise<Record<string, str
   return nomes;
 }
 
-async function buscarGaleriaCards(desdeIso: string): Promise<(HomeBlogueiroGaleriaGerais | HomeBlogueiroGaleriaMinhas)[]> {
+async function buscarGaleriaCards(
+  desdeIso: string,
+  emailEfetivo?: string | null,
+): Promise<(HomeBlogueiroGaleriaGerais | HomeBlogueiroGaleriaMinhas)[]> {
   const cards: (HomeBlogueiroGaleriaGerais | HomeBlogueiroGaleriaMinhas)[] = [];
 
   const { data: geraisRows, error: errGerais } = await supabase
@@ -89,7 +93,7 @@ async function buscarGaleriaCards(desdeIso: string): Promise<(HomeBlogueiroGaler
     }
   }
 
-  const meu = await buscarMeuColaboradorGaleria();
+  const meu = await buscarMeuColaboradorGaleria(emailEfetivo);
   if (meu) {
     const { data: minhasRows, error: errMinhas } = await supabase
       .from("marketing_fotos")
@@ -137,6 +141,7 @@ async function buscarSpinCards(desdeIso: string): Promise<HomeBlogueiroSpinMenca
 }
 
 export function useHomeBlogueiroSpinFeed() {
+  const { email } = useIdentidadeEfetiva();
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
   const [lista, setLista] = useState<HomeBlogueiroSpinItem[]>([]);
@@ -149,7 +154,10 @@ export function useHomeBlogueiroSpinFeed() {
       setErro(false);
       try {
         const desdeIso = getHomeStaffFeedNovidadeDesdeIso();
-        const [galeria, spin] = await Promise.all([buscarGaleriaCards(desdeIso), buscarSpinCards(desdeIso)]);
+        const [galeria, spin] = await Promise.all([
+          buscarGaleriaCards(desdeIso, email),
+          buscarSpinCards(desdeIso),
+        ]);
         if (cancelled) return;
         setLista([...galeria, ...spin].sort((a, b) => tsItem(b) - tsItem(a)));
       } catch (e) {
@@ -166,7 +174,7 @@ export function useHomeBlogueiroSpinFeed() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [email]);
 
   return { loading, erro, lista };
 }

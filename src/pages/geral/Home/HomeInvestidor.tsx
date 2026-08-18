@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasInvestidor } from "./investidor/BoasVindasInvestidor";
@@ -10,10 +11,11 @@ import { AtalhosInvestidor } from "./investidor/AtalhosInvestidor";
 
 export default function HomeInvestidor() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Investidor";
+  const nome = nomeEfetivo?.trim() || "Investidor";
 
   return (
     <div

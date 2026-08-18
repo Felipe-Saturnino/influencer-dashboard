@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { extrairPrimeiroNome } from "../../../../lib/aniversarioHoje";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
@@ -8,21 +9,23 @@ import {
 } from "../../../../lib/rhCadastroRevisao";
 
 export function useHomeAtualizacaoCadastral() {
-  const { user, permissionsAcoes, simulacaoSomenteLeitura } = useApp();
+  const { user, permissionsAcoes, effectiveRole } = useApp();
+  const { email: emailEfetivo, name: nomeEfetivo } = useIdentidadeEfetiva();
   const [loading, setLoading] = useState(true);
   const [pendente, setPendente] = useState(false);
   const [primeiroNome, setPrimeiroNome] = useState("");
 
   useEffect(() => {
-    const email = user?.email?.trim();
-    if (!email || simulacaoSomenteLeitura) {
+    const email = emailEfetivo?.trim();
+    if (!email) {
       setLoading(false);
       setPendente(false);
       return;
     }
 
     const permEditar = permissionsAcoes.rh_dados_cadastro?.editar ?? null;
-    if (!user || !usuarioSujeitoGateRevisaoCadastral(user.role, permEditar)) {
+    const role = effectiveRole ?? user?.role;
+    if (!role || !usuarioSujeitoGateRevisaoCadastral(role, permEditar)) {
       setLoading(false);
       setPendente(false);
       return;
@@ -35,7 +38,7 @@ export function useHomeAtualizacaoCadastral() {
       try {
         const row = await buscarFuncionarioRevisaoCadastralPorEmail(email);
         if (cancelled) return;
-        const nomeCadastro = row?.nome?.trim() || user?.name?.trim() || "Colaborador";
+        const nomeCadastro = row?.nome?.trim() || nomeEfetivo?.trim() || user?.name?.trim() || "Colaborador";
         setPrimeiroNome(extrairPrimeiroNome(nomeCadastro) || "Colaborador");
         setPendente(revisaoCadastralPendenteParaFuncionario(row));
       } catch (e) {
@@ -62,7 +65,7 @@ export function useHomeAtualizacaoCadastral() {
       cancelled = true;
       window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
     };
-  }, [user, permissionsAcoes.rh_dados_cadastro?.editar, simulacaoSomenteLeitura]);
+  }, [user, permissionsAcoes.rh_dados_cadastro?.editar, emailEfetivo, nomeEfetivo, effectiveRole]);
 
   return { loading, pendente, primeiroNome };
 }

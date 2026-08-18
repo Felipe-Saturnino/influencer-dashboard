@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
@@ -48,6 +49,7 @@ export function ModalCandidaturaVaga({
 }) {
   const brand = useDashboardBrand();
   const { user } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
 
   const [prestador, setPrestador] = useState<RhFuncionario | null>(null);
   const [carregandoPrestador, setCarregandoPrestador] = useState(false);
@@ -81,7 +83,7 @@ export function ModalCandidaturaVaga({
     }
     resetForm();
     setJaInscrito(false);
-    const email = user?.email?.trim();
+    const email = emailEfetivo?.trim();
     if (!email) {
       setPrestador(null);
       setErroPrestador("Não foi possível identificar o seu cadastro de prestador. Verifique o e-mail da sua conta.");
@@ -120,7 +122,7 @@ export function ModalCandidaturaVaga({
     return () => {
       cancelled = true;
     };
-  }, [open, resetForm, user?.email, vaga?.id]);
+  }, [open, resetForm, emailEfetivo, vaga?.id]);
 
   const inputStyle: CSSProperties = {
     width: "100%",

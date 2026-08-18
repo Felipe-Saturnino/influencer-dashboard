@@ -70,6 +70,37 @@ describe("resolverAcoesPresencaLinha / resolverStatusPresencaLinha — Compra e 
     expect(resolverAcoesPresencaLinha(params).acaoPrimaria).toBe("justificar");
   });
 
+  it("Escalado sem horário programado em dia já passado vira Falta e oferece Justificar", () => {
+    const params = {
+      situacao: "Escalado",
+      diaIso: "2026-07-10",
+      entEsc: "—",
+      saiEsc: "—",
+      temCheckIn: false,
+      temCheckOut: false,
+      statusBase: "Sem horário",
+      agora: new Date("2026-07-18T12:00:00"),
+    };
+    expect(resolverStatusPresencaLinha(params)).toBe("Falta");
+    expect(resolverAcoesPresencaLinha(params).acaoPrimaria).toBe("justificar");
+  });
+
+  it("Escalado sem horário no próprio dia ainda não oferece Justificar", () => {
+    const agora = new Date("2026-07-18T12:00:00");
+    const params = {
+      situacao: "Escalado",
+      diaIso: "2026-07-18",
+      entEsc: "—",
+      saiEsc: "—",
+      temCheckIn: false,
+      temCheckOut: false,
+      statusBase: "Sem horário",
+      agora,
+    };
+    expect(resolverStatusPresencaLinha(params)).toBe("Sem horário");
+    expect(resolverAcoesPresencaLinha(params).acaoPrimaria).toBeNull();
+  });
+
   it("Venda com Check-in e Check-out permite aprovar como Folga", () => {
     expect(
       resolverAcoesPresencaLinha({

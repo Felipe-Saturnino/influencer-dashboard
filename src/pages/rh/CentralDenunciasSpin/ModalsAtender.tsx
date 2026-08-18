@@ -10,17 +10,6 @@ import type { DenunciaListRow, AnexoRow } from "./types";
 
 const MODAL_MAX = "90dvh" as const;
 
-function useEscClose(open: boolean, onClose: () => void) {
-  useEffect(() => {
-    if (!open) return;
-    const fn = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", fn);
-    return () => window.removeEventListener("keydown", fn);
-  }, [open, onClose]);
-}
-
 function fmtDt(iso: string) {
   try {
     return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -78,8 +67,6 @@ export function ModalAtenderDenuncia({
       anexos: AnexoRow[];
     }[]
   >([]);
-  useEscClose(open, onClose);
-
   const finalStatuses: DenunciaStatusDb[] = ["procedente", "nao_procedente"];
   const showResolucao = finalStatuses.includes(statusDraft);
 

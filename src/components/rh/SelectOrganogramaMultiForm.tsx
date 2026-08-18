@@ -3,6 +3,7 @@ import { Check, ChevronDown, UsersRound } from "lucide-react";
 import { FONT } from "../../constants/theme";
 import { useApp } from "../../context/AppContext";
 import { useDashboardBrand } from "../../hooks/useDashboardBrand";
+import { useListboxKeyboardNavigation } from "../../hooks/useListboxKeyboardNavigation";
 import { placeholderPesquisaFiltro } from "../../lib/searchBarConstants";
 import { textoContemBusca } from "../../lib/searchText";
 import { BarraPesquisaFiltroPainel } from "../BarraPesquisaFiltroPainel";
@@ -92,6 +93,11 @@ export function SelectOrganogramaMultiForm({
     },
     [onChange, value],
   );
+  const listboxKeyboard = useListboxKeyboardNavigation({
+    items: filtered,
+    onSelect: (option) => toggleOption(option.id),
+    onEscape: () => setOpen(false),
+  });
 
   const borderColor = hasError ? "#e84025" : t.cardBorder;
 
@@ -106,6 +112,18 @@ export function SelectOrganogramaMultiForm({
         aria-controls={listboxId}
         aria-label={`${ariaLabel} — ${triggerLabel}`}
         onClick={() => !disabled && setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (disabled) return;
+          if (e.key === "Escape" && open) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+            return;
+          }
+          if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+          e.preventDefault();
+          setOpen(true);
+        }}
         style={{
           width: "100%",
           display: "flex",
@@ -158,30 +176,36 @@ export function SelectOrganogramaMultiForm({
                 value={searchQuery}
                 onChange={setSearchQuery}
                 placeholder={placeholderPesquisaFiltro("Organograma")}
+                aria-activedescendant={
+                  filtered[listboxKeyboard.activeIndex]
+                    ? `${listboxId}-option-${listboxKeyboard.activeIndex}`
+                    : undefined
+                }
+                onKeyDown={listboxKeyboard.onKeyDown}
               />
             </div>
           ) : null}
-          {filtered.map((opt) => {
+          {filtered.map((opt, index) => {
             const selected = value.includes(opt.id);
+            const active = index === listboxKeyboard.activeIndex;
             return (
               <div
                 key={opt.id}
+                id={`${listboxId}-option-${index}`}
+                ref={(node) => {
+                  listboxKeyboard.optionRefs.current[index] = node;
+                }}
                 role="option"
                 aria-selected={selected}
-                tabIndex={0}
+                tabIndex={-1}
+                onMouseEnter={() => listboxKeyboard.setActiveIndex(index)}
                 onClick={() => toggleOption(opt.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    toggleOption(opt.id);
-                  }
-                }}
                 style={{
                   width: "100%",
                   padding: "8px 12px",
                   borderRadius: 8,
                   border: "none",
-                  background: selected
+                  background: selected || active
                     ? "color-mix(in srgb, var(--brand-accent, #1e36f8) 12%, transparent)"
                     : "transparent",
                   color: selected ? accentColor : t.text,

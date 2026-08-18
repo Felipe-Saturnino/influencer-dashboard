@@ -52,6 +52,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "ROI exibe '—' quando não há investimento registrado para o influencer no período. Isso ocorre quando o pagamento ainda não foi confirmado (status Pendente) ou quando o influencer não tem contrato de cachê cadastrado. Apenas pagamentos com status Pago são considerados no cálculo.",
       },
       {
+        subtitulo: "O Investimento do Relatório Diário veio R$ 0 e o Streamers mostra valor?",
+        texto:
+          "O e-mail Relatório Diário (bloco Resultado de Streamers) usa a mesma regra da página Streamers: só pagamentos com status Pago, no mês do consolidado, pela data de fim do ciclo — não pela data em que o pagamento foi marcado como Pago. A visão é global (Todas Operadoras / Todos Influencers).\n\nO valor deve coincidir com o KPI Investimento do Overview Streamers no mês corrente. Não compare com um único ciclo na página Financeiro: o KPI soma todos os ciclos pagos do mês. Se o e-mail do mesmo dia continuar zerado e a página mostrar valor, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "O PVI está como 0 ou parece inconsistente?",
         texto:
           "O PVI (Player Value Index) é calculado com base em três componentes: ticket médio de depósito, GGR por jogador e WD Ratio. Se qualquer um desses dados for zero (ex.: influencer sem depósitos registrados), o PVI não pode ser calculado corretamente e pode aparecer baixo ou zerado. Isso é esperado para influencers com poucos FTDs no período.",
@@ -729,7 +734,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "As setas ou a tecla Tab não funcionam como esperado no formulário?",
         texto:
-          "Nos campos pesquisáveis **Mesa** e **Prestador**, clique no campo e comece a digitar. Use **↑/↓** para destacar um resultado e **Enter** para selecionar; **Escape** fecha a lista. A tecla **Tab** avança para o próximo controle do formulário sem percorrer cada opção. Se o navegador mantiver um comportamento antigo, atualize a página e tente novamente.",
+          "Nos campos pesquisáveis, clique no campo e comece a digitar. Use **↑/↓** para destacar um resultado, **Home/End** para ir ao início/fim e **Enter** para selecionar. A tecla **Tab** avança para o próximo controle do formulário sem percorrer cada opção — o campo em foco fica com um contorno colorido. **Escape não fecha o modal**, evitando a perda acidental do preenchimento. Se o navegador mantiver um comportamento antigo, atualize a página e tente novamente.",
       },
       {
         subtitulo: "O anexo não foi enviado ao salvar o incidente?",
@@ -1527,14 +1532,24 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     titulo: "Gestão de Staff",
     blocos: [
       {
+        subtitulo: "Só vejo o meu time na Gestão de Staff?",
+        texto:
+          "Com permissão de Ver em **Próprios**, a página mostra só o time do seu cadastro de prestador. Para ver todos os times de Game Floor e Operation Management, a permissão de Ver precisa ser **Sim**. Se o seu login não estiver ligado a um prestador desses times, a lista fica vazia — entre em contato com o RH.",
+      },
+      {
+        subtitulo: "Mensagem «Este cadastro foi alterado por outra pessoa»?",
+        texto:
+          "Outra pessoa salvou o mesmo prestador enquanto o modal estava aberto. Feche o modal, recarregue a lista e edite de novo com os dados atuais.",
+      },
+      {
         subtitulo: "Não vejo Gestão de Staff no menu?",
         texto:
-          "Confirme permissão de **Ver** e escopo de menu em Gestão de Usuários. A página lista prestadores operacionais — perfis sem escopo de estúdio/escala podem não ter a rota liberada.",
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Gestão de Staff**. A página lista prestadores dos times de Game Floor e Operation Management. Com Ver em **Próprios**, só aparece o time do seu cadastro — se o login não estiver vinculado a um prestador desse universo, a lista fica vazia. Após alterar permissão, faça logout e login (ou atualize a sessão).",
       },
       {
         subtitulo: "Não vejo o campo ID TOS?",
         texto:
-          "O **ID TOS** aparece só no time **Service Manager**, na aba Função dos modais **Ver** e **Editar** — não há coluna na tabela da listagem. Em outros times o campo não é exibido. Se a migração ainda não foi aplicada no Supabase, o salvamento pode falhar — nesse caso entre em contato com o suporte.",
+          "O **ID TOS** aparece só no time **Service Manager**, na aba Função dos modais **Ver** e **Editar** — não há coluna na tabela da listagem. Em outros times o campo não é exibido. O valor precisa ser um UUID (com hífens). Se o salvamento falhar, entre em contato com o suporte.",
       },
       {
         subtitulo: "Mensagem «Este ID TOS já está cadastrado»?",
@@ -1544,7 +1559,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo imprimir o ID de um Game Presenter?",
         texto:
-          "No modal **Imprimir IDs**, a lista inclui todos os times da Gestão de Staff. Só entram na impressão quem tem o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. Prestadores sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
+          "No modal **Imprimir IDs**, a lista inclui os times visíveis na Gestão de Staff (com **Próprios**, só o seu time). O botão só aparece com permissão de **Editar**. Só entram na impressão quem tem o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. Prestadores sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
       },
     ],
   },
@@ -1585,6 +1600,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo registrar presença ou justificativa?",
         texto:
           "Para **Justificar** a própria falta ou pendência no **Meu Controle**, basta permissão de **Ver** no Calendário. Para **Aprovar** turnos de liderados (ou a própria presença registrada com perfil de edição), é necessária permissão de **Editar** (**Sim** ou **Próprios**). **Correções** de horário (**Esquecimento**, **Outro** ou Correção) só o **líder imediato** (ou Editar Sim) analisa por campo — o próprio prestador não aprova a própria correção. Atestado **Médico** é atendido em **Solicitações** (RH). Se o botão não aparecer, peça liberação ao administrador em Gestão de Usuários → Permissões.",
+      },
+      {
+        subtitulo: "O Status aparece Sem horário e não consigo Justificar?",
+        texto:
+          "No **Controle de Presença**, **Sem horário** aparece quando o turno Escalado (Manhã/Tarde/Noite) não encontra entrada e saída programadas. Em **Shuffler** (e outros times com **Todos Estúdios**), o horário vem do **primeiro estúdio ativo** com turnos preenchidos em Gestão de Estúdios — não da operadora. Se o Status continuar Sem horário, confirme os horários Manhã/Tarde/Noite do estúdio. Em **dias já passados** sem Check-in, o Status passa a **Falta** e o botão **Justificar** fica disponível mesmo sem o horário programado. No próprio dia, o Justificar só aparece depois do fim do turno (ou no dia seguinte, se o horário ainda não estiver cadastrado).",
       },
       {
         subtitulo: "O check-out da manhã aparece como check-in do outro dia?",
@@ -1644,12 +1664,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo aceitar uma oferta?",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma, nunca na própria oferta. Dá para aceitar **no mesmo dia**, com pelo menos **2h até o início do turno** e a escala do mês **aprovada**. Publicar exige **4h**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar. Se a oferta já passou da janela de 2h ou a data é antiga, ela é cancelada automaticamente.",
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma — ou, na **Liderança**, entre Shift Leader e Service Manager — nunca na própria oferta. Dá para enviar proposta **no mesmo dia**, com pelo menos **2h até o início do turno** e a escala do mês **aprovada** (a de cada participante). Publicar exige **4h**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. Em todos os tipos a proposta fica **Em análise** até quem publicou aprovar. Quem enviou a proposta pode **desistir** nesse intervalo. Se a oferta já passou da janela de 2h ou a data é antiga, ela é cancelada automaticamente.",
       },
       {
         subtitulo: "Só vejo ofertas do meu time?",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu time e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba muda para **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para alternar o escopo, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu grupo de negociação e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba padrão é **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para ver as **suas** ofertas (e aprovar uma compra), use **Minhas Negociações** ao lado do Histórico — o mural passa a ser só do seu time e a aba Minhas Ofertas reaparece. Para alternar o escopo de gestão, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+      },
+      {
+        subtitulo: "Não vejo a aba Minhas Ofertas?",
+        texto:
+          "Com **Ver: Sim**, a segunda aba é **Ofertas Encerradas** (visão de gestão). Se o seu login também é prestador de estúdio, ligue **Minhas Negociações** ao lado do Histórico: Encerradas some e voltam **Todas as Ofertas** (só o seu grupo) e **Minhas Ofertas**. Sem cadastro de prestador ligado ao login, o botão não aparece.",
       },
       {
         subtitulo: "Marquei vários dias e só parte das ofertas foi publicada?",
@@ -1664,7 +1689,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitei uma oferta e a escala não mudou?",
         texto:
-          "Nas vendas, a célula é gravada no aceite: **Compra - Turno** para quem assumiu e **Venda** para quem saiu. Na **Oferta de Troca**, enviar a proposta não altera a escala: o status fica **Em análise** e o ofertante original deve aprovar em **Minhas ofertas abertas**. Se a aprovação já ocorreu, recarregue a Escala Estúdio ou o Calendário. Se continuar divergente, entre em contato com o suporte.",
+          "Enviar a proposta **não** altera a escala: o status fica **Em análise** e quem publicou precisa **aprovar** em **Minhas ofertas abertas** (com **Ver: Sim**, ligue **Minhas Negociações**). Recusar ou desistir devolve a oferta ao mural, também sem mudar a escala. Se a aprovação já ocorreu, recarregue a Escala Estúdio ou o Calendário. Se continuar divergente, entre em contato com o suporte.",
       },
     ],
   },
@@ -1764,12 +1789,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo as abas Documentos, Carreira ou Acesso a Plataforma no modal?",
         texto:
-          "Essas abas dependem da permissão do perfil nesta página. A aba **Dados da empresa** aparece apenas quando o contrato do prestador é **PJ**.",
+          "Documentos e Acesso a Plataforma aparecem no modal **Ver** e **Editar**. **Carreira** só aparece no modal **Ver**. A aba **Dados da empresa** aparece apenas quando o contrato do prestador é **PJ**. Enviar ou excluir documentos no Editar fica pendente até clicar em **Salvar**.",
       },
       {
         subtitulo: "Os botões Novo Prestador ou RH Talks não aparecem?",
         texto:
-          "**Novo Prestador** exige permissão de **Criar** e só é exibido na aba **Head Count**. **RH Talks** aparece na aba **Anotações RH** para perfis com a permissão correspondente.",
+          "**Novo Prestador** exige permissão de **Criar** e Ver os dados do cadastro, e só é exibido na aba **Head Count**. **RH Talks** aparece na aba **Anotações RH** para perfis com permissão de **Editar**.",
+      },
+      {
+        subtitulo: "O cadastro salvou, mas o login na plataforma não atualizou?",
+        texto:
+          "O cadastro e o acesso são gravados em etapas. Se a sincronização falhar, a página avisa e o modal permanece aberto para tentar de novo. Confira e-mail Spin ou e-mail pessoal e o organograma. Se o problema persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "A mensagem pede para recarregar porque outra pessoa alterou o cadastro?",
+        texto:
+          "Alguém salvou o mesmo prestador enquanto o modal estava aberto. Feche, abra de novo e aplique as alterações sobre a versão atual.",
       },
     ],
   },
@@ -1930,6 +1965,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "O menu simulado não mostra páginas que o perfil deveria ter?",
         texto:
           "O menu combina a matriz de permissões do perfil simulado com o escopo (operadora ou área). Confirme a operadora/área escolhida no modal e as marcações em Gestão de Usuários (Permissões e abas de escopo). Algumas páginas de plataforma ficam ocultas de propósito na simulação.",
+      },
+      {
+        subtitulo: "No Calendário ainda vejo Relatório de Presença e filtros de Time/Staff?",
+        texto:
+          "Comportamento esperado só para perfis com permissão de Editar Sim ou Ver Sim no Calendário. Ao simular um Game Presenter (ou outro perfil com Ver Próprios), a página deve mostrar só Compromissos e Controle de Presença daquela pessoa, sem Relatório nem filtros de gestão. Encerrar a visualização e iniciar de novo. Se continuar com a visão de administrador, recarregue a página; se persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Na Galeria de Fotos ainda vejo fotos de outros colaboradores?",
+        texto:
+          "Na aba **Gerais** as fotos de evento são compartilhadas — isso é esperado. Em **Minhas Fotos**, a simulação deve mostrar só o colaborador da pessoa escolhida. Recarregue a página com a visualização ativa. Se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Como sair da simulação?",

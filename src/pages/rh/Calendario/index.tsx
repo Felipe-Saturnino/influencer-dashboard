@@ -23,9 +23,7 @@ import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../li
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
 import {
-  fetchTurnosPorEstudioSlugs,
-  fetchTurnosPorOperadoraSlugs,
-  pickStaffEstudioSlugParaTurnos,
+  carregarMapasTurnosHorarioPrestadores,
   resolveTurnosHorarioPrestador,
   type TurnosDealersPick,
 } from "../../../lib/turnosDealers";
@@ -105,7 +103,9 @@ import {
   prestadorAtendeFiltroTime,
   type StaffTimeRow,
 } from "../../../lib/rhCalendarioStaffFiltroHelpers";
+import { aplicarEscopoCalendarioSimulado } from "../../../lib/rhCalendarioEscopoSimulado";
 import { carregarRhCalendarioGradeMes } from "../../../lib/rhCalendarioGradeMes";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
   baixarCalendarioCompromissosPdf,
   diaSemanaCurtoPdf,
@@ -715,7 +715,8 @@ function statusPresencaNoDia(
 }
 
 export default function RhCalendarioPage() {
-  const { theme: t, isDark, user } = useApp();
+  const { theme: t, isDark, user, effectiveRole, simulacaoLogin, dadosUsuarioEfetivo, simulacaoSomenteLeitura } =
+    useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const perm = usePermission("rh_calendario");
@@ -863,19 +864,37 @@ export default function RhCalendarioPage() {
           "Não foi possível carregar os times e prestadores. Se o problema persistir, entre em contato com o suporte.",
         );
       } else {
-        setTimes((timesRes.data ?? []) as StaffTimeRow[]);
-        setPrestadores(
-          ((staffRes.data ?? []) as RhFuncionario[]).sort((a, b) =>
-            (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR"),
-          ),
+        const staffRpc = ((staffRes.data ?? []) as RhFuncionario[]).sort((a, b) =>
+          (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR"),
         );
-        setMeuRhFuncionarioId((meuIdRes.data as string | null) ?? null);
+        const timesRpc = (timesRes.data ?? []) as StaffTimeRow[];
+        let meuId = (meuIdRes.data as string | null) ?? null;
+        let funcionarioSimulado: RhFuncionario | null = null;
+        if (simulacaoLogin?.userEmail) {
+          funcionarioSimulado = await buscarRhFuncionarioAtivoPorEmailLogin(simulacaoLogin.userEmail);
+          if (cancelled) return;
+          meuId = funcionarioSimulado?.id ?? null;
+        }
+        const recorte = simulacaoLogin
+          ? aplicarEscopoCalendarioSimulado({
+              canView: perm.canView,
+              staff: staffRpc,
+              times: timesRpc,
+              meuIdSimulado: meuId,
+              funcionarioSimulado,
+            })
+          : { staff: staffRpc, times: timesRpc, meuId };
+        setTimes(recorte.times);
+        setPrestadores(recorte.staff);
+        setMeuRhFuncionarioId(recorte.meuId);
         setFuncionariosGerenciaveisIds(
-          new Set(
-            ((gerenciaveisRes.data ?? []) as { funcionario_id: string }[]).map(
-              (row) => row.funcionario_id,
-            ),
-          ),
+          simulacaoLogin && perm.canView === "proprios"
+            ? new Set()
+            : new Set(
+                ((gerenciaveisRes.data ?? []) as { funcionario_id: string }[]).map(
+                  (row) => row.funcionario_id,
+                ),
+              ),
         );
         setEscopoVersao(versaoRes.data ? String(versaoRes.data) : null);
       }
@@ -884,7 +903,7 @@ export default function RhCalendarioPage() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, escopoRefreshTick]);
+  }, [perm.loading, perm.canView, escopoRefreshTick, simulacaoLogin]);
 
   useEffect(() => {
     if (perm.loading || (perm.canView !== "sim" && perm.canView !== "proprios")) return;
@@ -1043,9 +1062,9 @@ export default function RhCalendarioPage() {
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
   }, [prestadores, relatorioFiltroTimeAtivo, relatorioFiltroTimeIdsReais]);
 
-  /** Relatório de Presença: só Editar = Sim (ou admin). Editar = Próprios não vê a aba. */
+  /** Relatório de Presença: só Editar = Sim no perfil efetivo. Admin real vê a aba; simulação de GP/prestador não. */
   const podeVerAbaRelatorioPresenca =
-    !perm.loading && (user?.role === "admin" || perm.canEditar === "sim");
+    !perm.loading && (effectiveRole === "admin" || perm.canEditar === "sim");
 
   useEffect(() => {
     if (!perm.loading && abaPrincipal === "relatorio" && !podeVerAbaRelatorioPresenca) {
@@ -1265,12 +1284,14 @@ export default function RhCalendarioPage() {
     prestadores.forEach((p) => {
       m.set(p.id, (p.nome ?? "").trim() || "—");
     });
-    if (soPropriosCal && meuRhFuncionarioId && user?.name) {
+    if (soPropriosCal && meuRhFuncionarioId && (dadosUsuarioEfetivo?.name || user?.name)) {
       const cur = m.get(meuRhFuncionarioId);
-      if (!cur || cur === "—") m.set(meuRhFuncionarioId, user.name.trim() || "—");
+      if (!cur || cur === "—") {
+        m.set(meuRhFuncionarioId, (dadosUsuarioEfetivo?.name || user?.name || "").trim() || "—");
+      }
     }
     return m;
-  }, [prestadores, soPropriosCal, meuRhFuncionarioId, user?.name]);
+  }, [prestadores, soPropriosCal, meuRhFuncionarioId, dadosUsuarioEfetivo?.name, user?.name]);
 
   const prestadorPorId = useMemo(() => {
     const m = new Map<string, RhFuncionario>();
@@ -1279,7 +1300,7 @@ export default function RhCalendarioPage() {
   }, [prestadores]);
 
   const meuFuncionarioIdOrganograma = meuRhFuncionarioId;
-  const isAdminPresenca = user?.role === "admin";
+  const isAdminPresenca = effectiveRole === "admin";
 
   /**
    * ID em `rh_calendario_acoes.solicitante_funcionario_id`: a política RLS só permite INSERT quando este
@@ -1571,31 +1592,11 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
-    const opSlugs = [
-      ...new Set(prestadores.map((p) => (p.staff_operadora_slug ?? "").trim()).filter(Boolean)),
-    ];
-    const estudioSlugs = [
-      ...new Set(
-        prestadores
-          .map((p) => pickStaffEstudioSlugParaTurnos(p))
-          .filter((s): s is string => Boolean(s)),
-      ),
-    ];
-    if (opSlugs.length === 0 && estudioSlugs.length === 0) {
-      setMapOpTurnos(new Map());
-      setMapEstudioTurnos(new Map());
-      return;
-    }
     let cancelled = false;
-    void Promise.all([
-      opSlugs.length > 0 ? fetchTurnosPorOperadoraSlugs(opSlugs) : Promise.resolve(new Map<string, TurnosDealersPick>()),
-      estudioSlugs.length > 0
-        ? fetchTurnosPorEstudioSlugs(estudioSlugs)
-        : Promise.resolve(new Map<string, TurnosDealersPick>()),
-    ]).then(([opMap, estMap]) => {
+    void carregarMapasTurnosHorarioPrestadores(prestadores).then(({ mapPorOperadora, mapPorEstudio }) => {
       if (cancelled) return;
-      setMapOpTurnos(opMap);
-      setMapEstudioTurnos(estMap);
+      setMapOpTurnos(mapPorOperadora);
+      setMapEstudioTurnos(mapPorEstudio);
     });
     return () => {
       cancelled = true;
@@ -2549,7 +2550,9 @@ export default function RhCalendarioPage() {
     });
 
   const mostrarBotaoPontoCalendario =
-    !perm.loading && (perm.canView === "sim" || perm.canView === "proprios");
+    !simulacaoSomenteLeitura &&
+    !perm.loading &&
+    (perm.canView === "sim" || perm.canView === "proprios");
   const labelBotaoPonto =
     pontoEstado?.proximoTipo === "check_out" ? "Fazer Check-out" : "Fazer Check-in";
   const pontoBotaoHabilitado =
@@ -2671,14 +2674,14 @@ export default function RhCalendarioPage() {
 
   const podeGerirPresencaStaff = useCallback(
     (fid: string | undefined | null) => {
-      if (!fid) return false;
+      if (!fid || simulacaoSomenteLeitura) return false;
       if (isAdminPresenca || perm.canEditar === "sim") return true;
       if (perm.canEditar !== "proprios") return false;
       // `rh_calendario_funcionarios_gerenciaveis` exclui o próprio — Meu Controle precisa das ações.
       if (meuRhFuncionarioId && fid === meuRhFuncionarioId) return true;
       return funcionariosGerenciaveisIds.has(fid);
     },
-    [isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds, meuRhFuncionarioId],
+    [simulacaoSomenteLeitura, isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds, meuRhFuncionarioId],
   );
 
   /**
@@ -2687,24 +2690,24 @@ export default function RhCalendarioPage() {
    */
   const podeAnalisarCorrecaoPresencaStaff = useCallback(
     (fid: string | undefined | null) => {
-      if (!fid) return false;
+      if (!fid || simulacaoSomenteLeitura) return false;
       if (meuRhFuncionarioId && fid === meuRhFuncionarioId) return false;
       if (isAdminPresenca || perm.canEditar === "sim") return true;
       if (perm.canEditar !== "proprios") return false;
       return funcionariosGerenciaveisIds.has(fid);
     },
-    [isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds, meuRhFuncionarioId],
+    [simulacaoSomenteLeitura, isAdminPresenca, perm.canEditar, funcionariosGerenciaveisIds, meuRhFuncionarioId],
   );
 
   /** Justificar a própria falta/pendência: disponível no Meu Controle mesmo só com Ver. */
   const podeJustificarPresencaStaff = useCallback(
     (fid: string | undefined | null) => {
-      if (!fid) return false;
+      if (!fid || simulacaoSomenteLeitura) return false;
       if (podeGerirPresencaStaff(fid)) return true;
       if (perm.canView !== "sim" && perm.canView !== "proprios") return false;
       return Boolean(meuRhFuncionarioId && fid === meuRhFuncionarioId);
     },
-    [podeGerirPresencaStaff, perm.canView, meuRhFuncionarioId],
+    [simulacaoSomenteLeitura, podeGerirPresencaStaff, perm.canView, meuRhFuncionarioId],
   );
 
   const podeAprovarPresencaMes = useMemo(() => {
@@ -3242,7 +3245,7 @@ export default function RhCalendarioPage() {
                   {baixandoCalendarioPdf ? "Gerando…" : "Download"}
                 </button>
               ) : null}
-              {abaPrincipal === "compromissos" && solicitanteAgendarId ? (
+              {abaPrincipal === "compromissos" && solicitanteAgendarId && !simulacaoSomenteLeitura ? (
                 <CtaCriarButton type="button" onClick={() => setModalAgendarAberto(true)} aria-label="Nova Agenda">
                   Nova Agenda
                 </CtaCriarButton>
@@ -4284,7 +4287,7 @@ export default function RhCalendarioPage() {
         </ModalBase>
       )}
 
-      {modalAgendarAberto && solicitanteAgendarId ? (
+      {modalAgendarAberto && solicitanteAgendarId && !simulacaoSomenteLeitura ? (
         <ModalAgendarReuniaoCalendario
           open
           onClose={() => setModalAgendarAberto(false)}

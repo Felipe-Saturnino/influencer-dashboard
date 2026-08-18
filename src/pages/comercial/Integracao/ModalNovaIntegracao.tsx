@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation";
 import { FONT } from "../../../constants/theme";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -58,6 +59,13 @@ export function ModalNovaIntegracao({
     () => marcas.filter((m) => textoContemBusca(m.nome, buscaMarca)),
     [marcas, buscaMarca],
   );
+  const marcasKeyboard = useListboxKeyboardNavigation({
+    items: marcasFiltradas,
+    onSelect: (marca) => {
+      setMarcaId(marca.id);
+      setBuscaMarca("");
+    },
+  });
 
   const inputStyle = {
     width: "100%",
@@ -191,6 +199,12 @@ export function ModalNovaIntegracao({
                 onChange={setBuscaMarca}
                 placeholder={placeholderPesquisaFiltro("Marca")}
                 aria-label="Pesquisar marca"
+                aria-activedescendant={
+                  marcasFiltradas[marcasKeyboard.activeIndex]
+                    ? `${formId}-marca-option-${marcasKeyboard.activeIndex}`
+                    : undefined
+                }
+                onKeyDown={marcasKeyboard.onKeyDown}
               />
               <ul
                 role="listbox"
@@ -215,12 +229,18 @@ export function ModalNovaIntegracao({
                     Nenhuma marca em Fechado disponível.
                   </li>
                 ) : (
-                  marcasFiltradas.map((m) => (
+                  marcasFiltradas.map((m, index) => (
                     <li key={m.id}>
                       <button
+                        id={`${formId}-marca-option-${index}`}
+                        ref={(node) => {
+                          marcasKeyboard.optionRefs.current[index] = node;
+                        }}
                         type="button"
                         role="option"
                         aria-selected={false}
+                        tabIndex={-1}
+                        onMouseEnter={() => marcasKeyboard.setActiveIndex(index)}
                         onClick={() => {
                           setMarcaId(m.id);
                           setBuscaMarca("");
@@ -231,7 +251,10 @@ export function ModalNovaIntegracao({
                           padding: "8px 10px",
                           border: "none",
                           borderRadius: 8,
-                          background: "transparent",
+                          background:
+                            index === marcasKeyboard.activeIndex
+                              ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                              : "transparent",
                           color: t.text,
                           fontSize: 13,
                           fontFamily: FONT.body,

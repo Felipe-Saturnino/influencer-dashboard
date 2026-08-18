@@ -7,7 +7,7 @@ import type { RhOrgOrganogramaGrupoPrestador, RhOrgTimeOpcao } from "../../../ty
 import { encontrarVinculoParaFuncionarioRow, flattenVinculosDeGrupos } from "../../../lib/rhOrganogramaTree";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import { revisaoCadastralPendenteParaFuncionario } from "../../../lib/rhCadastroRevisao";
-import { prestadorCadastroIncompleto } from "./gestaoPrestadorHelpers";
+import { PRESTADOR_LISTA_SELECT, prestadorCadastroIncompleto } from "./gestaoPrestadorHelpers";
 import { somenteDigitos } from "../../../lib/rhFuncionarioValidators";
 import { textoContemBusca } from "../../../lib/searchText";
 import type { SortDir } from "../../../components/dashboard";
@@ -76,27 +76,11 @@ export function usePrestadorLista({
   const carregar = useCallback(async () => {
     setLoading(true);
     setErroCarregar(null);
-    /** Colunas do domínio RhFuncionario — evita select("*") e payloads com colunas futuras não usadas na UI. */
-    const PRESTADOR_LISTA_COLS = [
-      "id", "status", "nome", "rg", "cpf", "telefone", "email", "email_spin", "data_nascimento",
-      "endereco_residencial", "res_cep", "res_logradouro", "res_numero", "res_complemento", "res_cidade", "res_estado",
-      "contato_emergencia", "emerg_nome", "emerg_parentesco", "emerg_telefone",
-      "setor", "org_diretoria_id", "org_gerencia_id", "org_time_id", "cargo", "nivel",
-      "area_atuacao", "remuneracao_hora_centavos", "salario", "data_inicio", "data_funcao",
-      "origem_contratacao", "quem_indicou", "data_desligamento", "observacao_rh", "escala", "tipo_contrato",
-      "nome_empresa", "cnpj", "endereco_empresa", "emp_cep", "emp_logradouro", "emp_numero", "emp_complemento",
-      "emp_cidade", "emp_estado", "banco", "agencia", "conta_corrente", "pix",
-      "staff_nickname", "staff_estudio_slug", "staff_estudio_slugs", "staff_operadora_slug", "staff_barcode",
-      "staff_id_operacional", "staff_turno", "staff_horario_turno", "staff_skills", "staff_live_no_estudio",
-      "staff_fim_treinamento", "staff_dealer_genero", "staff_dealer_bio", "staff_dealer_fotos",
-      "cadastro_revisado_em", "cadastro_revisao_tipo",
-      "created_at", "updated_at", "created_by", "updated_by",
-    ].join(", ");
     try {
       const rows = await fetchAllPages(async (from, to) => {
         const res = await supabase
           .from("rh_funcionarios")
-          .select(PRESTADOR_LISTA_COLS)
+          .select(PRESTADOR_LISTA_SELECT)
           .order("nome", { ascending: true })
           .range(from, to);
         return {

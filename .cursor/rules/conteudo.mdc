@@ -216,7 +216,7 @@ const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
 
 ## Modais — Padrão com Acessibilidade
 
-Alinhado ao padrão **Estúdio** (modais densos): sem `backdropFilter: blur()`; overlay escuro; `role="dialog"`, `aria-modal="true"`, `aria-labelledby`; Escape + foco; `maxHeight: "90dvh"`.
+Alinhado ao padrão global de modais densos: sem `backdropFilter: blur()`; overlay escuro; `role="dialog"`, `aria-modal="true"`, `aria-labelledby`; foco inicial e anel `:focus-visible`; **Escape não fecha o modal**; `maxHeight: "90dvh"`.
 
 ```tsx
 style={{
@@ -356,7 +356,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Header: `PageHeader` + subtítulo canónico.
 - **Abas** (`useRouteTab` + `FiltroBarTabButton`): **Influencers** | **Afiliados** — bases em `lib/linksMateriaisCanal.ts` (`TRACKING_BASE_INFLUENCER` / `TRACKING_BASE_AFILIADO`).
 - **Ver = Sim / Admin / Criar = Sim:** ambas as abas + select com **todos** influencers/afiliados da aba. **Escopo só para Agência.**
-- **Ver = Próprios:** só o próprio link (`linksMateriaisIsSelfMode`) + aba do perfil. Agência: select filtrado por `podeVerInfluencer`.
+- **Ver = Próprios:** só o próprio link (`linksMateriaisIsSelfMode`) + aba do perfil. Agência: select filtrado por `podeVerInfluencer`. No Simulador de Login, o perfil e o UTM emitido usam `useIdentidadeEfetiva().userId` — **proibido** `user.id` da conta viewer no modo self.
 - **Criar = Sim:** emitir para qualquer um da lista. **Criar = Próprios:** só o próprio link (RPC `can_criar`). Matriz: `hasCriar: true`, `hasEditar: false`.
 - **Nome de exibição:** Influencer = nome artístico; Afiliado = nome (`nomeExibicaoLinksEntidade`).
 - Bloco **Link de rastreamento:** `getPageContentBoxStyle` + `SectionTitle` (sem ícone no título de bloco).
@@ -370,7 +370,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 
 ### PlaybookInfluencers (`src/pages/conteudo/PlaybookInfluencers/index.tsx`)
 
-- Header: `BookOpen`, `h1` **18px**; `BRAND_SEMANTIC as BRAND` de `constants/theme` — sem `const BRAND` local.
+- **Simulador de Login:** ciência e modo influencer usam `useIdentidadeEfetiva()` (id + perfil efetivo). Auditoria só se o perfil **simulado** tiver Editar Sim — **proibido** `user.role` da conta viewer.
 - Abas: ARIA completa + `onKeyDown` ArrowLeft/Right + `tabIndex` roving + fade de overflow; `tabpanel` com `tabIndex={0}`, topo `clamp(22px, 4vw, 32px)` (painel encosta nas abas) e laterais/base `clamp(14px, 4vw, 28px)`.
 - **BlocoCiencia:** `role="checkbox"` customizado; `key={itemKey}` para remount; `aria-live` na transição; erro upsert: `"Não foi possível registrar a confirmação. Tente novamente."`; `Loader2` branco em Confirmar Ciência.
 - **PainelAuditoria:** `Loader2` no loading; fallback nome `Influencer (${id.slice(0, 8)}…)` — nunca UUID completo.
@@ -429,7 +429,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 ### RoteiroMesa (`src/pages/estudio/RoteiroMesa/index.tsx`)
 
 - Exclusão: dois cliques, nunca `window.confirm()`; `aria-label` com identificador do item.
-- Modais: sem blur; ARIA + Escape + foco; Salvar brand-aware (sem `BRAND.azul` / `BRAND.ciano` hardcoded no primário).
+- Modais: sem blur; ARIA + foco inicial e visível; **Escape não fecha o modal**; Salvar brand-aware (sem `BRAND.azul` / `BRAND.ciano` hardcoded no primário).
 - FilterChips: `aria-pressed` sempre; separadores entre grupos — manter.
 - **`ROTEIRO_IDENT_COL_PX = 108`:** constante centralizada; em mobile estreito, `Math.min(108, viewportWidth * 0.30)` se necessário.
 - **`BLOCO_CONFIG` / `TIPO_CONFIG`:** fonte única de cor/gradiente/ícone — não duplicar inline.

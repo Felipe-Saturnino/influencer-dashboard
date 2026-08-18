@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useState } from "react";
 import { Download, Eye, Loader2 } from "lucide-react";
 import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
@@ -15,27 +15,70 @@ import {
   categoriasDocumentoPorTipoContrato,
   inputIdDocumentoPrestador,
   rotuloArquivoDocumentoPrestador,
+  type RhPrestadorDocumentoCategoria,
 } from "../../../lib/rhPrestadorDocumentosCadastro";
 import type { RhFuncionarioSelfMedia, RhFuncionarioTipoContrato } from "../../../types/rhFuncionario";
 import { useRhPrestadorDocumentosCategoria } from "../../../hooks/useRhPrestadorDocumentosCategoria";
 
-export function PrestadorDocumentosGestaoPanel({
-  funcionarioId,
-  tipoContrato,
-  podeEditar,
-}: {
-  funcionarioId: string | null;
-  tipoContrato: RhFuncionarioTipoContrato | "" | null | undefined;
-  podeEditar: boolean;
-}) {
+export type PrestadorDocumentosGestaoHandle = {
+  temPendentes: () => boolean;
+  commitPendentes: () => Promise<{ ok: boolean }>;
+  descartarPendentes: () => void;
+};
+
+type PendenteUpload = { key: string; categoria: RhPrestadorDocumentoCategoria; file: File };
+
+export const PrestadorDocumentosGestaoPanel = forwardRef<
+  PrestadorDocumentosGestaoHandle,
+  {
+    funcionarioId: string | null;
+    tipoContrato: RhFuncionarioTipoContrato | "" | null | undefined;
+    podeEditar: boolean;
+  }
+>(function PrestadorDocumentosGestaoPanel({ funcionarioId, tipoContrato, podeEditar }, ref) {
   const { theme: t } = useApp();
   const [alvoExcluir, setAlvoExcluir] = useState<{ row: RhFuncionarioSelfMedia; rotulo: string } | null>(null);
+  const [pendentesUpload, setPendentesUpload] = useState<PendenteUpload[]>([]);
+  const [pendentesExcluir, setPendentesExcluir] = useState<RhFuncionarioSelfMedia[]>([]);
 
   const { rows, loading, erro, signedById, uploadingCategory, excluindoId, upload, excluir } =
     useRhPrestadorDocumentosCategoria(funcionarioId, { podeEditar });
 
   const categorias = useMemo(() => categoriasDocumentoPorTipoContrato(tipoContrato), [tipoContrato]);
-  const porCategoria = useMemo(() => agruparDocumentosPorCategoria(rows, categorias), [rows, categorias]);
+  const idsExcluir = useMemo(() => new Set(pendentesExcluir.map((r) => r.id)), [pendentesExcluir]);
+  const rowsVisiveis = useMemo(() => rows.filter((r) => !idsExcluir.has(r.id)), [rows, idsExcluir]);
+  const porCategoria = useMemo(
+    () => agruparDocumentosPorCategoria(rowsVisiveis, categorias),
+    [rowsVisiveis, categorias],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      temPendentes: () => pendentesUpload.length > 0 || pendentesExcluir.length > 0,
+      descartarPendentes: () => {
+        setPendentesUpload([]);
+        setPendentesExcluir([]);
+        setAlvoExcluir(null);
+      },
+      commitPendentes: async () => {
+        for (const p of pendentesUpload) {
+          const dt = new DataTransfer();
+          dt.items.add(p.file);
+          const n = await upload(p.categoria, dt.files);
+          if (n < 1) return { ok: false };
+        }
+        for (const row of pendentesExcluir) {
+          const ok = await excluir(row);
+          if (!ok) return { ok: false };
+        }
+        setPendentesUpload([]);
+        setPendentesExcluir([]);
+        return { ok: true };
+      },
+    }),
+    [pendentesUpload, pendentesExcluir, upload, excluir],
+  );
 
   if (!funcionarioId) {
     return (
@@ -73,6 +116,12 @@ export function PrestadorDocumentosGestaoPanel({
         </div>
       ) : null}
 
+      {podeEditar ? (
+        <p style={{ margin: "0 0 12px", fontSize: 12, color: t.textMuted, fontFamily: FONT.body }}>
+          Os arquivos ficam pendentes até clicar em Salvar.
+        </p>
+      ) : null}
+
       <div className="app-table-wrap">
         <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, tableLayout: "fixed", minWidth: 520 }}>
           <caption style={{ display: "none" }}>Documentos cadastrais por categoria</caption>
@@ -101,6 +150,7 @@ export function PrestadorDocumentosGestaoPanel({
               const arquivos = porCategoria[cat] ?? [];
               const enviando = uploadingCategory === cat;
               const inputId = inputIdDocumentoPrestador("gestao", funcionarioId, cat);
+              const pendentesCat = pendentesUpload.filter((p) => p.categoria === cat);
               return (
                 <tr key={cat} style={{ background: zebraStripe(i) }}>
                   <td
@@ -129,7 +179,7 @@ export function PrestadorDocumentosGestaoPanel({
                       whiteSpace: "normal",
                     }}
                   >
-                    {arquivos.length === 0 ? (
+                    {arquivos.length === 0 && pendentesCat.length === 0 ? (
                       <span style={{ color: t.textMuted, fontSize: 12 }}>Nenhum arquivo enviado.</span>
                     ) : (
                       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
@@ -145,7 +195,7 @@ export function PrestadorDocumentosGestaoPanel({
                                 alignItems: "center",
                                 gap: 10,
                                 padding: "6px 0",
-                                borderBottom: arquivos.length > 1 ? `1px solid ${t.cardBorder}` : undefined,
+                                borderBottom: `1px solid ${t.cardBorder}`,
                                 fontSize: 12,
                                 fontFamily: FONT.body,
                                 minWidth: 0,
@@ -212,6 +262,45 @@ export function PrestadorDocumentosGestaoPanel({
                             </li>
                           );
                         })}
+                        {pendentesCat.map((p) => (
+                          <li
+                            key={p.key}
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              alignItems: "center",
+                              gap: 10,
+                              padding: "6px 0",
+                              borderBottom: `1px solid ${t.cardBorder}`,
+                              fontSize: 12,
+                              fontFamily: FONT.body,
+                              minWidth: 0,
+                            }}
+                          >
+                            <span style={{ color: t.text, fontWeight: 600 }} title={p.file.name}>
+                              {p.file.name}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 700,
+                                padding: "1px 6px",
+                                borderRadius: 20,
+                                background: "rgba(245,158,11,0.15)",
+                                color: "#f59e0b",
+                                border: "1px solid rgba(245,158,11,0.35)",
+                              }}
+                            >
+                              Pendente
+                            </span>
+                            <span style={{ marginLeft: "auto" }}>
+                              <BtnExcluirLinha
+                                labelAcao={tooltipExcluir("documento")}
+                                onClick={() => setPendentesUpload((prev) => prev.filter((x) => x.key !== p.key))}
+                              />
+                            </span>
+                          </li>
+                        ))}
                       </ul>
                     )}
                   </td>
@@ -225,11 +314,16 @@ export function PrestadorDocumentosGestaoPanel({
                         multiple
                         showList={false}
                         items={[]}
-                        disabled={enviando}
+                        disabled={enviando || Boolean(excluindoId)}
                         onAdd={(files) => {
-                          const dt = new DataTransfer();
-                          for (const f of files) dt.items.add(f);
-                          void upload(cat, dt.files);
+                          setPendentesUpload((prev) => [
+                            ...prev,
+                            ...files.map((file) => ({
+                              key: `${cat}-${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+                              categoria: cat,
+                              file,
+                            })),
+                          ]);
                         }}
                         onRemove={() => {}}
                         t={t}
@@ -250,9 +344,8 @@ export function PrestadorDocumentosGestaoPanel({
             if (!excluindoId) setAlvoExcluir(null);
           }}
           onConfirm={() => {
-            void excluir(alvoExcluir.row).then((ok) => {
-              if (ok) setAlvoExcluir(null);
-            });
+            setPendentesExcluir((prev) => (prev.some((r) => r.id === alvoExcluir.row.id) ? prev : [...prev, alvoExcluir.row]));
+            setAlvoExcluir(null);
           }}
           loading={Boolean(excluindoId)}
           zIndex={1100}
@@ -260,4 +353,4 @@ export function PrestadorDocumentosGestaoPanel({
       ) : null}
     </div>
   );
-}
+});

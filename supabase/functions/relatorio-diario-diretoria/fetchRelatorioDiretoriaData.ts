@@ -1,5 +1,5 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { arpuFromGgrUap, fmtUltimaLeitura, hojeISO, ontemISO, primeiroDiaMes } from './common.ts'
+import { arpuFromGgrUap, fmtUltimaLeitura, hojeISO, ontemISO, primeiroDiaMes, fimPeriodoInvestimentoRelatorioDiretoria } from './common.ts'
 
 export interface LiveAgenda {
   horario: string
@@ -517,7 +517,7 @@ export async function fetchRelatorioDiretoriaData(
 
   const { data: invData, error: invErr } = await supabase.rpc('get_investimento_pago', {
     p_inicio: inicioMes,
-    p_fim: dataOntem,
+    p_fim: fimPeriodoInvestimentoRelatorioDiretoria(dataHoje, inicioMes, dataOntem),
     p_operadora_slug: null,
     p_influencer_ids: null,
     p_include_agentes: true,

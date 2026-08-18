@@ -65,6 +65,7 @@ export function ModalAceitarOfertaMarketplace({
     return diasOfertaveisMarketplace("oferta_troca", grade.valorPorIso, {
       horario: contexto.horario,
       operadora: contexto.operadora,
+      areaKey: contexto.areaKey,
     }).filter((dia) => {
       if (dia.iso === oferta.dataOfertaIso || diasReservados.has(dia.iso)) return false;
       const gradeComDiaLiberado = new Map(grade.valorPorIso);
@@ -109,7 +110,7 @@ export function ModalAceitarOfertaMarketplace({
     }
     if (oferta!.souOfertante) return "Você não pode aceitar a sua própria oferta.";
     if (oferta!.mesmoTime === false) {
-      return "O aceite só é permitido entre prestadores do mesmo time.";
+      return mensagemErroOfertaMarketplace("times_diferentes");
     }
 
     if (ehVendaFolga) {
@@ -185,7 +186,7 @@ export function ModalAceitarOfertaMarketplace({
 
   return (
     <ModalBase maxWidth={520} onClose={onClose} zIndex={1140}>
-      <ModalHeader title={ehTroca ? "Propor troca" : "Aceitar oferta"} onClose={onClose} />
+      <ModalHeader title="Enviar proposta" onClose={onClose} />
       <div style={{ padding: "4px 4px 0", fontFamily: FONT.body, color: t.text }}>
         <div
           style={{
@@ -208,8 +209,9 @@ export function ModalAceitarOfertaMarketplace({
 
         {ehVendaFolga ? (
           <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
-            Ao aceitar, {oferta.ofertante} fica com Compra - {oferta.turnoOferta} e você fica com
-            Venda na escala.
+            Ao enviar a proposta, a oferta sai do mural e fica Em análise. A escala só muda depois
+            que {oferta.ofertante} aprovar: essa pessoa fica com Compra - {oferta.turnoOferta} e você
+            fica com Venda. Enquanto isso, você pode desistir em Minhas Ofertas.
           </p>
         ) : ehTroca ? (
           <div style={{ marginBottom: 14 }}>
@@ -243,7 +245,9 @@ export function ModalAceitarOfertaMarketplace({
           </div>
         ) : (
           <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
-            Ao aceitar, você assume este turno e fica com Compra - {oferta.turnoOferta} na escala.
+            Ao enviar a proposta, a oferta sai do mural e fica Em análise. A escala só muda depois
+            que {oferta.ofertante} aprovar: você assume o turno (Compra - {oferta.turnoOferta}).
+            Enquanto isso, você pode desistir em Minhas Ofertas.
           </p>
         )}
 
@@ -284,7 +288,7 @@ export function ModalAceitarOfertaMarketplace({
                 Salvando…
               </span>
             ) : (
-              ehTroca ? "Enviar proposta" : "Aceitar oferta"
+              "Enviar proposta"
             )}
           </button>
         </div>

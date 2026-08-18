@@ -57,6 +57,7 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
@@ -352,6 +353,7 @@ function FiltroSubtabPills({
 
 export default function PortalRhPage() {
   const { theme: t, user } = useApp();
+  const { email: emailEfetivo, userId: userIdEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const perm = usePermission("rh_portal");
   const podeGerenciarPostagens = podeGerenciarPostagensPortalRh(perm.canEditar);
 
@@ -405,7 +407,7 @@ export default function PortalRhPage() {
   }, [busca]);
 
   useEffect(() => {
-    if (!user?.email?.trim()) {
+    if (!emailEfetivo?.trim()) {
       setSetoresUsuarioAplicavel([]);
       setUsuarioCadastradoGestaoPrestadores(false);
       return;
@@ -413,7 +415,7 @@ export default function PortalRhPage() {
     let cancel = false;
     void (async () => {
       const [funcionario, org] = await Promise.all([
-        buscarRhFuncionarioAtivoPorEmailLogin(user.email!),
+        buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo),
         carregarOpcoesTimesOrganograma(),
       ]);
       if (cancel) return;
@@ -424,10 +426,10 @@ export default function PortalRhPage() {
     return () => {
       cancel = true;
     };
-  }, [user?.email]);
+  }, [emailEfetivo]);
 
   const carregar = useCallback(async () => {
-    if (!user?.id) return;
+    if (!userIdEfetivo) return;
     setLoading(true);
     setErro(null);
     try {
@@ -534,7 +536,7 @@ export default function PortalRhPage() {
           const { data, error } = await supabase
             .from("rh_portal_read_receipt")
             .select("content_type, content_id, read_at, acknowledged_at")
-            .eq("user_id", user.id)
+            .eq("user_id", userIdEfetivo)
             .in("content_id", ids);
           if (error) throw error;
           return (data ?? []) as ReadReceiptRow[];
@@ -549,7 +551,7 @@ export default function PortalRhPage() {
       for (const p of parts) {
         const row = p as { talk_id: string; user_id: string };
         counts[row.talk_id] = (counts[row.talk_id] ?? 0) + 1;
-        if (row.user_id === user.id) mySet.add(row.talk_id);
+        if (row.user_id === userIdEfetivo) mySet.add(row.talk_id);
       }
       setTalkParticipantTalkIds(mySet);
       setTalkCounts(counts);
@@ -571,12 +573,12 @@ export default function PortalRhPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userIdEfetivo]);
 
   useEffect(() => {
-    if (perm.loading || perm.canView === "nao" || !user?.id) return;
+    if (perm.loading || perm.canView === "nao" || !userIdEfetivo) return;
     void carregar();
-  }, [carregar, perm.loading, perm.canView, user?.id]);
+  }, [carregar, perm.loading, perm.canView, userIdEfetivo]);
 
   useEffect(() => {
     if (perm.loading) return;
@@ -746,7 +748,7 @@ export default function PortalRhPage() {
       );
     }
     const recMap = receipts;
-    const uid = user?.id;
+    const uid = userIdEfetivo;
     list = [...list].sort((a, b) => {
       const pendA =
         a.requires_acknowledgment &&
@@ -764,7 +766,7 @@ export default function PortalRhPage() {
     comunicados,
     filtroCatCom,
     receipts,
-    user?.id,
+    userIdEfetivo,
     modoHistorico,
     mesesCom,
     idxMesCom,
@@ -923,25 +925,25 @@ export default function PortalRhPage() {
   const cienciaExigidaDocIds = useMemo(() => {
     const set = new Set<string>();
     for (const d of documentosFiltrados) {
-      if (documentoExigeCienciaDoUsuario(d, setoresUsuarioAplicavel, user?.role, usuarioCadastradoGestaoPrestadores)) {
+      if (documentoExigeCienciaDoUsuario(d, setoresUsuarioAplicavel, roleEfetivo, usuarioCadastradoGestaoPrestadores)) {
         set.add(d.id);
       }
     }
     return set;
-  }, [documentosFiltrados, setoresUsuarioAplicavel, user?.role, usuarioCadastradoGestaoPrestadores]);
+  }, [documentosFiltrados, setoresUsuarioAplicavel, roleEfetivo, usuarioCadastradoGestaoPrestadores]);
 
-  const usuarioVeColunaCiencia = perfilPortalRhParticipaCiencia(user?.role);
+  const usuarioVeColunaCiencia = perfilPortalRhParticipaCiencia(roleEfetivo);
 
   const cienciaPendenteDocIds = useMemo(() => {
     const set = new Set<string>();
-    if (!user?.id) return set;
+    if (!userIdEfetivo) return set;
     for (const id of cienciaExigidaDocIds) {
       if (!receipts.get(receiptKey("documento", id))?.acknowledged_at) {
         set.add(id);
       }
     }
     return set;
-  }, [cienciaExigidaDocIds, receipts, user?.id]);
+  }, [cienciaExigidaDocIds, receipts, userIdEfetivo]);
 
   const cienciaRegistradaEm = useMemo(() => {
     const map = new Map<string, string>();
@@ -1117,7 +1119,7 @@ export default function PortalRhPage() {
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {comunicadosLista.map((c) => {
-                      const rec = user?.id ? receipts.get(receiptKey("comunicado", c.id)) : undefined;
+                      const rec = userIdEfetivo ? receipts.get(receiptKey("comunicado", c.id)) : undefined;
                       const isNovoCard = !rec?.read_at;
                       return (
                         <li key={c.id}>
@@ -1231,7 +1233,7 @@ export default function PortalRhPage() {
             exigeCiencia={documentoExigeCienciaDoUsuario(
               modalDoc,
               setoresUsuarioAplicavel,
-              user?.role,
+              roleEfetivo,
               usuarioCadastradoGestaoPrestadores,
             )}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
@@ -1254,7 +1256,7 @@ export default function PortalRhPage() {
             exigeCiencia={documentoExigeCienciaDoUsuario(
               modalDoc,
               setoresUsuarioAplicavel,
-              user?.role,
+              roleEfetivo,
               usuarioCadastradoGestaoPrestadores,
             )}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}

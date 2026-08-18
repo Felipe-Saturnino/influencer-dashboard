@@ -255,14 +255,6 @@ function ModalValidacao({
     return () => window.cancelAnimationFrame(id);
   }, [live.id]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const showResultFields = status === "realizada";
 
   async function handleSave() {

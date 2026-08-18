@@ -13,6 +13,8 @@ type Props = {
   items: RhFuncionarioHistorico[];
   itemsFiltrados: RhFuncionarioHistorico[];
   loading: boolean;
+  erro: string | null;
+  onRetry: () => void;
   filtroTipo: FiltroTipoAcaoHistoricoPrestador;
   onFiltroTipoChange: (v: FiltroTipoAcaoHistoricoPrestador) => void;
   onClose: () => void;
@@ -25,6 +27,8 @@ export function ModalHistoricoPrestador({
   items,
   itemsFiltrados,
   loading,
+  erro,
+  onRetry,
   filtroTipo,
   onFiltroTipoChange,
   onClose,
@@ -73,18 +77,56 @@ export function ModalHistoricoPrestador({
             </option>
           ))}
         </select>
-        <div style={{ maxHeight: "min(60vh, 480px)", overflowY: "auto", paddingRight: 2 }}>
-          <ListaHistoricoRh
-            items={itemsFiltrados}
-            loading={loading}
-            t={t}
-            emptyMessage={
-              items.length === 0 && !loading
-                ? "Sem dados para o período selecionado."
-                : "Nenhum registro deste tipo no histórico."
-            }
-          />
-        </div>
+        {erro ? (
+          <div
+            role="alert"
+            style={{
+              marginBottom: 12,
+              padding: "10px 14px",
+              borderRadius: 10,
+              fontSize: 13,
+              color: "#e84025",
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "rgba(232,64,37,0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>{erro}</span>
+            <button
+              type="button"
+              onClick={onRetry}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(232,64,37,0.35)",
+                background: "transparent",
+                color: "#e84025",
+                fontWeight: 700,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
+        ) : (
+          <div style={{ maxHeight: "min(60vh, 480px)", overflowY: "auto", paddingRight: 2 }}>
+            <ListaHistoricoRh
+              items={itemsFiltrados}
+              loading={loading}
+              t={t}
+              emptyMessage={
+                items.length === 0 && !loading
+                  ? "Nenhum registro no histórico."
+                  : "Nenhum registro deste tipo no histórico."
+              }
+            />
+          </div>
+        )}
       </div>
     </ModalBase>
   );

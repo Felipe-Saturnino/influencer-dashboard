@@ -4,7 +4,7 @@
  * Listagem vem de `escala_marketplace_ofertas_listar` já em jsonb e com nomes
  * resolvidos no servidor: o prestador não lê `rh_funcionarios` de colegas por RLS.
  * O escopo também é do servidor — Ver = Sim devolve todos os times, Ver = Próprios
- * só o time do prestador.
+ * o grupo de negociação (mesmo time, ou Liderança = Shift Leader + Service Manager).
  *
  * Antecedência: ≥4h para **publicar** (`turnoRespeitaAntecedencia4h`); ≥2h para
  * **aceitar**. Ex.: às 6h, a Manhã de hoje (início 7h) não pode ser ofertada; a
@@ -21,6 +21,7 @@
  */
 import { supabase } from "./supabase";
 import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "./rhFuncionarioLoginMatch";
 import { normRhOrgRotuloOrganograma } from "./rhPrestadorUsuarioSync";
 import {
   instanteFimTurnoTrabalhadoNoDia,
@@ -41,6 +42,7 @@ import type { RhCalendarioAcaoTipo } from "./rhCalendarioAcaoHelpers";
 import type {
   EscalaTimeFiltro,
   LinhaOfertaMarketplace,
+  MarketplaceTimeFiltro,
   OfertaStatusUi,
 } from "./escalaTurnosUiConstants";
 
@@ -110,6 +112,10 @@ export type EscalaMarketplaceOfertaDb = {
   sou_ofertante?: boolean;
   sou_interessado?: boolean;
   mesmo_time?: boolean;
+  /** Início congelado do turno ofertado (`America/Sao_Paulo`). */
+  inicio_turno_at?: string | null;
+  /** Troca aceita: início do turno de interesse (mesmo helper da Home). */
+  inicio_turno_interesse_at?: string | null;
 };
 
 function isoDate(v: unknown): string {
@@ -164,6 +170,60 @@ export function timeKeyFromOrgTimeNome(nome: string | null | undefined): EscalaT
   return "todos";
 }
 
+/** `true` se a oferta entra no filtro Time do Marketplace (Liderança = SL + SM). */
+export function ofertaPassaFiltroTimeMarketplace(
+  timeKey: EscalaTimeFiltro,
+  filtro: MarketplaceTimeFiltro,
+): boolean {
+  if (filtro === "todos") return true;
+  if (filtro === "lideranca") return timeKey === "shift_leader" || timeKey === "service_manager";
+  return timeKey === filtro;
+}
+
+/**
+ * Recorte do mural em Minhas Negociações (Ver = Sim): mesmo grupo da RPC Ver = Próprios.
+ * `null` = sem time de estúdio — o mural fica vazio.
+ */
+export function filtroTimeGrupoNegociacaoMarketplace(
+  areaKey: string | null | undefined,
+): MarketplaceTimeFiltro | null {
+  const k = (areaKey ?? "").trim().toLowerCase();
+  if (k === "shift_leader" || k === "service_manager") return "lideranca";
+  if (
+    k === "game_presenter" ||
+    k === "performance_coach" ||
+    k === "shuffler" ||
+    k === "treinamento"
+  ) {
+    return k;
+  }
+  return null;
+}
+
+/** Frase curta para cards da Home («troca», «venda de turno»). */
+export function fraseTipoOfertaMarketplace(tipo: string): string {
+  if (tipo === "venda_turno") return "venda de turno";
+  if (tipo === "venda_folga") return "venda de folga";
+  if (tipo === "oferta_troca") return "troca";
+  return "negociação";
+}
+
+/** `YYYY-MM-DD` → `dd/mm/aaaa`. */
+export function formatarDiaIsoPtBr(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso.trim());
+  if (!m) return iso;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+/** Shift Leader e Service Manager só negociam Manhã e Noite (turno de 12h). */
+export function turnoMarketplacePermitidoNaArea(
+  areaKey: string | null | undefined,
+  turnoNome: string,
+): boolean {
+  if (areaKey !== "shift_leader" && areaKey !== "service_manager") return true;
+  return turnoNome === "Manhã" || turnoNome === "Noite";
+}
+
 function turnoLabelOferta(row: EscalaMarketplaceOfertaDb): string {
   const label = texto(row.turno_label);
   if (label) return label;
@@ -198,6 +258,7 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
       ? texto(row.interessado_nome) || labelTruncadoUuid(interessadoId)
       : undefined,
     solicitanteStaffId: ofertanteId,
+    interessadoStaffId: interessadoId || undefined,
     observacao: texto(row.observacao) || undefined,
     souOfertante: row.sou_ofertante === true,
     souInteressado: row.sou_interessado === true,
@@ -321,13 +382,69 @@ export function parseMeuContextoMarketplace(data: unknown): MarketplaceMeuContex
   };
 }
 
-export async function carregarMeuContextoMarketplace(): Promise<MarketplaceMeuContexto | null> {
+export async function carregarMeuContextoMarketplace(
+  emailEfetivo?: string | null,
+): Promise<MarketplaceMeuContexto | null> {
   const { data, error } = await supabase.rpc("escala_marketplace_meu_contexto");
   if (error) {
     console.error("[carregarMeuContextoMarketplace]", error);
     return null;
   }
-  return parseMeuContextoMarketplace(data);
+  const ctx = parseMeuContextoMarketplace(data);
+  const email = emailEfetivo?.trim();
+  if (!email) return ctx;
+  const func = await buscarRhFuncionarioAtivoPorEmailLogin(email);
+  if (!func) {
+    return ctx
+      ? { ...ctx, funcionarioId: null, nome: "", orgTimeId: null, timeNome: "", areaKey: "" }
+      : null;
+  }
+  let timeNome = "";
+  if (func.org_time_id) {
+    const { data: trow } = await supabase
+      .from("rh_org_times")
+      .select("nome")
+      .eq("id", func.org_time_id)
+      .maybeSingle();
+    timeNome = texto((trow as { nome?: string } | null)?.nome);
+  }
+  const areaKey = timeKeyFromOrgTimeNome(timeNome);
+  return {
+    escopo: "proprios",
+    funcionarioId: func.id,
+    nome: func.nome,
+    orgTimeId: func.org_time_id ?? null,
+    timeNome,
+    areaKey: areaKey === "todos" ? "" : areaKey,
+    areaAtuacao: func.area_atuacao ?? ctx?.areaAtuacao ?? "",
+    horario: {
+      escala: (func as { escala?: string | null }).escala ?? ctx?.horario.escala ?? null,
+      staff_turno: func.staff_turno ?? ctx?.horario.staff_turno ?? null,
+      staff_horario_turno: (func as { staff_horario_turno?: string | null }).staff_horario_turno
+        ?? ctx?.horario.staff_horario_turno
+        ?? null,
+    },
+    operadora: ctx?.operadora ?? null,
+  };
+}
+
+/**
+ * Recalcula souOfertante / souInteressado / mesmoTime com o prestador da sessão visível.
+ * A RPC usa auth.uid() da conta viewer (admin vê tudo como se fosse gestão).
+ */
+export function overlayIdentidadeMarketplaceOfertas(
+  linhas: LinhaOfertaMarketplace[],
+  funcionarioId: string | null,
+  areaKey: string | null | undefined,
+): LinhaOfertaMarketplace[] {
+  if (!funcionarioId) return linhas;
+  const grupo = filtroTimeGrupoNegociacaoMarketplace(areaKey);
+  return linhas.map((l) => ({
+    ...l,
+    souOfertante: l.solicitanteStaffId === funcionarioId,
+    souInteressado: l.interessadoStaffId === funcionarioId,
+    mesmoTime: grupo ? ofertaPassaFiltroTimeMarketplace(l.timeKey, grupo) : false,
+  }));
 }
 
 export type MarketplaceMinhaGrade = {
@@ -459,12 +576,15 @@ export function turnosOfertaveisNaFolgaMarketplace(
   horario: PrestadorHorarioCtx,
   operadora: OperadoraTurnosPick | null | undefined,
   agora: Date = new Date(),
+  areaKey?: string | null,
 ): string[] {
-  return turnosBaseOfertaNaFolga(horario.escala).filter(
-    (turnoNome) =>
-      gapEntreTurnosOk({ diaIso: diaFolgaIso, turnoNome, valorPorIso, horario, operadora }) &&
-      turnoRespeitaAntecedencia4h(diaFolgaIso, turnoNome, horario, operadora, agora),
-  );
+  return turnosBaseOfertaNaFolga(horario.escala)
+    .filter((turnoNome) => turnoMarketplacePermitidoNaArea(areaKey, turnoNome))
+    .filter(
+      (turnoNome) =>
+        gapEntreTurnosOk({ diaIso: diaFolgaIso, turnoNome, valorPorIso, horario, operadora }) &&
+        turnoRespeitaAntecedencia4h(diaFolgaIso, turnoNome, horario, operadora, agora),
+    );
 }
 
 // ─── Dias elegíveis para ofertar ────────────────────────────────────────────
@@ -521,6 +641,7 @@ export type DiasOfertaveisMarketplaceOpts = {
   hoje?: Date;
   horario?: PrestadorHorarioCtx | null;
   operadora?: OperadoraTurnosPick | null;
+  areaKey?: string | null;
 };
 
 /**
@@ -555,6 +676,7 @@ export function diasOfertaveisMarketplace(
           opts.horario,
           opts.operadora,
           hoje,
+          opts.areaKey,
         );
         if (turnos.length === 0) continue;
       }
@@ -565,6 +687,7 @@ export function diasOfertaveisMarketplace(
     if (valorCelulaEhFolgaOperacional(valor)) continue;
     const turno = turnoOperacionalValorGrade(valor);
     if (!turno) continue;
+    if (!turnoMarketplacePermitidoNaArea(opts.areaKey, turno)) continue;
     if (
       !turnoRespeitaAntecedencia4h(iso, turno, opts.horario ?? null, opts.operadora, hoje)
     ) {
@@ -639,6 +762,185 @@ export function aprovarTrocaMarketplace(id: string): Promise<DecidirTrocaMarketp
 
 export function recusarTrocaMarketplace(id: string): Promise<DecidirTrocaMarketplaceResult> {
   return decidirTrocaMarketplace("escala_marketplace_troca_recusar", id);
+}
+
+export async function desistirOfertaMarketplace(id: string): Promise<DecidirTrocaMarketplaceResult> {
+  const { data, error } = await supabase.rpc("escala_marketplace_oferta_desistir", {
+    p_oferta_id: id,
+  });
+  if (error) {
+    console.error("[desistirOfertaMarketplace]", error);
+    return { ok: false, error: "rpc_error" };
+  }
+  const payload = payloadResultado(data);
+  if (!payload?.ok) return { ok: false, error: payload?.error ?? "unknown" };
+  return { ok: true };
+}
+
+export type HomeMarketplaceAlertaKind = "pendente" | "lembrete";
+
+export type HomeMarketplaceAlerta = {
+  id: string;
+  kind: HomeMarketplaceAlertaKind;
+  tipo: string;
+  diaIso: string;
+};
+
+export function parseHomeMarketplaceAlertas(data: unknown): HomeMarketplaceAlerta[] {
+  const raw = Array.isArray(data) ? data : [];
+  const out: HomeMarketplaceAlerta[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const row = item as Record<string, unknown>;
+    const id = texto(row.id);
+    const kind = row.kind === "lembrete" ? "lembrete" : row.kind === "pendente" ? "pendente" : null;
+    const tipo = texto(row.tipo);
+    const diaIso = texto(row.dia_iso);
+    if (!id || !kind || !tipo || !diaIso) continue;
+    out.push({ id, kind, tipo, diaIso });
+  }
+  return out;
+}
+
+/** Linha mínima para recortar os cards da Home pelo prestador visível (Simulador). */
+export type HomeMarketplaceAlertaFonte = {
+  id: string;
+  tipo: string;
+  status: string;
+  dia_iso: string;
+  ofertante_funcionario_id: string;
+  interessado_funcionario_id: string | null;
+  inicio_turno_at?: string | null;
+  inicio_turno_interesse_at?: string | null;
+  dia_iso_interesse?: string | null;
+};
+
+/**
+ * Payload de `escala_marketplace_ofertas_listar` → fontes dos cards da Home.
+ * A tabela `escala_marketplace_oferta` não é lida pelo cliente (RLS + GRANT).
+ */
+export function fontesAlertaHomeDePayloadListar(data: unknown): HomeMarketplaceAlertaFonte[] {
+  const out: HomeMarketplaceAlertaFonte[] = [];
+  for (const item of parseArrayPayload(data)) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const id = texto(row.id);
+    const tipo = texto(row.tipo);
+    const status = texto(row.status);
+    const diaIso = isoDate(row.dia_iso);
+    const ofertante = texto(row.ofertante_funcionario_id);
+    if (!id || !tipo || !status || !diaIso || !ofertante) continue;
+    if (status !== "em_analise" && status !== "aceita") continue;
+    const interessado = texto(row.interessado_funcionario_id);
+    const inicio = texto(row.inicio_turno_at);
+    const inicioInteresse = texto(row.inicio_turno_interesse_at);
+    const diaInteresse = isoDate(row.dia_iso_interesse);
+    out.push({
+      id,
+      tipo,
+      status,
+      dia_iso: diaIso,
+      ofertante_funcionario_id: ofertante,
+      interessado_funcionario_id: interessado || null,
+      inicio_turno_at: inicio || null,
+      inicio_turno_interesse_at: inicioInteresse || null,
+      dia_iso_interesse: diaInteresse || null,
+    });
+  }
+  return out;
+}
+
+function instanteMsIso(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Fim do dia em São Paulo — fallback quando a RPC de início do turno da troca não está no cliente. */
+function fimDoDiaSaoPauloMs(diaIso: string): number | null {
+  const ms = Date.parse(`${diaIso}T23:59:59.999-03:00`);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * Mesma regra de `home_marketplace_alertas`: pendente = ofertante + Em análise;
+ * lembrete = aceita enquanto o último início (`inicio_turno_at` / troca) ainda é futuro.
+ */
+export function alertasHomeMarketplaceDoPrestador(
+  rows: HomeMarketplaceAlertaFonte[],
+  funcionarioId: string,
+  agora: Date = new Date(),
+): HomeMarketplaceAlerta[] {
+  const fid = funcionarioId.trim();
+  if (!fid) return [];
+  const agoraMs = agora.getTime();
+  const out: HomeMarketplaceAlerta[] = [];
+  for (const row of rows) {
+    const id = texto(row.id);
+    const tipo = texto(row.tipo);
+    const diaIso = isoDate(row.dia_iso);
+    if (!id || !tipo || !diaIso) continue;
+    if (row.status === "em_analise" && row.ofertante_funcionario_id === fid) {
+      out.push({ id, kind: "pendente", tipo, diaIso });
+      continue;
+    }
+    if (row.status !== "aceita") continue;
+    const souParte =
+      row.ofertante_funcionario_id === fid || row.interessado_funcionario_id === fid;
+    if (!souParte) continue;
+    const inicioOferta =
+      instanteMsIso(row.inicio_turno_at) ?? fimDoDiaSaoPauloMs(diaIso) ?? 0;
+    const inicioTroca =
+      instanteMsIso(row.inicio_turno_interesse_at) ??
+      (row.dia_iso_interesse
+        ? fimDoDiaSaoPauloMs(isoDate(row.dia_iso_interesse)) ?? Number.NEGATIVE_INFINITY
+        : Number.NEGATIVE_INFINITY);
+    if (Math.max(inicioOferta, inicioTroca) > agoraMs) {
+      out.push({ id, kind: "lembrete", tipo, diaIso });
+    }
+  }
+  out.sort((a, b) => {
+    const ordem = (k: HomeMarketplaceAlertaKind) => (k === "pendente" ? 1 : 2);
+    const c = ordem(a.kind) - ordem(b.kind);
+    if (c !== 0) return c;
+    const d = a.diaIso.localeCompare(b.diaIso);
+    if (d !== 0) return d;
+    return a.id.localeCompare(b.id);
+  });
+  return out;
+}
+
+/**
+ * @param emailEfetivo e-mail da sessão visível. No Simulador `home_marketplace_alertas`
+ * usa `auth.uid()` do viewer — listar via `escala_marketplace_ofertas_listar`
+ * (SECURITY DEFINER, GRANT authenticated; jsonb inclui `inicio_turno_at`) e recortar
+ * no cliente pelo cadastro RH. Proibido `select` direto em `escala_marketplace_oferta`.
+ */
+export async function carregarHomeMarketplaceAlertas(
+  emailEfetivo?: string | null,
+): Promise<HomeMarketplaceAlerta[]> {
+  const email = emailEfetivo?.trim();
+  if (!email) {
+    const { data, error } = await supabase.rpc("home_marketplace_alertas");
+    if (error) {
+      console.error("[carregarHomeMarketplaceAlertas]", error);
+      return [];
+    }
+    return parseHomeMarketplaceAlertas(data);
+  }
+  const func = await buscarRhFuncionarioAtivoPorEmailLogin(email);
+  if (!func?.id) return [];
+  const { data, error } = await supabase.rpc("escala_marketplace_ofertas_listar", {
+    p_ref_mes: null,
+  });
+  if (error) {
+    console.error("[carregarHomeMarketplaceAlertas] overlay", error);
+    return [];
+  }
+  return alertasHomeMarketplaceDoPrestador(
+    fontesAlertaHomeDePayloadListar(data),
+    func.id,
+  );
 }
 
 export type CriarOfertaMarketplaceInput = {
@@ -717,7 +1019,8 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   not_found: "Esta oferta não está mais disponível.",
   status_invalido: "Esta oferta já foi aceita ou encerrada.",
   mesmo_ofertante: "Você não pode aceitar a sua própria oferta.",
-  times_diferentes: "O aceite só é permitido entre prestadores do mesmo time.",
+  times_diferentes:
+    "O aceite só é permitido entre prestadores do mesmo time, ou entre Shift Leader e Service Manager.",
   aceitante_ja_escalado: "Você já tem turno neste dia.",
   aceitante_sem_turno: "Você precisa estar escalado neste dia para aceitar esta oferta.",
   aceitante_em_negociacao: "O seu dia já está em negociação na escala (Compra, Venda ou Troca).",
@@ -732,8 +1035,9 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   dia_interesse_alterado: "O turno do dia oferecido em troca foi alterado. Atualize a página e tente novamente.",
   ofertante_ja_escalado: "O ofertante já tem turno no dia que você oferece em troca.",
   escala_alterada:
-    "A escala de um dos dias foi alterada durante a negociação. Recuse a proposta e publique ou aceite uma nova troca.",
-  nao_e_ofertante: "Só o autor da oferta pode cancelá-la.",
+    "A escala de um dos dias foi alterada durante a negociação. Recuse a proposta e publique ou aceite uma nova oferta.",
+  nao_e_ofertante: "Só o autor da oferta pode concluir esta ação.",
+  nao_e_interessado: "Só quem enviou a proposta pode desistir desta negociação.",
   gap_minimo: "É necessário respeitar o intervalo mínimo de 12h entre turnos.",
   horario_turno_indisponivel:
     "Não foi possível identificar o horário de início deste turno. Revise o horário no cadastro do estúdio (Gestão de Estúdios) ou na Gestão de Staff.",

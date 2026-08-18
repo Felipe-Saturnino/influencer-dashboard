@@ -1,4 +1,5 @@
 import { useApp } from "../../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../../lib/pageContentBoxStyles";
 import type { HomeOperadorTemplateProps } from "../../../../lib/homeOperadoraTemplate";
@@ -16,10 +17,11 @@ export default function HomeOperadorPadrao({
   sectionIdPrefix = "home-operador-padrao",
 }: HomeOperadorTemplateProps) {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Operador";
+  const nome = nomeEfetivo?.trim() || "Operador";
 
   return (
     <div

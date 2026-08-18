@@ -137,7 +137,8 @@ export type SyncRhPrestadorAuthUserResponse = {
 export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserResponse | null | undefined): string | null {
   if (!res || typeof res !== "object") return null;
   if (typeof res.error === "string" && res.error.trim()) {
-    return `Sincronização com Gestão de Usuários: ${res.error.trim()}`;
+    console.error("[rhPrestadorUsuarioSync] Edge:", res.error);
+    return "O cadastro foi gravado, mas não foi possível sincronizar o acesso à plataforma. Se o problema persistir, entre em contato com o suporte.";
   }
   if (res.created === true || res.updated === true) return null;
   if (!res.skipped) return null;
@@ -150,7 +151,8 @@ export function mensagemFeedbackSyncPrestador(res: SyncRhPrestadorAuthUserRespon
   if (res.reason === "prestador_encerrado" || res.reason === "prestador_encerrado_sem_usuario") {
     return null;
   }
-  return `Prestador salvo, mas o usuário não foi criado automaticamente (${String(res.reason ?? "motivo não indicado")}).`;
+  console.error("[rhPrestadorUsuarioSync] skip:", res.reason);
+  return "Prestador salvo, mas o usuário não foi criado automaticamente. Se o problema persistir, entre em contato com o suporte.";
 }
 
 /** Mensagem de sucesso quando o organograma alterou perfil/escopos de usuário existente. */

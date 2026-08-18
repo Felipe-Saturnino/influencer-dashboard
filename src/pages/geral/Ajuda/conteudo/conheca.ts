@@ -564,12 +564,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Cadastro e detalhe do prestador",
         texto:
-          "O modal do prestador é organizado em abas: **Dados pessoais**, **Dados de contratação**, **Dados da empresa** (só para contrato PJ), **Dados bancários**, **Documentos**, **Carreira** e **Acesso a Plataforma** — as três últimas conforme permissão do perfil.\n\nOs campos preenchidos em uma aba são mantidos ao alternar entre elas; um único **Salvar** grava tudo.",
+          "O modal do prestador é organizado em abas: **Dados pessoais**, **Dados de contratação**, **Dados da empresa** (só para contrato PJ), **Dados bancários**, **Documentos**, **Carreira** e **Acesso a Plataforma**. Documentos, Carreira e Acesso aparecem no modal Ver ou Editar; a aba **Carreira** só no Ver. Os campos preenchidos em uma aba são mantidos ao alternar entre elas; um único **Salvar** grava o cadastro e os documentos pendentes.",
+      },
+      {
+        subtitulo: "KPIs e revisão cadastral",
+        texto:
+          "Acima dos filtros, os cards mostram o total no filtro atual, cadastros incompletos e revisões cadastrais pendentes (ciclo de 6 meses em Dados de Cadastro). Clique no card para ir ao prestador quando houver permissão de Editar.",
       },
       {
         subtitulo: "Remuneração e dados sensíveis",
         texto:
-          "Quem tem permissão de Ver na página enxerga a coluna **Remuneração** e os dados financeiros no detalhe do prestador. Os valores da tabela ficam ocultos por padrão — use o ícone de olho no cabeçalho da coluna para exibir ou ocultar. Alterar valores continua exigindo permissão de Editar.",
+          "Quem tem permissão de Ver na página enxerga a coluna **Remuneração** e os dados financeiros no detalhe do prestador. Os valores da tabela ficam ocultos por padrão — use o ícone de olho no cabeçalho da coluna para exibir ou ocultar. Alterar valores continua exigindo permissão de Editar. Esta página é de RH e Executivos — use **Sim** ou **Não** em Gestão de Usuários; Próprios não se aplica aqui.",
+      },
+      {
+        subtitulo: "Acesso à plataforma",
+        texto:
+          "Ao salvar um prestador ou registrar Revisão de Contrato / Reativação, a plataforma tenta criar ou atualizar o login conforme o organograma. Se essa sincronização falhar, o cadastro já está gravado — a mensagem pede para tentar de novo. Encerrar a prestação desativa o acesso automaticamente.",
       },
     ],
   },
@@ -824,17 +834,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Imprimir IDs",
         texto:
-          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** abre um modal para selecionar prestadores de **todos os times** da Gestão de Staff (Game Presenter, Shuffler, Shift Leader, Service Manager e demais times da página). Ao gerar, a plataforma baixa um PDF em **folha A4** com até **8 etiquetas de 8×6 cm** por página (grade 2×4), com guia de corte: código de barras centralizado, número do barcode e nickname. Só entram na impressão quem já tem barcode cadastrado no modal de edição.",
+          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** (permissão de **Editar**) abre um modal para selecionar prestadores dos times visíveis na Gestão de Staff. Com Ver **Próprios**, a lista e a impressão ficam só no **próprio time**. Ao gerar, a plataforma baixa um PDF em **folha A4** com até **8 etiquetas de 8×6 cm** por página (grade 2×4), com guia de corte: código de barras centralizado, número do barcode e nickname. Só entram na impressão quem já tem barcode cadastrado no modal de edição.",
       },
       {
         subtitulo: "ID TOS (Service Manager)",
         texto:
-          "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) guarda o UUID do colaborador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters.",
+          "No time **Service Manager**, o campo **ID TOS** (modais Ver e Editar — não aparece na tabela) salva o UUID do colaborador no sistema TOS. Esse valor liga os sinais atendidos ao cadastro do SM. O **ID operacional** continua sendo o Work ID usado por Game Presenters. O valor deve ser um UUID; o servidor recusa formato inválido.",
       },
       {
         subtitulo: "Permissões",
         texto:
-          "Consulta exige permissão de Ver; alterações de turno ou cadastro operacional exigem Editar. Filtros de operadora e busca restringem a grade antes de salvar alterações em lote.",
+          "Consulta exige permissão de **Ver**; alterações de turno, estúdio, skills, dealer e **Imprimir IDs** exigem **Editar**. Com Ver ou Editar em **Próprios**, a lista, a edição e a impressão ficam só no time do seu cadastro de prestador (Game Floor / Operation Management). **Sim** vê todos os times da página. A busca restringe a tabela na tela — não há alterações em lote. Times **Service Manager**, **Shift Leader** e **Shuffler** ficam sempre em **Todos Estúdios**.",
       },
     ],
   },
@@ -877,12 +887,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Ponta única onde os prestadores de estúdio negociam turnos: **Venda de Turno**, **Venda de Folga** e **Oferta de Troca**. A aba **Todas as Ofertas** mostra o mural do período em três blocos — **Ofertas de Turno**, **Ofertas de Folga** e **Ofertas de Troca** — com a **Observação** de quem publicou em cada linha. Com **Ver: Próprios** há ainda **Minhas Ofertas** (o que você publicou e o que aceitou). Com **Ver: Sim** (gestão), no lugar de Minhas Ofertas aparece **Ofertas Encerradas**, com o histórico de aceites e cancelamentos de todos os prestadores. Vendas têm aceite imediato; na **Oferta de Troca**, o aceitante envia uma proposta e a escala só muda após o ofertante original aprovar — sem aprovação de gestor.",
+          "Ponta única onde os prestadores de estúdio negociam turnos: **Venda de Turno**, **Venda de Folga** e **Oferta de Troca**. A aba **Todas as Ofertas** mostra o mural do período em três blocos — **Ofertas de Turno**, **Ofertas de Folga** e **Ofertas de Troca** — com a **Observação** de quem publicou em cada linha. Com **Ver: Próprios** há ainda **Minhas Ofertas** (o que você publicou e o que aceitou). Com **Ver: Sim** (gestão), no lugar de Minhas Ofertas aparece **Ofertas Encerradas**; quem também é prestador usa o botão **Minhas Negociações**, ao lado do Histórico, para ver o mural do próprio grupo e as próprias ofertas. Em todos os tipos, o colega envia uma proposta: a oferta sai do mural, fica **Em análise** e a escala só muda depois que quem publicou aprova — sem aprovação de gestor.",
       },
       {
         subtitulo: "O que você vê",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista traz apenas ofertas do **seu time** do Organograma e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter** e **Shuffler**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha. Na aba **Todas as Ofertas** há ainda o filtro de dia (**Todos os Dias**), que lista somente os dias com oferta no período — com mais de cinco dias, o painel do filtro abre com pesquisa.",
+          "Com permissão de **Ver: Próprios**, a lista traz as ofertas do **seu grupo de negociação** — o próprio time do Organograma ou, para Shift Leader e Service Manager, o grupo **Liderança** (os dois times) — e a aba **Minhas Ofertas**. Com **Ver: Sim** (gestão), aparecem as ofertas de todos os times, o filtro **Times** fica disponível na primeira linha (**Todos Times**, **Game Presenter**, **Shuffler** e **Liderança**) e a segunda aba é **Ofertas Encerradas** — **Ofertas aceitas** e **Ofertas Canceladas** de todos os prestadores, filtradas pelo time. Se o seu login também tem cadastro de prestador, o botão **Minhas Negociações** (ao lado do Histórico) troca essa visão pela do grupo: **Todas as Ofertas** só do seu time (Liderança = SL + SM) e **Minhas Ofertas** só as suas; Encerradas e o filtro Times somem até você desligar o botão. A página abre com **Histórico** selecionado; desative-o para navegar pelo carrossel mensal. O filtro de ações fica na mesma linha do carrossel; as abas ficam na linha seguinte e a pesquisa por ofertante, estúdio ou turno na última linha. Na aba **Todas as Ofertas** há ainda o filtro de dia (**Todos os Dias**), que lista somente os dias com oferta no período — com mais de cinco dias, o painel do filtro abre com pesquisa.",
       },
       {
         subtitulo: "Publicar uma oferta",
@@ -892,8 +902,13 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitar uma oferta",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** e nunca na própria oferta. Dá para aceitar **no mesmo dia**, desde que restem pelo menos **2h até o início do turno**. Publicar uma oferta nova exige **4h**. Em **Venda de Turno** você precisa estar livre no dia e fica com **Compra - Turno** (o ofertante fica Venda). Em **Venda de Folga** quem aceita é o colega escalado no mesmo turno, que fica com **Venda** (o ofertante fica Compra - Turno). Na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. A proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** do ofertante, que pode aprovar ou recusar. Aprovar aplica as duas transferências; recusar libera os dias e devolve a oferta ao mural. Enquanto estiver Em análise, nenhum dos dois prestadores pode usar os dois dias em outra negociação. Se o aceite — ou a aprovação final da troca — não for concluído, a oferta é **cancelada automaticamente quando faltam menos de 2h para o início do turno** ou quando a **data já passou**, liberando as reservas sem alterar a escala. **Compra - Turno** se comporta como dia escalado e **Venda** como folga.",
-        },
+          "O aceite só é permitido entre prestadores do **mesmo time** — e, na **Liderança**, entre **Shift Leader** e **Service Manager** (nos dois sentidos) — e nunca na própria oferta. Dá para enviar proposta **no mesmo dia**, desde que restem pelo menos **2h até o início do turno**. Publicar uma oferta nova exige **4h**. Em **Venda de Turno** você precisa estar livre no dia; em **Venda de Folga** quem envia a proposta é o colega escalado no mesmo turno; na **Oferta de Troca**, você precisa estar livre no dia do ofertante e escolhe, entre os seus dias escalados, qual dia/turno propõe entregar. Em todos os tipos a proposta fica **Em análise**, sai do mural e aparece em **Minhas ofertas abertas** de quem publicou, que pode **aprovar** (aí sim a escala grava Compra - Turno / Venda) ou **recusar** (a oferta volta ao mural). Quem enviou a proposta pode **desistir** enquanto estiver Em análise — o efeito é o mesmo da recusa. Sem aprovação de gestor. Enquanto estiver Em análise, os dias ficam reservados e não entram em outra negociação. Se a proposta ou a aprovação não for concluída a tempo, a oferta é **cancelada automaticamente quando faltam menos de 2h para o início do turno** ou quando a **data já passou**, sem alterar a escala. **Compra - Turno** se comporta como dia escalado e **Venda** como folga. Cada prestador permanece na **própria** Escala Estúdio (Shift Leader e Service Manager não se misturam numa aba só): o Calendário e os cards de Compra/Venda/Trocas refletem o dia de cada um.",
+      },
+      {
+        subtitulo: "Avisos na Home",
+        texto:
+          "Nas Homes de **Game Presenter**, **Shuffler**, **Shift Leader** e **Service Manager**, a plataforma mostra um card quando há algo para fazer no Marketplace. **Negociação aguardando aprovação** aparece só para quem publicou a oferta, enquanto ela está Em análise — o atalho abre **Marketplace → Minhas Ofertas**. **Não esqueça da sua negociação** aparece para os dois participantes depois da aprovação, até o início do turno — o atalho abre o **Calendário**. Os cards somem sozinhos (não há «Li e Ocultar»). No Simulador de Login, os cards seguem a pessoa escolhida.",
+      },
       {
         subtitulo: "Intervalo mínimo de 12h",
         texto:
@@ -1162,7 +1177,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tabela e ações",
         texto:
-          "Com o carrossel em **Em análise**, a tabela mostra descrição (período do atestado ou data da reunião com RH) e os ícones **Ver** e **Atender** (com permissão de Editar). Em **Todos Status**, a coluna **Status** substitui a descrição; **Atender** só aparece para solicitações ainda **Em análise**.\n\nCom o carrossel em **Aprovado** ou **Rejeitado**, as colunas passam a **Atendido** (quem aprovou ou rejeitou) e **Data do Atendimento**; só o ícone **Ver** fica disponível.\n\nNo **Ver** de solicitações já atendidas, use as abas **Solicitação** (dados do pedido; atestado inclui período e anexo) e **Atendimento** (data, responsável, observação do RH; atestado inclui abono remunerado). No **Atender** (Em análise), defina status e observação do RH (obrigatória ao alterar o status). Com status **Aprovado** em **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**).\n\nAo **aprovar** um atestado: a **Escala** grava **Atestado** em todos os dias entre início e fim (incluindo Folga e Venda); vendas de Folga ainda abertas no **Marketplace** nesse período são **canceladas**. No **Calendário** (Controle de Presença), com abono **SIM** o Status fica **Abonado** nos dias que eram Escalado, Troca ou Compra (demais dias mantêm o Status anterior); com abono **NÃO** o Status fica **Atestado** em todos os dias do período.",
+          "Com o carrossel em **Em análise**, a tabela mostra descrição (período do atestado ou data da reunião com RH) e os ícones **Ver** e **Atender** (com permissão de Editar). Em **Todos Status**, a coluna **Status** substitui a descrição; **Atender** só aparece para solicitações ainda **Em análise**.\n\nCom o carrossel em **Aprovado** ou **Rejeitado**, as colunas passam a **Atendido** (quem aprovou ou rejeitou) e **Data do Atendimento**; só o ícone **Ver** fica disponível.\n\nNo **Ver** de solicitações já atendidas, use as abas **Solicitação** (dados do pedido; atestado inclui período e anexo) e **Atendimento** (data, responsável, observação do RH; atestado inclui abono remunerado). No **Atender** (Em análise), defina status e observação do RH (obrigatória ao alterar o status). Com status **Aprovado** em **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**).\n\nAo **aprovar** um atestado: a **Escala** grava **Atestado** em todos os dias entre início e fim (incluindo Folga e Venda); vendas de Folga ainda abertas no **Marketplace** nesse período são **canceladas**. No **Calendário** (Controle de Presença), com abono **SIM** o Status fica **Abonado** nos dias que eram Escalado, Troca ou Compra (demais dias mantêm o Status anterior); com abono **NÃO** o Status fica **Atestado** em todos os dias do período.\n\nAo **rejeitar** um atestado, o Status no Calendário volta a **Falta** nos dias cobertos."
       },
     ],
   },
@@ -1741,7 +1756,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O que você vê na simulação",
         texto:
-          "O menu e as permissões seguem o perfil simulado, o usuário ativo escolhido e o escopo de operadora ou área, quando aplicável. A sua conta (nome no avatar) não muda. Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nPáginas sensíveis de administração (Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado. Gestão de Estúdios continua visível se o perfil simulado tiver acesso.",
+          "O menu e as permissões seguem o perfil simulado, o usuário ativo escolhido e o escopo de operadora ou área, quando aplicável. A sua conta (nome no avatar) não muda. Ações de Criar, Editar e Excluir ficam bloqueadas.\n\nEm todas as páginas, a visão pessoal (Meu Calendário, Minhas Fotos, Dados de Cadastro, Overview Prestador, Marketplace, Portais) usa o cadastro da pessoa escolhida — não a conta de quem está simulando. Um Game Presenter não vê Relatório de Presença nem fotos de outros colaboradores em Minhas Fotos. A aba Gerais da Galeria continua com as fotos de evento, que são compartilhadas.\n\nPáginas sensíveis de administração (Gestão de Usuários, Gestão de Operadoras e Status Técnico) não entram no menu simulado. Gestão de Estúdios continua visível se o perfil simulado tiver acesso.",
       },
       {
         subtitulo: "Quem pode usar e o que aparece na lista",

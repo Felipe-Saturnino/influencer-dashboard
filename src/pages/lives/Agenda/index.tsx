@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -106,6 +107,7 @@ const AGENDA_MODO_VISUALIZACAO_OPTIONS = [
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
   const { theme: t, isDark, user, setActivePage } = useApp();
+  const { userId: userIdEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("agenda");
@@ -246,10 +248,10 @@ export default function Agenda() {
 
   async function tentarAbrirNovaLive() {
     if (!user) return;
-    if (roleParidadeInfluencer(user.role)) {
+    if (roleParidadeInfluencer(roleEfetivo ?? user?.role)) {
       setChecandoNovaLive(true);
       try {
-        const gate = await verificarElegibilidadeAgendaLive(user.id);
+        const gate = await verificarElegibilidadeAgendaLive(userIdEfetivo ?? user.id);
         if (gate.perfilIncompleto || gate.faltaPlaybook) {
           setBloqueioNovaLive(gate);
           return;

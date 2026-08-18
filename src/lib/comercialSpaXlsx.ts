@@ -113,35 +113,7 @@ export function xlsxUnzippedToMatrix(files: Record<string, Uint8Array>): string[
   return parseSheetToMatrix(sheetXml, shared);
 }
 
-/**
- * Descobre URL da planilha de autorizações (nacional) na página gov.br.
- * Prefere `.xlsx` estável (`planilha-de-autorizacoes.xlsx`); aceita legado `.csv` datado.
- * Ignora CSV de processos judiciais.
- */
-export function extractAutorizacoesPlanilhaUrl(html: string): string | null {
-  const hrefRe =
-    /href="(https:\/\/www\.gov\.br\/fazenda\/[^"]*lista-de-empresas\/[^"]+)"/gi;
-  const urls: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = hrefRe.exec(html)) !== null) {
-    urls.push(m[1].replace(/&amp;/g, "&"));
-  }
-
-  const isJudicial = (u: string) => /processos?\s*judiciais|judicial/i.test(u);
-  const xlsx = urls.find(
-    (u) => /planilha-de-autorizacoes[^"/]*\.xlsx$/i.test(u) && !isJudicial(u),
-  );
-  if (xlsx) return xlsx;
-
-  const csv = urls.find(
-    (u) => /planilha-de-autorizacoes[^"/]*\.csv$/i.test(u) && !isJudicial(u),
-  );
-  if (csv) return csv;
-
-  return null;
-}
-
-/** @deprecated Use extractAutorizacoesPlanilhaUrl — mantido para compatibilidade. */
-export function extractAutorizacoesCsvUrl(html: string): string | null {
-  return extractAutorizacoesPlanilhaUrl(html);
-}
+export {
+  extractAutorizacoesCsvUrl,
+  extractAutorizacoesPlanilhaUrl,
+} from "./comercialSpaListaFonte";

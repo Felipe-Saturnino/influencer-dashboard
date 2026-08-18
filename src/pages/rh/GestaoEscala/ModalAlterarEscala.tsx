@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation";
 import { FONT } from "../../../constants/theme";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
@@ -157,6 +158,13 @@ export function ModalAlterarEscala({
       textoContemBuscaEmAlgum(q, p.nome, p.nomeCompletoCadastro, p.nickname),
     );
   }, [prestadores, busca]);
+  const prestadoresKeyboard = useListboxKeyboardNavigation({
+    items: prestadoresFiltrados,
+    onSelect: (p) => {
+      setPrestadorId(p.id);
+      setBusca("");
+    },
+  });
 
   useEffect(() => {
     const id = window.setTimeout(() => buscaRef.current?.focus(), 100);
@@ -303,6 +311,12 @@ export function ModalAlterarEscala({
               onChange={setBusca}
               placeholder={PAGE_SEARCH.nomeNickname}
               aria-label="Pesquisar prestador por nome ou nickname"
+              aria-activedescendant={
+                prestadoresFiltrados[prestadoresKeyboard.activeIndex]
+                  ? `alterar-escala-prestador-${prestadoresKeyboard.activeIndex}`
+                  : undefined
+              }
+              onKeyDown={prestadoresKeyboard.onKeyDown}
               wrapperStyle={{ width: "100%", marginBottom: 8 }}
             />
             <div
@@ -325,12 +339,18 @@ export function ModalAlterarEscala({
                   Nenhum prestador corresponde à pesquisa.
                 </div>
               ) : (
-                prestadoresFiltrados.map((p) => (
+                prestadoresFiltrados.map((p, index) => (
                   <button
                     key={p.id}
+                    id={`alterar-escala-prestador-${index}`}
+                    ref={(node) => {
+                      prestadoresKeyboard.optionRefs.current[index] = node;
+                    }}
                     type="button"
                     role="option"
                     aria-selected={false}
+                    tabIndex={-1}
+                    onMouseEnter={() => prestadoresKeyboard.setActiveIndex(index)}
                     onClick={() => {
                       setPrestadorId(p.id);
                       setBusca("");
@@ -342,7 +362,10 @@ export function ModalAlterarEscala({
                       padding: "10px 12px",
                       border: "none",
                       borderBottom: `1px solid color-mix(in srgb, ${t.cardBorder} 55%, transparent)`,
-                      background: "transparent",
+                      background:
+                        index === prestadoresKeyboard.activeIndex
+                          ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                          : "transparent",
                       color: t.text,
                       fontFamily: FONT.body,
                       fontSize: 13,

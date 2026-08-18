@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "./rhFuncionarioLoginMatch";
 
 export const MARKETING_FOTOS_GERAIS_BUCKET = "marketing-fotos-gerais";
 export const MARKETING_FOTOS_PRESTADORES_BUCKET = "marketing-fotos-prestadores";
@@ -550,8 +551,20 @@ export async function enrichMetadadosGaleriaFromFotos(
   };
 }
 
-/** Colaborador vinculado ao login (RPC SECURITY DEFINER — mesmo critério do RLS Minhas Fotos). */
-export async function buscarMeuColaboradorGaleria(): Promise<GaleriaMeuColaborador | null> {
+/**
+ * Colaborador vinculado ao login.
+ * Com `emailEfetivo` (Simulador de Login), resolve pelo cadastro RH — a RPC usa `auth.uid()`
+ * da conta viewer (ex.: admin) e devolveria o colaborador errado ou nenhum.
+ */
+export async function buscarMeuColaboradorGaleria(
+  emailEfetivo?: string | null,
+): Promise<GaleriaMeuColaborador | null> {
+  const email = emailEfetivo?.trim();
+  if (email) {
+    const row = await buscarRhFuncionarioAtivoPorEmailLogin(email);
+    if (!row?.id || !row.nome) return null;
+    return { id: row.id, nome: row.nome };
+  }
   const { data, error } = await supabase.rpc("galeria_fotos_meu_colaborador");
   if (error || data == null) return null;
   const row = data as { id?: string; nome?: string };

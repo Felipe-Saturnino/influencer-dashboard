@@ -41,14 +41,6 @@ export function ModalBase({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  useEffect(() => {
     const first = containerRef.current?.querySelector<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
@@ -72,13 +64,11 @@ export function ModalBase({
          * fechava o modal; `mousedown` só no fundo evita esse caso. */
         if (e.target === e.currentTarget) onClose();
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
       role="presentation"
     >
       <div
         ref={containerRef}
+        className="app-modal-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

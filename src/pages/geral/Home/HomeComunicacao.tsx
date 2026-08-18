@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasComunicacao } from "./comunicacao/BoasVindasComunicacao";
@@ -11,10 +12,11 @@ const HOME_COMUNICACAO_PREFIX = "home-comunicacao";
 
 export default function HomeComunicacao() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Comunicação";
+  const nome = nomeEfetivo?.trim() || "Comunicação";
 
   return (
     <div

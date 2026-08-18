@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useApp } from "../../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { usePermission } from "../../../../hooks/usePermission";
 import { getPeriodoHistoricoCompetencias } from "../../../../lib/dashboardHelpers";
 import {
@@ -54,7 +54,7 @@ function tsItem(item: { published_at: string | null }): number {
 }
 
 export function useHomePortalRhFeed() {
-  const { user } = useApp();
+  const { email: emailEfetivo, userId: userIdEfetivo } = useIdentidadeEfetiva();
   const perm = usePermission("rh_portal");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -62,7 +62,7 @@ export function useHomePortalRhFeed() {
 
   useEffect(() => {
     if (perm.loading) return;
-    if (perm.canView === "nao" || !user?.id) {
+    if (perm.canView === "nao" || !userIdEfetivo) {
       setLoading(false);
       setErro(false);
       setLista([]);
@@ -128,9 +128,9 @@ export function useHomePortalRhFeed() {
             return { data: (data ?? []) as PostagemRow[], error };
           }),
           (async () => {
-            if (!user.email?.trim()) return null;
+            if (!emailEfetivo?.trim()) return null;
             try {
-              return await buscarRhFuncionarioAtivoPorEmailLogin(user.email);
+              return await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo);
             } catch (e) {
               console.error("[Home] Portal RH feed (funcionario):", e);
               return null;
@@ -230,7 +230,7 @@ export function useHomePortalRhFeed() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, perm.canEditar, user?.id, user?.email]);
+  }, [perm.loading, perm.canView, perm.canEditar, userIdEfetivo, emailEfetivo]);
 
   return {
     loading: loading || perm.loading,

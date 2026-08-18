@@ -966,25 +966,31 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Marketplace",
         definicao:
-          "Única ponta onde o prestador de estúdio publica e aceita negociações de turno — Venda de Turno, Venda de Folga e Oferta de Troca. O aceite é **imediato**, sem aprovação de gestor, e grava Compra, Venda ou Troca na Escala Estúdio aprovada. Só entre prestadores do **mesmo time**. Publicar exige **4h** até o início do turno; aceitar no mesmo dia é permitido até **2h** antes. Oferta ainda aberta é cancelada automaticamente com menos de **2h**. Respeita **12h** entre turnos.",
+          "Única ponta onde o prestador de estúdio publica e aceita negociações de turno — Venda de Turno, Venda de Folga e Oferta de Troca. Quem aceita envia uma **proposta**; a escala só muda depois que quem publicou **aprova**, sem aprovação de gestor. Só entre prestadores do **mesmo time**, ou entre **Shift Leader** e **Service Manager** (grupo Liderança). Publicar exige **4h** até o início do turno; enviar proposta e aprovar no mesmo dia é permitido até **2h** antes. Oferta ainda aberta ou Em análise é cancelada automaticamente com menos de **2h**. Respeita **12h** entre turnos. Com **Ver: Sim**, **Minhas Negociações** mostra o mural do próprio grupo e as próprias ofertas.",
         referencia: "Marketplace",
       },
       {
         termo: "Venda de Turno",
         definicao:
-          "Oferta em que o prestador escalado deixa o turno: ele fica com **Venda** na escala e quem aceita (de folga no dia) fica com **Compra**.",
+          "Oferta em que o prestador escalado deixa o turno. Depois da **aprovação** de quem publicou, ele fica com **Venda** na escala e quem enviou a proposta (de folga no dia) fica com **Compra**.",
         referencia: "Marketplace",
       },
       {
         termo: "Venda de Folga",
         definicao:
-          "Oferta em que o prestador de folga se oferece para **trabalhar** o turno: ele fica com **Compra** e quem aceita — o colega escalado no mesmo turno — fica com **Venda**.",
+          "Oferta em que o prestador de folga se oferece para **trabalhar** o turno. Depois da **aprovação**, ele fica com **Compra** e quem enviou a proposta — o colega escalado no mesmo turno — fica com **Venda**.",
         referencia: "Marketplace",
       },
       {
         termo: "Oferta de Troca",
         definicao:
-          "Oferta em que dois prestadores do mesmo time trocam de dia: quem aceita indica um dia seu com turno e ambos ficam com **Troca** nos dois dias da escala.",
+          "Oferta em que dois prestadores do mesmo grupo de negociação (mesmo time, ou Shift Leader com Service Manager) trocam de dia: quem envia a proposta indica um dia seu com turno; depois da **aprovação**, a Escala grava **Venda** e **Compra - Turno** em cada participante.",
+        referencia: "Marketplace",
+      },
+      {
+        termo: "Minhas Negociações",
+        definicao:
+          "Botão na barra do Marketplace, só com permissão de **Ver: Sim** e cadastro de prestador. Ligado, mostra o mural do próprio grupo (Liderança = Shift Leader + Service Manager) e a aba **Minhas Ofertas**; Encerradas some. Desligado, volta à visão de todos os times.",
         referencia: "Marketplace",
       },
       {
@@ -1377,7 +1383,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Ferramenta para visualizar a plataforma com o menu e a identidade de outro perfil, sem trocar a conta real. A simulação é somente leitura e pode ser encerrada a qualquer momento.",
         nota:
-          "Os perfis disponíveis dependem da matriz em Gestão de Usuários → Simulador de Login. A simulação usa um usuário ativo daquele perfil (lista atual, contas rotativas). Operador e prestador pedem operadora ou área antes do usuário.",
+          "Os perfis disponíveis dependem da matriz em Gestão de Usuários → Simulador de Login. A simulação usa um usuário ativo daquele perfil (lista atual, contas rotativas). Operador e prestador pedem operadora ou área antes do usuário. Em toda a plataforma, a visão pessoal (calendário, fotos, cadastro, escala) segue a pessoa escolhida — não a conta de quem está simulando.",
         referencia: "Simulador de Login · Gestão de Usuários",
       },
       {

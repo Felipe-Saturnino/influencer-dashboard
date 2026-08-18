@@ -267,24 +267,6 @@ export function ModalImprimirIdsStaff({
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
         <button
           type="button"
-          onClick={onClose}
-          disabled={gerando}
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            border: `1px solid ${t.cardBorder}`,
-            background: t.inputBg,
-            color: t.text,
-            fontFamily: FONT.body,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: gerando ? "not-allowed" : "pointer",
-          }}
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
           onClick={() => void gerar()}
           disabled={gerando || selecionados.size === 0}
           style={{

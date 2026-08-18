@@ -572,7 +572,9 @@ export function passouHorarioSaidaEscaladaMais30Min(
   agora = new Date(),
   entEsc?: string,
 ): boolean {
-  if (saiEsc === "—") return false;
+  // Sem horário programado (ex.: Shuffler em Todos Estúdios): dia civil já passado
+  // conta como limite atingido, para Falta + Justificar não ficarem bloqueados.
+  if (saiEsc === "—") return diaIso < toIsoLocal(agora);
   const minSaida = minutosRelogioHHmm(saiEsc);
   if (minSaida == null) return false;
   const [y, mo, d] = diaIso.split("-").map((x) => parseInt(x, 10));

@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { PageHeader } from "../../../components/PageHeader";
@@ -105,6 +106,7 @@ function initialTab(
 
 export default function PerformanceHubPage() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("academy_performance_hub");
   const cadastro = usePerformanceHubCadastro();
@@ -175,7 +177,7 @@ export default function PerformanceHubPage() {
       : "";
     return avaliacoes.filter((row) => {
       if (row.time !== timeSelecionado) return false;
-      if (perm.canView === "proprios" && user?.name && !nomeCoincideUsuario(row.avaliadoNome, user.name)) {
+      if (perm.canView === "proprios" && nomeEfetivo && !nomeCoincideUsuario(row.avaliadoNome, nomeEfetivo)) {
         return false;
       }
       if (historico && !isAvaliacaoNoHistorico(row)) return false;
@@ -183,7 +185,7 @@ export default function PerformanceHubPage() {
       if (selectedStaffName && row.avaliadoNome !== selectedStaffName) return false;
       return true;
     });
-  }, [avaliacoes, timeSelecionado, historico, mesSelecionado, staffSelecionado, cadastro, perm.canView, user?.name]);
+  }, [avaliacoes, timeSelecionado, historico, mesSelecionado, staffSelecionado, cadastro, perm.canView, nomeEfetivo]);
 
   const avaliacoesAbaAvaliacoes = useMemo(
     () => avaliacoesFiltradasBase.filter(avaliacaoVisivelAbaAvaliacoes),
@@ -247,7 +249,7 @@ export default function PerformanceHubPage() {
       time: timeSelecionado,
       avaliadoNome: nome,
       avaliadoStaffId: staffId,
-      avaliadorNome: user?.name ?? "Performance Coach",
+      avaliadorNome: nomeEfetivo ?? user?.name ?? "Performance Coach",
       status: statusInicialNovaAvaliacao(timeSelecionado),
       notaTotal: null,
       notaImagem: null,
@@ -330,7 +332,7 @@ export default function PerformanceHubPage() {
             avaliacoes={avaliacoesAbaAvaliacoes}
             timeSelecionado={timeSelecionado}
             canView={perm.canView}
-            roleUsuario={user?.role ?? "prestador"}
+            roleUsuario={roleEfetivo ?? user?.role ?? "prestador"}
             onVer={handleVerAvaliacao}
             onAnalisar={handleAnalisarAvaliacao}
           />

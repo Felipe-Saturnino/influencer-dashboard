@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
@@ -77,7 +78,8 @@ function CampoVaga({ k, v, t }: { k: string; v: string; t: { textMuted: string; 
 }
 
 export default function RhVagasPage() {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_vagas");
 
@@ -128,9 +130,9 @@ export default function RhVagasPage() {
   }, []);
 
   const recarregarInscricoes = useCallback(async () => {
-    const ids = await buscarVagaIdsComCandidaturaDoLogin(user?.email);
+    const ids = await buscarVagaIdsComCandidaturaDoLogin(emailEfetivo);
     setVagasInscritasIds(ids);
-  }, [user?.email]);
+  }, [emailEfetivo]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;

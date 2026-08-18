@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback, type CSSProperties, type Reac
 import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
-import { useModalEscape } from "../../../hooks/useModalEscape";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
@@ -166,13 +166,14 @@ function AfiliadoModalTabs({
 
 export default function Afiliados() {
   const { theme: t, user, podeVerInfluencer, podeVerOperadora } = useApp();
+  const { userId: userIdEfetivo, name: nomeEfetivo, email: emailEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const ctaGradient = brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
     : "linear-gradient(135deg, #4a2082, #1e36f8)";
   const { operadoraSlugsForcado, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("afiliados");
-  const showManagementUI = user?.role !== "afiliado";
+  const showManagementUI = roleEfetivo !== "afiliado";
 
   const podeEditarAf = (id: string) => perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(id));
   const podeAlterarStatus = !!user?.role && ROLES_STAFF_OPERACOES_LIVES.includes(user.role as Role);
@@ -223,16 +224,22 @@ export default function Afiliados() {
           operadoras: opsPor[p.id] ?? [],
         })));
       }
-    } else if (user) {
+    } else if (userIdEfetivo) {
       const [perfilRes, opsRes] = await Promise.all([
-        supabase.from("influencer_perfil").select("*").eq("id", user.id).single(),
-        supabase.from("influencer_operadoras").select("*").eq("influencer_id", user.id),
+        supabase.from("influencer_perfil").select("*").eq("id", userIdEfetivo).single(),
+        supabase.from("influencer_operadoras").select("*").eq("influencer_id", userIdEfetivo),
       ]);
       const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({ ...o, operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome }));
-      setList([{ id: user.id, name: user.name, email: user.email, perfil: perfilRes.data ?? null, operadoras }]);
+      setList([{
+        id: userIdEfetivo,
+        name: nomeEfetivo || user?.name || "",
+        email: emailEfetivo || user?.email || "",
+        perfil: perfilRes.data ?? null,
+        operadoras,
+      }]);
     }
     setLoading(false);
-  }, [showManagementUI, user]);
+  }, [showManagementUI, user, userIdEfetivo, nomeEfetivo, emailEfetivo]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
@@ -478,7 +485,6 @@ function ModalVer({ row, operadorasList, onClose }: { row: AfiliadoRow; operador
   const labelStyle: CSSProperties = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.1px", textTransform: "uppercase", color: t.textMuted, marginBottom: 5, fontFamily: FONT.body };
   const rowS: CSSProperties = { marginBottom: 14 };
   const val = (v?: string | number | null) => <span style={{ fontSize: 13, color: v ? t.text : t.textMuted, fontFamily: FONT.body }}>{v || "—"}</span>;
-  useModalEscape(onClose, true);
   useEffect(() => { const id = window.setTimeout(() => ref.current?.focus(), 50); return () => window.clearTimeout(id); }, []);
   const tabs = [
     { key: "cadastral" as const, label: "Cadastral" },
@@ -594,7 +600,6 @@ function ModalEditar({
   const ctaSalvar = brand.useBrand
     ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
     : "linear-gradient(135deg, #4a2082, #1e36f8)";
-  useModalEscape(onClose, true);
 
   const [editNomeCompleto, setEditNomeCompleto] = useState(existing?.nome_completo ?? "");
   const [form, setForm] = useState<Perfil>(existing ?? emptyPerfil(row.id));

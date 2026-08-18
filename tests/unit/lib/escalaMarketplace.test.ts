@@ -4,12 +4,21 @@ import {
   gapEntreTurnosOk,
   isDataNoHistoricoMarketplace,
   mensagemErroOfertaMarketplace,
+  ofertaPassaFiltroTimeMarketplace,
+  filtroTimeGrupoNegociacaoMarketplace,
+  fraseTipoOfertaMarketplace,
+  formatarDiaIsoPtBr,
+  overlayIdentidadeMarketplaceOfertas,
+  parseHomeMarketplaceAlertas,
+  fontesAlertaHomeDePayloadListar,
+  alertasHomeMarketplaceDoPrestador,
   parseMeuContextoMarketplace,
   parseMinhaGradeMarketplace,
   parseOfertasMarketplacePayload,
   primeiroDiaOfertavelIso,
   timeKeyFromOrgTimeNome,
   turnosOfertaveisNaFolgaMarketplace,
+  turnoMarketplacePermitidoNaArea,
   turnoRespeitaAntecedencia4h,
 } from "../../../src/lib/escalaMarketplace";
 
@@ -148,7 +157,68 @@ describe("timeKeyFromOrgTimeNome", () => {
   it("normaliza acentos e prefixos do organograma", () => {
     expect(timeKeyFromOrgTimeNome("Time de Game Presenter")).toBe("game_presenter");
     expect(timeKeyFromOrgTimeNome("Performance Coach")).toBe("performance_coach");
+    expect(timeKeyFromOrgTimeNome("Shift Leader")).toBe("shift_leader");
+    expect(timeKeyFromOrgTimeNome("Service Manager")).toBe("service_manager");
     expect(timeKeyFromOrgTimeNome("Comercial B2B")).toBe("todos");
+  });
+});
+
+describe("filtroTimeGrupoNegociacaoMarketplace", () => {
+  it("Liderança para SL e SM", () => {
+    expect(filtroTimeGrupoNegociacaoMarketplace("shift_leader")).toBe("lideranca");
+    expect(filtroTimeGrupoNegociacaoMarketplace("service_manager")).toBe("lideranca");
+  });
+
+  it("demais áreas ficam no próprio time", () => {
+    expect(filtroTimeGrupoNegociacaoMarketplace("game_presenter")).toBe("game_presenter");
+    expect(filtroTimeGrupoNegociacaoMarketplace("shuffler")).toBe("shuffler");
+    expect(filtroTimeGrupoNegociacaoMarketplace("")).toBeNull();
+    expect(filtroTimeGrupoNegociacaoMarketplace(null)).toBeNull();
+  });
+});
+
+describe("fraseTipoOfertaMarketplace e formatarDiaIsoPtBr", () => {
+  it("usa frase curta e data BR", () => {
+    expect(fraseTipoOfertaMarketplace("oferta_troca")).toBe("troca");
+    expect(fraseTipoOfertaMarketplace("venda_turno")).toBe("venda de turno");
+    expect(formatarDiaIsoPtBr("2026-08-18")).toBe("18/08/2026");
+  });
+});
+
+describe("parseHomeMarketplaceAlertas", () => {
+  it("ignora itens incompletos", () => {
+    const rows = parseHomeMarketplaceAlertas([
+      { id: "1", kind: "pendente", tipo: "venda_turno", dia_iso: "2026-08-20" },
+      { id: "2", kind: "outro", tipo: "venda_turno", dia_iso: "2026-08-20" },
+      { kind: "lembrete", tipo: "oferta_troca", dia_iso: "2026-08-21" },
+    ]);
+    expect(rows).toEqual([
+      { id: "1", kind: "pendente", tipo: "venda_turno", diaIso: "2026-08-20" },
+    ]);
+  });
+});
+
+describe("ofertaPassaFiltroTimeMarketplace", () => {
+  it("Liderança agrega Shift Leader e Service Manager", () => {
+    expect(ofertaPassaFiltroTimeMarketplace("shift_leader", "lideranca")).toBe(true);
+    expect(ofertaPassaFiltroTimeMarketplace("service_manager", "lideranca")).toBe(true);
+    expect(ofertaPassaFiltroTimeMarketplace("game_presenter", "lideranca")).toBe(false);
+    expect(ofertaPassaFiltroTimeMarketplace("shuffler", "lideranca")).toBe(false);
+  });
+
+  it("filtro específico não cruza times", () => {
+    expect(ofertaPassaFiltroTimeMarketplace("game_presenter", "game_presenter")).toBe(true);
+    expect(ofertaPassaFiltroTimeMarketplace("shift_leader", "game_presenter")).toBe(false);
+    expect(ofertaPassaFiltroTimeMarketplace("shift_leader", "todos")).toBe(true);
+  });
+});
+
+describe("turnoMarketplacePermitidoNaArea", () => {
+  it("Liderança só Manhã e Noite", () => {
+    expect(turnoMarketplacePermitidoNaArea("shift_leader", "Manhã")).toBe(true);
+    expect(turnoMarketplacePermitidoNaArea("service_manager", "Noite")).toBe(true);
+    expect(turnoMarketplacePermitidoNaArea("shift_leader", "Tarde")).toBe(false);
+    expect(turnoMarketplacePermitidoNaArea("game_presenter", "Tarde")).toBe(true);
   });
 });
 
@@ -403,6 +473,18 @@ describe("turnosOfertaveisNaFolgaMarketplace", () => {
     expect(turnos).toEqual(["Manhã", "Tarde", "Noite"]);
   });
 
+  it("Liderança não lista Tarde mesmo com escala 4x2", () => {
+    const turnos = turnosOfertaveisNaFolgaMarketplace(
+      "2026-08-14",
+      grade,
+      HORARIO_4X2,
+      OPERADORA,
+      agora,
+      "shift_leader",
+    );
+    expect(turnos).toEqual(["Manhã", "Noite"]);
+  });
+
   it("respeita também o próximo turno escalado depois da folga", () => {
     const comProximo = new Map(grade);
     comProximo.set("2026-08-15", "MRN");
@@ -426,6 +508,8 @@ describe("mensagemErroOfertaMarketplace", () => {
     expect(mensagemErroOfertaMarketplace("turno_diferente")).toContain("mesmo do seu turno");
     expect(mensagemErroOfertaMarketplace("oferta_expirada")).toContain("menos de 2h");
     expect(mensagemErroOfertaMarketplace("dia_nao_futuro")).toContain("publicar oferta");
+    expect(mensagemErroOfertaMarketplace("times_diferentes")).toContain("Shift Leader e Service Manager");
+    expect(mensagemErroOfertaMarketplace("nao_e_interessado")).toContain("desistir");
     expect(mensagemErroOfertaMarketplace("horario_turno_indisponivel")).toContain(
       "horário de início",
     );
@@ -433,5 +517,160 @@ describe("mensagemErroOfertaMarketplace", () => {
 
   it("usa mensagem genérica com fecho de suporte em código desconhecido", () => {
     expect(mensagemErroOfertaMarketplace("boom")).toContain("entre em contato com o suporte");
+  });
+});
+
+describe("overlayIdentidadeMarketplaceOfertas", () => {
+  const base = {
+    id: "o1",
+    dataOfertaIso: "2026-08-20",
+    tipo: "venda_turno" as const,
+    turnoOferta: "Manhã",
+    operadora: "Blaze",
+    ofertante: "Ana",
+    timeKey: "game_presenter" as const,
+    solicitanteStaffId: "gp-1",
+    interessadoStaffId: "gp-2",
+    souOfertante: false,
+    souInteressado: false,
+    mesmoTime: false,
+  };
+
+  it("marca souOfertante / souInteressado / mesmoTime pelo prestador visível", () => {
+    const out = overlayIdentidadeMarketplaceOfertas([base], "gp-1", "game_presenter");
+    expect(out[0]?.souOfertante).toBe(true);
+    expect(out[0]?.souInteressado).toBe(false);
+    expect(out[0]?.mesmoTime).toBe(true);
+  });
+
+  it("sem funcionarioId não altera as flags da RPC", () => {
+    const out = overlayIdentidadeMarketplaceOfertas([base], null, "game_presenter");
+    expect(out[0]?.souOfertante).toBe(false);
+    expect(out[0]?.mesmoTime).toBe(false);
+  });
+});
+
+describe("alertasHomeMarketplaceDoPrestador", () => {
+  const agora = new Date("2026-08-18T12:00:00-03:00");
+  const base = {
+    id: "a1",
+    tipo: "venda_turno",
+    status: "em_analise",
+    dia_iso: "2026-08-20",
+    ofertante_funcionario_id: "gp-1",
+    interessado_funcionario_id: "gp-2" as string | null,
+    inicio_turno_at: "2026-08-20T10:00:00-03:00",
+    dia_iso_interesse: null as string | null,
+  };
+
+  it("mostra pendente só para o ofertante em análise", () => {
+    const out = alertasHomeMarketplaceDoPrestador([base], "gp-1", agora);
+    expect(out).toEqual([{ id: "a1", kind: "pendente", tipo: "venda_turno", diaIso: "2026-08-20" }]);
+    expect(alertasHomeMarketplaceDoPrestador([base], "gp-2", agora)).toEqual([]);
+  });
+
+  it("mostra lembrete de oferta aceita enquanto o turno não começou", () => {
+    const aceita = { ...base, status: "aceita", inicio_turno_at: "2026-08-20T19:00:00-03:00" };
+    const out = alertasHomeMarketplaceDoPrestador([aceita], "gp-2", agora);
+    expect(out).toEqual([{ id: "a1", kind: "lembrete", tipo: "venda_turno", diaIso: "2026-08-20" }]);
+  });
+
+  it("esconde lembrete depois do início do turno", () => {
+    const aceita = { ...base, status: "aceita", inicio_turno_at: "2026-08-18T07:00:00-03:00" };
+    expect(alertasHomeMarketplaceDoPrestador([aceita], "gp-1", agora)).toEqual([]);
+  });
+
+  it("lembrete usa o fim do dia quando a listagem não traz inicio_turno_at", () => {
+    const aceita = { ...base, status: "aceita", inicio_turno_at: null };
+    const out = alertasHomeMarketplaceDoPrestador([aceita], "gp-1", agora);
+    expect(out).toEqual([{ id: "a1", kind: "lembrete", tipo: "venda_turno", diaIso: "2026-08-20" }]);
+  });
+
+  it("esconde lembrete de troca depois do último início (interesse), não no fim do dia", () => {
+    const troca = {
+      ...base,
+      tipo: "oferta_troca",
+      status: "aceita",
+      inicio_turno_at: "2026-08-18T07:00:00-03:00",
+      dia_iso_interesse: "2026-08-18",
+      inicio_turno_interesse_at: "2026-08-18T10:00:00-03:00",
+    };
+    expect(alertasHomeMarketplaceDoPrestador([troca], "gp-1", agora)).toEqual([]);
+  });
+});
+
+describe("fontesAlertaHomeDePayloadListar", () => {
+  const listar = [
+    {
+      id: "aberta-1",
+      tipo: "venda_turno",
+      status: "aberta",
+      dia_iso: "2026-08-21",
+      ofertante_funcionario_id: "gp-1",
+      interessado_funcionario_id: null,
+    },
+    {
+      id: "analise-1",
+      tipo: "venda_folga",
+      status: "em_analise",
+      dia_iso: "2026-08-22",
+      ofertante_funcionario_id: "gp-1",
+      interessado_funcionario_id: "gp-2",
+      dia_iso_interesse: null,
+    },
+    {
+      id: "aceita-1",
+      tipo: "oferta_troca",
+      status: "aceita",
+      dia_iso: "2026-08-23",
+      ofertante_funcionario_id: "gp-3",
+      interessado_funcionario_id: "gp-1",
+      dia_iso_interesse: "2026-08-24",
+      inicio_turno_at: "2026-08-23T07:00:00-03:00",
+      inicio_turno_interesse_at: "2026-08-24T19:00:00-03:00",
+    },
+  ];
+
+  it("mantém só ofertas em análise ou aceitas do payload da RPC de listagem", () => {
+    expect(fontesAlertaHomeDePayloadListar(listar)).toEqual([
+      {
+        id: "analise-1",
+        tipo: "venda_folga",
+        status: "em_analise",
+        dia_iso: "2026-08-22",
+        ofertante_funcionario_id: "gp-1",
+        interessado_funcionario_id: "gp-2",
+        inicio_turno_at: null,
+        inicio_turno_interesse_at: null,
+        dia_iso_interesse: null,
+      },
+      {
+        id: "aceita-1",
+        tipo: "oferta_troca",
+        status: "aceita",
+        dia_iso: "2026-08-23",
+        ofertante_funcionario_id: "gp-3",
+        interessado_funcionario_id: "gp-1",
+        inicio_turno_at: "2026-08-23T07:00:00-03:00",
+        inicio_turno_interesse_at: "2026-08-24T19:00:00-03:00",
+        dia_iso_interesse: "2026-08-24",
+      },
+    ]);
+  });
+
+  it("aplica o corte de início de turno no recorte da Home", () => {
+    const agora = new Date("2026-08-23T12:00:00-03:00");
+    const aceita = listar.find((row) => row.id === "aceita-1");
+    const fontes = fontesAlertaHomeDePayloadListar([aceita]);
+    expect(alertasHomeMarketplaceDoPrestador(fontes, "gp-1", agora)).toEqual([
+      {
+        id: "aceita-1",
+        kind: "lembrete",
+        tipo: "oferta_troca",
+        diaIso: "2026-08-23",
+      },
+    ]);
+    const depoisDoTurno = new Date("2026-08-24T20:00:00-03:00");
+    expect(alertasHomeMarketplaceDoPrestador(fontes, "gp-1", depoisDoTurno)).toEqual([]);
   });
 });

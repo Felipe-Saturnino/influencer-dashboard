@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import {
   dataIsoDateOnly,
@@ -206,6 +207,13 @@ export function ModalAtualizarVaga({
     if (q) list = list.filter((f) => normalizarBuscaVaga(f.nome).includes(q));
     return list.slice(0, 500);
   }, [funcionarios, buscaHc]);
+  const funcionariosKeyboard = useListboxKeyboardNavigation({
+    items: filtradosHc,
+    onSelect: (funcionario) => {
+      setCandidatoId(funcionario.id);
+      setBuscaHc("");
+    },
+  });
 
   const candidatoSelecionadoHc = useMemo(
     () => funcionarios.find((f) => f.id === candidatoId) ?? null,
@@ -605,6 +613,12 @@ export function ModalAtualizarVaga({
                       placeholder={FILTER_SEARCH_STAFF}
                       aria-label="Filtrar lista de funcionários por nome"
                       disabled={carregandoHc}
+                      aria-activedescendant={
+                        filtradosHc[funcionariosKeyboard.activeIndex]
+                          ? `atv-funcionario-${funcionariosKeyboard.activeIndex}`
+                          : undefined
+                      }
+                      onKeyDown={funcionariosKeyboard.onKeyDown}
                       wrapperStyle={{ width: "100%", marginBottom: 8 }}
                     />
                     <div
@@ -626,9 +640,15 @@ export function ModalAtualizarVaga({
                         filtradosHc.map((f, i) => (
                           <button
                             key={f.id}
+                            id={`atv-funcionario-${i}`}
+                            ref={(node) => {
+                              funcionariosKeyboard.optionRefs.current[i] = node;
+                            }}
                             type="button"
                             role="option"
                             aria-selected={candidatoId === f.id}
+                            tabIndex={-1}
+                            onMouseEnter={() => funcionariosKeyboard.setActiveIndex(i)}
                             onClick={() => {
                               setCandidatoId(f.id);
                               setBuscaHc("");
@@ -640,7 +660,10 @@ export function ModalAtualizarVaga({
                               padding: "10px 12px",
                               border: "none",
                               borderTop: i > 0 ? `1px solid ${t.cardBorder}` : "none",
-                              background: "transparent",
+                              background:
+                                i === funcionariosKeyboard.activeIndex
+                                  ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                                  : "transparent",
                               color: t.text,
                               fontSize: 13,
                               fontFamily: FONT.body,

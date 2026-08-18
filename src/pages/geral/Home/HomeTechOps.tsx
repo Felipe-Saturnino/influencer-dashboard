@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasTechOps } from "./techOps/BoasVindasTechOps";
@@ -11,10 +12,11 @@ const HOME_TECH_OPS_PREFIX = "home-tech-ops";
 
 export default function HomeTechOps() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Tech Ops";
+  const nome = nomeEfetivo?.trim() || "Tech Ops";
 
   return (
     <div

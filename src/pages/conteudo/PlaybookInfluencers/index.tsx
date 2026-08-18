@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, type CSSProperties } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import type { Role } from "../../../types";
@@ -722,7 +723,8 @@ function BlocoCiencia({
 
 // ─── PRINCIPAL ────────────────────────────────────────────────────────────────
 export default function PlaybookInfluencers() {
-  const { theme: t, user, podeVerInfluencer } = useApp();
+  const { theme: t, podeVerInfluencer } = useApp();
+  const { userId: userIdEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("playbook_influencers");
   const dark = t.isDark ?? false;
@@ -748,13 +750,13 @@ export default function PlaybookInfluencers() {
 
   const exibirAuditoria =
     perm.canEditarOk &&
-    !!user &&
-    ROLES_AUDITORIA_PLAYBOOK.includes(user.role);
+    !!roleEfetivo &&
+    ROLES_AUDITORIA_PLAYBOOK.includes(roleEfetivo);
 
-  const influencerId = user?.id ?? "";
+  const influencerId = userIdEfetivo ?? "";
 
   const podeInfluencerConfirmar =
-    roleParidadeInfluencer(user?.role) &&
+    roleParidadeInfluencer(roleEfetivo) &&
     (perm.canCriarOk || perm.canEditarOk);
 
   const carregarConfirmacoes = useCallback(async () => {
@@ -785,7 +787,7 @@ export default function PlaybookInfluencers() {
         itensOb.every((k) => porInflu[row.id]?.has(k)),
       ).length;
       setTotalConfAll(completos);
-    } else if (roleParidadeInfluencer(user?.role) && influencerId) {
+    } else if (roleParidadeInfluencer(roleEfetivo) && influencerId) {
       const { data } = await supabase.from("guia_confirmacoes").select("item_key").eq("influencer_id", influencerId);
       setConfirmacoes(new Set((data ?? []).map((c: { item_key: string }) => c.item_key)));
     } else {
@@ -794,7 +796,7 @@ export default function PlaybookInfluencers() {
       setTotalConfAll(0);
     }
     setLoadingStats(false);
-  }, [exibirAuditoria, influencerId, user?.role, podeVerInfluencer]);
+  }, [exibirAuditoria, influencerId, roleEfetivo, podeVerInfluencer]);
 
   useEffect(() => {
     carregarConfirmacoes();
@@ -812,7 +814,7 @@ export default function PlaybookInfluencers() {
   const Conteudo = abaConfig.content;
   const totalOb = ITENS_OBRIGATORIOS.length;
   const confirmadosOb = ITENS_OBRIGATORIOS.filter((a) => confirmacoes.has(a.itemKey!)).length;
-  const tudoConfirmado = roleParidadeInfluencer(user?.role) && confirmadosOb === totalOb && totalOb > 0;
+  const tudoConfirmado = roleParidadeInfluencer(roleEfetivo) && confirmadosOb === totalOb && totalOb > 0;
 
   const playbookHeaderActions =
     !loadingStats &&
@@ -834,7 +836,7 @@ export default function PlaybookInfluencers() {
           {totalConfAll} de {totalInflu} influencers confirmaram tudo
         </span>
       </div>
-    ) : roleParidadeInfluencer(user?.role) ? (
+    ) : roleParidadeInfluencer(roleEfetivo) ? (
       tudoConfirmado ? (
         <div
           style={{
@@ -906,7 +908,7 @@ export default function PlaybookInfluencers() {
         </p>
       </div>
 
-      {roleParidadeInfluencer(user?.role) && tudoConfirmado && (
+      {roleParidadeInfluencer(roleEfetivo) && tudoConfirmado && (
         <div style={{
           ...getPageKpiSectionGapStyle(), padding: "16px 20px", borderRadius: 12,
           background: dark ? "rgba(34,197,94,0.10)" : "rgba(34,197,94,0.07)",
@@ -927,7 +929,7 @@ export default function PlaybookInfluencers() {
         </div>
       )}
 
-      {roleParidadeInfluencer(user?.role) && !tudoConfirmado && totalOb > 0 && (
+      {roleParidadeInfluencer(roleEfetivo) && !tudoConfirmado && totalOb > 0 && (
         <div style={getPageKpiSectionGapStyle()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, fontFamily: FONT.body, textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -960,7 +962,7 @@ export default function PlaybookInfluencers() {
           >
           {ABAS.map((aba) => {
             const isAtiva = abaAtiva === aba.key;
-            const jaConfirmou = roleParidadeInfluencer(user?.role) && aba.itemKey ? confirmacoes.has(aba.itemKey) : false;
+            const jaConfirmou = roleParidadeInfluencer(roleEfetivo) && aba.itemKey ? confirmacoes.has(aba.itemKey) : false;
             return (
               <FiltroBarTabButton
                 key={aba.key}
@@ -973,16 +975,16 @@ export default function PlaybookInfluencers() {
                 style={{ flexShrink: 0 }}
               >
                 {aba.label}
-                {aba.obrigatoria && roleParidadeInfluencer(user?.role) && !jaConfirmou && (
+                {aba.obrigatoria && roleParidadeInfluencer(roleEfetivo) && !jaConfirmou && (
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.vermelho, flexShrink: 0 }} aria-hidden />
                 )}
-                {aba.obrigatoria && roleParidadeInfluencer(user?.role) && !jaConfirmou ? (
+                {aba.obrigatoria && roleParidadeInfluencer(roleEfetivo) && !jaConfirmou ? (
                   <span className="sr-only">item obrigatório pendente</span>
                 ) : null}
-                {aba.obrigatoria && roleParidadeInfluencer(user?.role) && jaConfirmou && (
+                {aba.obrigatoria && roleParidadeInfluencer(roleEfetivo) && jaConfirmou && (
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: BRAND.verde, flexShrink: 0 }} aria-hidden />
                 )}
-                {aba.obrigatoria && roleParidadeInfluencer(user?.role) && jaConfirmou ? (
+                {aba.obrigatoria && roleParidadeInfluencer(roleEfetivo) && jaConfirmou ? (
                   <span className="sr-only">item obrigatório confirmado</span>
                 ) : null}
                 {aba.obrigatoria && exibirAuditoria && (
@@ -1055,7 +1057,7 @@ export default function PlaybookInfluencers() {
 
         <Conteudo dark={dark} />
 
-        {abaConfig.obrigatoria && abaConfig.itemKey && roleParidadeInfluencer(user?.role) && influencerId && (
+        {abaConfig.obrigatoria && abaConfig.itemKey && roleParidadeInfluencer(roleEfetivo) && influencerId && (
           <BlocoCiencia
             key={abaConfig.itemKey}
             itemKey={abaConfig.itemKey}

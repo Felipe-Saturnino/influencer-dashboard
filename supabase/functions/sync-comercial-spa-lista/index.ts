@@ -1,16 +1,16 @@
 /**
  * Edge Function: sync-comercial-spa-lista
- * Importa planilha oficial SPA/MF (CSV `;` ou XLSX) → comercial_empresas + comercial_marcas.
+ * Importa lista oficial SPA/MF (tabela HTML, CSV `;` ou XLSX) → comercial_empresas + comercial_marcas.
  * Não altera status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, status_dominio.
  *
  * Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- * Opcional: COMERCIAL_SPA_CSV_URL — URL direta do CSV/XLSX (senão descobre na página gov.br)
+ * Opcional: COMERCIAL_SPA_CSV_URL — URL direta do CSV/XLSX (senão descobre tabela HTML ou planilha na página gov.br)
  * Opcional: COMERCIAL_SPA_LISTA_PAGE_URL — página de listagem (default gov.br)
  *
  * POST JSON: { dry_run?: boolean, force?: boolean, csv_url?: string }
  *
  * Deploy no painel Supabase: um único ficheiro index.ts (sem imports locais).
- * Parser espelhado em src/lib/comercialSpaCsvParser.ts + src/lib/comercialSpaXlsx.ts.
+ * Parser espelhado em src/lib/comercialSpaCsvParser.ts + src/lib/comercialSpaXlsx.ts + src/lib/comercialSpaListaFonte.ts.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -312,31 +312,186 @@ function xlsxBytesToMatrix(bytes: Uint8Array): string[][] {
 }
 
 /**
- * Descobre URL da planilha nacional de autorizações.
- * Prefere `.xlsx` (`planilha-de-autorizacoes.xlsx`); aceita legado `.csv`.
- * Ignora ficheiros de processos judiciais.
+ * Descobre URL da planilha nacional de autorizações no HTML.
+ * Prefere `.xlsx`/`csv` no gov.br; ignora processos judiciais.
  */
 function extractAutorizacoesPlanilhaUrl(html: string): string | null {
-  const hrefRe =
-    /href="(https:\/\/www\.gov\.br\/fazenda\/[^"]*lista-de-empresas\/[^"]+)"/gi;
   const urls: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = hrefRe.exec(html)) !== null) {
-    urls.push(m[1].replace(/&amp;/g, "&"));
+  for (const m of html.matchAll(/href="([^"]+)"/gi)) {
+    urls.push(m[1].replace(/&amp;/g, "&").trim());
   }
-
-  const isJudicial = (u: string) => /processos?\s*judiciais|judicial/i.test(u);
-  const xlsx = urls.find(
-    (u) => /planilha-de-autorizacoes[^"/]*\.xlsx$/i.test(u) && !isJudicial(u),
-  );
-  if (xlsx) return xlsx;
-
-  const csv = urls.find(
-    (u) => /planilha-de-autorizacoes[^"/]*\.csv$/i.test(u) && !isJudicial(u),
-  );
-  if (csv) return csv;
-
+  const isJudicial = (u: string) =>
+    /processos?\s*judiciais|determinacao-judicial|determina[cç][aã]o-judicial|judicial/i.test(u);
+  const gov = urls.filter((u) => /gov\.br\/fazenda/i.test(u) && !isJudicial(u));
+  const xlsx = gov.find((u) => /planilha-de-autorizacoes[^"/?]*\.xlsx(?:$|\?)/i.test(u));
+  if (xlsx) return xlsx.split("#")[0] ?? xlsx;
+  const csv = gov.find((u) => /planilha-de-autorizacoes[^"/?]*\.csv(?:$|\?)/i.test(u));
+  if (csv) return csv.split("#")[0] ?? csv;
   return null;
+}
+
+function toSharePointDownloadUrl(url: string): string {
+  if (!/sharepoint\.com/i.test(url)) return url;
+  const sourcedoc = url.match(/[?&]sourcedoc=([^&]+)/i);
+  if (sourcedoc?.[1]) {
+    const guid = decodeURIComponent(sourcedoc[1]).replace(/[{}]/g, "");
+    const origin = url.match(/^(https:\/\/[^/]+)/i)?.[1];
+    const personal = url.match(/\/personal\/[^/?#]+/i)?.[0];
+    if (origin && personal && guid) {
+      return `${origin}${personal}/_layouts/15/download.aspx?UniqueId=${guid}`;
+    }
+  }
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("download", "1");
+    parsed.searchParams.delete("action");
+    parsed.searchParams.delete("mobileredirect");
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+function extractSharePointPlanilhaUrl(html: string): string | null {
+  const urls: string[] = [];
+  for (const m of html.matchAll(/href="([^"]+)"/gi)) {
+    urls.push(m[1].replace(/&amp;/g, "&").trim());
+  }
+  const sp = urls.filter((u) => /sharepoint\.com/i.test(u) && !/judicial/i.test(u));
+  const withFile = sp.find((u) => /[?&]file=[^&]*\.xlsx/i.test(u) || /\.xlsx(?:$|\?)/i.test(u));
+  if (withFile) return toSharePointDownloadUrl(withFile);
+  const first = sp.find((u) => /:x:\//i.test(u));
+  return first ? toSharePointDownloadUrl(first) : null;
+}
+
+const LISTA_EMPRESAS_PREFIX =
+  "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas/";
+
+const FALLBACK_PAGINAS_LISTA = [
+  `${LISTA_EMPRESAS_PREFIX}empresas-autorizadas`,
+  `${LISTA_EMPRESAS_PREFIX}confira-a-lista-de-empresas-autorizadas-a-ofertar-apostas-de-quota-fixa-em-2025`,
+];
+
+function extractPaginasListaAutorizacoes(html: string, pageUrl: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const current = pageUrl.replace(/\/+$/, "");
+  for (const m of html.matchAll(/href="([^"]+)"/gi)) {
+    let href = m[1].replace(/&amp;/g, "&").trim();
+    if (href.startsWith("/")) href = `https://www.gov.br${href}`;
+    else if (!/^https?:\/\//i.test(href)) {
+      try {
+        href = new URL(href, pageUrl).toString();
+      } catch {
+        continue;
+      }
+    }
+    const cleaned = (href.split("#")[0] ?? href).replace(/\/+$/, "");
+    if (!cleaned.toLowerCase().startsWith(LISTA_EMPRESAS_PREFIX.toLowerCase())) continue;
+    if (/\.(pdf|png|jpe?g|gif|svg|webp)(?:$|\?)/i.test(cleaned)) continue;
+    if (/@@images|arquivos_tarjados|judicial|transparencia-ativa/i.test(cleaned)) continue;
+    const rest = cleaned.slice(LISTA_EMPRESAS_PREFIX.length);
+    if (!rest || rest.includes("/")) continue;
+    if (cleaned === current || seen.has(cleaned)) continue;
+    seen.add(cleaned);
+    out.push(cleaned);
+  }
+  return out;
+}
+
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function findAutorizacoesTableHtml(html: string): string | null {
+  const tables = [...html.matchAll(/<table\b[^>]*>[\s\S]*?<\/table>/gi)].map((m) => m[0]);
+  return (
+    tables.find(
+      (t) => /CNPJ/i.test(t) && /Marcas/i.test(t) && /Dom[ií]nio/i.test(t) && /Portaria/i.test(t),
+    ) ?? null
+  );
+}
+
+function looksLikeSpaAutorizacoesHtmlTable(html: string): boolean {
+  return findAutorizacoesTableHtml(html) != null;
+}
+
+function splitListaItens(text: string): string[] {
+  return text
+    .split(/\n|•|·/)
+    .map((s) => s.replace(/^[-–]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+function splitRequerimentoHtml(raw: string): { numero: string | null; ano: string | null } {
+  const compact = raw.replace(/\s+/g, "");
+  const sigap = compact.match(/^(\d+)(20\d{2})$/);
+  if (sigap) return { numero: sigap[1] ?? null, ano: sigap[2] ?? null };
+  return splitRequerimento(raw);
+}
+
+function zipMarcasDominiosHtml(nomes: string[], dominios: string[]): ParsedMarca[] {
+  const len = Math.max(nomes.length, dominios.length);
+  const marcas: ParsedMarca[] = [];
+  for (let i = 0; i < len; i++) {
+    const nome = (nomes[i] ?? "").replace(/\s+/g, " ").trim();
+    const dominio = normalizeDominio(dominios[i] ?? "");
+    if (!nome) continue;
+    marcas.push({ nome, dominio });
+  }
+  return marcas;
+}
+
+function parseSpaAutorizacoesHtmlTable(html: string): ParsedEmpresaBloco[] {
+  const table = findAutorizacoesTableHtml(html);
+  if (!table) return [];
+  const blocos: ParsedEmpresaBloco[] = [];
+  for (const rm of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...(rm[1] ?? "").matchAll(/<(td|th)\b[^>]*>([\s\S]*?)<\/\1>/gi)].map(
+      (c) => c[2] ?? "",
+    );
+    if (cells.length < 6) continue;
+    let offset = 0;
+    if (/^\d+$/.test(htmlToPlainText(cells[0] ?? ""))) offset = 1;
+    const razao = htmlToPlainText(cells[offset] ?? "").replace(/\s+/g, " ").trim();
+    const cnpj = normalizeCnpj(htmlToPlainText(cells[offset + 1] ?? ""));
+    if (!cnpj || !razao || /^empresa$/i.test(razao)) continue;
+    const portariaLines = htmlToPlainText(cells[offset + 4] ?? "")
+      .split(/\n/)
+      .map((s) => s.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    const principal = portariaLines.find((l) => /^SPA\/MF/i.test(l)) ?? portariaLines[0] ?? null;
+    const req = splitRequerimentoHtml(htmlToPlainText(cells[offset + 5] ?? ""));
+    blocos.push({
+      cnpj,
+      razao_social: razao,
+      portaria: principal,
+      portaria_retificacoes: portariaLines.filter((l) => l !== principal),
+      requerimento_numero: req.numero,
+      requerimento_ano: req.ano,
+      marcas: zipMarcasDominiosHtml(
+        splitListaItens(htmlToPlainText(cells[offset + 2] ?? "")),
+        splitListaItens(htmlToPlainText(cells[offset + 3] ?? "")),
+      ),
+    });
+  }
+  return blocos.filter((b) => b.cnpj && b.razao_social);
+}
+
+function blocosToCanonicalText(blocos: ParsedEmpresaBloco[]): string {
+  return JSON.stringify(blocos);
 }
 
 // --- Sync ---
@@ -449,34 +604,77 @@ function looksLikeZip(bytes: Uint8Array): boolean {
   return bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b;
 }
 
-async function resolvePlanilhaUrl(
-  bodyUrl?: string,
-): Promise<
-  | { ok: true; url: string; listaAtualizadaEm: string | null }
-  | { ok: false; erro: string }
-> {
+type FonteResolvida =
+  | { ok: true; kind: "arquivo"; url: string; listaAtualizadaEm: string | null }
+  | { ok: true; kind: "html"; url: string; html: string; listaAtualizadaEm: string | null }
+  | { ok: false; erro: string };
+
+function pickFonteFromHtml(
+  html: string,
+  pageUrl: string,
+): Extract<FonteResolvida, { ok: true }> | null {
+  const listaAtualizadaEm = extractListaAtualizadaEm(html);
+  const planilha = extractAutorizacoesPlanilhaUrl(html);
+  if (planilha) {
+    return { ok: true, kind: "arquivo", url: planilha, listaAtualizadaEm };
+  }
+  if (looksLikeSpaAutorizacoesHtmlTable(html)) {
+    return { ok: true, kind: "html", url: pageUrl, html, listaAtualizadaEm };
+  }
+  const sharepoint = extractSharePointPlanilhaUrl(html);
+  if (sharepoint) {
+    return { ok: true, kind: "arquivo", url: sharepoint, listaAtualizadaEm };
+  }
+  return null;
+}
+
+async function resolveFonte(bodyUrl?: string): Promise<FonteResolvida> {
   const envUrl = Deno.env.get("COMERCIAL_SPA_CSV_URL")?.trim();
   const direct = bodyUrl?.trim() || envUrl;
   if (direct) {
-    return { ok: true, url: direct, listaAtualizadaEm: null };
+    return {
+      ok: true,
+      kind: "arquivo",
+      url: toSharePointDownloadUrl(direct),
+      listaAtualizadaEm: null,
+    };
   }
 
   const pageUrl = Deno.env.get("COMERCIAL_SPA_LISTA_PAGE_URL")?.trim() || DEFAULT_LISTA_PAGE;
   const page = await fetchText(pageUrl);
   if (!page.ok) return { ok: false, erro: `Não foi possível abrir a página oficial: ${page.erro}` };
 
-  const planilhaUrl = extractAutorizacoesPlanilhaUrl(page.text);
-  if (!planilhaUrl) {
-    return {
-      ok: false,
-      erro:
-        "Planilha de autorizações não encontrada na página (CSV/XLSX). Defina COMERCIAL_SPA_CSV_URL nos Secrets.",
-    };
+  const fromIndex = pickFonteFromHtml(page.text, pageUrl);
+  if (fromIndex) return fromIndex;
+
+  const nested = [
+    ...extractPaginasListaAutorizacoes(page.text, pageUrl),
+    ...FALLBACK_PAGINAS_LISTA,
+  ];
+  const seen = new Set<string>([pageUrl.replace(/\/+$/, "")]);
+  let sharepointFallback: Extract<FonteResolvida, { ok: true; kind: "arquivo" }> | null = null;
+
+  for (const url of nested) {
+    const key = url.replace(/\/+$/, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const child = await fetchText(url);
+    if (!child.ok) continue;
+    const picked = pickFonteFromHtml(child.text, url);
+    if (!picked) continue;
+    if (picked.kind === "html") return picked;
+    if (picked.kind === "arquivo" && /gov\.br\/fazenda/i.test(picked.url)) return picked;
+    if (picked.kind === "arquivo" && /sharepoint\.com/i.test(picked.url) && !sharepointFallback) {
+      sharepointFallback = picked;
+    }
   }
+
+  if (sharepointFallback) return sharepointFallback;
+
   return {
-    ok: true,
-    url: planilhaUrl,
-    listaAtualizadaEm: extractListaAtualizadaEm(page.text),
+    ok: false,
+    erro:
+      "Planilha de autorizações não encontrada na página (CSV/XLSX/HTML). Defina COMERCIAL_SPA_CSV_URL nos Secrets.",
   };
 }
 
@@ -721,7 +919,7 @@ async function upsertBlocos(
 }
 
 function extractListaAtualizadaEm(htmlOrCsvHint: string): string | null {
-  const m = htmlOrCsvHint.match(/Atualizada em (\d{2}\/\d{2}\/\d{4})/i);
+  const m = htmlOrCsvHint.match(/Atualizad[oa] em(?:<\/span>\s*<span[^>]*>|\s+)(\d{2}\/\d{2}\/\d{4})/i);
   return m?.[1] ?? null;
 }
 
@@ -752,7 +950,7 @@ serve(async (req) => {
   const force = body.force === true;
   const inicioMs = Date.now();
 
-  const resolved = await resolvePlanilhaUrl(body.csv_url);
+  const resolved = await resolveFonte(body.csv_url);
   if (!resolved.ok) {
     if (!dry_run) {
       await gravarSyncLog(supabase, {
@@ -768,54 +966,81 @@ serve(async (req) => {
     return json({ ok: false, erro: resolved.erro }, req, 200);
   }
 
-  const arquivo = await fetchBytes(resolved.url);
-  if (!arquivo.ok) {
-    const msg = `Não foi possível baixar a planilha oficial: ${arquivo.erro}`;
-    if (!dry_run) {
-      await gravarSyncLog(supabase, {
-        status: "falha",
-        registros_inseridos: 0,
-        registros_atualizados: 0,
-        erros_count: 1,
-        mensagem_erro: msg,
-        duracao_ms: Date.now() - inicioMs,
-      });
-      await gravarTechLog(supabase, msg);
-    }
-    return json({ ok: false, erro: msg, csv_url: resolved.url }, req, 200);
-  }
-
-  const urlLower = resolved.url.toLowerCase();
-  const isXlsx =
-    urlLower.endsWith(".xlsx") ||
-    arquivo.contentType.includes("spreadsheetml") ||
-    arquivo.contentType.includes("excel") ||
-    looksLikeZip(arquivo.bytes);
-
   let canonicalText: string;
   let blocos: ParsedEmpresaBloco[];
-  try {
-    if (isXlsx) {
-      const matrix = xlsxBytesToMatrix(arquivo.bytes);
-      canonicalText = matrixToSemicolonCsv(matrix);
-      blocos = parseSpaAutorizacoesMatrix(matrix);
-    } else {
-      canonicalText = new TextDecoder("utf-8").decode(arquivo.bytes);
-      blocos = parseSpaAutorizacoesCsv(canonicalText);
+  let isXlsx = false;
+  let formato: "xlsx" | "csv" | "html" = "csv";
+  const fonteUrl = resolved.url;
+
+  if (resolved.kind === "html") {
+    try {
+      blocos = parseSpaAutorizacoesHtmlTable(resolved.html);
+      canonicalText = blocosToCanonicalText(blocos);
+      formato = "html";
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!dry_run) {
+        await gravarSyncLog(supabase, {
+          status: "falha",
+          registros_inseridos: 0,
+          registros_atualizados: 0,
+          erros_count: 1,
+          mensagem_erro: `Erro ao interpretar planilha: ${msg}`,
+          duracao_ms: Date.now() - inicioMs,
+        });
+      }
+      return json({ ok: false, erro: `Erro ao interpretar planilha: ${msg}` }, req, 200);
     }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (!dry_run) {
-      await gravarSyncLog(supabase, {
-        status: "falha",
-        registros_inseridos: 0,
-        registros_atualizados: 0,
-        erros_count: 1,
-        mensagem_erro: `Erro ao interpretar planilha: ${msg}`,
-        duracao_ms: Date.now() - inicioMs,
-      });
+  } else {
+    const arquivo = await fetchBytes(resolved.url);
+    if (!arquivo.ok) {
+      const msg = `Não foi possível baixar a planilha oficial: ${arquivo.erro}`;
+      if (!dry_run) {
+        await gravarSyncLog(supabase, {
+          status: "falha",
+          registros_inseridos: 0,
+          registros_atualizados: 0,
+          erros_count: 1,
+          mensagem_erro: msg,
+          duracao_ms: Date.now() - inicioMs,
+        });
+        await gravarTechLog(supabase, msg);
+      }
+      return json({ ok: false, erro: msg, csv_url: fonteUrl }, req, 200);
     }
-    return json({ ok: false, erro: `Erro ao interpretar planilha: ${msg}` }, req, 200);
+
+    const urlLower = resolved.url.toLowerCase();
+    isXlsx =
+      urlLower.endsWith(".xlsx") ||
+      urlLower.includes("download.aspx") ||
+      arquivo.contentType.includes("spreadsheetml") ||
+      arquivo.contentType.includes("excel") ||
+      looksLikeZip(arquivo.bytes);
+    formato = isXlsx ? "xlsx" : "csv";
+
+    try {
+      if (isXlsx) {
+        const matrix = xlsxBytesToMatrix(arquivo.bytes);
+        canonicalText = matrixToSemicolonCsv(matrix);
+        blocos = parseSpaAutorizacoesMatrix(matrix);
+      } else {
+        canonicalText = new TextDecoder("utf-8").decode(arquivo.bytes);
+        blocos = parseSpaAutorizacoesCsv(canonicalText);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!dry_run) {
+        await gravarSyncLog(supabase, {
+          status: "falha",
+          registros_inseridos: 0,
+          registros_atualizados: 0,
+          erros_count: 1,
+          mensagem_erro: `Erro ao interpretar planilha: ${msg}`,
+          duracao_ms: Date.now() - inicioMs,
+        });
+      }
+      return json({ ok: false, erro: `Erro ao interpretar planilha: ${msg}` }, req, 200);
+    }
   }
 
   const contentHash = await sha256Hex(canonicalText);
@@ -835,8 +1060,8 @@ serve(async (req) => {
       skipped: true,
       motivo: "Planilha sem alteração (hash igual ao último sync).",
       content_hash: contentHash,
-      csv_url: resolved.url,
-      formato: isXlsx ? "xlsx" : "csv",
+      csv_url: fonteUrl,
+      formato,
     }, req);
   }
 
@@ -853,7 +1078,7 @@ serve(async (req) => {
       });
       await gravarTechLog(supabase, msg);
     }
-    return json({ ok: false, erro: msg, csv_url: resolved.url }, req, 200);
+    return json({ ok: false, erro: msg, csv_url: fonteUrl, formato }, req, 200);
   }
 
   const totalMarcas = blocos.reduce((s, b) => s + b.marcas.length, 0);
@@ -864,8 +1089,8 @@ serve(async (req) => {
     return json({
       ok: true,
       dry_run: true,
-      csv_url: resolved.url,
-      formato: isXlsx ? "xlsx" : "csv",
+      csv_url: fonteUrl,
+      formato,
       content_hash: contentHash,
       blocos: blocos.length,
       marcas: totalMarcas,
@@ -889,7 +1114,7 @@ serve(async (req) => {
 
   await salvarMeta(supabase, {
     content_hash: contentHash,
-    csv_url: resolved.url,
+    csv_url: fonteUrl,
     lista_atualizada_em: listaAtualizada,
     blocos: blocos.length,
     marcas: totalMarcas,
@@ -910,8 +1135,8 @@ serve(async (req) => {
 
   return json({
     ok,
-    csv_url: resolved.url,
-    content_hash: contentHash,
+    csv_url: fonteUrl,
+    formato,
     lista_atualizada_em: listaAtualizada,
     blocos: blocos.length,
     marcas_parseadas: totalMarcas,

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Archive, Ban, Check, ChevronLeft, ChevronRight, Loader2, Store, User, X } from "lucide-react";
+import { Archive, Ban, Check, ChevronLeft, ChevronRight, Loader2, Store, Undo2, User, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import {
@@ -19,6 +20,7 @@ import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { FiltroEntidadeBarSelect } from "../../../components/FiltroEntidadeBarSelect";
+import { FiltroMinhasNegociacoesButton } from "../../../components/FiltroMinhasNegociacoesButton";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import {
   AjudaContextualAcoes,
@@ -38,12 +40,11 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   ESCALA_ACAO_TIPO_OPCOES_MINHAS,
   ESCALA_ACAO_TIPO_OPCOES_TODAS,
-  ESCALA_TIME_OPCOES,
   OFERTA_STATUS_LABEL,
   RH_CALENDARIO_ACAO_LABEL_FORMAL,
   type EscalaAcaoFiltro,
-  type EscalaTimeFiltro,
   type LinhaOfertaMarketplace,
+  type MarketplaceTimeFiltro,
 } from "../../../lib/escalaTurnosUiConstants";
 import type { RhCalendarioAcaoTipo } from "../../../lib/rhCalendarioAcaoHelpers";
 import {
@@ -57,7 +58,10 @@ import {
   carregarMinhaGradeMarketplace,
   carregarMinhaGradeMarketplaceMeses,
   carregarOfertasMarketplace,
+  filtroTimeGrupoNegociacaoMarketplace,
   isDataNoHistoricoMarketplace,
+  ofertaPassaFiltroTimeMarketplace,
+  overlayIdentidadeMarketplaceOfertas,
   type MarketplaceMeuContexto,
   type MarketplaceMinhaGrade,
   competenciaAnoMes,
@@ -65,9 +69,9 @@ import {
 import { ModalOfertarMarketplace } from "./ModalOfertarMarketplace";
 import { ModalAceitarOfertaMarketplace } from "./ModalAceitarOfertaMarketplace";
 import { ModalCancelarOfertaMarketplace } from "./ModalCancelarOfertaMarketplace";
-import { ModalDecidirTrocaMarketplace } from "./ModalDecidirTrocaMarketplace";
+import { ModalDecidirTrocaMarketplace, type DecisaoOfertaMarketplace } from "./ModalDecidirTrocaMarketplace";
 
-/** Times que negociam turnos no Marketplace (escopo Ver = Sim). */
+/** Times que negociam turnos no Marketplace (escopo Ver = Sim). Liderança = SL + SM. */
 const TUTORIAL_MARKETPLACE_OFERTAS: AjudaContextualTutorial = {
   id: "marketplace-ofertas",
   urlSlug: "MarketplaceOfertas",
@@ -76,10 +80,11 @@ const TUTORIAL_MARKETPLACE_OFERTAS: AjudaContextualTutorial = {
 const MARKETPLACE_TIME_TODOS_VALUE = "todos";
 const MARKETPLACE_TIME_TODOS_LABEL = "Todos Times";
 const MARKETPLACE_TIME_ARIA_LABEL = "Times";
-const MARKETPLACE_TIME_SLUGS: EscalaTimeFiltro[] = ["game_presenter", "shuffler"];
-const MARKETPLACE_TIME_OPCOES = ESCALA_TIME_OPCOES.filter((o) =>
-  MARKETPLACE_TIME_SLUGS.includes(o.value),
-).map((o) => ({ value: o.value, label: o.label }));
+const MARKETPLACE_TIME_OPCOES: { value: MarketplaceTimeFiltro; label: string }[] = [
+  { value: "game_presenter", label: "Game Presenter" },
+  { value: "shuffler", label: "Shuffler" },
+  { value: "lideranca", label: "Liderança" },
+];
 
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
 
@@ -225,9 +230,8 @@ function passaFiltroTipo(row: LinhaOfertaMarketplace, filtro: EscalaAcaoFiltro):
   return row.tipo === filtro;
 }
 
-function passaFiltroTime(row: LinhaOfertaMarketplace, filtro: EscalaTimeFiltro): boolean {
-  if (filtro === "todos") return true;
-  return row.timeKey === filtro;
+function passaFiltroTime(row: LinhaOfertaMarketplace, filtro: MarketplaceTimeFiltro): boolean {
+  return ofertaPassaFiltroTimeMarketplace(row.timeKey, filtro);
 }
 
 function filtrarPorMesEscala(rows: LinhaOfertaMarketplace[], ano: number, mes0: number): LinhaOfertaMarketplace[] {
@@ -246,6 +250,7 @@ function ofertaAtiva(row: LinhaOfertaMarketplace): boolean {
 
 export default function EscalaMarketplaceTurnosPage() {
   const { theme: t } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("escala_marketplace_turnos");
 
@@ -253,6 +258,7 @@ export default function EscalaMarketplaceTurnosPage() {
   const mesesDisponiveis = useMemo(() => getMesesMarketplace(hoje), [hoje]);
   const [idxMes, setIdxMes] = useState(() => idxMesInicialMarketplace(getMesesMarketplace(new Date()), new Date()));
   const [historico, setHistorico] = useState(true);
+  const [minhasNegociacoes, setMinhasNegociacoes] = useState(false);
 
   const idxMesInicial = useMemo(
     () => idxMesInicialMarketplace(mesesDisponiveis, hoje),
@@ -265,7 +271,7 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const [aba, setAba] = useRouteTab("escala_marketplace_turnos", "todas", MARKETPLACE_ABAS);
   const [filtroTipoTodas, setFiltroTipoTodas] = useState<EscalaAcaoFiltro>("todos");
-  const [filtroTimeTodas, setFiltroTimeTodas] = useState<EscalaTimeFiltro>("todos");
+  const [filtroTimeTodas, setFiltroTimeTodas] = useState<MarketplaceTimeFiltro>("todos");
   /** `""` = todos os dias do período (mês do carrossel ou Histórico). */
   const [filtroDiaTodas, setFiltroDiaTodas] = useState("");
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
@@ -287,7 +293,7 @@ export default function EscalaMarketplaceTurnosPage() {
   const [ofertaCancelar, setOfertaCancelar] = useState<LinhaOfertaMarketplace | null>(null);
   const [decisaoTroca, setDecisaoTroca] = useState<{
     oferta: LinhaOfertaMarketplace;
-    decisao: "aprovar" | "recusar";
+    decisao: DecisaoOfertaMarketplace;
   } | null>(null);
   const [preparandoAceiteId, setPreparandoAceiteId] = useState<string | null>(null);
 
@@ -300,13 +306,26 @@ export default function EscalaMarketplaceTurnosPage() {
     }));
 
   const podeFiltrarTimes = perm.canView === "sim";
+  const podeMinhasNegociacoes = podeFiltrarTimes && !!contexto?.funcionarioId;
+  const visaoPessoal = !podeFiltrarTimes || minhasNegociacoes;
+  const mostrarEncerradas = podeFiltrarTimes && !minhasNegociacoes;
+  const filtroTimeGrupo = minhasNegociacoes
+    ? filtroTimeGrupoNegociacaoMarketplace(contexto?.areaKey)
+    : null;
 
-  /** Ver = Sim: aba Ofertas Encerradas. Ver = Próprios: aba Minhas Ofertas. */
+  /** Ver = Sim: Encerradas por defeito. Minhas Ofertas só com Minhas Negociações (ou URL /MinhasOfertas). */
   useEffect(() => {
     if (perm.loading) return;
-    if (podeFiltrarTimes && aba === "minhas") setAba("encerradas");
-    if (!podeFiltrarTimes && aba === "encerradas") setAba("minhas");
-  }, [perm.loading, podeFiltrarTimes, aba, setAba]);
+    if (!podeFiltrarTimes) {
+      if (aba === "encerradas") setAba("minhas");
+      return;
+    }
+    if (aba === "minhas") {
+      if (!minhasNegociacoes) setMinhasNegociacoes(true);
+      return;
+    }
+    if (aba === "encerradas" && minhasNegociacoes) setAba("minhas");
+  }, [perm.loading, podeFiltrarTimes, aba, minhasNegociacoes, setAba]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
@@ -319,13 +338,13 @@ export default function EscalaMarketplaceTurnosPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void carregarMeuContextoMarketplace().then((ctx) => {
+    void carregarMeuContextoMarketplace(emailEfetivo).then((ctx) => {
       if (!cancelled) setContexto(ctx);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [emailEfetivo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -363,20 +382,30 @@ export default function EscalaMarketplaceTurnosPage() {
     return competenciaAnoMes(last.ano, last.mes);
   }, [mesesDisponiveis]);
 
+  const ofertasEscopo = useMemo(() => {
+    const overlay = overlayIdentidadeMarketplaceOfertas(
+      ofertas,
+      contexto?.funcionarioId ?? null,
+      contexto?.areaKey,
+    );
+    if (perm.canView === "sim") return overlay;
+    return overlay.filter((r) => r.mesmoTime || r.souOfertante || r.souInteressado);
+  }, [ofertas, contexto?.funcionarioId, contexto?.areaKey, perm.canView]);
+
   const linhasMes = useMemo(() => {
     if (historico) {
-      return ofertas.filter((r) =>
+      return ofertasEscopo.filter((r) =>
         isDataNoHistoricoMarketplace(r.dataOfertaIso, hoje, competenciaFimCarrossel),
       );
     }
     const m = mesesDisponiveis[idxMes];
     if (!m) return [];
-    return filtrarPorMesEscala(ofertas, m.ano, m.mes);
-  }, [ofertas, mesesDisponiveis, idxMes, historico, hoje, competenciaFimCarrossel]);
+    return filtrarPorMesEscala(ofertasEscopo, m.ano, m.mes);
+  }, [ofertasEscopo, mesesDisponiveis, idxMes, historico, hoje, competenciaFimCarrossel]);
 
   const diasReservadosUsuario = useMemo(() => {
     const dias = new Set<string>();
-    for (const oferta of ofertas) {
+    for (const oferta of ofertasEscopo) {
       if (!ofertaAtiva(oferta)) continue;
       if (oferta.souOfertante) dias.add(oferta.dataOfertaIso);
       if (oferta.status === "em_analise" && (oferta.souOfertante || oferta.souInteressado)) {
@@ -385,21 +414,35 @@ export default function EscalaMarketplaceTurnosPage() {
       }
     }
     return dias;
-  }, [ofertas]);
+  }, [ofertasEscopo]);
 
   const carrosselPrimeiro = idxMes === 0;
   const carrosselUltimo = idxMes >= mesesDisponiveis.length - 1;
 
   /** Mural público: só ofertas ainda disponíveis (aceitas/canceladas somem daqui). */
   const linhasTodasBase = useMemo(() => {
+    const passaTime = (r: LinhaOfertaMarketplace) => {
+      if (minhasNegociacoes) {
+        return filtroTimeGrupo != null && passaFiltroTime(r, filtroTimeGrupo);
+      }
+      return !podeFiltrarTimes || passaFiltroTime(r, filtroTimeTodas);
+    };
     return linhasMes.filter(
       (r) =>
         ofertaEmAberto(r) &&
         passaFiltroTipo(r, filtroTipoTodas) &&
-        (!podeFiltrarTimes || passaFiltroTime(r, filtroTimeTodas)) &&
+        passaTime(r) &&
         textoContemBuscaEmAlgum(busca, r.ofertante, estudioDaOferta(r), r.turnoOferta, r.turnoInteresse),
     );
-  }, [linhasMes, filtroTipoTodas, filtroTimeTodas, podeFiltrarTimes, busca]);
+  }, [
+    linhasMes,
+    filtroTipoTodas,
+    filtroTimeTodas,
+    podeFiltrarTimes,
+    minhasNegociacoes,
+    filtroTimeGrupo,
+    busca,
+  ]);
 
   /** Dias com oferta em aberto no período — alimentam o filtro de dia da barra. */
   const diasComOfertaTodas = useMemo(() => {
@@ -441,10 +484,9 @@ export default function EscalaMarketplaceTurnosPage() {
       linhasMes.filter(
         (r) =>
           passaFiltroTipo(r, filtroTipoMinhas) &&
-          (!podeFiltrarTimes || passaFiltroTime(r, filtroTimeTodas)) &&
           textoContemBuscaEmAlgum(busca, r.ofertante, estudioDaOferta(r), r.turnoOferta, r.turnoInteresse),
       ),
-    [linhasMes, filtroTipoMinhas, filtroTimeTodas, podeFiltrarTimes, busca],
+    [linhasMes, filtroTipoMinhas, busca],
   );
 
   const minhasAbertas = useMemo(
@@ -565,6 +607,20 @@ export default function EscalaMarketplaceTurnosPage() {
           }
         }}
       />
+      {podeMinhasNegociacoes ? (
+        <FiltroMinhasNegociacoesButton
+          active={minhasNegociacoes}
+          onClick={() => {
+            if (minhasNegociacoes) {
+              setMinhasNegociacoes(false);
+              if (aba === "minhas") setAba("todas");
+            } else {
+              setMinhasNegociacoes(true);
+              setAba("minhas");
+            }
+          }}
+        />
+      ) : null}
     </>
   );
 
@@ -588,10 +644,10 @@ export default function EscalaMarketplaceTurnosPage() {
           opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
         />
       )}
-      {podeFiltrarTimes ? (
+      {podeFiltrarTimes && !minhasNegociacoes ? (
         <FiltroBarCampoSelect
           value={filtroTimeTodas}
-          onChange={(v) => setFiltroTimeTodas(v as EscalaTimeFiltro)}
+          onChange={(v) => setFiltroTimeTodas(v as MarketplaceTimeFiltro)}
           options={MARKETPLACE_TIME_OPCOES}
           icon={FilterBarIcons.time}
           ariaLabel={MARKETPLACE_TIME_ARIA_LABEL}
@@ -652,7 +708,7 @@ export default function EscalaMarketplaceTurnosPage() {
     }
     return (
       <BtnIconeAcaoLinha
-        label={tooltipAcao(row.tipo === "oferta_troca" ? "Propor Troca" : "Aceitar Oferta")}
+        label={tooltipAcao(row.tipo === "oferta_troca" ? "Propor Troca" : "Enviar proposta")}
         onClick={() => void abrirAceite(row)}
       >
         <Check size={14} aria-hidden="true" />
@@ -804,7 +860,7 @@ export default function EscalaMarketplaceTurnosPage() {
     const mostrarOfertante = variant === "aceitei";
     const mostrarComprador = variant === "historico";
     const mostrarStatus = true;
-    const mostrarAcoes = variant === "abertas";
+    const mostrarAcoes = variant === "abertas" || variant === "aceitei";
 
     return (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -847,10 +903,21 @@ export default function EscalaMarketplaceTurnosPage() {
                   )}
                   {mostrarAcoes &&
                     tdAcoes(
-                      r.tipo === "oferta_troca" && r.status === "em_analise" ? (
+                      variant === "aceitei" ? (
+                        r.status === "em_analise" ? (
+                          <BtnIconeAcaoLinha
+                            label={tooltipAcao("Desistir da proposta")}
+                            onClick={() => setDecisaoTroca({ oferta: r, decisao: "desistir" })}
+                          >
+                            <Undo2 size={14} aria-hidden="true" />
+                          </BtnIconeAcaoLinha>
+                        ) : (
+                          <span style={{ color: t.textMuted }}>—</span>
+                        )
+                      ) : r.status === "em_analise" ? (
                         <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
                           <BtnIconeAcaoLinha
-                            label={tooltipAcao("Aprovar Troca")}
+                            label={tooltipAcao(r.tipo === "oferta_troca" ? "Aprovar Troca" : "Aprovar compra")}
                             onClick={() => setDecisaoTroca({ oferta: r, decisao: "aprovar" })}
                           >
                             <Check size={14} aria-hidden="true" />
@@ -860,6 +927,12 @@ export default function EscalaMarketplaceTurnosPage() {
                             onClick={() => setDecisaoTroca({ oferta: r, decisao: "recusar" })}
                           >
                             <X size={14} aria-hidden="true" />
+                          </BtnIconeAcaoLinha>
+                          <BtnIconeAcaoLinha
+                            label={tooltipAcao("Cancelar Oferta")}
+                            onClick={() => setOfertaCancelar(r)}
+                          >
+                            <Ban size={14} aria-hidden="true" />
                           </BtnIconeAcaoLinha>
                         </div>
                       ) : (
@@ -963,7 +1036,7 @@ export default function EscalaMarketplaceTurnosPage() {
               >
                 Todas as Ofertas
               </FiltroBarTabButton>
-              {podeFiltrarTimes ? (
+              {mostrarEncerradas ? (
                 <FiltroBarTabButton
                   id="tab-mkt-encerradas"
                   active={aba === "encerradas"}
@@ -1034,7 +1107,7 @@ export default function EscalaMarketplaceTurnosPage() {
             </div>
           )}
 
-          {aba === "minhas" && !podeFiltrarTimes && (
+          {aba === "minhas" && visaoPessoal && (
             <div role="tabpanel" id="panel-mkt-minhas" aria-labelledby="tab-mkt-minhas">
               <div style={contentBox}>
                 <SectionTitle sub="Disponíveis ou com proposta de troca em análise">
@@ -1043,7 +1116,7 @@ export default function EscalaMarketplaceTurnosPage() {
                 {renderTabelaMinhas(minhasAbertas, "abertas")}
               </div>
               <div style={contentBox}>
-                <SectionTitle sub="Aceites concluídos e propostas de troca em análise">
+                <SectionTitle sub="Aceites concluídos e propostas em análise">
                   Ofertas que aceitei
                 </SectionTitle>
                 {renderTabelaMinhas(minhasAceitas, "aceitei")}
@@ -1055,7 +1128,7 @@ export default function EscalaMarketplaceTurnosPage() {
             </div>
           )}
 
-          {aba === "encerradas" && podeFiltrarTimes && (
+          {aba === "encerradas" && mostrarEncerradas && (
             <div role="tabpanel" id="panel-mkt-encerradas" aria-labelledby="tab-mkt-encerradas">
               <div style={contentBox}>
                 <SectionTitle sub="Ofertas de todos os prestadores que foram aceitas">

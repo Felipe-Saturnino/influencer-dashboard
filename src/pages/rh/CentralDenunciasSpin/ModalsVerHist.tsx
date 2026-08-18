@@ -10,17 +10,6 @@ import type { DenunciaListRow, AnexoRow } from "./types";
 
 const MODAL_MAX = "90dvh" as const;
 
-function useEscClose(open: boolean, onClose: () => void) {
-  useEffect(() => {
-    if (!open) return;
-    const fn = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", fn);
-    return () => window.removeEventListener("keydown", fn);
-  }, [open, onClose]);
-}
-
 function fmtDt(iso: string) {
   try {
     return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -62,7 +51,6 @@ export function ModalVerDenuncia({
 }) {
   const [aba, setAba] = useState<"dados" | "relato">("dados");
   const [exibirSensiveis, setExibirSensiveis] = useState(false);
-  useEscClose(open, onClose);
 
   useEffect(() => {
     if (open) {
@@ -294,7 +282,6 @@ export function ModalHistoricoDenuncia({
 }) {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<{ sortAt: string; node: ReactNode }[]>([]);
-  useEscClose(open, onClose);
 
   const load = useCallback(async () => {
     if (!denunciaId) return;

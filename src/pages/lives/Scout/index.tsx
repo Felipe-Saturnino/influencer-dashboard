@@ -771,14 +771,6 @@ function ModalVisualizar({ scout, operadorasList, onClose, isDark }: { scout: Sc
   useEffect(() => { containerRef.current?.focus(); }, []);
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  useEffect(() => {
     if (scout?.id) {
       supabase.from("scout_anotacoes").select("id, scout_id, usuario_id, texto, created_at").eq("scout_id", scout.id).order("created_at", { ascending: false }).then(({ data }) => {
         const lista = (data ?? []) as ScoutAnotacao[];
@@ -1006,14 +998,6 @@ function ModalEditar({ scout, operadorasList, perm, onClose, onSaved, isDark }: 
   }, [scout?.id]);
 
   useEffect(() => { containerRef.current?.focus(); }, []);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const togglePlataforma = (p: string) => {
     setPlataformas((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));

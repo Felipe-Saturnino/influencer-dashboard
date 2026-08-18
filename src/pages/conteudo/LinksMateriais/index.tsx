@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
@@ -106,12 +107,13 @@ type PerfilEmbed = {
 
 export default function LinksMateriais() {
   const { theme: t, user, effectiveRole, podeVerInfluencer, setActivePage } = useApp();
+  const { userId: userIdEfetivo, name: nomeEfetivo, role: roleIdentidade } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("links_materiais");
   const dark = t.isDark ?? false;
   const narrowMobile = useMediaQuery("(max-width: 479px)");
 
-  const roleEfetivo = effectiveRole ?? user?.role ?? null;
+  const roleEfetivo = roleIdentidade ?? effectiveRole ?? user?.role ?? null;
   const abasVisiveis = linksMateriaisAbasVisiveis(roleEfetivo, perm.canView);
   const [canal, setCanal] = useRouteTab(
     "links_materiais",
@@ -167,7 +169,7 @@ export default function LinksMateriais() {
   }, [canal]);
 
   const carregarMeuPerfil = useCallback(async () => {
-    if (!user?.id || !linksMateriaisIsSelfMode(roleEfetivo, perm.canView)) {
+    if (!userIdEfetivo || !linksMateriaisIsSelfMode(roleEfetivo, perm.canView)) {
       setLoadingPerfil(false);
       setNomeArtistico("");
       setUtmInput("");
@@ -179,7 +181,7 @@ export default function LinksMateriais() {
     const { data, error } = await supabase
       .from("influencer_perfil")
       .select("nome_artistico, nome_completo")
-      .eq("id", user.id)
+      .eq("id", userIdEfetivo)
       .maybeSingle();
     if (error) {
       console.error("[LinksMateriais] perfil:", error.message);
@@ -194,11 +196,11 @@ export default function LinksMateriais() {
       role: roleEfetivo,
       nome_artistico: data?.nome_artistico,
       nome_completo: data?.nome_completo,
-      name: user.name,
+      name: nomeEfetivo ?? user?.name,
     });
     setNomeArtistico(nome === "—" ? "" : nome);
 
-    const existente = await fetchCdaUtmEmitidoParaInfluencer(null);
+    const existente = await fetchCdaUtmEmitidoParaInfluencer(userIdEfetivo);
     if (existente) {
       setEmitido(true);
       setUtmInput(existente);
@@ -209,7 +211,7 @@ export default function LinksMateriais() {
       setUtmInput(sanitizarUtm(nome === "—" ? "" : nome));
     }
     setLoadingPerfil(false);
-  }, [user?.id, user?.name, roleEfetivo, canal, perm.canView]);
+  }, [userIdEfetivo, nomeEfetivo, user?.name, roleEfetivo, canal, perm.canView]);
 
   useEffect(() => {
     void carregarMeuPerfil();
@@ -382,7 +384,7 @@ export default function LinksMateriais() {
     if (isSelfMode && canal === "influencer") {
       setVerificandoGateEmissao(true);
       try {
-        const gate = await verificarElegibilidadeAgendaLive(user.id);
+        const gate = await verificarElegibilidadeAgendaLive(userIdEfetivo ?? user.id);
         if (gate.perfilIncompleto || gate.faltaPlaybook) {
           setBloqueioEmissao(gate);
           return;
@@ -396,7 +398,7 @@ export default function LinksMateriais() {
     setSalvando(true);
     try {
       const payload = isSelfMode
-        ? { p_utm_source: raw, p_influencer_id: user.id }
+        ? { p_utm_source: raw, p_influencer_id: userIdEfetivo ?? user.id }
         : { p_utm_source: raw, p_influencer_id: influencerSelecionado };
       const { data, error } = await supabase.rpc("registrar_utm_alias_tracking_casa_apostas", payload);
       if (error) {

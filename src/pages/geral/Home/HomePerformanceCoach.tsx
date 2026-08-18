@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasPerformanceCoach } from "./performanceCoach/BoasVindasPerformanceCoach";
@@ -12,10 +13,11 @@ const HOME_PERFORMANCE_COACH_PREFIX = "home-performance-coach";
 
 export default function HomePerformanceCoach() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Performance Coach";
+  const nome = nomeEfetivo?.trim() || "Performance Coach";
 
   return (
     <div

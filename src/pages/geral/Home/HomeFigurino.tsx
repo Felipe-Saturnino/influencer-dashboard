@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasFigurino } from "./figurino/BoasVindasFigurino";
@@ -11,10 +12,11 @@ const HOME_FIGURINO_PREFIX = "home-figurino";
 
 export default function HomeFigurino() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Figurino";
+  const nome = nomeEfetivo?.trim() || "Figurino";
 
   return (
     <div

@@ -62,8 +62,8 @@ export default function Ajuda() {
   } = useApp();
   const brand = useDashboardBrand();
   const perm = usePermission("ajuda");
-  const isAdmin = user?.role === "admin";
   const roleEfetivo = (effectiveRole ?? user?.role) as Role | null | undefined;
+  const isAdmin = roleEfetivo === "admin";
 
   const podeVerAbaTutoriais = useMemo(
     () =>

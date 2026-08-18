@@ -6,16 +6,17 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import {
   aprovarTrocaMarketplace,
+  desistirOfertaMarketplace,
   mensagemErroOfertaMarketplace,
   recusarTrocaMarketplace,
 } from "../../../lib/escalaMarketplace";
 import type { LinhaOfertaMarketplace } from "../../../lib/escalaTurnosUiConstants";
 
-type DecisaoTroca = "aprovar" | "recusar";
+export type DecisaoOfertaMarketplace = "aprovar" | "recusar" | "desistir";
 
 type Props = {
   oferta: LinhaOfertaMarketplace | null;
-  decisao: DecisaoTroca;
+  decisao: DecisaoOfertaMarketplace;
   onClose: () => void;
   onConcluida: () => void;
 };
@@ -40,16 +41,35 @@ export function ModalDecidirTrocaMarketplace({
 
   if (!oferta) return null;
 
+  const ehTroca = oferta.tipo === "oferta_troca";
   const aprovando = decisao === "aprovar";
-  const titulo = aprovando ? "Aprovar troca" : "Recusar proposta";
-  const acao = aprovando ? "Aprovar troca" : "Recusar proposta";
+  const desistindo = decisao === "desistir";
+
+  const titulo = desistindo
+    ? "Desistir da proposta"
+    : aprovando
+      ? ehTroca
+        ? "Aprovar troca"
+        : "Aprovar compra"
+      : "Recusar proposta";
+  const acao = titulo;
+
+  const corpo = desistindo
+    ? "Ao desistir, a oferta volta ao mural para outros colegas. A escala não muda."
+    : aprovando
+      ? ehTroca
+        ? "Ao aprovar, os dois dias serão atualizados nas escalas (Compra - Turno e Venda). Sem aprovação de gestor."
+        : "Ao aprovar, a escala é atualizada: Compra - Turno para quem assume e Venda para quem sai. Sem aprovação de gestor."
+      : "Ao recusar, a oferta volta ao mural. A escala não muda.";
 
   async function confirmar() {
     setErro(null);
     setGravando(true);
-    const res = aprovando
-      ? await aprovarTrocaMarketplace(oferta!.id)
-      : await recusarTrocaMarketplace(oferta!.id);
+    const res = desistindo
+      ? await desistirOfertaMarketplace(oferta!.id)
+      : aprovando
+        ? await aprovarTrocaMarketplace(oferta!.id)
+        : await recusarTrocaMarketplace(oferta!.id);
     setGravando(false);
     if ("error" in res) {
       setErro(mensagemErroOfertaMarketplace(res.error));
@@ -78,17 +98,27 @@ export function ModalDecidirTrocaMarketplace({
             lineHeight: 1.65,
           }}
         >
-          <div><strong>Seu dia:</strong> {oferta.dataOfertaIso} — {oferta.turnoOferta}</div>
           <div>
-            <strong>Proposta de {oferta.comprador ?? "prestador"}:</strong>{" "}
-            {oferta.dataInteresseIso ?? "—"} — {oferta.turnoInteresse ?? "—"}
+            <strong>{ehTroca ? "Seu dia:" : "Dia da oferta:"}</strong> {oferta.dataOfertaIso} —{" "}
+            {oferta.turnoOferta}
           </div>
+          {ehTroca || oferta.dataInteresseIso ? (
+            <div>
+              <strong>
+                {desistindo ? "Sua proposta:" : `Proposta de ${oferta.comprador ?? "prestador"}:`}
+              </strong>{" "}
+              {oferta.dataInteresseIso ?? oferta.dataOfertaIso} — {oferta.turnoInteresse ?? oferta.turnoOferta}
+            </div>
+          ) : (
+            <div>
+              <strong>{desistindo ? "Ofertante:" : "Proposta de:"}</strong>{" "}
+              {desistindo ? oferta.ofertante : (oferta.comprador ?? "prestador")}
+            </div>
+          )}
         </div>
 
         <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
-          {aprovando
-            ? "Ao aprovar, os dois dias serão trocados oficialmente nas escalas."
-            : "Ao recusar, os dias serão liberados e a oferta voltará ao quadro de Ofertas de Troca."}
+          {corpo}
         </p>
 
         {erro ? (
@@ -98,22 +128,6 @@ export function ModalDecidirTrocaMarketplace({
         ) : null}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: "10px 18px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              background: "transparent",
-              color: t.text,
-              fontFamily: FONT.body,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Voltar
-          </button>
           <button
             type="button"
             disabled={gravando || ofertaExpirada}
