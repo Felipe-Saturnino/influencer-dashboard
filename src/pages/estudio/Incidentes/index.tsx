@@ -201,7 +201,7 @@ function sortRows(
 }
 
 export default function Incidentes() {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
   const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("incidentes");
