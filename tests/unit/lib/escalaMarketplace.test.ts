@@ -10,6 +10,7 @@ import {
   formatarDiaIsoPtBr,
   overlayIdentidadeMarketplaceOfertas,
   parseHomeMarketplaceAlertas,
+  fontesAlertaHomeDePayloadListar,
   alertasHomeMarketplaceDoPrestador,
   parseMeuContextoMarketplace,
   parseMinhaGradeMarketplace,
@@ -577,5 +578,67 @@ describe("alertasHomeMarketplaceDoPrestador", () => {
   it("esconde lembrete depois do início do turno", () => {
     const aceita = { ...base, status: "aceita", inicio_turno_at: "2026-08-18T07:00:00-03:00" };
     expect(alertasHomeMarketplaceDoPrestador([aceita], "gp-1", agora)).toEqual([]);
+  });
+
+  it("lembrete usa o fim do dia quando a listagem não traz inicio_turno_at", () => {
+    const aceita = { ...base, status: "aceita", inicio_turno_at: null };
+    const out = alertasHomeMarketplaceDoPrestador([aceita], "gp-1", agora);
+    expect(out).toEqual([{ id: "a1", kind: "lembrete", tipo: "venda_turno", diaIso: "2026-08-20" }]);
+  });
+});
+
+describe("fontesAlertaHomeDePayloadListar", () => {
+  const listar = [
+    {
+      id: "aberta-1",
+      tipo: "venda_turno",
+      status: "aberta",
+      dia_iso: "2026-08-21",
+      ofertante_funcionario_id: "gp-1",
+      interessado_funcionario_id: null,
+    },
+    {
+      id: "analise-1",
+      tipo: "venda_folga",
+      status: "em_analise",
+      dia_iso: "2026-08-22",
+      ofertante_funcionario_id: "gp-1",
+      interessado_funcionario_id: "gp-2",
+      dia_iso_interesse: null,
+    },
+    {
+      id: "aceita-1",
+      tipo: "oferta_troca",
+      status: "aceita",
+      dia_iso: "2026-08-23",
+      ofertante_funcionario_id: "gp-3",
+      interessado_funcionario_id: "gp-1",
+      dia_iso_interesse: "2026-08-24",
+    },
+  ];
+
+  it("mantém só ofertas em análise ou aceitas do payload da RPC de listagem", () => {
+    expect(fontesAlertaHomeDePayloadListar(listar)).toEqual([
+      {
+        id: "analise-1",
+        tipo: "venda_folga",
+        status: "em_analise",
+        dia_iso: "2026-08-22",
+        ofertante_funcionario_id: "gp-1",
+        interessado_funcionario_id: "gp-2",
+        inicio_turno_at: null,
+        dia_iso_interesse: null,
+      },
+      {
+        id: "aceita-1",
+        tipo: "oferta_troca",
+        status: "aceita",
+        dia_iso: "2026-08-23",
+        ofertante_funcionario_id: "gp-3",
+        interessado_funcionario_id: "gp-1",
+        inicio_turno_at: null,
+        dia_iso_interesse: "2026-08-24",
+      },
+    ]);
   });
 });

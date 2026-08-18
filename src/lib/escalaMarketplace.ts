@@ -810,6 +810,39 @@ export type HomeMarketplaceAlertaFonte = {
   dia_iso_interesse?: string | null;
 };
 
+/**
+ * Payload de `escala_marketplace_ofertas_listar` → fontes dos cards da Home.
+ * A tabela `escala_marketplace_oferta` não é lida pelo cliente (RLS + GRANT).
+ */
+export function fontesAlertaHomeDePayloadListar(data: unknown): HomeMarketplaceAlertaFonte[] {
+  const out: HomeMarketplaceAlertaFonte[] = [];
+  for (const item of parseArrayPayload(data)) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const id = texto(row.id);
+    const tipo = texto(row.tipo);
+    const status = texto(row.status);
+    const diaIso = isoDate(row.dia_iso);
+    const ofertante = texto(row.ofertante_funcionario_id);
+    if (!id || !tipo || !status || !diaIso || !ofertante) continue;
+    if (status !== "em_analise" && status !== "aceita") continue;
+    const interessado = texto(row.interessado_funcionario_id);
+    const inicio = texto(row.inicio_turno_at);
+    const diaInteresse = isoDate(row.dia_iso_interesse);
+    out.push({
+      id,
+      tipo,
+      status,
+      dia_iso: diaIso,
+      ofertante_funcionario_id: ofertante,
+      interessado_funcionario_id: interessado || null,
+      inicio_turno_at: inicio || null,
+      dia_iso_interesse: diaInteresse || null,
+    });
+  }
+  return out;
+}
+
 function instanteMsIso(value: string | null | undefined): number | null {
   if (!value) return null;
   const ms = Date.parse(value);
@@ -869,8 +902,10 @@ export function alertasHomeMarketplaceDoPrestador(
 }
 
 /**
- * @param emailEfetivo e-mail da sessão visível. No Simulador a RPC usa `auth.uid()`
- * do viewer — recortar no cliente pelo cadastro RH desse e-mail.
+ * @param emailEfetivo e-mail da sessão visível. No Simulador `home_marketplace_alertas`
+ * usa `auth.uid()` do viewer — listar via `escala_marketplace_ofertas_listar`
+ * (SECURITY DEFINER, GRANT authenticated) e recortar no cliente pelo cadastro RH.
+ * Proibido `select` direto em `escala_marketplace_oferta` (RLS bloqueia).
  */
 export async function carregarHomeMarketplaceAlertas(
   emailEfetivo?: string | null,
@@ -886,19 +921,15 @@ export async function carregarHomeMarketplaceAlertas(
   }
   const func = await buscarRhFuncionarioAtivoPorEmailLogin(email);
   if (!func?.id) return [];
-  const { data, error } = await supabase
-    .from("escala_marketplace_oferta")
-    .select(
-      "id, tipo, status, dia_iso, ofertante_funcionario_id, interessado_funcionario_id, inicio_turno_at, dia_iso_interesse",
-    )
-    .or(`ofertante_funcionario_id.eq.${func.id},interessado_funcionario_id.eq.${func.id}`)
-    .in("status", ["em_analise", "aceita"]);
+  const { data, error } = await supabase.rpc("escala_marketplace_ofertas_listar", {
+    p_ref_mes: null,
+  });
   if (error) {
     console.error("[carregarHomeMarketplaceAlertas] overlay", error);
     return [];
   }
   return alertasHomeMarketplaceDoPrestador(
-    (data ?? []) as HomeMarketplaceAlertaFonte[],
+    fontesAlertaHomeDePayloadListar(data),
     func.id,
   );
 }
