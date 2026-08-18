@@ -12,6 +12,7 @@ import { fetchTurnosPorEstudioSlugs, type TurnosDealersPick } from "../../../lib
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { ModalTabPanel } from "../../../components/ModalTabPanel";
 import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
@@ -79,6 +80,7 @@ import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import type { RhFuncionario, RhFuncionarioHistorico, RhStaffAnotacao } from "../../../types/rhFuncionario";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 import {
   calcularResumoStaffCards,
   STAFF_FUNCIONARIO_LIST_SELECT,
@@ -541,6 +543,7 @@ function ModalStaffAnotacoes({
 
 export default function RhGestaoStaffPage() {
   const { theme: t, user } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const perm = usePermission("rh_staff");
@@ -586,10 +589,16 @@ export default function RhGestaoStaffPage() {
       setErroTimes(ERRO_CARREGAR_TIMES);
       setTimes([]);
     } else {
-      setTimes((data ?? []) as StaffTimeRow[]);
+      let list = (data ?? []) as StaffTimeRow[];
+      if (recorteProprios) {
+        const eu = emailEfetivo ? await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo) : null;
+        const tid = eu?.org_time_id;
+        list = tid ? list.filter((t) => t.id === tid) : [];
+      }
+      setTimes(list);
     }
     setLoadingTimes(false);
-  }, []);
+  }, [recorteProprios, emailEfetivo]);
 
   const carregarEstudios = useCallback(async () => {
     setErroEstudios(null);
@@ -649,13 +658,18 @@ export default function RhGestaoStaffPage() {
           .range(from, to);
         return { data: ((data as unknown as RhFuncionario[]) ?? []), error };
       });
-      setPrestadores(rows);
+      if (recorteProprios && emailEfetivo) {
+        const eu = await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo);
+        setPrestadores(eu ? rows.filter((r) => r.id === eu.id) : []);
+      } else {
+        setPrestadores(rows);
+      }
     } catch {
       setPrestadores([]);
       setErroPrestadores(ERRO_CARREGAR_PRESTADORES);
     }
     setLoadingPrestadores(false);
-  }, []);
+  }, [recorteProprios, emailEfetivo]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;

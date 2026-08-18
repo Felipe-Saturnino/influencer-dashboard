@@ -1664,12 +1664,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo aceitar uma oferta?",
         texto:
-          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma — ou, na **Liderança**, entre Shift Leader e Service Manager — nunca na própria oferta. Dá para aceitar **no mesmo dia**, com pelo menos **2h até o início do turno** e a escala do mês **aprovada** (a de cada participante). Publicar exige **4h**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. A troca fica **Em análise** até o ofertante aprovar. Se a oferta já passou da janela de 2h ou a data é antiga, ela é cancelada automaticamente.",
+          "O aceite só é permitido entre prestadores do **mesmo time** do Organograma — ou, na **Liderança**, entre Shift Leader e Service Manager — nunca na própria oferta. Dá para enviar proposta **no mesmo dia**, com pelo menos **2h até o início do turno** e a escala do mês **aprovada** (a de cada participante). Publicar exige **4h**. Em Venda de Turno e Oferta de Troca você precisa estar **de folga** no dia ofertado; em Venda de Folga precisa estar **escalado no mesmo turno**. Para propor uma troca, o campo **Dia que você oferece em troca** lista somente seus dias escalados, livres de outra negociação e compatíveis com o intervalo mínimo de **12h**. Em todos os tipos a proposta fica **Em análise** até quem publicou aprovar. Quem enviou a proposta pode **desistir** nesse intervalo. Se a oferta já passou da janela de 2h ou a data é antiga, ela é cancelada automaticamente.",
       },
       {
         subtitulo: "Só vejo ofertas do meu time?",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu time e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba muda para **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para alternar o escopo, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu grupo de negociação e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba padrão é **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para ver as **suas** ofertas (e aprovar uma compra), use **Minhas Negociações** ao lado do Histórico — o mural passa a ser só do seu time e a aba Minhas Ofertas reaparece. Para alternar o escopo de gestão, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+      },
+      {
+        subtitulo: "Não vejo a aba Minhas Ofertas?",
+        texto:
+          "Com **Ver: Sim**, a segunda aba é **Ofertas Encerradas** (visão de gestão). Se o seu login também é prestador de estúdio, ligue **Minhas Negociações** ao lado do Histórico: Encerradas some e voltam **Todas as Ofertas** (só o seu grupo) e **Minhas Ofertas**. Sem cadastro de prestador ligado ao login, o botão não aparece.",
       },
       {
         subtitulo: "Marquei vários dias e só parte das ofertas foi publicada?",
@@ -1684,7 +1689,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aceitei uma oferta e a escala não mudou?",
         texto:
-          "Nas vendas, a célula é gravada no aceite: **Compra - Turno** para quem assumiu e **Venda** para quem saiu. Na **Oferta de Troca**, enviar a proposta não altera a escala: o status fica **Em análise** e o ofertante original deve aprovar em **Minhas ofertas abertas**. Se a aprovação já ocorreu, recarregue a Escala Estúdio ou o Calendário. Se continuar divergente, entre em contato com o suporte.",
+          "Enviar a proposta **não** altera a escala: o status fica **Em análise** e quem publicou precisa **aprovar** em **Minhas ofertas abertas** (com **Ver: Sim**, ligue **Minhas Negociações**). Recusar ou desistir devolve a oferta ao mural, também sem mudar a escala. Se a aprovação já ocorreu, recarregue a Escala Estúdio ou o Calendário. Se continuar divergente, entre em contato com o suporte.",
       },
     ],
   },
@@ -1960,6 +1965,16 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "O menu simulado não mostra páginas que o perfil deveria ter?",
         texto:
           "O menu combina a matriz de permissões do perfil simulado com o escopo (operadora ou área). Confirme a operadora/área escolhida no modal e as marcações em Gestão de Usuários (Permissões e abas de escopo). Algumas páginas de plataforma ficam ocultas de propósito na simulação.",
+      },
+      {
+        subtitulo: "No Calendário ainda vejo Relatório de Presença e filtros de Time/Staff?",
+        texto:
+          "Comportamento esperado só para perfis com permissão de Editar Sim ou Ver Sim no Calendário. Ao simular um Game Presenter (ou outro perfil com Ver Próprios), a página deve mostrar só Compromissos e Controle de Presença daquela pessoa, sem Relatório nem filtros de gestão. Encerrar a visualização e iniciar de novo. Se continuar com a visão de administrador, recarregue a página; se persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Na Galeria de Fotos ainda vejo fotos de outros colaboradores?",
+        texto:
+          "Na aba **Gerais** as fotos de evento são compartilhadas — isso é esperado. Em **Minhas Fotos**, a simulação deve mostrar só o colaborador da pessoa escolhida. Recarregue a página com a visualização ativa. Se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Como sair da simulação?",

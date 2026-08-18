@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasExecutivo } from "./executivo/BoasVindasExecutivo";
@@ -12,10 +13,11 @@ const HOME_EXECUTIVO_PREFIX = "home-executivo";
 
 export default function HomeExecutivo() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Executivo";
+  const nome = nomeEfetivo?.trim() || "Executivo";
 
   return (
     <div

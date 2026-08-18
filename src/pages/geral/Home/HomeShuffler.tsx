@@ -1,8 +1,10 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasShuffler } from "./shuffler/BoasVindasShuffler";
 import { HomeStaffAposBoasVindas } from "./shared/HomeStaffAposBoasVindas";
+import { MarketplaceAlertasStaffHome } from "./shared/MarketplaceAlertasStaffHome";
 import { InformacoesStaffHome } from "./shared/InformacoesStaffHome";
 import { CentralAcademyStaffHome } from "./shared/CentralAcademyStaffHome";
 import { BlogueiroSpinStaffHome } from "./shared/BlogueiroSpinStaffHome";
@@ -12,10 +14,11 @@ const HOME_SHUFFLER_PREFIX = "home-shuffler";
 
 export default function HomeShuffler() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Shuffler";
+  const nome = nomeEfetivo?.trim() || "Shuffler";
 
   return (
     <div
@@ -31,6 +34,7 @@ export default function HomeShuffler() {
     >
       <BoasVindasShuffler nome={nome} />
       <HomeStaffAposBoasVindas sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
+      <MarketplaceAlertasStaffHome sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
       <InformacoesStaffHome perfil="shuffler" sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
       <CentralAcademyStaffHome sectionIdPrefix={HOME_SHUFFLER_PREFIX} />
       <BlogueiroSpinStaffHome sectionIdPrefix={HOME_SHUFFLER_PREFIX} />

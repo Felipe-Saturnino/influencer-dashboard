@@ -56,7 +56,9 @@ export function ModalCancelarOfertaMarketplace({ oferta, onClose, onCancelada }:
           {oferta.turnoOferta})?
         </p>
         <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
-          A oferta sai da lista de disponíveis e a sua escala não é alterada.
+          {oferta.status === "em_analise"
+            ? "Cancelar encerra a oferta. A proposta do colega é descartada e a oferta não volta ao mural. A escala não muda."
+            : "A oferta sai da lista de disponíveis e a sua escala não é alterada."}
         </p>
 
         {erro ? (

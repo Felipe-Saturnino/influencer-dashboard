@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Download, History, Loader2 } from "lucide-re
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
@@ -140,6 +141,7 @@ import {
   type EscalaExcelLinhaDetalhe,
 } from "./gestaoEscalaExcel";
 import { baixarXlsx } from "../../../lib/xlsxWriter";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
 
 export type GestaoEscalaPageProps = {
   modo?: EscalaGradeModo;
@@ -153,6 +155,7 @@ const TUTORIAL_ALTERAR_ESCALA: AjudaContextualTutorial = {
 
 export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPageProps) {
   const { theme: t } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageKey = modo === "escritorio" ? "escala_escritorio" : "rh_gestao_escala";
@@ -236,12 +239,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     setLoadingPrestadores(true);
     setErroPrestadores(null);
     const pAreaAtuacao = modo === "escritorio" ? "escritorio" : "estudio";
-    const [timesRes, prestRes, meuIdRes] = await Promise.all([
+    const [timesRes, prestRes, meuFuncionario] = await Promise.all([
       supabase.rpc("rh_escala_times_por_area_atuacao", { p_area_atuacao: pAreaAtuacao }),
       supabase.rpc("rh_escala_prestadores_por_area_atuacao", { p_area_atuacao: pAreaAtuacao }),
-      perm.canView === "proprios"
-        ? supabase.rpc("rh_calendario_meu_funcionario_id")
-        : Promise.resolve({ data: null as string | null, error: null }),
+      perm.canView === "proprios" && emailEfetivo
+        ? buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo)
+        : Promise.resolve(null),
     ]);
     if (prestRes.error) {
       setErroPrestadores(
@@ -261,13 +264,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           }));
       let abas = buildAbasEscalaFromTimes(modo, times);
       if (perm.canView === "proprios") {
-        const meuIdRaw = meuIdRes.data;
-        const meuId =
-          typeof meuIdRaw === "string"
-            ? meuIdRaw
-            : meuIdRaw != null
-              ? String(meuIdRaw)
-              : "";
+        const meuId = meuFuncionario?.id ?? "";
         const eu = meuId ? prestadores.find((p) => p.id === meuId) : undefined;
         const myArea = eu ? areaKeyDoPrestadorEscala(modo, eu) : null;
         abas = myArea ? abas.filter((a) => a.areaKey === myArea) : [];
@@ -290,7 +287,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       }
     }
     setLoadingPrestadores(false);
-  }, [modo, perm.canView]);
+  }, [modo, perm.canView, emailEfetivo]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;

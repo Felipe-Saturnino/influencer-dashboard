@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -52,14 +53,15 @@ interface Props {
 // ─── MODAL ────────────────────────────────────────────────────────────────────
 export default function ModalLive({ live, onClose, onSave }: Props) {
   const { theme: t, user, isDark, setActivePage } = useApp();
+  const { userId: userIdEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const { podeVerInfluencer } = useDashboardFiltros();
   const perm = usePermission("agenda");
-  const isInfluencer = roleParidadeInfluencer(user?.role);
+  const isInfluencer = roleParidadeInfluencer(roleEfetivo ?? user?.role);
   const isEdit       = !!live;
   const isAdminOuGestor =
-    !!user?.role && ROLES_STAFF_OPERACOES_LIVES.includes(user.role as Role);
-  const exigeAgendarSoDiaSeguinte = roleParidadeInfluencer(user?.role) || user?.role === "operador";
+    !!roleEfetivo && ROLES_STAFF_OPERACOES_LIVES.includes(roleEfetivo as Role);
+  const exigeAgendarSoDiaSeguinte = roleParidadeInfluencer(roleEfetivo ?? user?.role) || roleEfetivo === "operador";
   const statusValidado = live?.status === "realizada" || live?.status === "nao_realizada";
   // Apenas Admin e Gestor podem editar/excluir lives com status realizada ou não realizada
   const podeEditar   = isEdit && perm.canEditarOk && (!statusValidado || isAdminOuGestor);
@@ -75,7 +77,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   const [influencers, setInfluencers] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
-    influencer_id: live?.influencer_id ?? (roleParidadeInfluencer(user?.role) ? user?.id ?? "" : ""),
+    influencer_id: live?.influencer_id ?? (roleParidadeInfluencer(roleEfetivo ?? user?.role) ? userIdEfetivo ?? "" : ""),
     data:          live?.data          ?? "",
     horario:       live?.horario       ?? "",
     plataforma:    (live?.plataforma    ?? "Twitch") as Plataforma,
@@ -137,7 +139,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     if (!form.horario) return setError("Informe o horário.");
     if (!isInfluencer && influencers.length > 0 && !form.influencer_id) return setError("Selecione um influencer.");
 
-    const targetInfluencerId = isInfluencer ? (user?.id ?? "") : (form.influencer_id ?? "");
+    const targetInfluencerId = isInfluencer ? (userIdEfetivo ?? "") : (form.influencer_id ?? "");
     if (!isEdit) {
       if (!targetInfluencerId) return setError("Selecione um influencer.");
       const gate = await verificarElegibilidadeAgendaLive(targetInfluencerId);
@@ -178,7 +180,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
       horario:       form.horario,
       plataforma:    form.plataforma,
       link:          form.link.trim(),
-      influencer_id: isInfluencer ? user?.id : form.influencer_id || undefined,
+      influencer_id: isInfluencer ? userIdEfetivo : form.influencer_id || undefined,
     };
     if (operadoraSlugInfluencer) payload.operadora_slug = operadoraSlugInfluencer;
     if (isEdit) {

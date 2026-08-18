@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE, BRAND } from "../../../lib/dashboardConstants";
 import { supabase } from "../../../lib/supabase";
@@ -55,10 +56,11 @@ import { ModalPerfil } from "./ModalPerfil";
 
 export default function Influencers() {
   const { theme: t, user, isDark, escoposVisiveis: _escoposVisiveis, podeVerInfluencer, podeVerOperadora } = useApp();
+  const { userId: userIdEfetivo, name: nomeEfetivo, email: emailEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const { operadoraSlugsForcado, showFiltroOperadora } = useDashboardFiltros();
   const perm = usePermission("influencers");
-  const showManagementUI = user?.role !== "influencer";
+  const showManagementUI = roleEfetivo !== "influencer";
   // "proprios": ações apenas em registros do escopo do usuário
   const podeEditarInf = (infId: string) =>
     perm.canEditarOk && (perm.canEditar !== "proprios" || podeVerInfluencer(infId));
@@ -139,10 +141,10 @@ export default function Influencers() {
         }
       }
     } else {
-      if (!user) return;
+      if (!userIdEfetivo) return;
       const [perfilRes, opsRes] = await Promise.all([
-        supabase.from("influencer_perfil").select(PERFIL_COLS).eq("id", user.id).single(),
-        supabase.from("influencer_operadoras").select(INF_OP_COLS).eq("influencer_id", user.id),
+        supabase.from("influencer_perfil").select(PERFIL_COLS).eq("id", userIdEfetivo).single(),
+        supabase.from("influencer_operadoras").select(INF_OP_COLS).eq("influencer_id", userIdEfetivo),
       ]);
       const perfil = perfilRes.data ?? null;
       const operadoras = ((opsRes.data ?? []) as InfluencerOperadora[]).map((o) => ({
@@ -150,15 +152,15 @@ export default function Influencers() {
         operadora_nome: opsMap[o.operadora_slug] ?? o.operadora_nome,
       }));
       setList([{
-        id: user.id,
-        name: user.name,
-        email: user.email,
+        id: userIdEfetivo,
+        name: nomeEfetivo || user?.name || "",
+        email: emailEfetivo || user?.email || "",
         perfil,
         operadoras,
       }]);
     }
     setLoading(false);
-  }, [showManagementUI, user]);
+  }, [showManagementUI, user, userIdEfetivo, nomeEfetivo, emailEfetivo]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 

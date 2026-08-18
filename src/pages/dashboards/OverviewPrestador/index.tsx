@@ -13,14 +13,16 @@ import { OverviewPrestadorAbaKpisMesa } from "./OverviewPrestadorAbaKpisMesa";
 import { OverviewPrestadorAbaKpisOcr } from "./OverviewPrestadorAbaKpisOcr";
 import { OverviewPrestadorFiltroBar } from "./OverviewPrestadorFiltroBar";
 import { useOverviewPrestadorDados, type OverviewPrestadorTab } from "./useOverviewPrestadorDados";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 
 export default function OverviewPrestador() {
-  const { theme: t, user } = useApp();
+  const { theme: t } = useApp();
+  const identidade = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("dash_overview_prestador");
   const [aba, setAba] = useRouteTab("dash_overview_prestador", "escala", ["escala", "kpis_mesa"] as const);
 
-  const dados = useOverviewPrestadorDados(perm.canView, perm.loading, user?.email);
+  const dados = useOverviewPrestadorDados(perm.canView, perm.loading, identidade.email ?? undefined);
 
   const kpisMesaMode = dados.caps.kpisMesaMode;
   const showAbaKpisMesa = kpisMesaMode !== "hidden";

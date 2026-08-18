@@ -21,6 +21,7 @@
  */
 import { supabase } from "./supabase";
 import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
+import { buscarRhFuncionarioAtivoPorEmailLogin } from "./rhFuncionarioLoginMatch";
 import { normRhOrgRotuloOrganograma } from "./rhPrestadorUsuarioSync";
 import {
   instanteFimTurnoTrabalhadoNoDia,
@@ -175,6 +176,41 @@ export function ofertaPassaFiltroTimeMarketplace(
   return timeKey === filtro;
 }
 
+/**
+ * Recorte do mural em Minhas Negociações (Ver = Sim): mesmo grupo da RPC Ver = Próprios.
+ * `null` = sem time de estúdio — o mural fica vazio.
+ */
+export function filtroTimeGrupoNegociacaoMarketplace(
+  areaKey: string | null | undefined,
+): MarketplaceTimeFiltro | null {
+  const k = (areaKey ?? "").trim().toLowerCase();
+  if (k === "shift_leader" || k === "service_manager") return "lideranca";
+  if (
+    k === "game_presenter" ||
+    k === "performance_coach" ||
+    k === "shuffler" ||
+    k === "treinamento"
+  ) {
+    return k;
+  }
+  return null;
+}
+
+/** Frase curta para cards da Home («troca», «venda de turno»). */
+export function fraseTipoOfertaMarketplace(tipo: string): string {
+  if (tipo === "venda_turno") return "venda de turno";
+  if (tipo === "venda_folga") return "venda de folga";
+  if (tipo === "oferta_troca") return "troca";
+  return "negociação";
+}
+
+/** `YYYY-MM-DD` → `dd/mm/aaaa`. */
+export function formatarDiaIsoPtBr(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso.trim());
+  if (!m) return iso;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
 /** Shift Leader e Service Manager só negociam Manhã e Noite (turno de 12h). */
 export function turnoMarketplacePermitidoNaArea(
   areaKey: string | null | undefined,
@@ -218,6 +254,7 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
       ? texto(row.interessado_nome) || labelTruncadoUuid(interessadoId)
       : undefined,
     solicitanteStaffId: ofertanteId,
+    interessadoStaffId: interessadoId || undefined,
     observacao: texto(row.observacao) || undefined,
     souOfertante: row.sou_ofertante === true,
     souInteressado: row.sou_interessado === true,
@@ -341,13 +378,69 @@ export function parseMeuContextoMarketplace(data: unknown): MarketplaceMeuContex
   };
 }
 
-export async function carregarMeuContextoMarketplace(): Promise<MarketplaceMeuContexto | null> {
+export async function carregarMeuContextoMarketplace(
+  emailEfetivo?: string | null,
+): Promise<MarketplaceMeuContexto | null> {
   const { data, error } = await supabase.rpc("escala_marketplace_meu_contexto");
   if (error) {
     console.error("[carregarMeuContextoMarketplace]", error);
     return null;
   }
-  return parseMeuContextoMarketplace(data);
+  const ctx = parseMeuContextoMarketplace(data);
+  const email = emailEfetivo?.trim();
+  if (!email) return ctx;
+  const func = await buscarRhFuncionarioAtivoPorEmailLogin(email);
+  if (!func) {
+    return ctx
+      ? { ...ctx, funcionarioId: null, nome: "", orgTimeId: null, timeNome: "", areaKey: "" }
+      : null;
+  }
+  let timeNome = "";
+  if (func.org_time_id) {
+    const { data: trow } = await supabase
+      .from("rh_org_times")
+      .select("nome")
+      .eq("id", func.org_time_id)
+      .maybeSingle();
+    timeNome = texto((trow as { nome?: string } | null)?.nome);
+  }
+  const areaKey = timeKeyFromOrgTimeNome(timeNome);
+  return {
+    escopo: "proprios",
+    funcionarioId: func.id,
+    nome: func.nome,
+    orgTimeId: func.org_time_id ?? null,
+    timeNome,
+    areaKey: areaKey === "todos" ? "" : areaKey,
+    areaAtuacao: func.area_atuacao ?? ctx?.areaAtuacao ?? "",
+    horario: {
+      escala: (func as { escala?: string | null }).escala ?? ctx?.horario.escala ?? null,
+      staff_turno: func.staff_turno ?? ctx?.horario.staff_turno ?? null,
+      staff_horario_turno: (func as { staff_horario_turno?: string | null }).staff_horario_turno
+        ?? ctx?.horario.staff_horario_turno
+        ?? null,
+    },
+    operadora: ctx?.operadora ?? null,
+  };
+}
+
+/**
+ * Recalcula souOfertante / souInteressado / mesmoTime com o prestador da sessão visível.
+ * A RPC usa auth.uid() da conta viewer (admin vê tudo como se fosse gestão).
+ */
+export function overlayIdentidadeMarketplaceOfertas(
+  linhas: LinhaOfertaMarketplace[],
+  funcionarioId: string | null,
+  areaKey: string | null | undefined,
+): LinhaOfertaMarketplace[] {
+  if (!funcionarioId) return linhas;
+  const grupo = filtroTimeGrupoNegociacaoMarketplace(areaKey);
+  return linhas.map((l) => ({
+    ...l,
+    souOfertante: l.solicitanteStaffId === funcionarioId,
+    souInteressado: l.interessadoStaffId === funcionarioId,
+    mesmoTime: grupo ? ofertaPassaFiltroTimeMarketplace(l.timeKey, grupo) : false,
+  }));
 }
 
 export type MarketplaceMinhaGrade = {
@@ -667,6 +760,53 @@ export function recusarTrocaMarketplace(id: string): Promise<DecidirTrocaMarketp
   return decidirTrocaMarketplace("escala_marketplace_troca_recusar", id);
 }
 
+export async function desistirOfertaMarketplace(id: string): Promise<DecidirTrocaMarketplaceResult> {
+  const { data, error } = await supabase.rpc("escala_marketplace_oferta_desistir", {
+    p_oferta_id: id,
+  });
+  if (error) {
+    console.error("[desistirOfertaMarketplace]", error);
+    return { ok: false, error: "rpc_error" };
+  }
+  const payload = payloadResultado(data);
+  if (!payload?.ok) return { ok: false, error: payload?.error ?? "unknown" };
+  return { ok: true };
+}
+
+export type HomeMarketplaceAlertaKind = "pendente" | "lembrete";
+
+export type HomeMarketplaceAlerta = {
+  id: string;
+  kind: HomeMarketplaceAlertaKind;
+  tipo: string;
+  diaIso: string;
+};
+
+export function parseHomeMarketplaceAlertas(data: unknown): HomeMarketplaceAlerta[] {
+  const raw = Array.isArray(data) ? data : [];
+  const out: HomeMarketplaceAlerta[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const row = item as Record<string, unknown>;
+    const id = texto(row.id);
+    const kind = row.kind === "lembrete" ? "lembrete" : row.kind === "pendente" ? "pendente" : null;
+    const tipo = texto(row.tipo);
+    const diaIso = texto(row.dia_iso);
+    if (!id || !kind || !tipo || !diaIso) continue;
+    out.push({ id, kind, tipo, diaIso });
+  }
+  return out;
+}
+
+export async function carregarHomeMarketplaceAlertas(): Promise<HomeMarketplaceAlerta[]> {
+  const { data, error } = await supabase.rpc("home_marketplace_alertas");
+  if (error) {
+    console.error("[carregarHomeMarketplaceAlertas]", error);
+    return [];
+  }
+  return parseHomeMarketplaceAlertas(data);
+}
+
 export type CriarOfertaMarketplaceInput = {
   tipo: TipoOfertaMarketplace;
   diaIso: string;
@@ -759,8 +899,9 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   dia_interesse_alterado: "O turno do dia oferecido em troca foi alterado. Atualize a página e tente novamente.",
   ofertante_ja_escalado: "O ofertante já tem turno no dia que você oferece em troca.",
   escala_alterada:
-    "A escala de um dos dias foi alterada durante a negociação. Recuse a proposta e publique ou aceite uma nova troca.",
-  nao_e_ofertante: "Só o autor da oferta pode cancelá-la.",
+    "A escala de um dos dias foi alterada durante a negociação. Recuse a proposta e publique ou aceite uma nova oferta.",
+  nao_e_ofertante: "Só o autor da oferta pode concluir esta ação.",
+  nao_e_interessado: "Só quem enviou a proposta pode desistir desta negociação.",
   gap_minimo: "É necessário respeitar o intervalo mínimo de 12h entre turnos.",
   horario_turno_indisponivel:
     "Não foi possível identificar o horário de início deste turno. Revise o horário no cadastro do estúdio (Gestão de Estúdios) ou na Gestão de Staff.",

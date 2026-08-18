@@ -41,6 +41,7 @@ import { supabase } from "../../../lib/supabase";
 import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -311,6 +312,7 @@ function filtrarManuaisPortal(
 
 export default function PortalAcademyPage() {
   const { theme: t, user } = useApp();
+  const { email: emailEfetivo, userId: userIdEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("academy_portal");
 
@@ -359,14 +361,14 @@ export default function PortalAcademyPage() {
   }, [busca]);
 
   useEffect(() => {
-    if (!user?.email?.trim()) {
+    if (!emailEfetivo?.trim()) {
       setSetoresUsuarioAplicavel([]);
       return;
     }
     let cancel = false;
     void (async () => {
       const [funcionario, org] = await Promise.all([
-        buscarRhFuncionarioAtivoPorEmailLogin(user.email!),
+        buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo),
         carregarOpcoesTimesOrganograma(),
       ]);
       if (cancel) return;
@@ -376,10 +378,10 @@ export default function PortalAcademyPage() {
     return () => {
       cancel = true;
     };
-  }, [user?.email]);
+  }, [emailEfetivo]);
 
   const carregar = useCallback(async () => {
-    if (!user?.id) return;
+    if (!userIdEfetivo) return;
     setLoading(true);
     setErro(null);
     try {
@@ -460,7 +462,7 @@ export default function PortalAcademyPage() {
             const { data, error } = await supabase
               .from("academy_portal_read_receipt")
               .select("content_id, read_at, acknowledged_at")
-              .eq("user_id", user.id)
+              .eq("user_id", userIdEfetivo)
               .in("content_id", ids);
             if (error) throw error;
             return (data ?? []) as AcademyPortalReadReceiptRow[];
@@ -481,12 +483,12 @@ export default function PortalAcademyPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userIdEfetivo]);
 
   useEffect(() => {
-    if (perm.loading || perm.canView === "nao" || !user?.id) return;
+    if (perm.loading || perm.canView === "nao" || !userIdEfetivo) return;
     void carregar();
-  }, [carregar, perm.loading, perm.canView, user?.id]);
+  }, [carregar, perm.loading, perm.canView, userIdEfetivo]);
 
   useEffect(() => {
     if (perm.loading) return;
@@ -585,14 +587,14 @@ export default function PortalAcademyPage() {
 
   const cienciaPendenteManualIds = useMemo(() => {
     const set = new Set<string>();
-    if (!user?.id) return set;
+    if (!userIdEfetivo) return set;
     for (const id of cienciaExigidaManualIds) {
       if (!receipts.get(academyManualReceiptKey(id))?.acknowledged_at) {
         set.add(id);
       }
     }
     return set;
-  }, [cienciaExigidaManualIds, receipts, user?.id]);
+  }, [cienciaExigidaManualIds, receipts, userIdEfetivo]);
 
   const cienciaRegistradaEm = useMemo(() => {
     const map = new Map<string, string>();

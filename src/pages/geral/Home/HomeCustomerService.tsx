@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasCustomerService } from "./customerService/BoasVindasCustomerService";
@@ -12,10 +13,11 @@ const HOME_CUSTOMER_SERVICE_PREFIX = "home-customer-service";
 
 export default function HomeCustomerService() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "Customer Service";
+  const nome = nomeEfetivo?.trim() || "Customer Service";
 
   return (
     <div

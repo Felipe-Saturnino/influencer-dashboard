@@ -5,6 +5,11 @@ import {
   isDataNoHistoricoMarketplace,
   mensagemErroOfertaMarketplace,
   ofertaPassaFiltroTimeMarketplace,
+  filtroTimeGrupoNegociacaoMarketplace,
+  fraseTipoOfertaMarketplace,
+  formatarDiaIsoPtBr,
+  overlayIdentidadeMarketplaceOfertas,
+  parseHomeMarketplaceAlertas,
   parseMeuContextoMarketplace,
   parseMinhaGradeMarketplace,
   parseOfertasMarketplacePayload,
@@ -153,6 +158,41 @@ describe("timeKeyFromOrgTimeNome", () => {
     expect(timeKeyFromOrgTimeNome("Shift Leader")).toBe("shift_leader");
     expect(timeKeyFromOrgTimeNome("Service Manager")).toBe("service_manager");
     expect(timeKeyFromOrgTimeNome("Comercial B2B")).toBe("todos");
+  });
+});
+
+describe("filtroTimeGrupoNegociacaoMarketplace", () => {
+  it("Liderança para SL e SM", () => {
+    expect(filtroTimeGrupoNegociacaoMarketplace("shift_leader")).toBe("lideranca");
+    expect(filtroTimeGrupoNegociacaoMarketplace("service_manager")).toBe("lideranca");
+  });
+
+  it("demais áreas ficam no próprio time", () => {
+    expect(filtroTimeGrupoNegociacaoMarketplace("game_presenter")).toBe("game_presenter");
+    expect(filtroTimeGrupoNegociacaoMarketplace("shuffler")).toBe("shuffler");
+    expect(filtroTimeGrupoNegociacaoMarketplace("")).toBeNull();
+    expect(filtroTimeGrupoNegociacaoMarketplace(null)).toBeNull();
+  });
+});
+
+describe("fraseTipoOfertaMarketplace e formatarDiaIsoPtBr", () => {
+  it("usa frase curta e data BR", () => {
+    expect(fraseTipoOfertaMarketplace("oferta_troca")).toBe("troca");
+    expect(fraseTipoOfertaMarketplace("venda_turno")).toBe("venda de turno");
+    expect(formatarDiaIsoPtBr("2026-08-18")).toBe("18/08/2026");
+  });
+});
+
+describe("parseHomeMarketplaceAlertas", () => {
+  it("ignora itens incompletos", () => {
+    const rows = parseHomeMarketplaceAlertas([
+      { id: "1", kind: "pendente", tipo: "venda_turno", dia_iso: "2026-08-20" },
+      { id: "2", kind: "outro", tipo: "venda_turno", dia_iso: "2026-08-20" },
+      { kind: "lembrete", tipo: "oferta_troca", dia_iso: "2026-08-21" },
+    ]);
+    expect(rows).toEqual([
+      { id: "1", kind: "pendente", tipo: "venda_turno", diaIso: "2026-08-20" },
+    ]);
   });
 });
 
@@ -467,6 +507,7 @@ describe("mensagemErroOfertaMarketplace", () => {
     expect(mensagemErroOfertaMarketplace("oferta_expirada")).toContain("menos de 2h");
     expect(mensagemErroOfertaMarketplace("dia_nao_futuro")).toContain("publicar oferta");
     expect(mensagemErroOfertaMarketplace("times_diferentes")).toContain("Shift Leader e Service Manager");
+    expect(mensagemErroOfertaMarketplace("nao_e_interessado")).toContain("desistir");
     expect(mensagemErroOfertaMarketplace("horario_turno_indisponivel")).toContain(
       "horário de início",
     );
@@ -474,5 +515,35 @@ describe("mensagemErroOfertaMarketplace", () => {
 
   it("usa mensagem genérica com fecho de suporte em código desconhecido", () => {
     expect(mensagemErroOfertaMarketplace("boom")).toContain("entre em contato com o suporte");
+  });
+});
+
+describe("overlayIdentidadeMarketplaceOfertas", () => {
+  const base = {
+    id: "o1",
+    dataOfertaIso: "2026-08-20",
+    tipo: "venda_turno" as const,
+    turnoOferta: "Manhã",
+    operadora: "Blaze",
+    ofertante: "Ana",
+    timeKey: "game_presenter" as const,
+    solicitanteStaffId: "gp-1",
+    interessadoStaffId: "gp-2",
+    souOfertante: false,
+    souInteressado: false,
+    mesmoTime: false,
+  };
+
+  it("marca souOfertante / souInteressado / mesmoTime pelo prestador visível", () => {
+    const out = overlayIdentidadeMarketplaceOfertas([base], "gp-1", "game_presenter");
+    expect(out[0]?.souOfertante).toBe(true);
+    expect(out[0]?.souInteressado).toBe(false);
+    expect(out[0]?.mesmoTime).toBe(true);
+  });
+
+  it("sem funcionarioId não altera as flags da RPC", () => {
+    const out = overlayIdentidadeMarketplaceOfertas([base], null, "game_presenter");
+    expect(out[0]?.souOfertante).toBe(false);
+    expect(out[0]?.mesmoTime).toBe(false);
   });
 });

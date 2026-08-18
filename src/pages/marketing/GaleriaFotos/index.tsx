@@ -23,6 +23,7 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useRouteTab } from "../../../hooks/useRouteTab";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { consumeHomeGaleriaFocus } from "../../../lib/homeGaleriaDeepLink";
 import { supabase } from "../../../lib/supabase";
@@ -162,6 +163,7 @@ function aspectRatioThumbPlaceholder(tipo: MarketingFotoTipo): string {
 
 export default function GaleriaFotos() {
   const { theme: t, user } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("galeria_fotos");
   const podeUpload = perm.canCriarOk;
@@ -421,7 +423,7 @@ export default function GaleriaFotos() {
       return;
     }
     let cancel = false;
-    void buscarMeuColaboradorGaleria().then((row) => {
+    void buscarMeuColaboradorGaleria(emailEfetivo).then((row) => {
       if (cancel) return;
       setMeuRhFuncionarioId(row?.id ?? null);
       setMeuRhFuncionarioNome(row?.nome ?? null);
@@ -429,7 +431,7 @@ export default function GaleriaFotos() {
     return () => {
       cancel = true;
     };
-  }, [perm.canView]);
+  }, [perm.canView, emailEfetivo]);
 
   useEffect(() => {
     const t = setTimeout(() => setBuscaDeb(normalizarTextoBusca(buscaGaleria)), 300);
@@ -451,6 +453,17 @@ export default function GaleriaFotos() {
         const filtradas = rows.filter((f) => {
           const ev = resolverEventoGaleria(f, metadadosGaleria);
           const prest = resolverPrestadorGaleria(f, metadadosGaleria);
+          if (
+            galeriaSubAba === "minhas_fotos" &&
+            !podeFiltrarPrestador &&
+            meuRhFuncionarioId &&
+            effectiveRhFuncionarioId(f) !== meuRhFuncionarioId
+          ) {
+            return false;
+          }
+          if (galeriaSubAba === "minhas_fotos" && !podeFiltrarPrestador && !meuRhFuncionarioId) {
+            return false;
+          }
           return textoContemBuscaEmAlgum(
             buscaDeb,
             ev?.nome,
@@ -470,7 +483,7 @@ export default function GaleriaFotos() {
     return () => {
       cancel = true;
     };
-  }, [buscaDeb, perm.canView, metadadosGaleria]);
+  }, [buscaDeb, perm.canView, metadadosGaleria, galeriaSubAba, podeFiltrarPrestador, meuRhFuncionarioId]);
 
   useEffect(() => {
     if (galeriaSubAba !== "gerais" || fotosBusca) return;
@@ -631,6 +644,8 @@ export default function GaleriaFotos() {
           }
         } else if (meuRhFuncionarioId) {
           list = list.filter((f) => effectiveRhFuncionarioId(f) === meuRhFuncionarioId);
+        } else {
+          list = [];
         }
       }
       return montarBlocosDeFotos(list);
@@ -662,6 +677,8 @@ export default function GaleriaFotos() {
       }
     } else if (meuRhFuncionarioId) {
       prests = prests.filter((p) => p.id === meuRhFuncionarioId);
+    } else {
+      prests = [];
     }
     if (buscaDeb) {
       prests = prests.filter((p) => textoContemBuscaEmAlgum(buscaDeb, p.nome));

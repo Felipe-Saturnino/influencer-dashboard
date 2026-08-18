@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useApp } from "../../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { usePermission } from "../../../../hooks/usePermission";
 import {
   academyManualReceiptKey,
@@ -61,7 +61,7 @@ function dentroJanela(publishedAt: string | null, desdeIso: string): boolean {
 }
 
 export function useHomeCentralAcademyFeed() {
-  const { user } = useApp();
+  const { email: emailEfetivo, userId: userIdEfetivo } = useIdentidadeEfetiva();
   const perm = usePermission("academy_portal");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
@@ -69,7 +69,7 @@ export function useHomeCentralAcademyFeed() {
 
   useEffect(() => {
     if (perm.loading) return;
-    if (perm.canView === "nao" || !user?.id) {
+    if (perm.canView === "nao" || !userIdEfetivo) {
       setLoading(false);
       setErro(false);
       setLista([]);
@@ -107,9 +107,9 @@ export function useHomeCentralAcademyFeed() {
           supabase
             .from("academy_portal_read_receipt")
             .select("content_id, read_at, acknowledged_at")
-            .eq("user_id", user.id),
-          user.email?.trim()
-            ? buscarRhFuncionarioAtivoPorEmailLogin(user.email)
+            .eq("user_id", userIdEfetivo),
+          emailEfetivo?.trim()
+            ? buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo)
             : Promise.resolve(null),
           carregarOpcoesTimesOrganograma(),
         ]);
@@ -205,7 +205,7 @@ export function useHomeCentralAcademyFeed() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, user?.id, user?.email]);
+  }, [perm.loading, perm.canView, userIdEfetivo, emailEfetivo]);
 
   return { loading: loading || perm.loading, erro, lista, podeVer: perm.canView !== "nao" };
 }

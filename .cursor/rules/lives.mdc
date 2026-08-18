@@ -355,6 +355,8 @@ Toda string visível ao usuário deve estar em português do Brasil. Padrão com
 
 **Carga de lives:** janela da vista atual (mês = grid completo; semana; dia) via `gte`/`lte` em `data` + **`fetchAllPages`** (`lib/supabasePaginate.ts`). Influencer/agência com lista finita: também `.in("influencer_id", …)` no servidor. **Proibido** carregar `lives` sem corte de data com `order data ASC` (PostgREST ~1000 → lives novas somem após Nova Live).
 
+**Simulador de Login:** gate de Nova Live e `influencer_id` no modal usam `useIdentidadeEfetiva()` — **proibido** `user.id` / `user.role` da conta viewer para decidir se o perfil é influencer.
+
 **Nova Live — `operadora_slug`:** no create, preencher com o primeiro vínculo ativo em `influencer_operadoras` do **influencer da live** (selecionado ou logado) — gestores inclusos, não só perfil influencer.
 
 **Datas no calendário:** `YYYY-MM-DD` em fuso **local** (não `toISOString().slice(0,10)` UTC).

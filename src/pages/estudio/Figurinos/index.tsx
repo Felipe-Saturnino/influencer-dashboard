@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros"
 import { usePermission } from "../../../hooks/usePermission"
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva"
 import { useRouteTab } from "../../../hooks/useRouteTab"
 import { FONT } from "../../../constants/theme"
 import { FONT_TITLE } from "../../../lib/dashboardConstants"
@@ -64,6 +65,7 @@ import { ModalSucessoCadastro } from "./ModalSucessoCadastro"
 
 export default function FigurinosPage() {
   const { theme: t, user } = useApp();
+  const { email: emailEfetivo, name: nomeEfetivo, role: roleEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const { operadoraSlugsForcado } = useDashboardFiltros();
@@ -206,14 +208,14 @@ export default function FigurinosPage() {
   }, [carregar]);
 
   useEffect(() => {
-    if (perm.canView !== "proprios" || !user?.email?.trim()) {
+    if (perm.canView !== "proprios" || !emailEfetivo?.trim()) {
       setRhPrestadorIdsLogin([]);
       setLoadingRhPrestadorMatch(false);
       return;
     }
     let cancelled = false;
     setLoadingRhPrestadorMatch(true);
-    void buscarRhFuncionarioIdsPorEmailLogin(user.email).then((ids) => {
+    void buscarRhFuncionarioIdsPorEmailLogin(emailEfetivo).then((ids) => {
       if (!cancelled) {
         setRhPrestadorIdsLogin(ids);
         setLoadingRhPrestadorMatch(false);
@@ -222,13 +224,13 @@ export default function FigurinosPage() {
     return () => {
       cancelled = true;
     };
-  }, [perm.canView, user?.email]);
+  }, [perm.canView, emailEfetivo]);
 
   useEffect(() => {
-    if (user?.role === "operador" && estudioSlugsForcado?.length === 1) {
+    if (roleEfetivo === "operador" && estudioSlugsForcado?.length === 1) {
       setFiltroEstudio(estudioSlugsForcado[0]!);
     }
-  }, [user?.role, estudioSlugsForcado]);
+  }, [roleEfetivo, estudioSlugsForcado]);
 
   const estudioNome = useCallback(
     (slug: string) => estudiosNome[slug] ?? slug,
@@ -259,7 +261,7 @@ export default function FigurinosPage() {
   const pecasComFiltroTopo = useMemo(() => pecas.filter(passaFiltroBloco), [pecas, passaFiltroBloco]);
 
   const rhPrestadorIdsSet = useMemo(() => new Set(rhPrestadorIdsLogin), [rhPrestadorIdsLogin]);
-  const nomeUsuarioFigNorm = useMemo(() => normNomeParaFiltroPrestadorFig(user?.name), [user?.name]);
+  const nomeUsuarioFigNorm = useMemo(() => normNomeParaFiltroPrestadorFig(nomeEfetivo), [nomeEfetivo]);
 
   /** Gestão de Usuários — permissão Figurinos «Próprios»: retiradas do próprio cadastro RH (`borrower_ref`) ou, em legado, nome igual ao perfil. */
   const pecasVisiveisPermissao = useMemo(() => {

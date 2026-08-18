@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { PAGE_CONTENT_BOX_GAP } from "../../../lib/pageContentBoxStyles";
 import { BoasVindasRh } from "./rh/BoasVindasRh";
@@ -11,10 +12,11 @@ const HOME_RH_PREFIX = "home-rh";
 
 export default function HomeRh() {
   const { theme: t, user } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
 
   if (!user) return null;
 
-  const nome = user.name?.trim() || "RH";
+  const nome = nomeEfetivo?.trim() || "RH";
 
   return (
     <div

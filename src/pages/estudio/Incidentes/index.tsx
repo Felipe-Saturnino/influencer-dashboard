@@ -18,6 +18,7 @@ import {
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { getPageContentBoxStyle, getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -201,6 +202,7 @@ function sortRows(
 
 export default function Incidentes() {
   const { theme: t, user } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("incidentes");
   const dataTable = useDataTableBlock();
@@ -348,13 +350,13 @@ export default function Incidentes() {
     if (perm.loading || !isProprios) return;
     let cancel = false;
     void (async () => {
-      const ids = await buscarRhFuncionarioIdsPorEmailLogin(user?.email);
+      const ids = await buscarRhFuncionarioIdsPorEmailLogin(emailEfetivo);
       if (!cancel) setMeusIds(ids);
     })();
     return () => {
       cancel = true;
     };
-  }, [perm.loading, isProprios, user?.email]);
+  }, [perm.loading, isProprios, emailEfetivo]);
 
   useEffect(() => {
     const ids = rowsAtual.map((r) => r.relator_user_id).filter((x): x is string => Boolean(x?.trim()));

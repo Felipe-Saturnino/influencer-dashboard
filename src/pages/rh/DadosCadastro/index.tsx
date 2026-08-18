@@ -4,6 +4,7 @@ import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { REVISAO_GATE_BANNER_KEY } from "../../../lib/appRoutes";
 import { FONT } from "../../../constants/theme";
@@ -286,6 +287,7 @@ function validarCadastroSelf(form: FormState): Record<string, string> {
 
 export default function RhDadosCadastroPage() {
   const { theme: t, user } = useApp();
+  const { email: emailEfetivo } = useIdentidadeEfetiva();
   const brand = useDashboardBrand();
   const perm = usePermission("rh_dados_cadastro");
 
@@ -404,7 +406,7 @@ export default function RhDadosCadastroPage() {
     : "Atualização cadastral — apenas o seu cadastro";
 
   const carregarFuncionarioProprio = useCallback(async () => {
-    if (!user?.email?.trim()) {
+    if (!emailEfetivo?.trim()) {
       setRow(null);
       setForm(null);
       setLoading(false);
@@ -412,7 +414,7 @@ export default function RhDadosCadastroPage() {
     }
     setLoading(true);
     setErroGlobal(null);
-    const emailNorm = user.email.trim();
+    const emailNorm = emailEfetivo.trim();
     const emailLc = emailNorm.toLowerCase();
     const [byEmail, bySpin] = await Promise.all([
       supabase.from("rh_funcionarios").select("*").ilike("email", emailNorm),
@@ -444,7 +446,7 @@ export default function RhDadosCadastroPage() {
     setRow(r);
     setForm(formDeFuncionario(r));
     setLoading(false);
-  }, [user?.email]);
+  }, [emailEfetivo]);
 
   const carregarFuncionarioPorId = useCallback(async (funcionarioId: string) => {
     setLoading(true);
@@ -509,15 +511,15 @@ export default function RhDadosCadastroPage() {
   }, [perm.loading, vistaCompleta]);
 
   useEffect(() => {
-    if (perm.loading || !user?.email?.trim()) return;
+    if (perm.loading || !emailEfetivo?.trim()) return;
     let cancelled = false;
-    void buscarRhFuncionarioAtivoPorEmailLogin(user.email).then((r) => {
+    void buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo).then((r) => {
       if (!cancelled) setMeuPrestadorId(r?.id ?? null);
     });
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, user?.email]);
+  }, [perm.loading, emailEfetivo]);
 
   useEffect(() => {
     if (!vistaCompleta || !meuPrestadorId || filterStaffId) return;
@@ -826,7 +828,7 @@ export default function RhDadosCadastroPage() {
     );
   }
 
-  if (!user?.email) {
+  if (!emailEfetivo) {
     return (
       <div className="app-page-shell" style={{ color: t.textMuted, fontFamily: FONT.body }}>
         Não foi possível identificar o e-mail da sessão.
