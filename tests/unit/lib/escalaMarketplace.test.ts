@@ -8,6 +8,7 @@ import {
   filtroTimeGrupoNegociacaoMarketplace,
   fraseTipoOfertaMarketplace,
   formatarDiaIsoPtBr,
+  marketplaceMostrarNovaOferta,
   overlayIdentidadeMarketplaceOfertas,
   parseHomeMarketplaceAlertas,
   fontesAlertaHomeDePayloadListar,
@@ -672,5 +673,34 @@ describe("fontesAlertaHomeDePayloadListar", () => {
     ]);
     const depoisDoTurno = new Date("2026-08-24T20:00:00-03:00");
     expect(alertasHomeMarketplaceDoPrestador(fontes, "gp-1", depoisDoTurno)).toEqual([]);
+  });
+});
+
+describe("marketplaceMostrarNovaOferta", () => {
+  const fid = "prestador-1";
+  const criarOk = { canCriarOk: true };
+
+  it("Ver Próprios: sempre com Criar ok e cadastro", () => {
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "proprios", ...criarOk }, fid, false),
+    ).toBe(true);
+  });
+
+  it("Ver Sim: só com Minhas Negociações ligado", () => {
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "sim", ...criarOk }, fid, false),
+    ).toBe(false);
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "sim", ...criarOk }, fid, true),
+    ).toBe(true);
+  });
+
+  it("sem cadastro ou sem Criar: nunca", () => {
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "proprios", ...criarOk }, null, true),
+    ).toBe(false);
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "sim", canCriarOk: false }, fid, true),
+    ).toBe(false);
   });
 });

@@ -22,6 +22,7 @@
 import { supabase } from "./supabase";
 import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "./rhFuncionarioLoginMatch";
+import type { PermissaoValor } from "../types";
 import { normRhOrgRotuloOrganograma } from "./rhPrestadorUsuarioSync";
 import {
   instanteFimTurnoTrabalhadoNoDia,
@@ -198,6 +199,21 @@ export function filtroTimeGrupoNegociacaoMarketplace(
     return k;
   }
   return null;
+}
+
+/**
+ * CTA Nova Oferta: Criar Sim/Próprios + cadastro de prestador.
+ * Com **Ver = Sim**, só quando **Minhas Negociações** está ligado (visão pessoal).
+ * Com **Ver = Próprios**, sempre que puder criar.
+ */
+export function marketplaceMostrarNovaOferta(
+  perm: { canView: PermissaoValor; canCriarOk: boolean },
+  funcionarioId: string | null | undefined,
+  minhasNegociacoes: boolean,
+): boolean {
+  if (!perm.canCriarOk || !funcionarioId) return false;
+  if (perm.canView === "sim") return minhasNegociacoes;
+  return perm.canView === "proprios";
 }
 
 /** Frase curta para cards da Home («troca», «venda de turno»). */

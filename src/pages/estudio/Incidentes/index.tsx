@@ -949,7 +949,7 @@ export default function Incidentes() {
           onClose={() => setNovoOpen(false)}
           onSaved={(_protocolo, opts) => {
             recarregarTickets();
-            if (opts?.criarOutro) return;
+            if (opts?.criarOutro || opts?.criarNovo) return;
             setNovoOpen(false);
           }}
         />

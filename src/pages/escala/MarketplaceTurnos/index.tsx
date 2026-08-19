@@ -60,6 +60,7 @@ import {
   carregarOfertasMarketplace,
   filtroTimeGrupoNegociacaoMarketplace,
   isDataNoHistoricoMarketplace,
+  marketplaceMostrarNovaOferta,
   ofertaPassaFiltroTimeMarketplace,
   overlayIdentidadeMarketplaceOfertas,
   type MarketplaceMeuContexto,
@@ -531,6 +532,11 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const souPrestadorCadastrado = !!contexto?.funcionarioId;
   const podeOfertar = perm.canCriarOk && souPrestadorCadastrado;
+  const mostrarNovaOferta = marketplaceMostrarNovaOferta(
+    perm,
+    contexto?.funcionarioId,
+    minhasNegociacoes,
+  );
 
   const abrirAceite = useCallback(async (row: LinhaOfertaMarketplace) => {
     setPreparandoAceiteId(row.id);
@@ -624,7 +630,7 @@ export default function EscalaMarketplaceTurnosPage() {
     </>
   );
 
-  const ctaOfertar = podeOfertar ? (
+  const ctaOfertar = mostrarNovaOferta ? (
     <CtaCriarButton onClick={() => setOfertarAberto(true)}>Nova Oferta</CtaCriarButton>
   ) : null;
 
