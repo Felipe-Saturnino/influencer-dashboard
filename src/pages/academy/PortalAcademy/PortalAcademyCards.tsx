@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { ModalBase, MODAL_BASE_PADDING_PX } from "../../../components/OperacoesModal";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
@@ -153,6 +153,7 @@ export function PostagemAcademyCard({
   mostrarBotaoVer,
   descricaoCompleta = false,
   mostrarNomeAnexo = true,
+  reacoes,
 }: {
   titulo: string;
   corpo: string;
@@ -168,6 +169,7 @@ export function PostagemAcademyCard({
   mostrarBotaoVer?: boolean;
   descricaoCompleta?: boolean;
   mostrarNomeAnexo?: boolean;
+  reacoes?: ReactNode;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -250,6 +252,7 @@ export function PostagemAcademyCard({
               {linhaMetaAutorPortalAcademy(autorInfo, dataPublicacao)}
             </span>
           </div>
+          {reacoes ? <div style={{ marginTop: 12 }}>{reacoes}</div> : null}
         </div>
         {mediaUrl ? (
           <button

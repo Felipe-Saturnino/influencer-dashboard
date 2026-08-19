@@ -28,6 +28,7 @@ export function HomeStaffFeedCard({
   onLiEOcultar,
   mostrarLiEOcultar = true,
   rodape,
+  reacoes,
   children,
 }: {
   title: string;
@@ -38,6 +39,8 @@ export function HomeStaffFeedCard({
   /** Default true. Manuais com ciência pendente ficam sem o botão. */
   mostrarLiEOcultar?: boolean;
   rodape?: string;
+  /** Barra de reações (UX). Não substitui «Li e Ocultar». */
+  reacoes?: ReactNode;
   children: ReactNode;
 }) {
   const { theme: t } = useApp();
@@ -119,6 +122,7 @@ export function HomeStaffFeedCard({
       {rodape ? (
         <p style={{ fontSize: 12, color: t.textMuted, margin: "14px 0 0", fontFamily: FONT.body }}>{rodape}</p>
       ) : null}
+      {reacoes ? <div style={{ marginTop: 12 }}>{reacoes}</div> : null}
       {mostrarLiEOcultar ? (
         <button type="button" onClick={onLiEOcultar} style={{ ...BTN_LI_OCULTAR, borderColor: t.cardBorder }}>
           Li e Ocultar

@@ -1007,7 +1007,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Central de **comunicados**, **dicas** e **manuais** de treinamento para a operação. As abas de leitura exibem apenas conteúdo **Publicado**; arquivados ficam na aba **Gerenciamento** (permissão de **Editar**).\n\nO acesso é controlado em **Gestão de Usuários → Permissões**. Por padrão, todos os perfis começam bloqueados — apenas **Administrador** entra liberado.",
+          "Central de **comunicados**, **dicas** e **manuais** de treinamento para a operação. As abas de leitura exibem apenas conteúdo **Publicado**; arquivados ficam na aba **Gerenciamento** (permissão de **Editar**).\n\nO acesso é controlado em **Gestão de Usuários → Permissões**. Por padrão, todos os perfis começam bloqueados — apenas **Administrador** entra liberado.\n\nEm **Comunicados** e **Dicas**, o card tem reações com poucos emojis. É um gesto de leitura — **não** substitui a ciência dos **Manuais**.",
       },
       {
         subtitulo: "Abas e filtros",
@@ -1148,7 +1148,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Informativos",
         texto:
-          "Lista os informativos já publicados, filtrados por mês (data de postagem), modo Histórico (competência atual e 12 anteriores) e busca por palavras-chave no assunto ou na descrição.",
+          "Lista os informativos já publicados, filtrados por mês (data de postagem), modo Histórico (competência atual e 12 anteriores) e busca por palavras-chave no assunto ou na descrição.\n\nNo rodapé do card há reações com poucos emojis (Gostei, Amei, Parabéns, Animado, Surpreso). É só um gesto — não registra ciência e não esconde o aviso.",
       },
       {
         subtitulo: "Gerenciamento de Informativos",
@@ -1210,7 +1210,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Comunicados",
         texto:
-          "Reúne avisos oficiais publicados pelo RH, organizados por categoria: Urgente, Geral, Pagamento e Eventos.\n\nComunicados marcados como Novo indicam que ainda não foram lidos. Clique em Lido para registrar a leitura — o badge desaparece após o clique.\n\nO texto do comunicado aparece completo no card. No rodapé, o autor é mostrado com o **time** do organograma (não a diretoria pai).\n\nCom permissão de **Editar = Sim**, o botão **Ver Lidos** no card abre a lista de quem já marcou a leitura.\n\nUm comunicado pode ser fixado no topo da lista para maior visibilidade. Quando fixado, aparece antes dos demais com o indicador Fixado.",
+          "Reúne avisos oficiais publicados pelo RH, organizados por categoria: Urgente, Geral, Pagamento e Eventos.\n\nComunicados marcados como Novo indicam que ainda não foram lidos. Clique em Lido para registrar a leitura — o badge desaparece após o clique.\n\nO texto do comunicado aparece completo no card. No rodapé, o autor é mostrado com o **time** do organograma (não a diretoria pai).\n\nNo mesmo card dá para reagir com um emoji (Gostei, Amei, Parabéns, Animado, Surpreso). Isso não substitui o botão Lido nem a ciência de políticas.\n\nCom permissão de **Editar = Sim**, o botão **Ver Lidos** no card abre a lista de quem já marcou a leitura.\n\nUm comunicado pode ser fixado no topo da lista para maior visibilidade. Quando fixado, aparece antes dos demais com o indicador Fixado.",
       },
       {
         subtitulo: "Filtros e Navegação de Comunicados",

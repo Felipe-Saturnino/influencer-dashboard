@@ -24,6 +24,7 @@ import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from 
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalAcademyCarrossel";
 import { PortalAcademyBlocoFiltros } from "./PortalAcademyBlocoFiltros";
 import { PostagemAcademyCard } from "./PortalAcademyCards";
+import { BarraReacaoConteudoLigada } from "../../../components/conteudo/BarraReacaoConteudo";
 import { AcademyPortalManuaisCards } from "./AcademyPortalManuaisCards";
 import { ModalCienciaManualAcademy } from "./ModalCienciaManualAcademy";
 import { ModalLerConteudo } from "./ModalLerConteudo";
@@ -42,6 +43,7 @@ import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
+import { useConteudoReacoes } from "../../../hooks/useConteudoReacoes";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -559,6 +561,15 @@ export default function PortalAcademyPage() {
     [dicas, filtroCatDica, modoHistorico, mesesDica, idxMesDica, buscaDeb, hitBuscaTexto, hitBuscaCorpo],
   );
 
+  const chavesReacaoAcademy = useMemo(
+    () => [
+      ...comunicadosLista.map((c) => ({ origem: "academy_comunicado" as const, contentId: c.id })),
+      ...dicasLista.map((d) => ({ origem: "academy_dica" as const, contentId: d.id })),
+    ],
+    [comunicadosLista, dicasLista],
+  );
+  const reacoesAcademy = useConteudoReacoes(chavesReacaoAcademy);
+
   const manuaisFiltrados = useMemo(
     () =>
       filtrarManuaisPortal(
@@ -844,6 +855,13 @@ export default function PortalAcademyPage() {
                   cardShadow={cardShadow}
                   descricaoCompleta
                   mostrarNomeAnexo={false}
+                  reacoes={
+                    <BarraReacaoConteudoLigada
+                      origem="academy_comunicado"
+                      contentId={c.id}
+                      api={reacoesAcademy}
+                    />
+                  }
                 />
               ))}
             </div>
@@ -869,6 +887,13 @@ export default function PortalAcademyPage() {
                   cardShadow={cardShadow}
                   descricaoCompleta
                   mostrarNomeAnexo={false}
+                  reacoes={
+                    <BarraReacaoConteudoLigada
+                      origem="academy_dica"
+                      contentId={d.id}
+                      api={reacoesAcademy}
+                    />
+                  }
                 />
               ))}
             </div>

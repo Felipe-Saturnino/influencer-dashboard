@@ -30,6 +30,7 @@ import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from 
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 import { ComunicadoCard, RhTalkCard } from "./PortalRhCards";
+import { BarraReacaoConteudoLigada } from "../../../components/conteudo/BarraReacaoConteudo";
 import { ModalLidosPostagem, type ModalLidosContentType } from "./ModalLidosPostagem";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { ModalVisualizarDocumento } from "./ModalVisualizarDocumento";
@@ -58,6 +59,7 @@ import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
+import { useConteudoReacoes } from "../../../hooks/useConteudoReacoes";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
@@ -775,6 +777,16 @@ export default function PortalRhPage() {
     hitBuscaCorpo,
   ]);
 
+  const chavesReacaoComunicado = useMemo(() => {
+    const ids = comunicadosLista.map((c) => c.id);
+    if (comunicadoPinned) ids.push(comunicadoPinned.id);
+    return [...new Set(ids)].map((contentId) => ({
+      origem: "rh_comunicado" as const,
+      contentId,
+    }));
+  }, [comunicadosLista, comunicadoPinned]);
+  const reacoesComunicado = useConteudoReacoes(chavesReacaoComunicado);
+
   const documentosFiltrados = useMemo(() => {
     let list = documentos.filter((d) => isPostagemPublica(d.status));
     list = list.filter((d) =>
@@ -1102,6 +1114,13 @@ export default function PortalRhPage() {
                         })
                       }
                       cardShadow={cardShadow}
+                      reacoes={
+                        <BarraReacaoConteudoLigada
+                          origem="rh_comunicado"
+                          contentId={comunicadoPinned.id}
+                          api={reacoesComunicado}
+                        />
+                      }
                     />
                   </div>
                 ) : null}
@@ -1139,6 +1158,13 @@ export default function PortalRhPage() {
                               setModalLidos({ id: c.id, titulo: c.titulo, contentType: "comunicado" })
                             }
                             cardShadow={cardShadow}
+                            reacoes={
+                              <BarraReacaoConteudoLigada
+                                origem="rh_comunicado"
+                                contentId={c.id}
+                                api={reacoesComunicado}
+                              />
+                            }
                           />
                         </li>
                       );

@@ -18,6 +18,8 @@ import { normalizarTextoBusca } from "../../../lib/searchText";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "../PortalRh/portalRhCarrossel";
 import { InformativosBlocoFiltros } from "./InformativosBlocoFiltros";
 import { InformativoCard } from "./InformativoCard";
+import { BarraReacaoConteudoLigada } from "../../../components/conteudo/BarraReacaoConteudo";
+import { useConteudoReacoes } from "../../../hooks/useConteudoReacoes";
 import {
   GerenciamentoInformativos,
   GerenciamentoInformativosFiltroStatus,
@@ -154,6 +156,12 @@ export default function InformativosPage() {
       return true;
     });
   }, [lista, mesesCarrossel, idxMes, modoHistorico, buscaDeb]);
+
+  const chavesReacaoInformativo = useMemo(
+    () => listaFiltrada.map((item) => ({ origem: "informativo" as const, contentId: item.id })),
+    [listaFiltrada],
+  );
+  const reacoesInformativo = useConteudoReacoes(chavesReacaoInformativo);
 
   const handleRegisterAbrirCriar = useCallback((fn: () => void) => {
     abrirCriarGerenciamentoRef.current = fn;
@@ -297,6 +305,13 @@ export default function InformativosPage() {
                       dataPublicacao={item.published_at}
                       autorNome={autorId ? (metaAutores[autorId] ?? "") : ""}
                       cardShadow={cardShadow}
+                      reacoes={
+                        <BarraReacaoConteudoLigada
+                          origem="informativo"
+                          contentId={item.id}
+                          api={reacoesInformativo}
+                        />
+                      }
                     />
                   </li>
                 );

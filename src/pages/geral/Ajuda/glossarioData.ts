@@ -893,8 +893,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Confirmação formal de que o colaborador leu e tomou conhecimento de um documento que exige ciência — no Portal de RH (política ou normativa) ou no Portal da Academy (manuais), com registro de data e hora.",
         nota:
-          "Diferente de apenas marcar um comunicado como Lido. No Portal da Academy, a coluna Sua Ciência mostra Pendente até o aceite; travessão (—) indica que o manual não exige ciência. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
+          "Diferente de apenas marcar um comunicado como Lido, e diferente das reações com emoji no card (gesto de leitura, sem registro de ciência). No Portal da Academy, a coluna Sua Ciência mostra Pendente até o aceite; travessão (—) indica que o manual não exige ciência. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
         referencia: "Portal de RH · Portal da Academy",
+      },
+      {
+        termo: "Reação (emoji)",
+        definicao:
+          "Gesto opcional no card de informativos, comunicados de RH e comunicados/dicas da Academy. Cinco opções fixas (Gostei, Amei, Parabéns, Animado, Surpreso); cada pessoa marca no máximo uma. Não substitui Lido, ciência nem «Li e Ocultar».",
+        referencia: "Informativos · Portal de RH · Portal da Academy · Home",
       },
       {
         termo: "Read Receipt",
@@ -1191,13 +1197,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Central Academy",
         definicao:
-          "Bloco da Home de perfis de Estúdio com Comunicados, Dicas e Manuais publicados no Portal da Academy (últimos 10 dias, «Li e Ocultar»). Manuais que exigem ciência do colaborador permanecem até o aceite no Portal da Academy, sem «Li e Ocultar».",
+          "Bloco da Home de perfis de Estúdio com Comunicados, Dicas e Manuais publicados no Portal da Academy (últimos 10 dias, «Li e Ocultar»). Manuais que exigem ciência do colaborador permanecem até o aceite no Portal da Academy, sem «Li e Ocultar». Comunicados e Dicas também mostram reações com emoji — gesto opcional, sem ciência.",
         referencia: "Home · Portal da Academy",
       },
       {
         termo: "Informativos na Home",
         definicao:
-          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso. O mesmo bloco também lista postagens do Portal de RH (Comunicados, Políticas e RH Talks): essas só saem da lista após «Li e Ocultar», sem limite de 10 dias.",
+          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso. O mesmo bloco também lista postagens do Portal de RH (Comunicados, Políticas e RH Talks): essas só saem da lista após «Li e Ocultar», sem limite de 10 dias. Informativos e comunicados de RH mostram reações com emoji no card expandido — isso não esconde o aviso.",
         referencia: "Informativos · Home",
       },
       {
@@ -1433,7 +1439,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
   comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
   customer_success: ["cs_atendimento"],
-  rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
+  rh_portal: ["rh_portal", "spin_na_rede", "informativos", "academy_portal"],
   escala: [
     "rh_staff",
     "escala_relatorio_turno",

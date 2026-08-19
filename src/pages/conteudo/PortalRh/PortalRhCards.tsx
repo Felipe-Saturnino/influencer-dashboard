@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Lock, X } from "lucide-react";
 import { ModalBase } from "../../../components/OperacoesModal";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
@@ -82,6 +82,7 @@ export function ComunicadoCard({
   podeVerLidos,
   onVerLidos,
   cardShadow,
+  reacoes,
 }: {
   titulo: string;
   corpo: string;
@@ -97,6 +98,7 @@ export function ComunicadoCard({
   podeVerLidos?: boolean;
   onVerLidos?: () => void;
   cardShadow: string;
+  reacoes?: ReactNode;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -173,6 +175,7 @@ export function ComunicadoCard({
             ) : null}
             <span style={{ fontSize: 12, color: t.textMuted }}>{linhaMetaAutorPortalRh(autorInfo, dataPublicacao)}</span>
           </div>
+          {reacoes ? <div style={{ marginTop: 12 }}>{reacoes}</div> : null}
         </div>
         {imgUrl ? (
           <button

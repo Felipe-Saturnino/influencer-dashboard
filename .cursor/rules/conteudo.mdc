@@ -388,6 +388,21 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Miniatura: `<a tabIndex={-1} aria-hidden>` quando o link de texto cobre o mesmo destino; `<img width={160} height={90} alt="" />` decorativa.
 - Erro: `role="alert"`; mensagem fixa ao usuário.
 
+### Reações de layout (`conteudo_reacao`)
+
+Gesto opcional no card — **não** é ciência, **não** é `read_receipt`, **não** substitui Lido / «Li e Ocultar» / «Ver Lidos». Sem lista de quem reagiu na v1.
+
+| Peça | Valor |
+|------|--------|
+| Tabela | `conteudo_reacao` — unique `(origem, content_id, user_id)`; CHECK de origem e emoji |
+| Origens | `informativo` · `rh_comunicado` · `academy_comunicado` · `academy_dica` |
+| Emojis | `up` 👍 Gostei · `heart` ❤️ Amei · `clap` 👏 Parabéns · `party` 🎉 Animado · `wow` 😮 Surpreso |
+| Lib / hook / UI | `lib/conteudoReacao.ts` · `useConteudoReacoes` · `BarraReacaoConteudo` |
+| Fetch | só IDs já carregados (`fetchInBatched` + `fetchAllPages`) |
+| Simulador | «minha» = `userId` efetivo; persistência = `viewer.id` (`auth.uid()`); **não grava** se `somenteLeitura` |
+
+**Com barra:** Informativos (página + Home), Comunicados do Portal RH (página + Home), Comunicados e Dicas da Academy (página + Home Central Academy). **Sem barra:** Políticas/Manuais, RH Talks, Gerenciamento, rascunho/arquivado.
+
 ### Informativos (`src/pages/conteudo/Informativos/`)
 
 - **Header:** `PageHeader` — título **Informativos**, subtítulo canónico acima.
@@ -401,6 +416,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Destinos no modal:** sem Administrador nem Executivo (`INFORMATIVO_FILTROS_PERFIL_LINHAS`). Mantém gestores de departamento, Estúdio, Escritório e Externos.
 - **Aprovação (`lib/informativosWorkflow.ts`):** Investidor/Operador, Agência/Influenciador/Afiliado e gestores de departamento → só «Enviar para aprovação»; demais (Estúdio/Escritório) → «Publicar» direto. Aprovar: Investidor/Operador → Admin ou Executivo; Agência/Influenciador/Afiliado → Admin, Executivo ou Gestor de Aquisição; gestores de departamento → Admin, Executivo ou Gestor de RH; mistura de grupos → interseção (mais restritivo). Autoaprovação só Admin.
 - **Sem** categorias, fixado nem marcar como lido.
+- **Reações (UX):** barra de 5 emojis fixos (👍 ❤️ 👏 🎉 😮) nos cards da aba Informativos e na Home. Um por pessoa; não é ciência, não some o card e não entra no Gerenciamento. Tabela `conteudo_reacao` (`origem = informativo`). Componente `BarraReacaoConteudo`.
 
 ### Portal de RH (`src/pages/conteudo/PortalRh/`)
 
@@ -420,7 +436,7 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - **Legado Políticas:** posts sem `codigo`/`tipo_documento` mantêm **`ModalLerPolitica`** (HTML + anexo opcional); novos cadastros de Política/Normativa usam sempre o modelo normativo.
 - **Tipo RH (legado categoria):** slug `rh` em `TIPOS_POLITICA` / filtro Gerenciamento — distinto de família «Políticas RH» no filtro normativo.
 - **Gerenciamento:** todas as postagens (incl. arquivadas) na janela de **13 competências** (`created_at` + `fetchAllPages`); carrossel e Histórico também em `published_at`; linha 3 — busca + tipo + status + **`CtaCriarButton` Nova Postagem** na mesma fileira (sem barra `borderTop` entre abas e busca; sem linha extra só para o CTA). Tabela com paginação de vista 50/página (`TabelaPaginacaoBar`).
-- **ComunicadoCard:** texto do corpo **completo** (sem truncar preview); `aria-label={`Marcar como lido: ${titulo}`}` no botão Lido; com **Editar = Sim**, botão **Ver Lidos** abre **`ModalLidosPostagem`** (lista quem registrou `read_at` em `rh_portal_read_receipt`).
+- **ComunicadoCard:** texto do corpo **completo** (sem truncar preview); `aria-label={`Marcar como lido: ${titulo}`}` no botão Lido; com **Editar = Sim**, botão **Ver Lidos** abre **`ModalLidosPostagem`** (lista quem registrou `read_at` em `rh_portal_read_receipt`). **Reações (UX):** só em **Comunicados** (portal + Home Informações) — `BarraReacaoConteudo`, `origem = rh_comunicado`. **Não** em Políticas, RH Talks nem Gerenciamento; **não** substitui Lido / ciência.
 - **Anexos / imagens (`PortalRhAssetLink`):** bucket privado `rh-portal-assets` + URL assinada; **sem** regra de Rede Spin/VPN. Abrir com **`abrirAssetAssinadoEmNovaAba`** (abre `about:blank` no gesto do clique, depois navega) — **proibido** `window.open` só após `await createSignedUrl` (Safari/iOS bloqueia em silêncio). Erro visível sob o link se pop-up bloqueado ou URL falhar.
 - **Meta do autor no card:** `portalRhAutorMeta.ts` — `Nome - Time - data/hora` (time do organograma; se vínculo for só gerência/diretoria, usa esse nível; fallback `setor`). **Proibido** mostrar só a diretoria pai quando o prestador tem time (ex.: RH sob Studio Operations).
 - **Gerenciamento — ações por status:** Rascunho: Editar + Histórico; Em aprovação: Editar + Aprovar + Histórico; **Publicado: Editar + Arquivar + Histórico**; Arquivado: só Histórico. Edição de publicado: **`ModalCriarPostagem`** com **Salvar alterações** (mantém `publicado`, não sobrescreve `created_by` / `published_at`).
@@ -469,3 +485,4 @@ Imports de modais/gates (`ModalBloqueioAgendaLive`, `verificarElegibilidadeAgend
 - Nunca `ctaGradient` local no Portal RH — usar `ctaGradientPortalRh` em `portalRhUi.ts`.
 - Nunca modal do Portal RH recebendo `t` ou `brand` por prop.
 - Nunca Arquivar com confirmação em 2 cliques na tabela de gerenciamento — usar **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`**.
+- Nunca misturar `conteudo_reacao` com `read_receipt` / ciência / «Li e Ocultar»; nunca listar quem reagiu; nunca gravar reação no Simulador de Login.
