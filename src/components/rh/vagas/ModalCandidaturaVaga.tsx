@@ -219,7 +219,7 @@ export function ModalCandidaturaVaga({
         Vaga: <strong style={{ color: t.text }}>{vaga.titulo}</strong>
       </p>
 
-      <div style={{ maxHeight: "min(70dvh, 620px)", overflowY: "auto", paddingRight: 4 }}>
+      <div style={{ maxHeight: "min(70dvh, 620px)", overflowY: "auto", paddingRight: 4, paddingBottom: 24 }}>
         {carregandoPrestador ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             <Loader2 size={16} className="app-lucide-spin" aria-hidden />

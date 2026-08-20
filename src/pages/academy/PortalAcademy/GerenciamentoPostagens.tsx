@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Clock, Loader2, Newspaper, Pencil } from "lucide-react";
+import { Check, Eye, Loader2, Newspaper, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
@@ -31,7 +31,7 @@ import { normalizarTextoBusca } from "../../../lib/searchText";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { usePermission } from "../../../hooks/usePermission";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
-import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
+import { ModalVerPostagem } from "./ModalVerPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalAcademyCarrossel";
 import { getPeriodoHistoricoCompetencias, isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
@@ -158,18 +158,18 @@ export function GerenciamentoPostagensFiltrosTipoStatus({
   );
 }
 
-function acoesPorStatus(status: AcademyPostagemStatus): ("editar" | "aprovar" | "arquivar" | "historico")[] {
+function acoesPorStatus(status: AcademyPostagemStatus): ("editar" | "aprovar" | "arquivar" | "ver")[] {
   switch (status) {
     case "publicado":
-      return ["editar", "arquivar", "historico"];
+      return ["editar", "arquivar", "ver"];
     case "rascunho":
-      return ["editar", "historico"];
+      return ["editar", "ver"];
     case "aprovacao":
-      return ["editar", "aprovar", "historico"];
+      return ["editar", "aprovar", "ver"];
     case "arquivado":
-      return ["historico"];
+      return ["ver"];
     default:
-      return ["historico"];
+      return ["ver"];
   }
 }
 
@@ -210,7 +210,7 @@ export function GerenciamentoPostagens({
 
   const [modalCriar, setModalCriar] = useState(false);
   const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
-  const [histRef, setHistRef] = useState<{ contentType: AcademyPostagemContentType; id: string; assunto: string } | null>(null);
+  const [verRef, setVerRef] = useState<{ contentType: AcademyPostagemContentType; id: string; assunto: string } | null>(null);
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
   const [alvoArquivar, setAlvoArquivar] = useState<PostagemGerenciamentoRow | null>(null);
   const [sortCol, setSortCol] = useState<PostagemSortCol>("createdAt");
@@ -684,14 +684,14 @@ export function GerenciamentoPostagens({
                             disabled={acaoLoading === row.id}
                           />
                         ) : null}
-                        {acoes.includes("historico") ? (
+                        {acoes.includes("ver") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipAcao("Histórico da postagem")}
+                            label={tooltipAcao("Ver postagem")}
                             onClick={() =>
-                              setHistRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })
+                              setVerRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })
                             }
                           >
-                            <Clock size={13} aria-hidden />
+                            <Eye size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
                         ) : null}
                       </div>
@@ -733,13 +733,13 @@ export function GerenciamentoPostagens({
         />
       ) : null}
 
-      {histRef ? (
-        <ModalHistoricoPostagem
+      {verRef ? (
+        <ModalVerPostagem
           open
-          assunto={histRef.assunto}
-          contentType={histRef.contentType}
-          contentId={histRef.id}
-          onClose={() => setHistRef(null)}
+          assunto={verRef.assunto}
+          contentType={verRef.contentType}
+          contentId={verRef.id}
+          onClose={() => setVerRef(null)}
         />
       ) : null}
 

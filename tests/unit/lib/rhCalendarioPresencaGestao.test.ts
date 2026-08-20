@@ -6,6 +6,9 @@ import {
   presencaCorrecaoTemCampoPendenteAnalise,
   resolverAcoesPresencaLinha,
   resolverStatusPresencaLinha,
+  aplicarMascaraHorarioPresencaHHMM,
+  normalizarHorarioPresencaHHMM,
+  validarHorarioPresencaHHMM,
 } from "@/lib/rhCalendarioPresencaGestao";
 
 const base = {
@@ -15,6 +18,31 @@ const base = {
   saiEsc: "—",
   statusBase: "Folga",
 };
+
+describe("horario presença HH:MM — máscara e normalização", () => {
+  it("formata 4 dígitos contínuos", () => {
+    expect(aplicarMascaraHorarioPresencaHHMM("0800")).toBe("08:00");
+    expect(normalizarHorarioPresencaHHMM("0800")).toBe("08:00");
+    expect(validarHorarioPresencaHHMM(normalizarHorarioPresencaHHMM("0800"))).toBe(true);
+  });
+
+  it("aceita ponto ou vírgula como separador (teclado numérico mobile)", () => {
+    expect(aplicarMascaraHorarioPresencaHHMM("6.50")).toBe("06:50");
+    expect(normalizarHorarioPresencaHHMM("6.50")).toBe("06:50");
+    expect(normalizarHorarioPresencaHHMM("6,50")).toBe("06:50");
+    expect(validarHorarioPresencaHHMM(normalizarHorarioPresencaHHMM("6.50"))).toBe(true);
+  });
+
+  it("interpreta 3 dígitos como HMM (zero da hora omitido)", () => {
+    expect(aplicarMascaraHorarioPresencaHHMM("650")).toBe("06:50");
+    expect(normalizarHorarioPresencaHHMM("650")).toBe("06:50");
+  });
+
+  it("normaliza hora com um dígito e minutos completos", () => {
+    expect(normalizarHorarioPresencaHHMM("6:50")).toBe("06:50");
+    expect(normalizarHorarioPresencaHHMM("15:17")).toBe("15:17");
+  });
+});
 
 describe("resolverAcoesPresencaLinha em Folga", () => {
   it("permite aprovar quando houve Check-in e Check-out", () => {

@@ -149,9 +149,16 @@ export function fmtDataEmissaoDocumentoPortal(date = new Date()): string {
 export function opcoesOrganogramaAplicavel(
   grupos: RhOrgOrganogramaGrupoPrestador[],
 ): { id: string; label: string }[] {
-  return flattenVinculosDeGrupos(grupos)
-    .filter((v) => v.nivel === "diretoria" || v.nivel === "gerencia" || v.nivel === "time")
-    .map((v) => ({ id: v.setorNome, label: v.label }));
+  const seen = new Set<string>();
+  const out: { id: string; label: string }[] = [];
+  for (const v of flattenVinculosDeGrupos(grupos)) {
+    if (v.nivel !== "diretoria" && v.nivel !== "gerencia" && v.nivel !== "time") continue;
+    const id = (v.setorNome ?? "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, label: v.label });
+  }
+  return out;
 }
 
 export function areaResponsavelPadraoRh(grupos: RhOrgOrganogramaGrupoPrestador[]): string {
@@ -222,6 +229,13 @@ export function proximoCodigoSugerido(tipo: RhDocumentoTipo, codigosExistentes: 
   return `${prefixo}${String(next).padStart(3, "0")}`;
 }
 
+/** True se o código (sem versão) já existe na lista de códigos cadastrados. */
+export function codigoDocumentoJaEmUso(codigo: string, codigosExistentes: readonly string[]): boolean {
+  const alvo = codigo.trim().toUpperCase();
+  if (!alvo) return false;
+  return codigosExistentes.some((c) => c.trim().toUpperCase() === alvo);
+}
+
 export function itemNoFiltroDocumento(
   doc: { tipo_documento?: RhDocumentoTipo | null },
   filtroKey: string,
@@ -233,10 +247,16 @@ export function itemNoFiltroDocumento(
   return cfg.tipos.includes(doc.tipo_documento);
 }
 
-export function validarPublicarDocumentoNormativo(f: RhDocumentoNormativoCampos): ValidacaoPublicar {
+export function validarPublicarDocumentoNormativo(
+  f: RhDocumentoNormativoCampos,
+  opts?: { codigosExistentes?: readonly string[] },
+): ValidacaoPublicar {
   const err: ValidacaoPublicar = {};
   if (!f.tipoDocumento) err.tipoDocumento = "Selecione o tipo de documento.";
   if (!f.codigo.trim()) err.codigo = "Informe o código do documento.";
+  else if (opts?.codigosExistentes && codigoDocumentoJaEmUso(f.codigo, opts.codigosExistentes)) {
+    err.codigo = "Este código já está em uso por outro documento.";
+  }
   if (!f.versao.trim()) err.versao = "Informe a versão.";
   if (!f.titulo.trim()) err.titulo = "Informe o título do documento.";
   if (!f.areaResponsavel.trim()) err.areaResponsavel = "Selecione a área responsável.";
@@ -308,26 +328,19 @@ export function documentoVisivelPorPermissaoPortalRh(
   return documentoAplicavelAoUsuario(doc.aplicavel_a, setoresUsuario);
 }
 
-/** Ciência exigida só para perfis internos/gerenciais, quando o documento pede aceite e o público inclui o usuário. */
+/** Ciência exigida quando o documento pede aceite, o perfil participa do fluxo e o item já passou pelo filtro de visibilidade da lista. */
 export function documentoExigeCienciaDoUsuario(
   doc: {
     requires_acknowledgment: boolean;
-    aplicavel_a?: string[] | null;
     codigo?: string | null;
     tipo_documento?: RhDocumentoTipo | null;
   },
-  setoresUsuario: readonly string[],
   role: Role | undefined | null,
-  cadastroGestaoPrestadores: boolean,
 ): boolean {
   if (!perfilPortalRhParticipaCiencia(role)) return false;
   if (!doc.requires_acknowledgment) return false;
   if (!documentoUsaModeloNormativo(doc)) return true;
-  if (!doc.aplicavel_a?.length) return true;
-  if (doc.aplicavel_a.includes(PORTAL_RH_APLICAVEL_TODOS)) {
-    return cadastroGestaoPrestadores;
-  }
-  return documentoAplicavelAoUsuario(doc.aplicavel_a, setoresUsuario);
+  return true;
 }
 
 export async function sincronizarRelacionadosDocumentoPortal(

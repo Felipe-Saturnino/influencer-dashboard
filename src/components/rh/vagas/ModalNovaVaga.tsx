@@ -177,7 +177,7 @@ export function ModalNovaVaga({
   return (
     <ModalBase maxWidth={560} onClose={fechar} zIndex={1100}>
       <ModalHeader title="Nova vaga" onClose={fechar} />
-      <div style={{ maxHeight: "min(70dvh, 620px)", overflowY: "auto", paddingRight: 4 }}>
+      <div style={{ maxHeight: "min(70dvh, 620px)", overflowY: "auto", paddingRight: 4, paddingBottom: 24 }}>
         {erroOrg ? (
           <div style={{ marginBottom: 12, fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>{erroOrg}</div>
         ) : null}

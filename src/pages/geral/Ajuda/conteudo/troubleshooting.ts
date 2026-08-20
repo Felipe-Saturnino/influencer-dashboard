@@ -809,7 +809,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo o botão Editar ou Arquivar em algumas postagens?",
         texto:
-          "Com Editar = **Próprios**, **Editar** e **Arquivar** só aparecem nas postagens criadas por você. Com Editar = **Sim**, valem para todas. Postagens **Arquivadas** têm só Histórico.",
+          "Com Editar = **Próprios**, **Editar** e **Arquivar** só aparecem nas postagens criadas por você. Com Editar = **Sim**, valem para todas. Postagens **Arquivadas** têm só o ícone **Ver** (abas Ver e Histórico no modal).",
       },
       {
         subtitulo: "Minha postagem ficou em Aprovação?",
@@ -977,9 +977,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A aba Gerenciamento de Postagens aparece apenas com permissão de Editar = Sim no Portal de RH. Editar = Próprios não libera essa aba. Se você precisa desse acesso, solicite ao administrador o ajuste em Gestão de Usuários → Permissões.",
       },
       {
-        subtitulo: "O botão 'Ver Ata' está desabilitado numa RH Talk?",
+        subtitulo: "Não vejo algumas políticas na aba Políticas?",
         texto:
-          "Essa ata tem acesso restrito a participantes da reunião. Se você esteve presente na reunião mas não consegue ver, pode ser que o registro de participação não tenha sido feito. Informe ao RH para que adicionem seu usuário como participante.",
+          "Com permissão de **Ver = Próprios**, a lista mostra só documentos cujo **Aplicável a** inclua **Todos os prestadores** ou a diretoria, gerência ou time do seu cadastro em Gestão de Prestadores. Se faltar vínculo no organograma, você pode não ver políticas direcionadas a times específicos. Perfis internos (não prestadores) devem usar **Ver = Sim**. Comunicados e RH Talks não usam esse filtro — aparecem para quem tem Ver = Sim ou Ver = Próprios.",
       },
       {
         subtitulo: "Cliquei em 'Lido' mas o badge 'Novo' voltou?",

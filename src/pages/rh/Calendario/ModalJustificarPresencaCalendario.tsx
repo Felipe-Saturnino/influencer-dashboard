@@ -324,6 +324,10 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
               maxLength={5}
               value={entradaEsquecimento}
               onChange={(e) => setEntradaEsquecimento(aplicarMascaraHorarioPresencaHHMM(e.target.value))}
+              onBlur={() => {
+                const n = normalizarHorarioPresencaHHMM(entradaEsquecimento);
+                if (validarHorarioPresencaHHMM(n)) setEntradaEsquecimento(n);
+              }}
               style={inputField(t)}
               aria-required="true"
             />
@@ -342,6 +346,10 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
               maxLength={5}
               value={saidaEsquecimento}
               onChange={(e) => setSaidaEsquecimento(aplicarMascaraHorarioPresencaHHMM(e.target.value))}
+              onBlur={() => {
+                const n = normalizarHorarioPresencaHHMM(saidaEsquecimento);
+                if (validarHorarioPresencaHHMM(n)) setSaidaEsquecimento(n);
+              }}
               style={inputField(t)}
               aria-required="true"
             />

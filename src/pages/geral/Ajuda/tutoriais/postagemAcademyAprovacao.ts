@@ -66,5 +66,5 @@ export const TUTORIAL_POSTAGEM_ACADEMY_APROVACAO: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Enquanto estiver em Aprovação, a postagem ainda não aparece para a operação nas abas de leitura.\n— Você só edita as próprias postagens neste fluxo.\n— Cancelar no modal descarta o que ainda não foi salvo.",
+    "— Enquanto estiver em Aprovação, a postagem ainda não aparece para a operação nas abas de leitura.\n— Você só edita as próprias postagens neste fluxo.\n— Use o ícone Ver na tabela para ler o conteúdo e consultar o histórico.\n— Cancelar no modal descarta o que ainda não foi salvo.",
 };

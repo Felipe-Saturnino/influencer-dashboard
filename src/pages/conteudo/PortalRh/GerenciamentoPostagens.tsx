@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Clock, Loader2, Newspaper, Pencil } from "lucide-react";
+import { Check, Eye, Loader2, Newspaper, Pencil } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
@@ -27,7 +27,7 @@ import { normalizarTextoBusca } from "../../../lib/searchText";
 import { labelTipoDocumentoPortal, type RhDocumentoTipo } from "../../../lib/portalRhDocumentoNormativo";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { ModalCriarPostagem, type PostagemEditRef } from "./ModalCriarPostagem";
-import { ModalHistoricoPostagem } from "./ModalHistoricoPostagem";
+import { ModalVerPostagem } from "./ModalVerPostagem";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 import { getPeriodoHistoricoCompetencias, isDataNoPeriodoHistoricoCompetencias } from "../../../lib/dashboardHelpers";
 import { fetchAllPages } from "../../../lib/supabasePaginate";
@@ -140,18 +140,18 @@ export function GerenciamentoPostagensFiltrosTipoStatus({
   );
 }
 
-function acoesPorStatus(status: RhPostagemStatus): ("editar" | "aprovar" | "arquivar" | "historico")[] {
+function acoesPorStatus(status: RhPostagemStatus): ("editar" | "aprovar" | "arquivar" | "ver")[] {
   switch (status) {
     case "publicado":
-      return ["editar", "arquivar", "historico"];
+      return ["editar", "arquivar", "ver"];
     case "rascunho":
-      return ["editar", "historico"];
+      return ["editar", "ver"];
     case "aprovacao":
-      return ["editar", "aprovar", "historico"];
+      return ["editar", "aprovar", "ver"];
     case "arquivado":
-      return ["historico"];
+      return ["ver"];
     default:
-      return ["historico"];
+      return ["ver"];
   }
 }
 
@@ -189,7 +189,7 @@ export function GerenciamentoPostagens({
 
   const [modalCriar, setModalCriar] = useState(false);
   const [editRef, setEditRef] = useState<PostagemEditRef | null>(null);
-  const [histRef, setHistRef] = useState<{ contentType: RhPostagemContentType; id: string; assunto: string } | null>(null);
+  const [verRef, setVerRef] = useState<{ contentType: RhPostagemContentType; id: string; assunto: string } | null>(null);
   const [acaoLoading, setAcaoLoading] = useState<string | null>(null);
   const [alvoArquivar, setAlvoArquivar] = useState<PostagemGerenciamentoRow | null>(null);
   const [pagina, setPagina] = useState(0);
@@ -734,15 +734,15 @@ export function GerenciamentoPostagens({
                             }}
                           />
                         ) : null}
-                        {acoes.includes("historico") ? (
+                        {acoes.includes("ver") ? (
                           <BtnIconeAcaoLinha
-                            label={tooltipAcao("Histórico da postagem")}
+                            label={tooltipAcao("Ver postagem")}
                             disabled={busy}
                             onClick={() =>
-                              setHistRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })
+                              setVerRef({ contentType: row.contentType, id: row.id, assunto: row.assunto })
                             }
                           >
-                            <Clock size={13} aria-hidden />
+                            <Eye size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
                         ) : null}
                       </div>
@@ -781,12 +781,12 @@ export function GerenciamentoPostagens({
         }}
       />
 
-      <ModalHistoricoPostagem
-        open={!!histRef}
-        assunto={histRef?.assunto ?? ""}
-        contentType={histRef?.contentType ?? null}
-        contentId={histRef?.id ?? null}
-        onClose={() => setHistRef(null)}
+      <ModalVerPostagem
+        open={!!verRef}
+        assunto={verRef?.assunto ?? ""}
+        contentType={verRef?.contentType ?? null}
+        contentId={verRef?.id ?? null}
+        onClose={() => setVerRef(null)}
       />
 
       {alvoArquivar ? (

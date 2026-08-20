@@ -885,7 +885,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "RH Talk",
         definicao:
           "Reunião periódica conduzida pelo RH da Spin Gaming com grupos de colaboradores para alinhamento, comunicação de políticas e abertura de espaço para perguntas. Cada sessão gera uma ata numerada sequencialmente.",
-        nota: "A ata fica disponível no Portal de RH apenas para participantes registrados da reunião.",
+        nota: "A ata publicada fica disponível no Portal de RH para quem tem permissão de Ver (Sim ou Próprios). Participantes da reunião são registrados em Anotações RH para controle operacional.",
+        referencia: "Portal de RH",
+      },
+      {
+        termo: "Aplicável a (Portal de RH)",
+        definicao:
+          "Campo de políticas e normativas que indica o público-alvo: **Todos os prestadores** ou diretorias, gerências e times do organograma. Filtra a lista na aba Políticas quando a permissão de Ver é **Próprios**.",
+        nota: "Comunicados e RH Talks não usam este filtro. Com **Ver = Sim** ou **Editar = Sim**, todas as políticas publicadas aparecem.",
         referencia: "Portal de RH",
       },
       {
@@ -893,7 +900,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Confirmação formal de que o colaborador leu e tomou conhecimento de um documento que exige ciência — no Portal de RH (política ou normativa) ou no Portal da Academy (manuais), com registro de data e hora.",
         nota:
-          "Diferente de apenas marcar um comunicado como Lido, e diferente das reações com emoji no card (gesto de leitura, sem registro de ciência). No Portal da Academy, a coluna Sua Ciência mostra Pendente até o aceite; travessão (—) indica que o manual não exige ciência. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
+          "No Portal de RH, quem **vê** o documento na lista e o item exige ciência deve registrar o aceite (perfis internos/gerenciais). Diferente de apenas marcar um comunicado como Lido, e diferente das reações com emoji no card (gesto de leitura, sem registro de ciência). No Portal da Academy, a coluna Sua Ciência mostra Pendente até o aceite; travessão (—) indica que o manual não exige ciência. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
         referencia: "Portal de RH · Portal da Academy",
       },
       {

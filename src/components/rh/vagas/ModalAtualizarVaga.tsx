@@ -433,7 +433,7 @@ export function ModalAtualizarVaga({
           </div>
         </div>
       ) : (
-        <div style={{ maxHeight: "min(70dvh, 640px)", overflowY: "auto", paddingRight: 4, fontFamily: FONT.body }}>
+        <div style={{ maxHeight: "min(70dvh, 640px)", overflowY: "auto", paddingRight: 4, paddingBottom: 24, fontFamily: FONT.body }}>
           <button
             type="button"
             onClick={voltarEscolha}

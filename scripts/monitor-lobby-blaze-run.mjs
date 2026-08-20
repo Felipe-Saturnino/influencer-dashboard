@@ -1,3 +1,9 @@
+import {
+  escanearLobbySoftSwissAteAcharTodos,
+  MONITOR_LOBBY_SCAN_VERSION,
+  SOFTSWISS_PAGE_LIMIT,
+} from "./lib/monitorLobbySoftSwissScan.mjs";
+
 /**
  * Busca o lobby Blaze e chama monitor-lobby-blaze (com blaze_lobby no body).
  *
@@ -11,7 +17,7 @@
  * Opcional: HTTPS_PROXY=http://user:pass@host:port (proxy residencial BR)
  */
 
-const LIMIT = 30;
+const LIMIT = SOFTSWISS_PAGE_LIMIT;
 const SEARCH_QUERY =
   "limit=30&search=&game_category_slugs=live-casino&xp_enabled=false&game_provider_slugs=&bonus_betting_enabled=false";
 const BLAZE_ORIGIN = "https://blaze.bet.br";
@@ -132,52 +138,20 @@ async function fetchPagina(page) {
 async function escanearLobby(idsEsperados) {
   await iniciarSessaoBlaze();
 
-  const lobby = [];
-  const posicoes = new Map();
-  let page = 1;
-  let totalPages = 1;
-
-  // Sempre varrer todas as páginas. Early-break após achar só dedicadas
-  // omitia Network (~P294+) e gerava «30 jogos / 1 página / parcial».
-  while (page <= totalPages) {
-    const data = await fetchPagina(page);
-    if (page === 1) {
-      totalPages = Math.max(1, data.meta?.total_pages ?? 1);
-      const totalRecords = data.meta?.total_records;
-      console.log(
-        `Blaze meta: total_pages=${totalPages}` +
-          (totalRecords != null ? ` total_records=${totalRecords}` : ""),
-      );
-    }
-    const records = data.records ?? [];
-    for (let i = 0; i < records.length; i++) {
-      const r = records[i];
-      const posicao = (page - 1) * LIMIT + i + 1;
-      const item = {
-        posicao,
-        game_id: r.id,
-        name: r.name,
-        slug: r.slug,
-        provider_name: r.provider?.name ?? "",
-        provider_slug: r.provider?.slug ?? "",
-      };
-      lobby.push(item);
-      const idStr = String(r.id);
-      if (idsEsperados.has(idStr)) {
-        posicoes.set(idStr, posicao);
-      }
-    }
-    page++;
-  }
-
-  console.log(
-    `IDs encontrados no lobby: ${posicoes.size}/${idsEsperados.size}` +
-      (posicoes.size < idsEsperados.size
-        ? ` (faltam: ${[...idsEsperados].filter((id) => !posicoes.has(id)).join(", ")})`
-        : ""),
-  );
-
-  return { lobby, paginasLidas: totalPages };
+  return escanearLobbySoftSwissAteAcharTodos({
+    idsEsperados,
+    limit: LIMIT,
+    logPrefix: "Blaze ",
+    fetchPagina,
+    mapRecord: (r, posicao) => ({
+      posicao,
+      game_id: r.id,
+      name: r.name,
+      slug: r.slug,
+      provider_name: r.provider?.name ?? "",
+      provider_slug: r.provider?.slug ?? "",
+    }),
+  });
 }
 
 async function main() {
@@ -244,6 +218,7 @@ async function main() {
   }
 
   console.log(`Buscando lobby Blaze (${ids.size} mesas no cadastro)...`);
+  console.log(`scan=${MONITOR_LOBBY_SCAN_VERSION}`);
   console.log(`IDs: ${[...ids].sort().join(", ")}`);
   const { lobby, paginasLidas } = await escanearLobby(ids);
   console.log(`Lobby: ${lobby.length} jogos, ${paginasLidas} página(s).`);

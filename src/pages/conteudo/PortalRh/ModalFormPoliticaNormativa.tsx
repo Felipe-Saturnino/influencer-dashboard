@@ -14,7 +14,6 @@ import {
   type RhDocumentoTipo,
   extrairSufixoNumericoCodigo,
   labelTipoDocumentoSelect,
-  montarCodigoDocumento,
   opcoesOrganogramaAplicavel,
   prefixoCodigoDocumento,
   proximoCodigoSugerido,
@@ -137,26 +136,24 @@ export function ModalFormPoliticaNormativa({
             <input
               id="mp-codigo"
               value={sufixoCodigo}
-              disabled={!values.tipoDocumento}
+              disabled
+              readOnly
               inputMode="numeric"
-              onChange={(e) => {
-                if (!prefixo) return;
-                const digits = e.target.value.replace(/\D/g, "").slice(0, 6);
-                onChange({ codigo: montarCodigoDocumento(prefixo, digits) });
-              }}
-              onBlur={() => {
-                if (!prefixo) return;
-                onChange({ codigo: montarCodigoDocumento(prefixo, sufixoCodigo || "0") });
-              }}
               style={{
                 ...inputStyle,
                 borderRadius: "0 10px 10px 0",
                 borderColor: fieldErr.codigo ? "#e84025" : t.cardBorder,
                 fontFamily: "ui-monospace, monospace",
+                cursor: "not-allowed",
+                opacity: 0.85,
               }}
               aria-label="Número sequencial do código do documento"
+              title="Gerado automaticamente — não é possível editar"
             />
           </div>
+          <p style={{ margin: "6px 0 0", fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+            Gerado automaticamente ao escolher o tipo de documento. Não é possível alterar.
+          </p>
         </div>
         <div>
           {lbl("mp-versao", "Versão", t, true)}

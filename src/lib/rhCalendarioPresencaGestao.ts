@@ -514,21 +514,75 @@ export function validarHorarioPresencaHHMM(valor: string): boolean {
   return /^([01]?\d|2[0-3]):[0-5]\d$/.test(valor.trim());
 }
 
-export function normalizarHorarioPresencaHHMM(valor: string): string {
-  const digits = valor.replace(/\D/g, "");
+/** Converte segmentos H e M em «HH:MM» com zero à esquerda. */
+function formatarSegmentosHorarioPresencaHHMM(horas: string, minutos: string): string {
+  const h = horas.replace(/\D/g, "").slice(0, 2);
+  const m = minutos.replace(/\D/g, "").slice(0, 2);
+  if (!h && !m) return "";
+  if (!m) return h.length === 2 ? `${h}:` : h;
+  return `${String(parseInt(h || "0", 10)).padStart(2, "0")}:${m.padStart(2, "0")}`;
+}
+
+/** Interpreta só dígitos (3 = HMM omitindo zero da hora; 4 = HHMM). */
+function horarioPresencaDeDigitos(digits: string): string | null {
   if (digits.length === 4) {
     return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
   }
-  const m = /^(\d{1,2}):(\d{2})$/.exec(valor.trim());
-  if (!m) return valor.trim();
-  return `${String(parseInt(m[1]!, 10)).padStart(2, "0")}:${m[2]}`;
+  if (digits.length === 3) {
+    return `0${digits[0]}:${digits.slice(1, 3)}`;
+  }
+  return null;
 }
 
-/** Máscara HH:MM — até 4 dígitos; «:» fixo após as horas (ex.: 0800 → 08:00). */
+export function normalizarHorarioPresencaHHMM(valor: string): string {
+  const trimmed = valor.trim();
+  if (!trimmed) return "";
+
+  // Teclado numérico mobile costuma usar «.» ou «,» no lugar de «:» (ex.: 6.50 → 06:50).
+  const comSeparador = trimmed.replace(/[.,]/g, ":");
+
+  const m = /^(\d{1,2}):(\d{1,2})$/.exec(comSeparador);
+  if (m) {
+    return formatarSegmentosHorarioPresencaHHMM(m[1]!, m[2]!);
+  }
+
+  const deDigitos = horarioPresencaDeDigitos(comSeparador.replace(/\D/g, ""));
+  if (deDigitos) {
+    const partes = /^(\d{1,2}):(\d{2})$/.exec(deDigitos);
+    if (partes) {
+      return formatarSegmentosHorarioPresencaHHMM(partes[1]!, partes[2]!);
+    }
+  }
+
+  const mLegado = /^(\d{1,2}):(\d{2})$/.exec(trimmed);
+  if (mLegado) {
+    return `${String(parseInt(mLegado[1]!, 10)).padStart(2, "0")}:${mLegado[2]}`;
+  }
+
+  return trimmed;
+}
+
+/**
+ * Máscara HH:MM em tempo real — aceita «:», «.» ou «,» como separador;
+ * digitando só números: 0800 → 08:00, 650 → 06:50.
+ */
 export function aplicarMascaraHorarioPresencaHHMM(input: string): string {
-  const digits = input.replace(/\D/g, "").slice(0, 4);
+  const comSeparador = input.replace(/[.,]/g, ":");
+  const limpo = comSeparador.replace(/[^\d:]/g, "");
+  const colonIdx = limpo.indexOf(":");
+
+  if (colonIdx >= 0) {
+    const h = limpo.slice(0, colonIdx);
+    const m = limpo.slice(colonIdx + 1).replace(/:/g, "");
+    return formatarSegmentosHorarioPresencaHHMM(h, m);
+  }
+
+  const digits = limpo.replace(/\D/g, "").slice(0, 4);
   if (digits.length === 0) return "";
   if (digits.length <= 2) return digits;
+  if (digits.length === 3) {
+    return `0${digits[0]}:${digits.slice(1)}`;
+  }
   return `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }
 

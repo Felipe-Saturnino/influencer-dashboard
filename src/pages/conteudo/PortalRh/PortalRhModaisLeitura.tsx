@@ -154,7 +154,6 @@ export function ModalVerAta({
   anexoNome,
   autorInfo,
   dataPublicacao,
-  podeVer,
   onClose,
 }: {
   titulo: string;
@@ -165,7 +164,6 @@ export function ModalVerAta({
   anexoNome: string | null | undefined;
   autorInfo: PortalRhAutorInfo | undefined;
   dataPublicacao: string | null | undefined;
-  podeVer: boolean;
   onClose: () => void;
 }) {
   const { theme: t } = useApp();
@@ -175,36 +173,30 @@ export function ModalVerAta({
   return (
     <ModalBase onClose={onClose} maxWidth={600}>
       <ModalHeader title="Ver Ata" onClose={onClose} />
-      {!podeVer ? (
-        <p style={{ fontSize: 14, color: t.textMuted, fontFamily: FONT.body }}>Acesso restrito a participantes desta reunião.</p>
-      ) : (
-        <>
-          <ModalLinha>
-            <div style={{ fontSize: 18, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{titulo}</div>
-          </ModalLinha>
-          {intro ? (
-            <ModalLinha label="Introdução">
-              <p style={{ fontSize: 14, color: t.text, margin: 0, lineHeight: 1.5, fontFamily: FONT.body }}>{intro}</p>
-            </ModalLinha>
-          ) : null}
-          {html ? (
-            <ModalLinha label="Descrição">
-              <CorpoHtmlPortalRh html={html} color={t.text} />
-            </ModalLinha>
-          ) : null}
-          <ModalLinha label="Anexos">
-            <LinksMidiaAnexo imagemPath={imagemPath} anexoPath={anexoPath} anexoNome={anexoNome} />
-            {!imagemPath?.trim() && !anexoPath?.trim() ? (
-              <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>—</span>
-            ) : null}
-          </ModalLinha>
-          <ModalLinha>
-            <p style={{ fontSize: 13, color: t.textMuted, margin: 0, fontFamily: FONT.body }}>
-              Autor: {linhaMetaAutorPortalRh(autorInfo, dataPublicacao)}
-            </p>
-          </ModalLinha>
-        </>
-      )}
+      <ModalLinha>
+        <div style={{ fontSize: 18, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{titulo}</div>
+      </ModalLinha>
+      {intro ? (
+        <ModalLinha label="Introdução">
+          <p style={{ fontSize: 14, color: t.text, margin: 0, lineHeight: 1.5, fontFamily: FONT.body }}>{intro}</p>
+        </ModalLinha>
+      ) : null}
+      {html ? (
+        <ModalLinha label="Descrição">
+          <CorpoHtmlPortalRh html={html} color={t.text} />
+        </ModalLinha>
+      ) : null}
+      <ModalLinha label="Anexos">
+        <LinksMidiaAnexo imagemPath={imagemPath} anexoPath={anexoPath} anexoNome={anexoNome} />
+        {!imagemPath?.trim() && !anexoPath?.trim() ? (
+          <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>—</span>
+        ) : null}
+      </ModalLinha>
+      <ModalLinha>
+        <p style={{ fontSize: 13, color: t.textMuted, margin: 0, fontFamily: FONT.body }}>
+          Autor: {linhaMetaAutorPortalRh(autorInfo, dataPublicacao)}
+        </p>
+      </ModalLinha>
     </ModalBase>
   );
 }

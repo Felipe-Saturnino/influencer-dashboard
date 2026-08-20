@@ -61,5 +61,5 @@ export const TUTORIAL_PORTAL_RH_GERENCIAMENTO: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Postagens arquivadas continuam visíveis no Gerenciamento (filtro Status) e no histórico da postagem.",
+    "— Postagens arquivadas continuam visíveis no Gerenciamento (filtro Status). Use o ícone Ver para ler o conteúdo e consultar o histórico da postagem.",
 };
