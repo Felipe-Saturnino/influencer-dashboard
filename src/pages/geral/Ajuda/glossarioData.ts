@@ -1003,7 +1003,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Minhas Negociações",
         definicao:
-          "Botão na barra do Marketplace, só com permissão de **Ver: Sim** e cadastro de prestador. Ligado, mostra o mural do próprio grupo (Liderança = Shift Leader + Service Manager) e a aba **Minhas Ofertas**; Encerradas some. Desligado, volta à visão de todos os times.",
+          "Botão na barra do Marketplace, com permissão de **Ver: Sim** e cadastro de prestador ligado ao login (perfil típico SL/SM: **Ver: Sim**, **Criar: Próprios**, **Editar: Próprios**). Ligado, mostra o mural do próprio grupo (Liderança = Shift Leader + Service Manager) e a aba **Minhas Ofertas**; Encerradas some. Desligado, volta à visão de todos os times.",
         referencia: "Marketplace",
       },
       {

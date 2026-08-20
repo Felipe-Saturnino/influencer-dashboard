@@ -9,6 +9,11 @@ import {
   fraseTipoOfertaMarketplace,
   formatarDiaIsoPtBr,
   marketplaceMostrarNovaOferta,
+  marketplaceModoLiderancaGestao,
+  marketplacePodeEditarOferta,
+  marketplacePodeMinhasNegociacoes,
+  marketplacePodeOfertar,
+  marketplacePodeProporNoMural,
   overlayIdentidadeMarketplaceOfertas,
   parseHomeMarketplaceAlertas,
   fontesAlertaHomeDePayloadListar,
@@ -702,5 +707,57 @@ describe("marketplaceMostrarNovaOferta", () => {
     expect(
       marketplaceMostrarNovaOferta({ canView: "sim", canCriarOk: false }, fid, true),
     ).toBe(false);
+  });
+});
+
+describe("marketplace permissões UI", () => {
+  const fid = "aaaa-bbbb";
+
+  const lideranca = {
+    canView: "sim" as const,
+    canCriar: "proprios" as const,
+    canEditar: "proprios" as const,
+    canCriarOk: true,
+    canEditarOk: true,
+  };
+
+  it("modo liderança gestão = Ver Sim + Criar/Editar Próprios", () => {
+    expect(marketplaceModoLiderancaGestao(lideranca)).toBe(true);
+    expect(
+      marketplaceModoLiderancaGestao({ ...lideranca, canCriar: "sim", canEditar: "sim" }),
+    ).toBe(false);
+  });
+
+  it("Minhas Negociações exige Ver Sim e prestador cadastrado", () => {
+    expect(marketplacePodeMinhasNegociacoes(lideranca, fid)).toBe(true);
+    expect(marketplacePodeMinhasNegociacoes(lideranca, null)).toBe(false);
+    expect(marketplacePodeMinhasNegociacoes({ canView: "proprios" }, fid)).toBe(false);
+  });
+
+  it("Nova Oferta com Criar Próprios e cadastro", () => {
+    expect(marketplacePodeOfertar(lideranca, fid)).toBe(true);
+    expect(marketplacePodeOfertar({ canCriarOk: false }, fid)).toBe(false);
+  });
+
+  it("Editar Próprios bloqueia proposta no mural alheio", () => {
+    expect(marketplacePodeProporNoMural(lideranca, fid)).toBe(false);
+    expect(
+      marketplacePodeProporNoMural(
+        { canCriarOk: true, canEditar: "sim" },
+        fid,
+      ),
+    ).toBe(true);
+  });
+
+  it("Editar Próprios limita ações às linhas próprias", () => {
+    expect(marketplacePodeEditarOferta(lideranca, { souOfertante: true })).toBe(true);
+    expect(marketplacePodeEditarOferta(lideranca, { souInteressado: true })).toBe(true);
+    expect(marketplacePodeEditarOferta(lideranca, {})).toBe(false);
+    expect(
+      marketplacePodeEditarOferta(
+        { canEditar: "sim", canEditarOk: true },
+        {},
+      ),
+    ).toBe(true);
   });
 });

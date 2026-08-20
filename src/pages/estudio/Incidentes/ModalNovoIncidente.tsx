@@ -568,6 +568,7 @@ export function ModalNovoIncidente({
   }
 
   function resetParaNovoIncidenteLimpo(protocolo: string) {
+    skipResetTimeAlvoRef.current = true;
     setTimeAlvo("gp");
     setMesaId("");
     setIdRodada("");
