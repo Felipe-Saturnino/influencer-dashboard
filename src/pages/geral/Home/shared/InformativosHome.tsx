@@ -1,12 +1,15 @@
 import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { CorpoHtmlInformativo } from "../../../../components/conteudo/CorpoHtmlInformativo";
+import { BarraReacaoConteudoLigada } from "../../../../components/conteudo/BarraReacaoConteudo";
 import { fmtDataColunaGerenciamento } from "../../../../lib/informativosWorkflow";
 import { getPageContentBoxStyle, getPageContentBoxShadow } from "../../../../lib/pageContentBoxStyles";
 import { FONT } from "../../../../constants/theme";
 import type { Role } from "../../../../types";
 import { useHomeInformativos } from "../hooks/useHomeInformativos";
+import { useConteudoReacoes } from "../../../../hooks/useConteudoReacoes";
 import { homeSectionTitleStyle, HOME_BODY_MUTED } from "./homeSharedUi";
 
 export function InformativosHome({ perfil, sectionIdPrefix }: { perfil: Role; sectionIdPrefix: string }) {
@@ -15,6 +18,11 @@ export function InformativosHome({ perfil, sectionIdPrefix }: { perfil: Role; se
   const { loading, erro, lista } = useHomeInformativos(perfil);
   const box = getPageContentBoxStyle(brand, t);
   const cardShadow = getPageContentBoxShadow(t.isDark ?? false);
+  const chavesReacao = useMemo(
+    () => lista.map((item) => ({ origem: "informativo" as const, contentId: item.id })),
+    [lista],
+  );
+  const reacoes = useConteudoReacoes(chavesReacao);
 
   return (
     <section style={box} aria-labelledby={`${sectionIdPrefix}-info-title`}>
@@ -66,6 +74,9 @@ export function InformativosHome({ perfil, sectionIdPrefix }: { perfil: Role; se
                   {item.autorNome ? `${item.autorNome} · ` : ""}
                   {item.published_at ? fmtDataColunaGerenciamento(item.published_at) : "—"}
                 </p>
+                <div style={{ marginTop: 12 }}>
+                  <BarraReacaoConteudoLigada origem="informativo" contentId={item.id} api={reacoes} />
+                </div>
               </article>
             </li>
           ))}

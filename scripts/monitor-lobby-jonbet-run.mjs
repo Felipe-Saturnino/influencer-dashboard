@@ -1,8 +1,6 @@
 ﻿/**
  * Busca o lobby Jonbet e chama monitor-lobby-jonbet (com jonbet_lobby no body).
  *
- * Mesmo padrão SoftSwiss da Blaze (`/api/games/search`). Rede BR recomendada (risco HTTP 451).
- *
  * Uso:
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/monitor-lobby-jonbet-run.mjs
  *   ... --dry-run
@@ -10,7 +8,13 @@
  * Doc: docs/TELECOM-MONITOR-LOBBY-JONBET.md
  */
 
-const LIMIT = 30;
+import {
+  escanearLobbySoftSwissAteAcharTodos,
+  MONITOR_LOBBY_SCAN_VERSION,
+  SOFTSWISS_PAGE_LIMIT,
+} from "./lib/monitorLobbySoftSwissScan.mjs";
+
+const LIMIT = SOFTSWISS_PAGE_LIMIT;
 const SEARCH_QUERY =
   "limit=30&search=&game_category_slugs=live-casino&xp_enabled=false&game_provider_slugs=&bonus_betting_enabled=false";
 const JONBET_ORIGIN = "https://jonbet.bet.br";
@@ -131,51 +135,20 @@ async function fetchPagina(page) {
 async function escanearLobby(idsEsperados) {
   await iniciarSessaoJonbet();
 
-  const lobby = [];
-  const posicoes = new Map();
-  let page = 1;
-  let totalPages = 1;
-
-  // Sempre varrer todas as páginas (Network pode estar longe no ranking).
-  while (page <= totalPages) {
-    const data = await fetchPagina(page);
-    if (page === 1) {
-      totalPages = Math.max(1, data.meta?.total_pages ?? 1);
-      const totalRecords = data.meta?.total_records;
-      console.log(
-        `Jonbet meta: total_pages=${totalPages}` +
-          (totalRecords != null ? ` total_records=${totalRecords}` : ""),
-      );
-    }
-    const records = data.records ?? [];
-    for (let i = 0; i < records.length; i++) {
-      const r = records[i];
-      const posicao = (page - 1) * LIMIT + i + 1;
-      const item = {
-        posicao,
-        game_id: r.id,
-        name: r.name,
-        slug: r.slug,
-        provider_name: r.provider?.name ?? "",
-        provider_slug: r.provider?.slug ?? "",
-      };
-      lobby.push(item);
-      const idStr = String(r.id);
-      if (idsEsperados.has(idStr)) {
-        posicoes.set(idStr, posicao);
-      }
-    }
-    page++;
-  }
-
-  console.log(
-    `IDs encontrados no lobby: ${posicoes.size}/${idsEsperados.size}` +
-      (posicoes.size < idsEsperados.size
-        ? ` (faltam: ${[...idsEsperados].filter((id) => !posicoes.has(id)).join(", ")})`
-        : ""),
-  );
-
-  return { lobby, paginasLidas: totalPages };
+  return escanearLobbySoftSwissAteAcharTodos({
+    idsEsperados,
+    limit: LIMIT,
+    logPrefix: "Jonbet ",
+    fetchPagina,
+    mapRecord: (r, posicao) => ({
+      posicao,
+      game_id: r.id,
+      name: r.name,
+      slug: r.slug,
+      provider_name: r.provider?.name ?? "",
+      provider_slug: r.provider?.slug ?? "",
+    }),
+  });
 }
 
 async function main() {
@@ -241,6 +214,7 @@ async function main() {
   }
 
   console.log(`Buscando lobby Jonbet (${ids.size} mesas no cadastro)...`);
+  console.log(`scan=${MONITOR_LOBBY_SCAN_VERSION}`);
   const { lobby, paginasLidas } = await escanearLobby(ids);
   console.log(`Lobby: ${lobby.length} jogos, ${paginasLidas} página(s).`);
 

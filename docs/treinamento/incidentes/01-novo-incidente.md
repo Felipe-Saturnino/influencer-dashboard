@@ -10,5 +10,8 @@ Imagens em `public/tutoriais/estudio/incidentes/`.
 
 1. Abrir Incidentes / Tickets e localizar Novo Incidente
 2. Preencher o modal (Time, Mesa, Tipo, categoria, prestador, rodada, descrição, anexos)
-3. Registrar ou Registrar e criar outro
+3. Três botões no rodapé:
+   - **Registrar e Criar Outro** (âmbar) — mantém mesa/prestador/time; limpa rodada, tipo e descrição
+   - **Registrar Incidente** (gradiente) — salva e fecha
+   - **Registrar e Criar Novo** (azul) — salva e reabre formulário limpo
 4. Editar pela linha da tabela (lápis) e Salvar Alterações

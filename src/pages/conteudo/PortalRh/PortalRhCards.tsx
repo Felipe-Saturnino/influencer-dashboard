@@ -1,5 +1,5 @@
-import { useEffect, useState, type CSSProperties } from "react";
-import { Lock, X } from "lucide-react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { X } from "lucide-react";
 import { ModalBase } from "../../../components/OperacoesModal";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
 import { urlAssinadaPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
@@ -82,6 +82,7 @@ export function ComunicadoCard({
   podeVerLidos,
   onVerLidos,
   cardShadow,
+  reacoes,
 }: {
   titulo: string;
   corpo: string;
@@ -97,6 +98,7 @@ export function ComunicadoCard({
   podeVerLidos?: boolean;
   onVerLidos?: () => void;
   cardShadow: string;
+  reacoes?: ReactNode;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -173,6 +175,7 @@ export function ComunicadoCard({
             ) : null}
             <span style={{ fontSize: 12, color: t.textMuted }}>{linhaMetaAutorPortalRh(autorInfo, dataPublicacao)}</span>
           </div>
+          {reacoes ? <div style={{ marginTop: 12 }}>{reacoes}</div> : null}
         </div>
         {imgUrl ? (
           <button
@@ -298,7 +301,6 @@ export function RhTalkCard({
   numero,
   autorInfo,
   dataPublicacao,
-  restrito,
   onAbrirAta,
   cardShadow,
 }: {
@@ -307,7 +309,6 @@ export function RhTalkCard({
   numero: number | null | undefined;
   autorInfo: PortalRhAutorInfo | undefined;
   dataPublicacao: string | null | undefined;
-  restrito: boolean;
   onAbrirAta: () => void;
   cardShadow: string;
 }) {
@@ -327,27 +328,11 @@ export function RhTalkCard({
         fontFamily: FONT.body,
       }}
     >
-      {restrito ? (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
-          <Lock size={14} aria-hidden />
-          Acesso restrito a participantes
-        </span>
-      ) : null}
       <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{tituloExib}</div>
       {intro ? (
         <p style={{ fontSize: 13, color: t.textMuted, margin: "8px 0 0", lineHeight: 1.45 }}>{intro}</p>
       ) : null}
-      <button
-        type="button"
-        onClick={onAbrirAta}
-        disabled={restrito}
-        style={{
-          ...ctaOutline(t),
-          marginTop: 14,
-          opacity: restrito ? 0.5 : 1,
-          cursor: restrito ? "not-allowed" : "pointer",
-        }}
-      >
+      <button type="button" onClick={onAbrirAta} style={{ ...ctaOutline(t), marginTop: 14 }}>
         Ver Ata
       </button>
       <p style={{ fontSize: 12, color: t.textMuted, margin: "12px 0 0" }}>{linhaMetaAutorPortalRh(autorInfo, dataPublicacao)}</p>

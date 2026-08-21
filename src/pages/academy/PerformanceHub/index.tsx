@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -55,6 +55,11 @@ function parseDateBr(value: string): Date | null {
   return parsed;
 }
 
+function labelMesCarrossel(ano: number, mes: number): string {
+  const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 function buildMesesCarrossel(rows: PerformanceHubAvaliacao[], time: PerformanceHubTimeSlug): MesCarrossel[] {
   const keys = new Set<string>();
   for (const row of rows) {
@@ -63,16 +68,21 @@ function buildMesesCarrossel(rows: PerformanceHubAvaliacao[], time: PerformanceH
     if (!parsed) continue;
     keys.add(`${parsed.getFullYear()}-${parsed.getMonth()}`);
   }
+  const now = new Date();
+  keys.add(`${now.getFullYear()}-${now.getMonth()}`);
   const entries = [...keys].map((key) => {
     const [ano, mes] = key.split("-").map(Number);
-    const raw = new Date(ano, mes, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-    return { ano, mes, label: raw.charAt(0).toUpperCase() + raw.slice(1) };
+    return { ano, mes, label: labelMesCarrossel(ano, mes) };
   });
   entries.sort((a, b) => a.ano - b.ano || a.mes - b.mes);
-  if (entries.length > 0) return entries;
-  const now = new Date();
-  const raw = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-  return [{ ano: now.getFullYear(), mes: now.getMonth(), label: raw.charAt(0).toUpperCase() + raw.slice(1) }];
+  return entries;
+}
+
+/** Índice do mês civil corrente (último da lista se ainda não houver competência atual). */
+function idxMesCorrenteCarrossel(meses: MesCarrossel[], ref: Date = new Date()): number {
+  if (meses.length === 0) return 0;
+  const i = meses.findIndex((m) => m.ano === ref.getFullYear() && m.mes === ref.getMonth());
+  return i >= 0 ? i : meses.length - 1;
 }
 
 function nomeCoincideUsuario(nomeAvaliado: string, nomeUsuario: string): boolean {
@@ -122,6 +132,8 @@ export default function PerformanceHubPage() {
   const [timeSelecionado, setTimeSelecionado] = useState<PerformanceHubTimeSlug>(PERFORMANCE_HUB_TIME_DEFAULT);
   const [staffSelecionado, setStaffSelecionado] = useState<string[]>([]);
   const [idxMes, setIdxMes] = useState(0);
+  /** Enquanto o usuário não navega o carrossel, sempre recoloca no mês corrente (inclui carga async). */
+  const usuarioNavegouCarrossel = useRef(false);
   const { scoringPorTime, setScoringPorTime } = scoringDb;
   const { avaliacoes, setAvaliacoes, persistirAvaliacao } = avaliacoesDb;
   const [avaliacaoEmEdicao, setAvaliacaoEmEdicao] = useState<PerformanceHubAvaliacao | null>(null);
@@ -139,6 +151,15 @@ export default function PerformanceHubPage() {
   );
 
   useEffect(() => {
+    usuarioNavegouCarrossel.current = false;
+  }, [timeSelecionado]);
+
+  useEffect(() => {
+    if (mesesCarrossel.length === 0) return;
+    if (!usuarioNavegouCarrossel.current) {
+      setIdxMes(idxMesCorrenteCarrossel(mesesCarrossel));
+      return;
+    }
     setIdxMes((prev) => Math.min(prev, Math.max(0, mesesCarrossel.length - 1)));
   }, [mesesCarrossel]);
 
@@ -310,12 +331,26 @@ export default function PerformanceHubPage() {
         aba={aba}
         onSelectAba={setAba}
         historico={historico}
-        onToggleHistorico={() => setHistorico((prev) => !prev)}
+        onToggleHistorico={() => {
+          setHistorico((prev) => {
+            if (prev) {
+              usuarioNavegouCarrossel.current = false;
+              setIdxMes(idxMesCorrenteCarrossel(mesesCarrossel));
+            }
+            return !prev;
+          });
+        }}
         labelCarrossel={historico ? "Todo o período" : (mesSelecionado?.label ?? "—")}
         carrosselAnteriorDisabled={historico || idxMes <= 0}
         carrosselProximoDisabled={historico || idxMes >= mesesCarrossel.length - 1}
-        onCarrosselAnterior={() => setIdxMes((prev) => Math.max(0, prev - 1))}
-        onCarrosselProximo={() => setIdxMes((prev) => Math.min(mesesCarrossel.length - 1, prev + 1))}
+        onCarrosselAnterior={() => {
+          usuarioNavegouCarrossel.current = true;
+          setIdxMes((prev) => Math.max(0, prev - 1));
+        }}
+        onCarrosselProximo={() => {
+          usuarioNavegouCarrossel.current = true;
+          setIdxMes((prev) => Math.min(mesesCarrossel.length - 1, prev + 1));
+        }}
         timeSelecionado={timeSelecionado}
         onSelecionarTime={setTimeSelecionado}
         staffItems={staffOptions}

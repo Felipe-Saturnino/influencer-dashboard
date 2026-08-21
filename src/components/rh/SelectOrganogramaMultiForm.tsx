@@ -47,7 +47,14 @@ export function SelectOrganogramaMultiForm({
   const listboxId = `${id}-${uid.replace(/:/g, "")}`;
 
   const allOptions = useMemo(() => {
-    const base = [...options];
+    const seen = new Set<string>();
+    const base: SelectOrganogramaMultiOption[] = [];
+    for (const o of options) {
+      const id = (o.id ?? "").trim();
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      base.push({ id, label: o.label });
+    }
     if (incluirTodosPrestadores) {
       return [{ id: PORTAL_RH_APLICAVEL_TODOS, label: PORTAL_RH_APLICAVEL_TODOS }, ...base];
     }
@@ -127,9 +134,10 @@ export function SelectOrganogramaMultiForm({
         style={{
           width: "100%",
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           gap: 8,
           padding: "10px 12px",
+          minHeight: 44,
           borderRadius: 10,
           border: `1px solid ${borderColor}`,
           background: t.inputBg,
@@ -142,11 +150,24 @@ export function SelectOrganogramaMultiForm({
           ...style,
         }}
       >
-        <UsersRound size={15} aria-hidden style={{ flexShrink: 0, opacity: 0.85 }} />
-        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <UsersRound size={15} aria-hidden style={{ flexShrink: 0, opacity: 0.85, marginTop: 1 }} />
+        <span
+          title={triggerLabel}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            lineHeight: 1.35,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+          }}
+        >
           {triggerLabel}
         </span>
-        <ChevronDown size={14} aria-hidden style={{ flexShrink: 0, opacity: 0.6 }} />
+        <ChevronDown size={14} aria-hidden style={{ flexShrink: 0, opacity: 0.6, marginTop: 2 }} />
       </button>
 
       {open ? (

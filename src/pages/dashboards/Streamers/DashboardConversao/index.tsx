@@ -20,6 +20,9 @@ import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, S
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
+import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
+import { slicePage, TABELA_PAGE_SIZE_STREAMERS } from "../../../../lib/tablePagination";
+import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
 import {
   Award,
   Check,
@@ -445,6 +448,9 @@ export default function DashboardConversao() {
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [pageTaxas, setPageTaxas] = useState(0);
   const [rows, setRows] = useState<ConversaoRow[]>([]);
   const [compA, setCompA] = useState<string>("");
   const [compB, setCompB] = useState<string>("");
@@ -486,11 +492,14 @@ export default function DashboardConversao() {
     if (catalogosPending) return;
     if (catalogosError) {
       console.error("[StreamersConversao] catálogos:", catalogosError);
+      setErroCarga(MSG_ERRO_STREAMERS);
       setLoading(false);
       return;
     }
+    let cancelled = false;
     async function carregar() {
       setLoading(true);
+      setErroCarga(null);
 
       const perfisLista: InfluencerPerfil[] = perfis;
 
@@ -505,73 +514,92 @@ export default function DashboardConversao() {
             ? null
             : escoposVisiveis.operadorasVisiveis;
       const influencerIdsQuery =
-        escoposVisiveis.vêTodosInfluencers ? null : escoposVisiveis.influencersVisiveis;
-      const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-        inicio,
-        fim,
-        operadoraSlugs: operadoraSlugsQuery,
-        influencerIds: influencerIdsQuery,
-      });
-      let metricas = analytics.metricas;
-      if (historico) {
-        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
-        const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
-          dataInicio: inicio,
-          dataFim: fim,
+        filtroInfluencer !== "todos"
+          ? [filtroInfluencer]
+          : escoposVisiveis.vêTodosInfluencers
+            ? null
+            : escoposVisiveis.influencersVisiveis;
+
+      try {
+        const analytics = await fetchInfluencerAnalyticsPeriodoCached({
+          inicio,
+          fim,
+          operadoraSlugs: operadoraSlugsQuery,
+          influencerIds: influencerIdsQuery,
         });
-        metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
-      }
-
-      const lives = analytics.lives;
-      const resultados = analytics.resultados;
-
-      const mapa = new Map<string, { acessos: number; registros: number; ftds: number; viewsTotal: number; liveComViews: number; horas: number }>();
-      metricas.forEach((m: { influencer_id: string; visit_count: number; registration_count: number; ftd_count: number }) => {
-        if (!mapa.has(m.influencer_id)) mapa.set(m.influencer_id, { acessos: 0, registros: 0, ftds: 0, viewsTotal: 0, liveComViews: 0, horas: 0 });
-        const r = mapa.get(m.influencer_id)!;
-        r.acessos += m.visit_count || 0;
-        r.registros += m.registration_count || 0;
-        r.ftds += m.ftd_count || 0;
-      });
-      lives.forEach((live: { influencer_id: string; id: string }) => {
-        if (!mapa.has(live.influencer_id)) mapa.set(live.influencer_id, { acessos: 0, registros: 0, ftds: 0, viewsTotal: 0, liveComViews: 0, horas: 0 });
-        const r = mapa.get(live.influencer_id)!;
-        const res = resultados.find((x) => x.live_id === live.id);
-        if (res) {
-          if (res.media_views) { r.viewsTotal += res.media_views; r.liveComViews += 1; }
-          r.horas += (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+        let metricas = analytics.metricas;
+        if (historico) {
+          const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
+          const aliasesSinteticas = await buscarMetricasDeAliases({
+            operadora_slug: operadoraSlugsForcado?.[0] ?? (filtroOperadora !== "todas" ? filtroOperadora : undefined),
+            influencerIds: influencerIdsQuery ?? undefined,
+            dataInicio: inicio,
+            dataFim: fim,
+          });
+          metricas = mesclarMetricasComAliases(metricas, aliasesSinteticas, fim, podeVerInfluencer);
         }
-      });
 
-      const resultado: ConversaoRow[] = [];
-      mapa.forEach((data, id) => {
-        const perfil = perfisLista.find((p) => p.id === id);
-        if (!perfil) return;
-        const avgViews = data.liveComViews > 0 ? Math.round(data.viewsTotal / data.liveComViews) : 0;
-        const row: ConversaoRow = {
-          influencer_id: id, nome: perfil.nome_artistico,
-          views: avgViews, acessos: data.acessos, registros: data.registros,
-          ftds: data.ftds, horas: data.horas,
-          pctViewAcesso: pct(data.acessos, avgViews),
-          pctAcessoReg: pct(data.registros, data.acessos),
-          pctRegFTD: pct(data.ftds, data.registros),
-          pctViewFTD: pct(data.ftds, avgViews),
-          ftdPorHora: data.horas > 0 ? data.ftds / data.horas : 0,
-          acaoLabel: "",
-        };
-        row.acaoLabel = getAcao(row).label;
-        resultado.push(row);
-      });
+        const lives = analytics.lives;
+        const resultados = analytics.resultados;
 
-      resultado.sort((a, b) => b.ftds - a.ftds);
-      const rowsVisiveis = resultado.filter((r) => podeVerInfluencer(r.influencer_id));
-      setRows(rowsVisiveis);
-      if (rowsVisiveis.length >= 1) setCompA((prev) => prev || rowsVisiveis[0].influencer_id);
-      if (rowsVisiveis.length >= 2) setCompB((prev) => prev || rowsVisiveis[1].influencer_id);
-      setLoading(false);
+        const mapa = new Map<string, { acessos: number; registros: number; ftds: number; viewsTotal: number; liveComViews: number; horas: number }>();
+        metricas.forEach((m: { influencer_id: string; visit_count: number; registration_count: number; ftd_count: number }) => {
+          if (!mapa.has(m.influencer_id)) mapa.set(m.influencer_id, { acessos: 0, registros: 0, ftds: 0, viewsTotal: 0, liveComViews: 0, horas: 0 });
+          const r = mapa.get(m.influencer_id)!;
+          r.acessos += m.visit_count || 0;
+          r.registros += m.registration_count || 0;
+          r.ftds += m.ftd_count || 0;
+        });
+        lives.forEach((live: { influencer_id: string; id: string }) => {
+          if (!mapa.has(live.influencer_id)) mapa.set(live.influencer_id, { acessos: 0, registros: 0, ftds: 0, viewsTotal: 0, liveComViews: 0, horas: 0 });
+          const r = mapa.get(live.influencer_id)!;
+          const res = resultados.find((x) => x.live_id === live.id);
+          if (res) {
+            if (res.media_views) { r.viewsTotal += res.media_views; r.liveComViews += 1; }
+            r.horas += (res.duracao_horas || 0) + (res.duracao_min || 0) / 60;
+          }
+        });
+
+        const resultado: ConversaoRow[] = [];
+        mapa.forEach((data, id) => {
+          const perfil = perfisLista.find((p) => p.id === id);
+          if (!perfil) return;
+          const avgViews = data.liveComViews > 0 ? Math.round(data.viewsTotal / data.liveComViews) : 0;
+          const row: ConversaoRow = {
+            influencer_id: id, nome: perfil.nome_artistico,
+            views: avgViews, acessos: data.acessos, registros: data.registros,
+            ftds: data.ftds, horas: data.horas,
+            pctViewAcesso: pct(data.acessos, avgViews),
+            pctAcessoReg: pct(data.registros, data.acessos),
+            pctRegFTD: pct(data.ftds, data.registros),
+            pctViewFTD: pct(data.ftds, avgViews),
+            ftdPorHora: data.horas > 0 ? data.ftds / data.horas : 0,
+            acaoLabel: "",
+          };
+          row.acaoLabel = getAcao(row).label;
+          resultado.push(row);
+        });
+
+        resultado.sort((a, b) => b.ftds - a.ftds);
+        if (cancelled) return;
+        const rowsVisiveis = resultado.filter((r) => podeVerInfluencer(r.influencer_id));
+        setRows(rowsVisiveis);
+        if (rowsVisiveis.length >= 1) setCompA((prev) => prev || rowsVisiveis[0].influencer_id);
+        if (rowsVisiveis.length >= 2) setCompB((prev) => prev || rowsVisiveis[1].influencer_id);
+        setLoading(false);
+      } catch (err) {
+        console.error("[StreamersConversao] carga:", err);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_STREAMERS);
+          setRows([]);
+          setLoading(false);
+        }
+      }
     }
-    carregar();
+    void carregar();
+    return () => {
+      cancelled = true;
+    };
   }, [
     catalogosPending,
     catalogosError,
@@ -582,7 +610,9 @@ export default function DashboardConversao() {
     podeVerInfluencer,
     operadoraSlugsForcado,
     filtroOperadora,
+    filtroInfluencer,
     perfis,
+    reloadTick,
   ]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
@@ -610,7 +640,10 @@ export default function DashboardConversao() {
     { label: "Ativar cadastro",  icon: <Target size={11} aria-hidden />, cor: BRAND.azul,   bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  },
     { label: "Em dia",           icon: <Check size={11} aria-hidden />,    cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
   ];
-  const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
+  const rowsFiltrados = useMemo(
+    () => (acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo),
+    [rowsFiltradosEscopo, acaoFiltro],
+  );
 
   const onSortTaxasConv = (col: TaxasConvSortCol) => {
     setSortTaxasConv((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
@@ -658,6 +691,16 @@ export default function DashboardConversao() {
     });
     return list;
   }, [rowsFiltrados, sortTaxasConv]);
+
+  const rowsTaxasPaginadas = useMemo(
+    () => slicePage(rowsTaxasOrdenadas, pageTaxas, TABELA_PAGE_SIZE_STREAMERS),
+    [rowsTaxasOrdenadas, pageTaxas],
+  );
+
+  // Depende de filtros/dados estáveis — não da referência de um .filter() inline a cada render.
+  useEffect(() => {
+    setPageTaxas(0);
+  }, [rowsFiltradosEscopo, acaoFiltro, sortTaxasConv, historico, idxMes, filtroInfluencer, filtroOperadora]);
 
   const brand = useDashboardBrand();
 
@@ -754,6 +797,43 @@ export default function DashboardConversao() {
       </div>
       )}
 
+      {erroCarga ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...card,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroCarga}</span>
+          <button
+            type="button"
+            onClick={() => setReloadTick((n) => n + 1)}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : (
+      <>
       {/* ══ BLOCO 2: COMPARATIVO DE FUNIL ═══════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
@@ -818,7 +898,7 @@ export default function DashboardConversao() {
         )}
 
         {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando dados...</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13 }}>Carregando…</div>
         ) : (
           <div className="app-conversao-funil-duo">
             <PainelFunil row={rowA} isEmpty={!compA} cor={COR_A} />
@@ -894,10 +974,11 @@ export default function DashboardConversao() {
         )}
 
         {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando…</div>
         ) : rowsFiltrados.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
+          <>
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 960 })}>
               <caption style={{ display: "none" }}>
@@ -917,7 +998,7 @@ export default function DashboardConversao() {
                 </tr>
               </thead>
               <tbody>
-                {rowsTaxasOrdenadas.map((r, i) => {
+                {rowsTaxasPaginadas.map((r, i) => {
                   const ac  = getAcao(r);
                   const hl1 = r.pctViewAcesso !== null && r.pctViewAcesso < 10;
                   const hl2 = !hl1 && r.pctAcessoReg !== null && r.pctAcessoReg < 10;
@@ -970,8 +1051,18 @@ export default function DashboardConversao() {
               </tbody>
             </table>
           </div>
+          <TabelaPaginacaoBar
+            t={t}
+            page={pageTaxas}
+            pageSize={TABELA_PAGE_SIZE_STREAMERS}
+            totalItems={rowsTaxasOrdenadas.length}
+            onPageChange={setPageTaxas}
+          />
+          </>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

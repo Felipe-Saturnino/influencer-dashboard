@@ -8,7 +8,13 @@ import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CampoUploadArquivos } from "../../../components/CampoUploadArquivos";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import {
+  ModalBase,
+  ModalHeader,
+  MODAL_FORM_FOOTER_STYLE,
+  MODAL_FORM_SCROLL_BODY_STYLE,
+  MODAL_FORM_SHELL_STYLE,
+} from "../../../components/OperacoesModal";
 import { uploadPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
 import {
   documentoUsaModeloNormativo,
@@ -16,6 +22,7 @@ import {
   FORM_POLITICA_NORMATIVA_VAZIO,
   PORTAL_RH_APLICAVEL_TODOS,
   areaResponsavelPadraoRh,
+  proximoCodigoSugerido,
   sincronizarRelacionadosDocumentoPortal,
   validarPublicarDocumentoNormativo,
   type RhDocumentoClassificacao,
@@ -191,6 +198,17 @@ export function ModalCriarPostagem({
       }
     })();
   }, [open, tipoPostagem, editRef?.id, modo, legadoPolitica]);
+
+  /** Na criação, recalcula o próximo código quando a lista de códigos existentes chega (ou muda). */
+  useEffect(() => {
+    if (!open || modo !== "criar" || legadoPolitica || tipoPostagem !== "politica") return;
+    setNormativo((prev) => {
+      if (!prev.tipoDocumento) return prev;
+      const proximo = proximoCodigoSugerido(prev.tipoDocumento, codigosExistentes);
+      if (prev.codigo === proximo) return prev;
+      return { ...prev, codigo: proximo };
+    });
+  }, [open, modo, legadoPolitica, tipoPostagem, codigosExistentes]);
 
   const carregarEdicao = useCallback(async (ref: PostagemEditRef) => {
     setLoadingData(true);
@@ -434,6 +452,20 @@ export function ModalCriarPostagem({
       setErro("Selecione o tipo de postagem.");
       return;
     }
+
+    /** Na criação normativa, o código é sempre o próximo livre — nunca o digitado (campo travado). */
+    const normativoPersistir: RhDocumentoNormativoCampos =
+      tipoPostagem === "politica" && !legadoPolitica && modo === "criar" && normativo.tipoDocumento
+        ? { ...normativo, codigo: proximoCodigoSugerido(normativo.tipoDocumento, codigosExistentes) }
+        : normativo;
+    if (
+      tipoPostagem === "politica" &&
+      !legadoPolitica &&
+      normativoPersistir.codigo !== normativo.codigo
+    ) {
+      setNormativo(normativoPersistir);
+    }
+
     const novoStatus: RhPostagemStatus =
       acao === "salvar"
         ? statusAtual === "publicado" && modo === "editar"
@@ -441,7 +473,9 @@ export function ModalCriarPostagem({
           : "rascunho"
         : tipoPostagem === "politica"
           ? statusPosPublicar(
-              legadoPolitica ? requerAprovacaoEhSim(requerAprovacao) : requerAprovacaoEhSim(normativo.requerAprovacao),
+              legadoPolitica
+                ? requerAprovacaoEhSim(requerAprovacao)
+                : requerAprovacaoEhSim(normativoPersistir.requerAprovacao),
             )
           : "publicado";
 
@@ -453,11 +487,14 @@ export function ModalCriarPostagem({
         if (legadoPolitica) {
           errs = validarPublicarPolitica({ tipoPolitica, requerAprovacao, assunto, introducao, descricao });
         } else {
-          errs = validarPublicarDocumentoNormativo({
-            ...normativo,
-            pdfPath: normativo.pdfPath ?? (pdfFile ? "pending" : null),
-            pdfNome: normativo.pdfNome ?? pdfFile?.name ?? null,
-          });
+          errs = validarPublicarDocumentoNormativo(
+            {
+              ...normativoPersistir,
+              pdfPath: normativoPersistir.pdfPath ?? (pdfFile ? "pending" : null),
+              pdfNome: normativoPersistir.pdfNome ?? pdfFile?.name ?? null,
+            },
+            { codigosExistentes },
+          );
         }
       } else {
         errs = validarPublicarRhTalk({ assunto, introducao, descricao });
@@ -606,30 +643,30 @@ export function ModalCriarPostagem({
             pdfPath = upPdf.path;
             pdfNome = pdfFile.name;
           }
-          const reqApr = requerAprovacaoEhSim(normativo.requerAprovacao);
+          const reqApr = requerAprovacaoEhSim(normativoPersistir.requerAprovacao);
           const dataEmissaoSalvar =
             novoStatus === "publicado" && statusAnterior !== "publicado"
               ? fmtDataEmissaoDocumentoPortal(new Date())
               : dataEmissaoPersistida;
           const payloadBase = {
-            titulo: normativo.titulo.trim() || "Rascunho",
-            codigo: normativo.codigo.trim() ? normativo.codigo.trim().toUpperCase() : null,
-            versao: normativo.versao.trim() || "1.0",
-            tipo_documento: normativo.tipoDocumento || null,
-            area_responsavel: normativo.areaResponsavel.trim() || null,
-            classificacao: normativo.classificacao || null,
-            aplicavel_a: normativo.aplicavelA,
-            resumo: normativo.resumo.trim(),
-            introducao: normativo.resumo.trim(),
+            titulo: normativoPersistir.titulo.trim() || "Rascunho",
+            codigo: normativoPersistir.codigo.trim() ? normativoPersistir.codigo.trim().toUpperCase() : null,
+            versao: normativoPersistir.versao.trim() || "1.0",
+            tipo_documento: normativoPersistir.tipoDocumento || null,
+            area_responsavel: normativoPersistir.areaResponsavel.trim() || null,
+            classificacao: normativoPersistir.classificacao || null,
+            aplicavel_a: normativoPersistir.aplicavelA,
+            resumo: normativoPersistir.resumo.trim(),
+            introducao: normativoPersistir.resumo.trim(),
             data_emissao: dataEmissaoSalvar,
-            elaborado_por: normativo.elaboradoPor.trim() || null,
-            revisado_por: normativo.revisadoPor.trim() || null,
-            aprovado_por_doc: normativo.aprovadoPorDoc.trim() || null,
+            elaborado_por: normativoPersistir.elaboradoPor.trim() || null,
+            revisado_por: normativoPersistir.revisadoPor.trim() || null,
+            aprovado_por_doc: normativoPersistir.aprovadoPorDoc.trim() || null,
             corpo: null,
             categoria_id: null,
             status: novoStatus,
             requer_aprovacao: reqApr,
-            requires_acknowledgment: requerAprovacaoEhSim(normativo.exigeCiencia),
+            requires_acknowledgment: requerAprovacaoEhSim(normativoPersistir.exigeCiencia),
             anexo_storage_path: pdfPath,
             anexo_nome: pdfNome,
             storage_path: pdfPath,
@@ -645,7 +682,11 @@ export function ModalCriarPostagem({
             if (error) {
               console.error("[ModalCriarPostagem] salvar documento normativo:", error);
               setSalvando(false);
-              setErro(ERRO_SALVAR);
+              setErro(
+                error.code === "23505"
+                  ? "Já existe um documento com este código e versão. Se o problema persistir, entre em contato com o suporte."
+                  : ERRO_SALVAR,
+              );
               return;
             }
             docId = editRef.id;
@@ -666,12 +707,20 @@ export function ModalCriarPostagem({
             if (error || !inserted) {
               console.error("[ModalCriarPostagem] inserir documento normativo:", error);
               setSalvando(false);
-              setErro(ERRO_SALVAR);
+              setErro(
+                error?.code === "23505"
+                  ? "Já existe um documento com este código e versão. Se o problema persistir, entre em contato com o suporte."
+                  : ERRO_SALVAR,
+              );
               return;
             }
             docId = (inserted as { id: string }).id;
           }
-          const relErr = await sincronizarRelacionadosDocumentoPortal(supabase, docId, normativo.relacionadosIds);
+          const relErr = await sincronizarRelacionadosDocumentoPortal(
+            supabase,
+            docId,
+            normativoPersistir.relacionadosIds,
+          );
           if (relErr) {
             console.error("[ModalCriarPostagem] relacionados:", relErr);
             setSalvando(false);
@@ -795,7 +844,8 @@ export function ModalCriarPostagem({
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: "min(70dvh, 560px)", overflowY: "auto", paddingRight: 4 }}>
+        <div style={MODAL_FORM_SHELL_STYLE}>
+        <div style={MODAL_FORM_SCROLL_BODY_STYLE}>
           {erro ? (
             <div role="alert" style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body }}>
               {erro}
@@ -1029,9 +1079,10 @@ export function ModalCriarPostagem({
             </>
           ) : null}
         </div>
+        </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20, flexWrap: "wrap" }}>
+      <div style={MODAL_FORM_FOOTER_STYLE}>
         {modo === "editar" && statusAtual === "publicado" ? (
           <button
             type="button"

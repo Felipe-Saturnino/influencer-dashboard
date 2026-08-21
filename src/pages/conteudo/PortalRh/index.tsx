@@ -30,6 +30,7 @@ import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from 
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
 import { PortalRhBlocoFiltros } from "./PortalRhBlocoFiltros";
 import { ComunicadoCard, RhTalkCard } from "./PortalRhCards";
+import { BarraReacaoConteudoLigada } from "../../../components/conteudo/BarraReacaoConteudo";
 import { ModalLidosPostagem, type ModalLidosContentType } from "./ModalLidosPostagem";
 import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { ModalVisualizarDocumento } from "./ModalVisualizarDocumento";
@@ -58,6 +59,7 @@ import { fetchAllPages, fetchInBatched } from "../../../lib/supabasePaginate";
 import { useApp } from "../../../context/AppContext";
 import { usePermission } from "../../../hooks/usePermission";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
+import { useConteudoReacoes } from "../../../hooks/useConteudoReacoes";
 import { useRouteTab } from "../../../hooks/useRouteTab";
 import { FONT } from "../../../constants/theme";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
@@ -372,8 +374,6 @@ export default function PortalRhPage() {
   const [comunicados, setComunicados] = useState<RhPortalComunicado[]>([]);
   const [documentos, setDocumentos] = useState<RhPortalDocumento[]>([]);
   const [talks, setTalks] = useState<RhPortalRhTalk[]>([]);
-  const [talkParticipantTalkIds, setTalkParticipantTalkIds] = useState<Set<string>>(new Set());
-  const [talkCounts, setTalkCounts] = useState<Record<string, number>>({});
   const [receipts, setReceipts] = useState<Map<string, ReadReceiptRow>>(new Map());
   const [metaAutores, setMetaAutores] = useState<Record<string, PortalRhAutorInfo>>({});
 
@@ -397,7 +397,6 @@ export default function PortalRhPage() {
     contentType: ModalLidosContentType;
   } | null>(null);
   const [setoresUsuarioAplicavel, setSetoresUsuarioAplicavel] = useState<string[]>([]);
-  const [usuarioCadastradoGestaoPrestadores, setUsuarioCadastradoGestaoPrestadores] = useState(false);
 
   const cardShadow = getPageContentBoxShadow(t.isDark);
 
@@ -409,7 +408,6 @@ export default function PortalRhPage() {
   useEffect(() => {
     if (!emailEfetivo?.trim()) {
       setSetoresUsuarioAplicavel([]);
-      setUsuarioCadastradoGestaoPrestadores(false);
       return;
     }
     let cancel = false;
@@ -421,7 +419,6 @@ export default function PortalRhPage() {
       if (cancel) return;
       const vinculos = flattenVinculosDeGrupos(org.grupos);
       setSetoresUsuarioAplicavel(setoresAplicavelDoUsuario(funcionario, vinculos));
-      setUsuarioCadastradoGestaoPrestadores(Boolean(funcionario));
     })();
     return () => {
       cancel = true;
@@ -497,7 +494,6 @@ export default function PortalRhPage() {
     const talkRows = talkData.filter((tk) => visivelPortal(tk.status));
     setTalks(talkRows);
 
-    const talkIds = talkRows.map((x) => x.id);
     const userIds = new Set<string>();
     for (const c of comRows) {
       const aid = autorIdPostagem(c);
@@ -514,17 +510,7 @@ export default function PortalRhPage() {
       if (aid) userIds.add(aid);
     }
 
-    const [parts, recData, meta] = await Promise.all([
-      talkIds.length > 0
-        ? fetchInBatched(talkIds, 100, async (ids) => {
-            const { data, error } = await supabase
-              .from("rh_portal_rh_talk_participant")
-              .select("talk_id, user_id")
-              .in("talk_id", ids);
-            if (error) throw error;
-            return data ?? [];
-          }, 3)
-        : Promise.resolve([] as { talk_id: string; user_id: string }[]),
+    const [recData, meta] = await Promise.all([
       (() => {
         const contentIds = [
           ...comRows.map((c) => c.id),
@@ -544,21 +530,6 @@ export default function PortalRhPage() {
       })(),
       carregarMetaAutoresPortalRh([...userIds]),
     ]);
-
-    if (talkIds.length > 0) {
-      const mySet = new Set<string>();
-      const counts: Record<string, number> = {};
-      for (const p of parts) {
-        const row = p as { talk_id: string; user_id: string };
-        counts[row.talk_id] = (counts[row.talk_id] ?? 0) + 1;
-        if (row.user_id === userIdEfetivo) mySet.add(row.talk_id);
-      }
-      setTalkParticipantTalkIds(mySet);
-      setTalkCounts(counts);
-    } else {
-      setTalkParticipantTalkIds(new Set());
-      setTalkCounts({});
-    }
 
     const map = new Map<string, ReadReceiptRow>();
     for (const row of recData) {
@@ -775,6 +746,16 @@ export default function PortalRhPage() {
     hitBuscaCorpo,
   ]);
 
+  const chavesReacaoComunicado = useMemo(() => {
+    const ids = comunicadosLista.map((c) => c.id);
+    if (comunicadoPinned) ids.push(comunicadoPinned.id);
+    return [...new Set(ids)].map((contentId) => ({
+      origem: "rh_comunicado" as const,
+      contentId,
+    }));
+  }, [comunicadosLista, comunicadoPinned]);
+  const reacoesComunicado = useConteudoReacoes(chavesReacaoComunicado);
+
   const documentosFiltrados = useMemo(() => {
     let list = documentos.filter((d) => isPostagemPublica(d.status));
     list = list.filter((d) =>
@@ -925,12 +906,12 @@ export default function PortalRhPage() {
   const cienciaExigidaDocIds = useMemo(() => {
     const set = new Set<string>();
     for (const d of documentosFiltrados) {
-      if (documentoExigeCienciaDoUsuario(d, setoresUsuarioAplicavel, roleEfetivo, usuarioCadastradoGestaoPrestadores)) {
+      if (documentoExigeCienciaDoUsuario(d, roleEfetivo)) {
         set.add(d.id);
       }
     }
     return set;
-  }, [documentosFiltrados, setoresUsuarioAplicavel, roleEfetivo, usuarioCadastradoGestaoPrestadores]);
+  }, [documentosFiltrados, roleEfetivo]);
 
   const usuarioVeColunaCiencia = perfilPortalRhParticipaCiencia(roleEfetivo);
 
@@ -958,12 +939,6 @@ export default function PortalRhPage() {
     const doc = documentos.find((d) => d.id === id);
     if (!doc) return;
     setModalDoc(doc);
-  }
-
-  function podeVerAta(tk: RhPortalRhTalk): boolean {
-    const n = talkCounts[tk.id] ?? 0;
-    if (n === 0) return true;
-    return talkParticipantTalkIds.has(tk.id);
   }
 
   if (perm.loading) {
@@ -1102,6 +1077,13 @@ export default function PortalRhPage() {
                         })
                       }
                       cardShadow={cardShadow}
+                      reacoes={
+                        <BarraReacaoConteudoLigada
+                          origem="rh_comunicado"
+                          contentId={comunicadoPinned.id}
+                          api={reacoesComunicado}
+                        />
+                      }
                     />
                   </div>
                 ) : null}
@@ -1139,6 +1121,13 @@ export default function PortalRhPage() {
                               setModalLidos({ id: c.id, titulo: c.titulo, contentType: "comunicado" })
                             }
                             cardShadow={cardShadow}
+                            reacoes={
+                              <BarraReacaoConteudoLigada
+                                origem="rh_comunicado"
+                                contentId={c.id}
+                                api={reacoesComunicado}
+                              />
+                            }
                           />
                         </li>
                       );
@@ -1194,8 +1183,6 @@ export default function PortalRhPage() {
                 ) : (
                   <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                     {talksFiltrados.map((tk) => {
-                      const n = talkCounts[tk.id] ?? 0;
-                      const restrito = n > 0 && !talkParticipantTalkIds.has(tk.id);
                       const dataPub = tk.published_at;
                       return (
                         <li key={tk.id}>
@@ -1205,7 +1192,6 @@ export default function PortalRhPage() {
                             numero={tk.numero}
                             autorInfo={metaAutor(autorIdPostagem(tk))}
                             dataPublicacao={dataPub}
-                            restrito={restrito}
                             onAbrirAta={() => setModalTalk(tk)}
                             cardShadow={cardShadow}
                           />
@@ -1230,12 +1216,7 @@ export default function PortalRhPage() {
             classificacao={modalDoc.classificacao ?? null}
             pdfPath={modalDoc.anexo_storage_path ?? modalDoc.storage_path}
             pdfNome={modalDoc.anexo_nome ?? null}
-            exigeCiencia={documentoExigeCienciaDoUsuario(
-              modalDoc,
-              setoresUsuarioAplicavel,
-              roleEfetivo,
-              usuarioCadastradoGestaoPrestadores,
-            )}
+            exigeCiencia={documentoExigeCienciaDoUsuario(modalDoc, roleEfetivo)}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
             onClose={() => setModalDoc(null)}
             onCiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
@@ -1253,12 +1234,7 @@ export default function PortalRhPage() {
             aprovadorInfo={metaAutor(modalDoc.approved_by)}
             dataAprovacao={modalDoc.approved_at}
             temAprovador={Boolean(modalDoc.approved_by && modalDoc.approved_at)}
-            exigeCiencia={documentoExigeCienciaDoUsuario(
-              modalDoc,
-              setoresUsuarioAplicavel,
-              roleEfetivo,
-              usuarioCadastradoGestaoPrestadores,
-            )}
+            exigeCiencia={documentoExigeCienciaDoUsuario(modalDoc, roleEfetivo)}
             jaCiente={Boolean(receipts.get(receiptKey("documento", modalDoc.id))?.acknowledged_at)}
             onClose={() => setModalDoc(null)}
             onLidoECiente={() => void marcarLidoECienteDocumento(modalDoc.id)}
@@ -1276,7 +1252,6 @@ export default function PortalRhPage() {
           anexoNome={modalTalk.anexo_nome}
           autorInfo={metaAutor(autorIdPostagem(modalTalk))}
           dataPublicacao={modalTalk.published_at ?? modalTalk.data_reuniao}
-          podeVer={podeVerAta(modalTalk)}
           onClose={() => setModalTalk(null)}
         />
       ) : null}

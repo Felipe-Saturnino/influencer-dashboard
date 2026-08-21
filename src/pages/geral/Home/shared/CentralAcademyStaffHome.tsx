@@ -1,5 +1,5 @@
 import { BookOpen, Loader2, Megaphone, Newspaper } from "lucide-react";
-import type { MouseEvent, ReactNode } from "react";
+import { useMemo, type MouseEvent, type ReactNode } from "react";
 import { useApp } from "../../../../context/AppContext";
 import { useDashboardBrand } from "../../../../hooks/useDashboardBrand";
 import { useAppPageNav } from "../../../../hooks/useAppPageNav";
@@ -10,6 +10,14 @@ import { useHomeCentralAcademyFeed, type HomeCentralAcademyItem } from "../hooks
 import { useHomeStaffLidoCollapse } from "../hooks/useHomeStaffLidoCollapse";
 import { HomeStaffFeedCard } from "./HomeStaffFeedCard";
 import { homeSectionTitleStyle, HOME_BODY_MUTED, HOME_LINK_BUTTON } from "./homeSharedUi";
+import { BarraReacaoConteudoLigada } from "../../../../components/conteudo/BarraReacaoConteudo";
+import { useConteudoReacoes } from "../../../../hooks/useConteudoReacoes";
+import {
+  PREFIXO_HOME_ACADEMY_COMUNICADO,
+  PREFIXO_HOME_ACADEMY_DICA,
+  uuidAposPrefixoHome,
+  type ConteudoReacaoChave,
+} from "../../../../lib/conteudoReacao";
 
 const ICON_PROPS = { size: 16, strokeWidth: 2, "aria-hidden": true as const };
 
@@ -79,6 +87,23 @@ function DescricaoAcademy({ item }: { item: HomeCentralAcademyItem }) {
   );
 }
 
+function reacoesAcademyHome(
+  item: HomeCentralAcademyItem,
+  api: ReturnType<typeof useConteudoReacoes>,
+) {
+  if (item.kind === "comunicado") {
+    const contentId = uuidAposPrefixoHome(item.id, PREFIXO_HOME_ACADEMY_COMUNICADO);
+    if (!contentId) return undefined;
+    return <BarraReacaoConteudoLigada origem="academy_comunicado" contentId={contentId} api={api} />;
+  }
+  if (item.kind === "dica") {
+    const contentId = uuidAposPrefixoHome(item.id, PREFIXO_HOME_ACADEMY_DICA);
+    if (!contentId) return undefined;
+    return <BarraReacaoConteudoLigada origem="academy_dica" contentId={contentId} api={api} />;
+  }
+  return undefined;
+}
+
 export function CentralAcademyStaffHome({ sectionIdPrefix }: { sectionIdPrefix: string }) {
   const { theme: t, user } = useApp();
   const brand = useDashboardBrand();
@@ -86,6 +111,21 @@ export function CentralAcademyStaffHome({ sectionIdPrefix }: { sectionIdPrefix: 
   const { isRecolhido, marcarLido, expandir } = useHomeStaffLidoCollapse(user?.id, "academy");
   const box = getPageContentBoxStyle(brand, t);
   const titleId = `${sectionIdPrefix}-central-academy-title`;
+
+  const chavesReacao = useMemo(() => {
+    const out: ConteudoReacaoChave[] = [];
+    for (const item of lista) {
+      if (item.kind === "comunicado") {
+        const contentId = uuidAposPrefixoHome(item.id, PREFIXO_HOME_ACADEMY_COMUNICADO);
+        if (contentId) out.push({ origem: "academy_comunicado", contentId });
+      } else if (item.kind === "dica") {
+        const contentId = uuidAposPrefixoHome(item.id, PREFIXO_HOME_ACADEMY_DICA);
+        if (contentId) out.push({ origem: "academy_dica", contentId });
+      }
+    }
+    return out;
+  }, [lista]);
+  const reacoes = useConteudoReacoes(chavesReacao);
 
   if (!podeVer) return null;
   if (!loading && !erro && lista.length === 0) return null;
@@ -119,6 +159,7 @@ export function CentralAcademyStaffHome({ sectionIdPrefix }: { sectionIdPrefix: 
                   onLiEOcultar={() => marcarLido(item.id)}
                   mostrarLiEOcultar={mostrarLiEOcultar}
                   rodape={linhaMetaAutorPortalAcademy({ nome: item.autorNome }, item.published_at)}
+                  reacoes={reacoesAcademyHome(item, reacoes)}
                 >
                   <DescricaoAcademy item={item} />
                 </HomeStaffFeedCard>

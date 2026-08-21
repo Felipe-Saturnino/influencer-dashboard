@@ -3,6 +3,7 @@ import { FONT } from "../../../constants/theme";
 import { CorpoHtmlInformativo } from "../../../components/conteudo/CorpoHtmlInformativo";
 import { truncPreviewHtml, fmtDataColunaGerenciamento } from "../../../lib/informativosWorkflow";
 import { labelPerfisInformativo } from "../../../lib/informativosRoles";
+import type { ReactNode } from "react";
 
 const PREVIEW_LEN = 280;
 
@@ -13,6 +14,7 @@ export function InformativoCard({
   dataPublicacao,
   autorNome,
   cardShadow,
+  reacoes,
 }: {
   assunto: string;
   descricao: string;
@@ -20,6 +22,7 @@ export function InformativoCard({
   dataPublicacao: string | null;
   autorNome: string;
   cardShadow: string;
+  reacoes?: ReactNode;
 }) {
   const { theme: t } = useApp();
 
@@ -42,6 +45,7 @@ export function InformativoCard({
         {dataPublicacao ? fmtDataColunaGerenciamento(dataPublicacao) : "—"}
         {perfis.length ? ` · ${labelPerfisInformativo(perfis)}` : ""}
       </p>
+      {reacoes ? <div style={{ marginTop: 12 }}>{reacoes}</div> : null}
     </article>
   );
 }

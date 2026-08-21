@@ -22,6 +22,7 @@
 import { supabase } from "./supabase";
 import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "./rhFuncionarioLoginMatch";
+import type { PermissaoValor } from "../types";
 import { normRhOrgRotuloOrganograma } from "./rhPrestadorUsuarioSync";
 import {
   instanteFimTurnoTrabalhadoNoDia,
@@ -198,6 +199,96 @@ export function filtroTimeGrupoNegociacaoMarketplace(
     return k;
   }
   return null;
+}
+
+/**
+ * CTA Nova Oferta: Criar Sim/Próprios + cadastro de prestador.
+ * Com **Ver = Sim**, só quando **Minhas Negociações** está ligado (visão pessoal).
+ * Com **Ver = Próprios**, sempre que puder criar.
+ */
+export function marketplaceMostrarNovaOferta(
+  perm: { canView: PermissaoValor; canCriarOk: boolean },
+  funcionarioId: string | null | undefined,
+  minhasNegociacoes: boolean,
+): boolean {
+  if (!perm.canCriarOk || !funcionarioId) return false;
+  if (perm.canView === "sim") return minhasNegociacoes;
+  return perm.canView === "proprios";
+}
+
+/** Permissões da página Marketplace usadas nos helpers de UI. */
+export type MarketplacePermissoesUi = {
+  canView: PermissaoValor;
+  canCriar: PermissaoValor;
+  canEditar: PermissaoValor;
+  canCriarOk: boolean;
+  canEditarOk: boolean;
+};
+
+/** Ver = Sim — visão de gestão (todos os times, Encerradas, filtro Time). */
+export function marketplaceVisaoGestao(canView: PermissaoValor | null): boolean {
+  return canView === "sim";
+}
+
+/**
+ * Perfil típico SL/SM: Ver Sim (mural amplo) com Criar/Editar Próprios (só ofertas próprias).
+ */
+export function marketplaceModoLiderancaGestao(
+  perm: Pick<MarketplacePermissoesUi, "canView" | "canCriar" | "canEditar">,
+): boolean {
+  return perm.canView === "sim" && perm.canCriar === "proprios" && perm.canEditar === "proprios";
+}
+
+/**
+ * Botão Minhas Negociações: Ver Sim + cadastro em `rh_funcionarios` ligado ao login.
+ * Cobre gestor pleno e modo liderança (Ver Sim + Criar/Editar Próprios).
+ */
+export function marketplacePodeMinhasNegociacoes(
+  perm: Pick<MarketplacePermissoesUi, "canView">,
+  funcionarioId: string | null | undefined,
+): boolean {
+  return marketplaceVisaoGestao(perm.canView) && Boolean(funcionarioId);
+}
+
+/** Pode criar oferta: Criar Sim ou Próprios + prestador cadastrado. */
+export function marketplacePodeOfertar(
+  perm: Pick<MarketplacePermissoesUi, "canCriarOk">,
+  funcionarioId: string | null | undefined,
+): boolean {
+  return perm.canCriarOk && Boolean(funcionarioId);
+}
+
+/** Editar = Próprios — ações de linha limitadas às ofertas em que o login participa. */
+export function marketplaceEditarSomenteProprias(
+  perm: Pick<MarketplacePermissoesUi, "canEditar">,
+): boolean {
+  return perm.canEditar === "proprios";
+}
+
+/**
+ * Enviar proposta / Propor Troca no mural (oferta de colega).
+ * Com Editar = Próprios, só cancelar/aprovar/recusar/desistir nas próprias ofertas (aba Minhas).
+ */
+export function marketplacePodeProporNoMural(
+  perm: Pick<MarketplacePermissoesUi, "canCriarOk" | "canEditar">,
+  funcionarioId: string | null | undefined,
+): boolean {
+  if (!perm.canCriarOk || !funcionarioId) return false;
+  if (marketplaceEditarSomenteProprias(perm)) return false;
+  return true;
+}
+
+/** Aprovar, recusar, cancelar ou desistir — respeita Editar Sim vs Próprios. */
+export function marketplacePodeEditarOferta(
+  perm: Pick<MarketplacePermissoesUi, "canEditar" | "canEditarOk">,
+  row: { souOfertante?: boolean; souInteressado?: boolean },
+): boolean {
+  if (!perm.canEditarOk) return false;
+  if (perm.canEditar === "sim") return true;
+  if (perm.canEditar === "proprios") {
+    return Boolean(row.souOfertante || row.souInteressado);
+  }
+  return false;
 }
 
 /** Frase curta para cards da Home («troca», «venda de turno»). */

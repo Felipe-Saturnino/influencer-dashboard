@@ -17,6 +17,7 @@ import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
+import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
 import {
   fmtBRL,
   getIdxMesCarrosselPadrao,
@@ -222,6 +223,9 @@ export default function DashboardFinanceiro() {
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [momPronto, setMomPronto] = useState(false);
   const [filtroInfluencerLocal, setFiltroInfluencerLocal] = useState("todos");
   const [operadoraFiltroLocal, setOperadoraFiltroLocal] = useState("todas");
 
@@ -260,16 +264,22 @@ export default function DashboardFinanceiro() {
     } else setHistorico(true);
   }
 
-  // ── BUSCA DE DADOS (lógica 100% idêntica ao original) ────────────────────────
+  // ── BUSCA: fase 1 = período atual; fase 2 = MoM em background ────────────────
   useEffect(() => {
     if (catalogosPending) return;
     if (catalogosError) {
       console.error("[StreamersFinanceiro] catálogos:", catalogosError);
+      setErroCarga(MSG_ERRO_STREAMERS);
       setLoading(false);
       return;
     }
+    let cancelled = false;
     async function carregar() {
       setLoading(true);
+      setErroCarga(null);
+      setMomPronto(false);
+      const totaisVazio: TotaisFinanceiros = { ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 };
+      setTotaisAnt(totaisVazio);
 
       const perfisLista: InfluencerPerfil[] = perfis;
 
@@ -289,159 +299,171 @@ export default function DashboardFinanceiro() {
           : escoposVisiveis.vêTodosInfluencers
             ? null
             : escoposVisiveis.influencersVisiveis;
-      const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-        inicio: periodoInicio,
-        fim: periodoFim,
-        operadoraSlugs: operadoraSlugsQuery,
-        influencerIds: influencerIdsQuery,
-      });
-      const mapaAgreg = new Map<string, MetricaRow>();
-      analytics.metricas.forEach((m) => {
-        if (!mapaAgreg.has(m.influencer_id)) mapaAgreg.set(m.influencer_id, { influencer_id: m.influencer_id, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
-        const r = mapaAgreg.get(m.influencer_id)!;
-        r.ftd_count += m.ftd_count || 0; r.ftd_total += m.ftd_total ?? 0;
-        r.deposit_count += m.deposit_count || 0; r.deposit_total += m.deposit_total || 0;
-        r.withdrawal_count += m.withdrawal_count || 0; r.withdrawal_total += m.withdrawal_total || 0;
-        r.ggr += m.ggr || 0;
-      });
-      if (historico) {
-        const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
-        const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: operadoraForApi ?? undefined,
-          influencerIds: influencerIdsQuery ?? undefined,
-          dataInicio: periodoInicio,
-          dataFim: periodoFim,
-        });
-        for (const a of aliasesSinteticas) {
-          if (!mapaAgreg.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
-            mapaAgreg.set(a.influencer_id, {
-              influencer_id: a.influencer_id,
-              ftd_count: a.ftd_count,
-              ftd_total: a.ftd_total,
-              deposit_count: a.deposit_count,
-              deposit_total: a.deposit_total,
-              withdrawal_count: a.withdrawal_count,
-              withdrawal_total: a.withdrawal_total,
-              ggr: a.ggr,
-            });
-          }
-        }
-      }
-      const metricas = [...mapaAgreg.values()];
-      const lives = analytics.lives;
-      const resultados = analytics.resultados;
-      const horasMap = new Map<string, number>();
-      lives.forEach((live: { influencer_id: string; id: string }) => {
-        const res = resultados.find((r) => r.live_id === live.id);
-        if (res) { const h = (res.duracao_horas || 0) + (res.duracao_min || 0) / 60; horasMap.set(live.influencer_id, (horasMap.get(live.influencer_id) || 0) + h); }
-      });
-
-      const { total: investimentoTotal, porInfluencer: investimentoPorInf, agentes: investimentoAgentes } = await buscarInvestimentoPago(
-        { inicio: periodoInicio, fim: periodoFim },
-        filtrosInvestimentoPorEscopo(
-          {
-            semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-            vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-            influencersVisiveis: escoposVisiveis.influencersVisiveis,
-          },
-          { operadora_slug: operadoraForApi, filtroInfluencer }
-        )
-      );
-
-      const mapa = new Map<string, Record<string, unknown>>();
-      metricas.forEach((m) => mapa.set(m.influencer_id, { ...m, ftd_count: Number(m.ftd_count)||0, ftd_total: Number(m.ftd_total)||0, deposit_count: Number(m.deposit_count)||0, deposit_total: Number(m.deposit_total)||0, withdrawal_count: Number(m.withdrawal_count)||0, withdrawal_total: Number(m.withdrawal_total)||0, ggr: Number(m.ggr)||0 }));
-
-      const resultado: FinanceiroRow[] = [];
-      mapa.forEach((data, id) => {
-        const perfil = perfisLista.find((p) => p.id === id);
-        if (!perfil) return;
-        const investimento = investimentoPorInf[id] ?? 0;
-        const d = data as Record<string, number>;
-        const ftd_ticket_medio = (d.ftd_ticket_medio as number) ?? (d.ftd_count > 0 ? d.ftd_total / d.ftd_count : 0);
-        const deposito_ticket_medio = (d.deposito_ticket_medio as number) ?? (d.deposit_count > 0 ? d.deposit_total / d.deposit_count : 0);
-        const saque_ticket_medio = (d.saque_ticket_medio as number) ?? ((d.withdrawal_count||0) > 0 ? d.withdrawal_total / (d.withdrawal_count||1) : 0);
-        const ggr_por_jogador = (d.ggr_por_jogador as number) ?? (d.ftd_count > 0 ? d.ggr / d.ftd_count : 0);
-        const wd_ratio_pct = (d.wd_ratio as number) ?? (d.deposit_total > 0 ? (d.withdrawal_total / d.deposit_total) * 100 : 0);
-        const pvi = (d.pvi as number) ?? calculaPVI(deposito_ticket_medio, ggr_por_jogador, wd_ratio_pct);
-        const perfilJogadorVal = d.perfil_jogador;
-        const perfil_jogador: PerfilJogador = (typeof perfilJogadorVal === "string" && ["Whales","Core","Recreativos","Caçadores de Bônus"].includes(perfilJogadorVal))
-          ? (perfilJogadorVal as PerfilJogador)
-          : getPerfilJogador(pvi);
-        resultado.push({ influencer_id: id, nome: perfil.nome_artistico, investimento, ggr: d.ggr, roi: 0, ftds: d.ftd_count, ftd_total: d.ftd_total, ftd_ticket_medio, depositos: d.deposit_total, deposit_count: d.deposit_count, deposito_ticket_medio, saques: d.withdrawal_total, saque_ticket_medio, ggr_por_jogador, wd_ratio: wd_ratio_pct, pvi, perfil_jogador });
-      });
-
-      resultado.sort((a, b) => b.pvi - a.pvi);
-      const rowsVisiveis = resultado.filter((r) => podeVerInfluencer(r.influencer_id));
-      setRows(rowsVisiveis);
 
       function calcTotais(arr: FinanceiroRow[], totalInvestimento?: number): TotaisFinanceiros {
-        const tFTDs = arr.reduce((s,r) => s+r.ftds, 0);
-        const tFtdTotal = arr.reduce((s,r) => s+r.ftd_total, 0);
-        const tDep = arr.reduce((s,r) => s+r.depositos, 0);
-        const tDepCount = arr.reduce((s,r) => s+r.deposit_count, 0);
-        const tSaq = arr.reduce((s,r) => s+r.saques, 0);
-        const tGGR = arr.reduce((s,r) => s+r.ggr, 0);
-        const tInvest = totalInvestimento ?? arr.reduce((s,r) => s+r.investimento, 0);
-        const depTM = tDepCount > 0 ? tDep/tDepCount : 0;
-        const ggrPJ = tFTDs > 0 ? tGGR/tFTDs : 0;
-        const wdPct = tDep > 0 ? (tSaq/tDep)*100 : 0;
-        const saqCount = arr.reduce((s,r) => s + (r.saque_ticket_medio > 0 ? Math.round(r.saques/r.saque_ticket_medio) : 0), 0);
-        return { ftd_total: tFtdTotal, ftds: tFTDs, ftd_ticket_medio: tFTDs>0?tFtdTotal/tFTDs:0, depositos: tDep, deposit_count: tDepCount, deposito_ticket_medio: depTM, saques: tSaq, saque_ticket_medio: saqCount>0?tSaq/saqCount:0, ggr: tGGR, ggr_por_jogador: ggrPJ, wd_ratio: wdPct, pvi: calculaPVI(depTM, ggrPJ, wdPct), investimento: tInvest };
+        const tFTDs = arr.reduce((s, r) => s + r.ftds, 0);
+        const tFtdTotal = arr.reduce((s, r) => s + r.ftd_total, 0);
+        const tDep = arr.reduce((s, r) => s + r.depositos, 0);
+        const tDepCount = arr.reduce((s, r) => s + r.deposit_count, 0);
+        const tSaq = arr.reduce((s, r) => s + r.saques, 0);
+        const tGGR = arr.reduce((s, r) => s + r.ggr, 0);
+        const tInvest = totalInvestimento ?? arr.reduce((s, r) => s + r.investimento, 0);
+        const depTM = tDepCount > 0 ? tDep / tDepCount : 0;
+        const ggrPJ = tFTDs > 0 ? tGGR / tFTDs : 0;
+        const wdPct = tDep > 0 ? (tSaq / tDep) * 100 : 0;
+        const saqCount = arr.reduce((s, r) => s + (r.saque_ticket_medio > 0 ? Math.round(r.saques / r.saque_ticket_medio) : 0), 0);
+        return { ftd_total: tFtdTotal, ftds: tFTDs, ftd_ticket_medio: tFTDs > 0 ? tFtdTotal / tFTDs : 0, depositos: tDep, deposit_count: tDepCount, deposito_ticket_medio: depTM, saques: tSaq, saque_ticket_medio: saqCount > 0 ? tSaq / saqCount : 0, ggr: tGGR, ggr_por_jogador: ggrPJ, wd_ratio: wdPct, pvi: calculaPVI(depTM, ggrPJ, wdPct), investimento: tInvest };
       }
 
-      setTotais(calcTotais(rowsVisiveis, investimentoTotal));
-      setInvestimentoAgentes(investimentoAgentes ?? 0);
-
-      if (!historico && mesSelecionado) {
-        const periodoAnt = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).anterior;
-        const [investAnt, analyticsAnt] = await Promise.all([
-          buscarInvestimentoPago(
-            { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
-            filtrosInvestimentoPorEscopo(
-              {
-                semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-                vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-                influencersVisiveis: escoposVisiveis.influencersVisiveis,
-              },
-              { operadora_slug: operadoraForApi, filtroInfluencer }
-            )
-          ),
-          fetchInfluencerAnalyticsPeriodoCached({
-            inicio: periodoAnt.inicio,
-            fim: periodoAnt.fim,
-            operadoraSlugs: operadoraSlugsQuery,
-            influencerIds: influencerIdsQuery,
-          }),
-        ]);
-        const mapaA = new Map<string, MetricaRow>();
-        analyticsAnt.metricas.forEach((m) => {
-          const mid = m.influencer_id;
-          if (!mapaA.has(mid)) mapaA.set(mid, { influencer_id: mid, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
-          const r = mapaA.get(mid)!;
+      try {
+        const analytics = await fetchInfluencerAnalyticsPeriodoCached({
+          inicio: periodoInicio,
+          fim: periodoFim,
+          operadoraSlugs: operadoraSlugsQuery,
+          influencerIds: influencerIdsQuery,
+        });
+        const mapaAgreg = new Map<string, MetricaRow>();
+        analytics.metricas.forEach((m) => {
+          if (!mapaAgreg.has(m.influencer_id)) mapaAgreg.set(m.influencer_id, { influencer_id: m.influencer_id, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
+          const r = mapaAgreg.get(m.influencer_id)!;
           r.ftd_count += m.ftd_count || 0; r.ftd_total += m.ftd_total ?? 0;
           r.deposit_count += m.deposit_count || 0; r.deposit_total += m.deposit_total || 0;
           r.withdrawal_count += m.withdrawal_count || 0; r.withdrawal_total += m.withdrawal_total || 0;
           r.ggr += m.ggr || 0;
         });
-        const rowsAnt: FinanceiroRow[] = [];
-        mapaA.forEach((data, id) => {
+        if (historico) {
+          const { buscarMetricasDeAliases } = await import("../../../../lib/metricasAliases");
+          const aliasesSinteticas = await buscarMetricasDeAliases({
+            operadora_slug: operadoraForApi ?? undefined,
+            influencerIds: influencerIdsQuery ?? undefined,
+            dataInicio: periodoInicio,
+            dataFim: periodoFim,
+          });
+          for (const a of aliasesSinteticas) {
+            if (!mapaAgreg.has(a.influencer_id) && podeVerInfluencer(a.influencer_id)) {
+              mapaAgreg.set(a.influencer_id, {
+                influencer_id: a.influencer_id,
+                ftd_count: a.ftd_count,
+                ftd_total: a.ftd_total,
+                deposit_count: a.deposit_count,
+                deposit_total: a.deposit_total,
+                withdrawal_count: a.withdrawal_count,
+                withdrawal_total: a.withdrawal_total,
+                ggr: a.ggr,
+              });
+            }
+          }
+        }
+        const metricas = [...mapaAgreg.values()];
+
+        const { total: investimentoTotal, porInfluencer: investimentoPorInf, agentes: investimentoAgentesRes } = await buscarInvestimentoPago(
+          { inicio: periodoInicio, fim: periodoFim },
+          filtrosInvestimentoPorEscopo(
+            {
+              semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+              vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+              influencersVisiveis: escoposVisiveis.influencersVisiveis,
+            },
+            { operadora_slug: operadoraForApi, filtroInfluencer }
+          )
+        );
+
+        const mapa = new Map<string, Record<string, unknown>>();
+        metricas.forEach((m) => mapa.set(m.influencer_id, { ...m, ftd_count: Number(m.ftd_count)||0, ftd_total: Number(m.ftd_total)||0, deposit_count: Number(m.deposit_count)||0, deposit_total: Number(m.deposit_total)||0, withdrawal_count: Number(m.withdrawal_count)||0, withdrawal_total: Number(m.withdrawal_total)||0, ggr: Number(m.ggr)||0 }));
+
+        const resultado: FinanceiroRow[] = [];
+        mapa.forEach((data, id) => {
           const perfil = perfisLista.find((p) => p.id === id);
           if (!perfil) return;
-          const investimento = investAnt.porInfluencer[id] ?? 0;
-          const deposito_ticket_medio = data.deposit_count>0?data.deposit_total/data.deposit_count:0;
-          const ggr_por_jogador = data.ftd_count>0?data.ggr/data.ftd_count:0;
-          const wd_ratio_pct = data.deposit_total>0?(data.withdrawal_total/data.deposit_total)*100:0;
-          const pvi = calculaPVI(deposito_ticket_medio, ggr_por_jogador, wd_ratio_pct);
-          rowsAnt.push({ influencer_id: id, nome: perfil.nome_artistico, investimento, ggr: data.ggr, roi: 0, ftds: data.ftd_count, ftd_total: data.ftd_total, ftd_ticket_medio: data.ftd_count>0?data.ftd_total/data.ftd_count:0, depositos: data.deposit_total, deposit_count: data.deposit_count, deposito_ticket_medio, saques: data.withdrawal_total, saque_ticket_medio: (data.withdrawal_count||0)>0?data.withdrawal_total/(data.withdrawal_count||1):0, ggr_por_jogador, wd_ratio: wd_ratio_pct, pvi, perfil_jogador: getPerfilJogador(pvi) });
+          const investimento = investimentoPorInf[id] ?? 0;
+          const d = data as Record<string, number>;
+          const ftd_ticket_medio = (d.ftd_ticket_medio as number) ?? (d.ftd_count > 0 ? d.ftd_total / d.ftd_count : 0);
+          const deposito_ticket_medio = (d.deposito_ticket_medio as number) ?? (d.deposit_count > 0 ? d.deposit_total / d.deposit_count : 0);
+          const saque_ticket_medio = (d.saque_ticket_medio as number) ?? ((d.withdrawal_count||0) > 0 ? d.withdrawal_total / (d.withdrawal_count||1) : 0);
+          const ggr_por_jogador = (d.ggr_por_jogador as number) ?? (d.ftd_count > 0 ? d.ggr / d.ftd_count : 0);
+          const wd_ratio_pct = (d.wd_ratio as number) ?? (d.deposit_total > 0 ? (d.withdrawal_total / d.deposit_total) * 100 : 0);
+          const pvi = (d.pvi as number) ?? calculaPVI(deposito_ticket_medio, ggr_por_jogador, wd_ratio_pct);
+          const perfilJogadorVal = d.perfil_jogador;
+          const perfil_jogador: PerfilJogador = (typeof perfilJogadorVal === "string" && ["Whales","Core","Recreativos","Caçadores de Bônus"].includes(perfilJogadorVal))
+            ? (perfilJogadorVal as PerfilJogador)
+            : getPerfilJogador(pvi);
+          resultado.push({ influencer_id: id, nome: perfil.nome_artistico, investimento, ggr: d.ggr, roi: 0, ftds: d.ftd_count, ftd_total: d.ftd_total, ftd_ticket_medio, depositos: d.deposit_total, deposit_count: d.deposit_count, deposito_ticket_medio, saques: d.withdrawal_total, saque_ticket_medio, ggr_por_jogador, wd_ratio: wd_ratio_pct, pvi, perfil_jogador });
         });
-        setTotaisAnt(calcTotais(rowsAnt.filter((r) => podeVerInfluencer(r.influencer_id)), investAnt.total));
-      } else {
-        setTotaisAnt({ ftd_total: 0, ftds: 0, ftd_ticket_medio: 0, depositos: 0, deposit_count: 0, deposito_ticket_medio: 0, saques: 0, saque_ticket_medio: 0, ggr: 0, ggr_por_jogador: 0, wd_ratio: 0, pvi: 0, investimento: 0 });
-      }
 
-      setLoading(false);
+        resultado.sort((a, b) => b.pvi - a.pvi);
+        if (cancelled) return;
+        const rowsVisiveis = resultado.filter((r) => podeVerInfluencer(r.influencer_id));
+        setRows(rowsVisiveis);
+        setTotais(calcTotais(rowsVisiveis, investimentoTotal));
+        setInvestimentoAgentes(investimentoAgentesRes ?? 0);
+        setLoading(false);
+
+        if (!historico && mesSelecionado) {
+          try {
+            const periodoAnt = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes).anterior;
+            const [investAnt, analyticsAnt] = await Promise.all([
+              buscarInvestimentoPago(
+                { inicio: periodoAnt.inicio, fim: periodoAnt.fim },
+                filtrosInvestimentoPorEscopo(
+                  {
+                    semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+                    vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+                    influencersVisiveis: escoposVisiveis.influencersVisiveis,
+                  },
+                  { operadora_slug: operadoraForApi, filtroInfluencer }
+                )
+              ),
+              fetchInfluencerAnalyticsPeriodoCached({
+                inicio: periodoAnt.inicio,
+                fim: periodoAnt.fim,
+                operadoraSlugs: operadoraSlugsQuery,
+                influencerIds: influencerIdsQuery,
+              }),
+            ]);
+            if (cancelled) return;
+            const mapaA = new Map<string, MetricaRow>();
+            analyticsAnt.metricas.forEach((m) => {
+              const mid = m.influencer_id;
+              if (!mapaA.has(mid)) mapaA.set(mid, { influencer_id: mid, ftd_count: 0, ftd_total: 0, deposit_count: 0, deposit_total: 0, withdrawal_count: 0, withdrawal_total: 0, ggr: 0 });
+              const r = mapaA.get(mid)!;
+              r.ftd_count += m.ftd_count || 0; r.ftd_total += m.ftd_total ?? 0;
+              r.deposit_count += m.deposit_count || 0; r.deposit_total += m.deposit_total || 0;
+              r.withdrawal_count += m.withdrawal_count || 0; r.withdrawal_total += m.withdrawal_total || 0;
+              r.ggr += m.ggr || 0;
+            });
+            const rowsAnt: FinanceiroRow[] = [];
+            mapaA.forEach((data, id) => {
+              const perfil = perfisLista.find((p) => p.id === id);
+              if (!perfil) return;
+              const investimento = investAnt.porInfluencer[id] ?? 0;
+              const deposito_ticket_medio = data.deposit_count > 0 ? data.deposit_total / data.deposit_count : 0;
+              const ggr_por_jogador = data.ftd_count > 0 ? data.ggr / data.ftd_count : 0;
+              const wd_ratio_pct = data.deposit_total > 0 ? (data.withdrawal_total / data.deposit_total) * 100 : 0;
+              const pvi = calculaPVI(deposito_ticket_medio, ggr_por_jogador, wd_ratio_pct);
+              rowsAnt.push({ influencer_id: id, nome: perfil.nome_artistico, investimento, ggr: data.ggr, roi: 0, ftds: data.ftd_count, ftd_total: data.ftd_total, ftd_ticket_medio: data.ftd_count > 0 ? data.ftd_total / data.ftd_count : 0, depositos: data.deposit_total, deposit_count: data.deposit_count, deposito_ticket_medio, saques: data.withdrawal_total, saque_ticket_medio: (data.withdrawal_count || 0) > 0 ? data.withdrawal_total / (data.withdrawal_count || 1) : 0, ggr_por_jogador, wd_ratio: wd_ratio_pct, pvi, perfil_jogador: getPerfilJogador(pvi) });
+            });
+            setTotaisAnt(calcTotais(rowsAnt.filter((r) => podeVerInfluencer(r.influencer_id)), investAnt.total));
+            setMomPronto(true);
+          } catch (errMom) {
+            console.error("[StreamersFinanceiro] MoM:", errMom);
+            if (!cancelled) setMomPronto(false);
+          }
+        }
+      } catch (err) {
+        console.error("[StreamersFinanceiro] carga:", err);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_STREAMERS);
+          setRows([]);
+          setTotais(totaisVazio);
+          setInvestimentoAgentes(0);
+          setLoading(false);
+        }
+      }
     }
-    carregar();
+    void carregar();
+    return () => {
+      cancelled = true;
+    };
   }, [
     catalogosPending,
     catalogosError,
@@ -455,6 +477,7 @@ export default function DashboardFinanceiro() {
     operadoraSlugsForcado,
     operadoraForApi,
     perfis,
+    reloadTick,
   ]);
 
   // ── DADOS FILTRADOS ───────────────────────────────────────────────────────────
@@ -604,6 +627,43 @@ export default function DashboardFinanceiro() {
       </div>
       )}
 
+      {erroCarga ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...card,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroCarga}</span>
+          <button
+            type="button"
+            onClick={() => setReloadTick((n) => n + 1)}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : (
+      <>
       {/* ══ BLOCO 2: KPIs FINANCEIROS ═══════════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
@@ -629,21 +689,21 @@ export default function DashboardFinanceiro() {
                 subValue={{ label: "ticket médio", value: totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ftd_ticket_medio) : "—" }}
                 icon={<Trophy size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.roxo}
                 atual={totaisExibir.ftd_total} anterior={totaisAnt.ftd_total}
-                isHistorico={historico} isBRL
+                isHistorico={historico || !momPronto} isBRL
               />
               <KpiCard
                 label="Depósitos" value={fmtBRL(totaisExibir.depositos)}
                 subValue={{ label: "ticket médio", value: totaisExibir.deposit_count > 0 ? fmtBRL(totaisExibir.deposito_ticket_medio) : "—" }}
                 icon={<ArrowDownToLine size={16} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.ciano}
                 atual={totaisExibir.depositos} anterior={totaisAnt.depositos}
-                isHistorico={historico} isBRL
+                isHistorico={historico || !momPronto} isBRL
               />
               <KpiCard
                 label="Saques" value={fmtBRL(totaisExibir.saques)}
                 subValue={{ label: "ticket médio", value: totaisExibir.saque_ticket_medio > 0 ? fmtBRL(totaisExibir.saque_ticket_medio) : "—" }}
                 icon={<ArrowUpFromLine size={16} aria-hidden />} accentColor={BRAND.vermelho}
                 atual={totaisExibir.saques} anterior={totaisAnt.saques}
-                isHistorico={historico} isBRL isInverso
+                isHistorico={historico || !momPronto} isBRL isInverso
               />
             </div>
             <div className="app-grid-kpi-3">
@@ -652,14 +712,14 @@ export default function DashboardFinanceiro() {
                 value={totaisExibir.depositos > 0 ? `${totaisExibir.wd_ratio.toFixed(1)}%` : "—"}
                 icon={<Scale size={16} aria-hidden />} accentColor={BRAND.vermelho}
                 atual={totaisExibir.wd_ratio} anterior={totaisAnt.wd_ratio}
-                isHistorico={historico} isInverso
+                isHistorico={historico || !momPronto} isInverso
               />
               <KpiCard
                 label="GGR por Jogador"
                 value={totaisExibir.ftds > 0 ? fmtBRL(totaisExibir.ggr_por_jogador) : "—"}
                 icon={<CircleDollarSign size={16} aria-hidden />} accentColor={BRAND.roxo}
                 atual={totaisExibir.ggr_por_jogador} anterior={totaisAnt.ggr_por_jogador}
-                isHistorico={historico} isBRL
+                isHistorico={historico || !momPronto} isBRL
               />
               <KpiCard
                 label="PVI"
@@ -667,7 +727,7 @@ export default function DashboardFinanceiro() {
                 subValue={{ label: "Player Value Index (0–100)", value: "" }}
                 icon={<Gauge size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.verde}
                 atual={totaisExibir.pvi} anterior={totaisAnt.pvi}
-                isHistorico={historico}
+                isHistorico={historico || !momPronto}
               />
             </div>
           </>
@@ -750,7 +810,7 @@ export default function DashboardFinanceiro() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando…</div>
         ) : rowsParaExibir.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
@@ -884,6 +944,8 @@ export default function DashboardFinanceiro() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

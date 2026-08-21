@@ -60,6 +60,11 @@ import {
   carregarOfertasMarketplace,
   filtroTimeGrupoNegociacaoMarketplace,
   isDataNoHistoricoMarketplace,
+  marketplaceMostrarNovaOferta,
+  marketplacePodeEditarOferta,
+  marketplacePodeMinhasNegociacoes,
+  marketplacePodeProporNoMural,
+  marketplaceVisaoGestao,
   ofertaPassaFiltroTimeMarketplace,
   overlayIdentidadeMarketplaceOfertas,
   type MarketplaceMeuContexto,
@@ -305,8 +310,8 @@ export default function EscalaMarketplaceTurnosPage() {
       dir: s.col === col && s.dir === "desc" ? "asc" : "desc",
     }));
 
-  const podeFiltrarTimes = perm.canView === "sim";
-  const podeMinhasNegociacoes = podeFiltrarTimes && !!contexto?.funcionarioId;
+  const podeFiltrarTimes = marketplaceVisaoGestao(perm.canView);
+  const podeMinhasNegociacoes = marketplacePodeMinhasNegociacoes(perm, contexto?.funcionarioId);
   const visaoPessoal = !podeFiltrarTimes || minhasNegociacoes;
   const mostrarEncerradas = podeFiltrarTimes && !minhasNegociacoes;
   const filtroTimeGrupo = minhasNegociacoes
@@ -529,8 +534,12 @@ export default function EscalaMarketplaceTurnosPage() {
     [encerradasBase],
   );
 
-  const souPrestadorCadastrado = !!contexto?.funcionarioId;
-  const podeOfertar = perm.canCriarOk && souPrestadorCadastrado;
+  const mostrarNovaOferta = marketplaceMostrarNovaOferta(
+    perm,
+    contexto?.funcionarioId,
+    minhasNegociacoes,
+  );
+  const podeProporNoMural = marketplacePodeProporNoMural(perm, contexto?.funcionarioId);
 
   const abrirAceite = useCallback(async (row: LinhaOfertaMarketplace) => {
     setPreparandoAceiteId(row.id);
@@ -624,7 +633,7 @@ export default function EscalaMarketplaceTurnosPage() {
     </>
   );
 
-  const ctaOfertar = podeOfertar ? (
+  const ctaOfertar = mostrarNovaOferta ? (
     <CtaCriarButton onClick={() => setOfertarAberto(true)}>Nova Oferta</CtaCriarButton>
   ) : null;
 
@@ -700,7 +709,7 @@ export default function EscalaMarketplaceTurnosPage() {
     if (row.souOfertante) {
       return <span style={{ color: t.textMuted, fontSize: 12 }}>Sua oferta</span>;
     }
-    if (!ofertaEmAberto(row) || !podeOfertar || row.mesmoTime === false) {
+    if (!ofertaEmAberto(row) || !podeProporNoMural || row.mesmoTime === false) {
       return <span style={{ color: t.textMuted }}>—</span>;
     }
     if (preparandoAceiteId === row.id) {
@@ -903,7 +912,9 @@ export default function EscalaMarketplaceTurnosPage() {
                   )}
                   {mostrarAcoes &&
                     tdAcoes(
-                      variant === "aceitei" ? (
+                      !marketplacePodeEditarOferta(perm, r) ? (
+                        <span style={{ color: t.textMuted }}>—</span>
+                      ) : variant === "aceitei" ? (
                         r.status === "em_analise" ? (
                           <BtnIconeAcaoLinha
                             label={tooltipAcao("Desistir da proposta")}

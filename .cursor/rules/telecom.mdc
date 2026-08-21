@@ -73,7 +73,13 @@ União, dedupe; **nunca** só o legado:
 
 Referência de implementação: `monitor-lobby-jonbet-run.mjs` / `monitor-lobby-blaze-run.mjs` (pós-Network).
 
-**Paginação do lobby:** sempre varrer **todas** as páginas (sem early-break). Parar na 1ª página ao achar só dedicadas omite Network (~P290+) e gera «30 jogos / 1 página / parcial».
+**Paginação do lobby (Blaze / Jonbet — SoftSwiss):**
+
+1. **Não** parar na 1ª página só porque achou mesas dedicadas no topo.  
+2. **Não** confiar só em `meta.total_pages` (sem cookie/sessão pode vir `1`).  
+3. Continuar página a página até **achar todos os IDs cadastrados** **ou** receber página vazia (fim do catálogo), até teto de 50 páginas.  
+4. Early-break **permitido** somente quando `IDs encontrados === total cadastrado`.  
+5. Stdout do script deve incluir `scan=v2-all-ids-or-exhaust` — Telecom usa isto para confirmar ficheiro novo.
 
 ---
 
@@ -84,7 +90,7 @@ Quando o produto pedir um **novo provedor/lobby** (ou atualização de um existe
 | Entrega | Ficheiro | Conteúdo |
 |---------|----------|----------|
 | **1. Handoff operacional** | `docs/TELECOM-MONITOR-LOBBY-<SLUG>.md` | O que configurar, env, F12/endpoints, comandos, agendamento, falhas |
-| **2. Script técnico** | `scripts/monitor-lobby-<slug>-run.mjs` | Fetch do lobby + ingest na Edge |
+| **2. Script técnico** | `scripts/monitor-lobby-<slug>-run.mjs` (+ `scripts/lib/monitorLobbySoftSwissScan.mjs` para Blaze/Jonbet) | Fetch do lobby + ingest na Edge |
 | **3. Setup Spin (interno)** | `docs/SETUP-MONITOR-LOBBY-<SLUG>.md` | IDs, deploy Edge, secrets — **não** é o handoff principal da Telecom |
 
 **Proibido no pacote Telecom:** wrappers `.ps1` / `.bat` — Telecom agenda `node` + env no próprio agendador.
@@ -137,7 +143,7 @@ Tom: operacional, PT-BR, **sem** pedir à Telecom para recompilar quando a Spin 
 
 - Hardcodar mesas no script “para facilitar o dry-run”
 - Script que só consulta `mesas_spin_cadastro` do slug dedicado e ignora Network na junction
-- Early-break de paginação (parar na 1ª página ao achar só dedicadas) — Network no fim do ranking fica `null`
+- Early-break de paginação antes de achar **todos** os IDs cadastrados — ou parar só porque `meta.total_pages=1`
 - Pedir à Telecom um job novo por estúdio no **mesmo** lobby da mesma operadora
 - Documentar “atualize o script quando entrarem mesas novas” em vez de “cadastre o ID na Gestão de Estúdios”
 - Confundir catálogo completo com prateleira da home (caso Esportiva) — a métrica de produto define a fonte; a expansão de mesas continua só no DI

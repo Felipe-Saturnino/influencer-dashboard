@@ -14,6 +14,13 @@ import { useHomePortalRhFeed, type HomePortalRhItem } from "../hooks/useHomePort
 import { useHomeStaffLidoCollapse } from "../hooks/useHomeStaffLidoCollapse";
 import { HomeStaffFeedCard } from "./HomeStaffFeedCard";
 import { homeSectionTitleStyle, HOME_BODY_MUTED, HOME_LINK_BUTTON } from "./homeSharedUi";
+import { BarraReacaoConteudoLigada } from "../../../../components/conteudo/BarraReacaoConteudo";
+import { useConteudoReacoes } from "../../../../hooks/useConteudoReacoes";
+import {
+  PREFIXO_HOME_RH_COMUNICADO,
+  uuidAposPrefixoHome,
+  type ConteudoReacaoChave,
+} from "../../../../lib/conteudoReacao";
 
 const ICON_PROPS = { size: 16, strokeWidth: 2, "aria-hidden": true as const };
 
@@ -64,6 +71,16 @@ function abaPortalRh(kind: HomePortalRhItem["kind"]): string {
   if (kind === "comunicado") return "Comunicados";
   if (kind === "politica") return "PoliticasENormativas";
   return "RHTalks";
+}
+
+function reacoesComunicadoRhHome(
+  item: ItemPortalRh,
+  api: ReturnType<typeof useConteudoReacoes>,
+) {
+  if (item.kind !== "comunicado") return undefined;
+  const contentId = uuidAposPrefixoHome(item.id, PREFIXO_HOME_RH_COMUNICADO);
+  if (!contentId) return undefined;
+  return <BarraReacaoConteudoLigada origem="rh_comunicado" contentId={contentId} api={api} />;
 }
 
 function DescricaoPortalRh({ item }: { item: ItemPortalRh }) {
@@ -158,6 +175,21 @@ export function InformacoesStaffHome({
     return items;
   }, [info.lista, portal.lista, isLido]);
 
+  const chavesReacao = useMemo(() => {
+    const out: ConteudoReacaoChave[] = [];
+    for (const item of lista) {
+      if (item.source === "informativo") {
+        out.push({ origem: "informativo", contentId: item.id });
+        continue;
+      }
+      if (item.kind !== "comunicado") continue;
+      const contentId = uuidAposPrefixoHome(item.id, PREFIXO_HOME_RH_COMUNICADO);
+      if (contentId) out.push({ origem: "rh_comunicado", contentId });
+    }
+    return out;
+  }, [lista]);
+  const reacoes = useConteudoReacoes(chavesReacao);
+
   const loading = info.loading || portal.loading;
   const erroTotal = lista.length === 0 && (info.erro || portal.erro);
 
@@ -189,6 +221,9 @@ export function InformacoesStaffHome({
                   onExpandir={() => expandir(item.id)}
                   onLiEOcultar={() => marcarLido(item.id)}
                   rodape={rodapeAutorData(item.autorNome, item.published_at)}
+                  reacoes={
+                    <BarraReacaoConteudoLigada origem="informativo" contentId={item.id} api={reacoes} />
+                  }
                 >
                   <CorpoHtmlInformativo html={item.descricao} color={t.text} />
                 </HomeStaffFeedCard>
@@ -202,6 +237,7 @@ export function InformacoesStaffHome({
                   onExpandir={() => undefined}
                   onLiEOcultar={() => marcarLido(item.id)}
                   rodape={rodapeAutorData(item.autorNome, item.published_at)}
+                  reacoes={reacoesComunicadoRhHome(item, reacoes)}
                 >
                   <DescricaoPortalRh item={item} />
                 </HomeStaffFeedCard>

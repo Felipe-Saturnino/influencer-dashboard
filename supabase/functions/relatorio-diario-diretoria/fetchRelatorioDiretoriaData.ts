@@ -156,14 +156,46 @@ function indexPosicoesLobby(rows: LobbyPosRow[]): {
   for (const r of rows) {
     const id = (r.mesa_identificacao ?? '').trim()
     const nome = (r.nome_mesa ?? '').trim()
-    const pos = r.posicao != null ? Number(r.posicao) : null
-    if (id) byId.set(id, pos)
-    if (nome) {
+    const pos = r.posicao != null && Number.isFinite(Number(r.posicao))
+      ? Number(r.posicao)
+      : null
+    if (id) {
+      // Preferir posição encontrada — não deixar um null anterior bloquear um P válido.
+      if (pos != null || !byId.has(id)) byId.set(id, pos)
+    }
+    if (nome && pos != null) {
       const key = normNomeMesa(nome)
       if (!byNome.has(key)) byNome.set(key, pos)
     }
   }
   return { byId, byNome }
+}
+
+/** Resolve posição: IDs Spin (prioridade por operadora) → demais IDs do nome → nome normalizado. */
+function posicaoLobbyParaMesa(
+  idx: ReturnType<typeof indexPosicoesLobby>,
+  opts: {
+    nomeKey: string
+    spinIdsPreferidos: readonly string[]
+    spinIdsFallback: readonly string[]
+  },
+): number | null {
+  for (const id of opts.spinIdsPreferidos) {
+    const p = idx.byId.get(id)
+    if (p != null) return p
+  }
+  for (const id of opts.spinIdsFallback) {
+    const p = idx.byId.get(id)
+    if (p != null) return p
+  }
+  return idx.byNome.get(opts.nomeKey) ?? null
+}
+
+type DedicadaAgg = {
+  display: string
+  spinIds: string[]
+  /** IDs Spin das mesas deste nome ligadas à operadora (estúdio → junction ou legado). */
+  spinIdsPorOperadora: Map<string, string[]>
 }
 
 export async function fetchRelatorioDiretoriaData(
@@ -191,6 +223,7 @@ export async function fetchRelatorioDiretoriaData(
     lobbyExecRes,
     estudiosRes,
     mesasCadRes,
+    estudioOpRes,
   ] = await Promise.all([
     supabase
       .from('lives')
@@ -265,7 +298,8 @@ export async function fetchRelatorioDiretoriaData(
     supabase.from('estudios_spin').select('slug, tipo, ativo').eq('ativo', true),
     supabase
       .from('mesas_spin_cadastro')
-      .select('nome_mesa, mesa_identificacao, estudio_slug'),
+      .select('nome_mesa, mesa_identificacao, estudio_slug, operadora_slug'),
+    supabase.from('estudios_spin_operadoras').select('estudio_slug, operadora_slug'),
   ])
 
   const nameMap: Record<string, string> = {}
@@ -573,13 +607,24 @@ export async function fetchRelatorioDiretoriaData(
     if (t) tipoPorEstudio.set(e.slug, t)
   }
 
-  const nomesDedicadas = new Map<string, string>() // norm → display
+  /** Estúdio → operadoras parceiras (Gestão de Estúdios). */
+  const operadorasPorEstudio = new Map<string, Set<string>>()
+  for (const j of (estudioOpRes.data ?? []) as { estudio_slug: string; operadora_slug: string }[]) {
+    const est = (j.estudio_slug ?? '').trim()
+    const op = (j.operadora_slug ?? '').trim()
+    if (!est || !op) continue
+    if (!operadorasPorEstudio.has(est)) operadorasPorEstudio.set(est, new Set())
+    operadorasPorEstudio.get(est)!.add(op)
+  }
+
+  const dedicadasPorNome = new Map<string, DedicadaAgg>()
   const networkPorId = new Map<string, string>() // mesa_identificacao → nome
 
   for (const m of (mesasCadRes.data ?? []) as {
     nome_mesa: string
     mesa_identificacao: string
     estudio_slug: string | null
+    operadora_slug: string | null
   }[]) {
     const est = (m.estudio_slug ?? '').trim()
     const tipo = tipoPorEstudio.get(est)
@@ -589,7 +634,24 @@ export async function fetchRelatorioDiretoriaData(
     if (!nome) continue
     if (tipo === 'dedicado') {
       const key = normNomeMesa(nome)
-      if (!nomesDedicadas.has(key)) nomesDedicadas.set(key, nome)
+      let agg = dedicadasPorNome.get(key)
+      if (!agg) {
+        agg = { display: nome, spinIds: [], spinIdsPorOperadora: new Map() }
+        dedicadasPorNome.set(key, agg)
+      }
+      if (id && !agg.spinIds.includes(id)) agg.spinIds.push(id)
+
+      const ops = new Set<string>()
+      const legadoOp = (m.operadora_slug ?? '').trim()
+      if (legadoOp) ops.add(legadoOp)
+      for (const op of operadorasPorEstudio.get(est) ?? []) ops.add(op)
+      if (id) {
+        for (const op of ops) {
+          const list = agg.spinIdsPorOperadora.get(op) ?? []
+          if (!list.includes(id)) list.push(id)
+          agg.spinIdsPorOperadora.set(op, list)
+        }
+      }
     } else if (id) {
       if (!networkPorId.has(id)) networkPorId.set(id, nome)
     }
@@ -637,23 +699,50 @@ export async function fetchRelatorioDiretoriaData(
   const esportivaIdx = idxPorSlug.get('esportiva_bet')!
   const jonbetIdx = idxPorSlug.get('jonbet')!
 
-  const mesasDedicadas: PosicaoMesaDedicadaRow[] = [...nomesDedicadas.entries()]
-    .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
-    .map(([key, mesa]) => ({
-      mesa,
-      blaze: blazeIdx.byNome.get(key) ?? null,
-      cda: cdaIdx.byNome.get(key) ?? null,
+  const mesasDedicadas: PosicaoMesaDedicadaRow[] = [...dedicadasPorNome.entries()]
+    .sort((a, b) => a[1].display.localeCompare(b[1].display, 'pt-BR'))
+    .map(([key, agg]) => ({
+      mesa: agg.display,
+      blaze: posicaoLobbyParaMesa(blazeIdx, {
+        nomeKey: key,
+        spinIdsPreferidos: agg.spinIdsPorOperadora.get('blaze') ?? [],
+        spinIdsFallback: agg.spinIds,
+      }),
+      cda: posicaoLobbyParaMesa(cdaIdx, {
+        nomeKey: key,
+        spinIdsPreferidos: agg.spinIdsPorOperadora.get('casa_apostas') ?? [],
+        spinIdsFallback: agg.spinIds,
+      }),
     }))
 
   const mesasNetwork: PosicaoMesaNetworkRow[] = [...networkPorId.entries()]
     .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
-    .map(([id, mesa]) => ({
-      mesa,
-      blaze: blazeIdx.byId.get(id) ?? blazeIdx.byNome.get(normNomeMesa(mesa)) ?? null,
-      cda: cdaIdx.byId.get(id) ?? cdaIdx.byNome.get(normNomeMesa(mesa)) ?? null,
-      esportiva: esportivaIdx.byId.get(id) ?? esportivaIdx.byNome.get(normNomeMesa(mesa)) ?? null,
-      jonbet: jonbetIdx.byId.get(id) ?? jonbetIdx.byNome.get(normNomeMesa(mesa)) ?? null,
-    }))
+    .map(([id, mesa]) => {
+      const nomeKey = normNomeMesa(mesa)
+      return {
+        mesa,
+        blaze: posicaoLobbyParaMesa(blazeIdx, {
+          nomeKey,
+          spinIdsPreferidos: [id],
+          spinIdsFallback: [],
+        }),
+        cda: posicaoLobbyParaMesa(cdaIdx, {
+          nomeKey,
+          spinIdsPreferidos: [id],
+          spinIdsFallback: [],
+        }),
+        esportiva: posicaoLobbyParaMesa(esportivaIdx, {
+          nomeKey,
+          spinIdsPreferidos: [id],
+          spinIdsFallback: [],
+        }),
+        jonbet: posicaoLobbyParaMesa(jonbetIdx, {
+          nomeKey,
+          spinIdsPreferidos: [id],
+          spinIdsFallback: [],
+        }),
+      }
+    })
 
   return {
     dataHoje,

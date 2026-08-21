@@ -4,6 +4,8 @@ export const TABELA_PAGE_SIZE_ESCALA = 40;
 export const TABELA_PAGE_SIZE_USUARIOS = 50;
 export const TABELA_PAGE_SIZE_OVERVIEW_PRESTADOR = 50;
 export const TABELA_PAGE_SIZE_INCIDENTES = 50;
+/** Ranking Overview / Comparativo de Taxas (Streamers). */
+export const TABELA_PAGE_SIZE_STREAMERS = 50;
 
 export function totalPaginasTabela(totalItems: number, pageSize: number): number {
   if (totalItems <= 0) return 1;

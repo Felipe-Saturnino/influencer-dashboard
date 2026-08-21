@@ -22,7 +22,10 @@ A cada **1 hora** (fuso `America/Sao_Paulo`):
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `scripts/monitor-lobby-blaze-run.mjs` | Script Node.js (único ficheiro do job) |
+| `scripts/monitor-lobby-blaze-run.mjs` | Script Node.js principal |
+| `scripts/lib/monitorLobbySoftSwissScan.mjs` | Helper de paginação (importado pelo script — **obrigatório** na mesma árvore) |
+
+Manter a pasta `scripts/lib/` ao lado do `.mjs` no servidor Telecom.
 
 **Requisito:** Node.js **18+** (`fetch` nativo).
 
@@ -161,12 +164,16 @@ No dry-run / produção, o log **deve** parecer com isto (números aproximados):
 
 ```text
 Buscando lobby Blaze (9 mesas no cadastro)...
+scan=v2-all-ids-or-exhaust
 IDs: 500615, 500616, 500617, 501109, 501110, 542819, 542820, 542821, 542822
+Blaze scan=v2-all-ids-or-exhaust
 Blaze meta: total_pages=12 total_records=339
-IDs encontrados no lobby: 9/9
+Blaze IDs encontrados: 9/9
 Lobby: 339 jogos, 12 página(s).
 ```
 
-Se aparecer `5 mesas`, `Lobby: 30 jogos, 1 página(s)` → **não** é o ficheiro atual. Network (IDs `542819`–`542822`) fica `null` na plataforma.
+O script **não** para na 1ª página: continua até achar **todos** os IDs cadastrados (ex.: Network `542819`–`542822` ~P294+) ou esgotar o catálogo. Se `meta.total_pages=1` no log mas faltam IDs, o ficheiro ainda é antigo **ou** faltou sessão/cookie na página Blaze antes do search.
+
+Se aparecer `5 mesas`, `Lobby: 30 jogos, 1 página(s)` **sem** `scan=v2-all-ids-or-exhaust` → **não** é o ficheiro atual. Network fica `null` na plataforma.
 
 **Contato:** Spin / Data Intelligence (cadastro, Supabase, dashboard). Telecom: operação do job e rede.

@@ -5,6 +5,7 @@ import {
   useEffect,
   useId,
   useRef,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { X } from "lucide-react";
@@ -19,6 +20,35 @@ const DialogTitleIdContext = createContext<string>("");
 
 /** Padding interno do painel `ModalBase` — usar em `ModalHeader` sticky para alinhar ao topo. */
 export const MODAL_BASE_PADDING_PX = 28;
+
+/** Shell flex: corpo rolável + rodapé fixo dentro de `ModalBase` (postagens, vagas, etc.). */
+export const MODAL_FORM_SHELL_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  minHeight: 0,
+  maxHeight: `calc(90dvh - ${MODAL_BASE_PADDING_PX * 2}px)`,
+};
+
+/** Área rolável do formulário — `paddingBottom` evita cortar o último campo no scroll. */
+export const MODAL_FORM_SCROLL_BODY_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+  flex: 1,
+  minHeight: 0,
+  overflowY: "auto",
+  paddingRight: 4,
+  paddingBottom: 24,
+};
+
+export const MODAL_FORM_FOOTER_STYLE: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  justifyContent: "flex-end",
+  marginTop: 20,
+  flexWrap: "wrap",
+  flexShrink: 0,
+};
 
 export function useDialogTitleId() {
   return useContext(DialogTitleIdContext);

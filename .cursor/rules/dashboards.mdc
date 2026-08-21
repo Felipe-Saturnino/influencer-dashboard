@@ -198,7 +198,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 
 - **Container:** `Streamers/index.tsx` — header, FilterBar compartilhada, tabs ARIA, Suspense.
   Toda lógica de filtros vive em `StreamersFiltrosProvider` (`StreamersFiltrosContext.tsx`).
-  **`FiltroInfluencerSelect` (`mode="single"`):** opções = influencers com dados no período (métricas, lives ou UTM mapeado), alinhado à **Overview Influencer** — ver `streamersInfluencerFilterHelpers.ts`; reset para **Todos Influencers** se a seleção sair do período/operadora.
+  **`FiltroInfluencerSelect` (`mode="single"`):** opções = influencers com **métrica ou live realizada no período** (IDs só — `streamersInfluencerFilterHelpers.ts`); **não** inclui UTM mapeado all-time. Reset para **Todos Influencers** se a seleção sair do período/operadora.
 - **Sub-páginas:** `DashboardOverview`, `DashboardConversao`, `DashboardFinanceiro`.
   Cada uma recebe os filtros via `useStreamersFiltrosOptional()`.
   Quando `embed === true` (dentro do container), a FilterBar NÃO é renderizada pela sub-página.
@@ -206,7 +206,10 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **`sf.setIsLoading(loading)`**: cada sub-página sinaliza o loading ao contexto via `useEffect`.
   O indicador de carregamento (`Clock size={12}`) fica no container, não nas sub-páginas.
 - **Ícone do header:** `Tv` (Lucide) — nunca `GiTv` (react-icons/gi).
-
+- **Carga Overview / Financeiro:** fase 1 = período atual (libera paint); fase 2 = MoM em background. Falha do MoM **não** apaga o mês já pintado (`momPronto` / `isHistorico` até o comparativo chegar).
+- **Erro de carga:** mensagem canónica + **Tentar de novo** (`erroCarga` / `reloadTick`) — não tratar falha como vazio.
+- **Tabelas densas:** Ranking Overview e Comparativo de Taxas usam `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE_STREAMERS` (50); KPIs usam o conjunto completo.
+- **Conversão:** `influencerIds` do filtro da barra entra no fetch (igual Overview/Financeiro).
 ---
 
 ## Mídias Sociais — Padrões Específicos

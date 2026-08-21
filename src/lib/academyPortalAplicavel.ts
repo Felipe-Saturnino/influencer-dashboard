@@ -21,15 +21,22 @@ function timeExcluidoAcademyAplicavel(timeNome: string): boolean {
 export function opcoesTimesAplicavelAcademyManuais(
   grupos: RhOrgOrganogramaGrupoPrestador[],
 ): { id: string; label: string }[] {
-  return flattenVinculosDeGrupos(grupos)
-    .filter(
-      (v) =>
-        v.nivel === "time" &&
-        gerenciaIndicaTimesAcademyAplicavel(v.gerenciaNome) &&
-        !timeExcluidoAcademyAplicavel(v.timeNome),
-    )
-    .map((v) => ({ id: v.setorNome, label: v.label }))
-    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  const seen = new Set<string>();
+  const out: { id: string; label: string }[] = [];
+  for (const v of flattenVinculosDeGrupos(grupos)) {
+    if (
+      v.nivel !== "time" ||
+      !gerenciaIndicaTimesAcademyAplicavel(v.gerenciaNome) ||
+      timeExcluidoAcademyAplicavel(v.timeNome)
+    ) {
+      continue;
+    }
+    const id = (v.setorNome ?? "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, label: v.label });
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }
 
 export function fmtAplicavelManualAcademy(aplicavel: string[] | null | undefined): string {

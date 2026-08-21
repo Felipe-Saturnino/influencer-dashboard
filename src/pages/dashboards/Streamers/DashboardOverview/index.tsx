@@ -42,6 +42,9 @@ import {
 } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
+import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
+import { slicePage, TABELA_PAGE_SIZE_STREAMERS } from "../../../../lib/tablePagination";
+import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
 import {
   BarChart2,
   ChevronLeft,
@@ -222,6 +225,10 @@ export default function DashboardOverview() {
   const [idxMesLocal, setIdxMesLocal] = useState(idxStartLocal);
   const [historicoLocal, setHistoricoLocal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [momPronto, setMomPronto] = useState(false);
+  const [pageRanking, setPageRanking] = useState(0);
 
   const [filtroInfluencerLocal, setFiltroInfluencerLocal] = useState<string>("todos");
   const [filtroOperadoraLocal, setFiltroOperadoraLocal] = useState<string>("todas");
@@ -264,16 +271,22 @@ export default function DashboardOverview() {
     sf.setIsLoading(loading);
   }, [embed, sf, loading]);
 
-  // ── BUSCA DE DADOS (idêntica ao original) ────────────────────────────────────
+  // ── BUSCA: fase 1 = período atual; fase 2 = MoM em background ────────────────
   useEffect(() => {
     if (catalogosPending) return;
     if (catalogosError) {
       console.error("[StreamersOverview] catálogos:", catalogosError);
+      setErroCarga(MSG_ERRO_STREAMERS);
       setLoading(false);
       return;
     }
+    let cancelled = false;
     async function carregar() {
       setLoading(true);
+      setErroCarga(null);
+      setMomPronto(false);
+      setRankingAnt([]);
+      setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
 
       const perfisLista: InfluencerPerfil[] = perfis;
       const operadoraSlugsQuery = operadoraSlugsForcado?.length
@@ -335,91 +348,112 @@ export default function DashboardOverview() {
         });
       }
 
-      let metricas: Metrica[] = [], lives: LiveData[] = [], resultados: LiveResultado[] = [];
-      let periodo: { inicio: string; fim: string };
-      let mom: ReturnType<typeof getPeriodoComparativoMoM> | null = null;
-      if (historico) {
-        periodo = getPeriodoHistoricoCompetencias();
-        const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-          inicio: periodo.inicio,
-          fim: periodo.fim,
-          operadoraSlugs: operadoraSlugsQuery,
-          influencerIds: influencerIdsQuery,
-        });
-        const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
-        const aliasesSinteticas = await buscarMetricasDeAliases({
-          operadora_slug: operadoraSlugParaApi,
-          dataInicio: periodo.inicio,
-          dataFim: periodo.fim,
-        });
-        metricas = mesclarMetricasComAliases(analytics.metricas, aliasesSinteticas, periodo.fim, podeVerInfluencer);
-        lives = analytics.lives;
-        resultados = analytics.resultados;
-      } else {
-        mom = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
-        periodo = mom.atual;
-        const analytics = await fetchInfluencerAnalyticsPeriodoCached({
-          inicio: periodo.inicio,
-          fim: periodo.fim,
-          operadoraSlugs: operadoraSlugsQuery,
-          influencerIds: influencerIdsQuery,
-        });
-        metricas = analytics.metricas;
-        lives = analytics.lives;
-        resultados = analytics.resultados;
-      }
+      const totaisVazio: TotaisData = { ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 };
 
-      const investimentoPago = await buscarInvestimentoPago(
-        periodo,
-        filtrosInvestimentoPorEscopo(
-          {
-            semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-            vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-            influencersVisiveis: escoposVisiveis.influencersVisiveis,
-          },
-          { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
-        )
-      );
-      const rows = montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer);
-      const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
-      setRanking(rowsVisiveis);
-      setTotais(calculaTotais(rowsVisiveis, investimentoPago.total));
-
-      if (mom) {
-        const periodoAnt = mom.anterior;
-        const [investAnt, analyticsAnt] = await Promise.all([
-          buscarInvestimentoPago(
-            periodoAnt,
-            filtrosInvestimentoPorEscopo(
-              {
-                semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
-                vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
-                influencersVisiveis: escoposVisiveis.influencersVisiveis,
-              },
-              { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
-            )
-          ),
-          fetchInfluencerAnalyticsPeriodoCached({
-            inicio: periodoAnt.inicio,
-            fim: periodoAnt.fim,
+      try {
+        let metricas: Metrica[] = [], lives: LiveData[] = [], resultados: LiveResultado[] = [];
+        let periodo: { inicio: string; fim: string };
+        let mom: ReturnType<typeof getPeriodoComparativoMoM> | null = null;
+        if (historico) {
+          periodo = getPeriodoHistoricoCompetencias();
+          const analytics = await fetchInfluencerAnalyticsPeriodoCached({
+            inicio: periodo.inicio,
+            fim: periodo.fim,
             operadoraSlugs: operadoraSlugsQuery,
             influencerIds: influencerIdsQuery,
-          }),
-        ]);
-        const mA: Metrica[] = analyticsAnt.metricas;
-        const lA: LiveData[] = analyticsAnt.lives;
-        const rA: LiveResultado[] = analyticsAnt.resultados;
-        const rowsAnt = montaRanking(mA, lA, rA, investAnt.porInfluencer).filter((r) => podeVerInfluencer(r.influencer_id));
-        setRankingAnt(rowsAnt);
-        setTotaisAnt(calculaTotais(rowsAnt, investAnt.total));
-      } else {
-        setRankingAnt([]);
-        setTotaisAnt({ ggr: 0, investimento: 0, roi: 0, ftds: 0, registros: 0, acessos: 0, views: 0, custoPorFTD: 0, custoPorRegistro: 0, lives: 0, horas: 0, influencers: 0, depositos_qtd: 0, depositos_valor: 0 });
-      }
+          });
+          const { buscarMetricasDeAliases, mesclarMetricasComAliases } = await import("../../../../lib/metricasAliases");
+          const aliasesSinteticas = await buscarMetricasDeAliases({
+            operadora_slug: operadoraSlugParaApi,
+            dataInicio: periodo.inicio,
+            dataFim: periodo.fim,
+          });
+          metricas = mesclarMetricasComAliases(analytics.metricas, aliasesSinteticas, periodo.fim, podeVerInfluencer);
+          lives = analytics.lives;
+          resultados = analytics.resultados;
+        } else {
+          mom = getPeriodoComparativoMoM(mesSelecionado.ano, mesSelecionado.mes);
+          periodo = mom.atual;
+          const analytics = await fetchInfluencerAnalyticsPeriodoCached({
+            inicio: periodo.inicio,
+            fim: periodo.fim,
+            operadoraSlugs: operadoraSlugsQuery,
+            influencerIds: influencerIdsQuery,
+          });
+          metricas = analytics.metricas;
+          lives = analytics.lives;
+          resultados = analytics.resultados;
+        }
 
-      setLoading(false);
+        const investimentoPago = await buscarInvestimentoPago(
+          periodo,
+          filtrosInvestimentoPorEscopo(
+            {
+              semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+              vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+              influencersVisiveis: escoposVisiveis.influencersVisiveis,
+            },
+            { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
+          )
+        );
+        if (cancelled) return;
+        const rows = montaRanking(metricas, lives, resultados, investimentoPago.porInfluencer);
+        const rowsVisiveis = rows.filter((r) => podeVerInfluencer(r.influencer_id));
+        setRanking(rowsVisiveis);
+        setTotais(calculaTotais(rowsVisiveis, investimentoPago.total));
+        setLoading(false);
+
+        if (mom) {
+          try {
+            const periodoAnt = mom.anterior;
+            const [investAnt, analyticsAnt] = await Promise.all([
+              buscarInvestimentoPago(
+                periodoAnt,
+                filtrosInvestimentoPorEscopo(
+                  {
+                    semRestricaoEscopo: escoposVisiveis.semRestricaoEscopo,
+                    vêTodosInfluencers: escoposVisiveis.vêTodosInfluencers,
+                    influencersVisiveis: escoposVisiveis.influencersVisiveis,
+                  },
+                  { operadora_slug: operadoraSlugParaApi, filtroInfluencer }
+                )
+              ),
+              fetchInfluencerAnalyticsPeriodoCached({
+                inicio: periodoAnt.inicio,
+                fim: periodoAnt.fim,
+                operadoraSlugs: operadoraSlugsQuery,
+                influencerIds: influencerIdsQuery,
+              }),
+            ]);
+            if (cancelled) return;
+            const rowsAnt = montaRanking(
+              analyticsAnt.metricas,
+              analyticsAnt.lives,
+              analyticsAnt.resultados,
+              investAnt.porInfluencer,
+            ).filter((r) => podeVerInfluencer(r.influencer_id));
+            setRankingAnt(rowsAnt);
+            setTotaisAnt(calculaTotais(rowsAnt, investAnt.total));
+            setMomPronto(true);
+          } catch (errMom) {
+            console.error("[StreamersOverview] MoM:", errMom);
+            if (!cancelled) setMomPronto(false);
+          }
+        }
+      } catch (err) {
+        console.error("[StreamersOverview] carga:", err);
+        if (!cancelled) {
+          setErroCarga(MSG_ERRO_STREAMERS);
+          setRanking([]);
+          setTotais(totaisVazio);
+          setLoading(false);
+        }
+      }
     }
-    carregar();
+    void carregar();
+    return () => {
+      cancelled = true;
+    };
   }, [
     catalogosPending,
     catalogosError,
@@ -433,6 +467,7 @@ export default function DashboardOverview() {
     operadoraSlugsForcado,
     operadoraSlugParaApi,
     perfis,
+    reloadTick,
   ]);
 
   const idsOperadoraEfetiva = useMemo(() => {
@@ -485,6 +520,15 @@ export default function DashboardOverview() {
     });
     return list;
   }, [rankingFiltrado, sortRanking]);
+
+  const rankingPaginado = useMemo(
+    () => slicePage(rankingOrdenado, pageRanking, TABELA_PAGE_SIZE_STREAMERS),
+    [rankingOrdenado, pageRanking],
+  );
+
+  useEffect(() => {
+    setPageRanking(0);
+  }, [rankingFiltrado, sortRanking, statusFiltro, historico, idxMes, filtroInfluencer, filtroOperadora]);
 
   const rankingAntFiltrado = useMemo(() => {
     let r = rankingAnt;
@@ -598,6 +642,43 @@ export default function DashboardOverview() {
       </div>
       )}
 
+      {erroCarga ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            ...card,
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{erroCarga}</span>
+          <button
+            type="button"
+            onClick={() => setReloadTick((n) => n + 1)}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : (
+      <>
       {/* ══ BLOCO 2: KPIs EXECUTIVOS ══════════════════════════════════════════ */}
       <div style={card}>
         <SectionTitle
@@ -634,9 +715,9 @@ export default function DashboardOverview() {
               Financeiro
             </div>
             <div className="app-grid-kpi-3" style={{ marginBottom: 12 }}>
-              <KpiCard label="GGR" value={fmtBRL(totaisExibidos.ggr)} icon={<TrendingUp size={16} aria-hidden />} accentColor={totaisExibidos.ggr >= 0 ? BRAND.verde : BRAND.vermelho} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico} />
-              <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<Coins size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico} />
-              <KpiCard label="ROI" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<BarChart2 size={16} aria-hidden />} accentColor={totaisExibidos.investimento > 0 ? (totaisExibidos.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico} />
+              <KpiCard label="GGR" value={fmtBRL(totaisExibidos.ggr)} icon={<TrendingUp size={16} aria-hidden />} accentColor={totaisExibidos.ggr >= 0 ? BRAND.verde : BRAND.vermelho} atual={totaisExibidos.ggr} anterior={totaisAntExibidos.ggr} isBRL isHistorico={historico || !momPronto} />
+              <KpiCard label="Investimento" value={fmtBRL(totaisExibidos.investimento)} icon={<Coins size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.investimento} anterior={totaisAntExibidos.investimento} isBRL isHistorico={historico || !momPronto} />
+              <KpiCard label="ROI" value={totaisExibidos.investimento > 0 ? `${totaisExibidos.roi >= 0 ? "+" : ""}${totaisExibidos.roi.toFixed(1)}%` : "—"} icon={<BarChart2 size={16} aria-hidden />} accentColor={totaisExibidos.investimento > 0 ? (totaisExibidos.roi >= 0 ? BRAND.verde : BRAND.vermelho) : BRAND.verde} atual={totaisExibidos.roi} anterior={totaisAntExibidos.roi} isHistorico={historico || !momPronto} />
             </div>
 
             <div
@@ -655,10 +736,10 @@ export default function DashboardOverview() {
               Operação
             </div>
             <div className="app-grid-kpi-4" style={{ marginBottom: 12 }}>
-              <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<Video size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico} />
-              <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<Clock size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico} />
-              <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<Users size={16} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico} />
-              <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico} />
+              <KpiCard label="Lives" value={totaisExibidos.lives.toLocaleString("pt-BR")} icon={<Video size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.lives} anterior={totaisAntExibidos.lives} isHistorico={historico || !momPronto} />
+              <KpiCard label="Horas Realizadas" value={fmtHorasTotal(totaisExibidos.horas)} icon={<Clock size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.operacao} atual={totaisExibidos.horas} anterior={totaisAntExibidos.horas} isHistorico={historico || !momPronto} />
+              <KpiCard label="Influencers Ativos" value={totaisExibidos.influencers.toLocaleString("pt-BR")} icon={<Users size={16} aria-hidden />} accentVar="--brand-icon-color" accentColor={BRAND.operacao} atual={totaisExibidos.influencers} anterior={totaisAntExibidos.influencers} isHistorico={historico || !momPronto} />
+              <KpiCardDepositos atual={{ qtd: totaisExibidos.depositos_qtd, valor: totaisExibidos.depositos_valor }} anterior={{ qtd: totaisAntExibidos.depositos_qtd, valor: totaisAntExibidos.depositos_valor }} isHistorico={historico || !momPronto} />
             </div>
 
             <div
@@ -677,10 +758,10 @@ export default function DashboardOverview() {
               Conversão
             </div>
             <div className="app-grid-kpi-4">
-              <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<UserPlus size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico} />
-              <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<Receipt size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico} />
-              <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<Trophy size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico} />
-              <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<Wallet size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico} />
+              <KpiCard label="Registros" value={totaisExibidos.registros.toLocaleString("pt-BR")} icon={<UserPlus size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.registros} anterior={totaisAntExibidos.registros} isHistorico={historico || !momPronto} />
+              <KpiCard label="Custo por Registro" value={totaisExibidos.registros > 0 ? fmtBRL(totaisExibidos.custoPorRegistro) : "—"} icon={<Receipt size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorRegistro} anterior={totaisAntExibidos.custoPorRegistro} isBRL isHistorico={historico || !momPronto} />
+              <KpiCard label="FTDs" value={totaisExibidos.ftds.toLocaleString("pt-BR")} icon={<Trophy size={16} aria-hidden />} accentVar="--brand-action" accentColor={BRAND.transacao} atual={totaisExibidos.ftds} anterior={totaisAntExibidos.ftds} isHistorico={historico || !momPronto} />
+              <KpiCard label="Custo por FTD" value={totaisExibidos.ftds > 0 ? fmtBRL(totaisExibidos.custoPorFTD) : "—"} icon={<Wallet size={16} aria-hidden />} accentVar="--brand-contrast" accentColor={BRAND.custo} atual={totaisExibidos.custoPorFTD} anterior={totaisAntExibidos.custoPorFTD} isBRL isHistorico={historico || !momPronto} />
             </div>
           </>
         )}
@@ -750,10 +831,11 @@ export default function DashboardOverview() {
         )}
 
         {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando dados...</div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>Carregando…</div>
         ) : rankingFiltrado.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
+          <>
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 640 })}>
               <caption style={{ display: "none" }}>
@@ -774,7 +856,7 @@ export default function DashboardOverview() {
                 </tr>
               </thead>
               <tbody>
-                {rankingOrdenado.map((r, i) => {
+                {rankingPaginado.map((r, i) => {
                   const st = getStatusROI(r.roi, r.ggr, r.investimento);
                   const hT = Math.floor(r.horas);
                   const mT = Math.round((r.horas - hT) * 60);
@@ -826,8 +908,18 @@ export default function DashboardOverview() {
               </tbody>
             </table>
           </div>
+          <TabelaPaginacaoBar
+            t={t}
+            page={pageRanking}
+            pageSize={TABELA_PAGE_SIZE_STREAMERS}
+            totalItems={rankingOrdenado.length}
+            onPageChange={setPageRanking}
+          />
+          </>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

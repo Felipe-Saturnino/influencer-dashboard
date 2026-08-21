@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import {
+  escanearLobbySoftSwiss,
+  SOFTSWISS_PAGE_LIMIT,
+} from "./softswissScan.ts";
 
 /**
  * Edge Function: monitor-lobby-blaze
@@ -19,7 +23,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const OPERADORA_SLUG = "blaze";
 const INTEGRACAO_SLUG = "lobby_blaze";
-const LIMIT = 30;
+const LIMIT = SOFTSWISS_PAGE_LIMIT;
 const SEARCH_QUERY =
   "limit=30&search=&game_category_slugs=live-casino&xp_enabled=false&game_provider_slugs=&bonus_betting_enabled=false";
 const BLAZE_SEARCH_URL = "https://blaze.bet.br/api/games/search";
@@ -342,39 +346,18 @@ async function escanearLobby(
   const idsEsperados = new Set(
     mesasEsperadas.map((m) => m.mesa_identificacao_operadora!.trim()),
   );
-  const lobby: LobbyGame[] = [];
-  const posicoes = new Map<string, number>();
-  let page = 1;
-  let totalPages = 1;
-
-  while (page <= totalPages) {
-    const data = await fetchPagina(page);
-    if (page === 1) {
-      totalPages = Math.max(1, data.meta?.total_pages ?? 1);
-    }
-    const records = data.records ?? [];
-    for (let i = 0; i < records.length; i++) {
-      const r = records[i];
-      const posicao = (page - 1) * LIMIT + i + 1;
-      const item: LobbyGame = {
-        posicao,
-        game_id: r.id,
-        name: r.name,
-        slug: r.slug,
-        provider_name: r.provider?.name ?? "",
-        provider_slug: r.provider?.slug ?? "",
-      };
-      lobby.push(item);
-      const idStr = String(r.id);
-      if (idsEsperados.has(idStr)) {
-        posicoes.set(idStr, posicao);
-      }
-    }
-    if (posicoes.size >= idsEsperados.size) break;
-    page++;
-  }
-
-  return { lobby, posicoes, paginasLidas: page };
+  const log = (msg: string) => console.log(`[monitor-lobby-blaze] ${msg}`);
+  const scan = await escanearLobbySoftSwiss({
+    idsEsperados,
+    fetchPagina,
+    limit: LIMIT,
+    log,
+  });
+  return {
+    lobby: scan.lobby,
+    posicoes: scan.posicoes,
+    paginasLidas: scan.paginasLidas,
+  };
 }
 
 type SupabaseAdmin = ReturnType<typeof createClient>;

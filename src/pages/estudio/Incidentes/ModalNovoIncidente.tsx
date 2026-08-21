@@ -366,8 +366,11 @@ export function ModalNovoIncidente({
 }: {
   mesas: NovoIncidenteMesaOption[];
   onClose: () => void;
-  /** `criarOutro`: mantém o modal aberto e limpa campos para o próximo ticket. */
-  onSaved: (protocolo: string, opts?: { criarOutro?: boolean }) => void;
+  /** `criarOutro` / `criarNovo`: mantém o modal aberto após registrar (formulário parcial ou limpo). */
+  onSaved: (
+    protocolo: string,
+    opts?: { criarOutro?: boolean; criarNovo?: boolean },
+  ) => void;
   /** Quando informado, abre em modo edição (protocolo somente leitura). */
   editando?: EstudioIncidenteRow | null;
 }) {
@@ -564,10 +567,35 @@ export function ModalNovoIncidente({
     setSalvando(false);
   }
 
-  async function handleSalvar(opts?: { criarOutro?: boolean }) {
+  function resetParaNovoIncidenteLimpo(protocolo: string) {
+    skipResetTimeAlvoRef.current = true;
+    setTimeAlvo("gp");
+    setMesaId("");
+    setIdRodada("");
+    setSemIdRodada(false);
+    setDataRodada(hojeIsoDateLocal());
+    setHoraRodada("");
+    setPrestadorId("");
+    setIncidenteCategoria("caso");
+    setTipo("");
+    setLocalMesa("em_mesa");
+    setResolucao(INCIDENTE_RESOLUCAO_OPTIONS[0]!);
+    setPayoutNecessario(false);
+    setDescricao("");
+    setAnexos([]);
+    setScriptAtivoId(null);
+    setScriptPendente(null);
+    setErro(null);
+    setSucessoMsg(`Incidente ${protocolo} registrado. Preencha um novo incidente.`);
+    salvandoRef.current = false;
+    setSalvando(false);
+  }
+
+  async function handleSalvar(opts?: { criarOutro?: boolean; criarNovo?: boolean }) {
     // Trava síncrona — `setSalvando` é assíncrono e um 2º clique gerava ticket duplicado.
     if (salvandoRef.current) return;
     const criarOutro = opts?.criarOutro === true && !isEdit;
+    const criarNovo = opts?.criarNovo === true && !isEdit;
     setErro(null);
     setSucessoMsg(null);
 
@@ -685,14 +713,22 @@ export function ModalNovoIncidente({
             protocoloSalvo,
             up.error,
           );
-          onSaved(protocoloSalvo, criarOutro ? { criarOutro: true } : undefined);
+          onSaved(
+            protocoloSalvo,
+            criarOutro ? { criarOutro: true } : criarNovo ? { criarNovo: true } : undefined,
+          );
           if (criarOutro) resetParaProximoIncidente(protocoloSalvo);
+          else if (criarNovo) resetParaNovoIncidenteLimpo(protocoloSalvo);
           return;
         }
       }
 
-      onSaved(protocoloSalvo, criarOutro ? { criarOutro: true } : undefined);
+      onSaved(
+        protocoloSalvo,
+        criarOutro ? { criarOutro: true } : criarNovo ? { criarNovo: true } : undefined,
+      );
       if (criarOutro) resetParaProximoIncidente(protocoloSalvo);
+      else if (criarNovo) resetParaNovoIncidenteLimpo(protocoloSalvo);
     } catch (e) {
       console.error("Incidentes: falha ao salvar", e);
       setErro(isEdit ? ERRO_GENERICO_EDITAR : ERRO_GENERICO_CRIAR);
@@ -1172,17 +1208,82 @@ export function ModalNovoIncidente({
           }}
         >
           {!isEdit ? (
+            <>
+              <button
+                type="button"
+                onClick={() => void handleSalvar({ criarOutro: true })}
+                disabled={salvando}
+                className={CAMPO_FOCO_CLASS}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(245,158,11,0.45)",
+                  background: t.isDark ? "rgba(245,158,11,0.18)" : "rgba(245,158,11,0.12)",
+                  color: "#f59e0b",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: salvando ? "not-allowed" : "pointer",
+                  opacity: salvando ? 0.75 : 1,
+                }}
+              >
+                {salvando ? "Salvando…" : "Registrar e Criar Outro"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSalvar()}
+                disabled={salvando}
+                className={CAMPO_FOCO_CLASS}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "none",
+                  background:
+                    "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: salvando ? "not-allowed" : "pointer",
+                  opacity: salvando ? 0.75 : 1,
+                }}
+              >
+                {salvando ? "Salvando…" : "Registrar Incidente"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSalvar({ criarNovo: true })}
+                disabled={salvando}
+                className={CAMPO_FOCO_CLASS}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(30,54,248,0.45)",
+                  background: "#1e36f8",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  fontFamily: FONT.body,
+                  cursor: salvando ? "not-allowed" : "pointer",
+                  opacity: salvando ? 0.75 : 1,
+                }}
+              >
+                {salvando ? "Salvando…" : "Registrar e Criar Novo"}
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={() => void handleSalvar({ criarOutro: true })}
+              onClick={() => void handleSalvar()}
               disabled={salvando}
               className={CAMPO_FOCO_CLASS}
               style={{
                 padding: "10px 20px",
                 borderRadius: 10,
-                border: `1px solid ${t.cardBorder}`,
-                background: t.inputBg ?? t.cardBg,
-                color: t.text,
+                border: "none",
+                background:
+                  "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))",
+                color: "#fff",
                 fontSize: 13,
                 fontWeight: 700,
                 fontFamily: FONT.body,
@@ -1190,30 +1291,9 @@ export function ModalNovoIncidente({
                 opacity: salvando ? 0.75 : 1,
               }}
             >
-              {salvando ? "Salvando…" : "Registrar e criar outro"}
+              {salvando ? "Salvando…" : "Salvar Alterações"}
             </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => void handleSalvar()}
-            disabled={salvando}
-            className={CAMPO_FOCO_CLASS}
-            style={{
-              padding: "10px 20px",
-              borderRadius: 10,
-              border: "none",
-              background:
-                "linear-gradient(135deg, var(--brand-primary, #4a2082), var(--brand-secondary, #1e36f8))",
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: FONT.body,
-              cursor: salvando ? "not-allowed" : "pointer",
-              opacity: salvando ? 0.75 : 1,
-            }}
-          >
-            {salvando ? "Salvando…" : isEdit ? "Salvar Alterações" : "Registrar Incidente"}
-          </button>
+          )}
         </div>
       </div>
     </ModalBase>

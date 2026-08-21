@@ -8,6 +8,7 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
+  aplicarMascaraHorarioPresencaHHMM,
   normalizarHorarioPresencaHHMM,
   validarHorarioPresencaHHMM,
 } from "../../../lib/rhCalendarioPresencaGestao";
@@ -255,9 +256,15 @@ export function ModalAprovacaoPresencaCalendario({
             id="pres-correcao-entrada"
             type="text"
             inputMode="numeric"
-            placeholder="HH:MM"
+            autoComplete="off"
+            placeholder="00:00"
+            maxLength={5}
             value={entradaCorrecao}
-            onChange={(e) => setEntradaCorrecao(e.target.value)}
+            onChange={(e) => setEntradaCorrecao(aplicarMascaraHorarioPresencaHHMM(e.target.value))}
+            onBlur={() => {
+              const n = normalizarHorarioPresencaHHMM(entradaCorrecao);
+              if (validarHorarioPresencaHHMM(n)) setEntradaCorrecao(n);
+            }}
             style={inputField(t)}
             aria-required="true"
           />
@@ -271,9 +278,15 @@ export function ModalAprovacaoPresencaCalendario({
             id="pres-correcao-saida"
             type="text"
             inputMode="numeric"
-            placeholder="HH:MM"
+            autoComplete="off"
+            placeholder="00:00"
+            maxLength={5}
             value={saidaCorrecao}
-            onChange={(e) => setSaidaCorrecao(e.target.value)}
+            onChange={(e) => setSaidaCorrecao(aplicarMascaraHorarioPresencaHHMM(e.target.value))}
+            onBlur={() => {
+              const n = normalizarHorarioPresencaHHMM(saidaCorrecao);
+              if (validarHorarioPresencaHHMM(n)) setSaidaCorrecao(n);
+            }}
             style={inputField(t)}
             aria-required="true"
           />

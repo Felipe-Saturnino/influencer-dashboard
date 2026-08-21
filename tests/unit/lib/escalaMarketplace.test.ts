@@ -8,6 +8,12 @@ import {
   filtroTimeGrupoNegociacaoMarketplace,
   fraseTipoOfertaMarketplace,
   formatarDiaIsoPtBr,
+  marketplaceMostrarNovaOferta,
+  marketplaceModoLiderancaGestao,
+  marketplacePodeEditarOferta,
+  marketplacePodeMinhasNegociacoes,
+  marketplacePodeOfertar,
+  marketplacePodeProporNoMural,
   overlayIdentidadeMarketplaceOfertas,
   parseHomeMarketplaceAlertas,
   fontesAlertaHomeDePayloadListar,
@@ -672,5 +678,86 @@ describe("fontesAlertaHomeDePayloadListar", () => {
     ]);
     const depoisDoTurno = new Date("2026-08-24T20:00:00-03:00");
     expect(alertasHomeMarketplaceDoPrestador(fontes, "gp-1", depoisDoTurno)).toEqual([]);
+  });
+});
+
+describe("marketplaceMostrarNovaOferta", () => {
+  const fid = "prestador-1";
+  const criarOk = { canCriarOk: true };
+
+  it("Ver Próprios: sempre com Criar ok e cadastro", () => {
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "proprios", ...criarOk }, fid, false),
+    ).toBe(true);
+  });
+
+  it("Ver Sim: só com Minhas Negociações ligado", () => {
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "sim", ...criarOk }, fid, false),
+    ).toBe(false);
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "sim", ...criarOk }, fid, true),
+    ).toBe(true);
+  });
+
+  it("sem cadastro ou sem Criar: nunca", () => {
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "proprios", ...criarOk }, null, true),
+    ).toBe(false);
+    expect(
+      marketplaceMostrarNovaOferta({ canView: "sim", canCriarOk: false }, fid, true),
+    ).toBe(false);
+  });
+});
+
+describe("marketplace permissões UI", () => {
+  const fid = "aaaa-bbbb";
+
+  const lideranca = {
+    canView: "sim" as const,
+    canCriar: "proprios" as const,
+    canEditar: "proprios" as const,
+    canCriarOk: true,
+    canEditarOk: true,
+  };
+
+  it("modo liderança gestão = Ver Sim + Criar/Editar Próprios", () => {
+    expect(marketplaceModoLiderancaGestao(lideranca)).toBe(true);
+    expect(
+      marketplaceModoLiderancaGestao({ ...lideranca, canCriar: "sim", canEditar: "sim" }),
+    ).toBe(false);
+  });
+
+  it("Minhas Negociações exige Ver Sim e prestador cadastrado", () => {
+    expect(marketplacePodeMinhasNegociacoes(lideranca, fid)).toBe(true);
+    expect(marketplacePodeMinhasNegociacoes(lideranca, null)).toBe(false);
+    expect(marketplacePodeMinhasNegociacoes({ canView: "proprios" }, fid)).toBe(false);
+  });
+
+  it("Nova Oferta com Criar Próprios e cadastro", () => {
+    expect(marketplacePodeOfertar(lideranca, fid)).toBe(true);
+    expect(marketplacePodeOfertar({ canCriarOk: false }, fid)).toBe(false);
+  });
+
+  it("Editar Próprios bloqueia proposta no mural alheio", () => {
+    expect(marketplacePodeProporNoMural(lideranca, fid)).toBe(false);
+    expect(
+      marketplacePodeProporNoMural(
+        { canCriarOk: true, canEditar: "sim" },
+        fid,
+      ),
+    ).toBe(true);
+  });
+
+  it("Editar Próprios limita ações às linhas próprias", () => {
+    expect(marketplacePodeEditarOferta(lideranca, { souOfertante: true })).toBe(true);
+    expect(marketplacePodeEditarOferta(lideranca, { souInteressado: true })).toBe(true);
+    expect(marketplacePodeEditarOferta(lideranca, {})).toBe(false);
+    expect(
+      marketplacePodeEditarOferta(
+        { canEditar: "sim", canEditarOk: true },
+        {},
+      ),
+    ).toBe(true);
   });
 });

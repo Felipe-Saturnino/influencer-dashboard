@@ -885,7 +885,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         termo: "RH Talk",
         definicao:
           "Reunião periódica conduzida pelo RH da Spin Gaming com grupos de colaboradores para alinhamento, comunicação de políticas e abertura de espaço para perguntas. Cada sessão gera uma ata numerada sequencialmente.",
-        nota: "A ata fica disponível no Portal de RH apenas para participantes registrados da reunião.",
+        nota: "A ata publicada fica disponível no Portal de RH para quem tem permissão de Ver (Sim ou Próprios). Participantes da reunião são registrados em Anotações RH para controle operacional.",
+        referencia: "Portal de RH",
+      },
+      {
+        termo: "Aplicável a (Portal de RH)",
+        definicao:
+          "Campo de políticas e normativas que indica o público-alvo: **Todos os prestadores** ou diretorias, gerências e times do organograma. Filtra a lista na aba Políticas quando a permissão de Ver é **Próprios**.",
+        nota: "Comunicados e RH Talks não usam este filtro. Com **Ver = Sim** ou **Editar = Sim**, todas as políticas publicadas aparecem.",
         referencia: "Portal de RH",
       },
       {
@@ -893,8 +900,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Confirmação formal de que o colaborador leu e tomou conhecimento de um documento que exige ciência — no Portal de RH (política ou normativa) ou no Portal da Academy (manuais), com registro de data e hora.",
         nota:
-          "Diferente de apenas marcar um comunicado como Lido. No Portal da Academy, a coluna Sua Ciência mostra Pendente até o aceite; travessão (—) indica que o manual não exige ciência. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
+          "No Portal de RH, quem **vê** o documento na lista e o item exige ciência deve registrar o aceite (perfis internos/gerenciais). Diferente de apenas marcar um comunicado como Lido, e diferente das reações com emoji no card (gesto de leitura, sem registro de ciência). No Portal da Academy, a coluna Sua Ciência mostra Pendente até o aceite; travessão (—) indica que o manual não exige ciência. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
         referencia: "Portal de RH · Portal da Academy",
+      },
+      {
+        termo: "Reação (emoji)",
+        definicao:
+          "Gesto opcional no card de informativos, comunicados de RH e comunicados/dicas da Academy. Cinco opções fixas (Gostei, Amei, Parabéns, Animado, Surpreso); cada pessoa marca no máximo uma. Não substitui Lido, ciência nem «Li e Ocultar».",
+        referencia: "Informativos · Portal de RH · Portal da Academy · Home",
       },
       {
         termo: "Read Receipt",
@@ -990,7 +1003,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Minhas Negociações",
         definicao:
-          "Botão na barra do Marketplace, só com permissão de **Ver: Sim** e cadastro de prestador. Ligado, mostra o mural do próprio grupo (Liderança = Shift Leader + Service Manager) e a aba **Minhas Ofertas**; Encerradas some. Desligado, volta à visão de todos os times.",
+          "Botão na barra do Marketplace, com permissão de **Ver: Sim** e cadastro de prestador ligado ao login (perfil típico SL/SM: **Ver: Sim**, **Criar: Próprios**, **Editar: Próprios**). Ligado, mostra o mural do próprio grupo (Liderança = Shift Leader + Service Manager) e a aba **Minhas Ofertas**; Encerradas some. Desligado, volta à visão de todos os times.",
         referencia: "Marketplace",
       },
       {
@@ -1191,13 +1204,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Central Academy",
         definicao:
-          "Bloco da Home de perfis de Estúdio com Comunicados, Dicas e Manuais publicados no Portal da Academy (últimos 10 dias, «Li e Ocultar»). Manuais que exigem ciência do colaborador permanecem até o aceite no Portal da Academy, sem «Li e Ocultar».",
+          "Bloco da Home de perfis de Estúdio com Comunicados, Dicas e Manuais publicados no Portal da Academy (últimos 10 dias, «Li e Ocultar»). Manuais que exigem ciência do colaborador permanecem até o aceite no Portal da Academy, sem «Li e Ocultar». Comunicados e Dicas também mostram reações com emoji — gesto opcional, sem ciência.",
         referencia: "Home · Portal da Academy",
       },
       {
         termo: "Informativos na Home",
         definicao:
-          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso. O mesmo bloco também lista postagens do Portal de RH (Comunicados, Políticas e RH Talks): essas só saem da lista após «Li e Ocultar», sem limite de 10 dias.",
+          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso. O mesmo bloco também lista postagens do Portal de RH (Comunicados, Políticas e RH Talks): essas só saem da lista após «Li e Ocultar», sem limite de 10 dias. Informativos e comunicados de RH mostram reações com emoji no card expandido — isso não esconde o aviso.",
         referencia: "Informativos · Home",
       },
       {
@@ -1433,7 +1446,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
   comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
   customer_success: ["cs_atendimento"],
-  rh_portal: ["rh_portal", "spin_na_rede", "informativos"],
+  rh_portal: ["rh_portal", "spin_na_rede", "informativos", "academy_portal"],
   escala: [
     "rh_staff",
     "escala_relatorio_turno",

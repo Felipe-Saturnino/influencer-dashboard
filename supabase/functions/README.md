@@ -22,8 +22,8 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 |-------|
 | `aprovar-pagamento` |
 | `atualizar-perfil` |
-| `monitor-lobby-blaze` |
 | `monitor-lobby-cda` |
+| `monitor-lobby-esportiva` |
 | `prestador-ponto` |
 | `prospecto-afiliados-network-site` |
 | `prospecto-cs-atendimento-site` |
@@ -59,6 +59,19 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `platformHealthDiagnostics.ts` |
 
 Detalhes: `docs/SETUP-PLATFORM-HEALTH.md`.
+
+---
+
+### `index.ts` + `softswissScan.ts`
+
+**Functions:** `monitor-lobby-blaze`, `monitor-lobby-jonbet` — paginação SoftSwiss até achar todos os IDs cadastrados.
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+| `softswissScan.ts` |
+
+Espelho Telecom: `scripts/lib/monitorLobbySoftSwissScan.mjs`.
 
 ---
 

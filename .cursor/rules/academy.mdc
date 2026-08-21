@@ -50,6 +50,8 @@ Bloco **Central Academy** na Home dos perfis `ROLES_PERFIS_ESTUDIO` (`CentralAca
 
 Ordem na Home Estúdio: Informações → **Central Academy** → Blogueiro Spin → Acesso rápido. Oculto se vazio ou sem permissão de Ver em Portal da Academy.
 
+**Reações (UX):** barra de 5 emojis em **Comunicados** e **Dicas** (portal + Home). Um por pessoa; tabela `conteudo_reacao`. **Não** em Manuais nem Gerenciamento; **não** é ciência nem «Li e Ocultar».
+
 ---
 
 ## Portal da Academy (`academy_portal`)
@@ -105,7 +107,7 @@ Se essa migration ainda não estiver aplicada, a listagem de Gerenciamento refaz
 
 **Tutorial (Ajuda → Tutoriais):** **Dicas Academy** (`postagem-academy-aprovacao`, URL `/Ajuda/Tutoriais/DicasAcademy`) — criar Dica/Comunicado e enviar para aprovação; imagens em `public/tutoriais/academy/postagem-aprovacao/`.
 
-Ações por status: rascunho → Editar + Histórico; **aprovacao** → Editar + **Aprovar** (só Sim) + Histórico; publicado → Editar + Arquivar + Histórico; arquivado → Histórico. Tabela: Assunto, Autor, Tipo, Categoria, Criado em, Status, **Data de Aprovação**, **Aprovador**, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página (`TabelaPaginacaoBar`).
+Ações por status: rascunho → Editar + Ver; **aprovacao** → Editar + **Aprovar** (só Sim) + Ver; publicado → Editar + Arquivar + Ver; arquivado → Ver. **Ver** abre **`ModalVerPostagem`** com abas **Ver** (campos preenchidos, só leitura) e **Histórico** (`academy_portal_postagem_status_historico`, mesma lista do modal de histórico anterior). Tabela: Assunto, Autor, Tipo, Categoria, Criado em, Status, **Data de Aprovação**, **Aprovador**, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página (`TabelaPaginacaoBar`).
 
 ### Filtros
 
@@ -115,7 +117,7 @@ Comunicados, dicas e manuais na **leitura pública** usam `fetchAllPages` com **
 
 ### Cards Comunicados e Dicas (leitura)
 
-Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do texto — se houver anexo de arquivo, abre o arquivo; se só houver imagem/vídeo no campo de mídia (sem anexo), o mesmo link abre a mídia. Thumbnail lateral **cresce com a altura do texto** (`app-academy-portal-card--with-media` em grid; coluna ~42% até 400px); ≤1100px coluna mais estreita; ≤720px mídia abaixo do texto em faixa 16:9 responsiva. Tags de jogo nas Dicas quando houver.
+Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do texto — se houver anexo de arquivo, abre o arquivo; se só houver imagem/vídeo no campo de mídia (sem anexo), o mesmo link abre a mídia. Thumbnail lateral **cresce com a altura do texto** (`app-academy-portal-card--with-media` em grid; coluna ~42% até 400px); ≤1100px coluna mais estreita; ≤720px mídia abaixo do texto em faixa 16:9 responsiva. Tags de jogo nas Dicas quando houver. **Reações (UX):** `BarraReacaoConteudo` no rodapé (`origem` = `academy_comunicado` / `academy_dica`) — um emoji por pessoa; **não** em Manuais nem Gerenciamento.
 
 ### Strings de vazio
 
@@ -236,7 +238,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 ### Filtros
 
-- Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco e limitada às 13 competências canônicas; sem registros, default = mês corrente.
+- Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco (**sempre** inclui o mês civil corrente); ao abrir a página (e ao sair do Histórico / trocar Time) o índice inicia no **mês corrente**, sem bloquear navegação para competências anteriores.
 - Time: select obrigatório GP / Shuffler.
 - Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.

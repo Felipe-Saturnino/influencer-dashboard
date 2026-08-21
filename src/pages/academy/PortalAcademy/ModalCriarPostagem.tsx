@@ -8,7 +8,13 @@ import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { CampoUploadArquivos, type CampoUploadArquivoItem } from "../../../components/CampoUploadArquivos";
 import { EditorTextoFormatado } from "../../../components/conteudo/EditorTextoFormatado";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import {
+  ModalBase,
+  ModalHeader,
+  MODAL_FORM_FOOTER_STYLE,
+  MODAL_FORM_SCROLL_BODY_STYLE,
+  MODAL_FORM_SHELL_STYLE,
+} from "../../../components/OperacoesModal";
 import { SelectOrganogramaMultiForm } from "../../../components/rh/SelectOrganogramaMultiForm";
 import {
   normalizarAnexosAcademyPortal,
@@ -582,7 +588,8 @@ export function ModalCriarPostagem({
           <Loader2 className="app-lucide-spin" size={22} color="var(--brand-primary, #7c3aed)" aria-hidden />
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: "min(70dvh, 560px)", overflowY: "auto", paddingRight: 4 }}>
+        <div style={MODAL_FORM_SHELL_STYLE}>
+        <div style={MODAL_FORM_SCROLL_BODY_STYLE}>
           <div>
             {lbl("ap-tipo-post", "Tipo de Postagem", modo === "criar")}
             <select
@@ -758,6 +765,7 @@ export function ModalCriarPostagem({
             </>
           ) : null}
         </div>
+        </div>
       )}
 
       {erro ? (
@@ -770,7 +778,7 @@ export function ModalCriarPostagem({
         </div>
       ) : null}
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: erro ? 12 : 20, flexWrap: "wrap" }}>
+      <div style={{ ...MODAL_FORM_FOOTER_STYLE, marginTop: erro ? 12 : 20 }}>
         
         <button
           type="button"

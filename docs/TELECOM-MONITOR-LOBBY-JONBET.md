@@ -24,7 +24,8 @@ A cada **1 hora** (fuso `America/Sao_Paulo`):
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `scripts/monitor-lobby-jonbet-run.mjs` | Script Node.js (único ficheiro do job) |
+| `scripts/monitor-lobby-jonbet-run.mjs` | Script Node.js principal |
+| `scripts/lib/monitorLobbySoftSwissScan.mjs` | Helper de paginação (importado — **obrigatório**) |
 
 **Requisito:** Node.js **18+**.
 

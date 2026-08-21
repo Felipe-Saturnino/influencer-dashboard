@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type ReactNode } from "react";
 import { FileText, Film, Plus, X, type LucideIcon } from "lucide-react";
+import { useApp } from "../context/AppContext";
 import { FONT } from "../constants/theme";
 import { CampoObrigatorioMark } from "./CampoObrigatorioMark";
+import { ModalBase, ModalHeader } from "./OperacoesModal";
 import { tooltipAcao } from "../lib/iconOnlyButtonA11y";
 
 export type CampoUploadArquivoItem = {
@@ -164,18 +166,7 @@ function mimePreviewKind(mime: string | undefined, urlHint?: string | null): "im
   return "other";
 }
 
-function AnexoPreviewCard({
-  item,
-  t,
-  disabled,
-  onRemove,
-}: {
-  item: CampoUploadArquivoItem;
-  t: CampoUploadArquivosTheme;
-  disabled?: boolean;
-  onRemove: (key: string) => void;
-}) {
-  const kind = mimePreviewKind(item.file?.type, item.previewUrl);
+function useAnexoPreviewSrc(item: CampoUploadArquivoItem, kind: "image" | "video" | "other") {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -192,7 +183,114 @@ function AnexoPreviewCard({
     return () => URL.revokeObjectURL(url);
   }, [item.file, item.previewUrl, kind]);
 
-  const src = item.previewUrl || objectUrl;
+  return item.previewUrl || objectUrl;
+}
+
+function AnexoAmpliadoModal({
+  item,
+  onClose,
+}: {
+  item: CampoUploadArquivoItem;
+  onClose: () => void;
+}) {
+  const { theme: t } = useApp();
+  const kind = mimePreviewKind(item.file?.type, item.previewUrl);
+  const src = useAnexoPreviewSrc(item, kind);
+
+  if (!src || (kind !== "image" && kind !== "video")) return null;
+
+  return (
+    <ModalBase onClose={onClose} maxWidth={960} zIndex={1100}>
+      <ModalHeader title={item.label} onClose={onClose} />
+      {kind === "image" ? (
+        <img
+          src={src}
+          alt={item.label}
+          style={{
+            width: "100%",
+            maxHeight: "min(80dvh, 760px)",
+            objectFit: "contain",
+            borderRadius: 10,
+            display: "block",
+          }}
+        />
+      ) : (
+        <video
+          src={src}
+          controls
+          playsInline
+          style={{
+            width: "100%",
+            maxHeight: "min(80dvh, 760px)",
+            objectFit: "contain",
+            borderRadius: 10,
+            display: "block",
+            background: "#000",
+          }}
+        />
+      )}
+      <p
+        style={{
+          margin: "10px 0 0",
+          fontSize: 12,
+          color: t.textMuted,
+          fontFamily: FONT.body,
+          textAlign: "center",
+        }}
+      >
+        {item.label}
+      </p>
+    </ModalBase>
+  );
+}
+
+function AnexoPreviewCard({
+  item,
+  t,
+  disabled,
+  onRemove,
+  onAmpliar,
+}: {
+  item: CampoUploadArquivoItem;
+  t: CampoUploadArquivosTheme;
+  disabled?: boolean;
+  onRemove: (key: string) => void;
+  onAmpliar?: (item: CampoUploadArquivoItem) => void;
+}) {
+  const kind = mimePreviewKind(item.file?.type, item.previewUrl);
+  const src = useAnexoPreviewSrc(item, kind);
+  const podeAmpliar = !!src && (kind === "image" || kind === "video") && !!onAmpliar;
+
+  const previewMedia =
+    kind === "image" && src ? (
+      <img
+        src={src}
+        alt=""
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />
+    ) : kind === "video" && src ? (
+      <video
+        src={src}
+        muted
+        playsInline
+        preload="metadata"
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />
+    ) : kind === "video" ? (
+      <Film size={28} color={t.textMuted} aria-hidden />
+    ) : (
+      <FileText size={28} color={t.textMuted} aria-hidden />
+    );
+
+  const previewAreaStyle: React.CSSProperties = {
+    height: 88,
+    background: `color-mix(in srgb, ${t.cardBorder} 55%, ${t.inputBg})`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    width: "100%",
+  };
 
   return (
     <li
@@ -208,36 +306,26 @@ function AnexoPreviewCard({
         flexDirection: "column",
       }}
     >
-      <div
-        style={{
-          height: 88,
-          background: `color-mix(in srgb, ${t.cardBorder} 55%, ${t.inputBg})`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        {kind === "image" && src ? (
-          <img
-            src={src}
-            alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
-        ) : kind === "video" && src ? (
-          <video
-            src={src}
-            muted
-            playsInline
-            preload="metadata"
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
-        ) : kind === "video" ? (
-          <Film size={28} color={t.textMuted} aria-hidden />
-        ) : (
-          <FileText size={28} color={t.textMuted} aria-hidden />
-        )}
-      </div>
+      {podeAmpliar ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onAmpliar!(item)}
+          aria-label={tooltipAcao("Ampliar pré-visualização")}
+          title={tooltipAcao("Ampliar pré-visualização")}
+          className="app-campo-foco"
+          style={{
+            ...previewAreaStyle,
+            border: "none",
+            padding: 0,
+            cursor: disabled ? "not-allowed" : "zoom-in",
+          }}
+        >
+          {previewMedia}
+        </button>
+      ) : (
+        <div style={previewAreaStyle}>{previewMedia}</div>
+      )}
       <div
         style={{
           padding: "8px 8px 10px",
@@ -340,6 +428,13 @@ export function CampoUploadArquivos({
   const lastPasteAtRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
   const [pasteFlash, setPasteFlash] = useState(false);
+  const [ampliado, setAmpliado] = useState<CampoUploadArquivoItem | null>(null);
+
+  useEffect(() => {
+    if (ampliado && !items.some((i) => i.key === ampliado.key)) {
+      setAmpliado(null);
+    }
+  }, [items, ampliado]);
   const activeHighlight = isDragging || pasteFlash;
   const borderColor = hasError
     ? "#e84025"
@@ -531,7 +626,14 @@ export function CampoUploadArquivos({
               }}
             >
               {items.map((item) => (
-                <AnexoPreviewCard key={item.key} item={item} t={t} disabled={disabled} onRemove={onRemove} />
+                <AnexoPreviewCard
+                  key={item.key}
+                  item={item}
+                  t={t}
+                  disabled={disabled}
+                  onRemove={onRemove}
+                  onAmpliar={setAmpliado}
+                />
               ))}
             </ul>
             {items.some((i) => i.pendente) && pendingHint ? (
@@ -631,6 +733,7 @@ export function CampoUploadArquivos({
         )
       ) : null}
       {footer}
+      {ampliado ? <AnexoAmpliadoModal item={ampliado} onClose={() => setAmpliado(null)} /> : null}
     </div>
   );
 }

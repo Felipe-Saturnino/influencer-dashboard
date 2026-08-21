@@ -325,7 +325,7 @@ export function ModalCandidaturaVer({
           {erro}
         </div>
       ) : !c ? null : (
-        <div style={{ maxHeight: "min(68dvh, 560px)", overflowY: "auto", paddingRight: 4 }}>
+        <div style={{ maxHeight: "min(68dvh, 560px)", overflowY: "auto", paddingRight: 4, paddingBottom: 24 }}>
           {tab === "candidatura" ? (
             tipoInterna(c.vaga?.tipo_vaga as RhVagaTipo) ? (
               <>
