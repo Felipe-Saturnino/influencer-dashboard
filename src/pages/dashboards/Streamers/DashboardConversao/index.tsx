@@ -640,7 +640,10 @@ export default function DashboardConversao() {
     { label: "Ativar cadastro",  icon: <Target size={11} aria-hidden />, cor: BRAND.azul,   bg: "rgba(30,54,248,0.10)",  border: "rgba(30,54,248,0.28)"  },
     { label: "Em dia",           icon: <Check size={11} aria-hidden />,    cor: BRAND.verde,   bg: "rgba(34,197,94,0.10)",  border: "rgba(34,197,94,0.28)"  },
   ];
-  const rowsFiltrados = acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo;
+  const rowsFiltrados = useMemo(
+    () => (acaoFiltro ? rowsFiltradosEscopo.filter((r) => r.acaoLabel === acaoFiltro) : rowsFiltradosEscopo),
+    [rowsFiltradosEscopo, acaoFiltro],
+  );
 
   const onSortTaxasConv = (col: TaxasConvSortCol) => {
     setSortTaxasConv((s) => ({ col, dir: s.col === col && s.dir === "desc" ? "asc" : "desc" }));
@@ -694,9 +697,10 @@ export default function DashboardConversao() {
     [rowsTaxasOrdenadas, pageTaxas],
   );
 
+  // Depende de filtros/dados estáveis — não da referência de um .filter() inline a cada render.
   useEffect(() => {
     setPageTaxas(0);
-  }, [rowsFiltrados, sortTaxasConv, acaoFiltro, historico, idxMes, filtroInfluencer, filtroOperadora]);
+  }, [rowsFiltradosEscopo, acaoFiltro, sortTaxasConv, historico, idxMes, filtroInfluencer, filtroOperadora]);
 
   const brand = useDashboardBrand();
 
