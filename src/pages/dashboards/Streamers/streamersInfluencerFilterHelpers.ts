@@ -7,6 +7,10 @@ import { supabase } from "../../../lib/supabase";
 
 export type PerfilInfluencerMin = { id: string; nome_artistico: string | null };
 
+/** Erro canónico de carga das abas Streamers (não confundir com vazio). */
+export const MSG_ERRO_STREAMERS =
+  "Não foi possível carregar os dados. Se o problema persistir, entre em contato com o suporte.";
+
 export function periodoStreamersFiltro(
   historico: boolean,
   mesSelecionado: { ano: number; mes: number } | undefined,
@@ -16,6 +20,10 @@ export function periodoStreamersFiltro(
   return getDatasDoMes(mesSelecionado.ano, mesSelecionado.mes);
 }
 
+/**
+ * IDs com métrica ou live realizada no período (colunas mínimas).
+ * Não inclui utm_aliases all-time — evita opção vazia no filtro do mês.
+ */
 export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
   inicio: string;
   fim: string;
@@ -25,7 +33,7 @@ export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
 }): Promise<string[]> {
   const { inicio, fim, filtroOperadora, operadoraSlugsForcado, podeVerInfluencer } = params;
 
-  const [metricas, lives, aliases] = await Promise.all([
+  const [metricas, lives] = await Promise.all([
     fetchAllPages<{ influencer_id: string }>(async (from, to) => {
       let q = supabase
         .from("influencer_metricas")
@@ -51,15 +59,6 @@ export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
       else if (filtroOperadora !== "todas") q = q.eq("operadora_slug", filtroOperadora);
       return q;
     }),
-    fetchAllPages<{ influencer_id: string }>(async (from, to) =>
-      supabase
-        .from("utm_aliases")
-        .select("influencer_id")
-        .eq("status", "mapeado")
-        .not("influencer_id", "is", null)
-        .order("influencer_id", { ascending: true })
-        .range(from, to),
-    ),
   ]);
 
   const ids = new Set<string>();
@@ -68,9 +67,6 @@ export async function fetchInfluencerIdsComDadosNoPeriodo(params: {
   }
   for (const l of lives) {
     if (podeVerInfluencer(l.influencer_id)) ids.add(l.influencer_id);
-  }
-  for (const a of aliases) {
-    if (podeVerInfluencer(a.influencer_id)) ids.add(a.influencer_id);
   }
 
   return [...ids];

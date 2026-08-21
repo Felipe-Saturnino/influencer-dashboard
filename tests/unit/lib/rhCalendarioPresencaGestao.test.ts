@@ -42,6 +42,17 @@ describe("horario presença HH:MM — máscara e normalização", () => {
     expect(normalizarHorarioPresencaHHMM("6:50")).toBe("06:50");
     expect(normalizarHorarioPresencaHHMM("15:17")).toBe("15:17");
   });
+
+  it("na digitação com separador não completa minuto com um dígito (maxLength 5)", () => {
+    expect(aplicarMascaraHorarioPresencaHHMM("12:3")).toBe("12:3");
+    expect(aplicarMascaraHorarioPresencaHHMM("12:30")).toBe("12:30");
+    expect(aplicarMascaraHorarioPresencaHHMM("6.5")).toBe("6:5");
+  });
+
+  it("no blur não inventa 06:05 a partir de minuto incompleto (6.5)", () => {
+    expect(normalizarHorarioPresencaHHMM("6.5")).toBe("06:5");
+    expect(validarHorarioPresencaHHMM(normalizarHorarioPresencaHHMM("6.5"))).toBe(false);
+  });
 });
 
 describe("resolverAcoesPresencaLinha em Folga", () => {

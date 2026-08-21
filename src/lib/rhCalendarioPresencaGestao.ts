@@ -514,13 +514,30 @@ export function validarHorarioPresencaHHMM(valor: string): boolean {
   return /^([01]?\d|2[0-3]):[0-5]\d$/.test(valor.trim());
 }
 
-/** Converte segmentos H e M em «HH:MM» com zero à esquerda. */
-function formatarSegmentosHorarioPresencaHHMM(horas: string, minutos: string): string {
-  const h = horas.replace(/\D/g, "").slice(0, 2);
+/** Converte segmentos H e M em «HH:MM». */
+function formatarSegmentosHorarioPresencaHHMM(
+  horas: string,
+  minutos: string,
+  modo: "digitacao" | "completo",
+): string {
+  const hRaw = horas.replace(/\D/g, "").slice(0, 2);
   const m = minutos.replace(/\D/g, "").slice(0, 2);
-  if (!h && !m) return "";
-  if (!m) return h.length === 2 ? `${h}:` : h;
-  return `${String(parseInt(h || "0", 10)).padStart(2, "0")}:${m.padStart(2, "0")}`;
+  if (!hRaw && !m) return "";
+  if (!m) return hRaw.length === 2 ? `${hRaw}:` : hRaw;
+
+  // Digitação: não zero-pad minutos com 1 dígito — senão «12:3» vira «12:03»
+  // e com maxLength={5} fica impossível chegar a «12:30».
+  if (modo === "digitacao") {
+    if (m.length < 2) return `${hRaw}:${m}`;
+    return `${String(parseInt(hRaw || "0", 10)).padStart(2, "0")}:${m}`;
+  }
+
+  // Completo (blur/save): minuto com 1 dígito permanece incompleto («06:5»)
+  // para não validar como «06:05» por engano (ex.: «6.5» a meio de «6.50»).
+  if (m.length < 2) {
+    return `${String(parseInt(hRaw || "0", 10)).padStart(2, "0")}:${m}`;
+  }
+  return `${String(parseInt(hRaw || "0", 10)).padStart(2, "0")}:${m}`;
 }
 
 /** Interpreta só dígitos (3 = HMM omitindo zero da hora; 4 = HHMM). */
@@ -543,14 +560,14 @@ export function normalizarHorarioPresencaHHMM(valor: string): string {
 
   const m = /^(\d{1,2}):(\d{1,2})$/.exec(comSeparador);
   if (m) {
-    return formatarSegmentosHorarioPresencaHHMM(m[1]!, m[2]!);
+    return formatarSegmentosHorarioPresencaHHMM(m[1]!, m[2]!, "completo");
   }
 
   const deDigitos = horarioPresencaDeDigitos(comSeparador.replace(/\D/g, ""));
   if (deDigitos) {
     const partes = /^(\d{1,2}):(\d{2})$/.exec(deDigitos);
     if (partes) {
-      return formatarSegmentosHorarioPresencaHHMM(partes[1]!, partes[2]!);
+      return formatarSegmentosHorarioPresencaHHMM(partes[1]!, partes[2]!, "completo");
     }
   }
 
@@ -573,8 +590,8 @@ export function aplicarMascaraHorarioPresencaHHMM(input: string): string {
 
   if (colonIdx >= 0) {
     const h = limpo.slice(0, colonIdx);
-    const m = limpo.slice(colonIdx + 1).replace(/:/g, "");
-    return formatarSegmentosHorarioPresencaHHMM(h, m);
+    const min = limpo.slice(colonIdx + 1).replace(/:/g, "");
+    return formatarSegmentosHorarioPresencaHHMM(h, min, "digitacao");
   }
 
   const digits = limpo.replace(/\D/g, "").slice(0, 4);

@@ -64,7 +64,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Os KPIs mostram valores diferentes entre Overview e Financeiro?",
         texto:
-          "As abas usam fontes de dados parcialmente diferentes: Financeiro usa um procedimento otimizado do banco para meses fechados, e cai no modo de busca linha a linha para o mês atual (MTD). Para meses passados fechados os valores devem ser idênticos. Se houver divergência em meses fechados, entre em contato com o suporte informando o mês e os valores observados.",
+          "As três abas usam a mesma busca linha a linha de métricas e lives do período. Diferenças entre Overview e Financeiro costumam vir do recorte exibido (ex.: investimento de agentes no Overview, PVI e perfil de jogador no Financeiro), não de um procedimento especial do banco. Se a divergência parecer inconsistente para o mesmo filtro e mês, entre em contato com o suporte informando o mês e os valores observados.",
       },
     ],
   },
