@@ -238,7 +238,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 ### Filtros
 
-- Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco e limitada às 13 competências canônicas; sem registros, default = mês corrente.
+- Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco (**sempre** inclui o mês civil corrente); ao abrir a página (e ao sair do Histórico / trocar Time) o índice inicia no **mês corrente**, sem bloquear navegação para competências anteriores.
 - Time: select obrigatório GP / Shuffler.
 - Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.
