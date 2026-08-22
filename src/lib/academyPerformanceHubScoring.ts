@@ -204,3 +204,11 @@ export function notaTerceiraDimensaoAvaliacao(
 export function labelTerceiraDimensaoTime(time: PerformanceHubTimeSlug): string {
   return time === "shuffler" ? "Procedimentos" : "Mesa";
 }
+
+/** Rótulo da 3.ª dimensão quando a lista pode misturar GP e Shuffler (Ver = Próprios). */
+export function labelTerceiraDimensaoLista(times: readonly PerformanceHubTimeSlug[]): string {
+  const unicos = [...new Set(times)];
+  if (unicos.length === 1) return labelTerceiraDimensaoTime(unicos[0]!);
+  if (unicos.length === 0) return "Mesa";
+  return "Mesa / Procedimentos";
+}

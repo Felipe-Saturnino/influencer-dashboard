@@ -14,10 +14,14 @@ import {
 } from "../../../lib/academyPerformanceHubConstants";
 import {
   formatNotaPerformanceHub,
+  labelTerceiraDimensaoLista,
   labelTerceiraDimensaoTime,
   notaTerceiraDimensaoAvaliacao,
 } from "../../../lib/academyPerformanceHubScoring";
-import { acoesAbaAvaliacoesPerformanceHub } from "../../../lib/academyPerformanceHubWorkflow";
+import {
+  acoesAbaAvaliacoesPerformanceHub,
+  isEscopoPropriosPerformanceHub,
+} from "../../../lib/academyPerformanceHubWorkflow";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
@@ -51,6 +55,7 @@ function scoreStatus(status: PerformanceHubStatus): number {
     "aguardando",
     "feedback",
     "aprovado",
+    "concluida",
   ];
   return order.indexOf(status);
 }
@@ -132,9 +137,13 @@ export function PerformanceHubAbaAvaliacoes({
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
-  const isProprios = canView === "proprios" && !canEditarOk;
-  const isShuffler = timeSelecionado === "shuffler";
-  const labelTerceiraDim = labelTerceiraDimensaoTime(timeSelecionado);
+  const isProprios = isEscopoPropriosPerformanceHub(canView, canEditarOk);
+  const labelTerceiraDim = isProprios
+    ? labelTerceiraDimensaoLista(avaliacoes.map((r) => r.time))
+    : labelTerceiraDimensaoTime(timeSelecionado);
+  const isShuffler =
+    labelTerceiraDim === "Procedimentos" ||
+    (!isProprios && timeSelecionado === "shuffler");
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
   const [busca, setBusca] = useState("");
   const showBusca = roleUsuario === "admin" || roleGestorDepartamento(roleUsuario);
@@ -143,7 +152,10 @@ export function PerformanceHubAbaAvaliacoes({
     const filtradas = avaliacoes
       .filter((row) =>
         isProprios
-          ? row.status === "aguardando" || row.status === "feedback" || row.status === "aprovado"
+          ? row.status === "aguardando" ||
+            row.status === "feedback" ||
+            row.status === "aprovado" ||
+            row.status === "concluida"
           : true,
       )
       .filter((row) => (showBusca ? textoContemBusca(row.avaliadoNome, busca) : true));

@@ -4,6 +4,7 @@ import type {
   PerformanceHubStatus,
   PerformanceHubTimeSlug,
 } from "./academyPerformanceHubTypes";
+import { normalizarTextoBusca } from "./searchText";
 
 export function statusInicialNovaAvaliacao(_time: PerformanceHubTimeSlug): PerformanceHubStatus {
   return "rascunho";
@@ -23,13 +24,48 @@ export function statusAposSalvarRascunho(
   return row.status;
 }
 
-/** Aba Avaliações — só avaliações já publicadas. */
+/** Aba Avaliações — só avaliações já publicadas (`concluida` = legado pré-migração). */
 export function avaliacaoVisivelAbaAvaliacoes(row: PerformanceHubAvaliacao): boolean {
   return (
     row.status === "aguardando" ||
     row.status === "feedback" ||
-    row.status === "aprovado"
+    row.status === "aprovado" ||
+    row.status === "concluida"
   );
+}
+
+/** Ver = Próprios sem Editar: lista só as próprias, sem filtro de Time. */
+export function isEscopoPropriosPerformanceHub(
+  canView: PermissaoValor,
+  canEditarOk: boolean,
+): boolean {
+  return canView === "proprios" && !canEditarOk;
+}
+
+export type EscopoPropriosPerformanceHub = {
+  staffIds: ReadonlySet<string>;
+  /** Nomes do cadastro RH + nome do perfil de login (já trimados). */
+  nomes: readonly string[];
+};
+
+function nomeCoincidePerformanceHub(a: string, b: string): boolean {
+  const na = normalizarTextoBusca(a);
+  const nb = normalizarTextoBusca(b);
+  if (!na || !nb) return false;
+  return na === nb;
+}
+
+/** Casa avaliação ao prestador logado: staff id (preferência) ou nome do cadastro/perfil. */
+export function avaliacaoPertenceAoEscopoProprios(
+  row: Pick<PerformanceHubAvaliacao, "avaliadoStaffId" | "avaliadoNome">,
+  escopo: EscopoPropriosPerformanceHub,
+): boolean {
+  const staffId = row.avaliadoStaffId?.trim();
+  if (staffId && escopo.staffIds.has(staffId)) return true;
+  for (const nome of escopo.nomes) {
+    if (nomeCoincidePerformanceHub(row.avaliadoNome, nome)) return true;
+  }
+  return false;
 }
 
 /** Bloco Analisar Avaliações (Gerenciamento) — rascunhos em andamento. */
@@ -69,7 +105,8 @@ export function acoesAbaAvaliacoesPerformanceHub(opts: {
   canEditarOk: boolean;
   status: PerformanceHubStatus;
 }): PerformanceHubAcaoAvaliacoes[] {
-  const { canView, canEditarOk, status } = opts;
+  const { canView, canEditarOk } = opts;
+  const status = opts.status === "concluida" ? "aprovado" : opts.status;
   if (status !== "aguardando" && status !== "feedback" && status !== "aprovado") {
     return [];
   }
@@ -89,10 +126,15 @@ export function acoesAbaAvaliacoesPerformanceHub(opts: {
 }
 
 export function statusPublicadoPerformanceHub(status: PerformanceHubStatus): boolean {
-  return status === "aguardando" || status === "feedback" || status === "aprovado";
+  return (
+    status === "aguardando" ||
+    status === "feedback" ||
+    status === "aprovado" ||
+    status === "concluida"
+  );
 }
 
 /** Conta na agenda (realizadas) — só avaliações aprovadas. */
 export function statusContaComoRealizadaPerformanceHub(status: PerformanceHubStatus): boolean {
-  return status === "aprovado";
+  return status === "aprovado" || status === "concluida";
 }

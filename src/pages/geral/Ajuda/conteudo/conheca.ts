@@ -983,7 +983,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma); com **Ver = Próprios**, a lista mostra apenas suas avaliações publicadas.",
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma).\n\nCom **Ver = Próprios**, o filtro de **Time** não aparece: a lista fica travada nas **suas** avaliações publicadas (Aguardando, Feedback ou Aprovado), de qualquer time, vinculadas ao cadastro do seu login.",
       },
       {
         subtitulo: "Status e ações",

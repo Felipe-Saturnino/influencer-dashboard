@@ -769,7 +769,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Sou prestador e a lista está vazia?",
         texto:
-          "Com **Ver = Próprios**, só entram avaliações com status **Concluída** vinculadas ao seu cadastro. Avaliações pendentes ou em análise não aparecem nesse escopo.",
+          "Com **Ver = Próprios**, só entram avaliações publicadas (**Aguardando**, **Feedback** ou **Aprovado**) do **seu** cadastro — o filtro de Time some e a lista não depende do nome do perfil coincidir letra a letra com o avaliado: a plataforma usa o prestador ligado ao e-mail de login (e-mail pessoal ou E-mail Spin) e o `staff` da avaliação.\n\nSe a lista continuar vazia: confira o mês/Histórico; se o login não estiver vinculado a um prestador em Gestão de Prestadores, ou o e-mail não bater com o cadastro, peça ajuste ao RH. Rascunhos não aparecem nesta aba.",
       },
       {
         subtitulo: "Alguns prestadores não aparecem para avaliar?",

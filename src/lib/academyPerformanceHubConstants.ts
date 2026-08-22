@@ -20,6 +20,7 @@ export const PERFORMANCE_HUB_STATUS_LABEL: Record<PerformanceHubStatus, string> 
   aguardando: "Aguardando",
   feedback: "Feedback",
   aprovado: "Aprovado",
+  concluida: "Aprovado",
 };
 
 export const PERFORMANCE_HUB_STATUS_COLOR: Record<PerformanceHubStatus, string> = {
@@ -29,6 +30,7 @@ export const PERFORMANCE_HUB_STATUS_COLOR: Record<PerformanceHubStatus, string> 
   aguardando: "#f59e0b",
   feedback: "#7c3aed",
   aprovado: "#22c55e",
+  concluida: "#22c55e",
 };
 
 export const PERFORMANCE_HUB_HISTORICO_ACAO_LABEL: Record<

@@ -31,6 +31,8 @@ type Props = {
   onCarrosselProximo: () => void;
   timeSelecionado: PerformanceHubTimeSlug;
   onSelecionarTime: (time: PerformanceHubTimeSlug) => void;
+  /** Ver = Próprios: oculto — lista já fica só nas avaliações do usuário. */
+  showTimeFilter: boolean;
   staffItems: { id: string; name: string }[];
   staffSelecionado: string[];
   onSelecionarStaff: (ids: string[]) => void;
@@ -61,6 +63,7 @@ export function PerformanceHubFiltroBar({
   onCarrosselProximo,
   timeSelecionado,
   onSelecionarTime,
+  showTimeFilter,
   staffItems,
   staffSelecionado,
   onSelecionarStaff,
@@ -99,12 +102,14 @@ export function PerformanceHubFiltroBar({
 
         <FiltroHistoricoButton active={historico} onClick={onToggleHistorico} />
 
-        <FiltroCalendarioTimeSelect
-          mode="single"
-          selected={[timeSelecionado]}
-          onChange={(ids) => onSelecionarTime((ids[0] as PerformanceHubTimeSlug | undefined) ?? timeSelecionado)}
-          items={PERFORMANCE_HUB_TIME_OPTIONS.map((item) => ({ id: item.value, name: item.label }))}
-        />
+        {showTimeFilter ? (
+          <FiltroCalendarioTimeSelect
+            mode="single"
+            selected={[timeSelecionado]}
+            onChange={(ids) => onSelecionarTime((ids[0] as PerformanceHubTimeSlug | undefined) ?? timeSelecionado)}
+            items={PERFORMANCE_HUB_TIME_OPTIONS.map((item) => ({ id: item.value, name: item.label }))}
+          />
+        ) : null}
 
         {canEditarOk && showStaffFilter ? (
           <FiltroCalendarioStaffSelect

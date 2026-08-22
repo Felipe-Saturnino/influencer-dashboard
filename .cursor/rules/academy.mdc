@@ -136,7 +136,7 @@ Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do te
 | **Gestor / Performance Coach / RH** | Avaliações do time após liberação em Gestão de Usuários (**Editar**) |
 | **Prestador** | Com **Ver = Próprios**: avaliações próprias publicadas — Analisar (Aguardando) ou Ver/Histórico |
 
-Times avaliados: **Game Presenter** e **Shuffler**. Filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**.
+Times avaliados: **Game Presenter** e **Shuffler**. Com escopo amplo (Ver ≠ Próprios ou Editar), filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**. Com **Ver = Próprios** (sem Editar), o filtro de Time **não aparece** — a lista fica só nas avaliações do usuário (todos os times).
 
 **Carga:** `fetchPerformanceHubAvaliacoes` — janela 13 competências no SQL (`data_avaliacao`) + `fetchAllPages` (Global § Eficiência de fetch).
 
@@ -210,7 +210,7 @@ O filtro de **Time** define qual layout e scoring aparecem. Consolidados e tabel
 
 **Promoção de cargo (virada do mês):** cada avaliação grava `time` no momento da criação. Meses anteriores mantêm formato do cargo antigo; a partir do mês da promoção, novas avaliações usam o time atual. **Gerenciamento** ao avaliar usa sempre o time selecionado na barra (cargo atual). Modal **Ver/Analisar** usa `avaliacao.time` (não o filtro da barra).
 
-**Ver = Próprios:** só avaliações do próprio nome (`canView === "proprios"`), independente do cargo; alternar filtro de time para ver histórico GP vs Shuffler.
+**Ver = Próprios** (sem Editar): só avaliações do próprio cadastro (match por `avaliado_staff_id` e/ou nome do RH / perfil de login), **sem** filtro de Time na barra — GP e Shuffler no mesmo carrossel/período.
 
 ### Modal Avaliar — estrutura (alinhado ao mockup)
 

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   acoesAbaAvaliacoesPerformanceHub,
+  avaliacaoPertenceAoEscopoProprios,
   avaliacaoVisivelAbaAvaliacoes,
   avaliacaoVisivelGerenciamentoAnalisar,
+  isEscopoPropriosPerformanceHub,
   statusAposConcluirModal,
   statusInicialNovaAvaliacao,
 } from "../../../src/lib/academyPerformanceHubWorkflow";
@@ -38,6 +40,24 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "aguardando" }))).toBe(true);
     expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "feedback" }))).toBe(true);
     expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "aprovado" }))).toBe(true);
+    expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "concluida" }))).toBe(true);
+  });
+
+  it("escopo Próprios casa por staff id ou nome", () => {
+    expect(isEscopoPropriosPerformanceHub("proprios", false)).toBe(true);
+    expect(isEscopoPropriosPerformanceHub("proprios", true)).toBe(false);
+    expect(isEscopoPropriosPerformanceHub("sim", false)).toBe(false);
+    const escopo = { staffIds: new Set(["abc"]), nomes: ["Gabriel Batista Duarte Da Costa"] };
+    expect(
+      avaliacaoPertenceAoEscopoProprios({ avaliadoStaffId: "abc", avaliadoNome: "Outro" }, escopo),
+    ).toBe(true);
+    expect(
+      avaliacaoPertenceAoEscopoProprios(
+        { avaliadoNome: "gabriel batista duarte da costa" },
+        escopo,
+      ),
+    ).toBe(true);
+    expect(avaliacaoPertenceAoEscopoProprios({ avaliadoNome: "Outra Pessoa" }, escopo)).toBe(false);
   });
 
   it("Gerenciamento lista só rascunhos em andamento", () => {
