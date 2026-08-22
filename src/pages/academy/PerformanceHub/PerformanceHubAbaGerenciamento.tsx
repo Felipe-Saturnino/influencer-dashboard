@@ -98,10 +98,8 @@ export function PerformanceHubAbaGerenciamento({
   return (
     <>
       <div style={pageBox}>
-        <SectionTitle
-          sub="rascunhos aguardando conclusão do avaliador"
-        >
-          Analisar Avaliações
+        <SectionTitle sub="avaliações salvas aguardando conclusão do avaliador">
+          Avaliações em Rascunho
         </SectionTitle>
 
         {avaliacoesPendentes.length === 0 ? (
@@ -111,7 +109,7 @@ export function PerformanceHubAbaGerenciamento({
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 740 })}>
-              <caption style={{ display: "none" }}>Tabela de avaliações para análise</caption>
+              <caption style={{ display: "none" }}>Tabela de avaliações em rascunho</caption>
               <thead>
                 <tr>
                   <SortTableTh label="Data" col="data" sortCol={sortAvaliacao.col} sortDir={sortAvaliacao.dir} onSort={onSortAvaliacao} thStyle={dataTable.thHeader} align="center" />

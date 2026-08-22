@@ -764,7 +764,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparecem as abas Gerenciamento ou Configuração?",
         texto:
-          "**Gerenciamento** exige permissão de **Editar**; **Configuração** exige permissão de **Criar**. Com apenas **Ver**, só a aba Avaliações fica disponível — comportamento esperado.",
+          "**Gerenciamento** e **Configuração** exigem permissão de **Criar = Sim**. Com apenas **Ver** ou **Editar**, só a aba Avaliações fica disponível — comportamento esperado.",
       },
       {
         subtitulo: "Sou prestador e a lista está vazia?",
@@ -779,12 +779,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro o botão Analisar?",
         texto:
-          "Com **Ver = Próprios**, o botão **Analisar** aparece só em status **Aguardando**. Em **Feedback** e **Aprovado** ficam **Ver** e **Histórico**.\n\nCom **Editar**, em **Aguardando** não há ação na aba Avaliações; em **Feedback** use **Aplicar Feedback**.",
+          "Com **Ver = Próprios**, o botão **Analisar** aparece só em status **Aguardando**. Em **Feedback** e **Aprovado** ficam **Ver** e **Histórico**.\n\nCom **Editar**, em **Aguardando** não há ação na aba Avaliações; em **Feedback** use **Aplicar Feedback**.\n\nSe **Solicitar Feedback** ou **Aprovar** não gravar, confira se o login está vinculado ao prestador avaliado (e-mail / E-mail Spin) e se a atualização de permissões do Performance Hub foi aplicada no banco. A mensagem de erro no pop-up indica falha de gravação.",
       },
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Editar** ou **Criar** em Performance Hub. Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Se citar formato, use **MP4**, **MOV** ou **WebM**.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",

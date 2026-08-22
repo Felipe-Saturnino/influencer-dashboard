@@ -133,7 +133,7 @@ Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do te
 | Perfil | Escopo típico |
 |--------|----------------|
 | **Admin** | Irrestrito via código (`usePermission`) |
-| **Gestor / Performance Coach / RH** | Avaliações do time após liberação em Gestão de Usuários (**Editar**) |
+| **Gestor / Performance Coach / RH** | Avaliações após liberação; **Criar = Sim** para Gerenciamento e Configuração; **Editar** para ações de coach na aba Avaliações |
 | **Prestador** | Com **Ver = Próprios**: avaliações próprias publicadas — Analisar (Aguardando) ou Ver/Histórico |
 
 Times avaliados: **Game Presenter** e **Shuffler**. Com escopo amplo (Ver ≠ Próprios ou Editar), filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**. Com **Ver = Próprios** (sem Editar), o filtro de Time **não aparece** — a lista fica só nas avaliações do usuário (todos os times).
@@ -147,8 +147,8 @@ Migração `20260625120000_academy_performance_hub_page.sql`: todos os roles (ex
 | Ação | Superfície |
 |------|------------|
 | **Ver** | Página + aba Avaliações |
-| **Editar** | Aba **Gerenciamento** (agenda + fila de rascunhos) + ações de coach na aba Avaliações |
-| **Criar** | Aba **Configuração** (pesos de scoring) |
+| **Editar** | Ações de coach na aba Avaliações (ex.: Aplicar Feedback) |
+| **Criar** (= **Sim**) | Abas **Gerenciamento** e **Configuração** |
 | **Excluir** | Reservado (sem fluxo na v1) |
 
 Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar` / `hasExcluir` = true.
@@ -158,14 +158,14 @@ Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar`
 | Tab | Ícone | Gate |
 |-----|-------|------|
 | Avaliações | `ClipboardList` | Ver (qualquer valor ≠ Não) |
-| Gerenciamento | `ClipboardList` | `canEditarOk` |
-| Configuração | `Settings` | `canCriarOk` |
+| Gerenciamento | `ClipboardList` | `canCriar === "sim"` |
+| Configuração | `Settings` | `canCriar === "sim"` |
 
 URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
 
 ### Status × ações (aba Avaliações)
 
-Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `20261121120000`). Rascunho fica só no Gerenciamento.
+Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `20261121120000`). Rascunho fica só no Gerenciamento, no bloco **Avaliações em Rascunho** (status `rascunho` + time filtrado + período).
 
 | Status | Ver = Próprios | Editar = Sim |
 |--------|----------------|--------------|
@@ -210,7 +210,7 @@ O filtro de **Time** define qual layout e scoring aparecem. Consolidados e tabel
 
 **Promoção de cargo (virada do mês):** cada avaliação grava `time` no momento da criação. Meses anteriores mantêm formato do cargo antigo; a partir do mês da promoção, novas avaliações usam o time atual. **Gerenciamento** ao avaliar usa sempre o time selecionado na barra (cargo atual). Modal **Ver/Analisar** usa `avaliacao.time` (não o filtro da barra).
 
-**Ver = Próprios** (sem Editar): só avaliações do próprio cadastro (match por `avaliado_staff_id` e/ou nome do RH / perfil de login), **sem** filtro de Time na barra — GP e Shuffler no mesmo carrossel/período.
+**Ver = Próprios** (sem Editar): só avaliações do próprio cadastro (match por `avaliado_staff_id` e/ou nome do RH / perfil de login), **sem** filtro de Time na barra — GP e Shuffler no mesmo carrossel/período. **Solicitar Feedback** / **Aprovar** gravam via RLS de update na própria linha (`_academy_performance_hub_avaliacao_e_do_usuario` — migration `20261122130000`).
 
 ### Modal Avaliar — estrutura (alinhado ao mockup)
 
@@ -223,7 +223,7 @@ O filtro de **Time** define qual layout e scoring aparecem. Consolidados e tabel
 
 **Jogo / Mesa (GP):** opções do select **Jogo** = tipos distintos das mesas do estúdio selecionado em **Gestão de Estúdios** (`mesas_spin_cadastro` via `jogosDoEstudioNoCatalogo`) — **não** filtrar pela interseção com `staff_skills`. Skills do staff só sugerem o valor inicial (prefill). Mesa = IDs Spin das mesas daquele estúdio + jogo.
 
-Demais blocos comuns: cabeçalho, tipo de avaliação, rodapé Salvar/Concluir.
+Demais blocos comuns: cabeçalho, abas do fluxo Performance Coach, rodapé Salvar/Concluir. **Sem** campo Tipo de Avaliação — todas as avaliações são Performance Coach.
 
 ### Modelo de pontuação
 
@@ -235,14 +235,15 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 - Escala **0–10**; UI com **2 casas decimais** (`formatNotaPerformanceHub`).
 - **Nota Total** = média ponderada dimensões (`calcularNotaTotalGamePresenter` / `calcularNotaTotalShuffler`).
-- **MTD consolidado** = média simples das notas totais **Aprovado** no período **do time filtrado**.
+- **MTD consolidado** = média simples das notas totais das avaliações **publicadas** (Aguardando, Feedback e Aprovado) no período do time filtrado (ou de todas as do usuário com Ver = Próprios). A agenda de Gerenciamento continua contando só **Aprovado** como realizada.
 - Configuração: subtítulo «Escala 0–10 · alterações aplicam-se a novas avaliações»; pesos editáveis por time conforme filtro de Time ativo.
 
 ### Filtros
 
 - Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco (**sempre** inclui o mês civil corrente); ao abrir a página (e ao sair do Histórico / trocar Time) o índice inicia no **mês corrente**, sem bloquear navegação para competências anteriores.
-- Time: select obrigatório GP / Shuffler.
+- Time: select obrigatório GP / Shuffler (oculto com Ver = Próprios).
 - Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
+- No bloco **Avaliações** (aba Avaliações), com **Ver = Sim**: busca por nome + filtros **Turno** (`FiltroTurnoSelect` — Todos Turnos / Manhã / Tarde / Noite) e **Status** (`FiltroBarCampoSelect` — Todos Status / Aguardando / Feedback / Aprovado) na mesma fileira. Com Ver = Próprios esses filtros não aparecem.
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.
 
 ### Dados (Supabase)

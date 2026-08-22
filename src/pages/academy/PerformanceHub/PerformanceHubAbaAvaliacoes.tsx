@@ -21,7 +21,6 @@ import {
 import {
   acoesAbaAvaliacoesPerformanceHub,
   isEscopoPropriosPerformanceHub,
-  statusContaComoRealizadaPerformanceHub,
 } from "../../../lib/academyPerformanceHubWorkflow";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
@@ -178,11 +177,8 @@ export function PerformanceHubAbaAvaliacoes({
     return sorted;
   }, [avaliacoes, isProprios, showBusca, busca, sort]);
 
-  // MTD / Consolidados: só status Aprovado (`aprovado` + legado `concluida`) — academy.mdc.
-  const rowsKpi = useMemo(
-    () => rowsVisiveis.filter((r) => statusContaComoRealizadaPerformanceHub(r.status)),
-    [rowsVisiveis],
-  );
+  // Consolidados = avaliações publicadas do período (mesma base da tabela).
+  const rowsKpi = rowsVisiveis;
   const kpiAvaliacoes = rowsKpi.length;
   const kpiNotaTotal = mediaNotas(rowsKpi, (r) => r.notaTotal);
   const kpiImagem = mediaNotas(rowsKpi, (r) => r.notaImagem);

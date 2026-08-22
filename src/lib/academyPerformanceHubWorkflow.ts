@@ -68,13 +68,13 @@ export function avaliacaoPertenceAoEscopoProprios(
   return false;
 }
 
-/** Bloco Analisar Avaliações (Gerenciamento) — rascunhos em andamento. */
+/** Bloco Avaliações em Rascunho (Gerenciamento) — só status rascunho do time filtrado. */
 export function avaliacaoVisivelGerenciamentoAnalisar(
   row: PerformanceHubAvaliacao,
   time: PerformanceHubTimeSlug,
 ): boolean {
   if (row.time !== time) return false;
-  return row.status === "rascunho" || row.status === "em_analise" || row.status === "pendente";
+  return row.status === "rascunho";
 }
 
 export function avaliacaoEmAndamentoPorNome(

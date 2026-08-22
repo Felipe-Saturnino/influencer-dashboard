@@ -69,8 +69,10 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     expect(avaliacaoPertenceAoEscopoProprios({ avaliadoNome: "Outra Pessoa" }, escopo)).toBe(false);
   });
 
-  it("Gerenciamento lista só rascunhos em andamento", () => {
+  it("Gerenciamento lista só rascunhos", () => {
     expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "rascunho" }), "game_presenter")).toBe(true);
+    expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "em_analise" }), "game_presenter")).toBe(false);
+    expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "pendente" }), "game_presenter")).toBe(false);
     expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "aguardando" }), "game_presenter")).toBe(false);
     expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "feedback" }), "game_presenter")).toBe(false);
   });

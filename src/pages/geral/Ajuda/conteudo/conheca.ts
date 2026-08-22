@@ -978,12 +978,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas e permissões",
         texto:
-          "**Avaliações** — exige permissão de **Ver** (inclui escopo Próprios para o prestador ver as próprias avaliações publicadas).\n\n**Gerenciamento** — exige permissão de **Editar**; agenda de avaliações e fila de rascunhos para concluir/publicar.\n\n**Configuração** — exige permissão de **Criar**; edição dos pesos das dimensões e critérios. Alterações valem só para **novas** avaliações (escala 0–10).",
+          "**Avaliações** — exige permissão de **Ver** (inclui escopo Próprios para o prestador ver as próprias avaliações publicadas).\n\n**Gerenciamento** e **Configuração** — exigem permissão de **Criar = Sim** (agenda, avaliações em rascunho e pesos de scoring). Com apenas Ver ou Editar, essas abas não aparecem.\n\n**Editar** libera ações de coach na aba Avaliações (ex.: Aplicar Feedback), sem abrir Gerenciamento/Configuração.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma).\n\nCom **Ver = Próprios**, o filtro de **Time** não aparece: a lista fica travada nas **suas** avaliações publicadas (Aguardando, Feedback ou Aprovado), de qualquer time, vinculadas ao cadastro do seu login.",
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma).\n\nNo bloco **Avaliações**, com **Ver = Sim**, use a busca por nome e os filtros **Turno** (Todos Turnos / Manhã / Tarde / Noite) e **Status** (Todos Status / Aguardando / Feedback / Aprovado) na mesma linha — eles restringem a tabela e os Consolidados.\n\nCom **Ver = Próprios**, o filtro de **Time** não aparece: a lista fica travada nas **suas** avaliações publicadas (Aguardando, Feedback ou Aprovado), de qualquer time, vinculadas ao cadastro do seu login.",
       },
       {
         subtitulo: "Status e ações",
@@ -998,7 +998,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Pontuação",
         texto:
-          "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). KPIs MTD (Consolidados) usam média simples só das avaliações **Aprovado** no período do time filtrado — Aguardando e Feedback entram na tabela, mas não na média. Valores exibidos com duas casas decimais.",
+          "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). Os Consolidados usam média simples das avaliações **publicadas** do período (Aguardando, Feedback e Aprovado), alinhadas à tabela. Valores exibidos com duas casas decimais.",
       },
     ],
   },

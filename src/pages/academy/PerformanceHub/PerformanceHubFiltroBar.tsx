@@ -36,16 +36,17 @@ type Props = {
   staffItems: { id: string; name: string }[];
   staffSelecionado: string[];
   onSelecionarStaff: (ids: string[]) => void;
-  canEditarOk: boolean;
-  canCriarOk: boolean;
+  /** Criar = Sim: abas Gerenciamento e Configuração. */
+  canCriarSim: boolean;
   /** Oculto na aba Configuração */
   showStaffFilter: boolean;
 };
 
-function tabsVisiveis(canEditarOk: boolean, canCriarOk: boolean): PerformanceHubTab[] {
+function tabsVisiveis(canCriarSim: boolean): PerformanceHubTab[] {
   const tabs: PerformanceHubTab[] = ["avaliacoes"];
-  if (canEditarOk) tabs.push("gerenciamento");
-  if (canCriarOk) tabs.push("configuracao");
+  if (canCriarSim) {
+    tabs.push("gerenciamento", "configuracao");
+  }
   return tabs;
 }
 
@@ -67,11 +68,10 @@ export function PerformanceHubFiltroBar({
   staffItems,
   staffSelecionado,
   onSelecionarStaff,
-  canEditarOk,
-  canCriarOk,
+  canCriarSim,
   showStaffFilter,
 }: Props) {
-  const tabs = tabsVisiveis(canEditarOk, canCriarOk);
+  const tabs = tabsVisiveis(canCriarSim);
 
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
@@ -111,7 +111,7 @@ export function PerformanceHubFiltroBar({
           />
         ) : null}
 
-        {canEditarOk && showStaffFilter ? (
+        {canCriarSim && showStaffFilter ? (
           <FiltroCalendarioStaffSelect
             mode="single"
             selected={staffSelecionado}
@@ -142,7 +142,7 @@ export function PerformanceHubFiltroBar({
             Avaliações
           </FiltroBarTabButton>
 
-          {canEditarOk ? (
+          {canCriarSim ? (
             <FiltroBarTabButton
               id="tab-performance-hub-gerenciamento"
               active={aba === "gerenciamento"}
@@ -154,7 +154,7 @@ export function PerformanceHubFiltroBar({
             </FiltroBarTabButton>
           ) : null}
 
-          {canCriarOk ? (
+          {canCriarSim ? (
             <FiltroBarTabButton
               id="tab-performance-hub-configuracao"
               active={aba === "configuracao"}

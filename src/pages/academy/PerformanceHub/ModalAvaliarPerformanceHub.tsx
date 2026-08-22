@@ -107,10 +107,8 @@ const TABS_SHUFFLER: { key: ModalTab; label: string; icon: typeof BarChart3 }[] 
   { key: "consideracoes", label: "Considerações", icon: NotebookPen },
 ];
 
-const TIPO_AVALIACAO_OPTIONS: { value: PerformanceHubTipoAvaliacao; label: string }[] = [
-  { value: "performance_coach", label: "Avaliação de Performance Coach" },
-  { value: "extra", label: "Avaliação Extra" },
-];
+/** Único tipo de avaliação na UI — gravação sempre Performance Coach. */
+const TIPO_AVALIACAO_FIXO: PerformanceHubTipoAvaliacao = "performance_coach";
 
 function mapRespostas(criterios: { slug: string }[], existentes?: Record<string, PerformanceHubCriterioResposta>): RespostasPorSlug {
   return criterios.reduce<RespostasPorSlug>((acc, c) => {
@@ -146,9 +144,6 @@ export function ModalAvaliarPerformanceHub({
   const prefillAtual = getPrefill(avaliacao.avaliadoStaffId, avaliacao.avaliadoNome);
 
   const [aba, setAba] = useState<ModalTab>("dados");
-  const [tipoAvaliacao, setTipoAvaliacao] = useState<PerformanceHubTipoAvaliacao | "">(
-    avaliacao.tipoAvaliacao ?? "",
-  );
   const [turno, setTurno] = useState<PerformanceHubTurno>(
     avaliacao.turno ?? prefillAtual?.turno ?? "Manhã",
   );
@@ -316,7 +311,7 @@ export function ModalAvaliarPerformanceHub({
       ...(isShuffler ? respostasProcedimentos : respostasMesa),
     };
     return {
-      tipoAvaliacao: (tipoAvaliacao || "performance_coach") as PerformanceHubTipoAvaliacao,
+      tipoAvaliacao: TIPO_AVALIACAO_FIXO,
       turno,
       estudioId,
       jogo: isShuffler ? null : jogo || null,
@@ -355,13 +350,6 @@ export function ModalAvaliarPerformanceHub({
   function validarConcluir(): string[] {
     const lista: string[] = [];
     const invalid = new Set<string>();
-
-    if (!tipoAvaliacao) {
-      lista.push("Selecione o tipo de avaliação.");
-      invalid.add("tipoAvaliacao");
-    }
-
-    if (tipoAvaliacao !== "performance_coach") return lista;
 
     if (!turno) {
       lista.push("Preencha todos os campos em Dados da Avaliação.");
@@ -598,83 +586,37 @@ export function ModalAvaliarPerformanceHub({
         Avaliador {avaliacao.avaliadorNome}
       </p>
 
-      <div style={{ marginBottom: 14 }}>
-        <label htmlFor="tipoAvaliacao" style={labelStyle(t)}>
-          Tipo de Avaliação
-          {!somenteLeitura ? <CampoObrigatorioMark /> : null}
-        </label>
-        <select
-          id="tipoAvaliacao"
-          value={tipoAvaliacao}
-          disabled={somenteLeitura}
-          onChange={(e) => {
-            setTipoAvaliacao(e.target.value as PerformanceHubTipoAvaliacao | "");
-            setErros([]);
-          }}
-          style={{
-            ...fieldStyle(t),
-            borderColor: invalidFields.has("tipoAvaliacao") ? "#e84025" : t.cardBorder,
-          }}
-          aria-label="Tipo de avaliação"
-        >
-          <option value="">Selecione...</option>
-          {TIPO_AVALIACAO_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+      <div
+        role="tablist"
+        aria-label="Abas da avaliação de performance"
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}
+        onKeyDown={(e) =>
+          onFiltroBarTabsKeyDown(
+            e,
+            tabsVisiveis.map((tab) => tab.key),
+            setAba,
+            (k) => `tab-modal-performance-${k}`,
+          )
+        }
+      >
+        {tabsVisiveis.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <FiltroBarTabButton
+              key={tab.key}
+              id={`tab-modal-performance-${tab.key}`}
+              active={aba === tab.key}
+              aria-controls={`panel-modal-performance-${tab.key}`}
+              onClick={() => setAba(tab.key)}
+              icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            >
+              {tab.label}
+            </FiltroBarTabButton>
+          );
+        })}
       </div>
 
-      {tipoAvaliacao === "extra" ? (
-        <div
-          style={{
-            borderRadius: 12,
-            border: `1px dashed ${t.cardBorder}`,
-            padding: 20,
-            textAlign: "center",
-            color: t.textMuted,
-            fontSize: 13,
-            fontFamily: FONT.body,
-          }}
-        >
-          Fluxo de <strong style={{ color: t.text }}>Avaliação Extra</strong> — em definição no handoff de produto.
-        </div>
-      ) : null}
-
-      {tipoAvaliacao === "performance_coach" ? (
-        <>
-          <div
-            role="tablist"
-            aria-label="Abas da avaliação de performance"
-            style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}
-            onKeyDown={(e) =>
-              onFiltroBarTabsKeyDown(
-                e,
-                tabsVisiveis.map((tab) => tab.key),
-                setAba,
-                (k) => `tab-modal-performance-${k}`,
-              )
-            }
-          >
-            {tabsVisiveis.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <FiltroBarTabButton
-                  key={tab.key}
-                  id={`tab-modal-performance-${tab.key}`}
-                  active={aba === tab.key}
-                  aria-controls={`panel-modal-performance-${tab.key}`}
-                  onClick={() => setAba(tab.key)}
-                  icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
-                >
-                  {tab.label}
-                </FiltroBarTabButton>
-              );
-            })}
-          </div>
-
-          <ModalTabPanel active={aba === "dados"} id="panel-modal-performance-dados" labelledBy="tab-modal-performance-dados">
+      <ModalTabPanel active={aba === "dados"} id="panel-modal-performance-dados" labelledBy="tab-modal-performance-dados">
             <div className="app-grid-2-tight" style={{ gap: 12 }}>
               <div>
                 <label htmlFor="modalTurno" style={labelStyle(t)}>
@@ -923,8 +865,6 @@ export function ModalAvaliarPerformanceHub({
               </div>
             </div>
           </ModalTabPanel>
-        </>
-      ) : null}
 
       {erros.length > 0 ? (
         <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginTop: 12 }}>
@@ -934,8 +874,7 @@ export function ModalAvaliarPerformanceHub({
         </div>
       ) : null}
 
-      {tipoAvaliacao ? (
-        <div
+      <div
           style={{
             marginTop: 14,
             borderTop: `1px solid ${t.cardBorder}`,
@@ -948,24 +887,20 @@ export function ModalAvaliarPerformanceHub({
           }}
         >
           <div style={{ display: "grid", gap: 4, fontSize: 12, fontFamily: FONT.body }}>
-            {tipoAvaliacao === "performance_coach" ? (
-              <>
-                <span style={{ color: t.textMuted }}>Comunicação: {formatNotaPerformanceHub(resultado.notaComunicacao)}</span>
-                <span style={{ color: t.textMuted }}>Imagem: {formatNotaPerformanceHub(resultado.notaImagem)}</span>
-                <span style={{ color: t.textMuted }}>
-                  {labelTerceiraDimensaoTime(variantTime)}:{" "}
-                  {formatNotaPerformanceHub(
-                    isShuffler ? resultado.notaProcedimentos : resultado.notaMesa,
-                  )}
-                </span>
-                <strong style={{ color: t.text }}>Nota Final: {formatNotaPerformanceHub(resultado.notaTotal)}</strong>
-              </>
-            ) : null}
+            <span style={{ color: t.textMuted }}>Comunicação: {formatNotaPerformanceHub(resultado.notaComunicacao)}</span>
+            <span style={{ color: t.textMuted }}>Imagem: {formatNotaPerformanceHub(resultado.notaImagem)}</span>
+            <span style={{ color: t.textMuted }}>
+              {labelTerceiraDimensaoTime(variantTime)}:{" "}
+              {formatNotaPerformanceHub(
+                isShuffler ? resultado.notaProcedimentos : resultado.notaMesa,
+              )}
+            </span>
+            <strong style={{ color: t.text }}>Nota Final: {formatNotaPerformanceHub(resultado.notaTotal)}</strong>
             {statusRascunho ? <span style={{ color: "#22c55e" }}>{statusRascunho}</span> : null}
           </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {!somenteLeitura && tipoAvaliacao === "performance_coach" ? (
+            {!somenteLeitura ? (
               <>
                 <button
                   type="button"
@@ -987,7 +922,6 @@ export function ModalAvaliarPerformanceHub({
             ) : null}
           </div>
         </div>
-      ) : null}
     </ModalBase>
   );
 }
