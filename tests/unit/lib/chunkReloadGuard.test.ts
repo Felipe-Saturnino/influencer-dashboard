@@ -1,9 +1,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  isChunkLoadError,
   limparParamCacheBustDaUrl,
   recarregarAposErroDeChunk,
   reloadAfterChunkError,
 } from "@/lib/chunkReloadGuard";
+
+describe("isChunkLoadError", () => {
+  it("reconhece mensagens explícitas de chunk / import dinâmico", () => {
+    expect(isChunkLoadError(new Error("Failed to fetch dynamically imported module"))).toBe(true);
+    expect(isChunkLoadError(new Error("Importing a module script failed"))).toBe(true);
+    expect(isChunkLoadError(Object.assign(new Error("x"), { name: "ChunkLoadError" }))).toBe(true);
+  });
+
+  it("reconhece Load failed do Safari no ErrorBoundary (default)", () => {
+    expect(isChunkLoadError(new TypeError("Load failed"))).toBe(true);
+  });
+
+  it("não trata Load failed genérico em unhandledrejection (allowSafariLoadFailed false)", () => {
+    expect(isChunkLoadError(new TypeError("Load failed"), { allowSafariLoadFailed: false })).toBe(false);
+    expect(
+      isChunkLoadError(new Error("Importing a module script failed"), { allowSafariLoadFailed: false }),
+    ).toBe(true);
+  });
+
+  it("não classifica erros de aplicação comuns", () => {
+    expect(isChunkLoadError(new Error("Cannot read properties of undefined"))).toBe(false);
+    expect(isChunkLoadError(null)).toBe(false);
+  });
+});
 
 describe("reloadAfterChunkError", () => {
   const STORAGE_KEY = "spin_chunk_reload_guard_v1";

@@ -159,7 +159,7 @@ export function InformacoesStaffHome({
     }
 
     for (const row of portal.lista) {
-      // Só some da Home após «Li e Ocultar» (sem janela de 10 dias).
+      // Janela de 10 dias (e fixados) no fetch; «Li e Ocultar» remove da Home.
       if (isLido(row.id)) continue;
       items.push({
         source: "portal_rh",
@@ -190,10 +190,12 @@ export function InformacoesStaffHome({
   }, [lista]);
   const reacoes = useConteudoReacoes(chavesReacao);
 
-  const loading = info.loading || portal.loading;
-  const erroTotal = lista.length === 0 && (info.erro || portal.erro);
+  /** Skeleton só enquanto nenhuma fonte entregou itens; depois pinta o que já chegou. */
+  const loadingBloqueante = lista.length === 0 && (info.loading || portal.loading);
+  const loadingParcial = lista.length > 0 && (info.loading || portal.loading);
+  const erroTotal = lista.length === 0 && !info.loading && !portal.loading && (info.erro || portal.erro);
 
-  if (!loading && !erroTotal && lista.length === 0) return null;
+  if (!loadingBloqueante && !erroTotal && lista.length === 0) return null;
 
   return (
     <section style={box} aria-labelledby={titleId}>
@@ -201,7 +203,7 @@ export function InformacoesStaffHome({
         Informações
       </h2>
 
-      {loading ? (
+      {loadingBloqueante ? (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}>
           <Loader2 className="app-lucide-spin" size={20} color="var(--brand-primary, #7c3aed)" aria-hidden />
           <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
@@ -211,40 +213,56 @@ export function InformacoesStaffHome({
           Não foi possível carregar as informações. Se o problema persistir, entre em contato com o suporte.
         </p>
       ) : (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-          {lista.map((item) =>
-            item.source === "informativo" ? (
-              <li key={item.id}>
-                <HomeStaffFeedCard
-                  title={item.titulo}
-                  recolhido={isRecolhido(item.id)}
-                  onExpandir={() => expandir(item.id)}
-                  onLiEOcultar={() => marcarLido(item.id)}
-                  rodape={rodapeAutorData(item.autorNome, item.published_at)}
-                  reacoes={
-                    <BarraReacaoConteudoLigada origem="informativo" contentId={item.id} api={reacoes} />
-                  }
-                >
-                  <CorpoHtmlInformativo html={item.descricao} color={t.text} />
-                </HomeStaffFeedCard>
-              </li>
-            ) : (
-              <li key={item.id}>
-                <HomeStaffFeedCard
-                  title={tituloPortalRh(item)}
-                  titleIcon={iconePortalRh(item.kind)}
-                  recolhido={false}
-                  onExpandir={() => undefined}
-                  onLiEOcultar={() => marcarLido(item.id)}
-                  rodape={rodapeAutorData(item.autorNome, item.published_at)}
-                  reacoes={reacoesComunicadoRhHome(item, reacoes)}
-                >
-                  <DescricaoPortalRh item={item} />
-                </HomeStaffFeedCard>
-              </li>
-            ),
-          )}
-        </ul>
+        <>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+            {lista.map((item) =>
+              item.source === "informativo" ? (
+                <li key={item.id}>
+                  <HomeStaffFeedCard
+                    title={item.titulo}
+                    recolhido={isRecolhido(item.id)}
+                    onExpandir={() => expandir(item.id)}
+                    onLiEOcultar={() => marcarLido(item.id)}
+                    rodape={rodapeAutorData(item.autorNome, item.published_at)}
+                    reacoes={
+                      <BarraReacaoConteudoLigada origem="informativo" contentId={item.id} api={reacoes} />
+                    }
+                  >
+                    <CorpoHtmlInformativo html={item.descricao} color={t.text} />
+                  </HomeStaffFeedCard>
+                </li>
+              ) : (
+                <li key={item.id}>
+                  <HomeStaffFeedCard
+                    title={tituloPortalRh(item)}
+                    titleIcon={iconePortalRh(item.kind)}
+                    recolhido={false}
+                    onExpandir={() => undefined}
+                    onLiEOcultar={() => marcarLido(item.id)}
+                    rodape={rodapeAutorData(item.autorNome, item.published_at)}
+                    reacoes={reacoesComunicadoRhHome(item, reacoes)}
+                  >
+                    <DescricaoPortalRh item={item} />
+                  </HomeStaffFeedCard>
+                </li>
+              ),
+            )}
+          </ul>
+          {loadingParcial ? (
+            <div
+              style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 10 }}
+              aria-live="polite"
+            >
+              <Loader2
+                className="app-lucide-spin"
+                size={14}
+                color="var(--brand-primary, #7c3aed)"
+                aria-hidden
+              />
+              <span style={{ color: t.textMuted, fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
+            </div>
+          ) : null}
+        </>
       )}
     </section>
   );

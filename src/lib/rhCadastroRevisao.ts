@@ -1,6 +1,6 @@
 import type { PageKey } from "../types";
 import type { RhFuncionario, RhFuncionarioStatus } from "../types/rhFuncionario";
-import { buscarRhFuncionarioAtivoPorEmailLogin } from "./rhFuncionarioLoginMatch";
+import { buscarRhFuncionarioAtivoPorEmailLoginCached, invalidarCacheRhFuncionarioLogin } from "./rhFuncionarioLoginMatch";
 
 export const MESES_CICLO_REVISAO_CADASTRO = 6;
 
@@ -97,6 +97,7 @@ export function payloadMarcarRevisaoCadastral(tipo: RhCadastroRevisaoTipo): {
 
 export function notificarRevisaoCadastralAtualizada(): void {
   if (typeof window !== "undefined") {
+    invalidarCacheRhFuncionarioLogin();
     window.dispatchEvent(new CustomEvent("rh-cadastro-revisao-atualizada"));
   }
 }
@@ -106,7 +107,7 @@ export async function buscarFuncionarioRevisaoCadastralPorEmail(
 ): Promise<RhFuncionario | null> {
   const em = email?.trim();
   if (!em) return null;
-  return buscarRhFuncionarioAtivoPorEmailLogin(em);
+  return buscarRhFuncionarioAtivoPorEmailLoginCached(em);
 }
 
 /** Usar `can_editar` de Dados de Cadastro — não confundir com `can_view` (Ver Próprios ≠ gate). */

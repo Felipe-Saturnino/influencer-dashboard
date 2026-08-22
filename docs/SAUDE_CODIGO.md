@@ -43,7 +43,8 @@ Com lazy loading + `codeSplitting.groups`, cada página gera chunks com hash no 
 **Solução implementada:**
 
 - `ErrorBoundary` detecta ChunkLoadError e recarrega a página automaticamente.
-- Listener global em `main.tsx` para `unhandledrejection` de chunk também dispara reload.
+- Listener global em `main.tsx` (`registerChunkReloadListeners`): `unhandledrejection` + evento Vite `vite:preloadError`.
+- Safari/iOS: falha de `import()` costuma ser só `TypeError: Load failed` (sem “chunk” no texto) — `isChunkLoadError` no ErrorBoundary trata isso; o preload do Vite cobre o boot.
 
 ### HTTP 500 em chunk estático — Cloudflare Pages (ícones)
 

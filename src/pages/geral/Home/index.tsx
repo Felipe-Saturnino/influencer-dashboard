@@ -335,6 +335,29 @@ export default function Home() {
   const [revisaoCadastralHomeReady, setRevisaoCadastralHomeReady] = useState(false);
 
   useEffect(() => {
+    const roleGate = effectiveRole ?? user?.role;
+    const homesDedicadas: Role[] = [
+      "investidor",
+      "executivo",
+      "prestador",
+      "figurino",
+      "comunicacao",
+      "performance_coach",
+      "service_manager",
+      "customer_service",
+      "game_presenter",
+      "shuffler",
+      "tech_ops",
+      "shift_leader",
+      "rh",
+      "operador",
+    ];
+    if (roleGate && homesDedicadas.includes(roleGate)) {
+      setRevisaoCadastralPendenteHome(false);
+      setRevisaoCadastralHomeReady(true);
+      return;
+    }
+
     if (!user?.email?.trim()) {
       setRevisaoCadastralPendenteHome(false);
       setRevisaoCadastralHomeReady(true);
@@ -366,7 +389,7 @@ export default function Home() {
       cancelled = true;
       window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
     };
-  }, [user, permissionsAcoes.rh_dados_cadastro?.editar, simulacaoSomenteLeitura]);
+  }, [user, permissionsAcoes.rh_dados_cadastro?.editar, simulacaoSomenteLeitura, effectiveRole]);
 
   useEffect(() => {
     const roleDados = effectiveRole ?? user?.role;

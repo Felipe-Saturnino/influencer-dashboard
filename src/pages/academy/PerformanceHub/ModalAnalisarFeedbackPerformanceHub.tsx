@@ -1,5 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ClipboardList, Image, ListChecks, MessageSquare, TableProperties } from "lucide-react";
+import {
+  ClipboardList,
+  Image,
+  ListChecks,
+  MessageSquare,
+  MessageSquareText,
+  TableProperties,
+} from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -29,27 +36,35 @@ import { PERFORMANCE_HUB_JOGOS_META } from "../../../lib/academyPerformanceHubDa
 import type { PerformanceHubEstudioCadastro } from "../../../lib/academyPerformanceHubCadastroPrefill";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { LinkAssistirVideoPerformanceHub } from "../../../components/LinkAssistirVideoPerformanceHub";
+import { formatDataHoraHistoricoPerformanceHub } from "../../../lib/academyPerformanceHubAvaliacoesFetch";
 
-type ModalTab = "dados" | "comunicacao" | "imagem" | "mesa" | "procedimentos";
+type ModalTab = "dados" | "comunicacao" | "imagem" | "mesa" | "procedimentos" | "feedback";
+
+export type ModalRevisaoAvaliacaoModo = "analisar" | "aplicar" | "ver";
 
 type Props = {
   avaliacao: PerformanceHubAvaliacao;
   variantTime: PerformanceHubTimeSlug;
   config: PerformanceHubScoringConfigGamePresenter | PerformanceHubScoringConfigShuffler;
   estudios: PerformanceHubEstudioCadastro[];
+  modo: ModalRevisaoAvaliacaoModo;
   onClose: () => void;
-  onAprovar: () => void | Promise<void>;
-  onSolicitarFeedback: (texto: string) => void | Promise<void>;
+  /** Prestador em Aguardando — aprova sem texto. */
+  onAprovar?: () => void | Promise<void>;
+  /** Prestador em Aguardando — solicita esclarecimento. */
+  onSolicitarFeedback?: (texto: string) => void | Promise<void>;
+  /** Coach em Feedback — aplica feedback e aprova. */
+  onAplicarFeedback?: (texto: string) => void | Promise<void>;
 };
 
-const TABS_GP: { key: ModalTab; label: string; icon: typeof ClipboardList }[] = [
+const TABS_GP_BASE: { key: ModalTab; label: string; icon: typeof ClipboardList }[] = [
   { key: "dados", label: "Dados da Avaliação", icon: ClipboardList },
   { key: "comunicacao", label: "Comunicação", icon: MessageSquare },
   { key: "imagem", label: "Imagem", icon: Image },
   { key: "mesa", label: "Mesa", icon: TableProperties },
 ];
 
-const TABS_SHUFFLER: { key: ModalTab; label: string; icon: typeof ClipboardList }[] = [
+const TABS_SHUFFLER_BASE: { key: ModalTab; label: string; icon: typeof ClipboardList }[] = [
   { key: "dados", label: "Dados da Avaliação", icon: ClipboardList },
   { key: "comunicacao", label: "Comunicação", icon: MessageSquare },
   { key: "imagem", label: "Imagem", icon: Image },
@@ -59,28 +74,53 @@ const TABS_SHUFFLER: { key: ModalTab; label: string; icon: typeof ClipboardList 
 const PLACEHOLDER_SOLICITAR =
   "Descreva abaixo o que da avaliação você deseja entender melhor para que o Shift Leader possa repassar contigo";
 
+const PLACEHOLDER_APLICAR = "Descreva o feedback aplicado para registro do repasse";
+
 export function ModalAnalisarFeedbackPerformanceHub({
   avaliacao,
   variantTime,
   config,
   estudios,
+  modo,
   onClose,
   onAprovar,
   onSolicitarFeedback,
+  onAplicarFeedback,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const isShuffler = variantTime === "shuffler";
   const configGp = isShuffler ? null : (config as PerformanceHubScoringConfigGamePresenter);
   const configSh = isShuffler ? (config as PerformanceHubScoringConfigShuffler) : null;
-  const tabsVisiveis = isShuffler ? TABS_SHUFFLER : TABS_GP;
+
+  const temAbaFeedback =
+    modo === "ver" &&
+    Boolean(
+      avaliacao.solicitacaoFeedbackTexto?.trim() ||
+        avaliacao.aplicacaoFeedbackTexto?.trim(),
+    );
+
+  const tabsVisiveis = useMemo(() => {
+    const base = isShuffler ? TABS_SHUFFLER_BASE : TABS_GP_BASE;
+    if (!temAbaFeedback) return base;
+    return [
+      ...base,
+      { key: "feedback" as const, label: "Feedback", icon: MessageSquareText },
+    ];
+  }, [isShuffler, temAbaFeedback]);
 
   const [aba, setAba] = useState<ModalTab>("dados");
   const [popupAprovar, setPopupAprovar] = useState(false);
   const [popupSolicitar, setPopupSolicitar] = useState(false);
+  const [popupAplicar, setPopupAplicar] = useState(false);
   const [textoSolicitacao, setTextoSolicitacao] = useState("");
-  const [erroSolicitacao, setErroSolicitacao] = useState<string | null>(null);
+  const [textoAplicacao, setTextoAplicacao] = useState("");
+  const [erroTexto, setErroTexto] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+
+  const showSolicitar = modo === "analisar" && avaliacao.status !== "feedback";
+  const showAprovarSimples = modo === "analisar";
+  const showAplicar = modo === "aplicar";
 
   const estudioNome = useMemo(() => {
     const slug = avaliacao.estudioId;
@@ -104,6 +144,7 @@ export function ModalAnalisarFeedbackPerformanceHub({
   const notaTerceira = isShuffler ? avaliacao.notaProcedimentos : avaliacao.notaMesa;
 
   async function confirmarAprovar() {
+    if (!onAprovar) return;
     setSalvando(true);
     try {
       await onAprovar();
@@ -115,10 +156,11 @@ export function ModalAnalisarFeedbackPerformanceHub({
   async function confirmarSolicitar() {
     const texto = textoSolicitacao.trim();
     if (!texto) {
-      setErroSolicitacao("Descreva o que deseja entender melhor para solicitar feedback.");
+      setErroTexto("Descreva o que deseja entender melhor para solicitar feedback.");
       return;
     }
-    setErroSolicitacao(null);
+    if (!onSolicitarFeedback) return;
+    setErroTexto(null);
     setSalvando(true);
     try {
       await onSolicitarFeedback(texto);
@@ -127,24 +169,47 @@ export function ModalAnalisarFeedbackPerformanceHub({
     }
   }
 
+  async function confirmarAplicar() {
+    const texto = textoAplicacao.trim();
+    if (!texto) {
+      setErroTexto("Descreva o feedback aplicado para registro do repasse.");
+      return;
+    }
+    if (!onAplicarFeedback) return;
+    setErroTexto(null);
+    setSalvando(true);
+    try {
+      await onAplicarFeedback(texto);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  const tituloModal =
+    modo === "aplicar"
+      ? `Aplicar Feedback · ${avaliacao.avaliadoNome}`
+      : modo === "ver"
+        ? `${avaliacao.avaliadoNome} · ${avaliacao.data}`
+        : `${avaliacao.avaliadoNome} · ${avaliacao.data}`;
+
   return (
     <>
       <ModalBase maxWidth={920} onClose={onClose}>
-        <ModalHeader title={`${avaliacao.avaliadoNome} · ${avaliacao.data}`} onClose={onClose} />
+        <ModalHeader title={tituloModal} onClose={onClose} />
         <p style={{ margin: "0 0 14px", fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
           Avaliador {avaliacao.avaliadorNome}
         </p>
 
         <div
           role="tablist"
-          aria-label="Abas da análise de feedback"
+          aria-label="Abas da avaliação"
           style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}
           onKeyDown={(e) =>
             onFiltroBarTabsKeyDown(
               e,
               tabsVisiveis.map((tab) => tab.key),
               setAba,
-              (k) => `tab-modal-feedback-${k}`,
+              (k) => `tab-modal-revisao-${k}`,
             )
           }
         >
@@ -153,9 +218,9 @@ export function ModalAnalisarFeedbackPerformanceHub({
             return (
               <FiltroBarTabButton
                 key={tab.key}
-                id={`tab-modal-feedback-${tab.key}`}
+                id={`tab-modal-revisao-${tab.key}`}
                 active={aba === tab.key}
-                aria-controls={`panel-modal-feedback-${tab.key}`}
+                aria-controls={`panel-modal-revisao-${tab.key}`}
                 onClick={() => setAba(tab.key)}
                 icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
               >
@@ -165,7 +230,7 @@ export function ModalAnalisarFeedbackPerformanceHub({
           })}
         </div>
 
-        <ModalTabPanel active={aba === "dados"} id="panel-modal-feedback-dados" labelledBy="tab-modal-feedback-dados">
+        <ModalTabPanel active={aba === "dados"} id="panel-modal-revisao-dados" labelledBy="tab-modal-revisao-dados">
           <LinhaTexto t={t}>
             <strong>Turno:</strong> {avaliacao.turno ?? "—"}
             {" · "}
@@ -199,54 +264,92 @@ export function ModalAnalisarFeedbackPerformanceHub({
 
         <ModalTabPanel
           active={aba === "comunicacao"}
-          id="panel-modal-feedback-comunicacao"
-          labelledBy="tab-modal-feedback-comunicacao"
+          id="panel-modal-revisao-comunicacao"
+          labelledBy="tab-modal-revisao-comunicacao"
         >
           {renderCriteriosTexto(config.comunicacao.criterios, avaliacao.criterios, t)}
         </ModalTabPanel>
 
-        <ModalTabPanel active={aba === "imagem"} id="panel-modal-feedback-imagem" labelledBy="tab-modal-feedback-imagem">
+        <ModalTabPanel active={aba === "imagem"} id="panel-modal-revisao-imagem" labelledBy="tab-modal-revisao-imagem">
           {renderCriteriosTexto(config.imagem.criterios, avaliacao.criterios, t)}
         </ModalTabPanel>
 
-        <ModalTabPanel active={aba === "mesa"} id="panel-modal-feedback-mesa" labelledBy="tab-modal-feedback-mesa">
+        <ModalTabPanel active={aba === "mesa"} id="panel-modal-revisao-mesa" labelledBy="tab-modal-revisao-mesa">
           {renderCriteriosTexto(mesaCriterios, avaliacao.criterios, t)}
         </ModalTabPanel>
 
         <ModalTabPanel
           active={aba === "procedimentos"}
-          id="panel-modal-feedback-procedimentos"
-          labelledBy="tab-modal-feedback-procedimentos"
+          id="panel-modal-revisao-procedimentos"
+          labelledBy="tab-modal-revisao-procedimentos"
         >
           {configSh ? renderCriteriosTexto(configSh.procedimentos.criterios, avaliacao.criterios, t) : null}
         </ModalTabPanel>
 
-        <div
-          style={{
-            marginTop: 18,
-            borderTop: `1px solid ${t.cardBorder}`,
-            paddingTop: 14,
-            display: "flex",
-            gap: 10,
-            flexWrap: "wrap",
-            justifyContent: "flex-end",
-          }}
+        <ModalTabPanel
+          active={aba === "feedback"}
+          id="panel-modal-revisao-feedback"
+          labelledBy="tab-modal-revisao-feedback"
         >
-          <button type="button" onClick={() => setPopupAprovar(true)} style={btnSecundario(t)}>
-            Aprovar
-          </button>
-          <button type="button" onClick={() => setPopupSolicitar(true)} style={btnPrimario(brand)}>
-            Solicitar Feedback
-          </button>
-        </div>
+          {avaliacao.solicitacaoFeedbackTexto?.trim() ? (
+            <QuadroFeedback
+              t={t}
+              titulo="Solicitação de Feedback"
+              usuario={avaliacao.solicitacaoFeedbackPorNome ?? avaliacao.avaliadoNome}
+              quando={avaliacao.solicitacaoFeedbackEm}
+              mensagem={avaliacao.solicitacaoFeedbackTexto}
+            />
+          ) : null}
+          {avaliacao.aplicacaoFeedbackTexto?.trim() ? (
+            <QuadroFeedback
+              t={t}
+              titulo="Aplicação de Feedback"
+              usuario={avaliacao.aplicacaoFeedbackPorNome ?? avaliacao.avaliadorNome}
+              quando={avaliacao.aplicacaoFeedbackEm}
+              mensagem={avaliacao.aplicacaoFeedbackTexto}
+            />
+          ) : null}
+          {!avaliacao.solicitacaoFeedbackTexto?.trim() && !avaliacao.aplicacaoFeedbackTexto?.trim() ? (
+            <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
+              Nenhum registro de feedback nesta avaliação.
+            </p>
+          ) : null}
+        </ModalTabPanel>
+
+        {modo !== "ver" ? (
+          <div
+            style={{
+              marginTop: 18,
+              borderTop: `1px solid ${t.cardBorder}`,
+              paddingTop: 14,
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+            }}
+          >
+            {showSolicitar ? (
+              <button type="button" onClick={() => setPopupSolicitar(true)} style={btnSecundario(t)}>
+                Solicitar Feedback
+              </button>
+            ) : null}
+            {showAprovarSimples ? (
+              <button type="button" onClick={() => setPopupAprovar(true)} style={btnPrimario(brand)}>
+                Aprovar
+              </button>
+            ) : null}
+            {showAplicar ? (
+              <button type="button" onClick={() => setPopupAplicar(true)} style={btnPrimario(brand)}>
+                Aprovar
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </ModalBase>
 
       {popupAprovar ? (
         <ModalBase maxWidth={440} onClose={() => !salvando && setPopupAprovar(false)} zIndex={1100}>
-          <ModalHeader
-            title="Aprovar Avaliação"
-            onClose={() => !salvando && setPopupAprovar(false)}
-          />
+          <ModalHeader title="Aprovar Avaliação" onClose={() => !salvando && setPopupAprovar(false)} />
           <p style={textoPopupStyle(t)}>
             Ao clicar abaixo você informa que entendeu os pontos sinalizados na avaliação
           </p>
@@ -286,32 +389,15 @@ export function ModalAnalisarFeedbackPerformanceHub({
             value={textoSolicitacao}
             onChange={(e) => {
               setTextoSolicitacao(e.target.value);
-              if (erroSolicitacao) setErroSolicitacao(null);
+              if (erroTexto) setErroTexto(null);
             }}
             placeholder={PLACEHOLDER_SOLICITAR}
             rows={5}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: `1px solid ${erroSolicitacao ? "#e84025" : t.cardBorder}`,
-              background: t.inputBg,
-              color: t.text,
-              fontSize: 13,
-              fontFamily: FONT.body,
-              resize: "vertical",
-              minHeight: 120,
-              boxSizing: "border-box",
-              marginBottom: erroSolicitacao ? 8 : 20,
-            }}
+            style={textareaStyle(t, Boolean(erroTexto))}
             aria-label="Descreva o que deseja entender melhor na avaliação"
           />
-          {erroSolicitacao ? (
-            <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, marginBottom: 16, fontFamily: FONT.body }}>
-              {erroSolicitacao}
-            </div>
-          ) : null}
-          <div style={{ display: "flex", gap: 10 }}>
+          {erroTexto ? <AlertaErro texto={erroTexto} /> : null}
+          <div style={{ display: "flex", gap: 10, marginTop: erroTexto ? 0 : 4 }}>
             <button
               type="button"
               disabled={salvando}
@@ -331,7 +417,102 @@ export function ModalAnalisarFeedbackPerformanceHub({
           </div>
         </ModalBase>
       ) : null}
+
+      {popupAplicar ? (
+        <ModalBase maxWidth={480} onClose={() => !salvando && setPopupAplicar(false)} zIndex={1100}>
+          <ModalHeader title="Aplicar Feedback" onClose={() => !salvando && setPopupAplicar(false)} />
+          <label htmlFor="aplicacaoFeedbackTexto" style={labelCampoStyle(t)}>
+            Feedback
+            <CampoObrigatorioMark />
+          </label>
+          <textarea
+            id="aplicacaoFeedbackTexto"
+            value={textoAplicacao}
+            onChange={(e) => {
+              setTextoAplicacao(e.target.value);
+              if (erroTexto) setErroTexto(null);
+            }}
+            placeholder={PLACEHOLDER_APLICAR}
+            rows={5}
+            style={textareaStyle(t, Boolean(erroTexto))}
+            aria-label="Descreva o feedback aplicado para registro do repasse"
+          />
+          {erroTexto ? <AlertaErro texto={erroTexto} /> : null}
+          <div style={{ display: "flex", gap: 10, marginTop: erroTexto ? 0 : 4 }}>
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={() => setPopupAplicar(false)}
+              style={btnSecundario(t, { flex: 1 })}
+            >
+              Voltar
+            </button>
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={() => void confirmarAplicar()}
+              style={btnPrimario(brand, { flex: 1 })}
+            >
+              {salvando ? "Salvando…" : "Aprovar"}
+            </button>
+          </div>
+        </ModalBase>
+      ) : null}
     </>
+  );
+}
+
+function QuadroFeedback({
+  t,
+  titulo,
+  usuario,
+  quando,
+  mensagem,
+}: {
+  t: ReturnType<typeof useApp>["theme"];
+  titulo: string;
+  usuario: string;
+  quando: string | null | undefined;
+  mensagem: string;
+}) {
+  return (
+    <div
+      style={{
+        marginBottom: 14,
+        padding: 14,
+        borderRadius: 12,
+        border: `1px solid ${t.cardBorder}`,
+        background: t.inputBg,
+        fontFamily: FONT.body,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          color: "var(--brand-primary, #7c3aed)",
+          marginBottom: 8,
+        }}
+      >
+        {titulo}
+      </div>
+      <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
+        {usuario}
+        {" · "}
+        {quando ? formatDataHoraHistoricoPerformanceHub(quando) : "—"}
+      </div>
+      <div style={{ fontSize: 13, color: t.text, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{mensagem}</div>
+    </div>
+  );
+}
+
+function AlertaErro({ texto }: { texto: string }) {
+  return (
+    <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, marginBottom: 16, fontFamily: FONT.body }}>
+      {texto}
+    </div>
   );
 }
 
@@ -429,6 +610,23 @@ function labelCampoStyle(t: ReturnType<typeof useApp>["theme"]) {
     marginBottom: 6,
     fontFamily: FONT.body,
   } as const;
+}
+
+function textareaStyle(t: ReturnType<typeof useApp>["theme"], erro: boolean) {
+  return {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: `1px solid ${erro ? "#e84025" : t.cardBorder}`,
+    background: t.inputBg,
+    color: t.text,
+    fontSize: 13,
+    fontFamily: FONT.body,
+    resize: "vertical" as const,
+    minHeight: 120,
+    boxSizing: "border-box" as const,
+    marginBottom: erro ? 8 : 20,
+  };
 }
 
 function btnSecundario(t: ReturnType<typeof useApp>["theme"], extra?: { flex?: number }) {

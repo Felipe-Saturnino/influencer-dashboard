@@ -91,6 +91,25 @@ export async function carregarMetaAutoresPortalRh(userIds: string[]): Promise<Re
   return out;
 }
 
+/**
+ * Só nome do autor (profiles) — uso na Home, onde o rodapé não exibe time.
+ * Evita organograma + dump de prestadores.
+ */
+export async function carregarNomesAutoresPortalRh(
+  userIds: string[],
+): Promise<Record<string, PortalRhAutorInfo>> {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (ids.length === 0) return {};
+
+  const { data: profs } = await supabase.from("profiles").select("id, name").in("id", ids);
+  const out: Record<string, PortalRhAutorInfo> = {};
+  for (const p of profs ?? []) {
+    const row = p as { id: string; name: string | null };
+    out[row.id] = { nome: (row.name ?? "").trim() || "Equipe", time: "—" };
+  }
+  return out;
+}
+
 export function autorIdPostagem(row: {
   created_by?: string | null;
   published_by?: string | null;

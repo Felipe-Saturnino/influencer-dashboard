@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { useIdentidadeEfetiva } from "../../../../hooks/useIdentidadeEfetiva";
 import { usePermission } from "../../../../hooks/usePermission";
-import { getPeriodoHistoricoCompetencias } from "../../../../lib/dashboardHelpers";
+import { getHomeStaffFeedNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
 import {
   autorIdPostagem,
-  carregarMetaAutoresPortalRh,
+  carregarNomesAutoresPortalRh,
   type PortalRhAutorInfo,
 } from "../../../../lib/portalRhAutorMeta";
 import {
   documentoVisivelPorPermissaoPortalRh,
   setoresAplicavelDoUsuario,
 } from "../../../../lib/portalRhDocumentoNormativo";
-import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../../lib/rhFuncionarioLoginMatch";
+import { buscarRhFuncionarioAtivoPorEmailLoginCached } from "../../../../lib/rhFuncionarioLoginMatch";
 import { carregarOpcoesTimesOrganograma } from "../../../../lib/rhOrganogramaFetch";
 import { flattenVinculosDeGrupos } from "../../../../lib/rhOrganogramaTree";
 import { fetchAllPages } from "../../../../lib/supabasePaginate";
@@ -75,7 +75,7 @@ export function useHomePortalRhFeed() {
       setLoading(true);
       setErro(false);
       try {
-        const { inicio: histInicio } = getPeriodoHistoricoCompetencias();
+        const desdeIso = getHomeStaffFeedNovidadeDesdeIso();
         const comCols = "id, titulo, status, published_at, created_by, published_by, is_pinned";
         const docCols =
           "id, titulo, status, published_at, created_by, published_by, aplicavel_a";
@@ -93,13 +93,15 @@ export function useHomePortalRhFeed() {
           }
         };
 
+        const precisaSetores = perm.canView === "proprios" && perm.canEditar !== "sim";
+
         const [comRes, docRes, talkRes, funcionario, org] = await Promise.all([
           fetchPortalSafe<PostagemRow & { is_pinned?: boolean | null }>("comunicados", async (from, to) => {
             const { data, error } = await supabase
               .from("rh_portal_comunicado")
               .select(comCols)
               .eq("status", "publicado")
-              .or(`is_pinned.eq.true,published_at.gte.${histInicio}`)
+              .or(`is_pinned.eq.true,published_at.gte.${desdeIso}`)
               .order("published_at", { ascending: false })
               .order("id", { ascending: true })
               .range(from, to);
@@ -110,7 +112,7 @@ export function useHomePortalRhFeed() {
               .from("rh_portal_documento")
               .select(docCols)
               .eq("status", "publicado")
-              .gte("published_at", histInicio)
+              .gte("published_at", desdeIso)
               .order("published_at", { ascending: false })
               .order("id", { ascending: true })
               .range(from, to);
@@ -121,22 +123,21 @@ export function useHomePortalRhFeed() {
               .from("rh_portal_rh_talk")
               .select(talkCols)
               .eq("status", "publicado")
-              .gte("published_at", histInicio)
+              .gte("published_at", desdeIso)
               .order("published_at", { ascending: false })
               .order("id", { ascending: true })
               .range(from, to);
             return { data: (data ?? []) as PostagemRow[], error };
           }),
-          (async () => {
-            if (!emailEfetivo?.trim()) return null;
-            try {
-              return await buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo);
-            } catch (e) {
-              console.error("[Home] Portal RH feed (funcionario):", e);
-              return null;
-            }
-          })(),
-          carregarOpcoesTimesOrganograma(),
+          precisaSetores && emailEfetivo?.trim()
+            ? buscarRhFuncionarioAtivoPorEmailLoginCached(emailEfetivo).catch((e) => {
+                console.error("[Home] Portal RH feed (funcionario):", e);
+                return null;
+              })
+            : Promise.resolve(null),
+          precisaSetores
+            ? carregarOpcoesTimesOrganograma()
+            : Promise.resolve({ grupos: [], opcoes: [], error: null }),
         ]);
 
         if (cancelled) return;
@@ -146,7 +147,7 @@ export function useHomePortalRhFeed() {
         const talkData = talkRes.rows;
         const fontesFalharam = comRes.falhou && docRes.falhou && talkRes.falhou;
 
-        const setores = funcionario
+        const setores = precisaSetores && funcionario
           ? setoresAplicavelDoUsuario(funcionario, flattenVinculosDeGrupos(org.grupos))
           : [];
 
@@ -198,7 +199,7 @@ export function useHomePortalRhFeed() {
         const autorIds = drafts.map((d) => d.autorId).filter((id): id is string => !!id);
         let meta: Record<string, PortalRhAutorInfo> = {};
         try {
-          meta = await carregarMetaAutoresPortalRh(autorIds);
+          meta = await carregarNomesAutoresPortalRh(autorIds);
         } catch (e) {
           console.error("[Home] Portal RH feed (autores):", e);
         }

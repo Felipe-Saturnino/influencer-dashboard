@@ -72,7 +72,7 @@ function contarRealizadasMes(
   return avaliacoes.filter(
     (row) =>
       row.time === staff.time &&
-      row.status === "concluida" &&
+      row.status === "aprovado" &&
       (row.avaliadoStaffId === staff.id || row.avaliadoNome === staff.nome) &&
       avaliacaoNoMes(row, mes),
   ).length;

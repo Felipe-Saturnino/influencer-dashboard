@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../../../../context/AppContext";
-import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../../lib/rhFuncionarioLoginMatch";
+import { buscarRhFuncionarioAtivoPorEmailLoginCached } from "../../../../lib/rhFuncionarioLoginMatch";
 import {
   extrairPrimeiroNome,
   isAniversarioEmpresaHoje,
@@ -28,7 +28,7 @@ export function useHomePrestadorCelebracoes() {
     void (async () => {
       setLoading(true);
       try {
-        const row = await buscarRhFuncionarioAtivoPorEmailLogin(email);
+        const row = await buscarRhFuncionarioAtivoPorEmailLoginCached(email);
         if (cancelled) return;
 
         const nomeCadastro = row?.nome?.trim() || dadosUsuarioEfetivo?.name?.trim() || user?.name?.trim() || "Prestador";

@@ -60,12 +60,17 @@ async function buscarGaleriaCards(
 ): Promise<(HomeBlogueiroGaleriaGerais | HomeBlogueiroGaleriaMinhas)[]> {
   const cards: (HomeBlogueiroGaleriaGerais | HomeBlogueiroGaleriaMinhas)[] = [];
 
-  const { data: geraisRows, error: errGerais } = await supabase
-    .from("marketing_fotos")
-    .select("id, created_at, uploaded_by, evento_id, tipo, marketing_eventos(id, nome, ativo)")
-    .eq("tipo", "geral")
-    .gte("created_at", desdeIso)
-    .order("created_at", { ascending: false });
+  const [geraisPack, meu] = await Promise.all([
+    supabase
+      .from("marketing_fotos")
+      .select("id, created_at, uploaded_by, evento_id, tipo, marketing_eventos(id, nome, ativo)")
+      .eq("tipo", "geral")
+      .gte("created_at", desdeIso)
+      .order("created_at", { ascending: false }),
+    buscarMeuColaboradorGaleria(emailEfetivo),
+  ]);
+
+  const { data: geraisRows, error: errGerais } = geraisPack;
 
   if (!errGerais && geraisRows?.length) {
     const porEvento = new Map<string, MarketingFotoComEvento>();
@@ -93,7 +98,6 @@ async function buscarGaleriaCards(
     }
   }
 
-  const meu = await buscarMeuColaboradorGaleria(emailEfetivo);
   if (meu) {
     const { data: minhasRows, error: errMinhas } = await supabase
       .from("marketing_fotos")

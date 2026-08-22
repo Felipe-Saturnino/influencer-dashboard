@@ -99,11 +99,7 @@ export function PerformanceHubAbaGerenciamento({
     <>
       <div style={pageBox}>
         <SectionTitle
-          sub={
-            timeSelecionado === "game_presenter"
-              ? "rascunhos e avaliações em análise aguardando o avaliador"
-              : "pendentes, em análise e em feedback"
-          }
+          sub="rascunhos aguardando conclusão do avaliador"
         >
           Analisar Avaliações
         </SectionTitle>

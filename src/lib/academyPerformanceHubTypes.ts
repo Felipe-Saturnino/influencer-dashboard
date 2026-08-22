@@ -4,7 +4,10 @@ export type PerformanceHubStatus =
   | "pendente"
   | "rascunho"
   | "em_analise"
+  | "aguardando"
   | "feedback"
+  | "aprovado"
+  /** Legado pré-migração de aprovação — tratar como aprovado na UI. */
   | "concluida";
 
 export type PerformanceHubTab = "avaliacoes" | "gerenciamento" | "configuracao";
@@ -17,7 +20,27 @@ export type PerformanceHubTurno = "Manhã" | "Tarde" | "Noite";
 
 export type PerformanceHubTipoAvaliacao = "performance_coach" | "extra";
 
-export type PerformanceHubModalModo = "ver" | "analisar" | "analisar_feedback";
+export type PerformanceHubModalModo =
+  | "ver"
+  | "analisar"
+  | "analisar_aguardando"
+  | "aplicar_feedback"
+  | "historico";
+
+export type PerformanceHubHistoricoAcao =
+  | "publicada"
+  | "solicitou_feedback"
+  | "aprovou"
+  | "aplicou_feedback";
+
+export interface PerformanceHubHistoricoItem {
+  id: string;
+  avaliacaoId: string;
+  createdAt: string;
+  acao: PerformanceHubHistoricoAcao;
+  usuarioNome: string;
+  mensagem: string | null;
+}
 
 export interface PerformanceHubCriterioResposta {
   nota: number | null;
@@ -83,8 +106,14 @@ export interface PerformanceHubAvaliacao {
   videoNome?: string | null;
   /** Preenchido quando a retenção apagou o vídeo do Storage (video_nome é mantido). */
   videoRemovidoEm?: string | null;
-  /** Texto do avaliado ao solicitar esclarecimento (Feedback → Em Análise). */
+  /** Texto do avaliado ao solicitar esclarecimento (Aguardando → Feedback). */
   solicitacaoFeedbackTexto?: string | null;
+  solicitacaoFeedbackPorNome?: string | null;
+  solicitacaoFeedbackEm?: string | null;
+  /** Texto do coach ao aplicar o repasse (Feedback → Aprovado). */
+  aplicacaoFeedbackTexto?: string | null;
+  aplicacaoFeedbackPorNome?: string | null;
+  aplicacaoFeedbackEm?: string | null;
 }
 
 export interface PerformanceHubAgendaItem {

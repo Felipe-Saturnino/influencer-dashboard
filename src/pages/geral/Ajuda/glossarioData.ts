@@ -1210,7 +1210,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Informativos na Home",
         definicao:
-          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso. O mesmo bloco também lista postagens do Portal de RH (Comunicados, Políticas e RH Talks): essas só saem da lista após «Li e Ocultar», sem limite de 10 dias. Informativos e comunicados de RH mostram reações com emoji no card expandido — isso não esconde o aviso.",
+          "Comunicados publicados em Informativos filtrados por perfil (e operadora, quando o alvo é Operador). Na Home staff, só os publicados nos últimos 10 dias entram no bloco Informações (o bloco some se não houver nenhum); use «Li e Ocultar» para recolher o card até o próximo acesso. O mesmo bloco também lista postagens do Portal de RH (Comunicados, Políticas e RH Talks) publicadas nos últimos 10 dias — Comunicados fixados entram mesmo fora da janela; use «Li e Ocultar» para tirá-las da lista. Informativos e comunicados de RH mostram reações com emoji no card expandido — isso não esconde o aviso.",
         referencia: "Informativos · Home",
       },
       {

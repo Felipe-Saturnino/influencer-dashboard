@@ -15,7 +15,6 @@ import type {
   PerformanceHubAvaliacao,
   PerformanceHubCriterioResposta,
   PerformanceHubJogoKey,
-  PerformanceHubModalModo,
   PerformanceHubScoringConfigGamePresenter,
   PerformanceHubScoringConfigShuffler,
   PerformanceHubTipoAvaliacao,
@@ -81,7 +80,7 @@ type Props = {
   avaliacao: PerformanceHubAvaliacao;
   variantTime: PerformanceHubTimeSlug;
   config: PerformanceHubScoringConfigGamePresenter | PerformanceHubScoringConfigShuffler;
-  modo: PerformanceHubModalModo;
+  modo: "ver" | "analisar";
   estudios: PerformanceHubEstudioCadastro[];
   mesas: PerformanceHubMesaCadastro[];
   getPrefill: (staffId?: string | null, nome?: string | null) => PerformanceHubDadosPrefill | null;
