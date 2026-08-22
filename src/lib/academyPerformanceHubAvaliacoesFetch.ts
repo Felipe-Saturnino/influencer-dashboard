@@ -4,6 +4,8 @@ import { fetchAllPages } from "./supabasePaginate";
 import type {
   PerformanceHubAvaliacao,
   PerformanceHubCriterioResposta,
+  PerformanceHubHistoricoAcao,
+  PerformanceHubHistoricoItem,
   PerformanceHubJogoKey,
   PerformanceHubStatus,
   PerformanceHubTimeSlug,
@@ -36,10 +38,24 @@ type AvaliacaoRow = {
   video_nome: string | null;
   video_removido_em: string | null;
   solicitacao_feedback_texto: string | null;
+  solicitacao_feedback_por_nome: string | null;
+  solicitacao_feedback_em: string | null;
+  aplicacao_feedback_texto: string | null;
+  aplicacao_feedback_por_nome: string | null;
+  aplicacao_feedback_em: string | null;
 };
 
 /** `video_removido_em` é escrito só pela retenção (Edge Function) — nunca pela UI. */
 type AvaliacaoWriteRow = Omit<AvaliacaoRow, "id" | "video_removido_em"> & { id?: string };
+
+type HistoricoRow = {
+  id: string;
+  avaliacao_id: string;
+  created_at: string;
+  acao: PerformanceHubHistoricoAcao;
+  usuario_nome: string;
+  mensagem: string | null;
+};
 
 function formatDataBrFromIso(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
@@ -79,6 +95,11 @@ export function mapRowParaAvaliacao(row: AvaliacaoRow): PerformanceHubAvaliacao 
     videoNome: row.video_nome,
     videoRemovidoEm: row.video_removido_em,
     solicitacaoFeedbackTexto: row.solicitacao_feedback_texto,
+    solicitacaoFeedbackPorNome: row.solicitacao_feedback_por_nome,
+    solicitacaoFeedbackEm: row.solicitacao_feedback_em,
+    aplicacaoFeedbackTexto: row.aplicacao_feedback_texto,
+    aplicacaoFeedbackPorNome: row.aplicacao_feedback_por_nome,
+    aplicacaoFeedbackEm: row.aplicacao_feedback_em,
   };
 }
 
@@ -108,6 +129,22 @@ function mapAvaliacaoParaRow(row: PerformanceHubAvaliacao): AvaliacaoWriteRow {
     video_url: row.videoUrl ?? null,
     video_nome: row.videoNome ?? null,
     solicitacao_feedback_texto: row.solicitacaoFeedbackTexto ?? null,
+    solicitacao_feedback_por_nome: row.solicitacaoFeedbackPorNome ?? null,
+    solicitacao_feedback_em: row.solicitacaoFeedbackEm ?? null,
+    aplicacao_feedback_texto: row.aplicacaoFeedbackTexto ?? null,
+    aplicacao_feedback_por_nome: row.aplicacaoFeedbackPorNome ?? null,
+    aplicacao_feedback_em: row.aplicacaoFeedbackEm ?? null,
+  };
+}
+
+function mapHistoricoRow(row: HistoricoRow): PerformanceHubHistoricoItem {
+  return {
+    id: row.id,
+    avaliacaoId: row.avaliacao_id,
+    createdAt: row.created_at,
+    acao: row.acao,
+    usuarioNome: row.usuario_nome,
+    mensagem: row.mensagem,
   };
 }
 
@@ -135,7 +172,12 @@ const SELECT_AVALIACAO = `
   video_url,
   video_nome,
   video_removido_em,
-  solicitacao_feedback_texto
+  solicitacao_feedback_texto,
+  solicitacao_feedback_por_nome,
+  solicitacao_feedback_em,
+  aplicacao_feedback_texto,
+  aplicacao_feedback_por_nome,
+  aplicacao_feedback_em
 `;
 
 export async function fetchPerformanceHubAvaliacoes(): Promise<PerformanceHubAvaliacao[]> {
@@ -189,4 +231,52 @@ export async function upsertPerformanceHubAvaliacao(
     return null;
   }
   return mapRowParaAvaliacao(data as AvaliacaoRow);
+}
+
+export async function fetchHistoricoAvaliacaoPerformanceHub(
+  avaliacaoId: string,
+): Promise<PerformanceHubHistoricoItem[]> {
+  if (!avaliacaoId || avaliacaoId.startsWith("novo-")) return [];
+  const { data, error } = await supabase
+    .from("academy_performance_hub_avaliacao_historico")
+    .select("id, avaliacao_id, created_at, acao, usuario_nome, mensagem")
+    .eq("avaliacao_id", avaliacaoId)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("Performance Hub: falha ao carregar histórico", error);
+    return [];
+  }
+  return ((data ?? []) as HistoricoRow[]).map(mapHistoricoRow);
+}
+
+export async function registrarHistoricoAvaliacaoPerformanceHub(opts: {
+  avaliacaoId: string;
+  acao: PerformanceHubHistoricoAcao;
+  usuarioNome: string;
+  mensagem?: string | null;
+}): Promise<boolean> {
+  if (!opts.avaliacaoId || opts.avaliacaoId.startsWith("novo-")) return false;
+  const { error } = await supabase.from("academy_performance_hub_avaliacao_historico").insert({
+    avaliacao_id: opts.avaliacaoId,
+    acao: opts.acao,
+    usuario_nome: opts.usuarioNome.trim() || "Usuário",
+    mensagem: opts.mensagem?.trim() || null,
+  });
+  if (error) {
+    console.error("Performance Hub: falha ao registrar histórico", error);
+    return false;
+  }
+  return true;
+}
+
+export function formatDataHoraHistoricoPerformanceHub(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

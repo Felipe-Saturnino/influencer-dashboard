@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { buscarRhFuncionarioAtivoPorEmailLogin } from "./rhFuncionarioLoginMatch";
+import { buscarRhFuncionarioAtivoPorEmailLoginCached } from "./rhFuncionarioLoginMatch";
 
 export const MARKETING_FOTOS_GERAIS_BUCKET = "marketing-fotos-gerais";
 export const MARKETING_FOTOS_PRESTADORES_BUCKET = "marketing-fotos-prestadores";
@@ -561,7 +561,7 @@ export async function buscarMeuColaboradorGaleria(
 ): Promise<GaleriaMeuColaborador | null> {
   const email = emailEfetivo?.trim();
   if (email) {
-    const row = await buscarRhFuncionarioAtivoPorEmailLogin(email);
+    const row = await buscarRhFuncionarioAtivoPorEmailLoginCached(email);
     if (!row?.id || !row.nome) return null;
     return { id: row.id, nome: row.nome };
   }

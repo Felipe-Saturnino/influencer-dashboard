@@ -150,7 +150,7 @@ async function purgarPorRetencao(
   const { data, error } = await supabase
     .from(TABELA)
     .select("id, video_url")
-    .eq("status", "concluida")
+    .eq("status", "aprovado")
     .not("video_url", "is", null)
     .is("video_removido_em", null)
     .lt("concluida_em", corte)

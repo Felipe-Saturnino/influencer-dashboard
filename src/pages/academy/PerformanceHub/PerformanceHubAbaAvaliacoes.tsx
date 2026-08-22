@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Eye, FileSearch, History, Image, ListChecks, MessageSquare, Star, TableProperties, Users } from "lucide-react";
+import { Eye, FileSearch, History, Image, ListChecks, MessageSquare, MessageSquareReply, Star, TableProperties, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -17,6 +17,7 @@ import {
   labelTerceiraDimensaoTime,
   notaTerceiraDimensaoAvaliacao,
 } from "../../../lib/academyPerformanceHubScoring";
+import { acoesAbaAvaliacoesPerformanceHub } from "../../../lib/academyPerformanceHubWorkflow";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
@@ -32,15 +33,25 @@ type Props = {
   avaliacoes: PerformanceHubAvaliacao[];
   timeSelecionado: PerformanceHubTimeSlug;
   canView: PermissaoValor;
+  canEditarOk: boolean;
   roleUsuario: Role;
   onVer: (row: PerformanceHubAvaliacao) => void;
   onAnalisar: (row: PerformanceHubAvaliacao) => void;
+  onHistorico: (row: PerformanceHubAvaliacao) => void;
+  onAplicarFeedback: (row: PerformanceHubAvaliacao) => void;
 };
 
 type SortCol = "data" | "avaliado" | "avaliador" | "status" | "total" | "imagem" | "comunicacao" | "terceira";
 
 function scoreStatus(status: PerformanceHubStatus): number {
-  const order: PerformanceHubStatus[] = ["pendente", "rascunho", "em_analise", "feedback", "concluida"];
+  const order: PerformanceHubStatus[] = [
+    "pendente",
+    "rascunho",
+    "em_analise",
+    "aguardando",
+    "feedback",
+    "aprovado",
+  ];
   return order.indexOf(status);
 }
 
@@ -110,15 +121,18 @@ export function PerformanceHubAbaAvaliacoes({
   avaliacoes,
   timeSelecionado,
   canView,
+  canEditarOk,
   roleUsuario,
   onVer,
   onAnalisar,
+  onHistorico,
+  onAplicarFeedback,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
-  const isProprios = canView === "proprios";
+  const isProprios = canView === "proprios" && !canEditarOk;
   const isShuffler = timeSelecionado === "shuffler";
   const labelTerceiraDim = labelTerceiraDimensaoTime(timeSelecionado);
   const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "data", dir: "desc" });
@@ -127,7 +141,11 @@ export function PerformanceHubAbaAvaliacoes({
 
   const rowsVisiveis = useMemo(() => {
     const filtradas = avaliacoes
-      .filter((row) => (isProprios ? row.status === "concluida" || row.status === "feedback" : true))
+      .filter((row) =>
+        isProprios
+          ? row.status === "aguardando" || row.status === "feedback" || row.status === "aprovado"
+          : true,
+      )
       .filter((row) => (showBusca ? textoContemBusca(row.avaliadoNome, busca) : true));
 
     const sorted = [...filtradas].sort((a, b) => {
@@ -289,37 +307,54 @@ export function PerformanceHubAbaAvaliacoes({
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcao("Ver avaliação")}
-                            onClick={() => onVer(row)}
-                          >
-                            <Eye size={14} aria-hidden />
-                          </BtnIconeAcaoLinha>
-
-                          {!isProprios && row.status === "em_analise" ? (
-                            <BtnIconeAcaoLinha
-                              label={tooltipAcao("Analisar avaliação")}
-                              onClick={() => onAnalisar(row)}
-                            >
-                              <FileSearch size={14} aria-hidden />
-                            </BtnIconeAcaoLinha>
-                          ) : null}
-
-                          {row.status === "feedback" ? (
-                            <BtnIconeAcaoLinha
-                              label={tooltipAcao("Analisar avaliação")}
-                              onClick={() => onAnalisar(row)}
-                            >
-                              <FileSearch size={14} aria-hidden />
-                            </BtnIconeAcaoLinha>
-                          ) : null}
-
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcao("Histórico da avaliação")}
-                            onClick={() => undefined}
-                          >
-                            <History size={14} aria-hidden />
-                          </BtnIconeAcaoLinha>
+                          {acoesAbaAvaliacoesPerformanceHub({
+                            canView,
+                            canEditarOk,
+                            status: row.status,
+                          }).map((acao) => {
+                            if (acao === "ver") {
+                              return (
+                                <BtnIconeAcaoLinha
+                                  key={`${row.id}-ver`}
+                                  label={tooltipAcao("Ver avaliação")}
+                                  onClick={() => onVer(row)}
+                                >
+                                  <Eye size={14} aria-hidden />
+                                </BtnIconeAcaoLinha>
+                              );
+                            }
+                            if (acao === "analisar") {
+                              return (
+                                <BtnIconeAcaoLinha
+                                  key={`${row.id}-analisar`}
+                                  label={tooltipAcao("Analisar avaliação")}
+                                  onClick={() => onAnalisar(row)}
+                                >
+                                  <FileSearch size={14} aria-hidden />
+                                </BtnIconeAcaoLinha>
+                              );
+                            }
+                            if (acao === "historico") {
+                              return (
+                                <BtnIconeAcaoLinha
+                                  key={`${row.id}-historico`}
+                                  label={tooltipAcao("Histórico da avaliação")}
+                                  onClick={() => onHistorico(row)}
+                                >
+                                  <History size={14} aria-hidden />
+                                </BtnIconeAcaoLinha>
+                              );
+                            }
+                            return (
+                              <BtnIconeAcaoLinha
+                                key={`${row.id}-aplicar`}
+                                label={tooltipAcao("Aplicar feedback")}
+                                onClick={() => onAplicarFeedback(row)}
+                              >
+                                <MessageSquareReply size={14} aria-hidden />
+                              </BtnIconeAcaoLinha>
+                            );
+                          })}
                         </div>
                       </td>
                     </tr>

@@ -978,17 +978,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas e permissões",
         texto:
-          "**Avaliações** — exige permissão de **Ver** (inclui escopo Próprios para o prestador ver avaliações concluídas).\n\n**Gerenciamento** — exige permissão de **Editar**; agenda de avaliações e fila «Analisar Avaliações» (pendentes, em análise, feedback).\n\n**Configuração** — exige permissão de **Criar**; edição dos pesos das dimensões e critérios. Alterações valem só para **novas** avaliações (escala 0–10).",
+          "**Avaliações** — exige permissão de **Ver** (inclui escopo Próprios para o prestador ver as próprias avaliações publicadas).\n\n**Gerenciamento** — exige permissão de **Editar**; agenda de avaliações e fila de rascunhos para concluir/publicar.\n\n**Configuração** — exige permissão de **Criar**; edição dos pesos das dimensões e critérios. Alterações valem só para **novas** avaliações (escala 0–10).",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma); com **Ver = Próprios**, a lista mostra apenas suas avaliações **Concluída**.",
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma); com **Ver = Próprios**, a lista mostra apenas suas avaliações publicadas.",
       },
       {
         subtitulo: "Status e ações",
         texto:
-          "**Pendente** — Ver e Histórico (sem notas).\n\n**Em Análise** — Ver, **Analisar** (modal com critérios 0–10) e Histórico.\n\n**Feedback** — Ver, **Analisar** (revisão em leitura, com **Aprovar** ou **Solicitar Feedback**) e Histórico.\n\n**Concluída** — Ver e Histórico; avaliações concluídas **não** exibem Analisar.\n\nPrestador (Próprios): **Ver minha avaliação** e Histórico nas concluídas.",
+          "**Aguardando** — avaliação publicada. Com **Ver = Próprios**: só **Analisar Avaliação** (Aprovar ou Solicitar Feedback). Com **Editar**: nenhuma ação nesta aba.\n\n**Feedback** — o prestador pediu esclarecimento. Próprios: **Ver** e **Histórico**. Editar: **Histórico**, **Ver** e **Aplicar Feedback**.\n\n**Aprovado** — ciclo encerrado. **Ver** e **Histórico** (Próprios e Editar).\n\nAo **Concluir** no Gerenciamento, a avaliação entra como **Aguardando**. Aprovar (prestador) ou Aplicar Feedback (coach) leva a **Aprovado**.",
       },
       {
         subtitulo: "Vídeo da avaliação",

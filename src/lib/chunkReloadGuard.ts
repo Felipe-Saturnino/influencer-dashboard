@@ -8,6 +8,40 @@ const WINDOW_MS = 120_000;
 /** Query param descartável: URL nova força o browser a buscar o `index.html` do servidor. */
 const PARAM_CACHE_BUST = "_spinv";
 
+export type IsChunkLoadErrorOptions = {
+  /**
+   * Safari/WebKit costuma reportar falha de `import()` só como `TypeError: Load failed`.
+   * No ErrorBoundary (lazy) isso é quase sempre chunk; em `unhandledrejection` pode ser
+   * fetch de API — use `false` nesse listener e confie em `vite:preloadError`.
+   */
+  allowSafariLoadFailed?: boolean;
+};
+
+/**
+ * Detecta falha de carregamento de chunk / módulo dinâmico (Chrome, Firefox, Safari/WebKit).
+ */
+export function isChunkLoadError(err: unknown, opts?: IsChunkLoadErrorOptions): boolean {
+  const allowSafariLoadFailed = opts?.allowSafariLoadFailed !== false;
+  if (err instanceof Error && err.name === "ChunkLoadError") return true;
+
+  const msg = String(err instanceof Error ? err.message : err ?? "")
+    .trim()
+    .toLowerCase();
+  if (!msg) return false;
+
+  if (msg.includes("failed to fetch dynamically imported module")) return true;
+  if (msg.includes("error loading dynamically imported module")) return true;
+  if (msg.includes("importing a module script failed")) return true;
+  if (msg.includes("chunk load error")) return true;
+  if (msg.includes("loading css chunk") && msg.includes("failed")) return true;
+  if (msg.includes("loading chunk") && (msg.includes("failed") || msg.includes("error"))) return true;
+
+  // Safari iOS / WebKit — mensagem curta sem URL do módulo (só no ErrorBoundary / lazy)
+  if (allowSafariLoadFailed && msg === "load failed") return true;
+
+  return false;
+}
+
 /** `true` quando a recarga foi disparada; `false` quando o limite da janela já foi atingido. */
 export function reloadAfterChunkError(context?: string): boolean {
   if (typeof window === "undefined") return false;
@@ -87,4 +121,24 @@ export function limparChunkReloadGuard(): void {
   } catch {
     /* storage indisponível — nada a limpar */
   }
+}
+
+/**
+ * Listeners de boot: `unhandledrejection` (mensagens explícitas) + `vite:preloadError`
+ * (Vite — inclui falhas de preload no Safari sem mensagem útil).
+ */
+export function registerChunkReloadListeners(): void {
+  if (typeof window === "undefined") return;
+
+  window.addEventListener("unhandledrejection", (ev) => {
+    // Sem `Load failed` genérico — no Safari isso também cobre fetch de API não tratada.
+    if (!isChunkLoadError(ev.reason, { allowSafariLoadFailed: false })) return;
+    ev.preventDefault();
+    reloadAfterChunkError("unhandledrejection");
+  });
+
+  window.addEventListener("vite:preloadError", ((ev: Event) => {
+    ev.preventDefault();
+    reloadAfterChunkError("vite:preloadError");
+  }) as EventListener);
 }

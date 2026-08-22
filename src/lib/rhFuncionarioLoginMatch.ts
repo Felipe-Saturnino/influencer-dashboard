@@ -71,3 +71,30 @@ export async function buscarRhFuncionarioAtivoPorEmailLogin(emailBruto: string):
   }
   return row;
 }
+
+/** Cache in-flight por e-mail — a Home dispara o mesmo lookup em vários blocos. */
+const cacheFuncionarioPorEmail = new Map<string, Promise<RhFuncionario | null>>();
+
+export function buscarRhFuncionarioAtivoPorEmailLoginCached(
+  emailBruto: string,
+): Promise<RhFuncionario | null> {
+  const key = emailBruto.trim().toLowerCase();
+  if (!key) return Promise.resolve(null);
+  let pending = cacheFuncionarioPorEmail.get(key);
+  if (!pending) {
+    pending = buscarRhFuncionarioAtivoPorEmailLogin(emailBruto).catch((err) => {
+      cacheFuncionarioPorEmail.delete(key);
+      throw err;
+    });
+    cacheFuncionarioPorEmail.set(key, pending);
+  }
+  return pending;
+}
+
+export function invalidarCacheRhFuncionarioLogin(emailBruto?: string): void {
+  if (!emailBruto) {
+    cacheFuncionarioPorEmail.clear();
+    return;
+  }
+  cacheFuncionarioPorEmail.delete(emailBruto.trim().toLowerCase());
+}

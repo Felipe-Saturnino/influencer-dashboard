@@ -12,7 +12,7 @@ import {
 } from "../../../../lib/academyPortalAutorMeta";
 import { getHomeStaffFeedNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
 import { setoresAplicavelDoUsuario } from "../../../../lib/portalRhDocumentoNormativo";
-import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../../lib/rhFuncionarioLoginMatch";
+import { buscarRhFuncionarioAtivoPorEmailLoginCached } from "../../../../lib/rhFuncionarioLoginMatch";
 import { carregarOpcoesTimesOrganograma } from "../../../../lib/rhOrganogramaFetch";
 import { flattenVinculosDeGrupos } from "../../../../lib/rhOrganogramaTree";
 import { supabase } from "../../../../lib/supabase";
@@ -84,7 +84,7 @@ export function useHomeCentralAcademyFeed() {
       try {
         const desdeIso = getHomeStaffFeedNovidadeDesdeIso();
 
-        const [comRes, dicaRes, manualRes, recRes, funcionario, org] = await Promise.all([
+        const [comRes, dicaRes, manualRes] = await Promise.all([
           supabase
             .from("academy_portal_comunicado")
             .select("id, titulo, status, published_at, created_by, published_by")
@@ -104,14 +104,6 @@ export function useHomeCentralAcademyFeed() {
             )
             .eq("status", "publicado")
             .order("published_at", { ascending: false }),
-          supabase
-            .from("academy_portal_read_receipt")
-            .select("content_id, read_at, acknowledged_at")
-            .eq("user_id", userIdEfetivo),
-          emailEfetivo?.trim()
-            ? buscarRhFuncionarioAtivoPorEmailLogin(emailEfetivo)
-            : Promise.resolve(null),
-          carregarOpcoesTimesOrganograma(),
         ]);
 
         if (cancelled) return;
@@ -126,7 +118,31 @@ export function useHomeCentralAcademyFeed() {
           return;
         }
 
-        const setores = setoresAplicavelDoUsuario(funcionario, flattenVinculosDeGrupos(org.grupos));
+        const manuais = (manualRes.data ?? []) as ManualRow[];
+        const manualIds = manuais.map((m) => m.id).filter(Boolean);
+        const precisaSetores = manuais.some(
+          (m) => m.requires_acknowledgment === true && (m.aplicavel_a?.length ?? 0) > 0,
+        );
+
+        const [recRes, funcionario, org] = await Promise.all([
+          manualIds.length > 0
+            ? supabase
+                .from("academy_portal_read_receipt")
+                .select("content_id, read_at, acknowledged_at")
+                .eq("user_id", userIdEfetivo)
+                .in("content_id", manualIds)
+            : Promise.resolve({ data: [] as AcademyPortalReadReceiptRow[], error: null }),
+          precisaSetores && emailEfetivo?.trim()
+            ? buscarRhFuncionarioAtivoPorEmailLoginCached(emailEfetivo)
+            : Promise.resolve(null),
+          precisaSetores ? carregarOpcoesTimesOrganograma() : Promise.resolve({ grupos: [], opcoes: [], error: null }),
+        ]);
+
+        if (cancelled) return;
+
+        const setores = precisaSetores
+          ? setoresAplicavelDoUsuario(funcionario, flattenVinculosDeGrupos(org.grupos))
+          : [];
 
         const receipts = new Map<string, AcademyPortalReadReceiptRow>();
         for (const r of recRes.data ?? []) {
@@ -160,7 +176,7 @@ export function useHomeCentralAcademyFeed() {
           });
         }
 
-        for (const row of (manualRes.data ?? []) as ManualRow[]) {
+        for (const row of manuais) {
           if (!isPublicado(row.status)) continue;
           const exige = manualExigeCienciaDoUsuario(row, setores);
           const jaCiente = !!receipts.get(academyManualReceiptKey(row.id))?.acknowledged_at;

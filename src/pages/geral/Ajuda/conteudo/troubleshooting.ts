@@ -15,6 +15,11 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
         "Isso acontece logo após uma nova versão da plataforma entrar no ar: o navegador ainda tem em cache a versão anterior e não encontra um dos arquivos atualizados.\n\nA plataforma tenta se atualizar sozinha. Se a mensagem **Nova versão disponível** permanecer, clique em **Recarregar página**.\n\nSe continuar, force a atualização com **Ctrl+Shift+R** (ou **Cmd+Shift+R** no Mac) e, em último caso, abra numa janela anônima. Persistindo, entre em contato com o suporte.",
     },
     {
+      subtitulo: "No celular (Safari) vejo «Erro ao carregar a página» com o menu ainda visível?",
+      texto:
+        "O menu e o cabeçalho carregaram, mas a área da página falhou (comum no Safari do iPhone após uma atualização da plataforma ou com cache antigo).\n\nToque em **Recarregar página**. Se voltar o mesmo aviso: feche a aba, abra de novo o endereço da plataforma ou use uma aba anônima. No iPhone: Ajustes → Safari → **Limpar histórico e dados do site** (só se as opções anteriores não resolverem).\n\nChrome ou outro navegador no mesmo celular costuma funcionar — isso não substitui o Safari, mas ajuda a confirmar se o problema é cache. Se continuar só no Safari, entre em contato com o suporte informando o modelo do iPhone e a versão do iOS.",
+    },
+    {
       subtitulo: "No endereço de staging (pages.dev) aparece que não tenho acesso ao ambiente?",
       texto:
         "O ambiente de preview/staging restringe o login a uma lista de e-mails definida pela equipe (variável de build no Cloudflare Pages — Preview). Produção e o uso local não usam essa lista. Quem não está autorizado vê a mensagem de acesso negado e não entra nas features em desenvolvimento. Integrações e rotas `/api/*` (formulários do site, webhooks) **não** são bloqueadas por essa regra. Se você precisa de acesso ao staging, peça inclusão do seu e-mail ao administrador.",
@@ -774,7 +779,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro o botão Analisar?",
         texto:
-          "O botão **Analisar** aparece em status **Em Análise** e **Feedback**. Avaliações **Pendente** e **Concluída** exibem apenas **Ver** e **Histórico** — isso é intencional.\n\nCom escopo **Próprios** o botão não aparece em **Em Análise**, apenas em **Feedback**.",
+          "Com **Ver = Próprios**, o botão **Analisar** aparece só em status **Aguardando**. Em **Feedback** e **Aprovado** ficam **Ver** e **Histórico**.\n\nCom **Editar**, em **Aguardando** não há ação na aba Avaliações; em **Feedback** use **Aplicar Feedback**.",
       },
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",

@@ -37,6 +37,8 @@ import { PerformanceHubAbaGerenciamento } from "./PerformanceHubAbaGerenciamento
 import { PerformanceHubAbaConfiguracao } from "./PerformanceHubAbaConfiguracao";
 import { ModalAvaliarPerformanceHub, type PerformanceHubAvaliacaoFormPayload } from "./ModalAvaliarPerformanceHub";
 import { ModalAnalisarFeedbackPerformanceHub } from "./ModalAnalisarFeedbackPerformanceHub";
+import { ModalHistoricoPerformanceHub } from "./ModalHistoricoPerformanceHub";
+import { registrarHistoricoAvaliacaoPerformanceHub } from "../../../lib/academyPerformanceHubAvaliacoesFetch";
 
 type MesCarrossel = {
   ano: number;
@@ -249,18 +251,29 @@ export default function PerformanceHubPage() {
   }
 
   function handleAnalisarAvaliacao(row: PerformanceHubAvaliacao) {
-    setModalModo(row.status === "feedback" ? "analisar_feedback" : "analisar");
+    setModalModo("analisar_aguardando");
+    setAvaliacaoEmEdicao(row);
+  }
+
+  function handleHistoricoAvaliacao(row: PerformanceHubAvaliacao) {
+    setModalModo("historico");
+    setAvaliacaoEmEdicao(row);
+  }
+
+  function handleAplicarFeedback(row: PerformanceHubAvaliacao) {
+    setModalModo("aplicar_feedback");
     setAvaliacaoEmEdicao(row);
   }
 
   function handleAbrirAvaliacao(row: PerformanceHubAvaliacao) {
-    handleAnalisarAvaliacao(row);
+    setModalModo("analisar");
+    setAvaliacaoEmEdicao(row);
   }
 
   function handleSolicitarAvaliacaoPorNome(nome: string) {
     const existente = avaliacaoEmAndamentoPorNome(avaliacoes, timeSelecionado, nome);
     if (existente) {
-      handleAnalisarAvaliacao(existente);
+      handleAbrirAvaliacao(existente);
       return;
     }
     const staffId = cadastro.resolveStaffId(nome);
@@ -289,11 +302,13 @@ export default function PerformanceHubPage() {
       videoNome: null,
     };
     setAvaliacoes((prev) => [nova, ...prev]);
-    handleAnalisarAvaliacao(nova);
+    handleAbrirAvaliacao(nova);
     void persistirAvaliacao(nova).then((salvo) => {
       if (salvo) setAvaliacaoEmEdicao(salvo);
     });
   }
+
+  const nomeUsuarioAcao = nomeEfetivo ?? user?.name ?? "Usuário";
 
   if (perm.loading || cadastro.loading || avaliacoesDb.loading || scoringDb.loading) {
     return (
@@ -367,9 +382,12 @@ export default function PerformanceHubPage() {
             avaliacoes={avaliacoesAbaAvaliacoes}
             timeSelecionado={timeSelecionado}
             canView={perm.canView}
+            canEditarOk={perm.canEditarOk}
             roleUsuario={roleEfetivo ?? user?.role ?? "prestador"}
             onVer={handleVerAvaliacao}
             onAnalisar={handleAnalisarAvaliacao}
+            onHistorico={handleHistoricoAvaliacao}
+            onAplicarFeedback={handleAplicarFeedback}
           />
         ) : null}
 
@@ -398,32 +416,91 @@ export default function PerformanceHubPage() {
         ) : null}
       </div>
 
-      {avaliacaoEmEdicao && modalModo === "analisar_feedback" ? (
+      {avaliacaoEmEdicao && modalModo === "historico" ? (
+        <ModalHistoricoPerformanceHub
+          avaliacao={avaliacaoEmEdicao}
+          onClose={() => setAvaliacaoEmEdicao(null)}
+        />
+      ) : null}
+
+      {avaliacaoEmEdicao &&
+      (modalModo === "analisar_aguardando" ||
+        modalModo === "aplicar_feedback" ||
+        modalModo === "ver") ? (
         <ModalAnalisarFeedbackPerformanceHub
           avaliacao={avaliacaoEmEdicao}
           variantTime={avaliacaoEmEdicao.time}
           config={scoringConfigParaTime(scoringPorTime, avaliacaoEmEdicao.time)}
           estudios={cadastro.estudios}
+          modo={
+            modalModo === "analisar_aguardando"
+              ? "analisar"
+              : modalModo === "aplicar_feedback"
+                ? "aplicar"
+                : "ver"
+          }
           onClose={() => setAvaliacaoEmEdicao(null)}
           onAprovar={async () => {
-            await persistirAvaliacao({ ...avaliacaoEmEdicao, status: "concluida" });
+            const salvo = await persistirAvaliacao({
+              ...avaliacaoEmEdicao,
+              status: "aprovado",
+            });
+            if (salvo) {
+              await registrarHistoricoAvaliacaoPerformanceHub({
+                avaliacaoId: salvo.id,
+                acao: "aprovou",
+                usuarioNome: nomeUsuarioAcao,
+              });
+            }
             setAvaliacaoEmEdicao(null);
           }}
           onSolicitarFeedback={async (texto) => {
-            await persistirAvaliacao({
+            const agora = new Date().toISOString();
+            const salvo = await persistirAvaliacao({
               ...avaliacaoEmEdicao,
-              status: "em_analise",
+              status: "feedback",
               solicitacaoFeedbackTexto: texto,
+              solicitacaoFeedbackPorNome: nomeUsuarioAcao,
+              solicitacaoFeedbackEm: agora,
             });
+            if (salvo) {
+              await registrarHistoricoAvaliacaoPerformanceHub({
+                avaliacaoId: salvo.id,
+                acao: "solicitou_feedback",
+                usuarioNome: nomeUsuarioAcao,
+                mensagem: texto,
+              });
+            }
+            setAvaliacaoEmEdicao(null);
+          }}
+          onAplicarFeedback={async (texto) => {
+            const agora = new Date().toISOString();
+            const salvo = await persistirAvaliacao({
+              ...avaliacaoEmEdicao,
+              status: "aprovado",
+              aplicacaoFeedbackTexto: texto,
+              aplicacaoFeedbackPorNome: nomeUsuarioAcao,
+              aplicacaoFeedbackEm: agora,
+            });
+            if (salvo) {
+              await registrarHistoricoAvaliacaoPerformanceHub({
+                avaliacaoId: salvo.id,
+                acao: "aplicou_feedback",
+                usuarioNome: nomeUsuarioAcao,
+                mensagem: texto,
+              });
+            }
             setAvaliacaoEmEdicao(null);
           }}
         />
-      ) : avaliacaoEmEdicao ? (
+      ) : null}
+
+      {avaliacaoEmEdicao && modalModo === "analisar" ? (
         <ModalAvaliarPerformanceHub
           avaliacao={avaliacaoEmEdicao}
           variantTime={avaliacaoEmEdicao.time}
           config={scoringConfigParaTime(scoringPorTime, avaliacaoEmEdicao.time)}
-          modo={modalModo}
+          modo="analisar"
           estudios={cadastro.estudios}
           mesas={cadastro.mesas}
           getPrefill={cadastro.getPrefill}
@@ -440,11 +517,18 @@ export default function PerformanceHubPage() {
           }}
           onConcluir={(payload) => {
             void (async () => {
-              const concluida = {
+              const publicada = {
                 ...aplicarPayload(avaliacaoEmEdicao, payload),
                 status: statusAposConcluirModal(avaliacaoEmEdicao.time),
               };
-              await persistirAvaliacao(concluida);
+              const salvo = await persistirAvaliacao(publicada);
+              if (salvo) {
+                await registrarHistoricoAvaliacaoPerformanceHub({
+                  avaliacaoId: salvo.id,
+                  acao: "publicada",
+                  usuarioNome: nomeUsuarioAcao,
+                });
+              }
               setAvaliacaoEmEdicao(null);
             })();
           }}

@@ -133,8 +133,8 @@ Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do te
 | Perfil | Escopo típico |
 |--------|----------------|
 | **Admin** | Irrestrito via código (`usePermission`) |
-| **Gestor / Performance Coach / RH** | Avaliações do time após liberação em Gestão de Usuários |
-| **Prestador** | Com **Ver = Próprios**: só avaliações **Concluída** — Ver minha avaliação + Histórico |
+| **Gestor / Performance Coach / RH** | Avaliações do time após liberação em Gestão de Usuários (**Editar**) |
+| **Prestador** | Com **Ver = Próprios**: avaliações próprias publicadas — Analisar (Aguardando) ou Ver/Histórico |
 
 Times avaliados: **Game Presenter** e **Shuffler**. Filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**.
 
@@ -147,9 +147,9 @@ Migração `20260625120000_academy_performance_hub_page.sql`: todos os roles (ex
 | Ação | Superfície |
 |------|------------|
 | **Ver** | Página + aba Avaliações |
-| **Editar** | Aba **Gerenciamento** (agenda + fila para analisar) |
+| **Editar** | Aba **Gerenciamento** (agenda + fila de rascunhos) + ações de coach na aba Avaliações |
 | **Criar** | Aba **Configuração** (pesos de scoring) |
-| **Excluir** | Reservado (sem fluxo na v1 mock) |
+| **Excluir** | Reservado (sem fluxo na v1) |
 
 Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar` / `hasExcluir` = true.
 
@@ -165,33 +165,35 @@ URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
 
 ### Status × ações (aba Avaliações)
 
-| Status | Ações (gestor) | Ações (Próprios) |
-|--------|----------------|------------------|
-| Pendente | Ver, Histórico | — |
-| Rascunho | — (só Gerenciamento) | — |
-| Em Análise | Ver, **Analisar**, Histórico | — |
-| Feedback | Ver, **Analisar** (resposta do avaliado), Histórico | **Analisar** (aprovar ou solicitar esclarecimento), Histórico |
-| Concluída | Ver, Histórico | Ver minha avaliação, Histórico |
+Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `20261121120000`). Rascunho fica só no Gerenciamento.
 
-**Game Presenter — fluxo de status**
+| Status | Ver = Próprios | Editar = Sim |
+|--------|----------------|--------------|
+| **Aguardando** | **Analisar Avaliação** | — (nenhuma ação) |
+| **Feedback** | Ver, Histórico | Histórico, Ver, **Aplicar Feedback** |
+| **Aprovado** | Ver, Histórico | Ver, Histórico |
 
-| Etapa | Onde aparece | Status |
-|-------|--------------|--------|
-| Iniciar / Salvar no modal | Gerenciamento → Analisar Avaliações | **Rascunho** |
-| Concluir no modal | Avaliações | **Feedback** |
-| Analisar (Feedback) → Aprovar | Avaliações | **Concluída** |
-| Analisar (Feedback) → Solicitar | Gerenciamento → Analisar | **Em Análise** |
-| (futuro) fechamento | Avaliações | Concluída |
+**Fluxo de publicação e aprovação**
 
-Modal **Analisar** em status **Feedback**: abas somente leitura (Dados, Comunicação, Imagem, Mesa/Procedimentos) + CTAs **Aprovar** / **Solicitar Feedback** com confirmação. Solicitar exige texto longo (`solicitacao_feedback_texto` no banco).
+| Etapa | Onde | Status |
+|-------|------|--------|
+| Iniciar / Salvar | Gerenciamento → Avaliar | **Rascunho** |
+| Concluir (publicar) | Avaliações | **Aguardando** |
+| Prestador → Solicitar Feedback | Avaliações · Analisar | **Feedback** |
+| Prestador → Aprovar | Avaliações · Analisar | **Aprovado** |
+| Coach → Aplicar Feedback (Aprovar + texto) | Avaliações · Aplicar Feedback | **Aprovado** |
 
-Rascunho **não** entra na aba Avaliações. **Concluir** no modal GP grava **Feedback** (não Concluída). Shuffler mantém fluxo legado: nova avaliação **Em Análise**; **Concluir** → **Concluída**.
+Modal **Analisar Avaliação** (Ver=Próprios, status Aguardando): leitura + CTAs **Aprovar** (primário) e **Solicitar Feedback** (secundário). Em status **Feedback** o botão Solicitar Feedback não aparece.
 
-**Concluída não exibe Analisar** — só **Em Análise** (Shuffler) abre modal editável com scoring a partir da aba Avaliações.
+Modal **Aplicar Feedback** (Editar): igual ao Analisar, só **Aprovar** → pop-up com campo **Feedback** (placeholder «Descreva o feedback aplicado para registro do repasse»).
 
-Modal **Ver** em Pendente/Feedback/Concluída: somente leitura (campos desabilitados; link **Assistir** no vídeo quando houver URL).
+Modal **Ver**: igual ao Analisar sem CTAs; aba **Feedback** com quadros Solicitação / Aplicação (usuário, data/hora, mensagem) quando houver.
 
-**Ações só ícone (aba Avaliações / Gerenciamento):** `BtnIconeAcaoLinha` + **`tituloModalPerformanceHub(avaliadoNome, data)`** — tooltip = título do `ModalHeader` (`{nome} · {data}`). Histórico (placeholder v1): **`tooltipModal("Histórico da avaliação")`**. Proibido sufixar nome do avaliado no tooltip quando o modal já usa título composto.
+Modal **Histórico**: linhas com data/hora, ação e usuário (`academy_performance_hub_avaliacao_historico`).
+
+Rascunho **não** entra na aba Avaliações. **Concluir** grava **Aguardando** e registra histórico `publicada`. Retenção de vídeo (`concluida_em`) dispara ao entrar em **Aprovado**.
+
+**Ações só ícone:** `BtnIconeAcaoLinha` + `tooltipAcao` (rótulo da ação, sem nome do avaliado).
 
 ### Formato por time (Game Presenter vs Shuffler)
 
@@ -233,7 +235,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 - Escala **0–10**; UI com **2 casas decimais** (`formatNotaPerformanceHub`).
 - **Nota Total** = média ponderada dimensões (`calcularNotaTotalGamePresenter` / `calcularNotaTotalShuffler`).
-- **MTD consolidado** = média simples das notas totais **Concluída** no período **do time filtrado**.
+- **MTD consolidado** = média simples das notas totais **Aprovado** no período **do time filtrado**.
 - Configuração: subtítulo «Escala 0–10 · alterações aplicam-se a novas avaliações»; pesos editáveis por time conforme filtro de Time ativo.
 
 ### Filtros
@@ -288,7 +290,7 @@ Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `aca
 ## Anti-patterns (Academy)
 
 - Abrir aba Gerenciamento/Configuração sem gate de permissão.
-- Botão **Analisar** em status **Concluída**.
+- Botão **Analisar** fora do status **Aguardando** (Ver=Próprios) ou **Aplicar Feedback** fora de **Feedback** (Editar).
 - Filtro de time com opção «Todos» ou default Shuffler.
 - Pesos de scoring hardcoded na página — usar `PERFORMANCE_HUB_SCORING_POR_TIME` / estado de Configuração por time.
 - Exibir filtro Staff na aba **Configuração**.

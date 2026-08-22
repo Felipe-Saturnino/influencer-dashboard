@@ -17,16 +17,28 @@ export const PERFORMANCE_HUB_STATUS_LABEL: Record<PerformanceHubStatus, string> 
   pendente: "Pendente",
   rascunho: "Rascunho",
   em_analise: "Em Análise",
+  aguardando: "Aguardando",
   feedback: "Feedback",
-  concluida: "Concluída",
+  aprovado: "Aprovado",
 };
 
 export const PERFORMANCE_HUB_STATUS_COLOR: Record<PerformanceHubStatus, string> = {
   pendente: "#6b7280",
   rascunho: "#94a3b8",
   em_analise: "#f59e0b",
+  aguardando: "#f59e0b",
   feedback: "#7c3aed",
-  concluida: "#22c55e",
+  aprovado: "#22c55e",
+};
+
+export const PERFORMANCE_HUB_HISTORICO_ACAO_LABEL: Record<
+  import("./academyPerformanceHubTypes").PerformanceHubHistoricoAcao,
+  string
+> = {
+  publicada: "Publicou a avaliação",
+  solicitou_feedback: "Solicitou feedback",
+  aprovou: "Aprovou a avaliação",
+  aplicou_feedback: "Aplicou feedback",
 };
 
 export const PERFORMANCE_HUB_KPI_SUB =

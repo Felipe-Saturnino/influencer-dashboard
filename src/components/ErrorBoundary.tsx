@@ -1,19 +1,10 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { recarregarAposErroDeChunk, reloadAfterChunkError } from "../lib/chunkReloadGuard";
-
-function isChunkLoadError(error: Error | null): boolean {
-  if (!error) return false;
-  if (error.name === "ChunkLoadError") return true;
-  const msg = error.message.toLowerCase();
-  return (
-    msg.includes("failed to fetch dynamically imported module") ||
-    msg.includes("importing a module script failed") ||
-    msg.includes("chunk load error") ||
-    (msg.includes("loading css chunk") && msg.includes("failed")) ||
-    (msg.includes("loading chunk") && (msg.includes("failed") || msg.includes("error")))
-  );
-}
+import {
+  isChunkLoadError,
+  recarregarAposErroDeChunk,
+  reloadAfterChunkError,
+} from "../lib/chunkReloadGuard";
 
 interface Props {
   children: ReactNode;
@@ -62,7 +53,8 @@ export default class ErrorBoundary extends Component<Props, State> {
       recarregarAposErroDeChunk();
       return;
     }
-    window.location.reload();
+    // Safari iOS: falha de módulo às vezes chega sem mensagem reconhecível — cache-bust ajuda.
+    recarregarAposErroDeChunk();
   };
 
   render() {
@@ -95,7 +87,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               aria-hidden
               style={{ animation: "spin 1s linear infinite" }}
             />
-            Atualizando...
+            Atualizando…
           </div>
         );
       }
