@@ -3,10 +3,14 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { recarregarAposErroDeChunk, reloadAfterChunkError } from "@/lib/chunkReloadGuard";
 
-vi.mock("@/lib/chunkReloadGuard", () => ({
-  reloadAfterChunkError: vi.fn(() => true),
-  recarregarAposErroDeChunk: vi.fn(),
-}));
+vi.mock("@/lib/chunkReloadGuard", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/chunkReloadGuard")>();
+  return {
+    ...actual,
+    reloadAfterChunkError: vi.fn(() => true),
+    recarregarAposErroDeChunk: vi.fn(),
+  };
+});
 
 const reloadGuardMock = vi.mocked(reloadAfterChunkError);
 const recarregarManualMock = vi.mocked(recarregarAposErroDeChunk);
@@ -46,7 +50,7 @@ describe("ErrorBoundary", () => {
       </ErrorBoundary>,
     );
 
-    expect(tela.getByText("Atualizando...")).toBeInTheDocument();
+    expect(tela.getByText("Atualizando…")).toBeInTheDocument();
   });
 
   it("oferece recarga manual quando o limite de recargas automáticas foi atingido", () => {
@@ -76,10 +80,7 @@ describe("ErrorBoundary", () => {
     expect(recarregarManualMock).toHaveBeenCalledTimes(1);
   });
 
-  it("erro genérico recarrega sem cache-busting", () => {
-    const reload = vi.fn();
-    vi.stubGlobal("location", { ...window.location, reload } as Location);
-
+  it("erro genérico também recarrega com cache-busting (Safari / HTML antigo)", () => {
     const tela = render(
       <ErrorBoundary>
         <Thrower message="falha de teste" />
@@ -87,8 +88,6 @@ describe("ErrorBoundary", () => {
     );
     fireEvent.click(tela.getByRole("button", { name: "Recarregar página" }));
 
-    expect(recarregarManualMock).not.toHaveBeenCalled();
-    expect(reload).toHaveBeenCalledTimes(1);
-    vi.unstubAllGlobals();
+    expect(recarregarManualMock).toHaveBeenCalledTimes(1);
   });
 });
