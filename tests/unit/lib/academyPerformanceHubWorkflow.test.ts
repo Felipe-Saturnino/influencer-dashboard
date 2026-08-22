@@ -6,6 +6,7 @@ import {
   avaliacaoVisivelGerenciamentoAnalisar,
   isEscopoPropriosPerformanceHub,
   statusAposConcluirModal,
+  statusContaComoRealizadaPerformanceHub,
   statusInicialNovaAvaliacao,
 } from "../../../src/lib/academyPerformanceHubWorkflow";
 import type { PerformanceHubAvaliacao } from "../../../src/lib/academyPerformanceHubTypes";
@@ -41,6 +42,14 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "feedback" }))).toBe(true);
     expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "aprovado" }))).toBe(true);
     expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "concluida" }))).toBe(true);
+  });
+
+  it("KPI MTD / realizadas só contam Aprovado (e legado concluida)", () => {
+    expect(statusContaComoRealizadaPerformanceHub("aguardando")).toBe(false);
+    expect(statusContaComoRealizadaPerformanceHub("feedback")).toBe(false);
+    expect(statusContaComoRealizadaPerformanceHub("aprovado")).toBe(true);
+    expect(statusContaComoRealizadaPerformanceHub("concluida")).toBe(true);
+    expect(statusContaComoRealizadaPerformanceHub("rascunho")).toBe(false);
   });
 
   it("escopo Próprios casa por staff id ou nome", () => {

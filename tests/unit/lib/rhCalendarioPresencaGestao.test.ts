@@ -36,11 +36,26 @@ describe("horario presença HH:MM — máscara e normalização", () => {
   it("interpreta 3 dígitos como HMM (zero da hora omitido)", () => {
     expect(aplicarMascaraHorarioPresencaHHMM("650")).toBe("06:50");
     expect(normalizarHorarioPresencaHHMM("650")).toBe("06:50");
+    expect(aplicarMascaraHorarioPresencaHHMM("930")).toBe("09:30");
+  });
+
+  it("com 3 dígitos e hora 10–23 não força HMM (23:00 / 10:00 no mobile)", () => {
+    // Digitando «230» a caminho de «2300» — sem isto vira «02:30» e maxLength 5 trava.
+    expect(aplicarMascaraHorarioPresencaHHMM("230")).toBe("23:0");
+    expect(aplicarMascaraHorarioPresencaHHMM("2300")).toBe("23:00");
+    expect(aplicarMascaraHorarioPresencaHHMM("100")).toBe("10:0");
+    expect(aplicarMascaraHorarioPresencaHHMM("1000")).toBe("10:00");
+    expect(aplicarMascaraHorarioPresencaHHMM("159")).toBe("15:9");
+    expect(normalizarHorarioPresencaHHMM("230")).toBe("23:0");
+    expect(validarHorarioPresencaHHMM(normalizarHorarioPresencaHHMM("230"))).toBe(false);
+    expect(normalizarHorarioPresencaHHMM("2300")).toBe("23:00");
+    expect(validarHorarioPresencaHHMM(normalizarHorarioPresencaHHMM("2300"))).toBe(true);
   });
 
   it("normaliza hora com um dígito e minutos completos", () => {
     expect(normalizarHorarioPresencaHHMM("6:50")).toBe("06:50");
     expect(normalizarHorarioPresencaHHMM("15:17")).toBe("15:17");
+    expect(normalizarHorarioPresencaHHMM("23:00")).toBe("23:00");
   });
 
   it("na digitação com separador não completa minuto com um dígito (maxLength 5)", () => {

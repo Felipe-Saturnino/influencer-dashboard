@@ -20,20 +20,24 @@ export function usePerformanceHubAvaliacoes() {
     void recarregar();
   }, [recarregar]);
 
-  const persistirAvaliacao = useCallback(async (row: PerformanceHubAvaliacao) => {
-    const salvo = await upsertPerformanceHubAvaliacao(row);
-    if (!salvo) return row;
-    setAvaliacoes((prev) => {
-      const idx = prev.findIndex((item) => item.id === row.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = salvo;
-        return next;
-      }
-      return [salvo, ...prev];
-    });
-    return salvo;
-  }, []);
+  const persistirAvaliacao = useCallback(
+    async (row: PerformanceHubAvaliacao): Promise<PerformanceHubAvaliacao | null> => {
+      const salvo = await upsertPerformanceHubAvaliacao(row);
+      // Falha no upsert → null (não devolver o row em memória: histórico/UI não devem assumir persistência).
+      if (!salvo) return null;
+      setAvaliacoes((prev) => {
+        const idx = prev.findIndex((item) => item.id === row.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = salvo;
+          return next;
+        }
+        return [salvo, ...prev];
+      });
+      return salvo;
+    },
+    [],
+  );
 
   return {
     avaliacoes,

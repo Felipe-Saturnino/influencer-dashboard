@@ -998,7 +998,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Pontuação",
         texto:
-          "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). KPIs MTD usam média simples das notas totais concluídas no período. Valores exibidos com duas casas decimais.",
+          "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). KPIs MTD (Consolidados) usam média simples só das avaliações **Aprovado** no período do time filtrado — Aguardando e Feedback entram na tabela, mas não na média. Valores exibidos com duas casas decimais.",
       },
     ],
   },

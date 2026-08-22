@@ -540,12 +540,21 @@ function formatarSegmentosHorarioPresencaHHMM(
   return `${String(parseInt(hRaw || "0", 10)).padStart(2, "0")}:${m}`;
 }
 
-/** Interpreta só dígitos (3 = HMM omitindo zero da hora; 4 = HHMM). */
+/**
+ * Interpreta só dígitos.
+ * 4 = HHMM. 3 = HMM (ex.: 650 → 06:50) **somente** se os dois primeiros
+ * dígitos **não** formarem hora 10–23 — senão «230» vira «02:30» e, com
+ * maxLength 5 no input, o usuário não consegue digitar «23:00».
+ */
 function horarioPresencaDeDigitos(digits: string): string | null {
   if (digits.length === 4) {
     return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
   }
   if (digits.length === 3) {
+    const firstTwo = parseInt(digits.slice(0, 2), 10);
+    if (firstTwo >= 10 && firstTwo <= 23) {
+      return `${digits.slice(0, 2)}:${digits[2]!}`;
+    }
     return `0${digits[0]}:${digits.slice(1, 3)}`;
   }
   return null;
@@ -565,7 +574,8 @@ export function normalizarHorarioPresencaHHMM(valor: string): string {
 
   const deDigitos = horarioPresencaDeDigitos(comSeparador.replace(/\D/g, ""));
   if (deDigitos) {
-    const partes = /^(\d{1,2}):(\d{2})$/.exec(deDigitos);
+    // Aceita minuto com 1 dígito («23:0» a meio de «23:00») — incompleto não valida.
+    const partes = /^(\d{1,2}):(\d{1,2})$/.exec(deDigitos);
     if (partes) {
       return formatarSegmentosHorarioPresencaHHMM(partes[1]!, partes[2]!, "completo");
     }
@@ -598,7 +608,12 @@ export function aplicarMascaraHorarioPresencaHHMM(input: string): string {
   if (digits.length === 0) return "";
   if (digits.length <= 2) return digits;
   if (digits.length === 3) {
-    return `0${digits[0]}:${digits.slice(1)}`;
+    // «230» → «23:0» (incompleto), não «02:30» — ver horarioPresencaDeDigitos.
+    const firstTwo = parseInt(digits.slice(0, 2), 10);
+    if (firstTwo >= 10 && firstTwo <= 23) {
+      return `${digits.slice(0, 2)}:${digits[2]!}`;
+    }
+    return `0${digits[0]!}:${digits.slice(1)}`;
   }
   return `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }

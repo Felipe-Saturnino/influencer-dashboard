@@ -509,13 +509,12 @@ export default function PerformanceHubPage() {
               ...avaliacaoEmEdicao,
               status: "aprovado",
             });
-            if (salvo) {
-              await registrarHistoricoAvaliacaoPerformanceHub({
-                avaliacaoId: salvo.id,
-                acao: "aprovou",
-                usuarioNome: nomeUsuarioAcao,
-              });
-            }
+            if (!salvo) return;
+            await registrarHistoricoAvaliacaoPerformanceHub({
+              avaliacaoId: salvo.id,
+              acao: "aprovou",
+              usuarioNome: nomeUsuarioAcao,
+            });
             setAvaliacaoEmEdicao(null);
           }}
           onSolicitarFeedback={async (texto) => {
@@ -527,14 +526,13 @@ export default function PerformanceHubPage() {
               solicitacaoFeedbackPorNome: nomeUsuarioAcao,
               solicitacaoFeedbackEm: agora,
             });
-            if (salvo) {
-              await registrarHistoricoAvaliacaoPerformanceHub({
-                avaliacaoId: salvo.id,
-                acao: "solicitou_feedback",
-                usuarioNome: nomeUsuarioAcao,
-                mensagem: texto,
-              });
-            }
+            if (!salvo) return;
+            await registrarHistoricoAvaliacaoPerformanceHub({
+              avaliacaoId: salvo.id,
+              acao: "solicitou_feedback",
+              usuarioNome: nomeUsuarioAcao,
+              mensagem: texto,
+            });
             setAvaliacaoEmEdicao(null);
           }}
           onAplicarFeedback={async (texto) => {
@@ -546,14 +544,13 @@ export default function PerformanceHubPage() {
               aplicacaoFeedbackPorNome: nomeUsuarioAcao,
               aplicacaoFeedbackEm: agora,
             });
-            if (salvo) {
-              await registrarHistoricoAvaliacaoPerformanceHub({
-                avaliacaoId: salvo.id,
-                acao: "aplicou_feedback",
-                usuarioNome: nomeUsuarioAcao,
-                mensagem: texto,
-              });
-            }
+            if (!salvo) return;
+            await registrarHistoricoAvaliacaoPerformanceHub({
+              avaliacaoId: salvo.id,
+              acao: "aplicou_feedback",
+              usuarioNome: nomeUsuarioAcao,
+              mensagem: texto,
+            });
             setAvaliacaoEmEdicao(null);
           }}
         />
@@ -576,7 +573,7 @@ export default function PerformanceHubPage() {
                 status: statusAposSalvarRascunho(avaliacaoEmEdicao),
               };
               const salvo = await persistirAvaliacao(atualizado);
-              setAvaliacaoEmEdicao(salvo);
+              if (salvo) setAvaliacaoEmEdicao(salvo);
             })();
           }}
           onConcluir={(payload) => {
@@ -592,8 +589,8 @@ export default function PerformanceHubPage() {
                   acao: "publicada",
                   usuarioNome: nomeUsuarioAcao,
                 });
+                setAvaliacaoEmEdicao(null);
               }
-              setAvaliacaoEmEdicao(null);
             })();
           }}
         />

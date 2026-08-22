@@ -21,6 +21,7 @@ import {
 import {
   acoesAbaAvaliacoesPerformanceHub,
   isEscopoPropriosPerformanceHub,
+  statusContaComoRealizadaPerformanceHub,
 } from "../../../lib/academyPerformanceHubWorkflow";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
@@ -177,11 +178,16 @@ export function PerformanceHubAbaAvaliacoes({
     return sorted;
   }, [avaliacoes, isProprios, showBusca, busca, sort]);
 
-  const kpiAvaliacoes = rowsVisiveis.length;
-  const kpiNotaTotal = mediaNotas(rowsVisiveis, (r) => r.notaTotal);
-  const kpiImagem = mediaNotas(rowsVisiveis, (r) => r.notaImagem);
-  const kpiComunicacao = mediaNotas(rowsVisiveis, (r) => r.notaComunicacao);
-  const kpiTerceira = mediaNotas(rowsVisiveis, (r) => notaTerceiraDimensaoAvaliacao(r));
+  // MTD / Consolidados: só status Aprovado (`aprovado` + legado `concluida`) — academy.mdc.
+  const rowsKpi = useMemo(
+    () => rowsVisiveis.filter((r) => statusContaComoRealizadaPerformanceHub(r.status)),
+    [rowsVisiveis],
+  );
+  const kpiAvaliacoes = rowsKpi.length;
+  const kpiNotaTotal = mediaNotas(rowsKpi, (r) => r.notaTotal);
+  const kpiImagem = mediaNotas(rowsKpi, (r) => r.notaImagem);
+  const kpiComunicacao = mediaNotas(rowsKpi, (r) => r.notaComunicacao);
+  const kpiTerceira = mediaNotas(rowsKpi, (r) => notaTerceiraDimensaoAvaliacao(r));
 
   function handleSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" }));
