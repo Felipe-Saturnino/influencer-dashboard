@@ -39,6 +39,7 @@ import { supabase } from "../../../lib/supabase";
 import { PerformanceHubFiltroBar } from "./PerformanceHubFiltroBar";
 import { PerformanceHubAbaAvaliacoes } from "./PerformanceHubAbaAvaliacoes";
 import { PerformanceHubAbaGerenciamento } from "./PerformanceHubAbaGerenciamento";
+import { PerformanceHubAbaFeedback } from "./PerformanceHubAbaFeedback";
 import { PerformanceHubAbaConfiguracao } from "./PerformanceHubAbaConfiguracao";
 import { ModalAvaliarPerformanceHub, type PerformanceHubAvaliacaoFormPayload } from "./ModalAvaliarPerformanceHub";
 import { ModalAnalisarFeedbackPerformanceHub } from "./ModalAnalisarFeedbackPerformanceHub";
@@ -114,8 +115,11 @@ function isAvaliacaoNoHistorico(row: PerformanceHubAvaliacao): boolean {
   return dataIso >= inicio && dataIso <= fim;
 }
 
-function initialTab(canCriarSim: boolean, current: PerformanceHubTab): PerformanceHubTab {
+function initialTab(canCriarSim: boolean, canEditarOk: boolean, current: PerformanceHubTab): PerformanceHubTab {
   if ((current === "gerenciamento" || current === "configuracao") && !canCriarSim) {
+    return "avaliacoes";
+  }
+  if (current === "feedback" && !canEditarOk) {
     return "avaliacoes";
   }
   return current;
@@ -132,11 +136,12 @@ export default function PerformanceHubPage() {
   const [aba, setAba] = useRouteTab(
     "academy_performance_hub",
     "avaliacoes",
-    ["avaliacoes", "gerenciamento", "configuracao"] as const,
+    ["avaliacoes", "feedback", "gerenciamento", "configuracao"] as const,
   );
 
   const soProprios = isEscopoPropriosPerformanceHub(perm.canView, perm.canEditarOk);
   const canCriarSim = perm.canCriar === "sim";
+  const canEditarOk = perm.canEditarOk;
 
   const [historico, setHistorico] = useState(false);
   const [timeSelecionado, setTimeSelecionado] = useState<PerformanceHubTimeSlug>(PERFORMANCE_HUB_TIME_DEFAULT);
@@ -155,9 +160,9 @@ export default function PerformanceHubPage() {
 
   useEffect(() => {
     if (perm.loading) return;
-    const next = initialTab(canCriarSim, aba);
+    const next = initialTab(canCriarSim, canEditarOk, aba);
     if (next !== aba) setAba(next);
-  }, [perm.loading, canCriarSim, aba, setAba]);
+  }, [perm.loading, canCriarSim, canEditarOk, aba, setAba]);
 
   useEffect(() => {
     if (!soProprios) {
@@ -434,6 +439,7 @@ export default function PerformanceHubPage() {
         staffSelecionado={staffSelecionado}
         onSelecionarStaff={setStaffSelecionado}
         canCriarSim={canCriarSim}
+        canEditarOk={canEditarOk}
         showStaffFilter={aba !== "configuracao"}
       />
 
@@ -448,7 +454,15 @@ export default function PerformanceHubPage() {
             onVer={handleVerAvaliacao}
             onAnalisar={handleAnalisarAvaliacao}
             onHistorico={handleHistoricoAvaliacao}
+          />
+        ) : null}
+
+        {aba === "feedback" && canEditarOk ? (
+          <PerformanceHubAbaFeedback
+            avaliacoes={avaliacoesFiltradasBase}
+            onVer={handleVerAvaliacao}
             onAplicarFeedback={handleAplicarFeedback}
+            onHistorico={handleHistoricoAvaliacao}
           />
         ) : null}
 

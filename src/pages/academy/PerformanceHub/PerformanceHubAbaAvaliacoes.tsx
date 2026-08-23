@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Eye, FileSearch, History, Image, ListChecks, MessageSquare, MessageSquareReply, Star, TableProperties, Users } from "lucide-react";
+import { Eye, FileSearch, History, Image, ListChecks, MessageSquare, Star, TableProperties, Users } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -42,7 +42,6 @@ type Props = {
   onVer: (row: PerformanceHubAvaliacao) => void;
   onAnalisar: (row: PerformanceHubAvaliacao) => void;
   onHistorico: (row: PerformanceHubAvaliacao) => void;
-  onAplicarFeedback: (row: PerformanceHubAvaliacao) => void;
 };
 
 type SortCol = "data" | "avaliado" | "avaliador" | "status" | "total" | "imagem" | "comunicacao" | "terceira";
@@ -131,7 +130,6 @@ export function PerformanceHubAbaAvaliacoes({
   onVer,
   onAnalisar,
   onHistorico,
-  onAplicarFeedback,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -359,15 +357,7 @@ export function PerformanceHubAbaAvaliacoes({
                                 </BtnIconeAcaoLinha>
                               );
                             }
-                            return (
-                              <BtnIconeAcaoLinha
-                                key={`${row.id}-aplicar`}
-                                label={tooltipAcao("Aplicar feedback")}
-                                onClick={() => onAplicarFeedback(row)}
-                              >
-                                <MessageSquareReply size={14} aria-hidden />
-                              </BtnIconeAcaoLinha>
-                            );
+                            return null;
                           })}
                         </div>
                       </td>

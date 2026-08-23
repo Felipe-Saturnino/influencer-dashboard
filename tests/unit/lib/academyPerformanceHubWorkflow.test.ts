@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   acoesAbaAvaliacoesPerformanceHub,
+  avaliacaoFeedbackAplicado,
+  avaliacaoFeedbackPendente,
   avaliacaoPertenceAoEscopoProprios,
   avaliacaoVisivelAbaAvaliacoes,
   avaliacaoVisivelGerenciamentoAnalisar,
@@ -90,15 +92,28 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     ).toEqual(["ver", "historico"]);
   });
 
-  it("ações Editar=Sim", () => {
+  it("ações Editar=Sim — Feedback sem Aplicar na aba Avaliações", () => {
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "aguardando" }),
     ).toEqual([]);
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "feedback" }),
-    ).toEqual(["historico", "ver", "aplicar_feedback"]);
+    ).toEqual(["historico", "ver"]);
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "aprovado" }),
     ).toEqual(["ver", "historico"]);
+  });
+
+  it("aba Feedback — pendentes e aplicados", () => {
+    const base = row({ status: "feedback", solicitacaoFeedbackEm: "2026-08-20T10:00:00Z" });
+    expect(avaliacaoFeedbackPendente(base)).toBe(true);
+    expect(avaliacaoFeedbackAplicado(base)).toBe(false);
+    expect(
+      avaliacaoFeedbackAplicado({
+        ...base,
+        status: "aprovado",
+        aplicacaoFeedbackEm: "2026-08-21T12:00:00Z",
+      }),
+    ).toBe(true);
   });
 });

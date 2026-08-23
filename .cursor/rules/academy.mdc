@@ -147,7 +147,7 @@ Migração `20260625120000_academy_performance_hub_page.sql`: todos os roles (ex
 | Ação | Superfície |
 |------|------------|
 | **Ver** | Página + aba Avaliações |
-| **Editar** | Ações de coach na aba Avaliações (ex.: Aplicar Feedback) |
+| **Editar** | Aba **Feedback** (Aplicar Feedback) — não abre Gerenciamento/Configuração sozinho |
 | **Criar** (= **Sim**) | Abas **Gerenciamento** e **Configuração** |
 | **Excluir** | Reservado (sem fluxo na v1) |
 
@@ -157,11 +157,23 @@ Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar`
 
 | Tab | Ícone | Gate |
 |-----|-------|------|
-| Avaliações | `ClipboardList` | Ver (qualquer valor ≠ Não) |
+| Avaliações | `BarChart3` | Ver (qualquer valor ≠ Não) |
+| Feedback | `MessageSquare` | `canEditarOk` (Editar = Sim) |
 | Gerenciamento | `ClipboardList` | `canCriar === "sim"` |
 | Configuração | `Settings` | `canCriar === "sim"` |
 
-URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
+URL: `appRoutes.ts` — segmentos `Avaliacoes`, `Feedback`, `Gerenciamento`, `Configuracao`.
+
+### Aba Feedback (`PerformanceHubAbaFeedback`)
+
+Visível só com **Editar = Sim**, entre Avaliações e Gerenciamento. Respeita os mesmos filtros de período/time/staff da página.
+
+| Bloco | Conteúdo | Ações |
+|-------|----------|-------|
+| **Feedbacks Pendentes** | `status === feedback` — Data da Avaliação, Avaliado, Data da Solicitação, Mensagem | **Aplicar Feedback** (`ModalAnalisarFeedbackPerformanceHub` modo aplicar), **Ver** |
+| **Feedbacks Aplicados** | `aplicacao_feedback_em` preenchido — + Data da Aplicação, Aplicador | **Ver**, **Histórico** |
+
+Strings de vazio: «Nenhum feedback pendente/aplicado para o período selecionado.»
 
 ### Status × ações (aba Avaliações)
 
@@ -170,7 +182,7 @@ Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `2
 | Status | Ver = Próprios | Editar = Sim |
 |--------|----------------|--------------|
 | **Aguardando** | **Analisar Avaliação** | — (nenhuma ação) |
-| **Feedback** | Ver, Histórico | Histórico, Ver, **Aplicar Feedback** |
+| **Feedback** | Ver, Histórico | Ver, Histórico (**Aplicar Feedback** só na aba Feedback) |
 | **Aprovado** | Ver, Histórico | Ver, Histórico |
 
 **Fluxo de publicação e aprovação**
@@ -181,7 +193,7 @@ Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `2
 | Concluir (publicar) | Avaliações | **Aguardando** |
 | Prestador → Solicitar Feedback | Avaliações · Analisar | **Feedback** |
 | Prestador → Aprovar | Avaliações · Analisar | **Aprovado** |
-| Coach → Aplicar Feedback (Aprovar + texto) | Avaliações · Aplicar Feedback | **Aprovado** |
+| Coach → Aplicar Feedback (Aprovar + texto) | Aba **Feedback** · Aplicar Feedback | **Aprovado** |
 
 Modal **Analisar Avaliação** (Ver=Próprios, status Aguardando): leitura + CTAs **Aprovar** (primário) e **Solicitar Feedback** (secundário). Em status **Feedback** o botão Solicitar Feedback não aparece.
 
@@ -290,8 +302,8 @@ Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `aca
 
 ## Anti-patterns (Academy)
 
-- Abrir aba Gerenciamento/Configuração sem gate de permissão.
-- Botão **Analisar** fora do status **Aguardando** (Ver=Próprios) ou **Aplicar Feedback** fora de **Feedback** (Editar).
+- Abrir aba Gerenciamento/Configuração sem gate de permissão; abrir aba **Feedback** sem **Editar = Sim**.
+- Botão **Analisar** fora do status **Aguardando** (Ver=Próprios) ou **Aplicar Feedback** fora da aba **Feedback** (Editar).
 - Filtro de time com opção «Todos» ou default Shuffler.
 - Pesos de scoring hardcoded na página — usar `PERFORMANCE_HUB_SCORING_POR_TIME` / estado de Configuração por time.
 - Exibir filtro Staff na aba **Configuração**.

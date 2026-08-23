@@ -113,7 +113,7 @@ export function acoesAbaAvaliacoesPerformanceHub(opts: {
 
   if (canEditarOk) {
     if (status === "aguardando") return [];
-    if (status === "feedback") return ["historico", "ver", "aplicar_feedback"];
+    if (status === "feedback") return ["historico", "ver"];
     return ["ver", "historico"];
   }
 
@@ -137,4 +137,14 @@ export function statusPublicadoPerformanceHub(status: PerformanceHubStatus): boo
 /** Conta na agenda (realizadas) e no KPI — avaliações publicadas (mesma base da aba Avaliações). */
 export function statusContaComoRealizadaPerformanceHub(status: PerformanceHubStatus): boolean {
   return statusPublicadoPerformanceHub(status);
+}
+
+/** Aba Feedback — aguardando repasse do coach (status Feedback). */
+export function avaliacaoFeedbackPendente(row: PerformanceHubAvaliacao): boolean {
+  return row.status === "feedback";
+}
+
+/** Aba Feedback — repasse já registrado pelo coach. */
+export function avaliacaoFeedbackAplicado(row: PerformanceHubAvaliacao): boolean {
+  return Boolean(row.aplicacaoFeedbackEm?.trim());
 }

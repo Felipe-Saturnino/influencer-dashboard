@@ -32,6 +32,7 @@ export type AppRouteTabAccess =
   | "vagas_gerenciamento"
   | "vagas_candidaturas"
   | "galeria_upload"
+  | "academy_feedback"
   | "academy_gerenciamento"
   | "academy_configuracao"
   | "academy_portal_gerenciamento"
@@ -253,6 +254,12 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   ]),
   page("Performance Hub", "academy_performance_hub", "PerformanceHub", [
     { tabId: "avaliacoes", slug: "Avaliacoes", label: "Avaliações", access: "always" },
+    {
+      tabId: "feedback",
+      slug: "Feedback",
+      label: "Feedback",
+      access: "academy_feedback",
+    },
     {
       tabId: "gerenciamento",
       slug: "Gerenciamento",
@@ -515,6 +522,8 @@ export function isTabAllowedForUser(
       return podeExecutarPerm(acoes.rh_vagas?.criar ?? null);
     case "galeria_upload":
       return podeExecutarPerm(acoes.galeria_fotos?.criar ?? null);
+    case "academy_feedback":
+      return podeExecutarPerm(acoes.academy_performance_hub?.editar ?? null);
     case "academy_gerenciamento":
       return podeExecutarPerm(acoes.academy_performance_hub?.editar ?? null);
     case "academy_configuracao":

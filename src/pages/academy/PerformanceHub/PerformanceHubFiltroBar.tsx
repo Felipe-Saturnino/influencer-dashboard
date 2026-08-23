@@ -1,4 +1,4 @@
-import { BarChart3, ChevronLeft, ChevronRight, ClipboardList, Settings } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, ClipboardList, MessageSquare, Settings } from "lucide-react";
 import type { Theme } from "../../../constants/theme";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { PERFORMANCE_HUB_TIME_OPTIONS } from "../../../lib/academyPerformanceHubConstants";
@@ -38,12 +38,15 @@ type Props = {
   onSelecionarStaff: (ids: string[]) => void;
   /** Criar = Sim: abas Gerenciamento e Configuração. */
   canCriarSim: boolean;
+  /** Editar = Sim: aba Feedback. */
+  canEditarOk: boolean;
   /** Oculto na aba Configuração */
   showStaffFilter: boolean;
 };
 
-function tabsVisiveis(canCriarSim: boolean): PerformanceHubTab[] {
+function tabsVisiveis(canCriarSim: boolean, canEditarOk: boolean): PerformanceHubTab[] {
   const tabs: PerformanceHubTab[] = ["avaliacoes"];
+  if (canEditarOk) tabs.push("feedback");
   if (canCriarSim) {
     tabs.push("gerenciamento", "configuracao");
   }
@@ -69,9 +72,10 @@ export function PerformanceHubFiltroBar({
   staffSelecionado,
   onSelecionarStaff,
   canCriarSim,
+  canEditarOk,
   showStaffFilter,
 }: Props) {
-  const tabs = tabsVisiveis(canCriarSim);
+  const tabs = tabsVisiveis(canCriarSim, canEditarOk);
 
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
@@ -141,6 +145,18 @@ export function PerformanceHubFiltroBar({
           >
             Avaliações
           </FiltroBarTabButton>
+
+          {canEditarOk ? (
+            <FiltroBarTabButton
+              id="tab-performance-hub-feedback"
+              active={aba === "feedback"}
+              aria-controls="panel-performance-hub-feedback"
+              onClick={() => onSelectAba("feedback")}
+              icon={<MessageSquare {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            >
+              Feedback
+            </FiltroBarTabButton>
+          ) : null}
 
           {canCriarSim ? (
             <FiltroBarTabButton
