@@ -14,7 +14,7 @@ Imagens em `public/tutoriais/academy/performance-hub-configuracao-pesos/`.
 
 ### 1. Aba Configuração
 
-Menu **Academy** → **Performance Hub** → aba **Configuração** (exige Criar = Sim).
+Menu **Academy** → **Performance Hub** → aba **Configuração**.
 
 ![Configuração](imagens/01-aba-configuracao.png)
 
@@ -47,4 +47,3 @@ Botão **Salvar** → confirmação **Pesos salvos com sucesso.**
 ## Notas
 
 - Alterações valem para **novas** avaliações; publicadas mantêm a nota original.
-- Defaults: GP — Comunicação 2, Mesa 2, Imagem 1; Shuffler — Comunicação 1, Imagem 1, Procedimentos 2.

@@ -34,6 +34,13 @@ const TUTORIAL_CONFIGURACAO_PESOS: AjudaContextualTutorial = {
   descricao: "Ajustar pesos de dimensões e critérios do scoring.",
 };
 
+const TUTORIAL_APLICAR_FEEDBACK: AjudaContextualTutorial = {
+  id: "performance-hub-aplicar-feedback",
+  urlSlug: "PerformanceHubAplicarFeedback",
+  titulo: "Aplicar Feedback",
+  descricao: "Repassar feedback ao prestador e aprovar a avaliação.",
+};
+
 type Props = {
   brand: Brand;
   t: Theme;
@@ -147,6 +154,8 @@ export function PerformanceHubFiltroBar({
           tutorial={
             aba === "gerenciamento"
               ? TUTORIAL_AVALIAR
+              : aba === "feedback"
+                ? TUTORIAL_APLICAR_FEEDBACK
               : aba === "configuracao"
                 ? TUTORIAL_CONFIGURACAO_PESOS
                 : null

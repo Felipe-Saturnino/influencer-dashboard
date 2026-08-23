@@ -1013,7 +1013,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tutoriais (Ajuda)",
         texto:
-          "Na aba **Gerenciamento**, o atalho roxo abre o tutorial **Realizar Avaliação** — fluxo completo de criar, preencher critérios e publicar (Salvar rascunho ou Concluir).\n\nNa aba **Configuração**, o tutorial **Configurar Pesos** explica como ajustar pesos de dimensões e critérios por time.\n\nVisibilidade inicial: perfil **Performance Coach** (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
+          "Na aba **Feedback**, o atalho roxo abre **Aplicar Feedback** — revisar a solicitação do prestador, registrar o repasse e aprovar a avaliação.\n\nNa aba **Gerenciamento**, o tutorial **Realizar Avaliação** cobre criar, preencher critérios e publicar (Salvar rascunho ou Concluir).\n\nNa aba **Configuração**, **Configurar Pesos** explica pesos de dimensões e critérios por time.\n\nVisibilidade inicial: **Aplicar Feedback** → Shift Leader; **Realizar Avaliação** e **Configurar Pesos** → Performance Coach (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
       },
     ],
   },

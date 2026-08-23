@@ -18,7 +18,7 @@ export const TUTORIAL_PERFORMANCE_HUB_CONFIGURACAO_PESOS: TutorialDef = {
     {
       titulo: "1. Abrir a Configuração",
       texto:
-        "1. No menu, seção Academy, clique em Performance Hub.\n2. Clique na aba **Configuração**.\n\nA aba só aparece com permissão de **Criar = Sim** em Gestão de Usuários. O subtítulo do bloco confirma: **Escala 0–10 · alterações aplicam-se a novas avaliações**.",
+        "1. No menu, seção Academy, clique em Performance Hub.\n2. Clique na aba **Configuração**.",
       imagens: [
         {
           src: `${IMG}/01-aba-configuracao.png`,
@@ -72,5 +72,5 @@ export const TUTORIAL_PERFORMANCE_HUB_CONFIGURACAO_PESOS: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Pesos padrão ao implantar: Game Presenter — Comunicação 2, Mesa 2, Imagem 1; Shuffler — Comunicação 1, Imagem 1, Procedimentos 2.\n— Avaliações em andamento (rascunho) passam a usar os novos pesos na próxima vez que forem abertas ou salvas.\n— Consolidados e histórico de avaliações já publicadas mantêm a nota calculada no momento da conclusão.",
+    "— Avaliações em andamento (rascunho) passam a usar os novos pesos na próxima vez que forem abertas ou salvas.\n— Consolidados e histórico de avaliações já publicadas mantêm a nota calculada no momento da conclusão.",
 };

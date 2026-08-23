@@ -32,7 +32,7 @@ alwaysApply: false
 | `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
 | `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
 
-**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`); demais abas sem tutorial. **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
+**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Feedback** → `performance-hub-aplicar-feedback` (`PerformanceHubAplicarFeedback`); **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`); demais abas sem tutorial. **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
 
 Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**.
 
@@ -297,10 +297,11 @@ Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `aca
 
 | Tutorial | `tutorial_id` | URL | Aba | Visibilidade inicial |
 |----------|---------------|-----|-----|----------------------|
+| Aplicar Feedback | `performance-hub-aplicar-feedback` | `/Ajuda/Tutoriais/PerformanceHubAplicarFeedback` | Feedback | `shift_leader` |
 | Realizar Avaliação | `performance-hub-avaliar` | `/Ajuda/Tutoriais/PerformanceHubAvaliar` | Gerenciamento | `performance_coach` |
 | Configurar Pesos | `performance-hub-configuracao-pesos` | `/Ajuda/Tutoriais/PerformanceHubConfiguracaoPesos` | Configuração | `performance_coach` |
 
-Imagens: `public/tutoriais/academy/performance-hub-avaliar/` e `performance-hub-configuracao-pesos/`. Handoff: `docs/treinamento/academy/01-performance-hub-avaliar.md`, `02-performance-hub-configuracao-pesos.md`.
+Imagens: `public/tutoriais/academy/performance-hub-aplicar-feedback/`, `performance-hub-avaliar/` e `performance-hub-configuracao-pesos/`. Handoff: `docs/treinamento/academy/01-performance-hub-avaliar.md`, `02-performance-hub-configuracao-pesos.md`, `03-performance-hub-aplicar-feedback.md`.
 
 ### Strings de vazio
 
