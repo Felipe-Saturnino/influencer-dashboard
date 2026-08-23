@@ -17,7 +17,7 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
     {
       subtitulo: "No celular (Safari) vejo «Erro ao carregar a página» com o menu ainda visível?",
       texto:
-        "O menu e o cabeçalho carregaram, mas a área da página falhou (comum no Safari do iPhone após uma atualização da plataforma ou com cache antigo).\n\nToque em **Recarregar página**. Se voltar o mesmo aviso: feche a aba, abra de novo o endereço da plataforma ou use uma aba anônima. No iPhone: Ajustes → Safari → **Limpar histórico e dados do site** (só se as opções anteriores não resolverem).\n\nChrome ou outro navegador no mesmo celular costuma funcionar — isso não substitui o Safari, mas ajuda a confirmar se o problema é cache. Se continuar só no Safari, entre em contato com o suporte informando o modelo do iPhone e a versão do iOS.",
+        "O menu e o cabeçalho carregaram, mas a área da página falhou — comum no Safari do iPhone após uma atualização da plataforma ou com cache antigo do site.\n\nA plataforma tenta se atualizar sozinha (você pode ver **Atualizando…** por um instante). Se aparecer **Nova versão disponível**, toque em **Recarregar página**.\n\nSe voltar o mesmo aviso: feche a aba, abra de novo o endereço da plataforma ou use uma aba anônima. No iPhone: Ajustes → Safari → **Limpar histórico e dados do site** (só se as opções anteriores não resolverem).\n\nChrome ou outro navegador no mesmo celular costuma funcionar — isso não substitui o Safari, mas ajuda a confirmar se o problema é cache. Se continuar só no Safari, entre em contato com o suporte informando o modelo do iPhone e a versão do iOS.",
     },
     {
       subtitulo: "No endereço de staging (pages.dev) aparece que não tenho acesso ao ambiente?",

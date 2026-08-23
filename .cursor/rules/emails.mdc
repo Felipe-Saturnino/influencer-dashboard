@@ -334,9 +334,9 @@ Ordem típica Relatório Diretoria: **Consolidado MTD** (até última data Overv
 
 **Resultado de Streamers — Investimento:** RPC **`get_investimento_pago`** (pagamentos + agentes com status **Pago**, ciclos cujo `data_fim` está no período). Visão global (sem filtro de operadora/influencer), igual ao Overview Streamers com **Todas Operadoras** / **Todos Influencers**. A Edge usa **service role** — a RPC precisa aceitar `auth.role() = service_role` (anônimo continua a receber 0). Janela: 1º dia do mês do consolidado até **hoje** (BRT) no mês civil atual (mesma regra `getPeriodoComparativoMoM` do Streamers); no dia 1, mês anterior fechado até ontem.
 
-**Posicionamento — Mesas Dedicadas:** colunas **Blaze | CDA**. Cruza a última execução `lobby_monitor_*` com o catálogo de estúdios dedicados: **ID Spin** da mesa ligada à operadora (estúdio → `estudios_spin_operadoras` ou `operadora_slug` legado), depois demais IDs do mesmo nome, depois nome normalizado. Células com prefixo **`P`** (ex. `P3`); sem leitura → **—**.
+**Posicionamento — Mesas Dedicadas:** colunas **Blaze | CDA**. Cruza a última execução `lobby_monitor_*` com o catálogo de estúdios **dedicados**: posição **somente** pelo **ID Spin** da mesa ligada àquela operadora (estúdio dedicado → `estudios_spin_operadoras` ou `operadora_slug` legado). **Sem** fallback por nome normalizado — evita exibir posição de mesa Network com o mesmo rótulo de jogo. Sem ID dedicado na operadora → **—**.
 
-**Posicionamento — Mesas Network:** colunas **Blaze | CDA | Esportiva | Jonbet**. Match por **ID Spin** (e nome como fallback). Células de posição com prefixo **`P`** (ex. `P3`), igual às Dedicadas.
+**Posicionamento — Mesas Network:** colunas **Blaze | CDA | Esportiva | Jonbet**. Match **exclusivo por ID Spin** da mesa network no cadastro. Células de posição com prefixo **`P`** (ex. `P3`); sem leitura → **—**.
 
 **Largura do card:** `EMAIL_CARD_MAX_WIDTH_PX = 960` em `common.ts` (`width:100%` + media query ≤640px).
 ---

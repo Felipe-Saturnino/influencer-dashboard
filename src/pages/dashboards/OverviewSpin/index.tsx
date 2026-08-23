@@ -37,8 +37,6 @@ import {
 
 const DashboardPosicionamento = lazy(() => import("./DashboardPosicionamento"));
 
-const MSG_SELECIONE_OPERADORA_MESAS = "Selecione uma operadora para ver as mesas.";
-
 import { Loader2 } from "lucide-react";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { DashboardPageHeader } from "../../../components/dashboard";
@@ -288,35 +286,6 @@ export default function OverviewSpin() {
     brand,
     t,
   } as const;
-
-  const blocosMesaTodasOperadoras = (
-    <>
-      {exibirComparativoMesa ? (
-        <div style={contentBox}>
-          <SectionTitle sub="Escolha duas mesas de Blackjack para ver os resultados">
-            Comparativo de mesa
-          </SectionTitle>
-          <div
-            style={{
-              padding: 40,
-              textAlign: "center",
-              color: t.textMuted,
-              fontFamily: FONT.body,
-              fontSize: 13,
-            }}
-          >
-            {MSG_SELECIONE_OPERADORA_MESAS}
-          </div>
-        </div>
-      ) : null}
-      <OverviewSpinDadosPorMesa
-        {...dadosPorMesaCommon}
-        state="empty"
-        emptyMessage={MSG_SELECIONE_OPERADORA_MESAS}
-        colTempo={historico ? "Mês" : "Data"}
-      />
-    </>
-  );
 
   const isPrimeiro = idxMes === 0;
   const isUltimo = idxMes === mesesDisponiveis.length - 1;
@@ -599,9 +568,7 @@ export default function OverviewSpin() {
                   <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                 </div>
               </div>
-              {modoAgregadoTodasOperadoras ? (
-                blocosMesaTodasOperadoras
-              ) : (
+              {!modoAgregadoTodasOperadoras && (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -638,9 +605,7 @@ export default function OverviewSpin() {
                   {MSG_SEM_DADOS_PERIODO}
                 </div>
               </div>
-              {modoAgregadoTodasOperadoras ? (
-                blocosMesaTodasOperadoras
-              ) : (
+              {!modoAgregadoTodasOperadoras && (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -698,9 +663,7 @@ export default function OverviewSpin() {
                 )}
               </div>
 
-              {modoAgregadoTodasOperadoras ? (
-                blocosMesaTodasOperadoras
-              ) : (
+              {!modoAgregadoTodasOperadoras && (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -883,9 +846,7 @@ export default function OverviewSpin() {
                   <span style={{ fontSize: 12, fontFamily: FONT.body }}>Carregando…</span>
                 </div>
               </div>
-              {modoAgregadoTodasOperadoras ? (
-                blocosMesaTodasOperadoras
-              ) : (
+              {!modoAgregadoTodasOperadoras && (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -922,9 +883,7 @@ export default function OverviewSpin() {
                   {MSG_SEM_DADOS_PERIODO}
                 </div>
               </div>
-              {modoAgregadoTodasOperadoras ? (
-                blocosMesaTodasOperadoras
-              ) : (
+              {!modoAgregadoTodasOperadoras && (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -982,9 +941,7 @@ export default function OverviewSpin() {
                 )}
               </div>
 
-              {modoAgregadoTodasOperadoras ? (
-                blocosMesaTodasOperadoras
-              ) : (
+              {!modoAgregadoTodasOperadoras && (
                 <>
                   {exibirComparativoMesa && (
                   <div style={contentBox}>
@@ -1141,6 +1098,7 @@ export default function OverviewSpin() {
             operadoraSlug={operadoraSlugPosicionamento}
             refDate={refDatePosicionamento}
             slugToNome={slugToNome}
+            catalogo={catalogo}
           />
         </Suspense>
       )}

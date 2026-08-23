@@ -44,6 +44,7 @@ import HomeTechOps from "./HomeTechOps";
 import HomeShiftLeader from "./HomeShiftLeader";
 import HomeRh from "./HomeRh";
 import HomeOperadorRouter from "./operador/HomeOperadorRouter";
+import HomeAfiliado from "./HomeAfiliado";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
 import {
@@ -352,7 +353,7 @@ export default function Home() {
       "rh",
       "operador",
     ];
-    if (roleGate && homesDedicadas.includes(roleGate)) {
+    if (roleGate && (homesDedicadas.includes(roleGate) || roleParidadeInfluencer(roleGate))) {
       setRevisaoCadastralPendenteHome(false);
       setRevisaoCadastralHomeReady(true);
       return;
@@ -393,7 +394,7 @@ export default function Home() {
 
   useEffect(() => {
     const roleDados = effectiveRole ?? user?.role;
-    if (!user || !roleParidadeInfluencer(roleDados)) {
+    if (!user || roleDados !== "influencer") {
       setInfluencerHomeReady(true);
       setPerfilRow(null);
       setPlaybookPendente(false);
@@ -530,6 +531,10 @@ export default function Home() {
     return <HomeOperadorRouter />;
   }
 
+  if (roleHome === "afiliado") {
+    return <HomeAfiliado />;
+  }
+
   const role = roleHome;
   const welcome = ROLE_WELCOME[role];
   const useBrand = false;
@@ -548,7 +553,7 @@ export default function Home() {
   }
 
   const atalhosOrdenados = [...atalhos];
-  if (roleParidadeInfluencer(role) || role === "agencia") {
+  if (role === "influencer" || role === "agencia") {
     const idxOverview = atalhosOrdenados.findIndex((a) => a.key === "dash_overview_influencer");
     if (idxOverview > 0) {
       const [item] = atalhosOrdenados.splice(idxOverview, 1);
@@ -565,22 +570,20 @@ export default function Home() {
   const welcomeInitial = welcomeAvatarLabel[0]?.toUpperCase() ?? "?";
 
   const showPerfilIncompleto =
-    roleParidadeInfluencer(role) &&
+    role === "influencer" &&
     influencerHomeReady &&
     (perfilRow?.status ?? "ativo") === "ativo" &&
     isPerfilIncompleto(perfilRow, nomePerfil);
 
-  const showPlaybookAlert =
-    roleParidadeInfluencer(role) && influencerHomeReady && playbookPendente;
+  const showPlaybookAlert = role === "influencer" && influencerHomeReady && playbookPendente;
 
   const showRevisaoCadastralAlert =
     revisaoCadastralHomeReady && revisaoCadastralPendenteHome;
 
-  const showProximasLives =
-    roleParidadeInfluencer(role) && influencerHomeReady && livesFuturas.length > 0;
+  const showProximasLives = role === "influencer" && influencerHomeReady && livesFuturas.length > 0;
 
   const showFeedbacksRecentes =
-    roleParidadeInfluencer(role) && influencerHomeReady && livesRealizadasRecentes.length > 0;
+    role === "influencer" && influencerHomeReady && livesRealizadasRecentes.length > 0;
 
   const alertBoxStyle: React.CSSProperties = {
     display: "flex",

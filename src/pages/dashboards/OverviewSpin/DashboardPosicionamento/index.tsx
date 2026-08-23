@@ -1,12 +1,14 @@
-import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  Building2,
   Clock,
   Eye,
   Loader2,
   MapPin,
   Minus,
+  Network,
   TrendingDown,
   Trophy,
 } from "lucide-react";
@@ -20,12 +22,13 @@ import {
   getDataTableWrapStyle,
 } from "../../../../lib/dataTableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
-import { SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
+import { SkeletonKpiCard, SortTableTh, type SortDir, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../../components/dashboard";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
 import {
   type HeatmapHistoricoModo,
   type LobbyPosicaoRow,
   type AlertaPos,
+  type CanalEstudioPosicionamento,
   fmtPosicao,
   posicaoBgColor,
   posicaoTextColor,
@@ -36,8 +39,16 @@ import {
   fmtUltimaAtualizacao,
   SEMANTIC,
   labelMesaPosicionamentoRow,
+  filtrarPosicoesPorCanal,
+  concorrentesPorJogoDetalhe,
+  rankingConcorrentesFromPosicoes,
+  visibilidadePorCategoriaDia,
 } from "../../../../lib/lobbyMonitorHelpers";
 import { useLobbyPosicionamentoData, POS_COMPARACAO_DIFERENTE_DIAS } from "./useLobbyPosicionamentoData";
+import {
+  operadoraTemCanaisDedicadoENetwork,
+  type OverviewSpinCatalogoCanais,
+} from "../overviewSpinCatalogo";
 import {
   getPageContentBoxShellStyle,
   getPageContentBoxStyle,
@@ -48,10 +59,16 @@ interface Props {
   operadoraSlug: string;
   refDate: Date;
   slugToNome?: (slug: string) => string;
+  catalogo?: OverviewSpinCatalogoCanais;
 }
 
 const VS_ONTEM = "vs ontem (mesmo horário)";
 const VS_ULTIMO_HORARIO = "vs último horário";
+
+const CANAIS_POSICIONAMENTO: { id: CanalEstudioPosicionamento; label: string; icon: typeof Building2 }[] = [
+  { id: "dedicado", label: "Dedicado", icon: Building2 },
+  { id: "network", label: "Network", icon: Network },
+];
 
 const HISTORICO_MODOS: { id: HeatmapHistoricoModo; label: string }[] = [
   { id: "dia", label: "Dia" },
@@ -61,6 +78,81 @@ const HISTORICO_MODOS: { id: HeatmapHistoricoModo; label: string }[] = [
 
 type CatVisSortCol = "categoria" | "top3" | "top10";
 type HistMesaSortCol = "mesa";
+
+function PosicionamentoCanalToggle({
+  canal,
+  onChange,
+}: {
+  canal: CanalEstudioPosicionamento;
+  onChange: (canal: CanalEstudioPosicionamento) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Canal das mesas"
+      onKeyDown={(e) =>
+        onFiltroBarTabsKeyDown(
+          e,
+          CANAIS_POSICIONAMENTO.map((c) => c.id),
+          onChange,
+          (id) => `tab-pos-canal-${id}`,
+        )
+      }
+      style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
+    >
+      {CANAIS_POSICIONAMENTO.map((c) => {
+        const Icon = c.icon;
+        return (
+          <FiltroBarTabButton
+            key={c.id}
+            id={`tab-pos-canal-${c.id}`}
+            active={canal === c.id}
+            aria-controls={`panel-pos-canal-${c.id}`}
+            onClick={() => onChange(c.id)}
+            icon={<Icon {...FILTRO_BAR_TAB_ICON_PROPS} />}
+          >
+            {c.label}
+          </FiltroBarTabButton>
+        );
+      })}
+    </div>
+  );
+}
+
+function PosicionamentoSecaoHeader({
+  titulo,
+  sub,
+  mostrarToggleCanal,
+  canalFiltro,
+  onCanalFiltro,
+}: {
+  titulo: string;
+  sub?: string;
+  mostrarToggleCanal: boolean;
+  canalFiltro: CanalEstudioPosicionamento;
+  onCanalFiltro: (canal: CanalEstudioPosicionamento) => void;
+}) {
+  if (!mostrarToggleCanal) {
+    return <SectionTitle sub={sub}>{titulo}</SectionTitle>;
+  }
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 10,
+        marginBottom: 16,
+      }}
+    >
+      <SectionTitle sub={sub} compact>
+        {titulo}
+      </SectionTitle>
+      <PosicionamentoCanalToggle canal={canalFiltro} onChange={onCanalFiltro} />
+    </div>
+  );
+}
 
 function KpiPosCard({
   label,
@@ -274,6 +366,9 @@ function PosicaoAtualMesasBlock({
   layout = "operadora",
   ultimaExecutadoEm,
   cardStyle,
+  mostrarToggleCanal = false,
+  canalFiltro = "dedicado",
+  onCanalFiltro,
 }: {
   titulo: string;
   loading: boolean;
@@ -288,14 +383,27 @@ function PosicaoAtualMesasBlock({
   layout?: "operadora" | "consolidado";
   ultimaExecutadoEm: string | undefined;
   cardStyle: CSSProperties;
+  mostrarToggleCanal?: boolean;
+  canalFiltro?: CanalEstudioPosicionamento;
+  onCanalFiltro?: (canal: CanalEstudioPosicionamento) => void;
 }) {
   const { theme: t } = useApp();
   const dataTable = useDataTableBlock();
+  const subTitulo = fmtUltimaAtualizacao(ultimaExecutadoEm);
+  const header = (
+    <PosicionamentoSecaoHeader
+      titulo={titulo}
+      sub={subTitulo}
+      mostrarToggleCanal={mostrarToggleCanal}
+      canalFiltro={canalFiltro}
+      onCanalFiltro={onCanalFiltro ?? (() => {})}
+    />
+  );
 
   if (loading) {
     return (
       <div style={cardStyle}>
-        <SectionTitle>{titulo}</SectionTitle>
+        {header}
         <div
           style={{
             display: "flex",
@@ -317,7 +425,7 @@ function PosicaoAtualMesasBlock({
   if (erro) {
     return (
       <div style={cardStyle}>
-        <SectionTitle>{titulo}</SectionTitle>
+        {header}
         <div
           role="alert"
           aria-live="polite"
@@ -360,7 +468,7 @@ function PosicaoAtualMesasBlock({
   if (semDados) {
     return (
       <div style={cardStyle}>
-        <SectionTitle>{titulo}</SectionTitle>
+        {header}
         <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body, margin: "12px 0 0" }}>
           Sem dados para o período selecionado.
         </p>
@@ -371,7 +479,7 @@ function PosicaoAtualMesasBlock({
   if (layout === "consolidado") {
     return (
       <div style={cardStyle}>
-        <SectionTitle sub={fmtUltimaAtualizacao(ultimaExecutadoEm)}>{titulo}</SectionTitle>
+        {header}
         <div className="app-table-wrap" style={{ ...getDataTableWrapStyle(), overflowX: "visible" }}>
           <table style={getDataTableStyle({ width: "100%", minWidth: 0, tableLayout: "fixed" })}>
             <caption style={{ display: "none" }}>{`Posição das mesas — ${titulo}`}</caption>
@@ -442,7 +550,7 @@ function PosicaoAtualMesasBlock({
 
   return (
     <div style={cardStyle}>
-      <SectionTitle sub={fmtUltimaAtualizacao(ultimaExecutadoEm)}>{titulo}</SectionTitle>
+      {header}
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {mesasOrdenadas.map((m) => {
           const pa = prevMap.get(m.mesa_identificacao) ?? null;
@@ -665,13 +773,16 @@ function DashboardPosicionamentoOperadora({
   operadoraSlug,
   refDate,
   card,
+  catalogo,
 }: {
   operadoraSlug: string;
   refDate: Date;
   card: CSSProperties;
+  catalogo: OverviewSpinCatalogoCanais;
 }) {
   const { theme: t } = useApp();
   const [historicoModo, setHistoricoModo] = useState<HeatmapHistoricoModo>("dia");
+  const [canalFiltro, setCanalFiltro] = useState<CanalEstudioPosicionamento>("dedicado");
   const [sortCatVis, setSortCatVis] = useState<{ col: CatVisSortCol; dir: SortDir }>({
     col: "top10",
     dir: "desc",
@@ -690,6 +801,7 @@ function DashboardPosicionamentoOperadora({
     semDados,
     execucoesAll,
     posByExec,
+    execDia,
     snapshotExec,
     usaSnapshotFallback,
     mesasOrdenadas,
@@ -700,12 +812,65 @@ function DashboardPosicionamentoOperadora({
     top10Ontem,
     melhor,
     queda,
-    concorrentesJogo,
-    rankingJogos,
-    cats,
     alertas,
     snapshotAtual,
   } = data;
+
+  const mostrarToggleCanal = useMemo(
+    () => operadoraTemCanaisDedicadoENetwork(catalogo, operadoraSlug),
+    [catalogo, operadoraSlug],
+  );
+
+  useEffect(() => {
+    setCanalFiltro("dedicado");
+  }, [operadoraSlug]);
+
+  const snapshotFiltrado = useMemo(() => {
+    if (!mostrarToggleCanal) return snapshotAtual;
+    return filtrarPosicoesPorCanal(snapshotAtual, canalFiltro);
+  }, [snapshotAtual, mostrarToggleCanal, canalFiltro]);
+
+  const posByExecFiltrado = useMemo(() => {
+    if (!mostrarToggleCanal) return posByExec;
+    const map = new Map<string, LobbyPosicaoRow[]>();
+    for (const [execId, rows] of posByExec) {
+      map.set(execId, filtrarPosicoesPorCanal(rows, canalFiltro));
+    }
+    return map;
+  }, [posByExec, mostrarToggleCanal, canalFiltro]);
+
+  const mesasOrdenadasFiltradas = useMemo(
+    () =>
+      [...snapshotFiltrado].sort((a, b) => {
+        const pa = a.posicao ?? 999;
+        const pb = b.posicao ?? 999;
+        return pa - pb;
+      }),
+    [snapshotFiltrado],
+  );
+
+  const prevMapFiltrado = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const m of mesasOrdenadasFiltradas) {
+      map.set(m.mesa_identificacao, prevMap.get(m.mesa_identificacao) ?? null);
+    }
+    return map;
+  }, [mesasOrdenadasFiltradas, prevMap]);
+
+  const concorrentesJogoFiltrados = useMemo(
+    () => concorrentesPorJogoDetalhe(snapshotFiltrado),
+    [snapshotFiltrado],
+  );
+
+  const rankingJogosFiltrados = useMemo(
+    () => rankingConcorrentesFromPosicoes(snapshotFiltrado),
+    [snapshotFiltrado],
+  );
+
+  const catsFiltradas = useMemo(
+    () => visibilidadePorCategoriaDia(execDia, posByExecFiltrado),
+    [execDia, posByExecFiltrado],
+  );
 
   const heatCols = useMemo(
     () => colunasHistoricoPosicionamento(historicoModo, refDate),
@@ -752,7 +917,7 @@ function DashboardPosicionamentoOperadora({
   }, []);
 
   const catsOrdenadas = useMemo(() => {
-    const arr = [...cats];
+    const arr = [...catsFiltradas];
     const { col, dir } = sortCatVis;
     arr.sort((a, b) => {
       switch (col) {
@@ -767,7 +932,7 @@ function DashboardPosicionamentoOperadora({
       }
     });
     return arr;
-  }, [cats, sortCatVis]);
+  }, [catsFiltradas, sortCatVis]);
 
   const dataTable = useDataTableBlock();
 
@@ -898,24 +1063,31 @@ function DashboardPosicionamentoOperadora({
         <PosicaoAtualMesasBlock
           titulo="Posição atual das mesas"
           loading={false}
-          semDados={false}
-          mesasOrdenadas={mesasOrdenadas}
-          prevMap={prevMap}
+          semDados={mesasOrdenadasFiltradas.length === 0}
+          mesasOrdenadas={mesasOrdenadasFiltradas}
+          prevMap={prevMapFiltrado}
           ultimaExecutadoEm={snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
+          mostrarToggleCanal={mostrarToggleCanal}
+          canalFiltro={canalFiltro}
+          onCanalFiltro={setCanalFiltro}
         />
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle sub={fmtUltimaAtualizacao(snapshotExec?.executado_em)}>
-            Concorrentes à frente
-          </SectionTitle>
-          {concorrentesJogo.length === 0 ? (
+          <PosicionamentoSecaoHeader
+            titulo="Concorrentes à frente"
+            sub={fmtUltimaAtualizacao(snapshotExec?.executado_em)}
+            mostrarToggleCanal={mostrarToggleCanal}
+            canalFiltro={canalFiltro}
+            onCanalFiltro={setCanalFiltro}
+          />
+          {concorrentesJogoFiltrados.length === 0 ? (
             <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
               Sem dados para o período selecionado.
             </p>
           ) : (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {concorrentesJogo.map((c) => (
+              {concorrentesJogoFiltrados.map((c) => (
                 <li
                   key={c.jogo}
                   style={{
@@ -1056,16 +1228,20 @@ function DashboardPosicionamentoOperadora({
 
       <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle sub={fmtUltimaAtualizacao(snapshotExec?.executado_em)}>
-            Ranking de concorrentes
-          </SectionTitle>
-          {rankingJogos.length === 0 ? (
+          <PosicionamentoSecaoHeader
+            titulo="Ranking de concorrentes"
+            sub={fmtUltimaAtualizacao(snapshotExec?.executado_em)}
+            mostrarToggleCanal={mostrarToggleCanal}
+            canalFiltro={canalFiltro}
+            onCanalFiltro={setCanalFiltro}
+          />
+          {rankingJogosFiltrados.length === 0 ? (
             <p style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
               Sem dados para o período selecionado.
             </p>
           ) : (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {rankingJogos.map((j) => (
+              {rankingJogosFiltrados.map((j) => (
                 <li
                   key={j.game_id}
                   style={{
@@ -1117,7 +1293,12 @@ function DashboardPosicionamentoOperadora({
         </div>
 
         <div style={{ ...card, marginBottom: 0 }}>
-          <SectionTitle>Visibilidade por categoria</SectionTitle>
+          <PosicionamentoSecaoHeader
+            titulo="Visibilidade por categoria"
+            mostrarToggleCanal={mostrarToggleCanal}
+            canalFiltro={canalFiltro}
+            onCanalFiltro={setCanalFiltro}
+          />
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
               <caption style={{ display: "none" }}>Visibilidade por categoria no dia</caption>
@@ -1171,13 +1352,14 @@ function DashboardPosicionamentoOperadora({
   );
 }
 
-export default function DashboardPosicionamento({ operadoraSlug, refDate, slugToNome }: Props) {
+export default function DashboardPosicionamento({ operadoraSlug, refDate, slugToNome, catalogo }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
 
   const card: CSSProperties = getPageContentBoxStyle(brand, t);
 
   const resolveNome = slugToNome ?? ((slug: string) => slug);
+  const catalogoResolvido = catalogo ?? { slugsComMesaDedicada: [], slugsComMesaNetwork: [] };
 
   if (operadoraSlug === "todas") {
     return (
@@ -1190,6 +1372,7 @@ export default function DashboardPosicionamento({ operadoraSlug, refDate, slugTo
       operadoraSlug={operadoraSlug}
       refDate={refDate}
       card={card}
+      catalogo={catalogoResolvido}
     />
   );
 }

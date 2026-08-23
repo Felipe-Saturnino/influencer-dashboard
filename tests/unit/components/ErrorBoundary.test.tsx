@@ -19,6 +19,10 @@ function Thrower({ message }: { message: string }) {
   throw new Error(message);
 }
 
+function ThrowTypeError({ message }: { message: string }) {
+  throw new TypeError(message);
+}
+
 describe("ErrorBoundary", () => {
   beforeEach(() => {
     reloadGuardMock.mockReturnValue(true);
@@ -80,7 +84,12 @@ describe("ErrorBoundary", () => {
     expect(recarregarManualMock).toHaveBeenCalledTimes(1);
   });
 
-  it("erro genérico também recarrega com cache-busting (Safari / HTML antigo)", () => {
+  it("erro genérico no Safari recarrega com cache-busting", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    });
+
     const tela = render(
       <ErrorBoundary>
         <Thrower message="falha de teste" />
@@ -89,5 +98,21 @@ describe("ErrorBoundary", () => {
     fireEvent.click(tela.getByRole("button", { name: "Recarregar página" }));
 
     expect(recarregarManualMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("TypeError vazio no Safari dispara recarga automática", () => {
+    vi.stubGlobal("navigator", {
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    });
+
+    const tela = render(
+      <ErrorBoundary>
+        <ThrowTypeError message="" />
+      </ErrorBoundary>,
+    );
+
+    expect(reloadGuardMock).toHaveBeenCalled();
+    expect(tela.getByText("Atualizando…")).toBeInTheDocument();
   });
 });

@@ -169,23 +169,30 @@ export function useLobbyPosicionamentoData(
               .range(from, to),
           ),
           fetchAllPages(async (from, to) =>
-            supabase.from("estudios_spin").select("slug, nome").range(from, to),
+            supabase.from("estudios_spin").select("slug, nome, tipo").range(from, to),
           ),
         ]);
 
         const nomeEstudioPorSlug = new Map<string, string>();
+        const tipoPorEstudio = new Map<string, "dedicado" | "network">();
         for (const e of estudiosCad) {
           const slug = typeof e.slug === "string" ? e.slug.trim() : "";
           const nome = typeof e.nome === "string" ? e.nome.trim() : "";
           if (slug && nome) nomeEstudioPorSlug.set(slug, nome);
+          if (slug && (e.tipo === "dedicado" || e.tipo === "network")) {
+            tipoPorEstudio.set(slug, e.tipo);
+          }
         }
         const nomeEstudioPorMesaSpin = new Map<string, string>();
+        const canalPorMesaSpin = new Map<string, "dedicado" | "network">();
         for (const m of mesasCad) {
           const mid = typeof m.mesa_identificacao === "string" ? m.mesa_identificacao.trim() : "";
           const estSlug = typeof m.estudio_slug === "string" ? m.estudio_slug.trim() : "";
           if (!mid || !estSlug) continue;
           const nomeEst = nomeEstudioPorSlug.get(estSlug);
           if (nomeEst) nomeEstudioPorMesaSpin.set(mid, nomeEst);
+          const canal = tipoPorEstudio.get(estSlug);
+          if (canal) canalPorMesaSpin.set(mid, canal);
         }
 
         setExecRecentes(
@@ -197,13 +204,17 @@ export function useLobbyPosicionamentoData(
           })),
         );
         setPosRecentes(
-          (posRows as LobbyPosicaoRow[]).map((p) => ({
-            ...p,
-            nome_estudio: nomeEstudioPorMesaSpin.get(p.mesa_identificacao.trim()) ?? null,
-            concorrentes_a_frente: Array.isArray(p.concorrentes_a_frente)
-              ? p.concorrentes_a_frente
-              : [],
-          })),
+          (posRows as LobbyPosicaoRow[]).map((p) => {
+            const mid = p.mesa_identificacao.trim();
+            return {
+              ...p,
+              nome_estudio: nomeEstudioPorMesaSpin.get(mid) ?? null,
+              canal_estudio: canalPorMesaSpin.get(mid) ?? null,
+              concorrentes_a_frente: Array.isArray(p.concorrentes_a_frente)
+                ? p.concorrentes_a_frente
+                : [],
+            };
+          }),
         );
         temDadosRecentes = true;
       }
