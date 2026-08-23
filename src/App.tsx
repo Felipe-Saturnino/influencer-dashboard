@@ -23,6 +23,7 @@ import {
   buildLoginPath,
   parseAppPathname,
 } from "./lib/appRoutes";
+import { isChunkLoadError, reloadAfterChunkError } from "./lib/chunkReloadGuard";
 
 // Helper: retry automático em falhas de carregamento de chunk (ex.: rede instável)
 function lazyWithRetry<T extends ComponentType>(
@@ -37,6 +38,9 @@ function lazyWithRetry<T extends ComponentType>(
         return await importFn();
       } catch (e) {
         lastErr = e;
+        if (isChunkLoadError(e)) {
+          reloadAfterChunkError(`lazyWithRetry:${i}`);
+        }
         if (i < retries) await new Promise((r) => setTimeout(r, delay * (i + 1)));
       }
     }

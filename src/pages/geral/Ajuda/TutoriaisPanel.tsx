@@ -13,6 +13,7 @@ import type { TutorialVisibilidadeMap } from "../../../lib/ajudaTutorialVisibili
 import { buildTutoriaisNav } from "./tutoriais/catalog";
 import type { TutorialDef } from "./tutoriais/types";
 import { ModalEditarVisibilidadeTutorial } from "./ModalEditarVisibilidadeTutorial";
+import { renderAjudaTexto } from "../../../lib/ajudaInlineText";
 import { GraduationCap, Pencil, TriangleAlert } from "lucide-react";
 
 function tutorialSlugDaUrl(): string | null {
@@ -362,7 +363,7 @@ export function TutoriaisPanel({
               }}
             >
               <p style={{ margin: 0 }}>
-                <strong style={{ color: t.text }}>Objetivo:</strong> {tutorial.objetivo}
+                <strong style={{ color: t.text }}>Objetivo:</strong> {renderAjudaTexto(tutorial.objetivo)}
               </p>
             </div>
 
@@ -397,7 +398,7 @@ export function TutoriaisPanel({
                       whiteSpace: "pre-line",
                     }}
                   >
-                    {passo.texto}
+                    {renderAjudaTexto(passo.texto)}
                   </p>
                   {passo.aviso ? (
                     <div
@@ -435,7 +436,7 @@ export function TutoriaisPanel({
                         >
                           Observação
                         </div>
-                        <div>{passo.aviso}</div>
+                        <div>{renderAjudaTexto(passo.aviso)}</div>
                       </div>
                     </div>
                   ) : null}
@@ -501,7 +502,7 @@ export function TutoriaisPanel({
                     whiteSpace: "pre-line",
                   }}
                 >
-                  {tutorial.notasFinais}
+                  {renderAjudaTexto(tutorial.notasFinais)}
                 </p>
               </div>
             ) : null}

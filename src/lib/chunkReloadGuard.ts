@@ -17,16 +17,36 @@ export type IsChunkLoadErrorOptions = {
   allowSafariLoadFailed?: boolean;
 };
 
-/**
- * Detecta falha de carregamento de chunk / módulo dinâmico (Chrome, Firefox, Safari/WebKit).
- */
-export function isChunkLoadError(err: unknown, opts?: IsChunkLoadErrorOptions): boolean {
-  const allowSafariLoadFailed = opts?.allowSafariLoadFailed !== false;
-  if (err instanceof Error && err.name === "ChunkLoadError") return true;
+/** Safari / WebKit nativo (iOS, iPadOS, macOS Safari) — não Chrome/Firefox/Edge no iOS. */
+export function isSafariWebKit(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /AppleWebKit/i.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS|Chromium/i.test(ua);
+}
 
-  const msg = String(err instanceof Error ? err.message : err ?? "")
-    .trim()
-    .toLowerCase();
+function normalizeErrorMessage(err: unknown): string {
+  if (err == null) return "";
+  if (typeof err === "string") return err.trim().toLowerCase();
+  const parts: string[] = [];
+  if (err instanceof Error) {
+    if (err.message) parts.push(err.message);
+    if (err.name && err.name !== "Error") parts.push(err.name);
+    const cause = (err as Error & { cause?: unknown }).cause;
+    if (cause != null && cause !== err) {
+      parts.push(normalizeErrorMessage(cause));
+    }
+  }
+  if (parts.length === 0) {
+    try {
+      parts.push(String(err).trim().toLowerCase());
+    } catch {
+      return "";
+    }
+  }
+  return parts.join(" ").trim().toLowerCase();
+}
+
+function messageMatchesChunkFailure(msg: string, allowSafariLoadFailed: boolean): boolean {
   if (!msg) return false;
 
   if (msg.includes("failed to fetch dynamically imported module")) return true;
@@ -35,9 +55,41 @@ export function isChunkLoadError(err: unknown, opts?: IsChunkLoadErrorOptions): 
   if (msg.includes("chunk load error")) return true;
   if (msg.includes("loading css chunk") && msg.includes("failed")) return true;
   if (msg.includes("loading chunk") && (msg.includes("failed") || msg.includes("error"))) return true;
+  if (msg.includes("unexpected token '<'") || msg.includes("unexpected token \u003c")) return true;
+  if (msg.includes("mime type") && msg.includes("text/html")) return true;
+  if (msg.includes("is not a valid javascript mime type")) return true;
 
-  // Safari iOS / WebKit — mensagem curta sem URL do módulo (só no ErrorBoundary / lazy)
-  if (allowSafariLoadFailed && msg === "load failed") return true;
+  if (allowSafariLoadFailed) {
+    if (msg.includes("load failed")) return true;
+    if (msg.includes("networkerror") || msg.includes("network error")) return true;
+    if (msg.includes("the network connection was lost")) return true;
+    if (msg.includes("cancelled") && msg.includes("fetch")) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Safari no ErrorBoundary: `TypeError` vazio ou genérico após lazy load — quase sempre chunk/HTML em cache.
+ */
+export function isLikelySafariModuleLoadFailure(err: unknown): boolean {
+  if (!isSafariWebKit()) return false;
+  if (isChunkLoadError(err)) return true;
+  if (!(err instanceof TypeError)) return false;
+  const msg = normalizeErrorMessage(err);
+  if (!msg || msg === "typeerror") return true;
+  return messageMatchesChunkFailure(msg, true);
+}
+
+/**
+ * Detecta falha de carregamento de chunk / módulo dinâmico (Chrome, Firefox, Safari/WebKit).
+ */
+export function isChunkLoadError(err: unknown, opts?: IsChunkLoadErrorOptions): boolean {
+  const allowSafariLoadFailed = opts?.allowSafariLoadFailed !== false;
+  if (err instanceof Error && err.name === "ChunkLoadError") return true;
+
+  const msg = normalizeErrorMessage(err);
+  if (messageMatchesChunkFailure(msg, allowSafariLoadFailed)) return true;
 
   return false;
 }
@@ -71,8 +123,8 @@ export function reloadAfterChunkError(context?: string): boolean {
     /* storage indisponível — uma recarga ainda pode ajudar */
   }
   console.warn("[App] Erro de carregamento de módulo — recarregando página.", context ?? "");
-  // `reload()` pode reaproveitar o index.html em cache — e é ele que aponta para o chunk inexistente.
-  if (tentativa >= MAX_AUTO_RELOADS) {
+  // Safari: `reload()` costuma reaproveitar o index.html em cache — ir direto ao cache-bust.
+  if (isSafariWebKit() || tentativa >= MAX_AUTO_RELOADS) {
     recarregarIgnorandoCacheDoHtml();
     return true;
   }

@@ -146,8 +146,13 @@ export function ModalAnalisarFeedbackPerformanceHub({
   async function confirmarAprovar() {
     if (!onAprovar) return;
     setSalvando(true);
+    setErroTexto(null);
     try {
       await onAprovar();
+    } catch {
+      setErroTexto(
+        "Não foi possível aprovar a avaliação. Se o problema persistir, entre em contato com o suporte.",
+      );
     } finally {
       setSalvando(false);
     }
@@ -164,6 +169,10 @@ export function ModalAnalisarFeedbackPerformanceHub({
     setSalvando(true);
     try {
       await onSolicitarFeedback(texto);
+    } catch {
+      setErroTexto(
+        "Não foi possível solicitar feedback. Se o problema persistir, entre em contato com o suporte.",
+      );
     } finally {
       setSalvando(false);
     }
@@ -180,6 +189,10 @@ export function ModalAnalisarFeedbackPerformanceHub({
     setSalvando(true);
     try {
       await onAplicarFeedback(texto);
+    } catch {
+      setErroTexto(
+        "Não foi possível aplicar o feedback. Se o problema persistir, entre em contato com o suporte.",
+      );
     } finally {
       setSalvando(false);
     }

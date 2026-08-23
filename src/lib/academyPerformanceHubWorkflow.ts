@@ -68,13 +68,13 @@ export function avaliacaoPertenceAoEscopoProprios(
   return false;
 }
 
-/** Bloco Analisar Avaliações (Gerenciamento) — rascunhos em andamento. */
+/** Bloco Avaliações em Rascunho (Gerenciamento) — só status rascunho do time filtrado. */
 export function avaliacaoVisivelGerenciamentoAnalisar(
   row: PerformanceHubAvaliacao,
   time: PerformanceHubTimeSlug,
 ): boolean {
   if (row.time !== time) return false;
-  return row.status === "rascunho" || row.status === "em_analise" || row.status === "pendente";
+  return row.status === "rascunho";
 }
 
 export function avaliacaoEmAndamentoPorNome(
@@ -113,7 +113,7 @@ export function acoesAbaAvaliacoesPerformanceHub(opts: {
 
   if (canEditarOk) {
     if (status === "aguardando") return [];
-    if (status === "feedback") return ["historico", "ver", "aplicar_feedback"];
+    if (status === "feedback") return ["historico", "ver"];
     return ["ver", "historico"];
   }
 
@@ -134,7 +134,17 @@ export function statusPublicadoPerformanceHub(status: PerformanceHubStatus): boo
   );
 }
 
-/** Conta na agenda (realizadas) — só avaliações aprovadas. */
+/** Conta na agenda (realizadas) e no KPI — avaliações publicadas (mesma base da aba Avaliações). */
 export function statusContaComoRealizadaPerformanceHub(status: PerformanceHubStatus): boolean {
-  return status === "aprovado" || status === "concluida";
+  return statusPublicadoPerformanceHub(status);
+}
+
+/** Aba Feedback — aguardando repasse do coach (status Feedback). */
+export function avaliacaoFeedbackPendente(row: PerformanceHubAvaliacao): boolean {
+  return row.status === "feedback";
+}
+
+/** Aba Feedback — repasse já registrado pelo coach. */
+export function avaliacaoFeedbackAplicado(row: PerformanceHubAvaliacao): boolean {
+  return Boolean(row.aplicacaoFeedbackEm?.trim());
 }

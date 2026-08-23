@@ -54,6 +54,7 @@ describe("gerarAlertasAlteracoesJanela", () => {
 
     expect(alertas).toHaveLength(1);
     expect(alertas[0].tipo).toBe("positivo");
+    expect(alertas[0].texto).toContain("Mesa (bj1)");
     expect(alertas[0].texto).toContain("P8 → P2");
     expect(alertas[0].texto).toContain("05/08");
   });
@@ -77,6 +78,7 @@ describe("gerarAlertasAlteracoesJanela", () => {
 
     expect(alertas).toHaveLength(1);
     expect(alertas[0].tipo).toBe("atencao");
+    expect(alertas[0].texto).toContain("Mesa (rl1)");
     expect(alertas[0].texto).toContain("P3 → P40");
   });
 });

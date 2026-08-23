@@ -1,5 +1,11 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { arpuFromGgrUap, fmtUltimaLeitura, hojeISO, ontemISO, primeiroDiaMes, fimPeriodoInvestimentoRelatorioDiretoria } from './common.ts'
+import {
+  indexPosicoesLobby,
+  normNomeMesa,
+  posicaoLobbyPorSpinIds,
+  type LobbyPosRow,
+} from './posicionamentoLobby.ts'
 
 export interface LiveAgenda {
   horario: string
@@ -135,60 +141,6 @@ function totaisKpiOrganic(rows: Array<{ impressions?: number; posts_published?: 
     },
     { impressoes: 0, postagens: 0 },
   )
-}
-
-function normNomeMesa(s: string): string {
-  return s.trim().toLocaleLowerCase('pt-BR')
-}
-
-type LobbyPosRow = {
-  mesa_identificacao: string
-  nome_mesa: string
-  posicao: number | null
-}
-
-function indexPosicoesLobby(rows: LobbyPosRow[]): {
-  byId: Map<string, number | null>
-  byNome: Map<string, number | null>
-} {
-  const byId = new Map<string, number | null>()
-  const byNome = new Map<string, number | null>()
-  for (const r of rows) {
-    const id = (r.mesa_identificacao ?? '').trim()
-    const nome = (r.nome_mesa ?? '').trim()
-    const pos = r.posicao != null && Number.isFinite(Number(r.posicao))
-      ? Number(r.posicao)
-      : null
-    if (id) {
-      // Preferir posição encontrada — não deixar um null anterior bloquear um P válido.
-      if (pos != null || !byId.has(id)) byId.set(id, pos)
-    }
-    if (nome && pos != null) {
-      const key = normNomeMesa(nome)
-      if (!byNome.has(key)) byNome.set(key, pos)
-    }
-  }
-  return { byId, byNome }
-}
-
-/** Resolve posição: IDs Spin (prioridade por operadora) → demais IDs do nome → nome normalizado. */
-function posicaoLobbyParaMesa(
-  idx: ReturnType<typeof indexPosicoesLobby>,
-  opts: {
-    nomeKey: string
-    spinIdsPreferidos: readonly string[]
-    spinIdsFallback: readonly string[]
-  },
-): number | null {
-  for (const id of opts.spinIdsPreferidos) {
-    const p = idx.byId.get(id)
-    if (p != null) return p
-  }
-  for (const id of opts.spinIdsFallback) {
-    const p = idx.byId.get(id)
-    if (p != null) return p
-  }
-  return idx.byNome.get(opts.nomeKey) ?? null
 }
 
 type DedicadaAgg = {
@@ -701,48 +653,21 @@ export async function fetchRelatorioDiretoriaData(
 
   const mesasDedicadas: PosicaoMesaDedicadaRow[] = [...dedicadasPorNome.entries()]
     .sort((a, b) => a[1].display.localeCompare(b[1].display, 'pt-BR'))
-    .map(([key, agg]) => ({
+    .map(([, agg]) => ({
       mesa: agg.display,
-      blaze: posicaoLobbyParaMesa(blazeIdx, {
-        nomeKey: key,
-        spinIdsPreferidos: agg.spinIdsPorOperadora.get('blaze') ?? [],
-        spinIdsFallback: agg.spinIds,
-      }),
-      cda: posicaoLobbyParaMesa(cdaIdx, {
-        nomeKey: key,
-        spinIdsPreferidos: agg.spinIdsPorOperadora.get('casa_apostas') ?? [],
-        spinIdsFallback: agg.spinIds,
-      }),
+      blaze: posicaoLobbyPorSpinIds(blazeIdx, agg.spinIdsPorOperadora.get('blaze') ?? []),
+      cda: posicaoLobbyPorSpinIds(cdaIdx, agg.spinIdsPorOperadora.get('casa_apostas') ?? []),
     }))
 
   const mesasNetwork: PosicaoMesaNetworkRow[] = [...networkPorId.entries()]
     .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
-    .map(([id, mesa]) => {
-      const nomeKey = normNomeMesa(mesa)
-      return {
-        mesa,
-        blaze: posicaoLobbyParaMesa(blazeIdx, {
-          nomeKey,
-          spinIdsPreferidos: [id],
-          spinIdsFallback: [],
-        }),
-        cda: posicaoLobbyParaMesa(cdaIdx, {
-          nomeKey,
-          spinIdsPreferidos: [id],
-          spinIdsFallback: [],
-        }),
-        esportiva: posicaoLobbyParaMesa(esportivaIdx, {
-          nomeKey,
-          spinIdsPreferidos: [id],
-          spinIdsFallback: [],
-        }),
-        jonbet: posicaoLobbyParaMesa(jonbetIdx, {
-          nomeKey,
-          spinIdsPreferidos: [id],
-          spinIdsFallback: [],
-        }),
-      }
-    })
+    .map(([id, mesa]) => ({
+      mesa,
+      blaze: posicaoLobbyPorSpinIds(blazeIdx, [id]),
+      cda: posicaoLobbyPorSpinIds(cdaIdx, [id]),
+      esportiva: posicaoLobbyPorSpinIds(esportivaIdx, [id]),
+      jonbet: posicaoLobbyPorSpinIds(jonbetIdx, [id]),
+    }))
 
   return {
     dataHoje,

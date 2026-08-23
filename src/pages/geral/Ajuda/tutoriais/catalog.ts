@@ -12,6 +12,9 @@ import { TUTORIAL_MARKETPLACE_OFERTAS } from "./marketplaceOfertas";
 import { TUTORIAL_NOVO_INCIDENTE } from "./novoIncidente";
 import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "./portalRhComunicadosLidos";
 import { TUTORIAL_PORTAL_RH_GERENCIAMENTO } from "./portalRhGerenciamento";
+import { TUTORIAL_PERFORMANCE_HUB_APLICAR_FEEDBACK } from "./performanceHubAplicarFeedback";
+import { TUTORIAL_PERFORMANCE_HUB_AVALIAR } from "./performanceHubAvaliar";
+import { TUTORIAL_PERFORMANCE_HUB_CONFIGURACAO_PESOS } from "./performanceHubConfiguracaoPesos";
 import { TUTORIAL_POSTAGEM_ACADEMY_APROVACAO } from "./postagemAcademyAprovacao";
 import { TUTORIAL_RH_SOLICITACOES_APROVAR } from "./rhSolicitacoesAprovar";
 import type { TutorialDef, TutorialSecaoNav } from "./types";
@@ -31,6 +34,9 @@ export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_MARKETPLACE_OFERTAS,
   TUTORIAL_CIENCIA_MANUAIS_ACADEMY,
   TUTORIAL_POSTAGEM_ACADEMY_APROVACAO,
+  TUTORIAL_PERFORMANCE_HUB_AVALIAR,
+  TUTORIAL_PERFORMANCE_HUB_APLICAR_FEEDBACK,
+  TUTORIAL_PERFORMANCE_HUB_CONFIGURACAO_PESOS,
 ];
 
 /** Agrupa tutoriais visíveis por secção (menu lateral da aba Tutoriais). */

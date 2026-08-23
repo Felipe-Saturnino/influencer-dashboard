@@ -32,7 +32,7 @@ alwaysApply: false
 | `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
 | `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
 
-**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** só Conheça + Troubleshooting. **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
+**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Feedback** → `performance-hub-aplicar-feedback` (`PerformanceHubAplicarFeedback`); **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`); demais abas sem tutorial. **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
 
 Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**.
 
@@ -133,7 +133,7 @@ Mesmo formato: descrição **completa** no card; link **Ver anexo** abaixo do te
 | Perfil | Escopo típico |
 |--------|----------------|
 | **Admin** | Irrestrito via código (`usePermission`) |
-| **Gestor / Performance Coach / RH** | Avaliações do time após liberação em Gestão de Usuários (**Editar**) |
+| **Gestor / Performance Coach / RH** | Avaliações após liberação; **Criar = Sim** para Gerenciamento e Configuração; **Editar** para ações de coach na aba Avaliações |
 | **Prestador** | Com **Ver = Próprios**: avaliações próprias publicadas — Analisar (Aguardando) ou Ver/Histórico |
 
 Times avaliados: **Game Presenter** e **Shuffler**. Com escopo amplo (Ver ≠ Próprios ou Editar), filtro de time **obrigatório** — sem agregador «Todos»; default **Game Presenter**. Com **Ver = Próprios** (sem Editar), o filtro de Time **não aparece** — a lista fica só nas avaliações do usuário (todos os times).
@@ -147,8 +147,8 @@ Migração `20260625120000_academy_performance_hub_page.sql`: todos os roles (ex
 | Ação | Superfície |
 |------|------------|
 | **Ver** | Página + aba Avaliações |
-| **Editar** | Aba **Gerenciamento** (agenda + fila de rascunhos) + ações de coach na aba Avaliações |
-| **Criar** | Aba **Configuração** (pesos de scoring) |
+| **Editar** | Aba **Feedback** (Aplicar Feedback) — não abre Gerenciamento/Configuração sozinho |
+| **Criar** (= **Sim**) | Abas **Gerenciamento** e **Configuração** |
 | **Excluir** | Reservado (sem fluxo na v1) |
 
 Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar` / `hasExcluir` = true.
@@ -157,20 +157,32 @@ Gestão de Usuários → `PAGES`: secção **Academy**, `hasCriar` / `hasEditar`
 
 | Tab | Ícone | Gate |
 |-----|-------|------|
-| Avaliações | `ClipboardList` | Ver (qualquer valor ≠ Não) |
-| Gerenciamento | `ClipboardList` | `canEditarOk` |
-| Configuração | `Settings` | `canCriarOk` |
+| Avaliações | `BarChart3` | Ver (qualquer valor ≠ Não) |
+| Feedback | `MessageSquare` | `canEditarOk` (Editar = Sim) |
+| Gerenciamento | `ClipboardList` | `canCriar === "sim"` |
+| Configuração | `Settings` | `canCriar === "sim"` |
 
-URL: `appRoutes.ts` — segmentos `avaliacoes`, `gerenciamento`, `configuracao`.
+URL: `appRoutes.ts` — segmentos `Avaliacoes`, `Feedback`, `Gerenciamento`, `Configuracao`.
+
+### Aba Feedback (`PerformanceHubAbaFeedback`)
+
+Visível só com **Editar = Sim**, entre Avaliações e Gerenciamento. Respeita os mesmos filtros de período/time/staff da página.
+
+| Bloco | Conteúdo | Ações |
+|-------|----------|-------|
+| **Feedbacks Pendentes** | `status === feedback` — Data da Avaliação, Avaliado, Time, Data da Solicitação, Mensagem | **Aplicar Feedback** (`ModalAnalisarFeedbackPerformanceHub` modo aplicar), **Ver** |
+| **Feedbacks Aplicados** | `aplicacao_feedback_em` preenchido — + Data da Aplicação, Aplicador | **Ver**, **Histórico** |
+
+Strings de vazio: «Nenhum feedback pendente/aplicado para o período selecionado.»
 
 ### Status × ações (aba Avaliações)
 
-Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `20261121120000`). Rascunho fica só no Gerenciamento.
+Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `20261121120000`). Rascunho fica só no Gerenciamento, no bloco **Avaliações em Rascunho** (status `rascunho` + time filtrado + período).
 
 | Status | Ver = Próprios | Editar = Sim |
 |--------|----------------|--------------|
 | **Aguardando** | **Analisar Avaliação** | — (nenhuma ação) |
-| **Feedback** | Ver, Histórico | Histórico, Ver, **Aplicar Feedback** |
+| **Feedback** | Ver, Histórico | Ver, Histórico (**Aplicar Feedback** só na aba Feedback) |
 | **Aprovado** | Ver, Histórico | Ver, Histórico |
 
 **Fluxo de publicação e aprovação**
@@ -181,7 +193,7 @@ Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `2
 | Concluir (publicar) | Avaliações | **Aguardando** |
 | Prestador → Solicitar Feedback | Avaliações · Analisar | **Feedback** |
 | Prestador → Aprovar | Avaliações · Analisar | **Aprovado** |
-| Coach → Aplicar Feedback (Aprovar + texto) | Avaliações · Aplicar Feedback | **Aprovado** |
+| Coach → Aplicar Feedback (Aprovar + texto) | Aba **Feedback** · Aplicar Feedback | **Aprovado** |
 
 Modal **Analisar Avaliação** (Ver=Próprios, status Aguardando): leitura + CTAs **Aprovar** (primário) e **Solicitar Feedback** (secundário). Em status **Feedback** o botão Solicitar Feedback não aparece.
 
@@ -210,7 +222,7 @@ O filtro de **Time** define qual layout e scoring aparecem. Consolidados e tabel
 
 **Promoção de cargo (virada do mês):** cada avaliação grava `time` no momento da criação. Meses anteriores mantêm formato do cargo antigo; a partir do mês da promoção, novas avaliações usam o time atual. **Gerenciamento** ao avaliar usa sempre o time selecionado na barra (cargo atual). Modal **Ver/Analisar** usa `avaliacao.time` (não o filtro da barra).
 
-**Ver = Próprios** (sem Editar): só avaliações do próprio cadastro (match por `avaliado_staff_id` e/ou nome do RH / perfil de login), **sem** filtro de Time na barra — GP e Shuffler no mesmo carrossel/período.
+**Ver = Próprios** (sem Editar): só avaliações do próprio cadastro (match por `avaliado_staff_id` e/ou nome do RH / perfil de login), **sem** filtro de Time na barra — GP e Shuffler no mesmo carrossel/período. **Solicitar Feedback** / **Aprovar** gravam via RLS de update na própria linha (`_academy_performance_hub_avaliacao_e_do_usuario` — migration `20261122130000`).
 
 ### Modal Avaliar — estrutura (alinhado ao mockup)
 
@@ -223,7 +235,7 @@ O filtro de **Time** define qual layout e scoring aparecem. Consolidados e tabel
 
 **Jogo / Mesa (GP):** opções do select **Jogo** = tipos distintos das mesas do estúdio selecionado em **Gestão de Estúdios** (`mesas_spin_cadastro` via `jogosDoEstudioNoCatalogo`) — **não** filtrar pela interseção com `staff_skills`. Skills do staff só sugerem o valor inicial (prefill). Mesa = IDs Spin das mesas daquele estúdio + jogo.
 
-Demais blocos comuns: cabeçalho, tipo de avaliação, rodapé Salvar/Concluir.
+Demais blocos comuns: cabeçalho, abas do fluxo Performance Coach, rodapé Salvar/Concluir. **Sem** campo Tipo de Avaliação — todas as avaliações são Performance Coach.
 
 ### Modelo de pontuação
 
@@ -235,14 +247,15 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 - Escala **0–10**; UI com **2 casas decimais** (`formatNotaPerformanceHub`).
 - **Nota Total** = média ponderada dimensões (`calcularNotaTotalGamePresenter` / `calcularNotaTotalShuffler`).
-- **MTD consolidado** = média simples das notas totais **Aprovado** no período **do time filtrado**.
+- **MTD consolidado** = média simples das notas totais das avaliações **publicadas** (Aguardando, Feedback e Aprovado) no período do time filtrado (ou de todas as do usuário com Ver = Próprios). A coluna **Realizadas** da Agenda de Gerenciamento usa a **mesma** definição (publicadas no mês por prestador).
 - Configuração: subtítulo «Escala 0–10 · alterações aplicam-se a novas avaliações»; pesos editáveis por time conforme filtro de Time ativo.
 
 ### Filtros
 
 - Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco (**sempre** inclui o mês civil corrente); ao abrir a página (e ao sair do Histórico / trocar Time) o índice inicia no **mês corrente**, sem bloquear navegação para competências anteriores.
-- Time: select obrigatório GP / Shuffler.
+- Time: select obrigatório GP / Shuffler (oculto com Ver = Próprios).
 - Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
+- No bloco **Avaliações** (aba Avaliações), com **Ver = Sim**: busca por nome + filtros **Turno** (`FiltroTurnoSelect` — Todos Turnos / Manhã / Tarde / Noite) e **Status** (`FiltroBarCampoSelect` — Todos Status / Aguardando / Feedback / Aprovado) na mesma fileira. Com Ver = Próprios esses filtros não aparecem.
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.
 
 ### Dados (Supabase)
@@ -276,9 +289,19 @@ Migrações: `20261103120000_academy_performance_hub_videos_retencao.sql` (limit
 
 **RLS mesas/estúdios:** leitura de `mesas_spin_cadastro` e `estudios_spin` inclui quem tem **Ver** em `academy_performance_hub` (`_academy_performance_hub_perm` — migração `20261017120000`); sem isso, os selects Estúdio/Jogo/Mesa do modal ficam vazios para Performance Coach.
 
-**Agenda de Avaliações (Gerenciamento):** lista prestadores **ativos/indisponíveis** do time filtrado, elegíveis no mês do carrossel. **Realizadas** = avaliações **Concluída** no mês; **Pendentes** = `max(0, 3 − realizadas)` (`PERFORMANCE_HUB_MIN_AVALIACOES_MES`) — GP e Shuffler.
+**Agenda de Avaliações (Gerenciamento):** lista prestadores **ativos/indisponíveis** do time filtrado, elegíveis no mês do carrossel. **Realizadas** = avaliações **publicadas** (Aguardando, Feedback, Aprovado; legado `concluida`) no mês por prestador; **Pendentes** = `max(0, 3 − realizadas)` (`PERFORMANCE_HUB_MIN_AVALIACOES_MES`) — GP e Shuffler.
 
 Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `academyPerformanceHubAvaliacoesFetch.ts`; agenda: `academyPerformanceHubAgenda.ts`.
+
+**Tutoriais (Ajuda → Tutoriais):**
+
+| Tutorial | `tutorial_id` | URL | Aba | Visibilidade inicial |
+|----------|---------------|-----|-----|----------------------|
+| Aplicar Feedback | `performance-hub-aplicar-feedback` | `/Ajuda/Tutoriais/PerformanceHubAplicarFeedback` | Feedback | `shift_leader` |
+| Realizar Avaliação | `performance-hub-avaliar` | `/Ajuda/Tutoriais/PerformanceHubAvaliar` | Gerenciamento | `performance_coach` |
+| Configurar Pesos | `performance-hub-configuracao-pesos` | `/Ajuda/Tutoriais/PerformanceHubConfiguracaoPesos` | Configuração | `performance_coach` |
+
+Imagens: `public/tutoriais/academy/performance-hub-aplicar-feedback/`, `performance-hub-avaliar/` e `performance-hub-configuracao-pesos/`. Handoff: `docs/treinamento/academy/01-performance-hub-avaliar.md`, `02-performance-hub-configuracao-pesos.md`, `03-performance-hub-aplicar-feedback.md`.
 
 ### Strings de vazio
 
@@ -289,8 +312,8 @@ Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `aca
 
 ## Anti-patterns (Academy)
 
-- Abrir aba Gerenciamento/Configuração sem gate de permissão.
-- Botão **Analisar** fora do status **Aguardando** (Ver=Próprios) ou **Aplicar Feedback** fora de **Feedback** (Editar).
+- Abrir aba Gerenciamento/Configuração sem gate de permissão; abrir aba **Feedback** sem **Editar = Sim**.
+- Botão **Analisar** fora do status **Aguardando** (Ver=Próprios) ou **Aplicar Feedback** fora da aba **Feedback** (Editar).
 - Filtro de time com opção «Todos» ou default Shuffler.
 - Pesos de scoring hardcoded na página — usar `PERFORMANCE_HUB_SCORING_POR_TIME` / estado de Configuração por time.
 - Exibir filtro Staff na aba **Configuração**.

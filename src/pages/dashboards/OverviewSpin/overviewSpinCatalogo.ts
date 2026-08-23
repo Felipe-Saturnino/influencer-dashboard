@@ -92,3 +92,16 @@ export function podeVerAbaCanalCatalogo(opts: {
 export function podeVerAbaOverviewCatalogo(verAbaDedicado: boolean, verAbaNetwork: boolean): boolean {
   return verAbaDedicado && verAbaNetwork;
 }
+
+/** Operadora com estúdio Dedicado e Network no catálogo — exibe toggle na aba Posicionamento. */
+export function operadoraTemCanaisDedicadoENetwork(
+  catalogo: OverviewSpinCatalogoCanais,
+  operadoraSlug: string,
+): boolean {
+  const slug = operadoraSlug.trim();
+  if (!slug || slug === "todas") return false;
+  return (
+    catalogo.slugsComMesaDedicada.includes(slug) &&
+    catalogo.slugsComMesaNetwork.includes(slug)
+  );
+}

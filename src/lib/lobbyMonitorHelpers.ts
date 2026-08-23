@@ -55,16 +55,28 @@ export interface ConcorrenteLobby {
   provider_slug: string;
 }
 
+export type CanalEstudioPosicionamento = "dedicado" | "network";
+
 export interface LobbyPosicaoRow {
   execucao_id: string;
   mesa_identificacao: string;
   nome_mesa: string;
   /** Nome do estúdio (Gestão de Estúdios); usado no rótulo «Estúdio - Mesa». */
   nome_estudio?: string | null;
+  /** Tipo do estúdio da mesa (Gestão de Estúdios); filtro Dedicado/Network na aba Posicionamento. */
+  canal_estudio?: CanalEstudioPosicionamento | null;
   tipo_jogo: string;
   posicao: number | null;
   qtd_concorrentes_a_frente: number;
   concorrentes_a_frente: ConcorrenteLobby[];
+}
+
+/** Filtra posições pelo canal do estúdio (mesas sem canal conhecido são omitidas). */
+export function filtrarPosicoesPorCanal(
+  posicoes: LobbyPosicaoRow[],
+  canal: CanalEstudioPosicionamento,
+): LobbyPosicaoRow[] {
+  return posicoes.filter((p) => p.canal_estudio === canal);
 }
 
 /** Rótulo canónico Posicionamento: «Estúdio - Mesa» (fallback só Mesa). */
@@ -978,7 +990,10 @@ export function gerarAlertasAlteracoesJanela(
   if (naJanela.length === 0) return [];
 
   /** mesa → dia → última leitura do dia */
-  const porMesaDia = new Map<string, Map<string, { posicao: number; executadoEm: string; label: string }>>();
+  const porMesaDia = new Map<
+    string,
+    Map<string, { posicao: number; executadoEm: string; nomeMesa: string }>
+  >();
 
   for (const ex of naJanela) {
     const dia = isoDateBrasilFromInstant(ex.executado_em);
@@ -992,10 +1007,11 @@ export function gerarAlertasAlteracoesJanela(
         dias = new Map();
         porMesaDia.set(mid, dias);
       }
+      const nomeMesa = row.nome_mesa?.trim() || mid;
       dias.set(dia, {
         posicao: Number(row.posicao),
         executadoEm: ex.executado_em,
-        label: labelMesaPosicionamentoRow(row),
+        nomeMesa,
       });
     }
   }
@@ -1010,7 +1026,7 @@ export function gerarAlertasAlteracoesJanela(
       const melhorou = atual.posicao < ant.posicao;
       alertas.push({
         tipo: melhorou ? "positivo" : "atencao",
-        texto: `${fmtDiaMesIso(diaAtual)} · ${atual.label}: ${fmtPosicao(ant.posicao)} → ${fmtPosicao(atual.posicao)}.`,
+        texto: `Mesa (${atual.nomeMesa}) — ${fmtDiaMesIso(diaAtual)} — ${fmtPosicao(ant.posicao)} → ${fmtPosicao(atual.posicao)}`,
         dataIso: diaAtual,
         sortTs: new Date(atual.executadoEm).getTime(),
       });

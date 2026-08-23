@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   acoesAbaAvaliacoesPerformanceHub,
+  avaliacaoFeedbackAplicado,
+  avaliacaoFeedbackPendente,
   avaliacaoPertenceAoEscopoProprios,
   avaliacaoVisivelAbaAvaliacoes,
   avaliacaoVisivelGerenciamentoAnalisar,
@@ -44,12 +46,13 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "concluida" }))).toBe(true);
   });
 
-  it("KPI MTD / realizadas só contam Aprovado (e legado concluida)", () => {
-    expect(statusContaComoRealizadaPerformanceHub("aguardando")).toBe(false);
-    expect(statusContaComoRealizadaPerformanceHub("feedback")).toBe(false);
+  it("realizadas / KPI contam avaliações publicadas (Aguardando, Feedback, Aprovado, legado concluida)", () => {
+    expect(statusContaComoRealizadaPerformanceHub("aguardando")).toBe(true);
+    expect(statusContaComoRealizadaPerformanceHub("feedback")).toBe(true);
     expect(statusContaComoRealizadaPerformanceHub("aprovado")).toBe(true);
     expect(statusContaComoRealizadaPerformanceHub("concluida")).toBe(true);
     expect(statusContaComoRealizadaPerformanceHub("rascunho")).toBe(false);
+    expect(statusContaComoRealizadaPerformanceHub("em_analise")).toBe(false);
   });
 
   it("escopo Próprios casa por staff id ou nome", () => {
@@ -69,8 +72,10 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     expect(avaliacaoPertenceAoEscopoProprios({ avaliadoNome: "Outra Pessoa" }, escopo)).toBe(false);
   });
 
-  it("Gerenciamento lista só rascunhos em andamento", () => {
+  it("Gerenciamento lista só rascunhos", () => {
     expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "rascunho" }), "game_presenter")).toBe(true);
+    expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "em_analise" }), "game_presenter")).toBe(false);
+    expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "pendente" }), "game_presenter")).toBe(false);
     expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "aguardando" }), "game_presenter")).toBe(false);
     expect(avaliacaoVisivelGerenciamentoAnalisar(row({ status: "feedback" }), "game_presenter")).toBe(false);
   });
@@ -87,15 +92,28 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     ).toEqual(["ver", "historico"]);
   });
 
-  it("ações Editar=Sim", () => {
+  it("ações Editar=Sim — Feedback sem Aplicar na aba Avaliações", () => {
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "aguardando" }),
     ).toEqual([]);
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "feedback" }),
-    ).toEqual(["historico", "ver", "aplicar_feedback"]);
+    ).toEqual(["historico", "ver"]);
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "aprovado" }),
     ).toEqual(["ver", "historico"]);
+  });
+
+  it("aba Feedback — pendentes e aplicados", () => {
+    const base = row({ status: "feedback", solicitacaoFeedbackEm: "2026-08-20T10:00:00Z" });
+    expect(avaliacaoFeedbackPendente(base)).toBe(true);
+    expect(avaliacaoFeedbackAplicado(base)).toBe(false);
+    expect(
+      avaliacaoFeedbackAplicado({
+        ...base,
+        status: "aprovado",
+        aplicacaoFeedbackEm: "2026-08-21T12:00:00Z",
+      }),
+    ).toBe(true);
   });
 });

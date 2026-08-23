@@ -39,6 +39,7 @@ import { supabase } from "../../../lib/supabase";
 import { PerformanceHubFiltroBar } from "./PerformanceHubFiltroBar";
 import { PerformanceHubAbaAvaliacoes } from "./PerformanceHubAbaAvaliacoes";
 import { PerformanceHubAbaGerenciamento } from "./PerformanceHubAbaGerenciamento";
+import { PerformanceHubAbaFeedback } from "./PerformanceHubAbaFeedback";
 import { PerformanceHubAbaConfiguracao } from "./PerformanceHubAbaConfiguracao";
 import { ModalAvaliarPerformanceHub, type PerformanceHubAvaliacaoFormPayload } from "./ModalAvaliarPerformanceHub";
 import { ModalAnalisarFeedbackPerformanceHub } from "./ModalAnalisarFeedbackPerformanceHub";
@@ -114,13 +115,13 @@ function isAvaliacaoNoHistorico(row: PerformanceHubAvaliacao): boolean {
   return dataIso >= inicio && dataIso <= fim;
 }
 
-function initialTab(
-  canEditarOk: boolean,
-  canCriarOk: boolean,
-  current: PerformanceHubTab,
-): PerformanceHubTab {
-  if (current === "gerenciamento" && !canEditarOk) return "avaliacoes";
-  if (current === "configuracao" && !canCriarOk) return canEditarOk ? "gerenciamento" : "avaliacoes";
+function initialTab(canCriarSim: boolean, canEditarOk: boolean, current: PerformanceHubTab): PerformanceHubTab {
+  if ((current === "gerenciamento" || current === "configuracao") && !canCriarSim) {
+    return "avaliacoes";
+  }
+  if (current === "feedback" && !canEditarOk) {
+    return "avaliacoes";
+  }
   return current;
 }
 
@@ -135,10 +136,12 @@ export default function PerformanceHubPage() {
   const [aba, setAba] = useRouteTab(
     "academy_performance_hub",
     "avaliacoes",
-    ["avaliacoes", "gerenciamento", "configuracao"] as const,
+    ["avaliacoes", "feedback", "gerenciamento", "configuracao"] as const,
   );
 
   const soProprios = isEscopoPropriosPerformanceHub(perm.canView, perm.canEditarOk);
+  const canCriarSim = perm.canCriar === "sim";
+  const canEditarOk = perm.canEditarOk;
 
   const [historico, setHistorico] = useState(false);
   const [timeSelecionado, setTimeSelecionado] = useState<PerformanceHubTimeSlug>(PERFORMANCE_HUB_TIME_DEFAULT);
@@ -157,9 +160,9 @@ export default function PerformanceHubPage() {
 
   useEffect(() => {
     if (perm.loading) return;
-    const next = initialTab(perm.canEditarOk, perm.canCriarOk, aba);
+    const next = initialTab(canCriarSim, canEditarOk, aba);
     if (next !== aba) setAba(next);
-  }, [perm.loading, perm.canEditarOk, perm.canCriarOk, aba, setAba]);
+  }, [perm.loading, canCriarSim, canEditarOk, aba, setAba]);
 
   useEffect(() => {
     if (!soProprios) {
@@ -353,7 +356,7 @@ export default function PerformanceHubPage() {
       notaComunicacao: null,
       notaMesa: null,
       notaProcedimentos: null,
-      tipoAvaliacao: null,
+      tipoAvaliacao: "performance_coach",
       turno: null,
       estudioId: null,
       jogo: null,
@@ -435,8 +438,8 @@ export default function PerformanceHubPage() {
         staffItems={staffOptions}
         staffSelecionado={staffSelecionado}
         onSelecionarStaff={setStaffSelecionado}
-        canEditarOk={perm.canEditarOk}
-        canCriarOk={perm.canCriarOk}
+        canCriarSim={canCriarSim}
+        canEditarOk={canEditarOk}
         showStaffFilter={aba !== "configuracao"}
       />
 
@@ -451,11 +454,19 @@ export default function PerformanceHubPage() {
             onVer={handleVerAvaliacao}
             onAnalisar={handleAnalisarAvaliacao}
             onHistorico={handleHistoricoAvaliacao}
-            onAplicarFeedback={handleAplicarFeedback}
           />
         ) : null}
 
-        {aba === "gerenciamento" && perm.canEditarOk ? (
+        {aba === "feedback" && canEditarOk ? (
+          <PerformanceHubAbaFeedback
+            avaliacoes={avaliacoesFiltradasBase}
+            onVer={handleVerAvaliacao}
+            onAplicarFeedback={handleAplicarFeedback}
+            onHistorico={handleHistoricoAvaliacao}
+          />
+        ) : null}
+
+        {aba === "gerenciamento" && canCriarSim ? (
           <PerformanceHubAbaGerenciamento
             avaliacoes={avaliacoesFiltradasBase}
             timeSelecionado={timeSelecionado}
@@ -465,7 +476,7 @@ export default function PerformanceHubPage() {
           />
         ) : null}
 
-        {aba === "configuracao" && perm.canCriarOk ? (
+        {aba === "configuracao" && canCriarSim ? (
           <PerformanceHubAbaConfiguracao
             config={scoringPorTime[timeSelecionado]}
             onChange={(next) =>
@@ -509,7 +520,7 @@ export default function PerformanceHubPage() {
               ...avaliacaoEmEdicao,
               status: "aprovado",
             });
-            if (!salvo) return;
+            if (!salvo) throw new Error("persist_aprovacao");
             await registrarHistoricoAvaliacaoPerformanceHub({
               avaliacaoId: salvo.id,
               acao: "aprovou",
@@ -526,7 +537,7 @@ export default function PerformanceHubPage() {
               solicitacaoFeedbackPorNome: nomeUsuarioAcao,
               solicitacaoFeedbackEm: agora,
             });
-            if (!salvo) return;
+            if (!salvo) throw new Error("persist_solicitacao");
             await registrarHistoricoAvaliacaoPerformanceHub({
               avaliacaoId: salvo.id,
               acao: "solicitou_feedback",
@@ -544,7 +555,7 @@ export default function PerformanceHubPage() {
               aplicacaoFeedbackPorNome: nomeUsuarioAcao,
               aplicacaoFeedbackEm: agora,
             });
-            if (!salvo) return;
+            if (!salvo) throw new Error("persist_aplicacao");
             await registrarHistoricoAvaliacaoPerformanceHub({
               avaliacaoId: salvo.id,
               acao: "aplicou_feedback",

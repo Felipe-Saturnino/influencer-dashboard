@@ -2,6 +2,8 @@ import { Component, ErrorInfo, ReactNode } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import {
   isChunkLoadError,
+  isLikelySafariModuleLoadFailure,
+  isSafariWebKit,
   recarregarAposErroDeChunk,
   reloadAfterChunkError,
 } from "../lib/chunkReloadGuard";
@@ -38,29 +40,37 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Erro capturado:", error?.message ?? error, errorInfo);
-    if (isChunkLoadError(error)) {
+    if (isChunkLoadError(error) || isLikelySafariModuleLoadFailure(error)) {
       this.setState({ chunkRecarregando: reloadAfterChunkError("ErrorBoundary: ChunkLoadError") });
     }
   }
 
+  private isRecoverableLoadFailure(error: Error | null): boolean {
+    if (!error) return false;
+    return isChunkLoadError(error) || isLikelySafariModuleLoadFailure(error);
+  }
+
   handleRetry = () => {
+    if (this.isRecoverableLoadFailure(this.state.error)) {
+      recarregarAposErroDeChunk();
+      return;
+    }
     this.setState({ hasError: false, error: null, chunkRecarregando: false });
     this.props.onReset?.();
   };
 
   handleReload = () => {
-    if (isChunkLoadError(this.state.error)) {
+    if (this.isRecoverableLoadFailure(this.state.error) || isSafariWebKit()) {
       recarregarAposErroDeChunk();
       return;
     }
-    // Safari iOS: falha de módulo às vezes chega sem mensagem reconhecível — cache-bust ajuda.
-    recarregarAposErroDeChunk();
+    window.location.reload();
   };
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
-      const isChunk = isChunkLoadError(this.state.error);
+      const isChunk = this.isRecoverableLoadFailure(this.state.error);
       if (isChunk && this.state.chunkRecarregando) {
         return (
           <div

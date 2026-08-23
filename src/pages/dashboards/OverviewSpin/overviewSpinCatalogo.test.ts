@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildCatalogoCanaisMesas, podeVerAbaCanalCatalogo, podeVerAbaOverviewCatalogo, type EstudioCatalogoRow } from "./overviewSpinCatalogo";
+import {
+  buildCatalogoCanaisMesas,
+  operadoraTemCanaisDedicadoENetwork,
+  podeVerAbaCanalCatalogo,
+  podeVerAbaOverviewCatalogo,
+  type EstudioCatalogoRow,
+} from "./overviewSpinCatalogo";
 
 const estudiosBlazeSports: EstudioCatalogoRow[] = [
   {
@@ -48,6 +54,15 @@ describe("podeVerAbaOverviewCatalogo", () => {
     expect(podeVerAbaOverviewCatalogo(false, true)).toBe(false);
     expect(podeVerAbaOverviewCatalogo(true, false)).toBe(false);
     expect(podeVerAbaOverviewCatalogo(false, false)).toBe(false);
+  });
+});
+
+describe("operadoraTemCanaisDedicadoENetwork", () => {
+  it("retorna true só quando operadora tem Dedicado e Network no catálogo", () => {
+    const cat = buildCatalogoCanaisMesas(estudiosBlazeSports, []);
+    expect(operadoraTemCanaisDedicadoENetwork(cat, "blaze")).toBe(true);
+    expect(operadoraTemCanaisDedicadoENetwork(cat, "esportiva_bet")).toBe(false);
+    expect(operadoraTemCanaisDedicadoENetwork(cat, "todas")).toBe(false);
   });
 });
 

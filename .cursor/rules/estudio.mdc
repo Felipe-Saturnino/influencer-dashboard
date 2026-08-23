@@ -192,7 +192,7 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 ### Modais
 
 - **`ModalVerIncidente`** — somente leitura, abas **Dados do Incidente** / **Descrição**; carrega anexos via `fetchEstudioIncidenteAnexos` + `urlAssinadaAnexoIncidente` (URL assinada, bucket `estudio-incidentes`).
-  - **Dados (Ver = Sim):** Abertura de Incidente (`created_at` — momento do registro, **não** data/hora da rodada) / Relator (**nickname** de Gestão de Staff via e-mail do `relator_user_id`; fallback `relator_nome`) → Data da Rodada / Hora da Rodada → ID da Rodada (linha inteira, `overflow-wrap`) → Mesa / Prestador (`Nome - Nickname`) / Time.
+  - **Dados (Ver = Sim):** Abertura de Incidente (`created_at` — momento do registro, **não** data/hora da rodada) / Relator (**nickname** de Gestão de Staff via e-mail do `relator_user_id`; fallback `relator_nome`) → Data da Rodada / Hora da Rodada (`formatHoraRodada` — sempre **`HH:MM:SS`**, igual ao cadastro) → ID da Rodada (linha inteira, `overflow-wrap`) → Mesa / Prestador (`Nome - Nickname`) / Time.
   - **Dados (Ver = Próprios):** sem Relator, Prestador e Time — layout readequado sem células vazias: Abertura (largura total) → Data / Hora da Rodada → ID → Mesa (largura total).
   - Coluna **Abertura** da tabela e filtro do carrossel usam `created_at` (registro), com limites de dia em **America/Sao_Paulo** (`inicioDiaBrasilUtcIso` / `fimDiaBrasilUtcIso`) — evita registro “sumir” à noite por deslocamento UTC. `data_rodada` / `hora_rodada` são só da rodada. No insert, `ocorrido_em` = agora (alinhado ao registro); **proibido** gravar data/hora da rodada em `ocorrido_em`.
   - **Descrição (GP):** Resolução / Payout → Descrição → Anexos.

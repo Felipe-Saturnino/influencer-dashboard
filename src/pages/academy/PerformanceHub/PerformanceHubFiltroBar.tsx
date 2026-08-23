@@ -1,4 +1,4 @@
-import { BarChart3, ChevronLeft, ChevronRight, ClipboardList, Settings } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, ClipboardList, MessageSquare, Settings } from "lucide-react";
 import type { Theme } from "../../../constants/theme";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { PERFORMANCE_HUB_TIME_OPTIONS } from "../../../lib/academyPerformanceHubConstants";
@@ -6,7 +6,10 @@ import type { PerformanceHubTab, PerformanceHubTimeSlug } from "../../../lib/aca
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FILTER_BAR_ROW_GAP, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import {
+  AjudaContextualAcoes,
+  type AjudaContextualTutorial,
+} from "../../../components/AjudaContextualAcoes";
 import {
   FILTRO_BAR_TAB_ICON_PROPS,
   FiltroBarTabButton,
@@ -16,6 +19,27 @@ import {
 } from "../../../components/dashboard";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
+
+const TUTORIAL_AVALIAR: AjudaContextualTutorial = {
+  id: "performance-hub-avaliar",
+  urlSlug: "PerformanceHubAvaliar",
+  titulo: "Realizar Avaliação",
+  descricao: "Criar e publicar uma avaliação Performance Coach.",
+};
+
+const TUTORIAL_CONFIGURACAO_PESOS: AjudaContextualTutorial = {
+  id: "performance-hub-configuracao-pesos",
+  urlSlug: "PerformanceHubConfiguracaoPesos",
+  titulo: "Configurar Pesos",
+  descricao: "Ajustar pesos de dimensões e critérios do scoring.",
+};
+
+const TUTORIAL_APLICAR_FEEDBACK: AjudaContextualTutorial = {
+  id: "performance-hub-aplicar-feedback",
+  urlSlug: "PerformanceHubAplicarFeedback",
+  titulo: "Aplicar Feedback",
+  descricao: "Repassar feedback ao prestador e aprovar a avaliação.",
+};
 
 type Props = {
   brand: Brand;
@@ -36,16 +60,20 @@ type Props = {
   staffItems: { id: string; name: string }[];
   staffSelecionado: string[];
   onSelecionarStaff: (ids: string[]) => void;
+  /** Criar = Sim: abas Gerenciamento e Configuração. */
+  canCriarSim: boolean;
+  /** Editar = Sim: aba Feedback. */
   canEditarOk: boolean;
-  canCriarOk: boolean;
   /** Oculto na aba Configuração */
   showStaffFilter: boolean;
 };
 
-function tabsVisiveis(canEditarOk: boolean, canCriarOk: boolean): PerformanceHubTab[] {
+function tabsVisiveis(canCriarSim: boolean, canEditarOk: boolean): PerformanceHubTab[] {
   const tabs: PerformanceHubTab[] = ["avaliacoes"];
-  if (canEditarOk) tabs.push("gerenciamento");
-  if (canCriarOk) tabs.push("configuracao");
+  if (canEditarOk) tabs.push("feedback");
+  if (canCriarSim) {
+    tabs.push("gerenciamento", "configuracao");
+  }
   return tabs;
 }
 
@@ -67,11 +95,11 @@ export function PerformanceHubFiltroBar({
   staffItems,
   staffSelecionado,
   onSelecionarStaff,
+  canCriarSim,
   canEditarOk,
-  canCriarOk,
   showStaffFilter,
 }: Props) {
-  const tabs = tabsVisiveis(canEditarOk, canCriarOk);
+  const tabs = tabsVisiveis(canCriarSim, canEditarOk);
 
   return (
     <div style={getPageFilterBoxStyle(brand, t)}>
@@ -111,7 +139,7 @@ export function PerformanceHubFiltroBar({
           />
         ) : null}
 
-        {canEditarOk && showStaffFilter ? (
+        {canCriarSim && showStaffFilter ? (
           <FiltroCalendarioStaffSelect
             mode="single"
             selected={staffSelecionado}
@@ -121,7 +149,18 @@ export function PerformanceHubFiltroBar({
         ) : null}
       </div>
       <div className="app-filter-bar-tabs-cta__actions">
-        <AjudaContextualAcoes pageKey="academy_performance_hub" />
+        <AjudaContextualAcoes
+          pageKey="academy_performance_hub"
+          tutorial={
+            aba === "gerenciamento"
+              ? TUTORIAL_AVALIAR
+              : aba === "feedback"
+                ? TUTORIAL_APLICAR_FEEDBACK
+              : aba === "configuracao"
+                ? TUTORIAL_CONFIGURACAO_PESOS
+                : null
+          }
+        />
       </div>
       </div>
 
@@ -144,6 +183,18 @@ export function PerformanceHubFiltroBar({
 
           {canEditarOk ? (
             <FiltroBarTabButton
+              id="tab-performance-hub-feedback"
+              active={aba === "feedback"}
+              aria-controls="panel-performance-hub-feedback"
+              onClick={() => onSelectAba("feedback")}
+              icon={<MessageSquare {...FILTRO_BAR_TAB_ICON_PROPS} />}
+            >
+              Feedback
+            </FiltroBarTabButton>
+          ) : null}
+
+          {canCriarSim ? (
+            <FiltroBarTabButton
               id="tab-performance-hub-gerenciamento"
               active={aba === "gerenciamento"}
               aria-controls="panel-performance-hub-gerenciamento"
@@ -154,7 +205,7 @@ export function PerformanceHubFiltroBar({
             </FiltroBarTabButton>
           ) : null}
 
-          {canCriarOk ? (
+          {canCriarSim ? (
             <FiltroBarTabButton
               id="tab-performance-hub-configuracao"
               active={aba === "configuracao"}

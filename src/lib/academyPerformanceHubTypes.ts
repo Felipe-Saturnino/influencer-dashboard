@@ -10,7 +10,7 @@ export type PerformanceHubStatus =
   /** Legado pré-migração de aprovação — tratar como aprovado na UI. */
   | "concluida";
 
-export type PerformanceHubTab = "avaliacoes" | "gerenciamento" | "configuracao";
+export type PerformanceHubTab = "avaliacoes" | "feedback" | "gerenciamento" | "configuracao";
 
 export type PerformanceHubMesaTipo = "cartas" | "roleta";
 

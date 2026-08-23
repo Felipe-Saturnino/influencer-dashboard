@@ -978,17 +978,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Abas e permissões",
         texto:
-          "**Avaliações** — exige permissão de **Ver** (inclui escopo Próprios para o prestador ver as próprias avaliações publicadas).\n\n**Gerenciamento** — exige permissão de **Editar**; agenda de avaliações e fila de rascunhos para concluir/publicar.\n\n**Configuração** — exige permissão de **Criar**; edição dos pesos das dimensões e critérios. Alterações valem só para **novas** avaliações (escala 0–10).",
+          "**Avaliações** — exige permissão de **Ver** (inclui escopo Próprios para o prestador ver as próprias avaliações publicadas).\n\n**Feedback** — exige permissão de **Editar = Sim** (fila de solicitações pendentes e histórico de repasses aplicados pelo coach). Fica entre Avaliações e Gerenciamento.\n\n**Gerenciamento** e **Configuração** — exigem permissão de **Criar = Sim** (agenda, avaliações em rascunho e pesos de scoring). Com apenas Ver ou Editar, essas abas não aparecem.\n\n**Editar** libera a aba **Feedback** (Aplicar Feedback) e não abre Gerenciamento/Configuração sozinho.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma).\n\nCom **Ver = Próprios**, o filtro de **Time** não aparece: a lista fica travada nas **suas** avaliações publicadas (Aguardando, Feedback ou Aprovado), de qualquer time, vinculadas ao cadastro do seu login.",
+          "Selecione o **time** (Game Presenter ou Shuffler) — não há opção «Todos». Use o carrossel de mês ou **Histórico** para ver a competência atual e as 12 anteriores (**Todo o período**). Com escopo amplo, filtre por **Staff** na barra (prestadores ativos ou indisponíveis daquele time no Organograma).\n\nNo bloco **Avaliações**, com **Ver = Sim**, use a busca por nome e os filtros **Turno** (Todos Turnos / Manhã / Tarde / Noite) e **Status** (Todos Status / Aguardando / Feedback / Aprovado) na mesma linha — eles restringem a tabela e os Consolidados.\n\nCom **Ver = Próprios**, o filtro de **Time** não aparece: a lista fica travada nas **suas** avaliações publicadas (Aguardando, Feedback ou Aprovado), de qualquer time, vinculadas ao cadastro do seu login.",
       },
       {
         subtitulo: "Status e ações",
         texto:
-          "**Aguardando** — avaliação publicada. Com **Ver = Próprios**: só **Analisar Avaliação** (Aprovar ou Solicitar Feedback). Com **Editar**: nenhuma ação nesta aba.\n\n**Feedback** — o prestador pediu esclarecimento. Próprios: **Ver** e **Histórico**. Editar: **Histórico**, **Ver** e **Aplicar Feedback**.\n\n**Aprovado** — ciclo encerrado. **Ver** e **Histórico** (Próprios e Editar).\n\nAo **Concluir** no Gerenciamento, a avaliação entra como **Aguardando**. Aprovar (prestador) ou Aplicar Feedback (coach) leva a **Aprovado**.",
+          "**Aguardando** — avaliação publicada. Com **Ver = Próprios**: só **Analisar Avaliação** (Aprovar ou Solicitar Feedback). Com **Editar**: nenhuma ação nesta aba.\n\n**Feedback** — o prestador pediu esclarecimento. Próprios: **Ver** e **Histórico**. Editar: **Ver** e **Histórico** na aba Avaliações; **Aplicar Feedback** só na aba **Feedback**.\n\n**Aprovado** — ciclo encerrado. **Ver** e **Histórico** (Próprios e Editar).\n\nAo **Concluir** no Gerenciamento, a avaliação entra como **Aguardando**. Aprovar (prestador) ou Aplicar Feedback (coach, aba Feedback) leva a **Aprovado**.",
       },
       {
         subtitulo: "Vídeo da avaliação",
@@ -998,7 +998,22 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Pontuação",
         texto:
-          "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). KPIs MTD (Consolidados) usam média simples só das avaliações **Aprovado** no período do time filtrado — Aguardando e Feedback entram na tabela, mas não na média. Valores exibidos com duas casas decimais.",
+          "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). Os Consolidados usam média simples das avaliações **publicadas** do período (Aguardando, Feedback e Aprovado), alinhadas à tabela. Valores exibidos com duas casas decimais.",
+      },
+      {
+        subtitulo: "Aba Feedback (Editar = Sim)",
+        texto:
+          "Entre **Avaliações** e **Gerenciamento**, visível só com permissão de **Editar = Sim**.\n\n**Feedbacks Pendentes** — avaliações em status Feedback do período filtrado: data da avaliação, avaliado, time, data da solicitação, mensagem do prestador. Ações: **Aplicar Feedback** (mesmo modal da operação de coach) e **Ver**.\n\n**Feedbacks Aplicados** — repasses já registrados: inclui time, data da aplicação e nome do aplicador. Ações: **Ver** e **Histórico**.\n\nNa aba **Avaliações**, status Feedback exibe apenas **Ver** e **Histórico** — **Aplicar Feedback** ficou exclusivo desta aba.",
+      },
+      {
+        subtitulo: "Agenda de Avaliações (Gerenciamento)",
+        texto:
+          "Lista prestadores ativos ou indisponíveis do time filtrado, elegíveis no mês do carrossel. A coluna **Realizadas** conta avaliações **publicadas** daquele prestador no mês (Aguardando, Feedback ou Aprovado) — mesma regra do card **Avaliações** nos Consolidados. **Pendentes** = quantas faltam para o mínimo de **3** avaliações publicadas no mês (`3 − realizadas`, mínimo zero). Prestadores ainda sem go-live no mês selecionado não entram na agenda até a competência em que já estão no estúdio.",
+      },
+      {
+        subtitulo: "Tutoriais (Ajuda)",
+        texto:
+          "Na aba **Feedback**, o atalho roxo abre **Aplicar Feedback** — revisar a solicitação do prestador, registrar o repasse e aprovar a avaliação.\n\nNa aba **Gerenciamento**, o tutorial **Realizar Avaliação** cobre criar, preencher critérios e publicar (Salvar rascunho ou Concluir).\n\nNa aba **Configuração**, **Configurar Pesos** explica pesos de dimensões e critérios por time.\n\nVisibilidade inicial: **Aplicar Feedback** → Shift Leader; **Realizar Avaliação** e **Configurar Pesos** → Performance Coach (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
       },
     ],
   },
