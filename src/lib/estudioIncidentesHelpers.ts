@@ -135,9 +135,16 @@ export function formatDataIsoBr(isoDate: string): string {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
+/** Exibe hora da rodada no formato canónico `HH:MM:SS` (coluna `time` / placeholder `#HH:MM:SS`). */
 export function formatHoraRodada(hora: string): string {
   if (!hora) return "—";
-  return hora.slice(0, 5);
+  const s = hora.trim().replace(/^#/, "");
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(s);
+  if (!m) return s || "—";
+  const h = m[1]!.padStart(2, "0");
+  const min = m[2]!;
+  const sec = m[3] ?? "00";
+  return `${h}:${min}:${sec}`;
 }
 
 export function hojeIsoDateLocal(): string {

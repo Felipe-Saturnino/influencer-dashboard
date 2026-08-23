@@ -32,7 +32,7 @@ alwaysApply: false
 | `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
 | `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
 
-**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** só Conheça + Troubleshooting. **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
+**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`); demais abas sem tutorial. **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
 
 Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**.
 
@@ -292,6 +292,15 @@ Migrações: `20261103120000_academy_performance_hub_videos_retencao.sql` (limit
 **Agenda de Avaliações (Gerenciamento):** lista prestadores **ativos/indisponíveis** do time filtrado, elegíveis no mês do carrossel. **Realizadas** = avaliações **publicadas** (Aguardando, Feedback, Aprovado; legado `concluida`) no mês por prestador; **Pendentes** = `max(0, 3 − realizadas)` (`PERFORMANCE_HUB_MIN_AVALIACOES_MES`) — GP e Shuffler.
 
 Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `academyPerformanceHubAvaliacoesFetch.ts`; agenda: `academyPerformanceHubAgenda.ts`.
+
+**Tutoriais (Ajuda → Tutoriais):**
+
+| Tutorial | `tutorial_id` | URL | Aba | Visibilidade inicial |
+|----------|---------------|-----|-----|----------------------|
+| Realizar Avaliação | `performance-hub-avaliar` | `/Ajuda/Tutoriais/PerformanceHubAvaliar` | Gerenciamento | `performance_coach` |
+| Configurar Pesos | `performance-hub-configuracao-pesos` | `/Ajuda/Tutoriais/PerformanceHubConfiguracaoPesos` | Configuração | `performance_coach` |
+
+Imagens: `public/tutoriais/academy/performance-hub-avaliar/` e `performance-hub-configuracao-pesos/`. Handoff: `docs/treinamento/academy/01-performance-hub-avaliar.md`, `02-performance-hub-configuracao-pesos.md`.
 
 ### Strings de vazio
 

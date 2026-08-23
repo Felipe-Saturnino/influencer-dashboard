@@ -64,7 +64,7 @@ const ERRO_GENERICO_EDITAR =
 
 function horaRodadaInicial(hora: string | null | undefined): string {
   if (!hora) return "";
-  const h = hora.trim();
+  const h = hora.trim().replace(/^#/, "");
   if (h.length >= 8) return h.slice(0, 8);
   if (h.length >= 5) return formatHoraRodada(h);
   return h;

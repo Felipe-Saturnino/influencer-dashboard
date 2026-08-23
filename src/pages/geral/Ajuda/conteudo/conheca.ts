@@ -1010,6 +1010,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Lista prestadores ativos ou indisponíveis do time filtrado, elegíveis no mês do carrossel. A coluna **Realizadas** conta avaliações **publicadas** daquele prestador no mês (Aguardando, Feedback ou Aprovado) — mesma regra do card **Avaliações** nos Consolidados. **Pendentes** = quantas faltam para o mínimo de **3** avaliações publicadas no mês (`3 − realizadas`, mínimo zero). Prestadores ainda sem go-live no mês selecionado não entram na agenda até a competência em que já estão no estúdio.",
       },
+      {
+        subtitulo: "Tutoriais (Ajuda)",
+        texto:
+          "Na aba **Gerenciamento**, o atalho roxo abre o tutorial **Realizar Avaliação** — fluxo completo de criar, preencher critérios e publicar (Salvar rascunho ou Concluir).\n\nNa aba **Configuração**, o tutorial **Configurar Pesos** explica como ajustar pesos de dimensões e critérios por time.\n\nVisibilidade inicial: perfil **Performance Coach** (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
+      },
     ],
   },
   academy_portal: {

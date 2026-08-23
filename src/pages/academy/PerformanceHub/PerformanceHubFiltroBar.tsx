@@ -6,7 +6,10 @@ import type { PerformanceHubTab, PerformanceHubTimeSlug } from "../../../lib/aca
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { FILTER_BAR_ROW_GAP, onFiltroBarTabsKeyDown } from "../../../lib/filterBarStyles";
 import { getPageFilterBoxStyle } from "../../../lib/pageContentBoxStyles";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import {
+  AjudaContextualAcoes,
+  type AjudaContextualTutorial,
+} from "../../../components/AjudaContextualAcoes";
 import {
   FILTRO_BAR_TAB_ICON_PROPS,
   FiltroBarTabButton,
@@ -16,6 +19,20 @@ import {
 } from "../../../components/dashboard";
 
 type Brand = ReturnType<typeof useDashboardBrand>;
+
+const TUTORIAL_AVALIAR: AjudaContextualTutorial = {
+  id: "performance-hub-avaliar",
+  urlSlug: "PerformanceHubAvaliar",
+  titulo: "Realizar Avaliação",
+  descricao: "Criar e publicar uma avaliação Performance Coach.",
+};
+
+const TUTORIAL_CONFIGURACAO_PESOS: AjudaContextualTutorial = {
+  id: "performance-hub-configuracao-pesos",
+  urlSlug: "PerformanceHubConfiguracaoPesos",
+  titulo: "Configurar Pesos",
+  descricao: "Ajustar pesos de dimensões e critérios do scoring.",
+};
 
 type Props = {
   brand: Brand;
@@ -125,7 +142,16 @@ export function PerformanceHubFiltroBar({
         ) : null}
       </div>
       <div className="app-filter-bar-tabs-cta__actions">
-        <AjudaContextualAcoes pageKey="academy_performance_hub" />
+        <AjudaContextualAcoes
+          pageKey="academy_performance_hub"
+          tutorial={
+            aba === "gerenciamento"
+              ? TUTORIAL_AVALIAR
+              : aba === "configuracao"
+                ? TUTORIAL_CONFIGURACAO_PESOS
+                : null
+          }
+        />
       </div>
       </div>
 
