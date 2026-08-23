@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase";
 import { PLAYBOOK_ITENS_OBRIGATORIOS } from "../../../../constants/playbookGuia";
-import { isPerfilIncompleto } from "../../../../lib/influencerPerfilCompleto";
 
 export type HomeAfiliadoPerfilRow = {
   nome_artistico?: string | null;
