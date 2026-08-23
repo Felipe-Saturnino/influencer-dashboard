@@ -18,7 +18,7 @@ export const TUTORIAL_PERFORMANCE_HUB_APLICAR_FEEDBACK: TutorialDef = {
     {
       titulo: "1. Abrir a aba Feedback",
       texto:
-        "1. No menu, seção Academy, clique em Performance Hub.\n2. Na barra de filtros, selecione o **time** (Game Presenter ou Shuffler) e o **mês** no carrossel — a lista respeita o período filtrado.\n3. Clique na aba **Feedback** (entre Avaliações e Gerenciamento).",
+        "1. No menu, seção Academy, clique em Performance Hub.\n2. Na barra de filtros, selecione o **time** (Game Presenter ou Shuffler) e o **mês** no carrossel — a lista respeita o período filtrado.\n3. Clique na aba **Feedback**.",
       imagens: [
         {
           src: `${IMG}/01-aba-feedback.png`,
@@ -62,7 +62,7 @@ export const TUTORIAL_PERFORMANCE_HUB_APLICAR_FEEDBACK: TutorialDef = {
     {
       titulo: "5. Registrar o repasse",
       texto:
-        "1. No rodapé do modal, clique em **Aprovar**.\n2. No pop-up **Aplicar Feedback**, preencha o campo **Feedback** (obrigatório) — descreva o repasse que será registrado para o prestador. Placeholder: *Descreva o feedback aplicado para registro do repasse*.\n3. Clique em **Aprovar** no pop-up para confirmar.\n\n— **Voltar** fecha o pop-up sem salvar.\n— O texto do repasse fica gravado no histórico da avaliação.",
+        "1. No rodapé do modal, clique em **Aprovar**.\n2. No pop-up **Aplicar Feedback**, preencha o campo **Feedback** (obrigatório) — descreva o repasse que será registrado para o prestador.\n3. Clique em **Aprovar** no pop-up para confirmar.\n\n— **Voltar** fecha o pop-up sem salvar.\n— O texto do repasse fica gravado no histórico da avaliação.",
       imagens: [
         {
           src: `${IMG}/05-popup-aplicar-feedback.png`,
