@@ -4,7 +4,8 @@ import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { FONT } from "../../../constants/theme";
-import type { PerformanceHubAvaliacao } from "../../../lib/academyPerformanceHubTypes";
+import type { PerformanceHubAvaliacao, PerformanceHubTimeSlug } from "../../../lib/academyPerformanceHubTypes";
+import { PERFORMANCE_HUB_TIME_OPTIONS } from "../../../lib/academyPerformanceHubConstants";
 import {
   avaliacaoFeedbackAplicado,
   avaliacaoFeedbackPendente,
@@ -23,8 +24,12 @@ type Props = {
   onHistorico: (row: PerformanceHubAvaliacao) => void;
 };
 
-type SortPendenteCol = "data" | "avaliado" | "solicitacao" | "mensagem";
-type SortAplicadoCol = "data" | "avaliado" | "solicitacao" | "aplicacao" | "aplicador";
+type SortPendenteCol = "data" | "avaliado" | "time" | "solicitacao" | "mensagem";
+type SortAplicadoCol = "data" | "avaliado" | "time" | "solicitacao" | "aplicacao" | "aplicador";
+
+function labelTimePerformanceHub(time: PerformanceHubTimeSlug): string {
+  return PERFORMANCE_HUB_TIME_OPTIONS.find((item) => item.value === time)?.label ?? time;
+}
 
 function toDateNumber(value: string): number {
   const [dia, mes, ano] = value.split("/").map(Number);
@@ -92,6 +97,7 @@ export function PerformanceHubAbaFeedback({
         let cmp = 0;
         if (sortPendente.col === "data") cmp = toDateNumber(a.data) - toDateNumber(b.data);
         if (sortPendente.col === "avaliado") cmp = a.avaliadoNome.localeCompare(b.avaliadoNome, "pt-BR");
+        if (sortPendente.col === "time") cmp = a.time.localeCompare(b.time, "pt-BR");
         if (sortPendente.col === "solicitacao") {
           cmp = isoToTime(a.solicitacaoFeedbackEm) - isoToTime(b.solicitacaoFeedbackEm);
         }
@@ -109,6 +115,7 @@ export function PerformanceHubAbaFeedback({
         let cmp = 0;
         if (sortAplicado.col === "data") cmp = toDateNumber(a.data) - toDateNumber(b.data);
         if (sortAplicado.col === "avaliado") cmp = a.avaliadoNome.localeCompare(b.avaliadoNome, "pt-BR");
+        if (sortAplicado.col === "time") cmp = a.time.localeCompare(b.time, "pt-BR");
         if (sortAplicado.col === "solicitacao") {
           cmp = isoToTime(a.solicitacaoFeedbackEm) - isoToTime(b.solicitacaoFeedbackEm);
         }
@@ -144,7 +151,7 @@ export function PerformanceHubAbaFeedback({
           </div>
         ) : (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: 880 })}>
+            <table style={getDataTableStyle({ minWidth: 980 })}>
               <caption style={{ display: "none" }}>Tabela de feedbacks pendentes</caption>
               <thead>
                 <tr>
@@ -159,6 +166,14 @@ export function PerformanceHubAbaFeedback({
                   <SortTableTh
                     label="Avaliado"
                     col="avaliado"
+                    sortCol={sortPendente.col}
+                    sortDir={sortPendente.dir}
+                    onSort={onSortPendente}
+                    thStyle={dataTable.thHeader}
+                  />
+                  <SortTableTh
+                    label="Time"
+                    col="time"
                     sortCol={sortPendente.col}
                     sortDir={sortPendente.dir}
                     onSort={onSortPendente}
@@ -190,6 +205,7 @@ export function PerformanceHubAbaFeedback({
                   <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
                     <td style={dataTable.tdCenter}>{row.data}</td>
                     <td style={dataTable.tdCenter}>{row.avaliadoNome}</td>
+                    <td style={dataTable.tdCenter}>{labelTimePerformanceHub(row.time)}</td>
                     <td style={dataTable.tdCenter}>{formatIsoDataHora(row.solicitacaoFeedbackEm)}</td>
                     <td style={dataTable.tdCenter}>
                       <CelulaMensagem texto={row.solicitacaoFeedbackTexto} />
@@ -223,7 +239,7 @@ export function PerformanceHubAbaFeedback({
           </div>
         ) : (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: 960 })}>
+            <table style={getDataTableStyle({ minWidth: 1060 })}>
               <caption style={{ display: "none" }}>Tabela de feedbacks aplicados</caption>
               <thead>
                 <tr>
@@ -238,6 +254,14 @@ export function PerformanceHubAbaFeedback({
                   <SortTableTh
                     label="Avaliado"
                     col="avaliado"
+                    sortCol={sortAplicado.col}
+                    sortDir={sortAplicado.dir}
+                    onSort={onSortAplicado}
+                    thStyle={dataTable.thHeader}
+                  />
+                  <SortTableTh
+                    label="Time"
+                    col="time"
                     sortCol={sortAplicado.col}
                     sortDir={sortAplicado.dir}
                     onSort={onSortAplicado}
@@ -277,6 +301,7 @@ export function PerformanceHubAbaFeedback({
                   <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
                     <td style={dataTable.tdCenter}>{row.data}</td>
                     <td style={dataTable.tdCenter}>{row.avaliadoNome}</td>
+                    <td style={dataTable.tdCenter}>{labelTimePerformanceHub(row.time)}</td>
                     <td style={dataTable.tdCenter}>{formatIsoDataHora(row.solicitacaoFeedbackEm)}</td>
                     <td style={dataTable.tdCenter}>{formatIsoDataHora(row.aplicacaoFeedbackEm)}</td>
                     <td style={dataTable.tdCenter}>{row.aplicacaoFeedbackPorNome?.trim() || "—"}</td>

@@ -1003,7 +1003,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Feedback (Editar = Sim)",
         texto:
-          "Entre **Avaliações** e **Gerenciamento**, visível só com permissão de **Editar = Sim**.\n\n**Feedbacks Pendentes** — avaliações em status Feedback do período filtrado: data da avaliação, avaliado, data da solicitação, mensagem do prestador. Ações: **Aplicar Feedback** (mesmo modal da operação de coach) e **Ver**.\n\n**Feedbacks Aplicados** — repasses já registrados: inclui data da aplicação e nome do aplicador. Ações: **Ver** e **Histórico**.\n\nNa aba **Avaliações**, status Feedback exibe apenas **Ver** e **Histórico** — **Aplicar Feedback** ficou exclusivo desta aba.",
+          "Entre **Avaliações** e **Gerenciamento**, visível só com permissão de **Editar = Sim**.\n\n**Feedbacks Pendentes** — avaliações em status Feedback do período filtrado: data da avaliação, avaliado, time, data da solicitação, mensagem do prestador. Ações: **Aplicar Feedback** (mesmo modal da operação de coach) e **Ver**.\n\n**Feedbacks Aplicados** — repasses já registrados: inclui time, data da aplicação e nome do aplicador. Ações: **Ver** e **Histórico**.\n\nNa aba **Avaliações**, status Feedback exibe apenas **Ver** e **Histórico** — **Aplicar Feedback** ficou exclusivo desta aba.",
       },
       {
         subtitulo: "Agenda de Avaliações (Gerenciamento)",

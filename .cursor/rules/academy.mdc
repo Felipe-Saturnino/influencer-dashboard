@@ -170,7 +170,7 @@ Visível só com **Editar = Sim**, entre Avaliações e Gerenciamento. Respeita 
 
 | Bloco | Conteúdo | Ações |
 |-------|----------|-------|
-| **Feedbacks Pendentes** | `status === feedback` — Data da Avaliação, Avaliado, Data da Solicitação, Mensagem | **Aplicar Feedback** (`ModalAnalisarFeedbackPerformanceHub` modo aplicar), **Ver** |
+| **Feedbacks Pendentes** | `status === feedback` — Data da Avaliação, Avaliado, Time, Data da Solicitação, Mensagem | **Aplicar Feedback** (`ModalAnalisarFeedbackPerformanceHub` modo aplicar), **Ver** |
 | **Feedbacks Aplicados** | `aplicacao_feedback_em` preenchido — + Data da Aplicação, Aplicador | **Ver**, **Histórico** |
 
 Strings de vazio: «Nenhum feedback pendente/aplicado para o período selecionado.»
