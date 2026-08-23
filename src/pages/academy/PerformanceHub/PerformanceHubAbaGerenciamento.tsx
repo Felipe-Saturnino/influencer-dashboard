@@ -143,7 +143,7 @@ export function PerformanceHubAbaGerenciamento({
       </div>
 
       <div style={pageBox}>
-        <SectionTitle sub="mínimo de 3 avaliações concluídas por prestador no mês">Agenda de Avaliações</SectionTitle>
+        <SectionTitle sub="mínimo de 3 avaliações publicadas por prestador no mês">Agenda de Avaliações</SectionTitle>
 
         <div style={{ marginBottom: 12 }}>
           <BarraPesquisaPagina

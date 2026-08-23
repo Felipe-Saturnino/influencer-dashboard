@@ -235,7 +235,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 - Escala **0–10**; UI com **2 casas decimais** (`formatNotaPerformanceHub`).
 - **Nota Total** = média ponderada dimensões (`calcularNotaTotalGamePresenter` / `calcularNotaTotalShuffler`).
-- **MTD consolidado** = média simples das notas totais das avaliações **publicadas** (Aguardando, Feedback e Aprovado) no período do time filtrado (ou de todas as do usuário com Ver = Próprios). A agenda de Gerenciamento continua contando só **Aprovado** como realizada.
+- **MTD consolidado** = média simples das notas totais das avaliações **publicadas** (Aguardando, Feedback e Aprovado) no período do time filtrado (ou de todas as do usuário com Ver = Próprios). A coluna **Realizadas** da Agenda de Gerenciamento usa a **mesma** definição (publicadas no mês por prestador).
 - Configuração: subtítulo «Escala 0–10 · alterações aplicam-se a novas avaliações»; pesos editáveis por time conforme filtro de Time ativo.
 
 ### Filtros
@@ -277,7 +277,7 @@ Migrações: `20261103120000_academy_performance_hub_videos_retencao.sql` (limit
 
 **RLS mesas/estúdios:** leitura de `mesas_spin_cadastro` e `estudios_spin` inclui quem tem **Ver** em `academy_performance_hub` (`_academy_performance_hub_perm` — migração `20261017120000`); sem isso, os selects Estúdio/Jogo/Mesa do modal ficam vazios para Performance Coach.
 
-**Agenda de Avaliações (Gerenciamento):** lista prestadores **ativos/indisponíveis** do time filtrado, elegíveis no mês do carrossel. **Realizadas** = avaliações **Concluída** no mês; **Pendentes** = `max(0, 3 − realizadas)` (`PERFORMANCE_HUB_MIN_AVALIACOES_MES`) — GP e Shuffler.
+**Agenda de Avaliações (Gerenciamento):** lista prestadores **ativos/indisponíveis** do time filtrado, elegíveis no mês do carrossel. **Realizadas** = avaliações **publicadas** (Aguardando, Feedback, Aprovado; legado `concluida`) no mês por prestador; **Pendentes** = `max(0, 3 − realizadas)` (`PERFORMANCE_HUB_MIN_AVALIACOES_MES`) — GP e Shuffler.
 
 Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `academyPerformanceHubAvaliacoesFetch.ts`; agenda: `academyPerformanceHubAgenda.ts`.
 

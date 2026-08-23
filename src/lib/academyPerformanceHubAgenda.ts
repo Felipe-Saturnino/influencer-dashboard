@@ -4,6 +4,7 @@ import type {
   PerformanceHubAvaliacao,
   PerformanceHubTimeSlug,
 } from "./academyPerformanceHubTypes";
+import { statusContaComoRealizadaPerformanceHub } from "./academyPerformanceHubWorkflow";
 
 export type PerformanceHubStaffAgendaFonte = {
   id: string;
@@ -72,7 +73,7 @@ function contarRealizadasMes(
   return avaliacoes.filter(
     (row) =>
       row.time === staff.time &&
-      row.status === "aprovado" &&
+      statusContaComoRealizadaPerformanceHub(row.status) &&
       (row.avaliadoStaffId === staff.id || row.avaliadoNome === staff.nome) &&
       avaliacaoNoMes(row, mes),
   ).length;

@@ -1000,6 +1000,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Três dimensões — Comunicação, Mesa e Imagem — com pesos configuráveis. A **Nota Total** usa média ponderada (critérios → dimensões → total). Os Consolidados usam média simples das avaliações **publicadas** do período (Aguardando, Feedback e Aprovado), alinhadas à tabela. Valores exibidos com duas casas decimais.",
       },
+      {
+        subtitulo: "Agenda de Avaliações (Gerenciamento)",
+        texto:
+          "Lista prestadores ativos ou indisponíveis do time filtrado, elegíveis no mês do carrossel. A coluna **Realizadas** conta avaliações **publicadas** daquele prestador no mês (Aguardando, Feedback ou Aprovado) — mesma regra do card **Avaliações** nos Consolidados. **Pendentes** = quantas faltam para o mínimo de **3** avaliações publicadas no mês (`3 − realizadas`, mínimo zero). Prestadores ainda sem go-live no mês selecionado não entram na agenda até a competência em que já estão no estúdio.",
+      },
     ],
   },
   academy_portal: {

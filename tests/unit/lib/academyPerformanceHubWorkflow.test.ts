@@ -44,12 +44,13 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     expect(avaliacaoVisivelAbaAvaliacoes(row({ status: "concluida" }))).toBe(true);
   });
 
-  it("KPI MTD / realizadas só contam Aprovado (e legado concluida)", () => {
-    expect(statusContaComoRealizadaPerformanceHub("aguardando")).toBe(false);
-    expect(statusContaComoRealizadaPerformanceHub("feedback")).toBe(false);
+  it("realizadas / KPI contam avaliações publicadas (Aguardando, Feedback, Aprovado, legado concluida)", () => {
+    expect(statusContaComoRealizadaPerformanceHub("aguardando")).toBe(true);
+    expect(statusContaComoRealizadaPerformanceHub("feedback")).toBe(true);
     expect(statusContaComoRealizadaPerformanceHub("aprovado")).toBe(true);
     expect(statusContaComoRealizadaPerformanceHub("concluida")).toBe(true);
     expect(statusContaComoRealizadaPerformanceHub("rascunho")).toBe(false);
+    expect(statusContaComoRealizadaPerformanceHub("em_analise")).toBe(false);
   });
 
   it("escopo Próprios casa por staff id ou nome", () => {

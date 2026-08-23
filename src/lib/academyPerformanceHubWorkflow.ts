@@ -134,7 +134,7 @@ export function statusPublicadoPerformanceHub(status: PerformanceHubStatus): boo
   );
 }
 
-/** Conta na agenda (realizadas) — só avaliações aprovadas. */
+/** Conta na agenda (realizadas) e no KPI — avaliações publicadas (mesma base da aba Avaliações). */
 export function statusContaComoRealizadaPerformanceHub(status: PerformanceHubStatus): boolean {
-  return status === "aprovado" || status === "concluida";
+  return statusPublicadoPerformanceHub(status);
 }
