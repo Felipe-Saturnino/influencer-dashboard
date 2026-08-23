@@ -29,7 +29,7 @@ export const TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS: TutorialDef = {
     {
       titulo: "2. Identificar se a ciência é obrigatória",
       texto:
-        "Cada card exibe código, tipo, título, objetivo, versão e aplicabilidade. No canto superior direito aparece o status da **sua** ciência:\n\n— **Ciência pendente** (amarelo) — o documento exige aceite e você ainda não confirmou.\n— **Ciência não exigida** — leitura opcional; não há botão de aceite.\n— **Ciente** (verde) — aceite registrado, com a data ao lado.\n\nCom **Ver = Próprios**, só entram na lista documentos cujo **Aplicável a** inclua **Todos os prestadores** ou o seu vínculo no organograma. Se o card aparece e está **Ciência pendente**, o aceite é obrigatório para o seu perfil.",
+        "Cada card exibe código, tipo, título, objetivo, versão e aplicabilidade. No canto superior direito aparece o status da **sua** ciência:\n\n— **Ciência pendente** (amarelo) — o documento exige aceite e você ainda não confirmou.\n— **Ciência não exigida** — leitura opcional; não há botão de aceite.\n— **Ciente** (verde) — aceite registrado, com a data ao lado.",
       imagens: [
         {
           src: `${IMG}/02-status-ciencia-card.png`,
@@ -51,20 +51,9 @@ export const TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS: TutorialDef = {
       ],
     },
     {
-      titulo: "4. Documento legado (texto no modal)",
+      titulo: "4. Documento sem ciência obrigatória",
       texto:
-        "Políticas antigas sem código normativo abrem o modal **Ler Política/Normativa** — introdução, descrição e anexos em texto, em vez do visualizador de PDF.\n\nQuando a ciência for obrigatória, o botão **Lido e Ciente** aparece no final do modal. O efeito é o mesmo: o status do card muda para **Ciente**.",
-      imagens: [
-        {
-          src: `${IMG}/04-modal-legado-lido-e-ciente.png`,
-          alt: "Modal Ler Política/Normativa com botão Lido e Ciente",
-        },
-      ],
-    },
-    {
-      titulo: "5. Documento sem ciência obrigatória",
-      texto:
-        "Em cards com **Ciência não exigida**, você pode abrir com **Visualizar** para consultar o conteúdo.\n\nO modal **não** exibe **Li e estou ciente** nem **Lido e Ciente** — não há aceite a registrar.",
+        "Em cards com **Ciência não exigida**, você pode abrir com **Visualizar** para consultar o conteúdo.\n\nO modal **não** exibe **Li e estou ciente** — não há aceite a registrar.",
       imagens: [
         {
           src: `${IMG}/05-sem-ciencia-obrigatoria.png`,
@@ -74,5 +63,5 @@ export const TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Ciência vale para prestadores e perfis internos do estúdio e escritório que acessam o Portal de RH. Influencer, operador e afiliado não participam deste fluxo.\n— Comunicados usam **Lido**; RH Talks são atas de leitura — não substituem a ciência de políticas.\n— Políticas com ciência pendente também podem aparecer na Home (bloco Informações) até o aceite.\n— Com **Editar = Sim**, o botão **Ver ciência** no card lista quem já registrou o aceite.",
+    "— Comunicados usam **Lido**; RH Talks são atas de leitura — não substituem a ciência de políticas.\n— Políticas com ciência pendente também podem aparecer na Home (bloco Informações) até o aceite.",
 };

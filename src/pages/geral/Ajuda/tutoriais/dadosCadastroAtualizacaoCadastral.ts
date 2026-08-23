@@ -17,7 +17,7 @@ export const TUTORIAL_DADOS_CADASTRO_ATUALIZACAO: TutorialDef = {
     {
       titulo: "1. Abrir Dados de Cadastro",
       texto:
-        "1. No menu, seção RH, clique em **Dados de Cadastro**.\n2. Com **Ver = Próprios**, você entra direto no seu cadastro — não há filtro de Staff.\n3. Se a revisão estiver pendente, um aviso aparece no topo da página e o sistema pode bloquear a navegação para outras áreas até concluir.",
+        "1. No menu, seção RH, clique em **Dados de Cadastro**.\n2. Se a revisão estiver pendente, um aviso aparece no topo da página e o sistema pode bloquear a navegação para outras áreas até concluir.",
       imagens: [
         {
           src: `${IMG}/01-pagina-revisao-pendente.png`,
@@ -39,7 +39,7 @@ export const TUTORIAL_DADOS_CADASTRO_ATUALIZACAO: TutorialDef = {
     {
       titulo: "3. Atualizar dados nas abas",
       texto:
-        "Se algo mudou desde a última revisão:\n\n1. Vá à aba correspondente — **Dados cadastrais**, **Documentos**, **Formação e Competências** ou **Experiência Profissional**.\n2. Preencha ou corrija os campos obrigatórios (rótulos em vermelho indicam pendência).\n3. Em **Dados cadastrais**, clique em **Salvar alterações** no topo do bloco **Dados pessoais**.\n4. Em **Documentos**, envie ou substitua arquivos nas categorias exigidas — o envio pode concluir a revisão automaticamente quando não houver mais pendências.\n\nNome completo, nickname e e-mail já cadastrado são somente leitura — alterações nesses itens passam pelo RH em Gestão de Prestadores.",
+        "Se algo mudou desde a última revisão:\n\n1. Vá à aba correspondente — **Dados cadastrais**, **Documentos**, **Formação e Competências** ou **Experiência Profissional**.\n2. Preencha ou corrija os campos obrigatórios (rótulos em vermelho indicam pendência).\n3. Em **Dados cadastrais**, clique em **Salvar alterações** no topo do bloco **Dados pessoais**.\n4. Em **Documentos**, envie ou substitua arquivos nas categorias exigidas — o envio pode concluir a revisão automaticamente quando não houver mais pendências.\n\nNome completo, nickname e e-mail já cadastrado são somente leitura — alterações nesses itens passam pelo RH e Liderança.",
     },
     {
       titulo: "4. Confirmar sem alterações",
@@ -65,5 +65,5 @@ export const TUTORIAL_DADOS_CADASTRO_ATUALIZACAO: TutorialDef = {
     },
   ],
   notasFinais:
-    "— A revisão cadastral é obrigatória no primeiro acesso e a cada seis meses.\n— Salvar só parte dos dados **não** encerra a revisão se ainda houver pendências.\n— **Configurações**, **Ajuda** e **Central de Denúncias** permanecem acessíveis mesmo com revisão pendente.\n— Com **Ver = Sim** (RH/gestores), use o filtro Staff para revisar o cadastro de outro prestador — o fluxo de confirmação vale só no **próprio** cadastro.",
+    "— A revisão cadastral é obrigatória no primeiro acesso e a cada seis meses.\n— Salvar só parte dos dados **não** encerra a revisão se ainda houver pendências.\n— **Configurações**, **Ajuda** e **Central de Denúncias** permanecem acessíveis mesmo com revisão pendente.",
 };

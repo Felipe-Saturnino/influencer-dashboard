@@ -74,5 +74,5 @@ export const TUTORIAL_CIENCIA_MANUAIS_ACADEMY: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Ciência obrigatória depende do cadastro do manual (**Exige ciência do colaborador?** = Sim) e do seu time em **Aplicável a**.\n— Comunicados e Dicas usam reações com emoji — isso não substitui a ciência dos Manuais.\n— Com **Editar = Sim**, o botão **Ver ciência** no card lista quem já registrou o aceite.",
+    "— Comunicados e Dicas usam reações com emoji — isso não substitui a ciência dos Manuais.",
 };
