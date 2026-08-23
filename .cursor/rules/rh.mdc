@@ -68,7 +68,7 @@ Canal público de denúncia (formulário externo): `geral.mdc` → `public/Canal
 ## Dados de Cadastro (`rh_dados_cadastro`)
 
 - `PageHeader`; subtítulo **Próprios:** «Atualização cadastral — apenas o seu cadastro» · **Ver Sim:** «Consulta e atualização cadastral de prestadores.»
-- **Ajuda contextual:** com **Ver = Sim**, `AjudaContextualAcoes` fica à direita da mesma linha do filtro Staff; com **Ver = Próprios**, fica à direita da linha da mensagem de próxima revisão cadastral.
+- **Ajuda contextual:** com **Ver = Sim**, `AjudaContextualAcoes` fica à direita da mesma linha do filtro Staff; com **Ver = Próprios**, fica à direita da linha da mensagem de próxima revisão cadastral. Tutorial **Atualização Cadastral** (`dados-cadastro-atualizacao-cadastral`, `/Ajuda/Tutoriais/DadosCadastroAtualizacaoCadastral`).
 - **Permissões (Gestão de Usuários → `rh_dados_cadastro`):**
   - **Ver/Editar Próprios:** entra direto no cadastro vinculado ao e-mail de login; sem filtro Staff nem botão **Meu Cadastro**.
   - **Ver Sim + Editar Próprios:** barra com `FiltroCalendarioStaffSelect` (`mode="single"`) + **Meu Cadastro** (`FiltroMeuCalendarioButton`); abas na linha 2 do bloco (`getPageFilterBoxStyle`); cadastro alheio **somente leitura**.

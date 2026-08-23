@@ -66,7 +66,9 @@ export function ModalSolicitar({
     setAgenciaElegivel(null);
     void verificarElegibilidadeAgendaLive(infSel).then((c) => {
       if (cancel) return;
-      if (c.perfilIncompleto) {
+      if (c.erroVerificacao) {
+        setAgenciaElegivel(false);
+      } else if (c.perfilIncompleto) {
         onBloqueioGate("perfil");
         setAgenciaElegivel(false);
       } else if (c.faltaPlaybook) {
@@ -128,6 +130,10 @@ export function ModalSolicitar({
     if (!podeSubmeter) return;
     const influencerAlvo = roleParidadeInfluencer(userRole as Role) ? userId : infSel;
     const check = await verificarElegibilidadeAgendaLive(influencerAlvo);
+    if (check.erroVerificacao) {
+      setErr("Não foi possível verificar o cadastro e o Playbook. Se o problema persistir, entre em contato com o suporte.");
+      return;
+    }
     if (check.perfilIncompleto) {
       onBloqueioGate("perfil");
       return;

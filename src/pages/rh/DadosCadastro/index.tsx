@@ -38,7 +38,8 @@ import { syncGamePresenterDealerFromRhFuncionario } from "../../../lib/rhGamePre
 import { ListaHistoricoRh, fmtDataIsoPtBr } from "../../../components/rh/ListaHistoricoRh";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
+import { TUTORIAL_DADOS_CADASTRO_ATUALIZACAO } from "../../geral/Ajuda/tutoriais/dadosCadastroAtualizacaoCadastral";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   FiltroBarTabButton,
@@ -91,6 +92,13 @@ const UFS_BR = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO",
   "RR", "SC", "SP", "SE", "TO",
 ] as const;
+
+const TUTORIAL_CTX_DADOS_CADASTRO: AjudaContextualTutorial = {
+  id: TUTORIAL_DADOS_CADASTRO_ATUALIZACAO.id,
+  urlSlug: TUTORIAL_DADOS_CADASTRO_ATUALIZACAO.urlSlug,
+  titulo: TUTORIAL_DADOS_CADASTRO_ATUALIZACAO.titulo,
+  descricao: "Atualizar cadastro e concluir a revisão obrigatória.",
+};
 
 const TIPOS_CONTRATO_LABEL: Record<RhFuncionarioTipoContrato, string> = {
   CLT: "CLT",
@@ -866,7 +874,7 @@ export default function RhDadosCadastroPage() {
               ) : null}
             </div>
             <div className="app-marketplace-filtro-minhas__cta">
-              <AjudaContextualAcoes pageKey="rh_dados_cadastro" />
+              <AjudaContextualAcoes pageKey="rh_dados_cadastro" tutorial={TUTORIAL_CTX_DADOS_CADASTRO} />
             </div>
           </div>
         </div>
@@ -884,7 +892,7 @@ export default function RhDadosCadastroPage() {
           icon={<PageMenuIcon pageKey="rh_dados_cadastro" />}
           title={getPageMenuLabel("rh_dados_cadastro")}
           subtitle={pageSubtitle}
-          actions={<AjudaContextualAcoes pageKey="rh_dados_cadastro" />}
+          actions={<AjudaContextualAcoes pageKey="rh_dados_cadastro" tutorial={TUTORIAL_CTX_DADOS_CADASTRO} />}
         />
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
           Não encontramos um cadastro de prestador vinculado ao seu e-mail de acesso. Em caso de dúvida, fale com o RH.
@@ -1243,7 +1251,7 @@ export default function RhDadosCadastroPage() {
               ) : null}
             </div>
             <div className="app-marketplace-filtro-minhas__cta">
-              <AjudaContextualAcoes pageKey="rh_dados_cadastro" />
+              <AjudaContextualAcoes pageKey="rh_dados_cadastro" tutorial={TUTORIAL_CTX_DADOS_CADASTRO} />
             </div>
           </div>
           {revisaoCadastralProximaNoticeRow}
@@ -1264,7 +1272,7 @@ export default function RhDadosCadastroPage() {
               {revisaoCadastralProximaNoticeRow}
             </div>
             <div className="app-marketplace-filtro-minhas__cta">
-              <AjudaContextualAcoes pageKey="rh_dados_cadastro" />
+              <AjudaContextualAcoes pageKey="rh_dados_cadastro" tutorial={TUTORIAL_CTX_DADOS_CADASTRO} />
             </div>
           </div>
           <div

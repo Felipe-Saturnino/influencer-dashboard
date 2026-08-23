@@ -41,6 +41,13 @@ const TUTORIAL_APLICAR_FEEDBACK: AjudaContextualTutorial = {
   descricao: "Repassar feedback ao prestador e aprovar a avaliação.",
 };
 
+const TUTORIAL_ANALISAR_AVALIACAO: AjudaContextualTutorial = {
+  id: "performance-hub-analisar-avaliacao",
+  urlSlug: "PerformanceHubAnalisarAvaliacao",
+  titulo: "Analisar Avaliação",
+  descricao: "Revisar sua avaliação publicada, aprovar ou solicitar feedback.",
+};
+
 type Props = {
   brand: Brand;
   t: Theme;
@@ -139,7 +146,7 @@ export function PerformanceHubFiltroBar({
           />
         ) : null}
 
-        {canCriarSim && showStaffFilter ? (
+        {(canCriarSim || canEditarOk) && showStaffFilter ? (
           <FiltroCalendarioStaffSelect
             mode="single"
             selected={staffSelecionado}
@@ -152,13 +159,15 @@ export function PerformanceHubFiltroBar({
         <AjudaContextualAcoes
           pageKey="academy_performance_hub"
           tutorial={
-            aba === "gerenciamento"
-              ? TUTORIAL_AVALIAR
-              : aba === "feedback"
-                ? TUTORIAL_APLICAR_FEEDBACK
-              : aba === "configuracao"
-                ? TUTORIAL_CONFIGURACAO_PESOS
-                : null
+            aba === "avaliacoes"
+              ? TUTORIAL_ANALISAR_AVALIACAO
+              : aba === "gerenciamento"
+                ? TUTORIAL_AVALIAR
+                : aba === "feedback"
+                  ? TUTORIAL_APLICAR_FEEDBACK
+                  : aba === "configuracao"
+                    ? TUTORIAL_CONFIGURACAO_PESOS
+                    : null
           }
         />
       </div>

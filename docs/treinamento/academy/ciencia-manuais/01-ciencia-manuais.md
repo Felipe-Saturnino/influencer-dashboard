@@ -9,14 +9,15 @@ Imagens em `public/tutoriais/academy/ciencia-manuais/`.
 ## Conteúdo
 
 1. Abrir a aba Manuais
-2. Identificar obrigatório vs não obrigatório na coluna Sua Ciência (`Pendente` vs `—`)
-3. Abrir o manual e clicar em **Lido e Ciente** quando estiver Pendente
-4. Manual sem ciência: modal sem o botão de aceite
+2. Identificar **Ciência pendente** / **Ciência não exigida** / **Ciente** no card
+3. **Visualizar** — ler introdução, descrição, mídia e abrir anexos (**Ver anexo**)
+4. **Lido e Ciente** quando a ciência for obrigatória
+5. Manual sem ciência: modal sem botão de aceite
 
 ## Regra rápida
 
-| Coluna Sua Ciência | Significado |
-|--------------------|-------------|
-| **Pendente** | Exige ciência; aceite ainda não registrado |
-| **—** | Não exige ciência |
-| **Ciente · data** | Aceite já registrado |
+| Status no card | Significado |
+|----------------|-------------|
+| **Ciência pendente** | Exige ciência; aceite ainda não registrado |
+| **Ciência não exigida** | Não exige aceite |
+| **Ciente** + data | Aceite já registrado |

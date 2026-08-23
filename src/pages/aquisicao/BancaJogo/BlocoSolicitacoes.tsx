@@ -92,6 +92,7 @@ export function BlocoSolicitacoes({
     if (!user?.id) return;
     if (roleParidadeInfluencer(user.role)) {
       const check = await verificarElegibilidadeAgendaLive(user.id);
+      if (check.erroVerificacao) return;
       if (check.perfilIncompleto) {
         setBloqueioSolicitacao("perfil");
         return;

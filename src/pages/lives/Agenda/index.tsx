@@ -104,6 +104,9 @@ const AGENDA_MODO_VISUALIZACAO_OPTIONS = [
   { value: "dia", label: "Dia" },
 ] as const;
 
+const LIVE_AGENDA_SELECT =
+  "id, influencer_id, operadora_slug, data, horario, plataforma, status, link, profiles!lives_influencer_id_fkey(name)";
+
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function Agenda() {
   const { theme: t, isDark, user, setActivePage } = useApp();
@@ -111,6 +114,15 @@ export default function Agenda() {
   const brand = useDashboardBrand();
   const { showFiltroInfluencer, showFiltroOperadora, podeVerInfluencer, podeVerOperadora, escoposVisiveis, operadoraSlugsForcado } = useDashboardFiltros();
   const perm = usePermission("agenda");
+
+  const perfilInfluencerParidade = roleParidadeInfluencer(roleEfetivo ?? user?.role);
+  const [gatePagina, setGatePagina] = useState<
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "bloqueado"; perfilIncompleto: boolean; faltaPlaybook: boolean }
+    | { kind: "erro_verificacao" }
+    | { kind: "liberado" }
+  >({ kind: "idle" });
 
   const [view,    setView]    = useState<ViewMode>("mes");
   const [current, setCurrent] = useState(new Date());
@@ -121,6 +133,7 @@ export default function Agenda() {
   const [bloqueioNovaLive, setBloqueioNovaLive] = useState<{
     perfilIncompleto: boolean;
     faltaPlaybook: boolean;
+    erroVerificacao?: boolean;
   } | null>(null);
   const [checandoNovaLive, setChecandoNovaLive] = useState(false);
 
@@ -137,23 +150,110 @@ export default function Agenda() {
     () => influencerList.filter((i) => podeVerInfluencer(i.id)),
     [influencerList, podeVerInfluencer]
   );
+
+  const operadoraFiltroQuery = useMemo(() => {
+    if (operadoraSlugsForcado?.length) return operadoraSlugsForcado;
+    if (filterOperadora !== "todas") return [filterOperadora];
+    return null;
+  }, [operadoraSlugsForcado, filterOperadora]);
+
+  const recarregarGatePagina = useCallback(() => {
+    if (!userIdEfetivo || !perfilInfluencerParidade) return;
+    setGatePagina({ kind: "loading" });
+    void verificarElegibilidadeAgendaLive(userIdEfetivo)
+      .then((gate) => {
+        if (gate.erroVerificacao) {
+          setGatePagina({ kind: "erro_verificacao" });
+          return;
+        }
+        if (gate.perfilIncompleto || gate.faltaPlaybook) {
+          setGatePagina({
+            kind: "bloqueado",
+            perfilIncompleto: gate.perfilIncompleto,
+            faltaPlaybook: gate.faltaPlaybook,
+          });
+        } else {
+          setGatePagina({ kind: "liberado" });
+        }
+      })
+      .catch(() => {
+        setGatePagina({ kind: "erro_verificacao" });
+      });
+  }, [userIdEfetivo, perfilInfluencerParidade]);
+
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao" || !userIdEfetivo) return;
+    if (!perfilInfluencerParidade) {
+      setGatePagina({ kind: "liberado" });
+      return;
+    }
+    let cancelled = false;
+    setGatePagina({ kind: "loading" });
+    void verificarElegibilidadeAgendaLive(userIdEfetivo)
+      .then((gate) => {
+        if (cancelled) return;
+        if (gate.erroVerificacao) {
+          setGatePagina({ kind: "erro_verificacao" });
+          return;
+        }
+        if (gate.perfilIncompleto || gate.faltaPlaybook) {
+          setGatePagina({
+            kind: "bloqueado",
+            perfilIncompleto: gate.perfilIncompleto,
+            faltaPlaybook: gate.faltaPlaybook,
+          });
+        } else {
+          setGatePagina({ kind: "liberado" });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setGatePagina({ kind: "erro_verificacao" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [perm.loading, perm.canView, userIdEfetivo, perfilInfluencerParidade]);
+
+  const gatePaginaLiberado =
+    !perfilInfluencerParidade || gatePagina.kind === "liberado";
+
   const loadLives = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     const { start, end } = agendaJanelaDatas(current, view);
-    type LiveRowDb = Live & { profiles?: { name?: string | null } | null };
+
+    if (
+      !escoposVisiveis.semRestricaoEscopo &&
+      !escoposVisiveis.vêTodosInfluencers &&
+      escoposVisiveis.influencersVisiveis.length === 0
+    ) {
+      setLives([]);
+      setLoading(false);
+      return;
+    }
+
+    type LiveRowDb = {
+      id: string;
+      influencer_id: string;
+      operadora_slug?: string;
+      data: string;
+      horario: string;
+      plataforma: Live["plataforma"];
+      status: Live["status"];
+      link?: string;
+      profiles?: { name?: string | null } | { name?: string | null }[] | null;
+    };
     try {
       const data = await fetchAllPages<LiveRowDb>(async (from, to) => {
         let q = supabase
           .from("lives")
-          .select("*, profiles!lives_influencer_id_fkey(name)")
+          .select(LIVE_AGENDA_SELECT)
           .gte("data", start)
           .lte("data", end)
           .order("data", { ascending: true })
           .order("horario", { ascending: true })
           .range(from, to);
-        if (operadoraSlugsForcado?.length) q = q.in("operadora_slug", operadoraSlugsForcado);
-        // Influencer/agência: restringir no servidor (evita truncar ~1000 lives globais antigas)
+        if (operadoraFiltroQuery?.length) q = q.in("operadora_slug", operadoraFiltroQuery);
         if (
           !escoposVisiveis.semRestricaoEscopo &&
           !escoposVisiveis.vêTodosInfluencers &&
@@ -161,9 +261,30 @@ export default function Agenda() {
         ) {
           q = q.in("influencer_id", escoposVisiveis.influencersVisiveis);
         }
+        if (filterInfluencers.length > 0) q = q.in("influencer_id", filterInfluencers);
+        if (filterStatus) q = q.eq("status", filterStatus);
+        if (filterPlat) q = q.eq("plataforma", filterPlat);
         return await q;
       });
-      const mapped = data.map((l) => ({ ...l, influencer_name: l.profiles?.name ?? undefined }));
+      const mapped: Live[] = data.map((l) => {
+        const profileEmbed = l.profiles;
+        const profileName = Array.isArray(profileEmbed)
+          ? profileEmbed[0]?.name
+          : profileEmbed?.name;
+        return {
+          id: l.id,
+          influencer_id: l.influencer_id,
+          operadora_slug: l.operadora_slug,
+          data: l.data,
+          horario: l.horario,
+          plataforma: l.plataforma,
+          status: l.status,
+          link: l.link,
+          titulo: "",
+          created_by: "",
+          influencer_name: profileName ?? undefined,
+        };
+      });
       setLives(mapped.filter((l) => podeVerInfluencer(l.influencer_id)));
     } catch (err) {
       console.error("Agenda loadLives:", err);
@@ -173,9 +294,21 @@ export default function Agenda() {
     } finally {
       setLoading(false);
     }
-  }, [podeVerInfluencer, operadoraSlugsForcado, current, view, escoposVisiveis]);
+  }, [
+    podeVerInfluencer,
+    operadoraFiltroQuery,
+    current,
+    view,
+    escoposVisiveis,
+    filterInfluencers,
+    filterStatus,
+    filterPlat,
+  ]);
 
-  useEffect(() => { void loadLives(); }, [loadLives]);
+  useEffect(() => {
+    if (!gatePaginaLiberado) return;
+    void loadLives();
+  }, [loadLives, gatePaginaLiberado]);
 
   useEffect(() => {
     if (showFiltroInfluencer || showFiltroOperadora) {
@@ -189,7 +322,7 @@ export default function Agenda() {
     }
   }, [showFiltroInfluencer, showFiltroOperadora]);
 
-  const operadoraEfetiva = operadoraSlugsForcado ?? (filterOperadora !== "todas" ? [filterOperadora] : null);
+  const operadoraEfetiva = operadoraFiltroQuery;
   function livesForDay(date: Date): Live[] {
     const iso = dateToISOLocal(date);
     return lives.filter(l => {
@@ -252,8 +385,15 @@ export default function Agenda() {
       setChecandoNovaLive(true);
       try {
         const gate = await verificarElegibilidadeAgendaLive(userIdEfetivo ?? user.id);
+        if (gate.erroVerificacao) {
+          setBloqueioNovaLive({ perfilIncompleto: false, faltaPlaybook: false, erroVerificacao: true });
+          return;
+        }
         if (gate.perfilIncompleto || gate.faltaPlaybook) {
-          setBloqueioNovaLive(gate);
+          setBloqueioNovaLive({
+            perfilIncompleto: gate.perfilIncompleto,
+            faltaPlaybook: gate.faltaPlaybook,
+          });
           return;
         }
       } finally {
@@ -266,7 +406,86 @@ export default function Agenda() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar esta página.
+        Você não tem permissão para visualizar este dashboard.
+      </div>
+    );
+  }
+
+  if (
+    perfilInfluencerParidade &&
+    (gatePagina.kind === "idle" || gatePagina.kind === "loading")
+  ) {
+    return (
+      <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+        <DashboardPageHeader
+          icon={<PageMenuIcon pageKey="agenda" />}
+          title={getPageMenuLabel("agenda")}
+          subtitle={getPageCanonicalSubtitle("agenda")}
+          brand={brand}
+          t={t}
+        />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 280 }}>
+          <Loader2 className="app-lucide-spin" size={24} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>Carregando…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (gatePagina.kind === "erro_verificacao") {
+    const pageBox = getPageContentBoxStyle(brand, t);
+    return (
+      <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+        <DashboardPageHeader
+          icon={<PageMenuIcon pageKey="agenda" />}
+          title={getPageMenuLabel("agenda")}
+          subtitle={getPageCanonicalSubtitle("agenda")}
+          brand={brand}
+          t={t}
+        />
+        <div style={pageBox}>
+          <ModalBloqueioAgendaLive
+            open
+            embedded
+            contexto="agenda_acesso"
+            erroVerificacao
+            perfilIncompleto={false}
+            faltaPlaybook={false}
+            segundaPessoa
+            onClose={() => undefined}
+            onIrInfluencers={() => setActivePage("influencers")}
+            onIrPlaybook={() => setActivePage("playbook_influencers")}
+            onTentarNovamente={recarregarGatePagina}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (gatePagina.kind === "bloqueado") {
+    const pageBox = getPageContentBoxStyle(brand, t);
+    return (
+      <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
+        <DashboardPageHeader
+          icon={<PageMenuIcon pageKey="agenda" />}
+          title={getPageMenuLabel("agenda")}
+          subtitle={getPageCanonicalSubtitle("agenda")}
+          brand={brand}
+          t={t}
+        />
+        <div style={pageBox}>
+          <ModalBloqueioAgendaLive
+            open
+            embedded
+            contexto="agenda_acesso"
+            perfilIncompleto={gatePagina.perfilIncompleto}
+            faltaPlaybook={gatePagina.faltaPlaybook}
+            segundaPessoa
+            onClose={() => undefined}
+            onIrInfluencers={() => setActivePage("influencers")}
+            onIrPlaybook={() => setActivePage("playbook_influencers")}
+          />
+        </div>
       </div>
     );
   }
@@ -295,9 +514,31 @@ export default function Agenda() {
             color: "#e84025",
             fontSize: 13,
             fontFamily: FONT.body,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          {loadError}
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={() => void loadLives()}
+            style={{
+              fontFamily: FONT.body,
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(232,64,37,0.35)",
+              background: "transparent",
+              color: "#e84025",
+              cursor: "pointer",
+            }}
+          >
+            Tentar de novo
+          </button>
         </div>
       ) : null}
 
@@ -423,7 +664,7 @@ export default function Agenda() {
             <CtaCriarButton
               onClick={() => void tentarAbrirNovaLive()}
               loading={checandoNovaLive}
-              loadingLabel="Verificando..."
+              loadingLabel="Verificando…"
             >
               Nova Live
             </CtaCriarButton>
@@ -433,9 +674,36 @@ export default function Agenda() {
           <div
             role="status"
             aria-label="Carregando agenda de lives"
-            style={{ textAlign: "center", padding: 60, color: t.textMuted, fontFamily: FONT.body, display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{
+              textAlign: "center",
+              padding: 60,
+              color: t.textMuted,
+              fontFamily: FONT.body,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+            }}
           >
             <Loader2 size={20} className="app-lucide-spin" style={{ color: "var(--brand-primary, #7c3aed)" }} aria-hidden="true" />
+            <span style={{ fontSize: 13 }}>Carregando…</span>
+          </div>
+        ) : !loadError && lives.length === 0 && view !== "dia" ? (
+          <div style={{ textAlign: "center", padding: "40px 16px", fontFamily: FONT.body }}>
+            <p style={{ margin: "0 0 12px", fontSize: 13, color: t.textMuted }}>
+              {hasActiveFilters
+                ? "Nenhuma live corresponde aos filtros selecionados."
+                : "Nenhuma live no período selecionado."}
+            </p>
+            {perm.canCriarOk && !hasActiveFilters ? (
+              <CtaCriarButton
+                onClick={() => void tentarAbrirNovaLive()}
+                loading={checandoNovaLive}
+                loadingLabel="Verificando…"
+              >
+                Nova Live
+              </CtaCriarButton>
+            ) : null}
           </div>
         ) : view === "mes" ? (
           <ViewMes {...calendarViewProps} />
@@ -458,9 +726,18 @@ export default function Agenda() {
       <ModalBloqueioAgendaLive
         open={bloqueioNovaLive !== null}
         onClose={() => setBloqueioNovaLive(null)}
+        erroVerificacao={bloqueioNovaLive?.erroVerificacao}
         perfilIncompleto={bloqueioNovaLive?.perfilIncompleto ?? false}
         faltaPlaybook={bloqueioNovaLive?.faltaPlaybook ?? false}
         segundaPessoa
+        onTentarNovamente={
+          bloqueioNovaLive?.erroVerificacao
+            ? () => {
+                setBloqueioNovaLive(null);
+                void tentarAbrirNovaLive();
+              }
+            : undefined
+        }
         onIrInfluencers={() => {
           setBloqueioNovaLive(null);
           setActivePage("influencers");

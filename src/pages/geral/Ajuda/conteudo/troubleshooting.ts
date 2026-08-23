@@ -294,17 +294,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Apareceu um modal de 'Agendamento indisponível'?",
         texto:
-          "O bloqueio ocorre quando o influencer não atendeu os pré-requisitos:\n\n— Perfil incompleto: dados obrigatórios do cadastro em Influencers não foram preenchidos. Use o botão 'Ir para Influencers' no próprio modal para ir diretamente à correção.\n— Playbook pendente: o influencer ainda não registrou ciência nos termos obrigatórios. Use o botão 'Ir para Playbook Influencers' no modal.\n\nO sistema verifica esses pré-requisitos automaticamente ao clicar em Nova Live. Se ambos os problemas existirem, os dois botões aparecem.",
+          "O bloqueio vale para perfis **Influencer** e **Agência** — gestores e operadores não passam por esta verificação ao agendar.\n\n— **Influencer:** cadastro incompleto em Influencers ou Playbook pendente impedem o uso da Agenda. A própria página mostra o que falta e os atalhos para corrigir.\n— **Agência:** ao salvar uma Nova Live, o sistema verifica o cadastro e o Playbook do influencer selecionado. Use os botões **Ir para Influencers** ou **Ir para Playbook Influencers** no modal quando aparecerem.\n\nItens verificados: dados obrigatórios do cadastro e ciência nos três termos obrigatórios do Playbook (Dealers, Agendamento e Jogos).",
+      },
+      {
+        subtitulo: "O calendário não carrega ou apareceu um aviso vermelho?",
+        texto:
+          "Use **Tentar de novo** no aviso. Confirme sua conexão e, se persistir, recarregue a página (Ctrl+Shift+R). Se o problema continuar, entre em contato com o suporte.\n\nInfluencers com cadastro ou Playbook pendente veem um painel de bloqueio em vez do calendário — conclua os pré-requisitos indicados antes de tentar de novo.",
       },
       {
         subtitulo: "Não consigo editar uma live?",
         texto:
-          "Lives com status Realizada ou Não Realizada são bloqueadas para edição por influencers, agências e operadores — o modal abre em modo somente leitura. Apenas Admin e Gestor podem editar lives já validadas. Se você precisa corrigir uma live validada, solicite a quem tem perfil Admin ou Gestor.",
-      },
-      {
-        subtitulo: "Não consigo excluir uma live?",
-        texto:
-          "As mesmas regras de edição se aplicam à exclusão: lives já validadas (Realizada ou Não Realizada) só podem ser excluídas por Admin e Gestor. Para lives ainda Agendadas, o botão Excluir no modal abre o pop-up padrão de confirmação quando o seu perfil tem permissão de exclusão.",
+          "Lives com status Realizada ou Não Realizada ficam em somente leitura para influencers, agências e operadores — o modal abre sem edição. Para alterar lives já validadas ou em datas passadas, é preciso perfil interno com permissão de **Editar** na Agenda (configurada em Gestão de Usuários). Se você precisa corrigir uma live validada, solicite a quem tem essa permissão.",
       },
       {
         subtitulo: "Não consigo agendar para hoje?",
@@ -319,7 +319,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo criar ou editar uma live em data passada?",
         texto:
-          "Apenas Admin e Gestor podem criar ou editar lives em datas e horários passados. Se o sistema bloqueou a operação, verifique se a data preenchida não está no passado e se o seu perfil tem essa permissão.",
+          "Criar ou editar lives em datas e horários passados exige perfil interno com permissão de **Editar** na Agenda. Se o sistema bloqueou a operação, verifique se a data preenchida não está no passado e se o seu perfil tem essa permissão em Gestão de Usuários.",
       },
       {
         subtitulo: "O botão Nova Live não aparece?",
@@ -369,7 +369,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Posso excluir uma live da lista de validação?",
         texto:
-          "Na página de Resultados, o botão Excluir aparece apenas para lives ainda com status Agendada (as que aguardam validação), para perfis com permissão — com pop-up de confirmação antes de excluir. Lives já validadas não são excluídas aqui; edição ou exclusão segue as regras da Agenda (Admin e Gestor para lives Realizada/Não Realizada).",
+          "Na página de Resultados, o botão Excluir aparece apenas para lives ainda com status Agendada (as que aguardam validação), para perfis com permissão de exclusão configurada em Gestão de Usuários — com pop-up de confirmação antes de excluir. Lives já validadas (Realizada ou Não Realizada) não são excluídas nesta lista.",
       },
     ],
   },
@@ -785,6 +785,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
           "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+      },
+      {
+        subtitulo: "Toque em Assistir e o vídeo não abre no iPhone?",
+        texto:
+          "No **Safari** (iPhone/iPad), o vídeo abre **dentro da plataforma** em um player com controles — não depende de nova aba.\n\nAguarde o carregamento (conexão lenta pode demorar em vídeos grandes). Se aparecer erro de reprodução, tente de novo em Wi‑Fi estável ou peça ao Performance Coach um arquivo em **MP4 (H.264)**.\n\nSe o botão ficar em **Abrindo…** sem resposta, atualize a página e confira se o login ainda está ativo.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",

@@ -76,7 +76,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Conjunto de termos, diretrizes e boas práticas que o influencer deve ler e confirmar antes de iniciar as ativações. O registro de ciência no Playbook é um pré-requisito obrigatório para agendar lives e emitir links de rastreamento.",
         nota:
-          "Enquanto o influencer não confirmar ciência no Playbook, o agendamento de novas lives é bloqueado. A mensagem de bloqueio aparece na Agenda ao tentar criar uma nova live.",
+          "Enquanto o influencer não confirmar ciência no Playbook e não concluir o cadastro obrigatório, a Agenda fica indisponível para o perfil Influencer. Agências veem o mesmo bloqueio ao tentar agendar para um influencer com pendências. Gestores e operadores não passam por esta verificação.",
         referencia: "Agenda · Links e Materiais",
       },
       {

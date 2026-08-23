@@ -296,22 +296,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Criando uma Nova Live",
         texto:
-          "No bloco **Calendário** (subtítulo *Data e hora das lives dos influencers*), use **Nova Live** no canto direito da mesma linha do título para abrir o formulário. Enquanto o sistema verifica pré-requisitos (perfil e Playbook), o botão exibe \"Verificando...\" com spinner.\n\nPreencha:\n\n— Influencer: selecione o parceiro responsável (disponível para gestores, executivos e operadores). Quando o próprio influencer agenda, o cadastro é fixo no perfil logado.\n— Data e Horário: quando a live está programada\n— Plataforma: botões visuais com logo — Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp ou Telegram\n— Link: obrigatório para salvar. É pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada, e atualiza automaticamente ao trocar de plataforma. Se o perfil não tiver o link da plataforma selecionada, o campo fica em branco e deve ser preenchido manualmente.\n\nAo salvar uma nova live, a operadora é definida automaticamente a partir do vínculo ativo do influencer em Influencers → Operadoras (primeira operadora ativa). Assim a live fica visível no escopo da operadora correspondente.",
+          "No bloco **Calendário** (subtítulo *Data e hora das lives dos influencers*), use **Nova Live** no canto direito da mesma linha do título para abrir o formulário. Enquanto o sistema verifica pré-requisitos (perfil e Playbook), o botão exibe \"Verificando…\" com spinner.\n\nPreencha:\n\n— Influencer: selecione o parceiro responsável (disponível para gestores, executivos e operadores). Quando o próprio influencer agenda, o cadastro é fixo no perfil logado.\n— Data e Horário: quando a live está programada\n— Plataforma: botões visuais com logo — Twitch, YouTube, Kick, Instagram, TikTok, Discord, WhatsApp ou Telegram\n— Link: obrigatório para salvar. É pré-preenchido automaticamente com o link cadastrado no perfil do influencer para a plataforma selecionada, e atualiza automaticamente ao trocar de plataforma. Se o perfil não tiver o link da plataforma selecionada, o campo fica em branco e deve ser preenchido manualmente.\n\nAo salvar uma nova live, a operadora é definida automaticamente a partir do vínculo ativo do influencer em Influencers → Operadoras (primeira operadora ativa). Assim a live fica visível no escopo da operadora correspondente.",
       },
       {
         subtitulo: "Restrições de Data e Permissão",
         texto:
-          "Influencers e operadores só podem agendar lives a partir do dia seguinte — o agendamento para o mesmo dia não é permitido. Apenas Admin e Gestor podem criar ou editar lives em datas e horários passados.\n\nLives com status Realizada ou Não Realizada são bloqueadas para edição por influencers, agências e operadores — o modal abre em modo somente leitura para esses perfis. Apenas Admin e Gestor podem editar ou corrigir lives já validadas.\n\nPerfis com permissão **Ver** na Agenda, mas **sem Editar**, ao clicar numa live no calendário veem o modal **Live agendada** (data, horário e link **Assista** na plataforma com ícone e nome) — sem formulário de edição; fecham pelo X no topo.",
+          "Influencers e operadores só podem agendar lives a partir do dia seguinte — o agendamento para o mesmo dia não é permitido.\n\nLives com status Realizada ou Não Realizada ficam em somente leitura para influencers, agências e operadores — o modal abre sem formulário de edição para esses perfis.\n\nCriar ou editar lives em datas e horários passados, ou alterar lives já validadas, exige perfil interno com permissão de **Editar** na Agenda (por exemplo Gestores, Executivo e líderes de operação) — conforme configurado em Gestão de Usuários.\n\nPerfis com permissão **Ver** na Agenda, mas **sem Editar**, ao clicar numa live no calendário veem o modal **Live agendada** (data, horário e link **Assista** na plataforma com ícone e nome) — sem formulário de edição; fecham pelo X no topo.",
       },
       {
-        subtitulo: "Bloqueio de Agendamento",
+        subtitulo: "Bloqueio de cadastro e Playbook (Influencer e Agência)",
         texto:
-          "Ao clicar em Nova Live, o sistema verifica automaticamente os pré-requisitos do influencer. Se algum estiver pendente, um modal de bloqueio é exibido com os itens faltantes e botões de ação direta:\n\n— Perfil incompleto: dados obrigatórios do cadastro em Influencers não foram preenchidos. O botão 'Ir para Influencers' leva diretamente à página para completar o cadastro.\n— Playbook pendente: o influencer ainda não registrou ciência nos termos obrigatórios. O botão 'Ir para Playbook Influencers' leva aos termos.\n\nSe todos os pré-requisitos estiverem ok, o formulário de Nova Live abre normalmente (sem o modal de bloqueio).",
-      },
-      {
-        subtitulo: "Excluindo uma Live",
-        texto:
-          "Ao editar uma live, o botão Excluir no rodapé do modal abre o pop-up padrão de confirmação — disponível para perfis com permissão de exclusão e conforme as regras de status (lives validadas só para Admin e Gestor). Toque em Excluir no pop-up para concluir ou Cancelar para voltar.",
+          "Somente os perfis **Influencer** e **Agência** passam pela verificação de cadastro completo e ciência no Playbook Influencers antes de usar a Agenda para agendar.\n\n— **Influencer:** ao abrir a Agenda com cadastro incompleto ou Playbook pendente, a página exibe o que falta e os atalhos para Influencers e Playbook. Só depois de concluir os dois pré-requisitos o calendário fica disponível.\n— **Agência:** pode consultar o calendário das lives do seu escopo; ao criar uma **Nova Live** para um influencer, o sistema verifica o cadastro e o Playbook **desse influencer** — se algo estiver pendente, aparece o modal de bloqueio com orientação.\n\nGestores, operadores, executivos e demais perfis internos **não** passam por este bloqueio ao agendar em nome de um influencer.",
       },
       {
         subtitulo: "Visibilidade por Perfil",
@@ -667,6 +662,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Registre cargos e empresas onde trabalhou **antes** do vínculo na Spin — distinto da aba Histórico de trabalho (contratação atual, somente leitura). Informe cargo, empresa, mês/ano de início e, se houver, mês/ano de fim; sem data de fim o período aparece como «… — atual». Descrição opcional (até 500 caracteres). Alterações geram evento na aba Histórico.",
       },
+      {
+        subtitulo: "Tutoriais (Ajuda)",
+        texto:
+          "O atalho roxo na barra abre o tutorial **Atualização Cadastral** — revisar pendências, atualizar dados nas abas, **Salvar alterações** quando necessário e **Confirmar sem alterações** quando tudo já estiver correto.\n\nVisibilidade inicial: prestadores e perfis operacionais com acesso a Dados de Cadastro (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
+      },
     ],
   },
   rh_figurinos: {
@@ -1013,7 +1013,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tutoriais (Ajuda)",
         texto:
-          "Na aba **Feedback**, o atalho roxo abre **Aplicar Feedback** — revisar a solicitação do prestador, registrar o repasse e aprovar a avaliação.\n\nNa aba **Gerenciamento**, o tutorial **Realizar Avaliação** cobre criar, preencher critérios e publicar (Salvar rascunho ou Concluir).\n\nNa aba **Configuração**, **Configurar Pesos** explica pesos de dimensões e critérios por time.\n\nVisibilidade inicial: **Aplicar Feedback** → Shift Leader; **Realizar Avaliação** e **Configurar Pesos** → Performance Coach (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
+          "Na aba **Avaliações**, o tutorial **Analisar Avaliação** cobre revisar a avaliação publicada, **Aprovar** quando estiver de acordo ou **Solicitar Feedback** ao Shift Leader — fluxo igual para Game Presenter e Shuffler.\n\nNa aba **Feedback**, o atalho roxo abre **Aplicar Feedback** — revisar a solicitação do prestador, registrar o repasse e aprovar a avaliação.\n\nNa aba **Gerenciamento**, o tutorial **Realizar Avaliação** cobre criar, preencher critérios e publicar (Salvar rascunho ou Concluir).\n\nNa aba **Configuração**, **Configurar Pesos** explica pesos de dimensões e critérios por time.\n\nVisibilidade inicial: **Analisar Avaliação** → Game Presenter e Shuffler; **Aplicar Feedback** → Shift Leader; **Realizar Avaliação** e **Configurar Pesos** → Performance Coach (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
       },
     ],
   },
@@ -1043,6 +1043,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Manuais — cards e ciência",
         texto:
           "A aba **Manuais** lista os documentos em **cards**: código, tipo, título, **introdução** (texto do cadastro), jogos, versão e status da sua ciência.\n\nQuando o tipo do manual **não** é **Jogos**, os jogos mostram **Todos os Jogos** (preenchido automaticamente ao salvar — o campo **Qual Jogo?** não aparece no modal).\n\nClique em **Visualizar** para abrir o manual — o modal mostra introdução, descrição, **imagens/vídeos** e **anexos**. Quando a postagem exige ciência **e** você pertence a um dos times em **Aplicável a**, confirme com **Lido e Ciente**. Com **Editar = Sim**, o botão **Ver ciência** lista quem já registrou o aceite.",
+      },
+      {
+        subtitulo: "Tutoriais (Ajuda)",
+        texto:
+          "Na aba **Manuais**, o tutorial **Ciência nos Manuais** cobre identificar **Ciência pendente** no card, abrir o conteúdo completo (incluindo **Ver anexo**) e registrar **Lido e Ciente**.\n\nNa aba **Gerenciamento**, o tutorial de **Nova Postagem** cobre criar e publicar comunicados, dicas e manuais.\n\nVisibilidade inicial: **Ciência nos Manuais** → prestadores e perfis operacionais da Academy; **Nova Postagem** → Performance Coach (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
       },
     ],
   },
@@ -1256,6 +1261,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Criar e Publicar Postagens",
         texto:
           "Ao criar uma postagem, selecione o tipo (Comunicado, Política/Normativa ou RH Talk). Campos marcados com asterisco vermelho são obrigatórios para publicar.\n\nPolíticas e normativas novas usam cadastro normativo: tipo de documento, **código gerado automaticamente** (travado — não é possível escolher um número já existente), versão, PDF obrigatório, área responsável, classificação, aplicabilidade, resumo e documentos relacionados. Comunicados e RH Talks mantêm o editor de texto e anexos opcionais.\n\nSalvar grava como rascunho sem publicar. Publicar torna o item visível imediatamente (ou envia para aprovação, no caso de políticas que exigem aprovação).",
+      },
+      {
+        subtitulo: "Tutoriais (Ajuda)",
+        texto:
+          "Na aba **Políticas e normativas**, o tutorial **Ciência nas Políticas** cobre identificar **Ciência pendente** no card, abrir o PDF com **Visualizar** e registrar **Li e estou ciente** (ou **Lido e Ciente** em documentos legados).\n\nNa aba **Comunicados**, **Ver Lidos nos Comunicados** explica quem marcou **Lido** em cada aviso.\n\nNa aba **Gerenciamento de Postagens**, **Gerenciamento de Postagens** cobre criar, editar e arquivar conteúdo.\n\nVisibilidade inicial: **Ciência nas Políticas** → prestadores e perfis operacionais do portal; **Ver Lidos** e **Gerenciamento** → RH/Gestor RH (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
       },
     ],
   },
