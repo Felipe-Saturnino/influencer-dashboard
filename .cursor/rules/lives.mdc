@@ -81,7 +81,7 @@ Ordem típica no strip `primaryTransparent*`:
 
 1. Carrossel de período (`carouselNavStyles`)
 2. **`FiltroHojeButton`** — atalho para hoje + modo Dia (`aria-pressed` quando dia corrente em vista Dia)
-3. **`FiltroModoVisualizacaoSelect`** — Mês / Semana / Dia; `defaultValue="mes"`; ícone `CalendarRange` 15px; inativo em Mês, ativo em Semana/Dia
+3. **`FiltroModoVisualizacaoSelect`** — Mês / Semana / Dia; `defaultValue="mes"`; ícone `CalendarRange` 15px; inativo em Mês, ativo em Semana/Dia. **Semana** na Agenda = **semana calendário** (dom–sáb), **não** confundir com **Semana** na Escala Estúdio/Escritório (hoje ±3 dias).
 4. **`FiltroInfluencerSelect`** (`mode="multiple"`) quando `showFiltroInfluencer`
 5. **`FiltroOperadoraSelect`** quando `showFiltroOperadora`
 
@@ -353,15 +353,25 @@ Toda string visível ao usuário deve estar em português do Brasil. Padrão com
 
 ### Agenda
 
-**Carga de lives:** janela da vista atual (mês = grid completo; semana; dia) via `gte`/`lte` em `data` + **`fetchAllPages`** (`lib/supabasePaginate.ts`). Influencer/agência com lista finita: também `.in("influencer_id", …)` no servidor. **Proibido** carregar `lives` sem corte de data com `order data ASC` (PostgREST ~1000 → lives novas somem após Nova Live).
+**Carga de lives:** janela da vista atual (mês = grid completo; semana; dia) via `gte`/`lte` em `data` + **`fetchAllPages`** (`lib/supabasePaginate.ts`). Select com colunas explícitas (`LIVE_AGENDA_SELECT` em `index.tsx` — **proibido** `select("*")`). Filtros de status, plataforma, influencer e operadora aplicados no **SQL** quando ativos. Influencer/agência com lista finita: `.in("influencer_id", …)` no servidor; lista vazia no escopo restrito → **zero lives** sem query global. Falha de carga: alerta vermelho + botão **Tentar de novo** (`loadLives`). Mês/semana sem lives: mensagem «Nenhuma live no período» (ou com filtros ativos) + **Nova Live** quando `canCriarOk` e sem filtros. **Proibido** carregar `lives` sem corte de data com `order data ASC` (PostgREST ~1000 → lives novas somem após Nova Live).
 
 **Simulador de Login:** gate de Nova Live e `influencer_id` no modal usam `useIdentidadeEfetiva()` — **proibido** `user.id` / `user.role` da conta viewer para decidir se o perfil é influencer.
+
+**Gate cadastro + Playbook (somente Influencer e Agência):** perfil **Influencer** — a página Agenda só libera o calendário após cadastro completo e ciência nos três itens obrigatórios do Playbook (`verificarElegibilidadeAgendaLive` + painel `ModalBloqueioAgendaLive` `embedded` / contexto `agenda_acesso`). Falha na consulta → `erroVerificacao` (bloqueio conservador + **Tentar de novo**). Perfil **Agência** — consulta o calendário do escopo; ao **salvar** Nova Live, o gate verifica o influencer selecionado (`ModalLive.handleSave`). **Gestores, operadores e demais perfis internos não passam pelo gate** ao agendar em nome de terceiros. Ajuda: Conheça/Troubleshooting Agenda + glossário Playbook.
+
+**ModalLive — link:** auto-preenchimento do perfil só em **Nova Live** ou ao **trocar plataforma** na edição; ao abrir edição, preservar o link salvo da live.
+
+**ModalLive — exclusão:** `handleDelete` fecha o modal e atualiza a lista **somente em sucesso**; erro canónico inline no modal.
+
+**Datas passadas / lives validadas:** `ROLES_STAFF_OPERACOES_LIVES` + `perm.canEditarOk` — não só Admin/Gestor; Ajuda cita permissão de **Editar** em Gestão de Usuários.
 
 **Nova Live — `operadora_slug`:** no create, preencher com o primeiro vínculo ativo em `influencer_operadoras` do **influencer da live** (selecionado ou logado) — gestores inclusos, não só perfil influencer.
 
 **Datas no calendário:** `YYYY-MM-DD` em fuso **local** (não `toISOString().slice(0,10)` UTC).
 
 **Filtros:** ver secção “Barra da Agenda” acima. Views: `AgendaCalendarViews.tsx` (`ViewMes`, `ViewSemana`, `ViewDia`).
+
+**Mobile (≤720px):** vista inicial **Dia** (evita grade mês/semana com scroll horizontal pesado). Calendário mês/semana mantém `app-agenda-cal-scroll` com `min-width` reduzido (480px em ≤600px).
 
 **Bloco do calendário (nível 2 — `getPageContentBoxStyle`):** toolbar na mesma linha com `justifyContent: space-between` — à esquerda `SectionTitle` com `compact`, título **Calendário**, `sub` **Data e hora das lives dos influencers** (sem ícone; padrão Global § Blocos de página); à direita **`CtaCriarButton`** **Nova Live** quando `perm.canCriarOk` (fora da barra de filtros).
 

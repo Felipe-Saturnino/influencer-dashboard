@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   gerarAlertasAlteracoesJanela,
+  labelMesaAlertaPeriodoPosicionamento,
   type LobbyExecucaoRow,
   type LobbyPosicaoRow,
 } from "../../../../lib/lobbyMonitorHelpers";
@@ -18,14 +19,16 @@ function pos(
   execucaoId: string,
   mesa: string,
   posicao: number,
-  estudio = "Blaze",
+  opts?: { estudio?: string; canal?: "dedicado" | "network"; tipoJogo?: string },
 ): LobbyPosicaoRow {
+  const estudio = opts?.estudio ?? "Blaze";
   return {
     execucao_id: execucaoId,
     mesa_identificacao: mesa,
     nome_mesa: mesa,
     nome_estudio: estudio,
-    tipo_jogo: "blackjack",
+    canal_estudio: opts?.canal ?? "dedicado",
+    tipo_jogo: opts?.tipoJogo ?? "blackjack",
     posicao,
     qtd_concorrentes_a_frente: 0,
     concorrentes_a_frente: [],
@@ -54,7 +57,7 @@ describe("gerarAlertasAlteracoesJanela", () => {
 
     expect(alertas).toHaveLength(1);
     expect(alertas[0].tipo).toBe("positivo");
-    expect(alertas[0].texto).toContain("Mesa (bj1)");
+    expect(alertas[0].texto).toContain("Mesa Dedicada (Blackjack)");
     expect(alertas[0].texto).toContain("P8 → P2");
     expect(alertas[0].texto).toContain("05/08");
   });
@@ -65,8 +68,8 @@ describe("gerarAlertasAlteracoesJanela", () => {
       exec("e2", "2026-08-02T12:00:00.000Z"),
     ];
     const posByExec = new Map<string, LobbyPosicaoRow[]>([
-      ["e1", [pos("e1", "rl1", 3, "Sports Club")]],
-      ["e2", [pos("e2", "rl1", 40, "Sports Club")]],
+      ["e1", [pos("e1", "rl1", 3, { estudio: "Sports Club", canal: "network", tipoJogo: "roleta" })]],
+      ["e2", [pos("e2", "rl1", 40, { estudio: "Sports Club", canal: "network", tipoJogo: "roleta" })]],
     ]);
 
     const alertas = gerarAlertasAlteracoesJanela(
@@ -78,7 +81,59 @@ describe("gerarAlertasAlteracoesJanela", () => {
 
     expect(alertas).toHaveLength(1);
     expect(alertas[0].tipo).toBe("atencao");
-    expect(alertas[0].texto).toContain("Mesa (rl1)");
+    expect(alertas[0].texto).toContain("Mesa Network (Roleta)");
     expect(alertas[0].texto).toContain("P3 → P40");
+  });
+
+  it("fase 2 histórico — sem tipo_jogo/canal usa mesa_identificacao", () => {
+    const execucoes = [
+      exec("e1", "2026-08-01T12:00:00.000Z"),
+      exec("e2", "2026-08-02T12:00:00.000Z"),
+    ];
+    const posSparse = (execucaoId: string, mesa: string, posicao: number): LobbyPosicaoRow => ({
+      execucao_id: execucaoId,
+      mesa_identificacao: mesa,
+      nome_mesa: "",
+      tipo_jogo: "",
+      posicao,
+      qtd_concorrentes_a_frente: 0,
+      concorrentes_a_frente: [],
+    });
+    const posByExec = new Map<string, LobbyPosicaoRow[]>([
+      ["e1", [posSparse("e1", "SC-BACC-01", 5)]],
+      ["e2", [posSparse("e2", "SC-BACC-01", 12)]],
+    ]);
+
+    const alertas = gerarAlertasAlteracoesJanela(
+      execucoes,
+      posByExec,
+      "2026-08-01",
+      "2026-08-02",
+    );
+
+    expect(alertas).toHaveLength(1);
+    expect(alertas[0].texto).toContain("Mesa (SC-BACC-01)");
+    expect(alertas[0].texto).not.toContain("Outros");
+  });
+});
+
+describe("labelMesaAlertaPeriodoPosicionamento", () => {
+  it("formato Dedicada/Network quando cadastro completo", () => {
+    expect(
+      labelMesaAlertaPeriodoPosicionamento({
+        canal_estudio: "network",
+        tipo_jogo: "roleta",
+        nome_mesa: "Roleta 1",
+      }),
+    ).toBe("Mesa Network (Roleta)");
+  });
+
+  it("fallback para identificação quando metadados ausentes", () => {
+    expect(
+      labelMesaAlertaPeriodoPosicionamento({
+        tipo_jogo: "",
+        mesa_identificacao: "bj-vip-2",
+      }),
+    ).toBe("Mesa (bj-vip-2)");
   });
 });

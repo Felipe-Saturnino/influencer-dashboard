@@ -1,3 +1,5 @@
+import { prefereAssetMesmaAba } from "./platformDetect";
+
 /**
  * Abre URL assinada (Storage) em nova aba.
  * Abre `about:blank` **no mesmo clique** (gesto síncrono) — necessário no Safari/iOS,
@@ -5,6 +7,24 @@
  */
 
 export type AbrirAssetAssinadoResultado = "ok" | "popup_bloqueado" | "falha_url";
+
+/** iOS: mesma aba (pop-up bloqueado). Demais: nova aba com about:blank síncrono. */
+export async function abrirAssetAssinadoComFallback(
+  obterUrl: () => Promise<string | null>,
+): Promise<AbrirAssetAssinadoResultado> {
+  if (prefereAssetMesmaAba()) {
+    try {
+      const url = await obterUrl();
+      if (!url) return "falha_url";
+      window.location.assign(url);
+      return "ok";
+    } catch (e) {
+      console.error("[abrirAssetAssinadoComFallback]", e);
+      return "falha_url";
+    }
+  }
+  return abrirAssetAssinadoEmNovaAba(obterUrl);
+}
 
 export async function abrirAssetAssinadoEmNovaAba(
   obterUrl: () => Promise<string | null>,

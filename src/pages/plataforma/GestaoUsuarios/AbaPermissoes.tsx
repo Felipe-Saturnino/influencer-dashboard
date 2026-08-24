@@ -254,7 +254,7 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
           border: `1px solid ${t.cardBorder}`,
         }}
       >
-        <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <div className="app-table-wrap app-permissoes-table-wrap" style={getDataTableWrapStyle()}>
           <table
             style={{
               width: "100%",
@@ -281,6 +281,70 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
             </thead>
             <tbody>{linhas}</tbody>
           </table>
+        </div>
+        <div
+          className="app-permissoes-cards"
+          style={{ ["--perm-card-border" as string]: t.cardBorder }}
+        >
+          {PAGES.map((page) => (
+            <div key={page.key} className="app-permissoes-card">
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  {page.secao}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginTop: 4 }}>
+                  {page.label}
+                </div>
+              </div>
+              <div className="app-permissoes-card__acoes">
+                {(["can_view", "can_criar", "can_editar", "can_excluir"] as const).map((campo) => {
+                  const temAcao =
+                    campo === "can_view"
+                      ? true
+                      : campo === "can_criar"
+                        ? page.hasCriar
+                        : campo === "can_editar"
+                          ? page.hasEditar
+                          : page.hasExcluir;
+                  if (!temAcao) return null;
+                  const val = (perms[page.key]?.[campo] as PermissaoValor) ?? null;
+                  const tint = estiloSelectPermissao(val, !!t.isDark);
+                  const labelCampo =
+                    campo === "can_view" ? "Ver" : campo === "can_criar" ? "Criar" : campo === "can_editar" ? "Editar" : "Excluir";
+                  return (
+                    <div key={campo} className="app-permissoes-card__acao">
+                      <label htmlFor={`perm-mobile-${page.key}-${campo}`}>{labelCampo}</label>
+                      <select
+                        id={`perm-mobile-${page.key}-${campo}`}
+                        value={val ?? ""}
+                        aria-label={`${page.label}: ${labelCampo}`}
+                        onChange={(e) =>
+                          setPerm(page.key, campo, (e.target.value as PermissaoValor) || null)
+                        }
+                        style={{
+                          background: tint.background || (t.inputBg ?? t.cardBg),
+                          border: `1px solid ${tint.borderColor || t.cardBorder}`,
+                          borderRadius: 8,
+                          color: t.text,
+                          fontFamily: FONT.body,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <option value="">—</option>
+                        {[...PERM_OPCOES]
+                          .sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "", "pt-BR"))
+                          .map((o) => (
+                            <option key={o.value} value={o.value ?? ""}>
+                              {o.label}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

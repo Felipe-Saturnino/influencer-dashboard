@@ -79,6 +79,7 @@ export function ModalBase({
 
   return (
     <div
+      className="app-modal-overlay-pad"
       style={{
         position: "fixed",
         inset: 0,

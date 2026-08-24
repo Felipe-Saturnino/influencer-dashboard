@@ -79,8 +79,8 @@ Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou UR
 | **Estúdio** | Gestão de Dealers, Central de Notificações, Figurinos, Roteiro de Mesa, Incidentes | Incidentes → `novo-incidente` |
 | **Academy** | Performance Hub, Portal da Academy | Portal: **Manuais** → `ciencia-manuais-academy`; **Gerenciamento** → `postagem-academy-aprovacao` |
 | **Escala** | Gestão de Staff, Relatório de Turno, Solicitações, Escala Estúdio, Rotação, Calendário, Marketplace | Escala Estúdio → `alterar-escala` (**nunca** Escritório); Marketplace → `marketplace-ofertas`; Calendário → Compromissos / Controle de Presença (`controle-presenca`) + Justificativa (`justificativa-presenca`); Gestão de Staff → `gestao-staff-editar` (página) + `imprimir-ids-staff` (só no modal Imprimir IDs) |
-| **RH** | Gestão de Prestadores, Dados de Cadastro, Organograma, Escala Escritório, Vagas, Solicitações, Central de Denúncias | Solicitações → `rh-solicitacoes-aprovar`; Escala Escritório: só Conheça + Troubleshooting |
-| **Conteúdo** | Playbook Influencers, Links e Materiais, Spin na Rede, Portal de RH, Informativos | Portal de RH: **Gerenciamento** → `portal-rh-gerenciamento-postagens`; **Comunicados** → `portal-rh-comunicados-lidos` |
+| **RH** | Gestão de Prestadores, Dados de Cadastro, Organograma, Escala Escritório, Vagas, Solicitações, Central de Denúncias | Dados de Cadastro → `dados-cadastro-atualizacao-cadastral`; Solicitações → `rh-solicitacoes-aprovar`; Escala Escritório: só Conheça + Troubleshooting |
+| **Conteúdo** | Playbook Influencers, Links e Materiais, Spin na Rede, Portal de RH, Informativos | Portal de RH: **Políticas** → `portal-rh-ciencia-politicas`; **Gerenciamento** → `portal-rh-gerenciamento-postagens`; **Comunicados** → `portal-rh-comunicados-lidos` |
 | **Tech Ops** | Gestão de Estoque, Ordem de Saída | — |
 | **Plataforma** | Gestão de Usuários, Gestão de Operadoras, Gestão de Estúdios, Status Técnico | — |
 

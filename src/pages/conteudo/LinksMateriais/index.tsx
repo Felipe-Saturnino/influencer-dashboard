@@ -156,6 +156,7 @@ export default function LinksMateriais() {
   const [bloqueioEmissao, setBloqueioEmissao] = useState<{
     perfilIncompleto: boolean;
     faltaPlaybook: boolean;
+    erroVerificacao?: boolean;
   } | null>(null);
   const [verificandoGateEmissao, setVerificandoGateEmissao] = useState(false);
 
@@ -385,6 +386,10 @@ export default function LinksMateriais() {
       setVerificandoGateEmissao(true);
       try {
         const gate = await verificarElegibilidadeAgendaLive(userIdEfetivo ?? user.id);
+        if (gate.erroVerificacao) {
+          setBloqueioEmissao({ perfilIncompleto: false, faltaPlaybook: false, erroVerificacao: true });
+          return;
+        }
         if (gate.perfilIncompleto || gate.faltaPlaybook) {
           setBloqueioEmissao(gate);
           return;
@@ -1176,10 +1181,19 @@ export default function LinksMateriais() {
       <ModalBloqueioAgendaLive
         open={bloqueioEmissao !== null}
         onClose={() => setBloqueioEmissao(null)}
+        erroVerificacao={bloqueioEmissao?.erroVerificacao}
         perfilIncompleto={bloqueioEmissao?.perfilIncompleto ?? false}
         faltaPlaybook={bloqueioEmissao?.faltaPlaybook ?? false}
         segundaPessoa
         contexto="emitir_link"
+        onTentarNovamente={
+          bloqueioEmissao?.erroVerificacao
+            ? () => {
+                setBloqueioEmissao(null);
+                void emitir();
+              }
+            : undefined
+        }
         onIrInfluencers={() => {
           setBloqueioEmissao(null);
           setActivePage(canal === "afiliado" ? "afiliados" : "influencers");

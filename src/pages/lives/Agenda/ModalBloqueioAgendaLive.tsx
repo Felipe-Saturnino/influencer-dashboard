@@ -5,7 +5,7 @@ import { FONT } from "../../../constants/theme";
 import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import { X, AlertCircle } from "lucide-react";
 
-export type ModalBloqueioAgendaContexto = "agenda" | "emitir_link";
+export type ModalBloqueioAgendaContexto = "agenda" | "agenda_acesso" | "emitir_link";
 
 const TEXTO_POR_CONTEXTO: Record<
   ModalBloqueioAgendaContexto,
@@ -15,6 +15,11 @@ const TEXTO_POR_CONTEXTO: Record<
     titulo: "Agendamento indisponível",
     introSegunda: "Para agendar uma live na agenda, você precisa:",
     introTerceira: "Não é possível agendar live para este influencer até que:",
+  },
+  agenda_acesso: {
+    titulo: "Agenda indisponível",
+    introSegunda: "Para usar a Agenda, você precisa:",
+    introTerceira: "Não é possível usar a Agenda para este influencer até que:",
   },
   emitir_link: {
     titulo: "Emissão de link indisponível",
@@ -28,12 +33,17 @@ interface Props {
   onClose: () => void;
   perfilIncompleto: boolean;
   faltaPlaybook: boolean;
+  /** Consulta de pré-requisitos falhou — bloqueio conservador. */
+  erroVerificacao?: boolean;
   /** true: "você precisa..."; false: "O influencer precisa..." */
   segundaPessoa: boolean;
   /** Agenda (padrão) ou Links e Materiais — ajusta título e introdução; itens da lista iguais. */
   contexto?: ModalBloqueioAgendaContexto;
+  /** Sem overlay nem botão fechar — bloco fixo na página (gate de acesso do influencer). */
+  embedded?: boolean;
   onIrInfluencers: () => void;
   onIrPlaybook: () => void;
+  onTentarNovamente?: () => void;
 }
 
 export default function ModalBloqueioAgendaLive({
@@ -41,10 +51,13 @@ export default function ModalBloqueioAgendaLive({
   onClose,
   perfilIncompleto,
   faltaPlaybook,
+  erroVerificacao = false,
   segundaPessoa,
   contexto = "agenda",
+  embedded = false,
   onIrInfluencers,
   onIrPlaybook,
+  onTentarNovamente,
 }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -63,69 +76,58 @@ export default function ModalBloqueioAgendaLive({
   const copy = TEXTO_POR_CONTEXTO[contexto];
   const intro = segundaPessoa ? copy.introSegunda : copy.introTerceira;
 
-  return (
+  const panel = (
     <div
+      ref={panelRef}
+      tabIndex={-1}
+      role={embedded ? "region" : "dialog"}
+      aria-modal={embedded ? undefined : true}
+      aria-labelledby="modal-bloqueio-agenda-title"
       style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.72)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1100,
-        padding: 20,
+        background: t.cardBg,
+        border: `1px solid ${t.cardBorder}`,
+        borderRadius: 20,
+        padding: "clamp(16px, 4vw, 28px)",
+        width: "100%",
+        maxWidth: embedded ? undefined : 440,
+        boxShadow: embedded ? undefined : "0 16px 48px rgba(0,0,0,0.35)",
+        outline: "none",
       }}
     >
-      <div
-        ref={panelRef}
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-bloqueio-agenda-title"
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          borderRadius: 20,
-          padding: "clamp(16px, 4vw, 28px)",
-          width: "100%",
-          maxWidth: 440,
-          boxShadow: "0 16px 48px rgba(0,0,0,0.35)",
-          outline: "none",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: brand.primaryIconBg,
-                border: brand.primaryIconBorder,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <AlertCircle size={18} color={BRAND.vermelho} aria-hidden="true" />
-            </span>
-            <h2
-              id="modal-bloqueio-agenda-title"
-              style={{
-                margin: 0,
-                fontSize: 15,
-                fontWeight: 800,
-                color: t.text,
-                fontFamily: FONT_TITLE,
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                lineHeight: 1.3,
-              }}
-            >
-              {copy.titulo}
-            </h2>
-          </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: brand.primaryIconBg,
+              border: brand.primaryIconBorder,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <AlertCircle size={18} color={BRAND.vermelho} aria-hidden="true" />
+          </span>
+          <h2
+            id="modal-bloqueio-agenda-title"
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 800,
+              color: t.text,
+              fontFamily: FONT_TITLE,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              lineHeight: 1.3,
+            }}
+          >
+            {copy.titulo}
+          </h2>
+        </div>
+        {!embedded ? (
           <button
             type="button"
             onClick={onClose}
@@ -145,11 +147,15 @@ export default function ModalBloqueioAgendaLive({
           >
             <X size={22} strokeWidth={2.75} aria-hidden="true" />
           </button>
-        </div>
+        ) : null}
+      </div>
 
         <p style={{ fontSize: 14, color: t.text, fontFamily: FONT.body, margin: "0 0 14px", lineHeight: 1.5 }}>
-          {intro}
+          {erroVerificacao
+            ? "Não foi possível verificar seus pré-requisitos agora. Tente novamente em instantes."
+            : intro}
         </p>
+        {!erroVerificacao ? (
         <ul style={{ margin: "0 0 20px", paddingLeft: 20, color: t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.65 }}>
           {perfilIncompleto && (
             <li>
@@ -166,9 +172,31 @@ export default function ModalBloqueioAgendaLive({
             </li>
           )}
         </ul>
+        ) : null}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {perfilIncompleto && (
+          {erroVerificacao && onTentarNovamente ? (
+            <button
+              type="button"
+              onClick={onTentarNovamente}
+              style={{
+                padding: "12px 16px",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                background: brand.useBrand
+                  ? "linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+                  : "linear-gradient(135deg, #4a2082, #1e36f8)",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: FONT.body,
+              }}
+            >
+              Tentar de novo
+            </button>
+          ) : null}
+          {!erroVerificacao && perfilIncompleto && (
             <button
               type="button"
               onClick={onIrInfluencers}
@@ -189,7 +217,7 @@ export default function ModalBloqueioAgendaLive({
               Ir para Influencers
             </button>
           )}
-          {faltaPlaybook && (
+          {!erroVerificacao && faltaPlaybook && (
             <button
               type="button"
               onClick={onIrPlaybook}
@@ -208,25 +236,45 @@ export default function ModalBloqueioAgendaLive({
               Ir para Playbook Influencers
             </button>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: `1px solid ${t.cardBorder}`,
-              cursor: "pointer",
-              background: t.inputBg ?? t.cardBg,
-              color: t.textMuted,
-              fontSize: 13,
-              fontWeight: 600,
-              fontFamily: FONT.body,
-            }}
-          >
-            Fechar
-          </button>
+          {!embedded ? (
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: "10px 16px",
+                borderRadius: 10,
+                border: `1px solid ${t.cardBorder}`,
+                cursor: "pointer",
+                background: t.inputBg ?? t.cardBg,
+                color: t.textMuted,
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: FONT.body,
+              }}
+            >
+              Fechar
+            </button>
+          ) : null}
         </div>
-      </div>
+    </div>
+  );
+
+  if (embedded) return panel;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.72)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1100,
+        padding: 20,
+      }}
+    >
+      {panel}
     </div>
   );
 }

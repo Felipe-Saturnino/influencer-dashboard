@@ -21,8 +21,17 @@ const TUS_CHUNK_SIZE_BYTES = 6 * 1024 * 1024;
 
 /** Orientação no campo de upload — evita arquivos grandes na origem. */
 export const ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO =
-  `Grave em 720p para o arquivo ficar leve — máximo ${ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL} por vídeo. ` +
+  `Grave em MP4 ou MOV (H.264) em 720p para compatibilidade com iPhone e Safari — máximo ${ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL} por vídeo. ` +
   `O arquivo é apagado ${ACADEMY_PERFORMANCE_HUB_VIDEO_RETENCAO_DIAS} dias após a avaliação ser concluída.`;
+
+/** Accept do input — só formatos reproduzíveis no Safari iOS. */
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_ACCEPT =
+  "video/mp4,video/quicktime,.mp4,.m4v,.mov";
+
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO =
+  "Formato não suportado nesta plataforma. Envie MP4 ou MOV (H.264) — WebM e MKV não funcionam no iPhone.";
+
+const EXTENSOES_VIDEO_PERMITIDAS = new Set(["mp4", "m4v", "mov"]);
 
 export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO =
   `O vídeo ultrapassa o tamanho máximo de ${ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL}. Envie um arquivo menor.`;
@@ -65,6 +74,23 @@ export function contentTypeVideoPerformanceHub(file: File): string {
     if (typed.startsWith("video/")) return typed;
   }
   return fromExt ?? "video/mp4";
+}
+
+export function arquivoVideoPerformanceHubPermitido(
+  file: File,
+): { ok: true } | { ok: false; erro: string } {
+  const ext = file.name.includes(".") ? file.name.split(".").pop()?.toLowerCase() ?? "" : "";
+  const mime = file.type?.trim().toLowerCase() ?? "";
+  if (mime === "video/webm" || ext === "webm" || ext === "mkv" || mime.includes("matroska")) {
+    return { ok: false, erro: ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO };
+  }
+  if (ext && !EXTENSOES_VIDEO_PERMITIDAS.has(ext)) {
+    return { ok: false, erro: ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO };
+  }
+  if (mime && mime.startsWith("video/") && mime !== "video/mp4" && mime !== "video/quicktime" && mime !== "video/x-m4v") {
+    return { ok: false, erro: ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO };
+  }
+  return { ok: true };
 }
 
 /** `video_url` no banco guarda path do Storage (não URL blob:/http:). */
@@ -138,7 +164,7 @@ export function mensagemErroUploadVideo(error: { message?: string; statusCode?: 
     return "Armazenamento de vídeo ainda não está configurado. Entre em contato com o suporte.";
   }
   if (raw.includes("mime") || raw.includes("not supported") || raw.includes("invalid content")) {
-    return "Formato de vídeo não suportado. Use MP4, MOV ou WebM.";
+    return ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO;
   }
   if (
     raw.includes("maximum size exceeded") ||
@@ -365,6 +391,11 @@ export async function uploadVideoPerformanceHub(
 ): Promise<{ path: string; error: string | null }> {
   if (file.size > ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES) {
     return { path: "", error: ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO };
+  }
+
+  const formato = arquivoVideoPerformanceHubPermitido(file);
+  if (!formato.ok) {
+    return { path: "", error: formato.erro };
   }
 
   const extRaw = file.name.includes(".") ? file.name.split(".").pop() : "mp4";

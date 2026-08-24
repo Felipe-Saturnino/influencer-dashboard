@@ -62,7 +62,7 @@ export function BlocoSolicitacoes({
   const periodo = historico ? null : periodoDoMes(mesFiltro);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [bloqueioSolicitacao, setBloqueioSolicitacao] = useState<"perfil" | "playbook" | null>(null);
+  const [bloqueioSolicitacao, setBloqueioSolicitacao] = useState<"perfil" | "playbook" | "erro_verificacao" | null>(null);
   const [modalAprovar, setModalAprovar] = useState<BancaRowDb | null>(null);
   const [confirmRecusar, setConfirmRecusar] = useState<BancaRowDb | null>(null);
   const [recusandoId, setRecusandoId] = useState<string | null>(null);
@@ -92,6 +92,10 @@ export function BlocoSolicitacoes({
     if (!user?.id) return;
     if (roleParidadeInfluencer(user.role)) {
       const check = await verificarElegibilidadeAgendaLive(user.id);
+      if (check.erroVerificacao) {
+        setBloqueioSolicitacao("erro_verificacao");
+        return;
+      }
       if (check.perfilIncompleto) {
         setBloqueioSolicitacao("perfil");
         return;
@@ -476,6 +480,11 @@ export function BlocoSolicitacoes({
         <ModalBloqueioSolicitacaoCampanha
           tipo={bloqueioSolicitacao}
           onClose={() => setBloqueioSolicitacao(null)}
+          onTentarNovamente={
+            bloqueioSolicitacao === "erro_verificacao"
+              ? () => void aoClicarSolicitar()
+              : undefined
+          }
         />
       ) : null}
       {modalOpen && user && (

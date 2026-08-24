@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
-  abrirAssetAssinadoEmNovaAba,
+  abrirAssetAssinadoComFallback,
   ERRO_ABRIR_ASSET_POPUP,
   ERRO_ABRIR_ASSET_URL,
 } from "../../../lib/abrirAssetAssinadoEmNovaAba";
@@ -33,7 +33,7 @@ export function PortalRhAssetLink({
             setErro(null);
             setLoading(true);
             try {
-              const resultado = await abrirAssetAssinadoEmNovaAba(() => urlAssinadaPortalRhAsset(storagePath));
+              const resultado = await abrirAssetAssinadoComFallback(() => urlAssinadaPortalRhAsset(storagePath));
               if (resultado === "popup_bloqueado") setErro(ERRO_ABRIR_ASSET_POPUP);
               else if (resultado === "falha_url") setErro(ERRO_ABRIR_ASSET_URL);
             } finally {

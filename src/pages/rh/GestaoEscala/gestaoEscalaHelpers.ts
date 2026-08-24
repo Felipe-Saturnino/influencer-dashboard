@@ -1220,6 +1220,42 @@ export function mesReferenciaInicial(): { ano: number; mes: number } {
   return { ano: d.getFullYear(), mes: d.getMonth() };
 }
 
+export type EscalaVistaColunas = "mes" | "semana";
+
+/** Opções do filtro Mês / Semana na barra (mesmo componente da Agenda, semântica distinta). */
+export const ESCALA_VISTA_COLUNAS_OPTIONS: ReadonlyArray<{ value: EscalaVistaColunas; label: string }> = [
+  { value: "mes", label: "Mês" },
+  { value: "semana", label: "Semana" },
+];
+
+export function isoDataLocalEscala(ref: Date): string {
+  const y = ref.getFullYear();
+  const m = String(ref.getMonth() + 1).padStart(2, "0");
+  const d = String(ref.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Vista Semana na Escala: hoje −3 … hoje +3 (interseção com os dias do mês carregado).
+ * Diferente da Agenda, onde Semana = semana calendário (dom–sáb).
+ */
+export function diasSemanaAtualEscala(dias: DiaMes[], refHoje: Date): DiaMes[] {
+  const start = new Date(refHoje.getFullYear(), refHoje.getMonth(), refHoje.getDate() - 3);
+  const end = new Date(refHoje.getFullYear(), refHoje.getMonth(), refHoje.getDate() + 3);
+  const startIso = isoDataLocalEscala(start);
+  const endIso = isoDataLocalEscala(end);
+  return dias.filter((d) => d.iso >= startIso && d.iso <= endIso);
+}
+
+export function diasVisiveisEscala(
+  dias: DiaMes[],
+  vista: EscalaVistaColunas,
+  refHoje: Date,
+): DiaMes[] {
+  if (vista === "mes") return dias;
+  return diasSemanaAtualEscala(dias, refHoje);
+}
+
 export function diasDoMes(ano: number, mes0: number): DiaMes[] {
   const ultimo = new Date(ano, mes0 + 1, 0).getDate();
   const out: DiaMes[] = [];

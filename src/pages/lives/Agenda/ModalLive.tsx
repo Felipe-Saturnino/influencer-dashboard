@@ -94,6 +94,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
   } | null>(null);
 
   const panelRef = useRef<HTMLDivElement>(null);
+  const plataformaInicialEdicaoRef = useRef(isEdit ? live?.plataforma : undefined);
   useEffect(() => {
     const id = window.requestAnimationFrame(() => {
       panelRef.current?.focus();
@@ -122,11 +123,12 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!form.influencer_id || Object.keys(perfilLinks).length === 0) return;
+    if (isEdit && form.plataforma === plataformaInicialEdicaoRef.current) return;
     const linkKey = PLAT_LINK_KEY[form.plataforma];
     const linkDoPerfil = (perfilLinks[linkKey] ?? "").trim();
-    setForm(f => ({ ...f, link: linkDoPerfil }));
+    setForm((f) => ({ ...f, link: linkDoPerfil }));
     setLinkAutoPreenchido(!!linkDoPerfil);
-  }, [form.plataforma, form.influencer_id, perfilLinks]);
+  }, [form.plataforma, form.influencer_id, perfilLinks, isEdit]);
 
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -140,11 +142,22 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
     if (!isInfluencer && influencers.length > 0 && !form.influencer_id) return setError("Selecione um influencer.");
 
     const targetInfluencerId = isInfluencer ? (userIdEfetivo ?? "") : (form.influencer_id ?? "");
-    if (!isEdit) {
+    const roleAtual = roleEfetivo ?? user?.role;
+    const aplicaGateCadastroPlaybook = isInfluencer || roleAtual === "agencia";
+    if (!isEdit && aplicaGateCadastroPlaybook) {
       if (!targetInfluencerId) return setError("Selecione um influencer.");
       const gate = await verificarElegibilidadeAgendaLive(targetInfluencerId);
+      if (gate.erroVerificacao) {
+        setError(
+          "Não foi possível verificar o cadastro e o Playbook. Se o problema persistir, entre em contato com o suporte.",
+        );
+        return;
+      }
       if (gate.perfilIncompleto || gate.faltaPlaybook) {
-        setBloqueioAgenda(gate);
+        setBloqueioAgenda({
+          perfilIncompleto: gate.perfilIncompleto,
+          faltaPlaybook: gate.faltaPlaybook,
+        });
         return;
       }
     }
@@ -214,8 +227,16 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
 
   async function handleDelete() {
     setSaving(true);
-    await supabase.from("lives").delete().eq("id", live!.id);
+    setError("");
+    const { error: err } = await supabase.from("lives").delete().eq("id", live!.id);
     setSaving(false);
+    if (err) {
+      console.error("Agenda delete live:", err);
+      setError(
+        "Não foi possível excluir a live. Se o problema persistir, entre em contato com o suporte.",
+      );
+      return;
+    }
     setModalExcluirAberto(false);
     onSave();
   }
@@ -493,7 +514,7 @@ export default function ModalLive({ live, onClose, onSave }: Props) {
               {saving ? (
                 <>
                   <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" />
-                  Salvando...
+                  Salvando…
                 </>
               ) : (
                 <>

@@ -109,7 +109,7 @@ export default function TrocarSenhaObrigatorio() {
     border: "1px solid rgba(229,220,225,0.15)",
     borderRadius: 12,
     color: "#fff",
-    fontSize: 14,
+    fontSize: 16,
     padding: "14px 52px 14px 16px",
     outline: "none",
     fontFamily: FONT.body,
@@ -134,7 +134,7 @@ export default function TrocarSenhaObrigatorio() {
         justifyContent: "center",
         fontFamily: FONT.body,
         position: "relative",
-        overflow: "hidden",
+        overflowY: "auto",
       }}
     >
       <div
@@ -259,6 +259,7 @@ export default function TrocarSenhaObrigatorio() {
               <input
                 type={showNew ? "text" : "password"}
                 autoComplete="new-password"
+                className="app-auth-input"
                 value={newPass}
                 onChange={(e) => {
                   setNewPass(e.target.value);
@@ -344,6 +345,7 @@ export default function TrocarSenhaObrigatorio() {
               <input
                 type={showConf ? "text" : "password"}
                 autoComplete="new-password"
+                className="app-auth-input"
                 value={confPass}
                 onChange={(e) => {
                   setConfPass(e.target.value);

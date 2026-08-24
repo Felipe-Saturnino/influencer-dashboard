@@ -32,7 +32,7 @@ alwaysApply: false
 | `academy_performance_hub` | Performance Hub | `academy/PerformanceHub/` |
 | `academy_portal` | Portal da Academy | `academy/PortalAcademy/` |
 
-**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Feedback** → `performance-hub-aplicar-feedback` (`PerformanceHubAplicarFeedback`); **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`); demais abas sem tutorial. **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
+**Ajuda contextual:** ambas as páginas usam **`AjudaContextualAcoes`** no grupo de ações à direita da linha principal da barra de filtros (contrato em `geral.mdc` § Ajuda contextual). **Performance Hub:** Conheça + Troubleshooting; tutorial por aba — **Avaliações** → `performance-hub-analisar-avaliacao` (`PerformanceHubAnalisarAvaliacao`); **Feedback** → `performance-hub-aplicar-feedback` (`PerformanceHubAplicarFeedback`); **Gerenciamento** → `performance-hub-avaliar` (`PerformanceHubAvaliar`); **Configuração** → `performance-hub-configuracao-pesos` (`PerformanceHubConfiguracaoPesos`). **Portal da Academy:** tutorial por aba — **Manuais** → `ciencia-manuais-academy` (`CienciaManuaisAcademy`); **Gerenciamento** → `postagem-academy-aprovacao` (`DicasAcademy`); **Comunicados** e **Dicas** sem tutorial. O grupo entra via prop `acoesAjuda` de `PortalAcademyBlocoFiltros`, na mesma linha do carrossel e do Histórico.
 
 Libs de domínio: `src/lib/academyPerformanceHubTypes.ts`, `academyPerformanceHubScoring.ts`, `academyPerformanceHubConstants.ts`, `academyPerformanceHubMockData.ts` (temporário até schema Supabase); **`academyPortalWorkflow.ts`**, **`academyPortalPostagemFiles.ts`**, **`academyPortalJogosMesa.ts`**, **`academyPortalAutorMeta.ts`**, **`academyPortalCiencia.ts`**, **`academyPortalAplicavel.ts`**, **`academyPortalManualCodigo.ts`**, **`academyPortalUi.ts`**.
 
@@ -90,7 +90,7 @@ Código de manual: prefixo das **3 primeiras letras** da categoria (sem acento, 
 
 Espelha **Políticas e normativas** do Portal de RH: **`AcademyPortalManuaisCards`** (cards em lista — código, tipo, título, **Introdução**, jogos, badge de ciência, **Visualizar** + **Ver ciência**). Modal **Ler manual** (`ModalLerConteudo`) exibe introdução, descrição, **imagens/vídeos** (`imagem_storage_paths`) e **anexos**; botão **Lido e Ciente** quando `requires_acknowledgment = true` **e** o time/gerência do usuário estiver em `aplicavel_a` (legado sem `aplicavel_a`: todos os leitores). Registro em `academy_portal_read_receipt`. **Ver ciência** (lista quem tem `acknowledged_at`) só com **Editar = Sim** — **`ModalCienciaManualAcademy`**. Lista pública carrega colunas de mídia single + array.
 
-**Tutorial (Ajuda → Tutoriais):** **Ciência nos Manuais** (`ciencia-manuais-academy`, URL `/Ajuda/Tutoriais/CienciaManuaisAcademy`) — visão prestador: ler o badge de ciência no card (`Pendente` vs `Ciência não exigida` vs `Ciente`), abrir com **Visualizar** e confirmar **Lido e Ciente**; imagens em `public/tutoriais/academy/ciencia-manuais/`.
+**Tutorial (Ajuda → Tutoriais):** **Ciência nos Manuais** (`ciencia-manuais-academy`, URL `/Ajuda/Tutoriais/CienciaManuaisAcademy`) — visão prestador: badge de ciência no card, abrir com **Visualizar**, ler descrição/mídia/**anexos** (**Ver anexo**) e confirmar **Lido e Ciente**; imagens em `public/tutoriais/academy/ciencia-manuais/`.
 
 Jogos do campo **Qual Jogo?** vêm de **`carregarJogosMesasEstudio()`** — valores distintos da coluna Jogo (tipo_jogo) em Gestão de Estúdios; sem duplicar; novos jogos cadastrados aparecem automaticamente. Persistência em `jogo_mesa text[]` (dica/manual).
 
@@ -267,7 +267,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 | Avaliações | `academy_performance_hub_avaliacao` | Abas Avaliações e Analisar; vazio até carga histórica |
 | Pesos do scoring | `academy_performance_hub_scoring_config` | Configuração por time; aplicada a novas avaliações |
 | Mesas / estúdios | `mesas_spin_cadastro`, `estudios_spin` | Modal Dados (GP) |
-| Vídeo da avaliação | bucket Storage `academy-performance-hub-videos` | Path em `video_url`; **Assistir** gera URL assinada |
+| Vídeo da avaliação | bucket Storage `academy-performance-hub-videos` | Path em `video_url`; **Assistir** gera URL assinada. **Safari/iOS:** player inline no modal (`playsInline`); demais navegadores abrem nova aba com `abrirAssetAssinadoEmNovaAba` (fallback inline se pop-up bloqueado) |
 
 #### Vídeo — limite e retenção
 
@@ -297,11 +297,12 @@ Migração: `20260703190000_academy_performance_hub_avaliacoes.sql`. Fetch: `aca
 
 | Tutorial | `tutorial_id` | URL | Aba | Visibilidade inicial |
 |----------|---------------|-----|-----|----------------------|
+| Analisar Avaliação | `performance-hub-analisar-avaliacao` | `/Ajuda/Tutoriais/PerformanceHubAnalisarAvaliacao` | Avaliações | `game_presenter`, `shuffler` |
 | Aplicar Feedback | `performance-hub-aplicar-feedback` | `/Ajuda/Tutoriais/PerformanceHubAplicarFeedback` | Feedback | `shift_leader` |
 | Realizar Avaliação | `performance-hub-avaliar` | `/Ajuda/Tutoriais/PerformanceHubAvaliar` | Gerenciamento | `performance_coach` |
 | Configurar Pesos | `performance-hub-configuracao-pesos` | `/Ajuda/Tutoriais/PerformanceHubConfiguracaoPesos` | Configuração | `performance_coach` |
 
-Imagens: `public/tutoriais/academy/performance-hub-aplicar-feedback/`, `performance-hub-avaliar/` e `performance-hub-configuracao-pesos/`. Handoff: `docs/treinamento/academy/01-performance-hub-avaliar.md`, `02-performance-hub-configuracao-pesos.md`, `03-performance-hub-aplicar-feedback.md`.
+Imagens: `public/tutoriais/academy/performance-hub-analisar-avaliacao/`, `performance-hub-aplicar-feedback/`, `performance-hub-avaliar/` e `performance-hub-configuracao-pesos/`. Handoff: `docs/treinamento/academy/01-performance-hub-avaliar.md`, `02-performance-hub-configuracao-pesos.md`, `03-performance-hub-aplicar-feedback.md`, `04-performance-hub-analisar-avaliacao.md`.
 
 ### Strings de vazio
 

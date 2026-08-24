@@ -3,7 +3,7 @@ import type { TutorialDef } from "./types";
 
 const IMG = "/tutoriais/academy/ciencia-manuais";
 
-/** Tutorial: identificar e dar ciência em manuais obrigatórios no Portal da Academy. */
+/** Tutorial: ler manual completo (anexos) e registrar ciência no Portal da Academy. */
 export const TUTORIAL_CIENCIA_MANUAIS_ACADEMY: TutorialDef = {
   id: "ciencia-manuais-academy",
   urlSlug: "CienciaManuaisAcademy",
@@ -13,28 +13,45 @@ export const TUTORIAL_CIENCIA_MANUAIS_ACADEMY: TutorialDef = {
   relatedPageKey: "academy_portal",
   relatedTabId: "manuais",
   objetivo:
-    "Identificar se um manual exige ciência e registrar o aceite Lido e Ciente na aba Manuais.",
+    "Abrir o conteúdo completo de um manual (texto, imagens, vídeos e anexos) e registrar o aceite **Lido e Ciente** quando a ciência for obrigatória.",
   passos: [
     {
       titulo: "1. Abrir a aba Manuais",
       texto:
-        "1. No menu, seção Academy, clique em Portal da Academy.\n2. Clique na aba Manuais.\n3. Os manuais aparecem em cards com código, tipo, título, introdução, jogos e o status da sua ciência.",
-    },
-    {
-      titulo: "2. Identificar se a ciência é obrigatória",
-      texto:
-        "1. Observe o status no canto superior direito de cada card.\n2. Ciência pendente (em amarelo) significa que o manual exige o seu aceite e ainda não foi confirmado.\n3. Ciência não exigida significa que o manual não exige ciência — você pode ler, mas não precisa confirmar aceite.\n4. Depois do aceite, o status passa a Ciente, com a data do registro.",
+        "1. No menu, seção Academy, clique em **Portal da Academy**.\n2. Clique na aba **Manuais**.\n3. Use o carrossel de mês ou **Histórico** para localizar o manual.\n4. Os filtros por tipo (Jogos, Imagem, Comunicação, Geral) restringem a lista.",
       imagens: [
         {
-          src: `${IMG}/01-manuais-sua-ciencia.png`,
-          alt: "Cards de Manuais com status de ciência Pendente ou Ciência não exigida",
+          src: `${IMG}/01-aba-manuais.png`,
+          alt: "Portal da Academy — aba Manuais",
         },
       ],
     },
     {
-      titulo: "3. Ler e confirmar quando estiver Pendente",
+      titulo: "2. Identificar ciência no card",
       texto:
-        "1. No card com Ciência pendente, clique em Visualizar.\n2. No modal Ler manual, leia a introdução, a descrição e, se houver, imagens, vídeos e anexos.\n3. Role até o final do modal e clique em Lido e Ciente.\n4. O modal fecha e o status do card muda para Ciente com a data.",
+        "No canto superior direito de cada card:\n\n— **Ciência pendente** (amarelo) — manual exige aceite e você ainda não confirmou.\n— **Ciência não exigida** — leitura opcional, sem botão de aceite.\n— **Ciente** (verde) — aceite já registrado, com a data.\n\nManuais com ciência pendente também podem aparecer na Home (Central Academy) até o aceite.",
+      imagens: [
+        {
+          src: `${IMG}/01-manuais-sua-ciencia.png`,
+          alt: "Cards de manuais com status de ciência",
+        },
+      ],
+    },
+    {
+      titulo: "3. Abrir o conteúdo completo",
+      texto:
+        "1. No card desejado, clique em **Visualizar**.\n2. O modal **Ler manual** exibe título, **Introdução**, **Descrição** (texto formatado) e, quando houver, a seção **Imagem e vídeo**.\n3. Role até o final — em **Anexos**, use **Ver anexo** para abrir cada arquivo em nova aba (PDF, planilha, etc.).\n4. Leia todo o material antes de confirmar a ciência.",
+      imagens: [
+        {
+          src: `${IMG}/02-modal-conteudo-anexos.png`,
+          alt: "Modal Ler manual com descrição, mídia e links Ver anexo",
+        },
+      ],
+    },
+    {
+      titulo: "4. Registrar Lido e Ciente",
+      texto:
+        "Quando o manual exige ciência e o aceite ainda está pendente:\n\n1. Após ler o conteúdo e abrir os anexos necessários, clique em **Lido e Ciente** no rodapé do modal.\n2. O modal fecha e o card passa a **Ciente** com a data do registro.\n\nO botão não aparece em manuais sem ciência obrigatória nem depois que você já confirmou.",
       aviso:
         "O botão Lido e Ciente só aparece quando o manual exige ciência e o aceite ainda está pendente. Após confirmar, o registro não pode ser desfeito por você.",
       imagens: [
@@ -45,17 +62,17 @@ export const TUTORIAL_CIENCIA_MANUAIS_ACADEMY: TutorialDef = {
       ],
     },
     {
-      titulo: "4. Manual sem ciência obrigatória",
+      titulo: "5. Manual sem ciência obrigatória",
       texto:
-        "1. Em cards com Ciência não exigida, você pode abrir o manual para consultar o conteúdo.\n2. O modal Ler manual não exibe o botão Lido e Ciente — não há aceite a registrar.",
+        "Em cards com **Ciência não exigida**, você pode abrir com **Visualizar** para consultar introdução, descrição e anexos.\n\nO modal **não** exibe **Lido e Ciente** — não há aceite a registrar.",
       imagens: [
         {
           src: `${IMG}/03-ler-manual-sem-ciencia-obrigatoria.png`,
-          alt: "Modal Ler manual sem botão Lido e Ciente",
+          alt: "Modal Ler manual sem botão de ciência",
         },
       ],
     },
   ],
   notasFinais:
-    "— Manuais com ciência pendente também podem aparecer na Home (Central Academy) até o aceite.\n— Ciência obrigatória vale quando o manual exige aceite e o seu time está entre os aplicáveis; caso contrário, o card mostra Ciência não exigida.\n— Com Editar = Sim, o botão Ver ciência no card lista quem já registrou o aceite.",
+    "— Comunicados e Dicas usam reações com emoji — isso não substitui a ciência dos Manuais.",
 };

@@ -525,9 +525,8 @@ export function isTabAllowedForUser(
     case "academy_feedback":
       return podeExecutarPerm(acoes.academy_performance_hub?.editar ?? null);
     case "academy_gerenciamento":
-      return podeExecutarPerm(acoes.academy_performance_hub?.editar ?? null);
     case "academy_configuracao":
-      return podeExecutarPerm(acoes.academy_performance_hub?.criar ?? null);
+      return (acoes.academy_performance_hub?.criar ?? null) === "sim";
     case "academy_portal_gerenciamento":
       return podeExecutarPerm(acoes.academy_portal?.editar ?? null);
     case "calendario_relatorio_presenca":

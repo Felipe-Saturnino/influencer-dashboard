@@ -36,6 +36,7 @@ import { ModalLerPolitica, ModalVerAta } from "./PortalRhModaisLeitura";
 import { ModalVisualizarDocumento } from "./ModalVisualizarDocumento";
 import { PortalRhDocumentosCards } from "./PortalRhDocumentosCards";
 import type { AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
+import { TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS } from "../../geral/Ajuda/tutoriais/portalRhCienciaPoliticas";
 import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "../../geral/Ajuda/tutoriais/portalRhComunicadosLidos";
 import { TUTORIAL_PORTAL_RH_GERENCIAMENTO } from "../../geral/Ajuda/tutoriais/portalRhGerenciamento";
 import {
@@ -79,6 +80,13 @@ const TUTORIAL_CTX_GERENCIAMENTO: AjudaContextualTutorial = {
 const TUTORIAL_CTX_COMUNICADOS_LIDOS: AjudaContextualTutorial = {
   id: TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS.id,
   urlSlug: TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS.urlSlug,
+};
+
+const TUTORIAL_CTX_CIENCIA_POLITICAS: AjudaContextualTutorial = {
+  id: TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS.id,
+  urlSlug: TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS.urlSlug,
+  titulo: TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS.titulo,
+  descricao: "Registrar ciência em políticas e normativas publicadas.",
 };
 
 type AbaPortal = "comunicados" | "politicas" | "rhtalks" | "gerenciamento";
@@ -1011,7 +1019,9 @@ export default function PortalRhPage() {
             ? TUTORIAL_CTX_GERENCIAMENTO
             : aba === "comunicados"
               ? TUTORIAL_CTX_COMUNICADOS_LIDOS
-              : null
+              : aba === "politicas"
+                ? TUTORIAL_CTX_CIENCIA_POLITICAS
+                : null
         }
       />
 
