@@ -103,10 +103,21 @@ export function labelMesaAlertaPeriodoPosicionamento(p: {
   canal_estudio?: CanalEstudioPosicionamento | null;
   tipo_jogo: string;
   nome_mesa?: string;
+  mesa_identificacao?: string;
 }): string {
-  const jogo = labelTipoJogo(p.tipo_jogo, p.nome_mesa);
-  if (p.canal_estudio === "dedicado") return `Mesa Dedicada (${jogo})`;
-  if (p.canal_estudio === "network") return `Mesa Network (${jogo})`;
+  const ident = (p.nome_mesa?.trim() || p.mesa_identificacao?.trim() || "");
+  const jogo = labelTipoJogo(p.tipo_jogo, ident || undefined);
+  const temTipoCadastro = Boolean(p.tipo_jogo?.trim());
+  const temCanal = p.canal_estudio === "dedicado" || p.canal_estudio === "network";
+  const jogoResolvido = temTipoCadastro || jogo !== "Outros";
+
+  if (temCanal && jogoResolvido) {
+    const prefix = p.canal_estudio === "network" ? "Mesa Network" : "Mesa Dedicada";
+    return `${prefix} (${jogo})`;
+  }
+
+  /** Fase 2 histórico — só mesa_identificacao: manter mesa identificável. */
+  if (ident) return `Mesa (${ident})`;
   return `Mesa (${jogo})`;
 }
 
@@ -1040,7 +1051,7 @@ export function gerarAlertasAlteracoesJanela(
   }
 
   const alertas: AlertaPos[] = [];
-  for (const dias of porMesaDia.values()) {
+  for (const [mesaId, dias] of porMesaDia.entries()) {
     const diasOrdenados = [...dias.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
     for (let i = 1; i < diasOrdenados.length; i++) {
       const [, ant] = diasOrdenados[i - 1];
@@ -1051,6 +1062,7 @@ export function gerarAlertasAlteracoesJanela(
         canal_estudio: atual.canalEstudio,
         tipo_jogo: atual.tipoJogo,
         nome_mesa: atual.nomeMesa,
+        mesa_identificacao: mesaId,
       });
       alertas.push({
         tipo: melhorou ? "positivo" : "atencao",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   gerarAlertasAlteracoesJanela,
+  labelMesaAlertaPeriodoPosicionamento,
   type LobbyExecucaoRow,
   type LobbyPosicaoRow,
 } from "../../../../lib/lobbyMonitorHelpers";
@@ -82,5 +83,57 @@ describe("gerarAlertasAlteracoesJanela", () => {
     expect(alertas[0].tipo).toBe("atencao");
     expect(alertas[0].texto).toContain("Mesa Network (Roleta)");
     expect(alertas[0].texto).toContain("P3 → P40");
+  });
+
+  it("fase 2 histórico — sem tipo_jogo/canal usa mesa_identificacao", () => {
+    const execucoes = [
+      exec("e1", "2026-08-01T12:00:00.000Z"),
+      exec("e2", "2026-08-02T12:00:00.000Z"),
+    ];
+    const posSparse = (execucaoId: string, mesa: string, posicao: number): LobbyPosicaoRow => ({
+      execucao_id: execucaoId,
+      mesa_identificacao: mesa,
+      nome_mesa: "",
+      tipo_jogo: "",
+      posicao,
+      qtd_concorrentes_a_frente: 0,
+      concorrentes_a_frente: [],
+    });
+    const posByExec = new Map<string, LobbyPosicaoRow[]>([
+      ["e1", [posSparse("e1", "SC-BACC-01", 5)]],
+      ["e2", [posSparse("e2", "SC-BACC-01", 12)]],
+    ]);
+
+    const alertas = gerarAlertasAlteracoesJanela(
+      execucoes,
+      posByExec,
+      "2026-08-01",
+      "2026-08-02",
+    );
+
+    expect(alertas).toHaveLength(1);
+    expect(alertas[0].texto).toContain("Mesa (SC-BACC-01)");
+    expect(alertas[0].texto).not.toContain("Outros");
+  });
+});
+
+describe("labelMesaAlertaPeriodoPosicionamento", () => {
+  it("formato Dedicada/Network quando cadastro completo", () => {
+    expect(
+      labelMesaAlertaPeriodoPosicionamento({
+        canal_estudio: "network",
+        tipo_jogo: "roleta",
+        nome_mesa: "Roleta 1",
+      }),
+    ).toBe("Mesa Network (Roleta)");
+  });
+
+  it("fallback para identificação quando metadados ausentes", () => {
+    expect(
+      labelMesaAlertaPeriodoPosicionamento({
+        tipo_jogo: "",
+        mesa_identificacao: "bj-vip-2",
+      }),
+    ).toBe("Mesa (bj-vip-2)");
   });
 });

@@ -55,6 +55,51 @@ export const POS_COMPARACAO_DIFERENTE_DIAS = 6;
 /** Concorrência dos lotes de posições do histórico (carga em background). */
 const POS_HISTORICO_CONCORRENCIA = 4;
 
+type MetadadosMesaSpinMaps = {
+  nomeEstudioPorMesa: Map<string, string>;
+  canalPorMesa: Map<string, "dedicado" | "network">;
+  nomeMesaPorId: Map<string, string>;
+  tipoJogoPorId: Map<string, string>;
+};
+
+function mapsMetadadosMesasSpin(
+  mesasCad: { mesa_identificacao?: unknown; nome_mesa?: unknown; tipo_jogo?: unknown; estudio_slug?: unknown }[],
+  estudiosCad: { slug?: unknown; nome?: unknown; tipo?: unknown }[],
+): MetadadosMesaSpinMaps {
+  const nomeEstudioPorSlug = new Map<string, string>();
+  const tipoPorEstudio = new Map<string, "dedicado" | "network">();
+  for (const e of estudiosCad) {
+    const slug = typeof e.slug === "string" ? e.slug.trim() : "";
+    const nome = typeof e.nome === "string" ? e.nome.trim() : "";
+    if (slug && nome) nomeEstudioPorSlug.set(slug, nome);
+    if (slug && (e.tipo === "dedicado" || e.tipo === "network")) {
+      tipoPorEstudio.set(slug, e.tipo);
+    }
+  }
+
+  const nomeEstudioPorMesa = new Map<string, string>();
+  const canalPorMesa = new Map<string, "dedicado" | "network">();
+  const nomeMesaPorId = new Map<string, string>();
+  const tipoJogoPorId = new Map<string, string>();
+
+  for (const m of mesasCad) {
+    const mid = typeof m.mesa_identificacao === "string" ? m.mesa_identificacao.trim() : "";
+    if (!mid) continue;
+    const nomeMesa = typeof m.nome_mesa === "string" ? m.nome_mesa.trim() : "";
+    const tipoJogo = typeof m.tipo_jogo === "string" ? m.tipo_jogo.trim() : "";
+    if (nomeMesa) nomeMesaPorId.set(mid, nomeMesa);
+    if (tipoJogo) tipoJogoPorId.set(mid, tipoJogo);
+    const estSlug = typeof m.estudio_slug === "string" ? m.estudio_slug.trim() : "";
+    if (!estSlug) continue;
+    const nomeEst = nomeEstudioPorSlug.get(estSlug);
+    if (nomeEst) nomeEstudioPorMesa.set(mid, nomeEst);
+    const canal = tipoPorEstudio.get(estSlug);
+    if (canal) canalPorMesa.set(mid, canal);
+  }
+
+  return { nomeEstudioPorMesa, canalPorMesa, nomeMesaPorId, tipoJogoPorId };
+}
+
 interface UseLobbyPosicionamentoDataOpts {
   /**
    * Quando `false`, não busca a janela de 35 dias usada pelo heatmap 7d/30d —
@@ -165,7 +210,7 @@ export function useLobbyPosicionamentoData(
           fetchAllPages(async (from, to) =>
             supabase
               .from("mesas_spin_cadastro")
-              .select("mesa_identificacao, estudio_slug")
+              .select("mesa_identificacao, nome_mesa, tipo_jogo, estudio_slug")
               .range(from, to),
           ),
           fetchAllPages(async (from, to) =>
@@ -173,27 +218,9 @@ export function useLobbyPosicionamentoData(
           ),
         ]);
 
-        const nomeEstudioPorSlug = new Map<string, string>();
-        const tipoPorEstudio = new Map<string, "dedicado" | "network">();
-        for (const e of estudiosCad) {
-          const slug = typeof e.slug === "string" ? e.slug.trim() : "";
-          const nome = typeof e.nome === "string" ? e.nome.trim() : "";
-          if (slug && nome) nomeEstudioPorSlug.set(slug, nome);
-          if (slug && (e.tipo === "dedicado" || e.tipo === "network")) {
-            tipoPorEstudio.set(slug, e.tipo);
-          }
-        }
-        const nomeEstudioPorMesaSpin = new Map<string, string>();
-        const canalPorMesaSpin = new Map<string, "dedicado" | "network">();
-        for (const m of mesasCad) {
-          const mid = typeof m.mesa_identificacao === "string" ? m.mesa_identificacao.trim() : "";
-          const estSlug = typeof m.estudio_slug === "string" ? m.estudio_slug.trim() : "";
-          if (!mid || !estSlug) continue;
-          const nomeEst = nomeEstudioPorSlug.get(estSlug);
-          if (nomeEst) nomeEstudioPorMesaSpin.set(mid, nomeEst);
-          const canal = tipoPorEstudio.get(estSlug);
-          if (canal) canalPorMesaSpin.set(mid, canal);
-        }
+        const { nomeEstudioPorMesa, canalPorMesa } = mapsMetadadosMesasSpin(mesasCad, estudiosCad);
+        const nomeEstudioPorMesaSpin = nomeEstudioPorMesa;
+        const canalPorMesaSpin = canalPorMesa;
 
         setExecRecentes(
           execucoes.map((e) => ({
@@ -252,19 +279,32 @@ export function useLobbyPosicionamentoData(
       if (execHistRows.length === 0) return;
 
       const idsHist = execHistRows.map((e) => e.id as string);
-      const posHistRows = await fetchInBatched(
-        idsHist,
-        LOBBY_MONITOR_EXECUCAO_IN_CHUNK,
-        async (slice) =>
-          fetchAllPages(async (from, to) =>
-            supabase
-              .from("lobby_monitor_posicao")
-              .select("execucao_id, mesa_identificacao, posicao")
-              .in("execucao_id", slice)
-              .range(from, to),
-          ),
-        POS_HISTORICO_CONCORRENCIA,
-      );
+      const [posHistRows, mesasCadHist, estudiosCadHist] = await Promise.all([
+        fetchInBatched(
+          idsHist,
+          LOBBY_MONITOR_EXECUCAO_IN_CHUNK,
+          async (slice) =>
+            fetchAllPages(async (from, to) =>
+              supabase
+                .from("lobby_monitor_posicao")
+                .select("execucao_id, mesa_identificacao, posicao")
+                .in("execucao_id", slice)
+                .range(from, to),
+            ),
+          POS_HISTORICO_CONCORRENCIA,
+        ),
+        fetchAllPages(async (from, to) =>
+          supabase
+            .from("mesas_spin_cadastro")
+            .select("mesa_identificacao, nome_mesa, tipo_jogo, estudio_slug")
+            .range(from, to),
+        ),
+        fetchAllPages(async (from, to) =>
+          supabase.from("estudios_spin").select("slug, nome, tipo").range(from, to),
+        ),
+      ]);
+
+      const metaHist = mapsMetadadosMesasSpin(mesasCadHist, estudiosCadHist);
 
       setExecHist(
         execHistRows.map((e) => ({
@@ -276,15 +316,20 @@ export function useLobbyPosicionamentoData(
         })),
       );
       setPosHist(
-        posHistRows.map((p) => ({
-          execucao_id: p.execucao_id as string,
-          mesa_identificacao: p.mesa_identificacao as string,
-          nome_mesa: "",
-          tipo_jogo: "",
-          posicao: (p.posicao ?? null) as number | null,
-          qtd_concorrentes_a_frente: 0,
-          concorrentes_a_frente: [],
-        })),
+        posHistRows.map((p) => {
+          const mid = (p.mesa_identificacao as string).trim();
+          return {
+            execucao_id: p.execucao_id as string,
+            mesa_identificacao: mid,
+            nome_mesa: metaHist.nomeMesaPorId.get(mid) ?? mid,
+            nome_estudio: metaHist.nomeEstudioPorMesa.get(mid) ?? null,
+            canal_estudio: metaHist.canalPorMesa.get(mid) ?? null,
+            tipo_jogo: metaHist.tipoJogoPorId.get(mid) ?? "",
+            posicao: (p.posicao ?? null) as number | null,
+            qtd_concorrentes_a_frente: 0,
+            concorrentes_a_frente: [],
+          };
+        }),
       );
     } catch (err) {
       console.error("[useLobbyPosicionamentoData:historico]", operadoraSlug, err);
