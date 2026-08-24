@@ -739,11 +739,25 @@ describe("marketplace permissões UI", () => {
     expect(marketplacePodeOfertar({ canCriarOk: false }, fid)).toBe(false);
   });
 
-  it("Editar Próprios bloqueia proposta no mural alheio", () => {
+  it("modo liderança (Ver Sim + Criar/Editar Próprios) bloqueia proposta no mural alheio", () => {
     expect(marketplacePodeProporNoMural(lideranca, fid)).toBe(false);
     expect(
       marketplacePodeProporNoMural(
-        { canCriarOk: true, canEditar: "sim" },
+        { canView: "sim", canCriar: "sim", canEditar: "sim", canCriarOk: true },
+        fid,
+      ),
+    ).toBe(true);
+  });
+
+  it("prestador Ver Próprios + Criar/Editar Próprios pode propor no mural", () => {
+    expect(
+      marketplacePodeProporNoMural(
+        {
+          canView: "proprios",
+          canCriar: "proprios",
+          canEditar: "proprios",
+          canCriarOk: true,
+        },
         fid,
       ),
     ).toBe(true);

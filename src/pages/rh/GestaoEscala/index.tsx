@@ -40,7 +40,7 @@ import {
   FILTRO_STAFF_ESTUDIO_TODOS,
 } from "../GestaoStaff/gestaoStaffEstudioHelpers";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
-import { SortTableTh, type SortDir } from "../../../components/dashboard";
+import { FiltroModoVisualizacaoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { gerarCelulasSugestaoCustomerService } from "../../../lib/gestaoEscalaSugestaoCustomerService";
 import {
@@ -84,6 +84,9 @@ import {
   dataMinimaEscalaCarrossel,
   diaComDestaqueCalendario,
   diasDoMes,
+  diasVisiveisEscala,
+  ESCALA_VISTA_COLUNAS_OPTIONS,
+  type EscalaVistaColunas,
   fundoCelulaStatusEscalaDiaria,
   escalaGradeAprovadaNaBase,
   escalaToolbarBtnAzul,
@@ -165,6 +168,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const inicial = useMemo(() => mesReferenciaInicial(), []);
   const [ano, setAno] = useState(inicial.ano);
   const [mes, setMes] = useState(inicial.mes);
+  /** Mês = grade completa do carrossel; Semana = hoje ±3 dias (carrossel travado no mês corrente). */
+  const [vistaColunas, setVistaColunas] = useState<EscalaVistaColunas>("mes");
 
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);
@@ -359,7 +364,22 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   );
 
   const dias = useMemo(() => diasDoMes(ano, mes), [ano, mes]);
+  const diasVisiveis = useMemo(
+    () => diasVisiveisEscala(dias, vistaColunas, hoje),
+    [dias, vistaColunas, hoje],
+  );
   const tituloMes = useMemo(() => labelMesAno(ano, mes), [ano, mes]);
+  const carrosselTravadoSemana = vistaColunas === "semana";
+
+  const onVistaColunasChange = useCallback((v: string) => {
+    const next = v as EscalaVistaColunas;
+    if (next === "semana") {
+      const ref = mesReferenciaInicial();
+      setAno(ref.ano);
+      setMes(ref.mes);
+    }
+    setVistaColunas(next);
+  }, []);
 
   const limitesCarrosselMes = useMemo(
     () => ({
@@ -370,14 +390,16 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   );
 
   const podeMesAnterior = useMemo(() => {
+    if (carrosselTravadoSemana) return false;
     const ref = primeiroDiaMes(ano, mes);
     return ref > limitesCarrosselMes.min;
-  }, [ano, mes, limitesCarrosselMes.min]);
+  }, [ano, mes, limitesCarrosselMes.min, carrosselTravadoSemana]);
 
   const podeMesSeguinte = useMemo(() => {
+    if (carrosselTravadoSemana) return false;
     const ref = primeiroDiaMes(ano, mes);
     return ref < limitesCarrosselMes.max;
-  }, [ano, mes, limitesCarrosselMes.max]);
+  }, [ano, mes, limitesCarrosselMes.max, carrosselTravadoSemana]);
 
   const mesAnterior = useCallback(() => {
     if (!podeMesAnterior) return;
@@ -1300,7 +1322,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     const linhasF = linhasRpc.map(mapLinhaPrestador);
     const celulas = gerarPorFiltroDeferred[filtroArea]?.celulas;
     if (modo === "escritorio") {
-      const comercial = contarCelulasComSigla(linhasF, dias, celulas, "Comercial");
+      const comercial = contarCelulasComSigla(linhasF, diasVisiveis, celulas, "Comercial");
       return {
         modoEscritorio: true as const,
         mostrarLinhaComercial: true as const,
@@ -1316,12 +1338,12 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
         noitePorEstudio: [] as ConsolidadoEstudioLinha[],
       };
     }
-    const manha = contarCelulasComSigla(linhasF, dias, celulas, "MRN");
-    const tarde = contarCelulasComSigla(linhasF, dias, celulas, "AFT");
-    const noite = contarCelulasComSigla(linhasF, dias, celulas, "NGT");
+    const manha = contarCelulasComSigla(linhasF, diasVisiveis, celulas, "MRN");
+    const tarde = contarCelulasComSigla(linhasF, diasVisiveis, celulas, "AFT");
+    const noite = contarCelulasComSigla(linhasF, diasVisiveis, celulas, "NGT");
     const ehAcademy = filtroArea === "academy";
     const comercial = ehAcademy
-      ? contarCelulasComSigla(linhasF, dias, celulas, "Comercial")
+      ? contarCelulasComSigla(linhasF, diasVisiveis, celulas, "Comercial")
       : ([] as number[]);
     /** Sem pessoal de tarde na operação destas áreas — não exibir linha «Turno da Tarde». */
     const temLinhaTardeConsolidado =
@@ -1331,15 +1353,15 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
       filtroArea === "game_presenter" &&
       filtroEstudioEscalaEfetivo === FILTRO_STAFF_ESTUDIO_TODOS;
     const manhaPorEstudio = drilldownPorEstudio
-      ? contarCelulasComSiglaPorEstudio(linhasRpc, dias, celulas, "MRN", opParaEstudio, estudiosNomeEscala)
+      ? contarCelulasComSiglaPorEstudio(linhasRpc, diasVisiveis, celulas, "MRN", opParaEstudio, estudiosNomeEscala)
       : [];
     const tardePorEstudio = drilldownPorEstudio
-      ? contarCelulasComSiglaPorEstudio(linhasRpc, dias, celulas, "AFT", opParaEstudio, estudiosNomeEscala)
+      ? contarCelulasComSiglaPorEstudio(linhasRpc, diasVisiveis, celulas, "AFT", opParaEstudio, estudiosNomeEscala)
       : [];
     const noitePorEstudio = drilldownPorEstudio
-      ? contarCelulasComSiglaPorEstudio(linhasRpc, dias, celulas, "NGT", opParaEstudio, estudiosNomeEscala)
+      ? contarCelulasComSiglaPorEstudio(linhasRpc, diasVisiveis, celulas, "NGT", opParaEstudio, estudiosNomeEscala)
       : [];
-    const total = dias.map((_, i) => {
+    const total = diasVisiveis.map((_, i) => {
       let s = (manha[i] ?? 0) + (noite[i] ?? 0);
       if (temLinhaTardeConsolidado) s += tarde[i] ?? 0;
       if (ehAcademy) s += comercial[i] ?? 0;
@@ -1363,7 +1385,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     mostrarFiltroArea,
     filtroArea,
     prestadoresFiltradosEstudio,
-    dias,
+    diasVisiveis,
     gerarPorFiltroDeferred,
     modo,
     filtroEstudioEscalaEfetivo,
@@ -1722,7 +1744,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
             </div>
           </th>
           {totais.map((n, idx) => {
-            const d = dias[idx]!;
+            const d = diasVisiveis[idx]!;
             return (
               <td key={`${rowKeyPrefix}-${d.iso}`} style={estiloCelulaConsolidadoNum(d, true)}>
                 {n}
@@ -1764,7 +1786,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   </button>
                 </th>
                 {est.counts.map((n, idx) => {
-                  const d = dias[idx]!;
+                  const d = diasVisiveis[idx]!;
                   return (
                     <td key={`${rowKeyPrefix}-${est.key}-${d.iso}`} style={estiloCelulaConsolidadoNum(d, false)}>
                       {n}
@@ -1912,6 +1934,14 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 <ChevronRight size={14} aria-hidden="true" />
               </button>
             </div>
+            <FiltroModoVisualizacaoSelect
+              value={vistaColunas}
+              defaultValue="mes"
+              options={ESCALA_VISTA_COLUNAS_OPTIONS}
+              onChange={onVistaColunasChange}
+              ariaLabelPrefix="Visualização da escala"
+              listboxAriaLabel="Selecionar visualização Mês ou Semana"
+            />
               {modo !== "escritorio" ? (
                 <FiltroEstudioSelect
                   id="rh-gestao-escala-filtro-estudio"
@@ -2129,9 +2159,13 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               >
                 <SectionTitle
                   sub={
-                    resumoTurnoDias.drilldownPorEstudio
-                      ? "clique no turno ou no estúdio para filtrar a Escala Diária · seta para expandir"
-                      : "clique num turno para filtrar a Escala Diária"
+                    carrosselTravadoSemana
+                      ? resumoTurnoDias.drilldownPorEstudio
+                        ? "7 dias em torno de hoje · clique no turno ou no estúdio para filtrar a Escala Diária · seta para expandir"
+                        : "7 dias em torno de hoje · clique num turno para filtrar a Escala Diária"
+                      : resumoTurnoDias.drilldownPorEstudio
+                        ? "clique no turno ou no estúdio para filtrar a Escala Diária · seta para expandir"
+                        : "clique num turno para filtrar a Escala Diária"
                   }
                 >
                   Consolidado
@@ -2140,7 +2174,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 <table
                   style={{
                     width: "100%",
-                    minWidth: CONSOLIDADO_COL_TURNO_W + dias.length * 44,
+                    minWidth: CONSOLIDADO_COL_TURNO_W + diasVisiveis.length * 44,
                     borderCollapse: "separate",
                     borderSpacing: 0,
                     border: `1px solid ${t.cardBorder}`,
@@ -2171,7 +2205,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                       >
                         Turno
                       </th>
-                      {dias.map((dia) => (
+                      {diasVisiveis.map((dia) => (
                         <th
                           key={`resumo-h-${dia.iso}`}
                           scope="col"
@@ -2206,7 +2240,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                         </button>
                       </th>
                         {resumoTurnoDias.comercial.map((n, idx) => {
-                        const d = dias[idx]!;
+                        const d = diasVisiveis[idx]!;
                         return (
                           <td
                               key={`resumo-c-${d.iso}`}
@@ -2250,7 +2284,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           </button>
                         </th>
                         {resumoTurnoDias.comercial.map((n, idx) => {
-                          const d = dias[idx]!;
+                          const d = diasVisiveis[idx]!;
                           return (
                             <td
                               key={`resumo-c-ac-${d.iso}`}
@@ -2332,7 +2366,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                         </button>
                       </th>
                       {resumoTurnoDias.total.map((n, idx) => {
-                        const d = dias[idx]!;
+                        const d = diasVisiveis[idx]!;
                         return (
                           <td
                             key={`resumo-tot-${d.iso}`}
@@ -2359,7 +2393,13 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
               aria-label="Escala Diária - Definição de status diário por Prestador"
               style={contentBox}
             >
-              <SectionTitle sub="definição de status diário por Prestador">
+              <SectionTitle
+                sub={
+                  carrosselTravadoSemana
+                    ? "7 dias em torno de hoje · definição de status diário por Prestador"
+                    : "definição de status diário por Prestador"
+                }
+              >
                 Escala Diária
               </SectionTitle>
               <div
@@ -2565,7 +2605,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                   (semColunaNome ? 0 : STICKY_W_NOME) +
                   (semColunaNickname ? 0 : STICKY_W_NICK) +
                   (semColunaTurno ? 0 : STICKY_W_TURNO_STAFF) +
-                  dias.length * 80,
+                  diasVisiveis.length * 80,
                 borderCollapse: "separate",
                 borderSpacing: 0,
                 border: `1px solid ${t.cardBorder}`,
@@ -2645,7 +2685,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                     align="center"
                   />
                   ) : null}
-                  {dias.map((dia) => (
+                  {diasVisiveis.map((dia) => (
                     <th
                       key={dia.iso}
                       scope="col"
@@ -2694,7 +2734,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 {linhas.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={colunasFixasEscalaDiaria + dias.length}
+                      colSpan={colunasFixasEscalaDiaria + diasVisiveis.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -2708,7 +2748,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                 ) : linhasFiltradasEscalaDiaria.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={colunasFixasEscalaDiaria + dias.length}
+                      colSpan={colunasFixasEscalaDiaria + diasVisiveis.length}
                       style={{
                         ...getTdStyle(t),
                         textAlign: "center",
@@ -2803,7 +2843,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
                           {row.turnoStaffNome || "—"}
                         </td>
                         ) : null}
-                        {dias.map((dia) => {
+                        {diasVisiveis.map((dia) => {
                           const ck = chaveCelulaGerar(row.id, dia.iso);
                           const bruto = celulasGerarAtivas?.[ck] ?? "";
                           const gradeAprovada = escalaGradeAprovadaNaBase(estGradeFiltro);

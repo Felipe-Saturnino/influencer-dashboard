@@ -81,7 +81,7 @@ Ordem típica no strip `primaryTransparent*`:
 
 1. Carrossel de período (`carouselNavStyles`)
 2. **`FiltroHojeButton`** — atalho para hoje + modo Dia (`aria-pressed` quando dia corrente em vista Dia)
-3. **`FiltroModoVisualizacaoSelect`** — Mês / Semana / Dia; `defaultValue="mes"`; ícone `CalendarRange` 15px; inativo em Mês, ativo em Semana/Dia
+3. **`FiltroModoVisualizacaoSelect`** — Mês / Semana / Dia; `defaultValue="mes"`; ícone `CalendarRange` 15px; inativo em Mês, ativo em Semana/Dia. **Semana** na Agenda = **semana calendário** (dom–sáb), **não** confundir com **Semana** na Escala Estúdio/Escritório (hoje ±3 dias).
 4. **`FiltroInfluencerSelect`** (`mode="multiple"`) quando `showFiltroInfluencer`
 5. **`FiltroOperadoraSelect`** quando `showFiltroOperadora`
 

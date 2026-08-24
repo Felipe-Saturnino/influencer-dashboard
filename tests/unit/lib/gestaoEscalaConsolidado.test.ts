@@ -3,6 +3,8 @@ import {
   celulaConsolidadoContaComoSigla,
   contarCelulasComSigla,
   contarCelulasComSiglaPorEstudio,
+  diasSemanaAtualEscala,
+  diasVisiveisEscala,
   opcoesSelectCelulaGerar,
   type DiaMes,
   type LinhaColaborador,
@@ -42,6 +44,52 @@ describe("celulaConsolidadoContaComoSigla", () => {
     expect(celulaConsolidadoContaComoSigla("Venda", "MRN")).toBe(false);
     expect(celulaConsolidadoContaComoSigla("Venda", "Folga")).toBe(true);
     expect(celulaConsolidadoContaComoSigla("Folga", "Folga")).toBe(true);
+  });
+});
+
+describe("diasVisiveisEscala", () => {
+  const diasAgosto2026: DiaMes[] = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1;
+    const dd = String(day).padStart(2, "0");
+    return {
+      dia: day,
+      dowShort: "seg",
+      isWeekend: false,
+      isFeriadoSP: false,
+      feriadoNome: null,
+      iso: `2026-08-${dd}`,
+    };
+  });
+
+  it("modo Mês devolve todos os dias do mês carregado", () => {
+    const hoje = new Date(2026, 7, 24);
+    expect(diasVisiveisEscala(diasAgosto2026, "mes", hoje)).toHaveLength(31);
+  });
+
+  it("modo Semana devolve hoje ±3 dias dentro do mês", () => {
+    const hoje = new Date(2026, 7, 24);
+    const visiveis = diasVisiveisEscala(diasAgosto2026, "semana", hoje);
+    expect(visiveis.map((d) => d.iso)).toEqual([
+      "2026-08-21",
+      "2026-08-22",
+      "2026-08-23",
+      "2026-08-24",
+      "2026-08-25",
+      "2026-08-26",
+      "2026-08-27",
+    ]);
+  });
+
+  it("diasSemanaAtualEscala trunca nos limites do mês carregado", () => {
+    const hoje = new Date(2026, 7, 2);
+    const visiveis = diasSemanaAtualEscala(diasAgosto2026, hoje);
+    expect(visiveis.map((d) => d.iso)).toEqual([
+      "2026-08-01",
+      "2026-08-02",
+      "2026-08-03",
+      "2026-08-04",
+      "2026-08-05",
+    ]);
   });
 });
 
