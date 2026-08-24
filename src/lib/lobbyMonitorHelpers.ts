@@ -98,6 +98,18 @@ export function labelMesaPosicionamentoRow(p: {
   return labelMesaPosicionamento(p.nome_estudio, p.nome_mesa);
 }
 
+/** Rótulo canónico — Alertas do período (consolidado): «Mesa Dedicada/Network (Jogo)». */
+export function labelMesaAlertaPeriodoPosicionamento(p: {
+  canal_estudio?: CanalEstudioPosicionamento | null;
+  tipo_jogo: string;
+  nome_mesa?: string;
+}): string {
+  const jogo = labelTipoJogo(p.tipo_jogo, p.nome_mesa);
+  if (p.canal_estudio === "dedicado") return `Mesa Dedicada (${jogo})`;
+  if (p.canal_estudio === "network") return `Mesa Network (${jogo})`;
+  return `Mesa (${jogo})`;
+}
+
 export interface SnapshotMesa {
   mesa_identificacao: string;
   nome_mesa: string;
@@ -992,7 +1004,16 @@ export function gerarAlertasAlteracoesJanela(
   /** mesa → dia → última leitura do dia */
   const porMesaDia = new Map<
     string,
-    Map<string, { posicao: number; executadoEm: string; nomeMesa: string }>
+    Map<
+      string,
+      {
+        posicao: number;
+        executadoEm: string;
+        canalEstudio: CanalEstudioPosicionamento | null;
+        tipoJogo: string;
+        nomeMesa: string;
+      }
+    >
   >();
 
   for (const ex of naJanela) {
@@ -1011,6 +1032,8 @@ export function gerarAlertasAlteracoesJanela(
       dias.set(dia, {
         posicao: Number(row.posicao),
         executadoEm: ex.executado_em,
+        canalEstudio: row.canal_estudio ?? null,
+        tipoJogo: row.tipo_jogo,
         nomeMesa,
       });
     }
@@ -1024,9 +1047,14 @@ export function gerarAlertasAlteracoesJanela(
       const [diaAtual, atual] = diasOrdenados[i];
       if (ant.posicao === atual.posicao) continue;
       const melhorou = atual.posicao < ant.posicao;
+      const labelMesa = labelMesaAlertaPeriodoPosicionamento({
+        canal_estudio: atual.canalEstudio,
+        tipo_jogo: atual.tipoJogo,
+        nome_mesa: atual.nomeMesa,
+      });
       alertas.push({
         tipo: melhorou ? "positivo" : "atencao",
-        texto: `Mesa (${atual.nomeMesa}) — ${fmtDiaMesIso(diaAtual)} — ${fmtPosicao(ant.posicao)} → ${fmtPosicao(atual.posicao)}`,
+        texto: `${labelMesa} — ${fmtDiaMesIso(diaAtual)} — ${fmtPosicao(ant.posicao)} → ${fmtPosicao(atual.posicao)}`,
         dataIso: diaAtual,
         sortTs: new Date(atual.executadoEm).getTime(),
       });

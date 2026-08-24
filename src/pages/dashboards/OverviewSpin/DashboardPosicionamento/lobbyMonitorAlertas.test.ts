@@ -18,14 +18,16 @@ function pos(
   execucaoId: string,
   mesa: string,
   posicao: number,
-  estudio = "Blaze",
+  opts?: { estudio?: string; canal?: "dedicado" | "network"; tipoJogo?: string },
 ): LobbyPosicaoRow {
+  const estudio = opts?.estudio ?? "Blaze";
   return {
     execucao_id: execucaoId,
     mesa_identificacao: mesa,
     nome_mesa: mesa,
     nome_estudio: estudio,
-    tipo_jogo: "blackjack",
+    canal_estudio: opts?.canal ?? "dedicado",
+    tipo_jogo: opts?.tipoJogo ?? "blackjack",
     posicao,
     qtd_concorrentes_a_frente: 0,
     concorrentes_a_frente: [],
@@ -54,7 +56,7 @@ describe("gerarAlertasAlteracoesJanela", () => {
 
     expect(alertas).toHaveLength(1);
     expect(alertas[0].tipo).toBe("positivo");
-    expect(alertas[0].texto).toContain("Mesa (bj1)");
+    expect(alertas[0].texto).toContain("Mesa Dedicada (Blackjack)");
     expect(alertas[0].texto).toContain("P8 → P2");
     expect(alertas[0].texto).toContain("05/08");
   });
@@ -65,8 +67,8 @@ describe("gerarAlertasAlteracoesJanela", () => {
       exec("e2", "2026-08-02T12:00:00.000Z"),
     ];
     const posByExec = new Map<string, LobbyPosicaoRow[]>([
-      ["e1", [pos("e1", "rl1", 3, "Sports Club")]],
-      ["e2", [pos("e2", "rl1", 40, "Sports Club")]],
+      ["e1", [pos("e1", "rl1", 3, { estudio: "Sports Club", canal: "network", tipoJogo: "roleta" })]],
+      ["e2", [pos("e2", "rl1", 40, { estudio: "Sports Club", canal: "network", tipoJogo: "roleta" })]],
     ]);
 
     const alertas = gerarAlertasAlteracoesJanela(
@@ -78,7 +80,7 @@ describe("gerarAlertasAlteracoesJanela", () => {
 
     expect(alertas).toHaveLength(1);
     expect(alertas[0].tipo).toBe("atencao");
-    expect(alertas[0].texto).toContain("Mesa (rl1)");
+    expect(alertas[0].texto).toContain("Mesa Network (Roleta)");
     expect(alertas[0].texto).toContain("P3 → P40");
   });
 });

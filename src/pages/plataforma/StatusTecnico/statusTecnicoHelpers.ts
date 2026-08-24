@@ -1,5 +1,5 @@
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
-import { isoDateBrasilFromInstant } from "../../../lib/dateBrasil";
+import { hojeIsoBrasil, isoDateBrasilFromInstant } from "../../../lib/dateBrasil";
 
 /** Horários a partir dos quais Status Técnico exige “ok hoje” (America/Sao_Paulo). */
 export const HORARIO_AGENDADO_BR = {
@@ -158,4 +158,194 @@ export function ctaGradientStatus(
 
 export function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)";
+}
+
+/** Slug em `sync_logs` → operadora em `lobby_monitor_execucao` (fonte do Posicionamento). */
+export const LOBBY_OPERADORA_POR_INTEGRACAO: Record<string, string> = {
+  lobby_blaze: "blaze",
+  lobby_cda: "casa_apostas",
+  lobby_esportiva: "esportiva_bet",
+  lobby_jonbet: "jonbet",
+};
+
+export const LOBBY_INTEGRACAO_SLUGS = Object.keys(LOBBY_OPERADORA_POR_INTEGRACAO);
+
+export type LobbyExecucaoMonitorRow = {
+  operadora_slug: string;
+  executado_em: string;
+  status: string;
+  mesas_encontradas: number;
+};
+
+type SyncLogResumoLobby = {
+  status: string;
+  executado_em: string;
+  registros_inseridos?: number | null;
+  registros_atualizados?: number | null;
+  erros_count?: number | null;
+};
+
+export function isLobbyIntegracaoSlug(slug: string): slug is keyof typeof LOBBY_OPERADORA_POR_INTEGRACAO {
+  return slug in LOBBY_OPERADORA_POR_INTEGRACAO;
+}
+
+function execucaoLobbyComDados(r: LobbyExecucaoMonitorRow): boolean {
+  return (r.status === "ok" || r.status === "parcial") && r.mesas_encontradas > 0;
+}
+
+/** Última execução com mesas gravadas (ok/parcial) — lista já ordenada desc por `executado_em`. */
+export function ultimaLobbyExecucaoComDados(
+  execucoes: LobbyExecucaoMonitorRow[],
+  operadoraSlug: string,
+): LobbyExecucaoMonitorRow | undefined {
+  return execucoes.find((r) => r.operadora_slug === operadoraSlug && execucaoLobbyComDados(r));
+}
+
+export function mesasLobbyExecucaoNoDia(
+  execucoes: LobbyExecucaoMonitorRow[],
+  operadoraSlug: string,
+  hojeIso: string,
+): number {
+  return execucoes
+    .filter(
+      (r) =>
+        r.operadora_slug === operadoraSlug &&
+        execucaoLobbyComDados(r) &&
+        isoDateBrasilFromInstant(r.executado_em) === hojeIso,
+    )
+    .reduce((s, r) => s + r.mesas_encontradas, 0);
+}
+
+export type StatusIntegracaoLobbyEnriquecido = {
+  ultimoSync: string | null;
+  registrosHoje: number;
+  erros: number;
+  status: "ok" | "warning" | "falha";
+};
+
+/**
+ * Status de integrações Lobby: prioriza `sync_logs`; se ausente ou falha, usa
+ * `lobby_monitor_execucao` (mesma fonte do Overview Spin → Posicionamento).
+ */
+export function enriquecerStatusIntegracaoLobby(
+  integracaoSlug: string,
+  logsInt: SyncLogResumoLobby[],
+  execucoes: LobbyExecucaoMonitorRow[],
+  hojeIso: string,
+): StatusIntegracaoLobbyEnriquecido {
+  const operadora = LOBBY_OPERADORA_POR_INTEGRACAO[integracaoSlug];
+  if (!operadora) {
+    return { ultimoSync: null, registrosHoje: 0, erros: 0, status: "falha" };
+  }
+
+  const ultimoLog = logsInt[0];
+  const execOp = execucoes.filter((e) => e.operadora_slug === operadora);
+  const ultimaExecDados = ultimaLobbyExecucaoComDados(execOp, operadora);
+  const regsLobbyHoje = mesasLobbyExecucaoNoDia(execOp, operadora, hojeIso);
+
+  const syncsHoje = logsInt.filter((l) => isoDateBrasilFromInstant(l.executado_em) === hojeIso);
+  const regsSyncHoje = syncsHoje.reduce(
+    (s, l) => s + (l.registros_inseridos ?? 0) + (l.registros_atualizados ?? 0),
+    0,
+  );
+  const regsSyncUltimoOk =
+    ultimoLog?.status === "ok"
+      ? (ultimoLog.registros_inseridos ?? 0) + (ultimoLog.registros_atualizados ?? 0)
+      : 0;
+
+  let ultimoSync = ultimoLog?.executado_em ?? null;
+  let registrosHoje = regsSyncHoje || regsSyncUltimoOk;
+  let erros = ultimoLog?.erros_count ?? 0;
+  let status: "ok" | "warning" | "falha" = "ok";
+
+  if (ultimoLog?.status === "ok") {
+    status = erros > 0 ? "warning" : "ok";
+    if (ultimaExecDados && ultimaExecDados.executado_em > ultimoLog.executado_em) {
+      ultimoSync = ultimaExecDados.executado_em;
+    }
+    if (regsLobbyHoje > registrosHoje) {
+      registrosHoje = regsLobbyHoje;
+    }
+  } else if (ultimaExecDados) {
+    ultimoSync = ultimaExecDados.executado_em;
+    registrosHoje = regsLobbyHoje || ultimaExecDados.mesas_encontradas;
+    status = ultimaExecDados.status === "parcial" ? "warning" : "ok";
+    erros = 0;
+  } else if (ultimoLog?.status === "falha" || !ultimoLog) {
+    status = "falha";
+  } else if (ultimoLog.erros_count && ultimoLog.erros_count > 0) {
+    status = "warning";
+  }
+
+  return { ultimoSync, registrosHoje, erros, status };
+}
+
+/** Timestamp mais recente entre sync_logs OK e execução de lobby com dados. */
+export function ultimaColetaLobbyOkEm(
+  integracaoSlug: string,
+  logsInt: SyncLogResumoLobby[],
+  execucoes: LobbyExecucaoMonitorRow[],
+): string | null {
+  const operadora = LOBBY_OPERADORA_POR_INTEGRACAO[integracaoSlug];
+  const ultimoLogOk = logsInt.find((l) => l.status === "ok");
+  const ultimaExec = operadora
+    ? ultimaLobbyExecucaoComDados(
+        execucoes.filter((e) => e.operadora_slug === operadora),
+        operadora,
+      )
+    : undefined;
+
+  const candidatos = [ultimoLogOk?.executado_em, ultimaExec?.executado_em].filter(Boolean) as string[];
+  if (candidatos.length === 0) return null;
+  return candidatos.sort((a, b) => b.localeCompare(a))[0];
+}
+
+export function lobbyIntegracaoTemColetaComSucesso(
+  integracaoSlug: string,
+  logsInt: SyncLogResumoLobby[],
+  execucoes: LobbyExecucaoMonitorRow[],
+): boolean {
+  return ultimaColetaLobbyOkEm(integracaoSlug, logsInt, execucoes) !== null;
+}
+
+export function lobbyIntegracaoStatusOk(
+  integracaoSlug: string,
+  logsInt: SyncLogResumoLobby[],
+  execucoes: LobbyExecucaoMonitorRow[],
+): boolean {
+  return enriquecerStatusIntegracaoLobby(integracaoSlug, logsInt, execucoes, hojeIsoBrasil()).status !==
+    "falha";
+}
+
+export function agregarLobbyExecucaoPorData(
+  execucoes: LobbyExecucaoMonitorRow[],
+  operadoraSlug: string,
+): Record<string, number> {
+  return execucoes.reduce<Record<string, number>>((acc, row) => {
+    if (row.operadora_slug !== operadoraSlug || !execucaoLobbyComDados(row)) return acc;
+    const d = isoDateBrasilFromInstant(row.executado_em);
+    if (!d) return acc;
+    acc[d] = (acc[d] ?? 0) + row.mesas_encontradas;
+    return acc;
+  }, {});
+}
+
+function mesclarContagemPorData(
+  syncPorData: Record<string, number>,
+  execPorData: Record<string, number>,
+): Record<string, number> {
+  const out = { ...syncPorData };
+  for (const [d, n] of Object.entries(execPorData)) {
+    out[d] = Math.max(out[d] ?? 0, n);
+  }
+  return out;
+}
+
+/** Mescla volume diário de sync_logs com fallback de lobby_monitor_execucao. */
+export function mesclarLobbyFluxoPorData(
+  syncPorData: Record<string, number>,
+  execucoes: LobbyExecucaoMonitorRow[],
+  operadoraSlug: string,
+): Record<string, number> {
+  return mesclarContagemPorData(syncPorData, agregarLobbyExecucaoPorData(execucoes, operadoraSlug));
 }

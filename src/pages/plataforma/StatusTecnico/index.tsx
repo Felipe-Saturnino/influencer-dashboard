@@ -58,6 +58,13 @@ import {
   SYNC_LOG_SLUGS_GARANTIDOS,
   syncLogOkNoDia,
   tableRowHoverBg,
+  enriquecerStatusIntegracaoLobby,
+  isLobbyIntegracaoSlug,
+  lobbyIntegracaoStatusOk,
+  lobbyIntegracaoTemColetaComSucesso,
+  ultimaColetaLobbyOkEm,
+  mesclarLobbyFluxoPorData,
+  type LobbyExecucaoMonitorRow,
 } from "./statusTecnicoHelpers";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { AcaoCtaContent, StatusTecnicoLoadingBlock } from "./statusTecnicoUi";
@@ -184,6 +191,7 @@ export default function StatusTecnico() {
   const [emailAgendaMensagem, setEmailAgendaMensagem] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
+  const [lobbyExecucoes, setLobbyExecucoes] = useState<LobbyExecucaoMonitorRow[]>([]);
   const [techLogs, setTechLogs] = useState<TechLog[]>([]);
   const [pipelineRuns, setPipelineRuns] = useState<PipelineRun[]>([]);
   const [fluxoDados, setFluxoDados] = useState<FluxoDia[]>([]);
@@ -243,29 +251,40 @@ export default function StatusTecnico() {
     );
 
     // Sync logs: janela 14d + fetch dedicado por slug crítico (jobs horários empurram diários fora do topo global)
-    const [{ data: syncDataRaw }, ...slugSyncRes] = await Promise.all([
-      supabase
-        .from("sync_logs")
-        .select("*")
-        .gte("executado_em", syncDesdeUtc)
-        .order("executado_em", { ascending: false })
-        .limit(300),
-      ...SYNC_LOG_SLUGS_GARANTIDOS.map((slug) =>
+    const [syncBatch, lobbyExecRes] = await Promise.all([
+      Promise.all([
         supabase
           .from("sync_logs")
           .select("*")
-          .eq("integracao_slug", slug)
           .gte("executado_em", syncDesdeUtc)
           .order("executado_em", { ascending: false })
-          .limit(40),
-      ),
+          .limit(300),
+        ...SYNC_LOG_SLUGS_GARANTIDOS.map((slug) =>
+          supabase
+            .from("sync_logs")
+            .select("*")
+            .eq("integracao_slug", slug)
+            .gte("executado_em", syncDesdeUtc)
+            .order("executado_em", { ascending: false })
+            .limit(40),
+        ),
+      ]),
+      supabase
+        .from("lobby_monitor_execucao")
+        .select("operadora_slug, executado_em, status, mesas_encontradas")
+        .in("operadora_slug", ["blaze", "casa_apostas", "esportiva_bet", "jonbet"])
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(400),
     ]);
+    const [{ data: syncDataRaw }, ...slugSyncRes] = syncBatch;
     setSyncLogs(
       mesclarSyncLogsPorExecucao(
         (syncDataRaw ?? []) as SyncLog[],
         ...slugSyncRes.map((r) => (r.data ?? []) as SyncLog[]),
       ),
     );
+    setLobbyExecucoes((lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[]);
 
     // Tech logs — sempre buscar 48h para alertas; exibir conforme logFiltro
     const desde = new Date();
@@ -360,17 +379,33 @@ export default function StatusTecnico() {
     const spinPorData = agregarSyncPorData(
       (resSpinSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; registros_atualizados: number | null }[],
     );
-    const lobbyBlazePorData = agregarSyncPorData(
-      (resLobbyBlazeSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    const lobbyBlazePorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyBlazeSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "blaze",
     );
-    const lobbyCdaPorData = agregarSyncPorData(
-      (resLobbyCdaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    const lobbyCdaPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyCdaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "casa_apostas",
     );
-    const lobbyEsportivaPorData = agregarSyncPorData(
-      (resLobbyEsportivaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    const lobbyEsportivaPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyEsportivaSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "esportiva_bet",
     );
-    const lobbyJonbetPorData = agregarSyncPorData(
-      (resLobbyJonbetSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+    const lobbyJonbetPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyJonbetSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "jonbet",
     );
     const comercialCnpjPorData = agregarSyncPorData(
       (resComercialCnpjSync.data ?? []) as {
@@ -1392,16 +1427,32 @@ export default function StatusTecnico() {
     (!passouHorarioComercialCnpj && ultimoSyncComercialCnpjLog?.status === "ok");
 
   const ultimoSyncLobbyBlazeLog = syncLogs.find((l) => l.integracao_slug === "lobby_blaze");
-  const lobbyBlazeStatusOk = ultimoSyncLobbyBlazeLog?.status === "ok";
+  const lobbyBlazeStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_blaze",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_blaze"),
+    lobbyExecucoes,
+  );
 
   const ultimoSyncLobbyCdaLog = syncLogs.find((l) => l.integracao_slug === "lobby_cda");
-  const lobbyCdaStatusOk = ultimoSyncLobbyCdaLog?.status === "ok";
+  const lobbyCdaStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_cda",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_cda"),
+    lobbyExecucoes,
+  );
 
   const ultimoSyncLobbyEsportivaLog = syncLogs.find((l) => l.integracao_slug === "lobby_esportiva");
-  const lobbyEsportivaStatusOk = ultimoSyncLobbyEsportivaLog?.status === "ok";
+  const lobbyEsportivaStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_esportiva",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_esportiva"),
+    lobbyExecucoes,
+  );
 
   const ultimoSyncLobbyJonbetLog = syncLogs.find((l) => l.integracao_slug === "lobby_jonbet");
-  const lobbyJonbetStatusOk = ultimoSyncLobbyJonbetLog?.status === "ok";
+  const lobbyJonbetStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_jonbet",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_jonbet"),
+    lobbyExecucoes,
+  );
 
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
@@ -1794,19 +1845,24 @@ export default function StatusTecnico() {
 
   // ── Lobby Blaze ──
   const syncLogsLobbyBlaze = syncLogs.filter((l) => l.integracao_slug === "lobby_blaze");
-  const ultimoSyncLobbyOk = syncLogsLobbyBlaze.find((l) => l.status === "ok");
-  const ultimoSyncLobbyFalha = syncLogsLobbyBlaze.find((l) => l.status === "falha");
   const taxaErroLobbyBlaze =
     syncLogsLobbyBlaze.length > 0
       ? ((syncLogsLobbyBlaze.filter((l) => l.status === "falha").length / syncLogsLobbyBlaze.length) * 100).toFixed(1)
       : "0";
 
-  if (syncLogsLobbyBlaze.length > 0 && !ultimoSyncLobbyOk && ultimoSyncLobbyFalha) {
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_blaze", syncLogsLobbyBlaze, lobbyExecucoes) &&
+    (syncLogsLobbyBlaze.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "blaze"))
+  ) {
     alertas.push({ nivel: "erro", msg: "Nenhuma coleta Lobby Blaze com sucesso" });
-  } else if (ultimoSyncLobbyOk) {
-    const exec = new Date(ultimoSyncLobbyOk.executado_em);
-    if (exec < vinteQuatroHoras) {
-      alertas.push({ nivel: "aviso", msg: "Coleta Lobby Blaze atrasada (> 24h sem execução OK)" });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_blaze", syncLogsLobbyBlaze, lobbyExecucoes);
+    if (ultimoOkEm) {
+      const exec = new Date(ultimoOkEm);
+      if (exec < vinteQuatroHoras) {
+        alertas.push({ nivel: "aviso", msg: "Coleta Lobby Blaze atrasada (> 24h sem execução OK)" });
+      }
     }
   }
   if (parseFloat(taxaErroLobbyBlaze) > 5 && syncLogsLobbyBlaze.length > 0) {
@@ -1815,19 +1871,24 @@ export default function StatusTecnico() {
 
   // ── Lobby CDA ──
   const syncLogsLobbyCda = syncLogs.filter((l) => l.integracao_slug === "lobby_cda");
-  const ultimoSyncLobbyCdaOk = syncLogsLobbyCda.find((l) => l.status === "ok");
-  const ultimoSyncLobbyCdaFalha = syncLogsLobbyCda.find((l) => l.status === "falha");
   const taxaErroLobbyCda =
     syncLogsLobbyCda.length > 0
       ? ((syncLogsLobbyCda.filter((l) => l.status === "falha").length / syncLogsLobbyCda.length) * 100).toFixed(1)
       : "0";
 
-  if (syncLogsLobbyCda.length > 0 && !ultimoSyncLobbyCdaOk && ultimoSyncLobbyCdaFalha) {
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_cda", syncLogsLobbyCda, lobbyExecucoes) &&
+    (syncLogsLobbyCda.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "casa_apostas"))
+  ) {
     alertas.push({ nivel: "erro", msg: "Nenhuma coleta Lobby CDA com sucesso" });
-  } else if (ultimoSyncLobbyCdaOk) {
-    const exec = new Date(ultimoSyncLobbyCdaOk.executado_em);
-    if (exec < vinteQuatroHoras) {
-      alertas.push({ nivel: "aviso", msg: "Coleta Lobby CDA atrasada (> 24h sem execução OK)" });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_cda", syncLogsLobbyCda, lobbyExecucoes);
+    if (ultimoOkEm) {
+      const exec = new Date(ultimoOkEm);
+      if (exec < vinteQuatroHoras) {
+        alertas.push({ nivel: "aviso", msg: "Coleta Lobby CDA atrasada (> 24h sem execução OK)" });
+      }
     }
   }
   if (parseFloat(taxaErroLobbyCda) > 5 && syncLogsLobbyCda.length > 0) {
@@ -1836,8 +1897,6 @@ export default function StatusTecnico() {
 
   // ── Lobby Esportiva Bet ──
   const syncLogsLobbyEsportiva = syncLogs.filter((l) => l.integracao_slug === "lobby_esportiva");
-  const ultimoSyncLobbyEsportivaOk = syncLogsLobbyEsportiva.find((l) => l.status === "ok");
-  const ultimoSyncLobbyEsportivaFalha = syncLogsLobbyEsportiva.find((l) => l.status === "falha");
   const taxaErroLobbyEsportiva =
     syncLogsLobbyEsportiva.length > 0
       ? ((syncLogsLobbyEsportiva.filter((l) => l.status === "falha").length /
@@ -1845,15 +1904,22 @@ export default function StatusTecnico() {
           100).toFixed(1)
       : "0";
 
-  if (syncLogsLobbyEsportiva.length > 0 && !ultimoSyncLobbyEsportivaOk && ultimoSyncLobbyEsportivaFalha) {
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_esportiva", syncLogsLobbyEsportiva, lobbyExecucoes) &&
+    (syncLogsLobbyEsportiva.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "esportiva_bet"))
+  ) {
     alertas.push({ nivel: "erro", msg: "Nenhuma coleta Lobby Esportiva Bet com sucesso" });
-  } else if (ultimoSyncLobbyEsportivaOk) {
-    const exec = new Date(ultimoSyncLobbyEsportivaOk.executado_em);
-    if (exec < vinteQuatroHoras) {
-      alertas.push({
-        nivel: "aviso",
-        msg: "Coleta Lobby Esportiva Bet atrasada (> 24h sem execução OK)",
-      });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_esportiva", syncLogsLobbyEsportiva, lobbyExecucoes);
+    if (ultimoOkEm) {
+      const exec = new Date(ultimoOkEm);
+      if (exec < vinteQuatroHoras) {
+        alertas.push({
+          nivel: "aviso",
+          msg: "Coleta Lobby Esportiva Bet atrasada (> 24h sem execução OK)",
+        });
+      }
     }
   }
   if (parseFloat(taxaErroLobbyEsportiva) > 5 && syncLogsLobbyEsportiva.length > 0) {
@@ -1865,8 +1931,6 @@ export default function StatusTecnico() {
 
   // ── Lobby Jonbet ──
   const syncLogsLobbyJonbet = syncLogs.filter((l) => l.integracao_slug === "lobby_jonbet");
-  const ultimoSyncLobbyJonbetOk = syncLogsLobbyJonbet.find((l) => l.status === "ok");
-  const ultimoSyncLobbyJonbetFalha = syncLogsLobbyJonbet.find((l) => l.status === "falha");
   const taxaErroLobbyJonbet =
     syncLogsLobbyJonbet.length > 0
       ? ((syncLogsLobbyJonbet.filter((l) => l.status === "falha").length /
@@ -1874,15 +1938,22 @@ export default function StatusTecnico() {
           100).toFixed(1)
       : "0";
 
-  if (syncLogsLobbyJonbet.length > 0 && !ultimoSyncLobbyJonbetOk && ultimoSyncLobbyJonbetFalha) {
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_jonbet", syncLogsLobbyJonbet, lobbyExecucoes) &&
+    (syncLogsLobbyJonbet.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "jonbet"))
+  ) {
     alertas.push({ nivel: "erro", msg: "Nenhuma coleta Lobby Jonbet com sucesso" });
-  } else if (ultimoSyncLobbyJonbetOk) {
-    const exec = new Date(ultimoSyncLobbyJonbetOk.executado_em);
-    if (exec < vinteQuatroHoras) {
-      alertas.push({
-        nivel: "aviso",
-        msg: "Coleta Lobby Jonbet atrasada (> 24h sem execução OK)",
-      });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_jonbet", syncLogsLobbyJonbet, lobbyExecucoes);
+    if (ultimoOkEm) {
+      const exec = new Date(ultimoOkEm);
+      if (exec < vinteQuatroHoras) {
+        alertas.push({
+          nivel: "aviso",
+          msg: "Coleta Lobby Jonbet atrasada (> 24h sem execução OK)",
+        });
+      }
     }
   }
   if (parseFloat(taxaErroLobbyJonbet) > 5 && syncLogsLobbyJonbet.length > 0) {
@@ -1906,6 +1977,19 @@ export default function StatusTecnico() {
         if (!ultimo) status = "falha";
         else if (ultimo.status === "falha") status = "falha";
         else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
+
+        let ultimoSync: string | null = ultimo?.executado_em ?? null;
+        let registrosHoje = regsExibir;
+        let erros = ultimo?.erros_count ?? 0;
+
+        if (isLobbyIntegracaoSlug(int.slug)) {
+          const lobby = enriquecerStatusIntegracaoLobby(int.slug, logsInt, lobbyExecucoes, hojeIso);
+          ultimoSync = lobby.ultimoSync;
+          registrosHoje = lobby.registrosHoje;
+          erros = lobby.erros;
+          status = lobby.status;
+        }
+
         const syncTipo =
           int.slug === "casa_apostas"
             ? ("cda" as const)
@@ -1934,14 +2018,14 @@ export default function StatusTecnico() {
                   : ("none" as const);
         return {
           ...int,
-          ultimoSync: ultimo?.executado_em ?? null,
-          registrosHoje: regsExibir,
-          erros: ultimo?.erros_count ?? 0,
+          ultimoSync,
+          registrosHoje,
+          erros,
           status,
           syncTipo,
         };
       }),
-    [integrations, syncLogs, hojeIso],
+    [integrations, syncLogs, lobbyExecucoes, hojeIso],
   );
 
   const fluxoHojeSocial = fluxoDados.find((f) => f.data === hojeIso);
@@ -2069,17 +2153,29 @@ export default function StatusTecnico() {
       else if (ultimo.status === "falha") status = "falha";
       else if (ultimo.erros_count && ultimo.erros_count > 0) status = "warning";
 
+      let ultimoSync: string | null = ultimo?.executado_em ?? null;
+      let registrosHoje = regsExibir;
+      let erros = ultimo?.erros_count ?? 0;
+
+      if (isLobbyIntegracaoSlug(slug)) {
+        const lobby = enriquecerStatusIntegracaoLobby(slug, logsInt, lobbyExecucoes, hojeIso);
+        ultimoSync = lobby.ultimoSync;
+        registrosHoje = lobby.registrosHoje;
+        erros = lobby.erros;
+        status = lobby.status;
+      }
+
       return {
         slug,
         nome: nomeFallback,
-        ultimoSync: ultimo?.executado_em ?? null,
-        registrosHoje: regsExibir,
-        erros: ultimo?.erros_count ?? 0,
+        ultimoSync,
+        registrosHoje,
+        erros,
         status,
         syncTipo,
       };
     },
-    [statusPorIntegracao, syncLogs, hojeIso],
+    [statusPorIntegracao, syncLogs, lobbyExecucoes, hojeIso],
   );
 
   /** Sempre visível na tabela Externas — fallback se a migration de `integrations` ainda não rodou. */
