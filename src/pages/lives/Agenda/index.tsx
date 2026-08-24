@@ -23,7 +23,6 @@ import {
 } from "../../../components/dashboard";
 import { ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
-
 import { PLAT_COLOR } from "../../../constants/platforms";
 import { ROLES_PARIDADE_INFLUENCER, roleParidadeInfluencer } from "../../../lib/staffRoles";
 import {
@@ -36,6 +35,11 @@ import {
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+
+function viewInicialAgenda(): ViewMode {
+  if (typeof window === "undefined") return "mes";
+  return window.matchMedia("(max-width: 720px)").matches ? "dia" : "mes";
+}
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
@@ -124,7 +128,7 @@ export default function Agenda() {
     | { kind: "liberado" }
   >({ kind: "idle" });
 
-  const [view,    setView]    = useState<ViewMode>("mes");
+  const [view,    setView]    = useState<ViewMode>(viewInicialAgenda);
   const [current, setCurrent] = useState(new Date());
   const [lives,   setLives]   = useState<Live[]>([]);
   const [loading, setLoading] = useState(true);

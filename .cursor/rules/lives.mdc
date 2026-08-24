@@ -371,6 +371,8 @@ Toda string visível ao usuário deve estar em português do Brasil. Padrão com
 
 **Filtros:** ver secção “Barra da Agenda” acima. Views: `AgendaCalendarViews.tsx` (`ViewMes`, `ViewSemana`, `ViewDia`).
 
+**Mobile (≤720px):** vista inicial **Dia** (evita grade mês/semana com scroll horizontal pesado). Calendário mês/semana mantém `app-agenda-cal-scroll` com `min-width` reduzido (480px em ≤600px).
+
 **Bloco do calendário (nível 2 — `getPageContentBoxStyle`):** toolbar na mesma linha com `justifyContent: space-between` — à esquerda `SectionTitle` com `compact`, título **Calendário**, `sub` **Data e hora das lives dos influencers** (sem ícone; padrão Global § Blocos de página); à direita **`CtaCriarButton`** **Nova Live** quando `perm.canCriarOk` (fora da barra de filtros).
 
 **Calendário — `gridAutoRows`:**

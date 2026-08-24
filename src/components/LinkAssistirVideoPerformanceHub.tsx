@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { FONT } from "../constants/theme";
@@ -9,10 +9,9 @@ import {
 } from "../lib/academyPerformanceHubVideoFiles";
 import {
   abrirAssetAssinadoEmNovaAba,
-  ERRO_ABRIR_ASSET_POPUP,
   ERRO_ABRIR_ASSET_URL,
 } from "../lib/abrirAssetAssinadoEmNovaAba";
-import { isSafariWebKit } from "../lib/chunkReloadGuard";
+import { prefereMidiaInlineNoDispositivo } from "../lib/platformDetect";
 import { ModalBase, ModalHeader } from "./OperacoesModal";
 
 type Props = {
@@ -30,10 +29,72 @@ const ERRO_REPRODUCAO_VIDEO =
 export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const [loading, setLoading] = useState(false);
+  const [abrindo, setAbrindo] = useState(false);
+  const [carregandoVideo, setCarregandoVideo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [urlInline, setUrlInline] = useState<string | null>(null);
   const [erroPlayer, setErroPlayer] = useState<string | null>(null);
+  const retryPlayerRef = useRef(false);
+
+  const abrirInline = useCallback(async () => {
+    retryPlayerRef.current = false;
+    setErroPlayer(null);
+    setCarregandoVideo(true);
+    const url = await urlAssinadaVideoPerformanceHub(videoUrl);
+    if (!url) {
+      setErro(ERRO_ABRIR_ASSET_URL);
+      setCarregandoVideo(false);
+      return;
+    }
+    setUrlInline(url);
+  }, [videoUrl]);
+
+  async function abrir() {
+    setErro(null);
+    setAbrindo(true);
+    try {
+      const obterUrl = () => urlAssinadaVideoPerformanceHub(videoUrl);
+
+      if (prefereMidiaInlineNoDispositivo()) {
+        await abrirInline();
+        return;
+      }
+
+      const resultado = await abrirAssetAssinadoEmNovaAba(obterUrl);
+      if (resultado === "ok") return;
+
+      if (resultado === "popup_bloqueado") {
+        await abrirInline();
+        return;
+      }
+
+      setErro(ERRO_ABRIR_ASSET_URL);
+    } finally {
+      setAbrindo(false);
+    }
+  }
+
+  function fecharPlayer() {
+    setUrlInline(null);
+    setErroPlayer(null);
+    setCarregandoVideo(false);
+    retryPlayerRef.current = false;
+  }
+
+  async function onErroPlayer() {
+    if (!retryPlayerRef.current) {
+      retryPlayerRef.current = true;
+      setCarregandoVideo(true);
+      setErroPlayer(null);
+      const url = await urlAssinadaVideoPerformanceHub(videoUrl);
+      if (url) {
+        setUrlInline(url);
+        return;
+      }
+    }
+    setCarregandoVideo(false);
+    setErroPlayer(ERRO_REPRODUCAO_VIDEO);
+  }
 
   if (!videoPerformanceHubPodeAssistir(videoUrl)) {
     if (videoRemovidoEm) {
@@ -49,47 +110,7 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
     return <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>—</span>;
   }
 
-  async function abrir() {
-    setErro(null);
-    setLoading(true);
-    try {
-      const obterUrl = () => urlAssinadaVideoPerformanceHub(videoUrl);
-
-      if (isSafariWebKit()) {
-        const url = await obterUrl();
-        if (!url) {
-          setErro(ERRO_ABRIR_ASSET_URL);
-          return;
-        }
-        setUrlInline(url);
-        setErroPlayer(null);
-        return;
-      }
-
-      const resultado = await abrirAssetAssinadoEmNovaAba(obterUrl);
-      if (resultado === "ok") return;
-
-      if (resultado === "popup_bloqueado") {
-        const url = await obterUrl();
-        if (!url) {
-          setErro(ERRO_ABRIR_ASSET_POPUP);
-          return;
-        }
-        setUrlInline(url);
-        setErroPlayer(null);
-        return;
-      }
-
-      setErro(ERRO_ABRIR_ASSET_URL);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function fecharPlayer() {
-    setUrlInline(null);
-    setErroPlayer(null);
-  }
+  const loading = abrindo || (urlInline != null && carregandoVideo);
 
   return (
     <>
@@ -136,7 +157,12 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
             >
               {erroPlayer}
             </div>
-          ) : (
+          ) : carregandoVideo ? (
+            <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+              Carregando vídeo…
+            </div>
+          ) : null}
+          {!erroPlayer ? (
             <video
               key={urlInline}
               src={urlInline}
@@ -149,11 +175,13 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
                 maxHeight: "70dvh",
                 borderRadius: 10,
                 background: "#000",
-                display: "block",
+                display: carregandoVideo ? "none" : "block",
               }}
-              onError={() => setErroPlayer(ERRO_REPRODUCAO_VIDEO)}
+              onLoadedData={() => setCarregandoVideo(false)}
+              onCanPlay={() => setCarregandoVideo(false)}
+              onError={() => void onErroPlayer()}
             />
-          )}
+          ) : null}
         </ModalBase>
       ) : null}
     </>

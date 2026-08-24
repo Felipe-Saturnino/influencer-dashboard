@@ -69,6 +69,8 @@ function MidiaManualBloco({ paths, titulo }: { paths: string[]; titulo: string }
               key={path}
               src={url}
               controls
+              playsInline
+              preload="metadata"
               style={{ width: "100%", maxHeight: 360, borderRadius: 10, display: "block", background: "#000" }}
             />
           ) : (

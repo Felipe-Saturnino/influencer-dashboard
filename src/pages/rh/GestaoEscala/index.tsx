@@ -86,7 +86,6 @@ import {
   diasDoMes,
   diasVisiveisEscala,
   ESCALA_VISTA_COLUNAS_OPTIONS,
-  type EscalaVistaColunas,
   fundoCelulaStatusEscalaDiaria,
   escalaGradeAprovadaNaBase,
   escalaToolbarBtnAzul,
@@ -126,6 +125,7 @@ import {
   type EscalaDiariaSortCol,
   type EscalaGerarEstadoFiltro,
   type EscalaGradeModo,
+  type EscalaVistaColunas,
   type FiltroTurnoConsolidadoRh,
   type GradeStatusMetaDb,
   type RpcAlteracaoUltimaRow,
@@ -145,6 +145,11 @@ import {
 } from "./gestaoEscalaExcel";
 import { baixarXlsx } from "../../../lib/xlsxWriter";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch";
+
+function vistaColunasInicialEscala(): EscalaVistaColunas {
+  if (typeof window === "undefined") return "mes";
+  return window.matchMedia("(max-width: 720px)").matches ? "semana" : "mes";
+}
 
 export type GestaoEscalaPageProps = {
   modo?: EscalaGradeModo;
@@ -169,7 +174,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const [ano, setAno] = useState(inicial.ano);
   const [mes, setMes] = useState(inicial.mes);
   /** Mês = grade completa do carrossel; Semana = hoje ±3 dias (carrossel travado no mês corrente). */
-  const [vistaColunas, setVistaColunas] = useState<EscalaVistaColunas>("mes");
+  const [vistaColunas, setVistaColunas] = useState<EscalaVistaColunas>(vistaColunasInicialEscala);
 
   const [prestadoresRaw, setPrestadoresRaw] = useState<RpcPrestadorEscala[]>([]);
   const [loadingPrestadores, setLoadingPrestadores] = useState(true);

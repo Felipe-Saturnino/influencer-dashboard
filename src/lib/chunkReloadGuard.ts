@@ -1,8 +1,12 @@
+import { isIOSDevice } from "./platformDetect";
+
 /**
  * Evita loop infinito: falha repetida de chunk / import dinâmico dispara reload no main e no ErrorBoundary.
  * Número de recargas automáticas permitidas por janela de tempo (sessionStorage).
  */
 const STORAGE_KEY = "spin_chunk_reload_guard_v1";
+const BF_CACHE_RELOAD_KEY = "spin_bfcache_chunk_reload_v1";
+const BF_CACHE_RELOAD_DEBOUNCE_MS = 30_000;
 const MAX_AUTO_RELOADS = 2;
 const WINDOW_MS = 120_000;
 /** Query param descartável: URL nova força o browser a buscar o `index.html` do servidor. */
@@ -73,7 +77,7 @@ function messageMatchesChunkFailure(msg: string, allowSafariLoadFailed: boolean)
  * Safari no ErrorBoundary: `TypeError` vazio ou genérico após lazy load — quase sempre chunk/HTML em cache.
  */
 export function isLikelySafariModuleLoadFailure(err: unknown): boolean {
-  if (!isSafariWebKit()) return false;
+  if (!isSafariWebKit() && !isIOSDevice()) return false;
   if (isChunkLoadError(err)) return true;
   if (!(err instanceof TypeError)) return false;
   const msg = normalizeErrorMessage(err);
@@ -123,8 +127,8 @@ export function reloadAfterChunkError(context?: string): boolean {
     /* storage indisponível — uma recarga ainda pode ajudar */
   }
   console.warn("[App] Erro de carregamento de módulo — recarregando página.", context ?? "");
-  // Safari: `reload()` costuma reaproveitar o index.html em cache — ir direto ao cache-bust.
-  if (isSafariWebKit() || tentativa >= MAX_AUTO_RELOADS) {
+  // Safari / iOS (incl. Chrome no iPhone): `reload()` reaproveita index.html em cache — cache-bust direto.
+  if (isSafariWebKit() || isIOSDevice() || tentativa >= MAX_AUTO_RELOADS) {
     recarregarIgnorandoCacheDoHtml();
     return true;
   }
@@ -193,4 +197,22 @@ export function registerChunkReloadListeners(): void {
     ev.preventDefault();
     reloadAfterChunkError("vite:preloadError");
   }) as EventListener);
+
+  window.addEventListener("pageshow", (ev: PageTransitionEvent) => {
+    if (!ev.persisted) return;
+    if (!isSafariWebKit() && !isIOSDevice()) return;
+    try {
+      const now = Date.now();
+      const raw = sessionStorage.getItem(BF_CACHE_RELOAD_KEY);
+      if (raw) {
+        const prev = Number(raw);
+        if (Number.isFinite(prev) && now - prev < BF_CACHE_RELOAD_DEBOUNCE_MS) return;
+      }
+      sessionStorage.setItem(BF_CACHE_RELOAD_KEY, String(now));
+    } catch {
+      /* storage indisponível — uma recarga ainda pode ajudar */
+    }
+    console.warn("[App] Restauração bfcache — recarregando com cache-bust para evitar chunks stale.");
+    recarregarIgnorandoCacheDoHtml();
+  });
 }

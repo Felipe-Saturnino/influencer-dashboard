@@ -101,7 +101,7 @@ export default function Login({ onLogin }: Props) {
         justifyContent: "center",
         fontFamily: FONT.body,
         position: "relative",
-        overflow: "hidden",
+        overflowY: "auto",
       }}
     >
       <div
@@ -154,6 +154,7 @@ export default function Login({ onLogin }: Props) {
         </div>
 
         <div
+          className="app-auth-card-scroll"
           style={{
             background: "rgba(15,15,26,0.85)",
             backdropFilter: "blur(20px)",
@@ -180,6 +181,7 @@ export default function Login({ onLogin }: Props) {
             <input
               type="email"
               autoComplete="email"
+              className="app-auth-input"
               value={email}
               placeholder="seu@email.com"
               onChange={(e) => {
@@ -194,7 +196,7 @@ export default function Login({ onLogin }: Props) {
                 border: "1px solid rgba(229,220,225,0.15)",
                 borderRadius: "12px",
                 color: "#fff",
-                fontSize: "14px",
+                fontSize: "16px",
                 padding: "14px 16px",
                 outline: "none",
                 fontFamily: FONT.body,
@@ -220,6 +222,7 @@ export default function Login({ onLogin }: Props) {
               <input
                 type={showPass ? "text" : "password"}
                 autoComplete="current-password"
+                className="app-auth-input"
                 value={password}
                 placeholder="••••••••"
                 onChange={(e) => {
@@ -234,7 +237,7 @@ export default function Login({ onLogin }: Props) {
                   border: "1px solid rgba(229,220,225,0.15)",
                   borderRadius: "12px",
                   color: "#fff",
-                  fontSize: "14px",
+                  fontSize: "16px",
                   padding: "14px 52px 14px 16px",
                   outline: "none",
                   fontFamily: FONT.body,

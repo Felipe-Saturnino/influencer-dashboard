@@ -405,7 +405,7 @@ export default function CanalDenunciasSpinPage() {
 
   return (
     <div
-      className="app-full-viewport-zoomed"
+      className="app-full-viewport-zoomed app-public-screen"
       style={{
         minHeight: "100dvh",
         background: "linear-gradient(135deg, #0a0a0f 0%, #2d1b4e 100%)",
@@ -615,6 +615,7 @@ export default function CanalDenunciasSpinPage() {
                     <Campo label="Nome" obrigatorio htmlFor="canal-denuncia-nome">
                       <input
                         id="canal-denuncia-nome"
+                        className="app-public-form-input"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
                         autoComplete="name"
@@ -625,6 +626,7 @@ export default function CanalDenunciasSpinPage() {
                     <Campo label="Telefone" obrigatorio htmlFor="canal-denuncia-telefone">
                       <input
                         id="canal-denuncia-telefone"
+                        className="app-public-form-input"
                         type="tel"
                         inputMode="numeric"
                         value={telefone}
@@ -638,6 +640,7 @@ export default function CanalDenunciasSpinPage() {
                     <Campo label="E-mail" obrigatorio htmlFor="canal-denuncia-email">
                       <input
                         id="canal-denuncia-email"
+                        className="app-public-form-input"
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -700,6 +703,7 @@ export default function CanalDenunciasSpinPage() {
                   </div>
                   {tiposSel.has("outro") && (
                     <textarea
+                      className="app-public-form-input"
                       value={outroTexto}
                       onChange={(e) => setOutroTexto(e.target.value)}
                       placeholder="Descreva o motivo do relato"
@@ -715,6 +719,7 @@ export default function CanalDenunciasSpinPage() {
                   legenda="Descreva o que aconteceu, quando, onde e quem estava envolvido. Quanto mais detalhes, melhor a apuração."
                 >
                   <textarea
+                    className="app-public-form-input"
                     value={relato}
                     onChange={(e) => setRelato(e.target.value)}
                     placeholder="Descreva os fatos com o máximo de detalhes possível…"
@@ -922,7 +927,7 @@ export default function CanalDenunciasSpinPage() {
                           }}
                         >
                           <div style={{ fontSize: 12, color: "#9b8ab8", marginBottom: 6 }}>Descrição da resolução</div>
-                          <div style={{ fontSize: 14, color: "#e5dce1", whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
+                          <div className="canal-timeline-texto" style={{ fontSize: 14, color: "#e5dce1", whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
                             {String(consultaData.descricao_resolucao)}
                           </div>
                         </li>
@@ -981,7 +986,7 @@ export default function CanalDenunciasSpinPage() {
                             </span>
                             <span style={{ fontSize: 12, color: "#9b8ab8" }}>{fmtDataHora(m.created_at)}</span>
                           </div>
-                          <div style={{ fontSize: 14, color: "#e5dce1", whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
+                          <div className="canal-timeline-texto" style={{ fontSize: 14, color: "#e5dce1", whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
                             {m.texto}
                           </div>
                           {(m.anexos ?? []).length > 0 ? (
@@ -1179,7 +1184,7 @@ const inp: CSSProperties = {
   border: "1px solid rgba(255,255,255,0.12)",
   background: "rgba(0,0,0,0.25)",
   color: "#fff",
-  fontSize: 14,
+  fontSize: 16,
   fontFamily: FONT.body,
 };
 

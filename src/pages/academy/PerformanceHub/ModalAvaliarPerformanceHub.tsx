@@ -49,9 +49,12 @@ import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
 import { LinkAssistirVideoPerformanceHub } from "../../../components/LinkAssistirVideoPerformanceHub";
 import {
+  ACADEMY_PERFORMANCE_HUB_VIDEO_ACCEPT,
+  ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO,
   ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO,
   ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_BYTES,
   ACADEMY_PERFORMANCE_HUB_VIDEO_ORIENTACAO,
+  arquivoVideoPerformanceHubPermitido,
   uploadVideoPerformanceHub,
   videoPerformanceHubPodeAssistir,
 } from "../../../lib/academyPerformanceHubVideoFiles";
@@ -469,7 +472,17 @@ export function ModalAvaliarPerformanceHub({
       setInvalidFields((prev) => new Set(prev).add("video"));
       return;
     }
-    setErros((prev) => prev.filter((e) => e !== ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO));
+    const formato = arquivoVideoPerformanceHubPermitido(file);
+    if (!formato.ok) {
+      setVideoNome("");
+      setVideoFile(null);
+      setErros([formato.erro]);
+      setInvalidFields((prev) => new Set(prev).add("video"));
+      return;
+    }
+    setErros((prev) =>
+      prev.filter((e) => e !== ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO && e !== ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO),
+    );
     setVideoNome(file.name);
     setVideoFile(file);
     setInvalidFields((prev) => {
@@ -751,7 +764,7 @@ export function ModalAvaliarPerformanceHub({
                   id="modalVideo"
                   label="Vídeo da avaliação"
                   buttonLabel="Enviar vídeo da avaliação"
-                  accept="video/*"
+                  accept={ACADEMY_PERFORMANCE_HUB_VIDEO_ACCEPT}
                   multiple={false}
                   obrigatorio
                   hasError={invalidFields.has("video")}
