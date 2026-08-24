@@ -100,6 +100,34 @@ function mapsMetadadosMesasSpin(
   return { nomeEstudioPorMesa, canalPorMesa, nomeMesaPorId, tipoJogoPorId };
 }
 
+const METADADOS_MESAS_SPIN_VAZIO: MetadadosMesaSpinMaps = {
+  nomeEstudioPorMesa: new Map(),
+  canalPorMesa: new Map(),
+  nomeMesaPorId: new Map(),
+  tipoJogoPorId: new Map(),
+};
+
+/** Catálogo opcional — falha não bloqueia posições históricas (fallback de rótulo usa mesa_identificacao). */
+async function carregarMetadadosMesasSpinCatalogo(): Promise<MetadadosMesaSpinMaps> {
+  try {
+    const [mesasCad, estudiosCad] = await Promise.all([
+      fetchAllPages(async (from, to) =>
+        supabase
+          .from("mesas_spin_cadastro")
+          .select("mesa_identificacao, nome_mesa, tipo_jogo, estudio_slug")
+          .range(from, to),
+      ),
+      fetchAllPages(async (from, to) =>
+        supabase.from("estudios_spin").select("slug, nome, tipo").range(from, to),
+      ),
+    ]);
+    return mapsMetadadosMesasSpin(mesasCad, estudiosCad);
+  } catch (err) {
+    console.error("[useLobbyPosicionamentoData:metadados]", err);
+    return METADADOS_MESAS_SPIN_VAZIO;
+  }
+}
+
 interface UseLobbyPosicionamentoDataOpts {
   /**
    * Quando `false`, não busca a janela de 35 dias usada pelo heatmap 7d/30d —
@@ -279,32 +307,21 @@ export function useLobbyPosicionamentoData(
       if (execHistRows.length === 0) return;
 
       const idsHist = execHistRows.map((e) => e.id as string);
-      const [posHistRows, mesasCadHist, estudiosCadHist] = await Promise.all([
-        fetchInBatched(
-          idsHist,
-          LOBBY_MONITOR_EXECUCAO_IN_CHUNK,
-          async (slice) =>
-            fetchAllPages(async (from, to) =>
-              supabase
-                .from("lobby_monitor_posicao")
-                .select("execucao_id, mesa_identificacao, posicao")
-                .in("execucao_id", slice)
-                .range(from, to),
-            ),
-          POS_HISTORICO_CONCORRENCIA,
-        ),
-        fetchAllPages(async (from, to) =>
-          supabase
-            .from("mesas_spin_cadastro")
-            .select("mesa_identificacao, nome_mesa, tipo_jogo, estudio_slug")
-            .range(from, to),
-        ),
-        fetchAllPages(async (from, to) =>
-          supabase.from("estudios_spin").select("slug, nome, tipo").range(from, to),
-        ),
-      ]);
+      const posHistRows = await fetchInBatched(
+        idsHist,
+        LOBBY_MONITOR_EXECUCAO_IN_CHUNK,
+        async (slice) =>
+          fetchAllPages(async (from, to) =>
+            supabase
+              .from("lobby_monitor_posicao")
+              .select("execucao_id, mesa_identificacao, posicao")
+              .in("execucao_id", slice)
+              .range(from, to),
+          ),
+        POS_HISTORICO_CONCORRENCIA,
+      );
 
-      const metaHist = mapsMetadadosMesasSpin(mesasCadHist, estudiosCadHist);
+      const metaHist = await carregarMetadadosMesasSpinCatalogo();
 
       setExecHist(
         execHistRows.map((e) => ({
