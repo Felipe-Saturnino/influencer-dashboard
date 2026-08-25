@@ -321,6 +321,12 @@ export default function TechOpsItensAlocados() {
             manutencoes={manutencoes}
             loading={loading}
             podeCriar={podeCriar}
+            localChave={localChave}
+            localLabel={localLabel}
+            mesaId={mesaId === MESA_TODAS ? null : mesaId}
+            autorNome={user?.name?.trim() || user?.email || "Usuário"}
+            autorUserId={user?.id ?? null}
+            onReload={() => void carregarDados()}
           />
         </div>
       )}

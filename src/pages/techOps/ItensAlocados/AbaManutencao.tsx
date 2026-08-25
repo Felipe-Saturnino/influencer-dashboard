@@ -12,6 +12,8 @@ import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FONT } from "../../../constants/theme";
 
+import { ModalRegistrarLimpeza } from "./ModalRegistrarLimpeza";
+
 function ModalEmBreve({ title, onClose }: { title: string; onClose: () => void }) {
   const { theme: t } = useApp();
   return (
@@ -29,11 +31,23 @@ export function AbaManutencaoPainel({
   manutencoes,
   loading,
   podeCriar,
+  localChave,
+  localLabel,
+  mesaId,
+  autorNome,
+  autorUserId,
+  onReload,
 }: {
   limpezas: LimpezaRow[];
   manutencoes: ManutencaoRegRow[];
   loading: boolean;
   podeCriar: boolean;
+  localChave: string;
+  localLabel: string;
+  mesaId: string | null;
+  autorNome: string;
+  autorUserId: string | null;
+  onReload: () => void;
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -190,7 +204,17 @@ export function AbaManutencaoPainel({
         )}
       </div>
 
-      {modal === "reg-limpeza" ? <ModalEmBreve title="Registrar Limpeza" onClose={() => setModal(null)} /> : null}
+      {modal === "reg-limpeza" ? (
+        <ModalRegistrarLimpeza
+          localLabel={localLabel}
+          localChave={localChave}
+          mesaId={mesaId}
+          autorNome={autorNome}
+          autorUserId={autorUserId}
+          onClose={() => setModal(null)}
+          onSalvo={onReload}
+        />
+      ) : null}
       {modal === "reg-manut" ? <ModalEmBreve title="Registrar Manutenção" onClose={() => setModal(null)} /> : null}
       {modal === "ver-limpeza" ? <ModalEmBreve title="Ver Limpeza" onClose={() => setModal(null)} /> : null}
       {modal === "ver-manut" ? <ModalEmBreve title="Ver Manutenção" onClose={() => setModal(null)} /> : null}

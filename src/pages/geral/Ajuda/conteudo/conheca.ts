@@ -1665,7 +1665,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Manutenção",
         texto:
-          "Dois blocos: **Limpeza** e **Manutenção**, com tabelas filtradas pelo local, mesa (quando aplicável) e mês. Os botões **Registrar Limpeza** e **Registrar Manutenção** abrem o fluxo de registro (detalhamento dos formulários na próxima etapa).",
+          "Dois blocos: **Limpeza** e **Manutenção**, com tabelas filtradas pelo local, mesa (quando aplicável) e mês. **Registrar Limpeza** lista as roletas alocadas (estúdio ou Academy) ou as máquinas de cartas (Shuffler Room ou OCR) do Set aberto — formato **Nome do Equipamento - Número de Série** — e grava o registro com data/hora e responsável. **Registrar Manutenção** permanece na próxima etapa.",
       },
       {
         subtitulo: "Permissões",

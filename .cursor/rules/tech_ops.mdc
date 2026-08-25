@@ -117,7 +117,8 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN, baixa automática de esto
 |----------|----------|
 | `index.tsx` | Permissão; linha 1 = carrossel Local + Mesa/Mês + Ajuda; linha 2 = abas Set/Manutenção |
 | `AbaSet.tsx` | KPIs + tabela Set + CTAs Checklist (gated Criar) |
-| `AbaManutencao.tsx` | Limpeza + Manutenção + Registrar (gated Criar); modais placeholder |
+| `AbaManutencao.tsx` | Limpeza + Manutenção + Registrar (gated Criar); `ModalRegistrarLimpeza` |
+| `ModalRegistrarLimpeza.tsx` | Roleta ou Máquina de Cartas alocada + CTA Registrar |
 | `ModalChecklist.tsx` | Abas Itens (status) + Anotações (tipo + observação) |
 | `ModalVerItem.tsx` | Dados do Item + Alocação (cards por OS) |
 | `ModalHistorico.tsx` | Filtro Checklist / Manutenção / Movimentação |
@@ -127,6 +128,7 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN, baixa automática de esto
 
 - **Set:** OS internas `status=aberta` com `destino_chave` = local; join estoque; status em `tech_ops_itens_alocados_status` (default Em Uso).
 - **Locais:** estúdios ativos (`estudios_spin`) + Shuffler Room / OCR / Academy — **sem Estoque**.
+- **Limpeza:** estúdio ou Academy → equipamentos **Roleta** alocados no Set (OS interna aberta); Shuffler Room ou OCR → **Máquina de Cartas**. Modal exibe `Nome - Número de Série`; select se >1; insert em `tech_ops_itens_alocados_limpeza` com `data_hora` atual e responsável logado.
 - **Mesa:** só quando Local é estúdio; default **Todas Mesas**; rótulo `[NOME] - [NÚMERO]`.
 - **Mês (Manutenção):** atual + 2 anteriores, mais novo → mais antigo; default = atual.
 - **Status da página:** Em Uso / Verificar / Manutenção (próprios desta página).
@@ -135,7 +137,7 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN, baixa automática de esto
 
 ## Fora do escopo (próxima etapa)
 
-Formulários completos de Registrar/Ver limpeza e manutenção (UI placeholder).
+Formulários completos de **Ver** limpeza e **Registrar/Ver** manutenção (UI placeholder).
 
 ## Anti-patterns
 

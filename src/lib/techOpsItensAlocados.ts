@@ -20,6 +20,7 @@ import {
   formatDataHoraEstoque,
   qtdAtualJogoLote,
   type EstoqueEquipamentoRow,
+  type EstoqueEquipCategoria,
   type EstoqueItemRow,
   type EstoqueJogoLoteRow,
 } from "./techOpsEstoque";
@@ -174,6 +175,13 @@ export interface ManutencaoRegRow {
   responsavel_nome: string;
   equipamento_label: string;
   mesa_label: string;
+}
+
+export interface EquipamentoLimpezaOption {
+  id: string;
+  nome: string;
+  numero_serie: string;
+  label: string;
 }
 
 export interface HistoricoChecklistEvento {
@@ -574,6 +582,77 @@ export async function fetchHistoricoMovimentacaoItem(
 
 /* ─── Limpeza / Manutenção ────────────────────────────────────────────────── */
 
+/** Estúdio ou Academy → Roleta; Shuffler Room ou OCR → Máquina de Cartas. */
+export function categoriaEquipamentoLimpezaPorLocal(localChave: string): EstoqueEquipCategoria | null {
+  if (localChave === "shuffler_room" || localChave === "ocr") return "maquina_cartas";
+  if (localChave === "academy" || isChaveEstudioOs(localChave)) return "roleta";
+  return null;
+}
+
+export function labelEquipamentoLimpeza(nome: string, numeroSerie: string | null | undefined): string {
+  const n = (nome ?? "").trim();
+  const s = (numeroSerie ?? "").trim();
+  if (n && s) return `${n} - ${s}`;
+  if (n) return n;
+  return s || "—";
+}
+
+export function labelCampoEquipamentoLimpeza(localChave: string): string {
+  const cat = categoriaEquipamentoLimpezaPorLocal(localChave);
+  if (cat === "maquina_cartas") return ESTOQUE_EQUIP_CATEGORIA_LABEL.maquina_cartas;
+  if (cat === "roleta") return ESTOQUE_EQUIP_CATEGORIA_LABEL.roleta;
+  return "Equipamento";
+}
+
+export function mensagemVazioEquipamentoLimpeza(localChave: string): string {
+  const cat = categoriaEquipamentoLimpezaPorLocal(localChave);
+  if (cat === "maquina_cartas") return "Nenhuma máquina de cartas alocada neste local.";
+  if (cat === "roleta") return "Nenhuma roleta alocada neste local.";
+  return "Nenhum equipamento alocado neste local.";
+}
+
+export async function fetchEquipamentosLimpezaNoLocal(localChave: string): Promise<EquipamentoLimpezaOption[]> {
+  const categoria = categoriaEquipamentoLimpezaPorLocal(localChave);
+  if (!categoria) return [];
+
+  const setRows = await fetchItensSetNoLocal(localChave);
+  const eqpIds = setRows.filter((r) => r.entidade_tipo === "equipamento").map((r) => r.entidade_id);
+  if (!eqpIds.length) return [];
+
+  const { data, error } = await supabase
+    .from("tech_ops_estoque_equipamentos")
+    .select("id, nome, numero_serie, categoria")
+    .in("id", eqpIds)
+    .eq("categoria", categoria)
+    .order("nome", { ascending: true });
+  if (error) throw error;
+
+  return (data ?? []).map((e) => ({
+    id: e.id as string,
+    nome: (e.nome as string) || "—",
+    numero_serie: (e.numero_serie as string) || "",
+    label: labelEquipamentoLimpeza(e.nome as string, e.numero_serie as string),
+  }));
+}
+
+export async function registrarLimpezaItensAlocados(params: {
+  localChave: string;
+  mesaId: string | null;
+  equipamentoId: string;
+  responsavelNome: string;
+  responsavelUserId?: string | null;
+}): Promise<void> {
+  const { error } = await supabase.from("tech_ops_itens_alocados_limpeza").insert({
+    local_chave: params.localChave,
+    mesa_id: params.mesaId,
+    equipamento_id: params.equipamentoId,
+    data_hora: new Date().toISOString(),
+    responsavel_nome: params.responsavelNome.trim() || "—",
+    responsavel_user_id: params.responsavelUserId ?? null,
+  });
+  if (error) throw error;
+}
+
 function competenciaBounds(mesKey: string): { ini: string; fimExcl: string } {
   const [y, m] = mesKey.split("-").map(Number);
   const ini = new Date(Date.UTC(y, m - 1, 1, 3, 0, 0)); /* approx BR */
@@ -604,7 +683,7 @@ export async function fetchLimpezasItensAlocados(params: {
   const mesaIds = [...new Set(rows.map((r) => r.mesa_id as string | null).filter(Boolean))] as string[];
 
   const [eqpRes, mesaRes] = await Promise.all([
-    supabase.from("tech_ops_estoque_equipamentos").select("id, codigo_num, nome").in("id", eqpIds),
+    supabase.from("tech_ops_estoque_equipamentos").select("id, nome, numero_serie").in("id", eqpIds),
     mesaIds.length
       ? supabase.from("mesas_spin_cadastro").select("id, tipo_jogo, numero_mesa").in("id", mesaIds)
       : Promise.resolve({ data: [], error: null }),
@@ -615,7 +694,7 @@ export async function fetchLimpezasItensAlocados(params: {
   const eqpMap = new Map(
     (eqpRes.data ?? []).map((e) => [
       e.id as string,
-      `${codigoEstoqueEquipamento(e as { codigo_num: number })} — ${(e as { nome: string }).nome}`,
+      labelEquipamentoLimpeza((e as { nome: string }).nome, (e as { numero_serie: string }).numero_serie),
     ]),
   );
   const mesaMap = new Map(
