@@ -1645,6 +1645,35 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  tech_ops_itens_alocados: {
+    titulo: "Itens Alocados",
+    blocos: [
+      {
+        texto:
+          "A página **Itens Alocados** mostra o checklist dos itens e equipamentos em uso no local (aba **Set**) e os registros de limpeza e manutenção (aba **Manutenção**). O Set é montado a partir das Ordens de Saída internas **Abertas** cujo destino é o local selecionado, com dados do catálogo da Gestão de Estoque.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "O carrossel de Local lista os estúdios ativos de Gestão de Estúdios mais Shuffler Room, OCR e Academy (sem Estoque). Em estúdio, o filtro Mesa começa em **Todas Mesas** e as opções usam o formato Nome da Mesa — Número. Na aba Manutenção, o seletor de mês cobre o mês atual e os dois anteriores (mais novo primeiro).",
+      },
+      {
+        subtitulo: "Aba Set",
+        texto:
+          "Os cards Itens do Set, Em Verificação e Em Manutenção filtram a tabela por status desta página (Em Uso, Verificar, Manutenção). A tabela lista código, nome, categoria, modelo/marca, quantidade, status, data de alocação e as ações **Ver** e **Histórico**. O botão **Checklist** abre o modal para atualizar status dos itens e registrar tipo de verificação (Preventiva, Pontual ou Escalada) com observação obrigatória.",
+      },
+      {
+        subtitulo: "Aba Manutenção",
+        texto:
+          "Dois blocos: **Limpeza** e **Manutenção**, com tabelas filtradas pelo local, mesa (quando aplicável) e mês. Os botões **Registrar Limpeza** e **Registrar Manutenção** abrem o fluxo de registro (detalhamento dos formulários na próxima etapa).",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Com permissão de **Ver**, você vê todos os dados e as ações Ver e Histórico nas duas abas. Apenas quem tem permissão de **Criar** vê Checklist, Registrar Limpeza e Registrar Manutenção. Não há exclusão nesta página.",
+      },
+    ],
+  },
   tech_ops_estoque: {
     titulo: "Gestão de Estoque",
     blocos: [

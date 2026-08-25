@@ -1423,6 +1423,26 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  tech_ops_itens_alocados: {
+    titulo: "Itens Alocados",
+    blocos: [
+      {
+        subtitulo: "A aba Set está vazia?",
+        texto:
+          "O Set lista itens de Ordens de Saída internas **Abertas** com destino no local selecionado. Se não houver OS aberta para aquele destino, a tabela fica vazia — confirme na Ordem de Saída ou troque o local no carrossel.",
+      },
+      {
+        subtitulo: "Não vejo Checklist nem Registrar Limpeza/Manutenção?",
+        texto:
+          "Esses botões exigem permissão de **Criar** em Gestão de Usuários → Permissões → Itens Alocados. Com apenas **Ver**, você continua vendo os dados e as ações Ver e Histórico.",
+      },
+      {
+        subtitulo: "O filtro Mesa não aparece?",
+        texto:
+          "O seletor de Mesa só aparece quando o Local é um estúdio. Em Shuffler Room, OCR ou Academy o filtro some e a listagem considera o local inteiro.",
+      },
+    ],
+  },
   tech_ops_estoque: {
     titulo: "Gestão de Estoque",
     blocos: [

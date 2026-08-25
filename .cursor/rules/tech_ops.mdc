@@ -1,9 +1,10 @@
 ---
-description: Tech Ops — Gestão de Estoque e Ordem de Saída
+description: Tech Ops — Gestão de Estoque, Ordem de Saída e Itens Alocados
 globs:
   - src/pages/techOps/**
   - src/lib/techOpsEstoque.ts
   - src/lib/techOpsOrdemSaida.ts
+  - src/lib/techOpsItensAlocados.ts
 ---
 
 # Tech Ops
@@ -89,3 +90,51 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN, baixa automática de esto
 - Seed fictício.
 - Exclusão na UI v1.
 - Confundir locais/estúdios com `operadoras.slug`.
+
+---
+
+# Itens Alocados
+
+**PageKey:** `tech_ops_itens_alocados` · **Menu:** Tech Ops → Itens Alocados (abaixo de Ordem de Saída) · **Rota:** `ItensAlocados` (abas `Set`, `Manutencao`)
+
+| Item | Valor |
+|------|-------|
+| Subtítulo | Checklist de itens e equipamentos alocados por local e mesa, com limpeza e manutenção. |
+| Tabelas | `tech_ops_itens_alocados_status`, `_checklist`, `_checklist_itens`, `_historico`, `_limpeza`, `_manutencao` |
+| Migração | `20261125180000_tech_ops_itens_alocados.sql` |
+| RLS | `_tech_ops_itens_alocados_perm(need)` |
+| Lib | `src/lib/techOpsItensAlocados.ts` |
+| Pasta | `src/pages/techOps/ItensAlocados/` |
+| Ações | **Ver** = dados + Ver/Histórico · **Criar** = Checklist / Registrar Limpeza / Registrar Manutenção · **sem Editar/Excluir** · seed `nao` (exceto admin) |
+
+## Estrutura
+
+| Ficheiro | Conteúdo |
+|----------|----------|
+| `index.tsx` | Permissão, carrossel Local, Mesa (estúdio), mês (aba Manutenção), abas Set/Manutenção |
+| `AbaSet.tsx` | KPIs + tabela Set + CTAs Checklist (gated Criar) |
+| `AbaManutencao.tsx` | Limpeza + Manutenção + Registrar (gated Criar); modais placeholder |
+| `ModalChecklist.tsx` | Abas Itens (status) + Anotações (tipo + observação) |
+| `ModalVerItem.tsx` | Dados do Item + Alocação (cards por OS) |
+| `ModalHistorico.tsx` | Filtro Checklist / Manutenção / Movimentação |
+| `itensAlocadosUi.tsx` | Badge status, KPI card, campos card |
+
+## Regras
+
+- **Set:** OS internas `status=aberta` com `destino_chave` = local; join estoque; status em `tech_ops_itens_alocados_status` (default Em Uso).
+- **Locais:** estúdios ativos (`estudios_spin`) + Shuffler Room / OCR / Academy — **sem Estoque**.
+- **Mesa:** só quando Local é estúdio; default **Todas Mesas**; rótulo `[NOME] - [NÚMERO]`.
+- **Mês (Manutenção):** atual + 2 anteriores, mais novo → mais antigo; default = atual.
+- **Status da página:** Em Uso / Verificar / Manutenção (próprios desta página).
+- **Permissões UI:** Ver → dados + Ver/Histórico; Criar → Checklist, Registrar Limpeza, Registrar Manutenção.
+- **Vazio Set:** `Nenhum item alocado neste local.` · Limpeza/Manutenção: mensagens específicas de local/mês.
+
+## Fora do escopo (próxima etapa)
+
+Formulários completos de Registrar/Ver limpeza e manutenção (UI placeholder).
+
+## Anti-patterns
+
+- Incluir Estoque no carrossel de Local.
+- Exibir Checklist/Registrar sem `canCriarOk`.
+- Confundir status desta página com status do estoque/OS.

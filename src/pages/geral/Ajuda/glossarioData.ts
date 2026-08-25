@@ -1381,6 +1381,31 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     ],
   },
   {
+    key: "tech_ops_itens_alocados",
+    label: "Tech Ops — Itens Alocados",
+    accentColor: "#6366f1",
+    termos: [
+      {
+        termo: "Itens Alocados",
+        definicao:
+          "Página de checklist dos ativos em uso no local (Set) e dos registros de limpeza e manutenção, alimentada pelas Ordens de Saída abertas e pelo catálogo da Gestão de Estoque.",
+        referencia: "Itens Alocados",
+      },
+      {
+        termo: "Set",
+        definicao:
+          "Conjunto de itens e equipamentos alocados no local selecionado, com status Em Uso, Verificar ou Manutenção.",
+        referencia: "Itens Alocados → Set",
+      },
+      {
+        termo: "Checklist",
+        definicao:
+          "Registro de verificação do Set: atualiza o status dos itens e exige tipo de verificação (Preventiva, Pontual ou Escalada) com observação.",
+        referencia: "Itens Alocados → Set → Checklist",
+      },
+    ],
+  },
+  {
     key: "geral_conta",
     label: "Geral — Conta e simulação",
     accentColor: "#64748b",
@@ -1466,6 +1491,7 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   academy: ["academy_performance_hub", "academy_portal"],
   tech_ops_estoque: ["tech_ops_estoque"],
   tech_ops_ordem_saida: ["tech_ops_ordem_saida"],
+  tech_ops_itens_alocados: ["tech_ops_itens_alocados"],
   periodos: DASHBOARD_PAGE_KEYS,
   geral_conta: ["configuracoes", "simulador_login"],
 };
