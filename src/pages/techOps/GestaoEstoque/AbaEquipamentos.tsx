@@ -185,10 +185,21 @@ export function AbaEquipamentos({
       </div>
 
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SectionTitle sub="Equipamentos cadastrados">Catálogo</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Equipamentos cadastrados">Catálogo</SectionTitle>
           {perm.canCriarOk ? (
-            <CtaCriarButton onClick={() => setNovoAberto(true)}>Novo Equipamento</CtaCriarButton>
+            <CtaCriarButton onClick={() => setNovoAberto(true)} style={{ flexShrink: 0 }}>
+              Novo Equipamento
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (

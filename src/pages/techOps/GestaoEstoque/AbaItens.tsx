@@ -182,9 +182,22 @@ export function AbaItens({
       </div>
 
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SectionTitle sub="Itens de estoque cadastrados">Catálogo</SectionTitle>
-          {perm.canCriarOk ? <CtaCriarButton onClick={() => setNovoAberto(true)}>Novo Item</CtaCriarButton> : null}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Itens de estoque cadastrados">Catálogo</SectionTitle>
+          {perm.canCriarOk ? (
+            <CtaCriarButton onClick={() => setNovoAberto(true)} style={{ flexShrink: 0 }}>
+              Novo Item
+            </CtaCriarButton>
+          ) : null}
         </div>
         {loading ? (
           <VazioEstoque>Carregando…</VazioEstoque>

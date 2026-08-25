@@ -78,10 +78,21 @@ export function AbaFornecedores({
   return (
     <>
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SectionTitle sub="Fornecedores cadastrados e contatos">Catálogo</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Fornecedores cadastrados e contatos">Catálogo</SectionTitle>
           {perm.canCriarOk ? (
-            <CtaCriarButton onClick={() => setNovoAberto(true)}>Novo Fornecedor</CtaCriarButton>
+            <CtaCriarButton onClick={() => setNovoAberto(true)} style={{ flexShrink: 0 }}>
+              Novo Fornecedor
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (

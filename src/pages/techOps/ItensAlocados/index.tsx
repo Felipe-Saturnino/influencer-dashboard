@@ -199,95 +199,102 @@ export default function TechOpsItensAlocados() {
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-        <div style={getFilterBarRowStyle()}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }} role="group" aria-label="Local">
-            <button
-              type="button"
-              aria-label="Local anterior"
-              disabled={idxLocal === 0}
-              onClick={() => setIdxLocal((i) => Math.max(0, i - 1))}
-              style={getCarouselBtnNavStyle(t, idxLocal === 0)}
-            >
-              <ChevronLeft size={14} aria-hidden />
-            </button>
-            <span style={getCarouselPeriodLabelStyle(t, { minWidth: 180 })}>
-              {localAtual?.label ?? "—"}
-            </span>
-            <button
-              type="button"
-              aria-label="Próximo local"
-              disabled={idxLocal >= locais.length - 1}
-              onClick={() => setIdxLocal((i) => Math.min(locais.length - 1, i + 1))}
-              style={getCarouselBtnNavStyle(t, idxLocal >= locais.length - 1)}
-            >
-              <ChevronRight size={14} aria-hidden />
-            </button>
+        <div className="app-filter-bar-tabs-cta">
+          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
+          <div
+            role="tablist"
+            aria-label="Abas Itens Alocados"
+            className="app-filter-bar-tabs-cta__tabs"
+            onKeyDown={(e) =>
+              onFiltroBarTabsKeyDown(
+                e,
+                tabs.map((tb) => tb.id),
+                setAba,
+                (k) => `tab-ia-${k}`,
+              )
+            }
+          >
+            {tabs.map((tb) => (
+              <FiltroBarTabButton
+                key={tb.id}
+                id={`tab-ia-${tb.id}`}
+                active={aba === tb.id}
+                aria-controls={`panel-ia-${tb.id}`}
+                onClick={() => setAba(tb.id)}
+                icon={tb.icon}
+              >
+                {tb.label}
+              </FiltroBarTabButton>
+            ))}
           </div>
-
-          {ehEstudio ? (
-            <SelectComIcone
-              icon={<LayoutTemplate size={15} strokeWidth={2} aria-hidden />}
-              label="Mesas"
-              value={mesaId}
-              onChange={setMesaId}
-              pill
-              minWidth={200}
-            >
-              <option value={MESA_TODAS}>Todas Mesas</option>
-              {mesas.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {labelMesaFiltro(m.nome_mesa, m.numero_mesa)}
-                </option>
-              ))}
-            </SelectComIcone>
-          ) : null}
-
-          {aba === "manutencao" ? (
-            <SelectComIcone
-              icon={FilterBarIcons.historico}
-              label="Mês"
-              value={mesKey}
-              onChange={setMesKey}
-              pill
-              minWidth={180}
-            >
-              {meses.map((m) => (
-                <option key={m.key} value={m.key}>
-                  {m.label}
-                </option>
-              ))}
-            </SelectComIcone>
-          ) : null}
-        </div>
-
-        <div
-          role="tablist"
-          aria-label="Abas Itens Alocados"
-          style={{ ...getFilterBarRowStyle(), marginTop: 4 }}
-          onKeyDown={(e) =>
-            onFiltroBarTabsKeyDown(
-              e,
-              tabs.map((tb) => tb.id),
-              setAba,
-              (k) => `tab-ia-${k}`,
-            )
-          }
-        >
-          {tabs.map((tb) => (
-            <FiltroBarTabButton
-              key={tb.id}
-              id={`tab-ia-${tb.id}`}
-              active={aba === tb.id}
-              aria-controls={`panel-ia-${tb.id}`}
-              onClick={() => setAba(tb.id)}
-              icon={tb.icon}
-            >
-              {tb.label}
-            </FiltroBarTabButton>
-          ))}
-          <div style={{ marginLeft: "auto" }}>
+          <div className="app-filter-bar-tabs-cta__actions">
             <AjudaContextualAcoes pageKey="tech_ops_itens_alocados" />
           </div>
+        </div>
+
+        <div className="app-marketplace-filtro-minhas" style={{ marginTop: 10 }}>
+          <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+          <div className="app-marketplace-filtro-minhas__centro" style={getFilterBarRowStyle({ width: "100%" })}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }} role="group" aria-label="Local">
+              <button
+                type="button"
+                aria-label="Local anterior"
+                disabled={idxLocal === 0}
+                onClick={() => setIdxLocal((i) => Math.max(0, i - 1))}
+                style={getCarouselBtnNavStyle(t, idxLocal === 0)}
+              >
+                <ChevronLeft size={14} aria-hidden />
+              </button>
+              <span style={getCarouselPeriodLabelStyle(t, { minWidth: 180 })}>
+                {localAtual?.label ?? "—"}
+              </span>
+              <button
+                type="button"
+                aria-label="Próximo local"
+                disabled={idxLocal >= locais.length - 1}
+                onClick={() => setIdxLocal((i) => Math.min(locais.length - 1, i + 1))}
+                style={getCarouselBtnNavStyle(t, idxLocal >= locais.length - 1)}
+              >
+                <ChevronRight size={14} aria-hidden />
+              </button>
+            </div>
+
+            {ehEstudio ? (
+              <SelectComIcone
+                icon={<LayoutTemplate size={15} strokeWidth={2} aria-hidden />}
+                label="Mesas"
+                value={mesaId}
+                onChange={setMesaId}
+                pill
+                minWidth={200}
+              >
+                <option value={MESA_TODAS}>Todas Mesas</option>
+                {mesas.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {labelMesaFiltro(m.nome_mesa, m.numero_mesa)}
+                  </option>
+                ))}
+              </SelectComIcone>
+            ) : null}
+
+            {aba === "manutencao" ? (
+              <SelectComIcone
+                icon={FilterBarIcons.historico}
+                label="Mês"
+                value={mesKey}
+                onChange={setMesKey}
+                pill
+                minWidth={180}
+              >
+                {meses.map((m) => (
+                  <option key={m.key} value={m.key}>
+                    {m.label}
+                  </option>
+                ))}
+              </SelectComIcone>
+            ) : null}
+          </div>
+          <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
         </div>
       </div>
 
