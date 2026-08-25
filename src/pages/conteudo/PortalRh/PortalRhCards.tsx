@@ -1,6 +1,5 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { X } from "lucide-react";
-import { ModalBase } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { CorpoHtmlPortalRh } from "../../../components/conteudo/CorpoHtmlPortalRh";
 import { urlAssinadaPortalRhAsset } from "../../../lib/portalRhPostagemFiles";
 import { linhaMetaAutorPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
@@ -10,6 +9,11 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { ctaGradientPortalRh } from "../../../lib/portalRhUi";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+
+/** Preview no card — legível para infográficos (antes 96×96 com crop). */
+const COMUNICADO_IMG_PREVIEW_PX = 220;
+/** Lightbox: usa quase a viewport (sem teto 720px). */
+const COMUNICADO_IMG_LIGHTBOX_MAX_W = 1280;
 
 function tagStyle(accent: string): CSSProperties {
   return {
@@ -132,8 +136,15 @@ export function ComunicadoCard({
         fontFamily: FONT.body,
       }}
     >
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 10 }}>
             {categoria ? <span style={tagStyle(accent)}>{categoria.label}</span> : null}
             {isNovo ? <span style={tagNovoStyle()}>Novo</span> : null}
@@ -184,12 +195,14 @@ export function ComunicadoCard({
             aria-label={tooltipAcao("Ampliar imagem")}
             title={tooltipAcao("Ampliar imagem")}
             style={{
-              padding: 0,
+              padding: 8,
               border: `1px solid ${t.cardBorder}`,
-              borderRadius: 10,
-              background: "transparent",
+              borderRadius: 12,
+              background: t.inputBg,
               cursor: "zoom-in",
-              flexShrink: 0,
+              flex: `0 1 ${COMUNICADO_IMG_PREVIEW_PX}px`,
+              width: COMUNICADO_IMG_PREVIEW_PX,
+              maxWidth: "100%",
               overflow: "hidden",
             }}
           >
@@ -198,9 +211,9 @@ export function ComunicadoCard({
               alt=""
               aria-hidden
               style={{
-                width: 96,
-                height: 96,
-                objectFit: "cover",
+                width: "100%",
+                height: COMUNICADO_IMG_PREVIEW_PX - 16,
+                objectFit: "contain",
                 display: "block",
               }}
             />
@@ -209,35 +222,37 @@ export function ComunicadoCard({
       </div>
 
       {imagemAmpliada && imgUrl ? (
-        <ModalBase onClose={() => setImagemAmpliada(false)} maxWidth={920} zIndex={1100}>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-            <button
-              type="button"
-              onClick={() => setImagemAmpliada(false)}
-              aria-label="Fechar imagem ampliada"
-              title="Fechar imagem ampliada"
-              style={{
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                color: t.textMuted,
-                padding: 4,
-              }}
-            >
-              <X size={22} aria-hidden />
-            </button>
-          </div>
-          <img
-            src={imgUrl}
-            alt={titulo}
+        <ModalBase
+          onClose={() => setImagemAmpliada(false)}
+          maxWidth={COMUNICADO_IMG_LIGHTBOX_MAX_W}
+          zIndex={1100}
+        >
+          <ModalHeader title={titulo} onClose={() => setImagemAmpliada(false)} />
+          <div
             style={{
-              width: "100%",
-              maxHeight: "min(80vh, 720px)",
-              objectFit: "contain",
-              borderRadius: 10,
-              display: "block",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              background: t.inputBg,
+              borderRadius: 12,
+              padding: 8,
+              minHeight: 200,
             }}
-          />
+          >
+            <img
+              src={imgUrl}
+              alt={titulo}
+              style={{
+                width: "auto",
+                maxWidth: "100%",
+                height: "auto",
+                maxHeight: "calc(90dvh - 96px)",
+                objectFit: "contain",
+                borderRadius: 8,
+                display: "block",
+              }}
+            />
+          </div>
         </ModalBase>
       ) : null}
     </div>
