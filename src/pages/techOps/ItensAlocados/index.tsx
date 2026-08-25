@@ -199,40 +199,7 @@ export default function TechOpsItensAlocados() {
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
-        <div className="app-filter-bar-tabs-cta">
-          <span className="app-filter-bar-tabs-cta__spacer" aria-hidden="true" />
-          <div
-            role="tablist"
-            aria-label="Abas Itens Alocados"
-            className="app-filter-bar-tabs-cta__tabs"
-            onKeyDown={(e) =>
-              onFiltroBarTabsKeyDown(
-                e,
-                tabs.map((tb) => tb.id),
-                setAba,
-                (k) => `tab-ia-${k}`,
-              )
-            }
-          >
-            {tabs.map((tb) => (
-              <FiltroBarTabButton
-                key={tb.id}
-                id={`tab-ia-${tb.id}`}
-                active={aba === tb.id}
-                aria-controls={`panel-ia-${tb.id}`}
-                onClick={() => setAba(tb.id)}
-                icon={tb.icon}
-              >
-                {tb.label}
-              </FiltroBarTabButton>
-            ))}
-          </div>
-          <div className="app-filter-bar-tabs-cta__actions">
-            <AjudaContextualAcoes pageKey="tech_ops_itens_alocados" />
-          </div>
-        </div>
-
-        <div className="app-marketplace-filtro-minhas" style={{ marginTop: 10 }}>
+        <div className="app-marketplace-filtro-minhas">
           <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
           <div className="app-marketplace-filtro-minhas__centro" style={getFilterBarRowStyle({ width: "100%" })}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }} role="group" aria-label="Local">
@@ -294,7 +261,36 @@ export default function TechOpsItensAlocados() {
               </SelectComIcone>
             ) : null}
           </div>
-          <span className="app-marketplace-filtro-minhas__spacer" aria-hidden="true" />
+          <div className="app-marketplace-filtro-minhas__cta">
+            <AjudaContextualAcoes pageKey="tech_ops_itens_alocados" />
+          </div>
+        </div>
+
+        <div
+          role="tablist"
+          aria-label="Abas Itens Alocados"
+          style={getFilterBarRowStyle({ width: "100%", marginTop: 10 })}
+          onKeyDown={(e) =>
+            onFiltroBarTabsKeyDown(
+              e,
+              tabs.map((tb) => tb.id),
+              setAba,
+              (k) => `tab-ia-${k}`,
+            )
+          }
+        >
+          {tabs.map((tb) => (
+            <FiltroBarTabButton
+              key={tb.id}
+              id={`tab-ia-${tb.id}`}
+              active={aba === tb.id}
+              aria-controls={`panel-ia-${tb.id}`}
+              onClick={() => setAba(tb.id)}
+              icon={tb.icon}
+            >
+              {tb.label}
+            </FiltroBarTabButton>
+          ))}
         </div>
       </div>
 

@@ -1684,7 +1684,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "A barra no topo tem as quatro abas e, abaixo, a busca (por código, nome, marca, modelo, série, lote, empresa, CNPJ ou contato — sem diferenciar acentos), o filtro de Estúdio (cadastro de Gestão de Estúdios) e o filtro de Categoria, cujas opções mudam conforme a aba. Estúdio e Categoria não se aplicam à aba Fornecedores.\n\nCom o foco nas abas, use ← → do teclado para alternar entre elas (padrão tablist).",
+          "A barra no topo tem as quatro abas e, abaixo, a busca (por código, nome, marca, modelo, série, lote, empresa, CNPJ ou contato — sem diferenciar acentos), o filtro de **Local** (**Todos Locais** por padrão — estúdios de Gestão de Estúdios mais Shuffler Room, OCR e Academy) e o filtro de Categoria, cujas opções mudam conforme a aba. Local e Categoria não se aplicam à aba Fornecedores.\n\nCom o foco nas abas, use ← → do teclado para alternar entre elas (padrão tablist).",
       },
       {
         subtitulo: "Consolidado de KPIs",

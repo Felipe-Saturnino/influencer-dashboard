@@ -209,6 +209,32 @@ export function formatDataHoraEstoque(iso: string): string {
   return `${d.toLocaleDateString("pt-BR")} · ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
+/** Locais fixos Tech Ops no filtro de Gestão de Estoque (sem Estoque central). */
+export const ESTOQUE_LOCAIS_FIXOS_FILTRO = [
+  { chave: "shuffler_room", label: "Shuffler Room" },
+  { chave: "ocr", label: "OCR" },
+  { chave: "academy", label: "Academy" },
+] as const;
+
+export const ESTOQUE_FILTRO_TODOS_LOCAIS_LABEL = "Todos Locais";
+export const ESTOQUE_FILTRO_LOCAIS_ARIA_LABEL = "Locais";
+
+export function buildEstoqueLocalNomeMap(estudios: { slug: string; nome: string }[]): Record<string, string> {
+  const map = Object.fromEntries(estudios.map((e) => [e.slug, e.nome]));
+  for (const local of ESTOQUE_LOCAIS_FIXOS_FILTRO) {
+    map[local.chave] = local.label;
+  }
+  return map;
+}
+
+export function labelEstoqueLocalSlug(
+  slug: string | null | undefined,
+  nomes: Record<string, string>,
+): string {
+  if (!slug) return "—";
+  return nomes[slug] ?? slug;
+}
+
 /* ─── Fetch ───────────────────────────────────────────────────────────────── */
 
 export async function fetchEstoqueItens(): Promise<EstoqueItemRow[]> {

@@ -132,10 +132,21 @@ export function AbaExterna({
   return (
     <>
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SectionTitle sub="Saídas externas ainda não realizadas">Ordens Futuras</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Saídas externas ainda não realizadas">Ordens Futuras</SectionTitle>
           {permissoesPagina.podeNovaOs ? (
-            <CtaCriarButton onClick={() => setNovoAberto(true)}>Nova O.S. Externa</CtaCriarButton>
+            <CtaCriarButton onClick={() => setNovoAberto(true)} style={{ flexShrink: 0 }}>
+              Nova O.S. Externa
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (

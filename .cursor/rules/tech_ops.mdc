@@ -29,6 +29,8 @@ globs:
 
 Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual derivadas. Catálogo para OS: itens com Estoque > 0; equipamentos `status=estoque`; lotes com Qtd Atual > 0.
 
+**Filtro Local (abas Itens, Equipamentos, Jogo):** agregadora **Todos Locais**; opções = estúdios ativos (`estudios_spin`) + Shuffler Room, OCR e Academy (`ESTOQUE_LOCAIS_FIXOS_FILTRO` em `techOpsEstoque.ts`) — alinhado a Itens Alocados (sem Estoque central).
+
 **Ajuda contextual:** `AjudaContextualAcoes` fica à direita da mesma linha das abas.
 
 ---
@@ -107,11 +109,13 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN, baixa automática de esto
 | Pasta | `src/pages/techOps/ItensAlocados/` |
 | Ações | **Ver** = dados + Ver/Histórico · **Criar** = Checklist / Registrar Limpeza / Registrar Manutenção · **sem Editar/Excluir** · seed `nao` (exceto admin) |
 
+**Ajuda contextual:** `AjudaContextualAcoes` fica à direita da mesma linha do carrossel de Local e dos filtros Mesa/Mês.
+
 ## Estrutura
 
 | Ficheiro | Conteúdo |
 |----------|----------|
-| `index.tsx` | Permissão, carrossel Local, Mesa (estúdio), mês (aba Manutenção), abas Set/Manutenção |
+| `index.tsx` | Permissão; linha 1 = carrossel Local + Mesa/Mês + Ajuda; linha 2 = abas Set/Manutenção |
 | `AbaSet.tsx` | KPIs + tabela Set + CTAs Checklist (gated Criar) |
 | `AbaManutencao.tsx` | Limpeza + Manutenção + Registrar (gated Criar); modais placeholder |
 | `ModalChecklist.tsx` | Abas Itens (status) + Anotações (tipo + observação) |

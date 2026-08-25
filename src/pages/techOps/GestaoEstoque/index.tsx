@@ -28,6 +28,10 @@ import {
   fetchEstoqueFornecedores,
   fetchEstoqueItens,
   fetchEstoqueJogoLotes,
+  buildEstoqueLocalNomeMap,
+  ESTOQUE_LOCAIS_FIXOS_FILTRO,
+  ESTOQUE_FILTRO_LOCAIS_ARIA_LABEL,
+  ESTOQUE_FILTRO_TODOS_LOCAIS_LABEL,
   ESTOQUE_EQUIP_CATEGORIAS,
   ESTOQUE_EQUIP_CATEGORIA_LABEL,
   ESTOQUE_ITEM_CATEGORIAS,
@@ -121,9 +125,11 @@ export default function TechOpsGestaoEstoque() {
       });
   }, [perm.loading, podeVer, carregar]);
 
-  const estudioNomePorSlug = useMemo(
-    () => Object.fromEntries(estudios.map((e) => [e.slug, e.nome])),
-    [estudios],
+  const estudioNomePorSlug = useMemo(() => buildEstoqueLocalNomeMap(estudios), [estudios]);
+
+  const localFixoFiltroOptions = useMemo(
+    () => ESTOQUE_LOCAIS_FIXOS_FILTRO.map((l) => ({ value: l.chave, label: l.label })),
+    [],
   );
 
   const categoriaOptions = useMemo(() => {
@@ -224,7 +230,14 @@ export default function TechOpsGestaoEstoque() {
             wrapperStyle={{ flex: "1 1 260px", maxWidth: 420 }}
           />
           {mostrarEstudio ? (
-            <FiltroEstudioSelect value={filtroEstudio} onChange={setFiltroEstudio} estudios={estudios} />
+            <FiltroEstudioSelect
+              value={filtroEstudio}
+              onChange={setFiltroEstudio}
+              estudios={estudios}
+              todosLabel={ESTOQUE_FILTRO_TODOS_LOCAIS_LABEL}
+              label={ESTOQUE_FILTRO_LOCAIS_ARIA_LABEL}
+              extraOptions={localFixoFiltroOptions}
+            />
           ) : null}
           {mostrarCategoria ? (
             <FiltroBarCampoSelect

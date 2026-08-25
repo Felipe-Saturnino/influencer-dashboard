@@ -18,6 +18,7 @@ import {
   ESTOQUE_EQUIP_CATEGORIA_LABEL,
   ESTOQUE_EQUIP_STATUS_COLOR,
   ESTOQUE_EQUIP_STATUS_LABEL,
+  labelEstoqueLocalSlug,
   proximoCodigoEstoque,
   type EstoqueEquipamentoRow,
   type EstoqueEquipStatus,
@@ -74,7 +75,9 @@ export function AbaEquipamentos({
   const pageBox = getPageContentBoxStyle(brand, t);
 
   const alocacao = (r: EstoqueEquipamentoRow): string =>
-    r.status === "em_uso" && r.estudio_slug ? (estudioNomePorSlug[r.estudio_slug] ?? r.estudio_slug) : "—";
+    r.status === "em_uso" && r.estudio_slug
+      ? labelEstoqueLocalSlug(r.estudio_slug, estudioNomePorSlug)
+      : "—";
 
   const filtradosBase = useMemo(
     () =>

@@ -92,10 +92,21 @@ export function AbaInterna({
   return (
     <>
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SectionTitle sub="Movimentações internas">Listagem</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Movimentações internas">Listagem</SectionTitle>
           {permissoesPagina.podeNovaOs ? (
-            <CtaCriarButton onClick={() => setNovoAberto(true)}>Nova O.S. Interna</CtaCriarButton>
+            <CtaCriarButton onClick={() => setNovoAberto(true)} style={{ flexShrink: 0 }}>
+              Nova O.S. Interna
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (

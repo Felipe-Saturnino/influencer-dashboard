@@ -45,10 +45,21 @@ export function AbaManutencaoPainel({
   return (
     <>
       <div style={pageBox}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-          <SectionTitle sub="registros de limpeza">Limpeza</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="registros de limpeza">Limpeza</SectionTitle>
           {podeCriar ? (
-            <CtaCriarButton onClick={() => setModal("reg-limpeza")}>Registrar Limpeza</CtaCriarButton>
+            <CtaCriarButton onClick={() => setModal("reg-limpeza")} style={{ flexShrink: 0 }}>
+              Registrar Limpeza
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (
@@ -105,10 +116,21 @@ export function AbaManutencaoPainel({
       </div>
 
       <div style={pageBox}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-          <SectionTitle sub="registros de manutenção">Manutenção</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="registros de manutenção">Manutenção</SectionTitle>
           {podeCriar ? (
-            <CtaCriarButton onClick={() => setModal("reg-manut")}>Registrar Manutenção</CtaCriarButton>
+            <CtaCriarButton onClick={() => setModal("reg-manut")} style={{ flexShrink: 0 }}>
+              Registrar Manutenção
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (

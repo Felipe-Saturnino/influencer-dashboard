@@ -111,10 +111,21 @@ export function AbaSet({
       </div>
 
       <div style={pageBox}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-          <SectionTitle sub={`itens em ${localLabel}`}>Itens</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub={`itens em ${localLabel}`}>Itens</SectionTitle>
           {podeCriar ? (
-            <CtaCriarButton onClick={() => setChecklistAberto(true)}>Checklist</CtaCriarButton>
+            <CtaCriarButton onClick={() => setChecklistAberto(true)} style={{ flexShrink: 0 }}>
+              Checklist
+            </CtaCriarButton>
           ) : null}
         </div>
 
