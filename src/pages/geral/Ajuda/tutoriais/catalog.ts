@@ -10,6 +10,7 @@ import { TUTORIAL_GESTAO_STAFF_EDITAR } from "./gestaoStaffEditar";
 import { TUTORIAL_IMPRIMIR_IDS_STAFF } from "./imprimirIdsStaff";
 import { TUTORIAL_JUSTIFICATIVA_PRESENCA } from "./justificativaPresenca";
 import { TUTORIAL_MARKETPLACE_OFERTAS } from "./marketplaceOfertas";
+import { TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO } from "./figurinoRetiradaDevolucao";
 import { TUTORIAL_NOVO_INCIDENTE } from "./novoIncidente";
 import { TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS } from "./portalRhCienciaPoliticas";
 import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "./portalRhComunicadosLidos";
@@ -25,6 +26,7 @@ import type { TutorialDef, TutorialSecaoNav } from "./types";
 /** Catálogo de tutoriais — ordem das secções alinhada ao menu quando possível. */
 export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_NOVO_INCIDENTE,
+  TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO,
   TUTORIAL_GESTAO_STAFF_EDITAR,
   TUTORIAL_IMPRIMIR_IDS_STAFF,
   TUTORIAL_PORTAL_RH_GERENCIAMENTO,

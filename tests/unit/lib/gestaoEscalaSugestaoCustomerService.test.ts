@@ -36,6 +36,78 @@ function preencherAgosto4x2(
   }
 }
 
+function predMrn33FaseA(off: number, phase: number): "MRN" | "Folga" {
+  const m = ((off + phase) % 6 + 6) % 6;
+  return m < 3 ? "MRN" : "Folga";
+}
+
+function predMrn33FaseB(off: number, phase: number): "MRN" | "Folga" {
+  const m = ((off + phase + 3) % 6 + 6) % 6;
+  return m < 3 ? "MRN" : "Folga";
+}
+
+describe("gerarCelulasSugestaoCustomerService — 3x3 Manhã pareamento A/B", () => {
+  const dias = diasMes("2026-09", 6);
+
+  it("dois GP 3x3 MRN sem mês anterior alternam variante A e B com a mesma fase", () => {
+    const gpA = {
+      id: "gp-mrn-a",
+      escalaCadastro: "3x3",
+      siglaTurnoStaff: "MRN",
+      turnoStaffNome: "Manhã",
+      liveNoEstudioIso: null,
+    };
+    const gpB = {
+      id: "gp-mrn-b",
+      escalaCadastro: "3x3",
+      siglaTurnoStaff: "MRN",
+      turnoStaffNome: "Manhã",
+      liveNoEstudioIso: null,
+    };
+
+    const out = gerarCelulasSugestaoCustomerService([gpA, gpB], dias);
+    const iso = "2026-09-01";
+    const off = dayOffsetUtc2000(iso);
+    const valA = out[chave(gpA.id, iso)];
+
+    let phaseEncontrada = -1;
+    for (let p = 0; p < 6; p++) {
+      if (predMrn33FaseA(off, p) === valA) {
+        phaseEncontrada = p;
+        break;
+      }
+    }
+    expect(phaseEncontrada).toBeGreaterThanOrEqual(0);
+    expect(out[chave(gpB.id, iso)]).toBe(predMrn33FaseB(off, phaseEncontrada));
+  });
+
+  it("cobertura diária: A e B juntos não folgam no mesmo dia (primeira semana)", () => {
+    const gpA = {
+      id: "gp-mrn-a",
+      escalaCadastro: "3x3",
+      siglaTurnoStaff: "MRN",
+      turnoStaffNome: "Manhã",
+      liveNoEstudioIso: null,
+    };
+    const gpB = {
+      id: "gp-mrn-b",
+      escalaCadastro: "3x3",
+      siglaTurnoStaff: "MRN",
+      turnoStaffNome: "Manhã",
+      liveNoEstudioIso: null,
+    };
+
+    const out = gerarCelulasSugestaoCustomerService([gpA, gpB], dias);
+
+    for (const dia of dias) {
+      const a = out[chave(gpA.id, dia.iso)];
+      const b = out[chave(gpB.id, dia.iso)];
+      expect(a === "Folga" && b === "Folga").toBe(false);
+      expect([a, b].filter((v) => v === "MRN").length).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
 describe("gerarCelulasSugestaoCustomerService — continuidade 4x2", () => {
   const rowId = "gp-continuidade";
   const linha = {

@@ -345,11 +345,11 @@ export function gerarCelulasSugestaoCustomerService(
     }
 
     if (esc === "3x3" && sig === "MRN") {
-      const phaseDefault = mod(phaseDefaultLegado + idxMrn33 * 2, 6);
-      const { phase, pred } = inferirFaseMrn33Variante(amostras, phaseDefault, [
-        { pred: predMrn33FaseA },
-        { pred: predMrn33FaseB },
-      ]);
+      const useB = idxMrn33 % 2 === 1;
+      const variantes = useB
+        ? [{ pred: predMrn33FaseB }, { pred: predMrn33FaseA }]
+        : [{ pred: predMrn33FaseA }, { pred: predMrn33FaseB }];
+      const { phase, pred } = inferirFaseMrn33Variante(amostras, phaseDefaultLegado, variantes);
       preencherDiasOperacionais(out, row.id, dias, liveIso, (off) => pred(off, phase));
       idxMrn33 += 1;
       continue;
@@ -364,11 +364,11 @@ export function gerarCelulasSugestaoCustomerService(
     }
 
     if (esc === "3x3" && sig === "AFT") {
-      const phaseDefault = mod(phaseDefaultLegado + idxAft33 * 2, 6);
-      const { phase, pred } = inferirFaseMrn33Variante(amostras, phaseDefault, [
-        { pred: predMrn33FaseAftA },
-        { pred: predMrn33FaseAftB },
-      ]);
+      const useB = idxAft33 % 2 === 1;
+      const variantes = useB
+        ? [{ pred: predMrn33FaseAftB }, { pred: predMrn33FaseAftA }]
+        : [{ pred: predMrn33FaseAftA }, { pred: predMrn33FaseAftB }];
+      const { phase, pred } = inferirFaseMrn33Variante(amostras, phaseDefaultLegado, variantes);
       preencherDiasOperacionais(out, row.id, dias, liveIso, (off) => pred(off, phase));
       idxAft33 += 1;
       continue;

@@ -112,6 +112,8 @@ alwaysApply: false
 - **Permissões:** **Editar** = Retirada / Devolução; **Criar** = Cadastrar peça, Manutenção (aba Disponíveis), Disponibilizar e Descartar (aba Manutenção).
 - **Handoff:** barcode (leitor USB modo teclado + câmera opcional), condição da peça, abas.
 
+**Tutorial (Ajuda → Tutoriais):** **Retirada e Devolução** (`figurino-retirada-devolucao`, URL `/Ajuda/Tutoriais/FigurinoRetiradaDevolucao`) — retirada/devolução manual e por bipagem; liderança usa tipo **Emprestada**; **Fixo** só equipe Figurino; classificação na devolução (Boa condição / Possível descarte / Manutenção). Visibilidade: Shift Leader, Service Manager, Figurino, gestor, RH. Imagens em `public/tutoriais/estudio/figurinos/retirada-devolucao/`. Atalho contextual na barra de abas (`AjudaContextualAcoes` + `TUTORIAL_CTX_FIGURINOS`).
+
 ---
 
 ## Roteiro de Mesa (`roteiro_mesa`)

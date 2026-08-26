@@ -23,6 +23,7 @@ export function AbaSet({
   itens,
   loading,
   localLabel,
+  mesaChecklistLabel,
   localChave,
   mesaId,
   autorNome,
@@ -33,6 +34,8 @@ export function AbaSet({
   itens: ItemAlocadoSetRow[];
   loading: boolean;
   localLabel: string;
+  /** Mesa da barra — só metadado do Checklist; a lista exibe todo o Set do local. */
+  mesaChecklistLabel: string | null;
   localChave: string;
   mesaId: string | null;
   autorNome: string;
@@ -121,7 +124,16 @@ export function AbaSet({
             marginBottom: 16,
           }}
         >
-          <SectionTitle compact sub={`itens em ${localLabel}`}>Itens</SectionTitle>
+          <SectionTitle
+            compact
+            sub={
+              mesaChecklistLabel
+                ? `todo o Set de ${localLabel} — mesa ${mesaChecklistLabel} aplica-se ao Checklist`
+                : `itens em ${localLabel}`
+            }
+          >
+            Itens
+          </SectionTitle>
           {podeCriar ? (
             <CtaCriarButton onClick={() => setChecklistAberto(true)} style={{ flexShrink: 0 }}>
               Checklist
@@ -193,7 +205,7 @@ export function AbaSet({
 
       {checklistAberto ? (
         <ModalChecklistItensAlocados
-          localLabel={localLabel}
+          localLabel={mesaChecklistLabel ? `${localLabel} · ${mesaChecklistLabel}` : localLabel}
           localChave={localChave}
           mesaId={mesaId}
           itens={itens}

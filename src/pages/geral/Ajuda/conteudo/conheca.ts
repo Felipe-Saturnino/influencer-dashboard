@@ -699,7 +699,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Retirada e Devolução",
         texto:
-          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: Emprestada (temporário) ou Fixo (uso contínuo). A peça passa a aparecer na aba correspondente.\n\nNa devolução, informe a condição da peça: Boa condição, Possível descarte ou Manutenção. Peças devolvidas para manutenção exigem tipo e motivo.",
+          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: **Emprestada** (temporário — fluxo de Shift Leader e liderança) ou **Fixo** (uso contínuo — operação da equipe de Figurino). A peça passa a aparecer na aba correspondente.\n\nNa devolução, informe a condição da peça: **Boa condição**, **Possível descarte** ou **Manutenção**. Peças devolvidas para manutenção exigem tipo e motivo.\n\nTutorial passo a passo (manual e bipagem): Ajuda → Tutoriais → **Retirada e Devolução**.",
       },
       {
         subtitulo: "Manutenção e Descarte",

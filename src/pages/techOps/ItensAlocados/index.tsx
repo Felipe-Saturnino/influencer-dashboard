@@ -81,15 +81,14 @@ export default function TechOpsItensAlocados() {
   const ehEstudio = localAtual?.tipo === "estudio";
   const estudioSlug = ehEstudio ? slugFromChaveEstudioOs(localChave) : null;
 
-  const localLabel = useMemo(() => {
-    if (!localAtual) return "";
-    if (!ehEstudio) return localAtual.label;
-    if (mesaId === MESA_TODAS) return `${localAtual.label} · Todas Mesas`;
+  const localLabel = localAtual?.label ?? "";
+
+  /** Mesa selecionada na barra — metadado do Checklist; itens do Set são do local inteiro. */
+  const mesaChecklistLabel = useMemo(() => {
+    if (!ehEstudio || mesaId === MESA_TODAS) return null;
     const m = mesas.find((x) => x.id === mesaId);
-    return m
-      ? `${localAtual.label} · ${labelMesaFiltro(m.nome_mesa, m.numero_mesa)}`
-      : localAtual.label;
-  }, [localAtual, ehEstudio, mesaId, mesas]);
+    return m ? labelMesaFiltro(m.nome_mesa, m.numero_mesa) : null;
+  }, [ehEstudio, mesaId, mesas]);
 
   const carregarCatalogo = useCallback(async () => {
     const est = await fetchEstudiosItensAlocados();
@@ -305,6 +304,7 @@ export default function TechOpsItensAlocados() {
             itens={itens}
             loading={loading}
             localLabel={localLabel}
+            mesaChecklistLabel={mesaChecklistLabel}
             localChave={localChave}
             mesaId={mesaId === MESA_TODAS ? null : mesaId}
             autorNome={user?.name?.trim() || user?.email || "Usuário"}

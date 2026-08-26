@@ -15,7 +15,8 @@ import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioL
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina"
 import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes"
+import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes"
+import { TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO } from "../../geral/Ajuda/tutoriais/figurinoRetiradaDevolucao"
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu"
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants"
 import { textoContemBusca } from "../../../lib/searchText"
@@ -62,6 +63,13 @@ import { ModalManutencaoPeca } from "./ModalManutencaoPeca"
 import { ModalRetirada } from "./ModalRetirada"
 import { ModalScanner } from "./ModalScanner"
 import { ModalSucessoCadastro } from "./ModalSucessoCadastro"
+
+const TUTORIAL_CTX_FIGURINOS: AjudaContextualTutorial = {
+  id: TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO.id,
+  urlSlug: TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO.urlSlug,
+  titulo: TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO.titulo,
+  descricao: "Retirada e devolução manual ou por bipagem, com classificação da peça.",
+};
 
 export default function FigurinosPage() {
   const { theme: t, user } = useApp();
@@ -697,7 +705,7 @@ export default function FigurinosPage() {
               ))}
             </div>
             <div className="app-filter-bar-tabs-cta__actions">
-              <AjudaContextualAcoes pageKey="rh_figurinos" />
+              <AjudaContextualAcoes pageKey="rh_figurinos" tutorial={TUTORIAL_CTX_FIGURINOS} />
             </div>
           </div>
       </div>
