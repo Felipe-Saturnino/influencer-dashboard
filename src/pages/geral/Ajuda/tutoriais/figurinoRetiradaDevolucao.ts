@@ -7,7 +7,7 @@ const IMG = "/tutoriais/estudio/figurinos/retirada-devolucao";
 export const TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO: TutorialDef = {
   id: "figurino-retirada-devolucao",
   urlSlug: "FigurinoRetiradaDevolucao",
-  titulo: "Retirada e Devolução",
+  titulo: "Figurino Retirada e Devolução",
   section: "Estúdio",
   icon: Shirt,
   relatedPageKey: "rh_figurinos",
@@ -29,8 +29,6 @@ export const TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO: TutorialDef = {
       titulo: "2. Retirada manual (botão)",
       texto:
         "1. Na linha da peça, clique em **Retirada**.\n2. No modal, pesquise o prestador em **Pesquisar Staff...** (nome ou setor) e selecione na lista — mesma base da Gestão de Prestadores (ativos e indisponíveis).\n3. Em **Tipo de retirada**, mantenha **Emprestada** — é o fluxo da liderança para empréstimo temporário no turno.\n4. Confira **Registrado por** e a data/hora; clique em **Confirmar Retirada**.\n\nA peça sai de **Disponíveis** e passa a aparecer na aba **Emprestada**.",
-      aviso:
-        "Retirada e devolução exigem permissão de **Editar = Sim** em Figurinos. **Fixo** (uso contínuo) é operação da equipe de **Figurino** — Shift Leader e demais lideranças registram apenas **Emprestada**.",
       imagens: [
         {
           src: `${IMG}/02-modal-retirada-emprestada.png`,
@@ -45,7 +43,7 @@ export const TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO: TutorialDef = {
     {
       titulo: "3. Retirada por bipagem",
       texto:
-        "1. Na barra de filtros, clique em **Bipar código**.\n2. Aponte o leitor USB para a etiqueta — leitores em modo teclado preenchem o campo automaticamente; pressione **Enter** ou **Buscar**.\n3. Também é possível digitar o código ou código de barras manualmente. Para câmera, expanda **Usar câmera (opcional)**.\n4. Se a peça estiver **disponível**, o sistema abre o modal **Retirada** (mesmo fluxo do passo 2).\n5. Se já estiver emprestada, abre direto o modal **Devolução** (passo 5).",
+        "1. Na barra de filtros, clique em **Bipar código**.\n2. Aponte a pistola de leitor para a etiqueta, pressione **Enter** ou **Buscar**.\n3. Também é possível digitar o código ou código de barras manualmente. Para câmera, expanda **Usar câmera (opcional)**.\n4. Se a peça estiver **disponível**, o sistema abre o modal **Retirada** (mesmo fluxo do passo 2).\n5. Se já estiver emprestada, abre direto o modal **Devolução** (passo 5).",
       imagens: [
         {
           src: `${IMG}/04-modal-bipar-codigo.png`,
@@ -67,7 +65,7 @@ export const TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO: TutorialDef = {
     {
       titulo: "5. Devolução manual (botão)",
       texto:
-        "1. Na aba **Emprestada**, clique em **Devolução** na linha da peça.\n2. O modal mostra os dados da retirada ativa (prestador e data).\n3. Em **Condição da devolução**, escolha uma opção:\n\n— **Boa condição** (verde) — peça volta ao estoque disponível.\n— **Possível descarte** (amarelo) — peça disponível, mas marcada para avaliação; observações opcionais.\n— **Manutenção** (roxo) — envia para manutenção; informe **Tipo** (Costura, Lavagem, Perda ou Descarte) e **Motivo**.\n4. Clique em **Confirmar devolução**.\n\nApós **Boa condição** ou **Possível descarte**, a peça retorna à aba **Disponíveis**. **Manutenção** move para a aba **Manutenção**.",
+        "1. Na aba **Emprestada**, clique em **Devolução** na linha da peça.\n2. O modal mostra os dados da retirada ativa (prestador e data).\n3. Em **Condição da devolução**, escolha uma opção:\n\n— **Boa condição** (verde) — peça volta ao estoque disponível.\n— **Possível descarte** (amarelo) — peça disponível, mas marcada para avaliação; a **Observações** é obrigatória.\n— **Manutenção** (roxo) — envia para manutenção; informe **Tipo** (Costura, Lavagem, Perda ou Descarte) e **Motivo**.\n4. Clique em **Confirmar devolução**.\n\nApós **Boa condição** ou **Possível descarte**, a peça retorna à aba **Disponíveis**. **Manutenção** move para a aba **Manutenção**.",
       aviso:
         "A classificação na devolução atualiza o status e a condição da peça no inventário. Escolha conforme o estado físico real ao receber a peça.",
       imagens: [
@@ -94,5 +92,5 @@ export const TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO: TutorialDef = {
     },
   ],
   notasFinais:
-    "— **Emprestada** = empréstimo temporário (turno); **Fixo** = alocação contínua — use **Fixo** somente na operação de Figurino.\n— Peças em **Manutenção** ou **Descartada** não abrem fluxo de retirada/devolução pela bipagem — a tela avisa o status.\n— O histórico completo da peça fica no detalhe ao clicar no **código** na tabela.",
+    "— **Emprestada** = empréstimo temporário (turno); **Fixo** = alocação contínua — usado apenas pela equipe de Figurino.\n— Peças em **Manutenção** ou **Descartada** não abrem fluxo de retirada/devolução pela bipagem — a tela avisa o status.\n— O histórico completo da peça fica no detalhe ao clicar no **código** na tabela.",
 };

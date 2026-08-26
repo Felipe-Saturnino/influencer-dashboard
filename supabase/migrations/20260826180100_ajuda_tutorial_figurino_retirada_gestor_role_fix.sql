@@ -1,4 +1,4 @@
--- Visibilidade inicial — Retirada e Devolução (Figurinos): liderança de estúdio.
+-- Corrige seed com role legado `gestor` (removido) → `gestor_operacoes` (ROLES canónico).
 INSERT INTO public.ajuda_tutorial_visibilidade (tutorial_id, roles)
 VALUES (
   'figurino-retirada-devolucao',
@@ -10,4 +10,4 @@ VALUES (
     'rh'
   ]::text[]
 )
-ON CONFLICT (tutorial_id) DO NOTHING;
+ON CONFLICT (tutorial_id) DO UPDATE SET roles = EXCLUDED.roles;

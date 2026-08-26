@@ -1,4 +1,4 @@
-# Tutorial — Retirada e Devolução (Figurinos)
+# Tutorial — Figurino Retirada e Devolução
 
 **URL:** `/Ajuda/Tutoriais/FigurinoRetiradaDevolucao`
 
@@ -24,7 +24,7 @@ Imagens em `public/tutoriais/estudio/figurinos/retirada-devolucao/`.
 | Opção | Efeito |
 |-------|--------|
 | **Boa condição** | Volta para **Disponíveis** |
-| **Possível descarte** | Volta para **Disponíveis** (com observação) |
+| **Possível descarte** | Volta para **Disponíveis** — **observação obrigatória** |
 | **Manutenção** | Vai para aba **Manutenção** (tipo + motivo obrigatórios) |
 
 ## Passos (resumo)
