@@ -144,12 +144,23 @@ export function AbaManutencao({
   return (
     <>
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SectionTitle sub="Equipamentos enviados a fornecedores para manutenção">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Equipamentos enviados a fornecedores para manutenção">
             Ordens em Aberto
           </SectionTitle>
           {permissoesPagina.podeNovaOs ? (
-            <CtaCriarButton onClick={() => setNovoAberto(true)}>Nova O.S. Manutenção</CtaCriarButton>
+            <CtaCriarButton onClick={() => setNovoAberto(true)} style={{ flexShrink: 0 }}>
+              Nova O.S. Manutenção
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (

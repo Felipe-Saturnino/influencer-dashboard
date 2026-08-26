@@ -105,12 +105,15 @@ alwaysApply: false
 - Filtros na barra (strip `primaryTransparent*`): **`FiltroEstudioSelect`** (**Todos Estúdios** + opção **Staff** via `extraOptions`), **`FiltroFigurinosCategoriaSelect`** (**Todas Categorias**, ícone `Tags` 15px), **`FiltroFigurinosTamanhoSelect`** (**Todos Tamanhos**, ícone `Ruler` 15px), **`FiltroFigurinosCorSelect`** (**Todas Cores**, ícone `Palette` 15px), **`FiltroFigurinosGeneroSelect`** (**Todos Gêneros**, ícone `Shirt` 15px) — pill 999 + `getFiltroCampoAtivoStyle` quando filtrado; **não** `<select>` nativo sem ícone.
 - Aba **Disponíveis** — colunas: Código, Estúdio, Categoria, Tamanho, Cor, Gênero, Classificação, Ações.
 - Modal Retirada: tipo **Emprestada** (valor interno `emprestar`) ou **Fixo**.
+- Modal Devolução: **Possível descarte** exige **Observações** (`CampoObrigatorioMark` + validação antes do RPC); **Boa condição** mantém observações opcionais; **Manutenção** exige tipo e motivo.
 - Peças vinculadas por **`rh_figurino_peca_estudios`** (N:N); cadastro via RPC `rh_figurino_criar_peca` com **`p_estudio_slugs`**. Junction **`rh_figurino_peca_operadoras`** mantida só para legado/sync. Coluna e modais exibem **Estúdio** (`labelEstudiosPeca` com fallback operadora→estúdio).
 - **Código da peça:** prefixo das **3 primeiras letras** da categoria (sem acento, maiúsculas) + `-` + sequencial de 6 dígitos por prefixo (ex.: Camisa → `CAM-000001`, Vestido → `VES-000001`, Acessório → `ACE-000001`). Contador independente por categoria em `rh_figurino_category_code_counters`; pré-visualização no cadastro via `rh_figurino_preview_proximo_code(p_category)`.
 - **Cadastro — estúdios:** modal com **Staff** (pode combinar com um ou mais estúdios; `atende_staff = true` + `rh_figurino_peca_estudios` quando houver slugs), **Todos Estúdios** (exclusivo sozinho; `atende_todos_estudios = true`) ou só estúdio(s) específico(s). Referência UI: `FigurinoEstudioCampoSelect`.
 - **Cadastro — gênero e cor:** obrigatórios no modal, abaixo de categoria/tamanho — **Gênero** (`Masculino` | `Feminino` | `Unisex`, default `Unisex`); **Cor** (`Branco` | `Preto` | `Cinza` | `Único`, default `Único`). Colunas `genero` e `cor` em `rh_figurino_pecas`; RPC `rh_figurino_criar_peca` com `p_genero` e `p_cor`.
 - **Permissões:** **Editar** = Retirada / Devolução; **Criar** = Cadastrar peça, Manutenção (aba Disponíveis), Disponibilizar e Descartar (aba Manutenção).
 - **Handoff:** barcode (leitor USB modo teclado + câmera opcional), condição da peça, abas.
+
+**Tutorial (Ajuda → Tutoriais):** **Figurino Retirada e Devolução** (`figurino-retirada-devolucao`, URL `/Ajuda/Tutoriais/FigurinoRetiradaDevolucao`) — retirada/devolução manual e por bipagem; liderança usa tipo **Emprestada**; **Fixo** só equipe Figurino; classificação na devolução (Boa condição / Possível descarte / Manutenção). Visibilidade: Shift Leader, Service Manager, Figurino, **Gestor de Operações**, RH. Imagens em `public/tutoriais/estudio/figurinos/retirada-devolucao/`. Atalho contextual na barra de abas (`AjudaContextualAcoes` + `TUTORIAL_CTX_FIGURINOS`).
 
 ---
 

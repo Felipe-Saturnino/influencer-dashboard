@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { FONT } from "../../../constants/theme"
 import { supabase } from "../../../lib/supabase"
+import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import { type RhFigurinoEmprestimo, type RhFigurinoPeca } from "./types"
@@ -41,6 +42,10 @@ export function ModalDevolucao({
     setErr(null);
     if (!fluxo) {
       setErr("Selecione a condição da devolução.");
+      return;
+    }
+    if (fluxo === "possivel_descarte" && !observacoes.trim()) {
+      setErr("Informe a observação.");
       return;
     }
     if (fluxo === "manutencao") {
@@ -121,6 +126,7 @@ export function ModalDevolucao({
       {fluxo === "boa" || fluxo === "possivel_descarte" ? (
         <label style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, display: "block", marginBottom: 12 }}>
           Observações
+          {fluxo === "possivel_descarte" ? <CampoObrigatorioMark /> : null}
           <textarea
             value={observacoes}
             onChange={(e) => setObservacoes(e.target.value)}

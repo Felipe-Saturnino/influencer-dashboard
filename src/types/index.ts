@@ -95,6 +95,7 @@ export type PageKey =
   | "informativos"
   | "tech_ops_estoque"
   | "tech_ops_ordem_saida"
+  | "tech_ops_itens_alocados"
   | "configuracoes"
   | "simulador_login"
   | "ajuda";

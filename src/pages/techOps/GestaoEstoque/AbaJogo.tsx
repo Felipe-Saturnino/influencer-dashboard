@@ -144,10 +144,21 @@ export function AbaJogo({
       </div>
 
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SectionTitle sub="Lotes de itens de jogo cadastrados">Catálogo</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Lotes de itens de jogo cadastrados">Catálogo</SectionTitle>
           {perm.canCriarOk ? (
-            <CtaCriarButton onClick={() => setNovoAberto(true)}>Novo Item de Jogo</CtaCriarButton>
+            <CtaCriarButton onClick={() => setNovoAberto(true)} style={{ flexShrink: 0 }}>
+              Novo Item de Jogo
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (

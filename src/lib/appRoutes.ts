@@ -304,6 +304,10 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "externa", slug: "Externa", label: "O.S. Externa", access: "always" },
     { tabId: "manutencao", slug: "Manutencao", label: "O.S. Manutenção", access: "always" },
   ]),
+  page("Itens Alocados", "tech_ops_itens_alocados", "ItensAlocados", [
+    { tabId: "set", slug: "Set", label: "Set", access: "always" },
+    { tabId: "manutencao", slug: "Manutencao", label: "Manutenção", access: "always" },
+  ]),
   page("Gestão de Usuários", "gestao_usuarios", "GestaoDeUsuarios", [
     { tabId: "usuarios", slug: "Usuarios", label: "Usuários", access: "always" },
     { tabId: "permissoes", slug: "Permissoes", label: "Permissões", access: "always" },

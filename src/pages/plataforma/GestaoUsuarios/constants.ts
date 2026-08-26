@@ -184,6 +184,7 @@ const PAGES_META: {
   // Tech Ops
   { key: "tech_ops_estoque", label: "Gestão de Estoque", secao: "Tech Ops", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "tech_ops_ordem_saida", label: "Ordem de Saída", secao: "Tech Ops", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "tech_ops_itens_alocados", label: "Itens Alocados", secao: "Tech Ops", hasCriar: true, hasEditar: false, hasExcluir: false },
   // Plataforma — Criar/Editar/Excluir alinhados a Novo usuário / modais e abas / desativação
   { key: "gestao_usuarios", label: "Gestão de Usuários", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "gestao_operadoras", label: "Gestão de Operadoras", secao: "Plataforma", hasCriar: true, hasEditar: true, hasExcluir: true },

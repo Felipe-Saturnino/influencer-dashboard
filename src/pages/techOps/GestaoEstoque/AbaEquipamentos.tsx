@@ -18,6 +18,7 @@ import {
   ESTOQUE_EQUIP_CATEGORIA_LABEL,
   ESTOQUE_EQUIP_STATUS_COLOR,
   ESTOQUE_EQUIP_STATUS_LABEL,
+  labelEstoqueLocalSlug,
   proximoCodigoEstoque,
   type EstoqueEquipamentoRow,
   type EstoqueEquipStatus,
@@ -74,7 +75,9 @@ export function AbaEquipamentos({
   const pageBox = getPageContentBoxStyle(brand, t);
 
   const alocacao = (r: EstoqueEquipamentoRow): string =>
-    r.status === "em_uso" && r.estudio_slug ? (estudioNomePorSlug[r.estudio_slug] ?? r.estudio_slug) : "—";
+    r.status === "em_uso" && r.estudio_slug
+      ? labelEstoqueLocalSlug(r.estudio_slug, estudioNomePorSlug)
+      : "—";
 
   const filtradosBase = useMemo(
     () =>
@@ -185,10 +188,21 @@ export function AbaEquipamentos({
       </div>
 
       <div style={pageBox}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SectionTitle sub="Equipamentos cadastrados">Catálogo</SectionTitle>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <SectionTitle compact sub="Equipamentos cadastrados">Catálogo</SectionTitle>
           {perm.canCriarOk ? (
-            <CtaCriarButton onClick={() => setNovoAberto(true)}>Novo Equipamento</CtaCriarButton>
+            <CtaCriarButton onClick={() => setNovoAberto(true)} style={{ flexShrink: 0 }}>
+              Novo Equipamento
+            </CtaCriarButton>
           ) : null}
         </div>
         {loading ? (

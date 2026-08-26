@@ -699,7 +699,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Retirada e Devolução",
         texto:
-          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: Emprestada (temporário) ou Fixo (uso contínuo). A peça passa a aparecer na aba correspondente.\n\nNa devolução, informe a condição da peça: Boa condição, Possível descarte ou Manutenção. Peças devolvidas para manutenção exigem tipo e motivo.",
+          "Para registrar uma retirada, selecione a peça na tabela (ou bipe o código) e clique em Retirada. Busque o prestador pelo nome ou setor na lista da Gestão de Prestadores e escolha o tipo: **Emprestada** (temporário — fluxo de Shift Leader e liderança) ou **Fixo** (uso contínuo — operação da equipe de Figurino). A peça passa a aparecer na aba correspondente.\n\nNa devolução, informe a condição da peça: **Boa condição**, **Possível descarte** ou **Manutenção**. **Possível descarte** exige observação; **Manutenção** exige tipo e motivo.\n\nTutorial passo a passo (manual e bipagem): Ajuda → Tutoriais → **Figurino Retirada e Devolução**.",
       },
       {
         subtitulo: "Manutenção e Descarte",
@@ -1042,7 +1042,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Manuais — cards e ciência",
         texto:
-          "A aba **Manuais** lista os documentos em **cards**: código, tipo, título, **introdução** (texto do cadastro), jogos, versão e status da sua ciência.\n\nQuando o tipo do manual **não** é **Jogos**, os jogos mostram **Todos os Jogos** (preenchido automaticamente ao salvar — o campo **Qual Jogo?** não aparece no modal).\n\nClique em **Visualizar** para abrir o manual — o modal mostra introdução, descrição, **imagens/vídeos** e **anexos**. Quando a postagem exige ciência **e** você pertence a um dos times em **Aplicável a**, confirme com **Lido e Ciente**. Com **Editar = Sim**, o botão **Ver ciência** lista quem já registrou o aceite.",
+          "A aba **Manuais** lista os documentos em **cards**: código, tipo, título, **introdução** (texto do cadastro), jogos, versão e status da sua ciência.\n\nQuando o tipo do manual **não** é **Jogos**, os jogos mostram **Todos os Jogos** (preenchido automaticamente ao salvar — o campo **Qual Jogo?** não aparece no modal).\n\nClique em **Visualizar** para abrir o manual — o modal mostra introdução, descrição, **imagens/vídeos** e **anexos**. Quando a postagem exige ciência **e** você pertence a um dos times em **Aplicável a**, confirme com **Lido e Ciente**. Com **Editar = Sim** e a postagem marcada para exigir ciência, o botão **Ver ciência** lista quem já registrou o aceite.",
       },
       {
         subtitulo: "Tutoriais (Ajuda)",
@@ -1245,7 +1245,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Políticas e Normativas",
         texto:
-          "Lista documentos oficiais (políticas RH, procedimentos, códigos de conduta e normas operacionais) em **cards**: código, tipo, título, **objetivo** (texto preenchido no cadastro), versão, aplicabilidade e status da sua ciência.\n\nO campo **Aplicável a** (diretoria, gerência, time ou Todos os prestadores) define quem enxerga o documento na lista quando a permissão de Ver é **Próprios**. Com **Ver = Sim** ou **Editar = Sim**, todas as políticas publicadas aparecem.\n\nQuando o documento exige ciência e você o enxerga na lista, perfis internos e gerenciais devem registrar **Li e estou ciente** no modal do PDF. Perfis externos (influencer, operador, afiliado) não participam do fluxo de ciência.\n\nUse os filtros por família (Políticas RH, Procedimentos, Códigos, Operações) para restringir a lista. Clique em **Visualizar** para abrir o PDF e, quando aplicável, registrar sua ciência. Com **Editar = Sim**, **Ver ciência** lista quem já aceitou.",
+          "Lista documentos oficiais (políticas RH, procedimentos, códigos de conduta e normas operacionais) em **cards**: código, tipo, título, **objetivo** (texto preenchido no cadastro), versão, aplicabilidade e status da sua ciência.\n\nO campo **Aplicável a** (diretoria, gerência, time ou Todos os prestadores) define quem enxerga o documento na lista quando a permissão de Ver é **Próprios**. Com **Ver = Sim** ou **Editar = Sim**, todas as políticas publicadas aparecem.\n\nQuando o documento exige ciência e você o enxerga na lista, perfis internos e gerenciais devem registrar **Li e estou ciente** no modal do PDF. Perfis externos (influencer, operador, afiliado) não participam do fluxo de ciência.\n\nUse os filtros por família (Políticas RH, Procedimentos, Códigos, Operações) para restringir a lista. Clique em **Visualizar** para abrir o PDF e, quando aplicável, registrar sua ciência. Com **Editar = Sim** e a postagem marcada para exigir ciência, **Ver ciência** lista quem já aceitou.",
       },
       {
         subtitulo: "RH Talks",
@@ -1645,6 +1645,35 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  tech_ops_itens_alocados: {
+    titulo: "Itens Alocados",
+    blocos: [
+      {
+        texto:
+          "A página **Itens Alocados** mostra o checklist dos itens e equipamentos em uso no local (aba **Set**) e os registros de limpeza e manutenção (aba **Manutenção**). O Set é montado a partir das Ordens de Saída internas **Abertas** cujo destino é o local selecionado, com dados do catálogo da Gestão de Estoque.",
+      },
+      {
+        subtitulo: "Filtros",
+        texto:
+          "O carrossel de Local lista os estúdios ativos de Gestão de Estúdios mais Shuffler Room, OCR e Academy (sem Estoque). Na aba **Set**, em estúdio, o filtro Mesa começa em **Todas Mesas** (formato Nome da Mesa — Número). Na aba **Manutenção**, só o seletor de mês (atual + 2 anteriores, mais novo primeiro).",
+      },
+      {
+        subtitulo: "Aba Set",
+        texto:
+          "Os cards Itens do Set, Em Verificação e Em Manutenção filtram a tabela por status desta página (Em Uso, Verificar, Manutenção). A tabela lista código, nome, categoria, modelo/marca, quantidade, status, data de alocação e as ações **Ver** e **Histórico**. O botão **Checklist** abre o modal para atualizar status dos itens e registrar tipo de verificação (Preventiva, Pontual ou Escalada) com observação obrigatória.",
+      },
+      {
+        subtitulo: "Aba Manutenção",
+        texto:
+          "Dois blocos: **Limpeza** e **Manutenção**, com tabelas filtradas pelo local e mês (sem filtro de mesa). **Registrar Limpeza** lista as roletas alocadas (estúdio ou Academy) ou as máquinas de cartas (Shuffler Room ou OCR) do Set aberto — formato **Nome do Equipamento - Número de Série** — e grava o registro com data/hora e responsável. **Registrar Manutenção** no estúdio ou Academy pede a **mesa** (Nome da Mesa - Número), tipo conforme o jogo (roleta com opções de nivelamento e foto de evidência quando aplicável) e observação obrigatória; em Shuffler Room ou OCR pede a **máquina de cartas**, tipo de manutenção e observação.",
+      },
+      {
+        subtitulo: "Permissões",
+        texto:
+          "Com permissão de **Ver**, você vê todos os dados e as ações Ver e Histórico nas duas abas. Apenas quem tem permissão de **Criar** vê Checklist, Registrar Limpeza e Registrar Manutenção. Não há exclusão nesta página.",
+      },
+    ],
+  },
   tech_ops_estoque: {
     titulo: "Gestão de Estoque",
     blocos: [
@@ -1655,7 +1684,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação",
         texto:
-          "A barra no topo tem as quatro abas e, abaixo, a busca (por código, nome, marca, modelo, série, lote, empresa, CNPJ ou contato — sem diferenciar acentos), o filtro de Estúdio (cadastro de Gestão de Estúdios) e o filtro de Categoria, cujas opções mudam conforme a aba. Estúdio e Categoria não se aplicam à aba Fornecedores.\n\nCom o foco nas abas, use ← → do teclado para alternar entre elas (padrão tablist).",
+          "A barra no topo tem as quatro abas e, abaixo, a busca (por código, nome, marca, modelo, série, lote, empresa, CNPJ ou contato — sem diferenciar acentos), o filtro de **Local** (**Todos Locais** por padrão — estúdios de Gestão de Estúdios mais Shuffler Room, OCR e Academy) e o filtro de Categoria, cujas opções mudam conforme a aba. Local e Categoria não se aplicam à aba Fornecedores.\n\nCom o foco nas abas, use ← → do teclado para alternar entre elas (padrão tablist).",
       },
       {
         subtitulo: "Consolidado de KPIs",

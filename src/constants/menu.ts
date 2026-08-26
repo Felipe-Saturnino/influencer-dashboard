@@ -9,6 +9,7 @@ import {
   Briefcase,
   Calendar,
   CalendarRange,
+  ClipboardCheck,
   ClipboardList,
   ClipboardPen,
   Dices,
@@ -179,6 +180,7 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "tech_ops_estoque", label: "Gestão de Estoque", icon: Boxes },
       { key: "tech_ops_ordem_saida", label: "Ordem de Saída", icon: ClipboardList },
+      { key: "tech_ops_itens_alocados", label: "Itens Alocados", icon: ClipboardCheck },
     ],
   },
   {
