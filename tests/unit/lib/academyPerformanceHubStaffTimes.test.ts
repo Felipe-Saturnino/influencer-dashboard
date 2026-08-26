@@ -6,10 +6,11 @@ import {
 } from "../../../src/lib/academyPerformanceHubStaffTimes";
 
 describe("academyPerformanceHubStaffTimes", () => {
-  it("reconhece singular, plural e acentos", () => {
+  it("reconhece singular, plural, acentos e sufixos no nome do time", () => {
     expect(slugTimePerformanceHubDeNome("Game Presenter")).toBe("game_presenter");
     expect(slugTimePerformanceHubDeNome("Game Presenters")).toBe("game_presenter");
     expect(slugTimePerformanceHubDeNome("  GAME  PRESENTER  ")).toBe("game_presenter");
+    expect(slugTimePerformanceHubDeNome("Game Presenter - CDA")).toBe("game_presenter");
     expect(slugTimePerformanceHubDeNome("Shuffler")).toBe("shuffler");
     expect(slugTimePerformanceHubDeNome("Shufflers")).toBe("shuffler");
     expect(slugTimePerformanceHubDeNome("Shift Leader")).toBeNull();

@@ -181,7 +181,7 @@ Status publicados: **Aguardando** · **Feedback** · **Aprovado** (migração `2
 
 | Status | Ver = Próprios | Editar = Sim |
 |--------|----------------|--------------|
-| **Aguardando** | **Analisar Avaliação** | — (nenhuma ação) |
+| **Aguardando** | **Analisar Avaliação** | **Ver**, **Histórico** |
 | **Feedback** | Ver, Histórico | Ver, Histórico (**Aplicar Feedback** só na aba Feedback) |
 | **Aprovado** | Ver, Histórico | Ver, Histórico |
 
@@ -262,12 +262,12 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 
 | Fonte | Tabela / RPC | Uso |
 |-------|----------------|-----|
-| Prestadores por time | `rh_funcionarios` + `rh_org_times` + `rh_staff_times_filtrados` | Filtro Staff, prefill Dados, **Agenda de Avaliações**. Match por `timeOrganogramaIndicaGamePresenter` / `Shuffler` (singular/plural); **todos** os `org_time_id` do slug, não só o primeiro nome exacto. `fetchAllPages`. RLS: `_academy_performance_hub_perm('view')` |
+| Prestadores por time | `rh_funcionarios` + `rh_org_times` + `rh_staff_times_filtrados` | Filtro Staff, prefill Dados, **Agenda de Avaliações**. Match por `timeOrganogramaIndicaGamePresenter` / `Shuffler` (`includes` no nome normalizado — ex.: «Game Presenter - CDA»); **todos** os `org_time_id` do slug. `fetchAllPages`. RLS: `_academy_performance_hub_perm('view')` |
 | Go-live | `rh_funcionarios.staff_live_no_estudio` (fallback `data_inicio`) | Coluna Go-live na agenda |
 | Avaliações | `academy_performance_hub_avaliacao` | Abas Avaliações e Analisar; vazio até carga histórica |
 | Pesos do scoring | `academy_performance_hub_scoring_config` | Configuração por time; aplicada a novas avaliações |
 | Mesas / estúdios | `mesas_spin_cadastro`, `estudios_spin` | Modal Dados (GP) |
-| Vídeo da avaliação | bucket Storage `academy-performance-hub-videos` | Path em `video_url`; **Assistir** gera URL assinada. **Safari/iOS:** player inline no modal (`playsInline`); demais navegadores abrem nova aba com `abrirAssetAssinadoEmNovaAba` (fallback inline se pop-up bloqueado) |
+| Vídeo da avaliação | bucket Storage `academy-performance-hub-videos` | Path em `video_url`; **Assistir** gera URL assinada. **Safari/iOS:** mesma aba → player nativo (`abrirAssetAssinadoComFallback`); desktop abre nova aba (`abrirAssetAssinadoEmNovaAba`); fallback inline em modal se pop-up bloqueado. Upload aceita só **MP4/MOV** — WebM legado não reproduz no iPhone |
 
 #### Vídeo — limite e retenção
 

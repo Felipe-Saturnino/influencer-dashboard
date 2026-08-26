@@ -39,7 +39,6 @@ import {
   turnosBaseOfertaNaFolga,
   valorCelulaEhFolgaOperacional,
 } from "./rhCalendarioAcaoHelpers";
-import type { RhCalendarioAcaoTipo } from "./rhCalendarioAcaoHelpers";
 import type {
   EscalaTimeFiltro,
   LinhaOfertaMarketplace,
@@ -81,11 +80,35 @@ export function competenciaAnoMes(ano: number, mes0: number): string {
 /** Tipos de oferta publicáveis no Marketplace. */
 export type TipoOfertaMarketplace = "venda_turno" | "venda_folga" | "oferta_troca";
 
+/** Tipos operacionais Spin (1 célula na grade). */
+export type TipoOfertaSpinMarketplace = "oferta_spin_cobertura" | "oferta_spin_liberacao";
+
+export type TipoOfertaMarketplaceCompleto = TipoOfertaMarketplace | TipoOfertaSpinMarketplace;
+
+export const MARKETPLACE_OFERTANTE_SPIN_LABEL = "Spin Gaming";
+
 const TIPOS_OFERTA: ReadonlySet<string> = new Set([
   "venda_turno",
   "venda_folga",
   "oferta_troca",
 ]);
+
+const TIPOS_OFERTA_SPIN: ReadonlySet<string> = new Set([
+  "oferta_spin_cobertura",
+  "oferta_spin_liberacao",
+]);
+
+export function ehTipoOfertaSpin(tipo: string): tipo is TipoOfertaSpinMarketplace {
+  return TIPOS_OFERTA_SPIN.has(tipo);
+}
+
+export function ehOfertaSpinBlocoTurno(tipo: string): boolean {
+  return tipo === "venda_turno" || tipo === "oferta_spin_cobertura";
+}
+
+export function ehOfertaSpinBlocoFolga(tipo: string): boolean {
+  return tipo === "venda_folga" || tipo === "oferta_spin_liberacao";
+}
 
 /** Linha da oferta como devolvida por `escala_marketplace_ofertas_listar`. */
 export type EscalaMarketplaceOfertaDb = {
@@ -113,6 +136,10 @@ export type EscalaMarketplaceOfertaDb = {
   sou_ofertante?: boolean;
   sou_interessado?: boolean;
   mesmo_time?: boolean;
+  oferta_spin?: boolean;
+  sou_criador_spin?: boolean;
+  criado_por_funcionario_id?: string | null;
+  estudio_slug?: string | null;
   /** Início congelado do turno ofertado (`America/Sao_Paulo`). */
   inicio_turno_at?: string | null;
   /** Troca aceita: início do turno de interesse (mesmo helper da Home). */
@@ -154,8 +181,10 @@ function mapStatusDbParaUi(status: string): OfertaStatusUi {
   }
 }
 
-function mapTipoDb(tipo: string): RhCalendarioAcaoTipo {
-  if (TIPOS_OFERTA.has(tipo)) return tipo as RhCalendarioAcaoTipo;
+function mapTipoDb(tipo: string): LinhaOfertaMarketplace["tipo"] {
+  if (TIPOS_OFERTA.has(tipo) || TIPOS_OFERTA_SPIN.has(tipo)) {
+    return tipo as LinhaOfertaMarketplace["tipo"];
+  }
   return "venda_turno";
 }
 
@@ -214,6 +243,31 @@ export function marketplaceMostrarNovaOferta(
   if (!perm.canCriarOk || !funcionarioId) return false;
   if (perm.canView === "sim") return minhasNegociacoes;
   return perm.canView === "proprios";
+}
+
+/** CTA Nova Oferta Spin — aba Ofertas Spin, Ver = Sim. */
+export function marketplaceMostrarNovaOfertaSpin(perm: { canView: PermissaoValor }): boolean {
+  return perm.canView === "sim";
+}
+
+/** Aceite de oferta Spin no mural: mesmo grupo de negociação + Criar ok (RPC valida grupo). */
+export function marketplacePodeAceitarOfertaSpin(
+  perm: Pick<MarketplacePermissoesUi, "canView" | "canCriarOk">,
+  row: Pick<LinhaOfertaMarketplace, "ofertaSpin" | "mesmoTime" | "souCriadorSpin">,
+  funcionarioId: string | null | undefined,
+): boolean {
+  if (!row.ofertaSpin || !funcionarioId || !perm.canCriarOk) return false;
+  if (row.souCriadorSpin) return false;
+  return row.mesmoTime === true;
+}
+
+/** Cancelar oferta Spin — Ver = Sim ou criador. */
+export function marketplacePodeCancelarOfertaSpin(
+  perm: Pick<MarketplacePermissoesUi, "canView">,
+  row: Pick<LinhaOfertaMarketplace, "ofertaSpin" | "souCriadorSpin">,
+): boolean {
+  if (!row.ofertaSpin) return false;
+  return perm.canView === "sim" || row.souCriadorSpin === true;
 }
 
 /** Permissões da página Marketplace usadas nos helpers de UI. */
@@ -295,6 +349,8 @@ export function marketplacePodeEditarOferta(
 
 /** Frase curta para cards da Home («troca», «venda de turno»). */
 export function fraseTipoOfertaMarketplace(tipo: string): string {
+  if (tipo === "oferta_spin_cobertura") return "cobertura Spin";
+  if (tipo === "oferta_spin_liberacao") return "liberação Spin";
   if (tipo === "venda_turno") return "venda de turno";
   if (tipo === "venda_folga") return "venda de folga";
   if (tipo === "oferta_troca") return "troca";
@@ -356,6 +412,8 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
     souOfertante: row.sou_ofertante === true,
     souInteressado: row.sou_interessado === true,
     mesmoTime: row.mesmo_time === true,
+    ofertaSpin: row.oferta_spin === true,
+    souCriadorSpin: row.sou_criador_spin === true,
   };
 }
 
@@ -1069,6 +1127,54 @@ export async function criarOfertaMarketplace(
   return { ok: true, id: String(payload.id) };
 }
 
+export type CriarOfertaSpinMarketplaceInput = {
+  tipo: TipoOfertaSpinMarketplace;
+  orgTimeId: string;
+  diaIso: string;
+  turnoLabel: string;
+  estudioSlug: string;
+  observacao?: string | null;
+};
+
+export async function criarOfertaSpinMarketplace(
+  input: CriarOfertaSpinMarketplaceInput,
+): Promise<CriarOfertaMarketplaceResult> {
+  const { data, error } = await supabase.rpc("escala_marketplace_oferta_spin_criar", {
+    p_tipo: input.tipo,
+    p_org_time_id: input.orgTimeId,
+    p_dia_iso: input.diaIso,
+    p_turno_label: input.turnoLabel,
+    p_estudio_slug: input.estudioSlug,
+    p_observacao: input.observacao ?? null,
+  });
+  if (error) {
+    console.error("[criarOfertaSpinMarketplace]", error);
+    return { ok: false, error: "rpc_error" };
+  }
+  const payload = payloadResultado(data);
+  if (!payload?.ok || !payload.id) {
+    return { ok: false, error: payload?.error ?? "unknown" };
+  }
+  return { ok: true, id: String(payload.id) };
+}
+
+export async function aceitarOfertaSpinMarketplace(
+  id: string,
+): Promise<AceitarOfertaMarketplaceResult> {
+  const { data, error } = await supabase.rpc("escala_marketplace_oferta_spin_aceitar", {
+    p_oferta_id: id,
+  });
+  if (error) {
+    console.error("[aceitarOfertaSpinMarketplace]", error);
+    return { ok: false, error: "rpc_error" };
+  }
+  const payload = payloadResultado(data);
+  if (!payload?.ok) {
+    return { ok: false, error: payload?.error ?? "unknown" };
+  }
+  return { ok: true, areaKey: payload.area_key, emAnalise: false };
+}
+
 export type CancelarOfertaMarketplaceResult = { ok: true } | { ok: false; error: string };
 
 export async function cancelarOfertaMarketplace(
@@ -1137,6 +1243,10 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   not_authenticated: "Sua sessão expirou. Faça login novamente e tente de novo.",
   invalid_tipo: "Tipo de oferta inválido. Atualize a página e tente novamente.",
   turno_invalido: "Turno inválido para esta oferta. Atualize a página e tente novamente.",
+  time_obrigatorio: "Escolha o time da oferta.",
+  time_invalido: "Time inválido. Atualize a página e tente novamente.",
+  estudio_obrigatorio: "Escolha o estúdio da oferta.",
+  estudio_invalido: "Estúdio inválido. Atualize a página e tente novamente.",
   oferta_expirada:
     "Esta oferta foi cancelada porque faltam menos de 2h para o início do turno ou a data já passou.",
 };

@@ -31,7 +31,11 @@ export const ACADEMY_PERFORMANCE_HUB_VIDEO_ACCEPT =
 export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO =
   "Formato não suportado nesta plataforma. Envie MP4 ou MOV (H.264) — WebM e MKV não funcionam no iPhone.";
 
+export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO_IOS =
+  "Este vídeo está em formato não compatível com iPhone (WebM ou MKV). Peça ao Performance Coach um arquivo MP4 (H.264).";
+
 const EXTENSOES_VIDEO_PERMITIDAS = new Set(["mp4", "m4v", "mov"]);
+const EXTENSOES_VIDEO_IOS_INCOMPATIVEL = new Set(["webm", "mkv", "avi", "mpeg", "mpg"]);
 
 export const ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_TAMANHO =
   `O vídeo ultrapassa o tamanho máximo de ${ACADEMY_PERFORMANCE_HUB_VIDEO_MAX_LABEL}. Envie um arquivo menor.`;
@@ -91,6 +95,29 @@ export function arquivoVideoPerformanceHubPermitido(
     return { ok: false, erro: ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO };
   }
   return { ok: true };
+}
+
+/** Extensão do path/url de vídeo no Storage (ex.: `videos/…/uuid.mp4` → `mp4`). */
+export function extensaoVideoPerformanceHubPath(videoUrlOrPath: string | null | undefined): string {
+  if (!videoUrlOrPath?.trim()) return "";
+  const limpo = videoUrlOrPath.trim().split("?")[0] ?? "";
+  const nome = limpo.split("/").pop() ?? limpo;
+  const idx = nome.lastIndexOf(".");
+  if (idx < 0) return "";
+  return nome.slice(idx + 1).toLowerCase();
+}
+
+/** Safari iOS não reproduz WebM/MKV — detectar pelo path antes de abrir o player. */
+export function videoPerformanceHubFormatoSuportadoIos(videoUrlOrPath: string | null | undefined): boolean {
+  const ext = extensaoVideoPerformanceHubPath(videoUrlOrPath);
+  if (!ext) return true;
+  if (EXTENSOES_VIDEO_IOS_INCOMPATIVEL.has(ext)) return false;
+  return true;
+}
+
+export function mimeTypeVideoPerformanceHubPath(videoUrlOrPath: string | null | undefined): string {
+  const ext = extensaoVideoPerformanceHubPath(videoUrlOrPath);
+  return MIME_POR_EXTENSAO[ext] ?? "video/mp4";
 }
 
 /** `video_url` no banco guarda path do Storage (não URL blob:/http:). */
@@ -427,7 +454,7 @@ export async function urlAssinadaVideoPerformanceHub(
   if (v.startsWith("http://") || v.startsWith("https://")) return v;
   const { data, error } = await supabase.storage
     .from(ACADEMY_PERFORMANCE_HUB_VIDEOS_BUCKET)
-    .createSignedUrl(v, 3600);
+    .createSignedUrl(v, 3600, { download: false });
   if (error || !data?.signedUrl) {
     console.error("Performance Hub: falha ao assinar URL do vídeo", error);
     return null;

@@ -779,17 +779,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro o botão Analisar?",
         texto:
-          "Com **Ver = Próprios**, o botão **Analisar** aparece só em status **Aguardando**. Em **Feedback** e **Aprovado** ficam **Ver** e **Histórico**.\n\nCom **Editar**, em **Aguardando** não há ação na aba Avaliações; em **Feedback** use **Aplicar Feedback**.\n\nSe **Solicitar Feedback** ou **Aprovar** não gravar, confira se o login está vinculado ao prestador avaliado (e-mail / E-mail Spin) e se a atualização de permissões do Performance Hub foi aplicada no banco. A mensagem de erro no pop-up indica falha de gravação.",
+          "Com **Ver = Próprios**, o botão **Analisar** aparece só em status **Aguardando**. Em **Feedback** e **Aprovado** ficam **Ver** e **Histórico** (nesta ordem).\n\nCom **Ver = Sim**, em **Aguardando**, **Feedback** e **Aprovado** ficam **Ver** e **Histórico** na aba Avaliações; **Aplicar Feedback** continua só na aba **Feedback**.\n\nSe **Solicitar Feedback** ou **Aprovar** não gravar, confira se o login está vinculado ao prestador avaliado (e-mail / E-mail Spin) e se a atualização de permissões do Performance Hub foi aplicada no banco. A mensagem de erro no pop-up indica falha de gravação.",
       },
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Use **MP4** ou **MOV (H.264)** — WebM não funciona no iPhone.",
       },
       {
         subtitulo: "Toque em Assistir e o vídeo não abre no iPhone?",
         texto:
-          "No **Safari** (iPhone/iPad), o vídeo abre **dentro da plataforma** em um player com controles — não depende de nova aba.\n\nAguarde o carregamento (conexão lenta pode demorar em vídeos grandes). Se aparecer erro de reprodução, tente de novo em Wi‑Fi estável ou peça ao Performance Coach um arquivo em **MP4 (H.264)**.\n\nSe o botão ficar em **Abrindo…** sem resposta, atualize a página e confira se o login ainda está ativo.",
+          "No **Safari** (iPhone/iPad), **Assistir** abre o vídeo no **player nativo** do sistema (tela cheia). Use **Voltar** no Safari para retornar à plataforma.\n\nAguarde alguns segundos em vídeos grandes (4G pode demorar). Se nada acontecer, atualize a página e tente de novo em Wi‑Fi.\n\nErro de formato ou reprodução: o arquivo pode estar em **WebM** (incompatível com iPhone) — peça ao coach um **MP4 (H.264)**. Se o botão ficar em **Abrindo…**, confira se o login ainda está ativo.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",
@@ -1591,6 +1591,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "No modal **Imprimir IDs**, a lista inclui os times visíveis na Gestão de Staff (com **Próprios**, só o seu time). O botão só aparece com permissão de **Editar**. Só entram na impressão quem tem o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. Prestadores sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
       },
+      {
+        subtitulo: "O leitor não reconhece o código de barras do ID?",
+        texto:
+          "O PDF gera cartões **5×3,6 cm** com código **GS1-128 (UCC/EAN-128)** de **1,4×1,6 cm**. Imprima em escala **100%** (sem «Ajustar à página») para manter as medidas. Confirme que o leitor está configurado para GS1-128. Se o barcode cadastrado já usar notação GS1 com parênteses — ex.: `(21)12345` — a plataforma respeita esse formato; valores simples recebem automaticamente o identificador de aplicação **21** (número de série). Se ainda falhar, entre em contato com o suporte.",
+      },
     ],
   },
   rh_calendario: {
@@ -1672,9 +1677,14 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A antecedência de **4h** conta até o **início do turno**, não até a meia-noite do dia. Ex.: se agora são 6h e a Manhã começa às 7h, esse turno (ou folga desejando Manhã) não aparece; a Tarde com início às 15h pode.",
       },
       {
+        subtitulo: "Dias do mês seguinte não aparecem no modal de oferta?",
+        texto:
+          "O modal carrega a escala **aprovada** do carrossel e do **mês civil seguinte** — o mesmo horizonte da Escala Estúdio. Se setembro já está aprovado mas os dias não aparecem, confirme que a escala está **aprovada** (não rascunho) na aba do seu time e que cada dia cumpre a antecedência de **4h** até o início do turno. Recarregue a página e tente de novo; se persistir, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Nenhum dia aparece no modal de oferta?",
         texto:
-          "Os dias vêm de **todas** as competências com escala **aprovada** (Julho, Agosto, etc.), com início do turno a pelo menos **4h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (4h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
+          "Os dias vêm de **todas** as competências com escala **aprovada** no carrossel **e no mês civil seguinte** (ex.: em agosto, setembro entra se já estiver aprovado na Escala Estúdio), com início do turno a pelo menos **4h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (4h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
       },
       {
         subtitulo: "Ao publicar aparece erro genérico ou de horário do turno?",

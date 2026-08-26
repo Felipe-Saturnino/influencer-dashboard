@@ -92,13 +92,19 @@ describe("academyPerformanceHubWorkflow — aprovação", () => {
     ).toEqual(["ver", "historico"]);
   });
 
-  it("ações Editar=Sim — Feedback sem Aplicar na aba Avaliações", () => {
+  it("ações Ver=Sim — Ver e Histórico em Aguardando, Feedback e Aprovado (ordem Ver → Histórico)", () => {
+    expect(
+      acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: false, status: "aguardando" }),
+    ).toEqual(["ver", "historico"]);
+    expect(
+      acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: false, status: "feedback" }),
+    ).toEqual(["ver", "historico"]);
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "aguardando" }),
-    ).toEqual([]);
+    ).toEqual(["ver", "historico"]);
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "feedback" }),
-    ).toEqual(["historico", "ver"]);
+    ).toEqual(["ver", "historico"]);
     expect(
       acoesAbaAvaliacoesPerformanceHub({ canView: "sim", canEditarOk: true, status: "aprovado" }),
     ).toEqual(["ver", "historico"]);

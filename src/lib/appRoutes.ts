@@ -185,6 +185,12 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "todas", slug: "TodasAsOfertas", label: "Todas as Ofertas", access: "always" },
     { tabId: "minhas", slug: "MinhasOfertas", label: "Minhas Ofertas", access: "always" },
     {
+      tabId: "spin",
+      slug: "OfertasSpin",
+      label: "Ofertas Spin",
+      access: "always",
+    },
+    {
       tabId: "encerradas",
       slug: "OfertasEncerradas",
       label: "Ofertas Encerradas",

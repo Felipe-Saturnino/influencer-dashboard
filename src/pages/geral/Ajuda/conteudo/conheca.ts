@@ -834,7 +834,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Imprimir IDs",
         texto:
-          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** (permissão de **Editar**) abre um modal para selecionar prestadores dos times visíveis na Gestão de Staff. Com Ver **Próprios**, a lista e a impressão ficam só no **próprio time**. Ao gerar, a plataforma baixa um PDF em **folha A4** com até **8 etiquetas de 8×6 cm** por página (grade 2×4), com guia de corte: código de barras centralizado, número do barcode e nickname. Só entram na impressão quem já tem barcode cadastrado no modal de edição.",
+          "Na barra de pesquisa e filtros, o botão **Imprimir IDs** (permissão de **Editar**) abre um modal para selecionar prestadores dos times visíveis na Gestão de Staff. Com Ver **Próprios**, a lista e a impressão ficam só no **próprio time**. Ao gerar, a plataforma baixa um PDF em **folha A4** com até **28 cartões de 5×3,6 cm** por página (grade 4×7), com guia de corte: código **GS1-128 (UCC/EAN-128)** de **1,4×1,6 cm**, número do barcode legível e nickname. Imprima em escala **100%**. Só entram na impressão quem já tem barcode cadastrado no modal de edição.",
       },
       {
         subtitulo: "ID TOS (Service Manager)",
@@ -988,7 +988,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Status e ações",
         texto:
-          "**Aguardando** — avaliação publicada. Com **Ver = Próprios**: só **Analisar Avaliação** (Aprovar ou Solicitar Feedback). Com **Editar**: nenhuma ação nesta aba.\n\n**Feedback** — o prestador pediu esclarecimento. Próprios: **Ver** e **Histórico**. Editar: **Ver** e **Histórico** na aba Avaliações; **Aplicar Feedback** só na aba **Feedback**.\n\n**Aprovado** — ciclo encerrado. **Ver** e **Histórico** (Próprios e Editar).\n\nAo **Concluir** no Gerenciamento, a avaliação entra como **Aguardando**. Aprovar (prestador) ou Aplicar Feedback (coach, aba Feedback) leva a **Aprovado**.",
+          "**Aguardando** — avaliação publicada. Com **Ver = Próprios** (sem Editar): só **Analisar Avaliação** (Aprovar ou Solicitar Feedback). Com **Ver = Sim** (gestão ou coach): **Ver** e **Histórico**.\n\n**Feedback** — o prestador pediu esclarecimento. **Ver = Próprios**: **Ver** e **Histórico**. **Ver = Sim**: **Ver** e **Histórico** na aba Avaliações; **Aplicar Feedback** só na aba **Feedback**.\n\n**Aprovado** — ciclo encerrado. **Ver** e **Histórico** (Próprios e Ver = Sim).\n\nAo **Concluir** no Gerenciamento, a avaliação entra como **Aguardando**. Aprovar (prestador) ou Aplicar Feedback (coach, aba Feedback) leva a **Aprovado**.",
       },
       {
         subtitulo: "Vídeo da avaliação",

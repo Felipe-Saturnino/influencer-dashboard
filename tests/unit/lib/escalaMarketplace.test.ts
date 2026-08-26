@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   diasOfertaveisMarketplace,
+  ehOfertaSpinBlocoFolga,
+  ehOfertaSpinBlocoTurno,
+  ehTipoOfertaSpin,
   gapEntreTurnosOk,
   isDataNoHistoricoMarketplace,
   mensagemErroOfertaMarketplace,
@@ -9,7 +12,10 @@ import {
   fraseTipoOfertaMarketplace,
   formatarDiaIsoPtBr,
   marketplaceMostrarNovaOferta,
+  marketplaceMostrarNovaOfertaSpin,
   marketplaceModoLiderancaGestao,
+  marketplacePodeAceitarOfertaSpin,
+  marketplacePodeCancelarOfertaSpin,
   marketplacePodeEditarOferta,
   marketplacePodeMinhasNegociacoes,
   marketplacePodeOfertar,
@@ -773,5 +779,93 @@ describe("marketplace permissões UI", () => {
         {},
       ),
     ).toBe(true);
+  });
+});
+
+describe("ofertas Spin — helpers", () => {
+  const spinRow = {
+    ofertaSpin: true,
+    mesmoTime: true,
+    souCriadorSpin: false,
+  };
+
+  it("classifica tipos Spin e blocos do mural", () => {
+    expect(ehTipoOfertaSpin("oferta_spin_cobertura")).toBe(true);
+    expect(ehTipoOfertaSpin("venda_turno")).toBe(false);
+    expect(ehOfertaSpinBlocoTurno("oferta_spin_cobertura")).toBe(true);
+    expect(ehOfertaSpinBlocoTurno("venda_turno")).toBe(true);
+    expect(ehOfertaSpinBlocoFolga("oferta_spin_liberacao")).toBe(true);
+    expect(ehOfertaSpinBlocoFolga("venda_folga")).toBe(true);
+  });
+
+  it("mapeia campos Spin no payload", () => {
+    const rows = parseOfertasMarketplacePayload([
+      {
+        id: "11111111-2222-3333-4444-555555555555",
+        tipo: "oferta_spin_cobertura",
+        status: "aberta",
+        dia_iso: "2026-08-12",
+        valor_celula_origem: "Folga",
+        turno_label: "Tarde",
+        criado_em: "2026-07-29T12:00:00Z",
+        ofertante_funcionario_id: "aaaa",
+        ofertante_nome: "Spin Gaming",
+        org_time_id: "bbbb",
+        oferta_spin: true,
+        sou_criador_spin: false,
+      },
+    ]);
+    expect(rows[0]?.ofertaSpin).toBe(true);
+    expect(rows[0]?.ofertante).toBe("Spin Gaming");
+    expect(rows[0]?.tipo).toBe("oferta_spin_cobertura");
+  });
+
+  it("Nova Oferta Spin exige Ver = Sim", () => {
+    expect(marketplaceMostrarNovaOfertaSpin({ canView: "sim" })).toBe(true);
+    expect(marketplaceMostrarNovaOfertaSpin({ canView: "proprios" })).toBe(false);
+  });
+
+  it("aceite Spin — mesmo grupo com Criar ok (gestão não aceita fora do grupo)", () => {
+    expect(
+      marketplacePodeAceitarOfertaSpin(
+        { canView: "sim", canCriarOk: true },
+        spinRow,
+        "func-id",
+      ),
+    ).toBe(true);
+    expect(
+      marketplacePodeAceitarOfertaSpin(
+        { canView: "sim", canCriarOk: true },
+        { ...spinRow, mesmoTime: false },
+        "func-id",
+      ),
+    ).toBe(false);
+    expect(
+      marketplacePodeAceitarOfertaSpin(
+        { canView: "proprios", canCriarOk: true },
+        spinRow,
+        "func-id",
+      ),
+    ).toBe(true);
+    expect(
+      marketplacePodeAceitarOfertaSpin(
+        { canView: "sim", canCriarOk: true },
+        { ...spinRow, souCriadorSpin: true },
+        "func-id",
+      ),
+    ).toBe(false);
+  });
+
+  it("cancelar Spin — gestão ou criador", () => {
+    expect(marketplacePodeCancelarOfertaSpin({ canView: "sim" }, spinRow)).toBe(true);
+    expect(
+      marketplacePodeCancelarOfertaSpin(
+        { canView: "proprios" },
+        { ...spinRow, souCriadorSpin: true },
+      ),
+    ).toBe(true);
+    expect(
+      marketplacePodeCancelarOfertaSpin({ canView: "proprios" }, spinRow),
+    ).toBe(false);
   });
 });

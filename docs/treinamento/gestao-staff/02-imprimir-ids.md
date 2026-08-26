@@ -10,4 +10,4 @@ Imagens em `public/tutoriais/escala/gestao-staff/`.
 
 1. Abrir Imprimir IDs na barra de filtros
 2. Selecionar prestadores com barcode
-3. Gerar PDF e imprimir
+3. Gerar PDF (cartões 5×3,6 cm, GS1-128 1,4×1,6 cm) e imprimir em escala 100%

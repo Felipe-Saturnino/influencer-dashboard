@@ -53,6 +53,28 @@ export function getMesesDisponiveisEscalaCarrossel(hoje = new Date()): MesCarros
   return lista;
 }
 
+/**
+ * Meses de julho/2026 até o mês civil corrente + mês seguinte (inclusivo).
+ * Alinhado a `dataMaximaEscalaCarrossel` na Gestão de Escala — permite ofertar dias
+ * da escala já aprovada no mês seguinte enquanto ainda estamos no mês corrente.
+ */
+export function getMesesDisponiveisEscalaCarrosselComMesSeguinte(hoje = new Date()): MesCarrosselEscalaEntry[] {
+  const base = getMesesDisponiveisEscalaCarrossel(hoje);
+  const last = base[base.length - 1];
+  if (!last) return base;
+
+  let nextMes = last.mes + 1;
+  let nextAno = last.ano;
+  if (nextMes > 11) {
+    nextMes = 0;
+    nextAno += 1;
+  }
+
+  if (base.some((m) => m.ano === nextAno && m.mes === nextMes)) return base;
+
+  return [...base, { ano: nextAno, mes: nextMes, label: `${ESCALA_CARROSSEL_MESES_PT[nextMes]} ${nextAno}` }];
+}
+
 /** Índice do mês atual na lista (ou último se o mês atual não existir na janela). */
 export function idxMesInicialEscalaCarrossel(meses: MesCarrosselEscalaEntry[], hoje = new Date()): number {
   const idx = meses.findIndex((m) => m.ano === hoje.getFullYear() && m.mes === hoje.getMonth());
