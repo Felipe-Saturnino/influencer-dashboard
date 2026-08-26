@@ -1655,7 +1655,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros",
         texto:
-          "O carrossel de Local lista os estúdios ativos de Gestão de Estúdios mais Shuffler Room, OCR e Academy (sem Estoque). Em estúdio, o filtro Mesa começa em **Todas Mesas** e as opções usam o formato Nome da Mesa — Número. Na aba Manutenção, o seletor de mês cobre o mês atual e os dois anteriores (mais novo primeiro).",
+          "O carrossel de Local lista os estúdios ativos de Gestão de Estúdios mais Shuffler Room, OCR e Academy (sem Estoque). Na aba **Set**, em estúdio, o filtro Mesa começa em **Todas Mesas** (formato Nome da Mesa — Número). Na aba **Manutenção**, só o seletor de mês (atual + 2 anteriores, mais novo primeiro).",
       },
       {
         subtitulo: "Aba Set",
@@ -1665,7 +1665,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Manutenção",
         texto:
-          "Dois blocos: **Limpeza** e **Manutenção**, com tabelas filtradas pelo local, mesa (quando aplicável) e mês. **Registrar Limpeza** lista as roletas alocadas (estúdio ou Academy) ou as máquinas de cartas (Shuffler Room ou OCR) do Set aberto — formato **Nome do Equipamento - Número de Série** — e grava o registro com data/hora e responsável. **Registrar Manutenção** permanece na próxima etapa.",
+          "Dois blocos: **Limpeza** e **Manutenção**, com tabelas filtradas pelo local e mês (sem filtro de mesa). **Registrar Limpeza** lista as roletas alocadas (estúdio ou Academy) ou as máquinas de cartas (Shuffler Room ou OCR) do Set aberto — formato **Nome do Equipamento - Número de Série** — e grava o registro com data/hora e responsável. **Registrar Manutenção** no estúdio ou Academy pede a **mesa** (Nome da Mesa - Número), tipo conforme o jogo (roleta com opções de nivelamento e foto de evidência quando aplicável) e observação obrigatória; em Shuffler Room ou OCR pede a **máquina de cartas**, tipo de manutenção e observação.",
       },
       {
         subtitulo: "Permissões",

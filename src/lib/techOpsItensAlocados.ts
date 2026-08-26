@@ -1,5 +1,7 @@
 import { supabase } from "./supabase";
 import { fetchAllPages } from "./supabasePaginate";
+import { normalizarTipoJogoGpKpi } from "./gpKpiMetrics";
+import { sanitizeStorageFileName } from "./rhVagaCandidaturaFiles";
 import {
   chaveEstudioOs,
   formatCodigoOrdemSaida,
@@ -169,7 +171,7 @@ export interface ManutencaoRegRow {
   id: string;
   local_chave: string;
   mesa_id: string | null;
-  equipamento_id: string;
+  equipamento_id: string | null;
   tipo: string;
   data_hora: string;
   responsavel_nome: string;
@@ -653,6 +655,138 @@ export async function registrarLimpezaItensAlocados(params: {
   if (error) throw error;
 }
 
+/* ─── Manutenção — tipos e registro ─────────────────────────────────────────── */
+
+export const IA_MANUTENCAO_STORAGE_BUCKET = "tech-ops-itens-alocados-manutencao";
+export const IA_MANUTENCAO_EVIDENCIA_MAX_BYTES = 15 * 1024 * 1024;
+
+export type ManutencaoLocalModo = "mesa" | "equipamento";
+
+export const MANUTENCAO_TIPOS_ROleta = [
+  "Nivelamento no padrão",
+  "Feito nivelamento",
+  "Calibração",
+  "Troca de peça",
+  "Cabos",
+  "Nano Poller",
+  "Fonte",
+  "Outros",
+] as const;
+
+export const MANUTENCAO_TIPOS_OUTRO_JOGO = [
+  "Troca de Tecido",
+  "Troca de Dispense",
+  "Troca de Top Scanner",
+  "Troca de Scanner",
+  "Troca de Mouse",
+  "Troca de Microfone",
+  "Troca de Box Scanner",
+  "Troca de LED",
+  "Outros",
+] as const;
+
+export const MANUTENCAO_TIPOS_MAQUINA_CARTAS = [
+  "Regular a lâmina",
+  "Reiniciar o sistema",
+  "Limpeza detalhada",
+  "Troca de Cabo",
+  "Outros",
+] as const;
+
+export type ManutencaoTipoRoleta = (typeof MANUTENCAO_TIPOS_ROleta)[number];
+export type ManutencaoTipoOutroJogo = (typeof MANUTENCAO_TIPOS_OUTRO_JOGO)[number];
+export type ManutencaoTipoMaquinaCartas = (typeof MANUTENCAO_TIPOS_MAQUINA_CARTAS)[number];
+
+const MANUTENCAO_TIPOS_NIVELAMENTO_EVIDENCIA = new Set<string>([
+  "Nivelamento no padrão",
+  "Feito nivelamento",
+]);
+
+export function modoManutencaoPorLocal(localChave: string): ManutencaoLocalModo | null {
+  if (localChave === "shuffler_room" || localChave === "ocr") return "equipamento";
+  if (localChave === "academy" || isChaveEstudioOs(localChave)) return "mesa";
+  return null;
+}
+
+export function mesaEhRoletaManutencao(tipoJogo: string | null | undefined): boolean {
+  return normalizarTipoJogoGpKpi(tipoJogo) === "roleta";
+}
+
+export function tiposManutencaoPorMesa(tipoJogo: string | null | undefined): readonly string[] {
+  return mesaEhRoletaManutencao(tipoJogo) ? MANUTENCAO_TIPOS_ROleta : MANUTENCAO_TIPOS_OUTRO_JOGO;
+}
+
+export function manutencaoTipoExigeEvidenciaNivelamento(tipo: string): boolean {
+  return MANUTENCAO_TIPOS_NIVELAMENTO_EVIDENCIA.has(tipo);
+}
+
+export async function fetchMesasManutencaoNoLocal(localChave: string): Promise<MesaItensAlocadosOption[]> {
+  const modo = modoManutencaoPorLocal(localChave);
+  if (modo !== "mesa") return [];
+  if (localChave === "academy") return fetchMesasItensAlocados("academy");
+  const slug = slugFromChaveEstudioOs(localChave);
+  if (!slug) return [];
+  return fetchMesasItensAlocados(slug);
+}
+
+export async function fetchEquipamentosManutencaoNoLocal(localChave: string): Promise<EquipamentoLimpezaOption[]> {
+  return fetchEquipamentosLimpezaNoLocal(localChave);
+}
+
+export async function registrarManutencaoItensAlocados(params: {
+  localChave: string;
+  mesaId: string | null;
+  equipamentoId: string | null;
+  tipo: string;
+  observacao: string;
+  evidenciaFile?: File | null;
+  responsavelNome: string;
+  responsavelUserId?: string | null;
+}): Promise<void> {
+  const obs = params.observacao.trim();
+  if (!obs) throw new Error("observacao_obrigatoria");
+  if (!params.mesaId && !params.equipamentoId) throw new Error("alvo_obrigatorio");
+
+  if (params.evidenciaFile && params.evidenciaFile.size > IA_MANUTENCAO_EVIDENCIA_MAX_BYTES) {
+    throw new Error("evidencia_grande");
+  }
+
+  const regId = crypto.randomUUID();
+  let evidenciaPath: string | null = null;
+
+  if (params.evidenciaFile) {
+    const safe = sanitizeStorageFileName(params.evidenciaFile.name);
+    evidenciaPath = `${regId}/${Date.now()}-${safe}`;
+    const { error: upErr } = await supabase.storage
+      .from(IA_MANUTENCAO_STORAGE_BUCKET)
+      .upload(evidenciaPath, params.evidenciaFile, {
+        contentType: params.evidenciaFile.type || undefined,
+        upsert: false,
+      });
+    if (upErr) throw upErr;
+  }
+
+  const { error } = await supabase.from("tech_ops_itens_alocados_manutencao").insert({
+    id: regId,
+    local_chave: params.localChave,
+    mesa_id: params.mesaId,
+    equipamento_id: params.equipamentoId,
+    tipo: params.tipo.trim(),
+    observacao: obs,
+    evidencia_storage_path: evidenciaPath,
+    data_hora: new Date().toISOString(),
+    responsavel_nome: params.responsavelNome.trim() || "—",
+    responsavel_user_id: params.responsavelUserId ?? null,
+  });
+
+  if (error) {
+    if (evidenciaPath) {
+      await supabase.storage.from(IA_MANUTENCAO_STORAGE_BUCKET).remove([evidenciaPath]);
+    }
+    throw error;
+  }
+}
+
 function competenciaBounds(mesKey: string): { ini: string; fimExcl: string } {
   const [y, m] = mesKey.split("-").map(Number);
   const ini = new Date(Date.UTC(y, m - 1, 1, 3, 0, 0)); /* approx BR */
@@ -735,13 +869,15 @@ export async function fetchManutencoesItensAlocados(params: {
   const rows = data ?? [];
   if (!rows.length) return [];
 
-  const eqpIds = [...new Set(rows.map((r) => r.equipamento_id as string))];
+  const eqpIds = [...new Set(rows.map((r) => r.equipamento_id as string | null).filter(Boolean))] as string[];
   const mesaIds = [...new Set(rows.map((r) => r.mesa_id as string | null).filter(Boolean))] as string[];
 
   const [eqpRes, mesaRes] = await Promise.all([
-    supabase.from("tech_ops_estoque_equipamentos").select("id, codigo_num, nome").in("id", eqpIds),
+    eqpIds.length
+      ? supabase.from("tech_ops_estoque_equipamentos").select("id, nome, numero_serie").in("id", eqpIds)
+      : Promise.resolve({ data: [], error: null }),
     mesaIds.length
-      ? supabase.from("mesas_spin_cadastro").select("id, tipo_jogo, numero_mesa").in("id", mesaIds)
+      ? supabase.from("mesas_spin_cadastro").select("id, nome_mesa, tipo_jogo, numero_mesa").in("id", mesaIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (eqpRes.error) throw eqpRes.error;
@@ -750,13 +886,13 @@ export async function fetchManutencoesItensAlocados(params: {
   const eqpMap = new Map(
     (eqpRes.data ?? []).map((e) => [
       e.id as string,
-      `${codigoEstoqueEquipamento(e as { codigo_num: number })} — ${(e as { nome: string }).nome}`,
+      labelEquipamentoLimpeza((e as { nome: string }).nome, (e as { numero_serie: string }).numero_serie),
     ]),
   );
   const mesaMap = new Map(
     (mesaRes.data ?? []).map((m) => [
       m.id as string,
-      labelMesaJogoNumero((m as { tipo_jogo: string }).tipo_jogo, (m as { numero_mesa: string | null }).numero_mesa),
+      labelMesaFiltro((m as { nome_mesa: string }).nome_mesa, (m as { numero_mesa: string | null }).numero_mesa),
     ]),
   );
 
@@ -764,11 +900,11 @@ export async function fetchManutencoesItensAlocados(params: {
     id: r.id as string,
     local_chave: r.local_chave as string,
     mesa_id: (r.mesa_id as string | null) ?? null,
-    equipamento_id: r.equipamento_id as string,
+    equipamento_id: (r.equipamento_id as string | null) ?? null,
     tipo: r.tipo as string,
     data_hora: r.data_hora as string,
     responsavel_nome: (r.responsavel_nome as string) || "—",
-    equipamento_label: eqpMap.get(r.equipamento_id as string) ?? "—",
+    equipamento_label: r.equipamento_id ? (eqpMap.get(r.equipamento_id as string) ?? "—") : "—",
     mesa_label: r.mesa_id ? (mesaMap.get(r.mesa_id as string) ?? "—") : "—",
   }));
 }

@@ -107,11 +107,10 @@ export default function TechOpsItensAlocados() {
     setLoading(true);
     setErro(null);
     try {
-      const mesaFiltro = mesaId !== MESA_TODAS ? mesaId : null;
       const [setRows, limp, manut] = await Promise.all([
         fetchItensSetNoLocal(localChave),
-        fetchLimpezasItensAlocados({ localChave, mesKey, mesaId: mesaFiltro }),
-        fetchManutencoesItensAlocados({ localChave, mesKey, mesaId: mesaFiltro }),
+        fetchLimpezasItensAlocados({ localChave, mesKey, mesaId: null }),
+        fetchManutencoesItensAlocados({ localChave, mesKey, mesaId: null }),
       ]);
       setItens(setRows);
       setLimpezas(limp);
@@ -226,7 +225,7 @@ export default function TechOpsItensAlocados() {
               </button>
             </div>
 
-            {ehEstudio ? (
+            {ehEstudio && aba !== "manutencao" ? (
               <SelectComIcone
                 icon={<LayoutTemplate size={15} strokeWidth={2} aria-hidden />}
                 label="Mesas"
@@ -322,8 +321,8 @@ export default function TechOpsItensAlocados() {
             loading={loading}
             podeCriar={podeCriar}
             localChave={localChave}
-            localLabel={localLabel}
-            mesaId={mesaId === MESA_TODAS ? null : mesaId}
+            localLabel={localAtual?.label ?? ""}
+            mesaId={null}
             autorNome={user?.name?.trim() || user?.email || "Usuário"}
             autorUserId={user?.id ?? null}
             onReload={() => void carregarDados()}

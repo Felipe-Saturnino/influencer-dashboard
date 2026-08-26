@@ -13,6 +13,7 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { FONT } from "../../../constants/theme";
 
 import { ModalRegistrarLimpeza } from "./ModalRegistrarLimpeza";
+import { ModalRegistrarManutencao } from "./ModalRegistrarManutencao";
 
 function ModalEmBreve({ title, onClose }: { title: string; onClose: () => void }) {
   const { theme: t } = useApp();
@@ -215,7 +216,16 @@ export function AbaManutencaoPainel({
           onSalvo={onReload}
         />
       ) : null}
-      {modal === "reg-manut" ? <ModalEmBreve title="Registrar Manutenção" onClose={() => setModal(null)} /> : null}
+      {modal === "reg-manut" ? (
+        <ModalRegistrarManutencao
+          localLabel={localLabel}
+          localChave={localChave}
+          autorNome={autorNome}
+          autorUserId={autorUserId}
+          onClose={() => setModal(null)}
+          onSalvo={onReload}
+        />
+      ) : null}
       {modal === "ver-limpeza" ? <ModalEmBreve title="Ver Limpeza" onClose={() => setModal(null)} /> : null}
       {modal === "ver-manut" ? <ModalEmBreve title="Ver Manutenção" onClose={() => setModal(null)} /> : null}
     </>
