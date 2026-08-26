@@ -50,7 +50,6 @@ import {
 import type { RhCalendarioAcaoTipo } from "../../../lib/rhCalendarioAcaoHelpers";
 import {
   ESCALA_CARROSSEL_MESES_PT,
-  getMesesDisponiveisEscalaCarrossel,
   getMesesDisponiveisEscalaCarrosselComMesSeguinte,
   idxMesInicialEscalaCarrossel,
   type MesCarrosselEscalaEntry,
@@ -109,10 +108,9 @@ const MARKETPLACE_DIA_LISTBOX_LABEL = "Dias com ofertas";
 const GRADE_VAZIA: MarketplaceMinhaGrade = { aprovada: false, areaKey: "", valorPorIso: new Map() };
 
 /**
- * TEMP TESTE — o carrossel oficial da Escala começa em agosto/2026.
- * Inclui julho/2026 e abre nele só nesta página para validação do Marketplace.
- * Remover `TEMP_MARKETPLACE_INCLUIR_JULHO` e voltar a `getMesesDisponiveisEscalaCarrossel`
- * + `idxMesInicialEscalaCarrossel` quando os testes terminarem.
+ * TEMP TESTE — inclui julho/2026 no carrossel (fora da janela oficial da Escala) para validação.
+ * A seleção inicial ao sair do Histórico continua no **mês corrente** (`idxMesInicialEscalaCarrossel`).
+ * Remover `TEMP_MARKETPLACE_INCLUIR_JULHO` quando os testes terminarem.
  */
 const TEMP_MARKETPLACE_INCLUIR_JULHO = true;
 const TEMP_JULHO_2026: MesCarrosselEscalaEntry = {
@@ -122,25 +120,18 @@ const TEMP_JULHO_2026: MesCarrosselEscalaEntry = {
 };
 
 function getMesesMarketplace(hoje = new Date()): MesCarrosselEscalaEntry[] {
-  const base = getMesesDisponiveisEscalaCarrossel(hoje);
-  if (!TEMP_MARKETPLACE_INCLUIR_JULHO) return base;
-  if (base.some((m) => m.ano === TEMP_JULHO_2026.ano && m.mes === TEMP_JULHO_2026.mes)) return base;
-  return [TEMP_JULHO_2026, ...base];
-}
-
-/** Meses cuja grade aprovada alimenta Ofertar / Aceitar — inclui mês civil seguinte (como Escala Estúdio). */
-function getMesesGradeOfertarMarketplace(hoje = new Date()): MesCarrosselEscalaEntry[] {
   const base = getMesesDisponiveisEscalaCarrosselComMesSeguinte(hoje);
   if (!TEMP_MARKETPLACE_INCLUIR_JULHO) return base;
   if (base.some((m) => m.ano === TEMP_JULHO_2026.ano && m.mes === TEMP_JULHO_2026.mes)) return base;
   return [TEMP_JULHO_2026, ...base];
 }
 
+/** Meses cuja grade aprovada alimenta Ofertar / Aceitar — igual ao carrossel do Marketplace. */
+function getMesesGradeOfertarMarketplace(hoje = new Date()): MesCarrosselEscalaEntry[] {
+  return getMesesMarketplace(hoje);
+}
+
 function idxMesInicialMarketplace(meses: MesCarrosselEscalaEntry[], hoje = new Date()): number {
-  if (TEMP_MARKETPLACE_INCLUIR_JULHO) {
-    const idxJulho = meses.findIndex((m) => m.ano === TEMP_JULHO_2026.ano && m.mes === TEMP_JULHO_2026.mes);
-    if (idxJulho >= 0) return idxJulho;
-  }
   return idxMesInicialEscalaCarrossel(meses, hoje);
 }
 

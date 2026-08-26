@@ -1679,7 +1679,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Dias do mês seguinte não aparecem no modal de oferta?",
         texto:
-          "O modal carrega a escala **aprovada** do carrossel e do **mês civil seguinte** — o mesmo horizonte da Escala Estúdio. Se setembro já está aprovado mas os dias não aparecem, confirme que a escala está **aprovada** (não rascunho) na aba do seu time e que cada dia cumpre a antecedência de **4h** até o início do turno. Recarregue a página e tente de novo; se persistir, entre em contato com o suporte.",
+          "O carrossel do Marketplace e o modal Ofertar usam o mesmo horizonte da **Escala Estúdio**: julho/2026 em diante até o **mês civil seguinte** (ex.: em agosto, setembro entra no carrossel). Se setembro já está aprovado mas os dias não aparecem no modal, confirme escala **aprovada** (não rascunho) na aba do seu time e antecedência de **4h** até o início do turno. Recarregue a página; se persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Ofertas do mês seguinte não aparecem nos blocos?",
+        texto:
+          "Com **Histórico** ligado, a listagem inclui ofertas até o **último mês do carrossel** — que também leva o mês civil seguinte (ex.: setembro em agosto). Se você publicou para setembro e não vê no mural, confirme que **Histórico** está ativo ou navegue o carrossel até setembro; limpe filtros de tipo de ação, time, turno, dia e busca. Ofertas **Em análise** ou **Encerradas** não entram em **Todas as Ofertas** — use **Minhas Ofertas** ou **Ofertas Encerradas**.",
       },
       {
         subtitulo: "Nenhum dia aparece no modal de oferta?",
