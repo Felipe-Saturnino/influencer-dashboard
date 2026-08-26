@@ -1,39 +1,45 @@
-/** Impressão de IDs do staff (Gestão de Staff) — várias etiquetas 8×6 cm numa folha A4. */
+/** Impressão de IDs do staff (Gestão de Staff) — cartões 5×3,6 cm com GS1-128 numa folha A4. */
+
+import {
+  STAFF_ID_BARCODE_H_MM,
+  STAFF_ID_BARCODE_W_MM,
+  STAFF_ID_CARD_H_MM,
+  STAFF_ID_CARD_W_MM,
+  staffBarcodeParaGs128Payload,
+} from "./staffBarcodeGs128";
 
 export type StaffIdEtiquetaPdf = {
   barcode: string;
   nickname: string;
 };
 
-/** Tamanho físico de cada etiqueta (para corte). */
-const CELL_W_MM = 80;
-const CELL_H_MM = 60;
+const CELL_W_MM = STAFF_ID_CARD_W_MM;
+const CELL_H_MM = STAFF_ID_CARD_H_MM;
 
 const PAGE_W_MM = 210;
 const PAGE_H_MM = 297;
-const COLS = 2;
-const ROWS = 4;
-const PER_PAGE = COLS * ROWS;
-const GAP_X_MM = 6;
-const GAP_Y_MM = 6;
+const COLS = 4;
+const ROWS = 7;
+export const STAFF_ID_LABELS_PER_PAGE = COLS * ROWS;
+const GAP_X_MM = 2;
+const GAP_Y_MM = 3;
 
 function barcodePngDataUrl(
   value: string,
   JsBarcode: (el: HTMLCanvasElement, text: string, opts: object) => void,
-): { dataUrl: string; aspect: number } {
+): string {
+  const payload = staffBarcodeParaGs128Payload(value);
   const canvas = document.createElement("canvas");
-  JsBarcode(canvas, value, {
+  JsBarcode(canvas, payload, {
     format: "CODE128",
-    width: 3,
-    height: 120,
+    width: 2,
+    height: 80,
     displayValue: false,
-    margin: 8,
+    margin: 4,
     background: "#ffffff",
     lineColor: "#000000",
   });
-  const w = canvas.width || 1;
-  const h = canvas.height || 1;
-  return { dataUrl: canvas.toDataURL("image/png"), aspect: w / h };
+  return canvas.toDataURL("image/png");
 }
 
 function desenharEtiqueta(
@@ -57,40 +63,31 @@ function desenharEtiqueta(
   cellY: number,
   barcode: string,
   nickname: string,
-  img: { dataUrl: string; aspect: number },
+  imgDataUrl: string,
 ): void {
-  // Guia de corte (tracejado leve).
   pdf.setDrawColor(180, 180, 180);
   pdf.setLineWidth(0.2);
   pdf.setLineDashPattern([1.2, 1.2], 0);
   pdf.rect(cellX, cellY, CELL_W_MM, CELL_H_MM);
   pdf.setLineDashPattern([], 0);
 
-  const maxImgW = CELL_W_MM - 12;
-  const maxImgH = 26;
-  let imgH = maxImgH;
-  let imgW = imgH * img.aspect;
-  if (imgW > maxImgW) {
-    imgW = maxImgW;
-    imgH = imgW / img.aspect;
-  }
-  const imgX = cellX + (CELL_W_MM - imgW) / 2;
-  const imgY = cellY + 7;
-  pdf.addImage(img.dataUrl, "PNG", imgX, imgY, imgW, imgH);
+  const imgX = cellX + (CELL_W_MM - STAFF_ID_BARCODE_W_MM) / 2;
+  const imgY = cellY + 3;
+  pdf.addImage(imgDataUrl, "PNG", imgX, imgY, STAFF_ID_BARCODE_W_MM, STAFF_ID_BARCODE_H_MM);
 
   const centerX = cellX + CELL_W_MM / 2;
-  const textMaxW = CELL_W_MM - 10;
+  const textMaxW = CELL_W_MM - 6;
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  const numY = imgY + imgH + 6;
+  pdf.setFontSize(8);
+  const numY = imgY + STAFF_ID_BARCODE_H_MM + 2.5;
   pdf.text(barcode, centerX, numY, { align: "center", maxWidth: textMaxW });
 
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(11);
-  const nickY = numY + 7;
-  const nick = nickname.length > 36 ? `${nickname.slice(0, 34)}…` : nickname;
+  pdf.setFontSize(7);
+  const nickY = numY + 4;
+  const nick = nickname.length > 22 ? `${nickname.slice(0, 20)}…` : nickname;
   pdf.text(nick, centerX, nickY, { align: "center", maxWidth: textMaxW });
 }
 
@@ -116,18 +113,18 @@ export async function baixarImprimirIdsStaffPdf(itens: StaffIdEtiquetaPdf[]): Pr
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
 
   for (let i = 0; i < validos.length; i++) {
-    if (i > 0 && i % PER_PAGE === 0) {
+    if (i > 0 && i % STAFF_ID_LABELS_PER_PAGE === 0) {
       pdf.addPage("a4", "portrait");
     }
-    const slot = i % PER_PAGE;
+    const slot = i % STAFF_ID_LABELS_PER_PAGE;
     const col = slot % COLS;
     const row = Math.floor(slot / COLS);
     const cellX = originX + col * (CELL_W_MM + GAP_X_MM);
     const cellY = originY + row * (CELL_H_MM + GAP_Y_MM);
 
     const { barcode, nickname } = validos[i]!;
-    const img = barcodePngDataUrl(barcode, JsBarcode);
-    desenharEtiqueta(pdf, cellX, cellY, barcode, nickname, img);
+    const imgDataUrl = barcodePngDataUrl(barcode, JsBarcode);
+    desenharEtiqueta(pdf, cellX, cellY, barcode, nickname, imgDataUrl);
   }
 
   const stamp = new Date().toISOString().slice(0, 10);

@@ -98,6 +98,7 @@ export type PerformanceHubAcaoAvaliacoes =
 
 /**
  * Ações da aba Avaliações conforme permissão.
+ * Ordem fixa quando há Ver + Histórico: **Ver** → **Histórico**.
  * Editar=Sim tem precedência sobre Ver=Próprios quando ambos existem.
  */
 export function acoesAbaAvaliacoesPerformanceHub(opts: {
@@ -111,13 +112,7 @@ export function acoesAbaAvaliacoesPerformanceHub(opts: {
     return [];
   }
 
-  if (canEditarOk) {
-    if (status === "aguardando") return [];
-    if (status === "feedback") return ["historico", "ver"];
-    return ["ver", "historico"];
-  }
-
-  if (canView === "proprios") {
+  if (canView === "proprios" && !canEditarOk) {
     if (status === "aguardando") return ["analisar"];
     return ["ver", "historico"];
   }

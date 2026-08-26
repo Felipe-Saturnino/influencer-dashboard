@@ -20,16 +20,16 @@ export function gerenciaOrganogramaIndicaCustomerService(gerenciaNome: string | 
   return normRhOrgRotuloOrganograma(gerenciaNome) === "customer service";
 }
 
-/** Time Game Presenter / Game Presenters (organograma). */
+/** Time Game Presenter / Game Presenters (organograma) — alinhado a Escala e Overview Prestador (`includes`). */
 export function timeOrganogramaIndicaGamePresenter(timeNome: string | null | undefined): boolean {
   const t = normRhOrgRotuloOrganograma(timeNome);
-  return t === "game presenter" || t === "game presenters";
+  return t.includes("game presenter");
 }
 
-/** Time Shuffler / Shufflers (organograma). */
+/** Time Shuffler / Shufflers (organograma) — alinhado a Escala e Overview Prestador (`includes`). */
 export function timeOrganogramaIndicaShuffler(timeNome: string | null | undefined): boolean {
   const t = normRhOrgRotuloOrganograma(timeNome);
-  return t === "shuffler" || t === "shufflers";
+  return t.includes("shuffler");
 }
 
 export type PerfilRhOrganogramaSync = Extract<

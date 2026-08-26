@@ -12,7 +12,7 @@ export const TUTORIAL_IMPRIMIR_IDS_STAFF: TutorialDef = {
   icon: Printer,
   relatedPageKey: "rh_staff",
   objetivo:
-    "Gerar um PDF com etiquetas de 8×6 cm (código de barras, número e nickname) para impressão dos IDs do staff.",
+    "Gerar um PDF com cartões de 5×3,6 cm (código GS1-128, número e nickname) para impressão dos IDs do staff.",
   passos: [
     {
       titulo: "1. Abrir Imprimir IDs",
@@ -39,7 +39,7 @@ export const TUTORIAL_IMPRIMIR_IDS_STAFF: TutorialDef = {
     {
       titulo: "3. Gerar o PDF",
       texto:
-        "1. Com ao menos um prestador selecionado, clique em Gerar PDF.\n2. O navegador baixa um único ficheiro A4 com até 8 etiquetas por folha (8×6 cm), com guia de corte, código de barras, número e nickname.\n3. Imprima o PDF e corte pelas guias.",
+        "1. Com ao menos um prestador selecionado, clique em Gerar PDF.\n2. O navegador baixa um único ficheiro A4 com até 28 cartões por folha (5×3,6 cm), com guia de corte: código **GS1-128 (UCC/EAN-128)** de 1,4×1,6 cm, número do barcode e nickname.\n3. Imprima o PDF em escala 100% e corte pelas guias.",
       imagens: [
         {
           src: `${IMG}/03-imprimir-ids-selecionados.png`,

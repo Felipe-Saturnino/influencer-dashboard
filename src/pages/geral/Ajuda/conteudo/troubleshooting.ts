@@ -779,7 +779,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro o botão Analisar?",
         texto:
-          "Com **Ver = Próprios**, o botão **Analisar** aparece só em status **Aguardando**. Em **Feedback** e **Aprovado** ficam **Ver** e **Histórico**.\n\nCom **Editar**, em **Aguardando** não há ação na aba Avaliações; em **Feedback** use **Aplicar Feedback**.\n\nSe **Solicitar Feedback** ou **Aprovar** não gravar, confira se o login está vinculado ao prestador avaliado (e-mail / E-mail Spin) e se a atualização de permissões do Performance Hub foi aplicada no banco. A mensagem de erro no pop-up indica falha de gravação.",
+          "Com **Ver = Próprios**, o botão **Analisar** aparece só em status **Aguardando**. Em **Feedback** e **Aprovado** ficam **Ver** e **Histórico** (nesta ordem).\n\nCom **Ver = Sim**, em **Aguardando**, **Feedback** e **Aprovado** ficam **Ver** e **Histórico** na aba Avaliações; **Aplicar Feedback** continua só na aba **Feedback**.\n\nSe **Solicitar Feedback** ou **Aprovar** não gravar, confira se o login está vinculado ao prestador avaliado (e-mail / E-mail Spin) e se a atualização de permissões do Performance Hub foi aplicada no banco. A mensagem de erro no pop-up indica falha de gravação.",
       },
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
@@ -1590,6 +1590,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo imprimir o ID de um Game Presenter?",
         texto:
           "No modal **Imprimir IDs**, a lista inclui os times visíveis na Gestão de Staff (com **Próprios**, só o seu time). O botão só aparece com permissão de **Editar**. Só entram na impressão quem tem o campo **Barcode** preenchido na edição do Staff. Cadastre o barcode, salve e tente de novo. Prestadores sem barcode aparecem na lista, mas ficam desabilitados. Se o PDF não baixar, permita downloads neste site e tente novamente; se persistir, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "O leitor não reconhece o código de barras do ID?",
+        texto:
+          "O PDF gera cartões **5×3,6 cm** com código **GS1-128 (UCC/EAN-128)** de **1,4×1,6 cm**. Imprima em escala **100%** (sem «Ajustar à página») para manter as medidas. Confirme que o leitor está configurado para GS1-128. Se o barcode cadastrado já usar notação GS1 com parênteses — ex.: `(21)12345` — a plataforma respeita esse formato; valores simples recebem automaticamente o identificador de aplicação **21** (número de série). Se ainda falhar, entre em contato com o suporte.",
       },
     ],
   },

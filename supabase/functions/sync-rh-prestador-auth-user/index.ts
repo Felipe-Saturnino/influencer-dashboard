@@ -295,12 +295,12 @@ function gerenciaIndicaCustomerService(gerenciaNome: string | null | undefined):
 
 function timeIndicaGamePresenter(timeNome: string | null | undefined): boolean {
   const t = normTimeNome(timeNome)
-  return t === 'game presenter' || t === 'game presenters'
+  return t.includes('game presenter')
 }
 
 function timeIndicaShuffler(timeNome: string | null | undefined): boolean {
   const t = normTimeNome(timeNome)
-  return t === 'shuffler' || t === 'shufflers'
+  return t.includes('shuffler')
 }
 
 async function carregarContextoOrganogramaRh(
