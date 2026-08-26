@@ -1,17 +1,21 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type VideoHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
 import { FONT } from "../constants/theme";
 import {
+  ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO_IOS,
   ACADEMY_PERFORMANCE_HUB_VIDEO_RETENCAO_DIAS,
   urlAssinadaVideoPerformanceHub,
+  videoPerformanceHubFormatoSuportadoIos,
   videoPerformanceHubPodeAssistir,
 } from "../lib/academyPerformanceHubVideoFiles";
 import {
+  abrirAssetAssinadoComFallback,
   abrirAssetAssinadoEmNovaAba,
   ERRO_ABRIR_ASSET_URL,
 } from "../lib/abrirAssetAssinadoEmNovaAba";
-import { prefereMidiaInlineNoDispositivo } from "../lib/platformDetect";
+import { isIOSDevice } from "../lib/platformDetect";
 import { ModalBase, ModalHeader } from "./OperacoesModal";
 
 type Props = {
@@ -25,6 +29,11 @@ type Props = {
 const ERRO_REPRODUCAO_VIDEO =
   "Não foi possível reproduzir o vídeo. Verifique a conexão ou tente de novo em alguns instantes.";
 
+const ERRO_CARREGAMENTO_LENTO =
+  "O vídeo está demorando para carregar. Verifique a conexão ou toque em Abrir vídeo abaixo.";
+
+const TIMEOUT_CARREGAMENTO_MS = 45_000;
+
 /** Abre o vídeo com URL assinada do Storage (paths) ou URL http(s) legada. */
 export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: Props) {
   const { theme: t } = useApp();
@@ -35,8 +44,14 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
   const [urlInline, setUrlInline] = useState<string | null>(null);
   const [erroPlayer, setErroPlayer] = useState<string | null>(null);
   const retryPlayerRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const abrirInline = useCallback(async () => {
+    if (isIOSDevice() && !videoPerformanceHubFormatoSuportadoIos(videoUrl)) {
+      setErro(ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO_IOS);
+      return;
+    }
+
     retryPlayerRef.current = false;
     setErroPlayer(null);
     setCarregandoVideo(true);
@@ -53,10 +68,18 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
     setErro(null);
     setAbrindo(true);
     try {
+      if (isIOSDevice() && !videoPerformanceHubFormatoSuportadoIos(videoUrl)) {
+        setErro(ACADEMY_PERFORMANCE_HUB_VIDEO_ERRO_FORMATO_IOS);
+        return;
+      }
+
       const obterUrl = () => urlAssinadaVideoPerformanceHub(videoUrl);
 
-      if (prefereMidiaInlineNoDispositivo()) {
-        await abrirInline();
+      /** iPhone/iPad: mesma aba → player nativo do Safari (mais confiável que `<video>` em modal). */
+      if (isIOSDevice()) {
+        const resultado = await abrirAssetAssinadoComFallback(obterUrl);
+        if (resultado === "ok") return;
+        setErro(ERRO_ABRIR_ASSET_URL);
         return;
       }
 
@@ -96,6 +119,22 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
     setErroPlayer(ERRO_REPRODUCAO_VIDEO);
   }
 
+  useEffect(() => {
+    if (!urlInline) return;
+    const el = videoRef.current;
+    if (!el) return;
+    el.load();
+  }, [urlInline]);
+
+  useEffect(() => {
+    if (!urlInline || !carregandoVideo) return;
+    const timer = window.setTimeout(() => {
+      setCarregandoVideo(false);
+      setErroPlayer(ERRO_CARREGAMENTO_LENTO);
+    }, TIMEOUT_CARREGAMENTO_MS);
+    return () => window.clearTimeout(timer);
+  }, [urlInline, carregandoVideo]);
+
   if (!videoPerformanceHubPodeAssistir(videoUrl)) {
     if (videoRemovidoEm) {
       return (
@@ -110,7 +149,82 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
     return <span style={{ color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>—</span>;
   }
 
-  const loading = abrindo || (urlInline != null && carregandoVideo);
+  const modalPlayer =
+    urlInline && typeof document !== "undefined" ? (
+      <ModalBase maxWidth={720} onClose={fecharPlayer} zIndex={1100}>
+        <ModalHeader title="Vídeo da avaliação" onClose={fecharPlayer} />
+        {erroPlayer ? (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, padding: "8px 0 12px" }}
+          >
+            {erroPlayer}
+          </div>
+        ) : null}
+        <div style={{ position: "relative", minHeight: 160 }}>
+          {carregandoVideo && !erroPlayer ? (
+            <div
+              aria-live="polite"
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 10,
+                background: "rgba(0,0,0,0.55)",
+                color: "#fff",
+                fontSize: 13,
+                fontFamily: FONT.body,
+              }}
+            >
+              Carregando vídeo…
+            </div>
+          ) : null}
+          {!erroPlayer || erroPlayer === ERRO_CARREGAMENTO_LENTO ? (
+            <video
+              ref={videoRef}
+              key={urlInline}
+              src={urlInline}
+              controls
+              playsInline
+              {...({ "webkit-playsinline": "true" } as VideoHTMLAttributes<HTMLVideoElement>)}
+              preload="auto"
+              aria-label="Vídeo da avaliação Performance Coach"
+              style={{
+                width: "100%",
+                maxHeight: "70dvh",
+                minHeight: 160,
+                borderRadius: 10,
+                background: "#000",
+                display: "block",
+              }}
+              onLoadedData={() => setCarregandoVideo(false)}
+              onCanPlay={() => setCarregandoVideo(false)}
+              onError={() => void onErroPlayer()}
+            />
+          ) : null}
+        </div>
+        {urlInline ? (
+          <p style={{ margin: "12px 0 0", fontSize: 12, color: t.textMuted, fontFamily: FONT.body, textAlign: "center" }}>
+            Se o player não iniciar,{" "}
+            <a
+              href={urlInline}
+              style={{ color: brand.primary, fontWeight: 600 }}
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.assign(urlInline);
+              }}
+            >
+              abrir vídeo em tela cheia
+            </a>
+            .
+          </p>
+        ) : null}
+      </ModalBase>
+    ) : null;
 
   return (
     <>
@@ -118,9 +232,9 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
         <button
           type="button"
           onClick={() => void abrir()}
-          disabled={loading}
-          aria-label={loading ? "Abrindo vídeo…" : "Assistir vídeo da avaliação"}
-          title={loading ? "Abrindo…" : "Assistir"}
+          disabled={abrindo}
+          aria-label={abrindo ? "Abrindo vídeo…" : "Assistir vídeo da avaliação"}
+          title={abrindo ? "Abrindo…" : "Assistir"}
           style={{
             border: "none",
             background: "transparent",
@@ -129,11 +243,11 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
             fontSize: 13,
             fontWeight: 600,
             fontFamily: FONT.body,
-            cursor: loading ? "wait" : "pointer",
+            cursor: abrindo ? "wait" : "pointer",
             textDecoration: "underline",
           }}
         >
-          {loading ? "Abrindo…" : "Assistir"}
+          {abrindo ? "Abrindo…" : "Assistir"}
         </button>
         {erro ? (
           <span
@@ -146,44 +260,7 @@ export function LinkAssistirVideoPerformanceHub({ videoUrl, videoRemovidoEm }: P
         ) : null}
       </span>
 
-      {urlInline ? (
-        <ModalBase maxWidth={720} onClose={fecharPlayer} zIndex={1100}>
-          <ModalHeader title="Vídeo da avaliação" onClose={fecharPlayer} />
-          {erroPlayer ? (
-            <div
-              role="alert"
-              aria-live="polite"
-              style={{ color: "#e84025", fontSize: 13, fontFamily: FONT.body, padding: "8px 0" }}
-            >
-              {erroPlayer}
-            </div>
-          ) : carregandoVideo ? (
-            <div style={{ padding: "24px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
-              Carregando vídeo…
-            </div>
-          ) : null}
-          {!erroPlayer ? (
-            <video
-              key={urlInline}
-              src={urlInline}
-              controls
-              playsInline
-              preload="metadata"
-              aria-label="Vídeo da avaliação Performance Coach"
-              style={{
-                width: "100%",
-                maxHeight: "70dvh",
-                borderRadius: 10,
-                background: "#000",
-                display: carregandoVideo ? "none" : "block",
-              }}
-              onLoadedData={() => setCarregandoVideo(false)}
-              onCanPlay={() => setCarregandoVideo(false)}
-              onError={() => void onErroPlayer()}
-            />
-          ) : null}
-        </ModalBase>
-      ) : null}
+      {modalPlayer ? createPortal(modalPlayer, document.body) : null}
     </>
   );
 }

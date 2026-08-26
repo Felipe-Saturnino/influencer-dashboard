@@ -784,12 +784,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Erro ao enviar o vídeo da avaliação?",
         texto:
-          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Se citar formato, use **MP4**, **MOV** ou **WebM**.",
+          "O limite da página é **500 MB** por arquivo. Um vídeo de ~126 MB ou **300.000 KB** está **dentro** desse teto.\n\nSe a mensagem disser que o armazenamento recusou o tamanho, o envio chegou ao servidor e foi barrado lá — não é a internet. Grave em **720p** ou envie um trecho mais curto; se o arquivo já estiver abaixo de 500 MB, entre em contato com o suporte.\n\nArquivos grandes sobem em partes (progresso **Enviando X%…**). Mantenha a aba aberta até 100%. Se aparecer falha de conexão, tente de novo.\n\nSe a mensagem falar de permissão, confirme em **Gestão de Usuários → Permissões** se o perfil tem permissão de **Criar = Sim** em Performance Hub (Gerenciamento). Use **MP4** ou **MOV (H.264)** — WebM não funciona no iPhone.",
       },
       {
         subtitulo: "Toque em Assistir e o vídeo não abre no iPhone?",
         texto:
-          "No **Safari** (iPhone/iPad), o vídeo abre **dentro da plataforma** em um player com controles — não depende de nova aba.\n\nAguarde o carregamento (conexão lenta pode demorar em vídeos grandes). Se aparecer erro de reprodução, tente de novo em Wi‑Fi estável ou peça ao Performance Coach um arquivo em **MP4 (H.264)**.\n\nSe o botão ficar em **Abrindo…** sem resposta, atualize a página e confira se o login ainda está ativo.",
+          "No **Safari** (iPhone/iPad), **Assistir** abre o vídeo no **player nativo** do sistema (tela cheia). Use **Voltar** no Safari para retornar à plataforma.\n\nAguarde alguns segundos em vídeos grandes (4G pode demorar). Se nada acontecer, atualize a página e tente de novo em Wi‑Fi.\n\nErro de formato ou reprodução: o arquivo pode estar em **WebM** (incompatível com iPhone) — peça ao coach um **MP4 (H.264)**. Se o botão ficar em **Abrindo…**, confira se o login ainda está ativo.",
       },
       {
         subtitulo: "A coluna Vídeo mostra «Vídeo removido»?",
@@ -1677,9 +1677,14 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A antecedência de **4h** conta até o **início do turno**, não até a meia-noite do dia. Ex.: se agora são 6h e a Manhã começa às 7h, esse turno (ou folga desejando Manhã) não aparece; a Tarde com início às 15h pode.",
       },
       {
+        subtitulo: "Dias do mês seguinte não aparecem no modal de oferta?",
+        texto:
+          "O modal carrega a escala **aprovada** do carrossel e do **mês civil seguinte** — o mesmo horizonte da Escala Estúdio. Se setembro já está aprovado mas os dias não aparecem, confirme que a escala está **aprovada** (não rascunho) na aba do seu time e que cada dia cumpre a antecedência de **4h** até o início do turno. Recarregue a página e tente de novo; se persistir, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "Nenhum dia aparece no modal de oferta?",
         texto:
-          "Os dias vêm de **todas** as competências com escala **aprovada** (Julho, Agosto, etc.), com início do turno a pelo menos **4h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (4h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
+          "Os dias vêm de **todas** as competências com escala **aprovada** no carrossel **e no mês civil seguinte** (ex.: em agosto, setembro entra se já estiver aprovado na Escala Estúdio), com início do turno a pelo menos **4h**. Venda de Turno e Oferta de Troca listam turno original e **Compra - Turno**; Venda de Folga lista **Folga** e **Venda** com ao menos um turno desejado elegível (4h + 12h de intervalo). Compra antiga sem o turno identificado e Troca não entram porque não informam qual turno deve ser negociado.",
       },
       {
         subtitulo: "Ao publicar aparece erro genérico ou de horário do turno?",

@@ -1,7 +1,11 @@
 import type { RhCalendarioAcaoTipo } from "./rhCalendarioAcaoHelpers";
 
 /** Tipos de ação no Marketplace / Solicitações (subset do calendário + «todos» na UI). */
-export type EscalaAcaoFiltro = RhCalendarioAcaoTipo | "todos";
+export type EscalaAcaoFiltro =
+  | RhCalendarioAcaoTipo
+  | "oferta_spin_cobertura"
+  | "oferta_spin_liberacao"
+  | "todos";
 
 /** Valor canónico da opção agregadora de tipo de ação. */
 export const ESCALA_ACAO_FILTRO_TODAS_VALUE = "todos";
@@ -17,6 +21,14 @@ export const ESCALA_ACAO_TIPO_OPCOES_TODAS: { value: EscalaAcaoFiltro; label: st
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
+  { value: "oferta_spin_cobertura", label: "Cobertura Spin" },
+  { value: "oferta_spin_liberacao", label: "Liberação Spin" },
+];
+
+export const ESCALA_ACAO_TIPO_OPCOES_SPIN: { value: EscalaAcaoFiltro; label: string }[] = [
+  { value: "todos", label: ESCALA_ACAO_FILTRO_TODAS_LABEL },
+  { value: "oferta_spin_cobertura", label: "Cobertura Spin" },
+  { value: "oferta_spin_liberacao", label: "Liberação Spin" },
 ];
 
 export const ESCALA_ACAO_TIPO_OPCOES_MINHAS: { value: EscalaAcaoFiltro; label: string }[] = [
@@ -75,12 +87,22 @@ export const OFERTA_STATUS_LABEL: Record<OfertaStatusUi, string> = {
   cancelada: "Cancelada",
 };
 
-export const RH_CALENDARIO_ACAO_LABEL_FORMAL: Record<RhCalendarioAcaoTipo, string> = {
+export const RH_CALENDARIO_ACAO_LABEL_FORMAL: Record<
+  RhCalendarioAcaoTipo | "oferta_spin_cobertura" | "oferta_spin_liberacao",
+  string
+> = {
   venda_turno: "Venda de Turno",
   venda_folga: "Venda de Folga",
   oferta_troca: "Oferta de Troca",
   agendamento_reuniao: "Agendamento de reunião",
+  oferta_spin_cobertura: "Cobertura Spin",
+  oferta_spin_liberacao: "Liberação Spin",
 };
+
+export type MarketplaceTipoLinha =
+  | RhCalendarioAcaoTipo
+  | "oferta_spin_cobertura"
+  | "oferta_spin_liberacao";
 
 export type LinhaOfertaMarketplace = {
   id: string;
@@ -88,7 +110,7 @@ export type LinhaOfertaMarketplace = {
   dataOfertaIso: string;
   /** Data de abertura da solicitação — filtro de período em Solicitações; se omitida, usa `dataOfertaIso`. */
   dataAberturaIso?: string;
-  tipo: RhCalendarioAcaoTipo;
+  tipo: MarketplaceTipoLinha;
   turnoOferta: string;
   operadora: string;
   /** Marketplace: estúdio(s) do prestador ofertante (Gestão de Staff); sem valor cai no rótulo de operadora. */
@@ -104,10 +126,14 @@ export type LinhaOfertaMarketplace = {
   /** Marketplace: id do interessado (quem aceitou). */
   interessadoStaffId?: string;
   observacao?: string;
-  /** Marketplace: o prestador logado publicou esta oferta. */
+  /** Marketplace: o prestador logado publicou esta oferta (P2P). */
   souOfertante?: boolean;
   /** Marketplace: o prestador logado aceitou esta oferta. */
   souInteressado?: boolean;
   /** Marketplace: a oferta é do mesmo grupo de negociação (mesmo time, ou Liderança = SL + SM). */
   mesmoTime?: boolean;
+  /** Oferta operacional Spin Gaming (1 célula na grade). */
+  ofertaSpin?: boolean;
+  /** Oferta Spin criada pelo login (auditoria / cancelar). */
+  souCriadorSpin?: boolean;
 };

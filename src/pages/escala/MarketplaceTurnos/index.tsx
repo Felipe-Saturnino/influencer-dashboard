@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Archive, Ban, Check, ChevronLeft, ChevronRight, Loader2, Store, Undo2, User, X } from "lucide-react";
+import { Archive, Ban, Check, ChevronLeft, ChevronRight, Loader2, Sparkles, Store, Undo2, User, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -39,6 +39,7 @@ import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   ESCALA_ACAO_TIPO_OPCOES_MINHAS,
+  ESCALA_ACAO_TIPO_OPCOES_SPIN,
   ESCALA_ACAO_TIPO_OPCOES_TODAS,
   OFERTA_STATUS_LABEL,
   RH_CALENDARIO_ACAO_LABEL_FORMAL,
@@ -50,6 +51,7 @@ import type { RhCalendarioAcaoTipo } from "../../../lib/rhCalendarioAcaoHelpers"
 import {
   ESCALA_CARROSSEL_MESES_PT,
   getMesesDisponiveisEscalaCarrossel,
+  getMesesDisponiveisEscalaCarrosselComMesSeguinte,
   idxMesInicialEscalaCarrossel,
   type MesCarrosselEscalaEntry,
 } from "../../../lib/escalaMesCarrosselOverviewStyle";
@@ -58,9 +60,14 @@ import {
   carregarMinhaGradeMarketplace,
   carregarMinhaGradeMarketplaceMeses,
   carregarOfertasMarketplace,
+  ehOfertaSpinBlocoFolga,
+  ehOfertaSpinBlocoTurno,
   filtroTimeGrupoNegociacaoMarketplace,
   isDataNoHistoricoMarketplace,
   marketplaceMostrarNovaOferta,
+  marketplaceMostrarNovaOfertaSpin,
+  marketplacePodeAceitarOfertaSpin,
+  marketplacePodeCancelarOfertaSpin,
   marketplacePodeEditarOferta,
   marketplacePodeMinhasNegociacoes,
   marketplacePodeProporNoMural,
@@ -72,7 +79,9 @@ import {
   competenciaAnoMes,
 } from "../../../lib/escalaMarketplace";
 import { ModalOfertarMarketplace } from "./ModalOfertarMarketplace";
+import { ModalOfertarSpin } from "./ModalOfertarSpin";
 import { ModalAceitarOfertaMarketplace } from "./ModalAceitarOfertaMarketplace";
+import { ModalAceitarOfertaSpin } from "./ModalAceitarOfertaSpin";
 import { ModalCancelarOfertaMarketplace } from "./ModalCancelarOfertaMarketplace";
 import { ModalDecidirTrocaMarketplace, type DecisaoOfertaMarketplace } from "./ModalDecidirTrocaMarketplace";
 
@@ -119,6 +128,14 @@ function getMesesMarketplace(hoje = new Date()): MesCarrosselEscalaEntry[] {
   return [TEMP_JULHO_2026, ...base];
 }
 
+/** Meses cuja grade aprovada alimenta Ofertar / Aceitar — inclui mês civil seguinte (como Escala Estúdio). */
+function getMesesGradeOfertarMarketplace(hoje = new Date()): MesCarrosselEscalaEntry[] {
+  const base = getMesesDisponiveisEscalaCarrosselComMesSeguinte(hoje);
+  if (!TEMP_MARKETPLACE_INCLUIR_JULHO) return base;
+  if (base.some((m) => m.ano === TEMP_JULHO_2026.ano && m.mes === TEMP_JULHO_2026.mes)) return base;
+  return [TEMP_JULHO_2026, ...base];
+}
+
 function idxMesInicialMarketplace(meses: MesCarrosselEscalaEntry[], hoje = new Date()): number {
   if (TEMP_MARKETPLACE_INCLUIR_JULHO) {
     const idxJulho = meses.findIndex((m) => m.ano === TEMP_JULHO_2026.ano && m.mes === TEMP_JULHO_2026.mes);
@@ -154,8 +171,8 @@ type MinhasVariant = "abertas" | "aceitei" | "historico";
 /** Blocos da aba Ofertas Encerradas (Ver = Sim). */
 type EncerradasVariant = "aceitas" | "canceladas";
 
-type MarketplaceAba = "todas" | "minhas" | "encerradas";
-const MARKETPLACE_ABAS: readonly MarketplaceAba[] = ["todas", "minhas", "encerradas"];
+type MarketplaceAba = "todas" | "minhas" | "encerradas" | "spin";
+const MARKETPLACE_ABAS: readonly MarketplaceAba[] = ["todas", "minhas", "encerradas", "spin"];
 
 /** Estúdio do prestador ofertante; ofertas legadas sem estúdio caem no rótulo de operadora. */
 function estudioDaOferta(row: LinhaOfertaMarketplace): string {
@@ -280,6 +297,7 @@ export default function EscalaMarketplaceTurnosPage() {
   /** `""` = todos os dias do período (mês do carrossel ou Histórico). */
   const [filtroDiaTodas, setFiltroDiaTodas] = useState("");
   const [filtroTipoMinhas, setFiltroTipoMinhas] = useState<EscalaAcaoFiltro>("todos");
+  const [filtroTipoSpin, setFiltroTipoSpin] = useState<EscalaAcaoFiltro>("todos");
   const [busca, setBusca] = useState("");
   const [sortOferta, setSortOferta] = useState<{ col: OfertaSortCol; dir: SortDir }>({
     col: "dataOferta",
@@ -294,6 +312,7 @@ export default function EscalaMarketplaceTurnosPage() {
   const [gradeAceite, setGradeAceite] = useState<MarketplaceMinhaGrade>(GRADE_VAZIA);
 
   const [ofertarAberto, setOfertarAberto] = useState(false);
+  const [ofertarSpinAberto, setOfertarSpinAberto] = useState(false);
   const [ofertaAceitar, setOfertaAceitar] = useState<LinhaOfertaMarketplace | null>(null);
   const [ofertaCancelar, setOfertaCancelar] = useState<LinhaOfertaMarketplace | null>(null);
   const [decisaoTroca, setDecisaoTroca] = useState<{
@@ -322,21 +341,21 @@ export default function EscalaMarketplaceTurnosPage() {
   useEffect(() => {
     if (perm.loading) return;
     if (!podeFiltrarTimes) {
-      if (aba === "encerradas") setAba("minhas");
+      if (aba === "encerradas" || aba === "spin") setAba("minhas");
       return;
     }
     if (aba === "minhas") {
       if (!minhasNegociacoes) setMinhasNegociacoes(true);
       return;
     }
-    if (aba === "encerradas" && minhasNegociacoes) setAba("minhas");
+    if ((aba === "encerradas" || aba === "spin") && minhasNegociacoes) setAba("minhas");
   }, [perm.loading, podeFiltrarTimes, aba, minhasNegociacoes, setAba]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
 
   const refsMesGradeOfertar = useMemo(
-    () => mesesDisponiveis.map((m) => refMesIsoPrimeiroDia(m.ano, m.mes)),
-    [mesesDisponiveis],
+    () => getMesesGradeOfertarMarketplace(hoje).map((m) => refMesIsoPrimeiroDia(m.ano, m.mes)),
+    [hoje],
   );
 
   const recarregar = useCallback(() => setReloadKey((k) => k + 1), []);
@@ -470,12 +489,12 @@ export default function EscalaMarketplaceTurnosPage() {
   }, [linhasTodasBase, filtroDiaTodas]);
 
   const linhasTurnoTodas = useMemo(
-    () => linhasTodasDoDia.filter((r) => r.tipo === "venda_turno"),
+    () => linhasTodasDoDia.filter((r) => ehOfertaSpinBlocoTurno(r.tipo)),
     [linhasTodasDoDia],
   );
 
   const linhasFolgaTodas = useMemo(
-    () => linhasTodasDoDia.filter((r) => r.tipo === "venda_folga"),
+    () => linhasTodasDoDia.filter((r) => ehOfertaSpinBlocoFolga(r.tipo)),
     [linhasTodasDoDia],
   );
 
@@ -534,11 +553,30 @@ export default function EscalaMarketplaceTurnosPage() {
     [encerradasBase],
   );
 
+  const spinBase = useMemo(
+    () =>
+      linhasMes.filter(
+        (r) =>
+          r.ofertaSpin &&
+          passaFiltroTipo(r, filtroTipoSpin) &&
+          passaFiltroTime(r, filtroTimeTodas) &&
+          textoContemBuscaEmAlgum(busca, r.ofertante, estudioDaOferta(r), r.turnoOferta, r.turnoInteresse),
+      ),
+    [linhasMes, filtroTipoSpin, filtroTimeTodas, busca],
+  );
+  const spinAbertas = useMemo(() => spinBase.filter((r) => ofertaEmAberto(r)), [spinBase]);
+  const spinAceitas = useMemo(() => spinBase.filter((r) => r.status === "aprovada"), [spinBase]);
+  const spinHistorico = useMemo(
+    () => spinBase.filter((r) => !ofertaEmAberto(r) && r.status !== "aprovada"),
+    [spinBase],
+  );
+
   const mostrarNovaOferta = marketplaceMostrarNovaOferta(
     perm,
     contexto?.funcionarioId,
     minhasNegociacoes,
   );
+  const mostrarNovaOfertaSpin = marketplaceMostrarNovaOfertaSpin(perm) && aba === "spin";
   const podeProporNoMural = marketplacePodeProporNoMural(perm, contexto?.funcionarioId);
 
   const abrirAceite = useCallback(async (row: LinhaOfertaMarketplace) => {
@@ -633,7 +671,9 @@ export default function EscalaMarketplaceTurnosPage() {
     </>
   );
 
-  const ctaOfertar = mostrarNovaOferta ? (
+  const ctaOfertar = mostrarNovaOfertaSpin ? (
+    <CtaCriarButton onClick={() => setOfertarSpinAberto(true)}>Nova Oferta</CtaCriarButton>
+  ) : mostrarNovaOferta ? (
     <CtaCriarButton onClick={() => setOfertarAberto(true)}>Nova Oferta</CtaCriarButton>
   ) : null;
 
@@ -646,6 +686,12 @@ export default function EscalaMarketplaceTurnosPage() {
           onChange={setFiltroTipoMinhas}
           opcoes={ESCALA_ACAO_TIPO_OPCOES_MINHAS}
         />
+      ) : aba === "spin" ? (
+        <FiltroSolicitacoesTipoAcaoSelect
+          value={filtroTipoSpin}
+          onChange={setFiltroTipoSpin}
+          opcoes={ESCALA_ACAO_TIPO_OPCOES_SPIN}
+        />
       ) : (
         <FiltroSolicitacoesTipoAcaoSelect
           value={filtroTipoTodas}
@@ -653,7 +699,7 @@ export default function EscalaMarketplaceTurnosPage() {
           opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
         />
       )}
-      {podeFiltrarTimes && !minhasNegociacoes ? (
+      {podeFiltrarTimes && !minhasNegociacoes && (aba === "todas" || aba === "spin" || aba === "encerradas") ? (
         <FiltroBarCampoSelect
           value={filtroTimeTodas}
           onChange={(v) => setFiltroTimeTodas(v as MarketplaceTimeFiltro)}
@@ -706,6 +752,28 @@ export default function EscalaMarketplaceTurnosPage() {
   }
 
   function acoesTodas(row: LinhaOfertaMarketplace) {
+    if (row.ofertaSpin) {
+      if (!ofertaEmAberto(row)) {
+        return <span style={{ color: t.textMuted }}>—</span>;
+      }
+      if (row.souCriadorSpin) {
+        return <span style={{ color: t.textMuted, fontSize: 12 }}>Sua oferta</span>;
+      }
+      if (!marketplacePodeAceitarOfertaSpin(perm, row, contexto?.funcionarioId)) {
+        return <span style={{ color: t.textMuted }}>—</span>;
+      }
+      if (preparandoAceiteId === row.id) {
+        return <Loader2 size={14} className="app-lucide-spin" aria-hidden="true" color={brand.accent} />;
+      }
+      return (
+        <BtnIconeAcaoLinha
+          label={tooltipAcao("Aceitar oferta Spin")}
+          onClick={() => void abrirAceite(row)}
+        >
+          <Check size={14} aria-hidden="true" />
+        </BtnIconeAcaoLinha>
+      );
+    }
     if (row.souOfertante) {
       return <span style={{ color: t.textMuted, fontSize: 12 }}>Sua oferta</span>;
     }
@@ -1016,6 +1084,79 @@ export default function EscalaMarketplaceTurnosPage() {
     );
   }
 
+  /** Tabelas da aba Ofertas Spin — visão de gestão (ofertas da empresa). */
+  function renderTabelaSpin(rows: LinhaOfertaMarketplace[], variant: "abertas" | "aceitas" | "historico") {
+    const sorted = ordenarOfertas(rows, sortOferta);
+    if (sorted.length === 0) return celulaVazia();
+    const mostrarAceitoPor = variant === "aceitas";
+    const mostrarStatus = variant === "historico";
+    const mostrarAcoes = variant === "abertas";
+
+    return (
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
+          <caption style={{ display: "none" }}>
+            {variant === "abertas"
+              ? "Ofertas Spin abertas"
+              : variant === "aceitas"
+                ? "Ofertas Spin aceitas"
+                : "Histórico de ofertas Spin"}
+          </caption>
+          <thead>
+            <tr>
+              {thSort("Data da Oferta", "dataOferta")}
+              {thSort("Tipo de Ação", "tipo")}
+              {thSort("Turno da Oferta", "turnoOferta")}
+              {thSort("Estúdio", "estudio")}
+              {thSort("Ofertante", "ofertante")}
+              {thSort("Observação", "observacao")}
+              {mostrarAceitoPor && thSort("Aceito por", "comprador")}
+              {mostrarStatus && thSort("Status", "status")}
+              {mostrarAcoes && (
+                <th scope="col" style={dataTable.thHeader}>
+                  Ações
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r, i) =>
+              linhaTabela(
+                r,
+                i,
+                <>
+                  <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
+                  <td style={dataTable.tdCenter}>{labelTipo(r)}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
+                  <td style={dataTable.tdCenter}>{estudioDaOferta(r)}</td>
+                  <td style={dataTable.tdCenter}>{r.ofertante}</td>
+                  {tdObservacao(r)}
+                  {mostrarAceitoPor && <td style={dataTable.tdCenter}>{r.comprador ?? "—"}</td>}
+                  {mostrarStatus && (
+                    <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  )}
+                  {mostrarAcoes &&
+                    tdAcoes(
+                      marketplacePodeCancelarOfertaSpin(perm, r) ? (
+                        <BtnIconeAcaoLinha
+                          label={tooltipAcao("Cancelar Oferta")}
+                          onClick={() => setOfertaCancelar(r)}
+                        >
+                          <Ban size={14} aria-hidden="true" />
+                        </BtnIconeAcaoLinha>
+                      ) : (
+                        <span style={{ color: t.textMuted }}>—</span>
+                      ),
+                    )}
+                </>,
+              ),
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
@@ -1048,15 +1189,26 @@ export default function EscalaMarketplaceTurnosPage() {
                 Todas as Ofertas
               </FiltroBarTabButton>
               {mostrarEncerradas ? (
-                <FiltroBarTabButton
-                  id="tab-mkt-encerradas"
-                  active={aba === "encerradas"}
-                  aria-controls="panel-mkt-encerradas"
-                  onClick={() => setAba("encerradas")}
-                  icon={<Archive size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
-                >
-                  Ofertas Encerradas
-                </FiltroBarTabButton>
+                <>
+                  <FiltroBarTabButton
+                    id="tab-mkt-spin"
+                    active={aba === "spin"}
+                    aria-controls="panel-mkt-spin"
+                    onClick={() => setAba("spin")}
+                    icon={<Sparkles size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+                  >
+                    Ofertas Spin
+                  </FiltroBarTabButton>
+                  <FiltroBarTabButton
+                    id="tab-mkt-encerradas"
+                    active={aba === "encerradas"}
+                    aria-controls="panel-mkt-encerradas"
+                    onClick={() => setAba("encerradas")}
+                    icon={<Archive size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />}
+                  >
+                    Ofertas Encerradas
+                  </FiltroBarTabButton>
+                </>
               ) : (
                 <FiltroBarTabButton
                   id="tab-mkt-minhas"
@@ -1155,6 +1307,27 @@ export default function EscalaMarketplaceTurnosPage() {
               </div>
             </div>
           )}
+
+          {aba === "spin" && mostrarEncerradas && (
+            <div role="tabpanel" id="panel-mkt-spin" aria-labelledby="tab-mkt-spin">
+              <div style={contentBox}>
+                <SectionTitle sub="Coberturas e liberações publicadas pela Spin Gaming">
+                  Ofertas abertas
+                </SectionTitle>
+                {renderTabelaSpin(spinAbertas, "abertas")}
+              </div>
+              <div style={contentBox}>
+                <SectionTitle sub="Aceites concluídos sem aprovação adicional">
+                  Ofertas aceitas
+                </SectionTitle>
+                {renderTabelaSpin(spinAceitas, "aceitas")}
+              </div>
+              <div style={contentBox}>
+                <SectionTitle sub="Canceladas ou expiradas">Histórico</SectionTitle>
+                {renderTabelaSpin(spinHistorico, "historico")}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -1167,14 +1340,30 @@ export default function EscalaMarketplaceTurnosPage() {
         diasReservados={diasReservadosUsuario}
       />
 
-      <ModalAceitarOfertaMarketplace
-        oferta={ofertaAceitar}
-        onClose={() => setOfertaAceitar(null)}
-        onAceita={recarregar}
-        contexto={contexto}
-        grade={gradeAceite}
-        diasReservados={diasReservadosUsuario}
+      <ModalOfertarSpin
+        open={ofertarSpinAberto}
+        onClose={() => setOfertarSpinAberto(false)}
+        onCriada={recarregar}
       />
+
+      {ofertaAceitar?.ofertaSpin ? (
+        <ModalAceitarOfertaSpin
+          oferta={ofertaAceitar}
+          onClose={() => setOfertaAceitar(null)}
+          onAceita={recarregar}
+          contexto={contexto}
+          grade={gradeAceite}
+        />
+      ) : (
+        <ModalAceitarOfertaMarketplace
+          oferta={ofertaAceitar}
+          onClose={() => setOfertaAceitar(null)}
+          onAceita={recarregar}
+          contexto={contexto}
+          grade={gradeAceite}
+          diasReservados={diasReservadosUsuario}
+        />
+      )}
 
       <ModalCancelarOfertaMarketplace
         oferta={ofertaCancelar}
