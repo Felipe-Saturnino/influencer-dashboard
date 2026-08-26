@@ -39,7 +39,6 @@ import {
   turnosBaseOfertaNaFolga,
   valorCelulaEhFolgaOperacional,
 } from "./rhCalendarioAcaoHelpers";
-import type { RhCalendarioAcaoTipo } from "./rhCalendarioAcaoHelpers";
 import type {
   EscalaTimeFiltro,
   LinhaOfertaMarketplace,
