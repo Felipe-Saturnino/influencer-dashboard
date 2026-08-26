@@ -250,7 +250,7 @@ export function marketplaceMostrarNovaOfertaSpin(perm: { canView: PermissaoValor
   return perm.canView === "sim";
 }
 
-/** Aceite de oferta Spin no mural: Ver = Sim ou prestador do mesmo grupo com Criar ok. */
+/** Aceite de oferta Spin no mural: mesmo grupo de negociação + Criar ok (RPC valida grupo). */
 export function marketplacePodeAceitarOfertaSpin(
   perm: Pick<MarketplacePermissoesUi, "canView" | "canCriarOk">,
   row: Pick<LinhaOfertaMarketplace, "ofertaSpin" | "mesmoTime" | "souCriadorSpin">,
@@ -258,7 +258,6 @@ export function marketplacePodeAceitarOfertaSpin(
 ): boolean {
   if (!row.ofertaSpin || !funcionarioId || !perm.canCriarOk) return false;
   if (row.souCriadorSpin) return false;
-  if (perm.canView === "sim") return true;
   return row.mesmoTime === true;
 }
 

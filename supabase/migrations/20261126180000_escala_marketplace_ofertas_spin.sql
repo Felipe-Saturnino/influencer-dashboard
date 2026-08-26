@@ -1,4 +1,5 @@
 -- Marketplace — Ofertas Spin (operacionais): ofertante Spin Gaming, aceite direto, 1 célula na grade.
+-- Executa após o fluxo Marketplace (202611*) para não sobrescrever RPCs com versões antigas.
 
 BEGIN;
 
@@ -166,7 +167,7 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'time_obrigatorio');
   END IF;
 
-  IF p_dia_iso IS NULL OR p_dia_iso <= v_hoje THEN
+  IF p_dia_iso IS NULL OR p_dia_iso < v_hoje THEN
     RETURN jsonb_build_object('ok', false, 'error', 'dia_nao_futuro');
   END IF;
 
@@ -275,7 +276,6 @@ DECLARE
   v_cel_aceitante text;
   v_turno_compra text;
   v_turno_aceitante text;
-  v_estudio_nome text;
 BEGIN
   IF auth.uid() IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'error', 'not_authenticated');
@@ -394,6 +394,8 @@ BEGIN
     atualizado_em = now()
   WHERE id = p_oferta_id;
 
+  PERFORM public._escala_marketplace_comentarios_registrar(p_oferta_id);
+
   RETURN jsonb_build_object('ok', true, 'area_key', v_area_aceitante, 'em_analise', false);
 END;
 $$;
@@ -401,7 +403,7 @@ $$;
 REVOKE ALL ON FUNCTION public.escala_marketplace_oferta_spin_aceitar(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.escala_marketplace_oferta_spin_aceitar(uuid) TO authenticated;
 
--- Listagem: Spin Gaming + estúdio persistido + flags de gestão.
+-- Listagem: base 20261120130000 + campos Spin.
 CREATE OR REPLACE FUNCTION public._escala_marketplace_ofertas_listar_sem_expiracao_2h(p_ref_mes date DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -512,7 +514,7 @@ BEGIN
 END;
 $$;
 
--- Cancelar: gestão Spin ou criador.
+-- Cancelar: base troca_em_analise + gestão Spin / criador.
 CREATE OR REPLACE FUNCTION public.escala_marketplace_oferta_cancelar(p_oferta_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -561,7 +563,7 @@ BEGIN
 END;
 $$;
 
--- Comentários de célula — só 1 linha (prestador aceitante).
+-- Comentários: base grupo_lideranca + ramos Spin (1 célula).
 CREATE OR REPLACE FUNCTION public._escala_marketplace_comentarios_registrar(p_oferta_id uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -573,6 +575,8 @@ DECLARE
   v_oferta public.escala_marketplace_oferta%ROWTYPE;
   v_ofertante public.rh_funcionarios%ROWTYPE;
   v_interessado public.rh_funcionarios%ROWTYPE;
+  v_area_ofertante text;
+  v_area_interessado text;
   v_nome_ofertante text;
   v_nome_interessado text;
   v_estudio_ofertante text;
@@ -596,6 +600,8 @@ BEGIN
   FROM public.rh_funcionarios f
   WHERE f.id = v_oferta.interessado_funcionario_id;
 
+  v_area_ofertante := public._escala_marketplace_area_key(v_ofertante.org_time_id);
+  v_area_interessado := public._escala_marketplace_area_key(v_interessado.org_time_id);
   v_nome_ofertante := COALESCE(NULLIF(btrim(v_ofertante.nome), ''), 'Prestador');
   v_nome_interessado := COALESCE(NULLIF(btrim(v_interessado.nome), ''), 'Prestador');
   v_estudio_ofertante := COALESCE(
@@ -677,7 +683,7 @@ BEGIN
         'Compra - ' || v_turno_origem
       );
 
-  ELSIF v_oferta.tipo = 'oferta_troca' THEN
+  ELSIF v_oferta.tipo = 'oferta_troca' AND v_oferta.dia_iso_interesse IS NOT NULL THEN
     INSERT INTO public.escala_marketplace_celula_comentario (
       oferta_id, funcionario_id, dia_iso, tipo, contraparte_nome,
       turno_trabalhar, estudio_trabalhar, valor_esperado
@@ -690,13 +696,31 @@ BEGIN
           SELECT 1 FROM public.rh_gestao_escala_grade g
           WHERE g.funcionario_id = v_oferta.ofertante_funcionario_id
             AND g.dia_iso = v_oferta.dia_iso
+            AND g.area_key = v_area_ofertante
             AND btrim(g.valor) = 'Troca'
         ) THEN 'Troca' ELSE 'Venda' END
       ),
       (
+        v_oferta.id, v_oferta.ofertante_funcionario_id, v_oferta.dia_iso_interesse,
+        'troca', v_nome_interessado, v_turno_interesse, v_estudio_interessado,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM public.rh_gestao_escala_grade g
+          WHERE g.funcionario_id = v_oferta.ofertante_funcionario_id
+            AND g.dia_iso = v_oferta.dia_iso_interesse
+            AND g.area_key = v_area_ofertante
+            AND btrim(g.valor) = 'Troca'
+        ) THEN 'Troca' ELSE 'Compra - ' || v_turno_interesse END
+      ),
+      (
         v_oferta.id, v_oferta.interessado_funcionario_id, v_oferta.dia_iso,
         'troca', v_nome_ofertante, v_turno_origem, v_estudio_ofertante,
-        'Compra - ' || v_turno_origem
+        CASE WHEN EXISTS (
+          SELECT 1 FROM public.rh_gestao_escala_grade g
+          WHERE g.funcionario_id = v_oferta.interessado_funcionario_id
+            AND g.dia_iso = v_oferta.dia_iso
+            AND g.area_key = v_area_interessado
+            AND btrim(g.valor) = 'Troca'
+        ) THEN 'Troca' ELSE 'Compra - ' || v_turno_origem END
       ),
       (
         v_oferta.id, v_oferta.interessado_funcionario_id, v_oferta.dia_iso_interesse,
@@ -705,13 +729,9 @@ BEGIN
           SELECT 1 FROM public.rh_gestao_escala_grade g
           WHERE g.funcionario_id = v_oferta.interessado_funcionario_id
             AND g.dia_iso = v_oferta.dia_iso_interesse
+            AND g.area_key = v_area_interessado
             AND btrim(g.valor) = 'Troca'
         ) THEN 'Troca' ELSE 'Venda' END
-      ),
-      (
-        v_oferta.id, v_oferta.ofertante_funcionario_id, v_oferta.dia_iso_interesse,
-        'troca', v_nome_interessado, v_turno_interesse, v_estudio_interessado,
-        'Compra - ' || v_turno_interesse
       );
   END IF;
 END;

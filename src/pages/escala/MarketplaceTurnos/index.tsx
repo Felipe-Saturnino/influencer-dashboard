@@ -39,8 +39,8 @@ import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import {
   ESCALA_ACAO_TIPO_OPCOES_MINHAS,
+  ESCALA_ACAO_TIPO_OPCOES_MARKETPLACE_TODAS,
   ESCALA_ACAO_TIPO_OPCOES_SPIN,
-  ESCALA_ACAO_TIPO_OPCOES_TODAS,
   OFERTA_STATUS_LABEL,
   RH_CALENDARIO_ACAO_LABEL_FORMAL,
   type EscalaAcaoFiltro,
@@ -696,7 +696,7 @@ export default function EscalaMarketplaceTurnosPage() {
         <FiltroSolicitacoesTipoAcaoSelect
           value={filtroTipoTodas}
           onChange={setFiltroTipoTodas}
-          opcoes={ESCALA_ACAO_TIPO_OPCOES_TODAS}
+          opcoes={ESCALA_ACAO_TIPO_OPCOES_MARKETPLACE_TODAS}
         />
       )}
       {podeFiltrarTimes && !minhasNegociacoes && (aba === "todas" || aba === "spin" || aba === "encerradas") ? (

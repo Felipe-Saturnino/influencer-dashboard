@@ -7,6 +7,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
   aceitarOfertaSpinMarketplace,
+  gapEntreTurnosOk,
   mensagemErroOfertaMarketplace,
   type MarketplaceMeuContexto,
   type MarketplaceMinhaGrade,
@@ -16,6 +17,8 @@ import {
   type LinhaOfertaMarketplace,
 } from "../../../lib/escalaTurnosUiConstants";
 import { turnoOperacionalValorGrade, valorCelulaEhFolgaOperacional } from "../../../lib/rhCalendarioAcaoHelpers";
+
+const MSG_GAP_12H = "É necessário respeitar o intervalo mínimo de 12h entre turnos.";
 
 type Props = {
   oferta: LinhaOfertaMarketplace | null;
@@ -56,6 +59,18 @@ export function ModalAceitarOfertaSpin({
     if (ehCobertura) {
       if (!valorCelulaEhFolgaOperacional(celula)) {
         return "Você precisa estar de folga neste dia para aceitar esta cobertura.";
+      }
+      if (
+        contexto &&
+        !gapEntreTurnosOk({
+          diaIso: ofertaAtual.dataOfertaIso,
+          turnoNome: ofertaAtual.turnoOferta,
+          valorPorIso: grade.valorPorIso,
+          horario: contexto.horario,
+          operadora: contexto.operadora,
+        })
+      ) {
+        return MSG_GAP_12H;
       }
     } else if (!turnoCelula) {
       return "Você precisa estar escalado neste dia para aceitar esta oferta.";

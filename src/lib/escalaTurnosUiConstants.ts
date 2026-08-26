@@ -21,6 +21,14 @@ export const ESCALA_ACAO_TIPO_OPCOES_TODAS: { value: EscalaAcaoFiltro; label: st
   { value: "venda_turno", label: "Venda de Turno" },
   { value: "venda_folga", label: "Venda de Folga" },
   { value: "oferta_troca", label: "Oferta de Troca" },
+];
+
+/** Marketplace — aba Todas as Ofertas (P2P + Spin). Solicitações usa só `ESCALA_ACAO_TIPO_OPCOES_TODAS`. */
+export const ESCALA_ACAO_TIPO_OPCOES_MARKETPLACE_TODAS: { value: EscalaAcaoFiltro; label: string }[] = [
+  { value: "todos", label: ESCALA_ACAO_FILTRO_TODAS_LABEL },
+  { value: "venda_turno", label: "Venda de Turno" },
+  { value: "venda_folga", label: "Venda de Folga" },
+  { value: "oferta_troca", label: "Oferta de Troca" },
   { value: "oferta_spin_cobertura", label: "Cobertura Spin" },
   { value: "oferta_spin_liberacao", label: "Liberação Spin" },
 ];

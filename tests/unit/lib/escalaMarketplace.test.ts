@@ -825,7 +825,7 @@ describe("ofertas Spin — helpers", () => {
     expect(marketplaceMostrarNovaOfertaSpin({ canView: "proprios" })).toBe(false);
   });
 
-  it("aceite Spin — gestão ou mesmo grupo com Criar ok", () => {
+  it("aceite Spin — mesmo grupo com Criar ok (gestão não aceita fora do grupo)", () => {
     expect(
       marketplacePodeAceitarOfertaSpin(
         { canView: "sim", canCriarOk: true },
@@ -835,7 +835,7 @@ describe("ofertas Spin — helpers", () => {
     ).toBe(true);
     expect(
       marketplacePodeAceitarOfertaSpin(
-        { canView: "proprios", canCriarOk: true },
+        { canView: "sim", canCriarOk: true },
         { ...spinRow, mesmoTime: false },
         "func-id",
       ),
