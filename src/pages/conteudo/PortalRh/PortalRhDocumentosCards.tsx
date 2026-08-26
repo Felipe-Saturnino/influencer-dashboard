@@ -84,7 +84,7 @@ function borderLeftCiencia(
   return "3px solid #22c55e";
 }
 
-/** Lista em cards (largura total) — Objetivo da Política + Visualizar + Ver ciência (Editar). */
+/** Lista em cards (largura total) — Objetivo da Política + Visualizar + Ver ciência (Editar + exige ciência). */
 export function PortalRhDocumentosCards({
   rows,
   cienciaPendenteIds,
@@ -101,7 +101,7 @@ export function PortalRhDocumentosCards({
   cienciaRegistradaEm: Map<string, string>;
   /** Perfis Gerenciais + Internos — badge da própria ciência. */
   mostrarStatusCiencia: boolean;
-  /** Editar = Sim — botão Ver ciência. */
+  /** Editar = Sim — botão Ver ciência (somente quando `requires_acknowledgment`). */
   podeVerCiencia: boolean;
   onAbrir: (id: string) => void;
   onVerCiencia?: (row: PortalRhDocumentoRow) => void;
@@ -219,7 +219,7 @@ export function PortalRhDocumentosCards({
                   <Eye size={14} aria-hidden />
                   Visualizar
                 </button>
-                {podeVerCiencia && onVerCiencia ? (
+                {podeVerCiencia && onVerCiencia && row.requires_acknowledgment ? (
                   <button
                     type="button"
                     onClick={() => onVerCiencia(row)}

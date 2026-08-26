@@ -844,7 +844,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparece o botão Ver ciência no manual?",
         texto:
-          "O botão **Ver ciência** nos cards de Manuais só aparece com permissão de **Editar = Sim** no Portal da Academy. Com apenas Ver, você registra a própria ciência no modal (**Lido e Ciente**), mas não consulta quem já aceitou.",
+          "O botão **Ver ciência** nos cards de Manuais só aparece com permissão de **Editar = Sim** no Portal da Academy **e** quando a postagem foi cadastrada com **Exige ciência do colaborador? = Sim**. Com apenas Ver, você registra a própria ciência no modal (**Lido e Ciente**), mas não consulta quem já aceitou.",
       },
     ],
   },
@@ -1014,7 +1014,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparece o botão Ver ciência no documento?",
         texto:
-          "O botão **Ver ciência** nos cards de Políticas e normativas só aparece com permissão de **Editar = Sim**. Com apenas Ver, você registra a própria ciência no modal do PDF (**Li e estou ciente**), mas não consulta quem já aceitou.",
+          "O botão **Ver ciência** nos cards de Políticas e normativas só aparece com permissão de **Editar = Sim** **e** quando a postagem foi cadastrada com **Exige ciência do colaborador? = Sim**. Com apenas Ver, você registra a própria ciência no modal do PDF (**Li e estou ciente**), mas não consulta quem já aceitou.",
       },
       {
         subtitulo: "O time do autor no card está errado?",

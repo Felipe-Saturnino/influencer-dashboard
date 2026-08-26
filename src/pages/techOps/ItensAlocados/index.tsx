@@ -124,7 +124,7 @@ export default function TechOpsItensAlocados() {
     } finally {
       setLoading(false);
     }
-  }, [localChave, mesKey, mesaId]);
+  }, [localChave, mesKey]);
 
   useEffect(() => {
     if (perm.loading || !podeVer) return;
