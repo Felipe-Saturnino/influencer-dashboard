@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Archive, Ban, Check, ChevronLeft, ChevronRight, Loader2, Sparkles, Store, Undo2, User, X } from "lucide-react";
+import { Archive, Ban, Briefcase, CalendarPlus, Check, ChevronLeft, ChevronRight, Loader2, Sparkles, Store, Undo2, User, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -14,6 +14,8 @@ import {
   SectionTitle,
   SortTableTh,
   type SortDir,
+  FILTRO_BAR_TAB_ICON_PROPS,
+  onFiltroBarTabsKeyDown,
 } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
@@ -66,7 +68,10 @@ import {
   marketplaceMostrarNovaOferta,
   marketplaceMostrarNovaOfertaSpin,
   marketplacePodeAceitarOfertaSpin,
+  marketplacePodeProporSpinGestao,
+  marketplacePodeDesistirPropostaSpinGestao,
   marketplacePodeCancelarOfertaSpin,
+  marketplaceTimeRotuloFromKey,
   marketplacePodeEditarOferta,
   marketplacePodeMinhasNegociacoes,
   marketplacePodeProporNoMural,
@@ -81,6 +86,7 @@ import { ModalOfertarMarketplace } from "./ModalOfertarMarketplace";
 import { ModalOfertarSpin } from "./ModalOfertarSpin";
 import { ModalAceitarOfertaMarketplace } from "./ModalAceitarOfertaMarketplace";
 import { ModalAceitarOfertaSpin } from "./ModalAceitarOfertaSpin";
+import { ModalProporSpinGestao } from "./ModalProporSpinGestao";
 import { ModalCancelarOfertaMarketplace } from "./ModalCancelarOfertaMarketplace";
 import { ModalDecidirTrocaMarketplace, type DecisaoOfertaMarketplace } from "./ModalDecidirTrocaMarketplace";
 
@@ -88,6 +94,15 @@ import { ModalDecidirTrocaMarketplace, type DecisaoOfertaMarketplace } from "./M
 const TUTORIAL_MARKETPLACE_OFERTAS: AjudaContextualTutorial = {
   id: "marketplace-ofertas",
   urlSlug: "MarketplaceOfertas",
+  titulo: "Marketplace",
+  descricao: "Venda de turno, folga e troca entre colegas.",
+};
+
+const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: AjudaContextualTutorial = {
+  id: "marketplace-ofertas-spin",
+  urlSlug: "MarketplaceOfertasSpin",
+  titulo: "Ofertas Spin",
+  descricao: "Cobertura e liberação publicadas pela Spin Gaming.",
 };
 
 const MARKETPLACE_TIME_TODOS_VALUE = "todos";
@@ -150,6 +165,7 @@ type OfertaSortCol =
   | "turnoOferta"
   | "estudio"
   | "ofertante"
+  | "time"
   | "observacao"
   | "dataInteresse"
   | "turnoInteresse"
@@ -164,6 +180,13 @@ type EncerradasVariant = "aceitas" | "canceladas";
 
 type MarketplaceAba = "todas" | "minhas" | "encerradas" | "spin";
 const MARKETPLACE_ABAS: readonly MarketplaceAba[] = ["todas", "minhas", "encerradas", "spin"];
+
+type CompraSpinModo = "turno" | "folga";
+
+function passaFiltroCompraSpinTime(row: LinhaOfertaMarketplace, filtro: MarketplaceTimeFiltro): boolean {
+  if (row.timeKey !== "game_presenter" && row.timeKey !== "shuffler") return false;
+  return passaFiltroTime(row, filtro);
+}
 
 /** Estúdio do prestador ofertante; ofertas legadas sem estúdio caem no rótulo de operadora. */
 function estudioDaOferta(row: LinhaOfertaMarketplace): string {
@@ -186,6 +209,8 @@ function valorOrdenacaoOferta(row: LinhaOfertaMarketplace, col: OfertaSortCol): 
       return estudioDaOferta(row);
     case "ofertante":
       return row.ofertante;
+    case "time":
+      return marketplaceTimeRotuloFromKey(row.timeKey);
     case "observacao":
       return row.observacao ?? "";
     case "dataInteresse":
@@ -304,6 +329,8 @@ export default function EscalaMarketplaceTurnosPage() {
 
   const [ofertarAberto, setOfertarAberto] = useState(false);
   const [ofertarSpinAberto, setOfertarSpinAberto] = useState(false);
+  const [compraSpinModo, setCompraSpinModo] = useState<CompraSpinModo>("turno");
+  const [ofertaProporSpin, setOfertaProporSpin] = useState<LinhaOfertaMarketplace | null>(null);
   const [ofertaAceitar, setOfertaAceitar] = useState<LinhaOfertaMarketplace | null>(null);
   const [ofertaCancelar, setOfertaCancelar] = useState<LinhaOfertaMarketplace | null>(null);
   const [decisaoTroca, setDecisaoTroca] = useState<{
@@ -561,6 +588,18 @@ export default function EscalaMarketplaceTurnosPage() {
     () => spinBase.filter((r) => !ofertaEmAberto(r) && r.status !== "aprovada"),
     [spinBase],
   );
+
+  const compraSpinLinhas = useMemo(() => {
+    const tipoAlvo = compraSpinModo === "turno" ? "venda_turno" : "venda_folga";
+    return linhasMes.filter(
+      (r) =>
+        !r.ofertaSpin &&
+        r.tipo === tipoAlvo &&
+        (ofertaEmAberto(r) || (r.status === "em_analise" && r.propostaSpinGestao === true)) &&
+        passaFiltroCompraSpinTime(r, filtroTimeTodas) &&
+        textoContemBuscaEmAlgum(busca, r.ofertante, r.turnoOferta),
+    );
+  }, [linhasMes, compraSpinModo, filtroTimeTodas, busca]);
 
   const mostrarNovaOferta = marketplaceMostrarNovaOferta(
     perm,
@@ -1148,6 +1187,71 @@ export default function EscalaMarketplaceTurnosPage() {
     );
   }
 
+  function renderTabelaCompraSpin(rows: LinhaOfertaMarketplace[]) {
+    const sorted = ordenarOfertas(rows, sortOferta);
+    if (sorted.length === 0) return celulaVazia();
+    const mostrarStatus = sorted.some((r) => r.status === "em_analise" && r.propostaSpinGestao);
+    return (
+      <div className="app-table-wrap" style={getDataTableWrapStyle()}>
+        <table style={getDataTableStyle()}>
+          <caption style={{ display: "none" }}>
+            {compraSpinModo === "turno"
+              ? "Compra de turno — ofertas P2P Game Presenter e Shuffler"
+              : "Compra de folga — ofertas P2P Game Presenter e Shuffler"}
+          </caption>
+          <thead>
+            <tr>
+              {thSort("Data da Oferta", "dataOferta")}
+              {thSort("Turno da Oferta", "turnoOferta")}
+              {thSort("Ofertante", "ofertante")}
+              {thSort("Time", "time")}
+              {mostrarStatus && thSort("Status", "status")}
+              <th scope="col" style={dataTable.thHeader}>
+                Ações
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((r, i) =>
+              linhaTabela(
+                r,
+                i,
+                <>
+                  <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
+                  <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
+                  <td style={dataTable.tdCenter}>{r.ofertante}</td>
+                  <td style={dataTable.tdCenter}>{marketplaceTimeRotuloFromKey(r.timeKey)}</td>
+                  {mostrarStatus && (
+                    <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  )}
+                  {tdAcoes(
+                    marketplacePodeDesistirPropostaSpinGestao(perm, r) ? (
+                      <BtnIconeAcaoLinha
+                        label={tooltipAcao("Desistir da proposta")}
+                        onClick={() => setDecisaoTroca({ oferta: r, decisao: "desistir" })}
+                      >
+                        <Undo2 size={14} aria-hidden="true" />
+                      </BtnIconeAcaoLinha>
+                    ) : marketplacePodeProporSpinGestao(perm, r) ? (
+                      <BtnIconeAcaoLinha
+                        label={tooltipAcao("Aceitar em nome da Spin")}
+                        onClick={() => setOfertaProporSpin(r)}
+                      >
+                        <Check size={14} aria-hidden="true" />
+                      </BtnIconeAcaoLinha>
+                    ) : (
+                      <span style={{ color: t.textMuted }}>—</span>
+                    ),
+                  )}
+                </>,
+              ),
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="app-page-shell" style={{ background: t.bg, minHeight: "100vh", fontFamily: FONT.body }}>
       <DashboardPageHeader
@@ -1215,7 +1319,7 @@ export default function EscalaMarketplaceTurnosPage() {
             <div className="app-filter-bar-tabs-cta__actions">
               <AjudaContextualAcoes
                 pageKey="escala_marketplace_turnos"
-                tutorial={TUTORIAL_MARKETPLACE_OFERTAS}
+                tutorial={[TUTORIAL_MARKETPLACE_OFERTAS, TUTORIAL_MARKETPLACE_OFERTAS_SPIN]}
               />
               {ctaOfertar}
             </div>
@@ -1314,6 +1418,63 @@ export default function EscalaMarketplaceTurnosPage() {
                 {renderTabelaSpin(spinAceitas, "aceitas")}
               </div>
               <div style={contentBox}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    marginBottom: 16,
+                  }}
+                >
+                  <SectionTitle
+                    compact
+                    sub={
+                      compraSpinModo === "turno"
+                        ? "Vendas de turno de Game Presenter e Shuffler — proposta em nome da Spin Gaming"
+                        : "Vendas de folga de Game Presenter e Shuffler — proposta em nome da Spin Gaming"
+                    }
+                  >
+                    {compraSpinModo === "turno" ? "Compra Turno" : "Compra Folga"}
+                  </SectionTitle>
+                  <div
+                    role="tablist"
+                    aria-label="Tipo de compra Spin"
+                    onKeyDown={(e) =>
+                      onFiltroBarTabsKeyDown(
+                        e,
+                        ["turno", "folga"] as const,
+                        setCompraSpinModo,
+                        (k) => (k === "turno" ? "tab-compra-spin-turno" : "tab-compra-spin-folga"),
+                      )
+                    }
+                  >
+                    <FiltroBarTabButton
+                      id="tab-compra-spin-turno"
+                      active={compraSpinModo === "turno"}
+                      aria-controls="panel-compra-spin"
+                      onClick={() => setCompraSpinModo("turno")}
+                      icon={<Briefcase {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                    >
+                      Compra Turno
+                    </FiltroBarTabButton>
+                    <FiltroBarTabButton
+                      id="tab-compra-spin-folga"
+                      active={compraSpinModo === "folga"}
+                      aria-controls="panel-compra-spin"
+                      onClick={() => setCompraSpinModo("folga")}
+                      icon={<CalendarPlus {...FILTRO_BAR_TAB_ICON_PROPS} />}
+                    >
+                      Compra Folga
+                    </FiltroBarTabButton>
+                  </div>
+                </div>
+                <div role="tabpanel" id="panel-compra-spin">
+                  {renderTabelaCompraSpin(compraSpinLinhas)}
+                </div>
+              </div>
+              <div style={contentBox}>
                 <SectionTitle sub="Canceladas ou expiradas">Histórico</SectionTitle>
                 {renderTabelaSpin(spinHistorico, "historico")}
               </div>
@@ -1335,6 +1496,12 @@ export default function EscalaMarketplaceTurnosPage() {
         open={ofertarSpinAberto}
         onClose={() => setOfertarSpinAberto(false)}
         onCriada={recarregar}
+      />
+
+      <ModalProporSpinGestao
+        oferta={ofertaProporSpin}
+        onClose={() => setOfertaProporSpin(null)}
+        onProposta={recarregar}
       />
 
       {ofertaAceitar?.ofertaSpin ? (

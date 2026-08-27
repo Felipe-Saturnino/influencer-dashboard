@@ -42,6 +42,7 @@ export function ModalDecidirTrocaMarketplace({
   if (!oferta) return null;
 
   const ehTroca = oferta.tipo === "oferta_troca";
+  const propostaSpin = oferta.propostaSpinGestao === true;
   const aprovando = decisao === "aprovar";
   const desistindo = decisao === "desistir";
 
@@ -50,16 +51,24 @@ export function ModalDecidirTrocaMarketplace({
     : aprovando
       ? ehTroca
         ? "Aprovar troca"
-        : "Aprovar compra"
+        : propostaSpin
+          ? "Aprovar proposta Spin"
+          : "Aprovar compra"
       : "Recusar proposta";
   const acao = titulo;
 
   const corpo = desistindo
-    ? "Ao desistir, a oferta volta ao mural para outros colegas. A escala não muda."
+    ? propostaSpin
+      ? "Ao desistir, a proposta da Spin Gaming é retirada e a oferta volta ao mural. A escala não muda."
+      : "Ao desistir, a oferta volta ao mural para outros colegas. A escala não muda."
     : aprovando
       ? ehTroca
         ? "Ao aprovar, os dois dias serão atualizados nas escalas (Compra - Turno e Venda). Sem aprovação de gestor."
-        : "Ao aprovar, a escala é atualizada: Compra - Turno para quem assume e Venda para quem sai. Sem aprovação de gestor."
+        : propostaSpin
+          ? oferta.tipo === "venda_folga"
+            ? "Ao aprovar, você assume o turno (Compra) neste dia. A contraparte é Spin Gaming — sem outro prestador na escala."
+            : "Ao aprovar, você libera o turno (Venda) neste dia. A contraparte é Spin Gaming — a vaga fica com a operação."
+          : "Ao aprovar, a escala é atualizada: Compra - Turno para quem assume e Venda para quem sai. Sem aprovação de gestor."
       : "Ao recusar, a oferta volta ao mural. A escala não muda.";
 
   async function confirmar() {

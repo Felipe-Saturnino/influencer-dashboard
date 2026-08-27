@@ -10,6 +10,7 @@ import { TUTORIAL_GESTAO_STAFF_EDITAR } from "./gestaoStaffEditar";
 import { TUTORIAL_IMPRIMIR_IDS_STAFF } from "./imprimirIdsStaff";
 import { TUTORIAL_JUSTIFICATIVA_PRESENCA } from "./justificativaPresenca";
 import { TUTORIAL_MARKETPLACE_OFERTAS } from "./marketplaceOfertas";
+import { TUTORIAL_MARKETPLACE_OFERTAS_SPIN } from "./marketplaceOfertasSpin";
 import { TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO } from "./figurinoRetiradaDevolucao";
 import { TUTORIAL_NOVO_INCIDENTE } from "./novoIncidente";
 import { TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS } from "./portalRhCienciaPoliticas";
@@ -39,6 +40,7 @@ export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_JUSTIFICATIVA_PRESENCA,
   TUTORIAL_ALTERAR_ESCALA,
   TUTORIAL_MARKETPLACE_OFERTAS,
+  TUTORIAL_MARKETPLACE_OFERTAS_SPIN,
   TUTORIAL_CIENCIA_MANUAIS_ACADEMY,
   TUTORIAL_POSTAGEM_ACADEMY_APROVACAO,
   TUTORIAL_PERFORMANCE_HUB_AVALIAR,

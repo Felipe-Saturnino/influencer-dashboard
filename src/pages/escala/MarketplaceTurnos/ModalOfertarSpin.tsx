@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Loader2 } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import {
+  ESTUDIO_FILTRO_TODOS_LABEL,
+  ESTUDIO_FILTRO_TODOS_VALUE,
+} from "../../../components/FiltroEstudioSelect";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -57,6 +61,11 @@ function labelGrupoTime(grupo: TimeSpinOpcao["grupo"]): string {
   return "Liderança";
 }
 
+/** Shuffler e Liderança atendem todos os estúdios — sem escolha no modal. */
+function grupoTimeForcaTodosEstudios(grupo: TimeSpinOpcao["grupo"]): boolean {
+  return grupo === "shuffler" || grupo === "lideranca";
+}
+
 export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -74,6 +83,8 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
   const [erro, setErro] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
 
+  const estudioObrigatorio = !grupoTimeForcaTodosEstudios(grupoTime);
+
   useEffect(() => {
     if (!open) return;
     setGrupoTime("game_presenter");
@@ -85,6 +96,15 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
     setErro(null);
     setGravando(false);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (grupoTimeForcaTodosEstudios(grupoTime)) {
+      setEstudioSlug(ESTUDIO_FILTRO_TODOS_VALUE);
+    } else {
+      setEstudioSlug((prev) => (prev === ESTUDIO_FILTRO_TODOS_VALUE ? "" : prev));
+    }
+  }, [open, grupoTime]);
 
   useEffect(() => {
     if (!open) return;
@@ -169,7 +189,10 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
       setErro("Escolha o dia da oferta.");
       return;
     }
-    if (!estudioSlug) {
+    const slugEnvio = grupoTimeForcaTodosEstudios(grupoTime)
+      ? ESTUDIO_FILTRO_TODOS_VALUE
+      : estudioSlug;
+    if (estudioObrigatorio && !slugEnvio) {
       setErro("Escolha o estúdio da oferta.");
       return;
     }
@@ -179,7 +202,7 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
       orgTimeId,
       diaIso,
       turnoLabel: turno,
-      estudioSlug,
+      estudioSlug: slugEnvio,
       observacao: observacao.trim() || null,
     });
     setGravando(false);
@@ -282,26 +305,33 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
               </select>
             </div>
 
-            <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle}>
-                Estúdio
-                <CampoObrigatorioMark />
-              </label>
-              <select
-                value={estudioSlug}
-                onChange={(e) => setEstudioSlug(e.target.value)}
-                style={inputStyle}
-                aria-label="Estúdio da oferta Spin"
-                disabled={gravando || estudios.length === 0}
-              >
-                <option value="">Selecione…</option>
-                {estudios.map((e) => (
-                  <option key={e.slug} value={e.slug}>
-                    {e.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {estudioObrigatorio ? (
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>
+                  Estúdio
+                  <CampoObrigatorioMark />
+                </label>
+                <select
+                  value={estudioSlug}
+                  onChange={(e) => setEstudioSlug(e.target.value)}
+                  style={inputStyle}
+                  aria-label="Estúdio da oferta Spin"
+                  disabled={gravando || estudios.length === 0}
+                >
+                  <option value="">Selecione…</option>
+                  {estudios.map((e) => (
+                    <option key={e.slug} value={e.slug}>
+                      {e.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p style={{ margin: "0 0 14px", fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
+                Este time atende todos os estúdios — a oferta aparece como{" "}
+                <strong style={{ color: t.text }}>{ESTUDIO_FILTRO_TODOS_LABEL}</strong> no mural.
+              </p>
+            )}
 
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>Observação</label>

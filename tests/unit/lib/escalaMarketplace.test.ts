@@ -16,6 +16,9 @@ import {
   marketplaceModoLiderancaGestao,
   marketplacePodeAceitarOfertaSpin,
   marketplacePodeCancelarOfertaSpin,
+  marketplacePodeProporSpinGestao,
+  marketplacePodeDesistirPropostaSpinGestao,
+  marketplaceTimeRotuloFromKey,
   marketplacePodeEditarOferta,
   marketplacePodeMinhasNegociacoes,
   marketplacePodeOfertar,
@@ -560,6 +563,19 @@ describe("overlayIdentidadeMarketplaceOfertas", () => {
     expect(out[0]?.souOfertante).toBe(false);
     expect(out[0]?.mesmoTime).toBe(false);
   });
+
+  it("preserva souInteressado da RPC em proposta Spin gestão", () => {
+    const spin = {
+      ...base,
+      interessadoStaffId: undefined,
+      propostaSpinGestao: true,
+      souInteressado: true,
+      status: "em_analise" as const,
+    };
+    const out = overlayIdentidadeMarketplaceOfertas([spin], "gp-1", "game_presenter");
+    expect(out[0]?.souInteressado).toBe(true);
+    expect(out[0]?.souOfertante).toBe(true);
+  });
 });
 
 describe("alertasHomeMarketplaceDoPrestador", () => {
@@ -867,5 +883,52 @@ describe("ofertas Spin — helpers", () => {
     expect(
       marketplacePodeCancelarOfertaSpin({ canView: "proprios" }, spinRow),
     ).toBe(false);
+  });
+
+  it("propor compra Spin — Ver Sim, GP/Shuffler, venda aberta", () => {
+    const row = {
+      ofertaSpin: false,
+      tipo: "venda_turno" as const,
+      timeKey: "game_presenter" as const,
+      status: "aberto" as const,
+    };
+    expect(marketplacePodeProporSpinGestao({ canView: "sim" }, row)).toBe(true);
+    expect(marketplacePodeProporSpinGestao({ canView: "proprios" }, row)).toBe(false);
+    expect(
+      marketplacePodeProporSpinGestao(
+        { canView: "sim" },
+        { ...row, timeKey: "shift_leader" },
+      ),
+    ).toBe(false);
+    expect(
+      marketplacePodeProporSpinGestao(
+        { canView: "sim" },
+        { ...row, status: "em_analise" },
+      ),
+    ).toBe(false);
+  });
+
+  it("desistir proposta Spin gestão — Ver Sim + Editar + em análise", () => {
+    const row = { propostaSpinGestao: true, status: "em_analise" as const };
+    expect(
+      marketplacePodeDesistirPropostaSpinGestao({ canView: "sim", canEditarOk: true }, row),
+    ).toBe(true);
+    expect(
+      marketplacePodeDesistirPropostaSpinGestao({ canView: "proprios", canEditarOk: true }, row),
+    ).toBe(false);
+    expect(
+      marketplacePodeDesistirPropostaSpinGestao({ canView: "sim", canEditarOk: false }, row),
+    ).toBe(false);
+    expect(
+      marketplacePodeDesistirPropostaSpinGestao(
+        { canView: "sim", canEditarOk: true },
+        { ...row, status: "aberto" },
+      ),
+    ).toBe(false);
+  });
+
+  it("rótulo de time GP/Shuffler", () => {
+    expect(marketplaceTimeRotuloFromKey("game_presenter")).toBe("Game Presenter");
+    expect(marketplaceTimeRotuloFromKey("shuffler")).toBe("Shuffler");
   });
 });

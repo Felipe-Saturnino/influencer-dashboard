@@ -914,6 +914,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Nenhuma oferta ou aceite pode deixar menos de **12h** entre o fim de um turno e o início do seguinte. A plataforma calcula o intervalo com a sua escala, o turno de staff e os horários da operadora. Exemplo na Venda de Folga: escalado na Noite do dia 12 e de folga nos dias 13 e 14 — ao ofertar o dia 13 só a **Noite** fica disponível (Manhã e Tarde ficariam a menos de 12h do fim do turno); no dia 14 todos os turnos voltam a caber.",
       },
+      {
+        subtitulo: "Ofertas Spin (gestão)",
+        texto:
+          "Com **Ver: Sim** e **Minhas Negociações** desligado, a aba **Ofertas Spin** concentra coberturas e liberações publicadas pela **Spin Gaming**. **Nova Oferta** nesta aba abre o modal operacional: **Time** (Game Presenter, Shuffler ou Liderança), **Cobertura de turno** ou **Liberação de vaga**, dia, turno, estúdio (só Game Presenter — Shuffler e Liderança gravam **Todos Estúdios**) e observação. Publicar exige **4h** até o início do turno; aceite no mural atualiza a escala **na hora** (Compra - Turno ou Venda) — sem proposta Em análise. Coberturas entram no mural em **Ofertas de Turno**; liberações em **Ofertas de Folga**. A aba organiza **Ofertas abertas**, **Ofertas aceitas**, o bloco **Compra Turno / Compra Folga** (vendas P2P de GP e Shuffler — gestão propõe compra em nome da Spin Gaming; ofertante aprova em **Minhas Ofertas**; proposta Em análise permanece no bloco com **Desistir da proposta**) e **Histórico** (canceladas ou expiradas). Tutorial: `/Ajuda/Tutoriais/MarketplaceOfertasSpin`.",
+      },
     ],
   },
   escala_relatorio_turno: {

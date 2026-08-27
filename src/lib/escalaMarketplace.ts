@@ -138,6 +138,7 @@ export type EscalaMarketplaceOfertaDb = {
   mesmo_time?: boolean;
   oferta_spin?: boolean;
   sou_criador_spin?: boolean;
+  proposta_spin_gestao?: boolean;
   criado_por_funcionario_id?: string | null;
   estudio_slug?: string | null;
   /** Início congelado do turno ofertado (`America/Sao_Paulo`). */
@@ -270,6 +271,38 @@ export function marketplacePodeCancelarOfertaSpin(
   return perm.canView === "sim" || row.souCriadorSpin === true;
 }
 
+/** Propor compra Spin sobre venda P2P (aba Ofertas Spin) — só Ver = Sim. */
+export function marketplacePodeProporSpinGestao(
+  perm: Pick<MarketplacePermissoesUi, "canView">,
+  row: Pick<LinhaOfertaMarketplace, "ofertaSpin" | "tipo" | "timeKey" | "status">,
+): boolean {
+  if (perm.canView !== "sim") return false;
+  if (row.ofertaSpin) return false;
+  if (row.tipo !== "venda_turno" && row.tipo !== "venda_folga") return false;
+  if (row.timeKey !== "game_presenter" && row.timeKey !== "shuffler") return false;
+  return row.status === "aberto" || row.status === "interessado";
+}
+
+/** Desistir de proposta Spin em análise (compra gestão) — Ver = Sim + Editar ok. */
+export function marketplacePodeDesistirPropostaSpinGestao(
+  perm: Pick<MarketplacePermissoesUi, "canView" | "canEditarOk">,
+  row: Pick<LinhaOfertaMarketplace, "propostaSpinGestao" | "status">,
+): boolean {
+  if (perm.canView !== "sim" || !perm.canEditarOk) return false;
+  return row.propostaSpinGestao === true && row.status === "em_analise";
+}
+
+/** Rótulo do time na tabela Compra Spin (GP / Shuffler). */
+export function marketplaceTimeRotuloFromKey(key: EscalaTimeFiltro): string {
+  if (key === "game_presenter") return "Game Presenter";
+  if (key === "shuffler") return "Shuffler";
+  if (key === "shift_leader") return "Shift Leader";
+  if (key === "service_manager") return "Service Manager";
+  if (key === "performance_coach") return "Performance Coach";
+  if (key === "treinamento") return "Treinamento";
+  return "—";
+}
+
 /** Permissões da página Marketplace usadas nos helpers de UI. */
 export type MarketplacePermissoesUi = {
   canView: PermissaoValor;
@@ -385,7 +418,11 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
   const ofertanteId = texto(row.ofertante_funcionario_id);
   const interessadoId = texto(row.interessado_funcionario_id);
   const operadora = texto(row.operadora_nome) || texto(row.operadora_slug) || "—";
-  const estudio = texto(row.estudio_nome) || operadora;
+  const estudioSlug = texto(row.estudio_slug).toLowerCase();
+  const estudio =
+    estudioSlug === "todos"
+      ? "Todos Estúdios"
+      : texto(row.estudio_nome) || operadora;
   const turnoInteresseCel = texto(row.valor_celula_interesse);
 
   return {
@@ -403,9 +440,11 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
       : undefined,
     timeKey: timeKeyFromOrgTimeNome(row.time_nome),
     status: mapStatusDbParaUi(texto(row.status)),
-    comprador: interessadoId
-      ? texto(row.interessado_nome) || labelTruncadoUuid(interessadoId)
-      : undefined,
+    comprador: row.proposta_spin_gestao
+      ? MARKETPLACE_OFERTANTE_SPIN_LABEL
+      : interessadoId
+        ? texto(row.interessado_nome) || labelTruncadoUuid(interessadoId)
+        : undefined,
     solicitanteStaffId: ofertanteId,
     interessadoStaffId: interessadoId || undefined,
     observacao: texto(row.observacao) || undefined,
@@ -414,6 +453,7 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
     mesmoTime: row.mesmo_time === true,
     ofertaSpin: row.oferta_spin === true,
     souCriadorSpin: row.sou_criador_spin === true,
+    propostaSpinGestao: row.proposta_spin_gestao === true,
   };
 }
 
@@ -582,6 +622,8 @@ export async function carregarMeuContextoMarketplace(
 /**
  * Recalcula souOfertante / souInteressado / mesmoTime com o prestador da sessão visível.
  * A RPC usa auth.uid() da conta viewer (admin vê tudo como se fosse gestão).
+ * Em proposta Spin gestão, `interessado_funcionario_id` é NULL — preservar `souInteressado` da RPC
+ * (gestão / admin com `_escala_marketplace_pode_gestao_spin`).
  */
 export function overlayIdentidadeMarketplaceOfertas(
   linhas: LinhaOfertaMarketplace[],
@@ -592,8 +634,10 @@ export function overlayIdentidadeMarketplaceOfertas(
   const grupo = filtroTimeGrupoNegociacaoMarketplace(areaKey);
   return linhas.map((l) => ({
     ...l,
-    souOfertante: l.solicitanteStaffId === funcionarioId,
-    souInteressado: l.interessadoStaffId === funcionarioId,
+    souOfertante: !l.ofertaSpin && l.solicitanteStaffId === funcionarioId,
+    souInteressado: l.propostaSpinGestao
+      ? l.souInteressado === true
+      : l.interessadoStaffId === funcionarioId,
     mesmoTime: grupo ? ofertaPassaFiltroTimeMarketplace(l.timeKey, grupo) : false,
   }));
 }
@@ -882,6 +926,23 @@ export async function aceitarOfertaMarketplace(
   });
   if (error) {
     console.error("[aceitarOfertaMarketplace]", error);
+    return { ok: false, error: "rpc_error" };
+  }
+  const payload = payloadResultado(data);
+  if (!payload?.ok) {
+    return { ok: false, error: payload?.error ?? "unknown" };
+  }
+  return { ok: true, areaKey: payload.area_key, emAnalise: payload.em_analise === true };
+}
+
+export async function proporSpinGestaoMarketplace(
+  id: string,
+): Promise<AceitarOfertaMarketplaceResult> {
+  const { data, error } = await supabase.rpc("escala_marketplace_oferta_propor_spin_gestao", {
+    p_oferta_id: id,
+  });
+  if (error) {
+    console.error("[proporSpinGestaoMarketplace]", error);
     return { ok: false, error: "rpc_error" };
   }
   const payload = payloadResultado(data);
@@ -1247,6 +1308,8 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   time_invalido: "Time inválido. Atualize a página e tente novamente.",
   estudio_obrigatorio: "Escolha o estúdio da oferta.",
   estudio_invalido: "Estúdio inválido. Atualize a página e tente novamente.",
+  sem_permissao: "Você não tem permissão para propor compra em nome da Spin Gaming.",
+  time_nao_gp_shuffler: "Esta oferta não é de Game Presenter ou Shuffler.",
   oferta_expirada:
     "Esta oferta foi cancelada porque faltam menos de 2h para o início do turno ou a data já passou.",
 };
