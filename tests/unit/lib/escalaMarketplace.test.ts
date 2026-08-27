@@ -16,6 +16,8 @@ import {
   marketplaceModoLiderancaGestao,
   marketplacePodeAceitarOfertaSpin,
   marketplacePodeCancelarOfertaSpin,
+  marketplacePodeProporSpinGestao,
+  marketplaceTimeRotuloFromKey,
   marketplacePodeEditarOferta,
   marketplacePodeMinhasNegociacoes,
   marketplacePodeOfertar,
@@ -867,5 +869,33 @@ describe("ofertas Spin — helpers", () => {
     expect(
       marketplacePodeCancelarOfertaSpin({ canView: "proprios" }, spinRow),
     ).toBe(false);
+  });
+
+  it("propor compra Spin — Ver Sim, GP/Shuffler, venda aberta", () => {
+    const row = {
+      ofertaSpin: false,
+      tipo: "venda_turno" as const,
+      timeKey: "game_presenter" as const,
+      status: "aberto" as const,
+    };
+    expect(marketplacePodeProporSpinGestao({ canView: "sim" }, row)).toBe(true);
+    expect(marketplacePodeProporSpinGestao({ canView: "proprios" }, row)).toBe(false);
+    expect(
+      marketplacePodeProporSpinGestao(
+        { canView: "sim" },
+        { ...row, timeKey: "shift_leader" },
+      ),
+    ).toBe(false);
+    expect(
+      marketplacePodeProporSpinGestao(
+        { canView: "sim" },
+        { ...row, status: "em_analise" },
+      ),
+    ).toBe(false);
+  });
+
+  it("rótulo de time GP/Shuffler", () => {
+    expect(marketplaceTimeRotuloFromKey("game_presenter")).toBe("Game Presenter");
+    expect(marketplaceTimeRotuloFromKey("shuffler")).toBe("Shuffler");
   });
 });

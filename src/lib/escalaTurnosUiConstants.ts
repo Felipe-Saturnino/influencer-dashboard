@@ -144,4 +144,6 @@ export type LinhaOfertaMarketplace = {
   ofertaSpin?: boolean;
   /** Oferta Spin criada pelo login (auditoria / cancelar). */
   souCriadorSpin?: boolean;
+  /** Proposta de compra em nome da Spin Gaming (aguarda aprovação do ofertante). */
+  propostaSpinGestao?: boolean;
 };
