@@ -93,8 +93,6 @@ BEGIN
     SET
       status = 'aceita',
       aceito_em = now(),
-      proposta_spin_gestao = false,
-      proposta_spin_por_funcionario_id = NULL,
       atualizado_em = now()
     WHERE id = p_oferta_id;
 
@@ -374,12 +372,44 @@ $$;
 COMMENT ON FUNCTION public._escala_marketplace_ofertas_listar_sem_expiracao_2h(date) IS
   'Listagem Marketplace (jsonb). sou_interessado = prestador P2P; proposta Spin gestão não usa esta flag.';
 
-UPDATE public.escala_marketplace_oferta
+-- Reparo: quem rodou versão anterior que zerava a flag em aceitas (comentário Spin Gaming na célula).
+UPDATE public.escala_marketplace_oferta o
 SET
-  proposta_spin_gestao = false,
-  proposta_spin_por_funcionario_id = NULL,
+  proposta_spin_gestao = true,
   atualizado_em = now()
-WHERE status = 'aceita'
-  AND proposta_spin_gestao = true;
+WHERE o.status = 'aceita'
+  AND COALESCE(o.proposta_spin_gestao, false) = false
+  AND o.interessado_funcionario_id IS NULL
+  AND NOT COALESCE(o.oferta_spin, false)
+  AND o.tipo IN ('venda_turno', 'venda_folga')
+  AND EXISTS (
+    SELECT 1
+    FROM public.escala_marketplace_celula_comentario c
+    WHERE c.oferta_id = o.id
+      AND btrim(COALESCE(c.contraparte_nome, '')) = 'Spin Gaming'
+  );
+
+-- Comentários em aceitas Spin gestão sem registro (aprovação com flag zerada cedo demais).
+DO $$
+DECLARE
+  v_id uuid;
+BEGIN
+  FOR v_id IN
+    SELECT o.id
+    FROM public.escala_marketplace_oferta o
+    WHERE o.status = 'aceita'
+      AND COALESCE(o.proposta_spin_gestao, false) = true
+      AND o.interessado_funcionario_id IS NULL
+      AND NOT COALESCE(o.oferta_spin, false)
+      AND o.tipo IN ('venda_turno', 'venda_folga')
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.escala_marketplace_celula_comentario c
+        WHERE c.oferta_id = o.id
+      )
+  LOOP
+    PERFORM public._escala_marketplace_comentarios_registrar(v_id);
+  END LOOP;
+END $$;
 
 COMMIT;

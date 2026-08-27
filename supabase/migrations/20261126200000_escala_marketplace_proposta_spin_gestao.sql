@@ -197,8 +197,6 @@ BEGIN
     SET
       status = 'aceita',
       aceito_em = now(),
-      proposta_spin_gestao = false,
-      proposta_spin_por_funcionario_id = NULL,
       atualizado_em = now()
     WHERE id = p_oferta_id;
 

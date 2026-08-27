@@ -6,17 +6,17 @@
 
 `scripts/manual-supabase-marketplace-fix-spin-gestao-bug.sql`
 
-Clique **Run**. Pode executar de novo se precisar (idempotente).
+Idempotente. Se já colou uma versão anterior, **cole de novo** a versão atual do script.
 
-**Pré-requisito:** compra Spin gestão já instalada no projeto (você já colou o `20261126200000` antes).
+**Pré-requisito:** compra Spin gestão já instalada (`26200000` aplicado antes).
 
 ---
 
 ## O que o script corrige
 
-1. `sou_interessado` na listagem — só prestador P2P (não gestão Spin)
-2. Aprovar compra Spin — zera `proposta_spin_gestao` na oferta aceita
-3. Dados legado — ofertas `aceita` com flag Spin antiga
+1. `sou_interessado` na listagem — só prestador P2P
+2. **Aprovar** compra Spin — mantém `proposta_spin_gestao` (comentários na célula + rótulo «Spin Gaming»)
+3. Reparo de aceitas afetadas por versão anterior que zerava a flag cedo demais
 
 ---
 
@@ -24,8 +24,10 @@ Clique **Run**. Pode executar de novo se precisar (idempotente).
 
 ```sql
 SELECT count(*) FROM public.escala_marketplace_oferta
-WHERE status = 'aceita' AND proposta_spin_gestao = true;
--- Esperado: 0
+WHERE status = 'aceita'
+  AND interessado_funcionario_id IS NULL
+  AND tipo IN ('venda_turno', 'venda_folga')
+  AND NOT COALESCE(oferta_spin, false)
+  AND NOT COALESCE(proposta_spin_gestao, false);
+-- Aceitas Spin gestão devem ter proposta_spin_gestao = true
 ```
-
-Frontend: deploy Cloudflare com o commit que inclui `escalaMarketplace.ts` e `MarketplaceTurnos/index.tsx`.
