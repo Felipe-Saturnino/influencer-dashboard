@@ -989,7 +989,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo algumas políticas na aba Políticas?",
         texto:
-          "Com permissão de **Ver = Próprios**, a lista mostra só documentos cujo **Aplicável a** inclua **Todos os prestadores** ou a diretoria, gerência ou time do seu cadastro em Gestão de Prestadores. Se faltar vínculo no organograma, você pode não ver políticas direcionadas a times específicos. Perfis internos (não prestadores) devem usar **Ver = Sim**. Comunicados e RH Talks não usam esse filtro — aparecem para quem tem Ver = Sim ou Ver = Próprios.",
+          "Com permissão de **Ver = Próprios**, a lista mostra só documentos cujo **Aplicável a** inclua **Todos os prestadores** ou a diretoria, gerência ou time do seu cadastro em Gestão de Prestadores. Se faltar vínculo no organograma, você pode não ver políticas direcionadas a times específicos. Perfis internos (não prestadores) devem usar **Ver = Sim**. Comunicados não usam esse filtro. **RH Talks** usam o mesmo filtro de Aplicável a que Políticas.",
       },
       {
         subtitulo: "Cliquei em 'Lido' mas o badge 'Novo' voltou?",

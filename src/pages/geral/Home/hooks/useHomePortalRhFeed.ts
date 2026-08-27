@@ -35,6 +35,7 @@ type PostagemRow = {
   published_at: string | null;
   created_by: string | null;
   published_by: string | null;
+  aplicavel_a?: string[] | null;
 };
 
 type DocRow = PostagemRow & {
@@ -79,7 +80,8 @@ export function useHomePortalRhFeed() {
         const comCols = "id, titulo, status, published_at, created_by, published_by, is_pinned";
         const docCols =
           "id, titulo, status, published_at, created_by, published_by, aplicavel_a";
-        const talkCols = "id, titulo, status, published_at, created_by, published_by";
+        const talkCols =
+          "id, titulo, status, published_at, created_by, published_by, aplicavel_a";
 
         const fetchPortalSafe = async <T,>(
           label: string,
@@ -187,6 +189,16 @@ export function useHomePortalRhFeed() {
 
         for (const row of talkData) {
           if (!isPublicado(row.status)) continue;
+          if (
+            !documentoVisivelPorPermissaoPortalRh(
+              row,
+              perm.canView,
+              perm.canEditar,
+              setores,
+            )
+          ) {
+            continue;
+          }
           drafts.push({
             kind: "rh_talk",
             id: `portal-rh-talk-${row.id}`,

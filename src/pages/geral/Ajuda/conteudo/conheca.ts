@@ -1245,7 +1245,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Permissões e visibilidade",
         texto:
-          "O acesso ao Portal de RH é definido em Gestão de Usuários → Permissões (colunas Ver e Editar).\n\n— **Ver = Sim:** vê todos os comunicados, políticas e RH Talks publicados. Use este valor para perfis internos que não são prestadores (gestores, RH, executivos).\n— **Ver = Próprios:** destinado a prestadores com vínculo no organograma. Vê todos os **Comunicados** e **RH Talks** publicados; em **Políticas e normativas**, vê só documentos cujo campo **Aplicável a** inclua **Todos os prestadores** ou a diretoria, gerência ou time do seu cadastro em Gestão de Prestadores.\n— **Editar = Sim:** além de ver tudo nas abas de leitura, acessa **Gerenciamento de Postagens** (criar, editar, aprovar, arquivar) e o botão **Ver ciência** / **Ver Lidos** nos cards.\n\n**Editar = Próprios** não se aplica ao Portal de RH — não libera Gerenciamento.",
+          "O acesso ao Portal de RH é definido em Gestão de Usuários → Permissões (colunas Ver e Editar).\n\n— **Ver = Sim:** vê todos os comunicados, políticas e RH Talks publicados. Use este valor para perfis internos que não são prestadores (gestores, RH, executivos).\n— **Ver = Próprios:** destinado a prestadores com vínculo no organograma. Vê todos os **Comunicados** publicados; em **Políticas e normativas** e **RH Talks**, vê só itens cujo campo **Aplicável a** inclua **Todos os prestadores** ou a diretoria, gerência ou time do seu cadastro em Gestão de Prestadores.\n— **Editar = Sim:** além de ver tudo nas abas de leitura, acessa **Gerenciamento de Postagens** (criar, editar, aprovar, arquivar) e o botão **Ver ciência** / **Ver Lidos** nos cards.\n\n**Editar = Próprios** não se aplica ao Portal de RH — não libera Gerenciamento.",
       },
       {
         subtitulo: "Políticas e Normativas",
@@ -1255,7 +1255,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "RH Talks",
         texto:
-          "Reúne as atas das reuniões periódicas do RH com colaboradores.\n\nCada RH Talk tem um número sequencial, título e uma introdução. Quem tem permissão de Ver (**Sim** ou **Próprios**) pode abrir qualquer ata publicada — clique em **Ver Ata** para ler o conteúdo completo. O registro de participantes da reunião fica em Anotações RH (operacional), não restringe a leitura no portal.",
+          "Reúne as atas das reuniões periódicas do RH com colaboradores.\n\nCada RH Talk tem um número sequencial, título, introdução e o campo **Aplicável a** (mesmo critério das Políticas). Com **Ver = Próprios**, só aparecem atas cujo público inclui **Todos os prestadores** ou a diretoria/gerência/time do seu cadastro. Com **Ver = Sim** ou **Editar = Sim**, todas as atas publicadas aparecem. Clique em **Ver Ata** para ler o conteúdo completo. O registro de participantes da reunião fica em Anotações RH (operacional), não restringe a leitura no portal.",
       },
       {
         subtitulo: "Gerenciamento de Postagens (Gestores)",
@@ -1265,7 +1265,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Criar e Publicar Postagens",
         texto:
-          "Ao criar uma postagem, selecione o tipo (Comunicado, Política/Normativa ou RH Talk). Campos marcados com asterisco vermelho são obrigatórios para publicar.\n\nPolíticas e normativas novas usam cadastro normativo: tipo de documento, **código gerado automaticamente** (travado — não é possível escolher um número já existente), versão, PDF obrigatório, área responsável, classificação, aplicabilidade, resumo e documentos relacionados. Comunicados e RH Talks mantêm o editor de texto e anexos opcionais.\n\nSalvar grava como rascunho sem publicar. Publicar torna o item visível imediatamente (ou envia para aprovação, no caso de políticas que exigem aprovação).",
+          "Ao criar uma postagem, selecione o tipo (Comunicado, Política/Normativa ou RH Talk). Campos marcados com asterisco vermelho são obrigatórios para publicar.\n\nPolíticas e normativas novas usam cadastro normativo: tipo de documento, **código gerado automaticamente** (travado — não é possível escolher um número já existente), versão, PDF obrigatório, área responsável, classificação, aplicabilidade, resumo e documentos relacionados. **RH Talks** incluem **Aplicável a** (multi-seleção de diretoria/gerência/time ou Todos os prestadores), assunto, introdução, descrição e anexos opcionais. Comunicados mantêm o editor de texto e anexos opcionais.\n\nSalvar grava como rascunho sem publicar. Publicar torna o item visível imediatamente (ou envia para aprovação, no caso de políticas que exigem aprovação).",
       },
       {
         subtitulo: "Tutoriais (Ajuda)",

@@ -22,6 +22,7 @@ import {
   FORM_POLITICA_NORMATIVA_VAZIO,
   PORTAL_RH_APLICAVEL_TODOS,
   areaResponsavelPadraoRh,
+  opcoesOrganogramaAplicavel,
   proximoCodigoSugerido,
   sincronizarRelacionadosDocumentoPortal,
   validarPublicarDocumentoNormativo,
@@ -31,6 +32,7 @@ import {
 } from "../../../lib/portalRhDocumentoNormativo";
 import { carregarOpcoesTimesOrganograma } from "../../../lib/rhOrganogramaFetch";
 import type { RhOrgOrganogramaGrupoPrestador } from "../../../types/rhOrganograma";
+import { SelectOrganogramaMultiForm } from "../../../components/rh/SelectOrganogramaMultiForm";
 import { ModalFormPoliticaNormativa } from "./ModalFormPoliticaNormativa";
 import {
   contentTypeFromTipoUi,
@@ -116,6 +118,12 @@ export function ModalCriarPostagem({
   >([]);
   const [organogramaGrupos, setOrganogramaGrupos] = useState<RhOrgOrganogramaGrupoPrestador[]>([]);
   const [dataEmissaoPersistida, setDataEmissaoPersistida] = useState<string | null>(null);
+  const [aplicavelATalk, setAplicavelATalk] = useState<string[]>([PORTAL_RH_APLICAVEL_TODOS]);
+
+  const opcoesAplicavelTalk = useMemo(
+    () => opcoesOrganogramaAplicavel(organogramaGrupos),
+    [organogramaGrupos],
+  );
 
   const buildSnapshot = useCallback(
     (paths: { imagem: string | null; anexo: string | null; anexoNome: string | null }): SnapshotPostagemEdicao | null => {
@@ -131,9 +139,10 @@ export function ModalCriarPostagem({
         imagemPath: paths.imagem,
         anexoPath: paths.anexo,
         anexoNome: paths.anexoNome,
+        aplicavelA: tipoPostagem === "rh_talk" ? [...aplicavelATalk] : [],
       };
     },
-    [tipoPostagem, tipoComunicado, tipoPolitica, requerAprovacao, assunto, introducao, descricao],
+    [tipoPostagem, tipoComunicado, tipoPolitica, requerAprovacao, assunto, introducao, descricao, aplicavelATalk],
   );
 
   const resetForm = useCallback(() => {
@@ -158,6 +167,7 @@ export function ModalCriarPostagem({
     setLegadoPolitica(false);
     setOrganogramaGrupos([]);
     setDataEmissaoPersistida(null);
+    setAplicavelATalk([PORTAL_RH_APLICAVEL_TODOS]);
   }, []);
 
   const aplicarSnapshotAposCarga = (
@@ -198,6 +208,19 @@ export function ModalCriarPostagem({
       }
     })();
   }, [open, tipoPostagem, editRef?.id, modo, legadoPolitica]);
+
+  useEffect(() => {
+    if (!open || tipoPostagem !== "rh_talk") return;
+    void (async () => {
+      const org = await carregarOpcoesTimesOrganograma();
+      if (!org.error) {
+        setOrganogramaGrupos(org.grupos);
+        if (modo === "criar") {
+          setAplicavelATalk((prev) => (prev.length === 0 ? [PORTAL_RH_APLICAVEL_TODOS] : prev));
+        }
+      }
+    })();
+  }, [open, tipoPostagem, modo]);
 
   /** Na criação, recalcula o próximo código quando a lista de códigos existentes chega (ou muda). */
   useEffect(() => {
@@ -255,6 +278,7 @@ export function ModalCriarPostagem({
         imagemPath: row.imagem_storage_path,
         anexoPath: row.anexo_storage_path,
         anexoNome: row.anexo_nome,
+        aplicavelA: [],
       });
     } else if (ref.contentType === "documento") {
       const { data, error } = await supabase
@@ -339,6 +363,7 @@ export function ModalCriarPostagem({
           imagemPath: row.imagem_storage_path,
           anexoPath: row.anexo_storage_path,
           anexoNome: row.anexo_nome,
+          aplicavelA: [],
         });
       } else {
         setAssunto(row.titulo);
@@ -358,6 +383,7 @@ export function ModalCriarPostagem({
           imagemPath: row.imagem_storage_path,
           anexoPath: row.anexo_storage_path,
           anexoNome: row.anexo_nome,
+          aplicavelA: [],
         });
       }
       setLoadingData(false);
@@ -378,6 +404,7 @@ export function ModalCriarPostagem({
         imagem_storage_path: string | null;
         anexo_storage_path: string | null;
         anexo_nome: string | null;
+        aplicavel_a: string[] | null;
       };
       setAssunto(row.titulo);
       setDescricao(row.corpo ?? row.resumo ?? "");
@@ -386,6 +413,9 @@ export function ModalCriarPostagem({
       setImagemPath(row.imagem_storage_path);
       setAnexoPath(row.anexo_storage_path);
       setAnexoNome(row.anexo_nome);
+      const aplicavel =
+        row.aplicavel_a?.length ? row.aplicavel_a : [PORTAL_RH_APLICAVEL_TODOS];
+      setAplicavelATalk(aplicavel);
       aplicarSnapshotAposCarga("rh_talk", {
         tipoComunicado: "",
         tipoPolitica: "",
@@ -396,6 +426,7 @@ export function ModalCriarPostagem({
         imagemPath: row.imagem_storage_path,
         anexoPath: row.anexo_storage_path,
         anexoNome: row.anexo_nome,
+        aplicavelA: aplicavel,
       });
     }
   }, []);
@@ -497,7 +528,7 @@ export function ModalCriarPostagem({
           );
         }
       } else {
-        errs = validarPublicarRhTalk({ assunto, introducao, descricao });
+        errs = validarPublicarRhTalk({ assunto, introducao, descricao, aplicavelA: aplicavelATalk });
       }
       setFieldErr(errs);
       if (Object.keys(errs).length > 0) return;
@@ -738,6 +769,7 @@ export function ModalCriarPostagem({
           imagem_storage_path: up.imagem,
           anexo_storage_path: up.anexo,
           anexo_nome: up.anexoNomeOut,
+          aplicavel_a: aplicavelATalk.length ? aplicavelATalk : [PORTAL_RH_APLICAVEL_TODOS],
         };
         const camposTalkPublicacao =
           novoStatus !== "publicado"
@@ -1012,6 +1044,17 @@ export function ModalCriarPostagem({
                   onChange={(e) => setAssunto(e.target.value)}
                   style={{ ...inputStyle, borderColor: fieldErr.assunto ? "#e84025" : t.cardBorder }}
                   aria-label="Assunto"
+                />
+              </div>
+              <div>
+                {lbl("mp-aplicavel-rt", "Aplicável a", true)}
+                <SelectOrganogramaMultiForm
+                  id="mp-aplicavel-rt"
+                  value={aplicavelATalk}
+                  onChange={setAplicavelATalk}
+                  options={opcoesAplicavelTalk}
+                  hasError={Boolean(fieldErr.aplicavelA)}
+                  ariaLabel="Aplicável a"
                 />
               </div>
               <div>

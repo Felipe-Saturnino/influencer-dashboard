@@ -81,6 +81,8 @@ export type SnapshotPostagemEdicao = {
   imagemPath: string | null;
   anexoPath: string | null;
   anexoNome: string | null;
+  /** RH Talks — público-alvo (nomes de setor / Todos os prestadores). */
+  aplicavelA: string[];
 };
 
 function textoCorpoIgual(a: string, b: string): boolean {
@@ -118,6 +120,11 @@ export function diffEdicaoRascunho(antes: SnapshotPostagemEdicao, depois: Snapsh
   }
   if (antes.anexoPath !== depois.anexoPath || antes.anexoNome !== depois.anexoNome) {
     alteracoes.push(depois.anexoPath ? "Anexo alterado" : "Anexo removido");
+  }
+  if (antes.tipoPostagem === "rh_talk") {
+    const a = [...antes.aplicavelA].map((s) => s.trim()).filter(Boolean).sort().join("|");
+    const b = [...depois.aplicavelA].map((s) => s.trim()).filter(Boolean).sort().join("|");
+    if (a !== b) alteracoes.push("Aplicável a alterado");
   }
   return alteracoes;
 }
@@ -305,11 +312,13 @@ export function validarPublicarRhTalk(f: {
   assunto: string;
   introducao: string;
   descricao: string;
+  aplicavelA: string[];
 }): ValidacaoPublicar {
   const err: ValidacaoPublicar = {};
   if (!f.assunto.trim()) err.assunto = "Informe o assunto.";
   if (!f.introducao.trim()) err.introducao = "Informe a introdução.";
   else if (f.introducao.length > 400) err.introducao = "Introdução deve ter no máximo 400 caracteres.";
   if (isHtmlEmpty(f.descricao)) err.descricao = "Informe a descrição.";
+  if (f.aplicavelA.length === 0) err.aplicavelA = "Selecione ao menos um público aplicável.";
   return err;
 }
