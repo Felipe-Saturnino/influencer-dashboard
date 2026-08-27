@@ -17,6 +17,7 @@ import {
   marketplacePodeAceitarOfertaSpin,
   marketplacePodeCancelarOfertaSpin,
   marketplacePodeProporSpinGestao,
+  marketplacePodeDesistirPropostaSpinGestao,
   marketplaceTimeRotuloFromKey,
   marketplacePodeEditarOferta,
   marketplacePodeMinhasNegociacoes,
@@ -562,6 +563,19 @@ describe("overlayIdentidadeMarketplaceOfertas", () => {
     expect(out[0]?.souOfertante).toBe(false);
     expect(out[0]?.mesmoTime).toBe(false);
   });
+
+  it("preserva souInteressado da RPC em proposta Spin gestão", () => {
+    const spin = {
+      ...base,
+      interessadoStaffId: undefined,
+      propostaSpinGestao: true,
+      souInteressado: true,
+      status: "em_analise" as const,
+    };
+    const out = overlayIdentidadeMarketplaceOfertas([spin], "gp-1", "game_presenter");
+    expect(out[0]?.souInteressado).toBe(true);
+    expect(out[0]?.souOfertante).toBe(true);
+  });
 });
 
 describe("alertasHomeMarketplaceDoPrestador", () => {
@@ -890,6 +904,25 @@ describe("ofertas Spin — helpers", () => {
       marketplacePodeProporSpinGestao(
         { canView: "sim" },
         { ...row, status: "em_analise" },
+      ),
+    ).toBe(false);
+  });
+
+  it("desistir proposta Spin gestão — Ver Sim + Editar + em análise", () => {
+    const row = { propostaSpinGestao: true, status: "em_analise" as const };
+    expect(
+      marketplacePodeDesistirPropostaSpinGestao({ canView: "sim", canEditarOk: true }, row),
+    ).toBe(true);
+    expect(
+      marketplacePodeDesistirPropostaSpinGestao({ canView: "proprios", canEditarOk: true }, row),
+    ).toBe(false);
+    expect(
+      marketplacePodeDesistirPropostaSpinGestao({ canView: "sim", canEditarOk: false }, row),
+    ).toBe(false);
+    expect(
+      marketplacePodeDesistirPropostaSpinGestao(
+        { canView: "sim", canEditarOk: true },
+        { ...row, status: "aberto" },
       ),
     ).toBe(false);
   });

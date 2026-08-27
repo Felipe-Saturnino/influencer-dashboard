@@ -283,6 +283,15 @@ export function marketplacePodeProporSpinGestao(
   return row.status === "aberto" || row.status === "interessado";
 }
 
+/** Desistir de proposta Spin em análise (compra gestão) — Ver = Sim + Editar ok. */
+export function marketplacePodeDesistirPropostaSpinGestao(
+  perm: Pick<MarketplacePermissoesUi, "canView" | "canEditarOk">,
+  row: Pick<LinhaOfertaMarketplace, "propostaSpinGestao" | "status">,
+): boolean {
+  if (perm.canView !== "sim" || !perm.canEditarOk) return false;
+  return row.propostaSpinGestao === true && row.status === "em_analise";
+}
+
 /** Rótulo do time na tabela Compra Spin (GP / Shuffler). */
 export function marketplaceTimeRotuloFromKey(key: EscalaTimeFiltro): string {
   if (key === "game_presenter") return "Game Presenter";
@@ -613,6 +622,8 @@ export async function carregarMeuContextoMarketplace(
 /**
  * Recalcula souOfertante / souInteressado / mesmoTime com o prestador da sessão visível.
  * A RPC usa auth.uid() da conta viewer (admin vê tudo como se fosse gestão).
+ * Em proposta Spin gestão, `interessado_funcionario_id` é NULL — preservar `souInteressado` da RPC
+ * (gestão / admin com `_escala_marketplace_pode_gestao_spin`).
  */
 export function overlayIdentidadeMarketplaceOfertas(
   linhas: LinhaOfertaMarketplace[],
@@ -623,8 +634,10 @@ export function overlayIdentidadeMarketplaceOfertas(
   const grupo = filtroTimeGrupoNegociacaoMarketplace(areaKey);
   return linhas.map((l) => ({
     ...l,
-    souOfertante: l.solicitanteStaffId === funcionarioId,
-    souInteressado: l.interessadoStaffId === funcionarioId,
+    souOfertante: !l.ofertaSpin && l.solicitanteStaffId === funcionarioId,
+    souInteressado: l.propostaSpinGestao
+      ? l.souInteressado === true
+      : l.interessadoStaffId === funcionarioId,
     mesmoTime: grupo ? ofertaPassaFiltroTimeMarketplace(l.timeKey, grupo) : false,
   }));
 }

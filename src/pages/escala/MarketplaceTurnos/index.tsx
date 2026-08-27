@@ -69,6 +69,7 @@ import {
   marketplaceMostrarNovaOfertaSpin,
   marketplacePodeAceitarOfertaSpin,
   marketplacePodeProporSpinGestao,
+  marketplacePodeDesistirPropostaSpinGestao,
   marketplacePodeCancelarOfertaSpin,
   marketplaceTimeRotuloFromKey,
   marketplacePodeEditarOferta,
@@ -594,7 +595,7 @@ export default function EscalaMarketplaceTurnosPage() {
       (r) =>
         !r.ofertaSpin &&
         r.tipo === tipoAlvo &&
-        ofertaEmAberto(r) &&
+        (ofertaEmAberto(r) || (r.status === "em_analise" && r.propostaSpinGestao === true)) &&
         passaFiltroCompraSpinTime(r, filtroTimeTodas) &&
         textoContemBuscaEmAlgum(busca, r.ofertante, r.turnoOferta),
     );
@@ -1189,6 +1190,7 @@ export default function EscalaMarketplaceTurnosPage() {
   function renderTabelaCompraSpin(rows: LinhaOfertaMarketplace[]) {
     const sorted = ordenarOfertas(rows, sortOferta);
     if (sorted.length === 0) return celulaVazia();
+    const mostrarStatus = sorted.some((r) => r.status === "em_analise" && r.propostaSpinGestao);
     return (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
@@ -1203,6 +1205,7 @@ export default function EscalaMarketplaceTurnosPage() {
               {thSort("Turno da Oferta", "turnoOferta")}
               {thSort("Ofertante", "ofertante")}
               {thSort("Time", "time")}
+              {mostrarStatus && thSort("Status", "status")}
               <th scope="col" style={dataTable.thHeader}>
                 Ações
               </th>
@@ -1218,8 +1221,18 @@ export default function EscalaMarketplaceTurnosPage() {
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
                   <td style={dataTable.tdCenter}>{r.ofertante}</td>
                   <td style={dataTable.tdCenter}>{marketplaceTimeRotuloFromKey(r.timeKey)}</td>
+                  {mostrarStatus && (
+                    <td style={dataTable.tdCenter}>{r.status ? OFERTA_STATUS_LABEL[r.status] : "—"}</td>
+                  )}
                   {tdAcoes(
-                    marketplacePodeProporSpinGestao(perm, r) ? (
+                    marketplacePodeDesistirPropostaSpinGestao(perm, r) ? (
+                      <BtnIconeAcaoLinha
+                        label={tooltipAcao("Desistir da proposta")}
+                        onClick={() => setDecisaoTroca({ oferta: r, decisao: "desistir" })}
+                      >
+                        <Undo2 size={14} aria-hidden="true" />
+                      </BtnIconeAcaoLinha>
+                    ) : marketplacePodeProporSpinGestao(perm, r) ? (
                       <BtnIconeAcaoLinha
                         label={tooltipAcao("Aceitar em nome da Spin")}
                         onClick={() => setOfertaProporSpin(r)}
