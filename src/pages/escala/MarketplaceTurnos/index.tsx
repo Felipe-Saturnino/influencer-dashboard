@@ -1300,7 +1300,7 @@ export default function EscalaMarketplaceTurnosPage() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="escala_marketplace_turnos" />}
         title={getPageMenuLabel("escala_marketplace_turnos")}
-        subtitle="Ofertas de venda e troca de turnos — mural aberto e histórico conforme a sua permissão."
+        subtitle="Ofertas de venda e troca de turnos."
         brand={brand}
         t={t}
       />
