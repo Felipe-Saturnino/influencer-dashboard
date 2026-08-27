@@ -1,9 +1,18 @@
--- Marketplace — fix Bugbot compra Spin gestão (sou_interessado P2P, aprovar, legado).
--- Para colar no SQL Editor: scripts/manual-supabase-marketplace-fix-spin-gestao-bug.sql
+-- =============================================================================
+-- SUPABASE → SQL Editor → New query → cole TUDO → Run
+--
+-- Marketplace — fix compra Spin gestão (versão definitiva, 2026-11-27)
+-- Idempotente: pode executar mais de uma vez.
+-- Pré-requisito: compra Spin gestão já instalada (migration 26200000 no banco).
+--
+-- Corrige:
+--   • sou_interessado na listagem = só P2P (não gestão Spin)
+--   • aprovar compra Spin mantém proposta_spin_gestao + comentário na célula
+--   • repara aceitas afetadas por script anterior
+-- =============================================================================
 
 BEGIN;
 
--- Aprovar: ramo proposta Spin (só célula do ofertante) — idempotente (CREATE OR REPLACE).
 CREATE OR REPLACE FUNCTION public._escala_marketplace_troca_aprovar_sem_limite_2h(p_oferta_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -87,10 +96,7 @@ BEGIN
     END IF;
 
     UPDATE public.escala_marketplace_oferta
-    SET
-      status = 'aceita',
-      aceito_em = now(),
-      atualizado_em = now()
+    SET status = 'aceita', aceito_em = now(), atualizado_em = now()
     WHERE id = p_oferta_id;
 
     PERFORM public._escala_marketplace_comentarios_registrar(p_oferta_id);
@@ -369,19 +375,14 @@ $$;
 COMMENT ON FUNCTION public._escala_marketplace_ofertas_listar_sem_expiracao_2h(date) IS
   'Listagem Marketplace (jsonb). sou_interessado = prestador P2P; proposta Spin gestão não usa esta flag.';
 
--- Reparo: aceitas Spin gestão com flag zerada pela versão anterior do script.
--- Aceita + interessado NULL + venda P2P = só ramo de aprovação Spin gestão (não exige comentário prévio).
 UPDATE public.escala_marketplace_oferta o
-SET
-  proposta_spin_gestao = true,
-  atualizado_em = now()
+SET proposta_spin_gestao = true, atualizado_em = now()
 WHERE o.status = 'aceita'
   AND COALESCE(o.proposta_spin_gestao, false) = false
   AND o.interessado_funcionario_id IS NULL
   AND NOT COALESCE(o.oferta_spin, false)
   AND o.tipo IN ('venda_turno', 'venda_folga');
 
--- Comentários em aceitas Spin gestão sem registro (flag restaurada acima ou nunca gravada).
 DO $$
 DECLARE
   v_id uuid;

@@ -1,33 +1,19 @@
 # Marketplace — fix compra Spin gestão (SQL manual)
 
-## O que colar no Supabase
+## Cole no Supabase
 
-**Um único arquivo** — copie e cole **inteiro** no SQL Editor:
+**Arquivo único (versão definitiva):**
 
-`scripts/manual-supabase-marketplace-fix-spin-gestao-bug.sql`
+`scripts/COLE-NO-SUPABASE-marketplace-spin-gestao-fix.sql`
 
-Idempotente. Se já colou uma versão anterior, **cole de novo** a versão atual do script.
+1. Abra o arquivo no repo
+2. Ctrl+A → Ctrl+C
+3. Supabase → SQL Editor → New query → Ctrl+V → **Run**
 
-**Pré-requisito:** compra Spin gestão já instalada (`26200000` aplicado antes).
+Idempotente. Pode rodar de novo se precisar.
 
----
+**Pré-requisito:** compra Spin gestão já no banco (`26200000` aplicado antes).
 
-## O que o script corrige
+**Ignore** `27180000` e scripts antigos — use só o arquivo acima.
 
-1. `sou_interessado` na listagem — só prestador P2P
-2. **Aprovar** compra Spin — mantém `proposta_spin_gestao` (comentários na célula + rótulo «Spin Gaming»)
-3. Reparo de aceitas afetadas por versão anterior que zerava a flag cedo demais
-
----
-
-## Verificação (opcional)
-
-```sql
-SELECT count(*) FROM public.escala_marketplace_oferta
-WHERE status = 'aceita'
-  AND interessado_funcionario_id IS NULL
-  AND tipo IN ('venda_turno', 'venda_folga')
-  AND NOT COALESCE(oferta_spin, false)
-  AND NOT COALESCE(proposta_spin_gestao, false);
--- Aceitas Spin gestão devem ter proposta_spin_gestao = true
-```
+Migration espelho no Git: `20261127220000_escala_marketplace_fix_spin_gestao_definitivo.sql` (mesmo conteúdo).
