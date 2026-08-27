@@ -564,16 +564,16 @@ describe("overlayIdentidadeMarketplaceOfertas", () => {
     expect(out[0]?.mesmoTime).toBe(false);
   });
 
-  it("preserva souInteressado da RPC em proposta Spin gestão", () => {
+  it("preserva souInteressado=false em proposta Spin gestão no overlay", () => {
     const spin = {
       ...base,
       interessadoStaffId: undefined,
       propostaSpinGestao: true,
-      souInteressado: true,
+      souInteressado: false,
       status: "em_analise" as const,
     };
     const out = overlayIdentidadeMarketplaceOfertas([spin], "gp-1", "game_presenter");
-    expect(out[0]?.souInteressado).toBe(true);
+    expect(out[0]?.souInteressado).toBe(false);
     expect(out[0]?.souOfertante).toBe(true);
   });
 });

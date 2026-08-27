@@ -450,7 +450,11 @@ export default function EscalaMarketplaceTurnosPage() {
     for (const oferta of ofertasEscopo) {
       if (!ofertaAtiva(oferta)) continue;
       if (oferta.souOfertante) dias.add(oferta.dataOfertaIso);
-      if (oferta.status === "em_analise" && (oferta.souOfertante || oferta.souInteressado)) {
+      if (
+        oferta.status === "em_analise" &&
+        !oferta.propostaSpinGestao &&
+        (oferta.souOfertante || oferta.souInteressado)
+      ) {
         dias.add(oferta.dataOfertaIso);
         if (oferta.dataInteresseIso) dias.add(oferta.dataInteresseIso);
       }
@@ -536,7 +540,7 @@ export default function EscalaMarketplaceTurnosPage() {
     [minhasBase],
   );
   const minhasAceitas = useMemo(
-    () => minhasBase.filter((r) => r.souInteressado === true),
+    () => minhasBase.filter((r) => r.souInteressado === true && !r.propostaSpinGestao),
     [minhasBase],
   );
   const minhasEncerradas = useMemo(
