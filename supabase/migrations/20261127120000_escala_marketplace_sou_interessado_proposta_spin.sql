@@ -1,5 +1,8 @@
--- Compra Spin (gestão): sou_interessado=true para quem pode gestão Spin,
--- alinhado a escala_marketplace_oferta_desistir (interessado_funcionario_id é NULL).
+-- Supersedido por 20261127180000 + scripts/manual-supabase-marketplace-fix-spin-gestao-bug.sql
+-- Mantido no repo apenas como registo; aplicar o fix via script manual no SQL Editor.
+
+-- Compra Spin (gestão): sou_interessado permanece só para P2P (interessado_funcionario_id).
+-- proposta_spin_gestao permanece true em aceitas (rótulo Spin Gaming + comentários na célula).
 
 BEGIN;
 
@@ -16,7 +19,6 @@ DECLARE
   v_fid uuid;
   v_time uuid;
   v_grupo text;
-  v_gestao_spin boolean := public._escala_marketplace_pode_gestao_spin();
   v_out jsonb;
 BEGIN
   IF v_escopo = 'nao' THEN
@@ -95,10 +97,9 @@ BEGIN
         ),
         'sou_criador_spin', (v_fid IS NOT NULL AND o.criado_por_funcionario_id = v_fid),
         'sou_interessado', (
-          CASE
-            WHEN COALESCE(o.proposta_spin_gestao, false) THEN v_gestao_spin
-            ELSE (v_fid IS NOT NULL AND o.interessado_funcionario_id = v_fid)
-          END
+          v_fid IS NOT NULL
+          AND NOT COALESCE(o.proposta_spin_gestao, false)
+          AND o.interessado_funcionario_id = v_fid
         ),
         'mesmo_time', (
           COALESCE(v_grupo, '') <> ''
@@ -127,6 +128,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public._escala_marketplace_ofertas_listar_sem_expiracao_2h(date) IS
-  'Listagem Marketplace (jsonb). Em proposta_spin_gestao, sou_interessado segue _escala_marketplace_pode_gestao_spin (interessado_funcionario_id fica NULL).';
+  'Listagem Marketplace (jsonb). sou_interessado = prestador P2P; proposta Spin gestão não usa esta flag.';
 
 COMMIT;
+

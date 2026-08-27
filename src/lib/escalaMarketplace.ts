@@ -621,9 +621,7 @@ export async function carregarMeuContextoMarketplace(
 
 /**
  * Recalcula souOfertante / souInteressado / mesmoTime com o prestador da sessão visível.
- * A RPC usa auth.uid() da conta viewer (admin vê tudo como se fosse gestão).
- * Em proposta Spin gestão, `interessado_funcionario_id` é NULL — preservar `souInteressado` da RPC
- * (gestão / admin com `_escala_marketplace_pode_gestao_spin`).
+ * Proposta Spin gestão não usa interessado_funcionario_id — não marcar souInteressado no overlay.
  */
 export function overlayIdentidadeMarketplaceOfertas(
   linhas: LinhaOfertaMarketplace[],
@@ -635,9 +633,7 @@ export function overlayIdentidadeMarketplaceOfertas(
   return linhas.map((l) => ({
     ...l,
     souOfertante: !l.ofertaSpin && l.solicitanteStaffId === funcionarioId,
-    souInteressado: l.propostaSpinGestao
-      ? l.souInteressado === true
-      : l.interessadoStaffId === funcionarioId,
+    souInteressado: !l.propostaSpinGestao && l.interessadoStaffId === funcionarioId,
     mesmoTime: grupo ? ofertaPassaFiltroTimeMarketplace(l.timeKey, grupo) : false,
   }));
 }
