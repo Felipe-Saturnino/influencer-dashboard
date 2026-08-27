@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Minus, Plus } from "lucide-react";
 import { FONT } from "../../../constants/theme";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import {
@@ -13,6 +13,7 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { supabase } from "../../../lib/supabase";
 import {
   criarOfertaSpinMarketplace,
+  MARKETPLACE_OFERTA_SPIN_QTD_MAX,
   mensagemErroOfertaMarketplace,
   timeKeyFromOrgTimeNome,
   type TipoOfertaSpinMarketplace,
@@ -79,6 +80,7 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
   const [diaIso, setDiaIso] = useState("");
   const [turno, setTurno] = useState<string>("Manhã");
   const [estudioSlug, setEstudioSlug] = useState("");
+  const [quantidade, setQuantidade] = useState(1);
   const [observacao, setObservacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
@@ -92,6 +94,7 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
     setDiaIso("");
     setTurno("Manhã");
     setEstudioSlug("");
+    setQuantidade(1);
     setObservacao("");
     setErro(null);
     setGravando(false);
@@ -196,6 +199,11 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
       setErro("Escolha o estúdio da oferta.");
       return;
     }
+    const qtd = Math.floor(Number(quantidade));
+    if (!Number.isFinite(qtd) || qtd < 1 || qtd > MARKETPLACE_OFERTA_SPIN_QTD_MAX) {
+      setErro(`A quantidade deve ser entre 1 e ${MARKETPLACE_OFERTA_SPIN_QTD_MAX}.`);
+      return;
+    }
     setGravando(true);
     const res = await criarOfertaSpinMarketplace({
       tipo,
@@ -204,6 +212,7 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
       turnoLabel: turno,
       estudioSlug: slugEnvio,
       observacao: observacao.trim() || null,
+      quantidade: qtd,
     });
     setGravando(false);
     if (!res.ok) {
@@ -212,6 +221,23 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
     }
     onCriada();
     onClose();
+  }
+
+  function ajustarQuantidade(delta: number) {
+    setQuantidade((q) => {
+      const next = Math.floor(Number(q)) + delta;
+      return Math.min(MARKETPLACE_OFERTA_SPIN_QTD_MAX, Math.max(1, next));
+    });
+  }
+
+  function onChangeQuantidadeInput(raw: string) {
+    if (raw.trim() === "") {
+      setQuantidade(1);
+      return;
+    }
+    const n = Math.floor(Number(raw));
+    if (!Number.isFinite(n)) return;
+    setQuantidade(Math.min(MARKETPLACE_OFERTA_SPIN_QTD_MAX, Math.max(1, n)));
   }
 
   if (!open) return null;
@@ -305,6 +331,90 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
               </select>
             </div>
 
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>
+                Quantidade
+                <CampoObrigatorioMark />
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => ajustarQuantidade(-1)}
+                  disabled={gravando || quantidade <= 1}
+                  aria-label="Diminuir quantidade"
+                  title="Diminuir quantidade"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    cursor: gravando || quantidade <= 1 ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: quantidade <= 1 ? 0.45 : 1,
+                  }}
+                >
+                  <Minus size={16} aria-hidden />
+                </button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MARKETPLACE_OFERTA_SPIN_QTD_MAX}
+                  value={quantidade}
+                  onChange={(e) => onChangeQuantidadeInput(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    width: 72,
+                    textAlign: "center",
+                    fontVariantNumeric: "tabular-nums",
+                    fontWeight: 700,
+                  }}
+                  aria-label="Quantidade de ofertas Spin"
+                  disabled={gravando}
+                />
+                <button
+                  type="button"
+                  onClick={() => ajustarQuantidade(1)}
+                  disabled={gravando || quantidade >= MARKETPLACE_OFERTA_SPIN_QTD_MAX}
+                  aria-label="Aumentar quantidade"
+                  title="Aumentar quantidade"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    cursor:
+                      gravando || quantidade >= MARKETPLACE_OFERTA_SPIN_QTD_MAX
+                        ? "not-allowed"
+                        : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: quantidade >= MARKETPLACE_OFERTA_SPIN_QTD_MAX ? 0.45 : 1,
+                  }}
+                >
+                  <Plus size={16} aria-hidden />
+                </button>
+              </div>
+              <p style={{ margin: "6px 0 0", fontSize: 11, color: t.textMuted }}>
+                Cada unidade vira uma linha independente em Todas as Ofertas (máx.{" "}
+                {MARKETPLACE_OFERTA_SPIN_QTD_MAX}).
+              </p>
+            </div>
+
             {estudioObrigatorio ? (
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>
@@ -381,6 +491,8 @@ export function ModalOfertarSpin({ open, onClose, onCriada }: Props) {
                     <Loader2 size={14} className="app-lucide-spin" aria-hidden />
                     Publicando…
                   </>
+                ) : quantidade > 1 ? (
+                  `Publicar ${quantidade} ofertas`
                 ) : (
                   "Publicar oferta"
                 )}

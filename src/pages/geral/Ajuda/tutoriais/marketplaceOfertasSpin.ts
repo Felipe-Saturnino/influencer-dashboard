@@ -35,7 +35,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: TutorialDef = {
     {
       titulo: "3. Publicar Cobertura de turno",
       texto:
-        "1. Na aba **Ofertas Spin**, clique em **Nova Oferta**.\n2. **Time** — selecione o grupo que poderá aceitar (ex.: Game Presenter).\n3. **Tipo da oferta** — **Cobertura de turno**.\n4. **Dia** — data futura com pelo menos **4h até o início do turno** escolhido.\n5. **Turno** — Manhã, Tarde ou Noite.\n6. **Estúdio** — obrigatório só para **Game Presenter**. Em **Shuffler** ou **Liderança** o campo some e a oferta grava **Todos Estúdios** (essas equipes atendem todos os estúdios).\n7. **Observação** — opcional; aparece no mural para os colegas.\n8. Clique em **Publicar oferta**.\n\nA oferta entra em **Ofertas abertas** desta aba e no bloco **Ofertas de Turno** em **Todas as Ofertas**.",
+        "1. Na aba **Ofertas Spin**, clique em **Nova Oferta**.\n2. **Time** — selecione o grupo que poderá aceitar (ex.: Game Presenter).\n3. **Tipo da oferta** — **Cobertura de turno**.\n4. **Dia** — data futura com pelo menos **4h até o início do turno** escolhido.\n5. **Turno** — Manhã, Tarde ou Noite.\n6. **Quantidade** — padrão **1**; aumente se precisar de várias vagas no mesmo dia/turno (cada unidade vira uma linha em **Todas as Ofertas**).\n7. **Estúdio** — obrigatório só para **Game Presenter**. Em **Shuffler** ou **Liderança** o campo some e a oferta grava **Todos Estúdios** (essas equipes atendem todos os estúdios).\n8. **Observação** — opcional; aparece no mural para os colegas.\n9. Clique em **Publicar oferta** (ou **Publicar N ofertas**).\n\nAs ofertas entram em **Ofertas abertas** desta aba e no bloco **Ofertas de Turno** em **Todas as Ofertas**.",
       imagens: [
         {
           src: `${IMG}/02-modal-cobertura-turno.png`,
@@ -98,5 +98,5 @@ export const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: TutorialDef = {
     },
   ],
   notasFinais:
-    "— **Nova Oferta** Spin só aparece na aba **Ofertas Spin** (permissão de gestão).\n— Cobertura/liberação Spin: publicar exige **4h** até o início do turno; aceite no mural exige **2h** e escala **aprovada** do mês.\n— Cobertura: aceitante de **folga** + intervalo mínimo de **12h** entre turnos. Liberação: aceitante **escalado no mesmo turno** do dia.\n— Uma oferta Spin operacional aberta por combinação time + dia + turno + tipo.\n— Para publicar ofertas **próprias** como prestador, use **Nova Oferta** na aba **Minhas Ofertas** (tutorial **Marketplace**).",
+    "— **Nova Oferta** Spin só aparece na aba **Ofertas Spin** (permissão de gestão).\n— Cobertura/liberação Spin: publicar exige **4h** até o início do turno; aceite no mural exige **2h** e escala **aprovada** do mês.\n— Cobertura: aceitante de **folga** + intervalo mínimo de **12h** entre turnos. Liberação: aceitante **escalado no mesmo turno** do dia.\n— **Quantidade** no modal permite várias ofertas Spin no mesmo dia/turno (cada uma = linha no mural; máx. 20).\n— Para publicar ofertas **próprias** como prestador, use **Nova Oferta** na aba **Minhas Ofertas** (tutorial **Marketplace**).",
 };

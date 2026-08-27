@@ -20,6 +20,7 @@
  * o que é estrutural (dia ≥ hoje, escala aprovada, célula coerente, conflito).
  */
 import { supabase } from "./supabase";
+import { subDiasIso } from "./dateBrasil";
 import { getPeriodoHistoricoCompetencias } from "./dashboardHelpers";
 import { buscarRhFuncionarioAtivoPorEmailLogin } from "./rhFuncionarioLoginMatch";
 import type { PermissaoValor } from "../types";
@@ -70,6 +71,27 @@ export function isDataNoHistoricoMarketplace(
     fimComp = extra;
   }
   return competencia >= inicioComp && competencia <= fimComp;
+}
+
+/** Janela dos blocos de arquivo (Encerradas / Histórico / Ofertas que aceitei) com o botão Histórico ativo. */
+export const MARKETPLACE_HISTORICO_BLOCO_DIAS = 30;
+
+/**
+ * Recorte civil inclusivo dos últimos `dias` (default 30) em America/Sao_Paulo —
+ * usado só nos blocos de arquivo quando o botão Histórico está ativo.
+ * Carrossel em mês: não aplicar (mostrar o mês inteiro).
+ */
+export function isDataNosUltimosDiasMarketplace(
+  value: string | null | undefined,
+  dias: number = MARKETPLACE_HISTORICO_BLOCO_DIAS,
+  ref: Date = new Date(),
+): boolean {
+  if (!value || dias < 1) return false;
+  const dia = value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return false;
+  const hojeIso = ref.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const inicioIso = subDiasIso(hojeIso, dias - 1);
+  return dia >= inicioIso && dia <= hojeIso;
 }
 
 /** Competência `YYYY-MM` a partir de ano + mês 0-based. */
@@ -896,6 +918,7 @@ type RpcResultado = {
   ok?: boolean;
   error?: string;
   id?: string;
+  quantidade?: number;
   area_key?: string;
   em_analise?: boolean;
 } | null;
@@ -1160,7 +1183,7 @@ export type CriarOfertaMarketplaceInput = {
 };
 
 export type CriarOfertaMarketplaceResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; quantidade?: number }
   | { ok: false; error: string };
 
 export async function criarOfertaMarketplace(
@@ -1191,11 +1214,17 @@ export type CriarOfertaSpinMarketplaceInput = {
   turnoLabel: string;
   estudioSlug: string;
   observacao?: string | null;
+  /** Quantas linhas independentes no mural (1–20). Default 1. */
+  quantidade?: number;
 };
+
+/** Máximo de ofertas Spin criadas de uma vez no mesmo dia/turno. */
+export const MARKETPLACE_OFERTA_SPIN_QTD_MAX = 20;
 
 export async function criarOfertaSpinMarketplace(
   input: CriarOfertaSpinMarketplaceInput,
 ): Promise<CriarOfertaMarketplaceResult> {
+  const qtd = Math.floor(Number(input.quantidade ?? 1));
   const { data, error } = await supabase.rpc("escala_marketplace_oferta_spin_criar", {
     p_tipo: input.tipo,
     p_org_time_id: input.orgTimeId,
@@ -1203,6 +1232,7 @@ export async function criarOfertaSpinMarketplace(
     p_turno_label: input.turnoLabel,
     p_estudio_slug: input.estudioSlug,
     p_observacao: input.observacao ?? null,
+    p_quantidade: qtd,
   });
   if (error) {
     console.error("[criarOfertaSpinMarketplace]", error);
@@ -1212,7 +1242,8 @@ export async function criarOfertaSpinMarketplace(
   if (!payload?.ok || !payload.id) {
     return { ok: false, error: payload?.error ?? "unknown" };
   }
-  return { ok: true, id: String(payload.id) };
+  const quantidade = typeof payload.quantidade === "number" ? payload.quantidade : qtd;
+  return { ok: true, id: String(payload.id), quantidade };
 }
 
 export async function aceitarOfertaSpinMarketplace(
@@ -1267,6 +1298,7 @@ const MENSAGENS_ERRO_OFERTA: Record<string, string> = {
   area_invalida: "O seu time não está configurado na Escala Estúdio. Entre em contato com o suporte.",
   escala_nao_aprovada: "A escala do mês ainda não está aprovada.",
   oferta_duplicada: "Você já tem uma oferta aberta para este dia.",
+  quantidade_invalida: "A quantidade deve ser entre 1 e 20.",
   dia_reservado: "Este dia já está reservado em outra negociação.",
   dia_nao_folga: "Este dia não está como folga na sua escala.",
   dia_sem_turno: "Este dia não tem turno na sua escala.",
