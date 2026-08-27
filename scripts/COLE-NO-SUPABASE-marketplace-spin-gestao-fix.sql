@@ -381,7 +381,22 @@ WHERE o.status = 'aceita'
   AND COALESCE(o.proposta_spin_gestao, false) = false
   AND o.interessado_funcionario_id IS NULL
   AND NOT COALESCE(o.oferta_spin, false)
-  AND o.tipo IN ('venda_turno', 'venda_folga');
+  AND o.tipo IN ('venda_turno', 'venda_folga')
+  AND (
+    o.proposta_spin_por_funcionario_id IS NOT NULL
+    OR EXISTS (
+      SELECT 1
+      FROM public.escala_marketplace_celula_comentario c
+      WHERE c.oferta_id = o.id
+        AND btrim(COALESCE(c.contraparte_nome, '')) = 'Spin Gaming'
+    )
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.escala_marketplace_celula_comentario c
+    WHERE c.oferta_id = o.id
+      AND btrim(COALESCE(c.contraparte_nome, '')) NOT IN ('', 'Spin Gaming')
+  );
 
 DO $$
 DECLARE
@@ -395,6 +410,7 @@ BEGIN
       AND o.interessado_funcionario_id IS NULL
       AND NOT COALESCE(o.oferta_spin, false)
       AND o.tipo IN ('venda_turno', 'venda_folga')
+      AND o.proposta_spin_por_funcionario_id IS NOT NULL
       AND NOT EXISTS (
         SELECT 1
         FROM public.escala_marketplace_celula_comentario c

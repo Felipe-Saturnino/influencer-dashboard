@@ -369,19 +369,30 @@ $$;
 COMMENT ON FUNCTION public._escala_marketplace_ofertas_listar_sem_expiracao_2h(date) IS
   'Listagem Marketplace (jsonb). sou_interessado = prestador P2P; proposta Spin gestão não usa esta flag.';
 
--- Reparo: aceitas Spin gestão com flag zerada pela versão anterior do script.
--- Aceita + interessado NULL + venda P2P = só ramo de aprovação Spin gestão (não exige comentário prévio).
+-- Reparo: só aceitas com evidência Spin gestão (gestor ou comentário Spin Gaming; exclui P2P com interessado apagado).
 UPDATE public.escala_marketplace_oferta o
-SET
-  proposta_spin_gestao = true,
-  atualizado_em = now()
+SET proposta_spin_gestao = true, atualizado_em = now()
 WHERE o.status = 'aceita'
   AND COALESCE(o.proposta_spin_gestao, false) = false
   AND o.interessado_funcionario_id IS NULL
   AND NOT COALESCE(o.oferta_spin, false)
-  AND o.tipo IN ('venda_turno', 'venda_folga');
+  AND o.tipo IN ('venda_turno', 'venda_folga')
+  AND (
+    o.proposta_spin_por_funcionario_id IS NOT NULL
+    OR EXISTS (
+      SELECT 1
+      FROM public.escala_marketplace_celula_comentario c
+      WHERE c.oferta_id = o.id
+        AND btrim(COALESCE(c.contraparte_nome, '')) = 'Spin Gaming'
+    )
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.escala_marketplace_celula_comentario c
+    WHERE c.oferta_id = o.id
+      AND btrim(COALESCE(c.contraparte_nome, '')) NOT IN ('', 'Spin Gaming')
+  );
 
--- Comentários em aceitas Spin gestão sem registro (flag restaurada acima ou nunca gravada).
 DO $$
 DECLARE
   v_id uuid;
@@ -394,6 +405,7 @@ BEGIN
       AND o.interessado_funcionario_id IS NULL
       AND NOT COALESCE(o.oferta_spin, false)
       AND o.tipo IN ('venda_turno', 'venda_folga')
+      AND o.proposta_spin_por_funcionario_id IS NOT NULL
       AND NOT EXISTS (
         SELECT 1
         FROM public.escala_marketplace_celula_comentario c
