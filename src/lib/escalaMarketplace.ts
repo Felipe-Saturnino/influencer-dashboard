@@ -409,7 +409,11 @@ export function mapOfertaDbParaLinha(row: EscalaMarketplaceOfertaDb): LinhaOfert
   const ofertanteId = texto(row.ofertante_funcionario_id);
   const interessadoId = texto(row.interessado_funcionario_id);
   const operadora = texto(row.operadora_nome) || texto(row.operadora_slug) || "—";
-  const estudio = texto(row.estudio_nome) || operadora;
+  const estudioSlug = texto(row.estudio_slug).toLowerCase();
+  const estudio =
+    estudioSlug === "todos"
+      ? "Todos Estúdios"
+      : texto(row.estudio_nome) || operadora;
   const turnoInteresseCel = texto(row.valor_celula_interesse);
 
   return {

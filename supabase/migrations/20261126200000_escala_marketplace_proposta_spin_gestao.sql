@@ -513,11 +513,14 @@ BEGIN
           WHEN COALESCE(o.oferta_spin, false) THEN 'Spin Gaming'
           ELSE fo.nome
         END,
-        'estudio_nome', COALESCE(
-          NULLIF(btrim(es.nome), ''),
-          NULLIF(public._escala_marketplace_estudio_label(fo), ''),
-          ''
-        ),
+        'estudio_nome', CASE
+          WHEN lower(btrim(COALESCE(o.estudio_slug, ''))) = 'todos' THEN 'Todos Estúdios'
+          ELSE COALESCE(
+            NULLIF(btrim(es.nome), ''),
+            NULLIF(public._escala_marketplace_estudio_label(fo), ''),
+            ''
+          )
+        END,
         'operadora_slug', btrim(COALESCE(fo.staff_operadora_slug, '')),
         'operadora_nome', op.nome,
         'org_time_id', o.org_time_id,
@@ -663,9 +666,13 @@ BEGIN
     '—'
   );
 
-  SELECT NULLIF(btrim(es.nome), '') INTO v_estudio_spin
-  FROM public.estudios_spin es
-  WHERE es.slug = v_oferta.estudio_slug;
+  IF lower(btrim(COALESCE(v_oferta.estudio_slug, ''))) = 'todos' THEN
+    v_estudio_spin := 'Todos Estúdios';
+  ELSE
+    SELECT NULLIF(btrim(es.nome), '') INTO v_estudio_spin
+    FROM public.estudios_spin es
+    WHERE es.slug = v_oferta.estudio_slug;
+  END IF;
 
   IF COALESCE(v_oferta.oferta_spin, false) AND v_oferta.tipo = 'oferta_spin_cobertura' THEN
     INSERT INTO public.escala_marketplace_celula_comentario (

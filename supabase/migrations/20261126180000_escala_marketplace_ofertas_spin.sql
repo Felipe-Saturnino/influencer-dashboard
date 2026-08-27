@@ -7,15 +7,18 @@ ALTER TABLE public.escala_marketplace_oferta
   ADD COLUMN IF NOT EXISTS oferta_spin boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS criado_por_funcionario_id uuid NULL
     REFERENCES public.rh_funcionarios (id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS estudio_slug text NULL
-    REFERENCES public.estudios_spin (slug) ON UPDATE CASCADE ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS estudio_slug text NULL;
+
+-- Sem FK: valor canónico «todos» (Shuffler / Liderança) não existe em estudios_spin.
+ALTER TABLE public.escala_marketplace_oferta
+  DROP CONSTRAINT IF EXISTS escala_marketplace_oferta_estudio_slug_fkey;
 
 COMMENT ON COLUMN public.escala_marketplace_oferta.oferta_spin IS
   'Oferta operacional Spin Gaming — aceite altera só a grade do prestador aceitante.';
 COMMENT ON COLUMN public.escala_marketplace_oferta.criado_por_funcionario_id IS
   'Autor da oferta Spin (auditoria); ofertante exibido na UI = Spin Gaming.';
 COMMENT ON COLUMN public.escala_marketplace_oferta.estudio_slug IS
-  'Estúdio escolhido na publicação Spin (horários e exibição).';
+  'Estúdio da publicação Spin: slug de estudios_spin ou «todos» (Shuffler/Liderança — Todos Estúdios).';
 
 ALTER TABLE public.escala_marketplace_oferta
   DROP CONSTRAINT IF EXISTS escala_marketplace_oferta_tipo_check;
@@ -44,24 +47,46 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  v_slug text := lower(btrim(COALESCE(p_estudio_slug, '')));
   v_turno text := btrim(COALESCE(p_turno_label, ''));
   v_hora time;
 BEGIN
-  IF p_estudio_slug IS NULL OR btrim(p_estudio_slug) = '' OR p_dia_iso IS NULL OR v_turno = '' THEN
+  IF v_slug = '' OR p_dia_iso IS NULL OR v_turno = '' THEN
     RETURN NULL;
   END IF;
 
-  SELECT CASE v_turno
-    WHEN 'Manhã' THEN e.turno_manha_inicio
-    WHEN 'Tarde' THEN e.turno_tarde_inicio
-    WHEN 'Noite' THEN e.turno_noite_inicio
-    ELSE NULL
-  END
-  INTO v_hora
-  FROM public.estudios_spin e
-  WHERE e.slug = btrim(p_estudio_slug)
-    AND e.ativo = true
-  LIMIT 1;
+  IF v_slug = 'todos' THEN
+    -- Mesmo fallback de cadastro Todos Estúdios: 1.º estúdio ativo com horário do turno.
+    SELECT CASE v_turno
+      WHEN 'Manhã' THEN e.turno_manha_inicio
+      WHEN 'Tarde' THEN e.turno_tarde_inicio
+      WHEN 'Noite' THEN e.turno_noite_inicio
+      ELSE NULL
+    END
+    INTO v_hora
+    FROM public.estudios_spin e
+    WHERE e.ativo = true
+      AND CASE v_turno
+        WHEN 'Manhã' THEN e.turno_manha_inicio
+        WHEN 'Tarde' THEN e.turno_tarde_inicio
+        WHEN 'Noite' THEN e.turno_noite_inicio
+        ELSE NULL
+      END IS NOT NULL
+    ORDER BY e.nome
+    LIMIT 1;
+  ELSE
+    SELECT CASE v_turno
+      WHEN 'Manhã' THEN e.turno_manha_inicio
+      WHEN 'Tarde' THEN e.turno_tarde_inicio
+      WHEN 'Noite' THEN e.turno_noite_inicio
+      ELSE NULL
+    END
+    INTO v_hora
+    FROM public.estudios_spin e
+    WHERE e.slug = btrim(p_estudio_slug)
+      AND e.ativo = true
+    LIMIT 1;
+  END IF;
 
   IF v_hora IS NULL THEN
     RETURN NULL;
@@ -128,6 +153,7 @@ DECLARE
   v_turno text := nullif(btrim(COALESCE(p_turno_label, '')), '');
   v_estudio text := nullif(btrim(COALESCE(p_estudio_slug, '')), '');
   v_area text;
+  v_grupo text;
   v_ref date;
   v_hoje date := (now() AT TIME ZONE 'America/Sao_Paulo')::date;
   v_fid uuid;
@@ -175,16 +201,6 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'turno_obrigatorio');
   END IF;
 
-  IF v_estudio IS NULL THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'estudio_obrigatorio');
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM public.estudios_spin e WHERE e.slug = v_estudio AND e.ativo = true
-  ) THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'estudio_invalido');
-  END IF;
-
   IF NOT EXISTS (
     SELECT 1 FROM public.rh_org_times t
     WHERE t.id = p_org_time_id AND t.status = 'ativo'
@@ -195,6 +211,21 @@ BEGIN
   v_area := public._escala_marketplace_area_key(p_org_time_id);
   IF v_area IS NULL OR v_area = '' THEN
     RETURN jsonb_build_object('ok', false, 'error', 'area_invalida');
+  END IF;
+
+  v_grupo := public._escala_marketplace_grupo_key(v_area);
+  -- Shuffler e Liderança atendem todos os estúdios (cadastro Staff = Todos Estúdios).
+  IF v_grupo IN ('shuffler', 'lideranca') THEN
+    v_estudio := 'todos';
+  ELSE
+    IF v_estudio IS NULL OR lower(v_estudio) = 'todos' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'estudio_obrigatorio');
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.estudios_spin e WHERE e.slug = v_estudio AND e.ativo = true
+    ) THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'estudio_invalido');
+    END IF;
   END IF;
 
   v_ref := date_trunc('month', p_dia_iso)::date;
@@ -470,11 +501,14 @@ BEGIN
           WHEN COALESCE(o.oferta_spin, false) THEN 'Spin Gaming'
           ELSE fo.nome
         END,
-        'estudio_nome', COALESCE(
-          NULLIF(btrim(es.nome), ''),
-          NULLIF(public._escala_marketplace_estudio_label(fo), ''),
-          ''
-        ),
+        'estudio_nome', CASE
+          WHEN lower(btrim(COALESCE(o.estudio_slug, ''))) = 'todos' THEN 'Todos Estúdios'
+          ELSE COALESCE(
+            NULLIF(btrim(es.nome), ''),
+            NULLIF(public._escala_marketplace_estudio_label(fo), ''),
+            ''
+          )
+        END,
         'operadora_slug', btrim(COALESCE(fo.staff_operadora_slug, '')),
         'operadora_nome', op.nome,
         'org_time_id', o.org_time_id,
@@ -622,9 +656,13 @@ BEGIN
     '—'
   );
 
-  SELECT NULLIF(btrim(es.nome), '') INTO v_estudio_spin
-  FROM public.estudios_spin es
-  WHERE es.slug = v_oferta.estudio_slug;
+  IF lower(btrim(COALESCE(v_oferta.estudio_slug, ''))) = 'todos' THEN
+    v_estudio_spin := 'Todos Estúdios';
+  ELSE
+    SELECT NULLIF(btrim(es.nome), '') INTO v_estudio_spin
+    FROM public.estudios_spin es
+    WHERE es.slug = v_oferta.estudio_slug;
+  END IF;
 
   DELETE FROM public.escala_marketplace_celula_comentario c
   WHERE c.oferta_id = p_oferta_id;
