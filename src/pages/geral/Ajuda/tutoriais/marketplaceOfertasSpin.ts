@@ -3,7 +3,7 @@ import type { TutorialDef } from "./types";
 
 const IMG = "/tutoriais/escala/marketplace/ofertas-spin";
 
-/** Tutorial: Ofertas Spin — publicar cobertura ou liberação na visão de gestão (Shift Leader). */
+/** Tutorial: Ofertas Spin — cobertura, liberação e compra P2P na visão de gestão (Shift Leader). */
 export const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: TutorialDef = {
   id: "marketplace-ofertas-spin",
   urlSlug: "MarketplaceOfertasSpin",
@@ -12,12 +12,12 @@ export const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: TutorialDef = {
   icon: Sparkles,
   relatedPageKey: "escala_marketplace_turnos",
   objetivo:
-    "Publicar cobertura de turno ou liberação de vaga em nome da Spin Gaming, acompanhar aceites e cancelar ofertas abertas na aba Ofertas Spin.",
+    "Publicar cobertura ou liberação em nome da Spin Gaming, comprar turnos ou folgas de GP/Shuffler e acompanhar aceites na aba Ofertas Spin.",
   passos: [
     {
       titulo: "1. Abrir a aba Ofertas Spin",
       texto:
-        "1. No menu, seção Escala, clique em **Marketplace**.\n2. Com permissão de **Ver** ampla (gestão), a segunda linha da barra traz a aba **Ofertas Spin** — ao lado de **Todas as Ofertas** e **Ofertas Encerradas**.\n3. Clique em **Ofertas Spin**. O botão **Nova Oferta** aparece só nesta aba.\n4. Mantenha **Minhas Negociações** desligado para ver todas as ofertas Spin do estúdio, não só as suas negociações P2P.\n5. Use o carrossel de mês, o filtro **Todas as Ações** (Cobertura Spin / Liberação Spin), o filtro **Times** e a busca para localizar ofertas.",
+        "1. No menu, seção Escala, clique em **Marketplace**.\n2. Com permissão de **Ver** ampla (gestão), a segunda linha da barra traz a aba **Ofertas Spin** — ao lado de **Todas as Ofertas** e **Ofertas Encerradas**.\n3. Clique em **Ofertas Spin**. O botão **Nova Oferta** aparece só nesta aba.\n4. Mantenha **Minhas Negociações** desligado para ver toda a gestão Spin, não só as suas negociações P2P.\n5. A página organiza **quatro blocos**: **Ofertas abertas**, **Ofertas aceitas**, **Compra Turno / Compra Folga** e **Histórico**.\n6. Use o carrossel de mês, o filtro **Todas as Ações**, o filtro **Times** e a busca para localizar ofertas.",
       imagens: [
         {
           src: `${IMG}/01-aba-ofertas-spin.png`,
@@ -28,7 +28,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: TutorialDef = {
     {
       titulo: "2. Cobertura de turno e Liberação de vaga",
       texto:
-        "As ofertas Spin são publicadas pela **Spin Gaming** (ofertante fixo na tabela) e aparecem também no mural **Todas as Ofertas**:\n\n— **Cobertura de turno** — a empresa precisa de alguém para assumir um turno. Quem aceita precisa estar de **folga** naquele dia; a escala grava **Compra - Turno** na hora, sem aprovação extra. No mural, entra em **Ofertas de Turno**.\n\n— **Liberação de vaga** — a empresa libera um turno já escalado. Quem aceita precisa estar **escalado no mesmo dia e turno**; a escala grava **Venda** na hora. No mural, entra em **Ofertas de Folga**.\n\nDiferente das vendas entre colegas, **não há proposta Em análise** — o aceite do prestador atualiza a grade imediatamente.",
+        "As ofertas Spin operacionais são publicadas pela **Spin Gaming** (ofertante fixo na tabela) e aparecem também no mural **Todas as Ofertas**:\n\n— **Cobertura de turno** — a empresa precisa de alguém para assumir um turno. Quem aceita precisa estar de **folga** naquele dia; a escala grava **Compra - Turno** na hora, sem aprovação extra. No mural, entra em **Ofertas de Turno**.\n\n— **Liberação de vaga** — a empresa libera um turno já escalado. Quem aceita precisa estar **escalado no mesmo dia e turno**; a escala grava **Venda** na hora. No mural, entra em **Ofertas de Folga**.\n\nDiferente das vendas entre colegas, **não há proposta Em análise** — o aceite do prestador atualiza a grade imediatamente.",
       aviso:
         "Escolha o **Time** (Game Presenter, Shuffler ou Liderança) conforme quem poderá aceitar a oferta no mural.",
     },
@@ -55,9 +55,17 @@ export const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: TutorialDef = {
       ],
     },
     {
-      titulo: "5. Comprar turno ou folga de GP/Shuffler (P2P)",
+      titulo: "5. Comprar turno ou folga de GP/Shuffler",
       texto:
-        "Abaixo de **Ofertas aceitas**, o bloco **Compra Turno** / **Compra Folga** lista vendas abertas de **Game Presenter** e **Shuffler** no mural P2P:\n\n1. Use os botões **Compra Turno** (padrão) ou **Compra Folga** na mesma linha do título.\n2. A tabela mostra **Data da Oferta**, **Turno**, **Ofertante**, **Time** e a ação **Aceitar em nome da Spin**.\n3. Com filtro **Todos Times**, aparecem GP e Shuffler; filtre por time na barra se precisar.\n4. Ao confirmar, a proposta fica **Em análise** — o ofertante vê **Spin Gaming** como interessado e aprova ou recusa em **Minhas Ofertas**.\n5. Se aprovado: em **Compra Turno** o prestador libera o dia (**Venda**); em **Compra Folga** assume o turno (**Compra - Turno**). Não há segunda célula — a Spin Gaming é a contraparte.\n\n**Ofertas de Troca** e times de **Liderança** não entram neste bloco.",
+        "A liderança também pode **comprar** vendas P2P já publicadas no mural — sem esperar o colega aceitar cobertura Spin.\n\n1. Role até o bloco **Compra Turno** (abaixo de **Ofertas aceitas**).\n2. Use as abas **Compra Turno** ou **Compra Folga** na mesma linha do título — alternam vendas de turno e vendas de folga de **Game Presenter** e **Shuffler**.\n3. A tabela traz **Data da Oferta**, **Turno da Oferta**, **Ofertante**, **Time** e **Ações**.\n4. Com filtro **Todos Times** na barra, aparecem GP e Shuffler; filtre por time se precisar.\n5. Clique em **Aceitar em nome da Spin** (ícone de check) na linha desejada.\n6. No modal **Propor compra Spin**, confira ofertante, dia e turno. Clique em **Enviar proposta**.\n7. A oferta sai do mural e fica **Em análise** — o ofertante vê **Spin Gaming** como interessado e **aprova ou recusa** em **Minhas Ofertas**.\n8. Se aprovado: em **Compra Turno** o prestador libera o dia (**Venda**); em **Compra Folga** assume o turno (**Compra - Turno**). A Spin Gaming é a contraparte — **não há segunda célula** na grade.\n\n**Ofertas de Troca** e vendas de **Liderança** não entram neste bloco.",
+      aviso:
+        "Diferente da cobertura/liberação Spin, a compra sobre venda P2P **exige aprovação do ofertante** antes de gravar a escala.",
+      imagens: [
+        {
+          src: `${IMG}/05-compra-turno-spin.png`,
+          alt: "Ofertas Spin — bloco Compra Turno com vendas P2P",
+        },
+      ],
     },
     {
       titulo: "6. Acompanhar abertas, aceitas e histórico",
@@ -66,7 +74,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: TutorialDef = {
       imagens: [
         {
           src: `${IMG}/04-ofertas-abertas-spin.png`,
-          alt: "Ofertas Spin — blocos abertas, aceitas e histórico",
+          alt: "Ofertas Spin — visão dos blocos de gestão",
         },
       ],
     },
@@ -84,11 +92,11 @@ export const TUTORIAL_MARKETPLACE_OFERTAS_SPIN: TutorialDef = {
       imagens: [
         {
           src: `${IMG}/07-mural-todas-ofertas-spin.png`,
-          alt: "Todas as Ofertas — linha Spin Gaming no mural",
+          alt: "Todas as Ofertas — mural com ofertas de turno",
         },
       ],
     },
   ],
   notasFinais:
-    "— **Nova Oferta** Spin só aparece na aba **Ofertas Spin** (permissão de gestão).\n— Publicar exige **4h** até o início do turno; aceitar no mural exige **2h** e escala **aprovada** do mês.\n— Cobertura: aceitante de **folga** + intervalo mínimo de **12h** entre turnos. Liberação: aceitante **escalado no mesmo turno** do dia.\n— Uma oferta Spin aberta por combinação time + dia + turno + tipo.\n— **Compra Turno/Folga** na aba Ofertas Spin: gestão propõe sobre vendas P2P de GP/Shuffler; ofertante aprova — interessado exibido como **Spin Gaming**.\n— Negociações P2P entre colegas continuam em **Minhas Negociações** / **Minhas Ofertas**.\n— Para publicar ofertas **próprias** como prestador, use **Nova Oferta** na aba **Minhas Ofertas** (tutorial **Marketplace**).",
+    "— **Nova Oferta** Spin só aparece na aba **Ofertas Spin** (permissão de gestão).\n— Cobertura/liberação Spin: publicar exige **4h** até o início do turno; aceite no mural exige **2h** e escala **aprovada** do mês.\n— Cobertura: aceitante de **folga** + intervalo mínimo de **12h** entre turnos. Liberação: aceitante **escalado no mesmo turno** do dia.\n— **Compra Turno/Folga**: gestão propõe sobre vendas P2P abertas de GP/Shuffler; ofertante aprova — interessado exibido como **Spin Gaming**.\n— Uma oferta Spin operacional aberta por combinação time + dia + turno + tipo.\n— Negociações P2P entre colegas continuam em **Minhas Negociações** / **Minhas Ofertas**.\n— Para publicar ofertas **próprias** como prestador, use **Nova Oferta** na aba **Minhas Ofertas** (tutorial **Marketplace**).",
 };
