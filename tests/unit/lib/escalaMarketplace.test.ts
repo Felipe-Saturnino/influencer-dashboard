@@ -6,6 +6,7 @@ import {
   ehTipoOfertaSpin,
   gapEntreTurnosOk,
   isDataNoHistoricoMarketplace,
+  isDataNosUltimosDiasMarketplace,
   mensagemErroOfertaMarketplace,
   ofertaPassaFiltroTimeMarketplace,
   filtroTimeGrupoNegociacaoMarketplace,
@@ -65,6 +66,26 @@ describe("isDataNoHistoricoMarketplace", () => {
     expect(isDataNoHistoricoMarketplace("2026-08-01", ref, "2026-09")).toBe(true);
     expect(isDataNoHistoricoMarketplace("2026-09-30", ref, "2026-09")).toBe(true);
     expect(isDataNoHistoricoMarketplace("2026-10-01", ref, "2026-09")).toBe(false);
+  });
+});
+
+describe("isDataNosUltimosDiasMarketplace", () => {
+  const ref = new Date("2026-08-27T15:00:00.000Z"); // 27/08/2026 em SP
+
+  it("inclui hoje e o 30.º dia inclusivo", () => {
+    expect(isDataNosUltimosDiasMarketplace("2026-08-27", 30, ref)).toBe(true);
+    expect(isDataNosUltimosDiasMarketplace("2026-07-29", 30, ref)).toBe(true);
+  });
+
+  it("exclui o dia anterior ao início da janela", () => {
+    expect(isDataNosUltimosDiasMarketplace("2026-07-28", 30, ref)).toBe(false);
+  });
+
+  it("inclui datas futuras (propostas / aceites à frente) e rejeita inválidos", () => {
+    expect(isDataNosUltimosDiasMarketplace("2026-08-28", 30, ref)).toBe(true);
+    expect(isDataNosUltimosDiasMarketplace("2026-09-15", 30, ref)).toBe(true);
+    expect(isDataNosUltimosDiasMarketplace(null, 30, ref)).toBe(false);
+    expect(isDataNosUltimosDiasMarketplace("lixo", 30, ref)).toBe(false);
   });
 });
 

@@ -1,11 +1,7 @@
-# Pipeline B2B — enriquecimento cidade/UF por CNPJ via Edge Function `enrich-comercial-cnpj`
-# ~8h30 BRT → 11h30 UTC (após validação de domínios 8h / 11h UTC)
-# Secrets GitHub: SUPABASE_URL, SUPABASE_ANON_KEY
+# Enrich Comercial CNPJ — manual / backup. PRINCIPAL: pg_cron
 name: Enrich Comercial CNPJ (8h30 BRT)
 
 on:
-  schedule:
-    - cron: "30 11 * * *"
   workflow_dispatch:
 
 jobs:

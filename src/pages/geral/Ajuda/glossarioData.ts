@@ -891,8 +891,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Aplicável a (Portal de RH)",
         definicao:
-          "Campo de políticas e normativas que indica o público-alvo: **Todos os prestadores** ou diretorias, gerências e times do organograma. Filtra a lista na aba Políticas quando a permissão de Ver é **Próprios**.",
-        nota: "Comunicados e RH Talks não usam este filtro. Com **Ver = Sim** ou **Editar = Sim**, todas as políticas publicadas aparecem.",
+          "Campo de **políticas/normativas** e **RH Talks** que indica o público-alvo: **Todos os prestadores** ou diretorias, gerências e times do organograma. Filtra a lista nas abas Políticas e RH Talks quando a permissão de Ver é **Próprios**.",
+        nota: "Comunicados não usam este filtro. Com **Ver = Sim** ou **Editar = Sim**, todos os itens publicados dessas abas aparecem.",
         referencia: "Portal de RH",
       },
       {

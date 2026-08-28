@@ -1,11 +1,7 @@
-# Pipeline B2B — importação diária lista SPA/MF via Edge Function `sync-comercial-spa-lista`
-# ~7h30 BRT → 10h30 UTC (escalonado após sync CDA 4h e RSS 6h20)
-# Secrets GitHub: SUPABASE_URL, SUPABASE_ANON_KEY
+# Comercial SPA Lista — manual / backup. PRINCIPAL: pg_cron (COLE-NO-SUPABASE-daily-edge-jobs-pg-cron.sql)
 name: Sync Comercial SPA Lista (7h30 BRT)
 
 on:
-  schedule:
-    - cron: "30 10 * * *"
   workflow_dispatch:
 
 jobs:

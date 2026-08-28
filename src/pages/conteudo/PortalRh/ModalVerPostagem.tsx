@@ -410,7 +410,7 @@ export function ModalVerPostagem({
         const { data, error } = await supabase
           .from("rh_portal_rh_talk")
           .select(
-            "titulo, corpo, introducao, resumo, numero, status, published_at, created_at, imagem_storage_path, anexo_storage_path, anexo_nome",
+            "titulo, corpo, introducao, resumo, numero, status, published_at, created_at, imagem_storage_path, anexo_storage_path, anexo_nome, aplicavel_a",
           )
           .eq("id", contentId)
           .single();
@@ -427,6 +427,7 @@ export function ModalVerPostagem({
           imagem_storage_path: string | null;
           anexo_storage_path: string | null;
           anexo_nome: string | null;
+          aplicavel_a: string[] | null;
         };
         setPostagem({
           contentType,
@@ -448,7 +449,7 @@ export function ModalVerPostagem({
           tipoDocumento: null,
           classificacao: null,
           areaResponsavel: null,
-          aplicavelA: [],
+          aplicavelA: row.aplicavel_a?.length ? row.aplicavel_a : [],
           resumo: null,
           exigeCiencia: null,
           elaboradoPor: null,
@@ -536,6 +537,11 @@ export function ModalVerPostagem({
             {postagem.contentType === "rh_talk" && postagem.numero != null ? (
               <CampoLeitura label="Número">
                 <TextoOuTraco value={`#${postagem.numero}`} />
+              </CampoLeitura>
+            ) : null}
+            {postagem.contentType === "rh_talk" ? (
+              <CampoLeitura label="Aplicável a">
+                <TextoOuTraco value={postagem.aplicavelA.length ? postagem.aplicavelA.join(", ") : null} />
               </CampoLeitura>
             ) : null}
             {postagem.contentType === "comunicado" ? (

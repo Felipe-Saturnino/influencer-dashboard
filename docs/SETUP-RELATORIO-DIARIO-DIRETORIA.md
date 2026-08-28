@@ -39,19 +39,21 @@ supabase functions deploy relatorio-diario-diretoria
 
 ### 3. Automação pela manhã (BRT)
 
-#### Opção A — GitHub Actions (repositório)
+#### Opção A — GitHub Actions (apenas manual / backup)
 
-O workflow `.github/workflows/relatorio-diario-diretoria.yml` dispara às **9h UTC** (= **6h em Brasília**, fuso `America/Sao_Paulo`). A ideia é **antecipar** o disparo: como o GitHub costuma **atrasar** execuções agendadas, começar às 6h BRT faz com que, mesmo com atraso, o e-mail tenda a sair **ainda de manhã**.
+O workflow `.github/workflows/relatorio-diario-diretoria.yml` **não** usa mais `schedule` (a fila do GitHub falhava manhãs inteiras e duplicaria o e-mail). Use **Run workflow** ou o Status Técnico.
 
-**Secrets no GitHub:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+**Agendamento PRINCIPAL:** **Opção B (pg_cron)** — `scripts/COLE-NO-SUPABASE-daily-edge-jobs-pg-cron.sql` (~6h BRT).
 
-**Importante — leia antes de confiar no horário:** o GitHub agenda em **UTC** (`0 9 * * *` = 09:00 UTC ≈ **6h em Brasília**), mas a fila é **“melhor esforço”** (atrasos de minutos ou horas). O histórico de Actions mostra o **horário real** de início do job — veja o passo *Horário da execução* nos logs. O workflow precisa estar na **branch padrão** do repositório.
+**Secrets no GitHub (só para disparo manual):** `SUPABASE_URL`, `SUPABASE_ANON_KEY`
 
-**Para horário fixo e previsível**, use a **Opção B ou C** abaixo; você pode **desativar** o `schedule` do GitHub (mantendo `workflow_dispatch` para testes).
+#### Opção B — Supabase pg_cron (recomendado / pontual)
 
-#### Opção B — Supabase (mais pontual)
+1. Garanta no Vault: `supabase_project_url` + `supabase_service_role_key` (mesmo do cron CS Outlook — `scripts/setup-cs-atendimento-outlook-cron.sql`).
+2. Cole no SQL Editor: `scripts/COLE-NO-SUPABASE-daily-edge-jobs-pg-cron.sql` (job `daily-relatorio-diario-diretoria`, cron `0 9 * * *` UTC ≈ 6h BRT).
+3. Valide: `SELECT jobid, jobname, schedule, active FROM cron.job WHERE jobname LIKE 'daily-%';`
 
-No **Supabase Dashboard** → **Edge Functions** → `relatorio-diario-diretoria` → **Schedules** (se disponível no seu plano): agende **diariamente às 06:00** (ou o horário desejado) com fuso **America/Sao_Paulo**, `POST`, body `{}`, com **anon key** ou conforme a UI.
+Alternativa na UI: **Edge Functions** → `relatorio-diario-diretoria` → **Schedules** (se disponível no plano), fuso **America/Sao_Paulo**.
 
 #### Opção C — Cron externo
 

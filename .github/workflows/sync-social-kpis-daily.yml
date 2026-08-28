@@ -1,5 +1,6 @@
-# ETL Social Media KPIs - Execução diária ~6h30 (horário de Brasília)
-# 6h30 BRT = 9h30 UTC — escalonado; recuperação em daily-jobs-watchdog.yml
+# ETL Social Media KPIs — ainda no GitHub (Python + secrets Meta/YouTube/LinkedIn).
+# Schedule ~6h30 BRT; recuperação: daily-jobs-watchdog.yml (8h / 9h30 / 12h BRT).
+# Demais jobs da manhã: pg_cron no Supabase (não dependem desta fila).
 name: Sync Social Media KPIs (6h)
 
 on:

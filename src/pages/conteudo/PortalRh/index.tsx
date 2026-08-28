@@ -171,6 +171,7 @@ type RhPortalRhTalk = {
   created_by?: string | null;
   status?: RhPostagemStatus | null;
   published_at?: string | null;
+  aplicavel_a?: string[] | null;
 };
 
 type ReadReceiptRow = {
@@ -447,7 +448,7 @@ export default function PortalRhPage() {
     const docCols =
       "id, titulo, corpo, categoria_id, paginas, requires_acknowledgment, storage_path, updated_at, status, published_at, introducao, resumo, imagem_storage_path, anexo_storage_path, anexo_nome, created_by, approved_at, approved_by, codigo, versao, tipo_documento, area_responsavel, classificacao, aplicavel_a, data_emissao, elaborado_por, revisado_por, aprovado_por_doc";
     const talkCols =
-      "id, numero, titulo, data_reuniao, duracao_min, resumo, corpo, introducao, storage_path, imagem_storage_path, anexo_storage_path, anexo_nome, created_by, status, published_at";
+      "id, numero, titulo, data_reuniao, duracao_min, resumo, corpo, introducao, storage_path, imagem_storage_path, anexo_storage_path, anexo_nome, created_by, status, published_at, aplicavel_a";
 
     const [catRes, comData, docData, talkData] = await Promise.all([
       supabase.from("rh_portal_categoria").select(catCols).order("sort_order", { ascending: true }),
@@ -812,6 +813,9 @@ export default function PortalRhPage() {
 
   const talksFiltrados = useMemo(() => {
     let list = talks.filter((tk) => isPostagemPublica(tk.status));
+    list = list.filter((tk) =>
+      documentoVisivelPorPermissaoPortalRh(tk, perm.canView, perm.canEditar, setoresUsuarioAplicavel),
+    );
     if (!modoHistorico) {
       const mesSel = mesesTalksDisponiveis[idxMesTalk];
       list = list.filter((tk) => itemNoMesCarrossel(tk.published_at, mesSel));
@@ -829,7 +833,18 @@ export default function PortalRhPage() {
       );
     }
     return list;
-  }, [talks, modoHistorico, mesesTalksDisponiveis, idxMesTalk, buscaDeb, hitBuscaTexto, hitBuscaCorpo]);
+  }, [
+    talks,
+    perm.canView,
+    perm.canEditar,
+    setoresUsuarioAplicavel,
+    modoHistorico,
+    mesesTalksDisponiveis,
+    idxMesTalk,
+    buscaDeb,
+    hitBuscaTexto,
+    hitBuscaCorpo,
+  ]);
 
   async function marcarLidoComunicado(contentId: string) {
     if (!user?.id) return;

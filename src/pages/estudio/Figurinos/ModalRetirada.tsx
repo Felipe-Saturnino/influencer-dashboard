@@ -5,6 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { useListboxKeyboardNavigation } from "../../../hooks/useListboxKeyboardNavigation"
 import { FONT } from "../../../constants/theme"
 import { supabase } from "../../../lib/supabase"
+import { fetchAllPages } from "../../../lib/supabasePaginate"
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal"
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles"
 import { type RhFigurinoPeca, type RhWithdrawalType } from "./types"
@@ -46,21 +47,26 @@ export function ModalRetirada({
     (async () => {
       setLoadingPrestadores(true);
       setErroCargaPrestadores(null);
-      const { data, error } = await supabase
-        .from("rh_funcionarios")
-        .select("id, nome, setor, status")
-        .in("status", ["ativo", "indisponivel"])
-        .order("nome", { ascending: true })
-        .limit(5000);
-      if (cancelado) return;
-      if (error) {
-        console.error("[Figurinos] Erro ao carregar prestadores:", error);
+      try {
+        const rows = await fetchAllPages<PrestadorRetiradaRow>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("rh_funcionarios")
+            .select("id, nome, setor, status")
+            .in("status", ["ativo", "indisponivel"])
+            .order("nome", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to);
+          return { data: (data ?? []) as PrestadorRetiradaRow[], error };
+        });
+        if (cancelado) return;
+        setPrestadores(rows);
+      } catch (e) {
+        if (cancelado) return;
+        console.error("[Figurinos] Erro ao carregar prestadores:", e);
         setErroCargaPrestadores("Não foi possível carregar a lista de prestadores. Tente novamente ou entre em contato com o suporte.");
         setPrestadores([]);
-      } else {
-        setPrestadores((data ?? []) as PrestadorRetiradaRow[]);
       }
-      setLoadingPrestadores(false);
+      if (!cancelado) setLoadingPrestadores(false);
     })();
     return () => {
       cancelado = true;

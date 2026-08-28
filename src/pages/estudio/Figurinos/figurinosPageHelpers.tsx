@@ -9,6 +9,40 @@ export function tableRowHoverBg(isDark: boolean): string {
   return isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
 }
 
+/**
+ * Candidatos para bipagem: leitores/teclado costumam omitir zeros à esquerda do barcode (12 dígitos no cadastro).
+ */
+export function candidatosLookupFigurino(texto: string): string[] {
+  const raw = texto.trim();
+  if (!raw) return [];
+  const out: string[] = [];
+  const push = (s: string) => {
+    if (s && !out.includes(s)) out.push(s);
+  };
+  push(raw);
+  push(raw.toUpperCase());
+  const digits = raw.replace(/\D/g, "");
+  if (digits) {
+    push(digits);
+    if (digits.length < 12) push(digits.padStart(12, "0"));
+    if (digits.length === 13) {
+      push(digits.slice(0, 12));
+      push(digits.slice(1));
+    }
+  }
+  return out;
+}
+
+/** Match local no inventário já carregado (barcode ou código da peça). */
+export function pecaPorCodigoLocal(pecas: RhFigurinoPeca[], texto: string): RhFigurinoPeca | undefined {
+  const cands = candidatosLookupFigurino(texto);
+  if (!cands.length) return undefined;
+  const upperCodes = new Set(cands.map((c) => c.toUpperCase()));
+  return pecas.find(
+    (p) => cands.includes(p.barcode) || upperCodes.has((p.code ?? "").toUpperCase()),
+  );
+}
+
 export function ctaButtonContent(loading: boolean, idle: ReactNode, busy: string): ReactNode {
   if (!loading) return idle;
   return (

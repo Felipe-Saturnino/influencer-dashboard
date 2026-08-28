@@ -1,11 +1,9 @@
-# Sync de métricas CDA - Execução diária às 4h (horário de Brasília)
-# 4h BRT = 7h UTC
-# Duas contas TAP: Influencers (default) e Afiliados (conta=afiliados)
+# Sync de métricas CDA — manual / backup no GitHub Actions.
+# Agendamento PRINCIPAL: pg_cron no Supabase (scripts/COLE-NO-SUPABASE-daily-edge-jobs-pg-cron.sql).
+# Motivo: schedule do GitHub é melhor esforço e costuma falhar manhãs inteiras.
 name: Sync Métricas CDA (4h)
 
 on:
-  schedule:
-    - cron: "0 7 * * *"
   workflow_dispatch:
 
 jobs:

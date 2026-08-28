@@ -639,7 +639,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A peça está na aba errada ou não aparece?",
         texto:
-          "Verifique se os filtros de estúdio, categoria, tamanho, cor ou gênero estão ativos — eles restringem o que aparece em todas as abas. Use as opções agregadoras (**Todos Estúdios**, **Todas Categorias**, etc.) para ver o inventário completo.\n\nPeças com retirada ativa do tipo Emprestada ficam na aba Emprestada; as do tipo Fixo ficam na aba Fixo. Manutenção e Descartada seguem o status da peça.",
+          "Verifique se os filtros de estúdio, categoria, tamanho, cor ou gênero estão ativos — eles restringem o que aparece em todas as abas. Use as opções agregadoras (**Todos Estúdios**, **Todas Categorias**, etc.) e limpe a busca para ver o inventário completo.\n\nPeças com retirada ativa do tipo Emprestada ficam na aba Emprestada; as do tipo Fixo ficam na aba Fixo. Manutenção e Descartada seguem o status da peça.\n\nO inventário carrega **todas** as peças (sem teto oculto). Com permissão de **Ver = Próprios**, só aparecem peças com retirada ativa no seu cadastro.",
+      },
+      {
+        subtitulo: "Ao bipear, a peça aparece como código não reconhecido?",
+        texto:
+          "Confirme que a peça está cadastrada e que os filtros da página não atrapalham a conferência na tabela. O leitor pode omitir zeros à esquerda do código de barras — a busca tenta completar automaticamente para 12 dígitos. Se ainda falhar, digite o **código da peça** (ex.: CAM-000001) no campo e clique em Buscar.",
       },
       {
         subtitulo: "A etiqueta PDF não baixou depois de cadastrar a peça?",
@@ -989,7 +994,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo algumas políticas na aba Políticas?",
         texto:
-          "Com permissão de **Ver = Próprios**, a lista mostra só documentos cujo **Aplicável a** inclua **Todos os prestadores** ou a diretoria, gerência ou time do seu cadastro em Gestão de Prestadores. Se faltar vínculo no organograma, você pode não ver políticas direcionadas a times específicos. Perfis internos (não prestadores) devem usar **Ver = Sim**. Comunicados e RH Talks não usam esse filtro — aparecem para quem tem Ver = Sim ou Ver = Próprios.",
+          "Com permissão de **Ver = Próprios**, a lista mostra só documentos cujo **Aplicável a** inclua **Todos os prestadores** ou a diretoria, gerência ou time do seu cadastro em Gestão de Prestadores. Se faltar vínculo no organograma, você pode não ver políticas direcionadas a times específicos. Perfis internos (não prestadores) devem usar **Ver = Sim**. Comunicados não usam esse filtro. **RH Talks** usam o mesmo filtro de Aplicável a que Políticas.",
       },
       {
         subtitulo: "Cliquei em 'Lido' mas o badge 'Novo' voltou?",

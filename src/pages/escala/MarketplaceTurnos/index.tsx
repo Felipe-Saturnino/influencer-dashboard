@@ -65,6 +65,7 @@ import {
   ehOfertaSpinBlocoTurno,
   filtroTimeGrupoNegociacaoMarketplace,
   isDataNoHistoricoMarketplace,
+  isDataNosUltimosDiasMarketplace,
   marketplaceMostrarNovaOferta,
   marketplaceMostrarNovaOfertaSpin,
   marketplacePodeAceitarOfertaSpin,
@@ -182,6 +183,14 @@ type MarketplaceAba = "todas" | "minhas" | "encerradas" | "spin";
 const MARKETPLACE_ABAS: readonly MarketplaceAba[] = ["todas", "minhas", "encerradas", "spin"];
 
 type CompraSpinModo = "turno" | "folga";
+
+/** Status do bloco Histórico (Minhas / Spin) — default Aprovada. */
+type HistoricoBlocoStatusFiltro = "aprovada" | "cancelada";
+
+const HISTORICO_BLOCO_STATUS_OPCOES: { value: HistoricoBlocoStatusFiltro; label: string }[] = [
+  { value: "aprovada", label: OFERTA_STATUS_LABEL.aprovada },
+  { value: "cancelada", label: OFERTA_STATUS_LABEL.cancelada },
+];
 
 function passaFiltroCompraSpinTime(row: LinhaOfertaMarketplace, filtro: MarketplaceTimeFiltro): boolean {
   if (row.timeKey !== "game_presenter" && row.timeKey !== "shuffler") return false;
@@ -330,6 +339,10 @@ export default function EscalaMarketplaceTurnosPage() {
   const [ofertarAberto, setOfertarAberto] = useState(false);
   const [ofertarSpinAberto, setOfertarSpinAberto] = useState(false);
   const [compraSpinModo, setCompraSpinModo] = useState<CompraSpinModo>("turno");
+  const [filtroStatusHistoricoMinhas, setFiltroStatusHistoricoMinhas] =
+    useState<HistoricoBlocoStatusFiltro>("aprovada");
+  const [filtroStatusHistoricoSpin, setFiltroStatusHistoricoSpin] =
+    useState<HistoricoBlocoStatusFiltro>("aprovada");
   const [ofertaProporSpin, setOfertaProporSpin] = useState<LinhaOfertaMarketplace | null>(null);
   const [ofertaAceitar, setOfertaAceitar] = useState<LinhaOfertaMarketplace | null>(null);
   const [ofertaCancelar, setOfertaCancelar] = useState<LinhaOfertaMarketplace | null>(null);
@@ -539,14 +552,26 @@ export default function EscalaMarketplaceTurnosPage() {
     () => minhasBase.filter((r) => r.souOfertante === true && ofertaAtiva(r)),
     [minhasBase],
   );
-  const minhasAceitas = useMemo(
-    () => minhasBase.filter((r) => r.souInteressado === true && !r.propostaSpinGestao),
-    [minhasBase],
-  );
-  const minhasEncerradas = useMemo(
-    () => minhasBase.filter((r) => r.souOfertante === true && !ofertaAtiva(r)),
-    [minhasBase],
-  );
+  const minhasAceitas = useMemo(() => {
+    let rows = minhasBase.filter((r) => r.souInteressado === true && !r.propostaSpinGestao);
+    if (historico) {
+      rows = rows.filter((r) => isDataNosUltimosDiasMarketplace(r.dataOfertaIso, undefined, hoje));
+    }
+    return rows;
+  }, [minhasBase, historico, hoje]);
+  const minhasEncerradas = useMemo(() => {
+    let rows = minhasBase.filter(
+      (r) =>
+        r.souOfertante === true &&
+        !ofertaAtiva(r) &&
+        (r.status === "aprovada" || r.status === "cancelada") &&
+        r.status === filtroStatusHistoricoMinhas,
+    );
+    if (historico) {
+      rows = rows.filter((r) => isDataNosUltimosDiasMarketplace(r.dataOfertaIso, undefined, hoje));
+    }
+    return rows;
+  }, [minhasBase, filtroStatusHistoricoMinhas, historico, hoje]);
 
   /** Gestores (Ver = Sim): todas as aceitas/canceladas, respeitando filtro de time. */
   const encerradasBase = useMemo(
@@ -566,14 +591,20 @@ export default function EscalaMarketplaceTurnosPage() {
       ),
     [linhasMes, filtroTipoTodas, filtroTimeTodas, busca],
   );
-  const encerradasAceitas = useMemo(
-    () => encerradasBase.filter((r) => r.status === "aprovada"),
-    [encerradasBase],
-  );
-  const encerradasCanceladas = useMemo(
-    () => encerradasBase.filter((r) => r.status === "cancelada"),
-    [encerradasBase],
-  );
+  const encerradasAceitas = useMemo(() => {
+    let rows = encerradasBase.filter((r) => r.status === "aprovada");
+    if (historico) {
+      rows = rows.filter((r) => isDataNosUltimosDiasMarketplace(r.dataOfertaIso, undefined, hoje));
+    }
+    return rows;
+  }, [encerradasBase, historico, hoje]);
+  const encerradasCanceladas = useMemo(() => {
+    let rows = encerradasBase.filter((r) => r.status === "cancelada");
+    if (historico) {
+      rows = rows.filter((r) => isDataNosUltimosDiasMarketplace(r.dataOfertaIso, undefined, hoje));
+    }
+    return rows;
+  }, [encerradasBase, historico, hoje]);
 
   const spinBase = useMemo(
     () =>
@@ -588,10 +619,18 @@ export default function EscalaMarketplaceTurnosPage() {
   );
   const spinAbertas = useMemo(() => spinBase.filter((r) => ofertaEmAberto(r)), [spinBase]);
   const spinAceitas = useMemo(() => spinBase.filter((r) => r.status === "aprovada"), [spinBase]);
-  const spinHistorico = useMemo(
-    () => spinBase.filter((r) => !ofertaEmAberto(r) && r.status !== "aprovada"),
-    [spinBase],
-  );
+  const spinHistorico = useMemo(() => {
+    let rows = spinBase.filter(
+      (r) =>
+        !ofertaEmAberto(r) &&
+        (r.status === "aprovada" || r.status === "cancelada") &&
+        r.status === filtroStatusHistoricoSpin,
+    );
+    if (historico) {
+      rows = rows.filter((r) => isDataNosUltimosDiasMarketplace(r.dataOfertaIso, undefined, hoje));
+    }
+    return rows;
+  }, [spinBase, filtroStatusHistoricoSpin, historico, hoje]);
 
   const compraSpinLinhas = useMemo(() => {
     const tipoAlvo = compraSpinModo === "turno" ? "venda_turno" : "venda_folga";
@@ -1261,7 +1300,7 @@ export default function EscalaMarketplaceTurnosPage() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="escala_marketplace_turnos" />}
         title={getPageMenuLabel("escala_marketplace_turnos")}
-        subtitle="Ofertas de venda e troca de turnos — mural aberto e histórico conforme a sua permissão."
+        subtitle="Ofertas de venda e troca de turnos."
         brand={brand}
         t={t}
       />
@@ -1378,13 +1417,49 @@ export default function EscalaMarketplaceTurnosPage() {
                 {renderTabelaMinhas(minhasAbertas, "abertas")}
               </div>
               <div style={contentBox}>
-                <SectionTitle sub="Aceites concluídos e propostas em análise">
+                <SectionTitle
+                  sub={
+                    historico
+                      ? "Aceites e propostas em análise — desde os últimos 30 dias (inclui datas futuras)"
+                      : "Aceites concluídos e propostas em análise"
+                  }
+                >
                   Ofertas que aceitei
                 </SectionTitle>
                 {renderTabelaMinhas(minhasAceitas, "aceitei")}
               </div>
               <div style={contentBox}>
-                <SectionTitle sub="Suas ofertas já aceitas ou canceladas">Histórico</SectionTitle>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    marginBottom: 16,
+                  }}
+                >
+                  <SectionTitle
+                    compact
+                    sub={
+                      historico
+                        ? "Suas ofertas encerradas — últimos 30 dias"
+                        : "Suas ofertas já aceitas ou canceladas"
+                    }
+                  >
+                    Histórico
+                  </SectionTitle>
+                  <FiltroBarCampoSelect
+                    value={filtroStatusHistoricoMinhas}
+                    onChange={(v) => setFiltroStatusHistoricoMinhas(v as HistoricoBlocoStatusFiltro)}
+                    options={HISTORICO_BLOCO_STATUS_OPCOES}
+                    showTodasOption={false}
+                    icon={FilterBarIcons.status}
+                    ariaLabel="Status"
+                    pill
+                    minWidth={160}
+                  />
+                </div>
                 {renderTabelaMinhas(minhasEncerradas, "historico")}
               </div>
             </div>
@@ -1393,13 +1468,25 @@ export default function EscalaMarketplaceTurnosPage() {
           {aba === "encerradas" && mostrarEncerradas && (
             <div role="tabpanel" id="panel-mkt-encerradas" aria-labelledby="tab-mkt-encerradas">
               <div style={contentBox}>
-                <SectionTitle sub="Ofertas de todos os prestadores que foram aceitas">
+                <SectionTitle
+                  sub={
+                    historico
+                      ? "Ofertas de todos os prestadores que foram aceitas — últimos 30 dias"
+                      : "Ofertas de todos os prestadores que foram aceitas"
+                  }
+                >
                   Ofertas aceitas
                 </SectionTitle>
                 {renderTabelaEncerradas(encerradasAceitas, "aceitas")}
               </div>
               <div style={contentBox}>
-                <SectionTitle sub="Ofertas de todos os prestadores que foram canceladas">
+                <SectionTitle
+                  sub={
+                    historico
+                      ? "Ofertas de todos os prestadores que foram canceladas — últimos 30 dias"
+                      : "Ofertas de todos os prestadores que foram canceladas"
+                  }
+                >
                   Ofertas Canceladas
                 </SectionTitle>
                 {renderTabelaEncerradas(encerradasCanceladas, "canceladas")}
@@ -1479,7 +1566,37 @@ export default function EscalaMarketplaceTurnosPage() {
                 </div>
               </div>
               <div style={contentBox}>
-                <SectionTitle sub="Canceladas ou expiradas">Histórico</SectionTitle>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    marginBottom: 16,
+                  }}
+                >
+                  <SectionTitle
+                    compact
+                    sub={
+                      historico
+                        ? "Coberturas e liberações encerradas — últimos 30 dias"
+                        : "Coberturas e liberações aprovadas ou canceladas"
+                    }
+                  >
+                    Histórico
+                  </SectionTitle>
+                  <FiltroBarCampoSelect
+                    value={filtroStatusHistoricoSpin}
+                    onChange={(v) => setFiltroStatusHistoricoSpin(v as HistoricoBlocoStatusFiltro)}
+                    options={HISTORICO_BLOCO_STATUS_OPCOES}
+                    showTodasOption={false}
+                    icon={FilterBarIcons.status}
+                    ariaLabel="Status"
+                    pill
+                    minWidth={160}
+                  />
+                </div>
                 {renderTabelaSpin(spinHistorico, "historico")}
               </div>
             </div>
