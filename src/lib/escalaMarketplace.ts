@@ -77,8 +77,9 @@ export function isDataNoHistoricoMarketplace(
 export const MARKETPLACE_HISTORICO_BLOCO_DIAS = 30;
 
 /**
- * Recorte civil inclusivo dos últimos `dias` (default 30) em America/Sao_Paulo —
- * usado só nos blocos de arquivo quando o botão Histórico está ativo.
+ * Recorte civil dos blocos de arquivo com Histórico ativo: desde (hoje − dias + 1)
+ * **sem teto em hoje** — inclui datas futuras (propostas em análise / aceites de turnos à frente).
+ * O teto superior vem de `linhasMes` (`isDataNoHistoricoMarketplace` / mês do carrossel).
  * Carrossel em mês: não aplicar (mostrar o mês inteiro).
  */
 export function isDataNosUltimosDiasMarketplace(
@@ -91,7 +92,7 @@ export function isDataNosUltimosDiasMarketplace(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return false;
   const hojeIso = ref.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
   const inicioIso = subDiasIso(hojeIso, dias - 1);
-  return dia >= inicioIso && dia <= hojeIso;
+  return dia >= inicioIso;
 }
 
 /** Competência `YYYY-MM` a partir de ano + mês 0-based. */

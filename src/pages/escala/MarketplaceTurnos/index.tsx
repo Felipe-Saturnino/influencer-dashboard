@@ -1420,7 +1420,7 @@ export default function EscalaMarketplaceTurnosPage() {
                 <SectionTitle
                   sub={
                     historico
-                      ? "Aceites e propostas em análise — últimos 30 dias"
+                      ? "Aceites e propostas em análise — desde os últimos 30 dias (inclui datas futuras)"
                       : "Aceites concluídos e propostas em análise"
                   }
                 >

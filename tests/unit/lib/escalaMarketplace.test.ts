@@ -81,8 +81,9 @@ describe("isDataNosUltimosDiasMarketplace", () => {
     expect(isDataNosUltimosDiasMarketplace("2026-07-28", 30, ref)).toBe(false);
   });
 
-  it("exclui futuro e valores inválidos", () => {
-    expect(isDataNosUltimosDiasMarketplace("2026-08-28", 30, ref)).toBe(false);
+  it("inclui datas futuras (propostas / aceites à frente) e rejeita inválidos", () => {
+    expect(isDataNosUltimosDiasMarketplace("2026-08-28", 30, ref)).toBe(true);
+    expect(isDataNosUltimosDiasMarketplace("2026-09-15", 30, ref)).toBe(true);
     expect(isDataNosUltimosDiasMarketplace(null, 30, ref)).toBe(false);
     expect(isDataNosUltimosDiasMarketplace("lixo", 30, ref)).toBe(false);
   });
