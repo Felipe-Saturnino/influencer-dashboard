@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertCircle, Loader2, ScanLine } from "lucide-react"
 import { supabase } from "../../../lib/supabase"
+import { fetchAllPages } from "../../../lib/supabasePaginate"
 import { useApp } from "../../../context/AppContext"
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand"
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros"
@@ -45,6 +46,7 @@ import { CATEGORIAS, TAMANHOS, CORES, GENEROS, COR_PADRAO, GENERO_PADRAO, emptyM
 import { FIGURINOS_ABAS, FIGURINOS_TAB_ICONS } from "./figurinosTabConfig";
 import {
   actorLabel,
+  candidatosLookupFigurino,
   ctaButtonContent,
   emprestimoFigurinoEhDoProprioLogin,
   fmtDataHora,
@@ -53,6 +55,7 @@ import {
   labelEstudiosPeca,
   normNomeParaFiltroPrestadorFig,
   pecaPassaFiltroEstudio,
+  pecaPorCodigoLocal,
   tableRowHoverBg,
 } from "./figurinosPageHelpers"
 import { ModalCadastroPeca } from "./ModalCadastroPeca"
@@ -192,22 +195,39 @@ export default function FigurinosPage() {
     await carregarEstudios();
     const selEmbed =
       "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
-    const q = supabase.from("rh_figurino_pecas").select(selEmbed).order("created_at", { ascending: false });
-    const [pr, er] = await Promise.all([
-      q,
-      supabase.from("rh_figurino_emprestimos").select("*").eq("status", "active").limit(500),
-    ]);
-    if (pr.error) {
-      console.error("[Figurinos] Erro ao carregar inventário:", pr.error);
+    try {
+      const [pecasRows, emps] = await Promise.all([
+        fetchAllPages<RhFigurinoPeca>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("rh_figurino_pecas")
+            .select(selEmbed)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: true })
+            .range(from, to);
+          return { data: (data ?? []) as RhFigurinoPeca[], error };
+        }),
+        fetchAllPages<RhFigurinoEmprestimo>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("rh_figurino_emprestimos")
+            .select("*")
+            .eq("status", "active")
+            .order("id", { ascending: true })
+            .range(from, to);
+          return { data: (data ?? []) as RhFigurinoEmprestimo[], error };
+        }),
+      ]);
+      setPecas(pecasRows);
+      const map: Record<string, RhFigurinoEmprestimo> = {};
+      emps.forEach((e) => {
+        map[e.item_id] = e;
+      });
+      setEmpPorItem(map);
+    } catch (e) {
+      console.error("[Figurinos] Erro ao carregar inventário:", e);
       setErroGlobal("Não foi possível carregar o inventário. Se o problema persistir, entre em contato com o suporte.");
+      setPecas([]);
+      setEmpPorItem({});
     }
-    setPecas((pr.data ?? []) as RhFigurinoPeca[]);
-    const emps = (er.data ?? []) as RhFigurinoEmprestimo[];
-    const map: Record<string, RhFigurinoEmprestimo> = {};
-    emps.forEach((e) => {
-      map[e.item_id] = e;
-    });
-    setEmpPorItem(map);
     setLoading(false);
   }, [carregarEstudios]);
 
@@ -409,64 +429,92 @@ export default function FigurinosPage() {
     setDetalhe(p);
     setHistErro(null);
     setLoadingHist(true);
-    const e2 = await supabase
-      .from("rh_figurino_status_history")
-      .select("*")
-      .eq("item_id", p.id)
-      .order("changed_at", { ascending: false })
-      .limit(80);
-    if (e2.error) {
-      console.error("[Figurinos] Erro ao carregar histórico da peça:", e2.error);
+    try {
+      const rows = await fetchAllPages<RhFigurinoStatusHist>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("rh_figurino_status_history")
+          .select("*")
+          .eq("item_id", p.id)
+          .order("changed_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to);
+        return { data: (data ?? []) as RhFigurinoStatusHist[], error };
+      });
+      setHistStatus(rows);
+    } catch (e) {
+      console.error("[Figurinos] Erro ao carregar histórico da peça:", e);
       setHistStatus([]);
       setHistErro("Não foi possível carregar o histórico desta peça. Se o problema persistir, entre em contato com o suporte.");
-    } else {
-      setHistStatus((e2.data ?? []) as RhFigurinoStatusHist[]);
     }
     setLoadingHist(false);
   };
 
-  const resolverCodigo = async (texto: string): Promise<RhFigurinoPeca | null> => {
-    const raw = texto.trim();
-    if (!raw) return null;
-    const emb = "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
-    const byBar = await supabase.from("rh_figurino_pecas").select(emb).eq("barcode", raw).maybeSingle();
-    if (byBar.data) return byBar.data as RhFigurinoPeca;
-    const upper = raw.toUpperCase();
-    const byCode = await supabase.from("rh_figurino_pecas").select(emb).eq("code", upper).maybeSingle();
-    if (byCode.data) return byCode.data as RhFigurinoPeca;
-    return null;
-  };
+  const resolverCodigo = useCallback(
+    async (texto: string): Promise<RhFigurinoPeca | null> => {
+      const raw = texto.trim();
+      if (!raw) return null;
 
-  const onScanOuManual = async (texto: string) => {
-    setErroGlobal(null);
-    const p = await resolverCodigo(texto);
-    if (!p) {
-      setErroGlobal("Código não reconhecido. Verifique se a peça foi cadastrada ou tente digitar o código manualmente.");
-      return;
-    }
-    if (p.status === "maintenance" || p.status === "discarded") {
-      setAvisoPeca(p);
-      return;
-    }
-    if (p.status === "available") {
-      setEmpPeca(p);
-      setModalScanner(false);
-      return;
-    }
-    if (p.status === "borrowed") {
-      if (perm.canView === "proprios") {
-        const emp = empPorItem[p.id];
-        if (!emprestimoFigurinoEhDoProprioLogin(emp, rhPrestadorIdsSet, nomeUsuarioFigNorm)) {
-          setErroGlobal(
-            "Esta peça não está associada ao seu cadastro de prestador (retirada). Só pode abrir devolução das suas próprias retiradas.",
-          );
-          return;
+      const local = pecaPorCodigoLocal(pecas, raw);
+      if (local) return local;
+
+      const emb = "*, rh_figurino_peca_estudios(estudio_slug), rh_figurino_peca_operadoras(operadora_slug)";
+      const cands = candidatosLookupFigurino(raw);
+      for (const cand of cands) {
+        const byBar = await supabase.from("rh_figurino_pecas").select(emb).eq("barcode", cand).maybeSingle();
+        if (byBar.error) {
+          console.error("[Figurinos] Erro ao buscar peça por barcode:", byBar.error);
         }
+        if (byBar.data) return byBar.data as RhFigurinoPeca;
       }
-      setDevPeca(p);
-      setModalScanner(false);
-    }
-  };
+      for (const cand of cands) {
+        const byCode = await supabase
+          .from("rh_figurino_pecas")
+          .select(emb)
+          .eq("code", cand.toUpperCase())
+          .maybeSingle();
+        if (byCode.error) {
+          console.error("[Figurinos] Erro ao buscar peça por código:", byCode.error);
+        }
+        if (byCode.data) return byCode.data as RhFigurinoPeca;
+      }
+      return null;
+    },
+    [pecas],
+  );
+
+  const onScanOuManual = useCallback(
+    async (texto: string) => {
+      setErroGlobal(null);
+      const p = await resolverCodigo(texto);
+      if (!p) {
+        setErroGlobal("Código não reconhecido. Verifique se a peça foi cadastrada ou tente digitar o código manualmente.");
+        return;
+      }
+      if (p.status === "maintenance" || p.status === "discarded") {
+        setAvisoPeca(p);
+        return;
+      }
+      if (p.status === "available") {
+        setEmpPeca(p);
+        setModalScanner(false);
+        return;
+      }
+      if (p.status === "borrowed") {
+        if (perm.canView === "proprios") {
+          const emp = empPorItem[p.id];
+          if (!emprestimoFigurinoEhDoProprioLogin(emp, rhPrestadorIdsSet, nomeUsuarioFigNorm)) {
+            setErroGlobal(
+              "Esta peça não está associada ao seu cadastro de prestador (retirada). Só pode abrir devolução das suas próprias retiradas.",
+            );
+            return;
+          }
+        }
+        setDevPeca(p);
+        setModalScanner(false);
+      }
+    },
+    [resolverCodigo, perm.canView, empPorItem, rhPrestadorIdsSet, nomeUsuarioFigNorm],
+  );
 
   if (perm.canView === "nao") {
     return (
