@@ -114,7 +114,7 @@ Espelho Telecom: `scripts/lib/monitorLobbySoftSwissScan.mjs`.
 
 ### Agenda diária (cron)
 
-**Function:** `email-agenda-diaria`
+**Function:** `email-agenda-diaria` · **Agendamento:** pg_cron (`daily-email-agenda-diaria`) — `scripts/COLE-NO-SUPABASE-daily-edge-jobs-pg-cron.sql`
 
 | Ficheiro |
 |----------|
@@ -128,7 +128,7 @@ Secret: `EMAIL_AGENDA_DESTINATARIOS` · Remetente: `RESEND_FROM_RELATORIOS`
 
 ### Relatório diário diretoria (cron)
 
-**Function:** `relatorio-diario-diretoria`
+**Function:** `relatorio-diario-diretoria` · **Agendamento:** pg_cron (`daily-relatorio-diario-diretoria`) — mesmo script COLE acima
 
 | Ficheiro |
 |----------|

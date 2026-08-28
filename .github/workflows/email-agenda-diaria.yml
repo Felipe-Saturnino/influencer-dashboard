@@ -1,11 +1,9 @@
-# E-mail Agenda do dia (operacional) — mesma janela do relatório da diretoria
+# E-mail Agenda do dia — manual / backup no GitHub Actions.
+# Agendamento PRINCIPAL: pg_cron (~6h10 BRT) — COLE-NO-SUPABASE-daily-edge-jobs-pg-cron.sql
+# NÃO reativar schedule aqui: duplicaria e-mail com o pg_cron.
 #
-# Dispara a Edge Function `email-agenda-diaria` (apenas tabela de lives agendadas).
-# Requer secrets no GitHub: SUPABASE_URL, SUPABASE_ANON_KEY (os mesmos do workflow da diretoria).
-# Destinatários vêm de EMAIL_AGENDA_DESTINATARIOS nos Secrets do Supabase (Edge Functions).
-#
-# Cron: 9h10 UTC ≈ 6h10 BRT — escalonado (não usar 0 9 junto com outros workflows).
-# Pode atrasar por fila do GitHub; ver relatorio-diario-diretoria.yml e daily-jobs-watchdog.yml.
+# Secrets GitHub (manual): SUPABASE_URL, SUPABASE_ANON_KEY
+# Destinatários: EMAIL_AGENDA_DESTINATARIOS nos Secrets do Supabase.
 
 name: E-mail Agenda Diária (6h BRT)
 
@@ -13,8 +11,6 @@ permissions:
   contents: read
 
 on:
-  schedule:
-    - cron: "10 9 * * *"
   workflow_dispatch:
 
 concurrency:

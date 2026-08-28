@@ -1,15 +1,6 @@
-# Relatório Diário Diretoria — Execução diária às 6h (horário de Brasília)
-#
-# Horário: 6h America/Sao_Paulo = 9h UTC (Brasil sem horário de verão desde 2019).
-# Disparo mais cedo compensa atrasos frequentes da fila do GitHub Actions: mesmo com
-# atraso de algumas horas, o e-mail tende a sair ainda pela manhã.
-#
-# Limitação do GitHub Actions: execuções agendadas podem atrasar ou falhar na fila se
-# vários workflows usam o mesmo minuto UTC — e-mails/Spin/Social usam 9h10/20/30 UTC.
-# Recuperação: `.github/workflows/daily-jobs-watchdog.yml` (~9h30 BRT).
-# Para disparo pontual: Supabase Schedules ou cron externo (America/Sao_Paulo).
-#
-# O workflow precisa existir na branch padrão do repositório para o schedule rodar.
+# Relatório Diário Diretoria — manual / backup no GitHub Actions.
+# Agendamento PRINCIPAL: pg_cron (~6h BRT) — COLE-NO-SUPABASE-daily-edge-jobs-pg-cron.sql
+# NÃO reativar schedule aqui: duplicaria e-mail com o pg_cron.
 
 name: Relatório Diário Diretoria (6h BRT)
 
@@ -17,8 +8,6 @@ permissions:
   contents: read
 
 on:
-  schedule:
-    - cron: "0 9 * * *"
   workflow_dispatch:
 
 concurrency:

@@ -4,8 +4,8 @@ import { hojeIsoBrasil, isoDateBrasilFromInstant } from "../../../lib/dateBrasil
 /** Horários a partir dos quais Status Técnico exige “ok hoje” (America/Sao_Paulo). */
 export const HORARIO_AGENDADO_BR = {
   /**
-   * Cron Actions: 4h BRT (`0 7 * * *` UTC). GitHub atrasa com frequência até ~7h30.
-   * Checagem após 8h evita falso positivo; o watchdog re-dispara às 9h30 BRT.
+   * Cron: pg_cron Supabase ~4h BRT (principal). GitHub Actions só manual.
+   * Checagem após 8h evita falso positivo cedo demais.
    */
   cda: 8,
   social: 6,

@@ -1,11 +1,7 @@
-# Pipeline B2B — validação HTTP de domínios via Edge Function `validate-comercial-dominios`
-# ~8h BRT → 11h UTC (após import SPA/MF 7h30 / 10h30 UTC)
-# Secrets GitHub: SUPABASE_URL, SUPABASE_ANON_KEY
+# Validate Comercial Domínios — manual / backup. PRINCIPAL: pg_cron
 name: Validate Comercial Dominios (8h BRT)
 
 on:
-  schedule:
-    - cron: "0 11 * * *"
   workflow_dispatch:
 
 jobs:
