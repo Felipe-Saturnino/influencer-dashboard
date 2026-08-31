@@ -782,8 +782,10 @@ describe("marketplace permissões UI", () => {
     expect(marketplacePodeOfertar({ canCriarOk: false }, fid)).toBe(false);
   });
 
-  it("modo liderança (Ver Sim + Criar/Editar Próprios) bloqueia proposta no mural alheio", () => {
+  it("modo liderança bloqueia proposta no mural de gestão; libera com Minhas Negociações", () => {
     expect(marketplacePodeProporNoMural(lideranca, fid)).toBe(false);
+    expect(marketplacePodeProporNoMural(lideranca, fid, false)).toBe(false);
+    expect(marketplacePodeProporNoMural(lideranca, fid, true)).toBe(true);
     expect(
       marketplacePodeProporNoMural(
         { canView: "sim", canCriar: "sim", canEditar: "sim", canCriarOk: true },

@@ -17,8 +17,8 @@
  */
 (async () => {
   const MODO = "network"; // "network" | "dedicado" | "monthly"
-  const DE = "2026-08-27";
-  const ATE = "2026-08-28";
+  const DE = "2026-08-28";
+  const ATE = "2026-08-31";
 
   const SC = [
     "Sports Club Blackjack",

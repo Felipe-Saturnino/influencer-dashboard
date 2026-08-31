@@ -1719,12 +1719,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Só vejo ofertas do meu time?",
         texto:
-          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu grupo de negociação e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba padrão é **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para ver as **suas** ofertas (e aprovar uma compra), use **Minhas Negociações** ao lado do Histórico — o mural passa a ser só do seu time e a aba Minhas Ofertas reaparece. Para alternar o escopo de gestão, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
+          "Com permissão de **Ver: Próprios**, a lista mostra apenas o seu grupo de negociação e a aba **Minhas Ofertas**. Com **Ver: Sim**, a aba padrão é **Ofertas Encerradas** (aceitas e canceladas de todos os prestadores) e o filtro de times fica disponível. Para ver o mural do **seu** grupo e as **suas** ofertas (e aprovar uma compra), use **Minhas Negociações** ao lado do Histórico — em **Todas as Ofertas** o mural passa a ser só do seu time sem mudar de aba; a aba **Minhas Ofertas** reaparece para você abrir quando quiser. Para alternar o escopo de gestão, ajuste a permissão de **Ver** na linha Marketplace em Gestão de Usuários → Permissões (após alterar, faça logout e login).",
       },
       {
         subtitulo: "Não vejo a aba Minhas Ofertas?",
         texto:
-          "Com **Ver: Sim**, a segunda aba é **Ofertas Encerradas** (visão de gestão). Se o seu login também é prestador de estúdio, ligue **Minhas Negociações** ao lado do Histórico: Encerradas some e voltam **Todas as Ofertas** (só o seu grupo) e **Minhas Ofertas**. Sem cadastro de prestador ligado ao login, o botão não aparece.",
+          "Com **Ver: Sim**, a segunda aba é **Ofertas Encerradas** (visão de gestão). Se o seu login também é prestador de estúdio, ligue **Minhas Negociações** ao lado do Histórico: Encerradas some e voltam **Todas as Ofertas** (só o seu grupo) e **Minhas Ofertas**. Em **Todas as Ofertas**, o botão só filtra o mural — não muda de aba; a partir de **Ofertas Spin**, leva a **Minhas Ofertas**. Sem cadastro de prestador ligado ao login, o botão não aparece.",
       },
       {
         subtitulo: "Marquei vários dias e só parte das ofertas foi publicada?",

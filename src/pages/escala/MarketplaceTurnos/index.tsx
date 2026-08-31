@@ -368,7 +368,12 @@ export default function EscalaMarketplaceTurnosPage() {
     ? filtroTimeGrupoNegociacaoMarketplace(contexto?.areaKey)
     : null;
 
-  /** Ver = Sim: Encerradas por defeito. Minhas Ofertas só com Minhas Negociações (ou URL /MinhasOfertas). */
+  /**
+   * Ver = Sim: Encerradas/Spin somem com Minhas Negociações.
+   * Em Todas as Ofertas o toggle só filtra o mural do grupo — não força Minhas Ofertas.
+   * Ofertas Spin → Minhas Ofertas; Encerradas → Todas (aba Encerradas some).
+   * URL /MinhasOfertas liga Minhas Negociações.
+   */
   useEffect(() => {
     if (perm.loading) return;
     if (!podeFiltrarTimes) {
@@ -379,7 +384,9 @@ export default function EscalaMarketplaceTurnosPage() {
       if (!minhasNegociacoes) setMinhasNegociacoes(true);
       return;
     }
-    if ((aba === "encerradas" || aba === "spin") && minhasNegociacoes) setAba("minhas");
+    if (!minhasNegociacoes) return;
+    if (aba === "spin") setAba("minhas");
+    else if (aba === "encerradas") setAba("todas");
   }, [perm.loading, podeFiltrarTimes, aba, minhasNegociacoes, setAba]);
 
   const mesSelecionado = mesesDisponiveis[idxMes];
@@ -650,7 +657,11 @@ export default function EscalaMarketplaceTurnosPage() {
     minhasNegociacoes,
   );
   const mostrarNovaOfertaSpin = marketplaceMostrarNovaOfertaSpin(perm) && aba === "spin";
-  const podeProporNoMural = marketplacePodeProporNoMural(perm, contexto?.funcionarioId);
+  const podeProporNoMural = marketplacePodeProporNoMural(
+    perm,
+    contexto?.funcionarioId,
+    minhasNegociacoes,
+  );
 
   const abrirAceite = useCallback(async (row: LinhaOfertaMarketplace) => {
     setPreparandoAceiteId(row.id);
@@ -736,7 +747,8 @@ export default function EscalaMarketplaceTurnosPage() {
               if (aba === "minhas") setAba("todas");
             } else {
               setMinhasNegociacoes(true);
-              setAba("minhas");
+              if (aba === "spin") setAba("minhas");
+              else if (aba === "encerradas") setAba("todas");
             }
           }}
         />
