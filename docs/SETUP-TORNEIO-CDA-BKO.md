@@ -5,7 +5,7 @@ Ranking ao vivo do torneio **Casa de Apostas × Spin Gaming**. Sem API própria:
 | Item | Valor |
 |------|--------|
 | Origem | PLS Backoffice (`bo2.sg.onairent.live`) |
-| Participantes | User Name CDA (`1990329`, …) → `playerId` `casadeapostas…CDA-{userName}` |
+| Participantes | User Name CDA (`1990329`, …) → `playerId` + **Screen Name** (`screenName` na busca BKO) |
 | Mesas | `tableSG6134`, `tableSG6131`, `tableSG6132`, `bacSG6133`, `roSG6130` |
 | Destino | `torneio_cda_*` no Supabase |
 | Script | `scripts/torneio-cda-bko-sync.mjs` |
@@ -57,8 +57,8 @@ Só extrair JSON sem gravar: `--fetch-only`.
 | Tabela | Conteúdo |
 |--------|----------|
 | `torneio_cda` | Config (slug, período, ativo) |
-| `torneio_cda_participante` | User Names + apelido público |
-| `torneio_cda_ranking` | Snapshot atual (substituído a cada sync) |
+| `torneio_cda_participante` | User Names + Screen Name BKO (cache em `apelido`) |
+| `torneio_cda_ranking` | Snapshot atual — coluna `apelido` = Screen Name na página |
 | `torneio_cda_consolidado` | KPIs totais + `sincronizado_em` |
 | `torneio_cda_atividade` | Últimas vitórias (upsert por `game_id`) |
 
@@ -74,8 +74,10 @@ RLS: leitura **anon** apenas quando `torneio_cda.ativo = true`.
 
 ## Participantes seed (User Name — teste)
 
-| User Name | Apelido |
-|-----------|---------|
+Cadastre só o **User Name** (`user_name`). O **Screen Name** vem do BKO a cada sync.
+
+| User Name | Screen Name BKO (exemplo) |
+|-----------|---------------------------|
 | 1990329 | Nathan |
 | 1989697 | Daci |
 | 1713222 | Gusti |
@@ -86,7 +88,7 @@ RLS: leitura **anon** apenas quando `torneio_cda.ativo = true`.
 
 | Ação | Endpoint |
 |------|----------|
-| Buscar jogador | `GET /backoffice/api/players/search?exactMatch=true&pattern={userName}` |
+| Buscar jogador | `GET /backoffice/api/players/search?exactMatch=true&pattern={userName}` → `screenName`, `playerId`, `externalName` |
 | Rodadas do jogador | `GET /backoffice/api/players/search/player/games/{playerId}?offset=&limit=1000&from=&to=` |
 
 Filtro de período: usar `from` / `to` em ISO UTC — **não** `dateFrom` / `dateTo`.

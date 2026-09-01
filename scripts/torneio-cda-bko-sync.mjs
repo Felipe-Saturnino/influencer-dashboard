@@ -128,19 +128,86 @@ function gameTypeLabel(gameType) {
   return map[gameType] ?? gameType ?? "Live Cassino";
 }
 
-function mensagemAtividade(apelido, game, net) {
+/** Lista de jogadores no response de /players/search (formatos legados). */
+function listaJogadoresBuscaBko(json) {
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json?.players)) return json.players;
+  if (Array.isArray(json?.results)) return json.results;
+  if (Array.isArray(json?.content)) return json.content;
+  return [];
+}
+
+/** Escolhe o jogador cujo User Name CDA (externalName) bate com o cadastro do torneio. */
+export function escolherJogadorBuscaBko(json, userName) {
+  const want = String(userName ?? "").trim();
+  if (!want) return null;
+  const lista = listaJogadoresBuscaBko(json);
+  const porExternal = lista.find((p) => String(p.externalName ?? "").trim() === want);
+  if (porExternal) return porExternal;
+  return (
+    lista.find((p) => String(p.playerId ?? "").includes(`.CDA-${want}`) || String(p.playerId ?? "").endsWith(`CDA-${want}`)) ??
+    null
+  );
+}
+
+/** Screen Name do BKO — nome público na página do torneio. */
+export function resolverScreenNameBko(participante) {
+  const screen =
+    participante?.screenName ??
+    participante?.screen_name ??
+    participante?.nickName ??
+    participante?.nickname ??
+    null;
+  if (screen != null && String(screen).trim()) return String(screen).trim();
+  if (participante?.apelido != null && String(participante.apelido).trim()) {
+    return String(participante.apelido).trim();
+  }
+  if (participante?.nick != null && String(participante.nick).trim()) {
+    return String(participante.nick).trim();
+  }
+  return String(participante?.userName ?? participante?.user_name ?? "—").trim();
+}
+
+async function fetchPlayerSearchBko(baseUrl, cookie, userName) {
+  for (const exactMatch of [true, false]) {
+    const qs = new URLSearchParams({
+      exactMatch: String(exactMatch),
+      pattern: String(userName),
+      limit: "10",
+    });
+    const url = `${baseUrl}/backoffice/api/players/search?${qs}`;
+    const res = await fetch(url, {
+      headers: { Cookie: cookie, Accept: "application/json" },
+    });
+    if (!res.ok) {
+      throw new Error(`BKO search ${userName}: ${res.status} ${(await res.text()).slice(0, 200)}`);
+    }
+    const json = await res.json();
+    const player = escolherJogadorBuscaBko(json, userName);
+    if (player) {
+      return {
+        playerId: player.playerId ?? player.id ?? null,
+        screenName: player.screenName ?? player.nickName ?? player.nickname ?? null,
+        externalName: player.externalName ?? userName,
+      };
+    }
+  }
+  return { playerId: null, screenName: null, externalName: userName };
+}
+
+function mensagemAtividade(nomeExibicao, game, net) {
   const fmt = (v) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
   if (net >= 50) {
-    return `${apelido} ganha ${fmt(net)} na última rodada`;
+    return `${nomeExibicao} ganha ${fmt(net)} na última rodada`;
   }
-  return `${apelido} ganha ${fmt(net)} em ${game.tableName ?? gameTypeLabel(game.gameType)}`;
+  return `${nomeExibicao} ganha ${fmt(net)} em ${game.tableName ?? gameTypeLabel(game.gameType)}`;
 }
 
 export function processarParticipante(participante, periodo) {
   const inicioMs = new Date(periodo.from).getTime();
   const fimMs = new Date(periodo.to).getTime();
-  const apelido = participante.apelido ?? participante.nick ?? participante.userName;
+  const nomeExibicao = resolverScreenNameBko(participante);
 
   const jogosCda = (participante.games ?? []).filter((g) => {
     if (!CDA_MESAS_BKO.has(g.tableId)) return false;
@@ -163,12 +230,12 @@ export function processarParticipante(participante, periodo) {
       rodadasGanhas += 1;
       vitorias.push({
         userName: participante.userName,
-        apelido,
+        apelido: nomeExibicao,
         gameId: g.gameId,
         gameType: g.gameType ?? "",
         tableName: g.tableName ?? "",
         valorNet: t.net,
-        mensagem: mensagemAtividade(apelido, g, t.net),
+        mensagem: mensagemAtividade(nomeExibicao, g, t.net),
         ocorridoEm: isoFromMs(g.startedAt) ?? new Date().toISOString(),
       });
     }
@@ -177,7 +244,7 @@ export function processarParticipante(participante, periodo) {
 
   return {
     userName: participante.userName,
-    apelido,
+    apelido: nomeExibicao,
     rodadasJogadas,
     rodadasGanhas,
     valorApostado: Math.round(valorApostado * 100) / 100,
@@ -277,14 +344,19 @@ async function extrairBko(baseUrl, cookie, torneio, participantes) {
   };
 
   for (const p of participantes) {
+    const meta = await fetchPlayerSearchBko(baseUrl, cookie, p.user_name);
     const playerId =
-      p.player_id_bko ?? `casadeapostas.if_dgc.L011_358_56.CDA-${p.user_name}`;
-    console.log(`  BKO → ${p.apelido} (${p.user_name})…`);
+      meta.playerId ??
+      p.player_id_bko ??
+      `casadeapostas.if_dgc.L011_358_56.CDA-${p.user_name}`;
+    const screenName = meta.screenName?.trim() || resolverScreenNameBko({ userName: p.user_name, apelido: p.apelido });
+    console.log(`  BKO → ${screenName} (${p.user_name})…`);
     const games = await fetchGamesBko(baseUrl, cookie, playerId, periodo);
     console.log(`    ${games.length} rodada(s) no período`);
     payload.participantes.push({
       userName: p.user_name,
-      apelido: p.apelido,
+      screenName,
+      apelido: screenName,
       playerId,
       games,
     });
@@ -388,6 +460,20 @@ async function gravarSnapshot(supabaseUrl, serviceKey, torneioId, snapshot) {
         ocorrido_em: a.ocorridoEm,
       })),
       "torneio_id,game_id",
+    );
+  }
+
+  if (snapshot.ranking.length) {
+    await supabaseUpsert(
+      supabaseUrl,
+      serviceKey,
+      "torneio_cda_participante",
+      snapshot.ranking.map((r) => ({
+        torneio_id: torneioId,
+        user_name: r.userName,
+        apelido: r.apelido,
+      })),
+      "torneio_id,user_name",
     );
   }
 }

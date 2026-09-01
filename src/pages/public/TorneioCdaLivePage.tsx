@@ -204,6 +204,43 @@ function TorneioCdaRegras() {
   );
 }
 
+function TorneioCdaPremiacao() {
+  const faixas = [
+    { posicao: "1º", titulo: "Primeiro", valor: 20_000, variant: "first" as const },
+    { posicao: "2º", titulo: "Segundo", valor: 10_000, variant: "second" as const },
+    { posicao: "3º", titulo: "Terceiro", valor: 5_000, variant: "third" as const },
+    { posicao: "—", titulo: "Demais participantes", valor: 1_000, variant: "demais" as const },
+  ];
+
+  return (
+    <div className="torneio-cda-content-box torneio-cda-premiacao-box">
+      <h2 className="torneio-cda-section-title">Premiação</h2>
+      <p className="torneio-cda-section-sub">Prêmios em bônus para os participantes do torneio</p>
+      <div className="torneio-cda-premiacao-list">
+        {faixas.map((faixa) => (
+          <div
+            key={faixa.titulo}
+            className={`torneio-cda-premiacao-item torneio-cda-premiacao-item--${faixa.variant}`}
+          >
+            <div className="torneio-cda-premiacao-rank">{faixa.posicao}</div>
+            <div className="torneio-cda-premiacao-desc">
+              {faixa.titulo}
+              <span>
+                {faixa.variant === "demais"
+                  ? `Bônus de ${fmtBRL(faixa.valor)}`
+                  : `${fmtBRL(faixa.valor)} em bônus`}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="torneio-cda-premiacao-nota">
+        O bônus é creditado como saldo na conta Casa de Apostas do participante.
+      </p>
+    </div>
+  );
+}
+
 function TorneioCdaAtividades({ rows }: { rows: TorneioCdaAtividadeRow[] }) {
   return (
     <aside className="torneio-cda-content-box torneio-cda-activity-panel" aria-label="Atividades recentes">
@@ -390,6 +427,7 @@ export default function TorneioCdaLivePage() {
           </div>
 
           <TorneioCdaRegras />
+          <TorneioCdaPremiacao />
           <TorneioCdaAtividades rows={atividades} />
         </div>
       </main>

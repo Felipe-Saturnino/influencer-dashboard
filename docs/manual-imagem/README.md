@@ -24,7 +24,7 @@ Detalhes: [`_templates/README.md`](_templates/README.md).
 | # | Tema | Status |
 |---|------|--------|
 | 01 | Acessórios e Joias | **Aprovado** (Política + Manual v1.1) |
-| 02 | Figurino / Uniforme | Política v1 — aguardando aprovação |
+| 02 | Figurino / Uniforme | Política v1.1 (rascunho) — incorpora *Dress Code* 10/02/2026; aguardando aprovação |
 | 03 | Higiene e Postura | Pendente |
 | 04 | Cabelo | Pendente |
 | 05 | Barba / Bigode / Sobrancelhas | Pendente |

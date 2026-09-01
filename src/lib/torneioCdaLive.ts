@@ -29,6 +29,7 @@ export type TorneioCdaRow = {
 
 export type TorneioCdaRankingRow = {
   user_name: string;
+  /** Screen Name BKO — exibido como nome do jogador na página. */
   apelido: string;
   posicao: number;
   rodadas_jogadas: number;

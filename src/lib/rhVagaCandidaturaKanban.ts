@@ -2,6 +2,23 @@ import { fmtDataBR } from "./rhVagasFormat";
 import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow } from "../types/rhVagaCandidatura";
 import type { RhVagaTipo } from "../types/rhVaga";
 
+/** Máximo de cards visíveis por coluna do funil antes de rolagem interna. */
+export const VAGAS_KANBAN_MAX_CARDS_VISIVEIS = 10;
+
+const VAGAS_KANBAN_CARD_ALTURA_ESTIMADA_PX = 168;
+const VAGAS_KANBAN_COL_GAP_PX = 8;
+const VAGAS_KANBAN_COL_BODY_PADDING_PX = 16;
+
+/** Altura máxima da lista de cards (≈10 cards + gaps + padding). */
+export function getVagasKanbanColBodyMaxHeightPx(maxCards = VAGAS_KANBAN_MAX_CARDS_VISIVEIS): number {
+  if (maxCards <= 0) return VAGAS_KANBAN_COL_BODY_PADDING_PX;
+  return (
+    maxCards * VAGAS_KANBAN_CARD_ALTURA_ESTIMADA_PX +
+    (maxCards - 1) * VAGAS_KANBAN_COL_GAP_PX +
+    VAGAS_KANBAN_COL_BODY_PADDING_PX
+  );
+}
+
 export const RH_VAGA_CANDIDATURA_ETAPA_ORDEM: RhVagaCandidaturaEtapa[] = [
   "inscritos",
   "aguardando_retorno",

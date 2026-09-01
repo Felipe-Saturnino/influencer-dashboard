@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS public.torneio_cda_participante (
 COMMENT ON COLUMN public.torneio_cda_participante.user_name IS
   'User Name CDA (externalName no BKO), ex.: 1990329.';
 
+COMMENT ON COLUMN public.torneio_cda_participante.apelido IS
+  'Screen Name do BKO — nome público na página; atualizado a cada sync.';
+
 CREATE TABLE IF NOT EXISTS public.torneio_cda_ranking (
   torneio_id uuid NOT NULL REFERENCES public.torneio_cda (id) ON DELETE CASCADE,
   user_name text NOT NULL,
@@ -37,6 +40,9 @@ CREATE TABLE IF NOT EXISTS public.torneio_cda_ranking (
   sincronizado_em timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (torneio_id, user_name)
 );
+
+COMMENT ON COLUMN public.torneio_cda_ranking.apelido IS
+  'Screen Name BKO no momento do sync — exibido na página pública.';
 
 CREATE INDEX IF NOT EXISTS idx_torneio_cda_ranking_posicao
   ON public.torneio_cda_ranking (torneio_id, posicao);
@@ -66,12 +72,23 @@ CREATE TABLE IF NOT EXISTS public.torneio_cda_atividade (
 CREATE INDEX IF NOT EXISTS idx_torneio_cda_atividade_ocorrido
   ON public.torneio_cda_atividade (torneio_id, ocorrido_em DESC);
 
--- RLS — leitura pública só em torneio ativo
+-- RLS — leitura pública só em torneio ativo (DROP IF EXISTS permite reexecutar no SQL Editor)
 ALTER TABLE public.torneio_cda ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.torneio_cda_participante ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.torneio_cda_ranking ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.torneio_cda_consolidado ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.torneio_cda_atividade ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS torneio_cda_select_publico ON public.torneio_cda;
+DROP POLICY IF EXISTS torneio_cda_participante_select_publico ON public.torneio_cda_participante;
+DROP POLICY IF EXISTS torneio_cda_ranking_select_publico ON public.torneio_cda_ranking;
+DROP POLICY IF EXISTS torneio_cda_consolidado_select_publico ON public.torneio_cda_consolidado;
+DROP POLICY IF EXISTS torneio_cda_atividade_select_publico ON public.torneio_cda_atividade;
+DROP POLICY IF EXISTS torneio_cda_service_all ON public.torneio_cda;
+DROP POLICY IF EXISTS torneio_cda_participante_service_all ON public.torneio_cda_participante;
+DROP POLICY IF EXISTS torneio_cda_ranking_service_all ON public.torneio_cda_ranking;
+DROP POLICY IF EXISTS torneio_cda_consolidado_service_all ON public.torneio_cda_consolidado;
+DROP POLICY IF EXISTS torneio_cda_atividade_service_all ON public.torneio_cda_atividade;
 
 CREATE POLICY torneio_cda_select_publico ON public.torneio_cda
   FOR SELECT TO anon, authenticated
