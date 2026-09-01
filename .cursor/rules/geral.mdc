@@ -5,6 +5,7 @@ globs:
   - src/pages/geral/**/*.ts
   - src/pages/public/CanalDenunciasSpinPage.tsx
   - src/pages/public/PainelNoticiasPage.tsx
+  - src/pages/public/TorneioCdaLivePage.tsx
 alwaysApply: false
 ---
 
@@ -28,6 +29,7 @@ alwaysApply: false
 | Trocar senha obrigatória | `geral/TrocarSenhaObrigatorio/` | Gate pós-login |
 | Canal de denúncias (público) | `public/CanalDenunciasSpinPage.tsx` | Rota pública; sem shell logado |
 | Painel de notícias (público) | `public/PainelNoticiasPage.tsx` | Rota `/painel-noticias`; RSS TV; sem shell logado |
+| Torneio Live CDA (público) | `public/TorneioCdaLivePage.tsx` | Rota `/TorneioCDA`; ranking ao vivo; sync BKO manual |
 
 Não há secção no menu lateral — páginas acessadas por fluxo, atalho ou URL pública.
 
@@ -216,6 +218,19 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - Purge físico na base após janela de 4 h quando fora do conjunto mínimo de 5 exibíveis.
 - Ingestão: só feeds de `PAINEL_NOTICIAS_RSS_URLS` (body **não** substitui a lista). Cron/GitHub exige `PAINEL_NOTICIAS_INGEST_SECRET`. Status Técnico → Sync dispara a mesma função com a sessão logada.
 - Primeira carga com falha: mensagem **Não foi possível carregar as notícias. Tentando novamente…** (não fica em Carregando…).
+
+---
+
+## Torneio Live CDA — público (`public/TorneioCdaLivePage.tsx`)
+
+**Exceções ao padrão de página logada** (mesmo espírito do painel de notícias):
+
+- Rota **`/TorneioCDA`** — `isTorneioCdaPublicPath()` / `detectPublicUnauthenticatedRoute()`.
+- **Sem** login, menu, `PageHeader`, `usePermission`.
+- Dados: `torneio_cda_*` via **anon** (RLS só com `torneio_cda.ativo = true`); carga manual via `scripts/torneio-cda-bko-sync.mjs` (BKO → Supabase, sob demanda durante o evento).
+- UI: brand Casa de Apostas (mockup aprovado), ranking + KPIs + atividades; polling **30 s**; badge «Atualizado há X s»; título do hero **Setembro 2026**; `noindex`.
+- Torneio inativo ou ausente: **Torneio indisponível no momento.** — ranking vazio após ativo: **Aguardando primeiras rodadas…**
+- Slug canónico: `cda-vip-setembro-2026` (`TORNEIO_CDA_SLUG` em `lib/torneioCdaLive.ts`). Participantes reais: atualizar `torneio_cda_participante` no Supabase antes do evento.
 
 ---
 

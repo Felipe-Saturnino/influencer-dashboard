@@ -5,7 +5,7 @@
 > - `Politica_Interna_Acessorios_e_Joias_Spin.pdf` (Downloads + esta pasta)
 > - Regenerar: `node scripts/generate-politica-imagem-pdf.mjs acessorios`
 >
-> Este Markdown é a **fonte de conteúdo** + decisões abertas. O PDF não inclui o bloco de decisões.
+> Este Markdown é a **fonte de conteúdo** da versão aprovada.
 
 ## Acessórios e Joias
 
@@ -13,8 +13,8 @@
 |-------|--------|
 | **Área responsável** | Performance Coach |
 | **Aprovado por** | Recursos Humanos / Diretoria |
-| **Versão** | 1.1 (rascunho — aguardando aprovação) |
-| **Data** | 31/08/2026 |
+| **Versão** | 1.1 (aprovada) |
+| **Data** | 01/09/2026 |
 | **Público** | Prestadores de Serviços em câmera (Game Presenter, Shuffler, Service Manager e Shift Leader quando em frente à câmera) |
 
 ---
@@ -173,46 +173,4 @@ Esta política é revisada periodicamente pelo Performance Coach.
 
 ---
 
-## Decisões abertas (restantes)
-
-### Resolvidas nesta revisão
-
-- **D1 — Tamanho 0,6 a 0,8:** **centímetros de diâmetro** (confirmado).
-- **Nomenclatura:** usar sempre **Game Presenter** (não “Dealer”).
-- **Seção Definições:** removida.
-
-### Ainda em aberto
-
-### D2 — Septo
-
-Proposta: **septo discreto permitido**.
-
-- [ ] **Confirmo**
-- [ ] **Reverter** para “não permitido”
-
-### D3 — Segundo furo / argolas
-
-- Argola no 1º + pino no 2º → OK · Pinos em ambos → OK · Argolas em ambos → **não** OK
-
-- [ ] **Manter**
-- [ ] **Outra:** _______________
-
-### D4 — Colares
-
-- [ ] **Confirmo** (minimalistas OK)
-- [ ] **Proibir colares por completo**
-- [ ] **Outra:** _______________
-
-### D5 — Homens e brincos
-
-- [ ] **Confirmo** (pino/argola pequena OK)
-- [ ] **Restringir:** _______________
-
-### D6 — Área responsável / Aprovado por
-
-- [ ] Manter **Performance Coach** / **RH + Diretoria**
-- [ ] Alterar para: _______________
-
----
-
-*Documento interno — Spin Gaming. Rascunho para aprovação; não substitui a versão publicada até assinatura formal.*
+*Documento interno — Spin Gaming. Versão aprovada em 01/09/2026.*

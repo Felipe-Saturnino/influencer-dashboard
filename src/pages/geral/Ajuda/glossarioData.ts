@@ -1165,6 +1165,14 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Status Técnico · /painel-noticias",
       },
       {
+        termo: "Torneio Live CDA",
+        definicao:
+          "Página pública de gamificação (`/TorneioCDA`), sem login, com ranking ao vivo, KPIs e atividades recentes do torneio VIP Casa de Apostas × Spin Gaming. Fora do menu lateral — use o link UTM direto.",
+        nota:
+          "Os dados vêm do Supabase (`torneio_cda_*`), atualizados sob demanda a partir do BKO durante o evento. Enquanto `torneio_cda.ativo` for false, a página exibe «Torneio indisponível no momento.»",
+        referencia: "docs/SETUP-TORNEIO-CDA-BKO.md · /TorneioCDA",
+      },
+      {
         termo: "Sync manual",
         definicao:
           "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico (inclui Painel de Notícias RSS). Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet rodam por job automatizado e não têm essa ação.",

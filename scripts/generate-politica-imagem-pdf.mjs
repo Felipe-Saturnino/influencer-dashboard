@@ -10,6 +10,7 @@
  * NÃO usa o layout dos PDFs de atividades (header escuro + gradiente).
  *
  * Uso: node scripts/generate-politica-imagem-pdf.mjs acessorios
+ *      node scripts/generate-politica-imagem-pdf.mjs figurino
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -503,19 +504,328 @@ function generateAcessoriosPdf(outputPath, logoAsset) {
   return outputPath;
 }
 
+function generateFigurinoPdf(outputPath, logoAsset) {
+  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  paintPageBg(pdf);
+  let y = drawDocHeader(pdf, logoAsset);
+
+  y = drawParagraph(pdf, logoAsset, y, "POLÍTICA INTERNA", {
+    bold: true,
+    size: 14,
+    after: 2,
+  });
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Política de Figurino e Uniforme – Uso Interno Gestão Spin Gaming",
+    { italics: true, size: 10.5, color: MUTED, after: 5 },
+  );
+
+  y = drawMetaTable(
+    pdf,
+    logoAsset,
+    y,
+    "Performance Coach",
+    "Recursos Humanos / Diretoria",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "1", "OBJETIVO");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Estabelecer os padrões de uso, conservação e apresentação do figurino (uniforme) fornecido pela Spin Gaming para os Prestadores de Serviços que atuam em frente às câmeras — incluindo Game Presenter, Shuffler, Service Manager e Shift Leader quando em frente à câmera —, garantindo apresentação visual profissional, padronizada e segura para a operação ao vivo.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "2", "ABRANGÊNCIA E APLICAÇÃO");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Aplica-se a todos os Prestadores de Serviços que atuam em frente às câmeras na operação da Spin Gaming — incluindo, entre outras, as funções de Game Presenter, Shuffler, Service Manager e Shift Leader quando estiverem em frente à câmera —, independentemente de gênero.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Não se aplica a colaboradores que não atuam em câmera, nem a Service Manager e Shift Leader quando estiverem fora do ambiente de câmera.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Fora do escopo desta política (tratados em documentos próprios):",
+    { bold: true, after: 2 },
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Joias e acessórios pessoais — Política Interna de Acessórios e Joias.",
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Penteado, cor e comprimento de cabelo — Política de Cabelo.",
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Maquiagem, barba, unhas, tatuagens e óculos.",
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Calçado — salvo orientação ou peça oficial futura no inventário de Figurinos.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Dentro do escopo: peças oficiais de figurino cadastradas em Figurinos, meia-calça, cinto quando integrantes do kit, acessórios de cabelo oficiais do uniforme e regras de conservação, higiene e uso.",
+    { after: 2 },
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "3", "DIRETRIZES GERAIS");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Princípio: na área de jogos e em câmera, utilizar somente o figurino fornecido pela Spin Gaming, completo e conforme o kit do estúdio. Peças pessoais não substituem itens oficiais. Na dúvida, consultar a liderança ou a equipe de Figurino antes do turno.",
+  );
+
+  const sub = (title) => {
+    y = drawParagraph(pdf, logoAsset, y, title, {
+      bold: true,
+      size: 10.5,
+      after: 2,
+    });
+  };
+  const permitido = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Permitido:", { bold: true, after: 1 });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+  const naoPermitido = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Não permitido:", {
+      bold: true,
+      after: 1,
+    });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+  const obrigatorio = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Obrigatório:", {
+      bold: true,
+      after: 1,
+    });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+
+  sub("3.1 Uso exclusivo do figurino oficial");
+  permitido(
+    "Utilizar peças registradas no inventário de Figurinos, retiradas conforme o fluxo oficial.",
+    "Composição conforme estúdio e gênero do kit definido para a operação (seção 3.2).",
+  );
+  naoPermitido(
+    "Substituir peça oficial por roupa ou acessório pessoal equivalente.",
+    "Entrar em câmera com figurino incompleto quando o kit exige a peça.",
+    "Utilizar peças de figurino de outro estúdio sem autorização da liderança.",
+  );
+
+  sub("3.2 Composição do uniforme por estúdio");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Referência de composição (cadastro em Figurinos prevalece): Blaze masculino — camisa branca, calça preta, colete, gravata; Blaze feminino — vestido; CDA masculino — camisa cinza, calça preta, gravata; CDA feminino — vestido branco ou modelo único; Sports Club masculino — camisa e calça únicas; Sports Club feminino — vestido único.",
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Gravata e colete: obrigatórios quando constarem no kit do estúdio.",
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Tamanho: utilizar peça que assente corretamente; trocas via equipe de Figurinos antes de entrar em câmera.",
+  );
+
+  sub("3.3 Retirada, uso e devolução");
+  permitido(
+    "Retirada Emprestada (turno) conforme fluxo da página Figurinos.",
+    "Manter o figurino durante todo o período em operação no estúdio escalado.",
+  );
+  obrigatorio(
+    "Retirar o figurino antes do turno, com tempo para vestir e conferir o kit.",
+    "Devolver peças emprestadas ao final do turno (ou conforme orientação da liderança).",
+    "Informar condição na devolução: boa condição, possível descarte ou manutenção.",
+  );
+  naoPermitido(
+    "Retirar peças sem registro quando o fluxo exige retirada registrada.",
+    "Emprestar figurino a terceiros sem registro/devolução formal.",
+  );
+
+  sub("3.4 Conservação, higiene e integridade");
+  obrigatorio(
+    "Apresentar-se com figurino limpo e bem apresentado; comunicar dano ou mancha persistente.",
+    "Vestir corretamente cada peça e utilizar todos os acessórios obrigatórios do kit.",
+  );
+  naoPermitido(
+    "Alterar, cortar, customizar ou reformar peças oficiais.",
+    "Utilizar peça com rasgo, fecho quebrado ou mancha evidente — solicitar troca antes de entrar em mesa.",
+  );
+
+  sub("3.5 Meia-calça e cinto");
+  permitido(
+    "Meia-calça preta ou nude, opaca, sem estampa ou brilho, quando exigida pelo kit feminino.",
+    "Cinto preto, discreto e liso, quando integrante do kit masculino.",
+  );
+  naoPermitido(
+    "Meia-calça colorida, estampada, arrastão ou com brilho.",
+    "Cinto chamativo, com fivela grande ou logotipos.",
+  );
+
+  sub("3.6 Acessórios integrantes do uniforme");
+  permitido(
+    "Grampos, elásticos ou presilhas pretos/discretos para fixar cabelo conforme padrão do estúdio.",
+    "Acessórios cadastrados na categoria Acessório do inventário, quando previstos.",
+  );
+  naoPermitido(
+    "Tiaras, laços ou adornos que não façam parte do figurino oficial.",
+    "Substituir acessório oficial por peça pessoal divergente.",
+  );
+
+  sub("3.7 Conduta e apresentação");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Manter comportamento profissional enquanto utilizar o figurino oficial nas áreas operacionais do estúdio.",
+  );
+
+  sub("3.8 Proibições transversais");
+  y = drawParagraph(pdf, logoAsset, y, "Não são permitidos:");
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Logotipos ou símbolos não autorizados visíveis sobre o figurino.",
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Peças pessoais adicionais que alterem a silhueta do uniforme (casacos, moletons, etc.).",
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Uso parcial ou descuidado do figurino que comprometa a padronização da equipe.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "4", "PAPÉIS E RESPONSABILIDADES");
+  y = drawRolesTable(pdf, logoAsset, y, [
+    [
+      "Prestador de Serviços",
+      "Retirar, vestir e devolver o figurino conforme o fluxo oficial; apresentar-se com kit completo, limpo e íntegro; comunicar necessidade de troca ou manutenção; seguir o kit do estúdio escalado.",
+    ],
+    [
+      "Liderança (Shift Leader / Service Manager)",
+      "Verificar conformidade do figurino antes do turno; orientar ajustes e solicitar troca; escalar à equipe de Figurinos indisponibilidade ou dano.",
+    ],
+    [
+      "Equipe de Figurino",
+      "Manter inventário, retirada, devolução, registro de condição e encaminhamento para lavagem/costura/descarte.",
+    ],
+    [
+      "Performance Coach",
+      "Considerar conformidade de figurino nas avaliações de performance; registrar desvios e orientações de adequação.",
+    ],
+  ]);
+
+  y = drawSectionTitle(pdf, logoAsset, y, "5", "NÃO CONFORMIDADE E PENALIDADES");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "O descumprimento desta política é classificado como Descumprimento/Desvio Contratual e segue o fluxo estabelecido nas Políticas de Desvios/Descumprimentos Contratuais da Spin Gaming, iniciando pelo alinhamento direto com a liderança e podendo evoluir para notificação formal em caso de reincidência ou recusa de ajuste.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Adicionalmente, o não cumprimento pode impactar a avaliação de desempenho do Prestador de Serviços, bem como as Políticas e métricas de Bonificação vigentes.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Danos a peças por uso inadequado podem ser tratados conforme procedimentos internos de Figurinos e RH, quando aplicável.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "6", "EXCEÇÕES");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Casos excepcionais (indisponibilidade de peça, restrição médica documentada, etc.) devem ser encaminhados à liderança e à equipe de Figurinos antes do início do turno, sem improviso em câmera.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Esta política é revisada periodicamente pelo Performance Coach.",
+  );
+
+  const total = pdf.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    pdf.setPage(i);
+    drawFooter(pdf, i, total);
+  }
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, Buffer.from(pdf.output("arraybuffer")));
+  return outputPath;
+}
+
+const POLITICAS = {
+  acessorios: {
+    fileName: "Politica_Interna_Acessorios_e_Joias_Spin.pdf",
+    folder: "01-acessorios-e-joias",
+    generate: generateAcessoriosPdf,
+  },
+  figurino: {
+    fileName: "Politica_Interna_Figurino_e_Uniforme_Spin.pdf",
+    folder: "02-figurino-uniforme",
+    generate: generateFigurinoPdf,
+  },
+};
+
 const key = (process.argv[2] || "acessorios").toLowerCase();
-if (key !== "acessorios") {
-  console.error(`Política desconhecida: ${key}. Disponível: acessorios`);
+const politica = POLITICAS[key];
+if (!politica) {
+  console.error(
+    `Política desconhecida: ${key}. Disponível: ${Object.keys(POLITICAS).join(", ")}`,
+  );
   process.exit(1);
 }
 
 const logoAsset = readLogoAsset();
-const fileName = "Politica_Interna_Acessorios_e_Joias_Spin.pdf";
 const downloads = path.join(
   process.env.USERPROFILE || process.env.HOME || ".",
   "Downloads",
 );
-const repoOut = path.join(ROOT, "docs", "manual-imagem", "01-acessorios-e-joias");
+const repoOut = path.join(ROOT, "docs", "manual-imagem", politica.folder);
 
-console.log(`PDF gerado: ${generateAcessoriosPdf(path.join(downloads, fileName), logoAsset)}`);
-console.log(`PDF gerado: ${generateAcessoriosPdf(path.join(repoOut, fileName), logoAsset)}`);
+console.log(
+  `PDF gerado: ${politica.generate(path.join(downloads, politica.fileName), logoAsset)}`,
+);
+console.log(
+  `PDF gerado: ${politica.generate(path.join(repoOut, politica.fileName), logoAsset)}`,
+);

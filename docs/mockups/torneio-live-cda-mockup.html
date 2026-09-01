@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<!-- Abrir: duplo clique no arquivo ou arrastar para o Chrome/Edge. Evite colar em geradores online (truncam ~900 linhas). -->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Mockup — Torneio VIP Casa de Apostas e Spin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet" />
+  <style>
+    /*
+      Brand Casa de Apostas — Manual de Marca HD2:
+      Rich Blue #001724 · Verde #75B62D · Vermelho #E10B17 · Roxo Fortuna #481682
+      Amarelo High Roll #C9DB00 · Laranja Impulso #FF8F1E
+      Tipografia: Acumin Pro Condensed (prod.) · fallback Inter (site)
+      Spin Gaming permanece co-brand secundário.
+    */
+    :root {
+      --cda-rich-blue: #001724;
+      --cda-rich-blue-mid: #002a3d;
+      --cda-rich-blue-soft: #003248;
+      --cda-verde: #75b62d;
+      --cda-vermelho: #e10b17;
+      --cda-roxo: #481682;
+      --cda-amarelo: #c9db00;
+      --cda-laranja: #ff8f1e;
+
+      --spin-action: #4a2082;
+      --spin-contrast: #1e36f8;
+
+      --brand-action: var(--cda-verde);
+      --brand-contrast: var(--cda-amarelo);
+      --brand-bg: var(--cda-rich-blue);
+      --brand-text: #ffffff;
+
+      --verde: var(--cda-verde);
+      --vermelho: var(--cda-vermelho);
+      --amarelo: var(--cda-amarelo);
+      --roxo-especial: var(--cda-roxo);
+      --cinza: #8fa3b0;
+
+      --game-roleta: #eab308;
+      --game-bj: #22c55e;
+      --game-bac: #1e36f8;
+      --game-fb: #ea580c;
+
+      --page-bg: var(--cda-rich-blue);
+      --card-bg: var(--cda-rich-blue-mid);
+      --card-border: rgba(117, 182, 45, 0.22);
+      --input-bg: var(--cda-rich-blue-soft);
+      --text: #ffffff;
+      --text-muted: #a8bcc8;
+      --radius: 14px;
+      --header-logo-height: clamp(52px, 7vw, 64px);
+      --font: "Inter", system-ui, -apple-system, sans-serif;
+      --font-title: "Inter", system-ui, sans-serif;
+    }
+
+    body.light {
+      --page-bg: #f0f4f2;
+      --card-bg: #ffffff;
+      --card-border: rgba(0, 23, 36, 0.12);
+      --input-bg: #f5f8f6;
+      --text: var(--cda-rich-blue);
+      --text-muted: #4a6270;
+      --brand-bg: #ffffff;
+      --brand-text: var(--cda-rich-blue);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+      min-height: 100dvh;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    body > * { position: relative; z-index: 1; }
+
+    /* Banner mock dev */
+    .mock-banner {
+      background: var(--cda-rich-blue-mid);
+      border-bottom: 2px solid var(--cda-verde);
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      text-align: center;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.45);
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--font);
+    }
+
+    /* Header — Casa de Apostas em destaque */
+    .site-header {
+      border-bottom: 1px solid var(--card-border);
+      background: var(--cda-rich-blue);
+    }
+    .brand-strip {
+      height: 5px;
+      background: linear-gradient(90deg, var(--cda-verde) 0%, var(--cda-verde) 48%, var(--cda-vermelho) 52%, var(--cda-vermelho) 100%);
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .cda-logo {
+      display: inline-flex;
+      align-items: center;
+      line-height: 0;
+    }
+    .logo-img-cda {
+      display: block;
+      height: var(--header-logo-height);
+      width: auto;
+      max-width: min(320px, 58vw);
+      object-fit: contain;
+    }
+    .partner-lockup {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding-left: 20px;
+      border-left: 1px solid rgba(117, 182, 45, 0.35);
+    }
+    .partner-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .logo-img-spin {
+      display: block;
+      height: var(--header-logo-height);
+      width: auto;
+      max-width: min(220px, 42vw);
+      object-fit: contain;
+      object-position: left center;
+    }
+    body.light .logo-img-spin {
+      filter: brightness(0);
+      opacity: 0.88;
+    }
+    body.light .logo-img-cda {
+      filter: brightness(0.55) contrast(1.15);
+    }
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(117, 182, 45, 0.35);
+      background: rgba(117, 182, 45, 0.08);
+    }
+    .sync-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cda-verde);
+      box-shadow: 0 0 8px rgba(117, 182, 45, 0.6);
+      animation: pulse 2s ease infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+
+    .page-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 20px 64px;
+    }
+
+    /* Hero torneio */
+    .hero {
+      border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      background:
+        radial-gradient(ellipse 90% 70% at 0% 0%, rgba(117, 182, 45, 0.18), transparent 50%),
+        radial-gradient(ellipse 60% 50% at 100% 0%, rgba(72, 22, 130, 0.25), transparent 45%),
+        linear-gradient(160deg, var(--cda-rich-blue-mid) 0%, var(--cda-rich-blue) 100%);
+      padding: 32px 28px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -40px;
+      top: -20px;
+      width: 200px;
+      height: 200px;
+      background: linear-gradient(135deg, transparent 45%, rgba(117, 182, 45, 0.12) 45%, rgba(117, 182, 45, 0.12) 55%, transparent 55%),
+        linear-gradient(-45deg, transparent 45%, rgba(225, 11, 23, 0.1) 45%, rgba(225, 11, 23, 0.1) 55%, transparent 55%);
+      transform: rotate(15deg);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      font-style: italic;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--cda-amarelo);
+      margin-bottom: 10px;
+    }
+    .hero h1 {
+      font-family: var(--font-title);
+      font-size: clamp(1.45rem, 2.8vw, 2.35rem);
+      font-weight: 900;
+      font-style: italic;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 12px;
+      color: #fff;
+      width: 100%;
+      max-width: none;
+      position: relative;
+      z-index: 1;
+    }
+    body.light .hero h1 {
+      color: var(--cda-rich-blue);
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--cda-verde);
+    }
+    .hero h1 .hero-brand-spin {
+      color: #4a3082;
+    }
+    .hero-sub {
+      font-size: clamp(13px, 1.6vw, 15px);
+      font-weight: 500;
+      color: var(--text-muted);
+      width: 100%;
+      max-width: none;
+      line-height: 1.55;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .meta-pill {
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .meta-pill strong { color: var(--brand-contrast); }
+    body.light .meta-pill strong { color: var(--brand-action); }
+
+    /* KPIs */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      border-top: 3px solid var(--cda-verde);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 96px;
+    }
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0;
+    }
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: var(--cda-verde);
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    body.light .kpi-value { color: var(--cda-rich-blue); }
+
+    /* Layout 2 colunas — ranking + regras à esquerda; atividades à direita (altura = fim das regras) */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: auto auto;
+      gap: 14px;
+      align-items: stretch;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 960px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+      }
+    }
+
+    .main-grid .ranking-box {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .main-grid .rules-box {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    @media (max-width: 960px) {
+      .main-grid .ranking-box,
+      .main-grid .rules-box,
+      .main-grid .activity-panel {
+        grid-column: 1;
+        grid-row: auto;
+      }
+    }
+
+    .content-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+    .main-grid .content-box { margin-bottom: 0; }
+    .section-title {
+      font-size: 14px;
+      font-weight: 900;
+      font-style: italic;
+      font-family: var(--font-title);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--cda-verde);
+      margin-bottom: 16px;
+    }
+    body.light .section-title { color: var(--cda-rich-blue); }
+    .section-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* Pódio */
+    .podium {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr 1fr;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 20px;
+      padding-top: 8px;
+    }
+    .podium-slot {
+      text-align: center;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      padding: 14px 10px 16px;
+      position: relative;
+    }
+    .podium-slot.first {
+      border-color: var(--cda-amarelo);
+      background: linear-gradient(180deg, rgba(201, 219, 0, 0.12) 0%, var(--input-bg) 100%);
+      transform: translateY(-8px);
+      box-shadow: 0 8px 24px rgba(201, 219, 0, 0.12);
+    }
+    .podium-slot.second {
+      border-color: rgba(184, 198, 212, 0.5);
+      background: linear-gradient(180deg, rgba(184, 198, 212, 0.14) 0%, var(--input-bg) 100%);
+    }
+    .podium-slot.third {
+      border-color: rgba(255, 143, 30, 0.45);
+      background: linear-gradient(180deg, rgba(255, 143, 30, 0.1) 0%, var(--input-bg) 100%);
+    }
+    .podium-rank {
+      font-size: 28px;
+      font-weight: 900;
+      font-style: italic;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .podium-slot.first .podium-rank { color: var(--cda-amarelo); }
+    .podium-slot.second .podium-rank { color: #d4e2ec; }
+    .podium-slot.third .podium-rank { color: var(--cda-laranja); }
+    .podium-name {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .podium-points {
+      font-size: 18px;
+      font-weight: 900;
+      font-style: italic;
+      font-variant-numeric: tabular-nums;
+      color: var(--cda-verde);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .podium-slot.first .podium-points { color: var(--cda-amarelo); }
+    .podium-stats {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .podium-stats .pos { color: var(--verde); font-weight: 700; }
+    .podium-stats .neg { color: var(--vermelho); font-weight: 700; }
+
+    /* Tabela ranking */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 520px;
+    }
+    thead th {
+      background: var(--cda-rich-blue);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 10px 12px;
+      text-align: center;
+      border-bottom: 2px solid var(--cda-verde);
+      color: #fff;
+    }
+    body.light thead th {
+      background: var(--cda-rich-blue);
+      color: #fff;
+    }
+    tbody td {
+      padding: 11px 12px;
+      text-align: center;
+      border-bottom: 1px solid rgba(117, 182, 45, 0.12);
+      font-variant-numeric: tabular-nums;
+    }
+    tbody tr:hover { background: rgba(117, 182, 45, 0.06); }
+    tbody tr:nth-child(even) { background: rgba(0, 23, 36, 0.35); }
+    body.light tbody tr:nth-child(even) { background: rgba(0, 23, 36, 0.04); }
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+    }
+    .rank-badge.top { background: rgba(201, 219, 0, 0.2); border-color: var(--cda-amarelo); color: var(--cda-amarelo); }
+    .player-cell { text-align: left; font-weight: 700; }
+    .num-pos { color: var(--verde); font-weight: 700; }
+    .num-neg { color: var(--vermelho); font-weight: 700; }
+
+    /* Feed rodadas */
+    .feed-list { display: flex; flex-direction: column; gap: 10px; }
+    .feed-item {
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      overflow: hidden;
+    }
+    .feed-item-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .feed-item-header:hover { background: rgba(0,132,61,0.06); }
+    .game-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      border: 1px solid;
+    }
+    .game-chip.roleta { color: var(--game-roleta); border-color: rgba(234,179,8,0.4); background: rgba(234,179,8,0.12); }
+    .feed-time { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+    .feed-result {
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .feed-body {
+      display: none;
+      padding: 0 14px 14px;
+      border-top: 1px solid var(--card-border);
+    }
+    .feed-item.open .feed-body { display: block; }
+    .feed-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+      padding: 12px 0;
+      font-size: 11px;
+    }
+    .feed-meta-grid span { color: var(--text-muted); display: block; }
+    .feed-meta-grid strong { color: var(--text); font-weight: 700; }
+
+    .bets-mini-table {
+      width: 100%;
+      font-size: 12px;
+      border-collapse: collapse;
+    }
+    .bets-mini-table th {
+      text-align: center;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .bets-mini-table td {
+      padding: 7px 8px;
+      text-align: center;
+      border-bottom: 1px solid rgba(42,42,66,0.5);
+    }
+    .bet-win {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(34,197,94,0.18);
+      color: var(--verde);
+      border: 1px solid rgba(34,197,94,0.35);
+    }
+    .bet-loss {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(232,64,37,0.15);
+      color: var(--vermelho);
+      border: 1px solid rgba(232,64,37,0.35);
+    }
+
+    /* Sidebar mapping */
+    .mapping-panel {
+      position: sticky;
+      top: 12px;
+    }
+    .mapping-panel details {
+      border: 1px dashed #2a2848;
+      border-radius: 12px;
+      background: #14141f;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .mapping-panel summary {
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--spin-ciano);
+    }
+    .map-list {
+      margin-top: 10px;
+      font-size: 10px;
+      font-family: ui-monospace, monospace;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+    .map-list b { color: var(--text); font-weight: 600; }
+    .map-list .api { color: #7dd3fc; }
+    .map-list .db { color: #a78bfa; }
+
+    .live-ticker {
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .live-ticker h3 {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+      color: var(--brand-action);
+    }
+    .ticker-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(42,42,66,0.6);
+    }
+    .ticker-row:last-child { border-bottom: none; }
+
+    .activity-panel {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .activity-panel .section-title {
+      flex-shrink: 0;
+      margin-bottom: 12px;
+    }
+    .activity-feed-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      margin: 0 -4px;
+      padding: 0 4px;
+    }
+    @media (max-width: 960px) {
+      .activity-panel {
+        max-height: min(420px, 55vh);
+      }
+    }
+    .activity-feed {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .activity-feed-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(42,42,66,0.55);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .game-tag {
+      display: inline-flex;
+      align-items: center;
+      align-self: flex-start;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+    .game-tag.roleta { color: #eab308; border-color: rgba(234,179,8,0.45); background: rgba(234,179,8,0.12); }
+    .game-tag.baccarat { color: #1e36f8; border-color: rgba(30,54,248,0.45); background: rgba(30,54,248,0.12); }
+    .game-tag.blackjack { color: #22c55e; border-color: rgba(34,197,94,0.45); background: rgba(34,197,94,0.12); }
+    .activity-feed-item:first-child { padding-top: 0; }
+    .activity-feed-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .activity-feed-item p { margin: 0; }
+    .activity-feed-item strong { color: var(--cda-verde); font-weight: 800; }
+    body.light .activity-feed-item strong { color: #5a9420; }
+    .activity-feed-item.is-new p {
+      padding-left: 12px;
+      border-left: 3px solid var(--cda-verde);
+    }
+
+    .rules-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .rule-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: var(--input-bg);
+    }
+    .rule-points {
+      flex-shrink: 0;
+      font-size: 18px;
+      font-weight: 900;
+      font-style: italic;
+      font-variant-numeric: tabular-nums;
+      color: var(--cda-amarelo);
+      min-width: 72px;
+    }
+    body.light .rule-points { color: var(--cda-rich-blue); }
+    .rule-desc {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .rule-desc span {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    footer.public-footer {
+      text-align: center;
+      padding: 24px 20px;
+      font-size: 11px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--card-border);
+      margin-top: 20px;
+      background: var(--cda-rich-blue);
+    }
+    footer .footer-brands {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+    footer .footer-brands .cda-name {
+      font-style: italic;
+      font-weight: 900;
+      color: var(--cda-verde);
+    }
+    footer .footer-brands .spin-name {
+      font-style: italic;
+      font-weight: 900;
+      color: #4a3082;
+    }
+    body.light footer .footer-brands .spin-name {
+      color: #4a3082;
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    Mockup — Torneio VIP · página pública · ranking ao vivo
+    <button type="button" id="toggle-theme">Alternar claro / escuro</button>
+  </div>
+
+  <header class="site-header">
+    <div class="brand-strip" aria-hidden="true"></div>
+    <div class="header-inner">
+      <div class="brand-lockup">
+        <div class="cda-logo" aria-label="Casa de Apostas">
+          <img src="logo-casa-apostas.png" alt="Casa de Apostas" class="logo-img-cda" />
+        </div>
+        <div class="partner-lockup">
+          <span class="partner-label">Powered by</span>
+          <img src="logo-spin-gaming.png" alt="Spin Gaming" class="logo-img-spin" />
+        </div>
+      </div>
+      <div class="sync-badge" title="Última atualização do ranking">
+        <span class="sync-dot" aria-hidden="true"></span>
+        Atualizado há 47 s
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="hero-eyebrow">Live Cassino · Torneio</p>
+      <h1 id="hero-title">Torneio VIP <em>Casa de Apostas</em> e <span class="hero-brand-spin">Spin Gaming</span> — Setembro 2026</h1>
+      <p class="hero-sub">
+        Ranking ao vivo dos participantes. Pontuação com base em rodadas, volume apostado e vitórias nas mesas da CDA com a Spin Gaming.
+      </p>
+    </section>
+
+    <div class="kpi-grid" aria-label="KPIs consolidados do torneio">
+      <div class="kpi-card">
+        <div class="kpi-label">Rodadas Jogadas</div>
+        <div class="kpi-value">47</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Valor Apostado</div>
+        <div class="kpi-value">R$ 892,50</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Rodadas Ganhas</div>
+        <div class="kpi-value">28</div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="content-box ranking-box">
+        <h2 class="section-title">Ranking</h2>
+
+        <div class="podium" aria-label="Pódio top 3">
+          <div class="podium-slot second">
+            <div class="podium-rank">2º</div>
+            <div class="podium-name">Rafa</div>
+            <div class="podium-points">10.680 pts</div>
+            <div class="podium-stats">
+              9 rodadas · 6 ganhas<br />
+              R$ 142,00 apostado
+            </div>
+          </div>
+          <div class="podium-slot first">
+            <div class="podium-rank">1º</div>
+            <div class="podium-name">Marina</div>
+            <div class="podium-points">14.450 pts</div>
+            <div class="podium-stats">
+              12 rodadas · 8 ganhas<br />
+              R$ 186,00 apostado
+            </div>
+          </div>
+          <div class="podium-slot third">
+            <div class="podium-rank">3º</div>
+            <div class="podium-name">Lucas</div>
+            <div class="podium-points">8.080 pts</div>
+            <div class="podium-stats">
+              8 rodadas · 4 ganhas<br />
+              R$ 98,00 apostado
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Ranking completo do torneio</caption>
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Jogador</th>
+                <th scope="col">Rodadas Jogadas</th>
+                <th scope="col">Rodadas Ganhas</th>
+                <th scope="col">Valor Apostado</th>
+                <th scope="col">Pontos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="rank-badge top">1</span></td>
+                <td class="player-cell">Marina</td>
+                <td>12</td>
+                <td>8</td>
+                <td>R$ 186,00</td>
+                <td><strong>14.450</strong></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge">2</span></td>
+                <td class="player-cell">Rafa</td>
+                <td>9</td>
+                <td>6</td>
+                <td>R$ 142,00</td>
+                <td><strong>10.680</strong></td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge">3</span></td>
+                <td class="player-cell">Lucas</td>
+                <td>8</td>
+                <td>4</td>
+                <td>R$ 98,00</td>
+                <td>8.080</td>
+              </tr>
+              <tr>
+                <td><span class="rank-badge">4</span></td>
+                <td class="player-cell">Daci</td>
+                <td>5</td>
+                <td>2</td>
+                <td>R$ 5,25</td>
+                <td>4.500</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="content-box rules-box">
+          <h2 class="section-title">Regras de Pontuação</h2>
+          <p class="section-sub">Como os pontos são calculados no ranking do torneio</p>
+
+          <div class="rules-list">
+            <div class="rule-item">
+              <div class="rule-points">500 pts</div>
+              <div class="rule-desc">
+                Por rodada jogada
+                <span>Cada rodada em que o participante apostou conta 500 pontos, independentemente do resultado.</span>
+              </div>
+            </div>
+            <div class="rule-item">
+              <div class="rule-points">1.000 pts</div>
+              <div class="rule-desc">
+                Por rodada ganha
+                <span>Rodada considerada ganha quando o saldo líquido da rodada é positivo.</span>
+              </div>
+            </div>
+            <div class="rule-item">
+              <div class="rule-points">10 pts</div>
+              <div class="rule-desc">
+                Por real ganho
+                <span>A cada R$ 1,00 de valor ganho (saldo positivo) somam-se 10 pontos extras ao total.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      <aside class="content-box activity-panel" aria-label="Atividades recentes">
+        <h2 class="section-title">Atividades Recentes</h2>
+
+        <div class="activity-feed-scroll">
+        <ul class="activity-feed">
+          <li class="activity-feed-item is-new">
+            <span class="game-tag baccarat">Baccarat</span>
+            <p>Rafa acaba de fazer <strong>R$ 200,00</strong> na side bet</p>
+          </li>
+          <li class="activity-feed-item">
+            <span class="game-tag roleta">Roleta</span>
+            <p>Marina ganha <strong>R$ 150,00</strong> na última rodada</p>
+          </li>
+          <li class="activity-feed-item">
+            <span class="game-tag blackjack">Blackjack</span>
+            <p>Daci ganha <strong>3 seguidas</strong></p>
+          </li>
+          <li class="activity-feed-item">
+            <span class="game-tag roleta">Roleta</span>
+            <p>Lucas ganha <strong>R$ 42,00</strong> na última rodada</p>
+          </li>
+          <li class="activity-feed-item">
+            <span class="game-tag baccarat">Baccarat</span>
+            <p>Marina ganha <strong>2 seguidas</strong></p>
+          </li>
+          <li class="activity-feed-item">
+            <span class="game-tag blackjack">Blackjack</span>
+            <p>Rafa ganha <strong>R$ 85,00</strong> na side bet Perfect Pairs</p>
+          </li>
+        </ul>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="public-footer">
+    <div class="footer-brands">
+      <span class="cda-name">Casa de Apostas</span>
+      <span class="spin-name">Spin Gaming</span>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("toggle-theme").addEventListener("click", function () {
+      document.body.classList.toggle("light");
+    });
+  </script>
+</body>
+</html>
