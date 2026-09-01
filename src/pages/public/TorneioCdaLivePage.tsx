@@ -20,7 +20,6 @@ import "../../styles/torneioCdaLive.css";
 const LOGO_CDA = `${import.meta.env.BASE_URL}torneio-cda/logo-casa-apostas.png`;
 const LOGO_SPIN = `${import.meta.env.BASE_URL}torneio-cda/logo-spin-gaming.png`;
 
-const INDISPONIVEL_MSG = "Torneio indisponível no momento.";
 const VAZIO_RANKING_MSG = "Aguardando primeiras rodadas…";
 const ERRO_MSG = "Não foi possível carregar o torneio. Tentando novamente…";
 
@@ -102,9 +101,15 @@ function TorneioCdaPodium({ top3 }: { top3: TorneioCdaRankingRow[] }) {
   const slot = (row: TorneioCdaRankingRow | undefined, cls: string, rankLabel: string) => {
     if (!row) {
       return (
-        <div className={`torneio-cda-podium-slot ${cls}`} aria-hidden="true">
+        <div className={`torneio-cda-podium-slot ${cls}`}>
           <div className="torneio-cda-podium-rank">{rankLabel}</div>
           <div className="torneio-cda-podium-name">—</div>
+          <div className="torneio-cda-podium-points">{fmtTorneioPontos(0)}</div>
+          <div className="torneio-cda-podium-stats">
+            0 rodadas · 0 ganhas
+            <br />
+            {fmtBRL(0)} apostado
+          </div>
         </div>
       );
     }
@@ -232,7 +237,6 @@ export default function TorneioCdaLivePage() {
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);
-  const [indisponivel, setIndisponivel] = useState(false);
   const [ranking, setRanking] = useState<TorneioCdaRankingRow[]>([]);
   const [consolidado, setConsolidado] = useState<TorneioCdaConsolidadoRow | null>(null);
   const [atividades, setAtividades] = useState<TorneioCdaAtividadeRow[]>([]);
@@ -248,22 +252,23 @@ export default function TorneioCdaLivePage() {
     if (torneioErr) {
       console.error("[TorneioCDA]", torneioErr.message);
       setErro(true);
+      setRanking([]);
+      setConsolidado(null);
+      setAtividades([]);
       setLoading(false);
       return;
     }
 
     if (!torneioRows) {
-      setIndisponivel(true);
+      setErro(false);
       setRanking([]);
       setConsolidado(null);
       setAtividades([]);
       setLoading(false);
-      setErro(false);
       return;
     }
 
     const torneioRow = torneioRows as TorneioCdaRow;
-    setIndisponivel(false);
     setErro(false);
 
     const [rankRes, consRes, ativRes] = await Promise.all([
@@ -318,39 +323,7 @@ export default function TorneioCdaLivePage() {
     );
   }
 
-  if (indisponivel) {
-    return (
-      <div className="torneio-cda-page">
-        <header className="torneio-cda-header">
-          <div className="torneio-cda-brand-strip" aria-hidden="true" />
-          <div className="torneio-cda-header-inner">
-            <div className="torneio-cda-brand-lockup">
-              <img src={LOGO_CDA} alt="Casa de Apostas" className="torneio-cda-logo-cda" />
-              <div className="torneio-cda-partner-lockup">
-                <span className="torneio-cda-partner-label">Powered by</span>
-                <img src={LOGO_SPIN} alt="Spin Gaming" className="torneio-cda-logo-spin" />
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="torneio-cda-shell">
-          <p className="torneio-cda-empty">{INDISPONIVEL_MSG}</p>
-        </main>
-      </div>
-    );
-  }
-
-  if (erro) {
-    return (
-      <div className="torneio-cda-page">
-        <main className="torneio-cda-shell">
-          <p className="torneio-cda-empty" role="alert">
-            {ERRO_MSG}
-          </p>
-        </main>
-      </div>
-    );
-  }
+  const temRanking = ranking.length > 0;
 
   return (
     <div className="torneio-cda-page">
@@ -369,6 +342,12 @@ export default function TorneioCdaLivePage() {
       </header>
 
       <main className="torneio-cda-shell">
+        {erro ? (
+          <p className="torneio-cda-erro-banner" role="alert" aria-live="polite">
+            {ERRO_MSG}
+          </p>
+        ) : null}
+
         <section className="torneio-cda-hero" aria-labelledby="torneio-cda-hero-title">
           <p className="torneio-cda-hero-eyebrow">Live Cassino · Torneio</p>
           <h1 id="torneio-cda-hero-title">
@@ -399,12 +378,13 @@ export default function TorneioCdaLivePage() {
         <div className="torneio-cda-main-grid">
           <div className="torneio-cda-content-box torneio-cda-ranking-box">
             <h2 className="torneio-cda-section-title">Ranking</h2>
-            {ranking.length === 0 ? (
-              <p className="torneio-cda-empty">{VAZIO_RANKING_MSG}</p>
+            <TorneioCdaPodium top3={temRanking ? ranking.slice(0, 3) : []} />
+            {temRanking ? (
+              <TorneioCdaRankingTable rows={ranking} />
             ) : (
               <>
-                {ranking.length >= 2 && <TorneioCdaPodium top3={ranking.slice(0, 3)} />}
-                <TorneioCdaRankingTable rows={ranking} />
+                <TorneioCdaRankingTable rows={[]} />
+                <p className="torneio-cda-empty torneio-cda-empty-inline">{VAZIO_RANKING_MSG}</p>
               </>
             )}
           </div>

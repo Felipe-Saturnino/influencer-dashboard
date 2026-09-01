@@ -1169,7 +1169,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Página pública de gamificação (`/TorneioCDA`), sem login, com ranking ao vivo, KPIs e atividades recentes do torneio VIP Casa de Apostas × Spin Gaming. Fora do menu lateral — use o link UTM direto.",
         nota:
-          "Os dados vêm do Supabase (`torneio_cda_*`), atualizados sob demanda a partir do BKO durante o evento. Enquanto `torneio_cda.ativo` for false, a página exibe «Torneio indisponível no momento.»",
+          "Os dados vêm do Supabase (`torneio_cda_*`), atualizados sob demanda a partir do BKO durante o evento. Sem dados ou com torneio ainda inativo, a página mantém o layout completo com valores zerados para preview.",
         referencia: "docs/SETUP-TORNEIO-CDA-BKO.md · /TorneioCDA",
       },
       {

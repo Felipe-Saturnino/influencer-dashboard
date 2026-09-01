@@ -641,6 +641,21 @@
   font-size: 13px;
 }
 
+.torneio-cda-empty-inline {
+  padding: 16px 0 0;
+}
+
+.torneio-cda-erro-banner {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(225, 11, 23, 0.35);
+  background: rgba(225, 11, 23, 0.1);
+  color: #ffb4b8;
+  font-size: 12px;
+  text-align: center;
+}
+
 .torneio-cda-loading {
   display: flex;
   align-items: center;

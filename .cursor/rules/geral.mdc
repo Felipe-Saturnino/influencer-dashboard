@@ -229,7 +229,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Sem** login, menu, `PageHeader`, `usePermission`.
 - Dados: `torneio_cda_*` via **anon** (RLS só com `torneio_cda.ativo = true`); carga manual via `scripts/torneio-cda-bko-sync.mjs` (BKO → Supabase, sob demanda durante o evento).
 - UI: brand Casa de Apostas (mockup aprovado), ranking + KPIs + atividades; polling **30 s**; badge «Atualizado há X s»; título do hero **Setembro 2026**; `noindex`.
-- Torneio inativo ou ausente: **Torneio indisponível no momento.** — ranking vazio após ativo: **Aguardando primeiras rodadas…**
+- Torneio inativo ou sem sync: layout completo com KPIs zerados, pódio placeholder (— / 0 pts) e tabela vazia; ranking sem dados: **Aguardando primeiras rodadas…** abaixo da tabela.
 - Slug canónico: `cda-vip-setembro-2026` (`TORNEIO_CDA_SLUG` em `lib/torneioCdaLive.ts`). Participantes reais: atualizar `torneio_cda_participante` no Supabase antes do evento.
 
 ---
