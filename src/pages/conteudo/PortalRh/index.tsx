@@ -25,6 +25,7 @@ import {
   getPeriodoHistoricoCompetencias,
   isDataNoPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
+import { comparePostagensLeituraPortal, comparePublishedAtDesc } from "../../../lib/portalPostagemSort";
 import { autorIdPostagem, carregarMetaAutoresPortalRh, type PortalRhAutorInfo } from "../../../lib/portalRhAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
 import { buildMesesCarrossel, itemNoMesCarrossel, type MesCarrosselEntry } from "./portalRhCarrossel";
@@ -729,18 +730,20 @@ export default function PortalRhPage() {
     }
     const recMap = receipts;
     const uid = userIdEfetivo;
-    list = [...list].sort((a, b) => {
-      const pendA =
-        a.requires_acknowledgment &&
-        uid &&
-        !recMap.get(receiptKey("comunicado", a.id))?.acknowledged_at;
-      const pendB =
-        b.requires_acknowledgment &&
-        uid &&
-        !recMap.get(receiptKey("comunicado", b.id))?.acknowledged_at;
-      if (pendA !== pendB) return pendA ? -1 : 1;
-      return new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime();
-    });
+    list = [...list].sort((a, b) =>
+      comparePostagensLeituraPortal(a, b, {
+        cienciaPendenteA: Boolean(
+          a.requires_acknowledgment &&
+            uid &&
+            !recMap.get(receiptKey("comunicado", a.id))?.acknowledged_at,
+        ),
+        cienciaPendenteB: Boolean(
+          b.requires_acknowledgment &&
+            uid &&
+            !recMap.get(receiptKey("comunicado", b.id))?.acknowledged_at,
+        ),
+      }),
+    );
     return list;
   }, [
     comunicados,
@@ -791,11 +794,7 @@ export default function PortalRhPage() {
           hitBuscaTexto(d.categoria?.slug),
       );
     }
-    list = [...list].sort((a, b) => {
-      const codA = a.codigo ?? a.titulo;
-      const codB = b.codigo ?? b.titulo;
-      return codA.localeCompare(codB, "pt-BR", { numeric: true });
-    });
+    list = [...list].sort(comparePublishedAtDesc);
     return list;
   }, [
     documentos,
@@ -832,7 +831,7 @@ export default function PortalRhPage() {
           String(x.numero).includes(buscaDeb),
       );
     }
-    return list;
+    return [...list].sort(comparePublishedAtDesc);
   }, [
     talks,
     perm.canView,

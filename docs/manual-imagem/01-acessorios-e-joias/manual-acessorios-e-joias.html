@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manual Academy · Acessórios e Joias | Spin Gaming</title>
+  <style>
+    :root {
+      --brand-action: #7c3aed;
+      --brand-contrast: #1e36f8;
+      --brand-gradient-start: #4a2082;
+      --brand-gradient-end: #1e36f8;
+      --brand-bg-dark: #0f0f1a;
+      --brand-text: #1a1a2e;
+      --brand-text-muted: #666688;
+      --brand-text-body: #3a3a4a;
+      --brand-page-bg: #f4f2f8;
+      --brand-card: #ffffff;
+      --brand-gold: #c9a227;
+      --sem-verde: #22c55e;
+      --sem-vermelho: #e84025;
+      --radius: 14px;
+      --font: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --font-title: "Inter", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: #1a1625;
+      color: var(--brand-text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .deck {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .slide {
+      background: var(--brand-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(15, 15, 26, 0.35);
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+    }
+    .slide--cover {
+      background: var(--brand-bg-dark);
+      color: #fff;
+      position: relative;
+      min-height: 560px;
+      justify-content: center;
+      padding: 48px 56px;
+    }
+    .slide--cover .kicker {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--brand-gold);
+      margin-bottom: 16px;
+    }
+    .slide--cover h1 {
+      font-family: var(--font-title);
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      max-width: 12ch;
+    }
+    .slide--cover .audience {
+      margin-top: 14px;
+      font-size: 18px;
+      color: #c4b5fd;
+      font-weight: 600;
+    }
+    .slide--cover .lead {
+      margin-top: 28px;
+      font-size: 15px;
+      color: rgba(255,255,255,0.78);
+      max-width: 44ch;
+    }
+    .slide--cover .meta {
+      margin-top: auto;
+      padding-top: 48px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+      max-width: 52ch;
+      line-height: 1.45;
+    }
+    .slide-body {
+      padding: 36px 40px 28px;
+      flex: 1;
+      background: var(--brand-page-bg);
+    }
+    .slide-body h2 {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--brand-gradient-start);
+      margin-bottom: 6px;
+    }
+    .slide-body .sub {
+      font-size: 14px;
+      color: var(--brand-text-muted);
+      margin-bottom: 20px;
+    }
+    .slide-body .intro {
+      font-size: 14px;
+      color: var(--brand-text-body);
+      margin-bottom: 18px;
+      max-width: 62ch;
+    }
+    .rules-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .rules-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+    .rule-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 18px 18px 18px 20px;
+      border: 1px solid #e8e4f2;
+      position: relative;
+    }
+    .rule-card::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 12px; bottom: 12px;
+      width: 5px;
+      border-radius: 4px;
+    }
+    .rule-card--danger::before { background: var(--sem-vermelho); }
+    .rule-card--brand::before { background: var(--brand-action); }
+    .rule-card--ok::before { background: var(--sem-verde); }
+    .rule-card--gold::before { background: var(--brand-gold); }
+    .rule-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--brand-text);
+    }
+    .rule-card p {
+      font-size: 13px;
+      color: var(--brand-text-body);
+    }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .compare-col {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #e8e4f2;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+    .badge--ok { background: var(--sem-verde); }
+    .badge--no { background: var(--sem-vermelho); }
+    .compare-col ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .compare-col li {
+      font-size: 13px;
+      color: var(--brand-text-body);
+      padding-left: 14px;
+      position: relative;
+    }
+    .compare-col li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      font-weight: 800;
+    }
+    .compare-col--ok li::before { color: var(--sem-verde); }
+    .compare-col--no li::before { color: var(--sem-vermelho); }
+    .ex-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .ex-card {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #e8e4f2;
+      background: #fafafa;
+    }
+    .ex-card img {
+      display: block;
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      object-position: center;
+    }
+    .ex-card img.ex-contain {
+      object-fit: contain;
+      background: #f3f1f7;
+      height: 168px;
+    }
+    .ex-card figcaption {
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--brand-text-muted);
+      line-height: 1.35;
+    }
+    .ex-grid--single { grid-template-columns: 1fr; }
+    .ex-grid--single .ex-card img { height: 168px; }
+    .ex-grid--single .ex-card img.ex-contain { height: 180px; }
+    .ex-grid--3 {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+    .ex-grid--3 .ex-card img { height: 130px; }
+    .tip {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--brand-action) 10%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-action) 25%, transparent);
+      font-size: 13px;
+      color: var(--brand-text-body);
+    }
+    .tip strong { color: var(--brand-gradient-start); }
+    .slide--checklist {
+      background: var(--brand-bg-dark);
+      color: #fff;
+      padding: 48px 56px;
+    }
+    .slide--checklist h2 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .slide--checklist .sub { color: rgba(255,255,255,0.65); margin-bottom: 28px; }
+    .check-list { display: flex; flex-direction: column; gap: 16px; }
+    .check-item { display: flex; gap: 16px; align-items: flex-start; }
+    .check-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: color-mix(in srgb, var(--brand-action) 35%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-action) 50%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: #e9d5ff;
+      flex-shrink: 0;
+    }
+    .check-item strong { display: block; font-size: 15px; margin-bottom: 2px; }
+    .check-item span { font-size: 13px; color: rgba(255,255,255,0.7); }
+    .check-footer {
+      margin-top: 32px;
+      font-style: italic;
+      color: var(--brand-gold);
+      font-size: 14px;
+    }
+    .slide-footer {
+      margin-top: auto;
+      padding: 12px 40px 16px;
+      border-top: 1px solid color-mix(in srgb, var(--brand-contrast) 25%, transparent);
+      font-size: 11px;
+      color: var(--brand-text-muted);
+      background: var(--brand-page-bg);
+    }
+    .slide--cover .slide-footer,
+    .slide--checklist .slide-footer {
+      background: transparent;
+      border-top-color: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.4);
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .note-dev {
+      max-width: 920px;
+      margin: 24px auto 0;
+      padding: 16px 20px;
+      background: #fff;
+      border-radius: 10px;
+      border-left: 4px solid var(--brand-action);
+      font-size: 12px;
+      color: var(--brand-text-body);
+    }
+    @media print {
+      body { background: #fff; }
+      .deck { padding: 0; gap: 0; max-width: none; }
+      .slide {
+        box-shadow: none;
+        border-radius: 0;
+        page-break-after: always;
+        min-height: 100vh;
+      }
+      .note-dev { display: none; }
+    }
+    @media (max-width: 720px) {
+      .rules-grid, .rules-grid--3, .compare, .ex-grid, .ex-grid--3 { grid-template-columns: 1fr; }
+      .slide--cover, .slide--checklist, .slide-body { padding: 28px 22px; }
+      .slide--cover h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="note-dev">
+    <strong>Manual Academy — Acessórios e Joias (v1.1).</strong>
+    Fotos de exemplo ilustrativas (stock). Para PDF: Chrome → Imprimir → Salvar como PDF (A4).
+  </div>
+
+  <div class="deck">
+
+    <!-- CAPA -->
+    <section class="slide slide--cover" aria-label="Capa">
+      <p class="kicker">Manual Academy · Imagem</p>
+      <h1>Acessórios e Joias</h1>
+      <p class="audience">Game Presenters · Shufflers · Service Manager e Shift Leader em câmera</p>
+      <p class="lead">Guia visual e prático para chegar em mesa com acessórios discretos, seguros e dentro do padrão Spin — sem surpresa na avaliação.</p>
+      <p class="meta">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</p>
+    </section>
+
+    <!-- COMO USAR -->
+    <section class="slide" aria-label="Como usar">
+      <div class="slide-body">
+        <h2>Como usar este manual</h2>
+        <p class="sub">Leitura rápida antes do turno — a regra completa está na Política Interna.</p>
+        <p class="intro">
+          Este manual traduz a política em linguagem de operação: o que <strong>pode</strong>, o que <strong>não pode</strong>
+          e como checar em 30 segundos. As fotos são <strong>exemplos ilustrativos</strong> do tipo de peça — não um catálogo oficial de marcas.
+          Se algo não estiver claro, pergunte à liderança <em>antes</em> de entrar em câmera.
+        </p>
+        <div class="rules-grid rules-grid--3">
+          <article class="rule-card rule-card--brand">
+            <h3>1. Discrição</h3>
+            <p>Se a peça chama mais atenção que o uniforme ou o jogo, ajuste antes do turno.</p>
+          </article>
+          <article class="rule-card rule-card--ok">
+            <h3>2. Segurança</h3>
+            <p>Nada que arranhe equipamento, faça barulho, reflita luz ou caia na mesa.</p>
+          </article>
+          <article class="rule-card rule-card--gold">
+            <h3>3. Padronização</h3>
+            <p>Mesmo critério para todo mundo em câmera — identidade sem perder o padrão visual.</p>
+          </article>
+        </div>
+        <p class="tip"><strong>Dica:</strong> a avaliação de Performance Coach usa frases como “Está em conformidade com o padrão de acessórios exigido.” — este manual é o mapa para chegar lá.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</div>
+    </section>
+
+    <!-- ANÉIS -->
+    <section class="slide" aria-label="Anéis">
+      <div class="slide-body">
+        <h2>Anéis</h2>
+        <p class="sub">Um só. Clássico. Sem pedra.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>Um único anel de casamento, discreto e clássico, no dedo anelar</li>
+              <li>Game Presenter de Roleta: só na mão esquerda</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/anel-ok.jpg" alt="Alianças clássicas sem pedra" />
+                <figcaption>Exemplo: aliança lisa, sem pedra</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Anéis adicionais em qualquer dedo</li>
+              <li>Pedras no anel de casamento (qualquer tamanho)</li>
+              <li>Detalhes que possam arranhar cartas, chips ou equipamentos</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/anel-nao.jpg" alt="Anel com pedras" />
+                <figcaption>Exemplo: anel com pedras / brilho</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Por quê a Roleta?</strong> A mão direita fica em contato constante com a roleta e o material — o anel fica só na esquerda para reduzir risco operacional.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</div>
+    </section>
+
+    <!-- BRINCOS -->
+    <section class="slide" aria-label="Brincos">
+      <div class="slide-body">
+        <h2>Brincos</h2>
+        <p class="sub">Pequenos, silenciosos e do mesmo “clima” visual.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>Brincos pequenos, elegantes e discretos</li>
+              <li>Segundo furo com peça pequena e discreta</li>
+              <li>Argola pequena no 1º furo + pino/stud no 2º</li>
+              <li>Pinos/studs em ambos os furos</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/brinco-stud-ok.jpg" alt="Stud pequeno de ouro no lóbulo" />
+                <figcaption>Exemplo: stud pequeno e discreto no lóbulo</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Argolas nos dois furos ao mesmo tempo</li>
+              <li>Pedrarias, cristais, strass ou pedras</li>
+              <li>Brincos grandes, chamativos, brilhantes ou barulhentos</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/brinco-grande-orelha-nao.jpg" alt="Brincos longos com cristais" />
+                <figcaption>Exemplo: brinco grande, longo e com brilho</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</div>
+    </section>
+
+    <!-- PIERCINGS — REGRAS -->
+    <section class="slide" aria-label="Piercings regras">
+      <div class="slide-body">
+        <h2>Piercings — regras principais</h2>
+        <p class="sub">Dois pontos que valem para orelha e nariz — com exemplos de peça.</p>
+        <div class="rules-grid">
+          <article class="rule-card rule-card--danger">
+            <h3>Sem brilho ou strass</h3>
+            <p>Não são permitidos piercings com strass, pedras, cristais ou outros elementos com brilho.</p>
+          </article>
+          <article class="rule-card rule-card--brand">
+            <h3>Diâmetro: 0,6 a 0,8 cm</h3>
+            <p>A peça deve ficar nessa faixa de diâmetro. Fora disso, não entra em mesa.</p>
+          </article>
+        </div>
+        <div class="compare" style="margin-top:16px">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ Dentro do padrão</span>
+            <div class="ex-grid">
+              <figure class="ex-card">
+                <img src="media/exemplos/septo-ok.jpg" alt="Septo discreto" style="object-position: center 40%;" />
+                <figcaption>Septo discreto, metal liso</figcaption>
+              </figure>
+              <figure class="ex-card">
+                <img src="media/exemplos/nostril-ok.jpg" alt="Nostril discreto" style="object-position: center 35%;" />
+                <figcaption>Nostril delicado</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ Fora do padrão</span>
+            <div class="ex-grid">
+              <figure class="ex-card">
+                <img src="media/exemplos/nariz-nao-1.jpg" alt="Piercing grande no septo" style="object-position: center 30%;" />
+                <figcaption>Peça grande / chamativa</figcaption>
+              </figure>
+              <figure class="ex-card">
+                <img src="media/exemplos/joia-brilho-nao.jpg" alt="Joia com muito brilho" />
+                <figcaption>Brilho / strass / cristais</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Checklist rápido:</strong> sem strass · sem pedras · diâmetro entre 0,6 e 0,8 cm.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</div>
+    </section>
+
+    <!-- ORELHA -->
+    <section class="slide" aria-label="Piercings orelha">
+      <div class="slide-body">
+        <h2>Piercings — orelha</h2>
+        <p class="sub">Regiões permitidas desde que a peça siga as regras comuns (tamanho + sem brilho).</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>Lóbulo, helix, tragus, rook, daith, conch e equivalentes</li>
+              <li>Peça discreta, sem strass / pedras / cristais</li>
+              <li>Diâmetro 0,6–0,8 cm</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/piercing-orelha-pode.jpg" alt="Exemplos de piercings discretos em orelha" class="ex-contain" />
+                <figcaption>Exemplo: piercings discretos (lóbulo, helix, tragus…)</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Brilho, strass, cristais ou pedras</li>
+              <li>Peças fora de 0,6–0,8 cm</li>
+              <li>Alargador aparente (use plug cor da pele)</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/piercing-orelha-nao.jpg" alt="Piercings com pedrarias azuis e brilho" />
+                <figcaption>Exemplo: pedrarias / brilho / peças chamativas</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Atenção:</strong> o mapa anatômico só indica <em>onde</em> a peça pode ficar — não libera acabamento com brilho nem tamanho fora da faixa.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</div>
+    </section>
+
+    <!-- NARIZ -->
+    <section class="slide" aria-label="Piercings nariz">
+      <div class="slide-body">
+        <h2>Piercings — nariz</h2>
+        <p class="sub">Septo e nostril discretos × peças grandes ou brilhantes.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>Septo de aparência leve e discreta</li>
+              <li>Nostril / narina com peça delicada</li>
+            </ul>
+            <div class="ex-grid">
+              <figure class="ex-card">
+                <img src="media/exemplos/septo-ok.jpg" alt="Septo permitido" style="object-position: center 40%;" />
+                <figcaption>Septo discreto</figcaption>
+              </figure>
+              <figure class="ex-card">
+                <img src="media/exemplos/nariz-piercing-ok.jpg" alt="Nostril permitido" style="object-position: center 35%;" />
+                <figcaption>Nostril delicado</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Modelos grandes, volumosos ou muito chamativos</li>
+              <li>Brilho, strass, cristais ou pedras</li>
+              <li>Fora de 0,6–0,8 cm · outros piercings no rosto (lábio, sobrancelha…)</li>
+            </ul>
+            <div class="ex-grid">
+              <figure class="ex-card">
+                <img src="media/exemplos/nariz-nao-1.jpg" alt="Piercing de nariz não permitido" style="object-position: center 30%;" />
+                <figcaption>Volume / destaque excessivo</figcaption>
+              </figure>
+              <figure class="ex-card">
+                <img src="media/exemplos/nariz-nao-2.jpg" alt="Outro piercing de nariz não permitido" style="object-position: center 30%;" />
+                <figcaption>Peça fora do padrão</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Resumo:</strong> se o piercing “domina” o rosto na câmera, é grande demais. Priorize aparência leve.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</div>
+    </section>
+
+    <!-- COLARES E PULSEIRAS -->
+    <section class="slide" aria-label="Colares e pulseiras">
+      <div class="slide-body">
+        <h2>Colares, correntes e pulseiras</h2>
+        <p class="sub">Menos é mais — e pulseira em mesa é zero.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>Colar / corrente minimalista e discreto</li>
+              <li>Sem brilho excessivo, sem ruído, sem risco de prender no uniforme</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/colar-uma-peca-ok.jpg" alt="Uma corrente fina no pescoço" />
+                <figcaption>Exemplo: uma corrente fina e discreta</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Correntes grossas ou colares em camadas</li>
+              <li>Pingentes religiosos ou ofensivos · pedras brutas / muito brilho</li>
+              <li><strong>Pulseiras na área de jogo / em câmera — sem exceção</strong></li>
+            </ul>
+            <div class="ex-grid">
+              <figure class="ex-card">
+                <img src="media/exemplos/colar-camadas-pingente-nao.jpg" alt="Colares em camadas com pingentes" class="ex-contain" />
+                <figcaption>Camadas / pingentes</figcaption>
+              </figure>
+              <figure class="ex-card">
+                <img src="media/exemplos/pulseira-stack-nao.jpg" alt="Pulseiras no pulso" style="object-position: center 40%;" />
+                <figcaption>Pulseira — proibida</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Proibições transversais:</strong> acessórios religiosos/ofensivos, peças barulhentas ou reflexivas, eletrônicos na área de jogos.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section class="slide slide--checklist" aria-label="Checklist">
+      <h2>Checklist antes de entrar em mesa</h2>
+      <p class="sub">Uma conferência rápida ajuda a manter o padrão.</p>
+      <div class="check-list">
+        <div class="check-item">
+          <div class="check-num">01</div>
+          <div>
+            <strong>Sem strass / brilho</strong>
+            <span>Nenhuma peça com pedras, cristais ou detalhes brilhantes.</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">02</div>
+          <div>
+            <strong>Tamanho certo</strong>
+            <span>Piercings entre 0,6 e 0,8 cm de diâmetro.</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">03</div>
+          <div>
+            <strong>Anel e brincos ok</strong>
+            <span>Só anel de casamento (Roleta = mão esquerda). Brincos pequenos; sem argola dupla.</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">04</div>
+          <div>
+            <strong>Sem pulseira</strong>
+            <span>Pulseiras fora — sem exceção na área de jogo.</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">05</div>
+          <div>
+            <strong>Dúvida?</strong>
+            <span>Confirme com a liderança antes do turno. Não improvise em câmera.</span>
+          </div>
+        </div>
+      </div>
+      <p class="check-footer">Discrição nos detalhes também faz parte de uma apresentação profissional.</p>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Acessórios e Joias</div>
+    </section>
+
+  </div>
+</body>
+</html>

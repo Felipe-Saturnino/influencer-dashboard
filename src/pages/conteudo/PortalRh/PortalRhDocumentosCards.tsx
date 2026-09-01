@@ -4,9 +4,9 @@ import { SectionTitle } from "../../../components/dashboard";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT, FONT_TITLE } from "../../../constants/theme";
-import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import { comparePostagensLeituraPortal } from "../../../lib/portalPostagemSort";
 import {
   fmtAplicavelDocumento,
   labelClassificacaoDocumento,
@@ -110,14 +110,12 @@ export function PortalRhDocumentosCards({
   const brand = useDashboardBrand();
   const pageBox = getPageContentBoxStyle(brand, t);
 
-  const sorted = [...rows].sort((a, b) => {
-    if (mostrarStatusCiencia) {
-      const pendA = cienciaPendenteIds.has(a.id) ? 0 : 1;
-      const pendB = cienciaPendenteIds.has(b.id) ? 0 : 1;
-      if (pendA !== pendB) return pendA - pendB;
-    }
-    return compareLocaleTexto(a.codigo ?? a.titulo, b.codigo ?? b.titulo, "asc");
-  });
+  const sorted = [...rows].sort((a, b) =>
+    comparePostagensLeituraPortal(a, b, {
+      cienciaPendenteA: mostrarStatusCiencia && cienciaPendenteIds.has(a.id),
+      cienciaPendenteB: mostrarStatusCiencia && cienciaPendenteIds.has(b.id),
+    }),
+  );
 
   return (
     <div style={pageBox}>

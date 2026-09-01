@@ -638,11 +638,18 @@ export async function criarOrdemSaida(params: {
   sem_retorno?: boolean;
   observacao: string;
   solicitante_nome: string;
+  solicitante_user_id?: string | null;
   solicitante_time?: string;
   responsavel_nome?: string;
   itens: OsItemInput[];
   autorNome: string;
 }): Promise<string> {
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+  const solicitanteUserId = params.solicitante_user_id ?? authUser?.id ?? null;
+  if (!solicitanteUserId) throw new Error("usuario_nao_autenticado");
+
   const { codigo_num, competencia } = await reservarCodigo(params.tipo);
   const { data, error } = await supabase
     .from("tech_ops_ordem_saida")
@@ -659,6 +666,7 @@ export async function criarOrdemSaida(params: {
       data_retorno: params.sem_retorno ? null : (params.data_retorno ?? null),
       sem_retorno: params.sem_retorno ?? false,
       observacao: params.observacao.trim(),
+      solicitante_user_id: solicitanteUserId,
       solicitante_nome: params.solicitante_nome.trim(),
       solicitante_time: (params.solicitante_time ?? "").trim(),
       responsavel_nome: (params.responsavel_nome ?? params.solicitante_nome).trim(),

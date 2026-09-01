@@ -1422,6 +1422,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Os itens vêm da Gestão de Estoque: só entram materiais com quantidade em estoque, equipamentos com status Estoque e lotes de jogo com quantidade atual maior que zero (na Manutenção a lista é mais ampla). Cadastre ou libere itens na Gestão de Estoque antes de solicitar a OS.",
       },
       {
+        subtitulo: "Ao clicar em Solicitar aparece erro genérico?",
+        texto:
+          "Confirme se a migration de correção da Ordem de Saída foi aplicada no Supabase e se o usuário tem permissão de **Criar** ou **Editar** em Gestão de Usuários. Se o erro continuar após o deploy, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "A data de retorno foi recusada?",
         texto:
           "A data de retorno (ou previsão) deve ser posterior à data de saída. Use o formato DD/MM/AAAA. Em Interna e Manutenção, marque Sem retorno / Sem previsão quando não houver data.",

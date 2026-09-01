@@ -4,18 +4,27 @@ Base de trabalho para unificar materiais de imagem de Game Presenters e Shuffler
 
 ## Fluxo por tema
 
-1. Redação da **Política Interna** (tom RH / normativo)
+1. Redação da **Política Interna** → PDF no layout Descumprimentos Contratuais (`generate-politica-imagem-pdf.mjs`)
 2. Aprovação ou correção pelo responsável
-3. Redação do **Manual** do tema (tom Academy + imagens)
+3. Redação do **Manual** do tema (template Academy + imagens)
 4. Aprovação ou correção do Manual
 5. Próximo tema
+
+## Formatos
+
+| Entrega | Formato | Onde |
+|---------|--------|------|
+| **Política** | PDF A4 — layout *Descumprimentos Contratuais* (faixa azul, logo, seções leves) | `scripts/generate-politica-imagem-pdf.mjs` |
+| **Manual** | HTML slides → PDF (template Academy) | `docs/manual-imagem/_templates/` |
+
+Detalhes: [`_templates/README.md`](_templates/README.md).
 
 ## Temas previstos
 
 | # | Tema | Status |
 |---|------|--------|
-| 01 | Acessórios e Joias | Política v1 — aguardando aprovação |
-| 02 | Figurino / Uniforme | Pendente |
+| 01 | Acessórios e Joias | **Aprovado** (Política + Manual v1.1) |
+| 02 | Figurino / Uniforme | Política — em elaboração |
 | 03 | Higiene e Postura | Pendente |
 | 04 | Cabelo | Pendente |
 | 05 | Barba / Bigode / Sobrancelhas | Pendente |

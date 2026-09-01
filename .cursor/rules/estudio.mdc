@@ -163,9 +163,9 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 
 - Carrossel de mês (início em `INCIDENTES_MES_INICIO` — julho/2026) + **`FiltroHistoricoButton`** + **`FiltroEstudioSelect`** (**Todos Estúdios**) na primeira linha, com **`AjudaContextualAcoes`**.
 - Segunda linha — abas de módulo **Tickets** / **Sinais** (`FiltroBarTabButton` + ícones `Ticket` / `Activity`).
-- Terceira linha (só aba **Tickets**) — **`BarraPesquisaPagina`** + filtros pill: **Time** (`FiltroBarCampoSelect`, **Todos Times** / Game Presenter / Shuffler, ícone `FilterBarIcons.time`), **Incidente**, **Tipo**, **Staff** (restrito ao time selecionado) e **Relator**. **Staff** e **Relator** ficam ocultos quando `canView === "proprios"`; o filtro **Time** permanece disponível.
+- Terceira linha (só aba **Tickets**) — **`BarraPesquisaPagina`** + filtros pill: **Time** (`FiltroBarCampoSelect`, **Todos Times** / Game Presenter / Shuffler, ícone `FilterBarIcons.time`), **Incidente** (**`FiltroEntidadeBarSelect` multi com checkbox** — **Todos Incidentes** quando vazio), **Tipo** (single), **Staff** (restrito ao time selecionado) e **Relator**. **Staff** e **Relator** ficam ocultos quando `canView === "proprios"`; o filtro **Time** permanece disponível.
 - Terceira linha (só aba **Sinais**) — **Staff** e **Relator** centralizados (`getFilterBarRowStyle`); **sem** barra de pesquisa. Staff = Service Managers do organograma (`resolver_funcionario_id`); Relator = criadores do período (`creator_funcionario_id` / screen name). **Staff** e **Relator** ocultos quando `canView === "proprios"`.
-- Filtro de escopo Tickets (time, staff, estúdio, incidente, tipo, relator) e busca são **client-side** sobre o período já buscado no servidor (`fetchEstudioIncidentesPeriodo`). Entram no mesmo escopo dos KPIs da aba Tickets.
+- Filtro de escopo Tickets (time, staff, estúdio, incidente multi, tipo, relator) **e a barra de pesquisa** são **client-side** sobre o período já buscado no servidor (`fetchEstudioIncidentesPeriodo`). **Todos** entram no mesmo escopo dos **KPIs Consolidados** e da tabela (busca por protocolo, prestador, nickname, mesa ou relator).
 - Filtro de escopo Sinais (estúdio, staff SM, relator) é **client-side** sobre `fetchSmSinaisResumoPeriodo` (`sm_sinais_resumo_diario`).
 
 ### Aba Sinais
