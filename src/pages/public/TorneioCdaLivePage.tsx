@@ -186,10 +186,10 @@ function TorneioCdaRegras() {
           </div>
         </div>
         <div className="torneio-cda-rule-item">
-          <div className="torneio-cda-rule-points">15 pts</div>
+          <div className="torneio-cda-rule-points">10 pts</div>
           <div className="torneio-cda-rule-desc">
             Por real apostado
-            <span>A cada R$ 1,00 de valor apostado na rodada somam-se 15 pontos extras ao total.</span>
+            <span>A cada R$ 1,00 de valor apostado na rodada somam-se 10 pontos extras ao total.</span>
           </div>
         </div>
         <div className="torneio-cda-rule-item">
@@ -200,10 +200,10 @@ function TorneioCdaRegras() {
           </div>
         </div>
         <div className="torneio-cda-rule-item">
-          <div className="torneio-cda-rule-points">10 pts</div>
+          <div className="torneio-cda-rule-points">15 pts</div>
           <div className="torneio-cda-rule-desc">
             Por real ganho
-            <span>A cada R$ 1,00 de valor ganho (saldo positivo) somam-se 10 pontos extras ao total.</span>
+            <span>A cada R$ 1,00 de valor ganho (saldo positivo) somam-se 15 pontos extras ao total.</span>
           </div>
         </div>
       </div>
