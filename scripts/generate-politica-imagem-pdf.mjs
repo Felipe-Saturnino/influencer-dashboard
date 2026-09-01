@@ -551,44 +551,6 @@ function generateFigurinoPdf(outputPath, logoAsset) {
     y,
     "Não se aplica a colaboradores que não atuam em câmera, nem a Service Manager e Shift Leader quando estiverem fora do ambiente de câmera.",
   );
-  y = drawParagraph(
-    pdf,
-    logoAsset,
-    y,
-    "Fora do escopo desta política (tratados em documentos próprios):",
-    { bold: true, after: 2 },
-  );
-  y = drawBullet(
-    pdf,
-    logoAsset,
-    y,
-    "Joias e acessórios pessoais — Política Interna de Acessórios e Joias.",
-  );
-  y = drawBullet(
-    pdf,
-    logoAsset,
-    y,
-    "Penteado, cor e comprimento de cabelo — Política de Cabelo.",
-  );
-  y = drawBullet(
-    pdf,
-    logoAsset,
-    y,
-    "Maquiagem, barba, unhas, tatuagens e óculos.",
-  );
-  y = drawBullet(
-    pdf,
-    logoAsset,
-    y,
-    "Vestimentas fora do ao vivo e camisa oficial no treinamento — Dress Code Spin Gaming (RH).",
-  );
-  y = drawParagraph(
-    pdf,
-    logoAsset,
-    y,
-    "Dentro do escopo: peças oficiais de figurino, calçado na operação ao vivo, meia-calça, cinto quando integrantes do kit, acessórios de cabelo oficiais, caimento mínimo, conferência visual pré-estúdio, conservação, higiene, uso e segurança (incluindo proibição de circular fora com figurino).",
-    { after: 2 },
-  );
 
   y = drawSectionTitle(pdf, logoAsset, y, "3", "DIRETRIZES GERAIS");
   y = drawParagraph(
@@ -627,7 +589,7 @@ function generateFigurinoPdf(outputPath, logoAsset) {
   sub("3.1 Uso exclusivo do figurino oficial");
   permitido(
     "Utilizar peças registradas no inventário de Figurinos, retiradas conforme o fluxo oficial.",
-    "Composição conforme estúdio e gênero do kit definido para a operação (seção 3.2).",
+    "Composição conforme kit do estúdio escalado e materiais oficiais daquele estúdio (Manual Academy do estúdio, Figurinos e liderança).",
   );
   naoPermitido(
     "Substituir peça oficial por roupa ou acessório pessoal equivalente.",
@@ -635,27 +597,7 @@ function generateFigurinoPdf(outputPath, logoAsset) {
     "Utilizar peças de figurino de outro estúdio sem autorização da liderança.",
   );
 
-  sub("3.2 Composição do uniforme por estúdio");
-  y = drawParagraph(
-    pdf,
-    logoAsset,
-    y,
-    "Referência (cadastro em Figurinos prevalece): Blaze masculino — camisa branca, calça preta, colete, gravata borboleta; Blaze feminino — vestido tubinho; CDA masculino — camisa cinza, calça preta, gravata; CDA feminino — vestido branco ou modelo único; Sports Club masculino — camisa e calça únicas; Sports Club feminino — vestido único.",
-  );
-  y = drawBullet(
-    pdf,
-    logoAsset,
-    y,
-    "Gravata borboleta/gravata e colete: obrigatórios quando constarem no kit; colete cobre o cós da calça; vestido tubinho no joelho ou logo abaixo.",
-  );
-  y = drawBullet(
-    pdf,
-    logoAsset,
-    y,
-    "Tamanho: utilizar peça que assente corretamente; trocas via equipe de Figurinos antes de entrar em câmera.",
-  );
-
-  sub("3.3 Retirada, uso e devolução");
+  sub("3.2 Retirada, uso e devolução");
   permitido(
     "Retirada Emprestada (turno) conforme fluxo da página Figurinos.",
     "Manter o figurino durante todo o período em operação no estúdio escalado.",
@@ -670,19 +612,19 @@ function generateFigurinoPdf(outputPath, logoAsset) {
     "Emprestar figurino a terceiros sem registro/devolução formal.",
   );
 
-  sub("3.4 Conservação, higiene e integridade");
+  sub("3.3 Conservação, higiene e integridade");
   obrigatorio(
     "Apresentar-se com figurino limpo e bem apresentado; comunicar dano ou mancha persistente.",
-    "Vestir corretamente cada peça (camisa abotoada quando exigir gravata borboleta) e utilizar todos os acessórios obrigatórios do kit.",
+    "Vestir corretamente cada peça conforme o kit do estúdio e utilizar todos os acessórios obrigatórios previstos.",
     "Manipular tecidos delicados com zelo; evitar vincos profundos no transporte ou guarda temporária.",
   );
   naoPermitido(
     "Alterar, cortar, customizar, amarrar ou reformar peças oficiais.",
     "Utilizar peça com rasgo, fecho quebrado, mancha, amassado ou fio puxado visível — solicitar troca antes de entrar em mesa.",
-    "Entrar no estúdio com peça reprovada na conferência visual (seção 3.8).",
+    "Entrar no estúdio com peça reprovada na conferência visual (seção 3.7).",
   );
 
-  sub("3.5 Meia-calça e cinto");
+  sub("3.4 Meia-calça e cinto");
   permitido(
     "Meia-calça preta ou nude, opaca, sem estampa ou brilho, quando exigida pelo kit feminino.",
     "Cinto preto, discreto e liso, quando integrante do kit masculino.",
@@ -692,7 +634,7 @@ function generateFigurinoPdf(outputPath, logoAsset) {
     "Cinto chamativo, com fivela grande ou logotipos.",
   );
 
-  sub("3.6 Acessórios integrantes do uniforme");
+  sub("3.5 Acessórios integrantes do uniforme");
   permitido(
     "Grampos, elásticos ou presilhas pretos/discretos para fixar cabelo conforme padrão do estúdio.",
     "Acessórios cadastrados na categoria Acessório do inventário, quando previstos.",
@@ -702,26 +644,26 @@ function generateFigurinoPdf(outputPath, logoAsset) {
     "Substituir acessório oficial por peça pessoal divergente.",
   );
 
-  sub("3.7 Caimento mínimo");
+  sub("3.6 Caimento mínimo");
   y = drawParagraph(
     pdf,
     logoAsset,
     y,
-    "Kit masculino: camisa ajustada ao colarinho e corpo; colete central cobrindo o cós; calça na cintura natural; gravata borboleta proporcional ao colarinho. Vestido tubinho: comprimento no joelho ou logo abaixo; costuras alinhadas; liberdade para sentar e caminhar. Detalhes visuais no Manual Academy.",
+    "Composição e caimento detalhados ficam nos materiais de cada estúdio (Manual Academy). Padrão mínimo: ajuste adequado ao corpo, silhueta alinhada com kit completo, comprimento conforme material oficial do estúdio; trocar tamanho via Figurinos antes de entrar em câmera quando necessário.",
   );
 
-  sub("3.8 Conferência visual antes do estúdio");
+  sub("3.7 Conferência visual antes do estúdio");
   obrigatorio(
     "Conferir figurino antes da área ao vivo; substituir peça com amassado, mancha, fio puxado, rasgo ou desarmonia visual.",
   );
 
-  sub("3.9 Calçado na operação ao vivo");
+  sub("3.8 Calçado na operação ao vivo");
   obrigatorio(
-    "Calçado fechado ou adequado ao ambiente profissional; Game Presenter e Shuffler: modelo indicado pela empresa (referência no Manual Academy).",
+    "Calçado fechado ou adequado ao ambiente profissional; Game Presenter e Shuffler: modelo indicado pela empresa para o estúdio (Manual Academy do estúdio).",
   );
   naoPermitido("Chinelos, rasteiras, Crocs ou calçado aberto/informal incompatível.");
 
-  sub("3.10 Segurança e circulação");
+  sub("3.9 Segurança e circulação");
   obrigatorio(
     "Figurino completo ao entrar na área ao vivo e ao circular dentro do estúdio durante o turno.",
   );
@@ -729,7 +671,7 @@ function generateFigurinoPdf(outputPath, logoAsset) {
     "Sair das dependências da empresa utilizando figurino oficial — medida de segurança.",
   );
 
-  sub("3.11 Conduta e apresentação");
+  sub("3.10 Conduta e apresentação");
   y = drawParagraph(
     pdf,
     logoAsset,
@@ -737,7 +679,7 @@ function generateFigurinoPdf(outputPath, logoAsset) {
     "Manter comportamento profissional enquanto utilizar o figurino oficial nas áreas operacionais do estúdio.",
   );
 
-  sub("3.12 Proibições transversais");
+  sub("3.11 Proibições transversais");
   y = drawParagraph(pdf, logoAsset, y, "Não são permitidos:");
   y = drawBullet(
     pdf,

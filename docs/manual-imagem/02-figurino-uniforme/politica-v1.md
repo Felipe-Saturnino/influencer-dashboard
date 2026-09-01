@@ -5,7 +5,7 @@
 > - `Politica_Interna_Figurino_e_Uniforme_Spin.pdf` (Downloads + esta pasta)
 > - Regenerar: `node scripts/generate-politica-imagem-pdf.mjs figurino`
 >
-> Este Markdown é a **fonte de conteúdo** + decisões abertas. O PDF não inclui o bloco de decisões.
+> Este Markdown é a **fonte de conteúdo** da versão aprovada.
 
 ## Figurino e Uniforme
 
@@ -13,7 +13,7 @@
 |-------|--------|
 | **Área responsável** | Performance Coach |
 | **Aprovado por** | Recursos Humanos / Diretoria |
-| **Versão** | 1.1 (rascunho — aguardando aprovação) |
+| **Versão** | 1.2 (aprovada) |
 | **Data** | 01/09/2026 |
 | **Fontes** | Inventário Figurinos + *Dress Code Spin Gaming* (10/02/2026) — ver `fontes/README.md` |
 | **Público** | Prestadores de Serviços em câmera (Game Presenter, Shuffler, Service Manager e Shift Leader quando em frente à câmera) |
@@ -32,16 +32,6 @@ Aplica-se a todos os Prestadores de Serviços que atuam em frente às câmeras n
 
 Não se aplica a colaboradores que não atuam em câmera, nem a Service Manager e Shift Leader quando estiverem **fora** do ambiente de câmera.
 
-**Fora do escopo desta política** (tratados em documentos próprios):
-
-- Joias e acessórios pessoais (anéis, brincos, piercings, colares, pulseiras) — Política Interna de Acessórios e Joias
-- Penteado, cor e comprimento de cabelo — Política de Cabelo
-- Maquiagem, barba, unhas, tatuagens e óculos
-- Vestimentas permitidas/proibidas **fora do ao vivo** e **camisa oficial no período de treinamento** — documento *Dress Code Spin Gaming* (RH / ambiente interno)
-- Procedimentos operacionais detalhados de retirada/devolução na plataforma (tutorial Figurinos) — referência operacional, não substituto desta política
-
-**Dentro do escopo:** peças oficiais de figurino (camisa, calça, colete, vestido, gravata e acessório de uniforme cadastrados em Figurinos), **calçado na operação ao vivo**, meia-calça, cinto quando integrantes do kit do estúdio, acessórios de cabelo **oficiais** do uniforme (grampos, elásticos, presilhas fornecidos ou autorizados como parte do figurino), **caimento mínimo**, **conferência visual antes do estúdio**, regras de **conservação, higiene, uso e segurança** (incluindo proibição de circular fora das dependências com figurino oficial).
-
 ---
 
 ## 3. DIRETRIZES GERAIS
@@ -53,35 +43,15 @@ Não se aplica a colaboradores que não atuam em câmera, nem a Service Manager 
 **Permitido**
 
 - Utilizar peças registradas no inventário de Figurinos da Spin Gaming, retiradas conforme o fluxo oficial (retirada emprestada ou fixa, conforme perfil e orientação da liderança).
-- Composição do uniforme conforme o **estúdio** e o **gênero** do kit definido para a operação (seção 3.2).
+- Composição conforme o **kit do estúdio escalado** e materiais oficiais daquele estúdio (Manual Academy do estúdio, cadastro em Figurinos e orientação da equipe de Figurinos).
 
 **Não permitido**
 
-- Substituir qualquer peça oficial por roupa ou acessório pessoal de aparência equivalente (ex.: camisa, calça, vestido, gravata ou colete próprios).
+- Substituir qualquer peça oficial por roupa ou acessório pessoal de aparência equivalente.
 - Entrar em câmera ou permanecer na área de jogos com figurino incompleto quando o kit do estúdio exige a peça.
-- Utilizar peças de figurino de **outro estúdio** sem autorização da liderança (cada GP deve operar com o kit do estúdio em que está escalado).
+- Utilizar peças de figurino de **outro estúdio** sem autorização da liderança (cada Prestador deve operar com o kit do estúdio em que está escalado).
 
-### 3.2 Composição do uniforme por estúdio
-
-O kit exato (tamanho, cor e combinação de peças) é definido pelo cadastro em **Figurinos** e informado na retirada. A tabela abaixo resume a **composição de referência** vigente no inventário legado; alterações futuras no cadastro prevalecem sobre esta lista.
-
-| Estúdio | Gênero | Peças oficiais (referência) |
-|---------|--------|----------------------------|
-| **Blaze** | Masculino | Camisa branca, calça preta, colete, **gravata borboleta** |
-| **Blaze** | Feminino | **Vestido tubinho** (cor/corte conforme peça cadastrada) |
-| **CDA (Casa de Apostas)** | Masculino | Camisa cinza, calça preta, gravata |
-| **CDA** | Feminino | Vestido branco ou modelo único conforme peça cadastrada |
-| **Sports Club** | Masculino | Camisa e calça (modelo único cadastrado) |
-| **Sports Club** | Feminino | Vestido (modelo único cadastrado) |
-
-**Regras complementares**
-
-- **Gravata borboleta, gravata e colete:** quando constarem no kit do estúdio, são **obrigatórios** — gravata borboleta centralizada no colarinho; colete como peça central que cobre o cós da calça e mantém continuidade visual entre camisa e calça; gravata/colete visíveis e ajustados conforme modelagem da peça.
-- **Vestido tubinho (feminino):** comprimento na altura do joelho ou logo abaixo; tecido encorpado/estruturado; caimento que permita sentar e caminhar confortavelmente durante o turno.
-- **Categoria Acessório** no inventário: refere-se a itens oficiais de uniforme (ex.: complementos cadastrados em Figurinos), **não** a joias pessoais.
-- **Tamanho:** utilizar peça que assente corretamente; trocas de tamanho devem ser feitas via equipe de Figurinos **antes** de entrar em câmera. Detalhes de caimento por peça compõem o **Manual Academy** (Guia de Caimento).
-
-### 3.3 Retirada, uso durante o turno e devolução
+### 3.2 Retirada, uso durante o turno e devolução
 
 **Permitido**
 
@@ -101,7 +71,7 @@ O kit exato (tamanho, cor e combinação de peças) é definido pelo cadastro em
 - Emprestar figurino oficial a terceiros ou circular peças entre colegas **sem** registro/devolução formal.
 - Acumular peças emprestadas de turnos anteriores sem devolução.
 
-### 3.4 Conservação, higiene e integridade das peças
+### 3.3 Conservação, higiene e integridade das peças
 
 **Permitido**
 
@@ -111,7 +81,7 @@ O kit exato (tamanho, cor e combinação de peças) é definido pelo cadastro em
 **Obrigatório**
 
 - Apresentar-se com figurino **limpo e bem apresentado** — a Spin Gaming é responsável pela higiene das peças oficiais mediante o fluxo de lavagem/manutenção; o Prestador de Serviços é responsável por **não** entrar em câmera com peça visivelmente suja, mal cuidada ou danificada.
-- Vestir corretamente cada peça (ordem de vestimenta, botões, zíperes, ajustes — camisa totalmente abotoada quando o kit exige gravata borboleta) e utilizar **todos os acessórios obrigatórios** do kit do estúdio.
+- Vestir corretamente cada peça (ordem de vestimenta, botões, zíperes e ajustes conforme o kit do estúdio) e utilizar **todos os acessórios obrigatórios** previstos para aquele kit.
 - Tratar o figurino com cuidado durante a operação (evitar atrito excessivo, superfícies ásperas e substâncias que manchem, rasguem ou deformem a peça).
 - Manipular tecidos delicados com zelo; evitar dobras que gerem vincos profundos durante transporte ou guarda temporária no turno.
 
@@ -120,9 +90,9 @@ O kit exato (tamanho, cor e combinação de peças) é definido pelo cadastro em
 - **Alterar, cortar, customizar ou reformar** peças oficiais (inclui barra, cós, mangas, decotes, amarrações, aplicação de adesivos, costura caseira ou tintura).
 - Remover permanentemente etiquetas ou identificadores internos de controle quando aplicável.
 - Utilizar peça em condição que comprometa a imagem em câmera ou a segurança (ex.: rasgo exposto, fecho quebrado, mancha evidente, amassados ou fios puxados visíveis) — solicitar troca **antes** de entrar em mesa.
-- Entrar no estúdio ou em câmera com peça que apresente falha visual ou de conservação identificável na conferência (seção 3.9).
+- Entrar no estúdio ou em câmera com peça que apresente falha visual ou de conservação identificável na conferência (seção 3.7).
 
-### 3.5 Meia-calça e cinto
+### 3.4 Meia-calça e cinto
 
 **Meia-calça**
 
@@ -134,7 +104,7 @@ O kit exato (tamanho, cor e combinação de peças) é definido pelo cadastro em
 - **Permitido:** cinto **preto**, discreto, liso, quando integrante do kit masculino do estúdio ou necessário ao correto caimento da calça oficial.
 - **Não permitido:** cinto chamativo, com fivela grande, logotipos, cores fora do padrão ou peça pessoal que substitua cinto oficial quando este estiver previsto no kit.
 
-### 3.6 Acessórios integrantes do uniforme
+### 3.5 Acessórios integrantes do uniforme
 
 **Permitido**
 
@@ -148,27 +118,20 @@ O kit exato (tamanho, cor e combinação de peças) é definido pelo cadastro em
 
 **Prevalência:** acessórios oficiais do uniforme **prevalecem** sobre joias pessoais quando houver conflito visual ou de segurança — ver Política de Acessórios e Joias.
 
-### 3.7 Caimento mínimo do figurino
+### 3.6 Caimento mínimo do figurino
 
-Referência: *Dress Code Spin Gaming* — Guias de Caimento (traje social com colete e gravata borboleta; vestido tubinho). O Manual Academy detalha medidas e exemplos visuais; aqui ficam os **requisitos mínimos** em operação.
+A composição exata e o caimento de cada peça são definidos nos **materiais do estúdio** (Manual Academy por estúdio e orientação de Figurinos). Esta política estabelece o **padrão mínimo** em operação:
 
-**Kit masculino (camisa, calça, colete, gravata borboleta — quando aplicável ao estúdio)**
-
-- **Camisa:** colarinho justo e confortável, mantendo a gravata borboleta centralizada; corpo acompanhando a silhueta, sem sobra de tecido e sem repuxar botões.
-- **Colete:** peça central — cobrir totalmente o cós da calça; ajuste ao tórax sem apertar a região abdominal; costas ajustadas pela fivela, sem bolsas de tecido.
-- **Calça:** cós na altura natural da cintura; caimento reto ou levemente ajustado (slim); barra com quebra leve ou nula, tocando o calçado sem acúmulo de tecido.
-- **Gravata borboleta:** largura não superior à do colarinho; camisa totalmente abotoada.
-
-**Vestido tubinho (feminino — quando aplicável)**
-
-- Caimento elegante e funcional: acompanhar o corpo sem marcar excessivamente; silhueta contínua e refinada.
-- Comprimento na altura do joelho ou logo abaixo; ombros com costuras alinhadas; costas planas, sem rugas; cintura definida sem apertar; liberdade para sentar e caminhar.
+- Peças com **ajuste adequado** ao corpo — sem sobra evidente de tecido, sem repuxar fechos ou botões e sem comprometer mobilidade na mesa.
+- **Silhueta alinhada e contínua** — peças do kit vestidas na ordem correta e com todos os itens obrigatórios do estúdio.
+- **Comprimento e proporção** conforme o material oficial do estúdio (ex.: vestidos e barras de calça no padrão definido para aquele kit).
+- **Tamanho:** utilizar peça que assente corretamente; trocas via equipe de Figurinos **antes** de entrar em câmera.
 
 **Não permitido**
 
-- Entrar em câmera com peça visivelmente grande, apertada, enrugada ou fora do padrão de caimento descrito acima quando houver tamanho alternativo disponível via Figurinos.
+- Entrar em câmera com peça visivelmente grande, apertada, enrugada ou fora do padrão de caimento do estúdio quando houver tamanho alternativo disponível via Figurinos.
 
-### 3.8 Conferência visual antes do estúdio
+### 3.7 Conferência visual antes do estúdio
 
 **Obrigatório**
 
@@ -183,21 +146,19 @@ Referência: *Dress Code Spin Gaming* — Guias de Caimento (traje social com co
 - **Rasgos ou desgaste:** rasgos, desfiados ou desgaste do tecido.
 - **Desarmonia visual:** qualquer elemento que comprometa estética ou padronização do uniforme.
 
-### 3.9 Calçado na operação ao vivo
+### 3.8 Calçado na operação ao vivo
 
 **Obrigatório**
 
 - Calçado **fechado** ou adequado ao ambiente profissional de estúdio ao vivo.
-- **Game Presenter** e **Shuffler:** utilizar modelo **indicado pela empresa** (referência visual no Manual Academy e orientação da liderança/Figurinos).
-- **Masculino (referência GP/Shuffler):** sapato social preto, polido — oxford, derby, monk strap ou loafer discreto conforme exemplos oficiais.
-- **Feminino (referência GP):** sandália de salto **bloco** médio, tiras finas, cores **preta ou nude**, com fixação no tornozelo ou calcanhar quando aplicável.
+- **Game Presenter** e **Shuffler:** utilizar modelo **indicado pela empresa** para o estúdio (referência visual no Manual Academy do estúdio e orientação da liderança/Figurinos).
 
 **Não permitido**
 
 - Chinelos, rasteiras, Crocs ou calçado aberto/informal incompatível com o ambiente profissional.
 - Calçado que comprometa segurança ou mobilidade na mesa (ex.: salto instável, solado inadequado).
 
-### 3.10 Segurança e circulação com figurino
+### 3.9 Segurança e circulação com figurino
 
 **Obrigatório**
 
@@ -207,12 +168,12 @@ Referência: *Dress Code Spin Gaming* — Guias de Caimento (traje social com co
 
 - **Sair das dependências da empresa** (rua / área externa) utilizando figurino oficial — medida de segurança para evitar reconhecimento indevido de colaboradores e da operação.
 
-### 3.11 Conduta e apresentação em figurino
+### 3.10 Conduta e apresentação em figurino
 
 - Manter **comportamento profissional** adequado enquanto estiver utilizando o figurino oficial, inclusive fora do close de câmera mas dentro das áreas operacionais do estúdio quando visível a parceiros ou visitas.
 - O figurino representa a marca Spin Gaming perante operadoras e jogadores — evitar gestos ou posturas incompatíveis com o padrão de apresentação ao vivo.
 
-### 3.12 Proibições transversais
+### 3.11 Proibições transversais
 
 Não são permitidos, em qualquer situação coberta por esta política:
 
@@ -251,45 +212,4 @@ Esta política é revisada periodicamente pelo Performance Coach.
 
 ---
 
-## Decisões abertas (aguardando aprovação)
-
-### D1 — Meia-calça feminina
-
-Proposta: **obrigatória** quando o kit/estúdio exigir; cores permitidas **preta ou nude**, opaca.
-
-- [ ] **Confirmo**
-- [ ] **Alterar:** _______________
-
-### D2 — Cinto masculino
-
-Proposta: **obrigatório** nos estúdios em que calça + camisa compõem o kit masculino (Blaze, CDA, Sports Club), salvo orientação contrária da liderança para modelo específico sem cinto.
-
-- [ ] **Confirmo**
-- [ ] **Alterar:** _______________
-
-### D3 — Composição CDA masculino
-
-Inventário legado indica **camisa cinza** + calça preta + gravata. O *Dress Code* (2026) detalha kit com **colete + gravata borboleta** para traje social de referência (Blaze). Confirmar se CDA masculino inclui colete e se a gravata é borboleta ou gravata comum.
-
-- [ ] **Confirmo** (sem colete; gravata comum)
-- [ ] **Incluir colete**
-- [ ] **Gravata borboleta** no CDA
-- [ ] **Outra composição:** _______________
-
-### D4 — Calçado ao vivo
-
-Proposta (com base no *Dress Code Spin Gaming*, 10/02/2026): incluir na política — proibidos chinelos, rasteiras e Crocs; GP e Shuffler com modelo indicado pela empresa; detalhes visuais no Manual Academy.
-
-- [ ] **Confirmo**
-- [ ] **Alterar:** _______________
-
-### D5 — Área responsável
-
-Proposta: **Performance Coach** (padrão das políticas de imagem) + operação de inventário pela **Equipe de Figurino** (seção 4).
-
-- [ ] **Confirmo**
-- [ ] **Alterar área responsável para:** _______________
-
----
-
-*Documento interno — Spin Gaming. Rascunho para aprovação; não substitui a versão publicada até assinatura formal.*
+*Documento interno — Spin Gaming. Versão aprovada em 01/09/2026.*

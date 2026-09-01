@@ -37,6 +37,7 @@ const ATIVIDADE_LIMITE = 30;
 const PTS_RODADA = 500;
 const PTS_RODADA_GANHA = 1000;
 const PTS_POR_REAL_GANHO = 10;
+const PTS_POR_REAL_APOSTADO = 15;
 
 const BKO_BASE_DEFAULT = "https://bo2.sg.onairent.live";
 
@@ -115,7 +116,13 @@ export function totaisRodada(game) {
 
 export function calcularPontosRodada(totais) {
   const netPos = Math.max(0, totais.net);
-  return PTS_RODADA + (totais.ganhou ? PTS_RODADA_GANHA : 0) + Math.floor(netPos * PTS_POR_REAL_GANHO);
+  const amount = Math.max(0, Number(totais.amount ?? 0));
+  return (
+    PTS_RODADA +
+    (totais.ganhou ? PTS_RODADA_GANHA : 0) +
+    Math.floor(netPos * PTS_POR_REAL_GANHO) +
+    Math.floor(amount * PTS_POR_REAL_APOSTADO)
+  );
 }
 
 function gameTypeLabel(gameType) {

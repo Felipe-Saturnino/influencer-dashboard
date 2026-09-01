@@ -49,6 +49,7 @@ Só extrair JSON sem gravar: `--fetch-only`.
 | Regra | Pontos |
 |-------|--------|
 | Rodada jogada (mesa CDA) | 500 |
+| Por R$ 1,00 apostado na rodada | +15 |
 | Rodada ganha (`net > 0`) | +1.000 |
 | Por R$ 1,00 ganho (líquido positivo) | +10 |
 
