@@ -10,7 +10,10 @@ import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { SectionTitle } from "../../../components/dashboard";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
-import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
+import {
+  getPageContentBoxRadius,
+  getPageContentBoxStyle,
+} from "../../../lib/pageContentBoxStyles";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -151,8 +154,10 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
   const [historico, setHistorico] = useState<CtPresencaRegistroRow[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [erroHistorico, setErroHistorico] = useState("");
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
 
   const loadSeq = useRef(0);
+  const rowHoverBg = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)";
 
   const carregar = useCallback(async () => {
     const seq = ++loadSeq.current;
@@ -282,8 +287,8 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
       <div style={pageBox}>
         <SectionTitle sub={sub}>Consolidado</SectionTitle>
         <div className="app-grid-2" style={{ gap: 12 }}>
-          <KpiTime titulo="Game Presenters" rows={gps} t={t} />
-          <KpiTime titulo="Shuffler" rows={shufflers} t={t} />
+          <KpiTime titulo="Game Presenters" rows={gps} t={t} brand={brand} />
+          <KpiTime titulo="Shuffler" rows={shufflers} t={t} brand={brand} />
         </div>
       </div>
 
@@ -333,28 +338,37 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                   </tr>
                 ) : (
                   filtradas.map((r, i) => (
-                    <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{r.nome}</td>
+                    <tr
+                      key={r.id}
+                      style={{
+                        background: hoverKey === r.id ? rowHoverBg : dataTable.zebraRow(i),
+                      }}
+                      onMouseEnter={() => setHoverKey(r.id)}
+                      onMouseLeave={() => setHoverKey(null)}
+                    >
+                      <td style={dataTable.tdCenter}>{r.nome}</td>
                       <td style={dataTable.tdCenter}>{r.nickname || "—"}</td>
                       <td style={dataTable.tdCenter}>{r.time || "—"}</td>
                       <td style={dataTable.tdCenter}>{r.entrada || "—"}</td>
                       <td style={dataTable.tdCenter}>{r.saida || "—"}</td>
                       <td style={dataTable.tdCenter}>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            padding: "3px 9px",
-                            borderRadius: 20,
-                            background: `${STATUS_COR[r.status]}22`,
-                            color: STATUS_COR[r.status],
-                            border: `1px solid ${STATUS_COR[r.status]}44`,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {STATUS_LABEL[r.status]}
-                        </span>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "3px 9px",
+                              borderRadius: 20,
+                              background: `${STATUS_COR[r.status]}22`,
+                              color: STATUS_COR[r.status],
+                              border: `1px solid ${STATUS_COR[r.status]}44`,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {STATUS_LABEL[r.status]}
+                          </span>
+                        </div>
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
@@ -628,10 +642,18 @@ function KpiTime({
   titulo,
   rows,
   t,
+  brand,
 }: {
   titulo: string;
   rows: CtPresencaRow[];
-  t: { text: string; textMuted: string; cardBorder: string; inputBg: string };
+  t: {
+    text: string;
+    textMuted: string;
+    cardBorder: string;
+    inputBg: string;
+    isDark: boolean;
+  };
+  brand: ReturnType<typeof useDashboardBrand>;
 }) {
   const presentes = rows.filter((r) => STATUS_PRESENTES.includes(r.status)).length;
   const faltas = rows.filter((r) => r.status === "falta").length;
@@ -639,16 +661,38 @@ function KpiTime({
     <div
       style={{
         border: `1px solid ${t.cardBorder}`,
-        borderRadius: 12,
-        padding: 14,
+        borderRadius: getPageContentBoxRadius(t.isDark),
+        padding: "12px 14px",
         background: t.inputBg,
         fontFamily: FONT.body,
+        textAlign: "center",
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: 13, color: t.text, marginBottom: 6 }}>{titulo}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color: t.text }}>{rows.length}</div>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: t.textMuted,
+          marginBottom: 4,
+        }}
+      >
+        {titulo}
+      </div>
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 800,
+          color: brand.primary,
+          lineHeight: 1.1,
+          marginBottom: 4,
+        }}
+      >
+        {rows.length}
+      </div>
       <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 8 }}>Escalados</div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e" }}>Presentes {presentes}</span>
         <span style={{ fontSize: 10, fontWeight: 700, color: "#e84025" }}>Faltas {faltas}</span>
       </div>

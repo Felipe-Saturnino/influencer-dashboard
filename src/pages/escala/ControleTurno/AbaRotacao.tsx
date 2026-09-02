@@ -7,7 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { SectionTitle } from "../../../components/dashboard";
-import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { getPageContentBoxRadius, getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import {
   FILTRO_STATUS_SEMANTICO_PILL,
@@ -418,7 +418,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
             flexWrap: "wrap",
             gap: 10,
             marginBottom: 14,
-            justifyContent: "flex-start",
+            justifyContent: "center",
             width: "100%",
           }}
         >
@@ -490,7 +490,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
               borderRadius: 10,
               background: "color-mix(in srgb, #f59e0b 12%, transparent)",
               border: "1px solid #f59e0b55",
-              color: "#92400e",
+              color: "#f59e0b",
               fontSize: 12,
               fontFamily: FONT.body,
             }}
@@ -510,7 +510,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
               borderRadius: 10,
               border: "1px solid rgba(245,158,11,0.35)",
               background: "color-mix(in srgb, #f59e0b 10%, transparent)",
-              color: "#92400e",
+              color: "#f59e0b",
               fontFamily: FONT.body,
               fontSize: 13,
             }}
@@ -565,10 +565,10 @@ export function AbaRotacao({ diaIso, turno }: Props) {
         ) : (
           <>
             <div className="app-grid-kpi-4" style={{ gap: 12, marginBottom: 14 }}>
-              <KpiMini label="Mesas" value={kpis.mesas} t={t} />
-              <KpiMini label="Escalados" value={kpis.escalados} t={t} />
-              <KpiMini label="Não chegaram" value={kpis.nao} t={t} cor="#e84025" />
-              <KpiMini label="Disponíveis" value={kpis.disp} t={t} cor="#22c55e" />
+              <KpiMini label="Mesas" value={kpis.mesas} t={t} brand={brand} />
+              <KpiMini label="Escalados" value={kpis.escalados} t={t} brand={brand} />
+              <KpiMini label="Não chegaram" value={kpis.nao} t={t} brand={brand} cor="#e84025" />
+              <KpiMini label="Disponíveis" value={kpis.disp} t={t} brand={brand} cor="#22c55e" />
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
@@ -629,7 +629,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
                   ...ghostBtn,
                   borderColor: "rgba(245,158,11,0.45)",
                   background: "color-mix(in srgb, #f59e0b 12%, transparent)",
-                  color: "#b45309",
+                  color: "#f59e0b",
                   cursor: !ctx || loading ? "not-allowed" : "pointer",
                   opacity: !ctx || loading ? 0.5 : 1,
                 }}
@@ -672,7 +672,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
               borderRadius: 10,
               background: "color-mix(in srgb, #22c55e 12%, transparent)",
               border: "1px solid rgba(34,197,94,0.35)",
-              color: "#166534",
+              color: "#22c55e",
               fontSize: 13,
               fontFamily: FONT.body,
             }}
@@ -725,14 +725,14 @@ export function AbaRotacao({ diaIso, turno }: Props) {
                           <span
                             style={{
                               marginLeft: 6,
-                              fontSize: 9,
+                              fontSize: 10,
                               fontWeight: 800,
                               letterSpacing: "0.04em",
                               textTransform: "uppercase",
                               padding: "2px 6px",
                               borderRadius: 6,
                               background: "color-mix(in srgb, #a78bfa 18%, transparent)",
-                              color: "#7c3aed",
+                              color: "#a78bfa",
                               border: "1px solid #a78bfa55",
                             }}
                           >
@@ -810,11 +810,13 @@ function KpiMini({
   label,
   value,
   t,
+  brand,
   cor,
 }: {
   label: string;
   value: number;
   t: ReturnType<typeof useApp>["theme"];
+  brand: ReturnType<typeof useDashboardBrand>;
   cor?: string;
 }) {
   return (
@@ -822,7 +824,7 @@ function KpiMini({
       style={{
         textAlign: "center",
         padding: "12px 14px",
-        borderRadius: 10,
+        borderRadius: getPageContentBoxRadius(t.isDark),
         border: `1px solid ${t.cardBorder}`,
         background: t.inputBg,
       }}
@@ -833,14 +835,24 @@ function KpiMini({
           textTransform: "uppercase",
           letterSpacing: "0.08em",
           fontWeight: 700,
-          fontSize: 11,
+          fontSize: 10,
           color: t.textMuted,
           fontFamily: FONT.body,
         }}
       >
         {label}
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: cor ?? t.text, fontFamily: FONT.body }}>{value}</div>
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 800,
+          color: cor ?? brand.primary,
+          fontFamily: FONT.body,
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }

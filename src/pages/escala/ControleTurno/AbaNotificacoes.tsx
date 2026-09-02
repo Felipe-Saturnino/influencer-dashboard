@@ -478,7 +478,7 @@ function BlocoCabecalho({
         justifyContent: "space-between",
         gap: 12,
         flexWrap: "wrap",
-        marginBottom: 16,
+        marginBottom: 14,
       }}
     >
       <SectionTitle compact sub={sub}>
@@ -507,10 +507,11 @@ function EmptyDia({ msg }: { msg: string }) {
 }
 
 function LoadingBloco() {
+  const { theme: t } = useApp();
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 0", gap: 8 }}>
       <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
-      <span style={{ fontSize: 13, fontFamily: FONT.body, color: "var(--brand-text, #64748b)" }}>Carregando…</span>
+      <span style={{ fontSize: 13, fontFamily: FONT.body, color: t.textMuted }}>Carregando…</span>
     </div>
   );
 }
@@ -1117,7 +1118,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
+                      <td style={dataTable.tdCenter}>
                         {f.mesa_label}
                         {herdado ? <TagDiaAnterior t={t} /> : null}
                       </td>
@@ -1132,7 +1133,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                           )}
                         </div>
                       </td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{lideranca}</td>
+                      <td style={dataTable.tdCenter}>{lideranca}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
                           <BtnIconeAcaoLinha label={tooltipAcao("Ver")} onClick={() => setVerFechamento(f)}>
@@ -1193,13 +1194,13 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{a.prestador_nome}</td>
+                      <td style={dataTable.tdCenter}>{a.prestador_nome}</td>
                       <td style={dataTable.tdCenter}>{motivoAusLabel(a.motivo)}</td>
                       <td style={dataTable.tdCenter}>{formatDiaBr(a.inicio)}</td>
                       <td style={dataTable.tdCenter}>
                         {a.fim_nao_informado ? "Não informado" : formatDiaBr(a.fim ?? "")}
                       </td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{a.lideranca_nome || "—"}</td>
+                      <td style={dataTable.tdCenter}>{a.lideranca_nome || "—"}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
                           <BtnIconeAcaoLinha label={tooltipAcao("Ver")} onClick={() => setVerAusencia(a)}>
@@ -1262,8 +1263,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseLeave={() => setHoverKey(null)}
                     >
                       <td style={dataTable.tdCenter}>{formatDiaBr(f.data_registro)}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{f.prestador_nome}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
+                      <td style={dataTable.tdCenter}>{f.prestador_nome}</td>
+                      <td style={dataTable.tdCenter}>
                         {RECOMENDACAO_LABEL[f.recomendacao]}
                       </td>
                       <td style={dataTable.tdCenter}>
@@ -1275,8 +1276,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                           )}
                         </div>
                       </td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{f.lideranca_nome || "—"}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
+                      <td style={dataTable.tdCenter}>{f.lideranca_nome || "—"}</td>
+                      <td style={dataTable.tdCenter}>
                         {f.status === "aplicado" ? f.aplicado_por_nome || "—" : "—"}
                       </td>
                       <td style={dataTable.tdCenter}>
@@ -1348,11 +1349,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseLeave={() => setHoverKey(null)}
                     >
                       <td style={dataTable.tdCenter}>{formatDiaBr(m.abertura)}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
+                      <td style={dataTable.tdCenter}>
                         {m.solicitante_nome || "—"}
                       </td>
                       <td style={dataTable.tdCenter}>{MANUT_TIPO_LABEL[m.tipo]}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{localExibicaoTabela(m)}</td>
+                      <td style={dataTable.tdCenter}>{localExibicaoTabela(m)}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           <StatusPill label={MANUT_STATUS_LABEL[m.status]} color={statusColor} />

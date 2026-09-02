@@ -156,6 +156,8 @@ export default function EscalaControleTurnoPage() {
             justifyContent: "center",
             width: "100%",
             marginTop: 12,
+            paddingTop: 12,
+            borderTop: `1px solid ${t.cardBorder}`,
           }}
         >
           {CONTROLE_TURNO_ABAS.map((k, i) => {

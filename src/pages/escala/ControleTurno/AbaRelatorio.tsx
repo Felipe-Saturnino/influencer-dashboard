@@ -15,7 +15,7 @@ import {
   SectionTitle,
 } from "../../../components/dashboard";
 import { ModalBase, ModalHeader, MODAL_FORM_FOOTER_STYLE, MODAL_FORM_SCROLL_BODY_STYLE } from "../../../components/OperacoesModal";
-import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { getPageContentBoxRadius, getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -484,13 +484,20 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "14px 16px",
-                  borderRadius: 10,
+                  padding: "12px 14px",
+                  borderRadius: getPageContentBoxRadius(t.isDark),
                   border: `1px solid ${t.cardBorder}`,
                   background: t.inputBg,
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: 14, fontFamily: FONT.body, color: t.text }}>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 13,
+                    fontFamily: FONT.body,
+                    color: t.text,
+                  }}
+                >
                   {labelTurnoCurto(turno)}
                 </span>
                 <StatusPill label={pill.label} cor={pill.cor} />
@@ -862,9 +869,7 @@ function CardTurno({
             marginBottom: 14,
           }}
         >
-          <span style={{ fontSize: 14, fontWeight: 800, fontFamily: FONT.body, color: brand.primary, textTransform: "uppercase" }}>
-            {titulo}
-          </span>
+          <SectionTitle compact>{titulo}</SectionTitle>
           {canGerar ? <CtaCriarButton onClick={onGerar}>Gerar Relatório</CtaCriarButton> : null}
         </div>
         <div
@@ -906,9 +911,7 @@ function CardTurno({
           marginBottom: 14,
         }}
       >
-        <span style={{ fontSize: 14, fontWeight: 800, fontFamily: FONT.body, color: brand.primary, textTransform: "uppercase" }}>
-          {titulo}
-        </span>
+        <SectionTitle compact>{titulo}</SectionTitle>
         {data.status === "rascunho" && canEditar ? (
           <button type="button" style={secBtn} onClick={onEditar}>
             Editar Rascunho
@@ -925,8 +928,8 @@ function CardTurno({
           </BtnIconeAcaoLinha>
         </div>
 
-        <StatsSec titulo="Game Presenters" stats={data.gp} t={t} />
-        <StatsSec titulo="Shuffler" stats={data.shuffler} t={t} />
+        <StatsSec titulo="Game Presenters" stats={data.gp} t={t} brand={brand} />
+        <StatsSec titulo="Shuffler" stats={data.shuffler} t={t} brand={brand} />
 
         <div className="app-grid-2" style={{ gap: 12, marginBottom: 12 }}>
           <CampoLeitura label="SOSs" valor={data.campos.sos} empty="Não houveram SOS no Turno" t={t} />
@@ -949,7 +952,7 @@ function CardTurno({
 
         <div
           style={{
-            marginTop: 16,
+            marginTop: 14,
             paddingTop: 12,
             borderTop: `1px solid ${t.cardBorder}`,
             fontSize: 12,
@@ -968,16 +971,18 @@ function StatsSec({
   titulo,
   stats,
   t,
+  brand,
 }: {
   titulo: string;
   stats: StatsBloco;
   t: ReturnType<typeof useApp>["theme"];
+  brand: ReturnType<typeof useDashboardBrand>;
 }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <div
         style={{
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
@@ -989,10 +994,10 @@ function StatsSec({
         {titulo}
       </div>
       <div className="app-grid-kpi-4" style={{ gap: 10 }}>
-        <StatCell label="Escalados" value={stats.escalados} t={t} />
-        <StatCell label="Presentes" value={stats.presentes} t={t} cor="#22c55e" />
-        <StatCell label="Atrasados" value={stats.atrasados} t={t} cor="#f59e0b" />
-        <StatCell label="Faltas" value={stats.faltas} t={t} cor="#e84025" />
+        <StatCell label="Escalados" value={stats.escalados} t={t} brand={brand} />
+        <StatCell label="Presentes" value={stats.presentes} t={t} brand={brand} cor="#22c55e" />
+        <StatCell label="Atrasados" value={stats.atrasados} t={t} brand={brand} cor="#f59e0b" />
+        <StatCell label="Faltas" value={stats.faltas} t={t} brand={brand} cor="#e84025" />
       </div>
     </div>
   );
@@ -1002,17 +1007,48 @@ function StatCell({
   label,
   value,
   t,
+  brand,
   cor,
 }: {
   label: string;
   value: number;
   t: ReturnType<typeof useApp>["theme"];
+  brand: ReturnType<typeof useDashboardBrand>;
   cor?: string;
 }) {
   return (
-    <div>
-      <div style={{ fontSize: 20, fontWeight: 800, color: cor ?? t.text, fontFamily: FONT.body }}>{value}</div>
-      <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{label}</div>
+    <div
+      style={{
+        textAlign: "center",
+        padding: "12px 14px",
+        borderRadius: getPageContentBoxRadius(t.isDark),
+        border: `1px solid ${t.cardBorder}`,
+        background: t.inputBg,
+        fontFamily: FONT.body,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: t.textMuted,
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 800,
+          color: cor ?? brand.primary,
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -1035,10 +1071,10 @@ function CampoLeitura({
     <div style={full ? { marginBottom: 12 } : undefined}>
       <div
         style={{
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: 700,
           textTransform: "uppercase",
-          letterSpacing: "0.06em",
+          letterSpacing: "0.08em",
           color: t.textMuted,
           marginBottom: 4,
           fontFamily: FONT.body,
