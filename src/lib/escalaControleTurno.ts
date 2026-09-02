@@ -34,6 +34,7 @@ export type CtMesaOpt = {
   id: string;
   label: string;
   nome: string;
+  numero: string;
   estudioSlug: string;
   estudioNome: string;
   jogo: string;
@@ -136,6 +137,7 @@ export type CtPresencaRow = {
   nome: string;
   nickname: string;
   time: string;
+  estudio: string;
   entrada: string;
   saida: string;
   status: CtPresencaStatus;
@@ -160,6 +162,7 @@ export type CtPresencaRegistroRow = {
 type MesaEmbed = {
   id?: string;
   nome_mesa?: string | null;
+  numero_mesa?: string | null;
   tipo_jogo?: string | null;
   estudio_slug?: string | null;
 };
@@ -199,10 +202,11 @@ async function authUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-function labelMesa(estudioNome: string, nomeMesa: string): string {
+function labelMesa(estudioNome: string, nomeMesa: string, numeroMesa?: string): string {
   const e = estudioNome.trim() || "—";
   const n = nomeMesa.trim() || "—";
-  return `${e} - ${n}`;
+  const num = (numeroMesa ?? "").trim();
+  return num ? `${e} - ${n} - ${num}` : `${e} - ${n}`;
 }
 
 export async function listEstudiosAtivos(): Promise<CtEstudioOpt[]> {
@@ -226,6 +230,8 @@ export async function listMesasForFechamento(): Promise<CtMesaOpt[]> {
   const nomeBySlug = new Map(estudios.map((e) => [e.slug, e.nome]));
 
   const attempts = [
+    "id, nome_mesa, numero_mesa, tipo_jogo, estudio_slug",
+    "id, nome_mesa, numero_mesa, tipo_jogo, operadora_slug",
     "id, nome_mesa, tipo_jogo, estudio_slug",
     "id, nome_mesa, tipo_jogo, operadora_slug",
   ];
@@ -246,16 +252,18 @@ export async function listMesasForFechamento(): Promise<CtMesaOpt[]> {
   return rows.map((r) => {
     const id = String(r.id ?? "");
     const nome = String(r.nome_mesa ?? "").trim() || "—";
+    const numero = String(r.numero_mesa ?? "").trim();
     const jogo = String(r.tipo_jogo ?? "").trim() || "—";
     const slug = String(r.estudio_slug ?? r.operadora_slug ?? "").trim();
     const estudioNome = nomeBySlug.get(slug) || slug || "—";
     return {
       id,
       nome,
+      numero,
       jogo,
       estudioSlug: slug,
       estudioNome,
-      label: labelMesa(estudioNome, nome),
+      label: labelMesa(estudioNome, nome, numero),
     };
   });
 }
@@ -285,6 +293,7 @@ function mapFechamento(
   const emb = unwrapEmbed(row.mesas_spin_cadastro as MesaEmbed | MesaEmbed[] | null);
   const fromMap = mesaMap.get(mesaId);
   const nome = (emb?.nome_mesa ?? fromMap?.nome ?? "").trim() || "—";
+  const numero = (emb?.numero_mesa ?? fromMap?.numero ?? "").trim();
   const jogo = (emb?.tipo_jogo ?? fromMap?.jogo ?? "").trim() || "—";
   const slug = (emb?.estudio_slug ?? fromMap?.estudioSlug ?? "").trim();
   const estudio = fromMap?.estudioNome || slug || "—";
@@ -300,7 +309,7 @@ function mapFechamento(
     lideranca_fechamento_nome: String(row.lideranca_fechamento_nome ?? ""),
     lideranca_reabertura_user_id: (row.lideranca_reabertura_user_id as string | null) ?? null,
     lideranca_reabertura_nome: String(row.lideranca_reabertura_nome ?? ""),
-    mesa_label: fromMap?.label || labelMesa(estudio, nome),
+    mesa_label: fromMap?.label || labelMesa(estudio, nome, numero),
     mesa_nome: nome,
     mesa_estudio: estudio,
     mesa_jogo: jogo,
@@ -315,7 +324,7 @@ export async function listFechamentos(diaIso: string): Promise<CtFechamentoRow[]
   const { data, error } = await supabase
     .from("escala_ct_fechamento_mesa")
     .select(
-      "id, data_registro, mesa_id, hora_fechamento, hora_reabertura, nao_reaberta, observacao, lideranca_fechamento_user_id, lideranca_fechamento_nome, lideranca_reabertura_user_id, lideranca_reabertura_nome, mesas_spin_cadastro(id, nome_mesa, tipo_jogo, estudio_slug)",
+      "id, data_registro, mesa_id, hora_fechamento, hora_reabertura, nao_reaberta, observacao, lideranca_fechamento_user_id, lideranca_fechamento_nome, lideranca_reabertura_user_id, lideranca_reabertura_nome, mesas_spin_cadastro(id, nome_mesa, numero_mesa, tipo_jogo, estudio_slug)",
     )
     .or(`data_registro.eq.${dia},and(data_registro.lt.${dia},nao_reaberta.eq.true)`)
     .order("data_registro", { ascending: false })
@@ -837,6 +846,7 @@ export async function listPresencaDiaTurno(
       nome: String(r.nome ?? "").trim() || "—",
       nickname: String(r.nickname ?? "").trim(),
       time: String(r.time ?? "").trim(),
+      estudio: String(r.estudio ?? "").trim() || "—",
       entrada: formatHoraCt(String(r.entrada ?? "")),
       saida: formatHoraCt(String(r.saida ?? "")),
       status: parsePresencaStatus(r.status),

@@ -5,7 +5,7 @@
 > - `Politica_Interna_Higiene_e_Postura_Spin.pdf` (Downloads + esta pasta)
 > - Regenerar: `node scripts/generate-politica-imagem-pdf.mjs higiene`
 >
-> Este Markdown é a **fonte de conteúdo** da versão em rascunho.
+> Este Markdown é a **fonte de conteúdo** da versão aprovada.
 
 ## Higiene e Postura
 
@@ -13,7 +13,7 @@
 |-------|--------|
 | **Área responsável** | Performance Coach |
 | **Aprovado por** | Recursos Humanos / Diretoria |
-| **Versão** | 1.0 (rascunho — aguardando aprovação) |
+| **Versão** | 1.0 (aprovada) |
 | **Data** | 02/09/2026 |
 | **Fontes** | *Guia Pocket — Imagem dos Dealers e Shufflers* + *IMAGEM DOS DEALERS E SHUFFLERS* — ver `fontes/README.md` |
 | **Público** | Prestadores de Serviços em câmera (Game Presenter, Shuffler, Service Manager e Shift Leader quando em frente à câmera) |
@@ -177,4 +177,4 @@ Esta política é revisada periodicamente pelo Performance Coach.
 
 ---
 
-*Documento interno — Spin Gaming. Versão em rascunho — 02/09/2026.*
+*Documento interno — Spin Gaming. Versão aprovada em 02/09/2026.*

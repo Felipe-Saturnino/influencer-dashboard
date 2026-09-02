@@ -253,9 +253,9 @@ function rowToRelData(row: CtRelatorioTurnoRow): RelTurnoData {
 }
 
 const STATUS_PILL: Record<RelStatus, { label: string; cor: string }> = {
-  publicado: { label: "Publicado", cor: "#22c55e" },
-  rascunho: { label: "Rascunho", cor: "#f59e0b" },
-  nao_iniciado: { label: "Não iniciado", cor: "#e84025" },
+  publicado: { label: "Relatório Publicado", cor: "#22c55e" },
+  rascunho: { label: "Relatório em Rascunho", cor: "#f59e0b" },
+  nao_iniciado: { label: "Relatório não Iniciado", cor: "#e84025" },
 };
 
 const TURNOS: ControleTurnoTurno[] = ["manha", "tarde", "noite"];
@@ -552,7 +552,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
             }
             onClose={fecharModal}
           />
-          <div style={MODAL_FORM_SCROLL_BODY_STYLE}>
+          <div style={{ ...MODAL_FORM_SCROLL_BODY_STYLE, paddingLeft: 6, paddingRight: 6 }}>
             {formErr ? (
               <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 8 }}>
                 {formErr}
@@ -912,22 +912,21 @@ function CardTurno({
         }}
       >
         <SectionTitle compact>{titulo}</SectionTitle>
-        {data.status === "rascunho" && canEditar ? (
-          <button type="button" style={secBtn} onClick={onEditar}>
-            Editar Rascunho
-          </button>
-        ) : (
-          <StatusPill label={st.label} cor={st.cor} />
-        )}
-      </div>
-
-      <div style={{ position: "relative" }}>
-        <div style={{ position: "absolute", top: 0, right: 0, zIndex: 1 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+          {data.status === "rascunho" && canEditar ? (
+            <button type="button" style={secBtn} onClick={onEditar}>
+              Editar Rascunho
+            </button>
+          ) : (
+            <StatusPill label={st.label} cor={st.cor} />
+          )}
           <BtnIconeAcaoLinha label={tooltipAcao("Ver histórico")} onClick={onHistorico}>
             <Eye size={14} aria-hidden />
           </BtnIconeAcaoLinha>
         </div>
+      </div>
 
+      <div>
         <StatsSec titulo="Game Presenters" stats={data.gp} t={t} brand={brand} />
         <StatsSec titulo="Shuffler" stats={data.shuffler} t={t} brand={brand} />
 
@@ -1101,6 +1100,7 @@ function textareaStyle(t: ReturnType<typeof useApp>["theme"]): CSSProperties {
     width: "100%",
     boxSizing: "border-box",
     padding: "10px 12px",
+    margin: 0,
     borderRadius: 10,
     border: `1px solid ${t.cardBorder}`,
     background: t.inputBg,
@@ -1108,6 +1108,7 @@ function textareaStyle(t: ReturnType<typeof useApp>["theme"]): CSSProperties {
     fontSize: 13,
     fontFamily: FONT.body,
     resize: "vertical",
+    outlineOffset: 2,
   };
 }
 
@@ -1135,7 +1136,7 @@ function CampoAndamento({
   const inputId = `rel-${id}`;
   const chkId = `rel-chk-${id}`;
   return (
-    <div style={{ marginBottom: 14, opacity: nao ? 0.65 : 1 }}>
+    <div style={{ marginBottom: 14, opacity: nao ? 0.65 : 1, paddingInline: 2 }}>
       <div
         style={{
           display: "flex",

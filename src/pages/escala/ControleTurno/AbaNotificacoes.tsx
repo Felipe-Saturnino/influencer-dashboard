@@ -9,7 +9,13 @@ import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import {
+  ModalBase,
+  ModalHeader,
+  MODAL_FORM_FOOTER_STYLE,
+  MODAL_FORM_SCROLL_BODY_STYLE,
+  MODAL_FORM_SHELL_STYLE,
+} from "../../../components/OperacoesModal";
 import { SectionTitle } from "../../../components/dashboard";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -85,6 +91,13 @@ type MesaDraft = {
 
 function motivoAusLabel(m: CtMotivoAusencia): string {
   return m === "medico" ? "Médico" : "Pessoal";
+}
+
+function grupoTimePrestador(time: string): "gp" | "shuffler" | "" {
+  const n = time.toLowerCase();
+  if (n.includes("shuffler")) return "shuffler";
+  if (n.includes("game presenter")) return "gp";
+  return "";
 }
 
 function StatusPill({ label, color }: { label: string; color: string }) {
@@ -213,7 +226,9 @@ function PrestadorSelect({
             <span style={{ color: t.textMuted, fontSize: 11 }}> · {selecionado.time}</span>
           </span>
         ) : (
-          <span style={{ color: t.textMuted }}>Selecionar prestador...</span>
+          <span style={{ color: t.textMuted }}>
+            {disabled ? "Selecione o Time primeiro..." : "Selecionar prestador..."}
+          </span>
         )}
       </button>
       {open ? (
@@ -548,6 +563,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   const [modalAusencia, setModalAusencia] = useState(false);
   const [ausEditId, setAusEditId] = useState<string | null>(null);
   const [ausForm, setAusForm] = useState({
+    timeFiltro: "" as "" | "gp" | "shuffler",
     prestadorId: "",
     motivo: "" as "" | CtMotivoAusencia,
     inicio: "",
@@ -560,6 +576,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
 
   const [modalFeedback, setModalFeedback] = useState(false);
   const [fbForm, setFbForm] = useState({
+    timeFiltro: "" as "" | "gp" | "shuffler",
     prestadorId: "",
     recomendacao: "" as "" | CtFeedbackRecomendacao,
     observacao: "",
@@ -586,6 +603,16 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     (id: string) => mesaById.get(id)?.label ?? id,
     [mesaById],
   );
+
+  const prestadoresAusencia = useMemo(() => {
+    if (!ausForm.timeFiltro) return [];
+    return prestadores.filter((p) => grupoTimePrestador(p.time) === ausForm.timeFiltro);
+  }, [prestadores, ausForm.timeFiltro]);
+
+  const prestadoresFeedback = useMemo(() => {
+    if (!fbForm.timeFiltro) return [];
+    return prestadores.filter((p) => grupoTimePrestador(p.time) === fbForm.timeFiltro);
+  }, [prestadores, fbForm.timeFiltro]);
 
   const carregarDia = useCallback(async () => {
     setLoading(true);
@@ -819,6 +846,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   function abrirRegistrarAusencia() {
     setAusEditId(null);
     setAusForm({
+      timeFiltro: "",
       prestadorId: "",
       motivo: "",
       inicio: "",
@@ -831,8 +859,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   }
 
   function abrirEditarAusencia(row: CtAusenciaRow) {
+    const p = prestadores.find((x) => x.id === row.prestador_id);
     setAusEditId(row.id);
     setAusForm({
+      timeFiltro: grupoTimePrestador(p?.time ?? "") || "gp",
       prestadorId: row.prestador_id,
       motivo: row.motivo,
       inicio: row.inicio,
@@ -845,6 +875,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   }
 
   async function salvarAusencia() {
+    if (!ausForm.timeFiltro) {
+      setAusErro("Selecione o Time.");
+      return;
+    }
     if (!ausForm.prestadorId) {
       setAusErro("Selecione o Prestador.");
       return;
@@ -905,12 +939,16 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   }
 
   function abrirRegistrarFeedback() {
-    setFbForm({ prestadorId: "", recomendacao: "", observacao: "" });
+    setFbForm({ timeFiltro: "", prestadorId: "", recomendacao: "", observacao: "" });
     setFbErro("");
     setModalFeedback(true);
   }
 
   async function salvarFeedback() {
+    if (!fbForm.timeFiltro) {
+      setFbErro("Selecione o Time.");
+      return;
+    }
     if (!fbForm.prestadorId) {
       setFbErro("Selecione o Prestador.");
       return;
@@ -1388,12 +1426,13 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       </div>
 
       {modalFechamento ? (
-        <ModalBase onClose={() => setModalFechamento(false)} maxWidth={720}>
+        <ModalBase onClose={() => setModalFechamento(false)} maxWidth={880}>
           <ModalHeader
             title={fechEditId ? "Editar Fechamento" : "Registrar Fechamento"}
             onClose={() => setModalFechamento(false)}
           />
-          <div style={{ padding: "0 4px 8px" }}>
+          <div style={MODAL_FORM_SHELL_STYLE}>
+            <div style={{ ...MODAL_FORM_SCROLL_BODY_STYLE, paddingLeft: 6, paddingRight: 6, minHeight: 320 }}>
             {fechErro ? (
               <div
                 role="alert"
@@ -1520,7 +1559,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 </div>
               );
             })}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            </div>
+            <div style={{ ...MODAL_FORM_FOOTER_STYLE, justifyContent: "flex-end" }}>
               <button
                 type="button"
                 disabled={salvando}
@@ -1589,6 +1629,29 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </div>
             ) : null}
             <div style={{ marginBottom: 14 }}>
+              <label style={labelCampoStyle(t)} htmlFor="aus-time">
+                Time
+                <CampoObrigatorioMark />
+              </label>
+              <select
+                id="aus-time"
+                aria-label="Time"
+                value={ausForm.timeFiltro}
+                onChange={(e) =>
+                  setAusForm((f) => ({
+                    ...f,
+                    timeFiltro: e.target.value as "" | "gp" | "shuffler",
+                    prestadorId: "",
+                  }))
+                }
+                style={inputStyle(t)}
+              >
+                <option value="">Selecionar...</option>
+                <option value="gp">Game Presenter</option>
+                <option value="shuffler">Shuffler</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 14 }}>
               <label style={labelCampoStyle(t)}>
                 Prestador
                 <CampoObrigatorioMark />
@@ -1596,7 +1659,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <PrestadorSelect
                 value={ausForm.prestadorId}
                 onChange={(id) => setAusForm((f) => ({ ...f, prestadorId: id }))}
-                prestadores={prestadores}
+                prestadores={prestadoresAusencia}
+                disabled={!ausForm.timeFiltro}
               />
             </div>
             <div style={{ marginBottom: 14 }}>
@@ -1751,6 +1815,29 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </div>
             ) : null}
             <div style={{ marginBottom: 14 }}>
+              <label style={labelCampoStyle(t)} htmlFor="fb-time">
+                Time
+                <CampoObrigatorioMark />
+              </label>
+              <select
+                id="fb-time"
+                aria-label="Time"
+                value={fbForm.timeFiltro}
+                onChange={(e) =>
+                  setFbForm((f) => ({
+                    ...f,
+                    timeFiltro: e.target.value as "" | "gp" | "shuffler",
+                    prestadorId: "",
+                  }))
+                }
+                style={inputStyle(t)}
+              >
+                <option value="">Selecionar...</option>
+                <option value="gp">Game Presenter</option>
+                <option value="shuffler">Shuffler</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 14 }}>
               <label style={labelCampoStyle(t)}>
                 Prestador
                 <CampoObrigatorioMark />
@@ -1758,7 +1845,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <PrestadorSelect
                 value={fbForm.prestadorId}
                 onChange={(id) => setFbForm((f) => ({ ...f, prestadorId: id }))}
-                prestadores={prestadores}
+                prestadores={prestadoresFeedback}
+                disabled={!fbForm.timeFiltro}
               />
             </div>
             <div style={{ marginBottom: 14 }}>

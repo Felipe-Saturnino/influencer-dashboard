@@ -12,6 +12,7 @@
  * Uso: node scripts/generate-politica-imagem-pdf.mjs acessorios
  *      node scripts/generate-politica-imagem-pdf.mjs figurino
  *      node scripts/generate-politica-imagem-pdf.mjs higiene
+ *      node scripts/generate-politica-imagem-pdf.mjs cabelo
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -990,6 +991,238 @@ function generateHigienePdf(outputPath, logoAsset) {
   return outputPath;
 }
 
+function generateCabeloPdf(outputPath, logoAsset) {
+  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  paintPageBg(pdf);
+  let y = drawDocHeader(pdf, logoAsset);
+
+  y = drawParagraph(pdf, logoAsset, y, "POLÍTICA INTERNA", {
+    bold: true,
+    size: 14,
+    after: 2,
+  });
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Política de Cabelo – Uso Interno Gestão Spin Gaming",
+    { italics: true, size: 10.5, color: MUTED, after: 5 },
+  );
+
+  y = drawMetaTable(
+    pdf,
+    logoAsset,
+    y,
+    "Performance Coach",
+    "Recursos Humanos / Diretoria",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "1", "OBJETIVO");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Estabelecer os padrões de cor, corte, penteado, franja, raiz, tranças, peruca/lace/toupee e acessórios de cabelo para os Prestadores de Serviços que atuam em frente às câmeras na operação da Spin Gaming — incluindo Game Presenter, Shuffler, Service Manager e Shift Leader quando em frente à câmera —, garantindo apresentação visual natural, cuidada e discreta para a operação ao vivo.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "2", "ABRANGÊNCIA E APLICAÇÃO");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Aplica-se a todos os Prestadores de Serviços que atuam em frente às câmeras na operação da Spin Gaming — incluindo, entre outras, as funções de Game Presenter, Shuffler, Service Manager e Shift Leader quando estiverem em frente à câmera —, independentemente de gênero.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Não se aplica a colaboradores que não atuam em câmera, nem a Service Manager e Shift Leader quando estiverem fora do ambiente de câmera.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "As regras de visual feminino e visual masculino aplicam-se conforme o padrão de apresentação do Prestador na operação (e o kit do estúdio, quando houver orientação específica de penteado).",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "3", "DIRETRIZES GERAIS");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Princípio: o cabelo deve transmitir naturalidade, cuidado e elegância, sem tirar o foco da operação. Se o penteado, a cor ou o acessório chama mais atenção que o uniforme, deve ser ajustado antes do turno.",
+  );
+
+  const sub = (title) => {
+    y = drawParagraph(pdf, logoAsset, y, title, {
+      bold: true,
+      size: 10.5,
+      after: 2,
+    });
+  };
+  const permitido = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Permitido:", { bold: true, after: 1 });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+  const naoPermitido = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Não permitido:", {
+      bold: true,
+      after: 1,
+    });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+  const obrigatorio = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Obrigatório:", {
+      bold: true,
+      after: 1,
+    });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+
+  sub("3.1 Padrão comum");
+  obrigatorio(
+    "Cabelo limpo, bem penteado, com formato definido; não cobrir os olhos (inclusive sentado).",
+  );
+  naoPermitido("Visual bagunçado, desleixado ou com frizz excessivo sem acabamento.");
+
+  sub("3.2 Cor e coloração");
+  permitido(
+    "Visual feminino: castanho, preto, loiro, ruivo e vermelho escuro.",
+    "Visual masculino: castanho, preto, loiro e ruivo.",
+    "Técnicas de coloração com transições suaves e visual harmonioso.",
+  );
+  naoPermitido(
+    "Cores artificiais ou vibrantes (azul, verde, rosa, violeta, amarelo, laranja, tons ácidos).",
+    "Visual masculino: vermelho, bordô e tons fora da lista permitida.",
+    "Contraste forte entre cores no mesmo cabelo.",
+  );
+
+  sub("3.3 Raiz");
+  permitido("Raiz retocada; tolerância de até 2 cm de raiz aparente.");
+  naoPermitido("Raiz aparente acima de 2 cm; contraste forte entre raiz, comprimento e pontas.");
+
+  sub("3.4 Franja");
+  permitido("Franja alinhada, limpa e sem cobrir os olhos.");
+  naoPermitido("Franja cobrindo os olhos; franja curta inadequada ao padrão profissional.");
+
+  sub("3.5 Penteados — visual feminino");
+  permitido("Cabelo solto, preso, um coque ou um rabo de cavalo, com acabamento limpo.");
+  naoPermitido(
+    "Coques ou rabos duplos; penteados infantis, volumosos em excesso ou desestruturados.",
+    "Grande contraste de comprimento entre o topo da cabeça e os lados.",
+  );
+
+  sub("3.6 Penteados — visual masculino");
+  permitido(
+    "Cortes curtos, médios ou longos bem definidos.",
+    "Cabelo comprido preso em rabo de cavalo ou coque discreto.",
+  );
+  naoPermitido(
+    "Cabelo desleixado ou sem forma; cabelo comprido solto que prejudique a apresentação.",
+  );
+
+  sub("3.7 Tranças");
+  permitido("Tranças em cores naturais, acabamento limpo; transições em gradiente suave.");
+  naoPermitido("Cores artificiais; contas, enfeites ou acessórios nas tranças.");
+
+  sub("3.8 Peruca, lace e toupee");
+  permitido(
+    "Aparência natural, linha capilar realista, boa fixação e cobertura/integração completa; estilo conforme as demais regras desta política.",
+  );
+  naoPermitido(
+    "Aspecto artificial, volume excessivo, bordas aparentes, peça mal fixada ou transição visível.",
+  );
+
+  sub("3.9 Acessórios de cabelo");
+  permitido(
+    "Grampos, elásticos ou presilhas discretos, próximos à cor do cabelo.",
+    "Acessórios oficiais do figurino do estúdio, quando previstos.",
+  );
+  naoPermitido(
+    "Tiaras, laços, flores, scrunchies coloridos, presilhas grandes, brilho, contas ou adornos chamativos.",
+  );
+
+  sub("3.10 Harmonia com barba (visual masculino)");
+  obrigatorio("Cabelo e barba em harmonia de cor e acabamento.");
+  naoPermitido("Diferença evidente de cor entre cabelo e barba.");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Comprimento, contorno e falhas da barba: Política de Barba / Bigode / Sobrancelhas.",
+    { size: 10, color: MUTED, after: 3 },
+  );
+
+  sub("3.11 Conferência antes do ao vivo");
+  obrigatorio(
+    "Conferir cabelo antes da mesa ou da posição de Shuffler; na dúvida, confirmar com a liderança.",
+  );
+
+  sub("3.12 Proibições transversais");
+  y = drawParagraph(pdf, logoAsset, y, "Não são permitidos:");
+  y = drawBullet(pdf, logoAsset, y, "Visual que distraia a câmera ou os jogadores.");
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Improviso de penteado em câmera para corrigir desvio que deveria ter sido resolvido antes do turno.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "4", "PAPÉIS E RESPONSABILIDADES");
+  y = drawRolesTable(pdf, logoAsset, y, [
+    [
+      "Prestador de Serviços",
+      "Apresentar-se com cabelo em conformidade antes de cada turno; ajustar cor, penteado, franja, raiz ou acessório em dúvida antes de entrar em câmera.",
+    ],
+    [
+      "Liderança (Shift Leader / Service Manager)",
+      "Verificar o padrão de cabelo da equipe antes do turno; orientar e solicitar ajuste antes de o Prestador entrar em câmera.",
+    ],
+    [
+      "Performance Coach",
+      "Considerar o critério de Cabelo nas avaliações de performance; registrar conformidade ou desvios.",
+    ],
+  ]);
+
+  y = drawSectionTitle(pdf, logoAsset, y, "5", "NÃO CONFORMIDADE E PENALIDADES");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "O descumprimento desta política é classificado como Descumprimento/Desvio Contratual e segue o fluxo estabelecido nas Políticas de Desvios/Descumprimentos Contratuais da Spin Gaming, iniciando pelo alinhamento direto com a liderança e podendo evoluir para notificação formal em caso de reincidência ou recusa de ajuste.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Adicionalmente, o não cumprimento pode impactar a avaliação de desempenho do Prestador de Serviços, bem como as Políticas e métricas de Bonificação vigentes.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "6", "EXCEÇÕES");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Casos que não se enquadrem claramente (ex.: condição capilar ou de saúde documentada) devem ser encaminhados à liderança direta antes do início do turno, sem improviso em câmera.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Esta política é revisada periodicamente pelo Performance Coach.",
+  );
+
+  const total = pdf.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    pdf.setPage(i);
+    drawFooter(pdf, i, total);
+  }
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, Buffer.from(pdf.output("arraybuffer")));
+  return outputPath;
+}
+
 const POLITICAS = {
   acessorios: {
     fileName: "Politica_Interna_Acessorios_e_Joias_Spin.pdf",
@@ -1005,6 +1238,11 @@ const POLITICAS = {
     fileName: "Politica_Interna_Higiene_e_Postura_Spin.pdf",
     folder: "03-higiene-e-postura",
     generate: generateHigienePdf,
+  },
+  cabelo: {
+    fileName: "Politica_Interna_Cabelo_Spin.pdf",
+    folder: "04-cabelo",
+    generate: generateCabeloPdf,
   },
 };
 

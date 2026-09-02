@@ -661,7 +661,18 @@ BEGIN
       f.id AS funcionario_id,
       COALESCE(NULLIF(btrim(f.nome), ''), '—') AS nome,
       COALESCE(NULLIF(btrim(f.staff_nickname), ''), '') AS nickname,
-      COALESCE(NULLIF(btrim(t.nome), ''), '') AS time_nome
+      COALESCE(NULLIF(btrim(t.nome), ''), '') AS time_nome,
+      COALESCE(
+        NULLIF(btrim(a.estudio_slug), ''),
+        NULLIF(btrim(f.staff_estudio_slug), ''),
+        CASE
+          WHEN f.staff_estudio_slugs IS NOT NULL
+               AND cardinality(f.staff_estudio_slugs) > 0
+               AND f.staff_estudio_slugs[1] IS DISTINCT FROM 'todos'
+            THEN NULLIF(btrim(f.staff_estudio_slugs[1]), '')
+          ELSE NULL
+        END
+      ) AS estudio_slug
     FROM public.rh_funcionarios f
     INNER JOIN public.rh_org_times t ON t.id = f.org_time_id AND t.status = 'ativo'
     INNER JOIN public.rh_gestao_escala_grade gr
@@ -670,6 +681,8 @@ BEGIN
      AND gr.dia_iso = p_dia
      AND gr.area_key IN ('game_presenter', 'shuffler')
      AND btrim(COALESCE(gr.valor, '')) = v_valor
+    LEFT JOIN public.escala_rotacao_alocacao a
+      ON a.dia = p_dia AND a.turno = v_turno AND a.funcionario_id = f.id
     WHERE f.status IN ('ativo', 'indisponivel')
       AND (
         lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%game presenter%'
@@ -715,6 +728,7 @@ BEGIN
       e.nome,
       e.nickname,
       e.time_nome,
+      COALESCE(NULLIF(btrim(es.nome), ''), NULLIF(btrim(e.estudio_slug), ''), '—') AS estudio_nome,
       CASE
         WHEN r.prestador_id IS NOT NULL THEN btrim(COALESCE(r.entrada_hhmm, ''))
         WHEN p.check_in_at IS NOT NULL
@@ -734,6 +748,7 @@ BEGIN
       END AS status,
       (r.prestador_id IS NOT NULL) AS registrado
     FROM escalados e
+    LEFT JOIN public.estudios_spin es ON es.slug = e.estudio_slug
     LEFT JOIN ponto p ON p.funcionario_id = e.funcionario_id
     LEFT JOIN reg r ON r.prestador_id = e.funcionario_id
   )
@@ -743,6 +758,7 @@ BEGIN
       'nome', l.nome,
       'nickname', l.nickname,
       'time', l.time_nome,
+      'estudio', l.estudio_nome,
       'entrada', l.entrada,
       'saida', l.saida,
       'status', l.status,

@@ -26,8 +26,8 @@ Detalhes do PDF: [`_templates/README.md`](_templates/README.md).
 |---|------|--------|
 | 01 | Acessórios e Joias | **Política v1.1 aprovada** |
 | 02 | Figurino / Uniforme | **Política v1.2 aprovada** |
-| 03 | Higiene e Postura | **Política v1.0 rascunho** — aguardando aprovação |
-| 04 | Cabelo | Pendente |
+| 03 | Higiene e Postura | **Política v1.0 aprovada** |
+| 04 | Cabelo | **Política v1.0 rascunho** — aguardando aprovação |
 | 05 | Barba / Bigode / Sobrancelhas | Pendente |
 | 06 | Unhas / Manicure | Pendente |
 | 07 | Maquiagem | Pendente |

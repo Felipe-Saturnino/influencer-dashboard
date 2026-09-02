@@ -155,6 +155,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [erroHistorico, setErroHistorico] = useState("");
   const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const [filtroTime, setFiltroTime] = useState<"gp" | "shuffler" | null>(null);
 
   const loadSeq = useRef(0);
   const rowHoverBg = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)";
@@ -181,12 +182,24 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
     void carregar();
   }, [carregar]);
 
+  useEffect(() => {
+    setFiltroTime(null);
+  }, [diaIso, turno]);
+
   const filtradas = useMemo(
     () =>
-      rows.filter((r) =>
-        textoContemBuscaEmAlgum(busca, r.nome, r.nickname, r.time, STATUS_LABEL[r.status]),
-      ),
-    [rows, busca],
+      rows.filter((r) => {
+        if (filtroTime && grupoDoTime(r.time) !== filtroTime) return false;
+        return textoContemBuscaEmAlgum(
+          busca,
+          r.nome,
+          r.nickname,
+          r.time,
+          r.estudio,
+          STATUS_LABEL[r.status],
+        );
+      }),
+    [rows, busca, filtroTime],
   );
 
   const gps = useMemo(() => rows.filter((r) => grupoDoTime(r.time) === "gp"), [rows]);
@@ -287,8 +300,22 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
       <div style={pageBox}>
         <SectionTitle sub={sub}>Consolidado</SectionTitle>
         <div className="app-grid-2" style={{ gap: 12 }}>
-          <KpiTime titulo="Game Presenters" rows={gps} t={t} brand={brand} />
-          <KpiTime titulo="Shuffler" rows={shufflers} t={t} brand={brand} />
+          <KpiTime
+            titulo="Game Presenters"
+            rows={gps}
+            t={t}
+            brand={brand}
+            active={filtroTime === "gp"}
+            onClick={() => setFiltroTime((prev) => (prev === "gp" ? null : "gp"))}
+          />
+          <KpiTime
+            titulo="Shuffler"
+            rows={shufflers}
+            t={t}
+            brand={brand}
+            active={filtroTime === "shuffler"}
+            onClick={() => setFiltroTime((prev) => (prev === "shuffler" ? null : "shuffler"))}
+          />
         </div>
       </div>
 
@@ -316,13 +343,14 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
           </div>
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: 720 })}>
+            <table style={getDataTableStyle({ minWidth: 800 })}>
               <caption style={{ display: "none" }}>Controle de presença do turno</caption>
               <thead>
                 <tr>
                   <th scope="col" style={dataTable.thHeader}>Nome</th>
                   <th scope="col" style={dataTable.thHeader}>Nickname</th>
                   <th scope="col" style={dataTable.thHeader}>Time</th>
+                  <th scope="col" style={dataTable.thHeader}>Estúdio</th>
                   <th scope="col" style={dataTable.thHeader}>Entrada</th>
                   <th scope="col" style={dataTable.thHeader}>Saída</th>
                   <th scope="col" style={dataTable.thHeader}>Status</th>
@@ -332,7 +360,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
               <tbody>
                 {filtradas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 24 }}>
+                    <td colSpan={8} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 24 }}>
                       Sem dados para o período selecionado.
                     </td>
                   </tr>
@@ -349,6 +377,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                       <td style={dataTable.tdCenter}>{r.nome}</td>
                       <td style={dataTable.tdCenter}>{r.nickname || "—"}</td>
                       <td style={dataTable.tdCenter}>{r.time || "—"}</td>
+                      <td style={dataTable.tdCenter}>{r.estudio || "—"}</td>
                       <td style={dataTable.tdCenter}>{r.entrada || "—"}</td>
                       <td style={dataTable.tdCenter}>{r.saida || "—"}</td>
                       <td style={dataTable.tdCenter}>
@@ -643,6 +672,8 @@ function KpiTime({
   rows,
   t,
   brand,
+  active,
+  onClick,
 }: {
   titulo: string;
   rows: CtPresencaRow[];
@@ -654,18 +685,33 @@ function KpiTime({
     isDark: boolean;
   };
   brand: ReturnType<typeof useDashboardBrand>;
+  active: boolean;
+  onClick: () => void;
 }) {
   const presentes = rows.filter((r) => STATUS_PRESENTES.includes(r.status)).length;
   const faltas = rows.filter((r) => r.status === "falta").length;
   return (
-    <div
+    <button
+      type="button"
+      aria-pressed={active}
+      aria-label={`Filtrar por ${titulo}`}
+      onClick={onClick}
       style={{
-        border: `1px solid ${t.cardBorder}`,
+        border: active
+          ? `1.5px solid ${brand.accent ?? brand.primary}`
+          : `1px solid ${t.cardBorder}`,
         borderRadius: getPageContentBoxRadius(t.isDark),
         padding: "12px 14px",
-        background: t.inputBg,
+        background: active
+          ? `color-mix(in srgb, ${brand.accent ?? brand.primary} 12%, ${t.inputBg})`
+          : t.inputBg,
         fontFamily: FONT.body,
         textAlign: "center",
+        cursor: "pointer",
+        width: "100%",
+        boxShadow: active
+          ? `0 0 0 1px color-mix(in srgb, ${brand.accent ?? brand.primary} 25%, transparent)`
+          : "none",
       }}
     >
       <div
@@ -692,10 +738,12 @@ function KpiTime({
         {rows.length}
       </div>
       <div style={{ fontSize: 11, color: t.textMuted, marginBottom: 8 }}>Escalados</div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: "#22c55e" }}>Presentes {presentes}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: "#e84025" }}>Faltas {faltas}</span>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#22c55e" }}>
+          Presentes {presentes}
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#e84025" }}>Faltas {faltas}</span>
       </div>
-    </div>
+    </button>
   );
 }
