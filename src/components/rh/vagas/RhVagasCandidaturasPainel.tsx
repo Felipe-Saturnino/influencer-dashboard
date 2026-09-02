@@ -14,6 +14,7 @@ import { VAGA_FILTRO_TODAS_VAGAS_VALUE } from "../../../lib/rhVagasFiltroConstan
 import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga";
 import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow, RhVagasCandidaturasFiltroTipo } from "../../../types/rhVagaCandidatura";
 import type { FiltroBarCampoOption } from "../../FiltroBarCampoSelect";
+import { getVagasKanbanColBodyMaxHeightPx, VAGAS_KANBAN_MAX_CARDS_VISIVEIS } from "../../../lib/rhVagaCandidaturaKanban";
 import { CandidaturaKanbanCard } from "./CandidaturaKanbanCard";
 import { ModalCandidaturaHistorico } from "./ModalCandidaturaHistorico";
 import { ModalCandidaturaVer } from "./ModalCandidaturaVer";
@@ -147,6 +148,7 @@ export function RhVagasCandidaturasPainel({
             return (
               <div
                 key={col.id}
+                className="app-vagas-candidaturas-kanban-col"
                 style={{
                   borderRadius: 12,
                   border: `1px solid ${t.cardBorder}`,
@@ -172,7 +174,24 @@ export function RhVagasCandidaturasPainel({
                   <span>{col.label}</span>
                   <span style={{ color: t.textMuted, fontWeight: 600, fontFamily: FONT.body }}>{itens.length}</span>
                 </div>
-                <ul style={{ listStyle: "none", margin: 0, padding: 8, flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                <ul
+                  className="app-vagas-candidaturas-kanban-col-body"
+                  aria-label={
+                    itens.length > VAGAS_KANBAN_MAX_CARDS_VISIVEIS
+                      ? `${col.label} — ${itens.length} candidaturas, role para ver mais`
+                      : undefined
+                  }
+                  style={{
+                    listStyle: "none",
+                    margin: 0,
+                    padding: 8,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    maxHeight: getVagasKanbanColBodyMaxHeightPx(),
+                    overflowY: itens.length > VAGAS_KANBAN_MAX_CARDS_VISIVEIS ? "auto" : "visible",
+                  }}
+                >
                   {itens.length === 0 ? (
                     <li style={{ fontSize: 12, color: t.textMuted, padding: 8, fontFamily: FONT.body, textAlign: "center" }}>—</li>
                   ) : (

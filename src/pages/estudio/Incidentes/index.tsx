@@ -219,7 +219,8 @@ export default function Incidentes() {
   const [aba, setAba] = useRouteTab("incidentes", "tickets", ABAS_INCIDENTES);
   const [timeFiltro, setTimeFiltro] = useState<TimeFiltro>("todos");
   const [staffFiltroId, setStaffFiltroId] = useState("");
-  const [incidenteFiltro, setIncidenteFiltro] = useState("");
+  /** Vazio = Todos Incidentes (multi-seleção com checkbox). */
+  const [incidenteFiltro, setIncidenteFiltro] = useState<IncidenteCategoria[]>([]);
   const [tipoFiltro, setTipoFiltro] = useState("");
   const [relatorFiltroId, setRelatorFiltroId] = useState("");
   const [busca, setBusca] = useState("");
@@ -413,19 +414,43 @@ export default function Incidentes() {
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [rowsAtual, nicknamePorRelator]);
 
+  const nicknamePorPrestadorId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of staffOptions) {
+      const nick = (s.nickname ?? "").trim();
+      if (nick) m.set(s.id, nick);
+    }
+    return m;
+  }, [staffOptions]);
+
+  const matchBuscaIncidente = useCallback(
+    (r: EstudioIncidenteRow) =>
+      textoContemBuscaEmAlgum(
+        busca,
+        r.protocolo,
+        r.tipo,
+        r.mesa_label,
+        r.prestador_nome,
+        nicknamePorPrestadorId.get(r.prestador_id) ?? "",
+        labelRelatorIncidente(r, nicknamePorRelator),
+      ),
+    [busca, nicknamePorPrestadorId, nicknamePorRelator],
+  );
+
   const aplicarFiltrosEscopo = useCallback(
     (rows: EstudioIncidenteRow[]) =>
       rows.filter((r) => {
         if (timeFiltro !== "todos" && r.time_alvo !== timeFiltro) return false;
         if (staffFiltroId && r.prestador_id !== staffFiltroId) return false;
         if (estudioFiltro !== "todos" && r.estudio_slug !== estudioFiltro) return false;
-        if (incidenteFiltro && r.incidente !== incidenteFiltro) return false;
+        if (incidenteFiltro.length > 0 && !incidenteFiltro.includes(r.incidente)) return false;
         if (tipoFiltro && r.tipo !== tipoFiltro) return false;
         if (relatorFiltroId) {
           const key = r.relator_user_id?.trim() || `nome:${(r.relator_nome ?? "").trim()}`;
           if (key !== relatorFiltroId) return false;
         }
         if (isProprios && !meusIds.includes(r.prestador_id)) return false;
+        if (!matchBuscaIncidente(r)) return false;
         return true;
       }),
     [
@@ -437,6 +462,7 @@ export default function Incidentes() {
       relatorFiltroId,
       isProprios,
       meusIds,
+      matchBuscaIncidente,
     ],
   );
 
@@ -449,29 +475,10 @@ export default function Incidentes() {
   const kpiAtual = useMemo(() => contarPorCategoria(rowsAtualEscopo), [rowsAtualEscopo]);
   const kpiAnterior = useMemo(() => contarPorCategoria(rowsAnteriorEscopo), [rowsAnteriorEscopo]);
 
-  const nicknamePorPrestadorId = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of staffOptions) {
-      const nick = (s.nickname ?? "").trim();
-      if (nick) m.set(s.id, nick);
-    }
-    return m;
-  }, [staffOptions]);
-
-  const rowsTabela = useMemo(() => {
-    const filtradas = rowsAtualEscopo.filter((r) =>
-      textoContemBuscaEmAlgum(
-        busca,
-        r.protocolo,
-        r.tipo,
-        r.mesa_label,
-        r.prestador_nome,
-        nicknamePorPrestadorId.get(r.prestador_id) ?? "",
-        labelRelatorIncidente(r, nicknamePorRelator),
-      ),
-    );
-    return sortRows(filtradas, sort.col, sort.dir, nicknamePorRelator);
-  }, [rowsAtualEscopo, busca, sort, nicknamePorPrestadorId, nicknamePorRelator]);
+  const rowsTabela = useMemo(
+    () => sortRows(rowsAtualEscopo, sort.col, sort.dir, nicknamePorRelator),
+    [rowsAtualEscopo, sort.col, sort.dir, nicknamePorRelator],
+  );
 
   useEffect(() => {
     setPagina(0);
@@ -650,15 +657,19 @@ export default function Incidentes() {
               todasLabel="Todos Times"
               minWidth={180}
             />
-            <FiltroBarCampoSelect
-              value={incidenteFiltro}
-              onChange={setIncidenteFiltro}
-              options={INCIDENTE_CATEGORIA_OPTIONS}
+            <FiltroEntidadeBarSelect
+              selected={incidenteFiltro}
+              onChange={(v) =>
+                setIncidenteFiltro(v.filter((id): id is IncidenteCategoria =>
+                  CATEGORIAS_KPI.includes(id as IncidenteCategoria),
+                ))
+              }
+              items={INCIDENTE_CATEGORIA_OPTIONS.map((o) => ({ id: o.value, name: o.label }))}
               icon={FilterBarIcons.figurinoCategoria}
-              ariaLabel="Incidentes"
-              todasValue=""
-              todasLabel="Todos Incidentes"
-              minWidth={180}
+              triggerEmptyLabel="Todos Incidentes"
+              ariaFilterPrefix="Filtrar por incidente"
+              listboxAriaLabel="Incidentes"
+              enableSearch={false}
             />
             <FiltroEntidadeBarSelect
               mode="single"

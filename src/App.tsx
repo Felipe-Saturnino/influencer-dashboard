@@ -18,6 +18,7 @@ import Login                  from "./pages/geral/Login";
 import TrocarSenhaObrigatorio from "./pages/geral/TrocarSenhaObrigatorio";
 import CanalDenunciasSpinPage from "./pages/public/CanalDenunciasSpinPage";
 import PainelNoticiasPage from "./pages/public/PainelNoticiasPage";
+import TorneioCdaLivePage from "./pages/public/TorneioCdaLivePage";
 import { detectPublicUnauthenticatedRoute } from "./lib/publicRoutes";
 import {
   buildLoginPath,
@@ -394,6 +395,7 @@ function Root() {
   }
   if (publicRoute === "canal-denuncias") return <CanalDenunciasSpinPage />;
   if (publicRoute === "painel-noticias") return <PainelNoticiasPage />;
+  if (publicRoute === "torneio-cda") return <TorneioCdaLivePage />;
   if (!user) return <Login onLogin={setUser} />;
   if (user.must_change_password) return <TrocarSenhaObrigatorio />;
   if (layoutView === "sem_acesso") {

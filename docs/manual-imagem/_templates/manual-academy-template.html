@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Template — Manual Academy · Imagem | Spin Gaming</title>
+  <style>
+    /*
+      Template de Manual Academy (Imagem) — Brandguide Spin
+      Tokens: global.css / Brand MDC
+      Uso: duplicar este HTML por tema; substituir [PLACEHOLDERS] e imagens.
+      Impressão / PDF: Chrome → Imprimir → Salvar como PDF (A4).
+    */
+    :root {
+      --brand-action: #7c3aed;
+      --brand-contrast: #1e36f8;
+      --brand-gradient-start: #4a2082;
+      --brand-gradient-end: #1e36f8;
+      --brand-bg-dark: #0f0f1a;
+      --brand-text: #1a1a2e;
+      --brand-text-muted: #666688;
+      --brand-text-body: #3a3a4a;
+      --brand-page-bg: #f4f2f8;
+      --brand-card: #ffffff;
+      --brand-gold: #c9a227;
+      --sem-verde: #22c55e;
+      --sem-vermelho: #e84025;
+      --sem-amarelo: #f59e0b;
+      --radius: 14px;
+      --font: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --font-title: "Inter", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: #1a1625;
+      color: var(--brand-text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .deck {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .slide {
+      background: var(--brand-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(15, 15, 26, 0.35);
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* —— Capa / divisor de seção —— */
+    .slide--cover {
+      background: var(--brand-bg-dark);
+      color: #fff;
+      position: relative;
+      min-height: 560px;
+      justify-content: center;
+      padding: 48px 56px;
+    }
+    .slide--cover::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 10px;
+      background: linear-gradient(180deg, #c4b5fd, var(--brand-contrast));
+    }
+    .slide--cover::after {
+      content: "";
+      position: absolute;
+      right: 38%; top: 0; bottom: 0;
+      width: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+    .slide--cover .kicker {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--brand-gold);
+      margin-bottom: 16px;
+    }
+    .slide--cover h1 {
+      font-family: var(--font-title);
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      max-width: 14ch;
+    }
+    .slide--cover .audience {
+      margin-top: 14px;
+      font-size: 18px;
+      color: #c4b5fd;
+      font-weight: 600;
+    }
+    .slide--cover .lead {
+      margin-top: 28px;
+      font-size: 15px;
+      color: rgba(255,255,255,0.78);
+      max-width: 42ch;
+    }
+    .slide--cover .meta {
+      margin-top: auto;
+      padding-top: 48px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    /* —— Conteúdo —— */
+    .slide-body {
+      padding: 36px 40px 28px;
+      flex: 1;
+      background: var(--brand-page-bg);
+    }
+    .slide-body h2 {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--brand-gradient-start);
+      margin-bottom: 6px;
+    }
+    .slide-body .sub {
+      font-size: 14px;
+      color: var(--brand-text-muted);
+      margin-bottom: 24px;
+    }
+
+    .rules-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .rule-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 18px 18px 18px 20px;
+      border: 1px solid #e8e4f2;
+      position: relative;
+    }
+    .rule-card::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 12px; bottom: 12px;
+      width: 5px;
+      border-radius: 4px;
+    }
+    .rule-card--danger::before { background: var(--sem-vermelho); }
+    .rule-card--brand::before { background: var(--brand-action); }
+    .rule-card--ok::before { background: var(--sem-verde); }
+    .rule-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--brand-text);
+    }
+    .rule-card p {
+      font-size: 13px;
+      color: var(--brand-text-body);
+    }
+
+    /* —— Pode × Não pode —— */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .compare-col {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #e8e4f2;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      color: #fff;
+    }
+    .badge--ok { background: var(--sem-verde); }
+    .badge--no { background: var(--sem-vermelho); }
+    .compare-col ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .compare-col li {
+      font-size: 13px;
+      color: var(--brand-text-body);
+      padding-left: 14px;
+      position: relative;
+    }
+    .compare-col li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      font-weight: 800;
+    }
+    .compare-col--ok li::before { color: var(--sem-verde); }
+    .compare-col--no li::before { color: var(--sem-vermelho); }
+
+    /* —— Referência visual (pares de foto) —— */
+    .visual-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .visual-card {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e8e4f2;
+    }
+    .visual-card .ph {
+      aspect-ratio: 4/3;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--brand-action) 12%, #fff), #fff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      padding: 16px;
+      border-bottom: 1px dashed #ddd6fe;
+    }
+    .visual-card .ph img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .visual-card .cap {
+      padding: 14px 16px 16px;
+    }
+    .visual-card .cap .badge { margin-bottom: 8px; }
+    .visual-card .cap p {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--brand-text);
+    }
+
+    /* —— Checklist —— */
+    .slide--checklist {
+      background: var(--brand-bg-dark);
+      color: #fff;
+      padding: 48px 56px;
+    }
+    .slide--checklist h2 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .slide--checklist .sub { color: rgba(255,255,255,0.65); margin-bottom: 32px; }
+    .check-list { display: flex; flex-direction: column; gap: 18px; }
+    .check-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .check-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: color-mix(in srgb, var(--brand-action) 35%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-action) 50%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: #e9d5ff;
+      flex-shrink: 0;
+    }
+    .check-item strong { display: block; font-size: 15px; margin-bottom: 2px; }
+    .check-item span { font-size: 13px; color: rgba(255,255,255,0.7); }
+    .check-footer {
+      margin-top: 36px;
+      font-style: italic;
+      color: var(--brand-gold);
+      font-size: 14px;
+    }
+
+    .slide-footer {
+      margin-top: auto;
+      padding: 12px 40px 16px;
+      border-top: 1px solid color-mix(in srgb, var(--brand-contrast) 25%, transparent);
+      font-size: 11px;
+      color: var(--brand-text-muted);
+      background: var(--brand-page-bg);
+    }
+    .slide--cover .slide-footer,
+    .slide--checklist .slide-footer {
+      background: transparent;
+      border-top-color: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.4);
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .note-dev {
+      max-width: 920px;
+      margin: 24px auto 0;
+      padding: 16px 20px;
+      background: #fff;
+      border-radius: 10px;
+      border-left: 4px solid var(--brand-action);
+      font-size: 12px;
+      color: var(--brand-text-body);
+    }
+    .note-dev code { background: #f3e8ff; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+    @media print {
+      body { background: #fff; }
+      .deck { padding: 0; gap: 0; max-width: none; }
+      .slide {
+        box-shadow: none;
+        border-radius: 0;
+        page-break-after: always;
+        min-height: 100vh;
+      }
+      .note-dev { display: none; }
+    }
+    @media (max-width: 720px) {
+      .rules-grid, .compare, .visual-grid { grid-template-columns: 1fr; }
+      .slide--cover, .slide--checklist, .slide-body { padding: 28px 22px; }
+      .slide--cover h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="note-dev">
+    <strong>Template Manual Academy — Imagem.</strong>
+    Brandguide Spin (<code>#4a2082</code> → <code>#1e36f8</code>, action <code>#7c3aed</code>, semântica verde/vermelho).
+    Estrutura fixa por tema: <em>Capa → Regras principais → Referência visual → Pode × Não pode → Checklist</em>.
+    Substitua <code>[TEMA]</code>, textos e imagens. Política normativa correspondente sai em PDF via
+    <code>node scripts/generate-politica-imagem-pdf.mjs</code>.
+  </div>
+
+  <div class="deck">
+
+    <!-- 1. CAPA -->
+    <section class="slide slide--cover" aria-label="Capa">
+      <p class="kicker">Manual Academy · Imagem</p>
+      <h1>[TÍTULO DO TEMA]<br />EX.: ACESSÓRIOS E JOIAS</h1>
+      <p class="audience">Game Presenters · Shufflers</p>
+      <p class="lead">[Uma frase de propósito — ex.: Orientações visuais para manter uma apresentação discreta e padronizada em mesa.]</p>
+      <p class="meta">Spin Gaming · Uso interno · Alinhado à Política Interna do tema</p>
+      <div class="slide-footer">Padrão visual · Academy</div>
+    </section>
+
+    <!-- 2. REGRAS PRINCIPAIS -->
+    <section class="slide" aria-label="Regras principais">
+      <div class="slide-body">
+        <h2>Regras principais</h2>
+        <p class="sub">Os pontos essenciais antes de entrar em mesa.</p>
+        <div class="rules-grid">
+          <article class="rule-card rule-card--danger">
+            <h3>[Regra 1 — título curto]</h3>
+            <p>[Ex.: Não são permitidos piercings com strass, pedras, cristais ou outros elementos com brilho.]</p>
+          </article>
+          <article class="rule-card rule-card--brand">
+            <h3>[Regra 2 — título curto]</h3>
+            <p>[Ex.: O piercing deve respeitar a faixa de tamanho de 0,6 a 0,8, conforme o padrão informado.]</p>
+          </article>
+        </div>
+      </div>
+      <div class="slide-footer">Padrão visual · Game Presenters</div>
+    </section>
+
+    <!-- 3. REFERÊNCIA VISUAL -->
+    <section class="slide" aria-label="Referência visual">
+      <div class="slide-body">
+        <h2>Referência visual</h2>
+        <p class="sub">A imagem ajuda a identificar o que está dentro e fora do padrão.</p>
+        <div class="visual-grid">
+          <article class="visual-card">
+            <div class="ph">[Imagem — exemplo PERMITIDO]<br />colar material / stock / IA</div>
+            <div class="cap">
+              <span class="badge badge--ok">✓ PERMITIDO</span>
+              <p>[Rótulo curto — ex.: Septo discreto]</p>
+            </div>
+          </article>
+          <article class="visual-card">
+            <div class="ph">[Imagem — exemplo NÃO PERMITIDO]</div>
+            <div class="cap">
+              <span class="badge badge--no">✕ NÃO PERMITIDO</span>
+              <p>[Rótulo curto — ex.: Modelo grande / chamativo]</p>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="slide-footer">Padrão visual · Game Presenters</div>
+    </section>
+
+    <!-- 4. PODE × NÃO PODE -->
+    <section class="slide" aria-label="Pode e não pode">
+      <div class="slide-body">
+        <h2>Pode × Não pode</h2>
+        <p class="sub">Na dúvida, priorize sempre um visual discreto.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>[Item permitido 1]</li>
+              <li>[Item permitido 2]</li>
+              <li>[Item permitido 3]</li>
+            </ul>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>[Item proibido 1]</li>
+              <li>[Item proibido 2]</li>
+              <li>[Item proibido 3]</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">Objetivo: manter a identidade individual sem perder a discrição e o padrão visual em mesa.</div>
+    </section>
+
+    <!-- 5. CHECKLIST -->
+    <section class="slide slide--checklist" aria-label="Checklist">
+      <h2>Checklist antes de entrar em mesa</h2>
+      <p class="sub">Uma conferência rápida ajuda a manter o padrão.</p>
+      <div class="check-list">
+        <div class="check-item">
+          <div class="check-num">01</div>
+          <div>
+            <strong>[Check 1]</strong>
+            <span>[Descrição curta]</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">02</div>
+          <div>
+            <strong>[Check 2]</strong>
+            <span>[Descrição curta]</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">03</div>
+          <div>
+            <strong>[Check 3]</strong>
+            <span>[Descrição curta]</span>
+          </div>
+        </div>
+      </div>
+      <p class="check-footer">Discrição nos detalhes também faz parte de uma apresentação profissional.</p>
+      <div class="slide-footer">Padrão visual · Academy</div>
+    </section>
+
+  </div>
+</body>
+</html>

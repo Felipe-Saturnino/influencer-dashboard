@@ -377,16 +377,17 @@ export function marketplaceEditarSomenteProprias(
 
 /**
  * Enviar proposta / Propor Troca no mural (oferta de colega).
- * Bloqueado só no **modo liderança gestão** (Ver Sim + Criar/Editar Próprios) — SL/SM
- * gerenciam o mural amplo mas não compram no mural alheio.
+ * Modo liderança gestão (Ver Sim + Criar/Editar Próprios): bloqueado no mural de gestão;
+ * liberado com **Minhas Negociações** (visão pessoal do grupo, como Ver = Próprios).
  * Prestador com Ver Próprios + Criar/Editar Próprios **pode** propor no mural do time.
  */
 export function marketplacePodeProporNoMural(
   perm: Pick<MarketplacePermissoesUi, "canView" | "canCriar" | "canEditar" | "canCriarOk">,
   funcionarioId: string | null | undefined,
+  minhasNegociacoes = false,
 ): boolean {
   if (!perm.canCriarOk || !funcionarioId) return false;
-  if (marketplaceModoLiderancaGestao(perm)) return false;
+  if (marketplaceModoLiderancaGestao(perm) && !minhasNegociacoes) return false;
   return true;
 }
 

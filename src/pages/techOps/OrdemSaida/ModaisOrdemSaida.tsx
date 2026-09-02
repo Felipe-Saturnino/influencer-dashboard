@@ -408,7 +408,7 @@ export function ModalNovaOsInterna({
   onClose: () => void;
   onCriado: () => void;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const [aba, setAba] = useState<AbaModalNova>("dados");
   const [origem, setOrigem] = useState("");
   const [destino, setDestino] = useState("");
@@ -474,6 +474,7 @@ export function ModalNovaOsInterna({
         sem_retorno: semRetorno,
         observacao,
         solicitante_nome: userName,
+        solicitante_user_id: user?.id ?? null,
         itens: montados.itens,
         autorNome: userName,
       });
@@ -634,7 +635,7 @@ export function ModalNovaOsExterna({
   onClose: () => void;
   onCriado: () => void;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const [aba, setAba] = useState<AbaModalNova>("dados");
   const [destinoTexto, setDestinoTexto] = useState("");
   const [saida, setSaida] = useState("");
@@ -682,6 +683,7 @@ export function ModalNovaOsExterna({
         data_retorno: isoRetorno,
         observacao,
         solicitante_nome: userName,
+        solicitante_user_id: user?.id ?? null,
         itens: montados.itens,
         autorNome: userName,
       });
@@ -797,7 +799,7 @@ export function ModalNovaOsManutencao({
   onClose: () => void;
   onCriado: () => void;
 }) {
-  const { theme: t } = useApp();
+  const { theme: t, user } = useApp();
   const [aba, setAba] = useState<AbaModalNova>("dados");
   const [fornecedorId, setFornecedorId] = useState("");
   const [saida, setSaida] = useState("");
@@ -855,6 +857,7 @@ export function ModalNovaOsManutencao({
         sem_retorno: semPrevisao,
         observacao,
         solicitante_nome: userName,
+        solicitante_user_id: user?.id ?? null,
         itens: montados.itens,
         autorNome: userName,
       });

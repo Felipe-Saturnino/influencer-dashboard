@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manual Academy · Figurino e Uniforme | Spin Gaming</title>
+  <style>
+    :root {
+      --brand-action: #7c3aed;
+      --brand-contrast: #1e36f8;
+      --brand-gradient-start: #4a2082;
+      --brand-gradient-end: #1e36f8;
+      --brand-bg-dark: #0f0f1a;
+      --brand-text: #1a1a2e;
+      --brand-text-muted: #666688;
+      --brand-text-body: #3a3a4a;
+      --brand-page-bg: #f4f2f8;
+      --brand-card: #ffffff;
+      --brand-gold: #c9a227;
+      --sem-verde: #22c55e;
+      --sem-vermelho: #e84025;
+      --radius: 14px;
+      --font: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --font-title: "Inter", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: #1a1625;
+      color: var(--brand-text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .deck {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .slide {
+      background: var(--brand-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(15, 15, 26, 0.35);
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+    }
+    .slide--cover {
+      background: var(--brand-bg-dark);
+      color: #fff;
+      position: relative;
+      min-height: 560px;
+      justify-content: center;
+      padding: 48px 56px;
+    }
+    .slide--cover .kicker {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--brand-gold);
+      margin-bottom: 16px;
+    }
+    .slide--cover h1 {
+      font-family: var(--font-title);
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      max-width: 12ch;
+    }
+    .slide--cover .audience {
+      margin-top: 14px;
+      font-size: 18px;
+      color: #c4b5fd;
+      font-weight: 600;
+    }
+    .slide--cover .lead {
+      margin-top: 28px;
+      font-size: 15px;
+      color: rgba(255,255,255,0.78);
+      max-width: 44ch;
+    }
+    .slide--cover .meta {
+      margin-top: auto;
+      padding-top: 48px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+      max-width: 52ch;
+      line-height: 1.45;
+    }
+    .slide-body {
+      padding: 36px 40px 28px;
+      flex: 1;
+      background: var(--brand-page-bg);
+    }
+    .slide-body h2 {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--brand-gradient-start);
+      margin-bottom: 6px;
+    }
+    .slide-body .sub {
+      font-size: 14px;
+      color: var(--brand-text-muted);
+      margin-bottom: 20px;
+    }
+    .slide-body .intro {
+      font-size: 14px;
+      color: var(--brand-text-body);
+      margin-bottom: 18px;
+      max-width: 62ch;
+    }
+    .rules-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .rules-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+    .rule-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 18px 18px 18px 20px;
+      border: 1px solid #e8e4f2;
+      position: relative;
+    }
+    .rule-card::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 12px; bottom: 12px;
+      width: 5px;
+      border-radius: 4px;
+    }
+    .rule-card--danger::before { background: var(--sem-vermelho); }
+    .rule-card--brand::before { background: var(--brand-action); }
+    .rule-card--ok::before { background: var(--sem-verde); }
+    .rule-card--gold::before { background: var(--brand-gold); }
+    .rule-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--brand-text);
+    }
+    .rule-card p {
+      font-size: 13px;
+      color: var(--brand-text-body);
+    }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .compare-col {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #e8e4f2;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+    .badge--ok { background: var(--sem-verde); }
+    .badge--no { background: var(--sem-vermelho); }
+    .compare-col ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .compare-col li {
+      font-size: 13px;
+      color: var(--brand-text-body);
+      padding-left: 14px;
+      position: relative;
+    }
+    .compare-col li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      font-weight: 800;
+    }
+    .compare-col--ok li::before { color: var(--sem-verde); }
+    .compare-col--no li::before { color: var(--sem-vermelho); }
+    .ex-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .ex-card {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #e8e4f2;
+      background: #fafafa;
+    }
+    .ex-card img {
+      display: block;
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      object-position: center;
+    }
+    .ex-card img.ex-contain {
+      object-fit: contain;
+      background: #f3f1f7;
+      height: 168px;
+    }
+    .ex-card figcaption {
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--brand-text-muted);
+      line-height: 1.35;
+    }
+    .ex-grid--single { grid-template-columns: 1fr; }
+    .ex-grid--single .ex-card img { height: 168px; }
+    .ex-grid--single .ex-card img.ex-contain { height: 180px; }
+    .ex-grid--3 {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+    .ex-grid--3 .ex-card img { height: 130px; }
+    .tip {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--brand-action) 10%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-action) 25%, transparent);
+      font-size: 13px;
+      color: var(--brand-text-body);
+    }
+    .tip strong { color: var(--brand-gradient-start); }
+    .slide--checklist {
+      background: var(--brand-bg-dark);
+      color: #fff;
+      padding: 48px 56px;
+    }
+    .slide--checklist h2 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .slide--checklist .sub { color: rgba(255,255,255,0.65); margin-bottom: 28px; }
+    .check-list { display: flex; flex-direction: column; gap: 16px; }
+    .check-item { display: flex; gap: 16px; align-items: flex-start; }
+    .check-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: color-mix(in srgb, var(--brand-action) 35%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-action) 50%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: #e9d5ff;
+      flex-shrink: 0;
+    }
+    .check-item strong { display: block; font-size: 15px; margin-bottom: 2px; }
+    .check-item span { font-size: 13px; color: rgba(255,255,255,0.7); }
+    .check-footer {
+      margin-top: 32px;
+      font-style: italic;
+      color: var(--brand-gold);
+      font-size: 14px;
+    }
+    .slide-footer {
+      margin-top: auto;
+      padding: 12px 40px 16px;
+      border-top: 1px solid color-mix(in srgb, var(--brand-contrast) 25%, transparent);
+      font-size: 11px;
+      color: var(--brand-text-muted);
+      background: var(--brand-page-bg);
+    }
+    .slide--cover .slide-footer,
+    .slide--checklist .slide-footer {
+      background: transparent;
+      border-top-color: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.4);
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .note-dev {
+      max-width: 920px;
+      margin: 24px auto 0;
+      padding: 16px 20px;
+      background: #fff;
+      border-radius: 10px;
+      border-left: 4px solid var(--brand-action);
+      font-size: 12px;
+      color: var(--brand-text-body);
+    }
+    @media print {
+      body { background: #fff; }
+      .deck { padding: 0; gap: 0; max-width: none; }
+      .slide {
+        box-shadow: none;
+        border-radius: 0;
+        page-break-after: always;
+        min-height: 100vh;
+      }
+      .note-dev { display: none; }
+    }
+    @media (max-width: 720px) {
+      .rules-grid, .rules-grid--3, .compare, .ex-grid, .ex-grid--3 { grid-template-columns: 1fr; }
+      .slide--cover, .slide--checklist, .slide-body { padding: 28px 22px; }
+      .slide--cover h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="note-dev">
+    <strong>Manual Academy — Figurino e Uniforme (v1).</strong>
+    Imagens de referência do Dress Code Spin (ilustrativas). Composição e caimento por estúdio: guias complementares.
+    Para PDF: Chrome → Imprimir → Salvar como PDF (A4).
+  </div>
+
+  <div class="deck">
+
+    <!-- CAPA -->
+    <section class="slide slide--cover" aria-label="Capa">
+      <p class="kicker">Manual Academy · Imagem</p>
+      <h1>Figurino e Uniforme</h1>
+      <p class="audience">Game Presenters · Shufflers · Service Manager e Shift Leader em câmera</p>
+      <p class="lead">Guia visual e prático para retirar, vestir, conservar e apresentar o figurino oficial — kit completo, limpo e no padrão do estúdio escalado.</p>
+      <p class="meta">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</p>
+    </section>
+
+    <!-- COMO USAR -->
+    <section class="slide" aria-label="Como usar">
+      <div class="slide-body">
+        <h2>Como usar este manual</h2>
+        <p class="sub">Leitura rápida antes do turno — a regra completa está na Política Interna.</p>
+        <p class="intro">
+          Este manual traduz a política em linguagem de operação: o que <strong>pode</strong>, o que <strong>não pode</strong>
+          e como conferir o figurino antes do estúdio. As imagens são <strong>referências ilustrativas</strong> — a composição
+          exata do kit (peças, cores, caimento) fica no <strong>guia do seu estúdio</strong> e no cadastro em Figurinos.
+          Se algo não estiver claro, pergunte à liderança ou à equipe de Figurinos <em>antes</em> de entrar em câmera.
+        </p>
+        <div class="rules-grid rules-grid--3">
+          <article class="rule-card rule-card--brand">
+            <h3>1. Kit oficial</h3>
+            <p>Somente figurino Spin, completo, do estúdio em que você está escalado. Nada pessoal no lugar das peças.</p>
+          </article>
+          <article class="rule-card rule-card--ok">
+            <h3>2. Conservação</h3>
+            <p>Peça limpa, sem mancha, rasgo ou amassado. Não alterar, cortar nem customizar.</p>
+          </article>
+          <article class="rule-card rule-card--gold">
+            <h3>3. Conferência</h3>
+            <p>Checklist visual antes do estúdio. Troca imediata se algo estiver fora do padrão.</p>
+          </article>
+        </div>
+        <p class="tip"><strong>Dica:</strong> a avaliação de Performance Coach considera conformidade de figurino — este manual é o mapa para chegar em mesa no padrão.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+    <!-- RETIRADA E DEVOLUÇÃO -->
+    <section class="slide" aria-label="Retirada e devolução">
+      <div class="slide-body">
+        <h2>Retirada e devolução</h2>
+        <p class="sub">Antes do turno · durante a operação · ao finalizar.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>Retirar o figurino <strong>antes</strong> do turno, com tempo para vestir e conferir</li>
+              <li>Usar retirada <strong>Emprestada</strong> conforme fluxo da página Figurinos</li>
+              <li>Manter o figurino durante toda a operação no estúdio escalado</li>
+              <li>Na devolução, informar a condição da peça no sistema</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/conferencia-checklist.png" alt="Conferência de figurino antes do estúdio" class="ex-contain" />
+                <figcaption>Exemplo: conferir peças antes de entrar no estúdio</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Retirar peça sem registro quando o fluxo exige retirada registrada</li>
+              <li>Emprestar figurino a colega sem devolução/registro formal</li>
+              <li>Acumular peças de turnos anteriores sem devolver</li>
+              <li>Operar com kit de outro estúdio sem autorização da liderança</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/vestuario-nao.png" alt="Exemplos de vestimentas não permitidas" class="ex-contain" />
+                <figcaption>Exemplo: não substituir nem improvisar peças do kit</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Fluxo Figurinos:</strong> retirada registrada → vestir e conferir → operação → devolução com condição informada.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+    <!-- CONSERVAÇÃO -->
+    <section class="slide" aria-label="Conservação">
+      <div class="slide-body">
+        <h2>Conservação e integridade</h2>
+        <p class="sub">Higiene Spin + zelo seu durante o turno — com exemplos do que reprovar.</p>
+        <div class="rules-grid">
+          <article class="rule-card rule-card--danger">
+            <h3>Proibido alterar</h3>
+            <p>Sem cortes, barras caseiras, amarrações, adesivos, tintura ou costura improvisada. Etiquetas internas de controle permanecem.</p>
+          </article>
+          <article class="rule-card rule-card--brand">
+            <h3>Zelo com o tecido</h3>
+            <p>Evite atrito em superfícies ásperas, vincos profundos e substâncias que manchem ou rasguem. Comunique dano à equipe de Figurinos.</p>
+          </article>
+        </div>
+        <div class="compare" style="margin-top:16px">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ Dentro do padrão</span>
+            <ul>
+              <li>Peça limpa e bem apresentada</li>
+              <li>Kit completo vestido na ordem correta</li>
+              <li>Dano ou mancha? Trocar <strong>antes</strong> da mesa</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/figurino-padrao.png" alt="Padrão de apresentação com figurino" class="ex-contain" />
+                <figcaption>Figurino alinhado e profissional</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ Fora do padrão</span>
+            <ul>
+              <li>Mancha, rasgo, fecho quebrado ou fio puxado visível</li>
+              <li>Peça amassada ou com vinco aparente</li>
+              <li>Personalização ou modificação da peça oficial</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/vestuario-nao.png" alt="Modificação de peça não permitida" class="ex-contain" />
+                <figcaption>Exemplo: peça alterada ou fora do padrão</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Checklist rápido:</strong> sem mancha · sem amassado · sem rasgo · sem alteração.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+    <!-- CONFERÊNCIA VISUAL -->
+    <section class="slide" aria-label="Conferência visual">
+      <div class="slide-body">
+        <h2>Conferência antes do estúdio</h2>
+        <p class="sub">Peça reprovada se qualquer item do checklist falhar.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE entrar</span>
+            <ul>
+              <li>Sem amassados ou vincos aparentes</li>
+              <li>Superfície limpa, sem manchas visíveis</li>
+              <li>Sem fios puxados, desfiados ou rasgos</li>
+              <li>Kit completo e caimento adequado ao estúdio</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/conferencia-checklist.png" alt="Checklist de conferência visual" class="ex-contain" />
+                <figcaption>Referência: checklist de conferência (Dress Code Spin)</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ Não entrar</span>
+            <ul>
+              <li>Qualquer falha visual ou de conservação identificável</li>
+              <li>Desarmonia visual que comprometa padronização</li>
+              <li>Peça sem troca quando há tamanho alternativo em Figurinos</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/zelo-tecido.png" alt="Zelo e cuidados com peças delicadas" class="ex-contain" />
+                <figcaption>Referência: zelo com tecidos delicados</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Atenção:</strong> irregularidade? Substituir ou encaminhar para manutenção — não autorizar uso em câmera.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+    <!-- MEIA-CALÇA E CINTO -->
+    <section class="slide" aria-label="Meia-calça e cinto">
+      <div class="slide-body">
+        <h2>Meia-calça e cinto</h2>
+        <p class="sub">Quando integrantes do kit do estúdio — confirme no guia do seu estúdio.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li><strong>Meia-calça:</strong> preta ou nude, opaca, sem estampa ou brilho — quando o kit exigir</li>
+              <li><strong>Cinto:</strong> preto, discreto, liso — quando previsto no kit masculino</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/calca-caimento.png" alt="Calça social no padrão" class="ex-contain" />
+                <figcaption>Exemplo: caimento alinhado do kit (calça na cintura)</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Meia colorida, estampada, arrastão, rede ou com brilho</li>
+              <li>Cinto chamativo, fivela grande ou com logotipos</li>
+              <li>Substituir peça oficial por modelo pessoal divergente</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/colete-kit.png" alt="Colete como peça central do traje" class="ex-contain" />
+                <figcaption>Exemplo: peças do kit devem permanecer no padrão oficial</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+    <!-- CALÇADO -->
+    <section class="slide" aria-label="Calçado">
+      <div class="slide-body">
+        <h2>Calçado na operação ao vivo</h2>
+        <p class="sub">Game Presenter e Shuffler — modelo indicado por estúdio.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>Calçado fechado ou adequado ao ambiente profissional</li>
+              <li>Modelo <strong>indicado pela empresa</strong> para o seu estúdio e função</li>
+            </ul>
+            <div class="ex-grid">
+              <figure class="ex-card">
+                <img src="media/exemplos/calcado-gp-ok.png" alt="Exemplos de sapato para Game Presenters" class="ex-contain" />
+                <figcaption>Game Presenter — referência visual</figcaption>
+              </figure>
+              <figure class="ex-card">
+                <img src="media/exemplos/calcado-shuffler-ok.png" alt="Exemplos de sapato para Shufflers" class="ex-contain" />
+                <figcaption>Shuffler — referência visual</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Chinelos, rasteiras ou Crocs</li>
+              <li>Calçado aberto ou informal incompatível com estúdio ao vivo</li>
+              <li>Salto instável ou solado que comprometa segurança na mesa</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/calcado-nao.png" alt="Calçados não permitidos" class="ex-contain" />
+                <figcaption>Exemplo: calçados não permitidos</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Importante:</strong> o guia do seu estúdio prevalece sobre detalhes de modelo e cor.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+    <!-- SEGURANÇA -->
+    <section class="slide" aria-label="Segurança">
+      <div class="slide-body">
+        <h2>Segurança e circulação</h2>
+        <p class="sub">Figurino completo no estúdio · nunca na rua.</p>
+        <div class="compare">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ PODE</span>
+            <ul>
+              <li>Figurino oficial completo ao entrar na área ao vivo</li>
+              <li>Manter o uniforme ao circular dentro do estúdio durante o turno</li>
+              <li>Comportamento profissional nas áreas operacionais visíveis</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/figurino-ao-vivo.png" alt="Regras de figurino na operação ao vivo" class="ex-contain" />
+                <figcaption>Referência: figurino na operação ao vivo</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--no">
+            <span class="badge badge--no">✕ NÃO PODE</span>
+            <ul>
+              <li>Sair à rua ou área externa com figurino oficial</li>
+              <li>Circular fora das dependências com uniforme de estúdio</li>
+              <li>Personalizar ou modificar peças do figurino</li>
+            </ul>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/seguranca-camisa.png" alt="Uso exclusivo da camisa dentro da empresa" class="ex-contain" />
+                <figcaption>Referência: uniforme só nas dependências (segurança)</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Resumo:</strong> o figurino representa a Spin perante operadoras e jogadores — e a circulação externa é proibida por segurança.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+    <!-- GUIAS POR ESTÚDIO -->
+    <section class="slide" aria-label="Guias por estúdio">
+      <div class="slide-body">
+        <h2>Guias por estúdio</h2>
+        <p class="sub">Composição do kit e caimento peça a peça — material complementar.</p>
+        <p class="intro">
+          Este manual cobre regras <strong>gerais</strong> de uso do figurino. Cada estúdio tem guia próprio com as peças oficiais
+          (camisa, calça, colete, vestido, gravata, acessórios) e referências de caimento. Consulte o material do estúdio em que você opera.
+        </p>
+        <div class="rules-grid rules-grid--3">
+          <article class="rule-card rule-card--brand">
+            <h3>Blaze</h3>
+            <p>Kit e guia de caimento do estúdio Blaze — conforme cadastro em Figurinos.</p>
+          </article>
+          <article class="rule-card rule-card--ok">
+            <h3>CDA</h3>
+            <p>Kit Casa de Apostas — composição e ajustes específicos do estúdio.</p>
+          </article>
+          <article class="rule-card rule-card--gold">
+            <h3>Sports Club</h3>
+            <p>Kit network Sports Club — peças e padrão visual do estúdio.</p>
+          </article>
+        </div>
+        <div class="compare" style="margin-top:16px">
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ Guia de caimento — masculino</span>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/caimento-masculino.png" alt="Guia de caimento traje social" class="ex-contain" />
+                <figcaption>Traje social com colete e gravata borboleta (referência)</figcaption>
+              </figure>
+            </div>
+          </div>
+          <div class="compare-col compare-col--ok">
+            <span class="badge badge--ok">✓ Guia de caimento — feminino</span>
+            <div class="ex-grid ex-grid--single">
+              <figure class="ex-card">
+                <img src="media/exemplos/caimento-feminino.png" alt="Guia de caimento vestido tubinho" class="ex-contain" />
+                <figcaption>Vestido tubinho (referência)</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+        <p class="tip"><strong>Próximo passo:</strong> guias HTML por estúdio em <code>manuais-estudio/</code> — adaptação dos materiais oficiais de cada operação.</p>
+      </div>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section class="slide slide--checklist" aria-label="Checklist">
+      <h2>Checklist antes de entrar em mesa</h2>
+      <p class="sub">Uma conferência rápida ajuda a manter o padrão.</p>
+      <div class="check-list">
+        <div class="check-item">
+          <div class="check-num">01</div>
+          <div>
+            <strong>Retirei o figurino</strong>
+            <span>Registro ok · kit do estúdio escalado · guia do estúdio consultado.</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">02</div>
+          <div>
+            <strong>Conferi visualmente</strong>
+            <span>Sem mancha, amassado, fio puxado ou rasgo.</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">03</div>
+          <div>
+            <strong>Kit completo + caimento</strong>
+            <span>Peças obrigatórias · meia/cinto se aplicável · tamanho correto.</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">04</div>
+          <div>
+            <strong>Calçado adequado</strong>
+            <span>Modelo do estúdio · nada aberto ou informal.</span>
+          </div>
+        </div>
+        <div class="check-item">
+          <div class="check-num">05</div>
+          <div>
+            <strong>Dúvida?</strong>
+            <span>Confirme com a liderança ou Figurinos antes do turno. Não improvise em câmera.</span>
+          </div>
+        </div>
+      </div>
+      <p class="check-footer">Apresentação profissional começa no figurino — antes de entrar em mesa.</p>
+      <div class="slide-footer">Spin Gaming · Uso interno · Alinhado à Política Interna de Figurino e Uniforme</div>
+    </section>
+
+  </div>
+</body>
+</html>

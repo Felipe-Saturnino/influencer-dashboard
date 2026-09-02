@@ -617,14 +617,25 @@
   }
 }
 
-/* Funil de candidaturas (RH Vagas) — colunas horizontais roláveis */
+/* Funil de candidaturas (RH Vagas) — colunas horizontais roláveis; scroll vertical por etapa */
 .app-vagas-candidaturas-kanban {
   display: grid;
   gap: 12px;
   grid-auto-flow: column;
   grid-auto-columns: minmax(200px, 240px);
+  align-items: start;
   overflow-x: auto;
+  overflow-y: visible;
   padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-vagas-candidaturas-kanban-col {
+  min-width: 0;
+}
+
+.app-vagas-candidaturas-kanban-col-body {
+  min-height: 0;
   -webkit-overflow-scrolling: touch;
 }
 

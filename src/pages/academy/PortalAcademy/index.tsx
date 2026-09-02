@@ -18,6 +18,7 @@ import {
   getPeriodoHistoricoCompetencias,
   isDataNoPeriodoHistoricoCompetencias,
 } from "../../../lib/dashboardHelpers";
+import { comparePublishedAtDesc } from "../../../lib/portalPostagemSort";
 import { normalizarJogosMesa } from "../../../lib/academyPortalJogosMesa";
 import { autorIdPostagem, carregarMetaAutoresPortalAcademy, type AcademyPortalAutorInfo } from "../../../lib/academyPortalAutorMeta";
 import { GerenciamentoPostagens, GerenciamentoPostagensFiltrosTipoStatus } from "./GerenciamentoPostagens";
@@ -267,9 +268,7 @@ function filtrarListaPortal<T extends PostagemBase>(
         ),
     );
   }
-  return [...out].sort(
-    (a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime(),
-  );
+  return [...out].sort(comparePublishedAtDesc);
 }
 
 function filtrarManuaisPortal(
@@ -305,11 +304,7 @@ function filtrarManuaisPortal(
         normalizarJogosMesa(c.jogo_mesa).some((j) => hitBuscaTexto(j)),
     );
   }
-  return [...out].sort((a, b) => {
-    const codA = a.codigo ?? a.titulo;
-    const codB = b.codigo ?? b.titulo;
-    return codA.localeCompare(codB, "pt-BR", { numeric: true });
-  });
+  return [...out].sort(comparePublishedAtDesc);
 }
 
 export default function PortalAcademyPage() {
