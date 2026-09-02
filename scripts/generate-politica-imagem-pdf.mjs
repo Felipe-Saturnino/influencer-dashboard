@@ -11,6 +11,7 @@
  *
  * Uso: node scripts/generate-politica-imagem-pdf.mjs acessorios
  *      node scripts/generate-politica-imagem-pdf.mjs figurino
+ *      node scripts/generate-politica-imagem-pdf.mjs higiene
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -765,6 +766,230 @@ function generateFigurinoPdf(outputPath, logoAsset) {
   return outputPath;
 }
 
+function generateHigienePdf(outputPath, logoAsset) {
+  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  paintPageBg(pdf);
+  let y = drawDocHeader(pdf, logoAsset);
+
+  y = drawParagraph(pdf, logoAsset, y, "POLÍTICA INTERNA", {
+    bold: true,
+    size: 14,
+    after: 2,
+  });
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Política de Higiene e Postura – Uso Interno Gestão Spin Gaming",
+    { italics: true, size: 10.5, color: MUTED, after: 5 },
+  );
+
+  y = drawMetaTable(
+    pdf,
+    logoAsset,
+    y,
+    "Performance Coach",
+    "Recursos Humanos / Diretoria",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "1", "OBJETIVO");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Estabelecer os padrões de higiene pessoal, odor, apresentação imediata e postura em câmera para os Prestadores de Serviços que atuam em frente às câmeras na operação da Spin Gaming — incluindo Game Presenter, Shuffler, Service Manager e Shift Leader quando em frente à câmera —, garantindo aparência cuidada, profissional e acolhedora para a operação ao vivo.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "2", "ABRANGÊNCIA E APLICAÇÃO");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Aplica-se a todos os Prestadores de Serviços que atuam em frente às câmeras na operação da Spin Gaming — incluindo, entre outras, as funções de Game Presenter, Shuffler, Service Manager e Shift Leader quando estiverem em frente à câmera —, independentemente de gênero.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Não se aplica a colaboradores que não atuam em câmera, nem a Service Manager e Shift Leader quando estiverem fora do ambiente de câmera.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "3", "DIRETRIZES GERAIS");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Princípio: consultar higiene e postura antes do turno. Mãos limpas, hálito fresco, aparência alinhada e atitude profissional. Odor, desleixo visível ou comportamento incompatível devem ser corrigidos antes de entrar em câmera.",
+  );
+
+  const sub = (title) => {
+    y = drawParagraph(pdf, logoAsset, y, title, {
+      bold: true,
+      size: 10.5,
+      after: 2,
+    });
+  };
+  const permitido = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Permitido:", { bold: true, after: 1 });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+  const naoPermitido = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Não permitido:", {
+      bold: true,
+      after: 1,
+    });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+  const obrigatorio = (...items) => {
+    y = drawParagraph(pdf, logoAsset, y, "Obrigatório:", {
+      bold: true,
+      after: 1,
+    });
+    for (const i of items) y = drawBullet(pdf, logoAsset, y, i);
+  };
+
+  sub("3.1 Higiene pessoal");
+  obrigatorio(
+    "Apresentar-se com higiene adequada ao estúdio ao vivo; manter o padrão durante todo o turno.",
+  );
+  naoPermitido(
+    "Sinais visíveis de desleixo (sujeira, resíduos, suor em excesso sem correção).",
+    "Entrar em câmera com aparência incompatível com o padrão profissional.",
+  );
+
+  sub("3.2 Mãos");
+  obrigatorio(
+    "Mãos limpas e secas antes da mesa ou da posição de Shuffler, e após intervalos quando necessário.",
+  );
+  naoPermitido(
+    "Mãos sujas, úmidas em excesso ou com resíduos que manchem figurino, cartas ou equipamentos.",
+    "Produtos nas mãos que deixem filme gorduroso, brilho excessivo ou odor forte.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Acabamento das unhas: Política de Unhas / Manicure. Sujeira visível nas mãos ou unhas é desvio desta política.",
+    { size: 10, color: MUTED, after: 3 },
+  );
+
+  sub("3.3 Hálito e higiene bucal");
+  obrigatorio("Hálito fresco; sorriso cuidado, sem resíduos visíveis de alimento.");
+  naoPermitido("Mau hálito perceptível; higiene bucal visivelmente inadequada em operação.");
+
+  sub("3.4 Odor corporal e fragrâncias");
+  permitido("Ausência de perfume ou fragrância discreta, que não se imponha na mesa.");
+  naoPermitido(
+    "Perfume, colônia ou desodorante fortes.",
+    "Odor corporal perceptível na área de jogos ou em câmera.",
+  );
+
+  sub("3.5 Higiene do figurino");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Lavagem e manutenção das peças oficiais: Spin Gaming via Figurinos. O Prestador não entra em câmera com peça visivelmente suja, úmida de suor sem troca, mal cheirosa ou mal apresentada. Conservação detalhada: Política de Figurino e Uniforme.",
+  );
+
+  sub("3.6 Postura e atitude em câmera");
+  obrigatorio(
+    "Atitude amigável e profissional durante toda a apresentação ao vivo.",
+    "Postura corporal alinhada: tronco ereto, ombros organizados; comportamento profissional também fora do close quando visível no estúdio.",
+  );
+  naoPermitido(
+    "Comportamento incompatível com a mesa ao vivo (desânimo ostensivo, gestos inadequados, desleixo corporal).",
+    "Mastigar chiclete, comer ou beber em câmera / na posição de jogo.",
+    "Apoiar-se de forma descuidada sobre a mesa ou adotar posição que prejudique a leitura profissional da câmera.",
+  );
+
+  sub("3.7 Sorriso e expressão");
+  permitido(
+    "Sorriso cuidado e expressão acolhedora durante o ao vivo.",
+  );
+  naoPermitido(
+    "Expressão fechada ou hostil de forma continuada.",
+    "Sorriso descuidado por higiene bucal inadequada.",
+  );
+
+  sub("3.8 Conferência antes do ao vivo");
+  obrigatorio(
+    "Conferir higiene e postura antes de ocupar a mesa ou a posição de Shuffler.",
+    "Checklist: mãos, hálito, fragrância/odor, desleixo visível, postura. Na dúvida, confirmar com a liderança antes do turno.",
+  );
+
+  sub("3.9 Proibições transversais");
+  y = drawParagraph(pdf, logoAsset, y, "Não são permitidos:");
+  y = drawBullet(pdf, logoAsset, y, "Desleixo visível de higiene pessoal em câmera.");
+  y = drawBullet(pdf, logoAsset, y, "Fragrância ou odor que se imponha na operação.");
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Atitude ou postura incompatível com apresentação profissional ao vivo.",
+  );
+  y = drawBullet(
+    pdf,
+    logoAsset,
+    y,
+    "Improviso em câmera para corrigir desvio que deveria ter sido resolvido antes do turno.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "4", "PAPÉIS E RESPONSABILIDADES");
+  y = drawRolesTable(pdf, logoAsset, y, [
+    [
+      "Prestador de Serviços",
+      "Apresentar-se com higiene e postura em conformidade antes de cada turno; corrigir desvios antes de entrar em câmera; comunicar à liderança condição que impeça o padrão.",
+    ],
+    [
+      "Liderança (Shift Leader / Service Manager)",
+      "Verificar higiene e postura da equipe antes do turno; orientar e solicitar ajuste antes de o Prestador entrar em câmera.",
+    ],
+    [
+      "Performance Coach",
+      "Considerar o critério de Postura (e a higiene visível associada) nas avaliações de performance; registrar conformidade ou desvios.",
+    ],
+  ]);
+
+  y = drawSectionTitle(pdf, logoAsset, y, "5", "NÃO CONFORMIDADE E PENALIDADES");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "O descumprimento desta política é classificado como Descumprimento/Desvio Contratual e segue o fluxo estabelecido nas Políticas de Desvios/Descumprimentos Contratuais da Spin Gaming, iniciando pelo alinhamento direto com a liderança e podendo evoluir para notificação formal em caso de reincidência ou recusa de ajuste.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Adicionalmente, o não cumprimento pode impactar a avaliação de desempenho do Prestador de Serviços, bem como as Políticas e métricas de Bonificação vigentes.",
+  );
+
+  y = drawSectionTitle(pdf, logoAsset, y, "6", "EXCEÇÕES");
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Casos que não se enquadrem claramente (ex.: condição de saúde documentada que afete hálito, odor ou mobilidade postural) devem ser encaminhados à liderança direta antes do início do turno, sem improviso em câmera.",
+  );
+  y = drawParagraph(
+    pdf,
+    logoAsset,
+    y,
+    "Esta política é revisada periodicamente pelo Performance Coach.",
+  );
+
+  const total = pdf.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    pdf.setPage(i);
+    drawFooter(pdf, i, total);
+  }
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, Buffer.from(pdf.output("arraybuffer")));
+  return outputPath;
+}
+
 const POLITICAS = {
   acessorios: {
     fileName: "Politica_Interna_Acessorios_e_Joias_Spin.pdf",
@@ -775,6 +1000,11 @@ const POLITICAS = {
     fileName: "Politica_Interna_Figurino_e_Uniforme_Spin.pdf",
     folder: "02-figurino-uniforme",
     generate: generateFigurinoPdf,
+  },
+  higiene: {
+    fileName: "Politica_Interna_Higiene_e_Postura_Spin.pdf",
+    folder: "03-higiene-e-postura",
+    generate: generateHigienePdf,
   },
 };
 

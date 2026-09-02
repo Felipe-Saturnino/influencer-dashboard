@@ -926,12 +926,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Hub operacional do turno: presença e consolidado, atalhos para **Rotação** e **Relatório de Turno**, e a aba **Notificações** (fechamento de mesa, ausências, feedbacks e solicitação de manutenção). Use o carrossel de dia; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
+          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool real da Escala Estúdio aprovada, check-in, prévia e publicação — o mesmo motor da página **Rotação**); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação. A página dedicada **Relatório de Turno** no menu Escala permanece até a migração completa.",
       },
       {
         subtitulo: "Notificações",
         texto:
-          "Registre fechamentos, ausências, feedbacks e manutenções do dia. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
+          "Com permissão de **Criar**, registre fechamentos, ausências, feedbacks e manutenções do dia. Com **Editar**, atualize fechamentos/ausências, aplique feedbacks em revisão e cancele manutenções abertas. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
+      },
+      {
+        subtitulo: "Relatório de Turno",
+        texto:
+          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno.",
       },
     ],
   },
@@ -1254,7 +1259,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Filtros e Navegação de Comunicados",
         texto:
-          "Use o carrossel de meses para navegar por período com base na data de publicação. Os pills de categoria (Todos, Urgente, Geral, Pagamento, Eventos) filtram por tipo.\n\nO botão Histórico exibe as postagens publicadas na competência atual e nas 12 anteriores (Todo o período) — o carrossel de mês fica desabilitado nesse modo. Postagens arquivadas não aparecem nestas abas de leitura.\n\nA barra de pesquisa filtra por palavras no título ou no corpo do comunicado.\n\nCom o foco na lista de abas do portal, use as setas ← → do teclado para alternar entre Comunicados, Políticas, RH Talks e Gerenciamento (quando disponível).",
+          "A página abre com o botão **Histórico** selecionado (**Todo o período** — competência atual e 12 anteriores); o carrossel de mês fica desabilitado nesse modo. Desligue Histórico para navegar mês a mês pelas setas, com base na data de publicação. Os pills de categoria (Todos, Urgente, Geral, Pagamento, Eventos) filtram por tipo. Postagens arquivadas não aparecem nestas abas de leitura.\n\nA barra de pesquisa filtra por palavras no título ou no corpo do comunicado.\n\nCom o foco na lista de abas do portal, use as setas ← → do teclado para alternar entre Comunicados, Políticas, RH Talks e Gerenciamento (quando disponível).",
       },
       {
         subtitulo: "Permissões e visibilidade",
@@ -1274,7 +1279,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Gerenciamento de Postagens (Gestores)",
         texto:
-          "Disponível apenas para usuários com permissão de Editar = Sim no Portal de RH. Editar = Próprios não libera esta aba.\n\nA aba exibe uma tabela com postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar, Ver\n— Em aprovação: Editar, Aprovar, Ver\n— Publicado: Editar (modal Salvar alterações), Arquivar (ícone Archive + pop-up de confirmação), Ver\n— Arquivado: só Ver\n\nO ícone **Ver** (olho) abre um modal de leitura com duas abas: **Ver** mostra os dados preenchidos da postagem; **Histórico** lista as alterações de status, na ordem mais recente primeiro.\n\nO carrossel de mês e o botão Histórico usam a data de publicação. O Histórico na barra mostra a competência atual e as 12 anteriores; o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
+          "Disponível apenas para usuários com permissão de Editar = Sim no Portal de RH. Editar = Próprios não libera esta aba.\n\nA aba exibe uma tabela com postagens (comunicados, políticas e RH Talks), incluindo arquivadas, com colunas de assunto, autor, tipo, datas e status.\n\nAções disponíveis por status:\n— Rascunho: Editar, Ver\n— Em aprovação: Editar, Aprovar, Ver\n— Publicado: Editar (modal Salvar alterações), Arquivar (ícone Archive + pop-up de confirmação), Ver\n— Arquivado: só Ver\n\nO ícone **Ver** (olho) abre um modal de leitura com duas abas: **Ver** mostra os dados preenchidos da postagem; **Histórico** lista as alterações de status, na ordem mais recente primeiro.\n\nO carrossel de mês e o botão Histórico usam a data de publicação. A página abre com Histórico ativo (**Todo o período** — competência atual e 12 anteriores); o filtro Status da postagem (incluindo Arquivado) define o que aparece na tabela. Use também os filtros de tipo e a busca por palavras-chave. Clique em Nova Postagem para redigir um novo conteúdo.",
       },
       {
         subtitulo: "Criar e Publicar Postagens",

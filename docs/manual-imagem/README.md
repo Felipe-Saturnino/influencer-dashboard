@@ -2,30 +2,31 @@
 
 Base de trabalho para unificar materiais de imagem de Game Presenters e Shufflers.
 
-## Fluxo por tema
+## Fluxo atual (só Política)
 
-1. Redação da **Política Interna** → PDF no layout Descumprimentos Contratuais (`generate-politica-imagem-pdf.mjs`)
-2. Aprovação ou correção pelo responsável
-3. Redação do **Manual** do tema (template Academy + imagens)
-4. Aprovação ou correção do Manual
-5. Próximo tema
+1. Redação da **Política Interna** em `politica-v1.md`
+2. PDF no layout Descumprimentos Contratuais (`generate-politica-imagem-pdf.mjs`)
+3. Aprovação ou correção pelo responsável
+4. Próximo tema
+
+**Manuais ficam fora desta fase.** Não redigir slides, não buscar fotos de stock e não iterar imagens no HTML. Quando todas as Políticas estiverem fechadas, geramos um **template editável** do Manual (slots PODE / NÃO PODE) para colocar as fotos à mão.
 
 ## Formatos
 
-| Entrega | Formato | Onde |
-|---------|--------|------|
-| **Política** | PDF A4 — layout *Descumprimentos Contratuais* (faixa azul, logo, seções leves) | `scripts/generate-politica-imagem-pdf.mjs` |
-| **Manual** | HTML slides → PDF (template Academy) | `docs/manual-imagem/_templates/` |
+| Entrega | Formato | Onde | Fase |
+|---------|--------|------|------|
+| **Política** | PDF A4 — layout *Descumprimentos Contratuais* | `scripts/generate-politica-imagem-pdf.mjs` | **Agora** |
+| **Manual** | Template editável (slots de imagem) | `_templates/` — a definir | Depois das Políticas |
 
-Detalhes: [`_templates/README.md`](_templates/README.md).
+Detalhes do PDF: [`_templates/README.md`](_templates/README.md).
 
 ## Temas previstos
 
 | # | Tema | Status |
 |---|------|--------|
-| 01 | Acessórios e Joias | **Aprovado** (Política + Manual v1.1) |
-| 02 | Figurino / Uniforme | **Política v1.2 aprovada** · Manual Academy v1 (exemplos stock) |
-| 03 | Higiene e Postura | Pendente |
+| 01 | Acessórios e Joias | **Política v1.1 aprovada** |
+| 02 | Figurino / Uniforme | **Política v1.2 aprovada** |
+| 03 | Higiene e Postura | **Política v1.0 rascunho** — aguardando aprovação |
 | 04 | Cabelo | Pendente |
 | 05 | Barba / Bigode / Sobrancelhas | Pendente |
 | 06 | Unhas / Manicure | Pendente |

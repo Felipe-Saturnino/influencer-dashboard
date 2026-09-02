@@ -1009,7 +1009,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Uma postagem que aprovar não aparece na lista de publicados?",
         texto:
-          "Após aprovar, a página atualiza automaticamente. Se a postagem não aparecer nos publicados, verifique o filtro de mês ativo — ela pode ter sido publicada em um mês diferente do selecionado. Mude o carrossel para o mês de publicação ou use a aba Gerenciamento com filtro Status: Publicado.",
+          "Após aprovar, a página atualiza automaticamente. Se a postagem não aparecer nos publicados, desligue o **Histórico** (ativo por padrão) e confira o mês do carrossel — ela pode ter sido publicada em outro mês. Ou use a aba Gerenciamento com filtro Status: Publicado.",
       },
       {
         subtitulo: "Não aparece o botão Ver Lidos no comunicado?",
@@ -1757,9 +1757,14 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Controle de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
       },
       {
-        subtitulo: "Rotação ou Relatório não aparecem dentro do Controle de Turno?",
+        subtitulo: "O pool da Rotação está vazio no Controle de Turno?",
         texto:
-          "Nesta primeira entrega, as abas **Rotação** e **Relatório de Turno** abrem atalho para as páginas dedicadas, que permanecem no menu Escala. A consolidação completa desses fluxos nesta página virá em seguida.",
+          "A aba **Rotação** usa os Game Presenters da **Escala Estúdio** **aprovada** no dia, turno e estúdio selecionados, com **Chegou** / **Não chegou** do check-in do Calendário. Sem aprovação do mês ou sem GPs naquele turno, o pool fica vazio.",
+      },
+      {
+        subtitulo: "Não consigo salvar Notificações ou o Relatório?",
+        texto:
+          "As abas **Notificações** e **Relatório de Turno** gravam no banco. Confirme permissão de **Criar** / **Editar** em Gestão de Usuários → Permissões → **Controle de Turno** e faça logout e login. Se o erro persistir, entre em contato com o suporte técnico para validar se o schema do Controle de Turno foi aplicado.",
       },
     ],
   },

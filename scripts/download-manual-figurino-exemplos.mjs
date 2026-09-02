@@ -15,8 +15,6 @@ mkdirSync(out, { recursive: true });
 
 /** Nome → URL — cada arquivo ilustra a ideia PODE/NÃO do slide. */
 const SOURCES = {
-  "retirada-ok.jpg":
-    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80",
   "conferencia-ok.jpg":
     "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80",
   "figurino-ao-vivo.jpg":

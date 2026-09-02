@@ -2,8 +2,10 @@
 
 | Arquivo | Sentido (PODE / NÃO PODE) | Fonte |
 |---------|---------------------------|--------|
-| `retirada-ok.jpg` / `conferencia-ok.jpg` / `figurino-ao-vivo.jpg` | Ajustar traje formal antes do turno / conferência ok | Stock (Unsplash) |
-| `vestuario-nao.png` | Roupa pessoal / improvisada no lugar do kit | Dress Code p.19 |
+| `retirada-ok.png` | Arara de Empréstimo — retirada registrada | Foto da operação (Sala de Figurino) |
+| `retirada-nao.png` | Empréstimo informal entre colegas, sem registro | Foto da operação (Sala de Figurino) |
+| `conferencia-ok.jpg` / `figurino-ao-vivo.jpg` | Traje formal conferido / completo na operação | Stock (Unsplash) |
+| `vestuario-nao.png` | Roupa pessoal / improvisada no lugar do kit | Dress Code p.19 (reserva — não usada neste slide) |
 | `figurino-padrao.jpg` | Peça limpa e bem apresentada | Stock (Unsplash) |
 | `figurino-amassado.jpg` | Peça amassada / com vinco | Stock (Unsplash) |
 | `figurino-alterado.jpg` | Peça alterada / amarrada | Stock (Pexels) |

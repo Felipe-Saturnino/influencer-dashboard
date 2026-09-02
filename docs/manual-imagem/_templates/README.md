@@ -19,18 +19,8 @@ Saída: `Downloads/` e `docs/manual-imagem/01-acessorios-e-joias/`.
 
 Fonte editável: `politica-v1.md` (decisões abertas só no MD).
 
-## Manual Academy (HTML → PDF)
+## Manual (pausado)
 
-**Template:** `manual-academy-template.html`
+Nesta fase **não** iterar HTML nem imagens. Os HTML atuais (`manual-academy-template.html` e manuais por tema) ficam como rascunho.
 
-Estrutura de slides por tema (inspirada nos decks de piercing + Brand MDC):
-
-1. **Capa** — fundo escuro, barra lateral clara, título uppercase, audiência
-2. **Regras principais** — 2 cards (vermelho / roxo marca)
-3. **Referência visual** — pares Permitido × Não permitido com foto
-4. **Pode × Não pode** — duas colunas semântica
-5. **Checklist** — fundo escuro, 01 / 02 / 03
-
-Cores: Brand Spin + semântica Global (verde = pode, vermelho = não pode). **Não** usar identidade por jogo nestes manuais.
-
-Para gerar PDF do Manual: abrir o HTML no Chrome → Imprimir → Salvar como PDF.
+**Próximo passo, depois das Políticas:** um template **editável** com slots PODE / NÃO PODE para inserir fotos manualmente — não gerar decks com stock.
