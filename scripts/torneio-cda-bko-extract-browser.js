@@ -3,18 +3,32 @@
  *
  * Pré-requisito: abrir https://bo2.sg.onairent.live/backoffice/static/bo/find-players
  *
- * Nome exibido no torneio = Screen Name do BKO (campo screenName na busca).
- * Ajuste PERIODO e PARTICIPANTES (User Names CDA) antes de rodar. O JSON alimenta:
- *   node scripts/torneio-cda-bko-sync.mjs --slug=... --arquivo=tmp/torneio-cda-bko.json
+ * Nome na UI = apelido travado abaixo (não Screen Name). Período = 03/09/2026 BRT.
+ *   node scripts/torneio-cda-bko-sync.mjs --slug=cda-vip-setembro-2026 --arquivo=tmp/torneio-cda-bko.json
  */
 (async () => {
+  /** 03/09/2026 00:00–23:59:59 America/Sao_Paulo */
   const PERIODO = {
-    from: "2026-09-01T03:00:00.000Z",
-    to: "2026-10-01T02:59:59.000Z",
+    from: "2026-09-03T03:00:00.000Z",
+    to: "2026-09-04T02:59:59.999Z",
   };
 
-  /** User Name CDA (externalName) — não é apelido manual. */
-  const USER_NAMES = ["1990329", "1989697", "1713222", "2152775", "2032222"];
+  /** userName → nome travado na UI */
+  const PARTICIPANTES = [
+    { userName: "2205336", apelido: "Alessandro Tomazelli" },
+    { userName: "2204772", apelido: "Eliane Luiza" },
+    { userName: "2204766", apelido: "Fernando Luis" },
+    { userName: "2204764", apelido: "Flavio Luis" },
+    { userName: "2204743", apelido: "Humberto dos Anjos" },
+    { userName: "2204823", apelido: "Pedro Alexandre" },
+    { userName: "2204769", apelido: "Flavio Hirata" },
+    { userName: "2204759", apelido: "Rodrigo Junqueira" },
+    { userName: "2207973", apelido: "Renato Silva" },
+    { userName: "2204755", apelido: "Luiz Viveiros" },
+    { userName: "2208185", apelido: "Miqueas Marcelo" },
+    { userName: "548736", apelido: "Rodrigo Simonini" },
+    { userName: "2208087", apelido: "Bruno Yela" },
+  ];
 
   const PAGE = 1000;
 
@@ -48,16 +62,14 @@
       if (player) {
         return {
           userName,
-          screenName: player.screenName ?? player.nickName ?? userName,
-          playerId:
-            player.playerId ??
-            `casadeapostas.if_dgc.L011_358_56.CDA-${userName}`,
+          screenName: player.screenName ?? player.nickName ?? null,
+          playerId: player.playerId ?? `casadeapostas.if_dgc.L011_358_56.CDA-${userName}`,
         };
       }
     }
     return {
       userName,
-      screenName: userName,
+      screenName: null,
       playerId: `casadeapostas.if_dgc.L011_358_56.CDA-${userName}`,
     };
   }
@@ -95,14 +107,14 @@
     participantes: [],
   };
 
-  for (const userName of USER_NAMES) {
-    const meta = await fetchPlayerMeta(userName);
-    console.log(`Buscando ${meta.screenName} (${userName})…`);
+  for (const p of PARTICIPANTES) {
+    const meta = await fetchPlayerMeta(p.userName);
+    console.log(`Buscando ${p.apelido} (${p.userName})…`);
     const games = await fetchGames(meta.playerId);
     payload.participantes.push({
-      userName: meta.userName,
+      userName: p.userName,
       screenName: meta.screenName,
-      apelido: meta.screenName,
+      apelido: p.apelido,
       playerId: meta.playerId,
       games,
     });

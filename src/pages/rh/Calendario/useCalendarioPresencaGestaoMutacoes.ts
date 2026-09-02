@@ -42,7 +42,7 @@ function gestaoAtualPorChave(
 
 export type UseCalendarioPresencaGestaoMutacoesOpts = {
   nomeUsuarioPresencaGestao: string;
-  presencaFilterStaffIds: string[];
+  filterStaffIds: string[];
   mesPresencaFechado: boolean;
   linhasAprovacaoPresencaMes: PresencaMesAprovacaoLinha[];
   current: Date;
@@ -66,7 +66,7 @@ export type UseCalendarioPresencaGestaoMutacoesOpts = {
 export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaGestaoMutacoesOpts) {
   const {
     nomeUsuarioPresencaGestao,
-    presencaFilterStaffIds,
+    filterStaffIds,
     mesPresencaFechado,
     linhasAprovacaoPresencaMes,
     current,
@@ -148,7 +148,7 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
   ]);
 
   const aprovarPresencaMesTodos = useCallback(async (): Promise<boolean> => {
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid || !mesPresencaFechado) return false;
     const em = new Date().toISOString();
     const nextMap = new Map(presencaGestaoPorChave);
@@ -192,7 +192,7 @@ export function useCalendarioPresencaGestaoMutacoes(opts: UseCalendarioPresencaG
     setPresencaGestaoTick((x) => x + 1);
     return true;
   }, [
-    presencaFilterStaffIds,
+    filterStaffIds,
     mesPresencaFechado,
     linhasAprovacaoPresencaMes,
     presencaGestaoPorChave,

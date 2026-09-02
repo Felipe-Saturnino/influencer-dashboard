@@ -26,7 +26,7 @@ COMMENT ON COLUMN public.torneio_cda_participante.user_name IS
   'User Name CDA (externalName no BKO), ex.: 1990329.';
 
 COMMENT ON COLUMN public.torneio_cda_participante.apelido IS
-  'Screen Name do BKO — nome público na página; atualizado a cada sync.';
+  'Nome travado para a UI pública (não é Screen Name do BKO); o sync não sobrescreve.';
 
 CREATE TABLE IF NOT EXISTS public.torneio_cda_ranking (
   torneio_id uuid NOT NULL REFERENCES public.torneio_cda (id) ON DELETE CASCADE,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS public.torneio_cda_ranking (
 );
 
 COMMENT ON COLUMN public.torneio_cda_ranking.apelido IS
-  'Screen Name BKO no momento do sync — exibido na página pública.';
+  'Cópia do nome travado do participante no momento do sync — exibido na página pública.';
 
 CREATE INDEX IF NOT EXISTS idx_torneio_cda_ranking_posicao
   ON public.torneio_cda_ranking (torneio_id, posicao);
@@ -145,27 +145,39 @@ CREATE POLICY torneio_cda_consolidado_service_all ON public.torneio_cda_consolid
 CREATE POLICY torneio_cda_atividade_service_all ON public.torneio_cda_atividade
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- Seed inicial — participantes de teste; substitua user_name/apelido antes do evento real
+-- Seed — participantes do evento 03/09/2026 (Screen Name em apelido; sync atualiza no dia)
 INSERT INTO public.torneio_cda (slug, nome, periodo_inicio, periodo_fim, ativo)
 VALUES (
   'cda-vip-setembro-2026',
   'Torneio VIP Casa de Apostas e Spin Gaming — Setembro 2026',
-  '2026-09-01 03:00:00+00',
-  '2026-10-01 02:59:59+00',
+  '2026-09-03 03:00:00+00',
+  '2026-09-04 02:59:59.999+00',
   false
 )
-ON CONFLICT (slug) DO NOTHING;
+ON CONFLICT (slug) DO UPDATE
+SET nome = EXCLUDED.nome,
+    periodo_inicio = EXCLUDED.periodo_inicio,
+    periodo_fim = EXCLUDED.periodo_fim,
+    updated_at = now();
 
 INSERT INTO public.torneio_cda_participante (torneio_id, user_name, apelido, player_id_bko)
 SELECT t.id, v.user_name, v.apelido, v.player_id_bko
 FROM public.torneio_cda t
 CROSS JOIN (
   VALUES
-    ('1990329', 'Nathan', 'casadeapostas.if_dgc.L011_358_56.CDA-1990329'),
-    ('1989697', 'Daci', 'casadeapostas.if_dgc.L011_358_56.CDA-1989697'),
-    ('1713222', 'Gusti', 'casadeapostas.if_dgc.L011_358_56.CDA-1713222'),
-    ('2152775', 'Matrix00', 'casadeapostas.if_dgc.L011_358_56.CDA-2152775'),
-    ('2032222', 'DG', 'casadeapostas.if_dgc.L011_358_56.CDA-2032222')
+    ('2205336', 'Alessandro Tomazelli', 'casadeapostas.if_dgc.L011_358_56.CDA-2205336'),
+    ('2204772', 'Eliane Luiza', 'casadeapostas.if_dgc.L011_358_56.CDA-2204772'),
+    ('2204766', 'Fernando Luis', 'casadeapostas.if_dgc.L011_358_56.CDA-2204766'),
+    ('2204764', 'Flavio Luis', 'casadeapostas.if_dgc.L011_358_56.CDA-2204764'),
+    ('2204743', 'Humberto dos Anjos', 'casadeapostas.if_dgc.L011_358_56.CDA-2204743'),
+    ('2204823', 'Pedro Alexandre', 'casadeapostas.if_dgc.L011_358_56.CDA-2204823'),
+    ('2204769', 'Flavio Hirata', 'casadeapostas.if_dgc.L011_358_56.CDA-2204769'),
+    ('2204759', 'Rodrigo Junqueira', 'casadeapostas.if_dgc.L011_358_56.CDA-2204759'),
+    ('2207973', 'Renato Silva', 'casadeapostas.if_dgc.L011_358_56.CDA-2207973'),
+    ('2204755', 'Luiz Viveiros', 'casadeapostas.if_dgc.L011_358_56.CDA-2204755'),
+    ('2208185', 'Miqueas Marcelo', 'casadeapostas.if_dgc.L011_358_56.CDA-2208185'),
+    ('548736', 'Rodrigo Simonini', 'casadeapostas.if_dgc.L011_358_56.CDA-548736'),
+    ('2208087', 'Bruno Yela', 'casadeapostas.if_dgc.L011_358_56.CDA-2208087')
 ) AS v(user_name, apelido, player_id_bko)
 WHERE t.slug = 'cda-vip-setembro-2026'
 ON CONFLICT (torneio_id, user_name) DO UPDATE

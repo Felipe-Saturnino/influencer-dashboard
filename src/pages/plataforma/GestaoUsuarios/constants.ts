@@ -147,6 +147,7 @@ const PAGES_META: {
   },
   // Escala (ordem = menu.ts)
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "escala_controle_turno", label: "Controle de Turno", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "escala_relatorio_turno", label: "Relatório de Turno", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "escala_solicitacoes", label: "Solicitações", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_gestao_escala", label: "Escala Estúdio", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },

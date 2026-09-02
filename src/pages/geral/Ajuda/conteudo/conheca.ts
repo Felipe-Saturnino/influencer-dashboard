@@ -921,6 +921,20 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  escala_controle_turno: {
+    titulo: "Controle de Turno",
+    blocos: [
+      {
+        texto:
+          "Hub operacional do turno: presença e consolidado, atalhos para **Rotação** e **Relatório de Turno**, e a aba **Notificações** (fechamento de mesa, ausências, feedbacks e solicitação de manutenção). Use o carrossel de dia; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
+      },
+      {
+        subtitulo: "Notificações",
+        texto:
+          "Registre fechamentos, ausências, feedbacks e manutenções do dia. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
+      },
+    ],
+  },
   escala_relatorio_turno: {
     titulo: "Relatório de Turno",
     blocos: [

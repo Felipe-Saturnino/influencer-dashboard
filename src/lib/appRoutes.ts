@@ -119,6 +119,12 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
   page("Escala Estúdio", "rh_gestao_escala", "EscalaEstudio"),
   page("Escala Escritório", "escala_escritorio", "EscalaEscritorio"),
   page("Gestão de Staff", "rh_staff", "GestaoDeStaff"),
+  page("Controle de Turno", "escala_controle_turno", "ControleDeTurno", [
+    { tabId: "escala", slug: "EscalaDoTurno", label: "Escala do Turno", access: "always" },
+    { tabId: "rotacao", slug: "Rotacao", label: "Rotação", access: "always" },
+    { tabId: "relatorio", slug: "RelatorioDeTurno", label: "Relatório de Turno", access: "always" },
+    { tabId: "notificacoes", slug: "Notificacoes", label: "Notificações", access: "always" },
+  ]),
   page("Central de Denúncias", "rh_central_denuncias", "CentralDeDenuncias"),
   page("Solicitações", "rh_solicitacoes", "RhSolicitacoes"),
   page("Links e Materiais", "links_materiais", "LinksEMateriais", [

@@ -33,7 +33,7 @@ export const CDA_MESAS_BKO = new Set([
 ]);
 
 const PAGE_SIZE = 1000;
-const ATIVIDADE_LIMITE = 30;
+const ATIVIDADE_LIMITE = 15;
 const PTS_RODADA = 500;
 const PTS_RODADA_GANHA = 1000;
 const PTS_POR_REAL_GANHO = 15;
@@ -157,8 +157,14 @@ export function escolherJogadorBuscaBko(json, userName) {
   );
 }
 
-/** Screen Name do BKO — nome público na página do torneio. */
-export function resolverScreenNameBko(participante) {
+/** Nome exibido na UI: apelido travado no cadastro tem prioridade sobre Screen Name do BKO. */
+export function resolverNomeExibicaoTorneio(participante) {
+  if (participante?.apelido != null && String(participante.apelido).trim()) {
+    return String(participante.apelido).trim();
+  }
+  if (participante?.nick != null && String(participante.nick).trim()) {
+    return String(participante.nick).trim();
+  }
   const screen =
     participante?.screenName ??
     participante?.screen_name ??
@@ -166,13 +172,12 @@ export function resolverScreenNameBko(participante) {
     participante?.nickname ??
     null;
   if (screen != null && String(screen).trim()) return String(screen).trim();
-  if (participante?.apelido != null && String(participante.apelido).trim()) {
-    return String(participante.apelido).trim();
-  }
-  if (participante?.nick != null && String(participante.nick).trim()) {
-    return String(participante.nick).trim();
-  }
   return String(participante?.userName ?? participante?.user_name ?? "—").trim();
+}
+
+/** @deprecated use resolverNomeExibicaoTorneio */
+export function resolverScreenNameBko(participante) {
+  return resolverNomeExibicaoTorneio(participante);
 }
 
 async function fetchPlayerSearchBko(baseUrl, cookie, userName) {
@@ -214,7 +219,7 @@ function mensagemAtividade(nomeExibicao, game, net) {
 export function processarParticipante(participante, periodo) {
   const inicioMs = new Date(periodo.from).getTime();
   const fimMs = new Date(periodo.to).getTime();
-  const nomeExibicao = resolverScreenNameBko(participante);
+  const nomeExibicao = resolverNomeExibicaoTorneio(participante);
 
   const jogosCda = (participante.games ?? []).filter((g) => {
     if (!CDA_MESAS_BKO.has(g.tableId)) return false;
@@ -356,14 +361,18 @@ async function extrairBko(baseUrl, cookie, torneio, participantes) {
       meta.playerId ??
       p.player_id_bko ??
       `casadeapostas.if_dgc.L011_358_56.CDA-${p.user_name}`;
-    const screenName = meta.screenName?.trim() || resolverScreenNameBko({ userName: p.user_name, apelido: p.apelido });
-    console.log(`  BKO → ${screenName} (${p.user_name})…`);
+    const nomeExibicao = resolverNomeExibicaoTorneio({
+      userName: p.user_name,
+      apelido: p.apelido,
+      screenName: meta.screenName,
+    });
+    console.log(`  BKO → ${nomeExibicao} [${meta.screenName ?? "—"}] (${p.user_name})…`);
     const games = await fetchGamesBko(baseUrl, cookie, playerId, periodo);
     console.log(`    ${games.length} rodada(s) no período`);
     payload.participantes.push({
       userName: p.user_name,
-      screenName,
-      apelido: screenName,
+      screenName: meta.screenName,
+      apelido: p.apelido || nomeExibicao,
       playerId,
       games,
     });
@@ -469,20 +478,6 @@ async function gravarSnapshot(supabaseUrl, serviceKey, torneioId, snapshot) {
       "torneio_id,game_id",
     );
   }
-
-  if (snapshot.ranking.length) {
-    await supabaseUpsert(
-      supabaseUrl,
-      serviceKey,
-      "torneio_cda_participante",
-      snapshot.ranking.map((r) => ({
-        torneio_id: torneioId,
-        user_name: r.userName,
-        apelido: r.apelido,
-      })),
-      "torneio_id,user_name",
-    );
-  }
 }
 
 async function main() {
@@ -565,7 +560,13 @@ async function main() {
   console.log("\nSupabase atualizado.");
 }
 
-main().catch((err) => {
-  console.error(err.message ?? err);
-  process.exit(1);
-});
+const isMain =
+  process.argv[1] != null &&
+  resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1]);
+
+if (isMain) {
+  main().catch((err) => {
+    console.error(err.message ?? err);
+    process.exit(1);
+  });
+}

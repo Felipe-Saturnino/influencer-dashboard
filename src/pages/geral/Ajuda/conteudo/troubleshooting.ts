@@ -1748,6 +1748,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  escala_controle_turno: {
+    titulo: "Controle de Turno",
+    blocos: [
+      {
+        subtitulo: "Não vejo Controle de Turno no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Controle de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+      },
+      {
+        subtitulo: "Rotação ou Relatório não aparecem dentro do Controle de Turno?",
+        texto:
+          "Nesta primeira entrega, as abas **Rotação** e **Relatório de Turno** abrem atalho para as páginas dedicadas, que permanecem no menu Escala. A consolidação completa desses fluxos nesta página virá em seguida.",
+      },
+    ],
+  },
   escala_relatorio_turno: {
     titulo: "Relatório de Turno",
     blocos: [
@@ -1860,6 +1875,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "A mensagem pede para recarregar porque outra pessoa alterou o cadastro?",
         texto:
           "Alguém salvou o mesmo prestador enquanto o modal estava aberto. Feche, abra de novo e aplique as alterações sobre a versão atual.",
+      },
+      {
+        subtitulo: "Ao salvar Novo Prestador aparece «Não foi possível salvar»?",
+        texto:
+          "Se a mensagem for genérica (sem listar pendências de campos), o cadastro chegou ao servidor e falhou na gravação. Confira se o **CPF** já existe em outro prestador e se o **organograma** ainda está ativo. Com o formulário completo (dados pessoais + contratação) e sem CPF duplicado, o suporte precisa aplicar a correção da função de salvar no banco. Se aparecer aviso de pendências com campos destacados, complete as abas indicadas antes de salvar de novo.",
       },
     ],
   },

@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   ClipboardPen,
+  Clock,
   Dices,
   Factory,
   Files,
@@ -145,6 +146,7 @@ export const MENU: MenuSection[] = [
     section: "Escala",
     items: [
       { key: "rh_staff", label: "Gestão de Staff", icon: UsersRound },
+      { key: "escala_controle_turno", label: "Controle de Turno", icon: Clock },
       { key: "escala_relatorio_turno", label: "Relatório de Turno", icon: ClipboardPen },
       { key: "escala_solicitacoes", label: "Solicitações", icon: ClipboardList },
       { key: "rh_gestao_escala", label: "Escala Estúdio", icon: Calendar },
