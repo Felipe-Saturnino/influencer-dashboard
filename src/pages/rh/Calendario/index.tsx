@@ -740,14 +740,13 @@ export default function RhCalendarioPage() {
   const [escopoVersao, setEscopoVersao] = useState<string | null>(null);
   const [escopoRefreshTick, setEscopoRefreshTick] = useState(0);
 
-  /** Filtros da aba Compromissos (multi). */
-  const [compFilterStaffIds, setCompFilterStaffIds] = useState<string[]>([]);
-  const [compFilterTimeIds, setCompFilterTimeIds] = useState<string[]>([]);
-  /** Filtros da aba Controle de Presença (Time e Staff: seleção única). */
-  const [presencaFilterTimeIds, setPresencaFilterTimeIds] = useState<string[]>([]);
-  const [presencaFilterStaffIds, setPresencaFilterStaffIds] = useState<string[]>([]);
-  const [relatorioFilterTimeIds, setRelatorioFilterTimeIds] = useState<string[]>([]);
-  const [relatorioFilterStaffIds, setRelatorioFilterStaffIds] = useState<string[]>([]);
+  /**
+   * Time e Staff — estado único nas 3 abas (Compromissos / Controle / Relatório).
+   * Compromissos: multi; Controle e Relatório: seleção única (`normalizarSelecaoUnica`).
+   * Ao entrar em Controle/Relatório com multi, mantém só o 1.º id de cada filtro.
+   */
+  const [filterStaffIds, setFilterStaffIds] = useState<string[]>([]);
+  const [filterTimeIds, setFilterTimeIds] = useState<string[]>([]);
   const [relatorioDia, setRelatorioDia] = useState(() => {
     const hoje = new Date();
     return new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
@@ -937,8 +936,7 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (!soPropriosCal || !meuRhFuncionarioId) return;
-    setPresencaFilterStaffIds([meuRhFuncionarioId]);
-    setRelatorioFilterStaffIds([meuRhFuncionarioId]);
+    setFilterStaffIds([meuRhFuncionarioId]);
   }, [soPropriosCal, meuRhFuncionarioId]);
 
   /**
@@ -950,15 +948,16 @@ export default function RhCalendarioPage() {
     if (meuCalendarioPadraoAplicadoRef.current) return;
     if (!meuRhFuncionarioId || soPropriosCal || prestadores.length <= 1) return;
     meuCalendarioPadraoAplicadoRef.current = true;
-    setCompFilterStaffIds((prev) => (prev.length > 0 ? prev : [meuRhFuncionarioId]));
+    setFilterStaffIds((prev) => (prev.length > 0 ? prev : [meuRhFuncionarioId]));
   }, [meuRhFuncionarioId, soPropriosCal, prestadores.length]);
 
   const filtroTimeIdsReais = useMemo(() => {
     const allowed = new Set(timeIds);
-    return new Set(compFilterTimeIds.filter((id) => allowed.has(id)));
-  }, [compFilterTimeIds, timeIds]);
+    return new Set(filterTimeIds.filter((id) => allowed.has(id)));
+  }, [filterTimeIds, timeIds]);
 
-  const filtroTimeAtivo = compFilterTimeIds.length > 0;
+  const filtroTimeAtivo = filterTimeIds.length > 0;
+  const filtroStaffAtivo = filterStaffIds.length > 0;
 
   const timeMultiselectItems = useMemo(() => {
     const prioridade = new Map<string, number>(
@@ -975,7 +974,7 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     const valid = new Set(timeMultiselectItems.map((x) => x.id));
-    setCompFilterTimeIds((prev) => {
+    setFilterTimeIds((prev) => {
       const next = prev.filter((id) => valid.has(id));
       return next.length === prev.length ? prev : next;
     });
@@ -987,13 +986,13 @@ export default function RhCalendarioPage() {
       filtroAtivo: true,
       filtroTimeIdsReais,
     };
-    setCompFilterStaffIds((prev) => {
+    setFilterStaffIds((prev) => {
       if (prev.length === 0) return prev;
       const allowedStaff = new Set(prestadores.filter((p) => prestadorAtendeFiltroTime(p, opts)).map((p) => p.id));
       const next = prev.filter((id) => allowedStaff.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, compFilterTimeIds]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, filterTimeIds]);
 
   const staffMultiselectItems = useMemo(() => {
     const opts = {
@@ -1005,62 +1004,17 @@ export default function RhCalendarioPage() {
       .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
   }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais]);
 
-  const presencaFiltroTimeIdsReais = useMemo(() => {
-    const allowed = new Set(timeIds);
-    return new Set(presencaFilterTimeIds.filter((id) => allowed.has(id)));
-  }, [presencaFilterTimeIds, timeIds]);
-
-  const presencaFiltroTimeAtivo = presencaFilterTimeIds.length > 0;
-
-  const staffPresencaMultiselectItems = useMemo(() => {
-    const opts = {
-      filtroAtivo: presencaFiltroTimeAtivo,
-      filtroTimeIdsReais: presencaFiltroTimeIdsReais,
-    };
-    return prestadores
-      .filter((p) => prestadorAtendeFiltroTime(p, opts))
-      .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
-  }, [
-    prestadores,
-    presencaFiltroTimeAtivo,
-    presencaFiltroTimeIdsReais,
-  ]);
-
-  const relatorioFiltroTimeIdsReais = useMemo(() => {
-    const allowed = new Set(timeIds);
-    return new Set(relatorioFilterTimeIds.filter((id) => allowed.has(id)));
-  }, [relatorioFilterTimeIds, timeIds]);
-
-  const relatorioFiltroTimeAtivo = relatorioFilterTimeIds.length > 0;
-  const relatorioFiltroStaffAtivo = relatorioFilterStaffIds.length > 0;
-
   const prestadoresRelatorioTime = useMemo(() => {
     const opts = {
-      filtroAtivo: relatorioFiltroTimeAtivo,
-      filtroTimeIdsReais: relatorioFiltroTimeIdsReais,
+      filtroAtivo: filtroTimeAtivo,
+      filtroTimeIdsReais,
     };
-    const filtroStaff = relatorioFiltroStaffAtivo ? new Set(relatorioFilterStaffIds) : null;
+    const filtroStaff = filtroStaffAtivo ? new Set(filterStaffIds) : null;
     return prestadores
       .filter((p) => prestadorAtendeFiltroTime(p, opts))
       .filter((p) => !filtroStaff || filtroStaff.has(p.id))
       .sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR"));
-  }, [
-    prestadores,
-    relatorioFiltroTimeAtivo,
-    relatorioFiltroTimeIdsReais,
-    relatorioFiltroStaffAtivo,
-    relatorioFilterStaffIds,
-  ]);
-
-  const staffRelatorioMultiselectItems = useMemo(() => {
-    const opts = {
-      filtroAtivo: relatorioFiltroTimeAtivo,
-      filtroTimeIdsReais: relatorioFiltroTimeIdsReais,
-    };
-    return prestadores
-      .filter((p) => prestadorAtendeFiltroTime(p, opts))
-      .map((p) => ({ id: p.id, name: (p.nome ?? "").trim() || "—" }));
-  }, [prestadores, relatorioFiltroTimeAtivo, relatorioFiltroTimeIdsReais]);
+  }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, filtroStaffAtivo, filterStaffIds]);
 
   /** Relatório de Presença: só Editar = Sim no perfil efetivo. Admin real vê a aba; simulação de GP/prestador não. */
   const podeVerAbaRelatorioPresenca =
@@ -1080,29 +1034,16 @@ export default function RhCalendarioPage() {
     }
   }, [abaPrincipal, relatorioDia, current]);
 
+  /** Controle / Relatório usam seleção única — colapsa multi da aba Compromissos. */
   useEffect(() => {
-    const valid = new Set(timeMultiselectItems.map((x) => x.id));
-    setPresencaFilterTimeIds((prev) => {
-      const next = prev.filter((id) => valid.has(id));
-      return next.length === prev.length ? prev : next;
-    });
-    setRelatorioFilterTimeIds((prev) => {
-      const next = prev.filter((id) => valid.has(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [timeMultiselectItems]);
+    if (abaPrincipal !== "presenca" && abaPrincipal !== "relatorio") return;
+    setFilterTimeIds((prev) => (prev.length <= 1 ? prev : [prev[0]!]));
+    setFilterStaffIds((prev) => (prev.length <= 1 ? prev : [prev[0]!]));
+  }, [abaPrincipal]);
 
   useEffect(() => {
-    const valid = new Set(staffRelatorioMultiselectItems.map((item) => item.id));
-    setRelatorioFilterStaffIds((prev) => {
-      const next = prev.filter((id) => valid.has(id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [staffRelatorioMultiselectItems]);
-
-  useEffect(() => {
-    const allowedIds = new Set(staffPresencaMultiselectItems.map((x) => x.id));
-    setPresencaFilterStaffIds((prev) => {
+    const allowedIds = new Set(staffMultiselectItems.map((x) => x.id));
+    setFilterStaffIds((prev) => {
       if (prev.length === 0) return prev;
       // Ver=Próprios: não dropar o próprio id enquanto a lista de staff ainda carrega.
       if (soPropriosCal && meuRhFuncionarioId && prev.length === 1 && prev[0] === meuRhFuncionarioId) {
@@ -1111,7 +1052,7 @@ export default function RhCalendarioPage() {
       const next = prev.filter((id) => allowedIds.has(id));
       return next.length === prev.length ? prev : next;
     });
-  }, [staffPresencaMultiselectItems, soPropriosCal, meuRhFuncionarioId]);
+  }, [staffMultiselectItems, soPropriosCal, meuRhFuncionarioId]);
 
   const mesAnteriorPresencaRef = useMemo(
     () => refPrimeiroDiaMesAnterior(current),
@@ -1131,18 +1072,18 @@ export default function RhCalendarioPage() {
     if (soPropriosCal) return meuRhFuncionarioId ? [meuRhFuncionarioId] : null;
 
     if (abaPrincipal === "presenca") {
-      const fid = presencaFilterStaffIds[0];
+      const fid = filterStaffIds[0];
       return fid ? [fid] : null;
     }
 
     if (abaPrincipal === "relatorio") {
-      if (!relatorioFiltroTimeAtivo && !relatorioFiltroStaffAtivo) return null;
+      if (!filtroTimeAtivo && !filtroStaffAtivo) return null;
       const ids = prestadoresRelatorioTime.map((p) => p.id);
       return ids.length > 0 ? ids : null;
     }
 
-    if (compFilterStaffIds.length > 0) return compFilterStaffIds;
-    if (compFilterTimeIds.length > 0) {
+    if (filterStaffIds.length > 0) return filterStaffIds;
+    if (filterTimeIds.length > 0) {
       const opts = { filtroAtivo: true, filtroTimeIdsReais };
       const ids = prestadores.filter((p) => prestadorAtendeFiltroTime(p, opts)).map((p) => p.id);
       return ids.length > 0 ? ids : null;
@@ -1152,12 +1093,11 @@ export default function RhCalendarioPage() {
     soPropriosCal,
     meuRhFuncionarioId,
     abaPrincipal,
-    presencaFilterStaffIds,
-    relatorioFiltroTimeAtivo,
-    relatorioFiltroStaffAtivo,
+    filterStaffIds,
+    filterTimeIds,
+    filtroTimeAtivo,
+    filtroStaffAtivo,
     prestadoresRelatorioTime,
-    compFilterStaffIds,
-    compFilterTimeIds,
     filtroTimeIdsReais,
     prestadores,
   ]);
@@ -1344,7 +1284,7 @@ export default function RhCalendarioPage() {
       return;
     }
     if (abaPrincipal !== "presenca") return;
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid) {
       pontoMesStaffIdRef.current = null;
       setPontoMesLinhas([]);
@@ -1417,7 +1357,7 @@ export default function RhCalendarioPage() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, mesAnteriorPresencaRef, pontoMesTick]);
+  }, [perm.loading, perm.canView, abaPrincipal, filterStaffIds, current, mesAnteriorPresencaRef, pontoMesTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
@@ -1425,7 +1365,7 @@ export default function RhCalendarioPage() {
       setMovimentacoesPresencaPorChave(new Map());
       return;
     }
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid) {
       movimentacoesPresencaStaffIdRef.current = null;
       setMovimentacoesPresencaPorChave(new Map());
@@ -1452,7 +1392,7 @@ export default function RhCalendarioPage() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, presencaGestaoTick]);
+  }, [perm.loading, perm.canView, abaPrincipal, filterStaffIds, current, presencaGestaoTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") {
@@ -1461,7 +1401,7 @@ export default function RhCalendarioPage() {
       return;
     }
     if (abaPrincipal !== "presenca") return;
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid) {
       presencaGestaoStaffIdRef.current = null;
       setPresencaGestaoPorChave(new Map());
@@ -1496,14 +1436,14 @@ export default function RhCalendarioPage() {
     return () => {
       cancelled = true;
     };
-  }, [perm.loading, perm.canView, abaPrincipal, presencaFilterStaffIds, current, mesAnteriorPresencaRef, presencaGestaoTick]);
+  }, [perm.loading, perm.canView, abaPrincipal, filterStaffIds, current, mesAnteriorPresencaRef, presencaGestaoTick]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "presenca") {
       setAprovacaoPresencaMes(null);
       return;
     }
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid || !mesCalendarioPresencaFechado(current)) {
       setAprovacaoPresencaMes(null);
       return;
@@ -1523,7 +1463,7 @@ export default function RhCalendarioPage() {
     perm.loading,
     perm.canView,
     abaPrincipal,
-    presencaFilterStaffIds,
+    filterStaffIds,
     current,
   ]);
 
@@ -1536,7 +1476,7 @@ export default function RhCalendarioPage() {
       return;
     }
     const fids =
-      relatorioFiltroTimeAtivo || relatorioFiltroStaffAtivo
+      filtroTimeAtivo || filtroStaffAtivo
         ? prestadoresRelatorioTime.map((p) => p.id)
         : [];
     if (fids.length === 0) {
@@ -1582,8 +1522,8 @@ export default function RhCalendarioPage() {
     abaPrincipal,
     podeVerAbaRelatorioPresenca,
     prestadoresRelatorioTime,
-    relatorioFiltroTimeAtivo,
-    relatorioFiltroStaffAtivo,
+    filtroTimeAtivo,
+    filtroStaffAtivo,
     relatorioDia,
     presencaGestaoTick,
     pontoMesTick,
@@ -1611,7 +1551,7 @@ export default function RhCalendarioPage() {
     [mapOpTurnos, mapEstudioTurnos],
   );
   const compromissosPorDiaIso = useMemo(() => {
-    const filtroStaff = compFilterStaffIds.length > 0 ? new Set(compFilterStaffIds) : null;
+    const filtroStaff = filterStaffIds.length > 0 ? new Set(filterStaffIds) : null;
     const optsTime = {
       filtroAtivo: filtroTimeAtivo,
       filtroTimeIdsReais,
@@ -1636,7 +1576,7 @@ export default function RhCalendarioPage() {
     return mapa;
   }, [
     rawGradeRowsFiltrados,
-    compFilterStaffIds,
+    filterStaffIds,
     nomePrestadorPorId,
     prestadorPorId,
     filtroTimeAtivo,
@@ -1670,7 +1610,7 @@ export default function RhCalendarioPage() {
   const reunioesItemsPorIso = useMemo(() => {
     const map = new Map<string, CompromissoAgendaExtra[]>();
     for (const row of reunioesMesRaw) {
-      if (compFilterStaffIds.length > 0 && !compFilterStaffIds.includes(row.solicitante_funcionario_id)) continue;
+      if (filterStaffIds.length > 0 && !filterStaffIds.includes(row.solicitante_funcionario_id)) continue;
       if (filtroTimeAtivo) {
         const p = prestadorPorId.get(row.solicitante_funcionario_id);
         if (!p || !prestadorAtendeFiltroTime(p, { filtroAtivo: true, filtroTimeIdsReais })) continue;
@@ -1713,7 +1653,7 @@ export default function RhCalendarioPage() {
   }, [
     reunioesMesRaw,
     solicitanteAgendarId,
-    compFilterStaffIds,
+    filterStaffIds,
     filtroTimeAtivo,
     filtroTimeIdsReais,
     prestadorPorId,
@@ -2573,23 +2513,21 @@ export default function RhCalendarioPage() {
 
   const showTimeFilter = !soPropriosCal && timeMultiselectItems.length > 0;
   const showStaffFilter = !soPropriosCal && staffMultiselectItems.length > 0;
-  const hasStaffFilterComp = compFilterStaffIds.length > 0;
-  const hasTimeFilterComp = compFilterTimeIds.length > 0;
+  const hasStaffFilterComp = filterStaffIds.length > 0;
+  const hasTimeFilterComp = filterTimeIds.length > 0;
   const mostrarBotaoMeuCalendario =
     !perm.loading && Boolean(meuRhFuncionarioId) && prestadores.length > 1;
   const calendarioSoMeuAtivo =
     Boolean(meuRhFuncionarioId) &&
-    compFilterStaffIds.length === 1 &&
-    compFilterStaffIds[0] === meuRhFuncionarioId;
+    filterStaffIds.length === 1 &&
+    filterStaffIds[0] === meuRhFuncionarioId;
   const meuIdParaBotoesMeu = meuRhFuncionarioId;
   const mostrarBotaoMeuControle =
     !perm.loading && Boolean(meuRhFuncionarioId) && prestadores.length > 1;
   const meuControleAtivo =
     Boolean(meuIdParaBotoesMeu) &&
-    presencaFilterStaffIds.length === 1 &&
-    presencaFilterStaffIds[0] === meuIdParaBotoesMeu;
-  const showTimeFilterPresenca = !soPropriosCal && timeMultiselectItems.length > 0;
-  const showStaffFilterPresenca = !soPropriosCal && staffPresencaMultiselectItems.length > 0;
+    filterStaffIds.length === 1 &&
+    filterStaffIds[0] === meuIdParaBotoesMeu;
   const filterBarSection = (withTopBorder: boolean): CSSProperties => ({
     ...getFilterBarRowStyle(),
     width: "100%",
@@ -2618,7 +2556,7 @@ export default function RhCalendarioPage() {
   }, [current]);
 
   const indiceJustificativaMedicoPresenca = useMemo(() => {
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid) return new Map<string, PresencaJustificativaMeta>();
     return construirIndiceJustificativaMedicoPorDia(
       Array.from(presencaGestaoPorChave.entries())
@@ -2627,14 +2565,14 @@ export default function RhCalendarioPage() {
       fid,
       (iso) => situacaoGestaoEscalaParaDia(primeiroValorGradeDia(rawGradeRows, fid, iso)),
     );
-  }, [presencaFilterStaffIds, presencaGestaoPorChave, rawGradeRows]);
+  }, [filterStaffIds, presencaGestaoPorChave, rawGradeRows]);
 
   const mesPresencaFechado = mesCalendarioPresencaFechado(current);
   const mesPresencaFuturo = mesCalendarioPresencaFuturo(current);
 
   const escUltimoDiaMesCarousel = useMemo(() => {
     if (!mesPresencaFechado || diasDoMesPresenca.length === 0) return null;
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid) return null;
     const ultimoDia = diasDoMesPresenca[diasDoMesPresenca.length - 1]!;
     const iso = toISO(ultimoDia);
@@ -2643,11 +2581,11 @@ export default function RhCalendarioPage() {
     const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
     return obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- helper local do render (rawGradeRows/turnoMesMap já nas deps)
-  }, [mesPresencaFechado, diasDoMesPresenca, presencaFilterStaffIds, prestadorPorId, turnosHorarioPrestador, rawGradeRows, turnoMesMap]);
+  }, [mesPresencaFechado, diasDoMesPresenca, filterStaffIds, prestadorPorId, turnosHorarioPrestador, rawGradeRows, turnoMesMap]);
 
   const exibirCheckInMesFechadoExcecao = useMemo(() => {
     if (!mesPresencaFechado) return false;
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid || fid !== meuFuncionarioIdOrganograma) return false;
     if (!escUltimoDiaMesCarousel) return false;
     return deveExibirCheckInMesFechadoPresenca({
@@ -2658,7 +2596,7 @@ export default function RhCalendarioPage() {
     });
   }, [
     mesPresencaFechado,
-    presencaFilterStaffIds,
+    filterStaffIds,
     meuFuncionarioIdOrganograma,
     escUltimoDiaMesCarousel,
     current,
@@ -2711,13 +2649,13 @@ export default function RhCalendarioPage() {
   );
 
   const podeAprovarPresencaMes = useMemo(() => {
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid || !mesPresencaFechado) return false;
     return podeGerirPresencaStaff(fid);
-  }, [presencaFilterStaffIds, mesPresencaFechado, podeGerirPresencaStaff]);
+  }, [filterStaffIds, mesPresencaFechado, podeGerirPresencaStaff]);
 
   const linhasAprovacaoPresencaMes = useMemo((): PresencaMesAprovacaoLinha[] => {
-    const fid = presencaFilterStaffIds[0];
+    const fid = filterStaffIds[0];
     if (!fid) return [];
     const pRow = prestadorPorId.get(fid);
     const opRow = turnosHorarioPrestador(pRow);
@@ -2770,7 +2708,7 @@ export default function RhCalendarioPage() {
     return out;
   // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal helper local do render
   }, [
-    presencaFilterStaffIds,
+    filterStaffIds,
     diasDoMesPresenca,
     prestadorPorId,
     turnosHorarioPrestador,
@@ -2782,7 +2720,7 @@ export default function RhCalendarioPage() {
 
   const calcularKpisPresencaReferenciaMes = useCallback(
     (refMes: Date) => {
-      const fid = presencaFilterStaffIds[0];
+      const fid = filterStaffIds[0];
       if (!fid) return PRESENCA_KPIS_ZERO;
       const pRow = prestadorPorId.get(fid);
       const opRow = turnosHorarioPrestador(pRow);
@@ -2821,7 +2759,7 @@ export default function RhCalendarioPage() {
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal helper local do render
     [
-      presencaFilterStaffIds,
+      filterStaffIds,
       rawGradeRows,
       mapaPontoPorDiaIso,
       presencaGestaoPorChave,
@@ -2838,10 +2776,10 @@ export default function RhCalendarioPage() {
   );
 
   const kpisPresencaCarregando =
-    presencaFilterStaffIds.length === 1 && (loadingEscala || loadingPontoMes || loadingPresencaGestao);
+    filterStaffIds.length === 1 && (loadingEscala || loadingPontoMes || loadingPresencaGestao);
 
   const linhasRelatorioPresenca = useMemo((): RelatorioPresencaLinha[] => {
-    if (!relatorioFiltroTimeAtivo && !relatorioFiltroStaffAtivo) return [];
+    if (!filtroTimeAtivo && !filtroStaffAtivo) return [];
     const iso = toISO(relatorioDia);
     const out: RelatorioPresencaLinha[] = [];
     for (const pRow of prestadoresRelatorioTime) {
@@ -2961,8 +2899,8 @@ export default function RhCalendarioPage() {
     return out;
   // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal helper local do render
   }, [
-    relatorioFiltroTimeAtivo,
-    relatorioFiltroStaffAtivo,
+    filtroTimeAtivo,
+    filtroStaffAtivo,
     relatorioDia,
     prestadoresRelatorioTime,
     rawGradeRows,
@@ -3002,7 +2940,7 @@ export default function RhCalendarioPage() {
     salvarJustificativaPresenca,
   } = useCalendarioPresencaGestaoMutacoes({
     nomeUsuarioPresencaGestao,
-    presencaFilterStaffIds,
+    filterStaffIds,
     mesPresencaFechado,
     linhasAprovacaoPresencaMes,
     current,
@@ -3122,47 +3060,47 @@ export default function RhCalendarioPage() {
                       active={calendarioSoMeuAtivo}
                       onClick={() => {
                         if (calendarioSoMeuAtivo) {
-                          setCompFilterStaffIds([]);
+                          setFilterStaffIds([]);
                         } else {
-                          setCompFilterTimeIds([]);
-                          setCompFilterStaffIds([meuRhFuncionarioId!]);
+                          setFilterTimeIds([]);
+                          setFilterStaffIds([meuRhFuncionarioId!]);
                         }
                       }}
                     />
                   ) : null}
                   {showTimeFilter ? (
                     <FiltroCalendarioTimeSelect
-                      selected={compFilterTimeIds}
-                      onChange={setCompFilterTimeIds}
+                      selected={filterTimeIds}
+                      onChange={setFilterTimeIds}
                       items={timeMultiselectItems}
                     />
                   ) : null}
                   {showStaffFilter ? (
                     <FiltroCalendarioStaffSelect
-                      selected={compFilterStaffIds}
-                      onChange={setCompFilterStaffIds}
+                      selected={filterStaffIds}
+                      onChange={setFilterStaffIds}
                       items={staffMultiselectItems}
                     />
                   ) : null}
                 </>
               ) : abaPrincipal === "relatorio" ? (
                 <>
-                  {showTimeFilterPresenca ? (
+                  {showTimeFilter ? (
                     <FiltroCalendarioTimeSelect
                       mode="single"
-                      selected={relatorioFilterTimeIds}
-                      onChange={(ids) => setRelatorioFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
+                      selected={filterTimeIds}
+                      onChange={(ids) => setFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
                       items={timeMultiselectItems}
                     />
                   ) : null}
-                  {!soPropriosCal && staffRelatorioMultiselectItems.length > 0 ? (
+                  {!soPropriosCal && staffMultiselectItems.length > 0 ? (
                     <FiltroCalendarioStaffSelect
                       mode="single"
-                      selected={relatorioFilterStaffIds}
+                      selected={filterStaffIds}
                       onChange={(ids) =>
-                        setRelatorioFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))
+                        setFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))
                       }
-                      items={staffRelatorioMultiselectItems}
+                      items={staffMultiselectItems}
                     />
                   ) : null}
                 </>
@@ -3173,11 +3111,11 @@ export default function RhCalendarioPage() {
                       active={meuControleAtivo}
                       onClick={() => {
                         if (meuControleAtivo) {
-                          setPresencaFilterStaffIds([]);
-                          setPresencaFilterTimeIds([]);
+                          setFilterStaffIds([]);
+                          setFilterTimeIds([]);
                         } else {
-                          setPresencaFilterTimeIds([]);
-                          setPresencaFilterStaffIds([meuIdParaBotoesMeu!]);
+                          setFilterTimeIds([]);
+                          setFilterStaffIds([meuIdParaBotoesMeu!]);
                         }
                       }}
                       ariaLabelActive="Mostrar lista geral de staff"
@@ -3186,20 +3124,20 @@ export default function RhCalendarioPage() {
                       Meu Controle
                     </FiltroMeuCalendarioButton>
                   ) : null}
-                  {showTimeFilterPresenca ? (
+                  {showTimeFilter ? (
                     <FiltroCalendarioTimeSelect
                       mode="single"
-                      selected={presencaFilterTimeIds}
-                      onChange={(ids) => setPresencaFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
+                      selected={filterTimeIds}
+                      onChange={(ids) => setFilterTimeIds((prev) => normalizarSelecaoUnica(prev, ids))}
                       items={timeMultiselectItems}
                     />
                   ) : null}
-                  {showStaffFilterPresenca ? (
+                  {showStaffFilter ? (
                     <FiltroCalendarioStaffSelect
                       mode="single"
-                      selected={presencaFilterStaffIds}
-                      onChange={(ids) => setPresencaFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
-                      items={staffPresencaMultiselectItems}
+                      selected={filterStaffIds}
+                      onChange={(ids) => setFilterStaffIds((prev) => normalizarSelecaoUnica(prev, ids))}
+                      items={staffMultiselectItems}
                     />
                   ) : null}
                 </>
@@ -3282,7 +3220,7 @@ export default function RhCalendarioPage() {
               ) : null}
               {abaPrincipal === "presenca" &&
               mesPresencaFechado &&
-              presencaFilterStaffIds.length === 1 &&
+              filterStaffIds.length === 1 &&
               podeAprovarPresencaMes &&
               !aprovacaoPresencaMes ? (
                 <button
@@ -3300,7 +3238,7 @@ export default function RhCalendarioPage() {
               ) : null}
               {abaPrincipal === "presenca" &&
               mesPresencaFechado &&
-              presencaFilterStaffIds.length === 1 &&
+              filterStaffIds.length === 1 &&
               aprovacaoPresencaMes ? (
                 <span
                   style={{
@@ -3338,8 +3276,8 @@ export default function RhCalendarioPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setCompFilterTimeIds([]);
-                  setCompFilterStaffIds([]);
+                  setFilterTimeIds([]);
+                  setFilterStaffIds([]);
                   setFiltroTipoCompromisso("todos");
                 }}
                 style={{
@@ -3514,7 +3452,7 @@ export default function RhCalendarioPage() {
           contentBox={contentBox}
           linhas={linhasRelatorioPresencaOrdenadas}
           loading={loadingRelatorioPresenca || loadingEscala}
-          semTime={!relatorioFiltroTimeAtivo && !relatorioFiltroStaffAtivo}
+          semTime={!filtroTimeAtivo && !filtroStaffAtivo}
           sortDir={sortRelatorioNomeDir}
           onToggleSortNome={() =>
             setSortRelatorioNomeDir((d) => (d === "asc" ? "desc" : "asc"))
@@ -3681,7 +3619,7 @@ export default function RhCalendarioPage() {
             <SectionTitle sub="Entrada, saída e status do mês selecionado">
               Controle de Presença
             </SectionTitle>
-            {presencaFilterStaffIds.length === 0 ? (
+            {filterStaffIds.length === 0 ? (
               <div
                 style={{
                   padding: "40px 0",
@@ -3810,7 +3748,7 @@ export default function RhCalendarioPage() {
                   </thead>
                   <tbody>
                     {diasDoMesPresenca.map((dia, i) => {
-                      const fid = presencaFilterStaffIds[0]!;
+                      const fid = filterStaffIds[0]!;
                       const iso = toISO(dia);
                       const diaAnterior = i > 0 ? diasDoMesPresenca[i - 1]! : null;
                       const isoAnterior = diaAnterior ? toISO(diaAnterior) : null;
