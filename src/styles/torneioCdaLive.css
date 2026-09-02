@@ -283,8 +283,6 @@
 .torneio-cda-main-grid .torneio-cda-activity-panel {
   grid-column: 2;
   grid-row: 1 / 4;
-  align-self: start;
-  max-height: min(720px, 85vh);
 }
 
 @media (max-width: 960px) {
@@ -294,10 +292,6 @@
   .torneio-cda-main-grid .torneio-cda-activity-panel {
     grid-column: 1;
     grid-row: auto;
-  }
-
-  .torneio-cda-activity-panel {
-    max-height: min(420px, 55vh);
   }
 }
 
@@ -476,7 +470,7 @@
 .torneio-cda-activity-panel {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -487,11 +481,9 @@
 
 .torneio-cda-activity-scroll {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
   margin: 0 -4px;
   padding: 0 4px;
+  overflow: visible;
 }
 
 .torneio-cda-activity-feed {
