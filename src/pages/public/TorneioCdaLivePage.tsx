@@ -5,6 +5,7 @@ import { fmtBRL } from "../../lib/dashboardHelpers";
 import {
   TORNEIO_CDA_BG,
   TORNEIO_CDA_POLL_MS,
+  TORNEIO_CDA_ATIVIDADE_LIMITE,
   TORNEIO_CDA_SLUG,
   fmtTorneioPontos,
   fmtTorneioSyncRelativo,
@@ -333,7 +334,7 @@ export default function TorneioCdaLivePage() {
         .select("id, user_name, apelido, game_id, game_type, table_name, valor_net, mensagem, ocorrido_em")
         .eq("torneio_id", torneioRow.id)
         .order("ocorrido_em", { ascending: false })
-        .limit(30),
+        .limit(TORNEIO_CDA_ATIVIDADE_LIMITE),
     ]);
 
     if (rankRes.error || consRes.error || ativRes.error) {

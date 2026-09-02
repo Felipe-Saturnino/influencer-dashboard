@@ -327,13 +327,59 @@
   .chip {
     display: inline-flex; padding: 4px 10px; border-radius: 999px;
     border: 1px solid var(--border); background: var(--input);
-    font-size: 12px; cursor: pointer;
+    font-size: 12px; cursor: pointer; font: inherit; color: inherit;
   }
   .chip.on {
     border-color: var(--accent);
     background: color-mix(in srgb, var(--accent) 15%, white);
     color: var(--primary); font-weight: 700;
   }
+  .pool-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-size: 12px;
+    min-width: 160px;
+  }
+  .pool-chip.falta { opacity: 0.7; }
+  .pool-chip.lider { border-color: #a78bfa66; }
+  .pool-chip .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ok); display: inline-block; margin-right: 6px;
+  }
+  .pool-chip.falta .dot { background: var(--bad); }
+  .pool-chip.lider .dot { background: #a78bfa; }
+  .pool-chip .muted { opacity: 0.65; }
+  .pool-chip .cargo {
+    font-size: 10px; font-weight: 700; color: #7c3aed;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .pool-chip .row-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .pool-chip select {
+    font-size: 11px; padding: 4px 8px; border-radius: 8px;
+    border: 1px solid var(--border); background: #fff; max-width: 140px;
+  }
+  .badge-ci {
+    display: inline-flex; align-items: center; padding: 2px 7px;
+    border-radius: 999px; font-size: 10px; font-weight: 700;
+  }
+  .badge-ci.ok { background: #22c55e22; color: #166534; }
+  .badge-ci.bad { background: #e8402522; color: #b91c1c; }
+  .btn-ghost {
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--input);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
   .banner {
     background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
     border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; font-size: 12px;
@@ -483,15 +529,6 @@
     background: #fff;
     position: sticky;
     bottom: 0;
-  }
-  .btn-ghost {
-    padding: 10px 18px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--input);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
   }
   .cta.outline {
     background: #fff;
@@ -757,6 +794,7 @@
         <button class="tab" type="button" id="tab-rotacao" onclick="setAba('rotacao')">Rotação</button>
         <button class="tab on" type="button" id="tab-escala" onclick="setAba('escala')">Escala do Turno</button>
         <button class="tab" type="button" id="tab-relatorio" onclick="setAba('relatorio')">Relatório de Turno</button>
+        <button class="tab" type="button" id="tab-fechamento" onclick="setAba('fechamento')">Fechamento de Mesa</button>
       </div>
       <div class="row" id="searchRow">
         <div class="search-wrap">
@@ -826,69 +864,109 @@
       </div>
     </div>
 
-    <!-- ABA ROTAÇÃO -->
+    <!-- ABA ROTAÇÃO (layout = Gerar Rotação da página Rotação) -->
     <div class="panel" id="panel-rotacao">
-      <div class="banner">
-        Proposta UX: uma superfície (sem Gerar/Atual), turno herdado do filtro, chips de estúdio,
-        sugestão automática se ainda não houver publicação — caminho feliz ≈ 1 clique (Publicar).
-      </div>
       <div class="box">
+        <div class="row" style="justify-content:flex-start;margin-bottom:14px">
+          <button type="button" class="chip on" data-estudio="sports_club" onclick="setEstudioRotacao('sports_club')">Sports Club</button>
+          <button type="button" class="chip" data-estudio="blaze" onclick="setEstudioRotacao('blaze')">Blaze</button>
+          <button type="button" class="chip" data-estudio="cda" onclick="setEstudioRotacao('cda')">CDA</button>
+        </div>
         <div class="sec-head">
-          <p class="tit">Antes × Depois</p>
-        </div>
-        <div class="compare">
-          <div class="bloco">
-            <h3>Antes (hoje)</h3>
-            <ul>
-              <li>Abrir página Rotação</li>
-              <li>Aba Gerar Rotação</li>
-              <li>Selecionar estúdio</li>
-              <li>Ajustar turno (default Noite)</li>
-              <li>Gerar prévia</li>
-              <li>Ajustar faltas / mover GPs</li>
-              <li>Publicar → ir à aba Atual</li>
-            </ul>
-          </div>
-          <div class="bloco">
-            <h3>Depois (nesta aba)</h3>
-            <ul>
-              <li>Dia + turno já certos (turno atual)</li>
-              <li>Grade já carregada (publicada ou sugestão)</li>
-              <li>Chips de estúdio no topo</li>
-              <li>Editar inline</li>
-              <li>Um CTA: Publicar / Atualizar</li>
-            </ul>
+          <p class="tit">Pool do turno <span id="rotacaoSub">— Manhã · Escala Aprovada e Check-in</span></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn-ghost" onclick="togglePainelLideranca()">Incluir Liderança</button>
+            <button type="button" class="cta" onclick="gerarPreviaRotacao()">Gerar prévia</button>
           </div>
         </div>
+
+        <div id="painelLideranca" class="banner hidden" style="background:color-mix(in srgb,#f59e0b 10%,#fff);border-color:#f59e0b55;color:#92400e">
+          <div style="font-weight:700;margin-bottom:8px">Shift Leaders e Service Managers escalados no dia · horário compatível com o turno</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button type="button" class="pool-chip lider" onclick="incluirLideranca(this)">
+              <span class="dot"></span> CarlaSL <span class="muted">(Carla Dias)</span>
+              <span class="cargo">Shift Leader · 08h–20h</span>
+            </button>
+            <button type="button" class="pool-chip lider" onclick="incluirLideranca(this)">
+              <span class="dot"></span> DiegoSM <span class="muted">(Diego Alves)</span>
+              <span class="cargo">Service Manager · 08h–20h</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="g4" style="margin-bottom:14px">
+          <div class="kpi" style="text-align:center;padding:12px 14px">
+            <div class="lbl" style="margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Mesas</div>
+            <div class="n" style="font-size:22px" id="rotKpiMesas">3</div>
+          </div>
+          <div class="kpi" style="text-align:center;padding:12px 14px">
+            <div class="lbl" style="margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Escalados</div>
+            <div class="n" style="font-size:22px" id="rotKpiEscalados">8</div>
+          </div>
+          <div class="kpi" style="text-align:center;padding:12px 14px">
+            <div class="lbl" style="margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Não chegaram</div>
+            <div class="n" style="font-size:22px;color:var(--bad)" id="rotKpiNao">1</div>
+          </div>
+          <div class="kpi" style="text-align:center;padding:12px 14px">
+            <div class="lbl" style="margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Disponíveis</div>
+            <div class="n" style="font-size:22px;color:var(--ok)" id="rotKpiDisp">7</div>
+          </div>
+        </div>
+
+        <div id="rotacaoPool" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px"></div>
       </div>
 
       <div class="box">
         <div class="sec-head">
-          <p class="tit">Grade unificada <span id="rotacaoSub">— Manhã · Sports Club</span></p>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <span class="pill info">Sugestão gerada</span>
-            <button class="cta" type="button">Publicar</button>
+          <p class="tit">Pré-visualização <span id="rotPreviaSub">— gere para ver a grade</span></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn-ghost" onclick="avisoIntervalo20()">Aviso — intervalo 20 min</button>
+            <button type="button" class="btn-ghost" id="btnRegenRot" disabled onclick="gerarPreviaRotacao()">Regenerar</button>
+            <button type="button" class="cta" id="btnPubRot" disabled onclick="publicarRotacao()">Publicar</button>
           </div>
         </div>
-        <div class="row" style="justify-content:flex-start;margin-bottom:12px">
-          <span class="chip on">Sports Club</span>
-          <span class="chip">Blaze</span>
-          <span class="chip">CDA</span>
-          <span style="color:var(--muted);font-size:12px;margin-left:8px">Pool: 8 GPs · 3 mesas · cobertura ok</span>
+        <div id="rotPreviaEmpty" class="empty-center">Gere a prévia para visualizar a grade de mesas por slot.</div>
+        <div id="rotPreviaWrap" class="hidden">
+          <div class="tw">
+            <table>
+              <thead>
+                <tr>
+                  <th>Slot</th>
+                  <th>Mesa 1</th>
+                  <th>Mesa 2</th>
+                  <th>Mesa 3</th>
+                </tr>
+              </thead>
+              <tbody id="rotPreviaBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA FECHAMENTO DE MESA -->
+    <div class="panel" id="panel-fechamento">
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Fechamento de Mesa <span id="fechSub">— Manhã · 12/08</span></p>
+          <button type="button" class="cta" onclick="abrirModalFechamento()">Registrar Fechamento</button>
         </div>
         <div class="tw">
           <table>
             <thead>
-              <tr><th>Slot</th><th>Mesa 1</th><th>Mesa 2</th><th>Mesa 3</th></tr>
+              <tr>
+                <th>Mesa</th>
+                <th>Hora de Fechamento</th>
+                <th>Hora de Reabertura</th>
+                <th>Status</th>
+                <th>Origem</th>
+                <th>Ações</th>
+              </tr>
             </thead>
-            <tbody>
-              <tr><td>07:00</td><td>Ana S.</td><td>Bruno L.</td><td>Carla D.</td></tr>
-              <tr><td>07:30</td><td>Bruno L.</td><td>Carla D.</td><td>Ana S.</td></tr>
-              <tr><td>08:00</td><td>Carla D.</td><td>Ana S.</td><td>Bruno L.</td></tr>
-              <tr><td>08:30</td><td>Ana S.</td><td>Bruno L.</td><td>— (falta)</td></tr>
-            </tbody>
+            <tbody id="fechamentoBody"></tbody>
           </table>
         </div>
+        <div id="fechEmpty" class="empty-center hidden">Sem fechamentos registrados no turno.</div>
       </div>
     </div>
 
@@ -915,7 +993,7 @@
       </div>
 
       <!-- Manhã publicado -->
-      <div class="box rel-turno-box" data-relator="Ana Costa" data-keywords="2 SOS na mesa BJ VIP — resolvidos às 10:40. Não houveram trocas de Figurino no Turno Headset mesa 2 com áudio intermitente — trocado. Não houveram fechamento de Mesas no Turno Roletas Blaze e CDA concluídas · Troca de Cartas Sports Club · CC Machine realizado. Turno estável. Sem incidentes críticos.">
+      <div class="box rel-turno-box" data-relator="Ana Costa" data-keywords="2 SOS na mesa BJ VIP — resolvidos às 10:40. Não houveram trocas de Figurino no Turno Headset mesa 2 com áudio intermitente — trocado. Roletas Blaze e CDA concluídas · Troca de Cartas Sports Club · CC Machine realizado. Turno estável. Sem incidentes críticos.">
         <div class="bloco-head">
           <p class="tit" style="margin:0">Turno da Manhã</p>
           <span class="pill ok">Publicado</span>
@@ -942,7 +1020,6 @@
             <div class="field"><div class="k">SOSs</div><div class="v">2 SOS na mesa BJ VIP — resolvidos às 10:40.</div></div>
             <div class="field"><div class="k">Figurino</div><div class="v empty">Não houveram trocas de Figurino no Turno</div></div>
             <div class="field"><div class="k">Equipamentos</div><div class="v">Headset mesa 2 com áudio intermitente — trocado.</div></div>
-            <div class="field"><div class="k">Fechamento de Mesa</div><div class="v empty">Não houveram fechamento de Mesas no Turno</div></div>
           </div>
           <div class="field"><div class="k">Manutenção</div><div class="v">Roletas Blaze e CDA concluídas · Troca de Cartas Sports Club · CC Machine realizado.</div></div>
           <div class="field"><div class="k">Comentários Gerais</div><div class="v">Turno estável. Sem incidentes críticos.</div></div>
@@ -951,7 +1028,7 @@
       </div>
 
       <!-- Tarde rascunho -->
-      <div class="box rel-turno-box" data-relator="Bruno Lima" data-keywords="Não houveram SOS no Turno Troca de blazer GP #4 às 16:20. Não houveram problemas com Equipamentos no Turno Não houveram fechamento de Mesas no Turno Não houveram Manutenções no Turno Rascunho — falta fechar comentários de equipamentos.">
+      <div class="box rel-turno-box" data-relator="Bruno Lima" data-keywords="Não houveram SOS no Turno Troca de blazer GP #4 às 16:20. Não houveram problemas com Equipamentos no Turno Não houveram Manutenções no Turno Rascunho — falta fechar comentários de equipamentos.">
         <div class="bloco-head">
           <p class="tit" style="margin:0">Turno da Tarde</p>
           <button class="cta sec" type="button" onclick="abrirModalRelatorio('tarde','editar')">Editar Rascunho</button>
@@ -978,7 +1055,6 @@
             <div class="field"><div class="k">SOSs</div><div class="v empty">Não houveram SOS no Turno</div></div>
             <div class="field"><div class="k">Figurino</div><div class="v">Troca de blazer GP #4 às 16:20.</div></div>
             <div class="field"><div class="k">Equipamentos</div><div class="v empty">Não houveram problemas com Equipamentos no Turno</div></div>
-            <div class="field"><div class="k">Fechamento de Mesa</div><div class="v empty">Não houveram fechamento de Mesas no Turno</div></div>
           </div>
           <div class="field"><div class="k">Manutenção</div><div class="v empty">Não houveram Manutenções no Turno</div></div>
           <div class="field"><div class="k">Comentários Gerais</div><div class="v">Rascunho — falta fechar comentários de equipamentos.</div></div>
@@ -1051,19 +1127,6 @@
             <label class="chk-line"><input type="checkbox" id="chk-equipamentos" onchange="toggleSemEvento('equipamentos')"> Não houveram situações com Equipamentos</label>
           </div>
           <textarea id="f-equipamentos" placeholder="Descreva situações de equipamentos…"></textarea>
-        </div>
-        <div class="f">
-          <label class="fl">Fechamento de Mesa</label>
-          <div class="msel" id="msel-mesas">
-            <button type="button" class="msel-trigger" id="msel-trigger" onclick="toggleMsel(event)" aria-haspopup="listbox" aria-expanded="false">
-              <span class="msel-placeholder" id="msel-ph">Selecionar mesas...</span>
-            </button>
-            <div class="msel-panel" id="msel-panel" role="listbox" onclick="event.stopPropagation()">
-              <input class="msel-search" type="search" id="msel-search" placeholder="Pesquisar mesa..." oninput="filtrarMsel()" onclick="event.stopPropagation()">
-              <div class="msel-opts" id="msel-opts"></div>
-            </div>
-          </div>
-          <div id="mesas-detalhes"></div>
         </div>
       </div>
 
@@ -1164,6 +1227,37 @@
   </div>
 </div>
 
+<!-- Modal Fechamento de Mesa -->
+<div class="ov" id="modalFechamento" onclick="if(event.target===this)fecharModalFechamento()">
+  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="fechTitle">
+    <div class="mh">
+      <h2 id="fechTitle">Registrar Fechamento</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalFechamento()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb">
+      <div class="alert-form" id="fechErro" role="alert"></div>
+      <div class="f">
+        <label class="fl">Mesas</label>
+        <div class="msel" id="msel-mesas">
+          <button type="button" class="msel-trigger" id="msel-trigger" onclick="toggleMsel(event)" aria-haspopup="listbox" aria-expanded="false">
+            <span class="msel-placeholder" id="msel-ph">Selecionar mesas...</span>
+          </button>
+          <div class="msel-panel" id="msel-panel" role="listbox" onclick="event.stopPropagation()">
+            <input class="msel-search" type="search" id="msel-search" placeholder="Pesquisar mesa..." oninput="filtrarMsel()" onclick="event.stopPropagation()">
+            <div class="msel-opts" id="msel-opts"></div>
+          </div>
+        </div>
+      </div>
+      <div id="mesas-detalhes"></div>
+    </div>
+    <div class="mf">
+      <button type="button" class="cta" onclick="salvarFechamento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script>
   var turnoAtual = "manha";
   var abaAtual = "escala";
@@ -1193,8 +1287,13 @@
     { id: "s-rl1", label: "Sports Club - Roleta 6115" }
   ];
 
-  /* estado: id -> { fechamento, reabertura, naoReaberta, herdado } */
+  /* estado do modal de fechamento: id -> { fechamento, reabertura, naoReaberta, herdado } */
   var mesasSelecionadas = {};
+
+  /* tabela Fechamento de Mesa (fonte da aba) */
+  var FECHAMENTOS = [
+    { id: "s-bj2", fechamento: "06:40", reabertura: "", naoReaberta: true, herdado: true }
+  ];
 
   var ROLETAS = [
     { id: "r-b", label: "Blaze - Roleta 6140" },
@@ -1202,9 +1301,34 @@
     { id: "r-s", label: "Sports Club - Roleta 6115" }
   ];
 
-  /* Mesa fechada no turno da Tarde sem reabertura → herda na Noite */
-  var MESAS_PENDENTES_REABERTURA = {
-    noite: [{ id: "s-bj2", fechamento: "06:40" }]
+  var estudioRotacao = "sports_club";
+  var rotacaoPreviaAtiva = false;
+  var ROTACAO_POOL = {
+    sports_club: [
+      { id: "1", nick: "AnaS", nome: "Ana Souza", chegou: true, falta: false },
+      { id: "2", nick: "BrunoL", nome: "Bruno Lima", chegou: true, falta: false },
+      { id: "3", nick: "CarlaD", nome: "Carla Dias", chegou: false, falta: false },
+      { id: "4", nick: "ElenaC", nome: "Elena Costa", chegou: true, falta: false },
+      { id: "5", nick: "FelipeR", nome: "Felipe Rocha", chegou: true, falta: false },
+      { id: "6", nick: "GiuliaM", nome: "Giulia Mendes", chegou: true, falta: false },
+      { id: "7", nick: "HugoP", nome: "Hugo Prado", chegou: true, falta: false },
+      { id: "8", nick: "IaraN", nome: "Iara Nunes", chegou: true, falta: false }
+    ],
+    blaze: [
+      { id: "b1", nick: "JoaoB", nome: "João Barros", chegou: true, falta: false },
+      { id: "b2", nick: "LiaK", nome: "Lia Kato", chegou: true, falta: false },
+      { id: "b3", nick: "MarcosT", nome: "Marcos Tavares", chegou: false, falta: false },
+      { id: "b4", nick: "NinaV", nome: "Nina Vaz", chegou: true, falta: false },
+      { id: "b5", nick: "OttoC", nome: "Otto Costa", chegou: true, falta: false },
+      { id: "b6", nick: "PaulaS", nome: "Paula Silva", chegou: true, falta: false }
+    ],
+    cda: [
+      { id: "c1", nick: "QuinnA", nome: "Quinn Alves", chegou: true, falta: false },
+      { id: "c2", nick: "RafaD", nome: "Rafa Dias", chegou: true, falta: false },
+      { id: "c3", nick: "SaraL", nome: "Sara Lopes", chegou: true, falta: false },
+      { id: "c4", nick: "TiagoM", nome: "Tiago Melo", chegou: false, falta: true },
+      { id: "c5", nick: "UrsulaF", nome: "Úrsula Freitas", chegou: true, falta: false }
+    ]
   };
 
   var RASCUNHOS = {
@@ -1215,7 +1339,6 @@
       figurinoNao: false,
       equipamentos: "",
       equipamentosNao: true,
-      mesas: {},
       roletas: {},
       limpezaMesas: {},
       trocaCartas: {},

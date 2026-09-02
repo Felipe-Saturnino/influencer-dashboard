@@ -11,6 +11,7 @@ build/
 .env.*.local
 .env.gp-kpi
 .env.monitor-cda
+.env.bko-pls
 
 # OAuth / Google (client secret — não versionar)
 client_secret*.json

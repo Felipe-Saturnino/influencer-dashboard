@@ -283,6 +283,8 @@
 .torneio-cda-main-grid .torneio-cda-activity-panel {
   grid-column: 2;
   grid-row: 1 / 4;
+  align-self: start;
+  max-height: min(720px, 85vh);
 }
 
 @media (max-width: 960px) {

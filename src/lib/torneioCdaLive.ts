@@ -5,6 +5,9 @@ export const TORNEIO_CDA_SLUG = "cda-vip-setembro-2026";
 /** Polling durante o evento ao vivo (ms). */
 export const TORNEIO_CDA_POLL_MS = 30_000;
 
+/** Máximo de itens em Atividades Recentes. */
+export const TORNEIO_CDA_ATIVIDADE_LIMITE = 15;
+
 export const TORNEIO_CDA_BG = "#001724";
 
 export function torneioCdaPublicPath(): string {

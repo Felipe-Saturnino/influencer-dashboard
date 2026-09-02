@@ -33,7 +33,7 @@ export const CDA_MESAS_BKO = new Set([
 ]);
 
 const PAGE_SIZE = 1000;
-const ATIVIDADE_LIMITE = 30;
+const ATIVIDADE_LIMITE = 15;
 const PTS_RODADA = 500;
 const PTS_RODADA_GANHA = 1000;
 const PTS_POR_REAL_GANHO = 15;
@@ -565,7 +565,13 @@ async function main() {
   console.log("\nSupabase atualizado.");
 }
 
-main().catch((err) => {
-  console.error(err.message ?? err);
-  process.exit(1);
-});
+const isMain =
+  process.argv[1] != null &&
+  resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1]);
+
+if (isMain) {
+  main().catch((err) => {
+    console.error(err.message ?? err);
+    process.exit(1);
+  });
+}
