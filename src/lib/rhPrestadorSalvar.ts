@@ -31,6 +31,16 @@ export function mensagemErroPrestadorSalvar(code: string | undefined): string {
       return "Já existe um prestador cadastrado com este CPF.";
     case "cpf_invalido":
       return "CPF Inválido";
+    case "cnpj_invalido":
+      return "CNPJ inválido. Confira os dígitos na aba Dados da empresa.";
+    case "organograma_invalido":
+      return "O organograma selecionado não é válido. Selecione novamente o time, a gerência ou a diretoria.";
+    case "campo_obrigatorio":
+      return "Faltam dados obrigatórios no cadastro. Revise as abas e tente novamente.";
+    case "dado_invalido":
+      return "Há um dado inválido no formulário. Revise CPF, CNPJ, tipo de contrato, origem e organograma.";
+    case "duplicado":
+      return "Já existe um cadastro com estes dados. Confira CPF e tente novamente.";
     default:
       return ERRO_PRESTADOR_SALVAR_GENERICO;
   }

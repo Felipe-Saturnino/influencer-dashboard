@@ -1876,6 +1876,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Alguém salvou o mesmo prestador enquanto o modal estava aberto. Feche, abra de novo e aplique as alterações sobre a versão atual.",
       },
+      {
+        subtitulo: "Ao salvar Novo Prestador aparece «Não foi possível salvar»?",
+        texto:
+          "Se a mensagem for genérica (sem listar pendências de campos), o cadastro chegou ao servidor e falhou na gravação. Confira se o **CPF** já existe em outro prestador e se o **organograma** ainda está ativo. Com o formulário completo (dados pessoais + contratação) e sem CPF duplicado, o suporte precisa aplicar a correção da função de salvar no banco. Se aparecer aviso de pendências com campos destacados, complete as abas indicadas antes de salvar de novo.",
+      },
     ],
   },
   rh_organograma: {
