@@ -5,7 +5,7 @@
 | `DRESS-COD-SPIN-GAMING-2026-02-10.pdf` | 10/02/2026 | Dress Code Spin — guias de caimento (traje social + vestido tubinho), zelo com peças delicadas, calçado ao vivo, regras de circulação com figurino |
 | `dress-code-2026-02-10-pages/` | — | PNGs extraídos do PDF acima (referência visual para o Manual Academy) |
 
-**Extração de páginas (PDF só-imagem):**
+**Extração de páginas (PDF só-imagem):** usada para **guias por estúdio** e referência interna — o **Manual Academy geral** (`manual-figurino-uniforme.html`) usa fotos de exemplo de stock (Unsplash/Pexels), como o manual de Acessórios e Joias. Ver `media/exemplos/README.md`.
 
 ```bash
 npx --yes pdf-to-img "fontes/DRESS-COD-SPIN-GAMING-2026-02-10.pdf" --output "fontes/dress-code-2026-02-10-pages" --scale 2
