@@ -73,17 +73,29 @@ RLS: leitura **anon** apenas quando `torneio_cda.ativo = true`.
 | Componente | `src/pages/public/TorneioCdaLivePage.tsx` |
 | Polling | 30 s (ranking, KPIs, atividades) |
 
-## Participantes seed (User Name — teste)
+## Participantes do evento (03/09/2026)
 
-Cadastre só o **User Name** (`user_name`). O **Screen Name** vem do BKO a cada sync.
+Nomes na UI são **travados** em `torneio_cda_participante.apelido` (não usam Screen Name do BKO). O sync só lê User Name + jogos.
 
-| User Name | Screen Name BKO (exemplo) |
-|-----------|---------------------------|
-| 1990329 | Nathan |
-| 1989697 | Daci |
-| 1713222 | Gusti |
-| 2152775 | Matrix00 |
-| 2032222 | DG |
+| User Name | Nome na UI |
+|-----------|------------|
+| 2205336 | Alessandro Tomazelli |
+| 2204772 | Eliane Luiza |
+| 2204766 | Fernando Luis |
+| 2204764 | Flavio Luis |
+| 2204743 | Humberto dos Anjos |
+| 2204823 | Pedro Alexandre |
+| 2204769 | Flavio Hirata |
+| 2204759 | Rodrigo Junqueira |
+| 2207973 | Renato Silva |
+| 2204755 | Luiz Viveiros |
+| 2208185 | Miqueas Marcelo |
+| 548736 | Rodrigo Simonini |
+| 2208087 | Bruno Yela |
+
+**Período do sync:** `2026-09-03T03:00:00.000Z` → `2026-09-04T02:59:59.999Z` (dia 03/09 inteiro em Brasília).
+
+No dia: `UPDATE torneio_cda SET ativo = true WHERE slug = 'cda-vip-setembro-2026';` e sync sob demanda.
 
 ## API BKO (referência)
 

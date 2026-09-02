@@ -1,6 +1,9 @@
 /**
  * Baixa fotos de exemplo (Unsplash / Pexels) para o Manual Figurino e Uniforme.
  * Uso: node scripts/download-manual-figurino-exemplos.mjs
+ *
+ * Calçado / vestimentas proibidas / segurança = PNGs do Dress Code em fontes/
+ * (não regenerados por este script).
  */
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -10,36 +13,24 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "docs/manual-imagem/02-figurino-uniforme/media/exemplos");
 mkdirSync(out, { recursive: true });
 
-/** Nome do arquivo → URL CDN (w≈900, qualidade 80). */
+/** Nome → URL — cada arquivo ilustra a ideia PODE/NÃO do slide. */
 const SOURCES = {
-  "conferencia-checklist.jpg":
-    "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?auto=format&fit=crop&w=900&q=80",
-  "vestuario-nao.jpg":
-    "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=80",
+  "retirada-ok.jpg":
+    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80",
+  "conferencia-ok.jpg":
+    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80",
+  "figurino-ao-vivo.jpg":
+    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80",
   "figurino-padrao.jpg":
     "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=900&q=80",
-  "figurino-fora-padrao.jpg":
-    "https://images.pexels.com/photos/6311473/pexels-photo-6311473.jpeg?auto=compress&cs=tinysrgb&w=900",
-  "zelo-tecido.jpg":
-    "https://images.pexels.com/photos/6043714/pexels-photo-6043714.jpeg?auto=compress&cs=tinysrgb&w=900",
-  "calca-caimento.jpg":
-    "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=900&q=80",
-  "colete-kit.jpg":
-    "https://images.pexels.com/photos/15536109/pexels-photo-15536109.jpeg?auto=compress&cs=tinysrgb&w=900",
-  "calcado-gp-ok.jpg":
-    "https://images.unsplash.com/photo-1576133384936-ea17c54e9fd4?auto=format&fit=crop&w=900&q=80",
-  "calcado-shuffler-ok.jpg":
-    "https://images.unsplash.com/photo-1574723475640-e514767d4181?auto=format&fit=crop&w=900&q=80",
-  "calcado-nao.jpg":
-    "https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=900",
-  "figurino-ao-vivo.jpg":
-    "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=900&q=80",
-  "seguranca-camisa.jpg":
-    "https://images.pexels.com/photos/4063856/pexels-photo-4063856.jpeg?auto=compress&cs=tinysrgb&w=900",
-  "caimento-masculino.jpg":
-    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80",
-  "caimento-feminino.jpg":
-    "https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=900",
+  "figurino-amassado.jpg":
+    "https://images.unsplash.com/photo-1558171813-4c088753af8f?auto=format&fit=crop&w=900&q=80",
+  "figurino-alterado.jpg":
+    "https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=900",
+  "cinto-discreto-ok.jpg":
+    "https://images.pexels.com/photos/10340815/pexels-photo-10340815.jpeg?auto=compress&cs=tinysrgb&w=900",
+  "meia-arrastao-nao.jpg":
+    "https://images.pexels.com/photos/1055691/pexels-photo-1055691.jpeg?auto=compress&cs=tinysrgb&w=900",
 };
 
 async function download(name, url) {

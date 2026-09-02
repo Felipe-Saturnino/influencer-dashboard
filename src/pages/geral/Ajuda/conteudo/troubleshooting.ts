@@ -1748,6 +1748,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
+  escala_controle_turno: {
+    titulo: "Controle de Turno",
+    blocos: [
+      {
+        subtitulo: "Não vejo Controle de Turno no menu?",
+        texto:
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Controle de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+      },
+      {
+        subtitulo: "Rotação ou Relatório não aparecem dentro do Controle de Turno?",
+        texto:
+          "Nesta primeira entrega, as abas **Rotação** e **Relatório de Turno** abrem atalho para as páginas dedicadas, que permanecem no menu Escala. A consolidação completa desses fluxos nesta página virá em seguida.",
+      },
+    ],
+  },
   escala_relatorio_turno: {
     titulo: "Relatório de Turno",
     blocos: [

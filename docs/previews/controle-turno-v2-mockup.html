@@ -165,6 +165,14 @@
     color: var(--primary);
     border: 1px solid color-mix(in srgb, var(--accent) 40%, white);
   }
+  .cta.danger {
+    background: #e84025;
+    color: #fff;
+  }
+  .btn-icone.danger {
+    color: #e84025;
+    border-color: rgba(232, 64, 37, 0.35);
+  }
   .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
   .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -770,6 +778,17 @@
     color: #b45309;
     margin-left: 6px;
   }
+  .tag-herdado {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #f59e0b66;
+    border-radius: 999px;
+    padding: 1px 7px;
+    vertical-align: middle;
+  }
   .alert-form {
     display: none;
     color: var(--bad);
@@ -816,9 +835,9 @@
       <div class="filter-line">
         <div aria-hidden="true"></div>
         <div class="filter-line__center">
-          <button class="btn btn-sq" type="button" aria-label="Dia anterior">‹</button>
+          <button class="btn btn-sq" type="button" aria-label="Dia anterior" onclick="navDia(-1)">‹</button>
           <span class="period" id="diaLabel">12/08/2026</span>
-          <button class="btn btn-sq" type="button" aria-label="Próximo dia">›</button>
+          <button class="btn btn-sq" type="button" aria-label="Próximo dia" onclick="navDia(1)">›</button>
           <span id="turnoWrap">
             <button class="btn on" type="button" data-turno="manha" onclick="setTurno('manha')">Manhã</button>
             <button class="btn" type="button" data-turno="tarde" onclick="setTurno('tarde')">Tarde</button>
@@ -840,7 +859,7 @@
         <button class="tab" type="button" id="tab-rotacao" onclick="setAba('rotacao')">Rotação</button>
         <button class="tab on" type="button" id="tab-escala" onclick="setAba('escala')">Escala do Turno</button>
         <button class="tab" type="button" id="tab-relatorio" onclick="setAba('relatorio')">Relatório de Turno</button>
-        <button class="tab" type="button" id="tab-fechamento" onclick="setAba('fechamento')">Fechamento de Mesa</button>
+        <button class="tab" type="button" id="tab-notificacoes" onclick="setAba('notificacoes')">Notificações</button>
       </div>
       <div class="row" id="searchRow">
         <div class="search-wrap">
@@ -983,11 +1002,11 @@
       </div>
     </div>
 
-    <!-- ABA FECHAMENTO DE MESA -->
-    <div class="panel" id="panel-fechamento">
+    <!-- ABA NOTIFICAÇÕES -->
+    <div class="panel" id="panel-notificacoes">
       <div class="box">
         <div class="sec-head">
-          <p class="tit">Fechamento de Mesa <span id="fechSub">— Manhã · 12/08</span></p>
+          <p class="tit">Fechamento de Mesa <span id="fechSub">— 12/08</span></p>
           <button type="button" class="cta" onclick="abrirModalFechamento()">Registrar Fechamento</button>
         </div>
         <div class="tw">
@@ -1005,7 +1024,77 @@
             <tbody id="fechamentoBody"></tbody>
           </table>
         </div>
-        <div id="fechEmpty" class="empty-center hidden">Sem fechamentos registrados no turno.</div>
+        <div id="fechEmpty" class="empty-center hidden">Sem fechamentos registrados no dia.</div>
+      </div>
+
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Ausências <span id="ausSub">— 12/08</span></p>
+          <button type="button" class="cta" onclick="abrirModalAusencia()">Registrar Ausência</button>
+        </div>
+        <div class="tw">
+          <table>
+            <thead>
+              <tr>
+                <th>Prestador</th>
+                <th>Motivo</th>
+                <th>Início da Ausência</th>
+                <th>Fim da Ausência</th>
+                <th>Liderança</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ausenciasBody"></tbody>
+          </table>
+        </div>
+        <div id="ausEmpty" class="empty-center hidden">Sem ausências registradas no dia.</div>
+      </div>
+
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Feedbacks <span id="fbSub">— 12/08</span></p>
+          <button type="button" class="cta" onclick="abrirModalFeedback()">Registrar Feedback</button>
+        </div>
+        <div class="tw">
+          <table>
+            <thead>
+              <tr>
+                <th>Data do Registro</th>
+                <th>Prestador</th>
+                <th>Recomendação</th>
+                <th>Status</th>
+                <th>Liderança</th>
+                <th>Aplicado Por</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="feedbacksBody"></tbody>
+          </table>
+        </div>
+        <div id="fbEmpty" class="empty-center hidden">Sem feedbacks registrados no dia.</div>
+      </div>
+
+      <div class="box">
+        <div class="sec-head">
+          <p class="tit">Solicitação de Manutenção <span id="manutSub">— 12/08</span></p>
+          <button type="button" class="cta" onclick="abrirModalManutencao()">Solicitar Manutenção</button>
+        </div>
+        <div class="tw">
+          <table>
+            <thead>
+              <tr>
+                <th>Abertura</th>
+                <th>Solicitante</th>
+                <th>Tipo</th>
+                <th>Local</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="manutencaoBody"></tbody>
+          </table>
+        </div>
+        <div id="manutEmpty" class="empty-center hidden">Sem solicitações de manutenção no dia.</div>
       </div>
     </div>
 
@@ -1310,10 +1399,218 @@
   </div>
 </div>
 
+<!-- Modal Ausência -->
+<div class="ov" id="modalAusencia" onclick="if(event.target===this)fecharModalAusencia()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ausTitle">
+    <div class="mh">
+      <h2 id="ausTitle">Registrar Ausência</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalAusencia()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb">
+      <div class="alert-form" id="ausErro" role="alert"></div>
+      <div class="f">
+        <label class="fl">Prestador <span class="req">*</span></label>
+        <div class="msel" id="psel-aus">
+          <button type="button" class="msel-trigger" id="psel-aus-trigger" onclick="togglePsel('aus', event)" aria-haspopup="listbox" aria-expanded="false">
+            <span class="msel-placeholder">Selecionar prestador...</span>
+          </button>
+          <div class="msel-panel" id="psel-aus-panel" role="listbox" onclick="event.stopPropagation()">
+            <input class="msel-search" type="search" id="psel-aus-search" placeholder="Pesquisar Prestador..." oninput="filtrarPsel('aus')" onclick="event.stopPropagation()">
+            <div class="msel-opts" id="psel-aus-opts"></div>
+          </div>
+        </div>
+        <input type="hidden" id="aus-prestador">
+      </div>
+      <div class="f">
+        <label class="fl" for="aus-motivo">Motivo <span class="req">*</span></label>
+        <select id="aus-motivo" aria-label="Motivo">
+          <option value="">Selecionar...</option>
+          <option value="medico">Médico</option>
+          <option value="pessoal">Pessoal</option>
+        </select>
+      </div>
+      <div class="g2">
+        <div class="f">
+          <label class="fl" for="aus-inicio">Início da Ausência <span class="req">*</span></label>
+          <input type="date" id="aus-inicio" onchange="onAusInicioChange()">
+        </div>
+        <div class="f">
+          <label class="fl" for="aus-fim">Fim da Ausência <span class="req">*</span></label>
+          <input type="date" id="aus-fim">
+          <label class="chk-line"><input type="checkbox" id="aus-fim-nao" onchange="onAusFimNaoInformado()"> Não informado</label>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:0">
+        <label class="fl" for="aus-obs">Observação <span class="req">*</span></label>
+        <textarea id="aus-obs" placeholder="Descreva a ausência..." style="min-height:96px"></textarea>
+      </div>
+    </div>
+    <div class="mf">
+      <button type="button" class="cta" onclick="salvarAusencia()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ver Ausência -->
+<div class="ov" id="modalVerAusencia" onclick="if(event.target===this)fecharModalVerAusencia()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="verAusTitle">
+    <div class="mh">
+      <h2 id="verAusTitle">Detalhes da Ausência</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalVerAusencia()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb" id="verAusBody"></div>
+  </div>
+</div>
+
+<!-- Modal Feedback -->
+<div class="ov" id="modalFeedback" onclick="if(event.target===this)fecharModalFeedback()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+    <div class="mh">
+      <h2 id="fbTitle">Registrar Feedback</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalFeedback()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb">
+      <div class="alert-form" id="fbErro" role="alert"></div>
+      <div class="f">
+        <label class="fl">Prestador <span class="req">*</span></label>
+        <div class="msel" id="psel-fb">
+          <button type="button" class="msel-trigger" id="psel-fb-trigger" onclick="togglePsel('fb', event)" aria-haspopup="listbox" aria-expanded="false">
+            <span class="msel-placeholder">Selecionar prestador...</span>
+          </button>
+          <div class="msel-panel" id="psel-fb-panel" role="listbox" onclick="event.stopPropagation()">
+            <input class="msel-search" type="search" id="psel-fb-search" placeholder="Pesquisar Prestador..." oninput="filtrarPsel('fb')" onclick="event.stopPropagation()">
+            <div class="msel-opts" id="psel-fb-opts"></div>
+          </div>
+        </div>
+        <input type="hidden" id="fb-prestador">
+      </div>
+      <div class="f">
+        <label class="fl" for="fb-recomendacao">Recomendação <span class="req">*</span></label>
+        <select id="fb-recomendacao" aria-label="Recomendação">
+          <option value="">Selecionar...</option>
+          <option value="orientacao">Orientação</option>
+          <option value="alinhamento">Alinhamento de Execução</option>
+          <option value="notif_descumprimento">Notificação de Descumprimento Contratual</option>
+          <option value="notif_suspensao">Notificação de Suspensão da Execução Contratual</option>
+          <option value="persistencia">Persistência do Descumprimento</option>
+        </select>
+      </div>
+      <div class="f" style="margin-bottom:0">
+        <label class="fl" for="fb-obs">Observação <span class="req">*</span></label>
+        <textarea id="fb-obs" placeholder="Descreva o feedback..." style="min-height:96px"></textarea>
+      </div>
+    </div>
+    <div class="mf">
+      <button type="button" class="cta" onclick="salvarFeedback()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ver Feedback -->
+<div class="ov" id="modalVerFeedback" onclick="if(event.target===this)fecharModalVerFeedback()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="verFbTitle">
+    <div class="mh">
+      <h2 id="verFbTitle">Detalhes do Feedback</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalVerFeedback()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb" id="verFbBody"></div>
+  </div>
+</div>
+
+<!-- Modal Solicitar Manutenção -->
+<div class="ov" id="modalManutencao" onclick="if(event.target===this)fecharModalManutencao()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="manutTitle">
+    <div class="mh">
+      <h2 id="manutTitle">Solicitar Manutenção</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalManutencao()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb">
+      <div class="alert-form" id="manutErro" role="alert"></div>
+      <div class="f">
+        <label class="fl" for="manut-tipo">Tipo <span class="req">*</span></label>
+        <select id="manut-tipo" aria-label="Tipo">
+          <option value="">Selecionar...</option>
+          <option value="ti">TI</option>
+          <option value="limpeza">Limpeza</option>
+          <option value="tech_ops">Tech Ops</option>
+        </select>
+      </div>
+      <div class="f">
+        <label class="fl" for="manut-local">Local <span class="req">*</span></label>
+        <select id="manut-local" aria-label="Local" onchange="onManutLocalChange()">
+          <option value="">Selecionar...</option>
+        </select>
+      </div>
+      <div class="f hidden" id="manut-mesa-wrap">
+        <label class="fl" for="manut-mesa">Mesa <span class="req">*</span></label>
+        <select id="manut-mesa" aria-label="Mesa">
+          <option value="">Selecionar...</option>
+        </select>
+      </div>
+      <div class="f" style="margin-bottom:0">
+        <label class="fl" for="manut-obs">Observação <span class="req">*</span></label>
+        <textarea id="manut-obs" placeholder="Descreva a solicitação de manutenção..." style="min-height:96px"></textarea>
+      </div>
+    </div>
+    <div class="mf">
+      <button type="button" class="cta" onclick="salvarManutencao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ver Manutenção -->
+<div class="ov" id="modalVerManutencao" onclick="if(event.target===this)fecharModalVerManutencao()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="verManutTitle">
+    <div class="mh">
+      <h2 id="verManutTitle">Detalhes da Solicitação</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalVerManutencao()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb" id="verManutBody"></div>
+  </div>
+</div>
+
+<!-- Modal Cancelar Manutenção -->
+<div class="ov" id="modalCancelarManutencao" onclick="if(event.target===this)fecharModalCancelarManutencao()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cancelManutTitle" style="max-width:440px">
+    <div class="mh">
+      <h2 id="cancelManutTitle">Cancelar Solicitação</h2>
+      <button class="btn-icone" type="button" title="Fechar modal" aria-label="Fechar modal" onclick="fecharModalCancelarManutencao()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="mb">
+      <p id="cancelManutTexto" style="margin:0;font-size:13px;line-height:1.5;color:var(--text)">
+        Deseja cancelar esta solicitação de manutenção?<br><br>O status será alterado para Cancelado. Esta ação não poderá ser desfeita.
+      </p>
+    </div>
+    <div class="mf" style="justify-content:flex-end;gap:10px">
+      <button type="button" class="btn-ghost" onclick="fecharModalCancelarManutencao()">Voltar</button>
+      <button type="button" class="cta danger" onclick="confirmarCancelarManutencao()">Cancelar Solicitação</button>
+    </div>
+  </div>
+</div>
+
 <script>
   var turnoAtual = "manha";
   var abaAtual = "escala";
   var labels = { manha: "Manhã", tarde: "Tarde", noite: "Noite" };
+  var DIAS = [
+    "2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12",
+    "2026-08-13", "2026-08-14", "2026-08-15"
+  ];
+  var diaIdx = 3; /* 12/08/2026 */
   var modalTurno = null;
   var modalModo = "gerar";
   var snapshotInicial = null;
@@ -1346,6 +1643,7 @@
   var FECHAMENTOS = [
     {
       id: "s-bj2",
+      dataRegistro: "2026-08-11",
       fechamento: "06:40",
       reabertura: "",
       naoReaberta: true,
@@ -1356,6 +1654,7 @@
     },
     {
       id: "c-bj1",
+      dataRegistro: "2026-08-12",
       fechamento: "10:15",
       reabertura: "11:05",
       naoReaberta: false,
@@ -1365,8 +1664,144 @@
       liderancaReabertura: "Ana Costa"
     }
   ];
-  var fechamentoEditIds = null; /* null = registrar (merge); array = ids do modal */
+  var fechamentoEditIds = null;
   var LIDERANCA_ATUAL = "Você (mock)";
+
+  var PRESTADORES = [
+    { id: "p1", nome: "Ana Souza", time: "Game Presenter" },
+    { id: "p2", nome: "Bruno Lima", time: "Game Presenter" },
+    { id: "p3", nome: "Carla Dias", time: "Game Presenter" },
+    { id: "p4", nome: "Diego Alves", time: "Shuffler" },
+    { id: "p5", nome: "Elena Costa", time: "Shuffler" },
+    { id: "p6", nome: "Felipe Rocha", time: "Game Presenter" },
+    { id: "p7", nome: "Giulia Mendes", time: "Game Presenter" },
+    { id: "p8", nome: "Hugo Prado", time: "Shuffler" }
+  ];
+
+  var AUSENCIAS = [
+    {
+      id: "a1",
+      prestadorId: "p3",
+      motivo: "medico",
+      inicio: "2026-08-12",
+      fim: "",
+      fimNaoInformado: true,
+      observacao: "Atestado médico — aguardando retorno do RH.",
+      lideranca: "Bruno Lima"
+    },
+    {
+      id: "a2",
+      prestadorId: "p5",
+      motivo: "pessoal",
+      inicio: "2026-08-10",
+      fim: "2026-08-11",
+      fimNaoInformado: false,
+      observacao: "Ausência pessoal já encerrada.",
+      lideranca: "Ana Costa"
+    },
+    {
+      id: "a3",
+      prestadorId: "p7",
+      motivo: "medico",
+      inicio: "2026-08-12",
+      fim: "2026-08-14",
+      fimNaoInformado: false,
+      observacao: "Atestado com data de retorno informada.",
+      lideranca: "Bruno Lima"
+    }
+  ];
+  var ausenciaEditId = null;
+
+  var RECOMENDACAO_LABEL = {
+    orientacao: "Orientação",
+    alinhamento: "Alinhamento de Execução",
+    notif_descumprimento: "Notificação de Descumprimento Contratual",
+    notif_suspensao: "Notificação de Suspensão da Execução Contratual",
+    persistencia: "Persistência do Descumprimento"
+  };
+
+  var FEEDBACKS = [
+    {
+      id: "f1",
+      dataRegistro: "2026-08-12",
+      prestadorId: "p2",
+      recomendacao: "orientacao",
+      status: "aplicado",
+      observacao: "Reforço sobre pontualidade no check-in.",
+      lideranca: "Ana Costa",
+      aplicadoPor: "Ana Costa"
+    },
+    {
+      id: "f2",
+      dataRegistro: "2026-08-11",
+      prestadorId: "p6",
+      recomendacao: "alinhamento",
+      status: "revisar",
+      observacao: "Desvio de procedimento na troca de cartas.",
+      lideranca: "Bruno Lima",
+      aplicadoPor: ""
+    }
+  ];
+  var feedbackEditId = null;
+  var pselSelecionado = { aus: null, fb: null };
+
+  var MANUT_TIPO_LABEL = { ti: "TI", limpeza: "Limpeza", tech_ops: "Tech Ops" };
+  var MANUT_STATUS_LABEL = {
+    aberto: "Aberto",
+    em_andamento: "Em andamento",
+    concluido: "Concluído",
+    cancelado: "Cancelado"
+  };
+  var LOCAIS_MANUT = [
+    { value: "estudio:blaze", label: "Blaze", tipo: "estudio", estudioSlug: "blaze", estudioNome: "Blaze" },
+    { value: "estudio:cda", label: "CDA", tipo: "estudio", estudioSlug: "cda", estudioNome: "CDA" },
+    { value: "estudio:sports_club", label: "Sports Club", tipo: "estudio", estudioSlug: "sports_club", estudioNome: "Sports Club" },
+    { value: "shuffler_room", label: "Shuffler Room", tipo: "especial" },
+    { value: "ocr", label: "OCR", tipo: "especial" }
+  ];
+  var MANUTENCOES = [
+    {
+      id: "m1",
+      abertura: "2026-08-11",
+      solicitante: "Bruno Lima",
+      tipo: "tech_ops",
+      local: "estudio:sports_club",
+      mesaId: "s-bj2",
+      observacao: "Leitor de cartas com falha intermitente.",
+      status: "aberto"
+    },
+    {
+      id: "m2",
+      abertura: "2026-08-12",
+      solicitante: "Ana Costa",
+      tipo: "ti",
+      local: "shuffler_room",
+      mesaId: "",
+      observacao: "Monitor do painel sem sinal HDMI.",
+      status: "em_andamento"
+    },
+    {
+      id: "m3",
+      abertura: "2026-08-12",
+      solicitante: "Você (mock)",
+      tipo: "limpeza",
+      local: "estudio:blaze",
+      mesaId: "estudio_geral",
+      observacao: "Limpeza geral do estúdio após turno da manhã.",
+      status: "concluido"
+    },
+    {
+      id: "m4",
+      abertura: "2026-08-10",
+      solicitante: "Bruno Lima",
+      tipo: "ti",
+      local: "ocr",
+      mesaId: "",
+      observacao: "Solicitação cancelada — equipamento já substituído.",
+      status: "cancelado"
+    }
+  ];
+  var manutCancelId = null;
 
   var ROLETAS = [
     { id: "r-b", label: "Blaze - Roleta 6140" },
@@ -1472,16 +1907,87 @@
     document.querySelectorAll("#turnoWrap .btn").forEach(function (b) {
       b.classList.toggle("on", b.getAttribute("data-turno") === t);
     });
-    var sub = "— " + labels[t] + " · 12/08";
-    var el = document.getElementById("escalaSub");
-    if (el) el.textContent = sub;
-    var r = document.getElementById("rotacaoSub");
-    if (r) r.textContent = "— " + labels[t] + " · Escala Aprovada e Check-in";
-    var f = document.getElementById("fechSub");
-    if (f) f.textContent = "— " + labels[t] + " · 12/08";
+    atualizarLabelsDia();
     renderRotacaoPool();
     rotacaoPreviaAtiva = false;
     atualizarPreviaUI();
+  }
+
+  function diaAtualISO() {
+    return DIAS[diaIdx];
+  }
+
+  function labelDiaCurto() {
+    var p = diaAtualISO().split("-");
+    return p[2] + "/" + p[1];
+  }
+
+  function labelDiaLongo() {
+    return fmtDataBR(diaAtualISO());
+  }
+
+  function navDia(delta) {
+    var n = diaIdx + delta;
+    if (n < 0 || n >= DIAS.length) return;
+    diaIdx = n;
+    atualizarLabelsDia();
+    if (abaAtual === "notificacoes") {
+      renderFechamentos();
+      renderAusencias();
+      renderFeedbacks();
+      renderManutencoes();
+    }
+  }
+
+  function atualizarLabelsDia() {
+    var diaEl = document.getElementById("diaLabel");
+    if (diaEl) diaEl.textContent = labelDiaLongo();
+    var sub = "— " + labels[turnoAtual] + " · " + labelDiaCurto();
+    var el = document.getElementById("escalaSub");
+    if (el) el.textContent = sub;
+    var r = document.getElementById("rotacaoSub");
+    if (r) r.textContent = "— " + labels[turnoAtual] + " · Escala Aprovada e Check-in";
+    var diaSub = "— " + labelDiaCurto();
+    var f = document.getElementById("fechSub");
+    if (f) f.textContent = diaSub;
+    var aus = document.getElementById("ausSub");
+    if (aus) aus.textContent = diaSub;
+    var fb = document.getElementById("fbSub");
+    if (fb) fb.textContent = diaSub;
+    var manut = document.getElementById("manutSub");
+    if (manut) manut.textContent = diaSub;
+  }
+
+  /* Persistência nos dias seguintes (aba Notificações) */
+  function fechamentoVisivelNoDia(f, dia) {
+    var reg = f.dataRegistro || dia;
+    if (reg > dia) return false;
+    if (reg === dia) return true;
+    /* dias seguintes: só se ainda Não aberta */
+    return !!f.naoReaberta;
+  }
+
+  function ausenciaVisivelNoDia(a, dia) {
+    if (!a.inicio || a.inicio > dia) return false;
+    /* Nos dias seguintes enquanto Fim ainda não é <= ao dia (ainda aberta): Não informado ou Fim >= dia */
+    if (a.fimNaoInformado || !a.fim) return true;
+    return a.fim >= dia;
+  }
+
+  function feedbackVisivelNoDia(f, dia) {
+    var reg = f.dataRegistro || dia;
+    if (reg > dia) return false;
+    if (reg === dia) return true;
+    /* dias seguintes: só se Status ≠ Aplicado */
+    return f.status !== "aplicado";
+  }
+
+  function manutencaoVisivelNoDia(m, dia) {
+    var reg = m.abertura || dia;
+    if (reg > dia) return false;
+    if (reg === dia) return true;
+    /* dias seguintes enquanto Status ≠ Cancelado e ≠ Concluído */
+    return m.status !== "cancelado" && m.status !== "concluido";
   }
 
   function normalizarBusca(s) {
@@ -1509,10 +2015,10 @@
       row.classList.remove("hidden");
       inp.placeholder = "Pesquisar por Relator ou palavras-chave...";
       inp.setAttribute("aria-label", "Pesquisar por Relator ou palavras-chave");
-    } else if (abaAtual === "fechamento") {
+    } else if (abaAtual === "notificacoes") {
       row.classList.remove("hidden");
-      inp.placeholder = "Pesquisar por Mesa...";
-      inp.setAttribute("aria-label", "Pesquisar por Mesa");
+      inp.placeholder = "Pesquisar mesa, prestador ou palavra-chave...";
+      inp.setAttribute("aria-label", "Pesquisar nas notificações");
     } else {
       row.classList.add("hidden");
       inp.value = "";
@@ -1540,9 +2046,18 @@
       return;
     }
 
-    if (abaAtual === "fechamento") {
+    if (abaAtual === "notificacoes") {
       document.querySelectorAll("#fechamentoBody tr").forEach(function (tr) {
         tr.style.display = textoContem(tr.getAttribute("data-mesa"), q) ? "" : "none";
+      });
+      document.querySelectorAll("#ausenciasBody tr").forEach(function (tr) {
+        tr.style.display = textoContem(tr.getAttribute("data-busca"), q) ? "" : "none";
+      });
+      document.querySelectorAll("#feedbacksBody tr").forEach(function (tr) {
+        tr.style.display = textoContem(tr.getAttribute("data-busca"), q) ? "" : "none";
+      });
+      document.querySelectorAll("#manutencaoBody tr").forEach(function (tr) {
+        tr.style.display = textoContem(tr.getAttribute("data-busca"), q) ? "" : "none";
       });
     }
   }
@@ -1736,18 +2251,25 @@
 
   function setAba(a) {
     abaAtual = a;
-    ["rotacao", "escala", "relatorio", "fechamento"].forEach(function (k) {
+    ["rotacao", "escala", "relatorio", "notificacoes"].forEach(function (k) {
       document.getElementById("tab-" + k).classList.toggle("on", k === a);
       document.getElementById("panel-" + k).classList.toggle("on", k === a);
     });
-    document.getElementById("turnoWrap").classList.toggle("hidden", a === "relatorio");
+    document.getElementById("turnoWrap").classList.toggle("hidden", a === "relatorio" || a === "notificacoes");
     var inp = document.getElementById("pageSearch");
     if (inp) inp.value = "";
     document.querySelectorAll("#escalaPresencaBody tr").forEach(function (tr) { tr.style.display = ""; });
     document.querySelectorAll(".rel-turno-box").forEach(function (box) { box.style.display = ""; });
-    document.querySelectorAll("#fechamentoBody tr").forEach(function (tr) { tr.style.display = ""; });
+    document.querySelectorAll("#fechamentoBody tr, #ausenciasBody tr, #feedbacksBody tr, #manutencaoBody tr").forEach(function (tr) {
+      tr.style.display = "";
+    });
     atualizarPlaceholderBusca();
-    if (a === "fechamento") renderFechamentos();
+    if (a === "notificacoes") {
+      renderFechamentos();
+      renderAusencias();
+      renderFeedbacks();
+      renderManutencoes();
+    }
     if (a === "rotacao") renderRotacaoPool();
   }
 
@@ -1808,6 +2330,10 @@
 
   function svgLapis() {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  }
+
+  function svgBan() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>';
   }
 
   function toggleMsel(e) {
@@ -1967,22 +2493,27 @@
     var body = document.getElementById("fechamentoBody");
     var empty = document.getElementById("fechEmpty");
     if (!body) return;
-    if (!FECHAMENTOS.length) {
+    var dia = diaAtualISO();
+    var rows = FECHAMENTOS.filter(function (f) { return fechamentoVisivelNoDia(f, dia); });
+    if (!rows.length) {
       body.innerHTML = "";
       empty.classList.remove("hidden");
       return;
     }
     empty.classList.add("hidden");
-    body.innerHTML = FECHAMENTOS.map(function (f) {
+    body.innerHTML = rows.map(function (f) {
       var status = f.naoReaberta
-        ? '<span class="pill warn">Não reaberta</span>'
+        ? '<span class="pill warn">Não aberta</span>'
         : '<span class="pill ok">Reaberta</span>';
       var lideranca = f.naoReaberta
         ? (f.liderancaFechamento || "—")
         : (f.liderancaReabertura || f.liderancaFechamento || "—");
+      var herdadoDia = (f.dataRegistro || dia) < dia;
       return (
         '<tr data-mesa="' + escHtml(mesaLabel(f.id)) + '">' +
-          '<td class="left">' + escHtml(mesaLabel(f.id)) + "</td>" +
+          '<td class="left">' + escHtml(mesaLabel(f.id)) +
+            (herdadoDia ? ' <span class="tag-herdado">Dia anterior</span>' : "") +
+          "</td>" +
           "<td>" + escHtml(f.fechamento || "—") + "</td>" +
           "<td>" + escHtml(f.naoReaberta ? "—" : (f.reabertura || "—")) + "</td>" +
           "<td>" + status + "</td>" +
@@ -2001,13 +2532,14 @@
     var f = FECHAMENTOS.find(function (x) { return x.id === id; });
     if (!f) return;
     var meta = mesaMeta(id);
-    var statusLabel = f.naoReaberta ? "Não reaberta" : "Reaberta";
+    var statusLabel = f.naoReaberta ? "Não aberta" : "Reaberta";
     var statusCls = f.naoReaberta ? "warn" : "ok";
     var abertura = f.naoReaberta ? "—" : (f.reabertura || "—");
     var obs = (f.observacao || "").trim() || "—";
     document.getElementById("verFechBody").innerHTML =
       '<div class="g2">' +
         '<div class="field"><div class="k">Status da Mesa</div><div class="v"><span class="pill ' + statusCls + '">' + statusLabel + "</span></div></div>" +
+        '<div class="field"><div class="k">Data do Registro</div><div class="v">' + escHtml(fmtDataBR(f.dataRegistro)) + "</div></div>" +
         '<div class="field"><div class="k">Nome da Mesa</div><div class="v">' + escHtml(meta.nome || meta.label) + "</div></div>" +
         '<div class="field"><div class="k">Jogo</div><div class="v">' + escHtml(meta.jogo || "—") + "</div></div>" +
         '<div class="field"><div class="k">Estúdio</div><div class="v">' + escHtml(meta.estudio || "—") + "</div></div>" +
@@ -2020,6 +2552,583 @@
 
   function fecharModalVerFechamento() {
     document.getElementById("modalVerFechamento").classList.remove("on");
+  }
+
+  function prestadorNome(id) {
+    var p = PRESTADORES.find(function (x) { return x.id === id; });
+    return p ? p.nome : id;
+  }
+
+  function fmtDataBR(iso) {
+    if (!iso) return "—";
+    var p = iso.split("-");
+    if (p.length !== 3) return iso;
+    return p[2] + "/" + p[1] + "/" + p[0];
+  }
+
+  function motivoAusLabel(m) {
+    return m === "medico" ? "Médico" : m === "pessoal" ? "Pessoal" : m || "—";
+  }
+
+  /* —— Prestador select (busca) —— */
+  function fecharPsel(kind) {
+    var panel = document.getElementById("psel-" + kind + "-panel");
+    var trigger = document.getElementById("psel-" + kind + "-trigger");
+    if (panel) panel.classList.remove("on");
+    if (trigger) trigger.setAttribute("aria-expanded", "false");
+  }
+
+  function togglePsel(kind, e) {
+    e.stopPropagation();
+    var panel = document.getElementById("psel-" + kind + "-panel");
+    var open = !panel.classList.contains("on");
+    fecharPsel("aus");
+    fecharPsel("fb");
+    panel.classList.toggle("on", open);
+    document.getElementById("psel-" + kind + "-trigger").setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) {
+      document.getElementById("psel-" + kind + "-search").value = "";
+      filtrarPsel(kind);
+      setTimeout(function () { document.getElementById("psel-" + kind + "-search").focus(); }, 30);
+    }
+  }
+
+  function filtrarPsel(kind) {
+    var q = normalizarBusca(document.getElementById("psel-" + kind + "-search").value);
+    var sel = pselSelecionado[kind];
+    document.getElementById("psel-" + kind + "-opts").innerHTML = PRESTADORES.filter(function (p) {
+      return textoContem(p.nome + " " + p.time, q);
+    }).map(function (p) {
+      var on = sel === p.id;
+      return '<button type="button" class="msel-opt' + (on ? " on" : "") + '" role="option" aria-selected="' + on + '" onclick="escolherPrestador(\'' + kind + '\',\'' + p.id + '\')">' +
+        escHtml(p.nome) + ' <span style="color:var(--muted);font-size:11px">· ' + escHtml(p.time) + "</span>" +
+        (on ? '<span class="mark">✓</span>' : "") + "</button>";
+    }).join("") || '<div style="padding:12px;color:#6b7280;font-size:12px">Nenhum prestador encontrado.</div>';
+  }
+
+  function escolherPrestador(kind, id) {
+    pselSelecionado[kind] = id;
+    document.getElementById(kind === "aus" ? "aus-prestador" : "fb-prestador").value = id;
+    var trigger = document.getElementById("psel-" + kind + "-trigger");
+    trigger.innerHTML = '<span class="msel-chip">' + escHtml(prestadorNome(id)) + "</span>";
+    fecharPsel(kind);
+  }
+
+  function renderPselTrigger(kind) {
+    var id = pselSelecionado[kind];
+    var trigger = document.getElementById("psel-" + kind + "-trigger");
+    if (!id) {
+      trigger.innerHTML = '<span class="msel-placeholder">Selecionar prestador...</span>';
+      return;
+    }
+    trigger.innerHTML = '<span class="msel-chip">' + escHtml(prestadorNome(id)) + "</span>";
+  }
+
+  /* —— Ausências —— */
+  function renderAusencias() {
+    var body = document.getElementById("ausenciasBody");
+    var empty = document.getElementById("ausEmpty");
+    if (!body) return;
+    var dia = diaAtualISO();
+    var rows = AUSENCIAS.filter(function (a) { return ausenciaVisivelNoDia(a, dia); });
+    if (!rows.length) {
+      body.innerHTML = "";
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    body.innerHTML = rows.map(function (a) {
+      var nome = prestadorNome(a.prestadorId);
+      var fim = a.fimNaoInformado ? "Não informado" : fmtDataBR(a.fim);
+      var busca = nome + " " + motivoAusLabel(a.motivo) + " " + a.lideranca + " " + (a.observacao || "");
+      return (
+        '<tr data-busca="' + escHtml(busca) + '">' +
+          '<td class="left">' + escHtml(nome) + "</td>" +
+          "<td>" + escHtml(motivoAusLabel(a.motivo)) + "</td>" +
+          "<td>" + escHtml(fmtDataBR(a.inicio)) + "</td>" +
+          "<td>" + escHtml(fim) + "</td>" +
+          '<td class="left">' + escHtml(a.lideranca || "—") + "</td>" +
+          '<td><div style="display:inline-flex;gap:6px;justify-content:center">' +
+            '<button type="button" class="btn-icone" title="Ver" aria-label="Ver" onclick="abrirModalVerAusencia(\'' + a.id + '\')">' + svgOlho() + "</button>" +
+            '<button type="button" class="btn-icone" title="Editar" aria-label="Editar" onclick="abrirModalAusencia(\'' + a.id + '\')">' + svgLapis() + "</button>" +
+          "</div></td>" +
+        "</tr>"
+      );
+    }).join("");
+    filtrarBuscaPagina();
+  }
+
+  function onAusInicioChange() {
+    var ini = document.getElementById("aus-inicio").value;
+    var fim = document.getElementById("aus-fim");
+    if (ini) fim.min = ini;
+    if (fim.value && ini && fim.value < ini) fim.value = "";
+  }
+
+  function onAusFimNaoInformado() {
+    var chk = document.getElementById("aus-fim-nao");
+    var fim = document.getElementById("aus-fim");
+    if (chk.checked) {
+      fim.value = "";
+      fim.disabled = true;
+    } else {
+      fim.disabled = false;
+    }
+  }
+
+  function abrirModalAusencia(editId) {
+    ausenciaEditId = editId || null;
+    document.getElementById("ausTitle").textContent = editId ? "Editar Ausência" : "Registrar Ausência";
+    document.getElementById("ausErro").classList.remove("on");
+    document.getElementById("ausErro").textContent = "";
+    pselSelecionado.aus = null;
+    document.getElementById("aus-prestador").value = "";
+    document.getElementById("aus-motivo").value = "";
+    document.getElementById("aus-inicio").value = "";
+    document.getElementById("aus-fim").value = "";
+    document.getElementById("aus-fim").disabled = false;
+    document.getElementById("aus-fim").min = "";
+    document.getElementById("aus-fim-nao").checked = false;
+    document.getElementById("aus-obs").value = "";
+    if (editId) {
+      var row = AUSENCIAS.find(function (a) { return a.id === editId; });
+      if (row) {
+        pselSelecionado.aus = row.prestadorId;
+        document.getElementById("aus-prestador").value = row.prestadorId;
+        document.getElementById("aus-motivo").value = row.motivo;
+        document.getElementById("aus-inicio").value = row.inicio;
+        document.getElementById("aus-fim-nao").checked = !!row.fimNaoInformado;
+        document.getElementById("aus-fim").value = row.fimNaoInformado ? "" : (row.fim || "");
+        document.getElementById("aus-fim").disabled = !!row.fimNaoInformado;
+        document.getElementById("aus-obs").value = row.observacao || "";
+        onAusInicioChange();
+      }
+    }
+    renderPselTrigger("aus");
+    document.getElementById("modalAusencia").classList.add("on");
+  }
+
+  function fecharModalAusencia() {
+    document.getElementById("modalAusencia").classList.remove("on");
+    ausenciaEditId = null;
+    fecharPsel("aus");
+  }
+
+  function salvarAusencia() {
+    var err = document.getElementById("ausErro");
+    err.classList.remove("on");
+    err.textContent = "";
+    var prestadorId = document.getElementById("aus-prestador").value;
+    var motivo = document.getElementById("aus-motivo").value;
+    var inicio = document.getElementById("aus-inicio").value;
+    var fimNao = document.getElementById("aus-fim-nao").checked;
+    var fim = document.getElementById("aus-fim").value;
+    var obs = document.getElementById("aus-obs").value.trim();
+    function fail(msg) { err.textContent = msg; err.classList.add("on"); }
+    if (!prestadorId) return fail("Selecione o Prestador.");
+    if (!motivo) return fail("Selecione o Motivo.");
+    if (!inicio) return fail("Informe o Início da Ausência.");
+    if (!fimNao && !fim) return fail("Informe o Fim da Ausência ou marque Não informado.");
+    if (!fimNao && fim < inicio) return fail("O Fim da Ausência deve ser após o Início.");
+    if (!obs) return fail("Preencha a Observação.");
+
+    var novo = {
+      id: ausenciaEditId || ("a" + Date.now()),
+      prestadorId: prestadorId,
+      motivo: motivo,
+      inicio: inicio,
+      fim: fimNao ? "" : fim,
+      fimNaoInformado: !!fimNao,
+      observacao: obs,
+      lideranca: LIDERANCA_ATUAL
+    };
+    if (ausenciaEditId) {
+      var prev = AUSENCIAS.find(function (a) { return a.id === ausenciaEditId; });
+      if (prev) novo.lideranca = prev.lideranca || LIDERANCA_ATUAL;
+      var idx = AUSENCIAS.findIndex(function (a) { return a.id === ausenciaEditId; });
+      if (idx >= 0) AUSENCIAS[idx] = novo;
+    } else {
+      AUSENCIAS.push(novo);
+    }
+    renderAusencias();
+    fecharModalAusencia();
+  }
+
+  function abrirModalVerAusencia(id) {
+    var a = AUSENCIAS.find(function (x) { return x.id === id; });
+    if (!a) return;
+    document.getElementById("verAusBody").innerHTML =
+      '<div class="g2">' +
+        '<div class="field"><div class="k">Prestador</div><div class="v">' + escHtml(prestadorNome(a.prestadorId)) + "</div></div>" +
+        '<div class="field"><div class="k">Motivo</div><div class="v">' + escHtml(motivoAusLabel(a.motivo)) + "</div></div>" +
+        '<div class="field"><div class="k">Início da Ausência</div><div class="v">' + escHtml(fmtDataBR(a.inicio)) + "</div></div>" +
+        '<div class="field"><div class="k">Fim da Ausência</div><div class="v">' + escHtml(a.fimNaoInformado ? "Não informado" : fmtDataBR(a.fim)) + "</div></div>" +
+        '<div class="field"><div class="k">Liderança</div><div class="v">' + escHtml(a.lideranca || "—") + "</div></div>" +
+      "</div>" +
+      '<div class="field" style="margin-bottom:0"><div class="k">Observação</div><div class="v" style="white-space:pre-wrap">' + escHtml(a.observacao || "—") + "</div></div>";
+    document.getElementById("modalVerAusencia").classList.add("on");
+  }
+
+  function fecharModalVerAusencia() {
+    document.getElementById("modalVerAusencia").classList.remove("on");
+  }
+
+  /* —— Feedbacks —— */
+  function renderFeedbacks() {
+    var body = document.getElementById("feedbacksBody");
+    var empty = document.getElementById("fbEmpty");
+    if (!body) return;
+    var dia = diaAtualISO();
+    var rows = FEEDBACKS.filter(function (f) { return feedbackVisivelNoDia(f, dia); });
+    if (!rows.length) {
+      body.innerHTML = "";
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    body.innerHTML = rows.map(function (f) {
+      var nome = prestadorNome(f.prestadorId);
+      var rec = RECOMENDACAO_LABEL[f.recomendacao] || f.recomendacao;
+      var statusPill = f.status === "aplicado"
+        ? '<span class="pill ok">Aplicado</span>'
+        : '<span class="pill warn">Revisar</span>';
+      var aplicado = f.status === "aplicado" ? (f.aplicadoPor || "—") : "—";
+      var acoes =
+        '<button type="button" class="btn-icone" title="Ver" aria-label="Ver" onclick="abrirModalVerFeedback(\'' + f.id + '\')">' + svgOlho() + "</button>";
+      if (f.status === "revisar") {
+        acoes +=
+          '<button type="button" class="btn-icone" title="Aplicar" aria-label="Aplicar" onclick="aplicarFeedbackPlaceholder(\'' + f.id + '\')">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>' +
+          "</button>";
+      }
+      var dataReg = fmtDataBR(f.dataRegistro);
+      var busca = dataReg + " " + nome + " " + rec + " " + f.status + " " + (f.lideranca || "") + " " + (f.aplicadoPor || "") + " " + (f.observacao || "");
+      return (
+        '<tr data-busca="' + escHtml(busca) + '">' +
+          "<td>" + escHtml(dataReg) + "</td>" +
+          '<td class="left">' + escHtml(nome) + "</td>" +
+          '<td class="left">' + escHtml(rec) + "</td>" +
+          "<td>" + statusPill + "</td>" +
+          '<td class="left">' + escHtml(f.lideranca || "—") + "</td>" +
+          '<td class="left">' + escHtml(aplicado) + "</td>" +
+          '<td><div style="display:inline-flex;gap:6px;justify-content:center">' + acoes + "</div></td>" +
+        "</tr>"
+      );
+    }).join("");
+    filtrarBuscaPagina();
+  }
+
+  function aplicarFeedbackPlaceholder() {
+    alert("Mock: modal Aplicar Feedback será trabalhado em seguida.");
+  }
+
+  function abrirModalFeedback(editId) {
+    feedbackEditId = editId || null;
+    document.getElementById("fbTitle").textContent = editId ? "Editar Feedback" : "Registrar Feedback";
+    document.getElementById("fbErro").classList.remove("on");
+    document.getElementById("fbErro").textContent = "";
+    pselSelecionado.fb = null;
+    document.getElementById("fb-prestador").value = "";
+    document.getElementById("fb-recomendacao").value = "";
+    document.getElementById("fb-obs").value = "";
+    if (editId) {
+      var row = FEEDBACKS.find(function (f) { return f.id === editId; });
+      if (row) {
+        pselSelecionado.fb = row.prestadorId;
+        document.getElementById("fb-prestador").value = row.prestadorId;
+        document.getElementById("fb-recomendacao").value = row.recomendacao;
+        document.getElementById("fb-obs").value = row.observacao || "";
+      }
+    }
+    renderPselTrigger("fb");
+    document.getElementById("modalFeedback").classList.add("on");
+  }
+
+  function fecharModalFeedback() {
+    document.getElementById("modalFeedback").classList.remove("on");
+    feedbackEditId = null;
+    fecharPsel("fb");
+  }
+
+  function salvarFeedback() {
+    var err = document.getElementById("fbErro");
+    err.classList.remove("on");
+    err.textContent = "";
+    var prestadorId = document.getElementById("fb-prestador").value;
+    var recomendacao = document.getElementById("fb-recomendacao").value;
+    var obs = document.getElementById("fb-obs").value.trim();
+    function fail(msg) { err.textContent = msg; err.classList.add("on"); }
+    if (!prestadorId) return fail("Selecione o Prestador.");
+    if (!recomendacao) return fail("Selecione a Recomendação.");
+    if (!obs) return fail("Preencha a Observação.");
+
+    var isOrientacao = recomendacao === "orientacao";
+    var status = isOrientacao ? "aplicado" : "revisar";
+    var lideranca = LIDERANCA_ATUAL;
+    var aplicadoPor = isOrientacao ? lideranca : "";
+    var prev = null;
+
+    if (feedbackEditId) {
+      prev = FEEDBACKS.find(function (f) { return f.id === feedbackEditId; });
+      if (prev) {
+        lideranca = prev.lideranca || lideranca;
+        if (isOrientacao) aplicadoPor = lideranca;
+        else if (prev.status === "aplicado" && prev.recomendacao !== "orientacao") {
+          aplicadoPor = prev.aplicadoPor || "";
+          status = "aplicado";
+        }
+      }
+    }
+
+    var novo = {
+      id: feedbackEditId || ("f" + Date.now()),
+      dataRegistro: (prev && prev.dataRegistro) || diaAtualISO(),
+      prestadorId: prestadorId,
+      recomendacao: recomendacao,
+      status: status,
+      observacao: obs,
+      lideranca: lideranca,
+      aplicadoPor: aplicadoPor
+    };
+    if (feedbackEditId) {
+      var idx = FEEDBACKS.findIndex(function (f) { return f.id === feedbackEditId; });
+      if (idx >= 0) FEEDBACKS[idx] = novo;
+    } else {
+      FEEDBACKS.push(novo);
+    }
+    renderFeedbacks();
+    fecharModalFeedback();
+  }
+
+  function abrirModalVerFeedback(id) {
+    var f = FEEDBACKS.find(function (x) { return x.id === id; });
+    if (!f) return;
+    var statusLabel = f.status === "aplicado" ? "Aplicado" : "Revisar";
+    var statusCls = f.status === "aplicado" ? "ok" : "warn";
+    document.getElementById("verFbBody").innerHTML =
+      '<div class="g2">' +
+        '<div class="field"><div class="k">Data do Registro</div><div class="v">' + escHtml(fmtDataBR(f.dataRegistro)) + "</div></div>" +
+        '<div class="field"><div class="k">Prestador</div><div class="v">' + escHtml(prestadorNome(f.prestadorId)) + "</div></div>" +
+        '<div class="field"><div class="k">Recomendação</div><div class="v">' + escHtml(RECOMENDACAO_LABEL[f.recomendacao] || f.recomendacao) + "</div></div>" +
+        '<div class="field"><div class="k">Status</div><div class="v"><span class="pill ' + statusCls + '">' + statusLabel + "</span></div></div>" +
+        '<div class="field"><div class="k">Liderança</div><div class="v">' + escHtml(f.lideranca || "—") + "</div></div>" +
+        '<div class="field"><div class="k">Aplicado Por</div><div class="v">' + escHtml(f.status === "aplicado" ? (f.aplicadoPor || "—") : "—") + "</div></div>" +
+      "</div>" +
+      '<div class="field" style="margin-bottom:0"><div class="k">Observação</div><div class="v" style="white-space:pre-wrap">' + escHtml(f.observacao || "—") + "</div></div>";
+    document.getElementById("modalVerFeedback").classList.add("on");
+  }
+
+  function fecharModalVerFeedback() {
+    document.getElementById("modalVerFeedback").classList.remove("on");
+  }
+
+  /* —— Solicitação de Manutenção —— */
+  function localManutMeta(value) {
+    return LOCAIS_MANUT.find(function (l) { return l.value === value; }) || null;
+  }
+
+  function localManutLabel(value) {
+    var meta = localManutMeta(value);
+    return meta ? meta.label : (value || "—");
+  }
+
+  function localEhEstudio(value) {
+    var meta = localManutMeta(value);
+    return !!(meta && meta.tipo === "estudio");
+  }
+
+  function mesaManutLabel(mesaId, localValue) {
+    if (!localEhEstudio(localValue)) return "—";
+    if (mesaId === "estudio_geral") return "Estúdio Geral";
+    return mesaLabel(mesaId);
+  }
+
+  function localExibicaoTabela(m) {
+    var base = localManutLabel(m.local);
+    if (!localEhEstudio(m.local)) return base;
+    var mesa = mesaManutLabel(m.mesaId, m.local);
+    return mesa && mesa !== "—" ? base + " · " + mesa : base;
+  }
+
+  function statusManutPill(status) {
+    if (status === "aberto") return '<span class="pill warn">Aberto</span>';
+    if (status === "em_andamento") return '<span class="pill warn">Em andamento</span>';
+    if (status === "concluido") return '<span class="pill ok">Concluído</span>';
+    if (status === "cancelado") return '<span class="pill bad">Cancelado</span>';
+    return '<span class="pill">' + escHtml(MANUT_STATUS_LABEL[status] || status) + "</span>";
+  }
+
+  function preencherSelectLocaisManut() {
+    var sel = document.getElementById("manut-local");
+    if (!sel) return;
+    sel.innerHTML =
+      '<option value="">Selecionar...</option>' +
+      LOCAIS_MANUT.map(function (l) {
+        return '<option value="' + escHtml(l.value) + '">' + escHtml(l.label) + "</option>";
+      }).join("");
+  }
+
+  function preencherSelectMesasManut(estudioSlug, selected) {
+    var sel = document.getElementById("manut-mesa");
+    if (!sel) return;
+    var meta = LOCAIS_MANUT.find(function (l) { return l.estudioSlug === estudioSlug; });
+    var nomeEst = meta ? meta.estudioNome : "";
+    var mesas = MESAS_CADASTRO.filter(function (m) { return m.estudio === nomeEst; });
+    sel.innerHTML =
+      '<option value="">Selecionar...</option>' +
+      '<option value="estudio_geral">Estúdio Geral</option>' +
+      mesas.map(function (m) {
+        return '<option value="' + escHtml(m.id) + '">' + escHtml(m.label) + "</option>";
+      }).join("");
+    if (selected) sel.value = selected;
+  }
+
+  function onManutLocalChange() {
+    var local = document.getElementById("manut-local").value;
+    var wrap = document.getElementById("manut-mesa-wrap");
+    var meta = localManutMeta(local);
+    if (meta && meta.tipo === "estudio") {
+      wrap.classList.remove("hidden");
+      preencherSelectMesasManut(meta.estudioSlug, "");
+    } else {
+      wrap.classList.add("hidden");
+      document.getElementById("manut-mesa").value = "";
+    }
+  }
+
+  function renderManutencoes() {
+    var body = document.getElementById("manutencaoBody");
+    var empty = document.getElementById("manutEmpty");
+    if (!body) return;
+    var dia = diaAtualISO();
+    var rows = MANUTENCOES.filter(function (m) { return manutencaoVisivelNoDia(m, dia); });
+    if (!rows.length) {
+      body.innerHTML = "";
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+    body.innerHTML = rows.map(function (m) {
+      var tipo = MANUT_TIPO_LABEL[m.tipo] || m.tipo;
+      var localTxt = localExibicaoTabela(m);
+      var podeCancelar = m.status === "aberto" || m.status === "em_andamento";
+      var acoes =
+        '<button type="button" class="btn-icone" title="Ver" aria-label="Ver" onclick="abrirModalVerManutencao(\'' + m.id + '\')">' + svgOlho() + "</button>";
+      if (podeCancelar) {
+        acoes +=
+          '<button type="button" class="btn-icone danger" title="Cancelar" aria-label="Cancelar" onclick="abrirModalCancelarManutencao(\'' + m.id + '\')">' +
+          svgBan() +
+          "</button>";
+      }
+      var busca =
+        fmtDataBR(m.abertura) + " " + (m.solicitante || "") + " " + tipo + " " + localTxt + " " +
+        (MANUT_STATUS_LABEL[m.status] || m.status) + " " + (m.observacao || "");
+      return (
+        '<tr data-busca="' + escHtml(busca) + '">' +
+          "<td>" + escHtml(fmtDataBR(m.abertura)) + "</td>" +
+          '<td class="left">' + escHtml(m.solicitante || "—") + "</td>" +
+          "<td>" + escHtml(tipo) + "</td>" +
+          '<td class="left">' + escHtml(localTxt) + "</td>" +
+          "<td>" + statusManutPill(m.status) + "</td>" +
+          '<td><div style="display:inline-flex;gap:6px;justify-content:center">' + acoes + "</div></td>" +
+        "</tr>"
+      );
+    }).join("");
+    filtrarBuscaPagina();
+  }
+
+  function abrirModalManutencao() {
+    document.getElementById("manutErro").classList.remove("on");
+    document.getElementById("manutErro").textContent = "";
+    preencherSelectLocaisManut();
+    document.getElementById("manut-tipo").value = "";
+    document.getElementById("manut-local").value = "";
+    document.getElementById("manut-mesa").innerHTML = '<option value="">Selecionar...</option>';
+    document.getElementById("manut-mesa-wrap").classList.add("hidden");
+    document.getElementById("manut-obs").value = "";
+    document.getElementById("modalManutencao").classList.add("on");
+  }
+
+  function fecharModalManutencao() {
+    document.getElementById("modalManutencao").classList.remove("on");
+  }
+
+  function salvarManutencao() {
+    var err = document.getElementById("manutErro");
+    err.classList.remove("on");
+    err.textContent = "";
+    var tipo = document.getElementById("manut-tipo").value;
+    var local = document.getElementById("manut-local").value;
+    var mesa = document.getElementById("manut-mesa").value;
+    var obs = document.getElementById("manut-obs").value.trim();
+    function fail(msg) { err.textContent = msg; err.classList.add("on"); }
+    if (!tipo) return fail("Selecione o Tipo.");
+    if (!local) return fail("Selecione o Local.");
+    if (localEhEstudio(local) && !mesa) return fail("Selecione a Mesa.");
+    if (!obs) return fail("Preencha a Observação.");
+
+    MANUTENCOES.push({
+      id: "m" + Date.now(),
+      abertura: diaAtualISO(),
+      solicitante: LIDERANCA_ATUAL,
+      tipo: tipo,
+      local: local,
+      mesaId: localEhEstudio(local) ? mesa : "",
+      observacao: obs,
+      status: "aberto"
+    });
+    renderManutencoes();
+    fecharModalManutencao();
+  }
+
+  function abrirModalVerManutencao(id) {
+    var m = MANUTENCOES.find(function (x) { return x.id === id; });
+    if (!m) return;
+    var mesaHtml = "";
+    if (localEhEstudio(m.local)) {
+      mesaHtml =
+        '<div class="field"><div class="k">Mesa</div><div class="v">' +
+        escHtml(mesaManutLabel(m.mesaId, m.local)) +
+        "</div></div>";
+    }
+    document.getElementById("verManutBody").innerHTML =
+      '<div class="g2">' +
+        '<div class="field"><div class="k">Abertura</div><div class="v">' + escHtml(fmtDataBR(m.abertura)) + "</div></div>" +
+        '<div class="field"><div class="k">Solicitante</div><div class="v">' + escHtml(m.solicitante || "—") + "</div></div>" +
+        '<div class="field"><div class="k">Tipo</div><div class="v">' + escHtml(MANUT_TIPO_LABEL[m.tipo] || m.tipo) + "</div></div>" +
+        '<div class="field"><div class="k">Local</div><div class="v">' + escHtml(localManutLabel(m.local)) + "</div></div>" +
+        mesaHtml +
+        '<div class="field"><div class="k">Status</div><div class="v">' + statusManutPill(m.status) + "</div></div>" +
+      "</div>" +
+      '<div class="field" style="margin-bottom:0"><div class="k">Observação</div><div class="v" style="white-space:pre-wrap">' +
+      escHtml(m.observacao || "—") +
+      "</div></div>";
+    document.getElementById("modalVerManutencao").classList.add("on");
+  }
+
+  function fecharModalVerManutencao() {
+    document.getElementById("modalVerManutencao").classList.remove("on");
+  }
+
+  function abrirModalCancelarManutencao(id) {
+    var m = MANUTENCOES.find(function (x) { return x.id === id; });
+    if (!m) return;
+    if (m.status !== "aberto" && m.status !== "em_andamento") return;
+    manutCancelId = id;
+    document.getElementById("modalCancelarManutencao").classList.add("on");
+  }
+
+  function fecharModalCancelarManutencao() {
+    document.getElementById("modalCancelarManutencao").classList.remove("on");
+    manutCancelId = null;
+  }
+
+  function confirmarCancelarManutencao() {
+    if (!manutCancelId) return;
+    var idx = MANUTENCOES.findIndex(function (m) { return m.id === manutCancelId; });
+    if (idx >= 0) MANUTENCOES[idx].status = "cancelado";
+    fecharModalCancelarManutencao();
+    renderManutencoes();
   }
 
   function abrirModalFechamento(editId) {
@@ -2102,6 +3211,7 @@
       }
       var novo = {
         id: id,
+        dataRegistro: (prev && prev.dataRegistro) || diaAtualISO(),
         fechamento: st.fechamento,
         reabertura: st.naoReaberta ? "" : st.reabertura,
         naoReaberta: !!st.naoReaberta,
@@ -2507,6 +3617,10 @@
   document.addEventListener("click", function (e) {
     var root = document.getElementById("msel-mesas");
     if (root && !root.contains(e.target)) fecharMsel();
+    var ausRoot = document.getElementById("psel-aus");
+    if (ausRoot && !ausRoot.contains(e.target)) fecharPsel("aus");
+    var fbRoot = document.getElementById("psel-fb");
+    if (fbRoot && !fbRoot.contains(e.target)) fecharPsel("fb");
   });
 
   document.addEventListener("keydown", function (e) {
@@ -2514,6 +3628,42 @@
       var panel = document.getElementById("msel-panel");
       if (panel && panel.classList.contains("on")) {
         fecharMsel();
+        return;
+      }
+      if (document.getElementById("psel-aus-panel").classList.contains("on")) {
+        fecharPsel("aus");
+        return;
+      }
+      if (document.getElementById("psel-fb-panel").classList.contains("on")) {
+        fecharPsel("fb");
+        return;
+      }
+      if (document.getElementById("modalCancelarManutencao").classList.contains("on")) {
+        fecharModalCancelarManutencao();
+        return;
+      }
+      if (document.getElementById("modalVerManutencao").classList.contains("on")) {
+        fecharModalVerManutencao();
+        return;
+      }
+      if (document.getElementById("modalManutencao").classList.contains("on")) {
+        fecharModalManutencao();
+        return;
+      }
+      if (document.getElementById("modalVerFeedback").classList.contains("on")) {
+        fecharModalVerFeedback();
+        return;
+      }
+      if (document.getElementById("modalFeedback").classList.contains("on")) {
+        fecharModalFeedback();
+        return;
+      }
+      if (document.getElementById("modalVerAusencia").classList.contains("on")) {
+        fecharModalVerAusencia();
+        return;
+      }
+      if (document.getElementById("modalAusencia").classList.contains("on")) {
+        fecharModalAusencia();
         return;
       }
       if (document.getElementById("modalVerFechamento").classList.contains("on")) {
@@ -2534,9 +3684,13 @@
   });
 
   setTurno("manha");
+  atualizarLabelsDia();
   setAba("escala");
   renderPresenca();
   renderFechamentos();
+  renderAusencias();
+  renderFeedbacks();
+  renderManutencoes();
   renderRotacaoPool();
   atualizarPreviaUI();
 </script>

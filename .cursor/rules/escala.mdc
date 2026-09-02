@@ -29,6 +29,7 @@ alwaysApply: false
 | PageKey | Label menu | Caminho atual |
 |---------|------------|---------------|
 | `rh_staff` | Gestão de Staff | `rh/GestaoStaff/` |
+| `escala_controle_turno` | Controle de Turno | `escala/ControleTurno/` |
 | `escala_relatorio_turno` | Relatório de Turno | `escala/RelatorioTurno/` |
 | `escala_solicitacoes` | Solicitações | `escala/Solicitacoes/` |
 | `rh_gestao_escala` | Escala Estúdio | `rh/GestaoEscala/` (`modo="estudio"`, default) |
@@ -37,7 +38,7 @@ alwaysApply: false
 | `rh_calendario` | Calendário | `rh/Calendario/` |
 | `escala_marketplace_turnos` | Marketplace | `escala/MarketplaceTurnos/` |
 
-**Ajuda contextual:** todas as páginas da secção usam **`AjudaContextualAcoes`** — contrato em `geral.mdc` § Ajuda contextual. Nas páginas com abas, o grupo fica à direita da mesma linha das abas; no **Calendário**, o tutorial varia com a aba. Tutoriais: **Escala Estúdio** → `alterar-escala` (`AlterarEscala`), **nunca** em Escala Escritório mesmo compartilhando o motor; **Marketplace** → `marketplace-ofertas` (`MarketplaceOfertas`) em todas as abas; **Calendário** → por aba (ver subsecção); **Gestão de Staff** → `gestao-staff-editar` (`GestaoDeStaffEditar`) na barra da página; **Imprimir IDs** → `imprimir-ids-staff` (`ImprimirIdsStaff`) **só no modal** (ícone à esquerda do X via `ModalHeader.trailing` + `AjudaContextualTutorialAtalho`). Relatório de Turno, Solicitações, Rotação e Escala Escritório: só Conheça + Troubleshooting.
+**Ajuda contextual:** todas as páginas da secção usam **`AjudaContextualAcoes`** — contrato em `geral.mdc` § Ajuda contextual. Nas páginas com abas, o grupo fica à direita da mesma linha das abas; no **Calendário**, o tutorial varia com a aba. Tutoriais: **Escala Estúdio** → `alterar-escala` (`AlterarEscala`), **nunca** em Escala Escritório mesmo compartilhando o motor; **Marketplace** → `marketplace-ofertas` (`MarketplaceOfertas`) em todas as abas; **Calendário** → por aba (ver subsecção); **Gestão de Staff** → `gestao-staff-editar` (`GestaoDeStaffEditar`) na barra da página; **Imprimir IDs** → `imprimir-ids-staff` (`ImprimirIdsStaff`) **só no modal** (ícone à esquerda do X via `ModalHeader.trailing` + `AjudaContextualTutorialAtalho`). Controle de Turno, Relatório de Turno, Solicitações, Rotação e Escala Escritório: só Conheça + Troubleshooting.
 
 **Motor partilhado:** `rh/GestaoEscala/` (`index.tsx` + `gestaoEscalaHelpers.ts`) — prop `modo: EscalaGradeModo` (`"estudio"` \| `"escritorio"`). PageKey, pool de times/prestadores (`rh_escala_*_por_area_atuacao`), células e storage local diferem por modo; RPCs de grade (`rh_gestao_escala_grade_*`) servem ambos (`area_key` legado / `t_*` / `g_*` / `academy` no Estúdio; `eo_*` / `eog_*` no Escritório). **Abas:** times do Organograma **e** gerências **sem times ativos** (cascata — prestadores com `org_gerencia_id` e `org_time_id` null), filtrados por `area_atuacao`. **Escala Estúdio:** Performance Coach + Treinamento unificados na aba **Academy** (`area_key = academy`). **Escala Escritório:** time **Arte** excluído das abas.
 
@@ -51,6 +52,18 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 - **Marketplace** e **Solicitações:** listas em tabela usam padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`).
 - **Barra de filtros Escala Estúdio / Escala Escritório:** em refactor, migrar para `primaryTransparentBg/Border` (hoje legado com `blockBg` — ver auditoria Brand).
 - Carrossel de mês: integrar na barra de filtros quando possível; `aria-label` Mês anterior / Próximo mês.
+
+---
+
+## Controle de Turno (`escala_controle_turno`)
+
+- **Menu:** Escala, logo após Gestão de Staff. **h1** = Controle de Turno. **Subtítulo:** «Acompanhe rotação, escala/presença e notificações operacionais do turno.»
+- **Abas (`useRouteTab`):** Escala do Turno | Rotação | Relatório de Turno | Notificações (`FiltroBarTabButton`).
+- **Filtros:** carrossel de **dia** + `FiltroTurnoSelect` (Manhã/Tarde/Noite, sem «Todos Turnos») — oculto nas abas **Relatório** e **Notificações** (dados do dia inteiro). Busca conforme a aba (Nome/Nickname; Relator; mesa/prestador).
+- **1ª entrega:** UI no chrome da plataforma; Escala e Notificações com estado local (mock); abas Rotação e Relatório com atalho para as páginas dedicadas (`escala_rotacao`, `escala_relatorio_turno`), que **permanecem no menu** até migração completa.
+- **Notificações:** blocos Fechamento de Mesa, Ausências, Feedbacks e Solicitação de Manutenção — regras de persistência visual nos dias seguintes (Não aberta; ausência ainda aberta; feedback ≠ Aplicado; manutenção ≠ Cancelado/Concluído). Persistência Supabase em entrega seguinte.
+- **Permissões:** seed Ver/Criar/Editar = Não (exceto Admin). `can_excluir` null.
+- **Handoff:** consolidar Relatório de Turno + Rotação nesta página antes de remover as páginas legadas.
 
 ---
 
