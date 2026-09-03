@@ -8,6 +8,12 @@ export const TORNEIO_CDA_POLL_MS = 30_000;
 /** Máximo de itens em Atividades Recentes. */
 export const TORNEIO_CDA_ATIVIDADE_LIMITE = 15;
 
+/** Pontos por R$ 1,00 apostado na rodada (espelha o sync BKO). */
+export const TORNEIO_CDA_PTS_POR_REAL_APOSTADO = 100;
+
+/** Pontos por R$ 1,00 ganho (saldo líquido positivo) (espelha o sync BKO). */
+export const TORNEIO_CDA_PTS_POR_REAL_GANHO = 150;
+
 export const TORNEIO_CDA_BG = "#001724";
 
 export function torneioCdaPublicPath(): string {
