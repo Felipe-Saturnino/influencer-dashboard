@@ -19,22 +19,31 @@ const PERIODO = {
   fim: "2026-09-04T02:59:59.999Z",
 };
 
-/** Nomes travados para a UI (não usar Screen Name do BKO). */
+function playerIdBko(userName) {
+  return `casadeapostas.if_dgc.L011_358_56.CDA-${userName}`;
+}
+
+/** Nomes travados para a UI — primeiro + segundo nome (não Screen Name do BKO). */
 const PARTICIPANTES = [
-  { user_name: "2205336", apelido: "Alessandro Tomazelli", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2205336" },
-  { user_name: "2204772", apelido: "Eliane Luiza", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2204772" },
-  { user_name: "2204766", apelido: "Fernando Luis", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2204766" },
-  { user_name: "2204764", apelido: "Flavio Luis", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2204764" },
-  { user_name: "2204743", apelido: "Humberto dos Anjos", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2204743" },
-  { user_name: "2204823", apelido: "Pedro Alexandre", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2204823" },
-  { user_name: "2204769", apelido: "Flavio Hirata", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2204769" },
-  { user_name: "2204759", apelido: "Rodrigo Junqueira", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2204759" },
-  { user_name: "2207973", apelido: "Renato Silva", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2207973" },
-  { user_name: "2204755", apelido: "Luiz Viveiros", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2204755" },
-  { user_name: "2208185", apelido: "Miqueas Marcelo", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2208185" },
-  { user_name: "548736", apelido: "Rodrigo Simonini", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-548736" },
-  { user_name: "2208087", apelido: "Bruno Yela", player_id_bko: "casadeapostas.if_dgc.L011_358_56.CDA-2208087" },
-];
+  { user_name: "2205336", apelido: "Alessandro Tomazelli" },
+  { user_name: "2204772", apelido: "Eliane Luiza" },
+  { user_name: "2204766", apelido: "Fernando Luis" },
+  { user_name: "2204764", apelido: "Flavio Luis" },
+  { user_name: "2204743", apelido: "Humberto dos Anjos" },
+  { user_name: "2204823", apelido: "Pedro Alexandre" },
+  { user_name: "2204769", apelido: "Flavio Hirata" },
+  { user_name: "2204759", apelido: "Rodrigo Junqueira" },
+  { user_name: "2207973", apelido: "Renato Dias" },
+  { user_name: "2204755", apelido: "Luiz Viveiros" },
+  { user_name: "2208185", apelido: "Miqueas Marcelo" },
+  { user_name: "548736", apelido: "Rodrigo Simonini" },
+  { user_name: "2208087", apelido: "Bruno Yela" },
+  { user_name: "770840", apelido: "João Vitor" },
+  { user_name: "2210427", apelido: "Luis Carlos" },
+  { user_name: "2210442", apelido: "Matheus Tonetti" },
+  { user_name: "2210443", apelido: "Bruno Hopf" },
+  { user_name: "2210445", apelido: "Marcos Alexandre" },
+].map((p) => ({ ...p, player_id_bko: playerIdBko(p.user_name) }));
 
 function parseEnvFile(caminho) {
   try {

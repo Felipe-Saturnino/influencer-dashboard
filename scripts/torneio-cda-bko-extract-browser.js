@@ -13,7 +13,7 @@
     to: "2026-09-04T02:59:59.999Z",
   };
 
-  /** userName → nome travado na UI */
+  /** userName → nome travado na UI (primeiro + segundo nome) */
   const PARTICIPANTES = [
     { userName: "2205336", apelido: "Alessandro Tomazelli" },
     { userName: "2204772", apelido: "Eliane Luiza" },
@@ -23,11 +23,16 @@
     { userName: "2204823", apelido: "Pedro Alexandre" },
     { userName: "2204769", apelido: "Flavio Hirata" },
     { userName: "2204759", apelido: "Rodrigo Junqueira" },
-    { userName: "2207973", apelido: "Renato Silva" },
+    { userName: "2207973", apelido: "Renato Dias" },
     { userName: "2204755", apelido: "Luiz Viveiros" },
     { userName: "2208185", apelido: "Miqueas Marcelo" },
     { userName: "548736", apelido: "Rodrigo Simonini" },
     { userName: "2208087", apelido: "Bruno Yela" },
+    { userName: "770840", apelido: "João Vitor" },
+    { userName: "2210427", apelido: "Luis Carlos" },
+    { userName: "2210442", apelido: "Matheus Tonetti" },
+    { userName: "2210443", apelido: "Bruno Hopf" },
+    { userName: "2210445", apelido: "Marcos Alexandre" },
   ];
 
   const PAGE = 1000;
