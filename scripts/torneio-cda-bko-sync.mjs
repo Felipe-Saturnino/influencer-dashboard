@@ -36,8 +36,8 @@ const PAGE_SIZE = 1000;
 const ATIVIDADE_LIMITE = 15;
 const PTS_RODADA = 500;
 const PTS_RODADA_GANHA = 1000;
-const PTS_POR_REAL_GANHO = 15;
-const PTS_POR_REAL_APOSTADO = 10;
+const PTS_POR_REAL_GANHO = 150;
+const PTS_POR_REAL_APOSTADO = 100;
 
 const BKO_BASE_DEFAULT = "https://bo2.sg.onairent.live";
 

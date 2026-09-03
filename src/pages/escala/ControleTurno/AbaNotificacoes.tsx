@@ -1,14 +1,21 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { Ban, Check, Eye, Pencil } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { Ban, Check, Eye, Loader2, Pencil } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
+import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import {
+  ModalBase,
+  ModalHeader,
+  MODAL_FORM_FOOTER_STYLE,
+  MODAL_FORM_SCROLL_BODY_STYLE,
+  MODAL_FORM_SHELL_STYLE,
+} from "../../../components/OperacoesModal";
 import { SectionTitle } from "../../../components/dashboard";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
@@ -16,119 +23,45 @@ import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca, textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
+import {
+  MSG_ERRO_CT,
+  MSG_ERRO_CT_SALVAR,
+  createAusencia,
+  createFechamentos,
+  createFeedback,
+  createManutencao,
+  getCurrentUserNome,
+  listAusencias,
+  listEstudiosAtivos,
+  listFechamentos,
+  listFeedbacks,
+  listManutencoes,
+  listMesasForFechamento,
+  listPrestadoresGpShuffler,
+  locaisManutFromEstudios,
+  updateAusencia,
+  updateFechamento,
+  updateFeedback,
+  updateManutencao,
+  type CtAusenciaRow,
+  type CtEstudioOpt,
+  type CtFeedbackRecomendacao,
+  type CtFeedbackRow,
+  type CtFechamentoRow,
+  type CtManutTipo,
+  type CtManutencaoRow,
+  type CtMesaOpt,
+  type CtMotivoAusencia,
+  type CtPrestadorOpt,
+} from "../../../lib/escalaControleTurno";
 import { formatDiaBr, formatDiaCurto } from "./helpers";
 
 export type AbaNotificacoesProps = {
-  /** YYYY-MM-DD — dia selecionado no carrossel */
   diaIso: string;
   busca: string;
 };
 
-const LIDERANCA_ATUAL = "Você";
-
-type MesaCadastro = {
-  id: string;
-  label: string;
-  nome: string;
-  estudio: string;
-  jogo: string;
-};
-
-type PrestadorMock = { id: string; nome: string; time: string };
-
-type FechamentoRow = {
-  id: string;
-  dataRegistro: string;
-  fechamento: string;
-  reabertura: string;
-  naoReaberta: boolean;
-  observacao: string;
-  liderancaFechamento: string;
-  liderancaReabertura: string;
-};
-
-type MotivoAusencia = "medico" | "pessoal";
-
-type AusenciaRow = {
-  id: string;
-  prestadorId: string;
-  motivo: MotivoAusencia;
-  inicio: string;
-  fim: string;
-  fimNaoInformado: boolean;
-  observacao: string;
-  lideranca: string;
-};
-
-type RecomendacaoKey =
-  | "orientacao"
-  | "alinhamento"
-  | "notif_descumprimento"
-  | "notif_suspensao"
-  | "persistencia";
-
-type FeedbackStatus = "aplicado" | "revisar";
-
-type FeedbackRow = {
-  id: string;
-  dataRegistro: string;
-  prestadorId: string;
-  recomendacao: RecomendacaoKey;
-  status: FeedbackStatus;
-  observacao: string;
-  lideranca: string;
-  aplicadoPor: string;
-};
-
-type ManutTipo = "ti" | "limpeza" | "tech_ops";
-type ManutStatus = "aberto" | "em_andamento" | "concluido" | "cancelado";
-
-type LocalManut = {
-  value: string;
-  label: string;
-  tipo: "estudio" | "especial";
-  estudioSlug?: string;
-  estudioNome?: string;
-};
-
-type ManutencaoRow = {
-  id: string;
-  abertura: string;
-  solicitante: string;
-  tipo: ManutTipo;
-  local: string;
-  mesaId: string;
-  observacao: string;
-  status: ManutStatus;
-};
-
-const MESAS_CADASTRO: MesaCadastro[] = [
-  { id: "b-bj1", label: "Blaze - 1", nome: "1", estudio: "Blaze", jogo: "Blackjack" },
-  { id: "b-bj2", label: "Blaze - 2", nome: "2", estudio: "Blaze", jogo: "Blackjack" },
-  { id: "b-bj3", label: "Blaze - 3", nome: "3", estudio: "Blaze", jogo: "Blackjack" },
-  { id: "b-rl1", label: "Blaze - Roleta 6140", nome: "Roleta 6140", estudio: "Blaze", jogo: "Roleta" },
-  { id: "c-bj1", label: "CDA - 1", nome: "1", estudio: "CDA", jogo: "Blackjack" },
-  { id: "c-bj2", label: "CDA - 2", nome: "2", estudio: "CDA", jogo: "Blackjack" },
-  { id: "c-rl1", label: "CDA - Roleta 6130", nome: "Roleta 6130", estudio: "CDA", jogo: "Roleta" },
-  { id: "s-bj1", label: "Sports Club - 1", nome: "1", estudio: "Sports Club", jogo: "Blackjack" },
-  { id: "s-bj2", label: "Sports Club - 2", nome: "2", estudio: "Sports Club", jogo: "Blackjack" },
-  { id: "s-bj3", label: "Sports Club - 3", nome: "3", estudio: "Sports Club", jogo: "Blackjack" },
-  { id: "s-bj4", label: "Sports Club - 4", nome: "4", estudio: "Sports Club", jogo: "Blackjack" },
-  { id: "s-rl1", label: "Sports Club - Roleta 6115", nome: "Roleta 6115", estudio: "Sports Club", jogo: "Roleta" },
-];
-
-const PRESTADORES: PrestadorMock[] = [
-  { id: "p1", nome: "Ana Souza", time: "Game Presenter" },
-  { id: "p2", nome: "Bruno Lima", time: "Game Presenter" },
-  { id: "p3", nome: "Carla Dias", time: "Game Presenter" },
-  { id: "p4", nome: "Diego Alves", time: "Shuffler" },
-  { id: "p5", nome: "Elena Costa", time: "Shuffler" },
-  { id: "p6", nome: "Felipe Rocha", time: "Game Presenter" },
-  { id: "p7", nome: "Giulia Mendes", time: "Game Presenter" },
-  { id: "p8", nome: "Hugo Prado", time: "Shuffler" },
-];
-
-const RECOMENDACAO_LABEL: Record<RecomendacaoKey, string> = {
+const RECOMENDACAO_LABEL: Record<CtFeedbackRecomendacao, string> = {
   orientacao: "Orientação",
   alinhamento: "Alinhamento de Execução",
   notif_descumprimento: "Notificação de Descumprimento Contratual",
@@ -136,233 +69,35 @@ const RECOMENDACAO_LABEL: Record<RecomendacaoKey, string> = {
   persistencia: "Persistência do Descumprimento",
 };
 
-const MANUT_TIPO_LABEL: Record<ManutTipo, string> = {
+const MANUT_TIPO_LABEL: Record<CtManutTipo, string> = {
   ti: "TI",
   limpeza: "Limpeza",
   tech_ops: "Tech Ops",
 };
 
-const MANUT_STATUS_LABEL: Record<ManutStatus, string> = {
+const MANUT_STATUS_LABEL = {
   aberto: "Aberto",
   em_andamento: "Em andamento",
   concluido: "Concluído",
   cancelado: "Cancelado",
+} as const;
+
+type MesaDraft = {
+  fechamento: string;
+  reabertura: string;
+  naoReaberta: boolean;
+  observacao: string;
 };
 
-const LOCAIS_MANUT: LocalManut[] = [
-  { value: "estudio:blaze", label: "Blaze", tipo: "estudio", estudioSlug: "blaze", estudioNome: "Blaze" },
-  { value: "estudio:cda", label: "CDA", tipo: "estudio", estudioSlug: "cda", estudioNome: "CDA" },
-  {
-    value: "estudio:sports_club",
-    label: "Sports Club",
-    tipo: "estudio",
-    estudioSlug: "sports_club",
-    estudioNome: "Sports Club",
-  },
-  { value: "shuffler_room", label: "Shuffler Room", tipo: "especial" },
-  { value: "ocr", label: "OCR", tipo: "especial" },
-];
-
-const SEED_FECHAMENTOS: FechamentoRow[] = [
-  {
-    id: "s-bj2",
-    dataRegistro: "2026-08-11",
-    fechamento: "06:40",
-    reabertura: "",
-    naoReaberta: true,
-    observacao: "Manutenção preventiva da mesa — aguardando retorno da Telecom.",
-    liderancaFechamento: "Bruno Lima",
-    liderancaReabertura: "",
-  },
-  {
-    id: "c-bj1",
-    dataRegistro: "2026-08-12",
-    fechamento: "10:15",
-    reabertura: "11:05",
-    naoReaberta: false,
-    observacao: "Troca de baralho e limpeza rápida.",
-    liderancaFechamento: "Bruno Lima",
-    liderancaReabertura: "Ana Costa",
-  },
-];
-
-const SEED_AUSENCIAS: AusenciaRow[] = [
-  {
-    id: "a1",
-    prestadorId: "p3",
-    motivo: "medico",
-    inicio: "2026-08-12",
-    fim: "",
-    fimNaoInformado: true,
-    observacao: "Atestado médico — aguardando retorno do RH.",
-    lideranca: "Bruno Lima",
-  },
-  {
-    id: "a2",
-    prestadorId: "p5",
-    motivo: "pessoal",
-    inicio: "2026-08-10",
-    fim: "2026-08-11",
-    fimNaoInformado: false,
-    observacao: "Ausência pessoal já encerrada.",
-    lideranca: "Ana Costa",
-  },
-  {
-    id: "a3",
-    prestadorId: "p7",
-    motivo: "medico",
-    inicio: "2026-08-12",
-    fim: "2026-08-14",
-    fimNaoInformado: false,
-    observacao: "Atestado com data de retorno informada.",
-    lideranca: "Bruno Lima",
-  },
-];
-
-const SEED_FEEDBACKS: FeedbackRow[] = [
-  {
-    id: "f1",
-    dataRegistro: "2026-08-12",
-    prestadorId: "p2",
-    recomendacao: "orientacao",
-    status: "aplicado",
-    observacao: "Reforço sobre pontualidade no check-in.",
-    lideranca: "Ana Costa",
-    aplicadoPor: "Ana Costa",
-  },
-  {
-    id: "f2",
-    dataRegistro: "2026-08-11",
-    prestadorId: "p6",
-    recomendacao: "alinhamento",
-    status: "revisar",
-    observacao: "Desvio de procedimento na troca de cartas.",
-    lideranca: "Bruno Lima",
-    aplicadoPor: "",
-  },
-];
-
-const SEED_MANUTENCOES: ManutencaoRow[] = [
-  {
-    id: "m1",
-    abertura: "2026-08-11",
-    solicitante: "Bruno Lima",
-    tipo: "tech_ops",
-    local: "estudio:sports_club",
-    mesaId: "s-bj2",
-    observacao: "Leitor de cartas com falha intermitente.",
-    status: "aberto",
-  },
-  {
-    id: "m2",
-    abertura: "2026-08-12",
-    solicitante: "Ana Costa",
-    tipo: "ti",
-    local: "shuffler_room",
-    mesaId: "",
-    observacao: "Monitor do painel sem sinal HDMI.",
-    status: "em_andamento",
-  },
-  {
-    id: "m3",
-    abertura: "2026-08-12",
-    solicitante: LIDERANCA_ATUAL,
-    tipo: "limpeza",
-    local: "estudio:blaze",
-    mesaId: "estudio_geral",
-    observacao: "Limpeza geral do estúdio após turno da manhã.",
-    status: "concluido",
-  },
-  {
-    id: "m4",
-    abertura: "2026-08-10",
-    solicitante: "Bruno Lima",
-    tipo: "ti",
-    local: "ocr",
-    mesaId: "",
-    observacao: "Solicitação cancelada — equipamento já substituído.",
-    status: "cancelado",
-  },
-];
-
-function mesaMeta(id: string): MesaCadastro {
-  return (
-    MESAS_CADASTRO.find((m) => m.id === id) ?? {
-      id,
-      label: id,
-      nome: id,
-      estudio: "—",
-      jogo: "—",
-    }
-  );
-}
-
-function mesaLabel(id: string): string {
-  return mesaMeta(id).label;
-}
-
-function prestadorNome(id: string): string {
-  return PRESTADORES.find((p) => p.id === id)?.nome ?? id;
-}
-
-function motivoAusLabel(m: MotivoAusencia): string {
+function motivoAusLabel(m: CtMotivoAusencia): string {
   return m === "medico" ? "Médico" : "Pessoal";
 }
 
-function localManutMeta(value: string): LocalManut | undefined {
-  return LOCAIS_MANUT.find((l) => l.value === value);
-}
-
-function localManutLabel(value: string): string {
-  return localManutMeta(value)?.label ?? value ?? "—";
-}
-
-function localEhEstudio(value: string): boolean {
-  return localManutMeta(value)?.tipo === "estudio";
-}
-
-function mesaManutLabel(mesaId: string, localValue: string): string {
-  if (!localEhEstudio(localValue)) return "—";
-  if (mesaId === "estudio_geral") return "Estúdio Geral";
-  return mesaLabel(mesaId);
-}
-
-function localExibicaoTabela(m: ManutencaoRow): string {
-  const base = localManutLabel(m.local);
-  if (!localEhEstudio(m.local)) return base;
-  const mesa = mesaManutLabel(m.mesaId, m.local);
-  return mesa && mesa !== "—" ? `${base} · ${mesa}` : base;
-}
-
-function fechamentoVisivelNoDia(f: FechamentoRow, dia: string): boolean {
-  const reg = f.dataRegistro || dia;
-  if (reg > dia) return false;
-  if (reg === dia) return true;
-  return !!f.naoReaberta;
-}
-
-function ausenciaVisivelNoDia(a: AusenciaRow, dia: string): boolean {
-  if (!a.inicio || a.inicio > dia) return false;
-  if (a.fimNaoInformado || !a.fim) return true;
-  return a.fim >= dia;
-}
-
-function feedbackVisivelNoDia(f: FeedbackRow, dia: string): boolean {
-  const reg = f.dataRegistro || dia;
-  if (reg > dia) return false;
-  if (reg === dia) return true;
-  return f.status !== "aplicado";
-}
-
-function manutencaoVisivelNoDia(m: ManutencaoRow, dia: string): boolean {
-  const reg = m.abertura || dia;
-  if (reg > dia) return false;
-  if (reg === dia) return true;
-  return m.status !== "cancelado" && m.status !== "concluido";
-}
-
-function novoId(prefix: string): string {
-  return `${prefix}${Date.now()}`;
+function grupoTimePrestador(time: string): "gp" | "shuffler" | "" {
+  const n = time.toLowerCase();
+  if (n.includes("shuffler")) return "shuffler";
+  if (n.includes("game presenter")) return "gp";
+  return "";
 }
 
 function StatusPill({ label, color }: { label: string; color: string }) {
@@ -407,13 +142,7 @@ function TagDiaAnterior({ t }: { t: { textMuted: string; cardBorder: string; inp
   );
 }
 
-function CampoDetalhe({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function CampoDetalhe({ label, children }: { label: string; children: ReactNode }) {
   const { theme: t } = useApp();
   return (
     <div style={{ marginBottom: 12 }}>
@@ -436,11 +165,7 @@ function labelCampoStyle(t: { text: string }): CSSProperties {
   };
 }
 
-function inputStyle(t: {
-  text: string;
-  inputBg: string;
-  cardBorder: string;
-}): CSSProperties {
+function inputStyle(t: { text: string; inputBg: string; cardBorder: string }): CSSProperties {
   return {
     width: "100%",
     padding: "10px 12px",
@@ -454,31 +179,26 @@ function inputStyle(t: {
   };
 }
 
-type MesaDraft = {
-  fechamento: string;
-  reabertura: string;
-  naoReaberta: boolean;
-  observacao: string;
-};
-
-type PrestadorSelectProps = {
+function PrestadorSelect({
+  value,
+  onChange,
+  prestadores,
+  disabled,
+}: {
   value: string;
   onChange: (id: string) => void;
+  prestadores: CtPrestadorOpt[];
   disabled?: boolean;
-};
-
-function PrestadorSelect({ value, onChange, disabled }: PrestadorSelectProps) {
+}) {
   const { theme: t } = useApp();
   const [open, setOpen] = useState(false);
   const [buscaPainel, setBuscaPainel] = useState("");
 
   const filtrados = useMemo(
-    () =>
-      PRESTADORES.filter((p) => textoContemBuscaEmAlgum(buscaPainel, p.nome, p.time)),
-    [buscaPainel],
+    () => prestadores.filter((p) => textoContemBuscaEmAlgum(buscaPainel, p.nome, p.time)),
+    [buscaPainel, prestadores],
   );
-
-  const selecionado = PRESTADORES.find((p) => p.id === value);
+  const selecionado = prestadores.find((p) => p.id === value);
 
   return (
     <div style={{ position: "relative" }}>
@@ -506,7 +226,9 @@ function PrestadorSelect({ value, onChange, disabled }: PrestadorSelectProps) {
             <span style={{ color: t.textMuted, fontSize: 11 }}> · {selecionado.time}</span>
           </span>
         ) : (
-          <span style={{ color: t.textMuted }}>Selecionar prestador...</span>
+          <span style={{ color: t.textMuted }}>
+            {disabled ? "Selecione o Time primeiro..." : "Selecionar prestador..."}
+          </span>
         )}
       </button>
       {open ? (
@@ -560,7 +282,9 @@ function PrestadorSelect({ value, onChange, disabled }: PrestadorSelectProps) {
                       padding: "8px 10px",
                       borderRadius: 8,
                       border: "none",
-                      background: on ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)" : "transparent",
+                      background: on
+                        ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                        : "transparent",
                       color: t.text,
                       fontSize: 13,
                       fontFamily: FONT.body,
@@ -584,21 +308,27 @@ function PrestadorSelect({ value, onChange, disabled }: PrestadorSelectProps) {
   );
 }
 
-type MesaMultiSelectProps = {
+function MesaMultiSelect({
+  selected,
+  onToggle,
+  mesas,
+  locked,
+  mesaLabelFn,
+}: {
   selected: Record<string, MesaDraft>;
   onToggle: (id: string) => void;
+  mesas: CtMesaOpt[];
   locked?: boolean;
-};
-
-function MesaMultiSelect({ selected, onToggle, locked }: MesaMultiSelectProps) {
+  mesaLabelFn: (id: string) => string;
+}) {
   const { theme: t } = useApp();
   const [open, setOpen] = useState(false);
   const [buscaPainel, setBuscaPainel] = useState("");
   const ids = Object.keys(selected);
 
   const filtrados = useMemo(
-    () => MESAS_CADASTRO.filter((m) => textoContemBusca(m.label, buscaPainel)),
-    [buscaPainel],
+    () => mesas.filter((m) => textoContemBusca(m.label, buscaPainel)),
+    [buscaPainel, mesas],
   );
 
   return (
@@ -644,12 +374,12 @@ function MesaMultiSelect({ selected, onToggle, locked }: MesaMultiSelectProps) {
                 border: "1px solid color-mix(in srgb, var(--brand-primary, #7c3aed) 30%, transparent)",
               }}
             >
-              {mesaLabel(id)}
+              {mesaLabelFn(id)}
               {!locked ? (
                 <span
                   role="button"
                   tabIndex={0}
-                  aria-label={`Remover ${mesaLabel(id)}`}
+                  aria-label={`Remover ${mesaLabelFn(id)}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggle(id);
@@ -719,7 +449,9 @@ function MesaMultiSelect({ selected, onToggle, locked }: MesaMultiSelectProps) {
                       padding: "8px 10px",
                       borderRadius: 8,
                       border: "none",
-                      background: on ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)" : "transparent",
+                      background: on
+                        ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                        : "transparent",
                       color: t.text,
                       fontSize: 13,
                       fontFamily: FONT.body,
@@ -745,11 +477,13 @@ function BlocoCabecalho({
   sub,
   ctaLabel,
   onCta,
+  showCta,
 }: {
   title: string;
   sub: string;
   ctaLabel: string;
   onCta: () => void;
+  showCta: boolean;
 }) {
   return (
     <div
@@ -759,13 +493,13 @@ function BlocoCabecalho({
         justifyContent: "space-between",
         gap: 12,
         flexWrap: "wrap",
-        marginBottom: 16,
+        marginBottom: 14,
       }}
     >
       <SectionTitle compact sub={sub}>
         {title}
       </SectionTitle>
-      <CtaCriarButton onClick={onCta}>{ctaLabel}</CtaCriarButton>
+      {showCta ? <CtaCriarButton onClick={onCta}>{ctaLabel}</CtaCriarButton> : null}
     </div>
   );
 }
@@ -787,131 +521,236 @@ function EmptyDia({ msg }: { msg: string }) {
   );
 }
 
-export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps) {
+function LoadingBloco() {
   const { theme: t } = useApp();
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 0", gap: 8 }}>
+      <Loader2 size={18} className="app-lucide-spin" color="var(--brand-primary, #7c3aed)" aria-hidden />
+      <span style={{ fontSize: 13, fontFamily: FONT.body, color: t.textMuted }}>Carregando…</span>
+    </div>
+  );
+}
+
+export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps) {
+  const { theme: t, dadosUsuarioEfetivo } = useApp();
   const brand = useDashboardBrand();
+  const perm = usePermission("escala_controle_turno");
   const dataTable = useDataTableBlock();
   const pageBox = getPageContentBoxStyle(brand, t);
   const diaSub = formatDiaCurto(diaIso);
+  const liderancaNome = getCurrentUserNome(dadosUsuarioEfetivo?.name);
 
-  const [fechamentos, setFechamentos] = useState<FechamentoRow[]>(SEED_FECHAMENTOS);
-  const [ausencias, setAusencias] = useState<AusenciaRow[]>(SEED_AUSENCIAS);
-  const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>(SEED_FEEDBACKS);
-  const [manutencoes, setManutencoes] = useState<ManutencaoRow[]>(SEED_MANUTENCOES);
+  const [mesas, setMesas] = useState<CtMesaOpt[]>([]);
+  const [prestadores, setPrestadores] = useState<CtPrestadorOpt[]>([]);
+  const [estudios, setEstudios] = useState<CtEstudioOpt[]>([]);
+  const [fechamentos, setFechamentos] = useState<CtFechamentoRow[]>([]);
+  const [ausencias, setAusencias] = useState<CtAusenciaRow[]>([]);
+  const [feedbacks, setFeedbacks] = useState<CtFeedbackRow[]>([]);
+  const [manutencoes, setManutencoes] = useState<CtManutencaoRow[]>([]);
 
+  const [loading, setLoading] = useState(true);
+  const [erroPagina, setErroPagina] = useState("");
+  const [salvando, setSalvando] = useState(false);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
 
-  /* —— Fechamento —— */
   const [modalFechamento, setModalFechamento] = useState(false);
   const [fechEditId, setFechEditId] = useState<string | null>(null);
+  const [fechEditMesaId, setFechEditMesaId] = useState<string | null>(null);
   const [mesasDraft, setMesasDraft] = useState<Record<string, MesaDraft>>({});
   const [fechErro, setFechErro] = useState("");
-  const [verFechamento, setVerFechamento] = useState<FechamentoRow | null>(null);
+  const [verFechamento, setVerFechamento] = useState<CtFechamentoRow | null>(null);
 
-  /* —— Ausência —— */
   const [modalAusencia, setModalAusencia] = useState(false);
   const [ausEditId, setAusEditId] = useState<string | null>(null);
   const [ausForm, setAusForm] = useState({
+    timeFiltro: "" as "" | "gp" | "shuffler",
     prestadorId: "",
-    motivo: "" as "" | MotivoAusencia,
+    motivo: "" as "" | CtMotivoAusencia,
     inicio: "",
     fim: "",
     fimNaoInformado: false,
     observacao: "",
   });
   const [ausErro, setAusErro] = useState("");
-  const [verAusencia, setVerAusencia] = useState<AusenciaRow | null>(null);
+  const [verAusencia, setVerAusencia] = useState<CtAusenciaRow | null>(null);
 
-  /* —— Feedback —— */
   const [modalFeedback, setModalFeedback] = useState(false);
   const [fbForm, setFbForm] = useState({
+    timeFiltro: "" as "" | "gp" | "shuffler",
     prestadorId: "",
-    recomendacao: "" as "" | RecomendacaoKey,
+    recomendacao: "" as "" | CtFeedbackRecomendacao,
     observacao: "",
   });
   const [fbErro, setFbErro] = useState("");
-  const [verFeedback, setVerFeedback] = useState<FeedbackRow | null>(null);
+  const [verFeedback, setVerFeedback] = useState<CtFeedbackRow | null>(null);
   const [avisoAplicar, setAvisoAplicar] = useState("");
 
-  /* —— Manutenção —— */
   const [modalManut, setModalManut] = useState(false);
   const [manutForm, setManutForm] = useState({
-    tipo: "" as "" | ManutTipo,
+    tipo: "" as "" | CtManutTipo,
     local: "",
     mesaId: "",
     observacao: "",
   });
   const [manutErro, setManutErro] = useState("");
-  const [verManut, setVerManut] = useState<ManutencaoRow | null>(null);
+  const [verManut, setVerManut] = useState<CtManutencaoRow | null>(null);
   const [cancelManutId, setCancelManutId] = useState<string | null>(null);
 
+  const locaisManut = useMemo(() => locaisManutFromEstudios(estudios), [estudios]);
+  const mesaById = useMemo(() => new Map(mesas.map((m) => [m.id, m])), [mesas]);
+
+  const mesaLabelFn = useCallback(
+    (id: string) => mesaById.get(id)?.label ?? id,
+    [mesaById],
+  );
+
+  const prestadoresAusencia = useMemo(() => {
+    if (!ausForm.timeFiltro) return [];
+    return prestadores.filter((p) => grupoTimePrestador(p.time) === ausForm.timeFiltro);
+  }, [prestadores, ausForm.timeFiltro]);
+
+  const prestadoresFeedback = useMemo(() => {
+    if (!fbForm.timeFiltro) return [];
+    return prestadores.filter((p) => grupoTimePrestador(p.time) === fbForm.timeFiltro);
+  }, [prestadores, fbForm.timeFiltro]);
+
+  const carregarDia = useCallback(async () => {
+    setLoading(true);
+    setErroPagina("");
+    try {
+      const [f, a, fb, m] = await Promise.all([
+        listFechamentos(diaIso),
+        listAusencias(diaIso),
+        listFeedbacks(diaIso),
+        listManutencoes(diaIso),
+      ]);
+      setFechamentos(f);
+      setAusencias(a);
+      setFeedbacks(fb);
+      setManutencoes(m);
+    } catch (e) {
+      console.error(e);
+      setErroPagina(MSG_ERRO_CT);
+      setFechamentos([]);
+      setAusencias([]);
+      setFeedbacks([]);
+      setManutencoes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [diaIso]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [mesasList, prestList, estList] = await Promise.all([
+          listMesasForFechamento(),
+          listPrestadoresGpShuffler(),
+          listEstudiosAtivos(),
+        ]);
+        if (cancelled) return;
+        setMesas(mesasList);
+        setPrestadores(prestList);
+        setEstudios(estList);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) setErroPagina(MSG_ERRO_CT);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    void carregarDia();
+  }, [carregarDia]);
+
   const fechVisiveis = useMemo(() => {
-    return fechamentos
-      .filter((f) => fechamentoVisivelNoDia(f, diaIso))
-      .filter((f) => textoContemBusca(mesaLabel(f.id), busca));
-  }, [fechamentos, diaIso, busca]);
+    return fechamentos.filter((f) => textoContemBusca(f.mesa_label, busca));
+  }, [fechamentos, busca]);
 
   const ausVisiveis = useMemo(() => {
-    return ausencias
-      .filter((a) => ausenciaVisivelNoDia(a, diaIso))
-      .filter((a) =>
-        textoContemBuscaEmAlgum(
-          busca,
-          prestadorNome(a.prestadorId),
-          motivoAusLabel(a.motivo),
-          a.lideranca,
-          a.observacao,
-        ),
-      );
-  }, [ausencias, diaIso, busca]);
+    return ausencias.filter((a) =>
+      textoContemBuscaEmAlgum(
+        busca,
+        a.prestador_nome,
+        motivoAusLabel(a.motivo),
+        a.lideranca_nome,
+        a.observacao,
+      ),
+    );
+  }, [ausencias, busca]);
 
   const fbVisiveis = useMemo(() => {
-    return feedbacks
-      .filter((f) => feedbackVisivelNoDia(f, diaIso))
-      .filter((f) =>
-        textoContemBuscaEmAlgum(
-          busca,
-          formatDiaBr(f.dataRegistro),
-          prestadorNome(f.prestadorId),
-          RECOMENDACAO_LABEL[f.recomendacao],
-          f.status,
-          f.lideranca,
-          f.aplicadoPor,
-          f.observacao,
-        ),
-      );
-  }, [feedbacks, diaIso, busca]);
+    return feedbacks.filter((f) =>
+      textoContemBuscaEmAlgum(
+        busca,
+        formatDiaBr(f.data_registro),
+        f.prestador_nome,
+        RECOMENDACAO_LABEL[f.recomendacao],
+        f.status,
+        f.lideranca_nome,
+        f.aplicado_por_nome,
+        f.observacao,
+      ),
+    );
+  }, [feedbacks, busca]);
+
+  function localManutLabel(value: string): string {
+    return locaisManut.find((l) => l.value === value)?.label ?? value ?? "—";
+  }
+
+  function localEhEstudio(value: string): boolean {
+    return locaisManut.find((l) => l.value === value)?.tipo === "estudio";
+  }
+
+  function mesaManutLabel(mesaRef: string | null, localValue: string): string {
+    if (!localEhEstudio(localValue)) return "—";
+    if (!mesaRef) return "—";
+    if (mesaRef === "estudio_geral") return "Estúdio Geral";
+    return mesaLabelFn(mesaRef);
+  }
+
+  function localExibicaoTabela(m: CtManutencaoRow): string {
+    const base = localManutLabel(m.local_key);
+    if (!localEhEstudio(m.local_key)) return base;
+    const mesa = mesaManutLabel(m.mesa_ref, m.local_key);
+    return mesa && mesa !== "—" ? `${base} · ${mesa}` : base;
+  }
 
   const manutVisiveis = useMemo(() => {
-    return manutencoes
-      .filter((m) => manutencaoVisivelNoDia(m, diaIso))
-      .filter((m) =>
-        textoContemBuscaEmAlgum(
-          busca,
-          formatDiaBr(m.abertura),
-          m.solicitante,
-          MANUT_TIPO_LABEL[m.tipo],
-          localExibicaoTabela(m),
-          MANUT_STATUS_LABEL[m.status],
-          m.observacao,
-        ),
-      );
-  }, [manutencoes, diaIso, busca]);
+    return manutencoes.filter((m) =>
+      textoContemBuscaEmAlgum(
+        busca,
+        formatDiaBr(m.abertura),
+        m.solicitante_nome,
+        MANUT_TIPO_LABEL[m.tipo],
+        localExibicaoTabela(m),
+        MANUT_STATUS_LABEL[m.status],
+        m.observacao,
+      ),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- localExibicao depends on mesas/locais
+  }, [manutencoes, busca, mesas, locaisManut]);
 
   function abrirRegistrarFechamento() {
     setFechEditId(null);
+    setFechEditMesaId(null);
     setMesasDraft({});
     setFechErro("");
     setModalFechamento(true);
   }
 
-  function abrirEditarFechamento(row: FechamentoRow) {
+  function abrirEditarFechamento(row: CtFechamentoRow) {
     setFechEditId(row.id);
+    setFechEditMesaId(row.mesa_id);
     setMesasDraft({
-      [row.id]: {
-        fechamento: row.fechamento,
-        reabertura: row.reabertura,
-        naoReaberta: row.naoReaberta,
+      [row.mesa_id]: {
+        fechamento: row.hora_fechamento,
+        reabertura: row.hora_reabertura ?? "",
+        naoReaberta: row.nao_reaberta,
         observacao: row.observacao,
       },
     });
@@ -933,14 +772,14 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     });
   }
 
-  function salvarFechamento() {
+  async function salvarFechamento() {
     const ids = Object.keys(mesasDraft);
     if (!ids.length) {
       setFechErro("Selecione ao menos uma mesa.");
       return;
     }
     for (const id of ids) {
-      const st = mesasDraft[id];
+      const st = mesasDraft[id]!;
       if (!st.fechamento) {
         setFechErro("Informe a Hora de Fechamento de todas as mesas selecionadas.");
         return;
@@ -955,51 +794,59 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       }
     }
 
-    setFechamentos((prev) => {
-      let next = [...prev];
-      for (const id of ids) {
-        const st = mesasDraft[id];
-        const existing = next.find((f) => f.id === id);
-        let liderFech = existing?.liderancaFechamento || LIDERANCA_ATUAL;
-        if (!existing?.liderancaFechamento) liderFech = LIDERANCA_ATUAL;
-        let liderReab = existing?.liderancaReabertura || "";
-        if (!st.naoReaberta) {
-          if (
-            !existing ||
-            existing.naoReaberta ||
-            existing.reabertura !== st.reabertura ||
-            !existing.liderancaReabertura
-          ) {
-            liderReab = LIDERANCA_ATUAL;
-          }
-        } else {
-          liderReab = "";
-        }
-        const novo: FechamentoRow = {
-          id,
-          dataRegistro: existing?.dataRegistro || diaIso,
-          fechamento: st.fechamento,
-          reabertura: st.naoReaberta ? "" : st.reabertura,
-          naoReaberta: !!st.naoReaberta,
-          observacao: st.observacao.trim(),
-          liderancaFechamento: liderFech,
-          liderancaReabertura: liderReab,
-        };
-        const idx = next.findIndex((f) => f.id === id);
-        if (idx >= 0) next[idx] = novo;
-        else next.push(novo);
+    setSalvando(true);
+    setFechErro("");
+    try {
+      if (fechEditId && fechEditMesaId) {
+        const st = mesasDraft[fechEditMesaId]!;
+        const existing = fechamentos.find((f) => f.id === fechEditId);
+        const setLiderancaReaberturaAtual =
+          !st.naoReaberta &&
+          (!existing ||
+            existing.nao_reaberta ||
+            existing.hora_reabertura !== st.reabertura ||
+            !existing.lideranca_reabertura_nome);
+        await updateFechamento({
+          id: fechEditId,
+          horaFechamento: st.fechamento,
+          horaReabertura: st.naoReaberta ? null : st.reabertura,
+          naoReaberta: st.naoReaberta,
+          observacao: st.observacao,
+          liderancaFechamentoNome: existing?.lideranca_fechamento_nome || liderancaNome,
+          liderancaReaberturaNome: existing?.lideranca_reabertura_nome || "",
+          setLiderancaReaberturaAtual,
+          liderancaNomeAtual: liderancaNome,
+        });
+      } else {
+        await createFechamentos({
+          dataRegistro: diaIso,
+          liderancaNome,
+          mesas: ids.map((mesaId) => {
+            const st = mesasDraft[mesaId]!;
+            return {
+              mesaId,
+              horaFechamento: st.fechamento,
+              horaReabertura: st.naoReaberta ? null : st.reabertura,
+              naoReaberta: st.naoReaberta,
+              observacao: st.observacao,
+            };
+          }),
+        });
       }
-      if (fechEditId && !mesasDraft[fechEditId]) {
-        next = next.filter((f) => f.id !== fechEditId);
-      }
-      return next;
-    });
-    setModalFechamento(false);
+      setModalFechamento(false);
+      await carregarDia();
+    } catch (e) {
+      console.error(e);
+      setFechErro(MSG_ERRO_CT_SALVAR);
+    } finally {
+      setSalvando(false);
+    }
   }
 
   function abrirRegistrarAusencia() {
     setAusEditId(null);
     setAusForm({
+      timeFiltro: "",
       prestadorId: "",
       motivo: "",
       inicio: "",
@@ -1011,21 +858,27 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     setModalAusencia(true);
   }
 
-  function abrirEditarAusencia(row: AusenciaRow) {
+  function abrirEditarAusencia(row: CtAusenciaRow) {
+    const p = prestadores.find((x) => x.id === row.prestador_id);
     setAusEditId(row.id);
     setAusForm({
-      prestadorId: row.prestadorId,
+      timeFiltro: grupoTimePrestador(p?.time ?? "") || "gp",
+      prestadorId: row.prestador_id,
       motivo: row.motivo,
       inicio: row.inicio,
-      fim: row.fimNaoInformado ? "" : row.fim,
-      fimNaoInformado: row.fimNaoInformado,
+      fim: row.fim_nao_informado ? "" : row.fim ?? "",
+      fimNaoInformado: row.fim_nao_informado,
       observacao: row.observacao,
     });
     setAusErro("");
     setModalAusencia(true);
   }
 
-  function salvarAusencia() {
+  async function salvarAusencia() {
+    if (!ausForm.timeFiltro) {
+      setAusErro("Selecione o Time.");
+      return;
+    }
     if (!ausForm.prestadorId) {
       setAusErro("Selecione o Prestador.");
       return;
@@ -1051,31 +904,51 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       return;
     }
 
-    const prev = ausEditId ? ausencias.find((a) => a.id === ausEditId) : null;
-    const novo: AusenciaRow = {
-      id: ausEditId || novoId("a"),
-      prestadorId: ausForm.prestadorId,
-      motivo: ausForm.motivo,
-      inicio: ausForm.inicio,
-      fim: ausForm.fimNaoInformado ? "" : ausForm.fim,
-      fimNaoInformado: ausForm.fimNaoInformado,
-      observacao: ausForm.observacao.trim(),
-      lideranca: prev?.lideranca || LIDERANCA_ATUAL,
-    };
-    setAusencias((list) => {
-      if (ausEditId) return list.map((a) => (a.id === ausEditId ? novo : a));
-      return [...list, novo];
-    });
-    setModalAusencia(false);
+    setSalvando(true);
+    setAusErro("");
+    try {
+      if (ausEditId) {
+        await updateAusencia({
+          id: ausEditId,
+          prestadorId: ausForm.prestadorId,
+          motivo: ausForm.motivo,
+          inicio: ausForm.inicio,
+          fim: ausForm.fimNaoInformado ? null : ausForm.fim,
+          fimNaoInformado: ausForm.fimNaoInformado,
+          observacao: ausForm.observacao,
+        });
+      } else {
+        await createAusencia({
+          prestadorId: ausForm.prestadorId,
+          motivo: ausForm.motivo,
+          inicio: ausForm.inicio,
+          fim: ausForm.fimNaoInformado ? null : ausForm.fim,
+          fimNaoInformado: ausForm.fimNaoInformado,
+          observacao: ausForm.observacao,
+          liderancaNome,
+        });
+      }
+      setModalAusencia(false);
+      await carregarDia();
+    } catch (e) {
+      console.error(e);
+      setAusErro(MSG_ERRO_CT_SALVAR);
+    } finally {
+      setSalvando(false);
+    }
   }
 
   function abrirRegistrarFeedback() {
-    setFbForm({ prestadorId: "", recomendacao: "", observacao: "" });
+    setFbForm({ timeFiltro: "", prestadorId: "", recomendacao: "", observacao: "" });
     setFbErro("");
     setModalFeedback(true);
   }
 
-  function salvarFeedback() {
+  async function salvarFeedback() {
+    if (!fbForm.timeFiltro) {
+      setFbErro("Selecione o Time.");
+      return;
+    }
     if (!fbForm.prestadorId) {
       setFbErro("Selecione o Prestador.");
       return;
@@ -1089,25 +962,41 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       return;
     }
 
-    const isOrientacao = fbForm.recomendacao === "orientacao";
-    const lideranca = LIDERANCA_ATUAL;
-    const novo: FeedbackRow = {
-      id: novoId("f"),
-      dataRegistro: diaIso,
-      prestadorId: fbForm.prestadorId,
-      recomendacao: fbForm.recomendacao,
-      status: isOrientacao ? "aplicado" : "revisar",
-      observacao: fbForm.observacao.trim(),
-      lideranca,
-      aplicadoPor: isOrientacao ? lideranca : "",
-    };
-    setFeedbacks((list) => [...list, novo]);
-    setModalFeedback(false);
+    setSalvando(true);
+    setFbErro("");
+    try {
+      await createFeedback({
+        dataRegistro: diaIso,
+        prestadorId: fbForm.prestadorId,
+        recomendacao: fbForm.recomendacao,
+        observacao: fbForm.observacao,
+        liderancaNome,
+      });
+      setModalFeedback(false);
+      await carregarDia();
+    } catch (e) {
+      console.error(e);
+      setFbErro(MSG_ERRO_CT_SALVAR);
+    } finally {
+      setSalvando(false);
+    }
   }
 
-  function aplicarFeedbackPlaceholder() {
-    setAvisoAplicar("Mock: modal Aplicar Feedback será trabalhado em seguida.");
-    window.setTimeout(() => setAvisoAplicar(""), 4000);
+  async function aplicarFeedback(row: CtFeedbackRow) {
+    if (!perm.canEditarOk) return;
+    setAvisoAplicar("");
+    try {
+      await updateFeedback({
+        id: row.id,
+        status: "aplicado",
+        aplicadoPorNome: liderancaNome,
+      });
+      await carregarDia();
+    } catch (e) {
+      console.error(e);
+      setAvisoAplicar(MSG_ERRO_CT_SALVAR);
+      window.setTimeout(() => setAvisoAplicar(""), 4000);
+    }
   }
 
   function abrirSolicitarManutencao() {
@@ -1116,7 +1005,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     setModalManut(true);
   }
 
-  function salvarManutencao() {
+  async function salvarManutencao() {
     if (!manutForm.tipo) {
       setManutErro("Selecione o Tipo.");
       return;
@@ -1134,33 +1023,47 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       return;
     }
 
-    const novo: ManutencaoRow = {
-      id: novoId("m"),
-      abertura: diaIso,
-      solicitante: LIDERANCA_ATUAL,
-      tipo: manutForm.tipo,
-      local: manutForm.local,
-      mesaId: localEhEstudio(manutForm.local) ? manutForm.mesaId : "",
-      observacao: manutForm.observacao.trim(),
-      status: "aberto",
-    };
-    setManutencoes((list) => [...list, novo]);
-    setModalManut(false);
+    setSalvando(true);
+    setManutErro("");
+    try {
+      await createManutencao({
+        abertura: diaIso,
+        tipo: manutForm.tipo,
+        localKey: manutForm.local,
+        mesaRef: localEhEstudio(manutForm.local) ? manutForm.mesaId : null,
+        observacao: manutForm.observacao,
+        solicitanteNome: liderancaNome,
+      });
+      setModalManut(false);
+      await carregarDia();
+    } catch (e) {
+      console.error(e);
+      setManutErro(MSG_ERRO_CT_SALVAR);
+    } finally {
+      setSalvando(false);
+    }
   }
 
-  function confirmarCancelarManutencao() {
+  async function confirmarCancelarManutencao() {
     if (!cancelManutId) return;
-    setManutencoes((list) =>
-      list.map((m) => (m.id === cancelManutId ? { ...m, status: "cancelado" as const } : m)),
-    );
-    setCancelManutId(null);
+    setSalvando(true);
+    try {
+      await updateManutencao({ id: cancelManutId, status: "cancelado" });
+      setCancelManutId(null);
+      await carregarDia();
+    } catch (e) {
+      console.error(e);
+      setErroPagina(MSG_ERRO_CT_SALVAR);
+    } finally {
+      setSalvando(false);
+    }
   }
 
   const mesasDoLocal = useMemo(() => {
-    const meta = localManutMeta(manutForm.local);
-    if (!meta?.estudioNome) return [];
-    return MESAS_CADASTRO.filter((m) => m.estudio === meta.estudioNome);
-  }, [manutForm.local]);
+    const meta = locaisManut.find((l) => l.value === manutForm.local);
+    if (!meta?.estudioSlug) return [];
+    return mesas.filter((m) => m.estudioSlug === meta.estudioSlug);
+  }, [manutForm.local, locaisManut, mesas]);
 
   const rowHoverBg = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)";
 
@@ -1170,8 +1073,30 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     };
   }
 
+  const podeCriar = perm.canCriarOk;
+  const podeEditar = perm.canEditarOk;
+
   return (
     <>
+      {erroPagina ? (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            marginBottom: 14,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(232,64,37,0.12)",
+            border: "1px solid rgba(232,64,37,0.35)",
+            color: "#e84025",
+            fontSize: 13,
+            fontFamily: FONT.body,
+          }}
+        >
+          {erroPagina}
+        </div>
+      ) : null}
+
       {avisoAplicar ? (
         <div
           role="status"
@@ -1191,15 +1116,17 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         </div>
       ) : null}
 
-      {/* —— 1. Fechamento de Mesa —— */}
       <div style={pageBox}>
         <BlocoCabecalho
           title="Fechamento de Mesa"
           sub={diaSub}
           ctaLabel="Registrar Fechamento"
           onCta={abrirRegistrarFechamento}
+          showCta={podeCriar}
         />
-        {fechVisiveis.length === 0 ? (
+        {loading ? (
+          <LoadingBloco />
+        ) : fechVisiveis.length === 0 ? (
           <EmptyDia msg="Sem fechamentos registrados no dia." />
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -1217,10 +1144,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </thead>
               <tbody>
                 {fechVisiveis.map((f, i) => {
-                  const herdado = (f.dataRegistro || diaIso) < diaIso;
-                  const lideranca = f.naoReaberta
-                    ? f.liderancaFechamento || "—"
-                    : f.liderancaReabertura || f.liderancaFechamento || "—";
+                  const herdado = (f.data_registro || diaIso) < diaIso;
+                  const lideranca = f.nao_reaberta
+                    ? f.lideranca_fechamento_nome || "—"
+                    : f.lideranca_reabertura_nome || f.lideranca_fechamento_nome || "—";
                   const key = `fech-${f.id}`;
                   return (
                     <tr
@@ -1229,36 +1156,35 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
-                        {mesaLabel(f.id)}
+                      <td style={dataTable.tdCenter}>
+                        {f.mesa_label}
                         {herdado ? <TagDiaAnterior t={t} /> : null}
                       </td>
-                      <td style={dataTable.tdCenter}>{f.fechamento || "—"}</td>
-                      <td style={dataTable.tdCenter}>{f.naoReaberta ? "—" : f.reabertura || "—"}</td>
+                      <td style={dataTable.tdCenter}>{f.hora_fechamento || "—"}</td>
+                      <td style={dataTable.tdCenter}>{f.nao_reaberta ? "—" : f.hora_reabertura || "—"}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", justifyContent: "center" }}>
-                          {f.naoReaberta ? (
+                          {f.nao_reaberta ? (
                             <StatusPill label="Não aberta" color="#f59e0b" />
                           ) : (
                             <StatusPill label="Reaberta" color="#22c55e" />
                           )}
                         </div>
                       </td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{lideranca}</td>
+                      <td style={dataTable.tdCenter}>{lideranca}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcao("Ver")}
-                            onClick={() => setVerFechamento(f)}
-                          >
+                          <BtnIconeAcaoLinha label={tooltipAcao("Ver")} onClick={() => setVerFechamento(f)}>
                             <Eye size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcao("Editar")}
-                            onClick={() => abrirEditarFechamento(f)}
-                          >
-                            <Pencil size={13} aria-hidden />
-                          </BtnIconeAcaoLinha>
+                          {podeEditar ? (
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcao("Editar")}
+                              onClick={() => abrirEditarFechamento(f)}
+                            >
+                              <Pencil size={13} aria-hidden />
+                            </BtnIconeAcaoLinha>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -1270,15 +1196,17 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         )}
       </div>
 
-      {/* —— 2. Ausências —— */}
       <div style={pageBox}>
         <BlocoCabecalho
           title="Ausências"
           sub={diaSub}
           ctaLabel="Registrar Ausência"
           onCta={abrirRegistrarAusencia}
+          showCta={podeCriar}
         />
-        {ausVisiveis.length === 0 ? (
+        {loading ? (
+          <LoadingBloco />
+        ) : ausVisiveis.length === 0 ? (
           <EmptyDia msg="Sem ausências registradas no dia." />
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -1304,29 +1232,26 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
-                        {prestadorNome(a.prestadorId)}
-                      </td>
+                      <td style={dataTable.tdCenter}>{a.prestador_nome}</td>
                       <td style={dataTable.tdCenter}>{motivoAusLabel(a.motivo)}</td>
                       <td style={dataTable.tdCenter}>{formatDiaBr(a.inicio)}</td>
                       <td style={dataTable.tdCenter}>
-                        {a.fimNaoInformado ? "Não informado" : formatDiaBr(a.fim)}
+                        {a.fim_nao_informado ? "Não informado" : formatDiaBr(a.fim ?? "")}
                       </td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{a.lideranca || "—"}</td>
+                      <td style={dataTable.tdCenter}>{a.lideranca_nome || "—"}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcao("Ver")}
-                            onClick={() => setVerAusencia(a)}
-                          >
+                          <BtnIconeAcaoLinha label={tooltipAcao("Ver")} onClick={() => setVerAusencia(a)}>
                             <Eye size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcao("Editar")}
-                            onClick={() => abrirEditarAusencia(a)}
-                          >
-                            <Pencil size={13} aria-hidden />
-                          </BtnIconeAcaoLinha>
+                          {podeEditar ? (
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcao("Editar")}
+                              onClick={() => abrirEditarAusencia(a)}
+                            >
+                              <Pencil size={13} aria-hidden />
+                            </BtnIconeAcaoLinha>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -1338,15 +1263,17 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         )}
       </div>
 
-      {/* —— 3. Feedbacks —— */}
       <div style={pageBox}>
         <BlocoCabecalho
           title="Feedbacks"
           sub={diaSub}
           ctaLabel="Registrar Feedback"
           onCta={abrirRegistrarFeedback}
+          showCta={podeCriar}
         />
-        {fbVisiveis.length === 0 ? (
+        {loading ? (
+          <LoadingBloco />
+        ) : fbVisiveis.length === 0 ? (
           <EmptyDia msg="Sem feedbacks registrados no dia." />
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -1373,11 +1300,9 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
-                      <td style={dataTable.tdCenter}>{formatDiaBr(f.dataRegistro)}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
-                        {prestadorNome(f.prestadorId)}
-                      </td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
+                      <td style={dataTable.tdCenter}>{formatDiaBr(f.data_registro)}</td>
+                      <td style={dataTable.tdCenter}>{f.prestador_nome}</td>
+                      <td style={dataTable.tdCenter}>
                         {RECOMENDACAO_LABEL[f.recomendacao]}
                       </td>
                       <td style={dataTable.tdCenter}>
@@ -1389,22 +1314,19 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                           )}
                         </div>
                       </td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{f.lideranca || "—"}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>
-                        {f.status === "aplicado" ? f.aplicadoPor || "—" : "—"}
+                      <td style={dataTable.tdCenter}>{f.lideranca_nome || "—"}</td>
+                      <td style={dataTable.tdCenter}>
+                        {f.status === "aplicado" ? f.aplicado_por_nome || "—" : "—"}
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcao("Ver")}
-                            onClick={() => setVerFeedback(f)}
-                          >
+                          <BtnIconeAcaoLinha label={tooltipAcao("Ver")} onClick={() => setVerFeedback(f)}>
                             <Eye size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
-                          {f.status === "revisar" ? (
+                          {f.status === "revisar" && podeEditar ? (
                             <BtnIconeAcaoLinha
                               label={tooltipAcao("Aplicar")}
-                              onClick={aplicarFeedbackPlaceholder}
+                              onClick={() => void aplicarFeedback(f)}
                             >
                               <Check size={13} aria-hidden />
                             </BtnIconeAcaoLinha>
@@ -1420,15 +1342,17 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         )}
       </div>
 
-      {/* —— 4. Solicitação de Manutenção —— */}
       <div style={pageBox}>
         <BlocoCabecalho
           title="Solicitação de Manutenção"
           sub={diaSub}
           ctaLabel="Solicitar Manutenção"
           onCta={abrirSolicitarManutencao}
+          showCta={podeCriar}
         />
-        {manutVisiveis.length === 0 ? (
+        {loading ? (
+          <LoadingBloco />
+        ) : manutVisiveis.length === 0 ? (
           <EmptyDia msg="Sem solicitações de manutenção no dia." />
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -1447,7 +1371,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <tbody>
                 {manutVisiveis.map((m, i) => {
                   const key = `manut-${m.id}`;
-                  const podeCancelar = m.status === "aberto" || m.status === "em_andamento";
+                  const podeCancelar =
+                    podeEditar && (m.status === "aberto" || m.status === "em_andamento");
                   const statusColor =
                     m.status === "concluido"
                       ? "#22c55e"
@@ -1462,9 +1387,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseLeave={() => setHoverKey(null)}
                     >
                       <td style={dataTable.tdCenter}>{formatDiaBr(m.abertura)}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{m.solicitante || "—"}</td>
+                      <td style={dataTable.tdCenter}>
+                        {m.solicitante_nome || "—"}
+                      </td>
                       <td style={dataTable.tdCenter}>{MANUT_TIPO_LABEL[m.tipo]}</td>
-                      <td style={{ ...dataTable.tdCenter, textAlign: "left" }}>{localExibicaoTabela(m)}</td>
+                      <td style={dataTable.tdCenter}>{localExibicaoTabela(m)}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           <StatusPill label={MANUT_STATUS_LABEL[m.status]} color={statusColor} />
@@ -1472,10 +1399,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
-                          <BtnIconeAcaoLinha
-                            label={tooltipAcao("Ver")}
-                            onClick={() => setVerManut(m)}
-                          >
+                          <BtnIconeAcaoLinha label={tooltipAcao("Ver")} onClick={() => setVerManut(m)}>
                             <Eye size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
                           {podeCancelar ? (
@@ -1501,14 +1425,14 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         )}
       </div>
 
-      {/* —— Modal Registrar/Editar Fechamento —— */}
       {modalFechamento ? (
-        <ModalBase onClose={() => setModalFechamento(false)} maxWidth={720}>
+        <ModalBase onClose={() => setModalFechamento(false)} maxWidth={880}>
           <ModalHeader
             title={fechEditId ? "Editar Fechamento" : "Registrar Fechamento"}
             onClose={() => setModalFechamento(false)}
           />
-          <div style={{ padding: "0 4px 8px" }}>
+          <div style={MODAL_FORM_SHELL_STYLE}>
+            <div style={{ ...MODAL_FORM_SCROLL_BODY_STYLE, paddingLeft: 6, paddingRight: 6, minHeight: 320 }}>
             {fechErro ? (
               <div
                 role="alert"
@@ -1526,11 +1450,13 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <MesaMultiSelect
                 selected={mesasDraft}
                 onToggle={toggleMesaDraft}
+                mesas={mesas}
                 locked={!!fechEditId}
+                mesaLabelFn={mesaLabelFn}
               />
             </div>
             {Object.keys(mesasDraft).map((id) => {
-              const st = mesasDraft[id];
+              const st = mesasDraft[id]!;
               return (
                 <div
                   key={id}
@@ -1543,7 +1469,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   }}
                 >
                   <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, fontFamily: FONT.body }}>
-                    {mesaLabel(id)}
+                    {mesaLabelFn(id)}
                   </div>
                   <div className="app-grid-2" style={{ gap: 12, marginBottom: 10 }}>
                     <div>
@@ -1557,11 +1483,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                         onChange={(e) =>
                           setMesasDraft((prev) => ({
                             ...prev,
-                            [id]: { ...prev[id], fechamento: e.target.value },
+                            [id]: { ...prev[id]!, fechamento: e.target.value },
                           }))
                         }
                         style={inputStyle(t)}
-                        aria-label={`Hora de Fechamento — ${mesaLabel(id)}`}
+                        aria-label={`Hora de Fechamento — ${mesaLabelFn(id)}`}
                       />
                     </div>
                     <div>
@@ -1576,11 +1502,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                         onChange={(e) =>
                           setMesasDraft((prev) => ({
                             ...prev,
-                            [id]: { ...prev[id], reabertura: e.target.value },
+                            [id]: { ...prev[id]!, reabertura: e.target.value },
                           }))
                         }
                         style={{ ...inputStyle(t), opacity: st.naoReaberta ? 0.55 : 1 }}
-                        aria-label={`Hora de Reabertura — ${mesaLabel(id)}`}
+                        aria-label={`Hora de Reabertura — ${mesaLabelFn(id)}`}
                       />
                     </div>
                   </div>
@@ -1602,9 +1528,9 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                         setMesasDraft((prev) => ({
                           ...prev,
                           [id]: {
-                            ...prev[id],
+                            ...prev[id]!,
                             naoReaberta: e.target.checked,
-                            reabertura: e.target.checked ? "" : prev[id].reabertura,
+                            reabertura: e.target.checked ? "" : prev[id]!.reabertura,
                           },
                         }))
                       }
@@ -1621,22 +1547,24 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onChange={(e) =>
                         setMesasDraft((prev) => ({
                           ...prev,
-                          [id]: { ...prev[id], observacao: e.target.value },
+                          [id]: { ...prev[id]!, observacao: e.target.value },
                         }))
                       }
                       placeholder="Descreva o motivo do fechamento..."
                       rows={3}
                       style={{ ...inputStyle(t), resize: "vertical", minHeight: 96 }}
-                      aria-label={`Observação — ${mesaLabel(id)}`}
+                      aria-label={`Observação — ${mesaLabelFn(id)}`}
                     />
                   </div>
                 </div>
               );
             })}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            </div>
+            <div style={{ ...MODAL_FORM_FOOTER_STYLE, justifyContent: "flex-end" }}>
               <button
                 type="button"
-                onClick={salvarFechamento}
+                disabled={salvando}
+                onClick={() => void salvarFechamento()}
                 style={{
                   padding: "10px 20px",
                   borderRadius: 10,
@@ -1646,36 +1574,35 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   fontWeight: 700,
                   fontSize: 13,
                   fontFamily: FONT.body,
-                  cursor: "pointer",
+                  cursor: salvando ? "not-allowed" : "pointer",
                 }}
               >
-                Salvar
+                {salvando ? "Salvando…" : "Salvar"}
               </button>
             </div>
           </div>
         </ModalBase>
       ) : null}
 
-      {/* —— Modal Ver Fechamento —— */}
       {verFechamento ? (
         <ModalBase onClose={() => setVerFechamento(null)} maxWidth={560}>
           <ModalHeader title="Detalhes do Fechamento" onClose={() => setVerFechamento(null)} />
           <div style={{ padding: "0 4px 8px" }}>
             <div className="app-grid-2" style={{ gap: 8 }}>
               <CampoDetalhe label="Status da Mesa">
-                {verFechamento.naoReaberta ? (
+                {verFechamento.nao_reaberta ? (
                   <StatusPill label="Não aberta" color="#f59e0b" />
                 ) : (
                   <StatusPill label="Reaberta" color="#22c55e" />
                 )}
               </CampoDetalhe>
-              <CampoDetalhe label="Data do Registro">{formatDiaBr(verFechamento.dataRegistro)}</CampoDetalhe>
-              <CampoDetalhe label="Nome da Mesa">{mesaMeta(verFechamento.id).nome}</CampoDetalhe>
-              <CampoDetalhe label="Jogo">{mesaMeta(verFechamento.id).jogo}</CampoDetalhe>
-              <CampoDetalhe label="Estúdio">{mesaMeta(verFechamento.id).estudio}</CampoDetalhe>
-              <CampoDetalhe label="Hora de Fechamento">{verFechamento.fechamento || "—"}</CampoDetalhe>
+              <CampoDetalhe label="Data do Registro">{formatDiaBr(verFechamento.data_registro)}</CampoDetalhe>
+              <CampoDetalhe label="Nome da Mesa">{verFechamento.mesa_nome}</CampoDetalhe>
+              <CampoDetalhe label="Jogo">{verFechamento.mesa_jogo}</CampoDetalhe>
+              <CampoDetalhe label="Estúdio">{verFechamento.mesa_estudio}</CampoDetalhe>
+              <CampoDetalhe label="Hora de Fechamento">{verFechamento.hora_fechamento || "—"}</CampoDetalhe>
               <CampoDetalhe label="Hora de Abertura">
-                {verFechamento.naoReaberta ? "—" : verFechamento.reabertura || "—"}
+                {verFechamento.nao_reaberta ? "—" : verFechamento.hora_reabertura || "—"}
               </CampoDetalhe>
             </div>
             <CampoDetalhe label="Observação">
@@ -1685,7 +1612,6 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         </ModalBase>
       ) : null}
 
-      {/* —— Modal Registrar/Editar Ausência —— */}
       {modalAusencia ? (
         <ModalBase onClose={() => setModalAusencia(false)} maxWidth={560}>
           <ModalHeader
@@ -1703,6 +1629,29 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </div>
             ) : null}
             <div style={{ marginBottom: 14 }}>
+              <label style={labelCampoStyle(t)} htmlFor="aus-time">
+                Time
+                <CampoObrigatorioMark />
+              </label>
+              <select
+                id="aus-time"
+                aria-label="Time"
+                value={ausForm.timeFiltro}
+                onChange={(e) =>
+                  setAusForm((f) => ({
+                    ...f,
+                    timeFiltro: e.target.value as "" | "gp" | "shuffler",
+                    prestadorId: "",
+                  }))
+                }
+                style={inputStyle(t)}
+              >
+                <option value="">Selecionar...</option>
+                <option value="gp">Game Presenter</option>
+                <option value="shuffler">Shuffler</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 14 }}>
               <label style={labelCampoStyle(t)}>
                 Prestador
                 <CampoObrigatorioMark />
@@ -1710,6 +1659,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <PrestadorSelect
                 value={ausForm.prestadorId}
                 onChange={(id) => setAusForm((f) => ({ ...f, prestadorId: id }))}
+                prestadores={prestadoresAusencia}
+                disabled={!ausForm.timeFiltro}
               />
             </div>
             <div style={{ marginBottom: 14 }}>
@@ -1722,7 +1673,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 aria-label="Motivo"
                 value={ausForm.motivo}
                 onChange={(e) =>
-                  setAusForm((f) => ({ ...f, motivo: e.target.value as "" | MotivoAusencia }))
+                  setAusForm((f) => ({ ...f, motivo: e.target.value as "" | CtMotivoAusencia }))
                 }
                 style={inputStyle(t)}
               >
@@ -1809,7 +1760,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"
-                onClick={salvarAusencia}
+                disabled={salvando}
+                onClick={() => void salvarAusencia()}
                 style={{
                   padding: "10px 20px",
                   borderRadius: 10,
@@ -1819,10 +1771,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   fontWeight: 700,
                   fontSize: 13,
                   fontFamily: FONT.body,
-                  cursor: "pointer",
+                  cursor: salvando ? "not-allowed" : "pointer",
                 }}
               >
-                Salvar
+                {salvando ? "Salvando…" : "Salvar"}
               </button>
             </div>
           </div>
@@ -1834,13 +1786,13 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
           <ModalHeader title="Detalhes da Ausência" onClose={() => setVerAusencia(null)} />
           <div style={{ padding: "0 4px 8px" }}>
             <div className="app-grid-2" style={{ gap: 8 }}>
-              <CampoDetalhe label="Prestador">{prestadorNome(verAusencia.prestadorId)}</CampoDetalhe>
+              <CampoDetalhe label="Prestador">{verAusencia.prestador_nome}</CampoDetalhe>
               <CampoDetalhe label="Motivo">{motivoAusLabel(verAusencia.motivo)}</CampoDetalhe>
               <CampoDetalhe label="Início da Ausência">{formatDiaBr(verAusencia.inicio)}</CampoDetalhe>
               <CampoDetalhe label="Fim da Ausência">
-                {verAusencia.fimNaoInformado ? "Não informado" : formatDiaBr(verAusencia.fim)}
+                {verAusencia.fim_nao_informado ? "Não informado" : formatDiaBr(verAusencia.fim ?? "")}
               </CampoDetalhe>
-              <CampoDetalhe label="Liderança">{verAusencia.lideranca || "—"}</CampoDetalhe>
+              <CampoDetalhe label="Liderança">{verAusencia.lideranca_nome || "—"}</CampoDetalhe>
             </div>
             <CampoDetalhe label="Observação">
               <span style={{ whiteSpace: "pre-wrap" }}>{verAusencia.observacao || "—"}</span>
@@ -1849,7 +1801,6 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         </ModalBase>
       ) : null}
 
-      {/* —— Modal Registrar/Editar Feedback —— */}
       {modalFeedback ? (
         <ModalBase onClose={() => setModalFeedback(false)} maxWidth={560}>
           <ModalHeader title="Registrar Feedback" onClose={() => setModalFeedback(false)} />
@@ -1864,6 +1815,29 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </div>
             ) : null}
             <div style={{ marginBottom: 14 }}>
+              <label style={labelCampoStyle(t)} htmlFor="fb-time">
+                Time
+                <CampoObrigatorioMark />
+              </label>
+              <select
+                id="fb-time"
+                aria-label="Time"
+                value={fbForm.timeFiltro}
+                onChange={(e) =>
+                  setFbForm((f) => ({
+                    ...f,
+                    timeFiltro: e.target.value as "" | "gp" | "shuffler",
+                    prestadorId: "",
+                  }))
+                }
+                style={inputStyle(t)}
+              >
+                <option value="">Selecionar...</option>
+                <option value="gp">Game Presenter</option>
+                <option value="shuffler">Shuffler</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 14 }}>
               <label style={labelCampoStyle(t)}>
                 Prestador
                 <CampoObrigatorioMark />
@@ -1871,6 +1845,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <PrestadorSelect
                 value={fbForm.prestadorId}
                 onChange={(id) => setFbForm((f) => ({ ...f, prestadorId: id }))}
+                prestadores={prestadoresFeedback}
+                disabled={!fbForm.timeFiltro}
               />
             </div>
             <div style={{ marginBottom: 14 }}>
@@ -1885,13 +1861,13 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 onChange={(e) =>
                   setFbForm((f) => ({
                     ...f,
-                    recomendacao: e.target.value as "" | RecomendacaoKey,
+                    recomendacao: e.target.value as "" | CtFeedbackRecomendacao,
                   }))
                 }
                 style={inputStyle(t)}
               >
                 <option value="">Selecionar...</option>
-                {(Object.keys(RECOMENDACAO_LABEL) as RecomendacaoKey[]).map((k) => (
+                {(Object.keys(RECOMENDACAO_LABEL) as CtFeedbackRecomendacao[]).map((k) => (
                   <option key={k} value={k}>
                     {RECOMENDACAO_LABEL[k]}
                   </option>
@@ -1915,7 +1891,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"
-                onClick={salvarFeedback}
+                disabled={salvando}
+                onClick={() => void salvarFeedback()}
                 style={{
                   padding: "10px 20px",
                   borderRadius: 10,
@@ -1925,10 +1902,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   fontWeight: 700,
                   fontSize: 13,
                   fontFamily: FONT.body,
-                  cursor: "pointer",
+                  cursor: salvando ? "not-allowed" : "pointer",
                 }}
               >
-                Salvar
+                {salvando ? "Salvando…" : "Salvar"}
               </button>
             </div>
           </div>
@@ -1940,8 +1917,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
           <ModalHeader title="Detalhes do Feedback" onClose={() => setVerFeedback(null)} />
           <div style={{ padding: "0 4px 8px" }}>
             <div className="app-grid-2" style={{ gap: 8 }}>
-              <CampoDetalhe label="Data do Registro">{formatDiaBr(verFeedback.dataRegistro)}</CampoDetalhe>
-              <CampoDetalhe label="Prestador">{prestadorNome(verFeedback.prestadorId)}</CampoDetalhe>
+              <CampoDetalhe label="Data do Registro">{formatDiaBr(verFeedback.data_registro)}</CampoDetalhe>
+              <CampoDetalhe label="Prestador">{verFeedback.prestador_nome}</CampoDetalhe>
               <CampoDetalhe label="Recomendação">
                 {RECOMENDACAO_LABEL[verFeedback.recomendacao]}
               </CampoDetalhe>
@@ -1952,9 +1929,9 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   <StatusPill label="Revisar" color="#f59e0b" />
                 )}
               </CampoDetalhe>
-              <CampoDetalhe label="Liderança">{verFeedback.lideranca || "—"}</CampoDetalhe>
+              <CampoDetalhe label="Liderança">{verFeedback.lideranca_nome || "—"}</CampoDetalhe>
               <CampoDetalhe label="Aplicado Por">
-                {verFeedback.status === "aplicado" ? verFeedback.aplicadoPor || "—" : "—"}
+                {verFeedback.status === "aplicado" ? verFeedback.aplicado_por_nome || "—" : "—"}
               </CampoDetalhe>
             </div>
             <CampoDetalhe label="Observação">
@@ -1964,7 +1941,6 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         </ModalBase>
       ) : null}
 
-      {/* —— Modal Solicitar Manutenção —— */}
       {modalManut ? (
         <ModalBase onClose={() => setModalManut(false)} maxWidth={560}>
           <ModalHeader title="Solicitar Manutenção" onClose={() => setModalManut(false)} />
@@ -1988,7 +1964,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 aria-label="Tipo"
                 value={manutForm.tipo}
                 onChange={(e) =>
-                  setManutForm((f) => ({ ...f, tipo: e.target.value as "" | ManutTipo }))
+                  setManutForm((f) => ({ ...f, tipo: e.target.value as "" | CtManutTipo }))
                 }
                 style={inputStyle(t)}
               >
@@ -2013,7 +1989,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 style={inputStyle(t)}
               >
                 <option value="">Selecionar...</option>
-                {LOCAIS_MANUT.map((l) => (
+                {locaisManut.map((l) => (
                   <option key={l.value} value={l.value}>
                     {l.label}
                   </option>
@@ -2060,7 +2036,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"
-                onClick={salvarManutencao}
+                disabled={salvando}
+                onClick={() => void salvarManutencao()}
                 style={{
                   padding: "10px 20px",
                   borderRadius: 10,
@@ -2070,10 +2047,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   fontWeight: 700,
                   fontSize: 13,
                   fontFamily: FONT.body,
-                  cursor: "pointer",
+                  cursor: salvando ? "not-allowed" : "pointer",
                 }}
               >
-                Salvar
+                {salvando ? "Salvando…" : "Salvar"}
               </button>
             </div>
           </div>
@@ -2086,11 +2063,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
           <div style={{ padding: "0 4px 8px" }}>
             <div className="app-grid-2" style={{ gap: 8 }}>
               <CampoDetalhe label="Abertura">{formatDiaBr(verManut.abertura)}</CampoDetalhe>
-              <CampoDetalhe label="Solicitante">{verManut.solicitante || "—"}</CampoDetalhe>
+              <CampoDetalhe label="Solicitante">{verManut.solicitante_nome || "—"}</CampoDetalhe>
               <CampoDetalhe label="Tipo">{MANUT_TIPO_LABEL[verManut.tipo]}</CampoDetalhe>
-              <CampoDetalhe label="Local">{localManutLabel(verManut.local)}</CampoDetalhe>
-              {localEhEstudio(verManut.local) ? (
-                <CampoDetalhe label="Mesa">{mesaManutLabel(verManut.mesaId, verManut.local)}</CampoDetalhe>
+              <CampoDetalhe label="Local">{localManutLabel(verManut.local_key)}</CampoDetalhe>
+              {localEhEstudio(verManut.local_key) ? (
+                <CampoDetalhe label="Mesa">{mesaManutLabel(verManut.mesa_ref, verManut.local_key)}</CampoDetalhe>
               ) : null}
               <CampoDetalhe label="Status">
                 <StatusPill
@@ -2142,7 +2119,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </button>
               <button
                 type="button"
-                onClick={confirmarCancelarManutencao}
+                disabled={salvando}
+                onClick={() => void confirmarCancelarManutencao()}
                 style={{
                   padding: "10px 18px",
                   borderRadius: 10,
@@ -2152,10 +2130,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   fontWeight: 700,
                   fontSize: 13,
                   fontFamily: FONT.body,
-                  cursor: "pointer",
+                  cursor: salvando ? "not-allowed" : "pointer",
                 }}
               >
-                Cancelar Solicitação
+                {salvando ? "Salvando…" : "Cancelar Solicitação"}
               </button>
             </div>
           </div>

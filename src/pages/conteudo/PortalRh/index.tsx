@@ -396,7 +396,7 @@ export default function PortalRhPage() {
   const [mesesGer, setMesesGer] = useState<MesCarrosselEntry[]>(() => buildMesesCarrossel([]));
   const [filtroTipoGer, setFiltroTipoGer] = useState<"todos" | RhPostagemTipoUi>("todos");
   const [filtroStatusGer, setFiltroStatusGer] = useState<"todos" | RhPostagemStatus>("todos");
-  const [modoHistorico, setModoHistorico] = useState(false);
+  const [modoHistorico, setModoHistorico] = useState(true);
   const abrirCriarGerenciamentoRef = useRef<(() => void) | null>(null);
 
   const [modalDoc, setModalDoc] = useState<RhPortalDocumento | null>(null);
@@ -568,7 +568,6 @@ export default function PortalRhPage() {
 
   useEffect(() => {
     if (aba === "gerenciamento") return;
-    setModoHistorico(false);
     setBusca("");
     setBuscaDeb("");
   }, [aba]);
@@ -615,6 +614,19 @@ export default function PortalRhPage() {
     setMesesGer(meses);
     setIdxMesGer(Math.max(0, meses.length - 1));
   }, []);
+
+  const handleModoHistoricoChange = useCallback(
+    (ativo: boolean) => {
+      setModoHistorico(ativo);
+      if (!ativo) {
+        setIdxMesCom(Math.max(0, mesesCom.length - 1));
+        setIdxMesPol(Math.max(0, mesesPol.length - 1));
+        setIdxMesTalk(Math.max(0, mesesTalksDisponiveis.length - 1));
+        setIdxMesGer(Math.max(0, mesesGer.length - 1));
+      }
+    },
+    [mesesCom.length, mesesPol.length, mesesTalksDisponiveis.length, mesesGer.length],
+  );
 
   const filtroCarrossel = useMemo(() => {
     switch (aba) {
@@ -992,7 +1004,7 @@ export default function PortalRhPage() {
         idxMes={filtroCarrossel.idx}
         onIdxMesChange={filtroCarrossel.setIdx}
         modoHistorico={modoHistorico}
-        onModoHistoricoChange={setModoHistorico}
+        onModoHistoricoChange={handleModoHistoricoChange}
         busca={busca}
         onBuscaChange={setBusca}
         buscaPlaceholder={buscaFiltroMeta.placeholder}

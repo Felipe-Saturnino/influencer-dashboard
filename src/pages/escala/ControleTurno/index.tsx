@@ -156,6 +156,8 @@ export default function EscalaControleTurnoPage() {
             justifyContent: "center",
             width: "100%",
             marginTop: 12,
+            paddingTop: 12,
+            borderTop: `1px solid ${t.cardBorder}`,
           }}
         >
           {CONTROLE_TURNO_ABAS.map((k, i) => {
@@ -199,7 +201,7 @@ export default function EscalaControleTurnoPage() {
       >
         {aba === "escala" ? <AbaEscala diaIso={diaIso} turno={turno} busca={busca} /> : null}
         {aba === "rotacao" ? <AbaRotacao diaIso={diaIso} turno={turno} /> : null}
-        {aba === "relatorio" ? <AbaRelatorio diaIso={diaIso} /> : null}
+        {aba === "relatorio" ? <AbaRelatorio diaIso={diaIso} busca={busca} /> : null}
         {aba === "notificacoes" ? <AbaNotificacoes diaIso={diaIso} busca={busca} /> : null}
       </div>
     </div>

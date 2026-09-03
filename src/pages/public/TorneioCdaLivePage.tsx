@@ -6,6 +6,8 @@ import {
   TORNEIO_CDA_BG,
   TORNEIO_CDA_POLL_MS,
   TORNEIO_CDA_ATIVIDADE_LIMITE,
+  TORNEIO_CDA_PTS_POR_REAL_APOSTADO,
+  TORNEIO_CDA_PTS_POR_REAL_GANHO,
   TORNEIO_CDA_SLUG,
   fmtTorneioPontos,
   fmtTorneioSyncRelativo,
@@ -174,6 +176,8 @@ function TorneioCdaRankingTable({ rows }: { rows: TorneioCdaRankingRow[] }) {
 }
 
 function TorneioCdaRegras() {
+  const ptsApostado = TORNEIO_CDA_PTS_POR_REAL_APOSTADO.toLocaleString("pt-BR");
+  const ptsGanho = TORNEIO_CDA_PTS_POR_REAL_GANHO.toLocaleString("pt-BR");
   return (
     <div className="torneio-cda-content-box torneio-cda-rules-box">
       <h2 className="torneio-cda-section-title">Regras de Pontuação</h2>
@@ -187,10 +191,12 @@ function TorneioCdaRegras() {
           </div>
         </div>
         <div className="torneio-cda-rule-item">
-          <div className="torneio-cda-rule-points">10 pts</div>
+          <div className="torneio-cda-rule-points">{ptsApostado} pts</div>
           <div className="torneio-cda-rule-desc">
             Por real apostado
-            <span>A cada R$ 1,00 de valor apostado na rodada somam-se 10 pontos extras ao total.</span>
+            <span>
+              A cada R$ 1,00 de valor apostado na rodada somam-se {ptsApostado} pontos extras ao total.
+            </span>
           </div>
         </div>
         <div className="torneio-cda-rule-item">
@@ -201,10 +207,12 @@ function TorneioCdaRegras() {
           </div>
         </div>
         <div className="torneio-cda-rule-item">
-          <div className="torneio-cda-rule-points">15 pts</div>
+          <div className="torneio-cda-rule-points">{ptsGanho} pts</div>
           <div className="torneio-cda-rule-desc">
             Por real ganho
-            <span>A cada R$ 1,00 de valor ganho (saldo positivo) somam-se 15 pontos extras ao total.</span>
+            <span>
+              A cada R$ 1,00 de valor ganho (saldo positivo) somam-se {ptsGanho} pontos extras ao total.
+            </span>
           </div>
         </div>
       </div>
