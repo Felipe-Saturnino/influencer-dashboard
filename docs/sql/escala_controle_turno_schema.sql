@@ -662,17 +662,49 @@ BEGIN
       COALESCE(NULLIF(btrim(f.nome), ''), '—') AS nome,
       COALESCE(NULLIF(btrim(f.staff_nickname), ''), '') AS nickname,
       COALESCE(NULLIF(btrim(t.nome), ''), '') AS time_nome,
-      COALESCE(
-        NULLIF(btrim(a.estudio_slug), ''),
-        NULLIF(btrim(f.staff_estudio_slug), ''),
-        CASE
-          WHEN f.staff_estudio_slugs IS NOT NULL
-               AND cardinality(f.staff_estudio_slugs) > 0
-               AND f.staff_estudio_slugs[1] IS DISTINCT FROM 'todos'
-            THEN NULLIF(btrim(f.staff_estudio_slugs[1]), '')
-          ELSE NULL
-        END
-      ) AS estudio_slug
+      -- Estúdio = cadastro Gestão de Staff (staff_estudio_slugs → slug legado → operadora).
+      CASE
+        WHEN f.staff_estudio_slugs IS NOT NULL
+             AND cardinality(f.staff_estudio_slugs) > 0
+             AND EXISTS (
+               SELECT 1 FROM unnest(f.staff_estudio_slugs) s(slug)
+               WHERE lower(btrim(s.slug)) = 'todos'
+             )
+          THEN 'Todos Estúdios'
+        WHEN f.staff_estudio_slugs IS NOT NULL
+             AND cardinality(f.staff_estudio_slugs) > 0
+          THEN COALESCE(
+            (
+              SELECT string_agg(COALESCE(NULLIF(btrim(es.nome), ''), btrim(s.slug)), ' · ' ORDER BY COALESCE(es.nome, s.slug))
+              FROM unnest(f.staff_estudio_slugs) s(slug)
+              LEFT JOIN public.estudios_spin es ON es.slug = btrim(s.slug)
+              WHERE btrim(s.slug) <> '' AND lower(btrim(s.slug)) <> 'todos'
+            ),
+            '—'
+          )
+        WHEN NULLIF(btrim(f.staff_estudio_slug), '') IS NOT NULL
+          THEN COALESCE(
+            (
+              SELECT NULLIF(btrim(es.nome), '')
+              FROM public.estudios_spin es
+              WHERE es.slug = btrim(f.staff_estudio_slug)
+            ),
+            btrim(f.staff_estudio_slug)
+          )
+        WHEN NULLIF(btrim(f.staff_operadora_slug), '') IS NOT NULL
+          THEN COALESCE(
+            (
+              SELECT COALESCE(NULLIF(btrim(es.nome), ''), j.estudio_slug)
+              FROM public.estudios_spin_operadoras j
+              LEFT JOIN public.estudios_spin es ON es.slug = j.estudio_slug
+              WHERE j.operadora_slug = btrim(f.staff_operadora_slug)
+              ORDER BY CASE WHEN j.tipo = 'dedicado' THEN 0 ELSE 1 END, j.estudio_slug
+              LIMIT 1
+            ),
+            '—'
+          )
+        ELSE '—'
+      END AS estudio_nome
     FROM public.rh_funcionarios f
     INNER JOIN public.rh_org_times t ON t.id = f.org_time_id AND t.status = 'ativo'
     INNER JOIN public.rh_gestao_escala_grade gr
@@ -681,8 +713,6 @@ BEGIN
      AND gr.dia_iso = p_dia
      AND gr.area_key IN ('game_presenter', 'shuffler')
      AND btrim(COALESCE(gr.valor, '')) = v_valor
-    LEFT JOIN public.escala_rotacao_alocacao a
-      ON a.dia = p_dia AND a.turno = v_turno AND a.funcionario_id = f.id
     WHERE f.status IN ('ativo', 'indisponivel')
       AND (
         lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%game presenter%'
@@ -728,7 +758,7 @@ BEGIN
       e.nome,
       e.nickname,
       e.time_nome,
-      COALESCE(NULLIF(btrim(es.nome), ''), NULLIF(btrim(e.estudio_slug), ''), '—') AS estudio_nome,
+      e.estudio_nome,
       CASE
         WHEN r.prestador_id IS NOT NULL THEN btrim(COALESCE(r.entrada_hhmm, ''))
         WHEN p.check_in_at IS NOT NULL
@@ -748,7 +778,6 @@ BEGIN
       END AS status,
       (r.prestador_id IS NOT NULL) AS registrado
     FROM escalados e
-    LEFT JOIN public.estudios_spin es ON es.slug = e.estudio_slug
     LEFT JOIN ponto p ON p.funcionario_id = e.funcionario_id
     LEFT JOIN reg r ON r.prestador_id = e.funcionario_id
   )
@@ -777,7 +806,7 @@ REVOKE ALL ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) FRO
 GRANT EXECUTE ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) TO authenticated;
 
 COMMENT ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) IS
-  'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno com ponto e overlay de escala_ct_presenca_registro.';
+  'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno com ponto, overlay de escala_ct_presenca_registro e estúdio do cadastro Gestão de Staff.';
 
 -- ─── 13) Seed permissões (reforço) ───────────────────────────────────────────
 

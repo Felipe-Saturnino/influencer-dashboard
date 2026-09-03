@@ -87,11 +87,16 @@ Nomes na UI são **travados** em `torneio_cda_participante.apelido` (não usam S
 | 2204823 | Pedro Alexandre |
 | 2204769 | Flavio Hirata |
 | 2204759 | Rodrigo Junqueira |
-| 2207973 | Renato Silva |
+| 2207973 | Renato Dias |
 | 2204755 | Luiz Viveiros |
 | 2208185 | Miqueas Marcelo |
 | 548736 | Rodrigo Simonini |
 | 2208087 | Bruno Yela |
+| 770840 | João Vitor |
+| 2210427 | Luis Carlos |
+| 2210442 | Matheus Tonetti |
+| 2210443 | Bruno Hopf |
+| 2210445 | Marcos Alexandre |
 
 **Período do sync:** `2026-09-03T03:00:00.000Z` → `2026-09-04T02:59:59.999Z` (dia 03/09 inteiro em Brasília).
 

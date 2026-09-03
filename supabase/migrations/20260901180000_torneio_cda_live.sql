@@ -173,11 +173,16 @@ CROSS JOIN (
     ('2204823', 'Pedro Alexandre', 'casadeapostas.if_dgc.L011_358_56.CDA-2204823'),
     ('2204769', 'Flavio Hirata', 'casadeapostas.if_dgc.L011_358_56.CDA-2204769'),
     ('2204759', 'Rodrigo Junqueira', 'casadeapostas.if_dgc.L011_358_56.CDA-2204759'),
-    ('2207973', 'Renato Silva', 'casadeapostas.if_dgc.L011_358_56.CDA-2207973'),
+    ('2207973', 'Renato Dias', 'casadeapostas.if_dgc.L011_358_56.CDA-2207973'),
     ('2204755', 'Luiz Viveiros', 'casadeapostas.if_dgc.L011_358_56.CDA-2204755'),
     ('2208185', 'Miqueas Marcelo', 'casadeapostas.if_dgc.L011_358_56.CDA-2208185'),
     ('548736', 'Rodrigo Simonini', 'casadeapostas.if_dgc.L011_358_56.CDA-548736'),
-    ('2208087', 'Bruno Yela', 'casadeapostas.if_dgc.L011_358_56.CDA-2208087')
+    ('2208087', 'Bruno Yela', 'casadeapostas.if_dgc.L011_358_56.CDA-2208087'),
+    ('770840', 'João Vitor', 'casadeapostas.if_dgc.L011_358_56.CDA-770840'),
+    ('2210427', 'Luis Carlos', 'casadeapostas.if_dgc.L011_358_56.CDA-2210427'),
+    ('2210442', 'Matheus Tonetti', 'casadeapostas.if_dgc.L011_358_56.CDA-2210442'),
+    ('2210443', 'Bruno Hopf', 'casadeapostas.if_dgc.L011_358_56.CDA-2210443'),
+    ('2210445', 'Marcos Alexandre', 'casadeapostas.if_dgc.L011_358_56.CDA-2210445')
 ) AS v(user_name, apelido, player_id_bko)
 WHERE t.slug = 'cda-vip-setembro-2026'
 ON CONFLICT (torneio_id, user_name) DO UPDATE
