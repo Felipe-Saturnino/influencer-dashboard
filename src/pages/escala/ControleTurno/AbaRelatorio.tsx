@@ -849,7 +849,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
         <ModalConfirmDelete
           title="Não é possível publicar"
           texto={
-            "Ainda falta aprovar a Escala do Turno.\n\nO relatório será salvo como Rascunho até que todos os prestadores estejam com Aprovado? Sim na aba Escala do Turno."
+            "Ainda falta aprovar a Escala do Turno.\n\nO relatório será salvo como Rascunho até que todos os horários dos prestadores estejam com Aprovados na aba Escala do Turno."
           }
           confirmLabel="Salvar como Rascunho"
           destructive={false}
