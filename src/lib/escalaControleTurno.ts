@@ -25,6 +25,7 @@ export type CtPresencaStatus =
   | "saida_antecipada"
   | "hora_adicional";
 export type CtPresencaTipo =
+  | "aprovar"
   | "falta"
   | "saida_antecipada"
   | "hora_adicional"
@@ -799,7 +800,18 @@ export function statusPresencaDoTipo(tipo: CtPresencaTipo): CtPresencaStatus {
   if (tipo === "falta") return "falta";
   if (tipo === "saida_antecipada") return "saida_antecipada";
   if (tipo === "hora_adicional") return "hora_adicional";
+  // aprovar | registrar_horario
   return "presente";
+}
+
+/** True se todas as linhas da Escala do Turno estão com Aprovado? = Sim (`registrado`). */
+export async function presencaTurnoTotalmenteAprovada(
+  data: string,
+  turno: CtTurno,
+): Promise<boolean> {
+  const rows = await listPresencaDiaTurno(data, turno);
+  if (rows.length === 0) return true;
+  return rows.every((r) => r.registrado);
 }
 
 function parsePresencaStatus(v: unknown): CtPresencaStatus {

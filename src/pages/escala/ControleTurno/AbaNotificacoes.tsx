@@ -415,7 +415,7 @@ function MesaMultiSelect({
             background: t.inputBg,
             boxShadow: t.isDark ? "0 8px 24px rgba(0,0,0,0.35)" : "0 8px 24px rgba(0,0,0,0.12)",
             padding: 8,
-            maxHeight: 280,
+            maxHeight: 220,
             overflow: "auto",
           }}
         >
@@ -714,10 +714,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   }
 
   function localExibicaoTabela(m: CtManutencaoRow): string {
-    const base = localManutLabel(m.local_key);
-    if (!localEhEstudio(m.local_key)) return base;
+    if (!localEhEstudio(m.local_key)) return localManutLabel(m.local_key);
     const mesa = mesaManutLabel(m.mesa_ref, m.local_key);
-    return mesa && mesa !== "—" ? `${base} · ${mesa}` : base;
+    /* mesaLabelFn já traz Estúdio - Nome - Número; não prefixar o local de novo */
+    return mesa && mesa !== "—" ? mesa : localManutLabel(m.local_key);
   }
 
   const manutVisiveis = useMemo(() => {
@@ -1198,7 +1198,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
 
       <div style={pageBox}>
         <BlocoCabecalho
-          title="Ausências"
+          title="Ausências Prolongadas"
           sub={diaSub}
           ctaLabel="Registrar Ausência"
           onCta={abrirRegistrarAusencia}
@@ -1207,11 +1207,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         {loading ? (
           <LoadingBloco />
         ) : ausVisiveis.length === 0 ? (
-          <EmptyDia msg="Sem ausências registradas no dia." />
+          <EmptyDia msg="Sem ausências prolongadas registradas no dia." />
         ) : (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
-              <caption style={{ display: "none" }}>Ausências do dia</caption>
+              <caption style={{ display: "none" }}>Ausências prolongadas do dia</caption>
               <thead>
                 <tr>
                   <th scope="col" style={dataTable.thHeader}>Prestador</th>
@@ -1361,10 +1361,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <thead>
                 <tr>
                   <th scope="col" style={dataTable.thHeader}>Abertura</th>
-                  <th scope="col" style={dataTable.thHeader}>Solicitante</th>
                   <th scope="col" style={dataTable.thHeader}>Tipo</th>
                   <th scope="col" style={dataTable.thHeader}>Local</th>
                   <th scope="col" style={dataTable.thHeader}>Status</th>
+                  <th scope="col" style={dataTable.thHeader}>Solicitante</th>
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>
@@ -1387,15 +1387,15 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                       onMouseLeave={() => setHoverKey(null)}
                     >
                       <td style={dataTable.tdCenter}>{formatDiaBr(m.abertura)}</td>
-                      <td style={dataTable.tdCenter}>
-                        {m.solicitante_nome || "—"}
-                      </td>
                       <td style={dataTable.tdCenter}>{MANUT_TIPO_LABEL[m.tipo]}</td>
                       <td style={dataTable.tdCenter}>{localExibicaoTabela(m)}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           <StatusPill label={MANUT_STATUS_LABEL[m.status]} color={statusColor} />
                         </div>
+                      </td>
+                      <td style={dataTable.tdCenter}>
+                        {m.solicitante_nome || "—"}
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
@@ -1426,13 +1426,26 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       </div>
 
       {modalFechamento ? (
-        <ModalBase onClose={() => setModalFechamento(false)} maxWidth={880}>
+        <ModalBase
+          onClose={() => setModalFechamento(false)}
+          maxWidth={880}
+          closeOnBackdrop={false}
+          panelOverflow="hidden"
+        >
           <ModalHeader
             title={fechEditId ? "Editar Fechamento" : "Registrar Fechamento"}
             onClose={() => setModalFechamento(false)}
           />
-          <div style={MODAL_FORM_SHELL_STYLE}>
-            <div style={{ ...MODAL_FORM_SCROLL_BODY_STYLE, paddingLeft: 6, paddingRight: 6, minHeight: 320 }}>
+          <div style={{ ...MODAL_FORM_SHELL_STYLE, minHeight: 0, flex: 1 }}>
+            <div
+              style={{
+                ...MODAL_FORM_SCROLL_BODY_STYLE,
+                paddingLeft: 6,
+                paddingRight: 6,
+                minHeight: 0,
+                flex: 1,
+              }}
+            >
             {fechErro ? (
               <div
                 role="alert"

@@ -67,6 +67,10 @@ export default function EscalaControleTurnoPage() {
   const esconderTurno = aba === "relatorio" || aba === "notificacoes";
   const mostrarBusca = aba === "escala" || aba === "relatorio" || aba === "notificacoes";
 
+  /** Futuro: só até amanhã (hoje + 1). Passado: sem limite. */
+  const diaMaxIso = shiftDiaIso(diaIsoLocal(new Date()), 1);
+  const podeAvancarDia = diaIso < diaMaxIso;
+
   const tabIds = useMemo(
     () => CONTROLE_TURNO_ABAS.map((k) => `tab-controle-turno-${k}`),
     [],
@@ -123,8 +127,12 @@ export default function EscalaControleTurnoPage() {
             <button
               type="button"
               aria-label="Próximo dia"
-              onClick={() => setDiaIso((d) => shiftDiaIso(d, 1))}
-              style={getCarouselBtnNavStyle(t, false)}
+              disabled={!podeAvancarDia}
+              onClick={() => {
+                if (!podeAvancarDia) return;
+                setDiaIso((d) => shiftDiaIso(d, 1));
+              }}
+              style={getCarouselBtnNavStyle(t, !podeAvancarDia)}
             >
               <ChevronRight size={14} aria-hidden />
             </button>

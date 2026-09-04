@@ -51,6 +51,7 @@ const STATUS_COR: Record<CtPresencaStatus, string> = {
 };
 
 const TIPO_LABEL: Record<CtPresencaTipo, string> = {
+  aprovar: "Aprovar",
   falta: "Falta",
   saida_antecipada: "Saída Antecipada",
   hora_adicional: "Hora Adicional",
@@ -58,6 +59,7 @@ const TIPO_LABEL: Record<CtPresencaTipo, string> = {
 };
 
 const TIPO_OPCOES: readonly CtPresencaTipo[] = [
+  "aprovar",
   "falta",
   "saida_antecipada",
   "hora_adicional",
@@ -65,6 +67,7 @@ const TIPO_OPCOES: readonly CtPresencaTipo[] = [
 ];
 
 const MOTIVO_LABEL: Record<CtPresencaTipo, string> = {
+  aprovar: "Observação",
   falta: "Motivo da Falta",
   saida_antecipada: "Motivo da Saída Antecipada",
   hora_adicional: "Motivo da Hora Adicional",
@@ -72,6 +75,7 @@ const MOTIVO_LABEL: Record<CtPresencaTipo, string> = {
 };
 
 const MOTIVO_PLACEHOLDER: Record<CtPresencaTipo, string> = {
+  aprovar: "Observação opcional...",
   falta: "Descreva o motivo da falta...",
   saida_antecipada: "Descreva o motivo da saída antecipada...",
   hora_adicional: "Descreva o motivo da hora adicional...",
@@ -79,6 +83,7 @@ const MOTIVO_PLACEHOLDER: Record<CtPresencaTipo, string> = {
 };
 
 const MOTIVO_ERRO: Record<CtPresencaTipo, string> = {
+  aprovar: "Preencha o Comentário.",
   falta: "Preencha o Motivo da Falta.",
   saida_antecipada: "Preencha o Motivo da Saída Antecipada.",
   hora_adicional: "Preencha o Motivo da Hora Adicional.",
@@ -226,17 +231,19 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
       setErroModal("Selecione o Status.");
       return;
     }
-    if (tipo !== "falta") {
-      if (!entrada) {
+
+    if (tipo !== "falta" && tipo !== "aprovar") {
+      if (!entrada.trim()) {
         setErroModal("Informe a Entrada realizada.");
         return;
       }
-      if (!saida) {
+      if (!saida.trim()) {
         setErroModal("Informe a Saída realizada.");
         return;
       }
     }
-    if (!motivo.trim()) {
+
+    if (tipo !== "aprovar" && !motivo.trim()) {
       setErroModal(MOTIVO_ERRO[tipo]);
       return;
     }
@@ -354,13 +361,14 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                   <th scope="col" style={dataTable.thHeader}>Entrada</th>
                   <th scope="col" style={dataTable.thHeader}>Saída</th>
                   <th scope="col" style={dataTable.thHeader}>Status</th>
+                  <th scope="col" style={dataTable.thHeader}>Aprovado?</th>
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filtradas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 24 }}>
+                    <td colSpan={9} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 24 }}>
                       Sem dados para o período selecionado.
                     </td>
                   </tr>
@@ -400,6 +408,25 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                         </div>
                       </td>
                       <td style={dataTable.tdCenter}>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "3px 9px",
+                              borderRadius: 20,
+                              background: r.registrado ? "#22c55e22" : "#e8402522",
+                              color: r.registrado ? "#22c55e" : "#e84025",
+                              border: `1px solid ${r.registrado ? "#22c55e44" : "#e8402544"}`,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {r.registrado ? "Sim" : "Não"}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
                           {podeRegistrar && !r.registrado ? (
                             <BtnIconeAcaoLinha
@@ -427,7 +454,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
       </div>
 
       {alvoRegistrar ? (
-        <ModalBase onClose={fecharRegistrar} maxWidth={560}>
+        <ModalBase onClose={fecharRegistrar} maxWidth={560} closeOnBackdrop={false}>
           <ModalHeader title="Registrar" onClose={fecharRegistrar} />
           <div style={{ padding: "0 4px 8px" }}>
             {erroModal ? (
@@ -463,8 +490,17 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                 aria-label="Status"
                 value={tipo}
                 onChange={(e) => {
-                  setTipo(e.target.value as CtPresencaTipo | "");
+                  const next = e.target.value as CtPresencaTipo | "";
                   setErroModal("");
+                  if (next === "aprovar") {
+                    if (entrada.trim() && saida.trim()) {
+                      setTipo("aprovar");
+                    } else {
+                      setTipo("registrar_horario");
+                    }
+                    return;
+                  }
+                  setTipo(next);
                 }}
                 style={inputStyle(t)}
               >
@@ -477,7 +513,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
               </select>
             </div>
 
-            {tipo && tipo !== "falta" ? (
+            {tipo && tipo !== "falta" && tipo !== "aprovar" ? (
               <div className="app-grid-2" style={{ gap: 12, marginBottom: 12 }}>
                 <div>
                   <label htmlFor="ct-reg-entrada" style={labelCampoStyle(t)}>
@@ -512,7 +548,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
               <div style={{ marginBottom: 16 }}>
                 <label htmlFor="ct-reg-motivo" style={labelCampoStyle(t)}>
                   {MOTIVO_LABEL[tipo]}
-                  <CampoObrigatorioMark />
+                  {tipo !== "aprovar" ? <CampoObrigatorioMark /> : null}
                 </label>
                 <textarea
                   id="ct-reg-motivo"
@@ -689,6 +725,7 @@ function KpiTime({
   onClick: () => void;
 }) {
   const presentes = rows.filter((r) => STATUS_PRESENTES.includes(r.status)).length;
+  const pendentes = rows.filter((r) => r.status === "pendente").length;
   const faltas = rows.filter((r) => r.status === "falta").length;
   return (
     <button
@@ -741,6 +778,9 @@ function KpiTime({
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#22c55e" }}>
           Presentes {presentes}
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b" }}>
+          Pendentes {pendentes}
         </span>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#e84025" }}>Faltas {faltas}</span>
       </div>

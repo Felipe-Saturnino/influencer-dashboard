@@ -59,11 +59,17 @@ export function ModalBase({
   maxWidth = 440,
   onClose,
   zIndex = 1000,
+  closeOnBackdrop = true,
+  panelOverflow = "auto",
 }: {
   children: ReactNode;
   maxWidth?: number;
   onClose: () => void;
   zIndex?: number;
+  /** Se false, só o X (ou ação explícita) fecha — clique no fundo não fecha. Default true. */
+  closeOnBackdrop?: boolean;
+  /** Overflow do painel. Use `hidden` com shell de formulário que já rola por dentro. Default `auto`. */
+  panelOverflow?: "auto" | "hidden";
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -93,7 +99,7 @@ export function ModalBase({
       onMouseDown={(e) => {
         /* `click` no backdrop após selecionar texto (mousedown no input + mouseup no overlay)
          * fechava o modal; `mousedown` só no fundo evita esse caso. */
-        if (e.target === e.currentTarget) onClose();
+        if (closeOnBackdrop && e.target === e.currentTarget) onClose();
       }}
       role="presentation"
     >
@@ -114,7 +120,9 @@ export function ModalBase({
           maxWidth,
           minWidth: 0,
           maxHeight: "90dvh",
-          overflow: "auto",
+          overflow: panelOverflow,
+          display: panelOverflow === "hidden" ? "flex" : undefined,
+          flexDirection: panelOverflow === "hidden" ? "column" : undefined,
         }}
       >
         <DialogTitleIdContext.Provider value={titleId}>{children}</DialogTitleIdContext.Provider>

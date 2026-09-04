@@ -14,7 +14,7 @@ import {
   onFiltroBarTabsKeyDown,
   SectionTitle,
 } from "../../../components/dashboard";
-import { ModalBase, ModalHeader, MODAL_FORM_FOOTER_STYLE, MODAL_FORM_SCROLL_BODY_STYLE } from "../../../components/OperacoesModal";
+import { ModalBase, ModalConfirmDelete, ModalHeader, MODAL_FORM_FOOTER_STYLE, MODAL_FORM_SCROLL_BODY_STYLE } from "../../../components/OperacoesModal";
 import { getPageContentBoxRadius, getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
@@ -24,6 +24,7 @@ import {
   MSG_ERRO_CT_SALVAR,
   getCurrentUserNome,
   listRelatoriosTurnoCt,
+  presencaTurnoTotalmenteAprovada,
   upsertRelatorioTurnoCt,
   type CtRelatorioManutencaoJson,
   type CtRelatorioTurnoRow,
@@ -334,6 +335,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
   const [form, setForm] = useState<RelFormState>(EMPTY_FORM);
   const [formErr, setFormErr] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [popupEscalaPendente, setPopupEscalaPendente] = useState(false);
 
   const [histTurno, setHistTurno] = useState<ControleTurnoTurno | null>(null);
 
@@ -381,6 +383,17 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
         const erro = validarPublicar(form);
         if (erro) {
           setFormErr(erro);
+          return;
+        }
+        try {
+          const aprovado = await presencaTurnoTotalmenteAprovada(diaIso, modalTurno);
+          if (!aprovado) {
+            setPopupEscalaPendente(true);
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+          setFormErr(MSG_ERRO_CT);
           return;
         }
       }
@@ -439,6 +452,11 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
     },
     [modalTurno, form, diaIso, modalModo, fecharModal, relatorNome, perm.canCriarOk, perm.canEditarOk],
   );
+
+  async function confirmarSalvarRascunhoPorEscala() {
+    setPopupEscalaPendente(false);
+    await salvar(false);
+  }
 
   return (
     <>
@@ -543,7 +561,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
         : null}
 
       {modalTurno ? (
-        <ModalBase onClose={fecharModal} maxWidth={720}>
+        <ModalBase onClose={fecharModal} maxWidth={720} closeOnBackdrop={false}>
           <ModalHeader
             title={
               modalModo === "editar"
@@ -826,6 +844,22 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
           </div>
         </ModalBase>
       ) : null}
+
+      {popupEscalaPendente ? (
+        <ModalConfirmDelete
+          title="Não é possível publicar"
+          texto={
+            "Ainda falta aprovar a Escala do Turno.\n\nO relatório será salvo como Rascunho até que todos os prestadores estejam com Aprovado? Sim na aba Escala do Turno."
+          }
+          confirmLabel="Salvar como Rascunho"
+          destructive={false}
+          loading={salvando}
+          loadingLabel="Salvando…"
+          zIndex={1100}
+          onCancel={() => setPopupEscalaPendente(false)}
+          onConfirm={() => void confirmarSalvarRascunhoPorEscala()}
+        />
+      ) : null}
     </>
   );
 }
@@ -940,14 +974,15 @@ function CardTurno({
             t={t}
           />
         </div>
-        <CampoLeitura
-          label="Manutenção"
-          valor={data.campos.manutencao}
-          empty="Não houveram Manutenções no Turno"
-          t={t}
-          full
-        />
-        <CampoLeitura label="Comentários Gerais" valor={data.campos.comentarios} empty="—" t={t} full />
+        <div className="app-grid-2" style={{ gap: 12, marginBottom: 12 }}>
+          <CampoLeituraLinhas
+            label="Manutenção"
+            valor={data.campos.manutencao}
+            empty="Não houveram Manutenções no Turno"
+            t={t}
+          />
+          <CampoLeitura label="Comentários Gerais" valor={data.campos.comentarios} empty="—" t={t} />
+        </div>
 
         <div
           style={{
@@ -1091,6 +1126,65 @@ function CampoLeitura({
       >
         {vazio ? empty : valor}
       </div>
+    </div>
+  );
+}
+
+/** Manutenção: itens empilhados (separados por · ou quebra de linha). */
+function CampoLeituraLinhas({
+  label,
+  valor,
+  empty,
+  t,
+}: {
+  label: string;
+  valor: string;
+  empty: string;
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  const linhas = valor
+    .split(/\s*·\s*|\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const vazio = linhas.length === 0;
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: t.textMuted,
+          marginBottom: 4,
+          fontFamily: FONT.body,
+        }}
+      >
+        {label}
+      </div>
+      {vazio ? (
+        <div
+          style={{
+            fontSize: 13,
+            fontFamily: FONT.body,
+            color: t.textMuted,
+            fontStyle: "italic",
+          }}
+        >
+          {empty}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {linhas.map((linha) => (
+            <div
+              key={linha}
+              style={{ fontSize: 13, fontFamily: FONT.body, color: t.text }}
+            >
+              {linha}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

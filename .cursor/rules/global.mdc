@@ -571,13 +571,16 @@ import { PAGE_SEARCH } from "../lib/searchBarConstants";
 
 Toda filtragem **client-side** acionada por barra de pesquisa ou busca no painel do filtro deve ignorar acentos e diferença de maiúsculas/minúsculas. Ex.: «Flavia» encontra «Flávia»; «jose» encontra «José».
 
+**Várias palavras:** cada token (separado por espaço) deve aparecer no texto (**AND**) — «Alexandre Zanchetta» encontra «Alexandre Galvão Zanchetta». Ordem dos tokens não importa. **Proibido** exigir a frase inteira como substring contígua.
+
 **Helper canónico:** `src/lib/searchText.ts` — não duplicar `normalize("NFD")` nem `toLowerCase().includes` localmente.
 
 | Função | Uso |
 |--------|-----|
 | `normalizarTextoBusca(s)` | Pré-processar termo ou haystack (trim, lower, remove marcas Unicode) |
-| `textoContemBusca(haystack, buscaRaw)` | Um campo — `true` se `buscaRaw` vazia ou coincidir |
-| `textoContemBuscaEmAlgum(buscaRaw, ...partes)` | Vários campos (nome, e-mail, nickname, …) |
+| `tokensBusca(buscaRaw)` | Tokens normalizados da busca (várias palavras) |
+| `textoContemBusca(haystack, buscaRaw)` | Um campo — `true` se `buscaRaw` vazia ou **todos** os tokens coincidirem |
+| `textoContemBuscaEmAlgum(buscaRaw, ...partes)` | Vários campos — cada token em **algum** campo (nome, e-mail, nickname, …) |
 
 ```tsx
 import { textoContemBusca, textoContemBuscaEmAlgum } from "../lib/searchText";

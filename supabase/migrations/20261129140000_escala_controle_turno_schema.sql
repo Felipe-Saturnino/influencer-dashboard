@@ -367,6 +367,7 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_presenca_registro (
   turno               text NOT NULL CHECK (turno IN ('manha', 'tarde', 'noite')),
   prestador_id        uuid NOT NULL REFERENCES public.rh_funcionarios (id) ON DELETE RESTRICT,
   tipo                text NOT NULL CHECK (tipo IN (
+                        'aprovar',
                         'falta',
                         'saida_antecipada',
                         'hora_adicional',
@@ -382,12 +383,14 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_presenca_registro (
                       )),
   entrada_hhmm        text,
   saida_hhmm          text,
-  motivo              text NOT NULL,
+  motivo              text NOT NULL DEFAULT '',
   lideranca_user_id   uuid REFERENCES auth.users (id),
   lideranca_nome      text NOT NULL DEFAULT '',
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT escala_ct_presenca_motivo_chk CHECK (btrim(motivo) <> ''),
+  CONSTRAINT escala_ct_presenca_motivo_chk CHECK (
+    tipo = 'aprovar' OR btrim(motivo) <> ''
+  ),
   CONSTRAINT escala_ct_presenca_entrada_chk CHECK (
     entrada_hhmm IS NULL
     OR btrim(entrada_hhmm) = ''
@@ -698,7 +701,7 @@ BEGIN
               FROM public.estudios_spin_operadoras j
               LEFT JOIN public.estudios_spin es ON es.slug = j.estudio_slug
               WHERE j.operadora_slug = btrim(f.staff_operadora_slug)
-              ORDER BY CASE WHEN j.tipo = 'dedicado' THEN 0 ELSE 1 END, j.estudio_slug
+              ORDER BY CASE WHEN es.tipo = 'dedicado' THEN 0 ELSE 1 END, j.estudio_slug
               LIMIT 1
             ),
             '—'
@@ -807,6 +810,29 @@ GRANT EXECUTE ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) 
 
 COMMENT ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) IS
   'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno com ponto, overlay de escala_ct_presenca_registro e estúdio do cadastro Gestão de Staff.';
+
+-- ─── 12b) Evolução: tipo Aprovar + motivo opcional ───────────────────────────
+
+ALTER TABLE public.escala_ct_presenca_registro
+  DROP CONSTRAINT IF EXISTS escala_ct_presenca_registro_tipo_check;
+ALTER TABLE public.escala_ct_presenca_registro
+  ADD CONSTRAINT escala_ct_presenca_registro_tipo_check
+  CHECK (tipo IN (
+    'aprovar',
+    'falta',
+    'saida_antecipada',
+    'hora_adicional',
+    'registrar_horario'
+  ));
+
+ALTER TABLE public.escala_ct_presenca_registro
+  DROP CONSTRAINT IF EXISTS escala_ct_presenca_motivo_chk;
+ALTER TABLE public.escala_ct_presenca_registro
+  ADD CONSTRAINT escala_ct_presenca_motivo_chk
+  CHECK (tipo = 'aprovar' OR btrim(motivo) <> '');
+
+ALTER TABLE public.escala_ct_presenca_registro
+  ALTER COLUMN motivo SET DEFAULT '';
 
 -- ─── 13) Seed permissões (reforço) ───────────────────────────────────────────
 

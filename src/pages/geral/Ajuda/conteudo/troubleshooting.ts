@@ -7,7 +7,7 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
     {
       subtitulo: "Pesquisei sem acento e não encontrei o nome (ou o contrário)?",
       texto:
-        "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
+        "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Com **várias palavras**, cada uma precisa aparecer no cadastro — a ordem e o nome do meio não importam (ex.: «Alexandre Zanchetta» encontra «Alexandre Galvão Zanchetta»). Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período, time, estúdio, turno) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
     },
     {
       subtitulo: "A página ficou em «Atualizando...» ou pedindo para recarregar?",
@@ -1571,6 +1571,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
   rh_staff: {
     titulo: "Gestão de Staff",
     blocos: [
+      {
+        subtitulo: "Busquei pelo primeiro e último nome e não apareceu?",
+        texto:
+          "A busca aceita várias palavras em qualquer ordem — «Alexandre Zanchetta» encontra «Alexandre Galvão Zanchetta». Confira também o carrossel de time, **Todos Estúdios** e **Todos Turnos**: filtros ativos restringem a tabela além do texto digitado.",
+      },
       {
         subtitulo: "Só vejo o meu time na Gestão de Staff?",
         texto:
