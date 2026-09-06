@@ -43,7 +43,7 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 
 **`purge-academy-performance-hub-videos`:** retenção dos vídeos do Performance Hub (cron semanal). Sem secrets próprios — usa `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`, e só aceita chamada cujo `Authorization` seja a service role key. Simulação: `{"dry_run": true}` no body. Regras: `.cursor/rules/academy.mdc` § Vídeo — limite e retenção.
 
-**`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser CSV/XLSX/HTML inline). Testes locais: `src/lib/comercialSpaCsvParser.ts` + `src/lib/comercialSpaXlsx.ts` + `src/lib/comercialSpaListaFonte.ts`. A Edge abre a página-índice gov.br, segue **Empresas Autorizadas** (tabela HTML) e, se existir, a planilha legado `planilha-de-autorizacoes.xlsx`. SharePoint (`:x:/r/`) só entra se não houver tabela nem ficheiro no gov.br.
+**`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser CSV/XLSX/HTML inline). Testes locais: `src/lib/comercialSpaCsvParser.ts` + `src/lib/comercialSpaXlsx.ts` + `src/lib/comercialSpaListaFonte.ts`. A Edge abre **`/empresas-autorizadas`** (tabela HTML oficial). Planilha legado `planilha-de-autorizacoes.xlsx` sob `lista-de-empresas/` só se não houver tabela; links sob `transparencia-ativa` são ignorados (XLSX 404). SharePoint (`:x:/r/`) só entra se não houver tabela nem ficheiro no gov.br.
 
 **`validate-comercial-dominios`:** deploy com **apenas** `index.ts`. Lógica HTTP espelhada em `src/lib/comercialDominioValidation.ts`.
 

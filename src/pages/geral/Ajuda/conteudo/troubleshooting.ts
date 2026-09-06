@@ -1311,6 +1311,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Verifique conexão e permissão de Editar. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.",
       },
+      {
+        subtitulo: "Sync da Lista SPA falhou com erro de planilha ou HTTP 404?",
+        texto:
+          "A lista oficial é a tabela **Empresas Autorizadas** no portal do Ministério da Fazenda. O sync lê essa página HTML; links antigos de planilha sob Transparência Ativa podem estar quebrados e são ignorados. Em Status Técnico, use **Sync** na linha **Lista SPA**. Se o erro persistir após o deploy da Edge Function, entre em contato com o suporte.",
+      },
     ],
   },
   comercial_pipeline_agregadoras: {

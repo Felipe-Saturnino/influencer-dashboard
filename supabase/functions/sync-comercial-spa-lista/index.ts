@@ -312,8 +312,9 @@ function xlsxBytesToMatrix(bytes: Uint8Array): string[][] {
 }
 
 /**
- * Descobre URL da planilha nacional de autorizações no HTML.
- * Prefere `.xlsx`/`csv` no gov.br; ignora processos judiciais.
+ * Descobre URL da planilha nacional de autorizações no HTML (legado).
+ * Ignora processos judiciais e links sob Transparência Ativa (ficheiros de processos;
+ * `planilha-de-autorizacoes-1.xlsx` nessa pasta costuma 404 — a lista viva é a tabela HTML).
  */
 function extractAutorizacoesPlanilhaUrl(html: string): string | null {
   const urls: string[] = [];
@@ -322,7 +323,9 @@ function extractAutorizacoesPlanilhaUrl(html: string): string | null {
   }
   const isJudicial = (u: string) =>
     /processos?\s*judiciais|determinacao-judicial|determina[cç][aã]o-judicial|judicial/i.test(u);
-  const gov = urls.filter((u) => /gov\.br\/fazenda/i.test(u) && !isJudicial(u));
+  const gov = urls.filter(
+    (u) => /gov\.br\/fazenda/i.test(u) && !isJudicial(u) && !/transparencia-ativa/i.test(u),
+  );
   const xlsx = gov.find((u) => /planilha-de-autorizacoes[^"/?]*\.xlsx(?:$|\?)/i.test(u));
   if (xlsx) return xlsx.split("#")[0] ?? xlsx;
   const csv = gov.find((u) => /planilha-de-autorizacoes[^"/?]*\.csv(?:$|\?)/i.test(u));
@@ -367,8 +370,11 @@ function extractSharePointPlanilhaUrl(html: string): string | null {
 const LISTA_EMPRESAS_PREFIX =
   "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas/";
 
+/** Página canónica com a tabela HTML oficial (índice `lista-de-empresas` mudou de conteúdo). */
+const DEFAULT_LISTA_PAGE = `${LISTA_EMPRESAS_PREFIX}empresas-autorizadas`;
+
 const FALLBACK_PAGINAS_LISTA = [
-  `${LISTA_EMPRESAS_PREFIX}empresas-autorizadas`,
+  DEFAULT_LISTA_PAGE,
   `${LISTA_EMPRESAS_PREFIX}confira-a-lista-de-empresas-autorizadas-a-ofertar-apostas-de-quota-fixa-em-2025`,
 ];
 
@@ -496,9 +502,6 @@ function blocosToCanonicalText(blocos: ParsedEmpresaBloco[]): string {
 
 // --- Sync ---
 
-const DEFAULT_LISTA_PAGE =
-  "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas";
-
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
@@ -614,12 +617,13 @@ function pickFonteFromHtml(
   pageUrl: string,
 ): Extract<FonteResolvida, { ok: true }> | null {
   const listaAtualizadaEm = extractListaAtualizadaEm(html);
+  // Tabela HTML oficial primeiro — a página ainda liga um .xlsx 404 sob Transparência Ativa.
+  if (looksLikeSpaAutorizacoesHtmlTable(html)) {
+    return { ok: true, kind: "html", url: pageUrl, html, listaAtualizadaEm };
+  }
   const planilha = extractAutorizacoesPlanilhaUrl(html);
   if (planilha) {
     return { ok: true, kind: "arquivo", url: planilha, listaAtualizadaEm };
-  }
-  if (looksLikeSpaAutorizacoesHtmlTable(html)) {
-    return { ok: true, kind: "html", url: pageUrl, html, listaAtualizadaEm };
   }
   const sharepoint = extractSharePointPlanilhaUrl(html);
   if (sharepoint) {
