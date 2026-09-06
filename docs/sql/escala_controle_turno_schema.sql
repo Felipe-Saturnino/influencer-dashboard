@@ -621,8 +621,8 @@ COMMENT ON FUNCTION public.escala_controle_turno_prestadores_gp_shuffler() IS
   'Lista GP + Shuffler ativos/indisponíveis para selects de Ausência/Feedback.';
 
 -- ─── 12) Presença do dia/turno (aba Escala do Turno) ─────────────────────────
--- Escalados GP/Shuffler da grade aprovada do dia + ponto (check-in/out) +
--- overlay de `escala_ct_presenca_registro`. Um registro CT sobrepõe o display.
+-- Escalados GP/Shuffler da grade (MRN/AFT/NGT, Manhã/Tarde/Noite, Compra - Turno;
+-- exclui Venda/Troca/Folga) + ponto (check-in/out) + overlay de `escala_ct_presenca_registro`.
 
 CREATE OR REPLACE FUNCTION public.escala_controle_turno_presenca_dia(
   p_dia date,
@@ -715,7 +715,21 @@ BEGIN
      AND gr.ref_mes = v_ref
      AND gr.dia_iso = p_dia
      AND gr.area_key IN ('game_presenter', 'shuffler')
-     AND btrim(COALESCE(gr.valor, '')) = v_valor
+     AND (
+       -- Escalado no turno: sigla (MRN/AFT/NGT), rótulo Manhã/Tarde/Noite ou Compra - Turno.
+       -- Venda, Troca, Folga e demais valores não entram.
+       btrim(COALESCE(gr.valor, '')) = v_valor
+       OR btrim(COALESCE(gr.valor, '')) = CASE v_turno
+         WHEN 'manha' THEN 'Manhã'
+         WHEN 'tarde' THEN 'Tarde'
+         ELSE 'Noite'
+       END
+       OR btrim(COALESCE(gr.valor, '')) = CASE v_turno
+         WHEN 'manha' THEN 'Compra - Manhã'
+         WHEN 'tarde' THEN 'Compra - Tarde'
+         ELSE 'Compra - Noite'
+       END
+     )
     WHERE f.status IN ('ativo', 'indisponivel')
       AND (
         lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%game presenter%'
@@ -809,7 +823,7 @@ REVOKE ALL ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) FRO
 GRANT EXECUTE ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) TO authenticated;
 
 COMMENT ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) IS
-  'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno com ponto, overlay de escala_ct_presenca_registro e estúdio do cadastro Gestão de Staff.';
+  'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno (MRN/AFT/NGT, Manhã/Tarde/Noite e Compra - Turno; exclui Venda/Troca/Folga) com ponto, overlay de escala_ct_presenca_registro e estúdio do cadastro Gestão de Staff.';
 
 -- ─── 12b) Evolução: tipo Aprovar + motivo opcional ───────────────────────────
 
