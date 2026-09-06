@@ -15,6 +15,7 @@ import { FONT } from "../../../constants/theme";
 import {
   DashboardPageHeader,
   FiltroBarTabButton,
+  FiltroHojeButton,
   FiltroTurnoSelect,
   FILTRO_BAR_TAB_ICON_PROPS,
   onFiltroBarTabsKeyDown,
@@ -67,9 +68,11 @@ export default function EscalaControleTurnoPage() {
   const esconderTurno = aba === "relatorio" || aba === "notificacoes";
   const mostrarBusca = aba === "escala" || aba === "relatorio" || aba === "notificacoes";
 
+  const hojeIso = diaIsoLocal(new Date());
   /** Futuro: só até amanhã (hoje + 1). Passado: sem limite. */
-  const diaMaxIso = shiftDiaIso(diaIsoLocal(new Date()), 1);
+  const diaMaxIso = shiftDiaIso(hojeIso, 1);
   const podeAvancarDia = diaIso < diaMaxIso;
+  const filtroHojeAtivo = diaIso === hojeIso;
 
   const tabIds = useMemo(
     () => CONTROLE_TURNO_ABAS.map((k) => `tab-controle-turno-${k}`),
@@ -136,6 +139,10 @@ export default function EscalaControleTurnoPage() {
             >
               <ChevronRight size={14} aria-hidden />
             </button>
+            <FiltroHojeButton
+              active={filtroHojeAtivo}
+              onClick={() => setDiaIso(hojeIso)}
+            />
             {!esconderTurno ? (
               <FiltroTurnoSelect
                 value={turno}

@@ -1013,24 +1013,18 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Solicitações",
       },
       {
-        termo: "Relatório do Turno",
+        termo: "Relatório de Turno",
         definicao:
-          "Registro estruturado da passagem de turno: um bloco por estúdio ativo com Game Presenters escalados e absenteísmo (atrasos, faltas e atestados), mais o bloco de Shufflers e o campo Geral.",
+          "Aba do Controle de Turno com cards por Manhã, Tarde e Noite (Não iniciado, Rascunho ou Publicado). Registra SOS, Figurino, Equipamentos, checklist de manutenção e comentários gerais do turno.",
         nota:
-          "A Data do turno é o dia em que o turno começou — não a data da publicação. Importante no turno noturno, que fecha na manhã seguinte.",
-        referencia: "Relatório de Turno",
-      },
-      {
-        termo: "Relatório de Estúdio",
-        definicao:
-          "Segunda aba do Relatório de Turno (Manhã ou Noite), com SOSs, Sinais, Payout e Resumo obrigatórios, além do checklist opcional de manutenção — roletas, mesas, troca de cartas, CC Machine e cartas contadas.",
-        referencia: "Relatório de Turno",
+          "Para publicar, todos os horários dos prestadores precisam estar aprovados na aba Escala do Turno.",
+        referencia: "Controle de Turno",
       },
       {
         termo: "Absenteísmo",
         definicao:
-          "Total de ausências e desvios de presença no turno — atrasos, faltas e atestados somados dos blocos do relatório.",
-        referencia: "Relatório de Turno · Overview Prestador",
+          "Total de ausências e desvios de presença — atrasos, faltas e atestados — usado em indicadores de Overview Prestador e consolidados de escala.",
+        referencia: "Overview Prestador · Controle de Turno",
       },
     ],
   },
@@ -1483,7 +1477,6 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   escala: [
     "rh_staff",
     "escala_controle_turno",
-    "escala_relatorio_turno",
     "escala_solicitacoes",
     "rh_gestao_escala",
     "escala_escritorio",

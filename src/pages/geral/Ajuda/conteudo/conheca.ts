@@ -926,36 +926,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool real da Escala Estúdio aprovada, check-in, prévia e publicação — o mesmo motor da página **Rotação**); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação. A página dedicada **Relatório de Turno** no menu Escala permanece até a migração completa.",
+          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool real da Escala Estúdio aprovada, check-in, prévia e publicação — o mesmo motor da página **Rotação**); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia e o atalho **Hoje**; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
       },
       {
         subtitulo: "Notificações",
         texto:
-          "Com permissão de **Criar**, registre fechamentos, ausências, feedbacks e manutenções do dia. Com **Editar**, atualize fechamentos/ausências, aplique feedbacks em revisão e cancele manutenções abertas. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
+          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. Com **Editar**, atualize fechamentos/ausências, aplique feedbacks em revisão e cancele manutenções abertas. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
       },
       {
         subtitulo: "Relatório de Turno",
         texto:
-          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno.",
-      },
-    ],
-  },
-  escala_relatorio_turno: {
-    titulo: "Relatório de Turno",
-    blocos: [
-      {
-        texto:
-          "Registre a passagem de turno e o relatório de estúdio de forma estruturada — substitui o fluxo informal de mensagens. Duas abas: **Relatório do Turno** (escalados e absenteísmo por estúdio e Shufflers) e **Relatório de Estúdio** (SOS, sinais, payout e checklist de manutenção).",
-      },
-      {
-        subtitulo: "Relatório do Turno",
-        texto:
-          "Com permissão de **Criar**, use **Novo Relatório**. A **Data do turno** é o dia em que o turno começou (ontem ou hoje) — não a data da publicação; o responsável fica travado no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados e atrasos/faltas/atestados; Resumo é opcional), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
-      },
-      {
-        subtitulo: "Relatório de Estúdio",
-        texto:
-          "Turno Manhã ou Noite. Campos obrigatórios numéricos: SOSs, Sinais e Payout, além do Resumo. A **Data do turno** é o dia em que o turno começou (não a data da publicação) — útil no turno noturno que fecha na manhã seguinte. Manutenção (Roletas, Mesas, Troca de Cartas por estúdio, CC Machine, Cartas Contadas) é checklist opcional.",
+          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado? Sim**.",
       },
     ],
   },

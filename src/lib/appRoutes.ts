@@ -207,10 +207,6 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "aberto", slug: "SolicitacoesEmAberto", label: "Solicitações em Aberto", access: "always" },
     { tabId: "arquivadas", slug: "SolicitacoesArquivadas", label: "Solicitações Arquivadas", access: "always" },
   ]),
-  page("Relatório de Turno", "escala_relatorio_turno", "RelatorioDeTurno", [
-    { tabId: "turno", slug: "RelatorioDoTurno", label: "Relatório do Turno", access: "always" },
-    { tabId: "estudio", slug: "RelatorioDeEstudio", label: "Relatório de Estúdio", access: "always" },
-  ]),
   page("Rotação", "escala_rotacao", "Rotacao", [
     { tabId: "gerar", slug: "GerarRotacao", label: "Gerar Rotação", access: "always" },
     { tabId: "atual", slug: "RotacaoAtual", label: "Rotação Atual", access: "always" },

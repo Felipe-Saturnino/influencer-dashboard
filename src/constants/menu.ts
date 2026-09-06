@@ -11,7 +11,6 @@ import {
   CalendarRange,
   ClipboardCheck,
   ClipboardList,
-  ClipboardPen,
   Clock,
   Dices,
   Factory,
@@ -147,7 +146,6 @@ export const MENU: MenuSection[] = [
     items: [
       { key: "rh_staff", label: "Gestão de Staff", icon: UsersRound },
       { key: "escala_controle_turno", label: "Controle de Turno", icon: Clock },
-      { key: "escala_relatorio_turno", label: "Relatório de Turno", icon: ClipboardPen },
       { key: "escala_solicitacoes", label: "Solicitações", icon: ClipboardList },
       { key: "rh_gestao_escala", label: "Escala Estúdio", icon: Calendar },
       { key: "escala_rotacao", label: "Rotação", icon: RotateCw },

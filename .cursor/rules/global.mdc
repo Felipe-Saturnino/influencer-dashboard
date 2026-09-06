@@ -1249,7 +1249,7 @@ Quando a UI pode renderizar **dezenas/centenas de linhas** (ou linha × muitas c
 
 Constantes: `TABELA_PAGE_SIZE_PRESTADORES` (50), `TABELA_PAGE_SIZE_ESCALA` (40), `TABELA_PAGE_SIZE_INCIDENTES` (50).
 
-**Referências:** Fase 7 (fetch) — Ordem de Saída, Relatório de Turno, Performance Hub, Headcount, Portais. Fase 8 (DOM) — Gestão de Prestadores, Gestão de Escala.
+**Referências:** Fase 7 (fetch) — Ordem de Saída, Controle de Turno, Performance Hub, Headcount, Portais. Fase 8 (DOM) — Gestão de Prestadores, Gestão de Escala.
 
 ---
 

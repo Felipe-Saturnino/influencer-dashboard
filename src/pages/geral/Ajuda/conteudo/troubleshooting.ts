@@ -1778,36 +1778,6 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
-  escala_relatorio_turno: {
-    titulo: "Relatório de Turno",
-    blocos: [
-      {
-        subtitulo: "Não vejo Relatório de Turno no menu?",
-        texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Relatório de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
-      },
-      {
-        subtitulo: "Não consigo criar um novo relatório?",
-        texto:
-          "É necessária permissão de **Criar** na mesma linha. Sem ela, o botão **Novo Relatório** não aparece. O responsável fica travado no usuário logado; a **Data do turno** pode ser ontem ou hoje (dia em que o turno começou).",
-      },
-      {
-        subtitulo: "Qual data usar no turno noturno?",
-        texto:
-          "Use a data em que o turno **começou**. Ex.: Noite que começa às 20h ou 23h de segunda e fecha na manhã de terça → selecione a data de **segunda**. Antes do meio-dia, o sistema já sugere **ontem** por padrão.",
-      },
-      {
-        subtitulo: "Falta a roleta do Sports Club no checklist?",
-        texto:
-          "A lista vem das mesas cadastradas com tipo ou nome de Roleta em Gestão de Estúdios / Mesas. Confirme o vínculo da mesa ao estúdio Sports Club e o tipo de jogo. Se a migração recente ainda não foi aplicada no banco, a listagem antiga pode omitir algumas roletas.",
-      },
-      {
-        subtitulo: "Faltam blocos de estúdio no modal?",
-        texto:
-          "Os blocos seguem os estúdios **ativos** em Gestão de Estúdios. Cadastre ou reative o estúdio para ele aparecer automaticamente no próximo relatório.",
-      },
-    ],
-  },
   escala_rotacao: {
     titulo: "Rotação",
     blocos: [
