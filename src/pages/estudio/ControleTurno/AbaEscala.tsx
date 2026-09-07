@@ -7,7 +7,7 @@ import { FONT } from "../../../constants/theme";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
-import { SectionTitle } from "../../../components/dashboard";
+import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import {
@@ -15,6 +15,7 @@ import {
   getPageContentBoxStyle,
 } from "../../../lib/pageContentBoxStyles";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import {
@@ -103,8 +104,25 @@ const STATUS_PRESENTES: readonly CtPresencaStatus[] = [
 
 type GrupoTime = "gp" | "shuffler";
 
+type SortPresencaCol =
+  | "nome"
+  | "nickname"
+  | "time"
+  | "estudio"
+  | "entrada"
+  | "saida"
+  | "status"
+  | "aprovado";
+
 function grupoDoTime(time: string): GrupoTime {
   return time.toLowerCase().includes("shuffler") ? "shuffler" : "gp";
+}
+
+function toggleSortDir<T extends string>(
+  prev: { col: T; dir: SortDir },
+  col: T,
+): { col: T; dir: SortDir } {
+  return { col, dir: prev.col === col && prev.dir === "desc" ? "asc" : "desc" };
 }
 
 function labelCampoStyle(t: { text: string }): CSSProperties {
@@ -168,6 +186,10 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
   const [erroHistorico, setErroHistorico] = useState("");
   const [hoverKey, setHoverKey] = useState<string | null>(null);
   const [filtroTime, setFiltroTime] = useState<"gp" | "shuffler" | null>(null);
+  const [sortPresenca, setSortPresenca] = useState<{ col: SortPresencaCol; dir: SortDir }>({
+    col: "nome",
+    dir: "asc",
+  });
 
   const loadSeq = useRef(0);
   const rowHoverBg = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)";
@@ -198,21 +220,33 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
     setFiltroTime(null);
   }, [diaIso, turno]);
 
-  const filtradas = useMemo(
-    () =>
-      rows.filter((r) => {
-        if (filtroTime && grupoDoTime(r.time) !== filtroTime) return false;
-        return textoContemBuscaEmAlgum(
-          busca,
-          r.nome,
-          r.nickname,
-          r.time,
-          r.estudio,
-          STATUS_LABEL[r.status],
-        );
-      }),
-    [rows, busca, filtroTime],
-  );
+  const filtradas = useMemo(() => {
+    const filtered = rows.filter((r) => {
+      if (filtroTime && grupoDoTime(r.time) !== filtroTime) return false;
+      return textoContemBuscaEmAlgum(
+        busca,
+        r.nome,
+        r.nickname,
+        r.time,
+        r.estudio,
+        STATUS_LABEL[r.status],
+      );
+    });
+    const sorted = [...filtered];
+    const { col, dir } = sortPresenca;
+    sorted.sort((a, b) => {
+      if (col === "nome") return compareLocaleTexto(a.nome, b.nome, dir);
+      if (col === "nickname") return compareLocaleTexto(a.nickname || "", b.nickname || "", dir);
+      if (col === "time") return compareLocaleTexto(a.time || "", b.time || "", dir);
+      if (col === "estudio") return compareLocaleTexto(a.estudio || "", b.estudio || "", dir);
+      if (col === "entrada") return compareLocaleTexto(a.entrada || "", b.entrada || "", dir);
+      if (col === "saida") return compareLocaleTexto(a.saida || "", b.saida || "", dir);
+      if (col === "status")
+        return compareLocaleTexto(STATUS_LABEL[a.status], STATUS_LABEL[b.status], dir);
+      return compareLocaleTexto(a.registrado ? "Sim" : "Não", b.registrado ? "Sim" : "Não", dir);
+    });
+    return sorted;
+  }, [rows, busca, filtroTime, sortPresenca]);
 
   const gps = useMemo(() => rows.filter((r) => grupoDoTime(r.time) === "gp"), [rows]);
   const shufflers = useMemo(() => rows.filter((r) => grupoDoTime(r.time) === "shuffler"), [rows]);
@@ -407,14 +441,29 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
               <caption style={{ display: "none" }}>Controle de presença do turno</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={dataTable.thHeader}>Nome</th>
-                  <th scope="col" style={dataTable.thHeader}>Nickname</th>
-                  <th scope="col" style={dataTable.thHeader}>Time</th>
-                  <th scope="col" style={dataTable.thHeader}>Estúdio</th>
-                  <th scope="col" style={dataTable.thHeader}>Entrada</th>
-                  <th scope="col" style={dataTable.thHeader}>Saída</th>
-                  <th scope="col" style={dataTable.thHeader}>Status</th>
-                  <th scope="col" style={dataTable.thHeader}>Aprovado</th>
+                  {(
+                    [
+                      ["nome", "Nome"],
+                      ["nickname", "Nickname"],
+                      ["time", "Time"],
+                      ["estudio", "Estúdio"],
+                      ["entrada", "Entrada"],
+                      ["saida", "Saída"],
+                      ["status", "Status"],
+                      ["aprovado", "Aprovado"],
+                    ] as const
+                  ).map(([col, label]) => (
+                    <SortTableTh
+                      key={col}
+                      label={label}
+                      col={col}
+                      sortCol={sortPresenca.col}
+                      sortDir={sortPresenca.dir}
+                      thStyle={dataTable.thHeader}
+                      align="center"
+                      onSort={(c) => setSortPresenca((s) => toggleSortDir(s, c))}
+                    />
+                  ))}
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>

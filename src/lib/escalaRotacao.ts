@@ -250,11 +250,16 @@ export type PresencaRotacaoCt = {
   saida: string;
 };
 
-const STATUS_POOL_TURNO_ATUAL = new Set(["presente", "pendente", "saida_antecipada"]);
+const STATUS_POOL_TURNO_ATUAL = new Set([
+  "presente",
+  "pendente",
+  "saida_antecipada",
+  "hora_adicional",
+]);
 
 /**
- * Pool da Rotação (CT): Presente / Pendente / Saída Antecipada do turno atual;
- * Hora Adicional do turno anterior (mesmo estúdio) entra até a saída registrada.
+ * Pool da Rotação (CT): Presente / Pendente / Saída Antecipada / Hora Adicional do turno atual;
+ * Hora Adicional do turno anterior (mesmo estúdio) também entra até a saída registrada (células ≥ saída = X).
  */
 export function filtrarPoolRotacaoPorPresencaCt(opts: {
   gps: RotacaoGpPool[];
@@ -270,12 +275,11 @@ export function filtrarPoolRotacaoPorPresencaCt(opts: {
     const p = byIdAtual.get(g.funcionarioId);
     if (!p || !STATUS_POOL_TURNO_ATUAL.has(p.status)) continue;
     const saida = p.saida.trim();
-    if (p.status === "saida_antecipada") {
-      if (!saida) continue;
-      pool.push({ ...g, saidaLimiteHhmm: saida });
-    } else {
-      pool.push({ ...g, saidaLimiteHhmm: undefined });
-    }
+    const comLimite =
+      (p.status === "saida_antecipada" || p.status === "hora_adicional") && saida
+        ? saida
+        : undefined;
+    pool.push({ ...g, saidaLimiteHhmm: comLimite });
     ids.add(g.funcionarioId);
   }
 
@@ -285,12 +289,11 @@ export function filtrarPoolRotacaoPorPresencaCt(opts: {
     const p = byIdAnt.get(g.funcionarioId);
     if (!p || p.status !== "hora_adicional") continue;
     const saida = p.saida.trim();
-    if (!saida) continue;
     pool.push({
       ...g,
       falta: false,
       isShiftLead: false,
-      saidaLimiteHhmm: saida,
+      saidaLimiteHhmm: saida || undefined,
     });
     ids.add(g.funcionarioId);
   }

@@ -926,7 +926,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool filtrado pela Escala do Turno — Presente, Pendente e Saída Antecipada; Hora Adicional no turno seguinte até a saída, com **X** depois); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia e o atalho **Hoje**; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
+          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool filtrado pela Escala do Turno — Presente, Pendente, Saída Antecipada e Hora Adicional; Hora Adicional do turno anterior também no turno seguinte, com **X** após a saída); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia e o atalho **Hoje**; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
       },
       {
         subtitulo: "Escala do Turno",
@@ -936,7 +936,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Rotação",
         texto:
-          "O pool usa a Escala Estúdio do estúdio selecionado, restrito aos prestadores da **Escala do Turno** com status **Presente** ou **Pendente**. **Saída Antecipada** entra no mesmo turno e a grade marca **X** a partir do horário de saída. **Hora Adicional** entra no **turno seguinte** (até a saída registrada; depois **X**). Falta e demais status ficam de fora do pool.",
+          "O pool usa a Escala Estúdio do estúdio selecionado, restrito aos prestadores da **Escala do Turno** com status **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. Com horário de saída registrado, a grade marca **X** a partir desse horário. **Hora Adicional** do turno anterior também entra no turno seguinte (mesmo estúdio). **Falta** fica de fora do pool.",
       },
       {
         subtitulo: "Notificações",

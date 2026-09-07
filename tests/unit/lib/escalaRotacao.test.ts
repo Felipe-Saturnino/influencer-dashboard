@@ -1,12 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
+  filtrarPoolRotacaoPorPresencaCt,
   gerarGradeRotacao,
   gerarPatternRotacao,
   labelsMesasRotacao,
   maxSlotsSeguidosAntesBreak,
   ROTACAO_MAX_MESAS_SEGUIDAS,
   type RotacaoGeracaoPessoa,
+  type RotacaoGpPool,
 } from "../../../src/lib/escalaRotacao";
+
+function gpFake(id: string, nome = id): RotacaoGpPool {
+  return {
+    funcionarioId: id,
+    nomeCompleto: nome,
+    nomeExibicao: nome,
+    nickname: nome,
+    falta: false,
+    isShiftLead: false,
+  };
+}
 
 function assertCoberturaTotal(
   matrix: string[][],
@@ -240,5 +253,46 @@ describe("gerarPatternRotacao (compat)", () => {
     expect(matrix).toHaveLength(5);
     assertCoberturaTotal(matrix, mesas, 5, 4);
     assertSemMesaConsecutiva(matrix);
+  });
+});
+
+describe("filtrarPoolRotacaoPorPresencaCt", () => {
+  it("inclui Saída Antecipada e Hora Adicional do turno atual", () => {
+    const pool = filtrarPoolRotacaoPorPresencaCt({
+      gps: [gpFake("a"), gpFake("b"), gpFake("c"), gpFake("d")],
+      presencaAtual: [
+        { id: "a", status: "presente", saida: "" },
+        { id: "b", status: "saida_antecipada", saida: "16:00" },
+        { id: "c", status: "hora_adicional", saida: "22:00" },
+        { id: "d", status: "falta", saida: "" },
+      ],
+      presencaAnterior: [],
+      gpsTurnoAnteriorMesmoEstudio: [],
+    });
+    expect(pool.map((g) => g.funcionarioId).sort()).toEqual(["a", "b", "c"]);
+    expect(pool.find((g) => g.funcionarioId === "b")?.saidaLimiteHhmm).toBe("16:00");
+    expect(pool.find((g) => g.funcionarioId === "c")?.saidaLimiteHhmm).toBe("22:00");
+  });
+
+  it("inclui Saída Antecipada mesmo sem horário de saída", () => {
+    const pool = filtrarPoolRotacaoPorPresencaCt({
+      gps: [gpFake("b")],
+      presencaAtual: [{ id: "b", status: "saida_antecipada", saida: "" }],
+      presencaAnterior: [],
+      gpsTurnoAnteriorMesmoEstudio: [],
+    });
+    expect(pool).toHaveLength(1);
+    expect(pool[0]?.saidaLimiteHhmm).toBeUndefined();
+  });
+
+  it("traz Hora Adicional do turno anterior no turno seguinte", () => {
+    const pool = filtrarPoolRotacaoPorPresencaCt({
+      gps: [gpFake("a")],
+      presencaAtual: [{ id: "a", status: "presente", saida: "" }],
+      presencaAnterior: [{ id: "x", status: "hora_adicional", saida: "10:00" }],
+      gpsTurnoAnteriorMesmoEstudio: [gpFake("x")],
+    });
+    expect(pool.map((g) => g.funcionarioId).sort()).toEqual(["a", "x"]);
+    expect(pool.find((g) => g.funcionarioId === "x")?.saidaLimiteHhmm).toBe("10:00");
   });
 });
