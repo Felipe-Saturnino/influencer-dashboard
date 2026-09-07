@@ -2674,6 +2674,7 @@ export default function RhCalendarioPage() {
         status,
       };
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal helper local do render
   }, [
     diasDoMesPresenca,
     filterStaffIds,
