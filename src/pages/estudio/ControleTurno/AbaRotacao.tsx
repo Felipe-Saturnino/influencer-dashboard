@@ -199,7 +199,8 @@ export function AbaRotacao({ diaIso, turno }: Props) {
         };
       }),
     );
-    setPoolSl(res.data.shiftLeads.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })));
+    // Liderança (SL/SM) só entra via «Incluir Liderança» — nunca no pool automático.
+    setPoolSl([]);
     setLiderancasDia(
       res.data.liderancas.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })),
     );

@@ -936,7 +936,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Rotação",
         texto:
-          "O pool usa a Escala Estúdio do estúdio selecionado, restrito aos prestadores da **Escala do Turno** com status **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. Com horário de saída registrado, a grade marca **X** a partir desse horário. **Hora Adicional** do turno anterior também entra no turno seguinte (mesmo estúdio). **Falta** fica de fora do pool. Em **Incluir Liderança**, aparecem **Shift Leaders** e **Service Managers** escalados no dia (Manhã, Tarde ou Noite) — disponíveis em **qualquer** turno da rotação. Como a liderança usa horário **08h–20h** ou **20h–08h**, a grade marca **X** nos slots antes do início ou a partir do fim dessa janela quando o turno da rotação só cobre parte do horário (ex.: Manhã começando às 06h com SL das 08h).",
+          "O pool usa a Escala Estúdio do estúdio selecionado, restrito aos prestadores da **Escala do Turno** com status **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. Com horário de saída registrado, a grade marca **X** a partir desse horário. **Hora Adicional** do turno anterior também entra no turno seguinte (mesmo estúdio). **Falta** fica de fora do pool. **Shift Leaders** e **Service Managers** **não** entram no Pool do Turno sozinhos — só pelo botão **Incluir Liderança** (lista do dia, qualquer turno). Após incluir, a grade marca **X** fora da janela **08h–20h** / **20h–08h** quando o turno da rotação só cobre parte do horário.",
       },
       {
         subtitulo: "Notificações",

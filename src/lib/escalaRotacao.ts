@@ -63,11 +63,11 @@ export type RotacaoContextoDia = {
   gps: RotacaoGpPool[];
   /** GPs do mesmo turno em outro estúdio efetivo (para mover). */
   gpsOutros: RotacaoGpPool[];
-  /** Shift Leads escalados (reserva automática do mesmo turno). */
+  /** Shift Leads do mesmo turno (RPC) — legado; a UI só inclui liderança via «Incluir Liderança». */
   shiftLeads: RotacaoGpPool[];
   /**
    * Shift Leaders + Service Managers escalados no dia (qualquer célula MRN/AFT/NGT),
-   * para o seletor «Incluir Liderança» — filtrar com `liderancaCompativelComTurnoRotacao`.
+   * para o seletor «Incluir Liderança».
    */
   liderancas: RotacaoGpPool[];
   mesas: RotacaoMesa[];
@@ -1310,15 +1310,8 @@ export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ gera
               isShiftLead: false,
               disponivelPorSlot: disponivelPorSlotPessoaRotacao(slots, g, ctx.turnoInicio),
             })),
-            shiftLeads: ctx.shiftLeads.map((g) => ({
-              funcionarioId: g.funcionarioId,
-              isShiftLead: true,
-              disponivelPorSlot: disponivelPorSlotPessoaRotacao(
-                slots,
-                { ...g, isShiftLead: true },
-                ctx.turnoInicio,
-              ),
-            })),
+            // Prévia do mês: só GPs — liderança entra depois via «Incluir Liderança» na UI.
+            shiftLeads: [],
             nSlots: slots.length,
             slotMinutos: slotMin,
           });
@@ -1326,7 +1319,7 @@ export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ gera
             erros += 1;
             continue;
           }
-          const porId = new Map(gps.concat(ctx.shiftLeads).map((g) => [g.funcionarioId, g]));
+          const porId = new Map(gps.map((g) => [g.funcionarioId, g]));
           const linhas = gerado.pessoas.map((p) => {
             const g = porId.get(p.funcionarioId);
             return (

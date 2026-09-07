@@ -449,7 +449,8 @@ export default function EscalaRotacaoPage() {
     const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
     setCtx(res.data);
     setPool(res.data.gps.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: false })));
-    setPoolSl(res.data.shiftLeads.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })));
+    // Liderança (SL/SM) só entra via «Incluir Liderança» — nunca no pool automático.
+    setPoolSl([]);
     setPoolOutros(res.data.gpsOutros.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: false })));
     setLiderancasDia(
       res.data.liderancas.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })),
