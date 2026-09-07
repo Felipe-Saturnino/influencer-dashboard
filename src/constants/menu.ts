@@ -132,6 +132,7 @@ export const MENU: MenuSection[] = [
       { key: "rh_figurinos", label: "Figurinos", icon: Shirt },
       { key: "roteiro_mesa", label: "Roteiro de Mesa", icon: Notebook },
       { key: "incidentes", label: "Incidentes", icon: AlertTriangle },
+      { key: "escala_controle_turno", label: "Controle de Turno", icon: Clock },
     ],
   },
   {
@@ -145,7 +146,6 @@ export const MENU: MenuSection[] = [
     section: "Escala",
     items: [
       { key: "rh_staff", label: "Gestão de Staff", icon: UsersRound },
-      { key: "escala_controle_turno", label: "Controle de Turno", icon: Clock },
       { key: "escala_solicitacoes", label: "Solicitações", icon: ClipboardList },
       { key: "rh_gestao_escala", label: "Escala Estúdio", icon: Calendar },
       { key: "escala_rotacao", label: "Rotação", icon: RotateCw },

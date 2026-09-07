@@ -1764,7 +1764,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Controle de Turno no menu?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Controle de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Controle de Turno** (seção **Estúdio**). A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
       },
       {
         subtitulo: "O pool da Rotação está vazio no Controle de Turno?",

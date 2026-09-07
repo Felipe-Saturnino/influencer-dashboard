@@ -128,6 +128,7 @@ const PAGES_META: {
   { key: "rh_figurinos", label: "Figurinos", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "roteiro_mesa", label: "Roteiro de Mesa", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "incidentes", label: "Incidentes", secao: "Estúdio", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "escala_controle_turno", label: "Controle de Turno", secao: "Estúdio", hasCriar: true, hasEditar: true, hasExcluir: false },
   // Academy
   {
     key: "academy_performance_hub",
@@ -147,7 +148,6 @@ const PAGES_META: {
   },
   // Escala (ordem = menu.ts)
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "escala_controle_turno", label: "Controle de Turno", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "escala_solicitacoes", label: "Solicitações", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_gestao_escala", label: "Escala Estúdio", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "escala_rotacao", label: "Rotação", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
