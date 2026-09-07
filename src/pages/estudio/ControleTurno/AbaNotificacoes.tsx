@@ -16,10 +16,11 @@ import {
   MODAL_FORM_SCROLL_BODY_STYLE,
   MODAL_FORM_SHELL_STYLE,
 } from "../../../components/OperacoesModal";
-import { SectionTitle } from "../../../components/dashboard";
+import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
+import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca, textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
@@ -41,7 +42,6 @@ import {
   locaisManutFromEstudios,
   updateAusencia,
   updateFechamento,
-  updateFeedback,
   updateManutencao,
   type CtAusenciaRow,
   type CtEstudioOpt,
@@ -91,6 +91,30 @@ type MesaDraft = {
 
 function motivoAusLabel(m: CtMotivoAusencia): string {
   return m === "medico" ? "Médico" : "Pessoal";
+}
+
+type SortFechCol = "mesa" | "horaFechamento" | "horaReabertura" | "status" | "lideranca";
+type SortAusCol = "prestador" | "motivo" | "inicio" | "fim" | "lideranca";
+type SortFbCol =
+  | "dataRegistro"
+  | "prestador"
+  | "recomendacao"
+  | "status"
+  | "lideranca"
+  | "aplicadoPor";
+type SortManutCol = "abertura" | "tipo" | "local" | "status" | "solicitante";
+
+function toggleSortDir<T extends string>(
+  prev: { col: T; dir: SortDir },
+  col: T,
+): { col: T; dir: SortDir } {
+  return { col, dir: prev.col === col && prev.dir === "desc" ? "asc" : "desc" };
+}
+
+function liderancaFechamento(f: CtFechamentoRow): string {
+  return f.nao_reaberta
+    ? f.lideranca_fechamento_nome || "—"
+    : f.lideranca_reabertura_nome || f.lideranca_fechamento_nome || "—";
 }
 
 function grupoTimePrestador(time: string): "gp" | "shuffler" | "" {
@@ -552,6 +576,22 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   const [erroPagina, setErroPagina] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const [sortFech, setSortFech] = useState<{ col: SortFechCol; dir: SortDir }>({
+    col: "mesa",
+    dir: "asc",
+  });
+  const [sortAus, setSortAus] = useState<{ col: SortAusCol; dir: SortDir }>({
+    col: "inicio",
+    dir: "desc",
+  });
+  const [sortFb, setSortFb] = useState<{ col: SortFbCol; dir: SortDir }>({
+    col: "dataRegistro",
+    dir: "desc",
+  });
+  const [sortManut, setSortManut] = useState<{ col: SortManutCol; dir: SortDir }>({
+    col: "abertura",
+    dir: "desc",
+  });
 
   const [modalFechamento, setModalFechamento] = useState(false);
   const [fechEditId, setFechEditId] = useState<string | null>(null);
@@ -583,7 +623,6 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   });
   const [fbErro, setFbErro] = useState("");
   const [verFeedback, setVerFeedback] = useState<CtFeedbackRow | null>(null);
-  const [avisoAplicar, setAvisoAplicar] = useState("");
 
   const [modalManut, setModalManut] = useState(false);
   const [manutForm, setManutForm] = useState({
@@ -668,11 +707,32 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   }, [carregarDia]);
 
   const fechVisiveis = useMemo(() => {
-    return fechamentos.filter((f) => textoContemBusca(f.mesa_label, busca));
-  }, [fechamentos, busca]);
+    const rows = fechamentos.filter((f) => textoContemBusca(f.mesa_label, busca));
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      const { col, dir } = sortFech;
+      if (col === "mesa") return compareLocaleTexto(a.mesa_label, b.mesa_label, dir);
+      if (col === "horaFechamento")
+        return compareLocaleTexto(a.hora_fechamento || "", b.hora_fechamento || "", dir);
+      if (col === "horaReabertura") {
+        const va = a.nao_reaberta ? "" : a.hora_reabertura || "";
+        const vb = b.nao_reaberta ? "" : b.hora_reabertura || "";
+        return compareLocaleTexto(va, vb, dir);
+      }
+      if (col === "status") {
+        return compareLocaleTexto(
+          a.nao_reaberta ? "Não aberta" : "Reaberta",
+          b.nao_reaberta ? "Não aberta" : "Reaberta",
+          dir,
+        );
+      }
+      return compareLocaleTexto(liderancaFechamento(a), liderancaFechamento(b), dir);
+    });
+    return sorted;
+  }, [fechamentos, busca, sortFech]);
 
   const ausVisiveis = useMemo(() => {
-    return ausencias.filter((a) =>
+    const rows = ausencias.filter((a) =>
       textoContemBuscaEmAlgum(
         busca,
         a.prestador_nome,
@@ -681,10 +741,25 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         a.observacao,
       ),
     );
-  }, [ausencias, busca]);
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      const { col, dir } = sortAus;
+      if (col === "prestador") return compareLocaleTexto(a.prestador_nome, b.prestador_nome, dir);
+      if (col === "motivo")
+        return compareLocaleTexto(motivoAusLabel(a.motivo), motivoAusLabel(b.motivo), dir);
+      if (col === "inicio") return compareLocaleTexto(a.inicio, b.inicio, dir);
+      if (col === "fim") {
+        const va = a.fim_nao_informado ? "" : a.fim || "";
+        const vb = b.fim_nao_informado ? "" : b.fim || "";
+        return compareLocaleTexto(va, vb, dir);
+      }
+      return compareLocaleTexto(a.lideranca_nome || "", b.lideranca_nome || "", dir);
+    });
+    return sorted;
+  }, [ausencias, busca, sortAus]);
 
   const fbVisiveis = useMemo(() => {
-    return feedbacks.filter((f) =>
+    const rows = feedbacks.filter((f) =>
       textoContemBuscaEmAlgum(
         busca,
         formatDiaBr(f.data_registro),
@@ -696,7 +771,32 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         f.observacao,
       ),
     );
-  }, [feedbacks, busca]);
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      const { col, dir } = sortFb;
+      if (col === "dataRegistro") return compareLocaleTexto(a.data_registro, b.data_registro, dir);
+      if (col === "prestador") return compareLocaleTexto(a.prestador_nome, b.prestador_nome, dir);
+      if (col === "recomendacao")
+        return compareLocaleTexto(
+          RECOMENDACAO_LABEL[a.recomendacao],
+          RECOMENDACAO_LABEL[b.recomendacao],
+          dir,
+        );
+      if (col === "status") {
+        return compareLocaleTexto(
+          a.status === "aplicado" ? "Aplicado" : "Revisar",
+          b.status === "aplicado" ? "Aplicado" : "Revisar",
+          dir,
+        );
+      }
+      if (col === "lideranca")
+        return compareLocaleTexto(a.lideranca_nome || "", b.lideranca_nome || "", dir);
+      const va = a.status === "aplicado" ? a.aplicado_por_nome || "" : "";
+      const vb = b.status === "aplicado" ? b.aplicado_por_nome || "" : "";
+      return compareLocaleTexto(va, vb, dir);
+    });
+    return sorted;
+  }, [feedbacks, busca, sortFb]);
 
   function localManutLabel(value: string): string {
     return locaisManut.find((l) => l.value === value)?.label ?? value ?? "—";
@@ -721,7 +821,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
   }
 
   const manutVisiveis = useMemo(() => {
-    return manutencoes.filter((m) =>
+    const rows = manutencoes.filter((m) =>
       textoContemBuscaEmAlgum(
         busca,
         formatDiaBr(m.abertura),
@@ -732,8 +832,21 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         m.observacao,
       ),
     );
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      const { col, dir } = sortManut;
+      if (col === "abertura") return compareLocaleTexto(a.abertura, b.abertura, dir);
+      if (col === "tipo")
+        return compareLocaleTexto(MANUT_TIPO_LABEL[a.tipo], MANUT_TIPO_LABEL[b.tipo], dir);
+      if (col === "local")
+        return compareLocaleTexto(localExibicaoTabela(a), localExibicaoTabela(b), dir);
+      if (col === "status")
+        return compareLocaleTexto(MANUT_STATUS_LABEL[a.status], MANUT_STATUS_LABEL[b.status], dir);
+      return compareLocaleTexto(a.solicitante_nome || "", b.solicitante_nome || "", dir);
+    });
+    return sorted;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- localExibicao depends on mesas/locais
-  }, [manutencoes, busca, mesas, locaisManut]);
+  }, [manutencoes, busca, mesas, locaisManut, sortManut]);
 
   function abrirRegistrarFechamento() {
     setFechEditId(null);
@@ -958,7 +1071,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       return;
     }
     if (!fbForm.observacao.trim()) {
-      setFbErro("Preencha a Observação.");
+      setFbErro(
+        fbForm.recomendacao === "orientacao"
+          ? "Preencha a Ata da Orientação."
+          : "Preencha a Observação.",
+      );
       return;
     }
 
@@ -979,23 +1096,6 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       setFbErro(MSG_ERRO_CT_SALVAR);
     } finally {
       setSalvando(false);
-    }
-  }
-
-  async function aplicarFeedback(row: CtFeedbackRow) {
-    if (!perm.canEditarOk) return;
-    setAvisoAplicar("");
-    try {
-      await updateFeedback({
-        id: row.id,
-        status: "aplicado",
-        aplicadoPorNome: liderancaNome,
-      });
-      await carregarDia();
-    } catch (e) {
-      console.error(e);
-      setAvisoAplicar(MSG_ERRO_CT_SALVAR);
-      window.setTimeout(() => setAvisoAplicar(""), 4000);
     }
   }
 
@@ -1097,25 +1197,6 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         </div>
       ) : null}
 
-      {avisoAplicar ? (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            marginBottom: 14,
-            padding: "10px 14px",
-            borderRadius: 10,
-            background: "rgba(245,158,11,0.12)",
-            border: "1px solid rgba(245,158,11,0.35)",
-            color: "#f59e0b",
-            fontSize: 13,
-            fontFamily: FONT.body,
-          }}
-        >
-          {avisoAplicar}
-        </div>
-      ) : null}
-
       <div style={pageBox}>
         <BlocoCabecalho
           title="Fechamento de Mesa"
@@ -1134,20 +1215,58 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <caption style={{ display: "none" }}>Fechamentos de mesa do dia</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={dataTable.thHeader}>Mesa</th>
-                  <th scope="col" style={dataTable.thHeader}>Hora de Fechamento</th>
-                  <th scope="col" style={dataTable.thHeader}>Hora de Reabertura</th>
-                  <th scope="col" style={dataTable.thHeader}>Status</th>
-                  <th scope="col" style={dataTable.thHeader}>Liderança</th>
+                  <SortTableTh
+                    label="Mesa"
+                    col="mesa"
+                    sortCol={sortFech.col}
+                    sortDir={sortFech.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFech((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Hora de Fechamento"
+                    col="horaFechamento"
+                    sortCol={sortFech.col}
+                    sortDir={sortFech.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFech((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Hora de Reabertura"
+                    col="horaReabertura"
+                    sortCol={sortFech.col}
+                    sortDir={sortFech.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFech((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Status"
+                    col="status"
+                    sortCol={sortFech.col}
+                    sortDir={sortFech.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFech((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Liderança"
+                    col="lideranca"
+                    sortCol={sortFech.col}
+                    sortDir={sortFech.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFech((s) => toggleSortDir(s, col))}
+                  />
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {fechVisiveis.map((f, i) => {
                   const herdado = (f.data_registro || diaIso) < diaIso;
-                  const lideranca = f.nao_reaberta
-                    ? f.lideranca_fechamento_nome || "—"
-                    : f.lideranca_reabertura_nome || f.lideranca_fechamento_nome || "—";
+                  const lideranca = liderancaFechamento(f);
                   const key = `fech-${f.id}`;
                   return (
                     <tr
@@ -1214,11 +1333,51 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <caption style={{ display: "none" }}>Ausências prolongadas do dia</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={dataTable.thHeader}>Prestador</th>
-                  <th scope="col" style={dataTable.thHeader}>Motivo</th>
-                  <th scope="col" style={dataTable.thHeader}>Início da Ausência</th>
-                  <th scope="col" style={dataTable.thHeader}>Fim da Ausência</th>
-                  <th scope="col" style={dataTable.thHeader}>Liderança</th>
+                  <SortTableTh
+                    label="Prestador"
+                    col="prestador"
+                    sortCol={sortAus.col}
+                    sortDir={sortAus.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortAus((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Motivo"
+                    col="motivo"
+                    sortCol={sortAus.col}
+                    sortDir={sortAus.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortAus((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Início da Ausência"
+                    col="inicio"
+                    sortCol={sortAus.col}
+                    sortDir={sortAus.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortAus((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Fim da Ausência"
+                    col="fim"
+                    sortCol={sortAus.col}
+                    sortDir={sortAus.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortAus((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Liderança"
+                    col="lideranca"
+                    sortCol={sortAus.col}
+                    sortDir={sortAus.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortAus((s) => toggleSortDir(s, col))}
+                  />
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>
@@ -1281,12 +1440,60 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <caption style={{ display: "none" }}>Feedbacks do dia</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={dataTable.thHeader}>Data do Registro</th>
-                  <th scope="col" style={dataTable.thHeader}>Prestador</th>
-                  <th scope="col" style={dataTable.thHeader}>Recomendação</th>
-                  <th scope="col" style={dataTable.thHeader}>Status</th>
-                  <th scope="col" style={dataTable.thHeader}>Liderança</th>
-                  <th scope="col" style={dataTable.thHeader}>Aplicado Por</th>
+                  <SortTableTh
+                    label="Data do Registro"
+                    col="dataRegistro"
+                    sortCol={sortFb.col}
+                    sortDir={sortFb.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFb((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Prestador"
+                    col="prestador"
+                    sortCol={sortFb.col}
+                    sortDir={sortFb.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFb((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Recomendação"
+                    col="recomendacao"
+                    sortCol={sortFb.col}
+                    sortDir={sortFb.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFb((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Status"
+                    col="status"
+                    sortCol={sortFb.col}
+                    sortDir={sortFb.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFb((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Liderança"
+                    col="lideranca"
+                    sortCol={sortFb.col}
+                    sortDir={sortFb.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFb((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Aplicado Por"
+                    col="aplicadoPor"
+                    sortCol={sortFb.col}
+                    sortDir={sortFb.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortFb((s) => toggleSortDir(s, col))}
+                  />
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>
@@ -1323,14 +1530,6 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                           <BtnIconeAcaoLinha label={tooltipAcao("Ver")} onClick={() => setVerFeedback(f)}>
                             <Eye size={13} aria-hidden />
                           </BtnIconeAcaoLinha>
-                          {f.status === "revisar" && podeEditar ? (
-                            <BtnIconeAcaoLinha
-                              label={tooltipAcao("Aplicar")}
-                              onClick={() => void aplicarFeedback(f)}
-                            >
-                              <Check size={13} aria-hidden />
-                            </BtnIconeAcaoLinha>
-                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -1360,11 +1559,51 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <caption style={{ display: "none" }}>Solicitações de manutenção do dia</caption>
               <thead>
                 <tr>
-                  <th scope="col" style={dataTable.thHeader}>Abertura</th>
-                  <th scope="col" style={dataTable.thHeader}>Tipo</th>
-                  <th scope="col" style={dataTable.thHeader}>Local</th>
-                  <th scope="col" style={dataTable.thHeader}>Status</th>
-                  <th scope="col" style={dataTable.thHeader}>Solicitante</th>
+                  <SortTableTh
+                    label="Abertura"
+                    col="abertura"
+                    sortCol={sortManut.col}
+                    sortDir={sortManut.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortManut((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Tipo"
+                    col="tipo"
+                    sortCol={sortManut.col}
+                    sortDir={sortManut.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortManut((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Local"
+                    col="local"
+                    sortCol={sortManut.col}
+                    sortDir={sortManut.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortManut((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Status"
+                    col="status"
+                    sortCol={sortManut.col}
+                    sortDir={sortManut.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortManut((s) => toggleSortDir(s, col))}
+                  />
+                  <SortTableTh
+                    label="Solicitante"
+                    col="solicitante"
+                    sortCol={sortManut.col}
+                    sortDir={sortManut.dir}
+                    thStyle={dataTable.thHeader}
+                    align="center"
+                    onSort={(col) => setSortManut((s) => toggleSortDir(s, col))}
+                  />
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>
@@ -1889,14 +2128,18 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={labelCampoStyle(t)} htmlFor="fb-obs">
-                Observação
+                {fbForm.recomendacao === "orientacao" ? "Ata da Orientação" : "Observação"}
                 <CampoObrigatorioMark />
               </label>
               <textarea
                 id="fb-obs"
                 value={fbForm.observacao}
                 onChange={(e) => setFbForm((f) => ({ ...f, observacao: e.target.value }))}
-                placeholder="Descreva o feedback..."
+                placeholder={
+                  fbForm.recomendacao === "orientacao"
+                    ? "Descreva a ata da orientação..."
+                    : "Descreva o feedback..."
+                }
                 rows={3}
                 style={{ ...inputStyle(t), resize: "vertical", minHeight: 96 }}
               />
@@ -1947,7 +2190,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 {verFeedback.status === "aplicado" ? verFeedback.aplicado_por_nome || "—" : "—"}
               </CampoDetalhe>
             </div>
-            <CampoDetalhe label="Observação">
+            <CampoDetalhe
+              label={
+                verFeedback.recomendacao === "orientacao" ? "Ata da Orientação" : "Observação"
+              }
+            >
               <span style={{ whiteSpace: "pre-wrap" }}>{verFeedback.observacao || "—"}</span>
             </CampoDetalhe>
           </div>

@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — Overview Estúdio | Spin Gaming</title>
+<style>
+  :root {
+    --brand-action: #7c3aed;
+    --brand-contrast: #1e36f8;
+    --pos: #22c55e;
+    --neg: #e84025;
+    --warn: #f59e0b;
+    --special: #a78bfa;
+    --neutral: #6b7280;
+    --game-bac: #1e36f8;
+    --game-rol: #eab308;
+    --game-bj: #22c55e;
+    --game-fb: #ea580c;
+    --font-body: "Inter", "Helvetica Neue", Arial, sans-serif;
+    --font-title: "Barlow Condensed", Impact, "Arial Black", sans-serif;
+  }
+  body[data-theme="dark"] {
+    --bg: #0f0f1a;
+    --card-bg: #1a1a2e;
+    --card-border: #2a2a4e;
+    --input-bg: rgba(255,255,255,0.07);
+    --text: #ffffff;
+    --text-muted: #e5dce1;
+    --box-radius: 18px;
+    --box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  }
+  body[data-theme="light"] {
+    --bg: #f4f4f8;
+    --card-bg: #ffffff;
+    --card-border: #e8e8f0;
+    --input-bg: #f8f8fc;
+    --text: #1a1a2e;
+    --text-muted: #666688;
+    --box-radius: 14px;
+    --box-shadow: 0 2px 10px rgba(26,26,46,0.06);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell { max-width: 1180px; margin: 0 auto; padding: 24px 20px 64px; }
+
+  /* ── Barra do mockup (não faz parte do produto) ───────────────── */
+  .mock-bar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--card-border);
+    padding: 10px 20px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  }
+  .mock-bar__label {
+    font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--text-muted); margin-right: 4px;
+  }
+  .mock-btn {
+    font: inherit; font-size: 12px; font-weight: 600;
+    padding: 7px 14px; border-radius: 999px; cursor: pointer;
+    background: var(--input-bg); color: var(--text);
+    border: 1px solid var(--card-border);
+  }
+  .mock-btn[aria-pressed="true"] {
+    border-color: var(--brand-action);
+    background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+    color: var(--text); font-weight: 700;
+  }
+  .mock-note {
+    margin-left: auto; font-size: 11px; color: var(--text-muted); max-width: 420px; text-align: right;
+  }
+  .mock-note b { color: var(--brand-action); }
+
+  /* ── Nível 1 — cabeçalho ──────────────────────────────────────── */
+  .page-header { margin-bottom: 18px; }
+  .page-header__row { display: flex; align-items: center; gap: 8px; }
+  .page-header__badge {
+    width: 32px; height: 32px; border-radius: 9px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--brand-action) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand-action) 35%, transparent);
+    color: var(--brand-action); flex: 0 0 auto;
+  }
+  .page-header h1 {
+    margin: 0; font-family: var(--font-title); font-size: 18px; font-weight: 700;
+    letter-spacing: .02em; text-transform: uppercase; color: var(--brand-action);
+  }
+  .page-header p {
+    margin: 5px 0 0; padding-left: 40px; font-size: 13px; color: var(--text-muted);
+  }
+
+  /* ── Nível 2 — filtros ────────────────────────────────────────── */
+  .filter-box {
+    background: color-mix(in srgb, var(--brand-action) 6%, var(--card-bg));
+    border: 1px solid color-mix(in srgb, var(--brand-action) 22%, transparent);
+    border-radius: 14px; padding: 12px 20px; margin-bottom: 14px;
+  }
+  body[data-theme="light"] .filter-box {
+    background: var(--card-bg);
+    border-color: var(--card-border);
+    box-shadow: var(--box-shadow);
+  }
+  .filter-row {
+    display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: center; gap: 10px; width: 100%;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 999px; font-size: 13px;
+    background: var(--input-bg); color: var(--text);
+    border: 1px solid var(--card-border); cursor: default;
+  }
+  .pill--on {
+    border-color: var(--brand-action);
+    background: color-mix(in srgb, var(--brand-action) 15%, transparent);
+    font-weight: 700;
+  }
+  .pill--muted { color: var(--text-muted); font-weight: 500; }
+  .nav-btn {
+    width: 32px; height: 32px; border-radius: 8px; cursor: default;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--input-bg); border: 1px solid var(--card-border); color: var(--text);
+  }
+  .nav-btn[disabled] { opacity: .35; }
+  .period-label { font-size: 18px; font-weight: 800; min-width: 180px; text-align: center; }
+
+  /* ── Nível 3 — blocos ─────────────────────────────────────────── */
+  .box {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: var(--box-radius); box-shadow: var(--box-shadow);
+    padding: 20px; margin-bottom: 14px;
+  }
+  .section-title {
+    display: flex; align-items: baseline; margin-bottom: 14px; flex-wrap: wrap; gap: 4px 0;
+  }
+  .section-title strong {
+    font-family: var(--font-title); font-size: 14px; font-weight: 800;
+    letter-spacing: .04em; text-transform: uppercase; color: var(--brand-action);
+  }
+  .section-title .dash { margin: 0 6px 0 12px; color: var(--text-muted); font-size: 12px; }
+  .section-title .sub { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+  .section-title .deeplink {
+    margin-left: auto; font-size: 11px; font-weight: 600;
+    color: var(--brand-contrast); text-decoration: none;
+    border-bottom: 1px dashed color-mix(in srgb, var(--brand-contrast) 40%, transparent);
+  }
+  .section-title .deeplink:hover { border-bottom-style: solid; }
+
+  /* Strip Atenção (sugestão) */
+  .attention {
+    display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap;
+    padding: 14px 16px; border-radius: 12px; margin-bottom: 14px;
+    background: color-mix(in srgb, var(--warn) 10%, var(--card-bg));
+    border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  }
+  .attention__badge {
+    font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 20px; flex: 0 0 auto;
+    background: color-mix(in srgb, var(--warn) 20%, transparent);
+    color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  }
+  .attention__list {
+    margin: 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 220px;
+  }
+  .attention__list li {
+    font-size: 12px; color: var(--text); display: flex; gap: 8px; align-items: baseline;
+  }
+  .attention__list li::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--warn); flex: 0 0 auto; margin-top: 5px;
+  }
+  .attention__list b { font-weight: 700; }
+  .attention__meta { font-size: 11px; color: var(--text-muted); width: 100%; margin-top: 2px; }
+
+  /* Índice de Saúde — destaque */
+  .health {
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .health__top {
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .health__chip {
+    font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .health__chip--ok {
+    background: color-mix(in srgb, var(--pos) 18%, transparent);
+    color: var(--pos); border: 1px solid color-mix(in srgb, var(--pos) 40%, transparent);
+  }
+  .health__chip--warn {
+    background: color-mix(in srgb, var(--warn) 18%, transparent);
+    color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  }
+  .health__chip--bad {
+    background: color-mix(in srgb, var(--neg) 18%, transparent);
+    color: var(--neg); border: 1px solid color-mix(in srgb, var(--neg) 40%, transparent);
+  }
+  .health__chip--info {
+    background: color-mix(in srgb, var(--brand-contrast) 14%, transparent);
+    color: var(--brand-contrast); border: 1px solid color-mix(in srgb, var(--brand-contrast) 35%, transparent);
+  }
+  .health__value {
+    font-size: 48px; font-weight: 800; font-variant-numeric: tabular-nums;
+    line-height: 1; letter-spacing: -0.02em;
+  }
+  .health__value--ok { color: var(--pos); }
+  .health__value--warn { color: var(--warn); }
+  .health__value--bad { color: var(--neg); }
+  .health__mom {
+    margin-top: 10px; font-size: 13px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .health__mom.up { color: var(--pos); }
+  .health__formula {
+    margin-top: 16px; font-size: 11px; color: var(--text-muted);
+    max-width: 640px; margin-left: auto; margin-right: auto;
+  }
+  .health__bands {
+    margin-top: 16px; display: flex; height: 8px; border-radius: 999px; overflow: hidden;
+    max-width: 360px; margin-left: auto; margin-right: auto;
+  }
+  .health__bands span { flex: 1; }
+  .health__bands .b-bad { background: var(--neg); }
+  .health__bands .b-warn { background: var(--warn); }
+  .health__bands .b-ok { background: var(--pos); }
+  .health__bands-label {
+    display: flex; justify-content: space-between; max-width: 360px;
+    margin: 6px auto 0; font-size: 9px; color: var(--text-muted); letter-spacing: .04em;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .health__spark {
+    margin-top: 18px; height: 36px; opacity: .45;
+    background:
+      radial-gradient(ellipse 80% 60% at 10% 70%, color-mix(in srgb, var(--pos) 35%, transparent), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 45% 40%, color-mix(in srgb, var(--pos) 28%, transparent), transparent 70%),
+      radial-gradient(ellipse 70% 55% at 80% 55%, color-mix(in srgb, var(--pos) 32%, transparent), transparent 70%);
+    border-radius: 8px;
+  }
+  .scope-row {
+    display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+
+  /* Grids KPI */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (max-width: 900px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .kpi {
+    border: 1px solid var(--card-border); border-radius: 14px;
+    background: var(--input-bg); padding: 14px 16px;
+  }
+  .kpi__head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .kpi__icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--brand-action) 12%, transparent);
+    color: var(--brand-action); flex: 0 0 auto;
+  }
+  .kpi__icon--inv {
+    background: color-mix(in srgb, var(--neg) 12%, transparent);
+    color: var(--neg);
+  }
+  .kpi__icon--warn {
+    background: color-mix(in srgb, var(--warn) 14%, transparent);
+    color: var(--warn);
+  }
+  .kpi__label {
+    font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--text-muted); line-height: 1.3;
+  }
+  .kpi__value {
+    font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .kpi__value--pos { color: var(--pos); }
+  .kpi__value--neg { color: var(--neg); }
+  .kpi__value--warn { color: var(--warn); }
+  .kpi__value small { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .kpi__mom { margin-top: 8px; font-size: 11px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .up { color: var(--pos); font-weight: 700; }
+  .down { color: var(--neg); font-weight: 700; }
+  .flat { color: var(--neutral); font-weight: 700; }
+  .kpi__ref { color: var(--text-muted); }
+  .kpi__hint {
+    margin-top: 8px; font-size: 10px; color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Chips de jogo (identidade fixa — Global) */
+  .game-chips {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px;
+    padding-top: 10px; border-top: 1px solid var(--card-border);
+  }
+  .game-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+  }
+  .game-chip--bac { background: color-mix(in srgb, var(--game-bac) 18%, transparent); color: var(--game-bac); border: 1px solid color-mix(in srgb, var(--game-bac) 40%, transparent); }
+  .game-chip--rol { background: color-mix(in srgb, var(--game-rol) 18%, transparent); color: var(--game-rol); border: 1px solid color-mix(in srgb, var(--game-rol) 40%, transparent); }
+  .game-chip--bj  { background: color-mix(in srgb, var(--game-bj) 18%, transparent); color: var(--game-bj); border: 1px solid color-mix(in srgb, var(--game-bj) 40%, transparent); }
+  .game-chip--fb  { background: color-mix(in srgb, var(--game-fb) 18%, transparent); color: var(--game-fb); border: 1px solid color-mix(in srgb, var(--game-fb) 40%, transparent); }
+
+  /* Painel de notas do mockup */
+  .notes {
+    margin-top: 28px; padding: 18px 20px; border-radius: var(--box-radius);
+    border: 1px dashed color-mix(in srgb, var(--brand-action) 40%, transparent);
+    background: color-mix(in srgb, var(--brand-action) 6%, var(--card-bg));
+  }
+  .notes h2 {
+    margin: 0 0 10px; font-size: 12px; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--brand-action); font-family: var(--font-title);
+  }
+  .notes ul { margin: 0; padding-left: 18px; font-size: 12px; color: var(--text); line-height: 1.55; }
+  .notes li { margin-bottom: 6px; }
+  .notes code {
+    font-size: 11px; padding: 1px 5px; border-radius: 4px;
+    background: var(--input-bg); border: 1px solid var(--card-border);
+  }
+  .tag-new {
+    display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: .06em;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 4px; margin-right: 4px;
+    background: color-mix(in srgb, var(--special) 22%, transparent); color: var(--special);
+    border: 1px solid color-mix(in srgb, var(--special) 40%, transparent); vertical-align: middle;
+  }
+  .tag-handoff {
+    display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: .06em;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 4px; margin-right: 4px;
+    background: color-mix(in srgb, var(--brand-contrast) 14%, transparent); color: var(--brand-contrast);
+    border: 1px solid color-mix(in srgb, var(--brand-contrast) 35%, transparent); vertical-align: middle;
+  }
+
+  [hidden] { display: none !important; }
+  .vis-estudio-only[hidden], .vis-todos-only[hidden] { display: none !important; }
+</style>
+</head>
+<body data-theme="light" data-scope="todos">
+
+<!-- Controles só do mockup -->
+<div class="mock-bar" role="toolbar" aria-label="Controles do mockup">
+  <span class="mock-bar__label">Tema</span>
+  <button type="button" class="mock-btn" data-theme-btn="light" aria-pressed="true">Light</button>
+  <button type="button" class="mock-btn" data-theme-btn="dark" aria-pressed="false">Dark</button>
+
+  <span class="mock-bar__label" style="margin-left:12px">Escopo</span>
+  <button type="button" class="mock-btn" data-scope-btn="todos" aria-pressed="true">Todos Estúdios</button>
+  <button type="button" class="mock-btn" data-scope-btn="um" aria-pressed="false">Sports Club</button>
+
+  <span class="mock-bar__label" style="margin-left:12px">Sugestões</span>
+  <button type="button" class="mock-btn" id="toggle-attention" aria-pressed="true">Strip Atenção</button>
+  <button type="button" class="mock-btn" id="toggle-deeplinks" aria-pressed="true">Deep links</button>
+
+  <span class="mock-note">Mockup de produto — <b>não é a página</b>. PageKey sugerido: <b>dash_overview_estudio</b></span>
+</div>
+
+<div class="shell">
+
+  <!-- Nível 1 -->
+  <header class="page-header">
+    <div class="page-header__row">
+      <span class="page-header__badge" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+      </span>
+      <h1>Overview Estúdio</h1>
+    </div>
+    <p>Visão consolidada da saúde operacional dos estúdios</p>
+  </header>
+
+  <!-- Nível 2 -->
+  <div class="filter-box">
+    <div class="filter-row">
+      <span class="pill pill--on" id="pill-estudio" title="Filtro Estúdio — agregadora Todos Estúdios">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>
+        <span id="label-estudio">Todos Estúdios</span>
+      </span>
+
+      <button type="button" class="nav-btn" aria-label="Mês anterior" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <span class="period-label" id="period-label">Ago 2026</span>
+      <button type="button" class="nav-btn" aria-label="Próximo mês">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+
+      <span class="pill pill--muted" title="Histórico off por padrão — mês corrente">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+        Histórico
+      </span>
+    </div>
+  </div>
+
+  <!-- Sugestão: strip Atenção -->
+  <aside class="attention" id="strip-attention" aria-label="Sinais de atenção">
+    <span class="attention__badge">Atenção</span>
+    <ul class="attention__list">
+      <li><span><b>Notificações críticas</b> — 7 abertas (↑ +2 vs mês ant.)</span></li>
+      <li><span><b>Horas extras</b> — 186h no período (↑ +18h)</span></li>
+      <li class="vis-todos-only"><span><b>Mesas em manutenção</b> — 3 · 4,1% do parque</span></li>
+      <li class="vis-estudio-only" hidden><span><b>MTTR</b> — 1h 48min no Sports Club (acima da média Spin)</span></li>
+    </ul>
+    <div class="attention__meta">Máx. 3 sinais · somente leitura · limiares a definir com PO · não substitui alertas automáticos (fora de escopo v1)</div>
+  </aside>
+
+  <!-- Destaque: Índice de Saúde -->
+  <section class="box health" aria-labelledby="title-health">
+    <div class="section-title" style="justify-content:center; margin-bottom:8px">
+      <strong id="title-health">Índice de Saúde Operacional do Estúdio</strong>
+      <span class="dash">—</span>
+      <span class="sub" id="health-sub">agregado de 4 estúdios ativos</span>
+    </div>
+
+    <div class="scope-row vis-estudio-only" hidden>
+      <span class="health__chip health__chip--info">Network</span>
+      <span class="health__chip health__chip--info">Sports Club</span>
+    </div>
+
+    <div class="health__top">
+      <span class="health__chip health__chip--ok" id="health-band">Saudável · ≥ 85%</span>
+    </div>
+
+    <div class="health__value health__value--ok" id="health-value">87,4%</div>
+    <div class="health__mom up" id="health-mom">
+      <span aria-hidden="true">↑</span> +2,1 pp vs mês ant.
+    </div>
+
+    <div class="health__bands" aria-hidden="true">
+      <span class="b-bad"></span>
+      <span class="b-warn"></span>
+      <span class="b-ok"></span>
+    </div>
+    <div class="health__bands-label" aria-hidden="true">
+      <span>&lt;70</span>
+      <span>70–84</span>
+      <span>≥85</span>
+    </div>
+
+    <p class="health__formula">
+      Proposta de fórmula (abrir com PO):
+      <b>0,40×Uptime + 0,25×Ocupação + 0,20×Aderência ao Roteiro + 0,15×Conformidade de Figurino</b>.
+      Se um input vier sem dado → redistribuir pesos ou exibir — no Índice.
+    </p>
+    <div class="health__spark" title="Sparkline nice-to-have v1.1" aria-hidden="true"></div>
+  </section>
+
+  <!-- Bloco 1 -->
+  <section class="box" aria-labelledby="title-disp">
+    <div class="section-title">
+      <strong id="title-disp">Disponibilidade &amp; Capacidade</strong>
+      <span class="dash">—</span>
+      <span class="sub">mesas ao vivo no período</span>
+      <a class="deeplink" href="#" onclick="return false">Ver em Status Técnico</a>
+    </div>
+    <div class="grid-3">
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+          </span>
+          <span class="kpi__label">Uptime de Mesas</span>
+        </div>
+        <div class="kpi__value kpi__value--pos">98,2%</div>
+        <div class="kpi__mom"><span class="up">↑ +1,0 pp</span> <span class="kpi__ref">vs mês ant.</span></div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+          </span>
+          <span class="kpi__label">Taxa de Ocupação de Mesas</span>
+        </div>
+        <div class="kpi__value kpi__value--pos">76,5%</div>
+        <div class="kpi__mom"><span class="up">↑ +3,2 pp</span> <span class="kpi__ref">vs mês ant.</span></div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon kpi__icon--inv" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </span>
+          <span class="kpi__label">Mesas em Manutenção / Indisponíveis</span>
+        </div>
+        <div class="kpi__value kpi__value--neg">3 <small>· 4,1%</small></div>
+        <div class="kpi__mom"><span class="up">↓ −0,8 pp</span> <span class="kpi__ref">vs mês ant. · isInverso</span></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Bloco 2 -->
+  <section class="box" aria-labelledby="title-inc">
+    <div class="section-title">
+      <strong id="title-inc">Incidentes &amp; Qualidade Técnica</strong>
+      <span class="dash">—</span>
+      <span class="sub">sinais técnicos e roteiro</span>
+      <a class="deeplink" href="#" onclick="return false">Ver em Incidentes</a>
+    </div>
+    <div class="grid-3">
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon kpi__icon--inv" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          </span>
+          <span class="kpi__label">Volume de Incidentes Técnicos</span>
+        </div>
+        <div class="kpi__value kpi__value--neg">42</div>
+        <div class="kpi__mom"><span class="up">↓ −12%</span> <span class="kpi__ref">vs mês ant. · isInverso</span></div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon kpi__icon--warn" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </span>
+          <span class="kpi__label">MTTR</span>
+        </div>
+        <div class="kpi__value kpi__value--warn" id="mttr-value">1h 24min</div>
+        <div class="kpi__mom"><span class="up">↓ −18 min</span> <span class="kpi__ref">vs mês ant. · isInverso</span></div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg>
+          </span>
+          <span class="kpi__label">Aderência ao Roteiro de Mesa</span>
+        </div>
+        <div class="kpi__value kpi__value--pos">91,0%</div>
+        <div class="kpi__mom"><span class="up">↑ +1,5 pp</span> <span class="kpi__ref">vs mês ant.</span></div>
+        <div class="kpi__hint">Se auditoria inexistente → «Sem dados para o período selecionado.» só neste tile</div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Bloco 3 -->
+  <section class="box" aria-labelledby="title-pes">
+    <div class="section-title">
+      <strong id="title-pes">Pessoas &amp; Escala</strong>
+      <span class="dash">—</span>
+      <span class="sub">cobertura e presença</span>
+      <a class="deeplink" href="#" onclick="return false">Ver em Gestão de Escala</a>
+    </div>
+    <div class="grid-4">
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+          <span class="kpi__label">Cobertura de Escala</span>
+        </div>
+        <div class="kpi__value kpi__value--pos">94,8%</div>
+        <div class="kpi__mom"><span class="up">↑ +2,0 pp</span> <span class="kpi__ref">vs mês ant.</span></div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>
+          </span>
+          <span class="kpi__label">Taxa de Faltas / No-Show</span>
+        </div>
+        <div class="kpi__value kpi__value--pos">3,2%</div>
+        <div class="kpi__mom"><span class="up">↓ −0,6 pp</span> <span class="kpi__ref">vs mês ant. · isInverso</span></div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon kpi__icon--warn" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+          </span>
+          <span class="kpi__label">Horas Extras</span>
+        </div>
+        <div class="kpi__value kpi__value--warn">186h</div>
+        <div class="kpi__mom"><span class="down">↑ +18h</span> <span class="kpi__ref">vs mês ant. · isInverso</span></div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>
+          </span>
+          <span class="kpi__label">Índice de Cobertura de Habilidades</span>
+        </div>
+        <div class="kpi__value kpi__value--pos">88%</div>
+        <div class="kpi__mom"><span class="up">↑ +1,7 pp</span> <span class="kpi__ref">vs mês ant.</span></div>
+        <div class="game-chips" aria-label="Cobertura por jogo">
+          <span class="game-chip game-chip--bac">♠ Baccarat 92%</span>
+          <span class="game-chip game-chip--rol">● Roleta 85%</span>
+          <span class="game-chip game-chip--bj">♣ Blackjack 90%</span>
+          <span class="game-chip game-chip--fb">⚑ FB 78%</span>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Bloco 4 -->
+  <section class="box" aria-labelledby="title-comp">
+    <div class="section-title">
+      <strong id="title-comp">Compliance &amp; Padrão de Marca</strong>
+      <span class="dash">—</span>
+      <span class="sub">figurino e notificações críticas</span>
+      <a class="deeplink" href="#" onclick="return false">Ver em Figurinos / Notificações</a>
+    </div>
+    <div class="grid-3">
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+          </span>
+          <span class="kpi__label">Conformidade de Figurino</span>
+        </div>
+        <div class="kpi__value kpi__value--pos">96,5%</div>
+        <div class="kpi__mom"><span class="up">↑ +1,2 pp</span> <span class="kpi__ref">vs mês ant.</span></div>
+        <div class="kpi__hint">Mesmo critério de «Sem dados» se não houver auditoria</div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon kpi__icon--inv" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          </span>
+          <span class="kpi__label">Notificações Críticas · Abertas</span>
+        </div>
+        <div class="kpi__value kpi__value--neg">7</div>
+        <div class="kpi__mom"><span class="down">↑ +2</span> <span class="kpi__ref">vs mês ant. · isInverso</span></div>
+      </article>
+      <article class="kpi">
+        <div class="kpi__head">
+          <span class="kpi__icon kpi__icon--inv" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </span>
+          <span class="kpi__label">Notificações Críticas · TMA</span>
+        </div>
+        <div class="kpi__value kpi__value--neg">2h 10min</div>
+        <div class="kpi__mom"><span class="down">↑ +22 min</span> <span class="kpi__ref">até leitura/ação · isInverso</span></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Notas do mockup -->
+  <aside class="notes" aria-label="Notas do mockup">
+    <h2>O que este mockup cobre</h2>
+    <ul>
+      <li><span class="tag-handoff">Handoff</span> Hierarquia 3 níveis, filtro Estúdio + Histórico, Índice + 4 blocos, semântica/`isInverso`, chips de jogo só em Habilidades.</li>
+      <li><span class="tag-new">Sugestão</span> Strip <b>Atenção</b> (máx. 3 sinais) — toggle na barra do mockup.</li>
+      <li><span class="tag-new">Sugestão</span> Faixa semântica no Índice (≥85 / 70–84 / &lt;70) + fórmula proposta para o PO.</li>
+      <li><span class="tag-new">Sugestão</span> Deep links só-leitura para páginas-fonte — toggle na barra.</li>
+      <li><span class="tag-new">Sugestão</span> Chip <b>Network</b> / nome do estúdio ao filtrar um único (trocar Escopo → Sports Club).</li>
+      <li><span class="tag-new">Sugestão</span> Contagem no agregador: «Todos Estúdios (4)» no subtítulo do Índice.</li>
+      <li><span class="tag-new">Sugestão</span> Notificações críticas em <b>2 tiles</b> (volume + TMA), não num só.</li>
+      <li><span class="tag-handoff">Tech</span> PageKey <code>dash_overview_estudio</code> · entidade <code>estudios_spin</code> · default mês corrente · Histórico = 13 competências · cap D-1 · permissões default Não exceto Admin.</li>
+      <li><span class="tag-handoff">Fora v1</span> Benchmarking entre estúdios, tabela diária, export, alertas automáticos, custo financeiro.</li>
+    </ul>
+  </aside>
+
+</div>
+
+<script>
+(function () {
+  const body = document.body;
+
+  // Tema
+  document.querySelectorAll("[data-theme-btn]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const theme = btn.getAttribute("data-theme-btn");
+      body.setAttribute("data-theme", theme);
+      document.querySelectorAll("[data-theme-btn]").forEach((b) => {
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+    });
+  });
+
+  // Escopo Todos vs um estúdio
+  function applyScope(scope) {
+    body.setAttribute("data-scope", scope);
+    document.querySelectorAll("[data-scope-btn]").forEach((b) => {
+      b.setAttribute("aria-pressed", b.getAttribute("data-scope-btn") === scope ? "true" : "false");
+    });
+
+    const isTodos = scope === "todos";
+    document.getElementById("label-estudio").textContent = isTodos ? "Todos Estúdios" : "Sports Club";
+    document.getElementById("health-sub").textContent = isTodos
+      ? "agregado de 4 estúdios ativos"
+      : "recorte do estúdio selecionado";
+    document.getElementById("health-value").textContent = isTodos ? "87,4%" : "84,1%";
+    document.getElementById("mttr-value").textContent = isTodos ? "1h 24min" : "1h 48min";
+
+    const band = document.getElementById("health-band");
+    const valueEl = document.getElementById("health-value");
+    if (isTodos) {
+      band.className = "health__chip health__chip--ok";
+      band.textContent = "Saudável · ≥ 85%";
+      valueEl.className = "health__value health__value--ok";
+      document.getElementById("health-mom").innerHTML = '<span aria-hidden="true">↑</span> +2,1 pp vs mês ant.';
+    } else {
+      band.className = "health__chip health__chip--warn";
+      band.textContent = "Atenção · 70–84%";
+      valueEl.className = "health__value health__value--warn";
+      document.getElementById("health-mom").innerHTML = '<span aria-hidden="true">↓</span> −1,3 pp vs mês ant.';
+      document.getElementById("health-mom").className = "health__mom down";
+    }
+    if (isTodos) document.getElementById("health-mom").className = "health__mom up";
+
+    document.querySelectorAll(".vis-todos-only").forEach((el) => {
+      el.hidden = !isTodos;
+    });
+    document.querySelectorAll(".vis-estudio-only").forEach((el) => {
+      el.hidden = isTodos;
+    });
+  }
+
+  document.querySelectorAll("[data-scope-btn]").forEach((btn) => {
+    btn.addEventListener("click", () => applyScope(btn.getAttribute("data-scope-btn")));
+  });
+
+  // Toggles de sugestões
+  document.getElementById("toggle-attention").addEventListener("click", function () {
+    const on = this.getAttribute("aria-pressed") !== "true";
+    this.setAttribute("aria-pressed", on ? "true" : "false");
+    document.getElementById("strip-attention").hidden = !on;
+  });
+
+  document.getElementById("toggle-deeplinks").addEventListener("click", function () {
+    const on = this.getAttribute("aria-pressed") !== "true";
+    this.setAttribute("aria-pressed", on ? "true" : "false");
+    document.querySelectorAll(".deeplink").forEach((a) => { a.hidden = !on; });
+  });
+})();
+</script>
+</body>
+</html>

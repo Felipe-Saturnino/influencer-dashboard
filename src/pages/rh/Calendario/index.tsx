@@ -52,6 +52,8 @@ import {
   FiltroMeuCalendarioButton,
   FiltroTipoCompromissoCalendarioSelect,
   SectionTitle,
+  SortTableTh,
+  type SortDir,
   type TipoCompromissoCalFiltroValue,
 } from "../../../components/dashboard";
 import {
@@ -97,6 +99,7 @@ import {
 } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { fmtHorasTotal } from "../../../lib/dashboardHelpers";
+import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
 import {
   normalizarSelecaoUnica,
   CALENDARIO_TIMES_FILTRO_ORDEM,
@@ -125,7 +128,6 @@ import {
   labelCarrosselDiaRelatorioPresenca,
   ordenarLinhasRelatorioPresencaPorNome,
 } from "../../../lib/rhCalendarioRelatorioPresenca";
-import type { SortDir } from "../../../components/dashboard";
 import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
 import {
   ModalAprovacaoPresencaCalendario,
@@ -617,6 +619,40 @@ function formatoDuracaoFmtHorasTotal(entrada: string, saida: string): string {
   return fmtHorasTotal(min / 60);
 }
 
+/** Minutos desde 00:00; vazio / «—» → -1 (fica no início em asc). */
+function minutosOrdenacaoPresencaHhmm(hhmm: string): number {
+  const s = hhmm.trim();
+  if (!s || s === "—") return -1;
+  const m = /^(\d{1,2}):(\d{2})/.exec(s);
+  if (!m) return -1;
+  return parseInt(m[1]!, 10) * 60 + parseInt(m[2]!, 10);
+}
+
+type PresencaMesSortCol =
+  | "data"
+  | "situacao"
+  | "entEsc"
+  | "entReal"
+  | "saiEsc"
+  | "saiReal"
+  | "horasEsc"
+  | "horasReal"
+  | "status";
+
+type PresencaMesLinhaSort = {
+  dia: Date;
+  iso: string;
+  isoAnterior: string | null;
+  situacao: string;
+  entEsc: string;
+  entReal: string;
+  saiEsc: string;
+  saiReal: string;
+  horasEsc: string;
+  horasReal: string;
+  status: string;
+};
+
 function horaRegistoSP(isoTs: string | null | undefined): string {
   if (!isoTs) return "—";
   const d = new Date(isoTs);
@@ -761,6 +797,10 @@ export default function RhCalendarioPage() {
   const [erroRelatorioPresenca, setErroRelatorioPresenca] = useState<string | null>(null);
   const [relatorioReloadTick, setRelatorioReloadTick] = useState(0);
   const [sortRelatorioNomeDir, setSortRelatorioNomeDir] = useState<SortDir>("asc");
+  const [sortPresencaMes, setSortPresencaMes] = useState<{ col: PresencaMesSortCol; dir: SortDir }>({
+    col: "data",
+    dir: "asc",
+  });
 
   const [rawGradeRowsRpc, setRawGradeRowsRpc] = useState<RpcGradeCalendarioRow[]>([]);
   /** Horário/turno congelados na aprovação da Gestão de Escala (mês da grade). */
@@ -2567,6 +2607,144 @@ export default function RhCalendarioPage() {
     );
   }, [filterStaffIds, presencaGestaoPorChave, rawGradeRows]);
 
+  const linhasPresencaMesParaSort = useMemo((): PresencaMesLinhaSort[] => {
+    const fid = filterStaffIds[0];
+    if (!fid) return [];
+    const pRow = prestadorPorId.get(fid);
+    const opRow = turnosHorarioPrestador(pRow);
+    return diasDoMesPresenca.map((dia, i) => {
+      const iso = toISO(dia);
+      const diaAnterior = i > 0 ? diasDoMesPresenca[i - 1]! : null;
+      const isoAnterior = diaAnterior ? toISO(diaAnterior) : null;
+      const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+      const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
+      const pt = mapaPontoPorDiaIso.get(iso);
+      const entEsc = esc ? esc.entrada : "—";
+      const saiEsc = esc ? esc.saida : "—";
+      const entReal = horaRegistoSP(pt?.check_in_at);
+      const saiReal = horaRegistoSP(pt?.check_out_at);
+      const situacao = situacaoGestaoEscalaParaDia(valorG);
+      const temCheckIn = Boolean(pt?.check_in_at);
+      const temCheckOut = Boolean(pt?.check_out_at);
+      const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
+      const gestaoDia = fundirGestaoPresencaComJustificativaMedico(
+        presencaGestaoPorChave.get(chavePresencaGestao(fid, iso)),
+        iso,
+        situacao,
+        indiceJustificativaMedicoPresenca,
+      );
+      const status = resolverStatusPresencaLinha({
+        situacao,
+        diaIso: iso,
+        entEsc,
+        saiEsc,
+        temCheckIn,
+        temCheckOut,
+        statusBase: stBase,
+        gestao: gestaoDia,
+      });
+      const correcao = gestaoDia?.correcao;
+      const entRealExib =
+        presencaCorrecaoCampoAprovado(correcao, "entrada") && correcao
+          ? correcao.entradaCorrigida
+          : entReal;
+      const saiRealExib =
+        presencaCorrecaoCampoAprovado(correcao, "saida") && correcao
+          ? correcao.saidaCorrigida
+          : saiReal;
+      const horasEsc = esc ? formatoDuracaoFmtHorasTotal(entEsc, saiEsc) : "—";
+      const horasRealBase = duracaoEntreTimestamps(pt?.check_in_at ?? null, pt?.check_out_at ?? null);
+      const horasReal =
+        (presencaCorrecaoCampoAprovado(correcao, "entrada") ||
+          presencaCorrecaoCampoAprovado(correcao, "saida")) &&
+        correcao
+          ? formatoDuracaoFmtHorasTotal(entRealExib, saiRealExib)
+          : horasRealBase;
+      return {
+        dia,
+        iso,
+        isoAnterior,
+        situacao,
+        entEsc,
+        entReal: entRealExib,
+        saiEsc,
+        saiReal: saiRealExib,
+        horasEsc,
+        horasReal,
+        status,
+      };
+    });
+  }, [
+    diasDoMesPresenca,
+    filterStaffIds,
+    prestadorPorId,
+    turnosHorarioPrestador,
+    rawGradeRows,
+    mapaPontoPorDiaIso,
+    presencaGestaoPorChave,
+    indiceJustificativaMedicoPresenca,
+  ]);
+
+  const linhasPresencaMesOrdenadas = useMemo(() => {
+    const { col, dir } = sortPresencaMes;
+    const copy = [...linhasPresencaMesParaSort];
+    copy.sort((a, b) => {
+      switch (col) {
+        case "data":
+          return compareLocaleTexto(a.iso, b.iso, dir);
+        case "situacao":
+          return compareLocaleTexto(a.situacao, b.situacao, dir);
+        case "status":
+          return compareLocaleTexto(a.status, b.status, dir);
+        case "entEsc":
+          return compareNumber(
+            minutosOrdenacaoPresencaHhmm(a.entEsc),
+            minutosOrdenacaoPresencaHhmm(b.entEsc),
+            dir,
+          );
+        case "entReal":
+          return compareNumber(
+            minutosOrdenacaoPresencaHhmm(a.entReal),
+            minutosOrdenacaoPresencaHhmm(b.entReal),
+            dir,
+          );
+        case "saiEsc":
+          return compareNumber(
+            minutosOrdenacaoPresencaHhmm(a.saiEsc),
+            minutosOrdenacaoPresencaHhmm(b.saiEsc),
+            dir,
+          );
+        case "saiReal":
+          return compareNumber(
+            minutosOrdenacaoPresencaHhmm(a.saiReal),
+            minutosOrdenacaoPresencaHhmm(b.saiReal),
+            dir,
+          );
+        case "horasEsc":
+          return compareNumber(
+            minutosOrdenacaoPresencaHhmm(a.horasEsc),
+            minutosOrdenacaoPresencaHhmm(b.horasEsc),
+            dir,
+          );
+        case "horasReal":
+          return compareNumber(
+            minutosOrdenacaoPresencaHhmm(a.horasReal),
+            minutosOrdenacaoPresencaHhmm(b.horasReal),
+            dir,
+          );
+        default:
+          return 0;
+      }
+    });
+    return copy;
+  }, [linhasPresencaMesParaSort, sortPresencaMes]);
+
+  const onToggleSortPresencaMes = (col: PresencaMesSortCol) => {
+    setSortPresencaMes((prev) =>
+      prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" },
+    );
+  };
+
   const mesPresencaFechado = mesCalendarioPresencaFechado(current);
   const mesPresencaFuturo = mesCalendarioPresencaFuturo(current);
 
@@ -3655,106 +3833,163 @@ export default function RhCalendarioPage() {
                   </caption>
                   <thead>
                     <tr>
-                      <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Data
-                      </th>
-                      <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Situação
-                      </th>
-                      <th
-                        colSpan={2}
-                        scope="colgroup"
-                        style={{
+                      <SortTableTh
+                        col="data"
+                        label="Data"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{ ...dataTable.thHeader, whiteSpace: "normal" }}
+                        align="center"
+                        rowSpan={2}
+                      />
+                      <SortTableTh
+                        col="situacao"
+                        label="Situação"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{ ...dataTable.thHeader, whiteSpace: "normal" }}
+                        align="center"
+                        rowSpan={2}
+                      />
+                      <SortTableTh
+                        col="entReal"
+                        label="Entrada"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{
                           ...dataTable.thHeader,
                           whiteSpace: "normal",
                           borderLeft: `2px solid ${t.cardBorder}`,
                           borderBottom: "none",
                         }}
-                      >
-                        Entrada
-                      </th>
-                      <th
+                        align="center"
                         colSpan={2}
-                        scope="colgroup"
-                        style={{
+                      />
+                      <SortTableTh
+                        col="saiReal"
+                        label="Saída"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{
                           ...dataTable.thHeader,
                           whiteSpace: "normal",
                           borderLeft: `2px solid ${t.cardBorder}`,
                           borderBottom: "none",
                         }}
-                      >
-                        Saída
-                      </th>
-                      <th
+                        align="center"
                         colSpan={2}
-                        scope="colgroup"
-                        style={{
+                      />
+                      <SortTableTh
+                        col="horasReal"
+                        label="Horas"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{
                           ...dataTable.thHeader,
                           whiteSpace: "normal",
                           borderLeft: `2px solid ${t.cardBorder}`,
                           borderBottom: "none",
                         }}
-                      >
-                        Horas
-                      </th>
-                      <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
-                        Status
-                      </th>
+                        align="center"
+                        colSpan={2}
+                      />
+                      <SortTableTh
+                        col="status"
+                        label="Status"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{ ...dataTable.thHeader, whiteSpace: "normal" }}
+                        align="center"
+                        rowSpan={2}
+                      />
                       <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
                         Ações
                       </th>
                     </tr>
                     <tr>
-                      <th
-                        scope="col"
-                        style={{
+                      <SortTableTh
+                        col="entEsc"
+                        label="Escalada"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{
                           ...dataTable.thHeaderSub,
                           whiteSpace: "normal",
                           borderLeft: `2px solid ${t.cardBorder}`,
                         }}
-                      >
-                        Escalada
-                      </th>
-                      <th scope="col" style={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}>
-                        Realizada
-                      </th>
-                      <th
-                        scope="col"
-                        style={{
+                        align="center"
+                      />
+                      <SortTableTh
+                        col="entReal"
+                        label="Realizada"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}
+                        align="center"
+                      />
+                      <SortTableTh
+                        col="saiEsc"
+                        label="Escalada"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{
                           ...dataTable.thHeaderSub,
                           whiteSpace: "normal",
                           borderLeft: `2px solid ${t.cardBorder}`,
                         }}
-                      >
-                        Escalada
-                      </th>
-                      <th scope="col" style={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}>
-                        Realizada
-                      </th>
-                      <th
-                        scope="col"
-                        style={{
+                        align="center"
+                      />
+                      <SortTableTh
+                        col="saiReal"
+                        label="Realizada"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}
+                        align="center"
+                      />
+                      <SortTableTh
+                        col="horasEsc"
+                        label="Escalada"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{
                           ...dataTable.thHeaderSub,
                           whiteSpace: "normal",
                           borderLeft: `2px solid ${t.cardBorder}`,
                         }}
-                      >
-                        Escalada
-                      </th>
-                      <th scope="col" style={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}>
-                        Realizada
-                      </th>
+                        align="center"
+                      />
+                      <SortTableTh
+                        col="horasReal"
+                        label="Realizada"
+                        sortCol={sortPresencaMes.col}
+                        sortDir={sortPresencaMes.dir}
+                        onSort={onToggleSortPresencaMes}
+                        thStyle={{ ...dataTable.thHeaderSub, whiteSpace: "normal" }}
+                        align="center"
+                      />
                     </tr>
                   </thead>
                   <tbody>
-                    {diasDoMesPresenca.map((dia, i) => {
+                    {linhasPresencaMesOrdenadas.map((linhaSort, i) => {
                       const fid = filterStaffIds[0]!;
-                      const iso = toISO(dia);
-                      const diaAnterior = i > 0 ? diasDoMesPresenca[i - 1]! : null;
-                      const isoAnterior = diaAnterior ? toISO(diaAnterior) : null;
+                      const dia = linhaSort.dia;
+                      const iso = linhaSort.iso;
+                      const isoAnterior = linhaSort.isoAnterior;
                       const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
                       const valorGAnterior =
-                        diaAnterior && isoAnterior
+                        isoAnterior != null
                           ? primeiroValorGradeDia(rawGradeRows, fid, isoAnterior)
                           : null;
                       const pRow = prestadorPorId.get(fid);

@@ -941,7 +941,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Notificações",
         texto:
-          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. Com **Editar**, atualize fechamentos/ausências, aplique feedbacks em revisão e cancele manutenções abertas. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
+          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. No **Registrar Feedback**, se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais tipos permanece **Observação**. Com **Editar**, atualize fechamentos/ausências e cancele manutenções abertas — a aplicação de feedbacks fica em fluxo separado (não nesta aba). Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
       },
       {
         subtitulo: "Relatório de Turno",
