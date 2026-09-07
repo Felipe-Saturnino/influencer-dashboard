@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
   ChevronLeft,
@@ -64,6 +64,17 @@ export default function EscalaControleTurnoPage() {
   const [diaIso, setDiaIso] = useState(() => diaIsoLocal(new Date()));
   const [turno, setTurno] = useState<ControleTurnoTurno>("manha");
   const [busca, setBusca] = useState("");
+  /** Monta cada aba na 1ª visita e mantém montada — evita refetch/perda de estado ao trocar de aba. */
+  const [abasMontadas, setAbasMontadas] = useState<Record<ControleTurnoAba, boolean>>({
+    escala: true,
+    rotacao: false,
+    relatorio: false,
+    notificacoes: false,
+  });
+
+  useEffect(() => {
+    setAbasMontadas((prev) => (prev[aba] ? prev : { ...prev, [aba]: true }));
+  }, [aba]);
 
   const esconderTurno = aba === "relatorio" || aba === "notificacoes";
   const mostrarBusca = aba === "escala" || aba === "relatorio" || aba === "notificacoes";
@@ -209,16 +220,46 @@ export default function EscalaControleTurnoPage() {
         ) : null}
       </div>
 
-      <div
-        role="tabpanel"
-        id={`panel-controle-turno-${aba}`}
-        aria-labelledby={`tab-controle-turno-${aba}`}
-      >
-        {aba === "escala" ? <AbaEscala diaIso={diaIso} turno={turno} busca={busca} /> : null}
-        {aba === "rotacao" ? <AbaRotacao diaIso={diaIso} turno={turno} /> : null}
-        {aba === "relatorio" ? <AbaRelatorio diaIso={diaIso} busca={busca} /> : null}
-        {aba === "notificacoes" ? <AbaNotificacoes diaIso={diaIso} busca={busca} /> : null}
-      </div>
+      {abasMontadas.escala ? (
+        <div
+          role="tabpanel"
+          id="panel-controle-turno-escala"
+          aria-labelledby="tab-controle-turno-escala"
+          hidden={aba !== "escala"}
+        >
+          <AbaEscala diaIso={diaIso} turno={turno} busca={busca} />
+        </div>
+      ) : null}
+      {abasMontadas.rotacao ? (
+        <div
+          role="tabpanel"
+          id="panel-controle-turno-rotacao"
+          aria-labelledby="tab-controle-turno-rotacao"
+          hidden={aba !== "rotacao"}
+        >
+          <AbaRotacao diaIso={diaIso} turno={turno} />
+        </div>
+      ) : null}
+      {abasMontadas.relatorio ? (
+        <div
+          role="tabpanel"
+          id="panel-controle-turno-relatorio"
+          aria-labelledby="tab-controle-turno-relatorio"
+          hidden={aba !== "relatorio"}
+        >
+          <AbaRelatorio diaIso={diaIso} busca={busca} />
+        </div>
+      ) : null}
+      {abasMontadas.notificacoes ? (
+        <div
+          role="tabpanel"
+          id="panel-controle-turno-notificacoes"
+          aria-labelledby="tab-controle-turno-notificacoes"
+          hidden={aba !== "notificacoes"}
+        >
+          <AbaNotificacoes diaIso={diaIso} busca={busca} />
+        </div>
+      ) : null}
     </div>
   );
 }

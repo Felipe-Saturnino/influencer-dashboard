@@ -77,7 +77,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 3. GP **não** repete a **mesma mesa** no slot seguinte — deve **intercalar** com outras mesas (com 2+ mesas no estúdio a regra é rígida; com 1 mesa é inevitável).
 4. Tempo contínuo em mesa **≤ 2h** antes do Break → com slot **30 min** = máx. **4** slots; com slot **20 min** = máx. **6** slots (por isso o 20 min “encaixa” mais mesas antes da pausa quando o time está enxuto).
 5. **Shift Lead** só entra para cobrir cobertura impossível só com GPs; deve fazer o **mínimo** de mesas (função dele é coordenar fora da mesa).
-6. Slot padrão **30 min**; **Aviso — intervalo 20 min** força 20 min e regenera. **Incluir Liderança** (ao lado de Gerar prévia) lista Shift Leaders e Service Managers escalados no dia cujo horário (08h–20h / 20h–08h) cobre o turno da rotação.
+6. Slot padrão **30 min**; **Aviso — intervalo 20 min** força 20 min e regenera. **Incluir Liderança** (ao lado de Gerar prévia) lista **Shift Leaders e Service Managers** escalados no dia (qualquer célula Manhã/Tarde/Noite) — disponíveis em **todos** os turnos da rotação para inclusão sob demanda. Como a liderança trabalha em janela **08h–20h** ou **20h–08h** (≠ jornada 8h do GP), a grade marca **X** nos slots **antes do início** ou **a partir do fim** da janela quando o turno da rotação só cobre parte do horário (ex.: Manhã 06h–14h + SL 08h–20h → X até 08h).
 
 ### Check-in e reingresso (atraso / chega no meio do turno)
 
@@ -100,7 +100,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 |------|---------|
 | **A** | Alocação do dia (move só na Rotação) + regenerar automática + bloqueio 2 estúdios/turno |
 | **B** | Check-in Chegou/Não chegou + reingresso a partir de slot futuro |
-| **C** | Regra ≤ 2h; **Aviso — intervalo 20 min**; **Incluir Liderança** (SL + SM por horário) |
+| **C** | Regra ≤ 2h; **Aviso — intervalo 20 min**; **Incluir Liderança** (SL + SM, todos os turnos) |
 | **D** | Prévia de todos os dias ao aprovar Escala Estúdio do mês |
 | **E** | Painel de risco de cobertura (faltas / não chegaram / SL em mesa) |
 

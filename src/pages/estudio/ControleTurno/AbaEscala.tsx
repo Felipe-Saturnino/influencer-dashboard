@@ -30,7 +30,7 @@ import {
   type CtPresencaStatus,
   type CtPresencaTipo,
 } from "../../../lib/escalaControleTurno";
-import { formatDiaBr, formatDiaCurto, labelTurnoCurto } from "./helpers";
+import { formatDiaBr, formatDiaCurto, formatSaidaPresencaCt, labelTurnoCurto } from "./helpers";
 import { CONTROLE_TURNO_TURNO_LABEL, type ControleTurnoTurno } from "./types";
 
 const STATUS_LABEL: Record<CtPresencaStatus, string> = {
@@ -489,7 +489,9 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                       <td style={dataTable.tdCenter}>{r.time || "—"}</td>
                       <td style={dataTable.tdCenter}>{r.estudio || "—"}</td>
                       <td style={dataTable.tdCenter}>{r.entrada || "—"}</td>
-                      <td style={dataTable.tdCenter}>{r.saida || "—"}</td>
+                      <td style={dataTable.tdCenter}>
+                        {formatSaidaPresencaCt(diaIso, r.entrada, r.saida)}
+                      </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           <span

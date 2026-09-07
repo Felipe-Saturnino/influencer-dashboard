@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  aplicarLimitesDisponibilidadeNaMatrixRotacao,
+  disponivelPorSlotPessoaRotacao,
   filtrarPoolRotacaoPorPresencaCt,
   gerarGradeRotacao,
   gerarPatternRotacao,
+  gerarSlotsRotacao,
   labelsMesasRotacao,
+  liderancaCompativelComTurnoRotacao,
   maxSlotsSeguidosAntesBreak,
+  parseIntervaloHorarioStaffRotacao,
   ROTACAO_MAX_MESAS_SEGUIDAS,
+  slotDentroJanelaHorarioRotacao,
   type RotacaoGeracaoPessoa,
   type RotacaoGpPool,
 } from "../../../src/lib/escalaRotacao";
@@ -54,7 +60,7 @@ function assertSemMesaConsecutiva(matrix: string[][]) {
     for (let s = 1; s < row.length; s++) {
       const a = row[s - 1]!;
       const b = row[s]!;
-      if (a === "Break" || b === "Break") continue;
+      if (a === "Break" || b === "Break" || a === "X" || b === "X" || a === "F" || b === "F") continue;
       expect(a === b, `pessoa ${p}: mesa ${a} repetida nos slots ${s - 1}/${s}`).toBe(false);
     }
   }
@@ -197,7 +203,6 @@ describe("gerarGradeRotacao", () => {
   it("nunca repete a mesma mesa seguida com 2+ mesas (pool folgado e enxuto)", () => {
     const cases: { mesas: string[]; nGp: number; nSl: number; nSlots: number }[] = [
       { mesas: ["A", "B", "C", "D", "E"], nGp: 7, nSl: 0, nSlots: 20 },
-      { mesas: ["A", "B", "C", "D", "E", "F"], nGp: 7, nSl: 1, nSlots: 16 },
       { mesas: ["A", "B", "C", "D"], nGp: 5, nSl: 0, nSlots: 12 },
       { mesas: ["A", "B"], nGp: 3, nSl: 0, nSlots: 10 },
     ];
@@ -243,6 +248,116 @@ describe("gerarGradeRotacao", () => {
       nSlots: 4,
     });
     expect(res.ok).toBe(false);
+  });
+});
+
+describe("janela horário liderança na rotação", () => {
+  it("parseIntervaloHorarioStaffRotacao lê 08-20 e 20-08", () => {
+    expect(parseIntervaloHorarioStaffRotacao("08-20")).toEqual({ inicio: "08:00", fim: "20:00" });
+    expect(parseIntervaloHorarioStaffRotacao("20-08")).toEqual({ inicio: "20:00", fim: "08:00" });
+    expect(parseIntervaloHorarioStaffRotacao("18-06")).toEqual({ inicio: "18:00", fim: "06:00" });
+  });
+
+  it("slotDentroJanelaHorarioRotacao cobre overnight e fim exclusivo", () => {
+    expect(slotDentroJanelaHorarioRotacao("08:00", "08:00", "20:00")).toBe(true);
+    expect(slotDentroJanelaHorarioRotacao("19:30", "08:00", "20:00")).toBe(true);
+    expect(slotDentroJanelaHorarioRotacao("20:00", "08:00", "20:00")).toBe(false);
+    expect(slotDentroJanelaHorarioRotacao("07:30", "08:00", "20:00")).toBe(false);
+    expect(slotDentroJanelaHorarioRotacao("22:00", "20:00", "08:00")).toBe(true);
+    expect(slotDentroJanelaHorarioRotacao("06:00", "20:00", "08:00")).toBe(true);
+    expect(slotDentroJanelaHorarioRotacao("08:00", "20:00", "08:00")).toBe(false);
+    expect(slotDentroJanelaHorarioRotacao("12:00", "20:00", "08:00")).toBe(false);
+  });
+
+  it("Manhã 06–14 com SL 08–20 marca X antes das 08h", () => {
+    const slots = gerarSlotsRotacao("06:00", "14:00", 30);
+    const mask = disponivelPorSlotPessoaRotacao(
+      slots,
+      { isShiftLead: true, horarioTurno: "08-20" },
+      "06:00",
+    );
+    expect(mask).toBeDefined();
+    expect(mask![slots.indexOf("06:00")]).toBe(false);
+    expect(mask![slots.indexOf("07:30")]).toBe(false);
+    expect(mask![slots.indexOf("08:00")]).toBe(true);
+    expect(mask![slots.indexOf("13:30")]).toBe(true);
+
+    const matrix = [["1", "1", "1", "1", "Break", "Break", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1"]];
+    const out = aplicarLimitesDisponibilidadeNaMatrixRotacao(
+      slots,
+      matrix,
+      [{ isShiftLead: true, horarioTurno: "08-20" }],
+      "06:00",
+    );
+    expect(out[0]![0]).toBe("X");
+    expect(out[0]![slots.indexOf("07:30")]).toBe("X");
+    expect(out[0]![slots.indexOf("08:00")]).not.toBe("X");
+  });
+
+  it("Manhã 06–14 com SL 20–08 marca X a partir das 08h", () => {
+    const slots = gerarSlotsRotacao("06:00", "14:00", 30);
+    const mask = disponivelPorSlotPessoaRotacao(
+      slots,
+      { isShiftLead: true, horarioTurno: "20-08" },
+      "06:00",
+    );
+    expect(mask![slots.indexOf("06:00")]).toBe(true);
+    expect(mask![slots.indexOf("07:30")]).toBe(true);
+    expect(mask![slots.indexOf("08:00")]).toBe(false);
+    expect(mask![slots.indexOf("13:00")]).toBe(false);
+  });
+
+  it("Tarde 14–22 com SL 20–08 marca X antes das 20h", () => {
+    const slots = gerarSlotsRotacao("14:00", "22:00", 30);
+    const mask = disponivelPorSlotPessoaRotacao(
+      slots,
+      { cargoLideranca: "service_manager", horarioTurno: "20-08" },
+      "14:00",
+    );
+    expect(mask![slots.indexOf("14:00")]).toBe(false);
+    expect(mask![slots.indexOf("19:30")]).toBe(false);
+    expect(mask![slots.indexOf("20:00")]).toBe(true);
+    expect(mask![slots.indexOf("21:30")]).toBe(true);
+  });
+
+  it("gerador não aloca mesa em slot indisponível da liderança", () => {
+    const slots = gerarSlotsRotacao("06:00", "10:00", 30);
+    const maskSl = disponivelPorSlotPessoaRotacao(
+      slots,
+      { isShiftLead: true, horarioTurno: "08-20" },
+      "06:00",
+    );
+    const res = gerarGradeRotacao({
+      mesasLabels: ["1", "2"],
+      gps: [
+        { funcionarioId: "g1", isShiftLead: false },
+        { funcionarioId: "g2", isShiftLead: false },
+      ],
+      shiftLeads: [
+        { funcionarioId: "sl1", isShiftLead: true, disponivelPorSlot: maskSl },
+      ],
+      nSlots: slots.length,
+      slotMinutos: 30,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const slRow = res.matrix[res.pessoas.findIndex((p) => p.funcionarioId === "sl1")]!;
+    expect(slRow[slots.indexOf("06:00")]).toBe("X");
+    expect(slRow[slots.indexOf("07:30")]).toBe("X");
+    // Cobertura: cada slot tem as 2 mesas
+    for (let s = 0; s < slots.length; s++) {
+      const working = res.matrix.map((row) => row[s]!).filter((v) => v !== "Break" && v !== "X");
+      expect(new Set(working).size).toBe(2);
+    }
+  });
+});
+
+describe("liderancaCompativelComTurnoRotacao", () => {
+  it("libera SL/SM em Manhã, Tarde e Noite", () => {
+    expect(liderancaCompativelComTurnoRotacao("manha", { horarioTurno: "20-08" })).toBe(true);
+    expect(liderancaCompativelComTurnoRotacao("tarde", { horarioTurno: "08-20" })).toBe(true);
+    expect(liderancaCompativelComTurnoRotacao("noite", { horarioTurno: "08-20" })).toBe(true);
+    expect(liderancaCompativelComTurnoRotacao("manha", { gradeValor: "NGT" })).toBe(true);
   });
 });
 

@@ -39,6 +39,9 @@ export type RotacaoGpPool = {
   saidaLimiteHhmm?: string;
 };
 
+/** Janela HH:MM do `staff_horario_turno` (ex.: 08-20 → 08:00–20:00). */
+export type RotacaoIntervaloHorario = { inicio: string; fim: string };
+
 export type RotacaoMesa = {
   id: string;
   mesaIdentificacao: string;
@@ -224,23 +227,108 @@ export function slotAtingiuOuPassouSaidaRotacao(
   return norm(slotHhmm) >= norm(saidaHhmm);
 }
 
-/** Sobrescreve células com «X» a partir do horário de saída do prestador. */
-export function aplicarLimiteSaidaNaMatrixRotacao(
+/**
+ * Converte chave `staff_horario_turno` (ex.: `08-20`, `20-08`, `18-06`) em HH:MM início/fim.
+ */
+export function parseIntervaloHorarioStaffRotacao(
+  valor: string | null | undefined,
+): RotacaoIntervaloHorario | null {
+  const v = (valor ?? "").trim().toLowerCase().replace(/\s/g, "");
+  if (!v) return null;
+  const m = /^(\d{1,2})(?::(\d{2}))?-(\d{1,2})(?::(\d{2}))?$/.exec(v);
+  if (!m) return null;
+  const hi = parseInt(m[1]!, 10);
+  const mi = parseInt(m[2] ?? "0", 10);
+  const hf = parseInt(m[3]!, 10);
+  const mf = parseInt(m[4] ?? "0", 10);
+  if (hi > 23 || hf > 23 || mi > 59 || mf > 59) return null;
+  return {
+    inicio: `${String(hi).padStart(2, "0")}:${String(mi).padStart(2, "0")}`,
+    fim: `${String(hf).padStart(2, "0")}:${String(mf).padStart(2, "0")}`,
+  };
+}
+
+/**
+ * Slot dentro da janela de trabalho (relógio civil). Janela overnight (20–08) cobre
+ * [20:00, 24:00) ∪ [00:00, 08:00). Fim exclusivo (slot 20:00 com fim 20:00 → fora).
+ */
+export function slotDentroJanelaHorarioRotacao(
+  slotHhmm: string,
+  janelaInicio: string,
+  janelaFim: string,
+): boolean {
+  const s = minutosDesdeMeiaNoite(slotHhmm);
+  const a = minutosDesdeMeiaNoite(janelaInicio);
+  const b = minutosDesdeMeiaNoite(janelaFim);
+  if (a === b) return true;
+  if (a < b) return s >= a && s < b;
+  return s >= a || s < b;
+}
+
+/**
+ * Máscara de disponibilidade por slot: liderança (08–20 / 20–08 / …) + saída CT.
+ * `undefined` = sem restrição (GP típico do turno).
+ */
+export function disponivelPorSlotPessoaRotacao(
+  slots: string[],
+  pessoa: {
+    horarioTurno?: string;
+    saidaLimiteHhmm?: string;
+    isShiftLead?: boolean;
+    cargoLideranca?: RotacaoCargoLideranca;
+  },
+  turnoInicio: string,
+): boolean[] | undefined {
+  const usarJanelaLid = Boolean(pessoa.isShiftLead || pessoa.cargoLideranca);
+  const janela = usarJanelaLid ? parseIntervaloHorarioStaffRotacao(pessoa.horarioTurno) : null;
+  const saida = pessoa.saidaLimiteHhmm?.trim() || "";
+  if (!janela && !saida) return undefined;
+  return slots.map((slot) => {
+    if (janela && !slotDentroJanelaHorarioRotacao(slot, janela.inicio, janela.fim)) {
+      return false;
+    }
+    if (saida && slotAtingiuOuPassouSaidaRotacao(slot, saida, turnoInicio)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Sobrescreve com «X» slots fora da janela da liderança e/ou ≥ saída (CT).
+ * Preferir gerar a grade já com `disponivelPorSlot` para não deixar mesa descoberta.
+ */
+export function aplicarLimitesDisponibilidadeNaMatrixRotacao(
   slots: string[],
   matrix: string[][],
-  pessoas: ReadonlyArray<{ saidaLimiteHhmm?: string }>,
+  pessoas: ReadonlyArray<{
+    horarioTurno?: string;
+    saidaLimiteHhmm?: string;
+    isShiftLead?: boolean;
+    cargoLideranca?: RotacaoCargoLideranca;
+  }>,
   turnoInicio: string,
 ): string[][] {
   return matrix.map((row, i) => {
-    const lim = pessoas[i]?.saidaLimiteHhmm?.trim();
-    if (!lim) return [...row];
-    return row.map((val, si) => {
-      const slot = slots[si];
-      if (!slot) return val;
-      if (slotAtingiuOuPassouSaidaRotacao(slot, lim, turnoInicio)) return "X";
-      return val;
-    });
+    const mask = disponivelPorSlotPessoaRotacao(slots, pessoas[i] ?? {}, turnoInicio);
+    if (!mask) return [...row];
+    return row.map((val, si) => (mask[si] === false ? "X" : val));
   });
+}
+
+/** @deprecated Preferir `aplicarLimitesDisponibilidadeNaMatrixRotacao`. */
+export function aplicarLimiteSaidaNaMatrixRotacao(
+  slots: string[],
+  matrix: string[][],
+  pessoas: ReadonlyArray<{
+    horarioTurno?: string;
+    saidaLimiteHhmm?: string;
+    isShiftLead?: boolean;
+    cargoLideranca?: RotacaoCargoLideranca;
+  }>,
+  turnoInicio: string,
+): string[][] {
+  return aplicarLimitesDisponibilidadeNaMatrixRotacao(slots, matrix, pessoas, turnoInicio);
 }
 
 /** Presença da Escala do Turno (shape mínimo) para filtrar o pool da Rotação no CT. */
@@ -423,10 +511,12 @@ function alocarSlotRotacao(
   estado: EstadoPessoaRotacao[],
   mesas: string[],
   maxConsec: number,
+  disponivel?: (idx: number) => boolean,
 ): { workers: number[]; mesasAttr: string[] } | null {
   const M = mesas.length;
   const forcar = mesas.length >= 2;
-  let workers = escolherWorkersSlot(estado, M, maxConsec);
+  const ok = disponivel ?? (() => true);
+  let workers = escolherWorkersSlot(estado, M, maxConsec, ok);
   if (workers.length < M) return null;
 
   let mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado, forcar);
@@ -437,7 +527,7 @@ function alocarSlotRotacao(
     return mesasAttr ? { workers, mesasAttr } : null;
   }
 
-  const resting = estado.map((_, i) => i).filter((i) => !workers.includes(i));
+  const resting = estado.map((_, i) => i).filter((i) => !workers.includes(i) && ok(i));
   const workerSet = new Set(workers);
 
   for (let round = 0; round < resting.length + 3; round++) {
@@ -468,7 +558,7 @@ function alocarSlotRotacao(
 
   // Busca exaustiva só em pools pequenos (evita explosão combinatória)
   if (estado.length <= 12) {
-    const todos = estado.map((_, i) => i);
+    const todos = estado.map((_, i) => i).filter((i) => ok(i));
     const escolha: number[] = [];
     const comb = (start: number): boolean => {
       if (escolha.length === M) {
@@ -499,6 +589,7 @@ function escolherWorkersSlot(
   estado: EstadoPessoaRotacao[],
   mesasCount: number,
   maxConsec: number,
+  disponivel: (idx: number) => boolean = () => true,
 ): number[] {
   const M = mesasCount;
   const gpOk: number[] = [];
@@ -506,6 +597,7 @@ function escolherWorkersSlot(
   const slIdx: number[] = [];
 
   for (let i = 0; i < estado.length; i++) {
+    if (!disponivel(i)) continue;
     const e = estado[i]!;
     if (e.isShiftLead) {
       slIdx.push(i);
@@ -576,6 +668,11 @@ function escolherWorkersSlot(
 export type RotacaoGeracaoPessoa = {
   funcionarioId: string;
   isShiftLead: boolean;
+  /**
+   * Por índice de slot: `false` = fora da janela (liderança) ou ≥ saída CT — célula «X»,
+   * não entra como worker.
+   */
+  disponivelPorSlot?: boolean[];
 };
 
 export type RotacaoGeracaoResultado = {
@@ -631,8 +728,8 @@ export function gerarGradeRotacao(opts: {
   }
 
   const pessoas: RotacaoGeracaoPessoa[] = [
-    ...gps.map((p) => ({ ...p, isShiftLead: false })),
-    ...shiftLeads.map((p) => ({ ...p, isShiftLead: true })),
+    ...gps.map((p) => ({ ...p, isShiftLead: false as const })),
+    ...shiftLeads.map((p) => ({ ...p, isShiftLead: true as const })),
   ];
   const estado: EstadoPessoaRotacao[] = pessoas.map((p) => ({
     isShiftLead: p.isShiftLead,
@@ -641,6 +738,12 @@ export function gerarGradeRotacao(opts: {
     totalMesas: 0,
   }));
   const rows: string[][] = Array.from({ length: pessoas.length }, () => []);
+
+  const disponivelEm = (pIdx: number, slotIdx: number): boolean => {
+    const mask = pessoas[pIdx]?.disponivelPorSlot;
+    if (!mask) return true;
+    return mask[slotIdx] !== false;
+  };
 
   // Replay slots passados para restaurar estado (reingresso)
   if (fromSlot > 0 && opts.matrixBase) {
@@ -662,7 +765,7 @@ export function gerarGradeRotacao(opts: {
   }
 
   for (let s = fromSlot; s < nSlots; s++) {
-    const aloc = alocarSlotRotacao(estado, mesas, maxConsec);
+    const aloc = alocarSlotRotacao(estado, mesas, maxConsec, (i) => disponivelEm(i, s));
     if (!aloc) {
       return {
         ok: false,
@@ -676,10 +779,11 @@ export function gerarGradeRotacao(opts: {
     }
 
     for (let p = 0; p < pessoas.length; p++) {
-      const v = assignment[p]!;
+      let v = assignment[p]!;
+      if (!disponivelEm(p, s)) v = "X";
       rows[p]!.push(v);
       const e = estado[p]!;
-      if (v === "Break") {
+      if (v === "Break" || v === "X" || v === "F") {
         e.consecutiveWork = 0;
         e.lastMesa = null;
       } else {
@@ -754,45 +858,15 @@ export function siglaTurnoGradeRotacao(
 }
 
 /**
- * Liderança 08h–20h cobre Manhã/Tarde; 20h–08h (ou 18h–06h) cobre Tarde/Noite.
- * Fallback pela célula da Escala (MRN / AFT / NGT / Compra - Turno) quando o horário não veio no cadastro.
+ * Incluir Liderança: SL e SM escalados no dia ficam disponíveis em **qualquer** turno
+ * (Manhã / Tarde / Noite) para inclusão sob demanda — sem filtro por janela 08h–20h / 20h–08h.
+ * A disponibilidade por slot (X fora da janela) é tratada em `disponivelPorSlotPessoaRotacao`.
  */
 export function liderancaCompativelComTurnoRotacao(
-  turno: RotacaoTurnoKey,
-  opts: { horarioTurno?: string | null; gradeValor?: string | null },
+  _turno: RotacaoTurnoKey,
+  _opts?: { horarioTurno?: string | null; gradeValor?: string | null },
 ): boolean {
-  const h = (opts.horarioTurno ?? "").trim().toLowerCase().replace(/\s/g, "");
-  const g = siglaTurnoGradeRotacao(opts.gradeValor);
-
-  const janelaDia =
-    h === "08-20" ||
-    h === "08:00-20:00" ||
-    h.startsWith("08-") ||
-    (h.includes("08h") && h.includes("20"));
-  const janelaNoite =
-    h === "20-08" ||
-    h === "18-06" ||
-    h === "20:00-08:00" ||
-    h === "18:00-06:00" ||
-    h.startsWith("20-") ||
-    h.startsWith("18-") ||
-    (h.includes("20h") && h.includes("08")) ||
-    (h.includes("18h") && h.includes("06"));
-
-  if (janelaDia && !janelaNoite) {
-    return turno === "manha" || turno === "tarde";
-  }
-  if (janelaNoite && !janelaDia) {
-    return turno === "noite" || turno === "tarde";
-  }
-
-  if (g === "MRN") return turno === "manha" || turno === "tarde";
-  if (g === "NGT") return turno === "noite" || turno === "tarde";
-  if (g === "AFT") return turno === "tarde" || turno === "manha";
-
-  // Sem horário/célula: não esconder — deixa a liderança escolher
-  if (!h && !g) return true;
-  return turno === "manha" || turno === "tarde" || turno === "noite";
+  return true;
 }
 
 export function labelCargoLiderancaRotacao(cargo?: RotacaoCargoLideranca): string {
@@ -1231,10 +1305,19 @@ export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ gera
           const slots = gerarSlotsRotacao(ctx.turnoInicio, ctx.turnoFim, slotMin);
           const gerado = gerarGradeRotacao({
             mesasLabels: mesas,
-            gps: gps.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: false })),
+            gps: gps.map((g) => ({
+              funcionarioId: g.funcionarioId,
+              isShiftLead: false,
+              disponivelPorSlot: disponivelPorSlotPessoaRotacao(slots, g, ctx.turnoInicio),
+            })),
             shiftLeads: ctx.shiftLeads.map((g) => ({
               funcionarioId: g.funcionarioId,
               isShiftLead: true,
+              disponivelPorSlot: disponivelPorSlotPessoaRotacao(
+                slots,
+                { ...g, isShiftLead: true },
+                ctx.turnoInicio,
+              ),
             })),
             nSlots: slots.length,
             slotMinutos: slotMin,
@@ -1244,9 +1327,28 @@ export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ gera
             continue;
           }
           const porId = new Map(gps.concat(ctx.shiftLeads).map((g) => [g.funcionarioId, g]));
+          const linhas = gerado.pessoas.map((p) => {
+            const g = porId.get(p.funcionarioId);
+            return (
+              g ?? {
+                funcionarioId: p.funcionarioId,
+                nomeCompleto: "—",
+                nomeExibicao: "—",
+                nickname: "—",
+                falta: false,
+                isShiftLead: p.isShiftLead,
+              }
+            );
+          });
+          const matrix = aplicarLimitesDisponibilidadeNaMatrixRotacao(
+            slots,
+            gerado.matrix,
+            linhas,
+            ctx.turnoInicio,
+          );
           const celulas: RotacaoCelulaPayload[] = [];
           gerado.pessoas.forEach((p, i) => {
-            const g = porId.get(p.funcionarioId);
+            const g = linhas[i];
             slots.forEach((slot, si) => {
               celulas.push({
                 funcionario_id: p.funcionarioId,
@@ -1254,7 +1356,7 @@ export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ gera
                 nickname: g?.nickname === "—" ? "" : (g?.nickname ?? ""),
                 linha_ordem: i,
                 slot_inicio: slot,
-                valor: gerado.matrix[i]?.[si] ?? "Break",
+                valor: matrix[i]?.[si] ?? "Break",
               });
             });
           });

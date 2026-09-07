@@ -29,10 +29,12 @@ import { labelHorarioTurnoStaffPorValor } from "../../../lib/rhStaffHorarioTurno
 import {
   alocarEstudioRotacao,
   anexarCheckinRotacao,
+  aplicarLimitesDisponibilidadeNaMatrixRotacao,
   carregarContextoRotacaoDia,
   carregarRotacaoPublicada,
   corMesaRotacao,
   diaIsoLocal,
+  disponivelPorSlotPessoaRotacao,
   formatDiaRotacaoLabel,
   gerarGradeRotacao,
   labelCargoLiderancaRotacao,
@@ -574,8 +576,20 @@ export default function EscalaRotacaoPage() {
       }
       const gerado = gerarGradeRotacao({
         mesasLabels: numeros,
-        gps: usedGps.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: false })),
-        shiftLeads: usedSl.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: true })),
+        gps: usedGps.map((g) => ({
+          funcionarioId: g.funcionarioId,
+          isShiftLead: false,
+          disponivelPorSlot: disponivelPorSlotPessoaRotacao(slots, g, ctx.turnoInicio),
+        })),
+        shiftLeads: usedSl.map((g) => ({
+          funcionarioId: g.funcionarioId,
+          isShiftLead: true,
+          disponivelPorSlot: disponivelPorSlotPessoaRotacao(
+            slots,
+            { ...g, isShiftLead: true },
+            ctx.turnoInicio,
+          ),
+        })),
         nSlots: slots.length,
         slotMinutos: step,
         fromSlotIndex: fromSlot > 0 ? fromSlot : undefined,
@@ -601,11 +615,17 @@ export default function EscalaRotacaoPage() {
           }
         );
       });
+      const matrix = aplicarLimitesDisponibilidadeNaMatrixRotacao(
+        slots,
+        gerado.matrix,
+        linhas,
+        ctx.turnoInicio,
+      );
       return {
         slots,
         gps: linhas,
         faltosos: [...opts.gpsPool.filter((g) => g.falta), ...opts.slPool.filter((g) => g.falta)],
-        matrix: gerado.matrix,
+        matrix,
         modeloN: usedGps.length,
         slotMin: step,
         mesaTipo: mesaTipoMap,

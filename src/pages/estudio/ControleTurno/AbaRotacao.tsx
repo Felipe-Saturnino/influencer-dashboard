@@ -16,17 +16,17 @@ import {
 import { labelHorarioTurnoStaffPorValor } from "../../../lib/rhStaffHorarioTurno";
 import {
   anexarCheckinRotacao,
-  aplicarLimiteSaidaNaMatrixRotacao,
+  aplicarLimitesDisponibilidadeNaMatrixRotacao,
   carregarContextoRotacaoDia,
   corMesaRotacao,
   diaIsoLocal,
+  disponivelPorSlotPessoaRotacao,
   filtrarPoolRotacaoPorPresencaCt,
   gerarGradeRotacao,
   gerarSlotsRotacao,
   indiceProximoSlotRotacao,
   labelCargoLiderancaRotacao,
   labelsMesasRotacao,
-  liderancaCompativelComTurnoRotacao,
   listarEstudiosAtivosRotacao,
   mapaCoresMesasRotacao,
   publicarRotacao,
@@ -213,15 +213,8 @@ export function AbaRotacao({ diaIso, turno }: Props) {
 
   const liderancasCompativeis = useMemo(() => {
     const idsNoPool = new Set(poolSl.map((g) => g.funcionarioId));
-    return liderancasDia.filter(
-      (g) =>
-        !idsNoPool.has(g.funcionarioId) &&
-        liderancaCompativelComTurnoRotacao(turnoKey, {
-          horarioTurno: g.horarioTurno,
-          gradeValor: g.gradeValor,
-        }),
-    );
-  }, [liderancasDia, poolSl, turnoKey]);
+    return liderancasDia.filter((g) => !idsNoPool.has(g.funcionarioId));
+  }, [liderancasDia, poolSl]);
 
   const mesaTipoMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -282,8 +275,20 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       }
       const gerado = gerarGradeRotacao({
         mesasLabels: numeros,
-        gps: usedGps.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: false })),
-        shiftLeads: usedSl.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: true })),
+        gps: usedGps.map((g) => ({
+          funcionarioId: g.funcionarioId,
+          isShiftLead: false,
+          disponivelPorSlot: disponivelPorSlotPessoaRotacao(slots, g, ctx.turnoInicio),
+        })),
+        shiftLeads: usedSl.map((g) => ({
+          funcionarioId: g.funcionarioId,
+          isShiftLead: true,
+          disponivelPorSlot: disponivelPorSlotPessoaRotacao(
+            slots,
+            { ...g, isShiftLead: true },
+            ctx.turnoInicio,
+          ),
+        })),
         nSlots: slots.length,
         slotMinutos: step,
         fromSlotIndex: fromSlot > 0 ? fromSlot : undefined,
@@ -309,7 +314,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
           }
         );
       });
-      const matrix = aplicarLimiteSaidaNaMatrixRotacao(
+      const matrix = aplicarLimitesDisponibilidadeNaMatrixRotacao(
         slots,
         gerado.matrix,
         linhas,
@@ -578,12 +583,12 @@ export function AbaRotacao({ diaIso, turno }: Props) {
             }}
           >
             <div style={{ fontWeight: 700, marginBottom: 8 }}>
-              Shift Leaders e Service Managers escalados no dia · horário compatível com o turno
+              Shift Leaders e Service Managers escalados no dia — disponíveis em qualquer turno
             </div>
             {liderancasCompativeis.length === 0 ? (
               <div style={{ fontSize: 13, color: t.textMuted }}>
-                Nenhuma liderança disponível para este turno. Confira a Escala Estúdio (Shift Leader / Service Manager) e o
-                horário cadastrado.
+                Nenhuma liderança disponível. Confira se há Shift Leader ou Service Manager com escala
+                aprovada (Manhã, Tarde ou Noite) neste dia na Escala Estúdio.
               </div>
             ) : (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
