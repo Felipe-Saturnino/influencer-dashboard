@@ -119,7 +119,11 @@ No Superset/ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio 
 | `brxbetbr_*` | BRX Bet | `brx_bet` |
 | `ricobetbr_*` | Rico Bet | `rico_bet` |
 
-Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesas-spin-run.mjs`. Antes da 1ª carga split, cadastrar as operadoras novas em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
+Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
+
+### Atualização diária (padrão agent)
+
+Quando o usuário pedir **atualizar / carregar** dados Mesas Spin neste chat: seguir **`.cursor/rules/mesas-spin-carga.mdc`** — extract Superset (dashboard 15) com split EsportivaBet → JSON em `tmp/` → UPSERT direto (`--gravar`). Não carregar o dia corrente incompleto; `ATE` exclusivo no Superset.
 
 ### Regras de reconciliação (carga)
 

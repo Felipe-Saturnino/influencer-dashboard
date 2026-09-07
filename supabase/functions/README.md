@@ -24,6 +24,9 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `atualizar-perfil` |
 | `monitor-lobby-cda` |
 | `monitor-lobby-esportiva` |
+| `monitor-lobby-bateu` |
+| `monitor-lobby-rico` |
+| `monitor-lobby-brx` |
 | `prestador-ponto` |
 | `prospecto-afiliados-network-site` |
 | `prospecto-cs-atendimento-site` |

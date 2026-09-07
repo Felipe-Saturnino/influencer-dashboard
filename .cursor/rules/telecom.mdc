@@ -57,7 +57,7 @@ Exceção legítima de constante no código: **URL/query da API do lobby**, tít
 | Setup Spin | `docs/SETUP-MONITOR-LOBBY-<SLUG>.md` |
 | Env | `.env.monitor` / variáveis no agendador (não versionar secrets) |
 
-`<slug>` = operadora parceira (`blaze`, `cda`, `jonbet`, `esportiva`) — **não** o estúdio network.
+`<slug>` = operadora parceira (`blaze`, `cda`, `jonbet`, `esportiva`, `bateu`, `rico`, `brx`) — **não** o estúdio network.
 
 **Não** incluir `.ps1` no pacote Telecom. O agendador chama `node …/monitor-lobby-<slug>-run.mjs` com env já injetado.
 
@@ -90,7 +90,7 @@ Quando o produto pedir um **novo provedor/lobby** (ou atualização de um existe
 | Entrega | Ficheiro | Conteúdo |
 |---------|----------|----------|
 | **1. Handoff operacional** | `docs/TELECOM-MONITOR-LOBBY-<SLUG>.md` | O que configurar, env, F12/endpoints, comandos, agendamento, falhas |
-| **2. Script técnico** | `scripts/monitor-lobby-<slug>-run.mjs` (+ `scripts/lib/monitorLobbySoftSwissScan.mjs` para Blaze/Jonbet) | Fetch do lobby + ingest na Edge |
+| **2. Script técnico** | `scripts/monitor-lobby-<slug>-run.mjs` (+ `scripts/lib/monitorLobbySoftSwissScan.mjs` para Blaze/Jonbet; + `scripts/lib/monitorLobbySoftGamingsFilterScan.mjs` para Rico/BRX) | Fetch do lobby + ingest na Edge |
 | **3. Setup Spin (interno)** | `docs/SETUP-MONITOR-LOBBY-<SLUG>.md` | IDs, deploy Edge, secrets — **não** é o handoff principal da Telecom |
 
 **Proibido no pacote Telecom:** wrappers `.ps1` / `.bat` — Telecom agenda `node` + env no próprio agendador.
@@ -106,6 +106,8 @@ Quando o produto pedir um **novo provedor/lobby** (ou atualização de um existe
 | **Blaze / Jonbet** | API de search; risco **HTTP 451** em IP de datacenter → job só em rede BR |
 | **CDA** | Precisa **`CDA_LOBBY_COOKIE`** de sessão válida; renovar via F12; 401 sem cookie |
 | **Esportiva** | Fonte = CMS `home-sections/public` (prateleira home), **não** o catálogo `casino-games/filter` |
+| **Bateu** | Fonte = grade **Todos os jogos** (`casino-games/list?categories[]=todos-os-jogos`), **não** `filter`/`cassino-ao-vivo` nem home-sections |
+| **Rico / BRX** | Fonte = grade **Todos os jogos** (`/games/category/all` → `casino-games/filter?sort=&per_page=24&term=`), IDs GG Labs iguais à Bateu |
 
 No material para a Telecom: secção clara de **autenticação / cookie / proxy**, **URL + query exatas**, e **como renovar** o que expirar (passo a passo F12).
 
@@ -159,3 +161,6 @@ Tom: operacional, PT-BR, **sem** pedir à Telecom para recompilar quando a Spin 
 | CDA | `TELECOM-MONITOR-LOBBY-CDA.md` | `monitor-lobby-cda-run.mjs` | `monitor-lobby-cda` |
 | Jonbet | `TELECOM-MONITOR-LOBBY-JONBET.md` | `monitor-lobby-jonbet-run.mjs` | `monitor-lobby-jonbet` |
 | Esportiva | `TELECOM-MONITOR-LOBBY-ESPORTIVA.md` | `monitor-lobby-esportiva-run.mjs` | `monitor-lobby-esportiva` |
+| Bateu | `TELECOM-MONITOR-LOBBY-BATEU.md` | `monitor-lobby-bateu-run.mjs` | `monitor-lobby-bateu` |
+| Rico | `TELECOM-MONITOR-LOBBY-RICO.md` | `monitor-lobby-rico-run.mjs` (+ lib SoftGamings filter) | `monitor-lobby-rico` |
+| BRX | `TELECOM-MONITOR-LOBBY-BRX.md` | `monitor-lobby-brx-run.mjs` (+ lib SoftGamings filter) | `monitor-lobby-brx` |

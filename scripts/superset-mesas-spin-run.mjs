@@ -1,12 +1,14 @@
 /**
  * Carga Mesas Spin a partir da extração do Daily Commercial Report [BRL] (Superset).
  *
- * Fluxo diário (quando o usuário pedir para atualizar):
+ * Fluxo diário (quando o usuário pedir para atualizar) — padrão canónico:
+ *   ver .cursor/rules/mesas-spin-carga.mdc (+ business.mdc § Grupo EsportivaBet).
  *   1. Abrir o dashboard 15 logado no navegador controlado.
- *   2. Injetar scripts/superset-mesas-spin-extract-browser.js (MODO network, depois
- *      dedicado, depois monthly) e gravar os JSON em tmp/.
- *   3. Rodar este script com --preencher-faltantes (consulta o último dia no
- *      Supabase e só emite/grava os dias seguintes já presentes no extract).
+ *   2. Extract Network (split esportiva/bateu/brx/rico) → Dedicado → Monthly;
+ *      helpers tmp/make-compact-extract.mjs + inject CDP; JSON em tmp/.
+ *   3. Este script com --gravar (UPSERT direto). Carga incremental:
+ *      --preencher-faltantes (só dias > último no Supabase).
+ *   4. Não carregar D-0 incompleto; ATE exclusivo no extract.
  *
  * Uso:
  *   node scripts/superset-mesas-spin-run.mjs --network=tmp/n.json --dedicado=tmp/d.json --sql

@@ -34,6 +34,9 @@ export const SYNC_LOG_SLUGS_GARANTIDOS = [
   "lobby_cda",
   "lobby_esportiva",
   "lobby_jonbet",
+  "lobby_bateu",
+  "lobby_rico",
+  "lobby_brx",
   "cs_atendimento_outlook",
 ] as const;
 
@@ -86,6 +89,9 @@ export const LABEL_UI_CS_ATENDIMENTO_OUTLOOK = "CS - Caixa de Contato (Outlook)"
 /** Rótulos de fallback quando a linha ainda não existe em `integrations`. */
 export const LABEL_UI_LOBBY_ESPORTIVA = "Lobby Esportiva Bet";
 export const LABEL_UI_LOBBY_JONBET = "Lobby Jonbet";
+export const LABEL_UI_LOBBY_BATEU = "Lobby Bateu Bet";
+export const LABEL_UI_LOBBY_RICO = "Lobby Rico Bet";
+export const LABEL_UI_LOBBY_BRX = "Lobby BRX Bet";
 
 export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): string {
   if (slug === "comercial_spa_lista") return LABEL_UI_COMERCIAL_SPA_LISTA;
@@ -94,6 +100,9 @@ export function nomeIntegracaoStatusTecnicoUi(slug: string, nome: string): strin
   if (slug === "cs_atendimento_outlook") return LABEL_UI_CS_ATENDIMENTO_OUTLOOK;
   if (slug === "lobby_esportiva") return LABEL_UI_LOBBY_ESPORTIVA;
   if (slug === "lobby_jonbet") return LABEL_UI_LOBBY_JONBET;
+  if (slug === "lobby_bateu") return LABEL_UI_LOBBY_BATEU;
+  if (slug === "lobby_rico") return LABEL_UI_LOBBY_RICO;
+  if (slug === "lobby_brx") return LABEL_UI_LOBBY_BRX;
   return nome;
 }
 
@@ -166,6 +175,9 @@ export const LOBBY_OPERADORA_POR_INTEGRACAO: Record<string, string> = {
   lobby_cda: "casa_apostas",
   lobby_esportiva: "esportiva_bet",
   lobby_jonbet: "jonbet",
+  lobby_bateu: "bateu_bet",
+  lobby_rico: "rico_bet",
+  lobby_brx: "brx_bet",
 };
 
 export const LOBBY_INTEGRACAO_SLUGS = Object.keys(LOBBY_OPERADORA_POR_INTEGRACAO);
