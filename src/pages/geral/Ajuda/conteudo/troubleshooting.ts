@@ -1809,7 +1809,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A prévia mostra mesas a menos ou dois GPs na mesma mesa?",
         texto:
-          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar o **Shift Lead** só como reserva. Se a cobertura falhar, use **Aviso — intervalo 20 min** ou **Aviso — incluir Shift Lead**. Clique de novo em **Gerar prévia** após atualizar a página.",
+          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar o **Shift Lead** só como reserva. Se a cobertura falhar, use **Rotação de 20min** (depois **Rotação de 30min** para voltar) ou **Incluir Liderança**. Clique de novo em **Gerar prévia** após atualizar a página.",
       },
       {
         subtitulo: "Chegou no meio do turno — como incluir?",

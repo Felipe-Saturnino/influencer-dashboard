@@ -844,7 +844,7 @@ export function gerarGradeRotacao(opts: {
     if (!aloc) {
       return {
         ok: false,
-        erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Use o aviso para incluir Shift Lead ou intervalo de 20 min.`,
+        erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Use Incluir Liderança ou Rotação de 20min.`,
       };
     }
     const { workers, mesasAttr } = aloc;

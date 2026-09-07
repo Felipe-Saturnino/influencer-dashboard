@@ -422,11 +422,14 @@ export function AbaRotacao({ diaIso, turno }: Props) {
     );
   };
 
-  const handleAviso20 = () => {
-    setSlotMin(20);
+  const slotRotacaoAtual = previa?.slotMin ?? slotMin;
+  const slotRotacaoAlvo = slotRotacaoAtual === 20 ? 30 : 20;
+
+  const handleToggleSlotRotacao = () => {
+    setSlotMin(slotRotacaoAlvo);
     aplicarPrevia(
       montarGrade({
-        slot: 20,
+        slot: slotRotacaoAlvo,
         gpsPool: pool,
         slPool: poolSl,
         preservarPassado: Boolean(previa),
@@ -913,9 +916,11 @@ export function AbaRotacao({ diaIso, turno }: Props) {
                   cursor: !ctx || loading ? "not-allowed" : "pointer",
                   opacity: !ctx || loading ? 0.5 : 1,
                 }}
-                onClick={handleAviso20}
+                onClick={handleToggleSlotRotacao}
+                aria-label={`Alternar para rotação de ${slotRotacaoAlvo} min`}
+                title={`Alternar para rotação de ${slotRotacaoAlvo} min`}
               >
-                Aviso — intervalo 20 min
+                {`Rotação de ${slotRotacaoAlvo}min`}
               </button>
               <button
                 type="button"
@@ -981,18 +986,6 @@ export function AbaRotacao({ diaIso, turno }: Props) {
           </div>
         ) : (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-            {podeLideranca ? (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: t.textMuted,
-                  fontFamily: FONT.body,
-                  marginBottom: 10,
-                }}
-              >
-                Arraste o nome na coluna Equipe para trocar a sequência de mesas com outro prestador.
-              </div>
-            ) : null}
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Pré-visualização da rotação por equipe e slot</caption>
               <thead>

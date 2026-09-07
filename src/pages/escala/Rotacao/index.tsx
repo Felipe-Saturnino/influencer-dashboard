@@ -684,10 +684,13 @@ export default function EscalaRotacaoPage() {
     );
   };
 
-  const handleAviso20 = () => {
-    setSlotMin(20);
+  const slotRotacaoAtual = previa?.slotMin ?? slotMin;
+  const slotRotacaoAlvo = slotRotacaoAtual === 20 ? 30 : 20;
+
+  const handleToggleSlotRotacao = () => {
+    setSlotMin(slotRotacaoAlvo);
     const state = montarGrade({
-      slot: 20,
+      slot: slotRotacaoAlvo,
       gpsPool: pool,
       slPool: poolSl,
       preservarPassado: Boolean(previa),
@@ -695,7 +698,7 @@ export default function EscalaRotacaoPage() {
     if (!state) return;
     setPrevia(state);
     persistirRascunho(state);
-    setToast("Aviso aplicado: intervalo de 20 min.");
+    setToast(`Rotação regenerada com intervalo de ${slotRotacaoAlvo} min.`);
   };
 
   const handleIncluirLideranca = (pessoa: RotacaoGpPool) => {
@@ -1354,10 +1357,12 @@ export default function EscalaRotacaoPage() {
                     <button
                       type="button"
                       disabled={!ctx}
-                      onClick={handleAviso20}
+                      onClick={handleToggleSlotRotacao}
                       style={avisoBtnStyle(t, !ctx)}
+                      aria-label={`Alternar para rotação de ${slotRotacaoAlvo} min`}
+                      title={`Alternar para rotação de ${slotRotacaoAlvo} min`}
                     >
-                      Aviso — intervalo 20 min
+                      {`Rotação de ${slotRotacaoAlvo}min`}
                     </button>
                     <button
                       type="button"
