@@ -107,6 +107,20 @@ Relatórios PLS (Per table, Daily, UAP por jogo, Monthly) — leitura humana / p
 
 **Overview Spin (UI):** aba Overview = soma Dedicado + Network; Estúdio Dedicado / Estúdio Network leem cada família de tabelas. Nunca carregar Network com slug de estúdio (ex. Sports Club) — só `operadora_slug` de parceiro.
 
+### Grupo EsportivaBet (Network) — marcas no `player_id`
+
+No Superset/ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio (diferente de Blaze/Jon Bet, que usam `brand_name`). A marca do provedor aparece no **último segmento** de `player_id` (mesmo padrão do BKO):
+
+| Token no `player_id` | Marca na plataforma | Slug canónico |
+|----------------------|---------------------|---------------|
+| `esportivabetbr_*` | Esportiva Bet | `esportiva_bet` |
+| *(sem prefixo — só número/UUID)* | Esportiva Bet | `esportiva_bet` |
+| `bateubetbr_*` | Bateu Bet | `bateu_bet` |
+| `brxbetbr_*` | BRX Bet | `brx_bet` |
+| `ricobetbr_*` | Rico Bet | `rico_bet` |
+
+Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesas-spin-run.mjs`. Antes da 1ª carga split, cadastrar as operadoras novas em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
+
 ### Regras de reconciliação (carga)
 
 1. Soma das mesas ≈ daily (GGR, turnover, apostas), tolerância ±1/±2.

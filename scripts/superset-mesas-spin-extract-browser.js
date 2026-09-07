@@ -6,10 +6,18 @@
  * ajustar MODO / DE / ATE abaixo, injetar o IIFE no CDP (awaitPromise + returnByValue).
  *
  * MODO:
- *   network  — Sports Club × Esportiva / Casa / Blaze.br / jonbet.bet.br
+ *   network  — Sports Club × Esportiva group / Casa / Blaze.br / jonbet.bet.br
  *   dedicado — mesas Casa / Blaze (sem brand)
  *   monthly  — UAP MTD do mês de DE (slice 461): time_range = dia 1 do mês → ATE
  *              (ATE exclusivo). Não usar DE mid-month — evita UAP parcial no monthly_summary.
+ *
+ * Grupo EsportivaBet (operator_name=EsportivaBet, brand_name vazio):
+ *   separa marcas pelo sufixo de player_id (último segmento após o ponto):
+ *     bateubetbr_*      → bateu     (slug plataforma: bateu_bet)
+ *     brxbetbr_*        → brx       (slug: brx_bet)
+ *     ricobetbr_*       → rico      (slug: rico_bet)
+ *     esportivabetbr_*  → esportiva (slug: esportiva_bet)
+ *     sem prefixo (só número/UUID) → esportiva (junto com Esportiva Bet)
  *
  * ATE é exclusivo no time_range do Superset (usar o dia seguinte ao último dia).
  * Ex.: 04–11/08 → DE='2026-08-04', ATE='2026-08-13'
@@ -47,9 +55,22 @@
   /** MTD do mês de DE: sempre do dia 1 até ATE (exclusivo). */
   const MONTHLY_TIME_RANGE = `${DE.slice(0, 7)}-01 : ${ATE}`;
 
+  /** Último segmento de player_id (ex.: bateubetbr_1834047 ou 1092408). */
+  const PLAYER_LAST_SEG =
+    "arrayElement(splitByChar('.', assumeNotNull(toString(player_id))), -1)";
+  /** Esportiva Bet = prefixo esportivabetbr_ + IDs sem marca (número/UUID). */
+  const WHERE_ESPORTIVA =
+    `(match(${PLAYER_LAST_SEG}, '^esportivabetbr_') OR NOT match(${PLAYER_LAST_SEG}, '^[A-Za-z][A-Za-z0-9]*_'))`;
+  const WHERE_BATEU = `match(${PLAYER_LAST_SEG}, '^bateubetbr_')`;
+  const WHERE_BRX = `match(${PLAYER_LAST_SEG}, '^brxbetbr_')`;
+  const WHERE_RICO = `match(${PLAYER_LAST_SEG}, '^ricobetbr_')`;
+
   const SCENARIOS = {
     network: [
-      { key: "esportiva", op: "EsportivaBet", brand: null, tables: SC },
+      { key: "esportiva", op: "EsportivaBet", brand: null, playerWhere: WHERE_ESPORTIVA, tables: SC },
+      { key: "bateu", op: "EsportivaBet", brand: null, playerWhere: WHERE_BATEU, tables: SC },
+      { key: "brx", op: "EsportivaBet", brand: null, playerWhere: WHERE_BRX, tables: SC },
+      { key: "rico", op: "EsportivaBet", brand: null, playerWhere: WHERE_RICO, tables: SC },
       { key: "casa", op: "Casa De Apostas", brand: null, tables: SC },
       { key: "blaze", op: "Blaze", brand: "Blaze.br", tables: SC },
       { key: "jonbet", op: "Blaze", brand: "jonbet.bet.br", tables: SC },
@@ -61,7 +82,10 @@
     monthly: [
       { key: "ded_casa", op: "Casa De Apostas", brand: null, tables: CASA },
       { key: "ded_blaze", op: "Blaze", brand: null, tables: BLAZE },
-      { key: "net_esportiva", op: "EsportivaBet", brand: null, tables: SC },
+      { key: "net_esportiva", op: "EsportivaBet", brand: null, playerWhere: WHERE_ESPORTIVA, tables: SC },
+      { key: "net_bateu", op: "EsportivaBet", brand: null, playerWhere: WHERE_BATEU, tables: SC },
+      { key: "net_brx", op: "EsportivaBet", brand: null, playerWhere: WHERE_BRX, tables: SC },
+      { key: "net_rico", op: "EsportivaBet", brand: null, playerWhere: WHERE_RICO, tables: SC },
       { key: "net_casa", op: "Casa De Apostas", brand: null, tables: SC },
       { key: "net_blaze", op: "Blaze", brand: "Blaze.br", tables: SC },
       { key: "net_jonbet", op: "Blaze", brand: "jonbet.bet.br", tables: SC },
@@ -176,6 +200,7 @@
       });
     }
     fm.adhoc_filters = adhoc;
+    const whereSql = sc.playerWhere || "";
     const url =
       "/api/v1/chart/data?form_data=" +
       encodeURIComponent(JSON.stringify({ slice_id: sliceId })) +
@@ -186,7 +211,7 @@
       queries: [
         {
           filters,
-          extras: { having: "", where: "" },
+          extras: { having: "", where: whereSql },
           applied_time_extras: {},
           columns,
           metrics: fm.metrics,
@@ -300,6 +325,7 @@
         });
       }
       fm.adhoc_filters = adhoc;
+      const whereSql = sc.playerWhere || "";
       const url =
         "/api/v1/chart/data?form_data=" +
         encodeURIComponent(JSON.stringify({ slice_id: SLICES.UAP_TOT })) +
@@ -310,7 +336,7 @@
         queries: [
           {
             filters,
-            extras: { having: "", where: "" },
+            extras: { having: "", where: whereSql },
             applied_time_extras: {},
             columns: [monthCol],
             metrics: fm.metrics,

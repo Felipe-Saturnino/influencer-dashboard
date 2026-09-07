@@ -926,12 +926,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool real da Escala Estúdio aprovada, check-in, prévia e publicação — o mesmo motor da página **Rotação**); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia e o atalho **Hoje**; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
+          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool filtrado pela Escala do Turno — Presente, Pendente e Saída Antecipada; Hora Adicional no turno seguinte até a saída, com **X** depois); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia e o atalho **Hoje**; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
       },
       {
         subtitulo: "Escala do Turno",
         texto:
           "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado.",
+      },
+      {
+        subtitulo: "Rotação",
+        texto:
+          "O pool usa a Escala Estúdio do estúdio selecionado, restrito aos prestadores da **Escala do Turno** com status **Presente** ou **Pendente**. **Saída Antecipada** entra no mesmo turno e a grade marca **X** a partir do horário de saída. **Hora Adicional** entra no **turno seguinte** (até a saída registrada; depois **X**). Falta e demais status ficam de fora do pool.",
       },
       {
         subtitulo: "Notificações",

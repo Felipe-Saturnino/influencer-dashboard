@@ -16,9 +16,11 @@ import {
 import { labelHorarioTurnoStaffPorValor } from "../../../lib/rhStaffHorarioTurno";
 import {
   anexarCheckinRotacao,
+  aplicarLimiteSaidaNaMatrixRotacao,
   carregarContextoRotacaoDia,
   corMesaRotacao,
   diaIsoLocal,
+  filtrarPoolRotacaoPorPresencaCt,
   gerarGradeRotacao,
   gerarSlotsRotacao,
   indiceProximoSlotRotacao,
@@ -29,11 +31,13 @@ import {
   mapaCoresMesasRotacao,
   publicarRotacao,
   salvarRascunhoRotacao,
+  turnoAnteriorRotacao,
   type RotacaoCelulaPayload,
   type RotacaoContextoDia,
   type RotacaoGpPool,
   type RotacaoTurnoKey,
 } from "../../../lib/escalaRotacao";
+import { listPresencaDiaTurno } from "../../../lib/escalaControleTurno";
 import { formatDiaBr, labelTurnoCurto } from "./helpers";
 import type { ControleTurnoTurno } from "./types";
 
@@ -122,11 +126,41 @@ export function AbaRotacao({ diaIso, turno }: Props) {
     setBannerPub(null);
     setErroPub(null);
     setPainelLideranca(false);
-    const res = await carregarContextoRotacaoDia({
-      diaIso,
-      turno: turnoKey,
-      estudioSlug: estudio,
-    });
+
+    const ant = turnoAnteriorRotacao(diaIso, turnoKey);
+    let res: Awaited<ReturnType<typeof carregarContextoRotacaoDia>>;
+    let presencaAtual: Awaited<ReturnType<typeof listPresencaDiaTurno>>;
+    let presencaAnt: Awaited<ReturnType<typeof listPresencaDiaTurno>>;
+    let resAnt: Awaited<ReturnType<typeof carregarContextoRotacaoDia>>;
+    try {
+      [res, presencaAtual, presencaAnt, resAnt] = await Promise.all([
+        carregarContextoRotacaoDia({
+          diaIso,
+          turno: turnoKey,
+          estudioSlug: estudio,
+        }),
+        listPresencaDiaTurno(diaIso, turnoKey),
+        listPresencaDiaTurno(ant.diaIso, ant.turno),
+        carregarContextoRotacaoDia({
+          diaIso: ant.diaIso,
+          turno: ant.turno,
+          estudioSlug: estudio,
+        }),
+      ]);
+    } catch (e) {
+      if (gen !== loadGen.current) return;
+      console.error(e);
+      setLoadingCtx(false);
+      setErroCtx(
+        "Não foi possível carregar a rotação. Se o problema persistir, entre em contato com o suporte.",
+      );
+      setCtx(null);
+      setPool([]);
+      setPoolSl([]);
+      setLiderancasDia([]);
+      return;
+    }
+
     if (gen !== loadGen.current) return;
     if (!res.ok) {
       setLoadingCtx(false);
@@ -137,12 +171,34 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       setLiderancasDia([]);
       return;
     }
-    const todos = [...res.data.gps, ...res.data.shiftLeads, ...res.data.liderancas];
+
+    const gpsFiltrados = filtrarPoolRotacaoPorPresencaCt({
+      gps: res.data.gps,
+      presencaAtual,
+      presencaAnterior: presencaAnt,
+      gpsTurnoAnteriorMesmoEstudio: resAnt.ok ? resAnt.data.gps : [],
+    });
+
+    const todos = [...gpsFiltrados, ...res.data.shiftLeads, ...res.data.liderancas];
     const comCheckin = await anexarCheckinRotacao(diaIso, todos);
     if (gen !== loadGen.current) return;
     const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
+    const limById = new Map(
+      gpsFiltrados
+        .filter((g) => g.saidaLimiteHhmm)
+        .map((g) => [g.funcionarioId, g.saidaLimiteHhmm!] as const),
+    );
     setCtx(res.data);
-    setPool(res.data.gps.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: false })));
+    setPool(
+      gpsFiltrados.map((g) => {
+        const base = byId.get(g.funcionarioId) ?? g;
+        return {
+          ...base,
+          isShiftLead: false,
+          saidaLimiteHhmm: limById.get(g.funcionarioId) ?? g.saidaLimiteHhmm,
+        };
+      }),
+    );
     setPoolSl(res.data.shiftLeads.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })));
     setLiderancasDia(
       res.data.liderancas.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })),
@@ -253,11 +309,17 @@ export function AbaRotacao({ diaIso, turno }: Props) {
           }
         );
       });
+      const matrix = aplicarLimiteSaidaNaMatrixRotacao(
+        slots,
+        gerado.matrix,
+        linhas,
+        ctx.turnoInicio,
+      );
       return {
         slots,
         gps: linhas,
         faltosos: [...opts.gpsPool.filter((g) => g.falta), ...opts.slPool.filter((g) => g.falta)],
-        matrix: gerado.matrix,
+        matrix,
         modeloN: usedGps.length,
         slotMin: step,
       };

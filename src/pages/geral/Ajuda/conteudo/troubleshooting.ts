@@ -1781,6 +1781,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "É esperado: Falta, Saída Antecipada, Hora Adicional e Registrar Horário **não** marcam **Aprovado**. Use a ação **Aprovar** (ícone de check) quando Entrada e Saída estiverem preenchidas **ou** depois de registrar **Falta**. Sem horários e sem Falta, o botão Aprovar não aparece.",
       },
+      {
+        subtitulo: "Falta alguém no pool da Rotação no Controle de Turno?",
+        texto:
+          "No Controle de Turno, o pool só inclui quem está na **Escala do Turno** como **Presente**, **Pendente** ou **Saída Antecipada**. **Falta** e **Hora Adicional** do turno atual não entram — a Hora Adicional aparece no **próximo** turno. Confirme o status na aba Escala do Turno e o estúdio selecionado.",
+      },
     ],
   },
   escala_rotacao: {

@@ -32,6 +32,11 @@ export type RotacaoGpPool = {
   horarioTurno?: string;
   /** Célula da Escala Estúdio no dia (MRN / AFT / NGT). */
   gradeValor?: string;
+  /**
+   * Controle de Turno: HH:MM de saída (Saída Antecipada / Hora Adicional).
+   * Slots com início ≥ este horário ficam «X» na grade.
+   */
+  saidaLimiteHhmm?: string;
 };
 
 export type RotacaoMesa = {
@@ -189,6 +194,108 @@ export function minutosDesdeMeiaNoite(hhmm: string): number {
   const m = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim());
   if (!m) return 0;
   return parseInt(m[1]!, 10) * 60 + parseInt(m[2]!, 10);
+}
+
+/** Turno imediatamente anterior (Manhã ← Noite do dia civil anterior). */
+export function turnoAnteriorRotacao(
+  diaIso: string,
+  turno: RotacaoTurnoKey,
+): { diaIso: string; turno: RotacaoTurnoKey } {
+  if (turno === "tarde") return { diaIso, turno: "manha" };
+  if (turno === "noite") return { diaIso, turno: "tarde" };
+  return { diaIso: shiftDiaIso(diaIso, -1), turno: "noite" };
+}
+
+/**
+ * True se o início do slot é ≥ saída, relativo ao início do turno (suporta overnight).
+ * Usado para marcar «X» após Saída Antecipada / Hora Adicional.
+ */
+export function slotAtingiuOuPassouSaidaRotacao(
+  slotHhmm: string,
+  saidaHhmm: string,
+  turnoInicio: string,
+): boolean {
+  const start = minutosDesdeMeiaNoite(turnoInicio);
+  const norm = (hhmm: string) => {
+    let m = minutosDesdeMeiaNoite(hhmm) - start;
+    if (m < 0) m += 24 * 60;
+    return m;
+  };
+  return norm(slotHhmm) >= norm(saidaHhmm);
+}
+
+/** Sobrescreve células com «X» a partir do horário de saída do prestador. */
+export function aplicarLimiteSaidaNaMatrixRotacao(
+  slots: string[],
+  matrix: string[][],
+  pessoas: ReadonlyArray<{ saidaLimiteHhmm?: string }>,
+  turnoInicio: string,
+): string[][] {
+  return matrix.map((row, i) => {
+    const lim = pessoas[i]?.saidaLimiteHhmm?.trim();
+    if (!lim) return [...row];
+    return row.map((val, si) => {
+      const slot = slots[si];
+      if (!slot) return val;
+      if (slotAtingiuOuPassouSaidaRotacao(slot, lim, turnoInicio)) return "X";
+      return val;
+    });
+  });
+}
+
+/** Presença da Escala do Turno (shape mínimo) para filtrar o pool da Rotação no CT. */
+export type PresencaRotacaoCt = {
+  id: string;
+  status: string;
+  saida: string;
+};
+
+const STATUS_POOL_TURNO_ATUAL = new Set(["presente", "pendente", "saida_antecipada"]);
+
+/**
+ * Pool da Rotação (CT): Presente / Pendente / Saída Antecipada do turno atual;
+ * Hora Adicional do turno anterior (mesmo estúdio) entra até a saída registrada.
+ */
+export function filtrarPoolRotacaoPorPresencaCt(opts: {
+  gps: RotacaoGpPool[];
+  presencaAtual: PresencaRotacaoCt[];
+  presencaAnterior: PresencaRotacaoCt[];
+  gpsTurnoAnteriorMesmoEstudio: RotacaoGpPool[];
+}): RotacaoGpPool[] {
+  const byIdAtual = new Map(opts.presencaAtual.map((r) => [r.id, r]));
+  const pool: RotacaoGpPool[] = [];
+  const ids = new Set<string>();
+
+  for (const g of opts.gps) {
+    const p = byIdAtual.get(g.funcionarioId);
+    if (!p || !STATUS_POOL_TURNO_ATUAL.has(p.status)) continue;
+    const saida = p.saida.trim();
+    if (p.status === "saida_antecipada") {
+      if (!saida) continue;
+      pool.push({ ...g, saidaLimiteHhmm: saida });
+    } else {
+      pool.push({ ...g, saidaLimiteHhmm: undefined });
+    }
+    ids.add(g.funcionarioId);
+  }
+
+  const byIdAnt = new Map(opts.presencaAnterior.map((r) => [r.id, r]));
+  for (const g of opts.gpsTurnoAnteriorMesmoEstudio) {
+    if (ids.has(g.funcionarioId)) continue;
+    const p = byIdAnt.get(g.funcionarioId);
+    if (!p || p.status !== "hora_adicional") continue;
+    const saida = p.saida.trim();
+    if (!saida) continue;
+    pool.push({
+      ...g,
+      falta: false,
+      isShiftLead: false,
+      saidaLimiteHhmm: saida,
+    });
+    ids.add(g.funcionarioId);
+  }
+
+  return pool;
 }
 
 export function gerarSlotsRotacao(inicio: string, fim: string, stepMin: number): string[] {

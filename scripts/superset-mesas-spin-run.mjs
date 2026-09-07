@@ -20,6 +20,12 @@
  * Regras: TO/GGR arredondados por mesa (Math.round); daily = soma das mesas;
  * UAP daily = UAP_TOT (não somar uap_por_jogo); monthly = MTD do mês de DE
  * (extract usa dia 1 → ATE exclusivo — ver MONTHLY_TIME_RANGE no browser script).
+ *
+ * Network — grupo EsportivaBet (split por player_id; brand_name vazio no CH):
+ *   esportiva → esportiva_bet (esportivabetbr_* + IDs sem marca)
+ *   bateu     → bateu_bet
+ *   brx       → brx_bet
+ *   rico      → rico_bet
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -53,6 +59,27 @@ const OPS = {
   esportiva: {
     slug: "esportiva_bet",
     nome: "Esportiva Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  bateu: {
+    slug: "bateu_bet",
+    nome: "Bateu Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  brx: {
+    slug: "brx_bet",
+    nome: "BRX Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  rico: {
+    slug: "rico_bet",
+    nome: "Rico Bet",
     canal: "network",
     mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
     jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
@@ -259,7 +286,10 @@ function montarDia(opKey, canal, block, dia) {
 }
 
 function opsDoExtract(raw, canal) {
-  const keys = canal === "network" ? ["esportiva", "casa", "blaze", "jonbet"] : ["casa", "blaze"];
+  const keys =
+    canal === "network"
+      ? ["esportiva", "bateu", "brx", "rico", "casa", "blaze", "jonbet"]
+      : ["casa", "blaze"];
   const out = [];
   for (const k of keys) {
     if (raw[k]) out.push(k);
@@ -388,6 +418,9 @@ function monthlyDoExtract(raw) {
     ded_casa: { canal: "dedicado", slug: "casa_apostas" },
     ded_blaze: { canal: "dedicado", slug: "blaze" },
     net_esportiva: { canal: "network", slug: "esportiva_bet" },
+    net_bateu: { canal: "network", slug: "bateu_bet" },
+    net_brx: { canal: "network", slug: "brx_bet" },
+    net_rico: { canal: "network", slug: "rico_bet" },
     net_casa: { canal: "network", slug: "casa_apostas" },
     net_blaze: { canal: "network", slug: "blaze" },
     net_jonbet: { canal: "network", slug: "jonbet" },
