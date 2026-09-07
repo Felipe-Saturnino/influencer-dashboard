@@ -386,6 +386,7 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_presenca_registro (
   motivo              text NOT NULL DEFAULT '',
   lideranca_user_id   uuid REFERENCES auth.users (id),
   lideranca_nome      text NOT NULL DEFAULT '',
+  aprovado            boolean NOT NULL DEFAULT false,
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT escala_ct_presenca_motivo_chk CHECK (
@@ -410,7 +411,10 @@ CREATE INDEX IF NOT EXISTS escala_ct_presenca_prestador_idx
   ON public.escala_ct_presenca_registro (prestador_id, data DESC);
 
 COMMENT ON TABLE public.escala_ct_presenca_registro IS
-  'Controle de Turno → aba Escala do Turno: registro da liderança por prestador/dia/turno. Sobrepõe o status derivado do ponto.';
+  'Controle de Turno → aba Escala do Turno: registro da liderança por prestador/dia/turno. Coluna aprovado = Sim só após ação Aprovar; demais tipos não alteram o flag.';
+
+COMMENT ON COLUMN public.escala_ct_presenca_registro.aprovado IS
+  'True somente após a ação Aprovar. Demais registros não alteram este flag.';
 
 -- ─── 9) updated_at triggers ──────────────────────────────────────────────────
 
@@ -764,7 +768,12 @@ BEGIN
     GROUP BY COALESCE(r.funcionario_id, uids.funcionario_id)
   ),
   reg AS (
-    SELECT pr.prestador_id, pr.status_presenca, pr.entrada_hhmm, pr.saida_hhmm
+    SELECT
+      pr.prestador_id,
+      pr.status_presenca,
+      pr.entrada_hhmm,
+      pr.saida_hhmm,
+      COALESCE(pr.aprovado, false) AS aprovado
     FROM public.escala_ct_presenca_registro pr
     WHERE pr.data = p_dia
       AND pr.turno = v_turno
@@ -793,7 +802,7 @@ BEGIN
         WHEN p.check_in_at IS NOT NULL THEN 'presente'
         ELSE 'pendente'
       END AS status,
-      (r.prestador_id IS NOT NULL) AS registrado
+      COALESCE(r.aprovado, false) AS registrado
     FROM escalados e
     LEFT JOIN ponto p ON p.funcionario_id = e.funcionario_id
     LEFT JOIN reg r ON r.prestador_id = e.funcionario_id
@@ -823,7 +832,7 @@ REVOKE ALL ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) FRO
 GRANT EXECUTE ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) TO authenticated;
 
 COMMENT ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) IS
-  'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno (MRN/AFT/NGT, Manhã/Tarde/Noite e Compra - Turno; exclui Venda/Troca/Folga) com ponto, overlay de escala_ct_presenca_registro e estúdio do cadastro Gestão de Staff.';
+  'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno (MRN/AFT/NGT, Manhã/Tarde/Noite e Compra - Turno; exclui Venda/Troca/Folga) com ponto, overlay de escala_ct_presenca_registro. Campo registrado = aprovado (só ação Aprovar).';
 
 -- ─── 12b) Evolução: tipo Aprovar + motivo opcional ───────────────────────────
 
@@ -847,6 +856,15 @@ ALTER TABLE public.escala_ct_presenca_registro
 
 ALTER TABLE public.escala_ct_presenca_registro
   ALTER COLUMN motivo SET DEFAULT '';
+
+-- ─── 12c) Flag aprovado — só ação Aprovar marca Sim ──────────────────────────
+
+ALTER TABLE public.escala_ct_presenca_registro
+  ADD COLUMN IF NOT EXISTS aprovado boolean NOT NULL DEFAULT false;
+
+UPDATE public.escala_ct_presenca_registro
+SET aprovado = true
+WHERE tipo = 'aprovar' AND aprovado = false;
 
 -- ─── 13) Seed permissões (reforço) ───────────────────────────────────────────
 

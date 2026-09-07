@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ClipboardPlus, History, Loader2 } from "lucide-react";
+import { Check, ClipboardPlus, History, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -58,8 +58,8 @@ const TIPO_LABEL: Record<CtPresencaTipo, string> = {
   registrar_horario: "Registrar Horário",
 };
 
-const TIPO_OPCOES: readonly CtPresencaTipo[] = [
-  "aprovar",
+/** Opções do modal Registrar — Aprovar é ação separada. */
+const TIPO_OPCOES_REGISTRAR: readonly CtPresencaTipo[] = [
   "falta",
   "saida_antecipada",
   "hora_adicional",
@@ -82,13 +82,17 @@ const MOTIVO_PLACEHOLDER: Record<CtPresencaTipo, string> = {
   registrar_horario: "Comentário sobre o horário...",
 };
 
-const MOTIVO_ERRO: Record<CtPresencaTipo, string> = {
-  aprovar: "Preencha o Comentário.",
+const MOTIVO_ERRO: Record<Exclude<CtPresencaTipo, "aprovar">, string> = {
   falta: "Preencha o Motivo da Falta.",
   saida_antecipada: "Preencha o Motivo da Saída Antecipada.",
   hora_adicional: "Preencha o Motivo da Hora Adicional.",
   registrar_horario: "Preencha o Comentário.",
 };
+
+function podeAbrirAprovar(row: CtPresencaRow): boolean {
+  if (row.status === "falta") return true;
+  return Boolean(row.entrada.trim() && row.saida.trim());
+}
 
 const STATUS_PRESENTES: readonly CtPresencaStatus[] = [
   "presente",
@@ -148,11 +152,14 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
   const [erroPagina, setErroPagina] = useState("");
 
   const [alvoRegistrar, setAlvoRegistrar] = useState<CtPresencaRow | null>(null);
+  const [alvoAprovar, setAlvoAprovar] = useState<CtPresencaRow | null>(null);
   const [tipo, setTipo] = useState<CtPresencaTipo | "">("");
   const [entrada, setEntrada] = useState("");
   const [saida, setSaida] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [obsAprovar, setObsAprovar] = useState("");
   const [erroModal, setErroModal] = useState("");
+  const [erroAprovar, setErroAprovar] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const [alvoHistorico, setAlvoHistorico] = useState<CtPresencaRow | null>(null);
@@ -225,14 +232,26 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
     setErroModal("");
   }
 
+  function abrirAprovar(row: CtPresencaRow) {
+    if (!podeAbrirAprovar(row)) return;
+    setAlvoAprovar(row);
+    setObsAprovar("");
+    setErroAprovar("");
+  }
+
+  function fecharAprovar() {
+    setAlvoAprovar(null);
+    setErroAprovar("");
+  }
+
   async function salvarRegistro() {
     if (!alvoRegistrar || !podeRegistrar) return;
-    if (!tipo) {
+    if (!tipo || tipo === "aprovar") {
       setErroModal("Selecione o Status.");
       return;
     }
 
-    if (tipo !== "falta" && tipo !== "aprovar") {
+    if (tipo !== "falta") {
       if (!entrada.trim()) {
         setErroModal("Informe a Entrada realizada.");
         return;
@@ -243,7 +262,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
       }
     }
 
-    if (tipo !== "aprovar" && !motivo.trim()) {
+    if (!motivo.trim()) {
       setErroModal(MOTIVO_ERRO[tipo]);
       return;
     }
@@ -266,6 +285,40 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
     } catch (e) {
       console.error(e);
       setErroModal(MSG_ERRO_CT_SALVAR);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarAprovar() {
+    if (!alvoAprovar || !podeRegistrar) return;
+    if (!podeAbrirAprovar(alvoAprovar)) {
+      setErroAprovar(
+        "Para aprovar, preencha Entrada e Saída ou registre Falta antes.",
+      );
+      return;
+    }
+
+    setSalvando(true);
+    setErroAprovar("");
+    try {
+      await upsertPresencaRegistro({
+        data: diaIso,
+        turno,
+        prestadorId: alvoAprovar.id,
+        tipo: "aprovar",
+        entrada: alvoAprovar.entrada,
+        saida: alvoAprovar.saida,
+        motivo: obsAprovar,
+        liderancaNome,
+        /** Aprovar Falta mantém status falta; com horários, fica presente. */
+        statusPresenca: alvoAprovar.status === "falta" ? "falta" : "presente",
+      });
+      fecharAprovar();
+      await carregar();
+    } catch (e) {
+      console.error(e);
+      setErroAprovar(MSG_ERRO_CT_SALVAR);
     } finally {
       setSalvando(false);
     }
@@ -361,7 +414,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                   <th scope="col" style={dataTable.thHeader}>Entrada</th>
                   <th scope="col" style={dataTable.thHeader}>Saída</th>
                   <th scope="col" style={dataTable.thHeader}>Status</th>
-                  <th scope="col" style={dataTable.thHeader}>Aprovado?</th>
+                  <th scope="col" style={dataTable.thHeader}>Aprovado</th>
                   <th scope="col" style={dataTable.thHeader}>Ações</th>
                 </tr>
               </thead>
@@ -428,6 +481,14 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                       </td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "inline-flex", gap: 6, justifyContent: "center" }}>
+                          {podeRegistrar && !r.registrado && podeAbrirAprovar(r) ? (
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcao("Aprovar")}
+                              onClick={() => abrirAprovar(r)}
+                            >
+                              <Check size={13} aria-hidden />
+                            </BtnIconeAcaoLinha>
+                          ) : null}
                           {podeRegistrar && !r.registrado ? (
                             <BtnIconeAcaoLinha
                               label={tooltipAcao("Registrar")}
@@ -490,22 +551,13 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                 aria-label="Status"
                 value={tipo}
                 onChange={(e) => {
-                  const next = e.target.value as CtPresencaTipo | "";
                   setErroModal("");
-                  if (next === "aprovar") {
-                    if (entrada.trim() && saida.trim()) {
-                      setTipo("aprovar");
-                    } else {
-                      setTipo("registrar_horario");
-                    }
-                    return;
-                  }
-                  setTipo(next);
+                  setTipo(e.target.value as CtPresencaTipo | "");
                 }}
                 style={inputStyle(t)}
               >
                 <option value="">Selecionar...</option>
-                {TIPO_OPCOES.map((op) => (
+                {TIPO_OPCOES_REGISTRAR.map((op) => (
                   <option key={op} value={op}>
                     {TIPO_LABEL[op]}
                   </option>
@@ -513,7 +565,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
               </select>
             </div>
 
-            {tipo && tipo !== "falta" && tipo !== "aprovar" ? (
+            {tipo && tipo !== "falta" ? (
               <div className="app-grid-2" style={{ gap: 12, marginBottom: 12 }}>
                 <div>
                   <label htmlFor="ct-reg-entrada" style={labelCampoStyle(t)}>
@@ -544,11 +596,11 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
               </div>
             ) : null}
 
-            {tipo ? (
+            {tipo && tipo !== "aprovar" ? (
               <div style={{ marginBottom: 16 }}>
                 <label htmlFor="ct-reg-motivo" style={labelCampoStyle(t)}>
                   {MOTIVO_LABEL[tipo]}
-                  {tipo !== "aprovar" ? <CampoObrigatorioMark /> : null}
+                  <CampoObrigatorioMark />
                 </label>
                 <textarea
                   id="ct-reg-motivo"
@@ -579,6 +631,109 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                 }}
               >
                 {salvando ? "Salvando…" : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </ModalBase>
+      ) : null}
+
+      {alvoAprovar ? (
+        <ModalBase onClose={fecharAprovar} maxWidth={520} closeOnBackdrop={false}>
+          <ModalHeader title="Aprovar" onClose={fecharAprovar} />
+          <div style={{ padding: "0 4px 8px" }}>
+            {erroAprovar ? (
+              <div
+                role="alert"
+                aria-live="polite"
+                style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 12 }}
+              >
+                {erroAprovar}
+              </div>
+            ) : null}
+
+            <p
+              style={{
+                margin: "0 0 14px",
+                fontSize: 12,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+              }}
+            >
+              {alvoAprovar.nome}
+              {alvoAprovar.nickname ? ` · ${alvoAprovar.nickname}` : ""} ·{" "}
+              {CONTROLE_TURNO_TURNO_LABEL[turno]} · {formatDiaBr(diaIso)}
+            </p>
+
+            <div style={{ marginBottom: 12 }}>
+              <span style={labelCampoStyle(t)}>Status</span>
+              <div style={{ display: "flex" }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: "3px 9px",
+                    borderRadius: 20,
+                    background: `${STATUS_COR[alvoAprovar.status]}22`,
+                    color: STATUS_COR[alvoAprovar.status],
+                    border: `1px solid ${STATUS_COR[alvoAprovar.status]}44`,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {STATUS_LABEL[alvoAprovar.status]}
+                </span>
+              </div>
+            </div>
+
+            {alvoAprovar.status !== "falta" ? (
+              <div className="app-grid-2" style={{ gap: 12, marginBottom: 12 }}>
+                <div>
+                  <span style={labelCampoStyle(t)}>Entrada</span>
+                  <div style={{ fontSize: 13, fontFamily: FONT.body, color: t.text }}>
+                    {alvoAprovar.entrada || "—"}
+                  </div>
+                </div>
+                <div>
+                  <span style={labelCampoStyle(t)}>Saída</span>
+                  <div style={{ fontSize: 13, fontFamily: FONT.body, color: t.text }}>
+                    {alvoAprovar.saida || "—"}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div style={{ marginBottom: 16 }}>
+              <label htmlFor="ct-aprovar-obs" style={labelCampoStyle(t)}>
+                Observação
+              </label>
+              <textarea
+                id="ct-aprovar-obs"
+                value={obsAprovar}
+                onChange={(e) => setObsAprovar(e.target.value)}
+                placeholder={MOTIVO_PLACEHOLDER.aprovar}
+                rows={4}
+                style={{ ...inputStyle(t), resize: "vertical" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                disabled={salvando}
+                onClick={() => void salvarAprovar()}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: getCtaCriarGradient(brand),
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  fontFamily: FONT.body,
+                  cursor: salvando ? "not-allowed" : "pointer",
+                }}
+              >
+                {salvando ? "Salvando…" : "Aprovar"}
               </button>
             </div>
           </div>

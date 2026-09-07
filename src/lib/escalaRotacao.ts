@@ -630,15 +630,29 @@ function mapPessoaPool(row: Record<string, unknown>, isShiftLead: boolean): Rota
 }
 
 /**
+ * Normaliza célula da Escala Estúdio para sigla de turno (MRN/AFT/NGT).
+ * Inclui Compra - Turno (Marketplace); Venda/Troca/Folga → null.
+ */
+export function siglaTurnoGradeRotacao(
+  valor: string | null | undefined,
+): "MRN" | "AFT" | "NGT" | null {
+  const v = (valor ?? "").trim();
+  if (v === "MRN" || v === "Manhã" || v === "Compra - Manhã") return "MRN";
+  if (v === "AFT" || v === "Tarde" || v === "Compra - Tarde") return "AFT";
+  if (v === "NGT" || v === "Noite" || v === "Compra - Noite") return "NGT";
+  return null;
+}
+
+/**
  * Liderança 08h–20h cobre Manhã/Tarde; 20h–08h (ou 18h–06h) cobre Tarde/Noite.
- * Fallback pela célula da Escala (MRN / AFT / NGT) quando o horário não veio no cadastro.
+ * Fallback pela célula da Escala (MRN / AFT / NGT / Compra - Turno) quando o horário não veio no cadastro.
  */
 export function liderancaCompativelComTurnoRotacao(
   turno: RotacaoTurnoKey,
   opts: { horarioTurno?: string | null; gradeValor?: string | null },
 ): boolean {
   const h = (opts.horarioTurno ?? "").trim().toLowerCase().replace(/\s/g, "");
-  const g = (opts.gradeValor ?? "").trim().toUpperCase();
+  const g = siglaTurnoGradeRotacao(opts.gradeValor);
 
   const janelaDia =
     h === "08-20" ||

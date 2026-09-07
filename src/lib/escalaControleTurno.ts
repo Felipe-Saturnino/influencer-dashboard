@@ -804,7 +804,7 @@ export function statusPresencaDoTipo(tipo: CtPresencaTipo): CtPresencaStatus {
   return "presente";
 }
 
-/** True se todas as linhas da Escala do Turno estão com Aprovado? = Sim (`registrado`). */
+/** True se todas as linhas da Escala do Turno estão com Aprovado = Sim (`registrado`). */
 export async function presencaTurnoTotalmenteAprovada(
   data: string,
   turno: CtTurno,
@@ -876,22 +876,30 @@ export async function upsertPresencaRegistro(input: {
   saida: string;
   motivo: string;
   liderancaNome: string;
+  /** Só Aprovar: preserva Falta ou força Presente com horários. */
+  statusPresenca?: CtPresencaStatus;
 }): Promise<void> {
   const dia = input.data.slice(0, 10);
   const uid = await authUserId();
-  const isFalta = input.tipo === "falta";
-  const payload = {
+  const isFalta =
+    input.tipo === "falta" ||
+    (input.tipo === "aprovar" && input.statusPresenca === "falta");
+  const isAprovar = input.tipo === "aprovar";
+  const basePayload = {
     data: dia,
     turno: input.turno,
     prestador_id: input.prestadorId,
     tipo: input.tipo,
-    status_presenca: statusPresencaDoTipo(input.tipo),
+    status_presenca:
+      input.statusPresenca ?? statusPresencaDoTipo(input.tipo),
     entrada_hhmm: isFalta ? "" : input.entrada.trim(),
     saida_hhmm: isFalta ? "" : input.saida.trim(),
     motivo: input.motivo.trim(),
     lideranca_user_id: uid,
     lideranca_nome: getCurrentUserNome(input.liderancaNome),
   };
+  /** Só Aprovar marca `aprovado`; demais ações não tocam o flag (insert = false default). */
+  const payload = isAprovar ? { ...basePayload, aprovado: true } : basePayload;
 
   const { data: existente, error: erroBusca } = await supabase
     .from("escala_ct_presenca_registro")

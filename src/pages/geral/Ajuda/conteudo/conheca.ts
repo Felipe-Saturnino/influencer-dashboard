@@ -929,6 +929,11 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
           "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool real da Escala Estúdio aprovada, check-in, prévia e publicação — o mesmo motor da página **Rotação**); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia e o atalho **Hoje**; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
       },
       {
+        subtitulo: "Escala do Turno",
+        texto:
+          "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado.",
+      },
+      {
         subtitulo: "Notificações",
         texto:
           "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. Com **Editar**, atualize fechamentos/ausências, aplique feedbacks em revisão e cancele manutenções abertas. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
@@ -936,7 +941,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Relatório de Turno",
         texto:
-          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado? Sim**.",
+          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**.",
       },
     ],
   },

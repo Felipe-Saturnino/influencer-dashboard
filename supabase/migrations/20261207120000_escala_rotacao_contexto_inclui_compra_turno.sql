@@ -1,9 +1,6 @@
--- Incremental: Incluir Liderança (SL + SM) em escala_rotacao_contexto_dia.
--- Pré-requisito: cockpit já aplicado (20261028120000 / escala_rotacao_cockpit.sql).
--- Idempotente: só CREATE OR REPLACE da RPC + GRANT.
--- Colar no SQL Editor do Supabase.
--- Esta é a revisão canónica da RPC (após cockpit). Não reaplicar
--- escala_rotacao_supabase.sql nem escala_rotacao_contexto_shift_lead.sql depois.
+-- Rotação: pool alinhado à Escala do Turno (Compra - Turno = escalado; Venda/Troca fora).
+-- Atualiza escala_rotacao_contexto_dia — mesma regra de 20261206180000 (presença CT).
+-- Colar no SQL Editor do Supabase. Não editar migrations antigas.
 
 BEGIN;
 
@@ -102,7 +99,7 @@ BEGIN
     AND btrim(COALESCE(m.numero_mesa, '')) <> '';
 
   IF v_aprovada THEN
-    -- GPs do turno com estúdio efetivo = override OU staff
+    -- GPs do turno: MRN/AFT/NGT, Manhã/Tarde/Noite ou Compra - Turno (exclui Venda/Troca/Folga)
     WITH base AS (
       SELECT
         f.id AS funcionario_id,
