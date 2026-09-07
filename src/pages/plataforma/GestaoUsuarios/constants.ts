@@ -150,7 +150,6 @@ const PAGES_META: {
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
   { key: "escala_solicitacoes", label: "Solicitações", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_gestao_escala", label: "Escala Estúdio", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
-  { key: "escala_rotacao", label: "Rotação", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_calendario", label: "Calendário", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
     key: "escala_marketplace_turnos",

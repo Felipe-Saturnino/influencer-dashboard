@@ -1784,42 +1784,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Falta alguém no pool da Rotação no Controle de Turno?",
         texto:
-          "No Controle de Turno, o pool inclui quem está na **Escala do Turno** como **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. **Hora Adicional** do turno anterior também entra no turno seguinte (mesmo estúdio). **Falta** fica de fora. Confirme o status na aba Escala do Turno e o estúdio selecionado.",
-      },
-    ],
-  },
-  escala_rotacao: {
-    titulo: "Rotação",
-    blocos: [
-      {
-        subtitulo: "Não vejo Rotação no menu?",
-        texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Rotação**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
-      },
-      {
-        subtitulo: "Pool vazio ou sem escala aprovada?",
-        texto:
-          "A rotação usa Game Presenters com célula de trabalho (Manhã/Tarde/Noite) na **Escala Estúdio** **aprovada** do dia e estúdio efetivo (Staff ou override na própria Rotação). O pool segue o **valor da célula do dia**. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio. Se a escala do dia está aprovada e o pool continua vazio, entre em contato com o suporte técnico.",
+          "No Controle de Turno, o pool inclui quem está na **Escala do Turno** como **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. **Hora Adicional** do turno anterior também entra no turno seguinte (mesmo estúdio). **Falta** fica de fora. Confirme o status na aba Escala do Turno e o bloco do estúdio.",
       },
       {
         subtitulo: "Não consigo publicar a rotação?",
         texto:
-          "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com gente suficiente para cobrir as mesas e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
+          "É necessária permissão de **Criar** em **Controle de Turno**. Em cada bloco de estúdio, gere a prévia com gente suficiente para cobrir as mesas e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
       },
       {
         subtitulo: "A prévia mostra mesas a menos ou dois GPs na mesma mesa?",
         texto:
-          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar o **Shift Lead** só como reserva. Se a cobertura falhar, use **Rotação de 20min** (depois **Rotação de 30min** para voltar) ou **Incluir Liderança**. Clique de novo em **Gerar prévia** após atualizar a página.",
-      },
-      {
-        subtitulo: "Chegou no meio do turno — como incluir?",
-        texto:
-          "Não recalcule slots já passados. Com check-in (**Chegou**) use **Incluir na rotação**: a grade redistribui só a partir do **próximo slot**. Se ainda faltar cobertura, use os botões de **Aviso** (20 min ou Shift Lead).",
+          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar a liderança só como reserva. Se a cobertura falhar, use **Rotação de 20min** (depois **Rotação de 30min** para voltar) ou **Incluir Liderança**. Clique de novo em **Gerar prévia** no bloco do estúdio.",
       },
       {
         subtitulo: "Mover entre estúdios não funciona?",
         texto:
-          "O move é **só na Rotação** (turno inteiro) e exige o SQL de alocação (`escala_rotacao_cockpit.sql`). Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
+          "O move é **só na aba Rotação** do Controle de Turno (turno inteiro), via **Mover estúdio…** no chip. Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
       },
     ],
   },

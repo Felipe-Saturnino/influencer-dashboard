@@ -950,25 +950,6 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       },
     ],
   },
-  escala_rotacao: {
-    titulo: "Rotação",
-    blocos: [
-      {
-        texto:
-          "Cockpit operacional da **rotação** dos Game Presenters nas mesas — use ~30 min antes do turno. Substitui o Excel de Month Shift and Rotation. Duas abas: **Gerar Rotação** (pool, check-in, avisos e prévia) e **Rotação Atual** (consulta da publicada). Ao **aprovar** a Escala Estúdio na aba Game Presenter, a plataforma pode gerar **prévias** de todos os dias do mês.",
-      },
-      {
-        subtitulo: "Gerar Rotação",
-        texto:
-          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na **Escala Estúdio** **aprovada** e, como reserva, dos **Shift Leads** do mesmo dia/turno. Cada chip mostra **Chegou** / **Não chegou** (ponto do Calendário). Marque faltas, **mova** um GP para outro estúdio só neste turno (figurino: 1 GP = 1 estúdio no turno) ou traga alguém de outro estúdio. **Gerar prévia** usa todos os GPs elegíveis: cobre **todas** as mesas; 1 pessoa por mesa; **intercala** mesas (não repete a mesma no horário seguinte); no máximo **2h** contínuas em mesa antes do Break (4×30 min ou 6×20 min); Shift Lead só para cobrir, com o mínimo de mesas. Intervalo padrão **30 min**. Se a cobertura ficar apertada, use **Rotação de 20min** (o botão passa a **Rotação de 30min** para voltar) ou **Incluir Liderança** (nunca «emergência»). Chegada no meio do turno: **Incluir na rotação** redistribui só os slots futuros. Com permissão de **Criar**, **Publicar** grava a rotação.",
-      },
-      {
-        subtitulo: "Rotação Atual",
-        texto:
-          "Consulta a rotação **publicada** para o mesmo dia, turno e estúdio. Células: **Número da Mesa**, **Break** ou **X** (falta). Sem publicação, a mensagem de vazio indica ausência de rotação no período.",
-      },
-    ],
-  },
   escala_solicitacoes: {
     titulo: "Solicitações",
     blocos: [

@@ -949,8 +949,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Rotação",
         definicao:
-          "Cockpit que posiciona Game Presenters nas mesas do estúdio ao longo do turno (intervalos de 30 min, ou 20 min sob aviso). O pool vem da Escala Estúdio aprovada; Shift Lead entra só como reserva. Células: Número da Mesa, Break ou X (falta). Permite mover GP entre estúdios só no dia/turno, ver Chegou/Não chegou e republicar sem reescrever slots já passados.",
-        referencia: "Rotação",
+          "Aba do **Controle de Turno** que posiciona Game Presenters nas mesas do estúdio ao longo do turno (intervalos de 30 min, ou 20 min sob demanda). Cada estúdio tem o próprio bloco; o pool vem da Escala Estúdio aprovada filtrada pela Escala do Turno; liderança entra só via Incluir Liderança. Células: Número da Mesa, Break ou X. Permite mover GP entre estúdios só no dia/turno e republicar sem reescrever slots já passados.",
+        referencia: "Controle de Turno",
       },
       {
         termo: "Calendário (RH)",
@@ -1479,7 +1479,6 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
     "escala_solicitacoes",
     "rh_gestao_escala",
     "escala_escritorio",
-    "escala_rotacao",
     "rh_calendario",
     "escala_marketplace_turnos",
     "dash_overview_prestador",
