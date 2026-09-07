@@ -1769,7 +1769,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O pool da Rotação está vazio no Controle de Turno?",
         texto:
-          "A aba **Rotação** usa os Game Presenters da **Escala Estúdio** **aprovada** no dia, turno e estúdio selecionados, com **Chegou** / **Não chegou** do check-in do Calendário. Sem aprovação do mês ou sem GPs naquele turno, o pool fica vazio.",
+          "A aba **Rotação** mostra um bloco por estúdio. Cada pool usa os Game Presenters da **Escala Estúdio** **aprovada** no dia e turno, com **Chegou** / **Não chegou** do check-in do Calendário. Sem aprovação do mês ou sem GPs naquele turno, o pool do bloco fica vazio.",
       },
       {
         subtitulo: "Não consigo salvar Notificações ou o Relatório?",
