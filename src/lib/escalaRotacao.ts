@@ -233,19 +233,36 @@ export function slotAtingiuOuPassouSaidaRotacao(
 export function parseIntervaloHorarioStaffRotacao(
   valor: string | null | undefined,
 ): RotacaoIntervaloHorario | null {
-  const v = (valor ?? "").trim().toLowerCase().replace(/\s/g, "");
-  if (!v) return null;
+  const raw = (valor ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  const v = raw.replace(/\s/g, "");
+  // 08-20 | 08:00-20:00 | 8-20
   const m = /^(\d{1,2})(?::(\d{2}))?-(\d{1,2})(?::(\d{2}))?$/.exec(v);
-  if (!m) return null;
-  const hi = parseInt(m[1]!, 10);
-  const mi = parseInt(m[2] ?? "0", 10);
-  const hf = parseInt(m[3]!, 10);
-  const mf = parseInt(m[4] ?? "0", 10);
-  if (hi > 23 || hf > 23 || mi > 59 || mf > 59) return null;
-  return {
-    inicio: `${String(hi).padStart(2, "0")}:${String(mi).padStart(2, "0")}`,
-    fim: `${String(hf).padStart(2, "0")}:${String(mf).padStart(2, "0")}`,
-  };
+  if (m) {
+    const hi = parseInt(m[1]!, 10);
+    const mi = parseInt(m[2] ?? "0", 10);
+    const hf = parseInt(m[3]!, 10);
+    const mf = parseInt(m[4] ?? "0", 10);
+    if (hi > 23 || hf > 23 || mi > 59 || mf > 59) return null;
+    return {
+      inicio: `${String(hi).padStart(2, "0")}:${String(mi).padStart(2, "0")}`,
+      fim: `${String(hf).padStart(2, "0")}:${String(mf).padStart(2, "0")}`,
+    };
+  }
+  // 08h às 20h | 08h30 as 20h00
+  const m2 = /^(\d{1,2})h(\d{2})?(?:às|as|-|–)(\d{1,2})h(\d{2})?$/.exec(v.replace(/à/g, "a"));
+  if (m2) {
+    const hi = parseInt(m2[1]!, 10);
+    const mi = parseInt(m2[2] ?? "0", 10);
+    const hf = parseInt(m2[3]!, 10);
+    const mf = parseInt(m2[4] ?? "0", 10);
+    if (hi > 23 || hf > 23 || mi > 59 || mf > 59) return null;
+    return {
+      inicio: `${String(hi).padStart(2, "0")}:${String(mi).padStart(2, "0")}`,
+      fim: `${String(hf).padStart(2, "0")}:${String(mf).padStart(2, "0")}`,
+    };
+  }
+  return null;
 }
 
 /**
@@ -266,13 +283,33 @@ export function slotDentroJanelaHorarioRotacao(
 }
 
 /**
+ * Janela efetiva da liderança na rotação.
+ * 1) `staff_horario_turno` (08-20, 20-08, 18-06, …)
+ * 2) célula do dia (MRN/AFT → 08–20; NGT → 20–08)
+ * 3) padrão diurno 08–20 (SL/SM sem cadastro de horário)
+ */
+export function janelaHorarioLiderancaRotacao(pessoa: {
+  horarioTurno?: string | null;
+  gradeValor?: string | null;
+}): RotacaoIntervaloHorario {
+  const fromKey = parseIntervaloHorarioStaffRotacao(pessoa.horarioTurno);
+  if (fromKey) return fromKey;
+  const g = siglaTurnoGradeRotacao(pessoa.gradeValor);
+  if (g === "NGT") return { inicio: "20:00", fim: "08:00" };
+  return { inicio: "08:00", fim: "20:00" };
+}
+
+/**
  * Máscara de disponibilidade por slot: liderança (08–20 / 20–08 / …) + saída CT.
  * `undefined` = sem restrição (GP típico do turno).
+ * Liderança (`isShiftLead` / `cargoLideranca`) **sempre** tem janela — nunca cobre o turno inteiro
+ * sem filtrar (ex.: Tarde até 22h30 com saída às 20h → X a partir de 20:00).
  */
 export function disponivelPorSlotPessoaRotacao(
   slots: string[],
   pessoa: {
     horarioTurno?: string;
+    gradeValor?: string;
     saidaLimiteHhmm?: string;
     isShiftLead?: boolean;
     cargoLideranca?: RotacaoCargoLideranca;
@@ -280,7 +317,7 @@ export function disponivelPorSlotPessoaRotacao(
   turnoInicio: string,
 ): boolean[] | undefined {
   const usarJanelaLid = Boolean(pessoa.isShiftLead || pessoa.cargoLideranca);
-  const janela = usarJanelaLid ? parseIntervaloHorarioStaffRotacao(pessoa.horarioTurno) : null;
+  const janela = usarJanelaLid ? janelaHorarioLiderancaRotacao(pessoa) : null;
   const saida = pessoa.saidaLimiteHhmm?.trim() || "";
   if (!janela && !saida) return undefined;
   return slots.map((slot) => {
@@ -303,6 +340,7 @@ export function aplicarLimitesDisponibilidadeNaMatrixRotacao(
   matrix: string[][],
   pessoas: ReadonlyArray<{
     horarioTurno?: string;
+    gradeValor?: string;
     saidaLimiteHhmm?: string;
     isShiftLead?: boolean;
     cargoLideranca?: RotacaoCargoLideranca;
@@ -322,6 +360,7 @@ export function aplicarLimiteSaidaNaMatrixRotacao(
   matrix: string[][],
   pessoas: ReadonlyArray<{
     horarioTurno?: string;
+    gradeValor?: string;
     saidaLimiteHhmm?: string;
     isShiftLead?: boolean;
     cargoLideranca?: RotacaoCargoLideranca;
@@ -329,6 +368,42 @@ export function aplicarLimiteSaidaNaMatrixRotacao(
   turnoInicio: string,
 ): string[][] {
   return aplicarLimitesDisponibilidadeNaMatrixRotacao(slots, matrix, pessoas, turnoInicio);
+}
+
+/**
+ * Troca quem ocupa cada linha da prévia: os padrões de mesa (matrix) ficam no índice;
+ * só as pessoas (`gps`) trocam de lugar — assim quem vai para a linha da Amanda herda 6130….
+ * Reaplica X fora da janela da liderança / saída CT; X órfão do ocupante anterior vira Break.
+ */
+export function trocarPessoasLinhasPreviaRotacao(opts: {
+  gps: RotacaoGpPool[];
+  matrix: string[][];
+  fromIndex: number;
+  toIndex: number;
+  slots: string[];
+  turnoInicio: string;
+}): { gps: RotacaoGpPool[]; matrix: string[][] } | null {
+  const { fromIndex: a, toIndex: b, slots, turnoInicio } = opts;
+  if (a === b) return null;
+  if (a < 0 || b < 0 || a >= opts.gps.length || b >= opts.gps.length) return null;
+  if (opts.matrix.length !== opts.gps.length) return null;
+
+  const gps = opts.gps.map((g) => ({ ...g }));
+  const tmp = gps[a]!;
+  gps[a] = gps[b]!;
+  gps[b] = tmp;
+
+  const masks = gps.map((p) => disponivelPorSlotPessoaRotacao(slots, p, turnoInicio));
+  const matrix = opts.matrix.map((row, i) => {
+    const mask = masks[i];
+    return row.map((val, si) => {
+      if (mask && mask[si] === false) return "X";
+      if (val === "X" && (!mask || mask[si] === true)) return "Break";
+      return val;
+    });
+  });
+
+  return { gps, matrix };
 }
 
 /** Presença da Escala do Turno (shape mínimo) para filtrar o pool da Rotação no CT. */

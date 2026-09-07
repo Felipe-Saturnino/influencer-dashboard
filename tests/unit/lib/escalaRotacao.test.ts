@@ -6,12 +6,14 @@ import {
   gerarGradeRotacao,
   gerarPatternRotacao,
   gerarSlotsRotacao,
+  janelaHorarioLiderancaRotacao,
   labelsMesasRotacao,
   liderancaCompativelComTurnoRotacao,
   maxSlotsSeguidosAntesBreak,
   parseIntervaloHorarioStaffRotacao,
   ROTACAO_MAX_MESAS_SEGUIDAS,
   slotDentroJanelaHorarioRotacao,
+  trocarPessoasLinhasPreviaRotacao,
   type RotacaoGeracaoPessoa,
   type RotacaoGpPool,
 } from "../../../src/lib/escalaRotacao";
@@ -320,6 +322,42 @@ describe("janela horário liderança na rotação", () => {
     expect(mask![slots.indexOf("21:30")]).toBe(true);
   });
 
+  it("Tarde 15–23 com liderança 08–20 marca X a partir das 20h (mesmo sem horarioTurno no cadastro)", () => {
+    const slots = gerarSlotsRotacao("15:00", "23:00", 30);
+    const mask = disponivelPorSlotPessoaRotacao(
+      slots,
+      { isShiftLead: true, gradeValor: "AFT" },
+      "15:00",
+    );
+    expect(mask![slots.indexOf("15:00")]).toBe(true);
+    expect(mask![slots.indexOf("19:30")]).toBe(true);
+    expect(mask![slots.indexOf("20:00")]).toBe(false);
+    expect(mask![slots.indexOf("22:30")]).toBe(false);
+
+    const matrix = [slots.map(() => "6133")];
+    const out = aplicarLimitesDisponibilidadeNaMatrixRotacao(
+      slots,
+      matrix,
+      [{ isShiftLead: true, horarioTurno: "08-20" }],
+      "15:00",
+    );
+    expect(out[0]![slots.indexOf("19:30")]).toBe("6133");
+    expect(out[0]![slots.indexOf("20:00")]).toBe("X");
+    expect(out[0]![slots.indexOf("22:00")]).toBe("X");
+  });
+
+  it("janelaHorarioLiderancaRotacao usa fallback diurno quando horário ausente", () => {
+    expect(janelaHorarioLiderancaRotacao({ horarioTurno: "08-20" })).toEqual({
+      inicio: "08:00",
+      fim: "20:00",
+    });
+    expect(janelaHorarioLiderancaRotacao({ gradeValor: "NGT" })).toEqual({
+      inicio: "20:00",
+      fim: "08:00",
+    });
+    expect(janelaHorarioLiderancaRotacao({})).toEqual({ inicio: "08:00", fim: "20:00" });
+  });
+
   it("gerador não aloca mesa em slot indisponível da liderança", () => {
     const slots = gerarSlotsRotacao("06:00", "10:00", 30);
     const maskSl = disponivelPorSlotPessoaRotacao(
@@ -368,6 +406,30 @@ describe("gerarPatternRotacao (compat)", () => {
     expect(matrix).toHaveLength(5);
     assertCoberturaTotal(matrix, mesas, 5, 4);
     assertSemMesaConsecutiva(matrix);
+  });
+});
+
+describe("trocarPessoasLinhasPreviaRotacao", () => {
+  it("move a pessoa para a sequência de mesas da outra linha", () => {
+    const slots = ["15:00", "15:30", "16:00"];
+    const amanda = gpFake("a", "Amanda");
+    const maria = gpFake("m", "Maria");
+    const res = trocarPessoasLinhasPreviaRotacao({
+      gps: [amanda, maria],
+      matrix: [
+        ["6130", "6131", "6130"],
+        ["6150", "6134", "6150"],
+      ],
+      fromIndex: 1,
+      toIndex: 0,
+      slots,
+      turnoInicio: "15:00",
+    });
+    expect(res).not.toBeNull();
+    expect(res!.gps[0]!.funcionarioId).toBe("m");
+    expect(res!.gps[1]!.funcionarioId).toBe("a");
+    expect(res!.matrix[0]).toEqual(["6130", "6131", "6130"]);
+    expect(res!.matrix[1]).toEqual(["6150", "6134", "6150"]);
   });
 });
 

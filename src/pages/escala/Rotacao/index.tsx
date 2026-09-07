@@ -709,15 +709,17 @@ export default function EscalaRotacaoPage() {
         ...pessoa,
         falta: false,
         isShiftLead: true,
+        cargoLideranca: pessoa.cargoLideranca ?? "shift_leader",
       },
     ];
     setPoolSl(nextSl);
     setPainelLiderancaAberto(false);
+    // Recalcula o turno inteiro para aplicar X fora da janela 08–20 / 20–08.
     const state = montarGrade({
       slot: slotMin,
       gpsPool: pool,
       slPool: nextSl,
-      preservarPassado: Boolean(previa),
+      preservarPassado: false,
     });
     if (!state) {
       setToast("Liderança incluída na reserva. Ajuste o pool e gere a prévia.");

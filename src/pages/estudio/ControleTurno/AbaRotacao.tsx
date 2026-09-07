@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { GripVertical, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -15,6 +15,7 @@ import {
 } from "../../../lib/filterBarStyles";
 import { labelHorarioTurnoStaffPorValor } from "../../../lib/rhStaffHorarioTurno";
 import {
+  alocarEstudioRotacao,
   anexarCheckinRotacao,
   aplicarLimitesDisponibilidadeNaMatrixRotacao,
   carregarContextoRotacaoDia,
@@ -27,10 +28,12 @@ import {
   indiceProximoSlotRotacao,
   labelCargoLiderancaRotacao,
   labelsMesasRotacao,
+  limparAlocacaoRotacao,
   listarEstudiosAtivosRotacao,
   mapaCoresMesasRotacao,
   publicarRotacao,
   salvarRascunhoRotacao,
+  trocarPessoasLinhasPreviaRotacao,
   turnoAnteriorRotacao,
   type RotacaoCelulaPayload,
   type RotacaoContextoDia,
@@ -79,6 +82,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
   const [ctx, setCtx] = useState<RotacaoContextoDia | null>(null);
   const [pool, setPool] = useState<RotacaoGpPool[]>([]);
   const [poolSl, setPoolSl] = useState<RotacaoGpPool[]>([]);
+  const [poolOutros, setPoolOutros] = useState<RotacaoGpPool[]>([]);
   const [liderancasDia, setLiderancasDia] = useState<RotacaoGpPool[]>([]);
   const [loadingCtx, setLoadingCtx] = useState(true);
   const [erroCtx, setErroCtx] = useState<string | null>(null);
@@ -86,6 +90,9 @@ export function AbaRotacao({ diaIso, turno }: Props) {
   const [slotMin, setSlotMin] = useState(30);
   const [previa, setPrevia] = useState<PreviaState | null>(null);
   const [painelLideranca, setPainelLideranca] = useState(false);
+  const [movendoId, setMovendoId] = useState<string | null>(null);
+  const [dragLinhaIdx, setDragLinhaIdx] = useState<number | null>(null);
+  const [dropLinhaIdx, setDropLinhaIdx] = useState<number | null>(null);
   const [publicando, setPublicando] = useState(false);
   const [erroPub, setErroPub] = useState<string | null>(null);
   const [bannerPub, setBannerPub] = useState<string | null>(null);
@@ -114,6 +121,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       setCtx(null);
       setPool([]);
       setPoolSl([]);
+      setPoolOutros([]);
       setLiderancasDia([]);
       setPainelLideranca(false);
       setPrevia(null);
@@ -157,6 +165,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       setCtx(null);
       setPool([]);
       setPoolSl([]);
+      setPoolOutros([]);
       setLiderancasDia([]);
       return;
     }
@@ -168,6 +177,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       setCtx(null);
       setPool([]);
       setPoolSl([]);
+      setPoolOutros([]);
       setLiderancasDia([]);
       return;
     }
@@ -178,13 +188,24 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       presencaAnterior: presencaAnt,
       gpsTurnoAnteriorMesmoEstudio: resAnt.ok ? resAnt.data.gps : [],
     });
+    const outrosFiltrados = filtrarPoolRotacaoPorPresencaCt({
+      gps: res.data.gpsOutros,
+      presencaAtual,
+      presencaAnterior: [],
+      gpsTurnoAnteriorMesmoEstudio: [],
+    });
 
-    const todos = [...gpsFiltrados, ...res.data.shiftLeads, ...res.data.liderancas];
+    const todos = [
+      ...gpsFiltrados,
+      ...outrosFiltrados,
+      ...res.data.shiftLeads,
+      ...res.data.liderancas,
+    ];
     const comCheckin = await anexarCheckinRotacao(diaIso, todos);
     if (gen !== loadGen.current) return;
     const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
     const limById = new Map(
-      gpsFiltrados
+      [...gpsFiltrados, ...outrosFiltrados]
         .filter((g) => g.saidaLimiteHhmm)
         .map((g) => [g.funcionarioId, g.saidaLimiteHhmm!] as const),
     );
@@ -201,6 +222,16 @@ export function AbaRotacao({ diaIso, turno }: Props) {
     );
     // Liderança (SL/SM) só entra via «Incluir Liderança» — nunca no pool automático.
     setPoolSl([]);
+    setPoolOutros(
+      outrosFiltrados.map((g) => {
+        const base = byId.get(g.funcionarioId) ?? g;
+        return {
+          ...base,
+          isShiftLead: false,
+          saidaLimiteHhmm: limById.get(g.funcionarioId) ?? g.saidaLimiteHhmm,
+        };
+      }),
+    );
     setLiderancasDia(
       res.data.liderancas.map((g) => ({ ...(byId.get(g.funcionarioId) ?? g), isShiftLead: true })),
     );
@@ -216,6 +247,17 @@ export function AbaRotacao({ diaIso, turno }: Props) {
     const idsNoPool = new Set(poolSl.map((g) => g.funcionarioId));
     return liderancasDia.filter((g) => !idsNoPool.has(g.funcionarioId));
   }, [liderancasDia, poolSl]);
+
+  const estudiosDestino = useMemo(
+    () => estudios.filter((e) => e.slug !== estudio),
+    [estudios, estudio],
+  );
+
+  const nomeEstudioBySlug = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of estudios) m.set(e.slug, e.nome);
+    return m;
+  }, [estudios]);
 
   const mesaTipoMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -394,17 +436,94 @@ export function AbaRotacao({ diaIso, turno }: Props) {
 
   const handleIncluirLideranca = (pessoa: RotacaoGpPool) => {
     if (poolSl.some((g) => g.funcionarioId === pessoa.funcionarioId)) return;
-    const nextSl = [...poolSl, { ...pessoa, falta: false, isShiftLead: true }];
+    const nextSl = [
+      ...poolSl,
+      {
+        ...pessoa,
+        falta: false,
+        isShiftLead: true,
+        cargoLideranca: pessoa.cargoLideranca ?? "shift_leader",
+      },
+    ];
     setPoolSl(nextSl);
     setPainelLideranca(false);
+    // Recalcula o turno inteiro para aplicar X fora da janela 08–20 / 20–08.
     const state = montarGrade({
       slot: slotMin,
       gpsPool: pool,
       slPool: nextSl,
-      preservarPassado: Boolean(previa),
+      preservarPassado: false,
     });
     if (!state) return;
     aplicarPrevia(state);
+  };
+
+  const handleMover = async (funcionarioId: string, destinoSlug: string) => {
+    if (!destinoSlug) return;
+    setMovendoId(funcionarioId);
+    setErroPub(null);
+    const res = await alocarEstudioRotacao({
+      diaIso,
+      turno: turnoKey,
+      funcionarioId,
+      estudioSlug: destinoSlug,
+    });
+    setMovendoId(null);
+    if (!res.ok) {
+      setErroPub(res.erro);
+      return;
+    }
+    void carregarCtx();
+  };
+
+  const handleTrazer = async (funcionarioId: string) => {
+    if (!estudio) return;
+    setMovendoId(funcionarioId);
+    setErroPub(null);
+    const res = await alocarEstudioRotacao({
+      diaIso,
+      turno: turnoKey,
+      funcionarioId,
+      estudioSlug: estudio,
+    });
+    setMovendoId(null);
+    if (!res.ok) {
+      setErroPub(res.erro);
+      return;
+    }
+    void carregarCtx();
+  };
+
+  const handleRestaurar = async (funcionarioId: string) => {
+    setMovendoId(funcionarioId);
+    setErroPub(null);
+    const res = await limparAlocacaoRotacao({ diaIso, turno: turnoKey, funcionarioId });
+    setMovendoId(null);
+    if (!res.ok) {
+      setErroPub(res.erro);
+      return;
+    }
+    void carregarCtx();
+  };
+
+  const handleTrocarLinhasPrevia = (fromIndex: number, toIndex: number) => {
+    if (!previa || !ctx || !podeLideranca) return;
+    const trocado = trocarPessoasLinhasPreviaRotacao({
+      gps: previa.gps,
+      matrix: previa.matrix,
+      fromIndex,
+      toIndex,
+      slots: previa.slots,
+      turnoInicio: ctx.turnoInicio,
+    });
+    if (!trocado) return;
+    const next: PreviaState = {
+      ...previa,
+      gps: trocado.gps,
+      matrix: trocado.matrix,
+    };
+    setPrevia(next);
+    persistirRascunho(next);
   };
 
   const handlePublicar = async () => {
@@ -646,7 +765,9 @@ export function AbaRotacao({ diaIso, turno }: Props) {
                 </span>
               ) : pool.length === 0 && poolSl.length === 0 ? (
                 <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum Game Presenter escalado neste turno/estúdio.
+                  {poolOutros.length > 0
+                    ? "Nenhum Game Presenter neste estúdio — traga de outro estúdio abaixo para cobrir a prévia."
+                    : "Nenhum Game Presenter escalado neste turno/estúdio."}
                 </span>
               ) : (
                 <>
@@ -655,12 +776,22 @@ export function AbaRotacao({ diaIso, turno }: Props) {
                       key={g.funcionarioId}
                       gp={g}
                       t={t}
+                      brandPrimary={brand.primary}
+                      estudiosDestino={estudiosDestino}
+                      movendo={movendoId === g.funcionarioId}
+                      podeMover={podeLideranca}
                       onToggleFalta={() => {
                         setPool((prev) =>
                           prev.map((x) => (x.funcionarioId === g.funcionarioId ? { ...x, falta: !x.falta } : x)),
                         );
                         setPrevia(null);
                       }}
+                      onMover={(slug) => void handleMover(g.funcionarioId, slug)}
+                      onRestaurar={
+                        g.alocacaoOrigem === "manual"
+                          ? () => void handleRestaurar(g.funcionarioId)
+                          : undefined
+                      }
                     />
                   ))}
                   {poolSl.map((g) => (
@@ -680,6 +811,87 @@ export function AbaRotacao({ diaIso, turno }: Props) {
                 </>
               )}
             </div>
+
+            {poolOutros.length > 0 && podeLideranca ? (
+              <div style={{ marginTop: 14 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    marginBottom: 8,
+                    fontFamily: FONT.body,
+                    color: t.textMuted,
+                  }}
+                >
+                  Trazer de outro estúdio
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {poolOutros.map((g) => {
+                    const estLabel =
+                      nomeEstudioBySlug.get((g.estudioEfetivo ?? "").trim()) ||
+                      g.estudioEfetivo ||
+                      "—";
+                    return (
+                      <div
+                        key={`out-${g.funcionarioId}`}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border: `1px solid ${t.cardBorder}`,
+                          background: t.inputBg,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          alignItems: "center",
+                          gap: 8,
+                          minWidth: 180,
+                        }}
+                      >
+                        <span style={{ fontFamily: FONT.body, fontSize: 13, color: t.text }}>
+                          <span style={{ fontWeight: 700 }}>{g.nickname}</span>
+                          <span style={{ color: t.textMuted }}> ({g.nomeExibicao})</span>
+                          <span style={{ color: t.textMuted, opacity: 0.8 }}> · {estLabel}</span>
+                        </span>
+                        {g.chegou === true || g.chegou === false ? (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "3px 9px",
+                              borderRadius: 20,
+                              border: `1px solid ${g.chegou ? "#22c55e44" : "#e8402544"}`,
+                              background: `${g.chegou ? "#22c55e" : "#e84025"}22`,
+                              color: g.chegou ? "#22c55e" : "#e84025",
+                              fontFamily: FONT.body,
+                            }}
+                          >
+                            {g.chegou ? "Chegou" : "Não chegou"}
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={movendoId === g.funcionarioId}
+                          onClick={() => void handleTrazer(g.funcionarioId)}
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: "4px 10px",
+                            borderRadius: 8,
+                            border: `1px solid ${t.cardBorder}`,
+                            background: t.cardBg,
+                            color: brand.primary,
+                            cursor: movendoId === g.funcionarioId ? "not-allowed" : "pointer",
+                            fontFamily: FONT.body,
+                            opacity: movendoId === g.funcionarioId ? 0.6 : 1,
+                          }}
+                        >
+                          Trazer
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </>
         )}
       </div>
@@ -769,6 +981,18 @@ export function AbaRotacao({ diaIso, turno }: Props) {
           </div>
         ) : (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
+            {podeLideranca ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: t.textMuted,
+                  fontFamily: FONT.body,
+                  marginBottom: 10,
+                }}
+              >
+                Arraste o nome na coluna Equipe para trocar a sequência de mesas com outro prestador.
+              </div>
+            ) : null}
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Pré-visualização da rotação por equipe e slot</caption>
               <thead>
@@ -784,31 +1008,104 @@ export function AbaRotacao({ diaIso, turno }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {previa.gps.map((g, i) => (
-                  <tr key={g.funcionarioId} style={{ background: dataTable.zebraRow(i) }}>
-                    <td style={dataTable.tdSticky()}>
-                      <div style={{ fontWeight: 700, fontSize: 13, fontFamily: FONT.body }}>
-                        {g.nomeExibicao}
-                        {g.isShiftLead ? (
-                          <span
-                            style={{
-                              marginLeft: 6,
-                              fontSize: 10,
-                              fontWeight: 800,
-                              letterSpacing: "0.04em",
-                              textTransform: "uppercase",
-                              padding: "2px 6px",
-                              borderRadius: 6,
-                              background: "color-mix(in srgb, #a78bfa 18%, transparent)",
-                              color: "#a78bfa",
-                              border: "1px solid #a78bfa55",
-                            }}
-                          >
-                            SL
-                          </span>
+                {previa.gps.map((g, i) => {
+                  const isDropTarget = dropLinhaIdx === i && dragLinhaIdx !== null && dragLinhaIdx !== i;
+                  const isDragging = dragLinhaIdx === i;
+                  return (
+                  <tr
+                    key={g.funcionarioId}
+                    style={{
+                      background: isDropTarget
+                        ? "color-mix(in srgb, var(--brand-primary, #7c3aed) 12%, transparent)"
+                        : dataTable.zebraRow(i),
+                      opacity: isDragging ? 0.55 : 1,
+                    }}
+                  >
+                    <td
+                      style={{
+                        ...dataTable.tdSticky(),
+                        cursor: podeLideranca ? "grab" : undefined,
+                        outline: isDropTarget
+                          ? "2px solid var(--brand-primary, #7c3aed)"
+                          : undefined,
+                        outlineOffset: -2,
+                      }}
+                      draggable={podeLideranca}
+                      onDragStart={(e) => {
+                        if (!podeLideranca) return;
+                        setDragLinhaIdx(i);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", String(i));
+                      }}
+                      onDragEnd={() => {
+                        setDragLinhaIdx(null);
+                        setDropLinhaIdx(null);
+                      }}
+                      onDragOver={(e) => {
+                        if (!podeLideranca || dragLinhaIdx === null) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (dropLinhaIdx !== i) setDropLinhaIdx(i);
+                      }}
+                      onDragLeave={() => {
+                        if (dropLinhaIdx === i) setDropLinhaIdx(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const raw = e.dataTransfer.getData("text/plain");
+                        const from = Number.parseInt(raw, 10);
+                        setDragLinhaIdx(null);
+                        setDropLinhaIdx(null);
+                        if (!Number.isFinite(from)) return;
+                        handleTrocarLinhasPrevia(from, i);
+                      }}
+                      title={
+                        podeLideranca
+                          ? "Arraste para trocar a sequência de mesas com outro prestador"
+                          : undefined
+                      }
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 6,
+                        }}
+                      >
+                        {podeLideranca ? (
+                          <GripVertical
+                            size={14}
+                            aria-hidden
+                            style={{ marginTop: 2, flexShrink: 0, color: t.textMuted, opacity: 0.7 }}
+                          />
                         ) : null}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13, fontFamily: FONT.body }}>
+                            {g.nomeExibicao}
+                            {g.isShiftLead ? (
+                              <span
+                                style={{
+                                  marginLeft: 6,
+                                  fontSize: 10,
+                                  fontWeight: 800,
+                                  letterSpacing: "0.04em",
+                                  textTransform: "uppercase",
+                                  padding: "2px 6px",
+                                  borderRadius: 6,
+                                  background: "color-mix(in srgb, #a78bfa 18%, transparent)",
+                                  color: "#a78bfa",
+                                  border: "1px solid #a78bfa55",
+                                }}
+                              >
+                                SL
+                              </span>
+                            ) : null}
+                          </div>
+                          <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                            {g.nickname}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>{g.nickname}</div>
                     </td>
                     {(previa.matrix[i] ?? []).map((valor, ci) => (
                       <td key={ci} style={dataTable.tdCenter}>
@@ -820,7 +1117,8 @@ export function AbaRotacao({ diaIso, turno }: Props) {
                       </td>
                     ))}
                   </tr>
-                ))}
+                  );
+                })}
                 {previa.faltosos.map((g, i) => {
                   const rowIndex = previa.gps.length + i;
                   return (
@@ -929,12 +1227,24 @@ function PoolChip({
   gp,
   t,
   reserva,
+  brandPrimary,
+  estudiosDestino,
+  movendo,
+  podeMover,
   onToggleFalta,
+  onMover,
+  onRestaurar,
 }: {
   gp: RotacaoGpPool;
   t: ReturnType<typeof useApp>["theme"];
   reserva?: boolean;
+  brandPrimary?: string;
+  estudiosDestino?: EstudioOpt[];
+  movendo?: boolean;
+  podeMover?: boolean;
   onToggleFalta: () => void;
+  onMover?: (destinoSlug: string) => void;
+  onRestaurar?: () => void;
 }) {
   const badgeOk = gp.chegou === true;
   const showBadge = gp.chegou === true || gp.chegou === false;
@@ -994,6 +1304,56 @@ function PoolChip({
           </span>
         ) : null}
       </div>
+      {!reserva && podeMover && onMover && (estudiosDestino?.length ?? 0) > 0 ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 8 }}>
+          <select
+            aria-label={`Mover ${gp.nomeExibicao} de estúdio`}
+            disabled={movendo}
+            defaultValue=""
+            onChange={(e) => {
+              const v = e.target.value;
+              e.target.value = "";
+              if (v) onMover(v);
+            }}
+            style={{
+              fontSize: 11,
+              padding: "4px 8px",
+              borderRadius: 8,
+              border: `1px solid ${t.cardBorder}`,
+              background: t.cardBg,
+              color: t.text,
+              fontFamily: FONT.body,
+              maxWidth: 160,
+            }}
+          >
+            <option value="">Mover estúdio…</option>
+            {estudiosDestino!.map((e) => (
+              <option key={e.slug} value={e.slug}>
+                {e.nome}
+              </option>
+            ))}
+          </select>
+          {onRestaurar ? (
+            <button
+              type="button"
+              disabled={movendo}
+              onClick={onRestaurar}
+              style={{
+                fontSize: 11,
+                border: 0,
+                background: "transparent",
+                color: brandPrimary ?? "var(--brand-primary, #7c3aed)",
+                cursor: movendo ? "not-allowed" : "pointer",
+                fontFamily: FONT.body,
+                fontWeight: 600,
+                padding: 0,
+              }}
+            >
+              Restaurar estúdio
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
