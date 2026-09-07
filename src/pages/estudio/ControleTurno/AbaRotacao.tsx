@@ -1162,6 +1162,7 @@ function BlocoRotacaoEstudio({
                           <td
                             style={{
                               ...dataTable.tdSticky(),
+                              textAlign: "center",
                               cursor: podeDrag ? "grab" : undefined,
                               outline: isDropTarget
                                 ? "2px solid var(--brand-primary, #7c3aed)"
@@ -1203,15 +1204,24 @@ function BlocoRotacaoEstudio({
                                 : undefined
                             }
                           >
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 6,
+                                width: "100%",
+                                textAlign: "center",
+                              }}
+                            >
                               {podeDrag ? (
                                 <GripVertical
                                   size={14}
                                   aria-hidden
-                                  style={{ marginTop: 2, flexShrink: 0, color: t.textMuted, opacity: 0.7 }}
+                                  style={{ flexShrink: 0, color: t.textMuted, opacity: 0.7 }}
                                 />
                               ) : null}
-                              <div style={{ minWidth: 0 }}>
+                              <div style={{ minWidth: 0, textAlign: "center" }}>
                                 <div style={{ fontWeight: 700, fontSize: 13, fontFamily: FONT.body }}>
                                   {g.nomeExibicao}
                                   {"isShiftLead" in g && g.isShiftLead ? (
@@ -1255,12 +1265,14 @@ function BlocoRotacaoEstudio({
                       const rowIndex = gradeGps.length + i;
                       return (
                         <tr key={`f-${g.funcionarioId}`} style={{ background: dataTable.zebraRow(rowIndex) }}>
-                          <td style={dataTable.tdSticky()}>
-                            <div style={{ fontWeight: 700, fontSize: 13, fontFamily: FONT.body }}>
-                              {g.nomeExibicao}
-                            </div>
-                            <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
-                              {g.nickname}
+                          <td style={{ ...dataTable.tdSticky(), textAlign: "center" }}>
+                            <div style={{ textAlign: "center" }}>
+                              <div style={{ fontWeight: 700, fontSize: 13, fontFamily: FONT.body }}>
+                                {g.nomeExibicao}
+                              </div>
+                              <div style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body }}>
+                                {g.nickname}
+                              </div>
                             </div>
                           </td>
                           {gradeSlots.map((s) => (
