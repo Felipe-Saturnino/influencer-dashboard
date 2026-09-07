@@ -62,13 +62,16 @@ export interface PosicaoMesaDedicadaRow {
   cda: number | null
 }
 
-/** Linha Mesas Network: posição no lobby Blaze / CDA / Esportiva / Jonbet (null → —). */
+/** Linha Mesas Network: posição no lobby por operadora parceira (null → —). */
 export interface PosicaoMesaNetworkRow {
   mesa: string
   blaze: number | null
   cda: number | null
   esportiva: number | null
   jonbet: number | null
+  bateu: number | null
+  rico: number | null
+  brx: number | null
 }
 
 export interface RelatorioDiretoriaData {
@@ -88,7 +91,15 @@ export interface RelatorioDiretoriaData {
 }
 
 /** Slugs de lobby usados no bloco Posicionamento. */
-const LOBBY_SLUGS = ['blaze', 'casa_apostas', 'esportiva_bet', 'jonbet'] as const
+const LOBBY_SLUGS = [
+  'blaze',
+  'casa_apostas',
+  'esportiva_bet',
+  'jonbet',
+  'bateu_bet',
+  'rico_bet',
+  'brx_bet',
+] as const
 
 /**
  * Estúdio network provisório cadastrado como operadora — não entra no consolidado
@@ -650,6 +661,9 @@ export async function fetchRelatorioDiretoriaData(
   const cdaIdx = idxPorSlug.get('casa_apostas')!
   const esportivaIdx = idxPorSlug.get('esportiva_bet')!
   const jonbetIdx = idxPorSlug.get('jonbet')!
+  const bateuIdx = idxPorSlug.get('bateu_bet')!
+  const ricoIdx = idxPorSlug.get('rico_bet')!
+  const brxIdx = idxPorSlug.get('brx_bet')!
 
   const mesasDedicadas: PosicaoMesaDedicadaRow[] = [...dedicadasPorNome.entries()]
     .sort((a, b) => a[1].display.localeCompare(b[1].display, 'pt-BR'))
@@ -667,6 +681,9 @@ export async function fetchRelatorioDiretoriaData(
       cda: posicaoLobbyPorSpinIds(cdaIdx, [id]),
       esportiva: posicaoLobbyPorSpinIds(esportivaIdx, [id]),
       jonbet: posicaoLobbyPorSpinIds(jonbetIdx, [id]),
+      bateu: posicaoLobbyPorSpinIds(bateuIdx, [id]),
+      rico: posicaoLobbyPorSpinIds(ricoIdx, [id]),
+      brx: posicaoLobbyPorSpinIds(brxIdx, [id]),
     }))
 
   return {

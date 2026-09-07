@@ -279,8 +279,8 @@
 }
 
 /**
- * Overview Spin → Posicionamento (Todas Operadoras): 4 cards de operadora.
- * Desktop: no máximo 2 colunas (2×2). Mobile: 1 coluna. Evita auto-fit em 4 colunas estreitas.
+ * Overview Spin → Posicionamento (Todas Operadoras): cards por operadora com monitor.
+ * Desktop: no máximo 2 colunas. Mobile: 1 coluna.
  */
 .app-grid-pos-operadoras {
   display: grid;

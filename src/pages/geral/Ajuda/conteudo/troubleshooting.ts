@@ -104,7 +104,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet estão OK. Com **Todas Operadoras**, as quatro parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
+          "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet / Bateu Bet / Rico Bet / BRX Bet estão OK. Com **Todas Operadoras**, as sete parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
@@ -1389,7 +1389,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Painel de Notícias RSS**, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet operam via job automatizado externo e não têm ação disponível na interface.\n\nSe a TV em `/painel-noticias` ficar vazia ou em «Aguardando notícias…», use **Sync** na linha Painel de Notícias (RSS) e confira se o job horário está ativo.",
+          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Painel de Notícias RSS**, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet e Lobby BRX Bet operam via job automatizado externo e não têm ação disponível na interface.\n\nSe a TV em `/painel-noticias` ficar vazia ou em «Aguardando notícias…», use **Sync** na linha Painel de Notícias (RSS) e confira se o job horário está ativo.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
