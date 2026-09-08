@@ -804,11 +804,9 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
           dir,
         );
       if (col === "status") {
-        return compareLocaleTexto(
-          a.status === "aplicado" ? "Aplicado" : "Revisar",
-          b.status === "aplicado" ? "Aplicado" : "Revisar",
-          dir,
-        );
+        const labelFb = (s: typeof a.status) =>
+          s === "aplicado" ? "Aplicado" : s === "rejeitado" ? "Rejeitado" : "Revisar";
+        return compareLocaleTexto(labelFb(a.status), labelFb(b.status), dir);
       }
       if (col === "lideranca")
         return compareLocaleTexto(a.lideranca_nome || "", b.lideranca_nome || "", dir);
@@ -1576,6 +1574,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           {f.status === "aplicado" ? (
                             <StatusPill label="Aplicado" color="#22c55e" />
+                          ) : f.status === "rejeitado" ? (
+                            <StatusPill label="Rejeitado" color="#e84025" />
                           ) : (
                             <StatusPill label="Revisar" color="#f59e0b" />
                           )}
@@ -2282,6 +2282,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <CampoDetalhe label="Status">
                 {verFeedback.status === "aplicado" ? (
                   <StatusPill label="Aplicado" color="#22c55e" />
+                ) : verFeedback.status === "rejeitado" ? (
+                  <StatusPill label="Rejeitado" color="#e84025" />
                 ) : (
                   <StatusPill label="Revisar" color="#f59e0b" />
                 )}

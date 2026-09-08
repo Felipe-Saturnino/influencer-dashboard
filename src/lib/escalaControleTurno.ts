@@ -13,7 +13,7 @@ export type CtFeedbackRecomendacao =
   | "notif_descumprimento"
   | "notif_suspensao"
   | "persistencia";
-export type CtFeedbackStatus = "aplicado" | "revisar";
+export type CtFeedbackStatus = "aplicado" | "revisar" | "rejeitado";
 export type CtManutTipo = "ti" | "limpeza" | "tech_ops";
 export type CtManutStatus = "aberto" | "em_andamento" | "concluido" | "cancelado";
 export type CtRelatorioStatus = "rascunho" | "publicado";
@@ -617,6 +617,9 @@ export async function updateFeedback(input: {
   if (input.status === "aplicado") {
     payload.aplicado_por_user_id = uid;
     payload.aplicado_por_nome = getCurrentUserNome(input.aplicadoPorNome);
+  } else if (input.status === "rejeitado") {
+    payload.aplicado_por_user_id = null;
+    payload.aplicado_por_nome = "";
   }
   const { error } = await supabase.from("escala_ct_feedback").update(payload).eq("id", input.id);
   if (error) {

@@ -16,6 +16,8 @@ import {
   fmtDataCurta,
   fmtPeriodoAtestadoSolicitacao,
   labelAbonoRemunerado,
+  labelFeedbackOrigem,
+  labelFeedbackRecomendacao,
   labelStatusSolicitacao,
   labelTipoSolicitacao,
   RH_SOLICITACAO_ABONO_OPCOES,
@@ -163,13 +165,30 @@ function textoDescricaoSolicitacao(row: RhSolicitacaoRow): string {
   return row.descricao.trim() || "—";
 }
 
+function ehReuniao(tipo: RhSolicitacaoRow["tipo"]): boolean {
+  return tipo === "reuniao_rh" || tipo === "reuniao_lideranca";
+}
+
 function corpoAbaSolicitacaoVer(row: RhSolicitacaoRow, t: Theme) {
   return (
     <>
       <LinhaInfo label="Data da solicitação" valor={fmtDataSolicitacao(row.created_at)} t={t} />
-      <LinhaInfo label="Solicitante" valor={nomeSolicitante(row)} t={t} />
+      <LinhaInfo
+        label={row.tipo === "feedback" ? "Prestador" : "Solicitante"}
+        valor={nomeSolicitante(row)}
+        t={t}
+      />
       <LinhaInfo label="Tipo de solicitação" valor={labelTipoSolicitacao(row.tipo)} t={t} />
-      <LinhaInfo label="Descrição" valor={textoDescricaoSolicitacao(row)} t={t} />
+      {row.tipo === "feedback" ? (
+        <>
+          <LinhaInfo label="Recomendação" valor={labelFeedbackRecomendacao(row.feedback_recomendacao)} t={t} />
+          <LinhaInfo label="Liderança" valor={row.lideranca_nome?.trim() || "—"} t={t} />
+          <LinhaInfo label="Origem" valor={labelFeedbackOrigem(row.feedback_origem)} t={t} />
+          <LinhaInfo label="Observação" valor={textoDescricaoSolicitacao(row)} t={t} />
+        </>
+      ) : (
+        <LinhaInfo label="Descrição" valor={textoDescricaoSolicitacao(row)} t={t} />
+      )}
       {row.tipo === "atestado" ? (
         <>
           <LinhaInfo
@@ -205,7 +224,11 @@ function corpoDetalhes(row: RhSolicitacaoRow, t: Theme) {
   return (
     <>
       <LinhaInfo label="Data da solicitação" valor={fmtDataSolicitacao(row.created_at)} t={t} />
-      <LinhaInfo label="Solicitante" valor={nomeSolicitante(row)} t={t} />
+      <LinhaInfo
+        label={row.tipo === "feedback" ? "Prestador" : "Solicitante"}
+        valor={nomeSolicitante(row)}
+        t={t}
+      />
       <LinhaInfo label="Tipo de solicitação" valor={labelTipoSolicitacao(row.tipo)} t={t} />
       <div style={{ marginBottom: 12 }}>
         <div
@@ -222,7 +245,14 @@ function corpoDetalhes(row: RhSolicitacaoRow, t: Theme) {
         </div>
         {badgeStatus(row.status)}
       </div>
-      {row.tipo === "reuniao_rh" ? (
+      {row.tipo === "feedback" ? (
+        <>
+          <LinhaInfo label="Recomendação" valor={labelFeedbackRecomendacao(row.feedback_recomendacao)} t={t} />
+          <LinhaInfo label="Liderança" valor={row.lideranca_nome?.trim() || "—"} t={t} />
+          <LinhaInfo label="Origem" valor={labelFeedbackOrigem(row.feedback_origem)} t={t} />
+          <LinhaInfo label="Observação" valor={row.descricao.trim() || "—"} t={t} />
+        </>
+      ) : ehReuniao(row.tipo) ? (
         <>
           <LinhaInfo label="Data da reunião" valor={fmtDataCurta(row.reuniao_dia_iso)} t={t} />
           <LinhaInfo label="Turno" valor={turnoReuniaoRh(row)} t={t} />
@@ -243,7 +273,9 @@ function corpoDetalhes(row: RhSolicitacaoRow, t: Theme) {
       ) : null}
       {row.tipo === "vagas" ? <LinhaInfo label="Vaga" valor={tituloVaga(row)} t={t} /> : null}
       {row.observacao_rh?.trim() ? <LinhaInfo label="Observação do RH" valor={row.observacao_rh} t={t} /> : null}
-      {row.status === "aprovado" && row.tipo === "atestado" && row.abono_remunerado ? (
+      {(row.status === "aprovado" || row.status === "aplicado") &&
+      row.tipo === "atestado" &&
+      row.abono_remunerado ? (
         <LinhaInfo label="Abono remunerado?" valor={labelAbonoRemunerado(row.abono_remunerado)} t={t} />
       ) : null}
       {row.atendido_em ? <LinhaInfo label="Atendida em" valor={fmtDataSolicitacao(row.atendido_em)} t={t} /> : null}
@@ -267,7 +299,7 @@ export function ModalVerSolicitacao({ open, onClose, row, t }: ModalVerSolicitac
 
   if (!open || !row) return null;
 
-  const comAbas = row.status === "aprovado" || row.status === "rejeitado";
+  const comAbas = row.status === "aprovado" || row.status === "rejeitado" || row.status === "aplicado";
   const tabs = ["solicitacao", "atendimento"] as const;
 
   return (

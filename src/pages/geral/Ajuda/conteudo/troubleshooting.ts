@@ -1814,7 +1814,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Confundi com Solicitações do RH?",
         texto:
-          "A seção **Escala → Solicitações** trata pedidos operacionais de escala (trocas, coberturas). A seção **RH → Solicitações** trata atestados, reuniões com RH e vagas — são páginas distintas no menu.",
+          "A seção **Escala → Solicitações** trata pedidos operacionais de escala (trocas, coberturas). A seção **RH → Solicitações** trata atestados, reuniões, vagas e feedback — são páginas distintas no menu.",
       },
     ],
   },
@@ -1894,12 +1894,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Atestado do Calendário não aparece aqui?",
         texto:
-          "Justificativas **Médico** registradas no Calendário criam solicitação **Atestado** com status **Em análise**. Use o filtro **Tipo de solicitação** e o carrossel **Em análise**. Aguarde alguns segundos e recarregue se acabou de salvar no Calendário.",
+          "Justificativas **Médico** registradas no Calendário criam solicitação **Atestado** com status **Em análise**. Abra a aba **Atestados** e o carrossel **Em análise**. Aguarde alguns segundos e recarregue se acabou de salvar no Calendário.",
+      },
+      {
+        subtitulo: "Feedback do Controle de Turno não aparece?",
+        texto:
+          "Cada feedback registrado em **Controle de Turno → Notificações → Feedbacks** cria uma linha na aba **Feedback** (origem Controle de Turno). **Revisar** no CT = **Em análise** aqui; **Aplicado** é igual nas duas. Confirme a aba **Feedback** e o carrossel de status. Feedback criado só pelo CTA **Registrar Feedback** nesta página **não** aparece no Controle de Turno.",
       },
       {
         subtitulo: "Não consigo atender solicitação?",
         texto:
-          "O ícone **Atender** exige permissão de **Editar** nesta página (RH). Sem Editar, use apenas **Ver**.",
+          "O ícone **Atender** exige permissão de **Editar** nesta página (RH). Com **Ver = Sim** sem Editar não há ícones de ação — use só a leitura da lista. Com Editar, **Atender** só aparece em status **Em análise**.",
+      },
+      {
+        subtitulo: "Não vejo Agendar Reunião no Calendário?",
+        texto:
+          "O CTA **Agendar Reunião** fica na aba **Compromissos**, na mesma linha do filtro de compromissos. Com **Ver = Sim**, ele só aparece quando **Meu Calendário** está selecionado. Com **Próprios** ou **Editar**, permanece disponível na sua visão.",
       },
     ],
   },

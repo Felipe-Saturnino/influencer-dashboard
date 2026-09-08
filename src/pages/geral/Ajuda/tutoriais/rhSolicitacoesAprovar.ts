@@ -17,7 +17,7 @@ export const TUTORIAL_RH_SOLICITACOES_APROVAR: TutorialDef = {
     {
       titulo: "1. Abrir Solicitações",
       texto:
-        "1. No menu, seção RH, clique em Solicitações.\n2. O carrossel de status abre em Em análise — é a fila das solicitações pendentes.\n3. Atestados entram sozinhos nesta fila quando alguém registra justificativa Médico no Calendário (Controle de Presença), já com status Em análise.\n4. Use o filtro Tipo de solicitação para restringir a Atestado, se quiser.",
+        "1. No menu, seção RH, clique em Solicitações.\n2. O carrossel de status abre em Em análise — é a fila das solicitações pendentes.\n3. Na segunda linha da barra, escolha a aba **Atestados**.\n4. Atestados entram sozinhos nesta fila quando alguém registra justificativa Médico no Calendário (Controle de Presença), já com status Em análise.",
       imagens: [
         {
           src: `${IMG}/01-lista-em-analise.png`,
@@ -53,9 +53,9 @@ export const TUTORIAL_RH_SOLICITACOES_APROVAR: TutorialDef = {
         "1. Com Abono remunerado = SIM, no Calendário (Controle de Presença) o Status fica Abonado só nos dias que eram Escalado, Troca ou Compra. Os demais dias do período mantêm o Status que já tinham.\n2. Com Abono remunerado = NÃO, o Status fica Atestado em todos os dias do período.\n3. Em ambos os casos, a Escala grava Atestado em todo o período — inclusive dias de Folga ou Venda.\n4. Vendas de Folga ainda abertas no Marketplace nesse intervalo são canceladas.",
     },
     {
-      titulo: "5. Filtrar Reunião com RH",
+      titulo: "5. Abrir a aba Reuniões",
       texto:
-        "1. Na barra de filtros, em Tipo de solicitação, escolha Reunião com RH.\n2. Em Em análise, use Atender na linha desejada — o fluxo é o mesmo do atestado.\n3. Na aba Dados, confira data da reunião, turno e motivo.",
+        "1. Na barra de filtros, clique na aba **Reuniões**.\n2. Em Em análise, use Atender na linha desejada — o fluxo é o mesmo do atestado.\n3. Na aba Dados, confira data da reunião, turno e motivo.",
       imagens: [
         {
           src: `${IMG}/04-filtro-reuniao-rh.png`,

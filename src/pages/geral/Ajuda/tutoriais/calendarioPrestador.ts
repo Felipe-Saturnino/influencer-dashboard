@@ -36,7 +36,7 @@ export const TUTORIAL_CALENDARIO_PRESTADOR: TutorialDef = {
     {
       titulo: "3. Solicitar uma reunião",
       texto:
-        "1. Na barra superior do Calendário, clique em Nova Agenda.\n2. Em Com quem será a reunião, escolha uma opção: Shift Lead, Gerente de Operações, RH ou Figurino.\n3. Em Motivo da Reunião, explique o assunto que deseja tratar.\n4. Em Data da reunião, escolha uma data futura em que você esteja escalado. As folgas não aparecem nessa lista.\n5. Clique em Agendar reunião — ou em Cancelar para sair sem registrar.",
+        "1. Na aba **Compromissos**, na mesma linha do filtro de compromissos, clique em **Agendar Reunião**.\n2. Em Com quem será a reunião, escolha uma opção: Shift Lead, Gerente de Operações, RH ou Figurino.\n3. Em Motivo da Reunião, explique o assunto que deseja tratar.\n4. Em Data da reunião, escolha uma data futura em que você esteja escalado. As folgas não aparecem nessa lista.\n5. Clique em **Agendar** — ou feche o modal pelo X para sair sem registrar.\n6. Com permissão **Ver = Sim**, o botão só aparece quando **Meu Calendário** está selecionado.",
       imagens: [
         {
           src: `${IMG}/02-agendar-reuniao.png`,
