@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_fechamento_mesa (
   mesa_id                     uuid NOT NULL REFERENCES public.mesas_spin_cadastro (id) ON DELETE RESTRICT,
   hora_fechamento             time NOT NULL,
   hora_reabertura             time,
+  data_reabertura             date,
   nao_reaberta                boolean NOT NULL DEFAULT true,
   observacao                  text NOT NULL,
   lideranca_fechamento_user_id uuid REFERENCES auth.users (id),
@@ -190,8 +191,13 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_fechamento_mesa (
   updated_at                  timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT escala_ct_fechamento_obs_chk CHECK (btrim(observacao) <> ''),
   CONSTRAINT escala_ct_fechamento_reab_chk CHECK (
-    (nao_reaberta = true AND hora_reabertura IS NULL)
-    OR (nao_reaberta = false AND hora_reabertura IS NOT NULL)
+    (nao_reaberta = true AND hora_reabertura IS NULL AND data_reabertura IS NULL)
+    OR (
+      nao_reaberta = false
+      AND hora_reabertura IS NOT NULL
+      AND data_reabertura IS NOT NULL
+      AND data_reabertura >= data_registro
+    )
   )
 );
 
@@ -202,9 +208,12 @@ CREATE INDEX IF NOT EXISTS escala_ct_fechamento_mesa_idx
 CREATE INDEX IF NOT EXISTS escala_ct_fechamento_abertos_idx
   ON public.escala_ct_fechamento_mesa (data_registro)
   WHERE nao_reaberta = true;
+CREATE INDEX IF NOT EXISTS escala_ct_fechamento_intervalo_idx
+  ON public.escala_ct_fechamento_mesa (data_registro, data_reabertura);
 
 COMMENT ON TABLE public.escala_ct_fechamento_mesa IS
-  'Controle de Turno → Notificações: fechamento/reabertura de mesa. Persiste nos dias seguintes enquanto nao_reaberta.';
+  'Controle de Turno → Notificações: fechamento/reabertura de mesa. Visível em cada dia D com data_registro ≤ D ≤ data_reabertura (ou aberto se nao_reaberta).';
+
 
 -- ─── 5) Ausências ────────────────────────────────────────────────────────────
 

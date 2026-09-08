@@ -77,7 +77,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 4. Tempo contínuo em mesa **≤ 2h** antes do Break → **4×30 min** ou **6×20 min**.
 5. **Liderança (SL/SM)** só via **Incluir Liderança**; mínimo de mesas; janela **08h–20h** / **20h–08h** → **X** fora da janela.
 6. Slot padrão **30 min**; toggle **Rotação de 20min** / **Rotação de 30min**.
-
+7. Ordem das linhas de GP na prévia é **aleatória** a cada geração completa (não alfabética), para variar sequência de mesas/breaks entre dias e regenerações. Incluir Liderança e regeneração parcial (slots futuros) **não** reshufflam as linhas.
 ### Check-in e reingresso
 
 - Antes do início: **Não chegou** / falta → regenerar prévia.

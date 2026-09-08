@@ -31,6 +31,8 @@ import {
   createFechamentos,
   createFeedback,
   createManutencao,
+  fechamentoAindaFechadoNoDia,
+  formatDataHoraCt,
   getCurrentUserNome,
   listAusencias,
   listEstudiosAtivos,
@@ -83,7 +85,9 @@ const MANUT_STATUS_LABEL = {
 } as const;
 
 type MesaDraft = {
+  dataFechamento: string;
   fechamento: string;
+  dataReabertura: string;
   reabertura: string;
   naoReaberta: boolean;
   observacao: string;
@@ -111,10 +115,19 @@ function toggleSortDir<T extends string>(
   return { col, dir: prev.col === col && prev.dir === "desc" ? "asc" : "desc" };
 }
 
-function liderancaFechamento(f: CtFechamentoRow): string {
-  return f.nao_reaberta
+function liderancaFechamento(f: CtFechamentoRow, diaIso: string): string {
+  return fechamentoAindaFechadoNoDia(f, diaIso)
     ? f.lideranca_fechamento_nome || "—"
     : f.lideranca_reabertura_nome || f.lideranca_fechamento_nome || "—";
+}
+
+function statusFechamentoNoDia(f: CtFechamentoRow, diaIso: string): "nao_aberta" | "reaberta" {
+  return fechamentoAindaFechadoNoDia(f, diaIso) ? "nao_aberta" : "reaberta";
+}
+
+function textoAberturaNoDia(f: CtFechamentoRow, diaIso: string): string {
+  if (fechamentoAindaFechadoNoDia(f, diaIso)) return "—";
+  return formatDataHoraCt(f.data_reabertura, f.hora_reabertura);
 }
 
 function grupoTimePrestador(time: string): "gp" | "shuffler" | "" {
@@ -713,23 +726,31 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       const { col, dir } = sortFech;
       if (col === "mesa") return compareLocaleTexto(a.mesa_label, b.mesa_label, dir);
       if (col === "horaFechamento")
-        return compareLocaleTexto(a.hora_fechamento || "", b.hora_fechamento || "", dir);
+        return compareLocaleTexto(
+          `${a.data_registro} ${a.hora_fechamento || ""}`,
+          `${b.data_registro} ${b.hora_fechamento || ""}`,
+          dir,
+        );
       if (col === "horaReabertura") {
-        const va = a.nao_reaberta ? "" : a.hora_reabertura || "";
-        const vb = b.nao_reaberta ? "" : b.hora_reabertura || "";
+        const va = fechamentoAindaFechadoNoDia(a, diaIso)
+          ? ""
+          : `${a.data_reabertura || ""} ${a.hora_reabertura || ""}`;
+        const vb = fechamentoAindaFechadoNoDia(b, diaIso)
+          ? ""
+          : `${b.data_reabertura || ""} ${b.hora_reabertura || ""}`;
         return compareLocaleTexto(va, vb, dir);
       }
       if (col === "status") {
         return compareLocaleTexto(
-          a.nao_reaberta ? "Não aberta" : "Reaberta",
-          b.nao_reaberta ? "Não aberta" : "Reaberta",
+          statusFechamentoNoDia(a, diaIso) === "nao_aberta" ? "Não aberta" : "Reaberta",
+          statusFechamentoNoDia(b, diaIso) === "nao_aberta" ? "Não aberta" : "Reaberta",
           dir,
         );
       }
-      return compareLocaleTexto(liderancaFechamento(a), liderancaFechamento(b), dir);
+      return compareLocaleTexto(liderancaFechamento(a, diaIso), liderancaFechamento(b, diaIso), dir);
     });
     return sorted;
-  }, [fechamentos, busca, sortFech]);
+  }, [fechamentos, busca, sortFech, diaIso]);
 
   const ausVisiveis = useMemo(() => {
     const rows = ausencias.filter((a) =>
@@ -861,7 +882,9 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     setFechEditMesaId(row.mesa_id);
     setMesasDraft({
       [row.mesa_id]: {
+        dataFechamento: row.data_registro || diaIso,
         fechamento: row.hora_fechamento,
+        dataReabertura: row.data_reabertura || diaIso,
         reabertura: row.hora_reabertura ?? "",
         naoReaberta: row.nao_reaberta,
         observacao: row.observacao,
@@ -880,7 +903,14 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       }
       return {
         ...prev,
-        [id]: { fechamento: "", reabertura: "", naoReaberta: false, observacao: "" },
+        [id]: {
+          dataFechamento: diaIso,
+          fechamento: "",
+          dataReabertura: diaIso,
+          reabertura: "",
+          naoReaberta: false,
+          observacao: "",
+        },
       };
     });
   }
@@ -893,13 +923,36 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     }
     for (const id of ids) {
       const st = mesasDraft[id]!;
+      if (!st.dataFechamento) {
+        setFechErro("Informe a Data de Fechamento de todas as mesas selecionadas.");
+        return;
+      }
       if (!st.fechamento) {
         setFechErro("Informe a Hora de Fechamento de todas as mesas selecionadas.");
         return;
       }
-      if (!st.naoReaberta && !st.reabertura) {
-        setFechErro("Informe a Hora de Reabertura ou marque que a mesa ainda não foi reaberta.");
-        return;
+      if (!st.naoReaberta) {
+        if (!st.dataReabertura) {
+          setFechErro("Informe a Data de Abertura ou marque que a mesa ainda não foi reaberta.");
+          return;
+        }
+        if (!st.reabertura) {
+          setFechErro("Informe a Hora de Abertura ou marque que a mesa ainda não foi reaberta.");
+          return;
+        }
+        if (st.dataReabertura < st.dataFechamento) {
+          setFechErro("A Data de Abertura deve ser igual ou posterior à Data de Fechamento.");
+          return;
+        }
+        if (
+          st.dataReabertura === st.dataFechamento &&
+          st.reabertura &&
+          st.fechamento &&
+          st.reabertura < st.fechamento
+        ) {
+          setFechErro("No mesmo dia, a Hora de Abertura deve ser igual ou posterior à Hora de Fechamento.");
+          return;
+        }
       }
       if (!st.observacao.trim()) {
         setFechErro("Preencha a Observação com o motivo do fechamento de todas as mesas selecionadas.");
@@ -918,10 +971,13 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
           (!existing ||
             existing.nao_reaberta ||
             existing.hora_reabertura !== st.reabertura ||
+            existing.data_reabertura !== st.dataReabertura ||
             !existing.lideranca_reabertura_nome);
         await updateFechamento({
           id: fechEditId,
+          dataRegistro: st.dataFechamento,
           horaFechamento: st.fechamento,
+          dataReabertura: st.naoReaberta ? null : st.dataReabertura,
           horaReabertura: st.naoReaberta ? null : st.reabertura,
           naoReaberta: st.naoReaberta,
           observacao: st.observacao,
@@ -932,13 +988,14 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         });
       } else {
         await createFechamentos({
-          dataRegistro: diaIso,
           liderancaNome,
           mesas: ids.map((mesaId) => {
             const st = mesasDraft[mesaId]!;
             return {
               mesaId,
+              dataFechamento: st.dataFechamento,
               horaFechamento: st.fechamento,
+              dataReabertura: st.naoReaberta ? null : st.dataReabertura,
               horaReabertura: st.naoReaberta ? null : st.reabertura,
               naoReaberta: st.naoReaberta,
               observacao: st.observacao,
@@ -1225,7 +1282,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                     onSort={(col) => setSortFech((s) => toggleSortDir(s, col))}
                   />
                   <SortTableTh
-                    label="Hora de Fechamento"
+                    label="Fechamento"
                     col="horaFechamento"
                     sortCol={sortFech.col}
                     sortDir={sortFech.dir}
@@ -1234,7 +1291,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                     onSort={(col) => setSortFech((s) => toggleSortDir(s, col))}
                   />
                   <SortTableTh
-                    label="Hora de Reabertura"
+                    label="Abertura"
                     col="horaReabertura"
                     sortCol={sortFech.col}
                     sortDir={sortFech.dir}
@@ -1266,7 +1323,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               <tbody>
                 {fechVisiveis.map((f, i) => {
                   const herdado = (f.data_registro || diaIso) < diaIso;
-                  const lideranca = liderancaFechamento(f);
+                  const aindaFechada = fechamentoAindaFechadoNoDia(f, diaIso);
+                  const lideranca = liderancaFechamento(f, diaIso);
                   const key = `fech-${f.id}`;
                   return (
                     <tr
@@ -1279,11 +1337,13 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                         {f.mesa_label}
                         {herdado ? <TagDiaAnterior t={t} /> : null}
                       </td>
-                      <td style={dataTable.tdCenter}>{f.hora_fechamento || "—"}</td>
-                      <td style={dataTable.tdCenter}>{f.nao_reaberta ? "—" : f.hora_reabertura || "—"}</td>
+                      <td style={dataTable.tdCenter}>
+                        {formatDataHoraCt(f.data_registro, f.hora_fechamento)}
+                      </td>
+                      <td style={dataTable.tdCenter}>{textoAberturaNoDia(f, diaIso)}</td>
                       <td style={dataTable.tdCenter}>
                         <div style={{ display: "flex", justifyContent: "center" }}>
-                          {f.nao_reaberta ? (
+                          {aindaFechada ? (
                             <StatusPill label="Não aberta" color="#f59e0b" />
                           ) : (
                             <StatusPill label="Reaberta" color="#22c55e" />
@@ -1726,6 +1786,24 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   <div className="app-grid-2" style={{ gap: 12, marginBottom: 10 }}>
                     <div>
                       <label style={labelCampoStyle(t)}>
+                        Data de Fechamento
+                        <CampoObrigatorioMark />
+                      </label>
+                      <input
+                        type="date"
+                        value={st.dataFechamento}
+                        onChange={(e) =>
+                          setMesasDraft((prev) => ({
+                            ...prev,
+                            [id]: { ...prev[id]!, dataFechamento: e.target.value },
+                          }))
+                        }
+                        style={inputStyle(t)}
+                        aria-label={`Data de Fechamento — ${mesaLabelFn(id)}`}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelCampoStyle(t)}>
                         Hora de Fechamento
                         <CampoObrigatorioMark />
                       </label>
@@ -1744,7 +1822,26 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                     </div>
                     <div>
                       <label style={labelCampoStyle(t)}>
-                        Hora de Reabertura
+                        Data de Abertura
+                        <CampoObrigatorioMark />
+                      </label>
+                      <input
+                        type="date"
+                        value={st.dataReabertura}
+                        disabled={st.naoReaberta}
+                        onChange={(e) =>
+                          setMesasDraft((prev) => ({
+                            ...prev,
+                            [id]: { ...prev[id]!, dataReabertura: e.target.value },
+                          }))
+                        }
+                        style={{ ...inputStyle(t), opacity: st.naoReaberta ? 0.55 : 1 }}
+                        aria-label={`Data de Abertura — ${mesaLabelFn(id)}`}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelCampoStyle(t)}>
+                        Hora de Abertura
                         <CampoObrigatorioMark />
                       </label>
                       <input
@@ -1758,7 +1855,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                           }))
                         }
                         style={{ ...inputStyle(t), opacity: st.naoReaberta ? 0.55 : 1 }}
-                        aria-label={`Hora de Reabertura — ${mesaLabelFn(id)}`}
+                        aria-label={`Hora de Abertura — ${mesaLabelFn(id)}`}
                       />
                     </div>
                   </div>
@@ -1783,6 +1880,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                             ...prev[id]!,
                             naoReaberta: e.target.checked,
                             reabertura: e.target.checked ? "" : prev[id]!.reabertura,
+                            dataReabertura: e.target.checked ? "" : prev[id]!.dataReabertura || diaIso,
                           },
                         }))
                       }
@@ -1848,13 +1946,16 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   <StatusPill label="Reaberta" color="#22c55e" />
                 )}
               </CampoDetalhe>
-              <CampoDetalhe label="Data do Registro">{formatDiaBr(verFechamento.data_registro)}</CampoDetalhe>
               <CampoDetalhe label="Nome da Mesa">{verFechamento.mesa_nome}</CampoDetalhe>
               <CampoDetalhe label="Jogo">{verFechamento.mesa_jogo}</CampoDetalhe>
               <CampoDetalhe label="Estúdio">{verFechamento.mesa_estudio}</CampoDetalhe>
-              <CampoDetalhe label="Hora de Fechamento">{verFechamento.hora_fechamento || "—"}</CampoDetalhe>
-              <CampoDetalhe label="Hora de Abertura">
-                {verFechamento.nao_reaberta ? "—" : verFechamento.hora_reabertura || "—"}
+              <CampoDetalhe label="Fechamento">
+                {formatDataHoraCt(verFechamento.data_registro, verFechamento.hora_fechamento)}
+              </CampoDetalhe>
+              <CampoDetalhe label="Abertura">
+                {verFechamento.nao_reaberta
+                  ? "—"
+                  : formatDataHoraCt(verFechamento.data_reabertura, verFechamento.hora_reabertura)}
               </CampoDetalhe>
             </div>
             <CampoDetalhe label="Observação">

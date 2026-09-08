@@ -324,13 +324,29 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       gpsPool: RotacaoGpPool[];
       slPool: RotacaoGpPool[];
       preservarPassado: boolean;
+      /** Default true em geração completa; false ao incluir liderança sem reshuffle. */
+      embaralharGps?: boolean;
       previaAtual: PreviaState | null;
       setErro: (msg: string | null) => void;
     }): PreviaState | null => {
       const { ctx } = opts;
       opts.setErro(null);
-      const usedGps = opts.gpsPool.filter((g) => !g.falta);
+      let usedGps = opts.gpsPool.filter((g) => !g.falta);
       const usedSl = opts.slPool.filter((g) => !g.falta);
+      // Sem reshuffle: manter a ordem de linhas da prévia atual (já aleatória).
+      if (opts.embaralharGps === false && opts.previaAtual) {
+        const byId = new Map(usedGps.map((g) => [g.funcionarioId, g]));
+        const ordenados: RotacaoGpPool[] = [];
+        for (const p of opts.previaAtual.gps) {
+          if (p.isShiftLead) continue;
+          const g = byId.get(p.funcionarioId);
+          if (!g) continue;
+          ordenados.push(g);
+          byId.delete(p.funcionarioId);
+        }
+        for (const g of byId.values()) ordenados.push(g);
+        usedGps = ordenados;
+      }
       const numeros = labelsMesasRotacao(ctx.mesas);
       if (!numeros.length) {
         opts.setErro("Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.");
@@ -382,6 +398,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
         slotMinutos: step,
         fromSlotIndex: fromSlot > 0 ? fromSlot : undefined,
         matrixBase,
+        embaralharGps: opts.embaralharGps,
       });
       if (!gerado.ok) {
         opts.setErro(gerado.erro);
@@ -517,6 +534,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       gpsPool: b.pool,
       slPool: nextSl,
       preservarPassado: false,
+      embaralharGps: false,
       previaAtual: b.previa,
       setErro: (msg) => patchBloco(slug, { erroAcao: msg }),
     });

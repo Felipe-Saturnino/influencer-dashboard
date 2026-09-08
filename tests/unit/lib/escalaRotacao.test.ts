@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aplicarLimitesDisponibilidadeNaMatrixRotacao,
   disponivelPorSlotPessoaRotacao,
+  embaralharListaRotacao,
   filtrarPoolRotacaoPorPresencaCt,
   gerarGradeRotacao,
   gerarPatternRotacao,
@@ -406,6 +407,66 @@ describe("gerarPatternRotacao (compat)", () => {
     expect(matrix).toHaveLength(5);
     assertCoberturaTotal(matrix, mesas, 5, 4);
     assertSemMesaConsecutiva(matrix);
+  });
+});
+
+describe("embaralharListaRotacao / ordem aleatória na prévia", () => {
+  it("embaralha com RNG determinístico", () => {
+    const ids = ["a", "b", "c", "d", "e", "f"];
+    let n = 0;
+    const rng = () => {
+      n += 1;
+      return (n % 7) / 7;
+    };
+    const out = embaralharListaRotacao(ids, rng);
+    expect(out).toHaveLength(6);
+    expect([...out].sort()).toEqual([...ids].sort());
+    expect(out.join(",")).not.toBe(ids.join(","));
+  });
+
+  it("gerarGradeRotacao embaralha GPs na geração completa", () => {
+    const mesas = ["1", "2", "3"];
+    const gps: RotacaoGeracaoPessoa[] = ["p1", "p2", "p3", "p4", "p5"].map((id) => ({
+      funcionarioId: id,
+      isShiftLead: false,
+    }));
+    let n = 0;
+    const rng = () => {
+      n += 1;
+      return (n % 11) / 11;
+    };
+    const res = gerarGradeRotacao({
+      mesasLabels: mesas,
+      gps,
+      shiftLeads: [],
+      nSlots: 6,
+      rng,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const ordem = res.pessoas.map((p) => p.funcionarioId);
+    expect(ordem).toHaveLength(5);
+    expect([...ordem].sort()).toEqual(["p1", "p2", "p3", "p4", "p5"]);
+    expect(ordem.join(",")).not.toBe("p1,p2,p3,p4,p5");
+    assertCoberturaTotal(res.matrix, mesas, 5, 4);
+  });
+
+  it("gerarGradeRotacao respeita embaralharGps false", () => {
+    const mesas = ["1", "2", "3"];
+    const gps: RotacaoGeracaoPessoa[] = ["p1", "p2", "p3", "p4"].map((id) => ({
+      funcionarioId: id,
+      isShiftLead: false,
+    }));
+    const res = gerarGradeRotacao({
+      mesasLabels: mesas,
+      gps,
+      shiftLeads: [],
+      nSlots: 4,
+      embaralharGps: false,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.pessoas.map((p) => p.funcionarioId)).toEqual(["p1", "p2", "p3", "p4"]);
   });
 });
 

@@ -140,6 +140,21 @@ function hashRotacaoSeed(s: string): number {
 }
 
 /**
+ * Fisher–Yates. Usado para embaralhar a ordem das linhas de GP na prévia
+ * (evita sequência alfabética fixa dia após dia). `rng` opcional para testes.
+ */
+export function embaralharListaRotacao<T>(lista: T[], rng: () => number = Math.random): T[] {
+  const out = [...lista];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = out[i]!;
+    out[i] = out[j]!;
+    out[j] = tmp;
+  }
+  return out;
+}
+
+/**
  * Cor da célula na grade: base = identidade do jogo;
  * tonalidades distintas por Número da Mesa (evita confusão entre mesas do mesmo jogo).
  */
@@ -765,7 +780,9 @@ export type RotacaoGeracaoResultado = {
  * — 1 GP/SL por mesa;
  * — GP não repete a mesma mesa no slot seguinte (intercala com outras; com 2+ mesas é regra rígida);
  * — GP no máximo ~2h contínuas (4×30 min ou 6×20 min) antes do Break;
- * — Shift Lead entra só para cobrir e faz o mínimo de mesas.
+ * — Shift Lead entra só para cobrir e faz o mínimo de mesas;
+ * — ordem das linhas de GP é **aleatória** em geração completa (não alfabética),
+ *   para não repetir a mesma sequência de mesas/breaks todos os dias.
  */
 export function gerarGradeRotacao(opts: {
   mesasLabels: string[];
@@ -780,9 +797,16 @@ export function gerarGradeRotacao(opts: {
    */
   fromSlotIndex?: number;
   matrixBase?: string[][];
+  /**
+   * Em geração completa (`fromSlot` 0), embaralha a ordem dos GPs (default `true`).
+   * Desligar ao incluir liderança sem querer trocar quem herda cada sequência.
+   */
+  embaralharGps?: boolean;
+  /** RNG opcional (testes). */
+  rng?: () => number;
 }): RotacaoGeracaoResultado {
   const mesas = opts.mesasLabels.filter((m) => m.trim());
-  const gps = opts.gps.filter((p) => !p.isShiftLead);
+  let gps = opts.gps.filter((p) => !p.isShiftLead);
   const shiftLeads = opts.shiftLeads.filter((p) => p.isShiftLead);
   const nSlots = opts.nSlots;
   const slotMin = opts.slotMinutos === 20 ? 20 : 30;
@@ -800,6 +824,11 @@ export function gerarGradeRotacao(opts: {
       ok: false,
       erro: `Pessoas insuficientes (${gps.length} GPs + ${shiftLeads.length} Shift Lead) para cobrir ${mesas.length} mesa(s).`,
     };
+  }
+
+  const deveEmbaralhar = fromSlot === 0 && opts.embaralharGps !== false;
+  if (deveEmbaralhar) {
+    gps = embaralharListaRotacao(gps, opts.rng);
   }
 
   const pessoas: RotacaoGeracaoPessoa[] = [

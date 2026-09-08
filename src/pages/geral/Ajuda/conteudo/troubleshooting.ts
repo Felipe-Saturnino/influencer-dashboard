@@ -1777,6 +1777,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "As abas **Notificações** e **Relatório de Turno** gravam no banco. Confirme permissão de **Criar** / **Editar** em Gestão de Usuários → Permissões → **Controle de Turno** e faça logout e login. Se o erro persistir, entre em contato com o suporte técnico para validar se o schema do Controle de Turno foi aplicado.",
       },
       {
+        subtitulo: "A mesa fechada sumiu nos dias seguintes depois de reabrir?",
+        texto:
+          "O **Fechamento de Mesa** usa data e hora de fechamento e de abertura. O registro deve aparecer em todos os dias entre o fechamento e a abertura (inclusive). Ao reabrir, informe a **Data de Abertura** correta (não só a hora). Se um registro antigo ainda parecer só no dia do fechamento, edite e ajuste a data de abertura — ou confira se a migração `data_reabertura` foi aplicada no banco.",
+      },
+      {
         subtitulo: "A coluna Aprovado continua Não depois de Registrar?",
         texto:
           "É esperado: Falta, Saída Antecipada, Hora Adicional e Registrar Horário **não** marcam **Aprovado**. Use a ação **Aprovar** (ícone de check) quando Entrada e Saída estiverem preenchidas **ou** depois de registrar **Falta**. Sem horários e sem Falta, o botão Aprovar não aparece.",
