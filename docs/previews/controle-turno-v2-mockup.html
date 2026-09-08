@@ -205,6 +205,7 @@
   }
   .pill.ok { background: #22c55e22; color: #166534; border-color: #22c55e44; }
   .pill.warn { background: #f59e0b22; color: #b45309; border-color: #f59e0b44; }
+  .pill.no { background: #e8402522; color: #e84025; border-color: #e8402544; }
   .pill.bad { background: #e8402522; color: #b91c1c; border-color: #e8402544; }
   .pill.neu { background: #6b728022; color: #4b5563; border-color: #6b728044; }
   .pill.info { background: #1e36f822; color: #1e36f8; border-color: #1e36f844; }
@@ -1055,6 +1056,12 @@
           <p class="tit">Feedbacks <span id="fbSub">— 12/08</span></p>
           <button type="button" class="cta" onclick="abrirModalFeedback()">Registrar Feedback</button>
         </div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">
+          Contrato com RH · Solicitações: cada nova linha aqui cria solicitação de Feedback.
+          <strong>Revisar</strong> ↔ Em análise; <strong>Aplicado</strong> igual nas duas.
+          Atendimento em Solicitações (só origem CT): Aprovado → Aplicado; Rejeitado → Rejeitado neste bloco.
+          Ver mock <code>docs/mockups/rh-solicitacoes-abas-mockup.html</code> (aba Feedback + espelho).
+        </p>
         <div class="tw">
           <table>
             <thead>
@@ -1978,8 +1985,8 @@
     var reg = f.dataRegistro || dia;
     if (reg > dia) return false;
     if (reg === dia) return true;
-    /* dias seguintes: só se Status ≠ Aplicado */
-    return f.status !== "aplicado";
+    /* dias seguintes: só enquanto Revisar (Aplicado/Rejeitado saem do bloco) */
+    return f.status === "revisar";
   }
 
   function manutencaoVisivelNoDia(m, dia) {
@@ -2791,7 +2798,9 @@
       var rec = RECOMENDACAO_LABEL[f.recomendacao] || f.recomendacao;
       var statusPill = f.status === "aplicado"
         ? '<span class="pill ok">Aplicado</span>'
-        : '<span class="pill warn">Revisar</span>';
+        : f.status === "rejeitado"
+          ? '<span class="pill no">Rejeitado</span>'
+          : '<span class="pill warn">Revisar</span>';
       var aplicado = f.status === "aplicado" ? (f.aplicadoPor || "—") : "—";
       var acoes =
         '<button type="button" class="btn-icone" title="Ver" aria-label="Ver" onclick="abrirModalVerFeedback(\'' + f.id + '\')">' + svgOlho() + "</button>";
@@ -2819,7 +2828,7 @@
   }
 
   function aplicarFeedbackPlaceholder() {
-    alert("Mock: modal Aplicar Feedback será trabalhado em seguida.");
+    alert("Contrato: feedbacks em Revisar seguem para RH · Solicitações (Em análise). O atendimento lá (Aprovado→Aplicado / Rejeitado→Rejeitado) atualiza este bloco. Mock interativo: docs/mockups/rh-solicitacoes-abas-mockup.html");
   }
 
   function abrirModalFeedback(editId) {
@@ -2903,8 +2912,8 @@
   function abrirModalVerFeedback(id) {
     var f = FEEDBACKS.find(function (x) { return x.id === id; });
     if (!f) return;
-    var statusLabel = f.status === "aplicado" ? "Aplicado" : "Revisar";
-    var statusCls = f.status === "aplicado" ? "ok" : "warn";
+    var statusLabel = f.status === "aplicado" ? "Aplicado" : f.status === "rejeitado" ? "Rejeitado" : "Revisar";
+    var statusCls = f.status === "aplicado" ? "ok" : f.status === "rejeitado" ? "no" : "warn";
     document.getElementById("verFbBody").innerHTML =
       '<div class="g2">' +
         '<div class="field"><div class="k">Data do Registro</div><div class="v">' + escHtml(fmtDataBR(f.dataRegistro)) + "</div></div>" +

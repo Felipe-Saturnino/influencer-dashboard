@@ -420,6 +420,14 @@
     <!-- ═══════════════ ATESTADOS ═══════════════ -->
     <div class="panel active" id="panel-atestados" role="tabpanel">
       <div class="content-box">
+        <div class="mock-perm" title="Só no mockup — simula escopo de permissão">
+          <strong>Mock permissão:</strong>
+          <select id="mockPermAtestado" aria-label="Simular permissão Atestados">
+            <option value="proprios">Ver / Editar = Próprios (só gerências · só Ver)</option>
+            <option value="ver_sim">Ver = Sim (todas as linhas · sem ações)</option>
+            <option value="editar_sim" selected>Editar = Sim (todas · Ver + Atender)</option>
+          </select>
+        </div>
         <div class="section-head">
           <div class="section-title">
             Atestados
@@ -462,9 +470,10 @@
       <div class="content-box">
         <div class="mock-perm" title="Só no mockup — simula escopo de permissão">
           <strong>Mock permissão:</strong>
-          <select id="mockPermReuniao" aria-label="Simular permissão Ver/Criar/Editar">
-            <option value="proprios">Ver / Criar / Editar = Próprios (só gerência)</option>
-            <option value="sim">Ver / Criar / Editar = Sim (todos prestadores)</option>
+          <select id="mockPermReuniao" aria-label="Simular permissão Reuniões">
+            <option value="proprios">Ver / Editar = Próprios (gerências · Ver + Atender · CTA escopo)</option>
+            <option value="ver_sim">Ver = Sim (todas · sem ações / sem CTA)</option>
+            <option value="editar_sim" selected>Editar = Sim (todas · ações + CTA · todos prestadores)</option>
           </select>
         </div>
         <div class="section-head">
@@ -512,14 +521,10 @@
       <div class="content-box">
         <div class="mock-perm" title="Só no mockup — simula escopo de permissão">
           <strong>Mock permissão:</strong>
-          <select id="mockPermVaga" aria-label="Simular permissão Ver/Criar">
-            <option value="proprios">Ver / Criar = Próprios (só times/gerências do solicitante)</option>
-            <option value="sim">Ver / Criar = Sim (todos os times)</option>
-          </select>
-          <span style="margin-left:8px">Atender (ícone):</span>
-          <select id="mockPermVagaEditar" aria-label="Simular permissão Editar">
-            <option value="nao">Editar = Não (só Ver)</option>
-            <option value="sim" selected>Editar = Sim (Ver + Atender)</option>
+          <select id="mockPermVaga" aria-label="Simular permissão Vagas">
+            <option value="proprios">Ver / Editar = Próprios (gerências · só Ver · CTA escopo)</option>
+            <option value="ver_sim">Ver = Sim (todas · sem ações / sem CTA)</option>
+            <option value="editar_sim" selected>Editar = Sim (todas · Ver + Atender · CTA · todos organogramas)</option>
           </select>
         </div>
         <div class="section-head">
@@ -567,21 +572,17 @@
       <div class="content-box">
         <div class="mock-perm" title="Só no mockup — simula escopo de permissão">
           <strong>Mock permissão:</strong>
-          <select id="mockPermFeedback" aria-label="Simular permissão Ver/Criar">
-            <option value="proprios">Ver / Criar = Próprios (só times/gerências do solicitante)</option>
-            <option value="sim">Ver / Criar = Sim (todos os times)</option>
-          </select>
-          <span style="margin-left:8px">Atender (ícone):</span>
-          <select id="mockPermFeedbackEditar" aria-label="Simular permissão Editar">
-            <option value="nao">Editar = Não (só Ver)</option>
-            <option value="sim" selected>Editar = Sim (Ver + Atender)</option>
+          <select id="mockPermFeedback" aria-label="Simular permissão Feedback">
+            <option value="proprios">Ver / Editar = Próprios (gerências · Ver + Atender · CTA escopo)</option>
+            <option value="ver_sim">Ver = Sim (todas · sem ações / sem CTA)</option>
+            <option value="editar_sim" selected>Editar = Sim (todas · ações + CTA · todos times)</option>
           </select>
         </div>
         <div class="section-head">
           <div class="section-title">
             Feedback
             <span class="dash">—</span>
-            <span class="sub">registros de feedback de liderança</span>
+            <span class="sub">liderança · Controle de Turno e Solicitações</span>
           </div>
           <button type="button" class="cta" id="btnRegistrarFeedback">
             <svg class="ico-svg" aria-hidden="true"><use href="#i-plus"/></svg> Registrar Feedback
@@ -608,6 +609,9 @@
                 <th scope="col" class="th-sort" data-sort-table="feedback" data-sort-col="status" aria-sort="none" tabindex="0">
                   <span class="th-sort-inner">Status <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
                 </th>
+                <th scope="col" class="th-sort" data-sort-table="feedback" data-sort-col="origem" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Origem <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
                 <th scope="col" class="th-acoes">Ações</th>
               </tr>
             </thead>
@@ -615,39 +619,101 @@
           </table>
         </div>
       </div>
+
+      <!-- Espelho CT (só visual/lógica de sync — dentro do painel Feedback) -->
+      <div class="content-box" style="margin-top:14px" id="espelhoCtFeedback">
+        <div class="section-head">
+          <div class="section-title">
+            Espelho — Controle de Turno · Feedbacks
+            <span class="dash">—</span>
+            <span class="sub">origem Notificações · sync só desta origem</span>
+          </div>
+          <button type="button" class="cta" id="btnSimularCtFeedback">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-plus"/></svg> Simular Registrar no CT
+          </button>
+        </div>
+        <p style="color:var(--text-muted);font-size:12px;margin:-4px 0 12px">
+          Cada registro no CT cria linha em Solicitações.
+          <strong>Revisar</strong> (CT) = <strong>Em análise</strong> (Solicitações);
+          <strong>Aplicado</strong> é o mesmo nas duas.
+          Atender aqui (Aprovado → Aplicado / Rejeitado → Rejeitado) atualiza o CT
+          <em>apenas</em> se a origem for Controle de Turno.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Espelho Feedbacks do Controle de Turno</caption>
+            <thead>
+              <tr>
+                <th scope="col">Data</th>
+                <th scope="col">Prestador</th>
+                <th scope="col">Recomendação</th>
+                <th scope="col">Status (CT)</th>
+                <th scope="col">Liderança</th>
+                <th scope="col">Solicitações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyEspelhoCtFeedback"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <div class="notes">
-      <h2>Regras de permissão (proposta)</h2>
+      <h2>Regras de permissão</h2>
       <ul>
         <li>
           <span class="tag">Atestados</span>
-          Colunas: Data da Solicitação · Solicitante · Descrição · <strong>Status</strong> · Ações.
-          <strong>Ver = Próprios</strong> → só linhas das suas gerências.
-          Modais <strong>Ver</strong> (abas Dados / Histórico) e <strong>Atender</strong> = os mesmos da página atual (<code>ModalsVerAtender</code>), com Histórico novo no Ver.
-          <strong>Atender</strong> só com <strong>Editar = Sim</strong>.
+          <strong>Ver/Editar = Próprios</strong> → só linhas das gerências; ações só <strong>Ver</strong>.
+          <strong>Ver = Sim</strong> → todas as linhas; <strong>sem</strong> ícones em Ações.
+          <strong>Editar = Sim</strong> → todas as linhas; <strong>Ver</strong> + <strong>Atender</strong>.
         </li>
         <li>
           <span class="tag">Reuniões</span>
-          Colunas: Data Solicitada · Solicitante · Time · Tipo · Status · Ações.
-          CTA <strong>Agendar Reunião</strong> → modal com Tipo, Prestador (escopo Próprios/Sim), Data Solicitada (só dias escalados futuros), Observação.
-          Ao agendar: linha com Status <strong>Em análise</strong>; prestador = Solicitante.
-          <strong>Ver</strong> → Solicitação de Reunião + subtítulo [tipo]; abas Dados / Histórico.
-          <strong>Atender</strong> → abas Dados / Atendimento; Status Aprovado|Rejeitado; se rejeitado: Data de Reagendamento + Observação.
+          <strong>Ver/Editar = Próprios</strong> → gerências; Ver + Atender; CTA Agendar com Prestador só da gerência.
+          <strong>Ver = Sim</strong> → todas; sem ações e sem CTA.
+          <strong>Editar = Sim</strong> → todas; ações + CTA com todos os prestadores.
+          <strong>Origens:</strong> (1) Solicitações — Liderança/RH escolhe Prestador (= Solicitante);
+          (2) Calendário · Compromissos — CTA <strong>Agendar Reunião</strong> (mock
+          <a href="./rh-calendario-compromissos-reuniao-mockup.html">rh-calendario-compromissos-reuniao-mockup.html</a>)
+          → Solicitante = usuário logado; card no dia com status; Atender atualiza calendário + observação no modal do dia.
         </li>
         <li>
           <span class="tag">Vagas</span>
-          Colunas: Data da Solicitação · Solicitante · Time · <strong>Tipo de Vaga</strong> · Status · Ações.
-          CTA <strong>Solicitar Vaga</strong> → Organograma (escopo Próprios/Sim), Data de Entrada (≥15 dias úteis), Turno, Tipo (Substituição + Prestador/Obs ou Nova entrada + Briefing).
-          Ao solicitar: Status <strong>Em análise</strong>; usuário = Solicitante; Organograma = Time.
-          <strong>Ver</strong> / <strong>Atender</strong> — Ver com abas Dados / Histórico; Atender só com Editar = Sim — Atendimento: Status Aprovado|Rejeitado + Observação.
-        </li>        <li>
+          <strong>Ver/Editar = Próprios</strong> → gerências; só Ver; CTA Solicitar com Organograma só da gerência.
+          <strong>Ver = Sim</strong> → todas; sem ações e sem CTA.
+          <strong>Editar = Sim</strong> → todas; Ver + Atender + CTA com todos organogramas.
+        </li>
+        <li>
           <span class="tag">Feedback</span>
-          Colunas: Data do Registro · Liderança · Prestador · Recomendação · Status · Ações.
-          CTA <strong>Registrar Feedback</strong> → Time (escopo Próprios/Sim), Prestador do time, Recomendação, Observação.
-          Ao registrar: Status <strong>Em análise</strong>; usuário = Liderança; Data do Registro = agora.
-          <strong>Ver</strong> → abas Dados / Histórico; subtítulo [Recomendação] - [Status].
-          <strong>Atender</strong> (Editar = Sim) → Dados / Atendimento; se Aprovado + notificação contratual: anexo <strong>Evidência</strong>.
+          <strong>Ver/Editar = Próprios</strong> → gerências; Ver + Atender; CTA Registrar com Time só da gerência.
+          <strong>Ver = Sim</strong> → todas; sem ações e sem CTA.
+          <strong>Editar = Sim</strong> → todas; ações + CTA com todos os times.
+          <strong>Origens:</strong>
+          (1) <strong>Controle de Turno → Notificações → Feedbacks</strong> — cada nova linha no CT cria linha em Solicitações;
+          (2) CTA <strong>Registrar Feedback</strong> nesta página — <em>não</em> cria linha no CT (sem espelho).
+        </li>
+      </ul>
+      <h2 style="margin-top:14px">Espelho Feedback — Controle de Turno ↔ Solicitações</h2>
+      <ul>
+        <li>
+          <strong>Só quando</strong> <code>origem = controle_turno</code>. Feedback criado só em Solicitações
+          <strong>não</strong> sincroniza com o CT.
+        </li>
+        <li>
+          <strong>Status CT → Solicitações (na criação / espelho):</strong>
+          <strong>Revisar</strong> ↔ <strong>Em análise</strong>;
+          <strong>Aplicado</strong> ↔ <strong>Aplicado</strong> (mesmo rótulo nas duas páginas).
+          Orientação no CT já nasce Aplicado → Solicitações também em Aplicado (sem fila de Atender).
+        </li>
+        <li>
+          <strong>Atender em Solicitações</strong> (decisão Aprovado / Rejeitado), só se origem CT:
+          <strong>Aprovado</strong> → CT e Solicitações ficam <strong>Aplicado</strong>;
+          <strong>Rejeitado</strong> → CT e Solicitações ficam <strong>Rejeitado</strong>
+          (CT passa a aceitar status Rejeitado além de Revisar / Aplicado).
+        </li>
+        <li>
+          Use o bloco <strong>Espelho — Controle de Turno · Feedbacks</strong> abaixo da aba Feedback
+          (visível com a aba Feedback ativa) para simular registro no CT e ver o sync.
         </li>
       </ul>
       <h2 style="margin-top:14px">Modal Ver — abas (todas as filas)</h2>
@@ -678,11 +744,15 @@
     </div>
 
     <div class="legacy">
-      <strong>Nota de implementação (não no mockup visual):</strong> Feedback ainda não existe em <code>rh_solicitacoes.tipo</code> (hoje: <code>atestado</code> | <code>vagas</code> | <code>reuniao_rh</code>).
-      Abas usam <code>FiltroBarTabButton</code> + <code>app-filter-bar-tabs-cta</code> (padrão Marketplace / Calendário).
-      CTAs usam <code>CtaCriarButton</code> (Brand §3). Modais de Agendar / Solicitar / Registrar ficam para a próxima etapa.
-      Modais Ver/Atender da aba Atestados espelham <code>ModalsVerAtender.tsx</code> — clique nos ícones da tabela para abrir.
-      <strong>Ícones:</strong> Lucide via SVG (Brand §6 / Global) — <strong>sem emoji</strong> em abas, header, CTAs, ações de linha ou Ajuda contextual.
+      <strong>Nota de implementação (não no mockup visual):</strong>
+      Feedback deve ter tabela própria (não forçar só <code>rh_solicitacoes.tipo</code>).
+      Espelho CT: ao criar em <code>escala_ct_feedback</code>, criar solicitação com
+      <code>origem=controle_turno</code> e status mapeado (revisar→em_analise; aplicado→aplicado).
+      Expandir CHECK de status do CT para incluir <strong>rejeitado</strong>.
+      Ao atender em Solicitações (origem CT): Aprovado→aplicado / Rejeitado→rejeitado em ambas.
+      Feedback só de Solicitações: sem sync com CT.
+      Abas usam <code>FiltroBarTabButton</code>. CTAs usam <code>CtaCriarButton</code>.
+      <strong>Ícones:</strong> Lucide via SVG — <strong>sem emoji</strong>.
     </div>
   </div>
 
@@ -1138,6 +1208,7 @@
         id: "a1",
         data: "08/09/2026 10:15",
         nome: "Marina Silva",
+        gerencia: "gp",
         desc: "Atestado médico — gripe",
         periodo: "08/09/2026 — 10/09/2026",
         anexo: "atestado-marina.pdf",
@@ -1151,6 +1222,7 @@
         id: "a2",
         data: "07/09/2026 18:40",
         nome: "Pedro Santos",
+        gerencia: "gp",
         desc: "Atestado — consulta ortopédica",
         periodo: "07/09/2026 — 07/09/2026",
         anexo: "atestado-pedro.pdf",
@@ -1164,6 +1236,7 @@
         id: "a3",
         data: "02/09/2026 09:00",
         nome: "Rita Oliveira",
+        gerencia: "academy",
         desc: "Atestado — afastamento",
         periodo: "01/09/2026 — 03/09/2026",
         anexo: "atestado-rita.pdf",
@@ -1194,6 +1267,7 @@
         id: "a4",
         data: "28/08/2026 14:12",
         nome: "Tiago Ramos",
+        gerencia: "ops",
         desc: "Atestado — documento incompleto",
         periodo: "27/08/2026 — 29/08/2026",
         anexo: "atestado-tiago.pdf",
@@ -1234,6 +1308,7 @@
 
     function statusLabelPt(st) {
       if (st === "aprovado") return "Aprovado";
+      if (st === "aplicado") return "Aplicado";
       if (st === "rejeitado") return "Rejeitado";
       if (st === "revisar") return "Em análise";
       return "Em análise";
@@ -1308,8 +1383,40 @@
       { id: "p4", nome: "Diego Alves", time: "Game Floor", gerencia: "ops", datas: ["2026-09-14", "2026-09-21", "2026-09-28"] },
       { id: "p5", nome: "Elena Rocha", time: "Operation", gerencia: "ops", datas: ["2026-09-16", "2026-09-23"] },
     ];
-    /** Mock: usuário logado gerencia GP + Shuffler */
+    /** Mock: usuário logado gerencia GP (+ times Shuffler na mesma gerência) */
     const MINHA_GERENCIA = ["gp"];
+
+    /**
+     * Mock de permissão por aba — valores: proprios | ver_sim | editar_sim
+     * @param {"atestados"|"reunioes"|"vagas"|"feedback"} aba
+     */
+    function permUi(aba) {
+      const idByAba = {
+        atestados: "mockPermAtestado",
+        reunioes: "mockPermReuniao",
+        vagas: "mockPermVaga",
+        feedback: "mockPermFeedback",
+      };
+      const mode = document.getElementById(idByAba[aba]).value;
+      const proprios = mode === "proprios";
+      const verSim = mode === "ver_sim";
+      const editarSim = mode === "editar_sim";
+      const atenderEmProprios = aba === "reunioes" || aba === "feedback";
+      return {
+        mode,
+        filterProprios: proprios,
+        showAcoes: !verSim,
+        showVer: !verSim,
+        showAtender: editarSim || (proprios && atenderEmProprios),
+        showCta: aba !== "atestados" && !verSim,
+        escopoFull: editarSim,
+      };
+    }
+
+    function syncCtaVisivel(btnId, show) {
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.toggle("hidden", !show);
+    }
 
     let reuniaoIdSeq = 10;
     let REUNIOES_ROWS = [
@@ -1320,6 +1427,7 @@
         solicitante: "Ana Souza",
         prestadorId: "p1",
         time: "Game Presenter",
+        gerencia: "gp",
         tipo: "Reunião com RH",
         tipoKey: "rh",
         status: "em_analise",
@@ -1335,6 +1443,7 @@
         solicitante: "Bruno Lima",
         prestadorId: "p2",
         time: "Shuffler",
+        gerencia: "gp",
         tipo: "Reunião com Liderança",
         tipoKey: "lideranca",
         status: "em_analise",
@@ -1350,6 +1459,7 @@
         solicitante: "Carla Mendes",
         prestadorId: "p3",
         time: "Academy",
+        gerencia: "academy",
         tipo: "Reunião com RH",
         tipoKey: "rh",
         status: "aprovado",
@@ -1379,9 +1489,9 @@
     }
 
     function prestadoresVisiveis() {
-      const perm = document.getElementById("mockPermReuniao").value;
-      if (perm === "sim") return PRESTADORES_MOCK;
-      return PRESTADORES_MOCK.filter((p) => MINHA_GERENCIA.includes(p.gerencia));
+      const p = permUi("reunioes");
+      if (p.escopoFull) return PRESTADORES_MOCK;
+      return PRESTADORES_MOCK.filter((x) => MINHA_GERENCIA.includes(x.gerencia));
     }
 
     function fillDatasSelect(selectEl, prestadorId, includeEmptyLabel) {
@@ -1423,10 +1533,14 @@
     }
 
     function renderReunioes() {
+      const p = permUi("reunioes");
+      syncCtaVisivel("btnAgendarReuniao", p.showCta);
       const tbody = document.getElementById("tbodyReunioes");
       const { col, dir } = sortState.reunioes;
       const mult = dir === "asc" ? 1 : -1;
-      const rows = REUNIOES_ROWS.slice().sort((a, b) => {
+      let rows = REUNIOES_ROWS.slice();
+      if (p.filterProprios) rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
+      rows.sort((a, b) => {
         const map = {
           dataSolicitada: (r) => r.dataIso,
           solicitante: (r) => r.solicitante,
@@ -1439,19 +1553,20 @@
         return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
       });
       tbody.innerHTML = rows.map((r) => {
-        const showAtender = r.status === "em_analise";
-        return `<tr data-sort-dataSolicitada="${r.dataIso}" data-sort-solicitante="${r.solicitante}" data-sort-time="${r.time}" data-sort-tipo="${r.tipo}" data-sort-status="${r.status}">
+        const showAtender = p.showAtender && r.status === "em_analise";
+        const actions = p.showAcoes
+          ? `<div class="actions">
+              ${p.showVer ? `<button type="button" class="icon-btn" data-reuniao-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>` : ""}
+              ${showAtender ? `<button type="button" class="icon-btn" data-reuniao-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
+            </div>`
+          : "";
+        return `<tr>
           <td>${r.dataLabel}</td>
           <td>${r.solicitante}</td>
           <td>${r.time}</td>
           <td>${r.tipo}</td>
           <td>${badgeHtml(r.status)}</td>
-          <td>
-            <div class="actions">
-              <button type="button" class="icon-btn" data-reuniao-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>
-              ${showAtender ? `<button type="button" class="icon-btn" data-reuniao-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
-            </div>
-          </td>
+          <td>${actions}</td>
         </tr>`;
       }).join("") || `<tr><td colspan="6" style="padding:40px;color:var(--text-muted)">Nenhuma solicitação encontrada.</td></tr>`;
       syncSortHeaders("reunioes");
@@ -1523,6 +1638,7 @@
 
     document.getElementById("btnAgendarReuniao").addEventListener("click", openModalAgendarReuniao);
     document.getElementById("mockPermReuniao").addEventListener("change", () => {
+      renderReunioes();
       if (document.getElementById("modalAgendarReuniao").classList.contains("open")) fillPrestadoresAgendar();
     });
     document.getElementById("agendarPrestador").addEventListener("change", (e) => {
@@ -1550,6 +1666,7 @@
         solicitante: p.nome,
         prestadorId: p.id,
         time: p.time,
+        gerencia: p.gerencia,
         tipo: tipoLabel,
         tipoKey,
         status: "em_analise",
@@ -1653,6 +1770,7 @@
         solicitante: "Diego Alves",
         organogramaId: "game_floor",
         time: "Game Floor",
+        gerencia: "ops",
         tipoKey: "substituicao",
         tipoLabel: "Substituição",
         turno: "noite",
@@ -1671,6 +1789,7 @@
         solicitante: "Elena Rocha",
         organogramaId: "operation",
         time: "Operation",
+        gerencia: "ops",
         tipoKey: "nova_entrada",
         tipoLabel: "Nova entrada",
         turno: "comercial",
@@ -1699,6 +1818,7 @@
         solicitante: "Fábio Nunes",
         organogramaId: "gp",
         time: "Game Presenter",
+        gerencia: "gp",
         tipoKey: "nova_entrada",
         tipoLabel: "Nova entrada",
         turno: "noite",
@@ -1726,8 +1846,8 @@
     }
 
     function organogramasVisiveisVaga() {
-      const perm = document.getElementById("mockPermVaga").value;
-      if (perm === "sim") return ORGANOGRAMAS_MOCK;
+      const p = permUi("vagas");
+      if (p.escopoFull) return ORGANOGRAMAS_MOCK;
       return ORGANOGRAMAS_MOCK.filter((o) => MINHA_GERENCIA.includes(o.gerencia));
     }
 
@@ -1782,11 +1902,14 @@
     }
 
     function renderVagas() {
+      const p = permUi("vagas");
+      syncCtaVisivel("btnSolicitarVaga", p.showCta);
       const tbody = document.getElementById("tbodyVagas");
       const { col, dir } = sortState.vagas;
       const mult = dir === "asc" ? 1 : -1;
-      const podeAtender = document.getElementById("mockPermVagaEditar").value === "sim";
-      const rows = VAGAS_ROWS.slice().sort((a, b) => {
+      let rows = VAGAS_ROWS.slice();
+      if (p.filterProprios) rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
+      rows.sort((a, b) => {
         const map = {
           data: (r) => r.dataIso,
           solicitante: (r) => r.solicitante,
@@ -1799,19 +1922,20 @@
         return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
       });
       tbody.innerHTML = rows.map((r) => {
-        const showAtender = r.status === "em_analise" && podeAtender;
+        const showAtender = p.showAtender && r.status === "em_analise";
+        const actions = p.showAcoes
+          ? `<div class="actions">
+              ${p.showVer ? `<button type="button" class="icon-btn" data-vaga-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>` : ""}
+              ${showAtender ? `<button type="button" class="icon-btn" data-vaga-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
+            </div>`
+          : "";
         return `<tr>
           <td>${r.dataLabel}</td>
           <td>${r.solicitante}</td>
           <td>${r.time}</td>
           <td>${r.tipoLabel}</td>
           <td>${badgeHtml(r.status)}</td>
-          <td>
-            <div class="actions">
-              <button type="button" class="icon-btn" data-vaga-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>
-              ${showAtender ? `<button type="button" class="icon-btn" data-vaga-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
-            </div>
-          </td>
+          <td>${actions}</td>
         </tr>`;
       }).join("") || `<tr><td colspan="6" style="padding:40px;color:var(--text-muted)">Nenhuma solicitação encontrada.</td></tr>`;
       syncSortHeaders("vagas");
@@ -1869,9 +1993,9 @@
 
     document.getElementById("btnSolicitarVaga").addEventListener("click", openModalSolicitarVaga);
     document.getElementById("mockPermVaga").addEventListener("change", () => {
+      renderVagas();
       if (document.getElementById("modalSolicitarVaga").classList.contains("open")) fillOrganogramaVaga();
     });
-    document.getElementById("mockPermVagaEditar").addEventListener("change", renderVagas);
     document.getElementById("vagaOrganograma").addEventListener("change", (e) => {
       fillPrestadorSubstVaga(e.target.value);
     });
@@ -1918,6 +2042,7 @@
         solicitante: USUARIO_MOCK_VAGA,
         organogramaId: orgId,
         time: org.label,
+        gerencia: org.gerencia,
         tipoKey: tipo,
         tipoLabel: TIPO_VAGA_LABEL[tipo],
         turno,
@@ -1991,12 +2116,52 @@
     const RECOM_EXIGE_EVIDENCIA = new Set(["notif_descumprimento", "notif_suspensao", "persistencia"]);
     const STATUS_FB_LABEL = {
       em_analise: "Em análise",
+      aplicado: "Aplicado",
       aprovado: "Aprovado",
       rejeitado: "Rejeitado",
     };
+    const ORIGEM_FB_LABEL = {
+      controle_turno: "Controle de Turno",
+      solicitacoes: "Solicitações",
+    };
     const USUARIO_MOCK_FB = "Você (RH)";
+    const LIDERANCA_CT_MOCK = "Gustavo Pires";
+
+    /** Abre o modal Registrar como origem CT ou Solicitações */
+    let registrarFbOrigem = "solicitacoes";
 
     let fbIdSeq = 10;
+    let ctFbIdSeq = 100;
+
+    /**
+     * Espelho CT (Notificações → Feedbacks).
+     * status CT: revisar | aplicado | rejeitado
+     */
+    let CT_FEEDBACK_ROWS = [
+      {
+        id: "ct1",
+        dataIso: "2026-09-04",
+        dataLabel: "04/09/2026",
+        lideranca: "Gustavo Pires",
+        prestador: "Ana Souza",
+        recomKey: "orientacao",
+        recomLabel: "Orientação",
+        status: "aplicado",
+        solId: "f1",
+      },
+      {
+        id: "ct3",
+        dataIso: "2026-08-22",
+        dataLabel: "22/08/2026",
+        lideranca: "Gustavo Pires",
+        prestador: "Bruno Lima",
+        recomKey: "notif_descumprimento",
+        recomLabel: "Notificação de Descumprimento Contratual",
+        status: "revisar",
+        solId: "f3",
+      },
+    ];
+
     let FEEDBACK_ROWS = [
       {
         id: "f1",
@@ -2010,7 +2175,9 @@
         recomKey: "orientacao",
         recomLabel: "Orientação",
         obs: "Orientação sobre pontualidade no início do turno.",
-        status: "em_analise",
+        status: "aplicado",
+        origem: "controle_turno",
+        ctId: "ct1",
         historico: [{ tipo: "criacao", usuario: "Gustavo Pires", dataHora: "04/09/2026 09:15" }],
       },
       {
@@ -2026,6 +2193,8 @@
         recomLabel: "Alinhamento de Execução",
         obs: "Alinhamento de execução do roteiro de treinamento.",
         status: "aprovado",
+        origem: "solicitacoes",
+        ctId: null,
         historico: [
           { tipo: "criacao", usuario: "Iris Barbosa", dataHora: "28/08/2026 11:00" },
           {
@@ -2051,6 +2220,8 @@
         recomLabel: "Notificação de Descumprimento Contratual",
         obs: "Descumprimento de regras de uniforme.",
         status: "em_analise",
+        origem: "controle_turno",
+        ctId: "ct3",
         historico: [{ tipo: "criacao", usuario: "Gustavo Pires", dataHora: "22/08/2026 16:40" }],
       },
     ];
@@ -2058,9 +2229,50 @@
     let fbAtenderRow = null;
     let fbAtenderAba = "dados";
 
+    function mapStatusCtParaSolicitacoes(ctStatus) {
+      if (ctStatus === "revisar") return "em_analise";
+      if (ctStatus === "aplicado") return "aplicado";
+      if (ctStatus === "rejeitado") return "rejeitado";
+      return "em_analise";
+    }
+
+    function badgeCtHtml(st) {
+      if (st === "aplicado") return '<span class="badge ok">Aplicado</span>';
+      if (st === "rejeitado") return '<span class="badge no">Rejeitado</span>';
+      return '<span class="badge em">Revisar</span>';
+    }
+
+    function origemFbLabel(origem) {
+      return ORIGEM_FB_LABEL[origem] || origem || "—";
+    }
+
+    function renderEspelhoCtFeedback() {
+      const tbody = document.getElementById("tbodyEspelhoCtFeedback");
+      if (!tbody) return;
+      if (!CT_FEEDBACK_ROWS.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;color:var(--text-muted)">Nenhum feedback no espelho do Controle de Turno.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = CT_FEEDBACK_ROWS.slice()
+        .sort((a, b) => b.dataIso.localeCompare(a.dataIso))
+        .map((ct) => {
+          const sol = FEEDBACK_ROWS.find((f) => f.id === ct.solId);
+          const solBadge = sol ? badgeHtml(sol.status) : '<span style="color:var(--text-muted)">—</span>';
+          return `<tr>
+            <td>${ct.dataLabel}</td>
+            <td>${ct.prestador}</td>
+            <td>${ct.recomLabel}</td>
+            <td>${badgeCtHtml(ct.status)}</td>
+            <td>${ct.lideranca}</td>
+            <td>${solBadge}</td>
+          </tr>`;
+        })
+        .join("");
+    }
+
     function timesVisiveisFeedback() {
-      const perm = document.getElementById("mockPermFeedback").value;
-      if (perm === "sim") return ORGANOGRAMAS_MOCK;
+      const p = permUi("feedback");
+      if (p.escopoFull) return ORGANOGRAMAS_MOCK;
       return ORGANOGRAMAS_MOCK.filter((o) => MINHA_GERENCIA.includes(o.gerencia));
     }
 
@@ -2102,6 +2314,7 @@
         infoLine("Prestador", r.prestador),
         infoLine("Liderança", r.lideranca),
         infoLine("Data do Registro", r.dataLabel),
+        infoLine("Origem", origemFbLabel(r.origem)),
         infoLine("Observação", r.obs || "—"),
       ].join("");
     }
@@ -2114,15 +2327,13 @@
     }
 
     function renderFeedback() {
+      const p = permUi("feedback");
+      syncCtaVisivel("btnRegistrarFeedback", p.showCta);
       const tbody = document.getElementById("tbodyFeedback");
       const { col, dir } = sortState.feedback;
       const mult = dir === "asc" ? 1 : -1;
-      const podeAtender = document.getElementById("mockPermFeedbackEditar").value === "sim";
-      const perm = document.getElementById("mockPermFeedback").value;
       let rows = FEEDBACK_ROWS.slice();
-      if (perm === "proprios") {
-        rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
-      }
+      if (p.filterProprios) rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
       rows.sort((a, b) => {
         const map = {
           data: (r) => r.dataIso,
@@ -2130,36 +2341,46 @@
           prestador: (r) => r.prestador,
           recomendacao: (r) => r.recomLabel,
           status: (r) => r.status,
+          origem: (r) => origemFbLabel(r.origem),
         };
         const va = (map[col](a) || "").toLowerCase();
         const vb = (map[col](b) || "").toLowerCase();
         return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
       });
       tbody.innerHTML = rows.map((r) => {
-        const showAtender = r.status === "em_analise" && podeAtender;
+        const showAtender = p.showAtender && r.status === "em_analise";
+        const actions = p.showAcoes
+          ? `<div class="actions">
+              ${p.showVer ? `<button type="button" class="icon-btn" data-fb-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>` : ""}
+              ${showAtender ? `<button type="button" class="icon-btn" data-fb-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
+            </div>`
+          : "";
         return `<tr>
           <td>${r.dataLabel}</td>
           <td>${r.lideranca}</td>
           <td>${r.prestador}</td>
           <td>${r.recomLabel}</td>
           <td>${badgeHtml(r.status)}</td>
-          <td>
-            <div class="actions">
-              <button type="button" class="icon-btn" data-fb-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>
-              ${showAtender ? `<button type="button" class="icon-btn" data-fb-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
-            </div>
-          </td>
+          <td>${origemFbLabel(r.origem)}</td>
+          <td>${actions}</td>
         </tr>`;
-      }).join("") || `<tr><td colspan="6" style="padding:40px;color:var(--text-muted)">Nenhuma solicitação encontrada.</td></tr>`;
+      }).join("") || `<tr><td colspan="7" style="padding:40px;color:var(--text-muted)">Nenhuma solicitação encontrada.</td></tr>`;
       syncSortHeaders("feedback");
+      renderEspelhoCtFeedback();
     }
 
-    function openModalRegistrarFeedback() {
+    function openModalRegistrarFeedback(origem) {
+      registrarFbOrigem = origem === "controle_turno" ? "controle_turno" : "solicitacoes";
       document.getElementById("errRegistrarFeedback").classList.remove("show");
       fillTimeFeedback();
       document.getElementById("fbRecomendacao").value = "";
       document.getElementById("fbObs").value = "";
       fillPrestadorFeedback("");
+      const title = document.getElementById("modalRegistrarFeedbackTitle");
+      title.textContent =
+        registrarFbOrigem === "controle_turno"
+          ? "Registrar Feedback (Controle de Turno)"
+          : "Registrar Feedback";
       openOverlay("modalRegistrarFeedback");
     }
 
@@ -2199,12 +2420,16 @@
       openOverlay("modalAtenderFeedback");
     }
 
-    document.getElementById("btnRegistrarFeedback").addEventListener("click", openModalRegistrarFeedback);
+    document.getElementById("btnRegistrarFeedback").addEventListener("click", () => {
+      openModalRegistrarFeedback("solicitacoes");
+    });
+    document.getElementById("btnSimularCtFeedback").addEventListener("click", () => {
+      openModalRegistrarFeedback("controle_turno");
+    });
     document.getElementById("mockPermFeedback").addEventListener("change", () => {
       renderFeedback();
       if (document.getElementById("modalRegistrarFeedback").classList.contains("open")) fillTimeFeedback();
     });
-    document.getElementById("mockPermFeedbackEditar").addEventListener("change", renderFeedback);
     document.getElementById("fbTime").addEventListener("change", (e) => {
       fillPrestadorFeedback(e.target.value);
     });
@@ -2227,12 +2452,38 @@
       const m = String(agora.getMonth() + 1).padStart(2, "0");
       const d = String(agora.getDate()).padStart(2, "0");
       const dataIso = `${y}-${m}-${d}`;
+      const dataLabel = fmtDataBr(dataIso);
+      const isCt = registrarFbOrigem === "controle_turno";
+      const isOrientacao = recom === "orientacao";
+      /* CT: Orientação → Aplicado; demais → Revisar. Solicitações (CTA): sempre Em análise. */
+      const ctStatus = isOrientacao ? "aplicado" : "revisar";
+      const solStatus = isCt ? mapStatusCtParaSolicitacoes(ctStatus) : "em_analise";
+      const lideranca = isCt ? LIDERANCA_CT_MOCK : USUARIO_MOCK_FB;
+
       fbIdSeq += 1;
+      const solId = "f" + fbIdSeq;
+      let ctId = null;
+      if (isCt) {
+        ctFbIdSeq += 1;
+        ctId = "ct" + ctFbIdSeq;
+        CT_FEEDBACK_ROWS.unshift({
+          id: ctId,
+          dataIso,
+          dataLabel,
+          lideranca,
+          prestador,
+          recomKey: recom,
+          recomLabel: RECOM_LABEL[recom],
+          status: ctStatus,
+          solId,
+        });
+      }
+
       FEEDBACK_ROWS.unshift({
-        id: "f" + fbIdSeq,
+        id: solId,
         dataIso,
-        dataLabel: fmtDataBr(dataIso),
-        lideranca: USUARIO_MOCK_FB,
+        dataLabel,
+        lideranca,
         timeId,
         time: org.label,
         gerencia: org.gerencia,
@@ -2240,8 +2491,10 @@
         recomKey: recom,
         recomLabel: RECOM_LABEL[recom],
         obs,
-        status: "em_analise",
-        historico: [{ tipo: "criacao", usuario: USUARIO_MOCK_FB, dataHora: agoraLabelMock() }],
+        status: solStatus,
+        origem: isCt ? "controle_turno" : "solicitacoes",
+        ctId,
+        historico: [{ tipo: "criacao", usuario: lideranca, dataHora: agoraLabelMock() }],
       });
       closeOverlay("modalRegistrarFeedback");
       renderFeedback();
@@ -2293,7 +2546,18 @@
         st === "aprovado" && RECOM_EXIGE_EVIDENCIA.has(fbAtenderRow.recomKey) && fileInput.files?.[0]
           ? fileInput.files[0].name
           : "";
-      fbAtenderRow.status = st;
+
+      /* Decisão no Atender: Aprovado | Rejeitado.
+         Origem CT: Aprovado → Aplicado (ambas); Rejeitado → Rejeitado (ambas).
+         Origem Solicitações: mantém Aprovado | Rejeitado (sem tocar no CT). */
+      let statusFinal = st;
+      if (fbAtenderRow.origem === "controle_turno") {
+        statusFinal = st === "aprovado" ? "aplicado" : "rejeitado";
+        const ct = CT_FEEDBACK_ROWS.find((c) => c.id === fbAtenderRow.ctId);
+        if (ct) ct.status = statusFinal;
+      }
+
+      fbAtenderRow.status = statusFinal;
       if (!fbAtenderRow.historico) fbAtenderRow.historico = [];
       const camposFb = [{ label: "Observação", value: obs }];
       if (evidenciaNome) camposFb.push({ label: "Evidência", value: evidenciaNome });
@@ -2302,7 +2566,7 @@
         usuario: USUARIO_MOCK_FB,
         dataHora: agoraLabelMock(),
         statusDe: statusAntes,
-        statusPara: statusLabelPt(st),
+        statusPara: statusLabelPt(statusFinal),
         campos: camposFb,
       });
       closeOverlay("modalAtenderFeedback");
@@ -2310,7 +2574,7 @@
     });
 
     function badgeHtml(st) {
-      if (st === "aprovado") return '<span class="badge ok">Aprovado</span>';
+      if (st === "aprovado" || st === "aplicado") return `<span class="badge ok">${st === "aplicado" ? "Aplicado" : "Aprovado"}</span>`;
       if (st === "rejeitado") return '<span class="badge no">Rejeitado</span>';
       return '<span class="badge em">Em análise</span>';
     }
@@ -2434,10 +2698,13 @@
     }
 
     function renderAtestados() {
+      const p = permUi("atestados");
       const filterKey = todosStatus ? null : STATUS[statusIdx].key;
       const { col, dir } = sortState.atestados;
       const mult = dir === "asc" ? 1 : -1;
-      const rows = ATESTADOS_ROWS.filter((r) => !filterKey || r.status === filterKey).slice().sort((a, b) => {
+      let rows = ATESTADOS_ROWS.filter((r) => !filterKey || r.status === filterKey);
+      if (p.filterProprios) rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
+      rows = rows.slice().sort((a, b) => {
         let va;
         let vb;
         if (col === "data") {
@@ -2456,12 +2723,13 @@
         return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
       });
       tbodyAtestados.innerHTML = rows.map((r) => {
-        const showAtender = r.status === "em_analise" && r.atender;
-        const actions = `
-          <div class="actions">
-            <button type="button" class="icon-btn" data-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>
+        const showAtender = p.showAtender && r.status === "em_analise" && r.atender;
+        const actions = p.showAcoes
+          ? `<div class="actions">
+            ${p.showVer ? `<button type="button" class="icon-btn" data-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>` : ""}
             ${showAtender ? `<button type="button" class="icon-btn" data-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
-          </div>`;
+          </div>`
+          : "";
         return `<tr>
           <td>${r.data}</td>
           <td>${r.nome}</td>
@@ -2524,9 +2792,11 @@
     });
 
     // Estado inicial
+    document.getElementById("mockPermAtestado").addEventListener("change", renderAtestados);
     renderReunioes();
     renderVagas();
     renderFeedback();
+    renderAtestados();
 
     tbodyAtestados.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-acao]");

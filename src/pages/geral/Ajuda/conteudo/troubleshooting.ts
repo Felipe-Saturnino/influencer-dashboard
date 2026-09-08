@@ -1429,7 +1429,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Ao clicar em Solicitar aparece erro genérico?",
         texto:
-          "Confirme se a migration de correção da Ordem de Saída foi aplicada no Supabase e se o usuário tem permissão de **Criar** ou **Editar** em Gestão de Usuários. Se o erro continuar após o deploy, entre em contato com o suporte.",
+          "Confirme se as correções da Ordem de Saída foram aplicadas no Supabase (reserva de código da OS e permissão de criação) e se o usuário tem permissão de **Criar** ou **Editar** em Gestão de Usuários. Se o erro continuar, entre em contato com o suporte.",
       },
       {
         subtitulo: "A data de retorno foi recusada?",
