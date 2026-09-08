@@ -22,7 +22,7 @@ import {
   TURNO_FILTRO_MANHA_TARDE_NOITE,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
-import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
@@ -34,6 +34,27 @@ import { AbaEscala } from "./AbaEscala";
 import { AbaRotacao } from "./AbaRotacao";
 import { AbaRelatorio } from "./AbaRelatorio";
 import AbaNotificacoes from "./AbaNotificacoes";
+
+const TUTORIAL_CTX_APROVACAO_ESCALA: AjudaContextualTutorial = {
+  id: "controle-turno-aprovacao-escala",
+  urlSlug: "ControleTurnoAprovacaoEscala",
+  titulo: "Aprovação de Escala de Turno",
+  descricao: "Registrar falta, saída antecipada, hora adicional ou horário e aprovar os dias.",
+};
+
+const TUTORIAL_CTX_RELATORIO: AjudaContextualTutorial = {
+  id: "controle-turno-relatorio",
+  urlSlug: "ControleTurnoRelatorio",
+  titulo: "Relatório de Turno",
+  descricao: "Gerar rascunho, publicar e consultar relatórios dos turnos.",
+};
+
+const TUTORIAL_CTX_NOTIFICACOES: AjudaContextualTutorial = {
+  id: "controle-turno-notificacoes",
+  urlSlug: "ControleTurnoNotificacoes",
+  titulo: "Notificação",
+  descricao: "Registrar e acompanhar fechamentos, ausências, feedbacks e manutenções.",
+};
 
 const TAB_META: Record<
   ControleTurnoAba,
@@ -167,7 +188,18 @@ export default function EscalaControleTurnoPage() {
             ) : null}
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", flex: "0 0 auto" }}>
-            <AjudaContextualAcoes pageKey="escala_controle_turno" />
+            <AjudaContextualAcoes
+              pageKey="escala_controle_turno"
+              tutorial={
+                aba === "escala"
+                  ? TUTORIAL_CTX_APROVACAO_ESCALA
+                  : aba === "relatorio"
+                    ? TUTORIAL_CTX_RELATORIO
+                    : aba === "notificacoes"
+                      ? TUTORIAL_CTX_NOTIFICACOES
+                      : null
+              }
+            />
           </div>
         </div>
 

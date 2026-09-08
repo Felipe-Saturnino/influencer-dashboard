@@ -931,7 +931,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Escala do Turno",
         texto:
-          "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado.",
+          "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado. Tutorial: `/Ajuda/Tutoriais/ControleTurnoAprovacaoEscala`.",
       },
       {
         subtitulo: "Rotação",
@@ -941,12 +941,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Notificações",
         texto:
-          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. No **Fechamento de Mesa**, informe **data e hora** de fechamento e de abertura; se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a reabertura. No **Registrar Feedback**, se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais tipos permanece **Observação**. Com **Editar**, atualize fechamentos/ausências e cancele manutenções abertas — a aplicação de feedbacks fica em fluxo separado (não nesta aba). Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
+          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. No **Fechamento de Mesa**, informe **data e hora** de fechamento e de abertura; se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a reabertura. No **Registrar Feedback**, se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais tipos permanece **Observação**. Com **Editar**, atualize fechamentos/ausências e cancele manutenções abertas — a aplicação de feedbacks fica em **Solicitações** (RH). Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos. Tutorial: `/Ajuda/Tutoriais/ControleTurnoNotificacoes`.",
       },
       {
         subtitulo: "Relatório de Turno",
         texto:
-          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**.",
+          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**. Tutorial: `/Ajuda/Tutoriais/ControleTurnoRelatorio`.",
+      },
+      {
+        subtitulo: "Tutoriais (Ajuda)",
+        texto:
+          "Na aba **Escala do Turno**, o atalho roxo abre **Aprovação de Escala de Turno** — sinalizar falta, saída antecipada, hora adicional ou horário e aprovar os dias.\n\nNa aba **Relatório de Turno**, **Relatório de Turno** cobre gerar rascunho, publicar e consultar dias anteriores.\n\nNa aba **Notificações**, **Notificação** explica os quatro blocos e o acompanhamento dos atendimentos.\n\nVisibilidade inicial: Shift Leader, Service Manager e Gestor de Operações (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
       },
     ],
   },
