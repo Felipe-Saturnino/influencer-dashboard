@@ -1,5 +1,10 @@
 import { useMemo } from "react";
 import {
+  getOntemIsoLocal,
+  getPeriodoComparativoMoMDmenos1,
+  preencherDetalhamentoDiarioZerado,
+} from "../../../lib/dashboardHelpers";
+import {
   aggDailyMesKpi,
   arpuComparativoFromGgrUap,
   filtrarPorEscopoOperadora,
@@ -11,6 +16,26 @@ import {
   type PorTabelaRow,
 } from "./overviewSpinLogic";
 
+function labelDiaMesFromIso(dataIso: string): string {
+  return new Date(`${dataIso}T12:00:00`).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function dailyRowVazio(dia: string): DailyRow {
+  return {
+    data: dia,
+    turnover: 0,
+    ggr: 0,
+    bets: 0,
+    uap: 0,
+    margin_pct: null,
+    bet_size: null,
+    arpu: null,
+  };
+}
+
 type Params = {
   porTabelaRows: PorTabelaRow[];
   porTabelaHistAll: PorTabelaRow[];
@@ -21,6 +46,7 @@ type Params = {
   dailyData: DailyRow[];
   monthlyData: MonthlyRow[];
   modoAgregadoTodasOperadoras: boolean;
+  mesSelecionado: { ano: number; mes: number } | undefined;
 };
 
 export function useOverviewSpinTabelaRows({
@@ -33,6 +59,7 @@ export function useOverviewSpinTabelaRows({
   dailyData,
   monthlyData,
   modoAgregadoTodasOperadoras,
+  mesSelecionado,
 }: Params) {
   const porTabelaFiltradas = useMemo(
     () =>
@@ -121,42 +148,46 @@ export function useOverviewSpinTabelaRows({
           );
         });
     }
+    const periodo = mesSelecionado
+      ? getPeriodoComparativoMoMDmenos1(mesSelecionado.ano, mesSelecionado.mes).atual
+      : null;
+    const dailyCompleto = periodo
+      ? preencherDetalhamentoDiarioZerado({
+          rows: dailyData,
+          getDia: (r) => r.data,
+          inicio: periodo.inicio,
+          fim: periodo.fim,
+          fimMax: getOntemIsoLocal(),
+          criarVazio: dailyRowVazio,
+        })
+      : [...dailyData].sort((a, b) => b.data.localeCompare(a.data));
+
     if (modoAgregadoTodasOperadoras) {
-      return [...dailyData]
-        .sort((a, b) => b.data.localeCompare(a.data))
-        .map((r) => ({
-          label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-          }),
+      return dailyCompleto.map((r) => ({
+        label: labelDiaMesFromIso(r.data),
+        turnover: r.turnover,
+        ggr: r.ggr,
+        bets: r.bets,
+        uap: r.uap,
+        margin_pct: r.margin_pct,
+        bet_size: r.bet_size,
+        arpu: arpuComparativoFromGgrUap(r.ggr, r.uap),
+        drillId: r.data,
+        periodoIso: normalizeMesasYmd(r.data),
+      }));
+    }
+    return dailyCompleto.map((r) =>
+      enrich(
+        {
+          label: labelDiaMesFromIso(r.data),
           turnover: r.turnover,
           ggr: r.ggr,
           bets: r.bets,
           uap: r.uap,
-          margin_pct: r.margin_pct,
-          bet_size: r.bet_size,
-          arpu: arpuComparativoFromGgrUap(r.ggr, r.uap),
-          drillId: r.data,
-          periodoIso: normalizeMesasYmd(r.data),
-        }));
-    }
-    return [...dailyData]
-      .sort((a, b) => b.data.localeCompare(a.data))
-      .map((r) =>
-        enrich(
-          {
-            label: new Date(r.data + "T12:00:00").toLocaleDateString("pt-BR", {
-              day: "2-digit",
-              month: "2-digit",
-            }),
-            turnover: r.turnover,
-            ggr: r.ggr,
-            bets: r.bets,
-            uap: r.uap,
-          },
-          normalizeMesasYmd(r.data),
-        ),
-      );
-  }, [historico, dailyData, monthlyData, modoAgregadoTodasOperadoras]);
+        },
+        normalizeMesasYmd(r.data),
+      ),
+    );
+  }, [historico, dailyData, monthlyData, modoAgregadoTodasOperadoras, mesSelecionado]);
   return { porTabelaFiltradas, porTabelaFiltradasHist, tabelaRows };
 }

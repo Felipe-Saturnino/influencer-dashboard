@@ -584,22 +584,61 @@ export async function createFeedback(input: {
   observacao: string;
   liderancaNome: string;
 }): Promise<void> {
-  const uid = await authUserId();
   const nome = getCurrentUserNome(input.liderancaNome);
-  const isOrientacao = input.recomendacao === "orientacao";
-  const { error } = await supabase.from("escala_ct_feedback").insert({
-    data_registro: input.dataRegistro.slice(0, 10),
-    prestador_id: input.prestadorId,
-    recomendacao: input.recomendacao,
-    status: isOrientacao ? "aplicado" : "revisar",
-    observacao: input.observacao.trim(),
-    lideranca_user_id: uid,
-    lideranca_nome: nome,
-    aplicado_por_user_id: isOrientacao ? uid : null,
-    aplicado_por_nome: isOrientacao ? nome : "",
+  const { data, error } = await supabase.rpc("escala_ct_feedback_criar", {
+    p_data_registro: input.dataRegistro.slice(0, 10),
+    p_prestador_id: input.prestadorId,
+    p_recomendacao: input.recomendacao,
+    p_observacao: input.observacao.trim(),
+    p_lideranca_nome: nome === "—" ? "" : nome,
   });
+
   if (error) {
-    console.error(error);
+    console.error("[createFeedback] RPC escala_ct_feedback_criar", error);
+    // Fallback legado se a RPC ainda não existir no projeto Supabase
+    const uid = await authUserId();
+    const isOrientacao = input.recomendacao === "orientacao";
+    const { data: inserted, error: insertErr } = await supabase
+      .from("escala_ct_feedback")
+      .insert({
+        data_registro: input.dataRegistro.slice(0, 10),
+        prestador_id: input.prestadorId,
+        recomendacao: input.recomendacao,
+        status: isOrientacao ? "aplicado" : "revisar",
+        observacao: input.observacao.trim(),
+        lideranca_user_id: uid,
+        lideranca_nome: nome === "—" ? "" : nome,
+        aplicado_por_user_id: isOrientacao ? uid : null,
+        aplicado_por_nome: isOrientacao ? (nome === "—" ? "" : nome) : "",
+      })
+      .select("id")
+      .single();
+
+    if (insertErr || !inserted) {
+      console.error(insertErr ?? error);
+      throw new Error(MSG_ERRO_CT_SALVAR);
+    }
+
+    // Tenta espelho client-side (pode falhar por RLS se o usuário não tem Editar em Solicitações)
+    const ctStatus = isOrientacao ? "aplicado" : "revisar";
+    const solStatus = ctStatus === "revisar" ? "em_analise" : ctStatus;
+    const { error: solErr } = await supabase.from("rh_solicitacoes").insert({
+      rh_funcionario_id: input.prestadorId,
+      tipo: "feedback",
+      status: solStatus,
+      descricao: input.observacao.trim(),
+      feedback_recomendacao: input.recomendacao,
+      feedback_origem: "controle_turno",
+      escala_ct_feedback_id: inserted.id,
+      lideranca_nome: nome === "—" ? "" : nome,
+    });
+    if (solErr) {
+      console.error("[createFeedback] espelho rh_solicitacoes (fallback)", solErr);
+    }
+    return;
+  }
+
+  if (data == null) {
     throw new Error(MSG_ERRO_CT_SALVAR);
   }
 }

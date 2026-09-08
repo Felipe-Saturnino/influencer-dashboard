@@ -53,7 +53,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Detalhamento Diário / Mensal",
         texto:
-          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") ou por mês no modo Histórico (subtítulo \"mês a mês\"). No modo **Todas Operadoras**, cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
+          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") — inclusive dias sem movimentação da operadora, com valores zerados — ou por mês no modo Histórico (subtítulo \"mês a mês\"). No mês corrente a grade vai até o último dia fechado (D-1). No modo **Todas Operadoras**, cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
       },
       {
         subtitulo: "Comparativo de Jogo",

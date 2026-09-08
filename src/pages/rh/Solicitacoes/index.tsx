@@ -93,7 +93,7 @@ const RH_SOLICITACOES_SELECT = `
   lideranca_nome,
   evidencias_storage_paths,
   calendario_acao:rh_calendario_acoes!rh_solicitacoes_rh_calendario_acao_id_fkey ( payload ),
-  solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome, org_time:rh_org_times ( nome ) ),
+  solicitante:rh_funcionarios!rh_solicitacoes_rh_funcionario_id_fkey ( id, nome, org_time:rh_org_times!rh_funcionarios_org_time_id_fkey ( nome ) ),
   atendente:profiles!rh_solicitacoes_atendido_por_fkey ( id, name ),
   vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
@@ -517,9 +517,19 @@ export default function RhSolicitacoesPage() {
 
             <FiltroBarPillButton
               active={todosStatusAtivo}
-              onClick={() => setFiltroStatus(RH_SOLICITACAO_FILTRO_TODOS_STATUS_VALUE)}
+              onClick={() =>
+                setFiltroStatus(
+                  todosStatusAtivo
+                    ? RH_SOLICITACAO_STATUS_DEFAULT
+                    : RH_SOLICITACAO_FILTRO_TODOS_STATUS_VALUE,
+                )
+              }
               icon={FilterBarIcons.status}
-              aria-label={todosStatusAtivo ? "Exibindo todos os status" : "Ver todos os status"}
+              aria-label={
+                todosStatusAtivo
+                  ? "Desativar todos os status — voltar a Em análise"
+                  : "Ver todos os status"
+              }
             >
               {RH_SOLICITACAO_TODOS_STATUS_LABEL}
             </FiltroBarPillButton>
