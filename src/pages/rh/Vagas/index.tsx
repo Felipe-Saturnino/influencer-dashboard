@@ -259,11 +259,13 @@ export default function RhVagasPage() {
       <CampoVaga k="Organograma" v={organogramaLabelDeVaga(v)} t={t} />
       <CampoVaga k="Data de abertura" v={fmtDataBR(v.data_abertura)} t={t} />
       <CampoVaga k="Data fim de inscrições" v={fmtDataBR(v.data_fim_inscricoes)} t={t} />
-      <CampoVaga
-        k="Repasse inicial"
-        v={v.repasse_inicial_centavos > 0 ? fmtBRL(v.repasse_inicial_centavos / 100) : "—"}
-        t={t}
-      />
+      {v.tipo_vaga !== "interna" ? (
+        <CampoVaga
+          k="Repasse inicial"
+          v={v.repasse_inicial_centavos > 0 ? fmtBRL(v.repasse_inicial_centavos / 100) : "—"}
+          t={t}
+        />
+      ) : null}
       <CampoVaga k="Descrição" v={textoMultilinha(v.descricao)} t={t} />
       <CampoVaga k="Responsabilidade" v={textoMultilinha(v.responsabilidades)} t={t} />
       {v.tipo_vaga !== "interna" ? <CampoVaga k="Tags" v={formatTagsVagaLabel(v.tags)} t={t} /> : null}

@@ -74,5 +74,5 @@ export const TUTORIAL_CONTROLE_TURNO_RELATORIO: TutorialDef = {
     },
   ],
   notasFinais:
-    "— **Gerar Relatório** exige **Criar**; **Editar Rascunho** exige **Editar**.\n— O filtro de turno da barra não aparece nesta aba — use os três cards.\n— Checklist de manutenção do relatório é do fechamento do turno; pedidos de manutenção abertos ficam na aba **Notificações**.",
+    "— Checklist de manutenção do relatório é do fechamento do turno; pedidos de manutenção abertos ficam na aba **Notificações**.",
 };

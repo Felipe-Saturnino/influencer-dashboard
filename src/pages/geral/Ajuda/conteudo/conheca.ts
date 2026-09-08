@@ -267,7 +267,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Contratação",
         texto:
-          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse, quantidade de candidatos e status. No Histórico, os mesmos blocos consideram as 13 competências.",
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse (vagas externas), quantidade de candidatos e status. No Histórico, os mesmos blocos consideram as 13 competências.",
       },
       {
         subtitulo: "Aba Distratos",
@@ -607,7 +607,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nova vaga",
         texto:
-          "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, **repasse inicial** (valor em reais), descrição e responsabilidades. Em vagas **Externas**, o campo **Tags** é obrigatório — adicione ao menos um rótulo (digite e pressione Enter). Vagas **Internas** não exibem Tags. Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
+          "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, descrição e responsabilidades. Em vagas **Externas**, **repasse inicial** (valor em reais) e **Tags** são obrigatórios — adicione ao menos um rótulo (digite e pressione Enter). Vagas **Internas** não exibem repasse nem Tags. Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
       },
       {
         subtitulo: "Compartilhar vaga externa",

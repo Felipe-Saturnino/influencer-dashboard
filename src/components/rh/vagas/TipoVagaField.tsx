@@ -26,15 +26,20 @@ export function TipoVagaField({
     fontSize: 14,
     color: t.text,
     fontFamily: FONT.body,
+    minHeight: 24,
   };
 
   return (
-    <fieldset style={{ border: "none", margin: "0 0 14px", padding: 0 }}>
-      <legend style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body, padding: 0 }}>
+    <div style={{ marginBottom: 14, overflow: "visible" }}>
+      <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 8, fontFamily: FONT.body }}>
         Tipo de vaga
         <CampoObrigatorioMark />
-      </legend>
-      <div role="radiogroup" aria-label="Tipo de vaga" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      </div>
+      <div
+        role="radiogroup"
+        aria-label="Tipo de vaga"
+        style={{ display: "flex", flexDirection: "column", gap: 10, overflow: "visible" }}
+      >
         <label style={row}>
           <input
             type="radio"
@@ -55,6 +60,6 @@ export function TipoVagaField({
         </label>
       </div>
       {erro ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 6, fontFamily: FONT.body }}>{erro}</div> : null}
-    </fieldset>
+    </div>
   );
 }

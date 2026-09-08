@@ -87,5 +87,5 @@ export const TUTORIAL_CONTROLE_TURNO_APROVACAO_ESCALA: TutorialDef = {
     },
   ],
   notasFinais:
-    "— Permissão de **Criar** ou **Editar** em Controle de Turno libera Registrar e Aprovar.\n— Check-in do Calendário só preenche Entrada/Saída se cair na janela do turno.\n— **Hora Adicional** do turno anterior também entra no pool da Rotação do turno seguinte.",
+    "— Check-in do Calendário só preenche Entrada/Saída se cair na janela do turno.\n— **Hora Adicional** do turno anterior também entra no pool da Rotação do turno seguinte.",
 };

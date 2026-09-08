@@ -29,7 +29,7 @@ export const TUTORIAL_CONTROLE_TURNO_NOTIFICACOES: TutorialDef = {
     {
       titulo: "2. Fechamento de Mesa",
       texto:
-        "1. Clique em **Registrar Fechamento** (permissão de **Criar**).\n2. Selecione uma ou mais mesas.\n3. Para cada mesa, informe **Data de Fechamento** e **Hora de Fechamento**.\n4. Informe **Data de Abertura** e **Hora de Abertura**, ou marque **Mesa ainda não foi reaberta**.\n5. Observação é opcional. Salve o registro.\n6. Na tabela, o status do dia fica **Não aberta** ou **Reaberta**. Com **Editar**, use o lápis para atualizar a reabertura.\n7. Se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a abertura.",
+        "1. Clique em **Registrar Fechamento**.\n2. Selecione uma ou mais mesas.\n3. Para cada mesa, informe **Data de Fechamento** e **Hora de Fechamento**.\n4. Informe **Data de Abertura** e **Hora de Abertura**, ou marque **Mesa ainda não foi reaberta**.\n5. Observação é opcional. Salve o registro.\n6. Na tabela, o status do dia fica **Não aberta** ou **Reaberta**. Com **Editar**, use o lápis para atualizar a reabertura.\n7. Se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a abertura.",
       imagens: [
         {
           src: `${IMG}/02-fechamento-mesa.png`,
@@ -40,7 +40,7 @@ export const TUTORIAL_CONTROLE_TURNO_NOTIFICACOES: TutorialDef = {
     {
       titulo: "3. Ausências Prolongadas",
       texto:
-        "1. Clique em **Registrar Ausência**.\n2. Selecione o prestador, o **Motivo** (**Médico** ou **Pessoal**), o **Início da Ausência** e o **Fim da Ausência** (ou marque que o fim ainda não foi informado).\n3. Salve. A linha fica no bloco com início, fim e liderança que registrou.\n4. Com **Editar**, atualize o fim quando a ausência encerrar — enquanto estiver aberta, o item segue aparecendo nos dias seguintes.",
+        "1. Clique em **Registrar Ausência**.\n2. Selecione o prestador, o **Motivo** (**Médico** ou **Pessoal**), o **Início da Ausência** e o **Fim da Ausência** (ou marque que o fim ainda não foi informado).\n3. Salve. A linha fica no bloco com início, fim e liderança que registrou.\n4. Com **Editar**, atualize o fim quando a ausência encerrar — enquanto estiver aberta, o item segue aparecendo nos dias seguintes.\n\n**Motivo Médico:** use este quadro só se o prestador **ainda não tiver atestado**. Se já tiver o documento, o encaminhamento ao RH é pela página **Calendário** (fluxo de justificativa de presença).",
       imagens: [
         {
           src: `${IMG}/03-ausencia-prolongada.png`,
@@ -51,9 +51,7 @@ export const TUTORIAL_CONTROLE_TURNO_NOTIFICACOES: TutorialDef = {
     {
       titulo: "4. Feedbacks",
       texto:
-        "1. Clique em **Registrar Feedback**.\n2. Selecione o **Time** (Game Presenter ou Shuffler) e o **Prestador**.\n3. Escolha a **Recomendação**: Orientação, Alinhamento de Execução, Notificação de Descumprimento Contratual, Notificação de Suspensão da Execução Contratual ou Persistência do Descumprimento.\n4. Se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais, **Observação**. Preencha e salve.\n5. O status inicial é **Revisar**. O atendimento (parecer e **Aplicado**) é feito em **Solicitações** (RH) — nesta aba **não** há botão Aplicar.\n6. Acompanhe aqui a coluna **Status** (**Revisar** / **Aplicado** / **Rejeitado**) e **Aplicado Por** quando o RH concluir.",
-      aviso:
-        "Cada feedback do Controle de Turno cria uma linha na aba Feedback de Solicitações (RH). O status Revisar corresponde a Em análise lá.",
+        "1. Clique em **Registrar Feedback**.\n2. Selecione o **Time** (Game Presenter ou Shuffler) e o **Prestador**.\n3. Escolha a **Recomendação**: Orientação, Alinhamento de Execução, Notificação de Descumprimento Contratual, Notificação de Suspensão da Execução Contratual ou Persistência do Descumprimento.\n4. Se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais, **Observação**. Preencha e salve.\n5. O status inicial é **Revisar**. Todas as recomendações são aprovadas pela Gerência e RH em outra página.\n6. Acompanhe aqui a coluna **Status** (**Revisar** / **Aplicado** / **Rejeitado**) e **Aplicado Por** quando o RH e Gerência concluir.",
       imagens: [
         {
           src: `${IMG}/04-registrar-feedback.png`,
@@ -84,6 +82,4 @@ export const TUTORIAL_CONTROLE_TURNO_NOTIFICACOES: TutorialDef = {
       ],
     },
   ],
-  notasFinais:
-    "— **Criar** libera os CTAs de registro; **Editar** libera atualizar fechamento/ausência e cancelar manutenção.\n— Feedbacks de origem Controle de Turno espelham em Solicitações; feedback criado só em Solicitações **não** aparece aqui.\n— Pedidos de manutenção desta aba são distintos do checklist de manutenção do **Relatório de Turno**.",
 };
