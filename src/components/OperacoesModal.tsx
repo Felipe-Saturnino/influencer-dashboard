@@ -29,7 +29,11 @@ export const MODAL_FORM_SHELL_STYLE: CSSProperties = {
   maxHeight: `calc(90dvh - ${MODAL_BASE_PADDING_PX * 2}px)`,
 };
 
-/** Área rolável do formulário — `paddingBottom` evita cortar o último campo no scroll. */
+/**
+ * Área rolável do formulário.
+ * Padding lateral/topo ≥ anel `:focus-visible` do dialog (outline 2 + offset 2 + halo 4)
+ * — sem isso o `overflowY` corta a seleção roxa na borda esquerda/direita.
+ */
 export const MODAL_FORM_SCROLL_BODY_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -37,7 +41,9 @@ export const MODAL_FORM_SCROLL_BODY_STYLE: CSSProperties = {
   flex: 1,
   minHeight: 0,
   overflowY: "auto",
-  paddingRight: 4,
+  paddingTop: 8,
+  paddingLeft: 8,
+  paddingRight: 8,
   paddingBottom: 24,
 };
 
