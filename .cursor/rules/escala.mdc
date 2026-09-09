@@ -101,8 +101,9 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 
 ### Implementação
 
-- UI: **Controle de Turno → Rotação** — um bloco por estúdio (`estudio.mdc`).
-- Pool: `escala_rotacao_contexto_dia` + filtro Escala do Turno; `gerarGradeRotacao`; publicar/rascunho em `escala_rotacao` / células.
+- UI: **Controle de Turno → Rotação** — um bloco por estúdio (GPs) + bloco **Shuffler** (`estudio.mdc`).
+- Shuffler: slug interno `shuffler`; sem move entre estúdios; células/posição **TODOS**; pool da Escala do Turno (área Shuffler).
+- Pool GP: `escala_rotacao_contexto_dia` + filtro Escala do Turno; `gerarGradeRotacao`; publicar/rascunho em `escala_rotacao` / células.
 - Ao aprovar Escala Estúdio (Game Presenter): `gerarPreviewsMesRotacao`.
 
 ---

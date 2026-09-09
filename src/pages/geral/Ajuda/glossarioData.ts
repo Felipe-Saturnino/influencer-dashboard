@@ -949,7 +949,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Rotação",
         definicao:
-          "Aba do **Controle de Turno** que posiciona Game Presenters nas mesas do estúdio ao longo do turno (intervalos de 30 min, ou 20 min sob demanda). Cada estúdio tem o próprio bloco; o pool vem da Escala Estúdio aprovada filtrada pela Escala do Turno; liderança entra só via Incluir Liderança. A ordem das linhas de GP na prévia é aleatória a cada geração completa. Células: Número da Mesa, Break ou X. Permite mover GP entre estúdios só no dia/turno, arrastar linhas na prévia e publicar (com aviso se ≥2h contínuas em mesa). Tutorial: Gerar Rotação.",
+          "Aba do **Controle de Turno** que posiciona Game Presenters nas mesas do estúdio e Shufflers na posição **TODOS** (todos os estúdios) ao longo do turno (intervalos de 30 min, ou 20 min sob demanda). Cada estúdio tem o próprio bloco de GP; o bloco Shuffler é único e sem mover estúdio. O pool vem da Escala Estúdio / Escala do Turno; liderança entra só via Incluir Liderança nos blocos de estúdio. A ordem das linhas na prévia é aleatória a cada geração completa. Células: Número da Mesa (ou TODOS), Break ou X. Permite mover GP entre estúdios só no dia/turno, arrastar linhas na prévia e publicar (com aviso se ≥2h contínuas em mesa). Tutorial: Gerar Rotação.",
         referencia: "Controle de Turno",
       },
       {

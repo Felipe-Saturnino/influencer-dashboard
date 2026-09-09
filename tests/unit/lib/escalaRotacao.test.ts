@@ -8,16 +8,21 @@ import {
   gerarPatternRotacao,
   gerarSlotsRotacao,
   janelaHorarioLiderancaRotacao,
+  isBlocoRotacaoShuffler,
   labelsMesasRotacao,
   liderancaCompativelComTurnoRotacao,
+  maxMinutosMesaContinuaNaGrade,
   maxSlotsSeguidosAntesBreak,
   mensagemAvisoMesaContinuaPublicar,
+  montarContextoRotacaoShuffler,
+  montarPoolShufflerRotacaoDePresenca,
   parseIntervaloHorarioStaffRotacao,
   ROTACAO_MAX_MESAS_SEGUIDAS,
+  ROTACAO_SHUFFLER_ESTUDIO_SLUG,
+  ROTACAO_SHUFFLER_MESA_LABEL,
   slotDentroJanelaHorarioRotacao,
   tempoMesaContinuaQueExigeAviso,
   formatarTempoMesaContinuoPt,
-  maxMinutosMesaContinuaNaGrade,
   trocarPessoasLinhasPreviaRotacao,
   type RotacaoGeracaoPessoa,
   type RotacaoGpPool,
@@ -571,5 +576,55 @@ describe("aviso de mesa contínua ao publicar", () => {
     expect(mensagemAvisoMesaContinuaPublicar("2 horas e 20 min")).toBe(
       "Nesta rotação temos Prestadores realizando 2 horas e 20 min tempo direto de mesa, quer seguir com esta rotação?",
     );
+  });
+});
+
+describe("bloco Shuffler (TODOS)", () => {
+  it("monta contexto com mesa TODOS e slug shuffler", () => {
+    const ctx = montarContextoRotacaoShuffler({
+      diaIso: "2026-09-09",
+      turno: "tarde",
+      turnoInicio: "12:00",
+      turnoFim: "20:00",
+      escalaAprovada: true,
+      shufflers: [gpFake("s1", "Ana Shuffler")],
+    });
+    expect(ctx.estudioSlug).toBe(ROTACAO_SHUFFLER_ESTUDIO_SLUG);
+    expect(isBlocoRotacaoShuffler(ctx.estudioSlug)).toBe(true);
+    expect(labelsMesasRotacao(ctx.mesas)).toEqual([ROTACAO_SHUFFLER_MESA_LABEL]);
+    expect(ctx.liderancas).toEqual([]);
+  });
+
+  it("filtra pool Shuffler pela presença CT", () => {
+    const pool = montarPoolShufflerRotacaoDePresenca({
+      presencaAtual: [
+        {
+          id: "s1",
+          nome: "Ana Silva",
+          nickname: "Ana",
+          time: "Shuffler",
+          status: "presente",
+          saida: "",
+        },
+        {
+          id: "g1",
+          nome: "Beto GP",
+          nickname: "Beto",
+          time: "Game Presenter",
+          status: "presente",
+          saida: "",
+        },
+        {
+          id: "s2",
+          nome: "Carla",
+          nickname: "Carla",
+          time: "Shuffler",
+          status: "falta",
+          saida: "",
+        },
+      ],
+      presencaAnterior: [],
+    });
+    expect(pool.map((p) => p.funcionarioId)).toEqual(["s1"]);
   });
 });

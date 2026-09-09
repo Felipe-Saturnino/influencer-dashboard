@@ -15,21 +15,28 @@ import {
   anexarCheckinRotacao,
   aplicarLimitesDisponibilidadeNaMatrixRotacao,
   carregarContextoRotacaoDia,
+  carregarHorarioTurnoRotacaoShuffler,
   carregarRotacaoPublicada,
   corMesaRotacao,
   diaIsoLocal,
   disponivelPorSlotPessoaRotacao,
+  escalaAreaRotacaoAprovada,
   filtrarPoolRotacaoPorPresencaCt,
   gerarGradeRotacao,
   gerarSlotsRotacao,
   indiceProximoSlotRotacao,
+  isBlocoRotacaoShuffler,
   labelCargoLiderancaRotacao,
   labelsMesasRotacao,
   limparAlocacaoRotacao,
   listarEstudiosAtivosRotacao,
   mapaCoresMesasRotacao,
   mensagemAvisoMesaContinuaPublicar,
+  montarContextoRotacaoShuffler,
+  montarPoolShufflerRotacaoDePresenca,
   publicarRotacao,
+  ROTACAO_SHUFFLER_ESTUDIO_NOME,
+  ROTACAO_SHUFFLER_ESTUDIO_SLUG,
   salvarRascunhoRotacao,
   tempoMesaContinuaQueExigeAviso,
   trocarPessoasLinhasPreviaRotacao,
@@ -271,6 +278,103 @@ export function AbaRotacao({ diaIso, turno }: Props) {
     [diaIso, turnoKey, patchBloco],
   );
 
+  const carregarBlocoShuffler = useCallback(
+    async (gen: number, presencaAtual: CtPresencaRow[], presencaAnt: CtPresencaRow[]) => {
+      const slug = ROTACAO_SHUFFLER_ESTUDIO_SLUG;
+      patchBloco(slug, {
+        ...blocoVazio(slug, ROTACAO_SHUFFLER_ESTUDIO_NOME),
+        loading: true,
+        erro: null,
+      });
+
+      let horario: { inicio: string; fim: string; horarioTexto: string };
+      let aprovada: boolean;
+      let pub: Awaited<ReturnType<typeof carregarRotacaoPublicada>>;
+      try {
+        [horario, aprovada, pub] = await Promise.all([
+          carregarHorarioTurnoRotacaoShuffler(turnoKey),
+          escalaAreaRotacaoAprovada(diaIso, "shuffler"),
+          carregarRotacaoPublicada({
+            diaIso,
+            turno: turnoKey,
+            estudioSlug: slug,
+          }),
+        ]);
+      } catch (e) {
+        console.error(e);
+        if (gen !== loadGen.current) return;
+        patchBloco(slug, {
+          loading: false,
+          erro: "Não foi possível carregar a rotação. Se o problema persistir, entre em contato com o suporte.",
+          ctx: null,
+          pool: [],
+          poolSl: [],
+          liderancasDia: [],
+          fase: "idle",
+          previa: null,
+          publicada: null,
+        });
+        return;
+      }
+
+      if (gen !== loadGen.current) return;
+
+      const gpsFiltrados = montarPoolShufflerRotacaoDePresenca({
+        presencaAtual,
+        presencaAnterior: presencaAnt,
+      });
+
+      const comCheckin = await anexarCheckinRotacao(diaIso, gpsFiltrados);
+      if (gen !== loadGen.current) return;
+      const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
+      const limById = new Map(
+        gpsFiltrados
+          .filter((g) => g.saidaLimiteHhmm)
+          .map((g) => [g.funcionarioId, g.saidaLimiteHhmm!] as const),
+      );
+
+      const pool = gpsFiltrados.map((g) => {
+        const base = byId.get(g.funcionarioId) ?? g;
+        return {
+          ...base,
+          isShiftLead: false,
+          saidaLimiteHhmm: limById.get(g.funcionarioId) ?? g.saidaLimiteHhmm,
+        };
+      });
+
+      const ctx = montarContextoRotacaoShuffler({
+        diaIso,
+        turno: turnoKey,
+        turnoInicio: horario.inicio,
+        turnoFim: horario.fim,
+        horarioTexto: horario.horarioTexto,
+        escalaAprovada: aprovada,
+        shufflers: pool,
+      });
+
+      const publicada = pub.ok ? pub.data : null;
+      const fase: FaseBloco = publicada ? "publicada" : "idle";
+
+      patchBloco(slug, {
+        loading: false,
+        erro: pub.ok ? null : pub.erro,
+        ctx,
+        pool,
+        poolSl: [],
+        liderancasDia: [],
+        fase,
+        slotMin: publicada?.slotMinutos === 20 ? 20 : 30,
+        previa: null,
+        publicada,
+        painelLideranca: false,
+        erroAcao: null,
+        bannerOk: null,
+        publicando: false,
+      });
+    },
+    [diaIso, turnoKey, patchBloco],
+  );
+
   const carregarTudo = useCallback(async () => {
     const gen = ++loadGen.current;
     setErroGeral(null);
@@ -293,7 +397,13 @@ export function AbaRotacao({ diaIso, turno }: Props) {
 
     if (gen !== loadGen.current) return;
     setEstudios(list);
-    setBlocos(Object.fromEntries(list.map((e) => [e.slug, blocoVazio(e.slug, e.nome)])));
+    setBlocos({
+      ...Object.fromEntries(list.map((e) => [e.slug, blocoVazio(e.slug, e.nome)])),
+      [ROTACAO_SHUFFLER_ESTUDIO_SLUG]: blocoVazio(
+        ROTACAO_SHUFFLER_ESTUDIO_SLUG,
+        ROTACAO_SHUFFLER_ESTUDIO_NOME,
+      ),
+    });
     setLoadingLista(false);
 
     const ant = turnoAnteriorRotacao(diaIso, turnoKey);
@@ -317,8 +427,11 @@ export function AbaRotacao({ diaIso, turno }: Props) {
     setPresencaAtualMap(new Map(presencaAtual.map((r) => [r.id, r])));
     setPresencaAntMap(new Map(presencaAnt.map((r) => [r.id, r])));
 
-    await Promise.all(list.map((e) => carregarBloco(e, gen, presencaAtual, presencaAnt)));
-  }, [diaIso, turnoKey, carregarBloco]);
+    await Promise.all([
+      ...list.map((e) => carregarBloco(e, gen, presencaAtual, presencaAnt)),
+      carregarBlocoShuffler(gen, presencaAtual, presencaAnt),
+    ]);
+  }, [diaIso, turnoKey, carregarBloco, carregarBlocoShuffler]);
 
   useEffect(() => {
     void carregarTudo();
@@ -356,12 +469,18 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       }
       const numeros = labelsMesasRotacao(ctx.mesas);
       if (!numeros.length) {
-        opts.setErro("Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.");
+        opts.setErro(
+          isBlocoRotacaoShuffler(ctx.estudioSlug)
+            ? "Não foi possível montar a posição TODOS para Shuffler."
+            : "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.",
+        );
         return null;
       }
       if (usedGps.length + usedSl.length < numeros.length) {
         opts.setErro(
-          `Pessoas insuficientes (${usedGps.length} GPs + ${usedSl.length} liderança) para cobrir ${numeros.length} mesa(s).`,
+          isBlocoRotacaoShuffler(ctx.estudioSlug)
+            ? `Shufflers insuficientes (${usedGps.length}) para cobrir a posição TODOS.`
+            : `Pessoas insuficientes (${usedGps.length} GPs + ${usedSl.length} liderança) para cobrir ${numeros.length} mesa(s).`,
         );
         return null;
       }
@@ -741,7 +860,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
     );
   }
 
-  if (estudios.length === 0) {
+  if (estudios.length === 0 && !blocos[ROTACAO_SHUFFLER_ESTUDIO_SLUG]) {
     return (
       <div style={pageBox}>
         <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
@@ -753,6 +872,13 @@ export function AbaRotacao({ diaIso, turno }: Props) {
 
   return (
     <>
+      {estudios.length === 0 ? (
+        <div style={{ ...pageBox, marginBottom: 14 }}>
+          <div style={{ padding: "12px 0", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            Nenhum estúdio ativo — o bloco Shuffler continua disponível abaixo.
+          </div>
+        </div>
+      ) : null}
       {estudios.map((est) => {
         const b = blocos[est.slug] ?? blocoVazio(est.slug, est.nome);
         const kpis = kpisDoPool(b.pool, presencaAtualMap, presencaAntMap);
@@ -805,6 +931,48 @@ export function AbaRotacao({ diaIso, turno }: Props) {
           />
         );
       })}
+      {(() => {
+        const slug = ROTACAO_SHUFFLER_ESTUDIO_SLUG;
+        const b = blocos[slug] ?? blocoVazio(slug, ROTACAO_SHUFFLER_ESTUDIO_NOME);
+        const kpis = kpisDoPool(b.pool, presencaAtualMap, presencaAntMap);
+        return (
+          <BlocoRotacaoEstudio
+            key={slug}
+            pageBox={pageBox}
+            ghostBtn={ghostBtn}
+            t={t}
+            brand={brand}
+            diaIso={diaIso}
+            turno={turno}
+            bloco={b}
+            kpis={kpis}
+            destinos={[]}
+            podeGerar={podeGerar}
+            podeLideranca={false}
+            movendoId={null}
+            onGerar={() => handleGerar(slug)}
+            onToggleSlot={() => handleToggleSlot(slug)}
+            onTogglePainelLideranca={() => undefined}
+            onIncluirLideranca={() => undefined}
+            onPublicar={() => handlePublicar(slug)}
+            onRegenerar={() => handleRegenerar(slug)}
+            onToggleFaltaGp={(id) => {
+              patchBloco(slug, {
+                pool: b.pool.map((x) =>
+                  x.funcionarioId === id ? { ...x, falta: !x.falta } : x,
+                ),
+                fase: b.fase === "previa" ? "idle" : b.fase,
+                previa: null,
+                painelLideranca: false,
+              });
+            }}
+            onToggleFaltaSl={() => undefined}
+            onMover={() => undefined}
+            onRestaurar={() => undefined}
+            onTrocarLinhas={(from, to) => handleTrocarLinhas(slug, from, to)}
+          />
+        );
+      })()}
       {confirmPublicar ? (
         <ModalConfirmDelete
           title="Publicar rotação"
@@ -873,6 +1041,7 @@ function BlocoRotacaoEstudio({
   const dataTable = useDataTableBlock();
   const [dragLinhaIdx, setDragLinhaIdx] = useState<number | null>(null);
   const [dropLinhaIdx, setDropLinhaIdx] = useState<number | null>(null);
+  const ehShuffler = isBlocoRotacaoShuffler(bloco.slug);
 
   const liderancasCompativeis = useMemo(() => {
     const idsNoPool = new Set(bloco.poolSl.map((g) => g.funcionarioId));
@@ -892,7 +1061,9 @@ function BlocoRotacaoEstudio({
   const slotAtual = bloco.previa?.slotMin ?? bloco.publicada?.slotMinutos ?? bloco.slotMin;
   const slotAlvo = slotAtual === 20 ? 30 : 20;
 
-  const subPool = `${labelTurnoCurto(turno)} · consolidado do estúdio`;
+  const subPool = ehShuffler
+    ? `${labelTurnoCurto(turno)} · todos os estúdios`
+    : `${labelTurnoCurto(turno)} · consolidado do estúdio`;
 
   const gradeSlots =
     bloco.fase === "publicada"
@@ -1021,8 +1192,9 @@ function BlocoRotacaoEstudio({
             fontFamily: FONT.body,
           }}
         >
-          A escala de Game Presenter do mês ainda não está aprovada em Escala Estúdio. O pool fica vazio até a
-          aprovação.
+          {ehShuffler
+            ? "A escala de Shuffler do mês ainda não está aprovada em Escala Estúdio. O pool fica vazio até a aprovação."
+            : "A escala de Game Presenter do mês ainda não está aprovada em Escala Estúdio. O pool fica vazio até a aprovação."}
         </div>
       ) : null}
 
@@ -1101,7 +1273,9 @@ function BlocoRotacaoEstudio({
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             {bloco.pool.length === 0 && bloco.poolSl.length === 0 ? (
               <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                Nenhum Game Presenter escalado neste turno/estúdio.
+                {ehShuffler
+                  ? "Nenhum Shuffler escalado neste turno."
+                  : "Nenhum Game Presenter escalado neste turno/estúdio."}
               </span>
             ) : (
               <>
@@ -1113,7 +1287,9 @@ function BlocoRotacaoEstudio({
                     brandPrimary={brand.primary}
                     estudiosDestino={destinos}
                     movendo={movendoId === g.funcionarioId}
-                    podeMover={podeLideranca && bloco.fase !== "publicada"}
+                    podeMover={
+                      !ehShuffler && podeLideranca && bloco.fase !== "publicada"
+                    }
                     onToggleFalta={() => onToggleFaltaGp(g.funcionarioId)}
                     onMover={(dest) => onMover(g.funcionarioId, dest)}
                     onRestaurar={
