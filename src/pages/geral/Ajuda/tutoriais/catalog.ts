@@ -13,6 +13,9 @@ import { TUTORIAL_MARKETPLACE_OFERTAS } from "./marketplaceOfertas";
 import { TUTORIAL_MARKETPLACE_OFERTAS_SPIN } from "./marketplaceOfertasSpin";
 import { TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO } from "./figurinoRetiradaDevolucao";
 import { TUTORIAL_NOVO_INCIDENTE } from "./novoIncidente";
+import { TUTORIAL_CONTROLE_TURNO_APROVACAO_ESCALA } from "./controleTurnoAprovacaoEscala";
+import { TUTORIAL_CONTROLE_TURNO_NOTIFICACOES } from "./controleTurnoNotificacoes";
+import { TUTORIAL_CONTROLE_TURNO_RELATORIO } from "./controleTurnoRelatorio";
 import { TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS } from "./portalRhCienciaPoliticas";
 import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "./portalRhComunicadosLidos";
 import { TUTORIAL_PORTAL_RH_GERENCIAMENTO } from "./portalRhGerenciamento";
@@ -27,6 +30,9 @@ import type { TutorialDef, TutorialSecaoNav } from "./types";
 /** Catálogo de tutoriais — ordem das secções alinhada ao menu quando possível. */
 export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_NOVO_INCIDENTE,
+  TUTORIAL_CONTROLE_TURNO_APROVACAO_ESCALA,
+  TUTORIAL_CONTROLE_TURNO_RELATORIO,
+  TUTORIAL_CONTROLE_TURNO_NOTIFICACOES,
   TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO,
   TUTORIAL_GESTAO_STAFF_EDITAR,
   TUTORIAL_IMPRIMIR_IDS_STAFF,

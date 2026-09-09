@@ -25,6 +25,7 @@ alwaysApply: false
 | `rh_figurinos` | Figurinos | Controle o inventário de peças com retiradas, devoluções e manutenções. |
 | `roteiro_mesa` | Roteiro de Mesa | Scripts e orientações de live por estúdio para o dealer usar em mesa. |
 | `incidentes` | Incidentes | Registre e acompanhe erros de mesa por Game Presenter e Shuffler no período. |
+| `escala_controle_turno` | Controle de Turno | Acompanhe rotação, escala/presença e notificações operacionais do turno. |
 
 **Central de Notificações:** após o `PageHeader`, manter `<p>` separado para texto dinâmico (ex.: contador de pendentes ou “Campanhas de roteiro…”) — não substituir o `subtitle` fixo do header.
 
@@ -41,9 +42,10 @@ alwaysApply: false
 | `rh_figurinos` | Figurinos | `estudio/Figurinos/` |
 | `roteiro_mesa` | Roteiro de Mesa | `estudio/RoteiroMesa/` |
 | `incidentes` | Incidentes | `estudio/Incidentes/` |
+| `escala_controle_turno` | Controle de Turno | `estudio/ControleTurno/` |
 | — | Modais de solicitação | `estudio/solicitacoes/` |
 
-**Ajuda contextual:** as cinco páginas usam **`AjudaContextualAcoes`** (contrato em `geral.mdc` § Ajuda contextual). **Incidentes** tem tutorial **Novo Incidente** (`novo-incidente`); as demais (Dealers, Figurinos, Roteiro, Notificações) só **Conheça** e **Troubleshooting**. Em **Figurinos**, o grupo fica à direita da mesma linha das abas de status; no Roteiro de Mesa, ao lado do filtro de estúdio; em **Incidentes**, na linha do carrossel/Histórico/estúdio.
+**Ajuda contextual:** as páginas usam **`AjudaContextualAcoes`** (contrato em `geral.mdc` § Ajuda contextual). **Incidentes** tem tutorial **Novo Incidente** (`novo-incidente`); **Controle de Turno**, Dealers, Figurinos, Roteiro e Notificações: só **Conheça** e **Troubleshooting**. Em **Figurinos**, o grupo fica à direita da mesma linha das abas de status; no Roteiro de Mesa, ao lado do filtro de estúdio; em **Incidentes**, na linha do carrossel/Histórico/estúdio; em **Controle de Turno**, à direita da linha das abas.
 
 ---
 
@@ -223,6 +225,25 @@ Nenhuma exceção documentada nesta secção. Usar paleta canónica (Global § I
 ### Exceções — identidade de jogo
 
 Nenhuma exceção documentada nesta secção. Chip de jogo na tabela usa paleta canónica (Global § Identidade visual por jogo).
+
+---
+
+## Controle de Turno (`escala_controle_turno`)
+
+- **Menu:** Estúdio, abaixo de Incidentes. **h1** = Controle de Turno. **Subtítulo:** «Acompanhe rotação, escala/presença e notificações operacionais do turno.»
+- **Pasta:** `estudio/ControleTurno/` — `PageKey` permanece `escala_controle_turno` (matriz de permissões / RPCs).
+- **Abas (`useRouteTab`):** Escala do Turno | Rotação | Relatório de Turno | Notificações (`FiltroBarTabButton`). Abas montam na 1ª visita e **permanecem montadas** (`hidden`) — troca de aba não remonta nem perde o estado da Escala.
+- **Filtros:** carrossel de **dia** (passados livres; futuro **só até amanhã** — `hoje+1`) + **`FiltroHojeButton`** (ativo quando o dia selecionado é hoje; default ao abrir) + `FiltroTurnoSelect` (Manhã/Tarde/Noite, sem «Todos Turnos») — oculto nas abas **Relatório** e **Notificações**. Busca conforme a aba.
+- **Rotação (aba):** motor `lib/escalaRotacao.ts` (regras de negócio em `escala.mdc` § Rotação). **Um bloco por estúdio ativo** — sem seletor único no topo. Em cada bloco: KPIs **Escalados / Não Chegaram / Horas Adicionais / Disponíveis**; pool filtrado pela Escala do Turno (**Presente** / **Pendente** / **Saída Antecipada** / **Hora Adicional**; HA do turno anterior no seguinte, com **X** após a saída); **Mover estúdio…** / **Restaurar estúdio** nos chips. Máquina de estados por estúdio: **idle** → **Gerar prévia**; **prévia** → **Incluir Liderança** + toggle **Rotação de 20min/30min** + **Publicar** + grade com drag-and-drop; **publicada** → só **Regenerar**. Ordem das linhas de GP na prévia é **aleatória** a cada geração completa. Página legada `escala_rotacao` **descontinuada** (menu Escala removido). Relatório de Turno legado também descontinuado — fluxo oficial é a aba Relatório do CT.
+- **Escala do Turno:** RPC **`escala_controle_turno_presenca_dia`**. Coluna **Aprovado** só via ação **Aprovar**. Bloco **Controle de Presença**: **`SortTableTh`** nas colunas de dados (default Nome asc; Ações sem ordenação). Saída overnight (saída < entrada) exibe `HH:MM · DD/MM` do dia civil seguinte. Ponto do Calendário só aplica se o check-in cair na janela do turno (migration `20261207150000_*`). Schema: `docs/sql/escala_controle_turno_schema.sql` + migrations `escala_ct_*`.
+- **Notificações → Feedbacks:** modal **Registrar Feedback** — se Recomendação = **Orientação**, label do texto = **Ata da Orientação**; senão **Observação**. Sem ação **Aplicar** nesta aba (aplicação em página futura). Tabelas dos quatro blocos com **`SortTableTh`** nas colunas de dados.
+- **Notificações → Fechamento de Mesa:** data+hora de fechamento e de abertura (`data_registro` / `hora_fechamento` + `data_reabertura` / `hora_reabertura`). Visível em cada dia D com `data_registro ≤ D ≤ data_reabertura` (ou enquanto `nao_reaberta`). Status **Não aberta** / **Reaberta** relativo ao dia do carrossel.
+- **Permissões:** seed Ver/Criar/Editar = Não (exceto Admin). `can_excluir` null.
+- **Tutoriais (Ajuda → Tutoriais):**
+  - **Aprovação de Escala de Turno** (`controle-turno-aprovacao-escala`, `/Ajuda/Tutoriais/ControleTurnoAprovacaoEscala`) — aba Escala; seed Shift Leader / Service Manager / Gestor de Operações; imagens em `public/tutoriais/estudio/controle-turno/aprovacao-escala/`.
+  - **Relatório de Turno** (`controle-turno-relatorio`, `/Ajuda/Tutoriais/ControleTurnoRelatorio`) — aba Relatório; mesmas roles; imagens em `public/tutoriais/estudio/controle-turno/relatorio/`.
+  - **Notificação** (`controle-turno-notificacoes`, `/Ajuda/Tutoriais/ControleTurnoNotificacoes`) — aba Notificações; mesmas roles; imagens em `public/tutoriais/estudio/controle-turno/notificacoes/`.
+  - Atalho contextual na barra muda conforme a aba (Rotação sem tutorial dedicado).
 
 ---
 

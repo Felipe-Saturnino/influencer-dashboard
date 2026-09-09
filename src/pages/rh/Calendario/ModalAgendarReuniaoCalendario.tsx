@@ -135,7 +135,7 @@ export function ModalAgendarReuniaoCalendario({
 
   return (
     <ModalBase maxWidth={480} onClose={onClose} zIndex={1140}>
-      <ModalHeader title="Agendar reunião" onClose={onClose} />
+      <ModalHeader title="Agendar Reunião" onClose={onClose} />
       <div style={{ padding: "4px 4px 0", fontFamily: FONT.body, color: t.text }}>
         {diasEscalados.length === 0 ? (
           <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.55, color: t.textMuted }}>
@@ -233,7 +233,7 @@ export function ModalAgendarReuniaoCalendario({
                 Salvando…
               </span>
             ) : (
-              "Agendar reunião"
+              "Agendar Reunião"
             )}
           </button>
         </div>

@@ -43,7 +43,7 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 |------|-------|
 | Subtítulo | Solicite e acompanhe as ordens de saída internas, externas e de manutenção dos ativos. |
 | Tabelas | `tech_ops_ordem_saida`, `tech_ops_ordem_saida_itens`, `tech_ops_ordem_saida_historico`, `tech_ops_ordem_saida_anotacoes`, `tech_ops_ordem_saida_codigo_counters` |
-| Migração | `20261018120000_tech_ops_ordem_saida.sql` · `20261018210000_tech_ops_ordem_saida_modais.sql` · `20261018220000_tech_ops_ordem_saida_permissoes.sql` · `20261129120000_tech_ops_ordem_saida_fix_criar.sql` |
+| Migração | `20261018120000_tech_ops_ordem_saida.sql` · `20261018210000_tech_ops_ordem_saida_modais.sql` · `20261018220000_tech_ops_ordem_saida_permissoes.sql` · `20261129120000_tech_ops_ordem_saida_fix_criar.sql` · `20261209120000_tech_ops_ordem_saida_proximo_codigo_ambiguity.sql` |
 | RLS | `_tech_ops_ordem_saida_perm(need)` + `_pode_nova` / `_pode_atualizar`; INSERT força `solicitante_user_id = auth.uid()` (trigger + client) |
 | Código | RPC `tech_ops_ordem_saida_proximo_codigo` → `OS/{INT\|EXT\|MAN}-MMAA-####` |
 | Lib | `src/lib/techOpsOrdemSaida.ts` |

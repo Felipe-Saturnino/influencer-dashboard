@@ -1,12 +1,14 @@
 /**
  * Carga Mesas Spin a partir da extração do Daily Commercial Report [BRL] (Superset).
  *
- * Fluxo diário (quando o usuário pedir para atualizar):
+ * Fluxo diário (quando o usuário pedir para atualizar) — padrão canónico:
+ *   ver .cursor/rules/mesas-spin-carga.mdc (+ business.mdc § Grupo EsportivaBet).
  *   1. Abrir o dashboard 15 logado no navegador controlado.
- *   2. Injetar scripts/superset-mesas-spin-extract-browser.js (MODO network, depois
- *      dedicado, depois monthly) e gravar os JSON em tmp/.
- *   3. Rodar este script com --preencher-faltantes (consulta o último dia no
- *      Supabase e só emite/grava os dias seguintes já presentes no extract).
+ *   2. Extract Network (split esportiva/bateu/brx/rico/donald/betponto) → Dedicado → Monthly;
+ *      helpers tmp/make-compact-extract.mjs + inject CDP; JSON em tmp/.
+ *   3. Este script com --gravar (UPSERT direto). Carga incremental:
+ *      --preencher-faltantes (só dias > último no Supabase).
+ *   4. Não carregar D-0 incompleto; ATE exclusivo no extract.
  *
  * Uso:
  *   node scripts/superset-mesas-spin-run.mjs --network=tmp/n.json --dedicado=tmp/d.json --sql
@@ -20,6 +22,14 @@
  * Regras: TO/GGR arredondados por mesa (Math.round); daily = soma das mesas;
  * UAP daily = UAP_TOT (não somar uap_por_jogo); monthly = MTD do mês de DE
  * (extract usa dia 1 → ATE exclusivo — ver MONTHLY_TIME_RANGE no browser script).
+ *
+ * Network — grupo EsportivaBet (split por player_id; brand_name vazio no CH):
+ *   esportiva → esportiva_bet (esportivabetbr_* + IDs sem marca)
+ *   bateu     → bateu_bet
+ *   brx       → brx_bet
+ *   rico      → rico_bet
+ *   donald    → donald_bet (donaldbetbr_*)
+ *   betponto  → betponto_bet (betpontobetbetbr_* — Bet.Bet)
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -53,6 +63,41 @@ const OPS = {
   esportiva: {
     slug: "esportiva_bet",
     nome: "Esportiva Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  bateu: {
+    slug: "bateu_bet",
+    nome: "Bateu Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  brx: {
+    slug: "brx_bet",
+    nome: "BRX Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  rico: {
+    slug: "rico_bet",
+    nome: "Rico Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  donald: {
+    slug: "donald_bet",
+    nome: "Donald Bet",
+    canal: "network",
+    mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+    jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
+  },
+  betponto: {
+    slug: "betponto_bet",
+    nome: "Bet.Bet",
     canal: "network",
     mesas: ["Blackjack 1", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
     jogos: ["Blackjack", "Futebol Brasileiro", "Speed Baccarat", "Roleta"],
@@ -259,7 +304,10 @@ function montarDia(opKey, canal, block, dia) {
 }
 
 function opsDoExtract(raw, canal) {
-  const keys = canal === "network" ? ["esportiva", "casa", "blaze", "jonbet"] : ["casa", "blaze"];
+  const keys =
+    canal === "network"
+      ? ["esportiva", "bateu", "brx", "rico", "casa", "blaze", "jonbet"]
+      : ["casa", "blaze"];
   const out = [];
   for (const k of keys) {
     if (raw[k]) out.push(k);
@@ -388,6 +436,11 @@ function monthlyDoExtract(raw) {
     ded_casa: { canal: "dedicado", slug: "casa_apostas" },
     ded_blaze: { canal: "dedicado", slug: "blaze" },
     net_esportiva: { canal: "network", slug: "esportiva_bet" },
+    net_bateu: { canal: "network", slug: "bateu_bet" },
+    net_brx: { canal: "network", slug: "brx_bet" },
+    net_rico: { canal: "network", slug: "rico_bet" },
+    net_donald: { canal: "network", slug: "donald_bet" },
+    net_betponto: { canal: "network", slug: "betponto_bet" },
     net_casa: { canal: "network", slug: "casa_apostas" },
     net_blaze: { canal: "network", slug: "blaze" },
     net_jonbet: { canal: "network", slug: "jonbet" },

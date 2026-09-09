@@ -13,7 +13,7 @@ export type CtFeedbackRecomendacao =
   | "notif_descumprimento"
   | "notif_suspensao"
   | "persistencia";
-export type CtFeedbackStatus = "aplicado" | "revisar";
+export type CtFeedbackStatus = "aplicado" | "revisar" | "rejeitado";
 export type CtManutTipo = "ti" | "limpeza" | "tech_ops";
 export type CtManutStatus = "aberto" | "em_andamento" | "concluido" | "cancelado";
 export type CtRelatorioStatus = "rascunho" | "publicado";
@@ -25,6 +25,7 @@ export type CtPresencaStatus =
   | "saida_antecipada"
   | "hora_adicional";
 export type CtPresencaTipo =
+  | "aprovar"
   | "falta"
   | "saida_antecipada"
   | "hora_adicional"
@@ -50,6 +51,8 @@ export type CtFechamentoRow = {
   mesa_id: string;
   hora_fechamento: string;
   hora_reabertura: string | null;
+  /** Dia civil da reabertura; null enquanto `nao_reaberta`. */
+  data_reabertura: string | null;
   nao_reaberta: boolean;
   observacao: string;
   lideranca_fechamento_user_id: string | null;
@@ -190,6 +193,40 @@ export function formatHoraCt(v: string | null | undefined): string {
   return `${m[1]!.padStart(2, "0")}:${m[2]}`;
 }
 
+/** Data ISO + hora HH:MM → `dd/mm/aaaa HH:MM` (ou `—`). */
+export function formatDataHoraCt(
+  dataIso: string | null | undefined,
+  hora: string | null | undefined,
+): string {
+  const d = isoDate(dataIso);
+  const h = formatHoraCt(hora);
+  if (!d || !h) return "—";
+  const p = d.split("-");
+  const br = p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+  return `${br} ${h}`;
+}
+
+/** Fechamento aparece no carrossel do dia D se o intervalo [fechamento, reabertura] cobre D. */
+export function fechamentoVisivelNoDia(
+  row: Pick<CtFechamentoRow, "data_registro" | "data_reabertura" | "nao_reaberta">,
+  diaIso: string,
+): boolean {
+  const dia = diaIso.slice(0, 10);
+  if (!row.data_registro || row.data_registro > dia) return false;
+  if (row.nao_reaberta || !row.data_reabertura) return true;
+  return row.data_reabertura >= dia;
+}
+
+/** No dia D a mesa ainda estava fechada (reabertura depois de D ou ainda aberta). */
+export function fechamentoAindaFechadoNoDia(
+  row: Pick<CtFechamentoRow, "data_reabertura" | "nao_reaberta">,
+  diaIso: string,
+): boolean {
+  const dia = diaIso.slice(0, 10);
+  if (row.nao_reaberta || !row.data_reabertura) return true;
+  return row.data_reabertura > dia;
+}
+
 export function getCurrentUserNome(nomeFromCaller?: string | null): string {
   const n = (nomeFromCaller ?? "").trim();
   return n || "—";
@@ -303,6 +340,7 @@ function mapFechamento(
     mesa_id: mesaId,
     hora_fechamento: formatHoraCt(row.hora_fechamento as string),
     hora_reabertura: row.hora_reabertura ? formatHoraCt(row.hora_reabertura as string) : null,
+    data_reabertura: row.data_reabertura ? isoDate(row.data_reabertura) : null,
     nao_reaberta: Boolean(row.nao_reaberta),
     observacao: String(row.observacao ?? ""),
     lideranca_fechamento_user_id: (row.lideranca_fechamento_user_id as string | null) ?? null,
@@ -324,9 +362,10 @@ export async function listFechamentos(diaIso: string): Promise<CtFechamentoRow[]
   const { data, error } = await supabase
     .from("escala_ct_fechamento_mesa")
     .select(
-      "id, data_registro, mesa_id, hora_fechamento, hora_reabertura, nao_reaberta, observacao, lideranca_fechamento_user_id, lideranca_fechamento_nome, lideranca_reabertura_user_id, lideranca_reabertura_nome, mesas_spin_cadastro(id, nome_mesa, numero_mesa, tipo_jogo, estudio_slug)",
+      "id, data_registro, mesa_id, hora_fechamento, hora_reabertura, data_reabertura, nao_reaberta, observacao, lideranca_fechamento_user_id, lideranca_fechamento_nome, lideranca_reabertura_user_id, lideranca_reabertura_nome, mesas_spin_cadastro(id, nome_mesa, numero_mesa, tipo_jogo, estudio_slug)",
     )
-    .or(`data_registro.eq.${dia},and(data_registro.lt.${dia},nao_reaberta.eq.true)`)
+    .lte("data_registro", dia)
+    .or(`nao_reaberta.eq.true,data_reabertura.gte.${dia}`)
     .order("data_registro", { ascending: false })
     .order("hora_fechamento", { ascending: true });
 
@@ -335,14 +374,17 @@ export async function listFechamentos(diaIso: string): Promise<CtFechamentoRow[]
     throw new Error(MSG_ERRO_CT);
   }
 
-  return ((data ?? []) as unknown as Record<string, unknown>[]).map((r) => mapFechamento(r, mesaMap));
+  return ((data ?? []) as unknown as Record<string, unknown>[])
+    .map((r) => mapFechamento(r, mesaMap))
+    .filter((r) => fechamentoVisivelNoDia(r, dia));
 }
 
 export async function createFechamentos(input: {
-  dataRegistro: string;
   mesas: {
     mesaId: string;
+    dataFechamento: string;
     horaFechamento: string;
+    dataReabertura: string | null;
     horaReabertura: string | null;
     naoReaberta: boolean;
     observacao: string;
@@ -351,18 +393,22 @@ export async function createFechamentos(input: {
 }): Promise<void> {
   const uid = await authUserId();
   const nome = getCurrentUserNome(input.liderancaNome);
-  const rows = input.mesas.map((m) => ({
-    data_registro: input.dataRegistro.slice(0, 10),
-    mesa_id: m.mesaId,
-    hora_fechamento: m.horaFechamento,
-    hora_reabertura: m.naoReaberta ? null : m.horaReabertura,
-    nao_reaberta: m.naoReaberta,
-    observacao: m.observacao.trim(),
-    lideranca_fechamento_user_id: uid,
-    lideranca_fechamento_nome: nome,
-    lideranca_reabertura_user_id: m.naoReaberta ? null : uid,
-    lideranca_reabertura_nome: m.naoReaberta ? "" : nome,
-  }));
+  const rows = input.mesas.map((m) => {
+    const dataFech = m.dataFechamento.slice(0, 10);
+    return {
+      data_registro: dataFech,
+      mesa_id: m.mesaId,
+      hora_fechamento: m.horaFechamento,
+      hora_reabertura: m.naoReaberta ? null : m.horaReabertura,
+      data_reabertura: m.naoReaberta ? null : (m.dataReabertura ?? dataFech).slice(0, 10),
+      nao_reaberta: m.naoReaberta,
+      observacao: m.observacao.trim(),
+      lideranca_fechamento_user_id: uid,
+      lideranca_fechamento_nome: nome,
+      lideranca_reabertura_user_id: m.naoReaberta ? null : uid,
+      lideranca_reabertura_nome: m.naoReaberta ? "" : nome,
+    };
+  });
   const { error } = await supabase.from("escala_ct_fechamento_mesa").insert(rows);
   if (error) {
     console.error(error);
@@ -372,7 +418,9 @@ export async function createFechamentos(input: {
 
 export async function updateFechamento(input: {
   id: string;
+  dataRegistro: string;
   horaFechamento: string;
+  dataReabertura: string | null;
   horaReabertura: string | null;
   naoReaberta: boolean;
   observacao: string;
@@ -383,9 +431,12 @@ export async function updateFechamento(input: {
 }): Promise<void> {
   const uid = await authUserId();
   const nomeAtual = getCurrentUserNome(input.liderancaNomeAtual);
+  const dataFech = input.dataRegistro.slice(0, 10);
   const payload: Record<string, unknown> = {
+    data_registro: dataFech,
     hora_fechamento: input.horaFechamento,
     hora_reabertura: input.naoReaberta ? null : input.horaReabertura,
+    data_reabertura: input.naoReaberta ? null : (input.dataReabertura ?? dataFech).slice(0, 10),
     nao_reaberta: input.naoReaberta,
     observacao: input.observacao.trim(),
     lideranca_fechamento_nome: input.liderancaFechamentoNome || nomeAtual,
@@ -533,22 +584,61 @@ export async function createFeedback(input: {
   observacao: string;
   liderancaNome: string;
 }): Promise<void> {
-  const uid = await authUserId();
   const nome = getCurrentUserNome(input.liderancaNome);
-  const isOrientacao = input.recomendacao === "orientacao";
-  const { error } = await supabase.from("escala_ct_feedback").insert({
-    data_registro: input.dataRegistro.slice(0, 10),
-    prestador_id: input.prestadorId,
-    recomendacao: input.recomendacao,
-    status: isOrientacao ? "aplicado" : "revisar",
-    observacao: input.observacao.trim(),
-    lideranca_user_id: uid,
-    lideranca_nome: nome,
-    aplicado_por_user_id: isOrientacao ? uid : null,
-    aplicado_por_nome: isOrientacao ? nome : "",
+  const { data, error } = await supabase.rpc("escala_ct_feedback_criar", {
+    p_data_registro: input.dataRegistro.slice(0, 10),
+    p_prestador_id: input.prestadorId,
+    p_recomendacao: input.recomendacao,
+    p_observacao: input.observacao.trim(),
+    p_lideranca_nome: nome === "—" ? "" : nome,
   });
+
   if (error) {
-    console.error(error);
+    console.error("[createFeedback] RPC escala_ct_feedback_criar", error);
+    // Fallback legado se a RPC ainda não existir no projeto Supabase
+    const uid = await authUserId();
+    const isOrientacao = input.recomendacao === "orientacao";
+    const { data: inserted, error: insertErr } = await supabase
+      .from("escala_ct_feedback")
+      .insert({
+        data_registro: input.dataRegistro.slice(0, 10),
+        prestador_id: input.prestadorId,
+        recomendacao: input.recomendacao,
+        status: isOrientacao ? "aplicado" : "revisar",
+        observacao: input.observacao.trim(),
+        lideranca_user_id: uid,
+        lideranca_nome: nome === "—" ? "" : nome,
+        aplicado_por_user_id: isOrientacao ? uid : null,
+        aplicado_por_nome: isOrientacao ? (nome === "—" ? "" : nome) : "",
+      })
+      .select("id")
+      .single();
+
+    if (insertErr || !inserted) {
+      console.error(insertErr ?? error);
+      throw new Error(MSG_ERRO_CT_SALVAR);
+    }
+
+    // Tenta espelho client-side (pode falhar por RLS se o usuário não tem Editar em Solicitações)
+    const ctStatus = isOrientacao ? "aplicado" : "revisar";
+    const solStatus = ctStatus === "revisar" ? "em_analise" : ctStatus;
+    const { error: solErr } = await supabase.from("rh_solicitacoes").insert({
+      rh_funcionario_id: input.prestadorId,
+      tipo: "feedback",
+      status: solStatus,
+      descricao: input.observacao.trim(),
+      feedback_recomendacao: input.recomendacao,
+      feedback_origem: "controle_turno",
+      escala_ct_feedback_id: inserted.id,
+      lideranca_nome: nome === "—" ? "" : nome,
+    });
+    if (solErr) {
+      console.error("[createFeedback] espelho rh_solicitacoes (fallback)", solErr);
+    }
+    return;
+  }
+
+  if (data == null) {
     throw new Error(MSG_ERRO_CT_SALVAR);
   }
 }
@@ -566,6 +656,9 @@ export async function updateFeedback(input: {
   if (input.status === "aplicado") {
     payload.aplicado_por_user_id = uid;
     payload.aplicado_por_nome = getCurrentUserNome(input.aplicadoPorNome);
+  } else if (input.status === "rejeitado") {
+    payload.aplicado_por_user_id = null;
+    payload.aplicado_por_nome = "";
   }
   const { error } = await supabase.from("escala_ct_feedback").update(payload).eq("id", input.id);
   if (error) {
@@ -799,7 +892,18 @@ export function statusPresencaDoTipo(tipo: CtPresencaTipo): CtPresencaStatus {
   if (tipo === "falta") return "falta";
   if (tipo === "saida_antecipada") return "saida_antecipada";
   if (tipo === "hora_adicional") return "hora_adicional";
+  // aprovar | registrar_horario
   return "presente";
+}
+
+/** True se todas as linhas da Escala do Turno estão com Aprovado = Sim (`registrado`). */
+export async function presencaTurnoTotalmenteAprovada(
+  data: string,
+  turno: CtTurno,
+): Promise<boolean> {
+  const rows = await listPresencaDiaTurno(data, turno);
+  if (rows.length === 0) return true;
+  return rows.every((r) => r.registrado);
 }
 
 function parsePresencaStatus(v: unknown): CtPresencaStatus {
@@ -864,22 +968,30 @@ export async function upsertPresencaRegistro(input: {
   saida: string;
   motivo: string;
   liderancaNome: string;
+  /** Só Aprovar: preserva Falta ou força Presente com horários. */
+  statusPresenca?: CtPresencaStatus;
 }): Promise<void> {
   const dia = input.data.slice(0, 10);
   const uid = await authUserId();
-  const isFalta = input.tipo === "falta";
-  const payload = {
+  const isFalta =
+    input.tipo === "falta" ||
+    (input.tipo === "aprovar" && input.statusPresenca === "falta");
+  const isAprovar = input.tipo === "aprovar";
+  const basePayload = {
     data: dia,
     turno: input.turno,
     prestador_id: input.prestadorId,
     tipo: input.tipo,
-    status_presenca: statusPresencaDoTipo(input.tipo),
+    status_presenca:
+      input.statusPresenca ?? statusPresencaDoTipo(input.tipo),
     entrada_hhmm: isFalta ? "" : input.entrada.trim(),
     saida_hhmm: isFalta ? "" : input.saida.trim(),
     motivo: input.motivo.trim(),
     lideranca_user_id: uid,
     lideranca_nome: getCurrentUserNome(input.liderancaNome),
   };
+  /** Só Aprovar marca `aprovado`; demais ações não tocam o flag (insert = false default). */
+  const payload = isAprovar ? { ...basePayload, aprovado: true } : basePayload;
 
   const { data: existente, error: erroBusca } = await supabase
     .from("escala_ct_presenca_registro")

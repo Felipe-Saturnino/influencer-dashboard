@@ -21,6 +21,13 @@ const DialogTitleIdContext = createContext<string>("");
 /** Padding interno do painel `ModalBase` — usar em `ModalHeader` sticky para alinhar ao topo. */
 export const MODAL_BASE_PADDING_PX = 28;
 
+/**
+ * Padding mínimo em qualquer área com `overflow` que contenha controles focáveis do dialog.
+ * Cobre o anel `:focus-visible` de `global.css` (outline 2 + offset 2 + halo ~4).
+ * Sem isso o overflow corta a borda roxa à esquerda/direita/topo (ex.: textareas em formulários longos).
+ */
+export const MODAL_FOCUS_RING_PAD_PX = 8;
+
 /** Shell flex: corpo rolável + rodapé fixo dentro de `ModalBase` (postagens, vagas, etc.). */
 export const MODAL_FORM_SHELL_STYLE: CSSProperties = {
   display: "flex",
@@ -29,7 +36,10 @@ export const MODAL_FORM_SHELL_STYLE: CSSProperties = {
   maxHeight: `calc(90dvh - ${MODAL_BASE_PADDING_PX * 2}px)`,
 };
 
-/** Área rolável do formulário — `paddingBottom` evita cortar o último campo no scroll. */
+/**
+ * Área rolável do formulário — usar com `ModalBase panelOverflow="hidden"` + `MODAL_FORM_SHELL_STYLE`.
+ * Padding ≥ `MODAL_FOCUS_RING_PAD_PX` para o anel de foco não ser clipado.
+ */
 export const MODAL_FORM_SCROLL_BODY_STYLE: CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -37,8 +47,17 @@ export const MODAL_FORM_SCROLL_BODY_STYLE: CSSProperties = {
   flex: 1,
   minHeight: 0,
   overflowY: "auto",
-  paddingRight: 4,
+  paddingTop: MODAL_FOCUS_RING_PAD_PX,
+  paddingLeft: MODAL_FOCUS_RING_PAD_PX,
+  paddingRight: MODAL_FOCUS_RING_PAD_PX,
   paddingBottom: 24,
+};
+
+/** Padding de foco seguro para wrappers ad hoc com `overflowY: auto` (sem o layout flex do shell). */
+export const MODAL_SCROLL_FOCUS_SAFE_PAD: CSSProperties = {
+  paddingTop: MODAL_FOCUS_RING_PAD_PX,
+  paddingLeft: MODAL_FOCUS_RING_PAD_PX,
+  paddingRight: MODAL_FOCUS_RING_PAD_PX,
 };
 
 export const MODAL_FORM_FOOTER_STYLE: CSSProperties = {
@@ -59,11 +78,17 @@ export function ModalBase({
   maxWidth = 440,
   onClose,
   zIndex = 1000,
+  closeOnBackdrop = true,
+  panelOverflow = "auto",
 }: {
   children: ReactNode;
   maxWidth?: number;
   onClose: () => void;
   zIndex?: number;
+  /** Se false, só o X (ou ação explícita) fecha — clique no fundo não fecha. Default true. */
+  closeOnBackdrop?: boolean;
+  /** Overflow do painel. Use `hidden` com shell de formulário que já rola por dentro. Default `auto`. */
+  panelOverflow?: "auto" | "hidden";
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
@@ -93,7 +118,7 @@ export function ModalBase({
       onMouseDown={(e) => {
         /* `click` no backdrop após selecionar texto (mousedown no input + mouseup no overlay)
          * fechava o modal; `mousedown` só no fundo evita esse caso. */
-        if (e.target === e.currentTarget) onClose();
+        if (closeOnBackdrop && e.target === e.currentTarget) onClose();
       }}
       role="presentation"
     >
@@ -114,7 +139,9 @@ export function ModalBase({
           maxWidth,
           minWidth: 0,
           maxHeight: "90dvh",
-          overflow: "auto",
+          overflow: panelOverflow,
+          display: panelOverflow === "hidden" ? "flex" : undefined,
+          flexDirection: panelOverflow === "hidden" ? "column" : undefined,
         }}
       >
         <DialogTitleIdContext.Provider value={titleId}>{children}</DialogTitleIdContext.Provider>

@@ -19,7 +19,7 @@ import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga"
 import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants";
-import { ModalBase, ModalHeader } from "../../OperacoesModal";
+import { ModalBase, ModalHeader, MODAL_FORM_SCROLL_BODY_STYLE } from "../../OperacoesModal";
 import { orgVinculoDeRow, orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
 import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
 import { CampoTagsVaga } from "./CampoTagsVaga";
@@ -152,6 +152,14 @@ export function ModalAtualizarVaga({
       setNecessarioVideoApresentacao(false);
       setNecessarioTurno(false);
       setTags([]);
+      setRepasseInicialCentavos("");
+      setFieldErr((prev) => {
+        if (!prev.repasse_inicial && !prev.tags) return prev;
+        const next = { ...prev };
+        delete next.repasse_inicial;
+        delete next.tags;
+        return next;
+      });
     }
   }, [tipoVaga]);
 
@@ -259,7 +267,7 @@ export function ModalAtualizarVaga({
     }
     if (!descricao.trim()) e.descricao = "Informe a descrição.";
     if (!responsabilidades.trim()) e.responsabilidades = "Informe as responsabilidades.";
-    if (centavosInteirosDeStringMoeda(repasseInicialCentavos) <= 0) {
+    if (tipoVaga === "externa" && centavosInteirosDeStringMoeda(repasseInicialCentavos) <= 0) {
       e.repasse_inicial = "Informe o repasse inicial.";
     }
     if (tipoVaga === "externa" && tags.length === 0) e.tags = "Adicione ao menos uma tag.";
@@ -314,7 +322,8 @@ export function ModalAtualizarVaga({
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
-        repasse_inicial_centavos: centavosInteirosDeStringMoeda(repasseInicialCentavos),
+        repasse_inicial_centavos:
+          tipoVaga === "externa" ? centavosInteirosDeStringMoeda(repasseInicialCentavos) : 0,
         tags: tipoVaga === "externa" ? tags : [],
         ...camposExterna,
         status: "aberta",
@@ -332,7 +341,8 @@ export function ModalAtualizarVaga({
         data_fim_inscricoes: dataFimInscricoes.trim(),
         descricao: descricao.trim(),
         responsabilidades: responsabilidades.trim(),
-        repasse_inicial_centavos: centavosInteirosDeStringMoeda(repasseInicialCentavos),
+        repasse_inicial_centavos:
+          tipoVaga === "externa" ? centavosInteirosDeStringMoeda(repasseInicialCentavos) : 0,
         tags: tipoVaga === "externa" ? tags : [],
         ...camposExterna,
       };
@@ -433,7 +443,7 @@ export function ModalAtualizarVaga({
           </div>
         </div>
       ) : (
-        <div style={{ maxHeight: "min(70dvh, 640px)", overflowY: "auto", paddingRight: 4, paddingBottom: 24, fontFamily: FONT.body }}>
+        <div style={{ ...MODAL_FORM_SCROLL_BODY_STYLE, maxHeight: "min(70dvh, 640px)", fontFamily: FONT.body }}>
           <button
             type="button"
             onClick={voltarEscolha}
@@ -514,23 +524,25 @@ export function ModalAtualizarVaga({
                 {fieldErr.data_fim ? <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.data_fim}</div> : null}
               </div>
 
-              <div style={{ marginBottom: 14 }}>
-                {lblReq("atv-repasse", "Repasse inicial")}
-                <input
-                  id="atv-repasse"
-                  type="text"
-                  inputMode="decimal"
-                  value={repasseInicialCentavos ? formatarMoedaDigitos(repasseInicialCentavos) : ""}
-                  onChange={(e) => setRepasseInicialCentavos(e.target.value.replace(/\D/g, ""))}
-                  placeholder="R$ 0,00"
-                  autoComplete="off"
-                  aria-label="Repasse inicial em reais"
-                  style={inputStyle}
-                />
-                {fieldErr.repasse_inicial ? (
-                  <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.repasse_inicial}</div>
-                ) : null}
-              </div>
+              {tipoVaga === "externa" ? (
+                <div style={{ marginBottom: 14 }}>
+                  {lblReq("atv-repasse", "Repasse inicial")}
+                  <input
+                    id="atv-repasse"
+                    type="text"
+                    inputMode="decimal"
+                    value={repasseInicialCentavos ? formatarMoedaDigitos(repasseInicialCentavos) : ""}
+                    onChange={(e) => setRepasseInicialCentavos(e.target.value.replace(/\D/g, ""))}
+                    placeholder="R$ 0,00"
+                    autoComplete="off"
+                    aria-label="Repasse inicial em reais"
+                    style={inputStyle}
+                  />
+                  {fieldErr.repasse_inicial ? (
+                    <div style={{ color: "#e84025", fontSize: 12, marginTop: 4 }}>{fieldErr.repasse_inicial}</div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div style={{ marginBottom: 14 }}>
                 {lblReq("atv-desc", "Descrição")}

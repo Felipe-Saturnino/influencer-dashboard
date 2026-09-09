@@ -142,7 +142,7 @@ function tabelaMesasDedicadas(rows: RelatorioDiretoriaData['mesasDedicadas']): s
 
 function tabelaMesasNetwork(rows: RelatorioDiretoriaData['mesasNetwork']): string {
   const linhas = rows.length === 0
-    ? `<tr><td colspan="5" style="${TD}color:#9ca3af;font-style:italic;">Sem leitura disponível.</td></tr>`
+    ? `<tr><td colspan="10" style="${TD}color:#9ca3af;font-style:italic;">Sem leitura disponível.</td></tr>`
     : rows.map((m, i) => `
         <tr style="${trStyle(i)}">
           <td style="${TD}font-weight:600;">${m.mesa}</td>
@@ -150,11 +150,16 @@ function tabelaMesasNetwork(rows: RelatorioDiretoriaData['mesasNetwork']): strin
           <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.cda)}</td>
           <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.esportiva)}</td>
           <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.jonbet)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.bateu)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.rico)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.brx)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.donald)}</td>
+          <td style="${TD_C}font-weight:700;color:#4a2082;">${fmtPos(m.betponto)}</td>
         </tr>`).join('')
 
   return `
     <div class="table-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:8px;">
-      <table style="width:100%;min-width:480px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+      <table style="width:100%;min-width:900px;border-collapse:collapse;font-size:13px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
         <thead>
           <tr>
             <th style="${TH}text-align:left;">Mesa</th>
@@ -162,6 +167,11 @@ function tabelaMesasNetwork(rows: RelatorioDiretoriaData['mesasNetwork']): strin
             <th style="${TH}text-align:center;">CDA</th>
             <th style="${TH}text-align:center;">Esportiva</th>
             <th style="${TH}text-align:center;">Jonbet</th>
+            <th style="${TH}text-align:center;">Bateu</th>
+            <th style="${TH}text-align:center;">Rico</th>
+            <th style="${TH}text-align:center;">BRX</th>
+            <th style="${TH}text-align:center;">Donald</th>
+            <th style="${TH}text-align:center;">BetPonto</th>
           </tr>
         </thead>
         <tbody>${linhas}</tbody>

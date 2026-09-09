@@ -178,6 +178,7 @@ export default function OverviewSpin() {
     dailyData,
     monthlyData,
     modoAgregadoTodasOperadoras,
+    mesSelecionado,
   });
 
   const {

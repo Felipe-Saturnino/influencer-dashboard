@@ -9,15 +9,15 @@ import {
   type ParsedMarca,
 } from "./comercialSpaCsvParser";
 
-export const DEFAULT_LISTA_PAGE =
-  "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas";
-
 const LISTA_EMPRESAS_PREFIX =
   "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas/";
 
-/** Páginas conhecidas quando o índice não aponta mais para a planilha. */
+/** Página canónica com a tabela HTML oficial (índice `lista-de-empresas` mudou de conteúdo). */
+export const DEFAULT_LISTA_PAGE = `${LISTA_EMPRESAS_PREFIX}empresas-autorizadas`;
+
+/** Páginas conhecidas quando o índice não aponta mais para a lista. */
 export const FALLBACK_PAGINAS_LISTA = [
-  `${LISTA_EMPRESAS_PREFIX}empresas-autorizadas`,
+  DEFAULT_LISTA_PAGE,
   `${LISTA_EMPRESAS_PREFIX}confira-a-lista-de-empresas-autorizadas-a-ofertar-apostas-de-quota-fixa-em-2025`,
 ] as const;
 
@@ -48,11 +48,19 @@ function isAssetUrl(u: string): boolean {
   return /\.(pdf|png|jpe?g|gif|svg|webp)(?:$|\?)/i.test(u) || /@@images|arquivos_tarjados/i.test(u);
 }
 
+function isTransparenciaAtivaUrl(u: string): boolean {
+  return /transparencia-ativa/i.test(u);
+}
+
 /**
- * URL de ficheiro CSV/XLSX no gov.br (legado). Ignora processos judiciais.
+ * URL de ficheiro CSV/XLSX no gov.br (legado).
+ * Ignora processos judiciais e links sob Transparência Ativa (ficheiros de processos; o
+ * `planilha-de-autorizacoes-1.xlsx` nessa pasta costuma 404 — a lista viva é a tabela HTML).
  */
 export function extractAutorizacoesPlanilhaUrl(html: string): string | null {
-  const urls = collectHrefs(html).filter((u) => /gov\.br\/fazenda/i.test(u) && !isJudicialUrl(u));
+  const urls = collectHrefs(html).filter(
+    (u) => /gov\.br\/fazenda/i.test(u) && !isJudicialUrl(u) && !isTransparenciaAtivaUrl(u),
+  );
 
   const xlsx = urls.find((u) => /planilha-de-autorizacoes[^"/?]*\.xlsx(?:$|\?)/i.test(u));
   if (xlsx) return xlsx.split("#")[0] ?? xlsx;
@@ -60,6 +68,30 @@ export function extractAutorizacoesPlanilhaUrl(html: string): string | null {
   const csv = urls.find((u) => /planilha-de-autorizacoes[^"/?]*\.csv(?:$|\?)/i.test(u));
   if (csv) return csv.split("#")[0] ?? csv;
 
+  return null;
+}
+
+export type SpaListaFontePicked =
+  | { kind: "html"; url: string; html: string; listaAtualizadaEm: string | null }
+  | { kind: "arquivo"; url: string; listaAtualizadaEm: string | null };
+
+/**
+ * Escolhe a fonte na página: tabela HTML oficial primeiro; planilha gov.br só se
+ * não houver tabela; SharePoint por último.
+ */
+export function pickFonteFromHtml(html: string, pageUrl: string): SpaListaFontePicked | null {
+  const listaAtualizadaEm = extractListaAtualizadaEm(html);
+  if (looksLikeSpaAutorizacoesHtmlTable(html)) {
+    return { kind: "html", url: pageUrl, html, listaAtualizadaEm };
+  }
+  const planilha = extractAutorizacoesPlanilhaUrl(html);
+  if (planilha) {
+    return { kind: "arquivo", url: planilha, listaAtualizadaEm };
+  }
+  const sharepoint = extractSharePointPlanilhaUrl(html);
+  if (sharepoint) {
+    return { kind: "arquivo", url: sharepoint, listaAtualizadaEm };
+  }
   return null;
 }
 

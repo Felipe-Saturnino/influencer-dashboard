@@ -52,6 +52,7 @@ import {
   FiltroMeuCalendarioButton,
   FiltroTipoCompromissoCalendarioSelect,
   SectionTitle,
+  type SortDir,
   type TipoCompromissoCalFiltroValue,
 } from "../../../components/dashboard";
 import {
@@ -125,7 +126,6 @@ import {
   labelCarrosselDiaRelatorioPresenca,
   ordenarLinhasRelatorioPresencaPorNome,
 } from "../../../lib/rhCalendarioRelatorioPresenca";
-import type { SortDir } from "../../../components/dashboard";
 import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
 import {
   ModalAprovacaoPresencaCalendario,
@@ -3183,11 +3183,6 @@ export default function RhCalendarioPage() {
                   {baixandoCalendarioPdf ? "Gerando…" : "Download"}
                 </button>
               ) : null}
-              {abaPrincipal === "compromissos" && solicitanteAgendarId && !simulacaoSomenteLeitura ? (
-                <CtaCriarButton type="button" onClick={() => setModalAgendarAberto(true)} aria-label="Nova Agenda">
-                  Nova Agenda
-                </CtaCriarButton>
-              ) : null}
               {abaPrincipal === "presenca" && mostrarBotaoCheckInPresenca ? (
                 <button
                   type="button"
@@ -3503,6 +3498,15 @@ export default function RhCalendarioPage() {
               value={filtroTipoCompromisso}
               onChange={setFiltroTipoCompromisso}
             />
+            {solicitanteAgendarId &&
+            !simulacaoSomenteLeitura &&
+            (perm.canView === "proprios" ||
+              perm.canEditarOk ||
+              (perm.canView === "sim" && calendarioSoMeuAtivo)) ? (
+              <CtaCriarButton type="button" onClick={() => setModalAgendarAberto(true)} aria-label="Agendar Reunião">
+                Agendar Reunião
+              </CtaCriarButton>
+            ) : null}
           </div>
           {loadingStaff ? (
             <div

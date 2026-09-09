@@ -676,12 +676,22 @@ function DashboardPosicionamentoTodas({
   const cda = useLobbyPosicionamentoData("casa_apostas", refDate, optsConsolidados);
   const esportiva = useLobbyPosicionamentoData("esportiva_bet", refDate, optsConsolidados);
   const jonbet = useLobbyPosicionamentoData("jonbet", refDate, optsConsolidados);
+  const bateu = useLobbyPosicionamentoData("bateu_bet", refDate, optsConsolidados);
+  const rico = useLobbyPosicionamentoData("rico_bet", refDate, optsConsolidados);
+  const brx = useLobbyPosicionamentoData("brx_bet", refDate, optsConsolidados);
+  const donald = useLobbyPosicionamentoData("donald_bet", refDate, optsConsolidados);
+  const betponto = useLobbyPosicionamentoData("betponto_bet", refDate, optsConsolidados);
 
   const loadingHistoricoAlertas =
     blaze.loadingHistorico ||
     cda.loadingHistorico ||
     esportiva.loadingHistorico ||
-    jonbet.loadingHistorico;
+    jonbet.loadingHistorico ||
+    bateu.loadingHistorico ||
+    rico.loadingHistorico ||
+    brx.loadingHistorico ||
+    donald.loadingHistorico ||
+    betponto.loadingHistorico;
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -694,12 +704,22 @@ function DashboardPosicionamentoTodas({
       ...prefix("casa_apostas", cda.alertasAlteracoes7d),
       ...prefix("esportiva_bet", esportiva.alertasAlteracoes7d),
       ...prefix("jonbet", jonbet.alertasAlteracoes7d),
+      ...prefix("bateu_bet", bateu.alertasAlteracoes7d),
+      ...prefix("rico_bet", rico.alertasAlteracoes7d),
+      ...prefix("brx_bet", brx.alertasAlteracoes7d),
+      ...prefix("donald_bet", donald.alertasAlteracoes7d),
+      ...prefix("betponto_bet", betponto.alertasAlteracoes7d),
     ].sort((a, b) => (b.sortTs ?? 0) - (a.sortTs ?? 0));
   }, [
     blaze.alertasAlteracoes7d,
     cda.alertasAlteracoes7d,
     esportiva.alertasAlteracoes7d,
     jonbet.alertasAlteracoes7d,
+    bateu.alertasAlteracoes7d,
+    rico.alertasAlteracoes7d,
+    brx.alertasAlteracoes7d,
+    donald.alertasAlteracoes7d,
+    betponto.alertasAlteracoes7d,
     slugToNome,
   ]);
 
@@ -756,6 +776,71 @@ function DashboardPosicionamentoTodas({
           prevDiferenteMap={jonbet.prevDiferenteMap}
           layout="consolidado"
           ultimaExecutadoEm={jonbet.snapshotExec?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("bateu_bet")}`}
+          loading={bateu.loading}
+          semDados={bateu.semDados}
+          erro={bateu.erro}
+          onRetry={() => void bateu.recarregar()}
+          mesasOrdenadas={bateu.mesasOrdenadas}
+          prevMap={bateu.prevMap}
+          prevDiferenteMap={bateu.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={bateu.snapshotExec?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("rico_bet")}`}
+          loading={rico.loading}
+          semDados={rico.semDados}
+          erro={rico.erro}
+          onRetry={() => void rico.recarregar()}
+          mesasOrdenadas={rico.mesasOrdenadas}
+          prevMap={rico.prevMap}
+          prevDiferenteMap={rico.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={rico.snapshotExec?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("brx_bet")}`}
+          loading={brx.loading}
+          semDados={brx.semDados}
+          erro={brx.erro}
+          onRetry={() => void brx.recarregar()}
+          mesasOrdenadas={brx.mesasOrdenadas}
+          prevMap={brx.prevMap}
+          prevDiferenteMap={brx.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={brx.snapshotExec?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("donald_bet")}`}
+          loading={donald.loading}
+          semDados={donald.semDados}
+          erro={donald.erro}
+          onRetry={() => void donald.recarregar()}
+          mesasOrdenadas={donald.mesasOrdenadas}
+          prevMap={donald.prevMap}
+          prevDiferenteMap={donald.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={donald.snapshotExec?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("betponto_bet")}`}
+          loading={betponto.loading}
+          semDados={betponto.semDados}
+          erro={betponto.erro}
+          onRetry={() => void betponto.recarregar()}
+          mesasOrdenadas={betponto.mesasOrdenadas}
+          prevMap={betponto.prevMap}
+          prevDiferenteMap={betponto.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={betponto.snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
       </div>

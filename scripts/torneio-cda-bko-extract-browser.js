@@ -1,19 +1,29 @@
 /**
- * Extrai jogos BKO dos participantes do torneio CDA (cole no Console do PLS Backoffice logado).
+ * Extrai jogos BKO dos participantes do torneio CDA — modo incremental.
  *
- * Pré-requisito: abrir https://bo2.sg.onairent.live/backoffice/static/bo/find-players
+ * Cole no Console do PLS Backoffice (aba find-players, logado) OU rode via CDP.
  *
- * Nome na UI = apelido travado abaixo (não Screen Name). Período = 03/09/2026 BRT.
- *   node scripts/torneio-cda-bko-sync.mjs --slug=cda-vip-setembro-2026 --arquivo=tmp/torneio-cda-bko.json
+ * Cache em memória: window.__TORNEIO_GAME_CACHE
+ *   - 1ª execução: pagina newest-first até startedAt < periodoInicio
+ *   - Syncs seguintes: para ao achar gameId já conhecido (só faltantes)
+ *
+ * Ao terminar: window.__TORNEIO_SNAP (ranking compacto) + atualiza o cache.
+ * Depois: exportar snap → node scripts/torneio-cda-gravar-snap.mjs
  */
 (async () => {
-  /** 03/09/2026 00:00–23:59:59 America/Sao_Paulo */
-  const PERIODO = {
-    from: "2026-09-03T03:00:00.000Z",
-    to: "2026-09-04T02:59:59.999Z",
-  };
+  const PERIODO_INICIO = "2026-09-03T19:54:18.957Z";
+  const fromMs = Date.parse(PERIODO_INICIO);
+  const toIso = new Date().toISOString();
+  const toMs = Date.parse(toIso);
 
-  /** userName → nome travado na UI (primeiro + segundo nome) */
+  const CDA_MESAS = new Set([
+    "tableSG6134",
+    "tableSG6131",
+    "tableSG6132",
+    "bacSG6133",
+    "roSG6130",
+  ]);
+
   const PARTICIPANTES = [
     { userName: "2205336", apelido: "Alessandro Tomazelli" },
     { userName: "2204772", apelido: "Eliane Luiza" },
@@ -35,7 +45,39 @@
     { userName: "2210445", apelido: "Marcos Alexandre" },
   ];
 
-  const PAGE = 1000;
+  const PTS_RODADA = 500;
+  const PTS_POR_REAL_APOSTADO = 100;
+  const PTS_RODADA_GANHA = 1000;
+  const PTS_POR_REAL_GANHO = 150;
+  const PAGE = 50;
+
+  if (!window.__TORNEIO_GAME_CACHE || window.__TORNEIO_GAME_CACHE.periodoInicio !== PERIODO_INICIO) {
+    window.__TORNEIO_GAME_CACHE = {
+      periodoInicio: PERIODO_INICIO,
+      atualizadoEm: null,
+      byUser: {},
+    };
+  }
+  const cache = window.__TORNEIO_GAME_CACHE;
+
+  function slimGame(g) {
+    return {
+      gameId: g.gameId,
+      tableId: g.tableId,
+      tableName: g.tableName ?? "",
+      gameType: g.gameType ?? "",
+      startedAt: g.startedAt,
+      transactions: (g.transactions ?? []).map((tx) => ({
+        bets: (tx.bets ?? []).map((b) => ({
+          totals: {
+            amount: Number(b.totals?.amount ?? 0),
+            payout: Number(b.totals?.payout ?? 0),
+            net: Number(b.totals?.net ?? 0),
+          },
+        })),
+      })),
+    };
+  }
 
   function listaJogadores(json) {
     if (Array.isArray(json?.players)) return json.players;
@@ -79,58 +121,170 @@
     };
   }
 
-  async function fetchGames(playerId) {
-    const out = [];
+  /** Newest-first; para ao achar game conhecido ou startedAt < inicio. */
+  async function fetchNovosGames(playerId, knownIds) {
+    const novos = [];
     let offset = 0;
-    let total = Infinity;
-    const qs = new URLSearchParams({
-      offset: "0",
-      limit: String(PAGE),
-      from: PERIODO.from,
-      to: PERIODO.to,
-    });
-    while (offset < total) {
-      qs.set("offset", String(offset));
+    let hitKnown = false;
+    let hitBefore = false;
+
+    while (!hitKnown && !hitBefore) {
+      const qs = new URLSearchParams({
+        offset: String(offset),
+        limit: String(PAGE),
+        from: PERIODO_INICIO,
+        to: toIso,
+      });
       const url = `/backoffice/api/players/search/player/games/${encodeURIComponent(playerId)}?${qs}`;
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) {
-        throw new Error(`${playerId}: HTTP ${res.status} ${await res.text()}`);
-      }
+      if (!res.ok) throw new Error(`${playerId}: HTTP ${res.status}`);
       const json = await res.json();
-      total = Number(json.count ?? 0);
       const batch = json.games ?? [];
-      out.push(...batch);
+      if (!batch.length) break;
+
+      for (const g of batch) {
+        const started = Number(g.startedAt ?? 0);
+        if (started && started < fromMs) {
+          hitBefore = true;
+          break;
+        }
+        if (started && started > toMs) continue;
+        if (!CDA_MESAS.has(g.tableId)) continue;
+        if (!g.gameId) continue;
+        if (knownIds.has(g.gameId)) {
+          hitKnown = true;
+          break;
+        }
+        novos.push(slimGame(g));
+      }
+
       if (batch.length < PAGE) break;
       offset += PAGE;
+      if (offset > 5000) break;
     }
-    return out;
+    return { novos, hitKnown, hitBefore };
   }
 
-  const payload = {
-    extraidoEm: new Date().toISOString(),
-    periodo: PERIODO,
-    participantes: [],
-  };
+  function metricasRodada(g) {
+    let amount = 0;
+    let net = 0;
+    for (const tx of g.transactions ?? []) {
+      for (const b of tx.bets ?? []) {
+        amount += Number(b.totals?.amount ?? 0);
+        net += Number(b.totals?.net ?? 0);
+      }
+    }
+    return { amount, net, ganhou: net > 0 };
+  }
 
+  function pontosDe(amount, net, ganhou) {
+    let pts = PTS_RODADA + amount * PTS_POR_REAL_APOSTADO;
+    if (ganhou) pts += PTS_RODADA_GANHA + net * PTS_POR_REAL_GANHO;
+    return Math.round(pts);
+  }
+
+  let novosTotal = 0;
   for (const p of PARTICIPANTES) {
     const meta = await fetchPlayerMeta(p.userName);
-    console.log(`Buscando ${p.apelido} (${p.userName})…`);
-    const games = await fetchGames(meta.playerId);
-    payload.participantes.push({
+    if (!cache.byUser[p.userName]) {
+      cache.byUser[p.userName] = {
+        apelido: p.apelido,
+        screenName: meta.screenName,
+        playerId: meta.playerId,
+        gamesById: {},
+      };
+    }
+    const slot = cache.byUser[p.userName];
+    slot.apelido = p.apelido;
+    slot.screenName = meta.screenName ?? slot.screenName;
+    slot.playerId = meta.playerId;
+    const known = new Set(Object.keys(slot.gamesById));
+    const { novos } = await fetchNovosGames(meta.playerId, known);
+    for (const g of novos) slot.gamesById[g.gameId] = g;
+    novosTotal += novos.length;
+    console.log(`${p.apelido}: +${novos.length} (cache ${Object.keys(slot.gamesById).length})`);
+  }
+  cache.atualizadoEm = new Date().toISOString();
+
+  const ranking = [];
+  let rodadasJogadas = 0;
+  let rodadasGanhas = 0;
+  let valorApostado = 0;
+  const wins = [];
+
+  for (const p of PARTICIPANTES) {
+    const slot = cache.byUser[p.userName] || { gamesById: {} };
+    let rj = 0;
+    let rg = 0;
+    let va = 0;
+    let pts = 0;
+    for (const g of Object.values(slot.gamesById)) {
+      const m = metricasRodada(g);
+      rj += 1;
+      va += m.amount;
+      pts += pontosDe(m.amount, m.net, m.ganhou);
+      if (m.ganhou) {
+        rg += 1;
+        wins.push({
+          userName: p.userName,
+          apelido: p.apelido,
+          gameId: g.gameId,
+          gameType: g.gameType,
+          tableName: g.tableName,
+          valorNet: m.net,
+          ocorridoEm: new Date(Number(g.startedAt)).toISOString(),
+          _net: m.net,
+        });
+      }
+    }
+    rodadasJogadas += rj;
+    rodadasGanhas += rg;
+    valorApostado += va;
+    ranking.push({
       userName: p.userName,
-      screenName: meta.screenName,
       apelido: p.apelido,
-      playerId: meta.playerId,
-      games,
+      rodadasJogadas: rj,
+      rodadasGanhas: rg,
+      valorApostado: va,
+      pontos: pts,
+      posicao: 0,
     });
-    console.log(`  → ${games.length} rodada(s)`);
   }
 
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `torneio-cda-bko-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
-  a.click();
-  console.log("Download iniciado.", payload);
-  return payload;
+  ranking.sort((a, b) => b.pontos - a.pontos || b.rodadasGanhas - a.rodadasGanhas || a.apelido.localeCompare(b.apelido, "pt-BR"));
+  ranking.forEach((r, i) => {
+    r.posicao = i + 1;
+  });
+
+  wins.sort((a, b) => Date.parse(b.ocorridoEm) - Date.parse(a.ocorridoEm));
+  const atividades = wins.slice(0, 15).map((w, i) => {
+    const top = i === 0 || w._net >= 100;
+    return {
+      userName: w.userName,
+      apelido: w.apelido,
+      gameId: w.gameId,
+      gameType: w.gameType,
+      tableName: w.tableName,
+      valorNet: w.valorNet,
+      mensagem: top
+        ? `${w.apelido} ganha R$\u00a0${w.valorNet.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} na última rodada`
+        : `${w.apelido} ganha R$\u00a0${w.valorNet.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} em ${w.tableName}`,
+      ocorridoEm: w.ocorridoEm,
+    };
+  });
+
+  window.__TORNEIO_SNAP = {
+    ranking,
+    consolidado: { rodadasJogadas, rodadasGanhas, valorApostado },
+    atividades,
+    sincronizadoEm: new Date().toISOString(),
+    periodo: { from: PERIODO_INICIO, to: toIso },
+  };
+
+  console.log(`Incremental: +${novosTotal} jogos · total ${rodadasJogadas} rodadas`);
+  console.log("--- Top 5 ---");
+  for (const r of ranking.slice(0, 5)) {
+    console.log(`${r.posicao}. ${r.apelido} — ${r.pontos.toLocaleString("pt-BR")} pts · ${r.rodadasJogadas} rod.`);
+  }
+  return { novos: novosTotal, total: rodadasJogadas, top: ranking.slice(0, 5).map((r) => r.apelido) };
 })();

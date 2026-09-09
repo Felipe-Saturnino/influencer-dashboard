@@ -1,0 +1,88 @@
+---
+description: Padrão de atualização diária Mesas Spin (Superset → Supabase) quando o usuário pedir atualizar/carregar dados
+alwaysApply: true
+---
+
+# Mesas Spin — atualização diária (padrão)
+
+**Gatilho:** pedidos como «atualizar», «atualizar os dados», «carregar Mesas Spin», «rodar a carga», «atualizar desde …».
+
+**Contrato:** extract no Superset (dashboard 15, sessão logada no browser Cursor) → JSON em `tmp/` → UPSERT **direto** no Supabase com `--gravar`. **Não** pedir ao usuário colar SQL no Editor (salvo falha de `--gravar` ou pedido explícito).
+
+**Proibido:** commit/push (regra do repo); carregar o **dia corrente incompleto** (D-0); usar slug de estúdio (ex. Sports Club) como `operadora_slug`.
+
+---
+
+## Janela temporal
+
+1. Consultar último dia em `relatorio_daily_summary` e `relatorio_network_daily_summary` (helper `tmp/ultimo-dia-supabase.mjs` ou equivalente).
+2. Carregar só dias **completos** ainda não gravados (ou reload pedido explicitamente).
+3. No Superset, `ATE` é **exclusivo** — último dia a incluir = `ATE − 1 dia`.
+4. Ex.: hoje 07/09 → carregar até **06/09** → `ATE=2026-09-07`.
+
+Histórico / reload: usar `--de` / `--ate` **inclusivos** no runner (`filtrarDias`).
+
+---
+
+## Split Network — grupo EsportivaBet (obrigatório)
+
+`operator_name = EsportivaBet` + `brand_name` vazio. Separar por **último segmento** de `player_id` (`extras.where` com `match` ClickHouse — **não** `adhoc` SQL):
+
+| Extract key | Slug Supabase | Critério |
+|-------------|---------------|----------|
+| `esportiva` | `esportiva_bet` | `esportivabetbr_*` **ou** sem prefixo de marca |
+| `bateu` | `bateu_bet` | `bateubetbr_*` |
+| `brx` | `brx_bet` | `brxbetbr_*` |
+| `rico` | `rico_bet` | `ricobetbr_*` |
+| `donald` | `donald_bet` | `donaldbetbr_*` |
+| `betponto` | `betponto_bet` | `betpontobetbetbr_*` (Bet.Bet) |
+| `casa` / `blaze` / `jonbet` | `casa_apostas` / `blaze` / `jonbet` | como antes (`brand_name` na Blaze/Jon) |
+
+Volume Bateu/BRX/Rico/Donald/BetPonto pode ser **zero** em alguns dias — OK; ainda assim correr os 6 cenários Esportiva.
+
+Detalhe de domínio: `business.mdc` § Grupo EsportivaBet.
+
+---
+
+## Fluxo operacional (agent)
+
+1. **Browser** — dashboard 15 Superset logado (`superset-sg.proxylive.tech`).
+2. **Extract** (nesta ordem):
+   - **Network** — `MODO=network` (split marcas)
+   - **Dedicado** — `MODO=dedicado` (Casa + Blaze)
+   - **Monthly** — `MODO=monthly` para o(s) mês(es) tocados (`DE` = dia 1 do mês, `ATE` exclusivo = dia seguinte ao último dia carregado)
+3. Gerar expressão: `node tmp/make-compact-extract.mjs <network|dedicado|monthly> <DE> <ATE>` → `tmp/cdp-compact-*.json`.
+4. Injetar via CDP em chunks (`tmp/split-b64-inject.mjs` + `tmp/build-inject-evals.mjs` + `Runtime.evaluate`); se Auto-review bloquear inject/extract, usar **Smart Mode approval** (fluxo pedido pelo usuário).
+5. Empacotar resultado (`__mesasNet` / `__mesasDed` / `__mesasMon`) → gravar `tmp/superset-*.json` (chunks base64 + `assemble-pack` / dump CDP).
+6. Janelas longas: partir Network/Dedicado (~15 dias) e **mergir** `byDay` antes do runner.
+7. **Gravar:**
+   ```bash
+   node scripts/superset-mesas-spin-run.mjs \
+     --network=tmp/superset-network-….json \
+     --dedicado=tmp/superset-dedicado-….json \
+     --monthly=tmp/superset-monthly-….json \
+     --de=YYYY-MM-DD --ate=YYYY-MM-DD \
+     --escrever-sql --gravar
+   ```
+   Carga só dos faltantes: acrescentar `--preencher-faltantes` (ignora dias ≤ último no Supabase).
+8. Env: `.env.gp-kpi` + `.env` — `VITE_SUPABASE_URL` / `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (mesmo `loadEnv` do runner).
+9. **Validar** após gravar: linhas em `bateu_bet` / `brx_bet` / `rico_bet` / `donald_bet` / `betponto_bet` / `esportiva_bet` (daily + monthly) no intervalo.
+10. Informar o usuário (dias, slugs novos com volume) e: alterações locais uncommitted — commit/push manual.
+
+Scripts canónicos: `scripts/superset-mesas-spin-extract-browser.js`, `scripts/superset-mesas-spin-run.mjs`, helpers em `tmp/make-compact-extract.mjs`.
+
+---
+
+## Reconciliação
+
+Seguir `business.mdc` § Regras de reconciliação. Discrepância mesas vs daily (±1/±2): **não** corrigir sozinho — sinalizar.
+
+---
+
+## Anti-patterns
+
+- Agregar todo EsportivaBet num único `esportiva_bet` (ignorar split).
+- Filtrar Bateu/BRX/Rico com `brand_name`.
+- Carregar D-0 incompleto.
+- Depender de `recv-json-server` / porta local se CDP dump funcionar.
+- Cloud Agent / commit automático após a carga.

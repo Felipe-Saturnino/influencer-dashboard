@@ -38,6 +38,11 @@ export const LOBBY_POS_SLUGS_CONSOLIDADOS = [
   "casa_apostas",
   "esportiva_bet",
   "jonbet",
+  "bateu_bet",
+  "rico_bet",
+  "brx_bet",
+  "donald_bet",
+  "betponto_bet",
 ] as const;
 
 export type LobbyPosSlugConsolidado = (typeof LOBBY_POS_SLUGS_CONSOLIDADOS)[number];

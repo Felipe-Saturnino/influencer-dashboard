@@ -1,4 +1,4 @@
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { ModalBase, ModalHeader, MODAL_SCROLL_FOCUS_SAFE_PAD } from "../../../components/OperacoesModal";
 import { ListaHistoricoRh } from "../../../components/rh/ListaHistoricoRh";
 import { FONT } from "../../../constants/theme";
 import type { Theme } from "../../../constants/theme";
@@ -114,7 +114,13 @@ export function ModalHistoricoPrestador({
             </button>
           </div>
         ) : (
-          <div style={{ maxHeight: "min(60vh, 480px)", overflowY: "auto", paddingRight: 2 }}>
+          <div
+            style={{
+              ...MODAL_SCROLL_FOCUS_SAFE_PAD,
+              maxHeight: "min(60vh, 480px)",
+              overflowY: "auto",
+            }}
+          >
             <ListaHistoricoRh
               items={itemsFiltrados}
               loading={loading}

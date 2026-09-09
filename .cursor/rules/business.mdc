@@ -107,6 +107,26 @@ Relatórios PLS (Per table, Daily, UAP por jogo, Monthly) — leitura humana / p
 
 **Overview Spin (UI):** aba Overview = soma Dedicado + Network; Estúdio Dedicado / Estúdio Network leem cada família de tabelas. Nunca carregar Network com slug de estúdio (ex. Sports Club) — só `operadora_slug` de parceiro.
 
+### Grupo EsportivaBet (Network) — marcas no `player_id`
+
+No Superset/ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio (diferente de Blaze/Jon Bet, que usam `brand_name`). A marca do provedor aparece no **último segmento** de `player_id` (mesmo padrão do BKO):
+
+| Token no `player_id` | Marca na plataforma | Slug canónico |
+|----------------------|---------------------|---------------|
+| `esportivabetbr_*` | Esportiva Bet | `esportiva_bet` |
+| *(sem prefixo — só número/UUID)* | Esportiva Bet | `esportiva_bet` |
+| `bateubetbr_*` | Bateu Bet | `bateu_bet` |
+| `brxbetbr_*` | BRX Bet | `brx_bet` |
+| `ricobetbr_*` | Rico Bet | `rico_bet` |
+| `donaldbetbr_*` | Donald Bet | `donald_bet` |
+| `betpontobetbetbr_*` | Bet.Bet | `betponto_bet` |
+
+Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `donald_bet`, `betponto_bet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
+
+### Atualização diária (padrão agent)
+
+Quando o usuário pedir **atualizar / carregar** dados Mesas Spin neste chat: seguir **`.cursor/rules/mesas-spin-carga.mdc`** — extract Superset (dashboard 15) com split EsportivaBet → JSON em `tmp/` → UPSERT direto (`--gravar`). Não carregar o dia corrente incompleto; `ATE` exclusivo no Superset.
+
 ### Regras de reconciliação (carga)
 
 1. Soma das mesas ≈ daily (GGR, turnover, apostas), tolerância ±1/±2.

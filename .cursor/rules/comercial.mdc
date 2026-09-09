@@ -165,7 +165,7 @@ Edge Function **`sync-comercial-spa-lista`** — import diário da planilha ofic
 | Regra | Valor |
 |-------|-------|
 | Agendamento | GitHub Actions `sync-comercial-spa-lista-daily.yml` — **7h30 BRT** (~10h30 UTC) |
-| Fonte | Página gov.br: segue **Empresas Autorizadas** (tabela HTML oficial) ou planilha **`planilha-de-autorizacoes.xlsx`/`csv`** (legado); SharePoint só como último recurso. Override: secret **`COMERCIAL_SPA_CSV_URL`** |
+| Fonte | Página canónica **`/empresas-autorizadas`** (tabela HTML); planilha **`planilha-de-autorizacoes.xlsx`/`csv`** sob `lista-de-empresas/` só se não houver tabela; **ignora** links sob `transparencia-ativa` (processos / XLSX 404). SharePoint só como último recurso. Override: secret **`COMERCIAL_SPA_CSV_URL`** |
 | Formato | **HTML** (tabela `/empresas-autorizadas`), **XLSX** (legado) ou **CSV `;`** — XLSX convertido pela Edge (1ª aba) |
 | Chave empresa | **CNPJ** — bloco = linhas até o próximo CNPJ |
 | Chave marca | **`empresa_id` + nome** (normalizado) |

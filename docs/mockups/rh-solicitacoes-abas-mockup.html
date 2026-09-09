@@ -1,0 +1,2947 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — RH · Solicitações (abas Atestados / Reuniões / Vagas / Feedback)</title>
+  <style>
+    :root {
+      --brand-primary: #4a2082;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #1e36f8;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --card-border: #e5e7eb;
+      --input-bg: #f9fafb;
+      --card-bg: #ffffff;
+      --page-bg: #f3f4f6;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 14px rgba(74,32,130,.06);
+      --radius: 14px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI", system-ui, sans-serif;
+      --verde: #22c55e;
+      --amarelo: #f59e0b;
+      --vermelho: #e84025;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--page-bg); color: var(--text); font-size: 13px; line-height: 1.45; }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; text-align: center; padding: 10px 16px; font-size: 12px; font-weight: 600;
+    }
+    .mock-banner code { background: rgba(255,255,255,.18); padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+
+    .shell { max-width: 1200px; margin: 0 auto; padding: 24px 20px 72px; }
+
+    /* Page header — Brand §4 */
+    .page-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 18px; }
+    .page-header-icon {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary); font-size: 14px;
+    }
+    .page-header-text { flex: 1; }
+    .page-header h1 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); line-height: 32px;
+    }
+    .page-header p { font-size: 13px; color: var(--text-muted); margin: 5px 0 0; padding-left: 40px; margin-left: -40px; }
+
+    /* Filter box — nível 2 */
+    .filter-box {
+      background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 12px 20px; margin-bottom: 14px;
+    }
+    .filter-row {
+      display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+      gap: 10px; width: 100%;
+    }
+    .filter-row-tabs {
+      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px;
+      width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border);
+    }
+    .tabs {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+    }
+    .ajuda-group { display: flex; gap: 8px; justify-content: flex-end; }
+    .ajuda-btn {
+      width: 32px; height: 32px; border-radius: 9px; border: 1px solid;
+      display: inline-flex; align-items: center; justify-content: center; cursor: default; font-size: 12px; font-weight: 700;
+    }
+    .ajuda-conheca { color: #1e36f8; background: color-mix(in srgb, #1e36f8 12%, #fff); border-color: color-mix(in srgb, #1e36f8 30%, transparent); }
+    .ajuda-ts { color: #f59e0b; background: color-mix(in srgb, #f59e0b 12%, #fff); border-color: color-mix(in srgb, #f59e0b 30%, transparent); }
+    .ajuda-tut { color: #a78bfa; background: color-mix(in srgb, #a78bfa 12%, #fff); border-color: color-mix(in srgb, #a78bfa 30%, transparent); }
+
+    .carousel-btn {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      color: var(--text); font-size: 14px;
+    }
+    .carousel-label {
+      min-width: 160px; text-align: center; font-size: 18px; font-weight: 800; font-family: var(--font);
+    }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 999px; padding: 6px 14px; border: 1px solid var(--card-border);
+      background: var(--input-bg); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .pill.active {
+      border-color: var(--brand-accent);
+      background: color-mix(in srgb, var(--brand-accent) 15%, #fff);
+      color: var(--brand-accent); font-weight: 700;
+    }
+    .pill .ico-svg { width: 15px; height: 15px; display: block; flex-shrink: 0; }
+
+    /* Tabs — FiltroBarTabButton (Brand §6): Lucide 16px, radius 10, 10px 18px, minHeight 44 */
+    .tab {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .tab.active {
+      border-color: var(--brand-accent);
+      background: color-mix(in srgb, var(--brand-accent) 15%, #fff);
+      color: var(--brand-accent); font-weight: 700;
+    }
+    .tab .ico-svg { width: 16px; height: 16px; display: block; flex-shrink: 0; }
+    .page-header-icon .ico-svg { width: 16px; height: 16px; display: block; }
+    .ajuda-btn .ico-svg { width: 15px; height: 15px; display: block; }
+    .cta .ico-svg { width: 14px; height: 14px; display: block; flex-shrink: 0; }
+    .icon-btn .ico-svg { width: 14px; height: 14px; display: block; }
+    .modal-close .ico-svg { width: 22px; height: 22px; display: block; }
+
+    /* Content box — nível 3 */
+    .content-box {
+      background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 20px; margin-bottom: 14px;
+    }
+    .section-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 14px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary);
+    }
+    .section-title .sub {
+      font-size: 11px; font-weight: 400; color: var(--text-muted); text-transform: none;
+    }
+    .section-title .dash { font-size: 12px; margin: 0 6px; color: var(--text-muted); font-weight: 400; }
+
+    .cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: 10px; border: none; color: #fff;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    }
+
+    .table-wrap { border-radius: 14px; overflow: auto; border: 1px solid var(--card-border); }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 720px; }
+    th {
+      background: color-mix(in srgb, #fff 86%, var(--brand-accent) 14%);
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      padding: 10px 12px; text-align: center; color: var(--text); white-space: nowrap;
+      border-bottom: 1px solid var(--card-border);
+    }
+    th.th-sort {
+      cursor: pointer; user-select: none;
+    }
+    th.th-sort:focus-visible {
+      outline: 2px solid var(--brand-primary); outline-offset: -2px;
+    }
+    .th-sort-inner {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .th-sort-ico {
+      display: inline-flex; flex-direction: column; line-height: 0.7;
+      font-size: 9px; opacity: 0.35; color: var(--text);
+    }
+    th.th-sort[aria-sort="ascending"] .th-sort-ico,
+    th.th-sort[aria-sort="descending"] .th-sort-ico {
+      opacity: 1; color: var(--brand-primary);
+    }
+    th.th-sort[aria-sort="ascending"] .th-sort-ico .down,
+    th.th-sort[aria-sort="descending"] .th-sort-ico .up {
+      opacity: 0.25;
+    }
+    th.th-acoes { cursor: default; }
+    td {
+      padding: 10px 12px; text-align: center; font-size: 13px;
+      border-bottom: 1px solid var(--card-border); font-variant-numeric: tabular-nums;
+    }
+    tr:nth-child(even) td { background: color-mix(in srgb, #fff 92%, var(--brand-secondary) 8%); }
+    tr:nth-child(odd) td { background: #fff; }
+    tr:hover td { background: rgba(0,0,0,.03) !important; }
+
+    .badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge.em { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+    .badge.ok { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e44; }
+    .badge.no { background: #e8402522; color: #e84025; border: 1px solid #e8402544; }
+
+    .actions { display: flex; justify-content: center; gap: 6px; }
+    .icon-btn {
+      width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      color: var(--text); font-size: 13px;
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .notes {
+      background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px 20px; margin-top: 14px;
+    }
+    .notes h2 { font-size: 13px; font-weight: 800; color: var(--brand-primary); text-transform: uppercase; margin-bottom: 10px; }
+    .notes ul { padding-left: 18px; color: var(--text-muted); font-size: 12px; }
+    .notes li { margin-bottom: 6px; }
+    .notes strong { color: var(--text); }
+    .tag {
+      display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+      background: color-mix(in srgb, var(--brand-primary) 10%, #fff); color: var(--brand-primary); margin-right: 4px;
+    }
+
+    .legacy {
+      margin-top: 24px; padding: 14px 16px; border-radius: 12px;
+      background: #fef3c7; border: 1px dashed #f59e0b; color: #92400e; font-size: 12px;
+    }
+
+    /* Modais — espelho ModalsVerAtender */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(15, 23, 42, 0.45);
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-panel {
+      width: 100%; max-width: 560px; max-height: 90dvh; overflow: auto;
+      background: #fff; border-radius: 14px; border: 1px solid var(--card-border);
+      box-shadow: 0 20px 50px rgba(0,0,0,.18);
+    }
+    .modal-header {
+      position: sticky; top: 0; z-index: 1;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 16px 20px; background: #fff; border-bottom: 1px solid var(--card-border);
+    }
+    .modal-header h2 {
+      font-family: var(--font-title); font-size: 16px; font-weight: 800; color: var(--text); margin: 0;
+    }
+    .modal-close {
+      width: 36px; height: 36px; border: none; background: transparent; cursor: pointer;
+      font-size: 22px; font-weight: 700; color: var(--text); line-height: 1;
+    }
+    .modal-tabs {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 20px 12px;
+    }
+    .modal-body { padding: 0 20px 20px; }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px;
+    }
+    .info-line { margin-bottom: 12px; }
+    .info-label {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; margin-bottom: 4px;
+    }
+    .info-value { font-size: 14px; color: var(--text); line-height: 1.45; white-space: pre-wrap; }
+    .info-link {
+      font-size: 14px; font-weight: 600; color: var(--brand-primary);
+      text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0;
+    }
+    .field-label {
+      display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .field-label .req { color: #e84025; margin-left: 2px; }
+    .field-control {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--card-border);
+      background: var(--input-bg); color: var(--text); font-size: 13px; font-family: var(--font);
+      box-sizing: border-box;
+    }
+    textarea.field-control { resize: vertical; min-height: 88px; }
+    .field-wrap { display: block; margin-bottom: 14px; }
+    .modal-header-text { flex: 1; min-width: 0; }
+    .modal-subtitle {
+      font-size: 13px; font-weight: 600; color: var(--brand-primary);
+      margin: 4px 0 0; font-family: var(--font);
+    }
+    .mock-perm {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+      background: color-mix(in srgb, var(--brand-primary) 6%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 18%, var(--card-border));
+      font-size: 12px; color: var(--text-muted);
+    }
+    .mock-perm strong { color: var(--text); }
+    .mock-perm select {
+      padding: 6px 10px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: #fff; font-size: 12px; font-weight: 600;
+    }
+    .err-box {
+      color: #e84025; font-size: 12px; margin: 0 20px 12px; display: none;
+    }
+    .err-box.show { display: block; }
+    .hidden { display: none !important; }
+    .hist-list { display: flex; flex-direction: column; gap: 12px; }
+    .hist-item {
+      padding: 12px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+    }
+    .hist-item-head {
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px;
+      margin-bottom: 8px;
+    }
+    .hist-item-user { font-size: 13px; font-weight: 700; color: var(--text); }
+    .hist-item-when { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .hist-item-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .hist-item-meta strong { color: var(--text); font-weight: 600; }
+    .hist-empty { padding: 24px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    MOCKUP · RH → Solicitações — proposta com abas · sem código de produção ·
+    <code>docs/mockups/rh-solicitacoes-abas-mockup.html</code>
+    · ícones Lucide (SVG) — sem emoji
+  </div>
+
+  <!-- Sprite Lucide (Brand §6 / Global — sem emoji em UI) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>
+    </symbol>
+    <symbol id="i-shield-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+    </symbol>
+    <symbol id="i-heart-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.54 0-3.04.99-3.57 2.36h-1.87C10.54 3.99 9.04 3 7.5 3A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>
+    </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>
+    </symbol>
+    <symbol id="i-message-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </symbol>
+    <symbol id="i-book-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
+    </symbol>
+    <symbol id="i-life-buoy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>
+    </symbol>
+    <symbol id="i-graduation-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14"/><path d="M12 5v14"/>
+    </symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>
+    </symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>
+    </symbol>
+    <symbol id="i-clipboard-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>
+    </symbol>
+    <symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+    </symbol>
+  </svg>
+
+  <div class="shell">
+    <header class="page-header">
+      <div class="page-header-icon" aria-hidden="true">
+        <svg class="ico-svg"><use href="#i-clipboard-list"/></svg>
+      </div>
+      <div class="page-header-text">
+        <h1>Solicitações</h1>
+        <p>Acompanhe e atenda solicitações de prestadores.</p>
+      </div>
+    </header>
+
+    <!-- Nível 2 — filtros -->
+    <div class="filter-box">
+      <!-- Linha 1: carrossel status + Todos Status (sem filtro Tipo) -->
+      <div class="filter-row" role="group" aria-label="Status da solicitação">
+        <button type="button" class="carousel-btn" id="btnPrev" aria-label="Status anterior">‹</button>
+        <span class="carousel-label" id="statusLabel">Em análise</span>
+        <button type="button" class="carousel-btn" id="btnNext" aria-label="Próximo status">›</button>
+
+        <button
+          type="button"
+          class="pill"
+          id="btnTodosStatus"
+          aria-pressed="false"
+          title="Clique para ativar Todos Status; clique de novo para voltar a Em análise"
+        >
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-shield-alert"/></svg>
+          Todos Status
+        </button>
+      </div>
+
+      <!-- Linha 2: abas (FiltroBarTabButton + Lucide 16px) + AjudaContextual -->
+      <div class="filter-row-tabs">
+        <div class="tabs" role="tablist" aria-label="Tipo de solicitação">
+          <button type="button" class="tab active" role="tab" aria-selected="true" data-tab="atestados">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-heart-pulse"/></svg> Atestados
+          </button>
+          <button type="button" class="tab" role="tab" aria-selected="false" data-tab="reunioes">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-users"/></svg> Reuniões
+          </button>
+          <button type="button" class="tab" role="tab" aria-selected="false" data-tab="vagas">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-briefcase"/></svg> Vagas
+          </button>
+          <button type="button" class="tab" role="tab" aria-selected="false" data-tab="feedback">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-message-square"/></svg> Feedback
+          </button>
+        </div>
+        <div class="ajuda-group" aria-label="Ajuda contextual">
+          <span class="ajuda-btn ajuda-conheca" title="Conheça"><svg class="ico-svg" aria-hidden="true"><use href="#i-book-open"/></svg></span>
+          <span class="ajuda-btn ajuda-ts" title="Troubleshooting"><svg class="ico-svg" aria-hidden="true"><use href="#i-life-buoy"/></svg></span>
+          <span class="ajuda-btn ajuda-tut" title="Tutorial"><svg class="ico-svg" aria-hidden="true"><use href="#i-graduation-cap"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ ATESTADOS ═══════════════ -->
+    <div class="panel active" id="panel-atestados" role="tabpanel">
+      <div class="content-box">
+        <div class="mock-perm" title="Só no mockup — simula escopo de permissão">
+          <strong>Mock permissão:</strong>
+          <select id="mockPermAtestado" aria-label="Simular permissão Atestados">
+            <option value="proprios">Ver / Editar = Próprios (só gerências · só Ver)</option>
+            <option value="ver_sim">Ver = Sim (todas as linhas · sem ações)</option>
+            <option value="editar_sim" selected>Editar = Sim (todas · Ver + Atender)</option>
+          </select>
+        </div>
+        <div class="section-head">
+          <div class="section-title">
+            Atestados
+            <span class="dash">—</span>
+            <span class="sub" id="atestadoSub">solicitações em análise</span>
+          </div>
+          <!-- Sem CTA de criação: atestado nasce do Calendário (justificativa Médico) -->
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Atestados</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="th-sort" data-sort-table="atestados" data-sort-col="data" aria-sort="descending" tabindex="0">
+                  <span class="th-sort-inner">Data da Solicitação <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="atestados" data-sort-col="solicitante" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Solicitante <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="atestados" data-sort-col="descricao" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Descrição <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="atestados" data-sort-col="status" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Status <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-acoes">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyAtestados">
+              <!-- preenchido via JS conforme status do carrossel -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ REUNIÕES ═══════════════ -->
+    <div class="panel" id="panel-reunioes" role="tabpanel">
+      <div class="content-box">
+        <div class="mock-perm" title="Só no mockup — simula escopo de permissão">
+          <strong>Mock permissão:</strong>
+          <select id="mockPermReuniao" aria-label="Simular permissão Reuniões">
+            <option value="proprios">Ver / Editar = Próprios (gerências · Ver + Atender · CTA escopo)</option>
+            <option value="ver_sim">Ver = Sim (todas · sem ações / sem CTA)</option>
+            <option value="editar_sim" selected>Editar = Sim (todas · ações + CTA · todos prestadores)</option>
+          </select>
+        </div>
+        <div class="section-head">
+          <div class="section-title">
+            Reuniões
+            <span class="dash">—</span>
+            <span class="sub">solicitações de reunião</span>
+          </div>
+          <button type="button" class="cta" id="btnAgendarReuniao">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-plus"/></svg> Agendar Reunião
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Reuniões</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="th-sort" data-sort-table="reunioes" data-sort-col="dataSolicitada" aria-sort="descending" tabindex="0">
+                  <span class="th-sort-inner">Data Solicitada <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="reunioes" data-sort-col="solicitante" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Solicitante <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="reunioes" data-sort-col="time" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Time <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="reunioes" data-sort-col="tipo" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Tipo de Reunião <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="reunioes" data-sort-col="status" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Status <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-acoes">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyReunioes"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ VAGAS ═══════════════ -->
+    <div class="panel" id="panel-vagas" role="tabpanel">
+      <div class="content-box">
+        <div class="mock-perm" title="Só no mockup — simula escopo de permissão">
+          <strong>Mock permissão:</strong>
+          <select id="mockPermVaga" aria-label="Simular permissão Vagas">
+            <option value="proprios">Ver / Editar = Próprios (gerências · só Ver · CTA escopo)</option>
+            <option value="ver_sim">Ver = Sim (todas · sem ações / sem CTA)</option>
+            <option value="editar_sim" selected>Editar = Sim (todas · Ver + Atender · CTA · todos organogramas)</option>
+          </select>
+        </div>
+        <div class="section-head">
+          <div class="section-title">
+            Vagas
+            <span class="dash">—</span>
+            <span class="sub">solicitações de abertura de vaga</span>
+          </div>
+          <button type="button" class="cta" id="btnSolicitarVaga">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-plus"/></svg> Solicitar Vaga
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Solicitações de vagas</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="th-sort" data-sort-table="vagas" data-sort-col="data" aria-sort="descending" tabindex="0">
+                  <span class="th-sort-inner">Data da Solicitação <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="vagas" data-sort-col="solicitante" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Solicitante <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="vagas" data-sort-col="time" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Time <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="vagas" data-sort-col="tipoVaga" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Tipo de Vaga <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="vagas" data-sort-col="status" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Status <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-acoes">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyVagas"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ FEEDBACK ═══════════════ -->
+    <div class="panel" id="panel-feedback" role="tabpanel">
+      <div class="content-box">
+        <div class="mock-perm" title="Só no mockup — simula escopo de permissão">
+          <strong>Mock permissão:</strong>
+          <select id="mockPermFeedback" aria-label="Simular permissão Feedback">
+            <option value="proprios">Ver / Editar = Próprios (gerências · Ver + Atender · CTA escopo)</option>
+            <option value="ver_sim">Ver = Sim (todas · sem ações / sem CTA)</option>
+            <option value="editar_sim" selected>Editar = Sim (todas · ações + CTA · todos times)</option>
+          </select>
+        </div>
+        <div class="section-head">
+          <div class="section-title">
+            Feedback
+            <span class="dash">—</span>
+            <span class="sub">liderança · Controle de Turno e Solicitações</span>
+          </div>
+          <button type="button" class="cta" id="btnRegistrarFeedback">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-plus"/></svg> Registrar Feedback
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Feedback</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="th-sort" data-sort-table="feedback" data-sort-col="data" aria-sort="descending" tabindex="0">
+                  <span class="th-sort-inner">Data do Registro <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="feedback" data-sort-col="lideranca" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Liderança <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="feedback" data-sort-col="prestador" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Prestador <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="feedback" data-sort-col="recomendacao" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Recomendação <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="feedback" data-sort-col="status" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Status <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-sort" data-sort-table="feedback" data-sort-col="origem" aria-sort="none" tabindex="0">
+                  <span class="th-sort-inner">Origem <span class="th-sort-ico" aria-hidden="true"><span class="up">▴</span><span class="down">▾</span></span></span>
+                </th>
+                <th scope="col" class="th-acoes">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyFeedback"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Espelho CT (só visual/lógica de sync — dentro do painel Feedback) -->
+      <div class="content-box" style="margin-top:14px" id="espelhoCtFeedback">
+        <div class="section-head">
+          <div class="section-title">
+            Espelho — Controle de Turno · Feedbacks
+            <span class="dash">—</span>
+            <span class="sub">origem Notificações · sync só desta origem</span>
+          </div>
+          <button type="button" class="cta" id="btnSimularCtFeedback">
+            <svg class="ico-svg" aria-hidden="true"><use href="#i-plus"/></svg> Simular Registrar no CT
+          </button>
+        </div>
+        <p style="color:var(--text-muted);font-size:12px;margin:-4px 0 12px">
+          Cada registro no CT cria linha em Solicitações.
+          <strong>Revisar</strong> (CT) = <strong>Em análise</strong> (Solicitações);
+          <strong>Aplicado</strong> é o mesmo nas duas.
+          Atender aqui (Aprovado → Aplicado / Rejeitado → Rejeitado) atualiza o CT
+          <em>apenas</em> se a origem for Controle de Turno.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <caption style="display:none">Espelho Feedbacks do Controle de Turno</caption>
+            <thead>
+              <tr>
+                <th scope="col">Data</th>
+                <th scope="col">Prestador</th>
+                <th scope="col">Recomendação</th>
+                <th scope="col">Status (CT)</th>
+                <th scope="col">Liderança</th>
+                <th scope="col">Solicitações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyEspelhoCtFeedback"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h2>Regras de permissão</h2>
+      <ul>
+        <li>
+          <span class="tag">Atestados</span>
+          <strong>Ver/Editar = Próprios</strong> → só linhas das gerências; ações só <strong>Ver</strong>.
+          <strong>Ver = Sim</strong> → todas as linhas; <strong>sem</strong> ícones em Ações.
+          <strong>Editar = Sim</strong> → todas as linhas; <strong>Ver</strong> + <strong>Atender</strong>.
+        </li>
+        <li>
+          <span class="tag">Reuniões</span>
+          <strong>Ver/Editar = Próprios</strong> → gerências; Ver + Atender; CTA Agendar com Prestador só da gerência.
+          <strong>Ver = Sim</strong> → todas; sem ações e sem CTA.
+          <strong>Editar = Sim</strong> → todas; ações + CTA com todos os prestadores.
+          <strong>Origens:</strong> (1) Solicitações — Liderança/RH escolhe Prestador (= Solicitante);
+          (2) Calendário · Compromissos — CTA <strong>Agendar Reunião</strong> (mock
+          <a href="./rh-calendario-compromissos-reuniao-mockup.html">rh-calendario-compromissos-reuniao-mockup.html</a>)
+          → Solicitante = usuário logado; card no dia com status; Atender atualiza calendário + observação no modal do dia.
+        </li>
+        <li>
+          <span class="tag">Vagas</span>
+          <strong>Ver/Editar = Próprios</strong> → gerências; só Ver; CTA Solicitar com Organograma só da gerência.
+          <strong>Ver = Sim</strong> → todas; sem ações e sem CTA.
+          <strong>Editar = Sim</strong> → todas; Ver + Atender + CTA com todos organogramas.
+        </li>
+        <li>
+          <span class="tag">Feedback</span>
+          <strong>Ver/Editar = Próprios</strong> → gerências; Ver + Atender; CTA Registrar com Time só da gerência.
+          <strong>Ver = Sim</strong> → todas; sem ações e sem CTA.
+          <strong>Editar = Sim</strong> → todas; ações + CTA com todos os times.
+          <strong>Origens:</strong>
+          (1) <strong>Controle de Turno → Notificações → Feedbacks</strong> — cada nova linha no CT cria linha em Solicitações;
+          (2) CTA <strong>Registrar Feedback</strong> nesta página — <em>não</em> cria linha no CT (sem espelho).
+        </li>
+      </ul>
+      <h2 style="margin-top:14px">Espelho Feedback — Controle de Turno ↔ Solicitações</h2>
+      <ul>
+        <li>
+          <strong>Só quando</strong> <code>origem = controle_turno</code>. Feedback criado só em Solicitações
+          <strong>não</strong> sincroniza com o CT.
+        </li>
+        <li>
+          <strong>Status CT → Solicitações (na criação / espelho):</strong>
+          <strong>Revisar</strong> ↔ <strong>Em análise</strong>;
+          <strong>Aplicado</strong> ↔ <strong>Aplicado</strong> (mesmo rótulo nas duas páginas).
+          Orientação no CT já nasce Aplicado → Solicitações também em Aplicado (sem fila de Atender).
+        </li>
+        <li>
+          <strong>Atender em Solicitações</strong> (decisão Aprovado / Rejeitado), só se origem CT:
+          <strong>Aprovado</strong> → CT e Solicitações ficam <strong>Aplicado</strong>;
+          <strong>Rejeitado</strong> → CT e Solicitações ficam <strong>Rejeitado</strong>
+          (CT passa a aceitar status Rejeitado além de Revisar / Aplicado).
+        </li>
+        <li>
+          Use o bloco <strong>Espelho — Controle de Turno · Feedbacks</strong> abaixo da aba Feedback
+          (visível com a aba Feedback ativa) para simular registro no CT e ver o sync.
+        </li>
+      </ul>
+      <h2 style="margin-top:14px">Modal Ver — abas (todas as filas)</h2>
+      <ul>
+        <li><strong>Dados</strong> — campos atuais do Ver de cada aba.</li>
+        <li>
+          <strong>Histórico</strong> — criação (usuário + data/hora); em <strong>Atendimento</strong>:
+          usuário + data/hora + alteração de status + <em>todos</em> os campos preenchidos no Atendimento
+          (ex.: Atestado aprovado → Observação do RH + Abono remunerado?; Reunião rejeitada → Observação + Data de Reagendamento; Feedback com notificação → Observação + Evidência).
+        </li>
+      </ul>
+      <h2 style="margin-top:14px">Comportamento — Todos Status</h2>
+      <ul>
+        <li><strong>Clicar</strong> (inativo) → ativa Todos Status (carrossel mostra «Todos Status»).</li>
+        <li><strong>Clicar de novo</strong> (ativo) → desativa e volta ao status <strong>Em análise</strong>.</li>
+        <li>Setas do carrossel continuam Em análise ↔ Aprovado ↔ Rejeitado; ao sair de «Todos Status» via seta, o pill desativa.</li>
+      </ul>
+      <h2 style="margin-top:14px">Ordenação</h2>
+      <ul>
+        <li>Todas as abas usam cabeçalhos clicáveis no padrão <code>SortTableTh</code> (ícone ▴▾).</li>
+        <li>Coluna de data inicia em <strong>desc</strong> (mais novo → mais antigo). Clique alterna a direção; outra coluna torna-se a ativa.</li>
+        <li>Coluna <strong>Ações</strong> não é ordenável.</li>
+      </ul>
+      <h2 style="margin-top:14px">O que sai da UI atual</h2>
+      <ul>
+        <li>Select <strong>Todas Solicitações</strong> (Atestado / Vagas / Reunião com RH) — substituído pelas abas.</li>
+      </ul>
+    </div>
+
+    <div class="legacy">
+      <strong>Nota de implementação (não no mockup visual):</strong>
+      Feedback deve ter tabela própria (não forçar só <code>rh_solicitacoes.tipo</code>).
+      Espelho CT: ao criar em <code>escala_ct_feedback</code>, criar solicitação com
+      <code>origem=controle_turno</code> e status mapeado (revisar→em_analise; aplicado→aplicado).
+      Expandir CHECK de status do CT para incluir <strong>rejeitado</strong>.
+      Ao atender em Solicitações (origem CT): Aprovado→aplicado / Rejeitado→rejeitado em ambas.
+      Feedback só de Solicitações: sem sync com CT.
+      Abas usam <code>FiltroBarTabButton</code>. CTAs usam <code>CtaCriarButton</code>.
+      <strong>Ícones:</strong> Lucide via SVG — <strong>sem emoji</strong>.
+    </div>
+  </div>
+
+  <!-- ═══ Modal Ver solicitação (Atestados) ═══ -->
+  <div class="modal-overlay" id="modalVer" role="dialog" aria-modal="true" aria-labelledby="modalVerTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 id="modalVerTitle">Ver solicitação</h2>
+        <button type="button" class="modal-close" data-close-modal="modalVer" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs" id="modalVerTabs" role="tablist" aria-label="Seções da solicitação">
+        <button type="button" class="tab active" data-ver-tab="dados" role="tab" aria-selected="true">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-file-text"/></svg> Dados
+        </button>
+        <button type="button" class="tab" data-ver-tab="historico" role="tab" aria-selected="false">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-history"/></svg> Histórico
+        </button>
+      </div>
+      <div class="modal-body" id="modalVerBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Atender solicitação ═══ -->
+  <div class="modal-overlay" id="modalAtender" role="dialog" aria-modal="true" aria-labelledby="modalAtenderTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 id="modalAtenderTitle">Atender solicitação</h2>
+        <button type="button" class="modal-close" data-close-modal="modalAtender" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs" role="tablist" aria-label="Seções do atendimento">
+        <button type="button" class="tab active" data-atender-tab="dados" role="tab" aria-selected="true">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-file-text"/></svg> Dados
+        </button>
+        <button type="button" class="tab" data-atender-tab="atendimento" role="tab" aria-selected="false">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg> Atendimento
+        </button>
+      </div>
+      <div class="modal-body" id="modalAtenderDados"></div>
+      <div class="modal-body hidden" id="modalAtenderForm">
+        <label class="field-wrap">
+          <span class="field-label">Status</span>
+          <select class="field-control" id="atenderStatus" aria-label="Status da solicitação">
+            <option value="em_analise">Em análise</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="rejeitado">Rejeitado</option>
+          </select>
+        </label>
+        <label class="field-wrap hidden" id="wrapAbono">
+          <span class="field-label">Abono remunerado?<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="atenderAbono" aria-label="Abono remunerado" aria-required="true">
+            <option value="">Selecione…</option>
+            <option value="sim">SIM</option>
+            <option value="nao">NÃO</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label" id="labelObsRh">Observação do RH</span>
+          <textarea class="field-control" id="atenderObs" rows="4" aria-label="Observação do RH"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta" id="btnSalvarAtender">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Agendar Reunião ═══ -->
+  <div class="modal-overlay" id="modalAgendarReuniao" role="dialog" aria-modal="true" aria-labelledby="modalAgendarTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalAgendarTitle">Agendar Reunião</h2>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalAgendarReuniao" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="err-box" id="errAgendar" role="alert"></div>
+      <div class="modal-body">
+        <label class="field-wrap">
+          <span class="field-label">Tipo de Reunião<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="agendarTipo" aria-required="true" aria-label="Tipo de Reunião">
+            <option value="">Selecione…</option>
+            <option value="rh">Reunião com RH</option>
+            <option value="lideranca">Reunião com Liderança</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Prestador<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="agendarPrestador" aria-required="true" aria-label="Prestador"></select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Data Solicitada<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="agendarData" aria-required="true" aria-label="Data Solicitada" disabled>
+            <option value="">Selecione o prestador…</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Observação<span class="req" aria-hidden="true">*</span></span>
+          <textarea class="field-control" id="agendarObs" rows="4" aria-required="true" aria-label="Observação"
+            placeholder="Descreva brevemente o intuito da ata"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta" id="btnConfirmarAgendar">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-plus"/></svg> Agendar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Ver Reunião ═══ -->
+  <div class="modal-overlay" id="modalVerReuniao" role="dialog" aria-modal="true" aria-labelledby="modalVerReuniaoTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalVerReuniaoTitle">Solicitação de Reunião</h2>
+          <p class="modal-subtitle" id="modalVerReuniaoSub"></p>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalVerReuniao" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs" role="tablist" aria-label="Seções da solicitação de reunião">
+        <button type="button" class="tab active" data-ver-reuniao-tab="dados" role="tab" aria-selected="true">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-file-text"/></svg> Dados
+        </button>
+        <button type="button" class="tab" data-ver-reuniao-tab="historico" role="tab" aria-selected="false">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-history"/></svg> Histórico
+        </button>
+      </div>
+      <div class="modal-body" id="modalVerReuniaoBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Atender Reunião ═══ -->
+  <div class="modal-overlay" id="modalAtenderReuniao" role="dialog" aria-modal="true" aria-labelledby="modalAtenderReuniaoTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalAtenderReuniaoTitle">Solicitação de Reunião</h2>
+          <p class="modal-subtitle" id="modalAtenderReuniaoSub"></p>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalAtenderReuniao" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs" role="tablist" aria-label="Seções do atendimento da reunião">
+        <button type="button" class="tab active" data-atender-reuniao-tab="dados" role="tab" aria-selected="true">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-file-text"/></svg> Dados
+        </button>
+        <button type="button" class="tab" data-atender-reuniao-tab="atendimento" role="tab" aria-selected="false">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg> Atendimento
+        </button>
+      </div>
+      <div class="err-box" id="errAtenderReuniao" role="alert"></div>
+      <div class="modal-body" id="modalAtenderReuniaoDados"></div>
+      <div class="modal-body hidden" id="modalAtenderReuniaoForm">
+        <label class="field-wrap">
+          <span class="field-label">Status<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="atenderReuniaoStatus" aria-required="true" aria-label="Status">
+            <option value="">Selecione…</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="rejeitado">Rejeitado</option>
+          </select>
+        </label>
+        <label class="field-wrap hidden" id="wrapReagendar">
+          <span class="field-label">Data de Reagendamento<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="atenderReuniaoReagendar" aria-label="Data de Reagendamento">
+            <option value="">Selecione…</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Observação<span class="req" aria-hidden="true">*</span></span>
+          <textarea class="field-control" id="atenderReuniaoObs" rows="4" aria-required="true" aria-label="Observação"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta" id="btnSalvarAtenderReuniao">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Solicitar Vaga ═══ -->
+  <div class="modal-overlay" id="modalSolicitarVaga" role="dialog" aria-modal="true" aria-labelledby="modalSolicitarVagaTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalSolicitarVagaTitle">Solicitação de Vaga</h2>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalSolicitarVaga" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="err-box" id="errSolicitarVaga" role="alert"></div>
+      <div class="modal-body">
+        <label class="field-wrap">
+          <span class="field-label">Organograma<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="vagaOrganograma" aria-required="true" aria-label="Organograma"></select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Data de Entrada<span class="req" aria-hidden="true">*</span></span>
+          <input type="date" class="field-control" id="vagaDataEntrada" aria-required="true" aria-label="Data de Entrada" />
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Turno<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="vagaTurno" aria-required="true" aria-label="Turno">
+            <option value="">Selecione…</option>
+            <option value="manha">Manhã</option>
+            <option value="tarde">Tarde</option>
+            <option value="noite">Noite</option>
+            <option value="comercial">Comercial</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Tipo de Vaga<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="vagaTipo" aria-required="true" aria-label="Tipo de Vaga">
+            <option value="">Selecione…</option>
+            <option value="substituicao">Substituição</option>
+            <option value="nova_entrada">Nova entrada</option>
+          </select>
+        </label>
+        <div id="wrapVagaSubstituicao" class="hidden">
+          <label class="field-wrap">
+            <span class="field-label">Prestador Substituído<span class="req" aria-hidden="true">*</span></span>
+            <select class="field-control" id="vagaPrestadorSubst" aria-label="Prestador Substituído">
+              <option value="">Selecione o organograma…</option>
+            </select>
+          </label>
+          <label class="field-wrap">
+            <span class="field-label">Observação<span class="req" aria-hidden="true">*</span></span>
+            <textarea class="field-control" id="vagaObsSubst" rows="4" aria-label="Observação"></textarea>
+          </label>
+        </div>
+        <div id="wrapVagaNova" class="hidden">
+          <label class="field-wrap">
+            <span class="field-label">Briefing da Vaga<span class="req" aria-hidden="true">*</span></span>
+            <textarea class="field-control" id="vagaBriefing" rows="5" aria-label="Briefing da Vaga"
+              placeholder="Descreva brevemente as responsabilidades da vaga, perfis similares na empresa que deseja ou qualquer caracteristica necessária para atender"></textarea>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta" id="btnConfirmarSolicitarVaga">Solicitar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Ver Vaga ═══ -->
+  <div class="modal-overlay" id="modalVerVaga" role="dialog" aria-modal="true" aria-labelledby="modalVerVagaTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalVerVagaTitle">Solicitação de Vaga</h2>
+          <p class="modal-subtitle" id="modalVerVagaSub"></p>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalVerVaga" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs" role="tablist" aria-label="Seções da solicitação de vaga">
+        <button type="button" class="tab active" data-ver-vaga-tab="dados" role="tab" aria-selected="true">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-file-text"/></svg> Dados
+        </button>
+        <button type="button" class="tab" data-ver-vaga-tab="historico" role="tab" aria-selected="false">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-history"/></svg> Histórico
+        </button>
+      </div>
+      <div class="modal-body" id="modalVerVagaBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Atender Vaga ═══ -->
+  <div class="modal-overlay" id="modalAtenderVaga" role="dialog" aria-modal="true" aria-labelledby="modalAtenderVagaTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalAtenderVagaTitle">Solicitação de Vaga</h2>
+          <p class="modal-subtitle" id="modalAtenderVagaSub"></p>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalAtenderVaga" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs" role="tablist" aria-label="Seções do atendimento da vaga">
+        <button type="button" class="tab active" data-atender-vaga-tab="dados" role="tab" aria-selected="true">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-file-text"/></svg> Dados
+        </button>
+        <button type="button" class="tab" data-atender-vaga-tab="atendimento" role="tab" aria-selected="false">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg> Atendimento
+        </button>
+      </div>
+      <div class="err-box" id="errAtenderVaga" role="alert"></div>
+      <div class="modal-body" id="modalAtenderVagaDados"></div>
+      <div class="modal-body hidden" id="modalAtenderVagaForm">
+        <label class="field-wrap">
+          <span class="field-label">Status<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="atenderVagaStatus" aria-required="true" aria-label="Status">
+            <option value="">Selecione…</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="rejeitado">Rejeitado</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Observação<span class="req" aria-hidden="true">*</span></span>
+          <textarea class="field-control" id="atenderVagaObs" rows="4" aria-required="true" aria-label="Observação"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta" id="btnSalvarAtenderVaga">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Registrar Feedback ═══ -->
+  <div class="modal-overlay" id="modalRegistrarFeedback" role="dialog" aria-modal="true" aria-labelledby="modalRegistrarFeedbackTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalRegistrarFeedbackTitle">Registrar Feedback</h2>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalRegistrarFeedback" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="err-box" id="errRegistrarFeedback" role="alert"></div>
+      <div class="modal-body">
+        <label class="field-wrap">
+          <span class="field-label">Time<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="fbTime" aria-required="true" aria-label="Time"></select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Prestador<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="fbPrestador" aria-required="true" aria-label="Prestador">
+            <option value="">Selecione o time…</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Recomendação<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="fbRecomendacao" aria-required="true" aria-label="Recomendação">
+            <option value="">Selecione…</option>
+            <option value="orientacao">Orientação</option>
+            <option value="alinhamento">Alinhamento de Execução</option>
+            <option value="notif_descumprimento">Notificação de Descumprimento Contratual</option>
+            <option value="notif_suspensao">Notificação de Suspensão da Execução Contratual</option>
+            <option value="persistencia">Persistência do Descumprimento</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Observação<span class="req" aria-hidden="true">*</span></span>
+          <textarea class="field-control" id="fbObs" rows="5" aria-required="true" aria-label="Observação"
+            placeholder="Descreva o ocorrido e argumentos para aplicação"></textarea>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta" id="btnConfirmarRegistrarFeedback">Registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Ver Feedback ═══ -->
+  <div class="modal-overlay" id="modalVerFeedback" role="dialog" aria-modal="true" aria-labelledby="modalVerFeedbackTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalVerFeedbackTitle">Registrar Feedback</h2>
+          <p class="modal-subtitle" id="modalVerFeedbackSub"></p>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalVerFeedback" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs" role="tablist" aria-label="Seções do feedback">
+        <button type="button" class="tab active" data-ver-fb-tab="dados" role="tab" aria-selected="true">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-file-text"/></svg> Dados
+        </button>
+        <button type="button" class="tab" data-ver-fb-tab="historico" role="tab" aria-selected="false">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-history"/></svg> Histórico
+        </button>
+      </div>
+      <div class="modal-body" id="modalVerFeedbackBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Modal Atender Feedback ═══ -->
+  <div class="modal-overlay" id="modalAtenderFeedback" role="dialog" aria-modal="true" aria-labelledby="modalAtenderFeedbackTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 id="modalAtenderFeedbackTitle">Registrar Feedback</h2>
+          <p class="modal-subtitle" id="modalAtenderFeedbackSub"></p>
+        </div>
+        <button type="button" class="modal-close" data-close-modal="modalAtenderFeedback" aria-label="Fechar modal" title="Fechar modal">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="modal-tabs" role="tablist" aria-label="Seções do atendimento de feedback">
+        <button type="button" class="tab active" data-atender-fb-tab="dados" role="tab" aria-selected="true">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-file-text"/></svg> Dados
+        </button>
+        <button type="button" class="tab" data-atender-fb-tab="atendimento" role="tab" aria-selected="false">
+          <svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg> Atendimento
+        </button>
+      </div>
+      <div class="err-box" id="errAtenderFeedback" role="alert"></div>
+      <div class="modal-body" id="modalAtenderFeedbackDados"></div>
+      <div class="modal-body hidden" id="modalAtenderFeedbackForm">
+        <label class="field-wrap">
+          <span class="field-label">Status<span class="req" aria-hidden="true">*</span></span>
+          <select class="field-control" id="atenderFbStatus" aria-required="true" aria-label="Status">
+            <option value="">Selecione…</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="rejeitado">Rejeitado</option>
+          </select>
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Observação<span class="req" aria-hidden="true">*</span></span>
+          <textarea class="field-control" id="atenderFbObs" rows="4" aria-required="true" aria-label="Observação"></textarea>
+        </label>
+        <div id="wrapFbEvidencia" class="hidden">
+          <label class="field-wrap">
+            <span class="field-label">Evidência<span class="req" aria-hidden="true">*</span></span>
+            <input type="file" class="field-control" id="atenderFbEvidencia" aria-label="Evidência" />
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="cta" id="btnSalvarAtenderFeedback">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATUS = [
+      { key: "em_analise", label: "Em análise" },
+      { key: "aprovado", label: "Aprovado" },
+      { key: "rejeitado", label: "Rejeitado" },
+    ];
+    let statusIdx = 0; // Em análise
+    let todosStatus = false;
+
+    const statusLabel = document.getElementById("statusLabel");
+    const btnTodos = document.getElementById("btnTodosStatus");
+    const atestadoSub = document.getElementById("atestadoSub");
+    const tbodyAtestados = document.getElementById("tbodyAtestados");
+
+    const ATESTADOS_ROWS = [
+      {
+        id: "a1",
+        data: "08/09/2026 10:15",
+        nome: "Marina Silva",
+        gerencia: "gp",
+        desc: "Atestado médico — gripe",
+        periodo: "08/09/2026 — 10/09/2026",
+        anexo: "atestado-marina.pdf",
+        status: "em_analise",
+        atender: true,
+        historico: [
+          { tipo: "criacao", usuario: "Marina Silva", dataHora: "08/09/2026 10:15" },
+        ],
+      },
+      {
+        id: "a2",
+        data: "07/09/2026 18:40",
+        nome: "Pedro Santos",
+        gerencia: "gp",
+        desc: "Atestado — consulta ortopédica",
+        periodo: "07/09/2026 — 07/09/2026",
+        anexo: "atestado-pedro.pdf",
+        status: "em_analise",
+        atender: true,
+        historico: [
+          { tipo: "criacao", usuario: "Pedro Santos", dataHora: "07/09/2026 18:40" },
+        ],
+      },
+      {
+        id: "a3",
+        data: "02/09/2026 09:00",
+        nome: "Rita Oliveira",
+        gerencia: "academy",
+        desc: "Atestado — afastamento",
+        periodo: "01/09/2026 — 03/09/2026",
+        anexo: "atestado-rita.pdf",
+        status: "aprovado",
+        atender: false,
+        atendimento: {
+          data: "03/09/2026 11:20",
+          atendido: "RH Spin",
+          obs: "Documentação válida. Abono conforme política.",
+          abono: "SIM",
+        },
+        historico: [
+          { tipo: "criacao", usuario: "Rita Oliveira", dataHora: "02/09/2026 09:00" },
+          {
+            tipo: "atendimento",
+            usuario: "RH Spin",
+            dataHora: "03/09/2026 11:20",
+            statusDe: "Em análise",
+            statusPara: "Aprovado",
+            campos: [
+              { label: "Observação do RH", value: "Documentação válida. Abono conforme política." },
+              { label: "Abono remunerado?", value: "SIM" },
+            ],
+          },
+        ],
+      },
+      {
+        id: "a4",
+        data: "28/08/2026 14:12",
+        nome: "Tiago Ramos",
+        gerencia: "ops",
+        desc: "Atestado — documento incompleto",
+        periodo: "27/08/2026 — 29/08/2026",
+        anexo: "atestado-tiago.pdf",
+        status: "rejeitado",
+        atender: false,
+        atendimento: {
+          data: "29/08/2026 09:05",
+          atendido: "RH Spin",
+          obs: "Anexo ilegível. Solicitar novo envio.",
+          abono: "—",
+        },
+        historico: [
+          { tipo: "criacao", usuario: "Tiago Ramos", dataHora: "28/08/2026 14:12" },
+          {
+            tipo: "atendimento",
+            usuario: "RH Spin",
+            dataHora: "29/08/2026 09:05",
+            statusDe: "Em análise",
+            statusPara: "Rejeitado",
+            campos: [
+              { label: "Observação do RH", value: "Anexo ilegível. Solicitar novo envio." },
+            ],
+          },
+        ],
+      },
+    ];
+
+    let modalVerRow = null;
+    let modalVerAba = "dados";
+    let modalAtenderRow = null;
+    let modalAtenderAba = "dados";
+    let verReuniaoRow = null;
+    let verReuniaoAba = "dados";
+    let verVagaRow = null;
+    let verVagaAba = "dados";
+    let verFbRow = null;
+    let verFbAba = "dados";
+
+    function statusLabelPt(st) {
+      if (st === "aprovado") return "Aprovado";
+      if (st === "aplicado") return "Aplicado";
+      if (st === "rejeitado") return "Rejeitado";
+      if (st === "revisar") return "Em análise";
+      return "Em análise";
+    }
+
+    function agoraLabelMock() {
+      return new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+    }
+
+    function renderHistoricoHtml(eventos) {
+      const list = eventos && eventos.length ? eventos : [];
+      if (!list.length) {
+        return '<div class="hist-empty">Nenhum evento no histórico.</div>';
+      }
+      const ordenados = list.slice().sort((a, b) => String(a.dataHora || "").localeCompare(String(b.dataHora || "")));
+      return `<div class="hist-list">${ordenados.map((ev) => {
+        if (ev.tipo === "criacao") {
+          return `<div class="hist-item">
+            <div class="hist-item-head">
+              <span class="hist-item-user">${ev.usuario}</span>
+              <span class="hist-item-when">${ev.dataHora}</span>
+            </div>
+            <div class="hist-item-meta"><strong>Criação</strong> da solicitação</div>
+          </div>`;
+        }
+        const campos = Array.isArray(ev.campos) ? ev.campos.slice() : [];
+        // legado mock: obs solto → Observação
+        if (!campos.length && ev.obs) {
+          campos.push({ label: "Observação", value: ev.obs });
+        }
+        const camposHtml = campos
+          .filter((c) => c && c.value != null && String(c.value).trim() !== "")
+          .map((c) => `<div class="hist-item-meta"><strong>${c.label}:</strong> ${c.value}</div>`)
+          .join("");
+        return `<div class="hist-item">
+          <div class="hist-item-head">
+            <span class="hist-item-user">${ev.usuario}</span>
+            <span class="hist-item-when">${ev.dataHora}</span>
+          </div>
+          <div class="hist-item-meta"><strong>Atendimento</strong> — Status: ${ev.statusDe} → ${ev.statusPara}</div>
+          ${camposHtml}
+        </div>`;
+      }).join("")}</div>`;
+    }
+
+    function setActiveTabs(attrName, aba) {
+      document.querySelectorAll(`[${attrName}]`).forEach((btn) => {
+        const on = btn.getAttribute(attrName) === aba;
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    }
+    /** Ordenação por tabela — espelho SortTableTh (default data desc). */
+    const sortState = {
+      atestados: { col: "data", dir: "desc" },
+      reunioes: { col: "dataSolicitada", dir: "desc" },
+      vagas: { col: "data", dir: "desc" },
+      feedback: { col: "data", dir: "desc" },
+    };
+
+    const TBODY_BY_TABLE = {
+      reunioes: "tbodyReunioes",
+      vagas: "tbodyVagas",
+      feedback: "tbodyFeedback",
+    };
+
+    // ── Reuniões ──
+    const PRESTADORES_MOCK = [
+      { id: "p1", nome: "Ana Souza", time: "Game Presenter", gerencia: "gp", datas: ["2026-09-12", "2026-09-18", "2026-09-25"] },
+      { id: "p2", nome: "Bruno Lima", time: "Shuffler", gerencia: "gp", datas: ["2026-09-15", "2026-09-22", "2026-10-01"] },
+      { id: "p3", nome: "Carla Mendes", time: "Academy", gerencia: "academy", datas: ["2026-09-20", "2026-09-27"] },
+      { id: "p4", nome: "Diego Alves", time: "Game Floor", gerencia: "ops", datas: ["2026-09-14", "2026-09-21", "2026-09-28"] },
+      { id: "p5", nome: "Elena Rocha", time: "Operation", gerencia: "ops", datas: ["2026-09-16", "2026-09-23"] },
+    ];
+    /** Mock: usuário logado gerencia GP (+ times Shuffler na mesma gerência) */
+    const MINHA_GERENCIA = ["gp"];
+
+    /**
+     * Mock de permissão por aba — valores: proprios | ver_sim | editar_sim
+     * @param {"atestados"|"reunioes"|"vagas"|"feedback"} aba
+     */
+    function permUi(aba) {
+      const idByAba = {
+        atestados: "mockPermAtestado",
+        reunioes: "mockPermReuniao",
+        vagas: "mockPermVaga",
+        feedback: "mockPermFeedback",
+      };
+      const mode = document.getElementById(idByAba[aba]).value;
+      const proprios = mode === "proprios";
+      const verSim = mode === "ver_sim";
+      const editarSim = mode === "editar_sim";
+      const atenderEmProprios = aba === "reunioes" || aba === "feedback";
+      return {
+        mode,
+        filterProprios: proprios,
+        showAcoes: !verSim,
+        showVer: !verSim,
+        showAtender: editarSim || (proprios && atenderEmProprios),
+        showCta: aba !== "atestados" && !verSim,
+        escopoFull: editarSim,
+      };
+    }
+
+    function syncCtaVisivel(btnId, show) {
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.toggle("hidden", !show);
+    }
+
+    let reuniaoIdSeq = 10;
+    let REUNIOES_ROWS = [
+      {
+        id: "r1",
+        dataIso: "2026-09-12",
+        dataLabel: "12/09/2026",
+        solicitante: "Ana Souza",
+        prestadorId: "p1",
+        time: "Game Presenter",
+        gerencia: "gp",
+        tipo: "Reunião com RH",
+        tipoKey: "rh",
+        status: "em_analise",
+        obs: "Alinhamento sobre escala e troca de turno.",
+        historico: [
+          { tipo: "criacao", usuario: "Você (RH)", dataHora: "05/09/2026 14:20" },
+        ],
+      },
+      {
+        id: "r2",
+        dataIso: "2026-09-15",
+        dataLabel: "15/09/2026",
+        solicitante: "Bruno Lima",
+        prestadorId: "p2",
+        time: "Shuffler",
+        gerencia: "gp",
+        tipo: "Reunião com Liderança",
+        tipoKey: "lideranca",
+        status: "em_analise",
+        obs: "Feedback de desempenho do mês.",
+        historico: [
+          { tipo: "criacao", usuario: "Você (RH)", dataHora: "06/09/2026 09:10" },
+        ],
+      },
+      {
+        id: "r3",
+        dataIso: "2026-09-20",
+        dataLabel: "20/09/2026",
+        solicitante: "Carla Mendes",
+        prestadorId: "p3",
+        time: "Academy",
+        gerencia: "academy",
+        tipo: "Reunião com RH",
+        tipoKey: "rh",
+        status: "aprovado",
+        obs: "Onboarding e documentos.",
+        historico: [
+          { tipo: "criacao", usuario: "Você (RH)", dataHora: "01/09/2026 16:00" },
+          {
+            tipo: "atendimento",
+            usuario: "RH Spin",
+            dataHora: "02/09/2026 10:30",
+            statusDe: "Em análise",
+            statusPara: "Aprovado",
+            campos: [
+              { label: "Observação", value: "Horário confirmado com o time." },
+            ],
+          },
+        ],
+      },
+    ];
+
+    let reuniaoAtenderRow = null;
+    let reuniaoAtenderAba = "dados";
+
+    function fmtDataBr(iso) {
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+
+    function prestadoresVisiveis() {
+      const p = permUi("reunioes");
+      if (p.escopoFull) return PRESTADORES_MOCK;
+      return PRESTADORES_MOCK.filter((x) => MINHA_GERENCIA.includes(x.gerencia));
+    }
+
+    function fillDatasSelect(selectEl, prestadorId, includeEmptyLabel) {
+      selectEl.innerHTML = "";
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = includeEmptyLabel || "Selecione…";
+      selectEl.appendChild(empty);
+      const p = PRESTADORES_MOCK.find((x) => x.id === prestadorId);
+      if (!p) {
+        selectEl.disabled = true;
+        return;
+      }
+      selectEl.disabled = false;
+      p.datas.forEach((iso) => {
+        const o = document.createElement("option");
+        o.value = iso;
+        o.textContent = fmtDataBr(iso);
+        selectEl.appendChild(o);
+      });
+    }
+
+    function fillPrestadoresAgendar() {
+      const sel = document.getElementById("agendarPrestador");
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Selecione…</option>';
+      prestadoresVisiveis().forEach((p) => {
+        const o = document.createElement("option");
+        o.value = p.id;
+        o.textContent = `${p.nome} (${p.time})`;
+        sel.appendChild(o);
+      });
+      if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
+      else {
+        sel.value = "";
+        document.getElementById("agendarData").innerHTML = '<option value="">Selecione o prestador…</option>';
+        document.getElementById("agendarData").disabled = true;
+      }
+    }
+
+    function renderReunioes() {
+      const p = permUi("reunioes");
+      syncCtaVisivel("btnAgendarReuniao", p.showCta);
+      const tbody = document.getElementById("tbodyReunioes");
+      const { col, dir } = sortState.reunioes;
+      const mult = dir === "asc" ? 1 : -1;
+      let rows = REUNIOES_ROWS.slice();
+      if (p.filterProprios) rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
+      rows.sort((a, b) => {
+        const map = {
+          dataSolicitada: (r) => r.dataIso,
+          solicitante: (r) => r.solicitante,
+          time: (r) => r.time,
+          tipo: (r) => r.tipo,
+          status: (r) => r.status,
+        };
+        const va = (map[col](a) || "").toLowerCase();
+        const vb = (map[col](b) || "").toLowerCase();
+        return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
+      });
+      tbody.innerHTML = rows.map((r) => {
+        const showAtender = p.showAtender && r.status === "em_analise";
+        const actions = p.showAcoes
+          ? `<div class="actions">
+              ${p.showVer ? `<button type="button" class="icon-btn" data-reuniao-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>` : ""}
+              ${showAtender ? `<button type="button" class="icon-btn" data-reuniao-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
+            </div>`
+          : "";
+        return `<tr>
+          <td>${r.dataLabel}</td>
+          <td>${r.solicitante}</td>
+          <td>${r.time}</td>
+          <td>${r.tipo}</td>
+          <td>${badgeHtml(r.status)}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="6" style="padding:40px;color:var(--text-muted)">Nenhuma solicitação encontrada.</td></tr>`;
+      syncSortHeaders("reunioes");
+    }
+
+    function openModalAgendarReuniao() {
+      document.getElementById("errAgendar").classList.remove("show");
+      document.getElementById("errAgendar").textContent = "";
+      document.getElementById("agendarTipo").value = "";
+      document.getElementById("agendarObs").value = "";
+      fillPrestadoresAgendar();
+      openOverlay("modalAgendarReuniao");
+    }
+
+    function openModalVerReuniao(r) {
+      verReuniaoRow = r;
+      verReuniaoAba = "dados";
+      document.getElementById("modalVerReuniaoSub").textContent = r.tipo;
+      setActiveTabs("data-ver-reuniao-tab", "dados");
+      document.getElementById("modalVerReuniaoBody").innerHTML = corpoDadosReuniao(r);
+      openOverlay("modalVerReuniao");
+    }
+
+    function renderModalVerReuniaoBody() {
+      if (!verReuniaoRow) return;
+      setActiveTabs("data-ver-reuniao-tab", verReuniaoAba);
+      document.getElementById("modalVerReuniaoBody").innerHTML =
+        verReuniaoAba === "historico"
+          ? renderHistoricoHtml(verReuniaoRow.historico)
+          : corpoDadosReuniao(verReuniaoRow);
+    }
+
+    function corpoDadosReuniao(r) {
+      return [
+        infoLine("Data Solicitada", r.dataLabel),
+        infoLine("Solicitante", r.solicitante),
+        infoLine("Time", r.time),
+        infoLine("Observação", r.obs || "—"),
+      ].join("");
+    }
+
+    function syncAtenderReuniaoForm() {
+      const st = document.getElementById("atenderReuniaoStatus").value;
+      const wrap = document.getElementById("wrapReagendar");
+      wrap.classList.toggle("hidden", st !== "rejeitado");
+      if (st === "rejeitado" && reuniaoAtenderRow) {
+        fillDatasSelect(document.getElementById("atenderReuniaoReagendar"), reuniaoAtenderRow.prestadorId, "Selecione…");
+      }
+    }
+
+    function openModalAtenderReuniao(r) {
+      reuniaoAtenderRow = r;
+      reuniaoAtenderAba = "dados";
+      document.getElementById("errAtenderReuniao").classList.remove("show");
+      document.getElementById("modalAtenderReuniaoSub").textContent = r.tipo;
+      document.getElementById("modalAtenderReuniaoDados").innerHTML = corpoDadosReuniao(r);
+      document.getElementById("modalAtenderReuniaoDados").classList.remove("hidden");
+      document.getElementById("modalAtenderReuniaoForm").classList.add("hidden");
+      document.querySelectorAll("[data-atender-reuniao-tab]").forEach((btn) => {
+        const on = btn.getAttribute("data-atender-reuniao-tab") === "dados";
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      document.getElementById("atenderReuniaoStatus").value = "";
+      document.getElementById("atenderReuniaoObs").value = "";
+      document.getElementById("wrapReagendar").classList.add("hidden");
+      openOverlay("modalAtenderReuniao");
+    }
+
+    document.getElementById("btnAgendarReuniao").addEventListener("click", openModalAgendarReuniao);
+    document.getElementById("mockPermReuniao").addEventListener("change", () => {
+      renderReunioes();
+      if (document.getElementById("modalAgendarReuniao").classList.contains("open")) fillPrestadoresAgendar();
+    });
+    document.getElementById("agendarPrestador").addEventListener("change", (e) => {
+      fillDatasSelect(document.getElementById("agendarData"), e.target.value, "Selecione…");
+    });
+    document.getElementById("btnConfirmarAgendar").addEventListener("click", () => {
+      const err = document.getElementById("errAgendar");
+      const tipoKey = document.getElementById("agendarTipo").value;
+      const pid = document.getElementById("agendarPrestador").value;
+      const dataIso = document.getElementById("agendarData").value;
+      const obs = document.getElementById("agendarObs").value.trim();
+      if (!tipoKey || !pid || !dataIso || !obs) {
+        err.textContent = "Preencha todos os campos obrigatórios.";
+        err.classList.add("show");
+        return;
+      }
+      const p = PRESTADORES_MOCK.find((x) => x.id === pid);
+      const tipoLabel = tipoKey === "rh" ? "Reunião com RH" : "Reunião com Liderança";
+      reuniaoIdSeq += 1;
+      const criadoEm = agoraLabelMock();
+      REUNIOES_ROWS.unshift({
+        id: "r" + reuniaoIdSeq,
+        dataIso,
+        dataLabel: fmtDataBr(dataIso),
+        solicitante: p.nome,
+        prestadorId: p.id,
+        time: p.time,
+        gerencia: p.gerencia,
+        tipo: tipoLabel,
+        tipoKey,
+        status: "em_analise",
+        obs,
+        historico: [{ tipo: "criacao", usuario: "Você (RH)", dataHora: criadoEm }],
+      });
+      closeOverlay("modalAgendarReuniao");
+      renderReunioes();
+    });
+
+    document.getElementById("tbodyReunioes").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-reuniao-acao]");
+      if (!btn) return;
+      const row = REUNIOES_ROWS.find((r) => r.id === btn.getAttribute("data-id"));
+      if (!row) return;
+      if (btn.getAttribute("data-reuniao-acao") === "ver") openModalVerReuniao(row);
+      if (btn.getAttribute("data-reuniao-acao") === "atender") openModalAtenderReuniao(row);
+    });
+
+    document.querySelectorAll("[data-atender-reuniao-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        reuniaoAtenderAba = btn.getAttribute("data-atender-reuniao-tab");
+        document.querySelectorAll("[data-atender-reuniao-tab]").forEach((b) => {
+          const on = b.getAttribute("data-atender-reuniao-tab") === reuniaoAtenderAba;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        document.getElementById("modalAtenderReuniaoDados").classList.toggle("hidden", reuniaoAtenderAba !== "dados");
+        document.getElementById("modalAtenderReuniaoForm").classList.toggle("hidden", reuniaoAtenderAba !== "atendimento");
+      });
+    });
+    document.getElementById("atenderReuniaoStatus").addEventListener("change", syncAtenderReuniaoForm);
+    document.getElementById("btnSalvarAtenderReuniao").addEventListener("click", () => {
+      const err = document.getElementById("errAtenderReuniao");
+      const st = document.getElementById("atenderReuniaoStatus").value;
+      const obs = document.getElementById("atenderReuniaoObs").value.trim();
+      const reag = document.getElementById("atenderReuniaoReagendar").value;
+      if (!st || !obs) {
+        err.textContent = "Preencha Status e Observação.";
+        err.classList.add("show");
+        return;
+      }
+      if (st === "rejeitado" && !reag) {
+        err.textContent = "Informe a Data de Reagendamento ao rejeitar.";
+        err.classList.add("show");
+        return;
+      }
+      if (!reuniaoAtenderRow) return;
+      const statusAntes = statusLabelPt(reuniaoAtenderRow.status);
+      reuniaoAtenderRow.status = st;
+      if (st === "rejeitado") {
+        reuniaoAtenderRow.dataIso = reag;
+        reuniaoAtenderRow.dataLabel = fmtDataBr(reag);
+        reuniaoAtenderRow.obs = obs;
+      } else {
+        reuniaoAtenderRow.obs = obs;
+      }
+      if (!reuniaoAtenderRow.historico) reuniaoAtenderRow.historico = [];
+      reuniaoAtenderRow.historico.push({
+        tipo: "atendimento",
+        usuario: "Você (RH)",
+        dataHora: agoraLabelMock(),
+        statusDe: statusAntes,
+        statusPara: statusLabelPt(st),
+        campos: [
+          { label: "Observação", value: obs },
+          ...(st === "rejeitado"
+            ? [{ label: "Data de Reagendamento", value: fmtDataBr(reag) }]
+            : []),
+        ],
+      });
+      closeOverlay("modalAtenderReuniao");
+      renderReunioes();
+    });
+
+    // ── Vagas ──
+    const ORGANOGRAMAS_MOCK = [
+      { id: "gp", label: "Game Presenter", gerencia: "gp" },
+      { id: "shuffler", label: "Shuffler", gerencia: "gp" },
+      { id: "academy", label: "Academy", gerencia: "academy" },
+      { id: "game_floor", label: "Game Floor", gerencia: "ops" },
+      { id: "operation", label: "Operation", gerencia: "ops" },
+    ];
+    const PRESTADORES_POR_ORG = {
+      gp: ["Ana Souza", "Marina Silva"],
+      shuffler: ["Bruno Lima", "Pedro Santos"],
+      academy: ["Carla Mendes"],
+      game_floor: ["Diego Alves", "Tiago Ramos"],
+      operation: ["Elena Rocha", "Fábio Nunes"],
+    };
+    const TURNO_LABEL = { manha: "Manhã", tarde: "Tarde", noite: "Noite", comercial: "Comercial" };
+    const TIPO_VAGA_LABEL = { substituicao: "Substituição", nova_entrada: "Nova entrada" };
+    const USUARIO_MOCK_VAGA = "Você (RH)";
+
+    let vagaIdSeq = 10;
+    let VAGAS_ROWS = [
+      {
+        id: "v1",
+        dataIso: "2026-09-05T11:30",
+        dataLabel: "05/09/2026 11:30",
+        solicitante: "Diego Alves",
+        organogramaId: "game_floor",
+        time: "Game Floor",
+        gerencia: "ops",
+        tipoKey: "substituicao",
+        tipoLabel: "Substituição",
+        turno: "noite",
+        dataEntradaIso: "2026-09-25",
+        dataEntradaLabel: "25/09/2026",
+        prestadorSubst: "Tiago Ramos",
+        obs: "Cobertura de férias.",
+        briefing: "",
+        status: "em_analise",
+        historico: [{ tipo: "criacao", usuario: "Diego Alves", dataHora: "05/09/2026 11:30" }],
+      },
+      {
+        id: "v2",
+        dataIso: "2026-09-03T08:05",
+        dataLabel: "03/09/2026 08:05",
+        solicitante: "Elena Rocha",
+        organogramaId: "operation",
+        time: "Operation",
+        gerencia: "ops",
+        tipoKey: "nova_entrada",
+        tipoLabel: "Nova entrada",
+        turno: "comercial",
+        dataEntradaIso: "2026-09-22",
+        dataEntradaLabel: "22/09/2026",
+        prestadorSubst: "",
+        obs: "",
+        briefing: "Analista de Escala com experiência em turnos rotativos.",
+        status: "aprovado",
+        historico: [
+          { tipo: "criacao", usuario: "Elena Rocha", dataHora: "03/09/2026 08:05" },
+          {
+            tipo: "atendimento",
+            usuario: "RH Spin",
+            dataHora: "04/09/2026 15:00",
+            statusDe: "Em análise",
+            statusPara: "Aprovado",
+            campos: [{ label: "Observação", value: "Headcount liberado." }],
+          },
+        ],
+      },
+      {
+        id: "v3",
+        dataIso: "2026-09-01T17:40",
+        dataLabel: "01/09/2026 17:40",
+        solicitante: "Fábio Nunes",
+        organogramaId: "gp",
+        time: "Game Presenter",
+        gerencia: "gp",
+        tipoKey: "nova_entrada",
+        tipoLabel: "Nova entrada",
+        turno: "noite",
+        dataEntradaIso: "2026-09-20",
+        dataEntradaLabel: "20/09/2026",
+        prestadorSubst: "",
+        obs: "",
+        briefing: "GP noturno fluente em inglês.",
+        status: "em_analise",
+        historico: [{ tipo: "criacao", usuario: "Fábio Nunes", dataHora: "01/09/2026 17:40" }],
+      },
+    ];
+
+    let vagaAtenderRow = null;
+    let vagaAtenderAba = "dados";
+
+    function minDataEntradaIso() {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + 15);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function organogramasVisiveisVaga() {
+      const p = permUi("vagas");
+      if (p.escopoFull) return ORGANOGRAMAS_MOCK;
+      return ORGANOGRAMAS_MOCK.filter((o) => MINHA_GERENCIA.includes(o.gerencia));
+    }
+
+    function fillOrganogramaVaga() {
+      const sel = document.getElementById("vagaOrganograma");
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Selecione…</option>';
+      organogramasVisiveisVaga().forEach((o) => {
+        const opt = document.createElement("option");
+        opt.value = o.id;
+        opt.textContent = o.label;
+        sel.appendChild(opt);
+      });
+      if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
+      else {
+        sel.value = "";
+        fillPrestadorSubstVaga("");
+      }
+    }
+
+    function fillPrestadorSubstVaga(orgId) {
+      const sel = document.getElementById("vagaPrestadorSubst");
+      sel.innerHTML = '<option value="">Selecione…</option>';
+      const lista = PRESTADORES_POR_ORG[orgId] || [];
+      lista.forEach((nome) => {
+        const o = document.createElement("option");
+        o.value = nome;
+        o.textContent = nome;
+        sel.appendChild(o);
+      });
+    }
+
+    function syncTipoVagaFields() {
+      const tipo = document.getElementById("vagaTipo").value;
+      document.getElementById("wrapVagaSubstituicao").classList.toggle("hidden", tipo !== "substituicao");
+      document.getElementById("wrapVagaNova").classList.toggle("hidden", tipo !== "nova_entrada");
+    }
+
+    function corpoDadosVaga(r) {
+      const parts = [
+        infoLine("Organograma", r.time),
+        infoLine("Data de Entrada", r.dataEntradaLabel),
+        infoLine("Turno", TURNO_LABEL[r.turno] || r.turno),
+      ];
+      if (r.tipoKey === "substituicao") {
+        parts.push(infoLine("Prestador Substituído", r.prestadorSubst || "—"));
+        parts.push(infoLine("Observação", r.obs || "—"));
+      } else {
+        parts.push(infoLine("Briefing da Vaga", r.briefing || "—"));
+      }
+      return parts.join("");
+    }
+
+    function renderVagas() {
+      const p = permUi("vagas");
+      syncCtaVisivel("btnSolicitarVaga", p.showCta);
+      const tbody = document.getElementById("tbodyVagas");
+      const { col, dir } = sortState.vagas;
+      const mult = dir === "asc" ? 1 : -1;
+      let rows = VAGAS_ROWS.slice();
+      if (p.filterProprios) rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
+      rows.sort((a, b) => {
+        const map = {
+          data: (r) => r.dataIso,
+          solicitante: (r) => r.solicitante,
+          time: (r) => r.time,
+          tipoVaga: (r) => r.tipoLabel,
+          status: (r) => r.status,
+        };
+        const va = (map[col](a) || "").toLowerCase();
+        const vb = (map[col](b) || "").toLowerCase();
+        return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
+      });
+      tbody.innerHTML = rows.map((r) => {
+        const showAtender = p.showAtender && r.status === "em_analise";
+        const actions = p.showAcoes
+          ? `<div class="actions">
+              ${p.showVer ? `<button type="button" class="icon-btn" data-vaga-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>` : ""}
+              ${showAtender ? `<button type="button" class="icon-btn" data-vaga-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
+            </div>`
+          : "";
+        return `<tr>
+          <td>${r.dataLabel}</td>
+          <td>${r.solicitante}</td>
+          <td>${r.time}</td>
+          <td>${r.tipoLabel}</td>
+          <td>${badgeHtml(r.status)}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="6" style="padding:40px;color:var(--text-muted)">Nenhuma solicitação encontrada.</td></tr>`;
+      syncSortHeaders("vagas");
+    }
+
+    function openModalSolicitarVaga() {
+      document.getElementById("errSolicitarVaga").classList.remove("show");
+      fillOrganogramaVaga();
+      const minIso = minDataEntradaIso();
+      const dataEl = document.getElementById("vagaDataEntrada");
+      dataEl.min = minIso;
+      dataEl.value = "";
+      document.getElementById("vagaTurno").value = "";
+      document.getElementById("vagaTipo").value = "";
+      document.getElementById("vagaObsSubst").value = "";
+      document.getElementById("vagaBriefing").value = "";
+      syncTipoVagaFields();
+      fillPrestadorSubstVaga("");
+      openOverlay("modalSolicitarVaga");
+    }
+
+    function openModalVerVaga(r) {
+      verVagaRow = r;
+      verVagaAba = "dados";
+      document.getElementById("modalVerVagaSub").textContent = r.tipoLabel;
+      setActiveTabs("data-ver-vaga-tab", "dados");
+      document.getElementById("modalVerVagaBody").innerHTML = corpoDadosVaga(r);
+      openOverlay("modalVerVaga");
+    }
+
+    function renderModalVerVagaBody() {
+      if (!verVagaRow) return;
+      setActiveTabs("data-ver-vaga-tab", verVagaAba);
+      document.getElementById("modalVerVagaBody").innerHTML =
+        verVagaAba === "historico" ? renderHistoricoHtml(verVagaRow.historico) : corpoDadosVaga(verVagaRow);
+    }
+
+    function openModalAtenderVaga(r) {
+      vagaAtenderRow = r;
+      vagaAtenderAba = "dados";
+      document.getElementById("errAtenderVaga").classList.remove("show");
+      document.getElementById("modalAtenderVagaSub").textContent = r.tipoLabel;
+      document.getElementById("modalAtenderVagaDados").innerHTML = corpoDadosVaga(r);
+      document.getElementById("modalAtenderVagaDados").classList.remove("hidden");
+      document.getElementById("modalAtenderVagaForm").classList.add("hidden");
+      document.querySelectorAll("[data-atender-vaga-tab]").forEach((btn) => {
+        const on = btn.getAttribute("data-atender-vaga-tab") === "dados";
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      document.getElementById("atenderVagaStatus").value = "";
+      document.getElementById("atenderVagaObs").value = "";
+      openOverlay("modalAtenderVaga");
+    }
+
+    document.getElementById("btnSolicitarVaga").addEventListener("click", openModalSolicitarVaga);
+    document.getElementById("mockPermVaga").addEventListener("change", () => {
+      renderVagas();
+      if (document.getElementById("modalSolicitarVaga").classList.contains("open")) fillOrganogramaVaga();
+    });
+    document.getElementById("vagaOrganograma").addEventListener("change", (e) => {
+      fillPrestadorSubstVaga(e.target.value);
+    });
+    document.getElementById("vagaTipo").addEventListener("change", syncTipoVagaFields);
+    document.getElementById("btnConfirmarSolicitarVaga").addEventListener("click", () => {
+      const err = document.getElementById("errSolicitarVaga");
+      const orgId = document.getElementById("vagaOrganograma").value;
+      const dataEntrada = document.getElementById("vagaDataEntrada").value;
+      const turno = document.getElementById("vagaTurno").value;
+      const tipo = document.getElementById("vagaTipo").value;
+      const prestSubst = document.getElementById("vagaPrestadorSubst").value;
+      const obs = document.getElementById("vagaObsSubst").value.trim();
+      const briefing = document.getElementById("vagaBriefing").value.trim();
+      const minIso = minDataEntradaIso();
+      if (!orgId || !dataEntrada || !turno || !tipo) {
+        err.textContent = "Preencha todos os campos obrigatórios.";
+        err.classList.add("show");
+        return;
+      }
+      if (dataEntrada < minIso) {
+        err.textContent = "A Data de Entrada deve ser pelo menos 15 dias à frente.";
+        err.classList.add("show");
+        return;
+      }
+      if (tipo === "substituicao" && (!prestSubst || !obs)) {
+        err.textContent = "Informe o Prestador Substituído e a Observação.";
+        err.classList.add("show");
+        return;
+      }
+      if (tipo === "nova_entrada" && !briefing) {
+        err.textContent = "Informe o Briefing da Vaga.";
+        err.classList.add("show");
+        return;
+      }
+      const org = ORGANOGRAMAS_MOCK.find((o) => o.id === orgId);
+      const agora = new Date();
+      const dataIso = agora.toISOString().slice(0, 16);
+      const dataLabel = agora.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+      vagaIdSeq += 1;
+      VAGAS_ROWS.unshift({
+        id: "v" + vagaIdSeq,
+        dataIso,
+        dataLabel,
+        solicitante: USUARIO_MOCK_VAGA,
+        organogramaId: orgId,
+        time: org.label,
+        gerencia: org.gerencia,
+        tipoKey: tipo,
+        tipoLabel: TIPO_VAGA_LABEL[tipo],
+        turno,
+        dataEntradaIso: dataEntrada,
+        dataEntradaLabel: fmtDataBr(dataEntrada),
+        prestadorSubst: tipo === "substituicao" ? prestSubst : "",
+        obs: tipo === "substituicao" ? obs : "",
+        briefing: tipo === "nova_entrada" ? briefing : "",
+        status: "em_analise",
+        historico: [{ tipo: "criacao", usuario: USUARIO_MOCK_VAGA, dataHora: dataLabel }],
+      });
+      closeOverlay("modalSolicitarVaga");
+      renderVagas();
+    });
+
+    document.getElementById("tbodyVagas").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-vaga-acao]");
+      if (!btn) return;
+      const row = VAGAS_ROWS.find((r) => r.id === btn.getAttribute("data-id"));
+      if (!row) return;
+      if (btn.getAttribute("data-vaga-acao") === "ver") openModalVerVaga(row);
+      if (btn.getAttribute("data-vaga-acao") === "atender") openModalAtenderVaga(row);
+    });
+
+    document.querySelectorAll("[data-atender-vaga-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        vagaAtenderAba = btn.getAttribute("data-atender-vaga-tab");
+        document.querySelectorAll("[data-atender-vaga-tab]").forEach((b) => {
+          const on = b.getAttribute("data-atender-vaga-tab") === vagaAtenderAba;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        document.getElementById("modalAtenderVagaDados").classList.toggle("hidden", vagaAtenderAba !== "dados");
+        document.getElementById("modalAtenderVagaForm").classList.toggle("hidden", vagaAtenderAba !== "atendimento");
+      });
+    });
+
+    document.getElementById("btnSalvarAtenderVaga").addEventListener("click", () => {
+      const err = document.getElementById("errAtenderVaga");
+      const st = document.getElementById("atenderVagaStatus").value;
+      const obs = document.getElementById("atenderVagaObs").value.trim();
+      if (!st || !obs) {
+        err.textContent = "Preencha Status e Observação.";
+        err.classList.add("show");
+        return;
+      }
+      if (!vagaAtenderRow) return;
+      const statusAntes = statusLabelPt(vagaAtenderRow.status);
+      vagaAtenderRow.status = st;
+      if (!vagaAtenderRow.historico) vagaAtenderRow.historico = [];
+      vagaAtenderRow.historico.push({
+        tipo: "atendimento",
+        usuario: USUARIO_MOCK_VAGA,
+        dataHora: agoraLabelMock(),
+        statusDe: statusAntes,
+        statusPara: statusLabelPt(st),
+        campos: [{ label: "Observação", value: obs }],
+      });
+      closeOverlay("modalAtenderVaga");
+      renderVagas();
+    });
+
+    // ── Feedback ──
+    const RECOM_LABEL = {
+      orientacao: "Orientação",
+      alinhamento: "Alinhamento de Execução",
+      notif_descumprimento: "Notificação de Descumprimento Contratual",
+      notif_suspensao: "Notificação de Suspensão da Execução Contratual",
+      persistencia: "Persistência do Descumprimento",
+    };
+    const RECOM_EXIGE_EVIDENCIA = new Set(["notif_descumprimento", "notif_suspensao", "persistencia"]);
+    const STATUS_FB_LABEL = {
+      em_analise: "Em análise",
+      aplicado: "Aplicado",
+      aprovado: "Aprovado",
+      rejeitado: "Rejeitado",
+    };
+    const ORIGEM_FB_LABEL = {
+      controle_turno: "Controle de Turno",
+      solicitacoes: "Solicitações",
+    };
+    const USUARIO_MOCK_FB = "Você (RH)";
+    const LIDERANCA_CT_MOCK = "Gustavo Pires";
+
+    /** Abre o modal Registrar como origem CT ou Solicitações */
+    let registrarFbOrigem = "solicitacoes";
+
+    let fbIdSeq = 10;
+    let ctFbIdSeq = 100;
+
+    /**
+     * Espelho CT (Notificações → Feedbacks).
+     * status CT: revisar | aplicado | rejeitado
+     */
+    let CT_FEEDBACK_ROWS = [
+      {
+        id: "ct1",
+        dataIso: "2026-09-04",
+        dataLabel: "04/09/2026",
+        lideranca: "Gustavo Pires",
+        prestador: "Ana Souza",
+        recomKey: "orientacao",
+        recomLabel: "Orientação",
+        status: "aplicado",
+        solId: "f1",
+      },
+      {
+        id: "ct3",
+        dataIso: "2026-08-22",
+        dataLabel: "22/08/2026",
+        lideranca: "Gustavo Pires",
+        prestador: "Bruno Lima",
+        recomKey: "notif_descumprimento",
+        recomLabel: "Notificação de Descumprimento Contratual",
+        status: "revisar",
+        solId: "f3",
+      },
+    ];
+
+    let FEEDBACK_ROWS = [
+      {
+        id: "f1",
+        dataIso: "2026-09-04",
+        dataLabel: "04/09/2026",
+        lideranca: "Gustavo Pires",
+        timeId: "gp",
+        time: "Game Presenter",
+        gerencia: "gp",
+        prestador: "Ana Souza",
+        recomKey: "orientacao",
+        recomLabel: "Orientação",
+        obs: "Orientação sobre pontualidade no início do turno.",
+        status: "aplicado",
+        origem: "controle_turno",
+        ctId: "ct1",
+        historico: [{ tipo: "criacao", usuario: "Gustavo Pires", dataHora: "04/09/2026 09:15" }],
+      },
+      {
+        id: "f2",
+        dataIso: "2026-08-28",
+        dataLabel: "28/08/2026",
+        lideranca: "Iris Barbosa",
+        timeId: "academy",
+        time: "Academy",
+        gerencia: "academy",
+        prestador: "Carla Mendes",
+        recomKey: "alinhamento",
+        recomLabel: "Alinhamento de Execução",
+        obs: "Alinhamento de execução do roteiro de treinamento.",
+        status: "aprovado",
+        origem: "solicitacoes",
+        ctId: null,
+        historico: [
+          { tipo: "criacao", usuario: "Iris Barbosa", dataHora: "28/08/2026 11:00" },
+          {
+            tipo: "atendimento",
+            usuario: "RH Spin",
+            dataHora: "29/08/2026 14:20",
+            statusDe: "Em análise",
+            statusPara: "Aprovado",
+            campos: [{ label: "Observação", value: "Procedimento aplicado." }],
+          },
+        ],
+      },
+      {
+        id: "f3",
+        dataIso: "2026-08-22",
+        dataLabel: "22/08/2026",
+        lideranca: "Gustavo Pires",
+        timeId: "shuffler",
+        time: "Shuffler",
+        gerencia: "gp",
+        prestador: "Bruno Lima",
+        recomKey: "notif_descumprimento",
+        recomLabel: "Notificação de Descumprimento Contratual",
+        obs: "Descumprimento de regras de uniforme.",
+        status: "em_analise",
+        origem: "controle_turno",
+        ctId: "ct3",
+        historico: [{ tipo: "criacao", usuario: "Gustavo Pires", dataHora: "22/08/2026 16:40" }],
+      },
+    ];
+
+    let fbAtenderRow = null;
+    let fbAtenderAba = "dados";
+
+    function mapStatusCtParaSolicitacoes(ctStatus) {
+      if (ctStatus === "revisar") return "em_analise";
+      if (ctStatus === "aplicado") return "aplicado";
+      if (ctStatus === "rejeitado") return "rejeitado";
+      return "em_analise";
+    }
+
+    function badgeCtHtml(st) {
+      if (st === "aplicado") return '<span class="badge ok">Aplicado</span>';
+      if (st === "rejeitado") return '<span class="badge no">Rejeitado</span>';
+      return '<span class="badge em">Revisar</span>';
+    }
+
+    function origemFbLabel(origem) {
+      return ORIGEM_FB_LABEL[origem] || origem || "—";
+    }
+
+    function renderEspelhoCtFeedback() {
+      const tbody = document.getElementById("tbodyEspelhoCtFeedback");
+      if (!tbody) return;
+      if (!CT_FEEDBACK_ROWS.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;color:var(--text-muted)">Nenhum feedback no espelho do Controle de Turno.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = CT_FEEDBACK_ROWS.slice()
+        .sort((a, b) => b.dataIso.localeCompare(a.dataIso))
+        .map((ct) => {
+          const sol = FEEDBACK_ROWS.find((f) => f.id === ct.solId);
+          const solBadge = sol ? badgeHtml(sol.status) : '<span style="color:var(--text-muted)">—</span>';
+          return `<tr>
+            <td>${ct.dataLabel}</td>
+            <td>${ct.prestador}</td>
+            <td>${ct.recomLabel}</td>
+            <td>${badgeCtHtml(ct.status)}</td>
+            <td>${ct.lideranca}</td>
+            <td>${solBadge}</td>
+          </tr>`;
+        })
+        .join("");
+    }
+
+    function timesVisiveisFeedback() {
+      const p = permUi("feedback");
+      if (p.escopoFull) return ORGANOGRAMAS_MOCK;
+      return ORGANOGRAMAS_MOCK.filter((o) => MINHA_GERENCIA.includes(o.gerencia));
+    }
+
+    function fillTimeFeedback() {
+      const sel = document.getElementById("fbTime");
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Selecione…</option>';
+      timesVisiveisFeedback().forEach((o) => {
+        const opt = document.createElement("option");
+        opt.value = o.id;
+        opt.textContent = o.label;
+        sel.appendChild(opt);
+      });
+      if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
+      else {
+        sel.value = "";
+        fillPrestadorFeedback("");
+      }
+    }
+
+    function fillPrestadorFeedback(timeId) {
+      const sel = document.getElementById("fbPrestador");
+      sel.innerHTML = '<option value="">Selecione…</option>';
+      (PRESTADORES_POR_ORG[timeId] || []).forEach((nome) => {
+        const o = document.createElement("option");
+        o.value = nome;
+        o.textContent = nome;
+        sel.appendChild(o);
+      });
+    }
+
+    function subtituloFeedback(r) {
+      return `${r.recomLabel} - ${STATUS_FB_LABEL[r.status] || r.status}`;
+    }
+
+    function corpoDadosFeedback(r) {
+      return [
+        infoLine("Time", r.time),
+        infoLine("Prestador", r.prestador),
+        infoLine("Liderança", r.lideranca),
+        infoLine("Data do Registro", r.dataLabel),
+        infoLine("Origem", origemFbLabel(r.origem)),
+        infoLine("Observação", r.obs || "—"),
+      ].join("");
+    }
+
+    function syncFbEvidencia() {
+      const st = document.getElementById("atenderFbStatus").value;
+      const precisa =
+        st === "aprovado" && fbAtenderRow && RECOM_EXIGE_EVIDENCIA.has(fbAtenderRow.recomKey);
+      document.getElementById("wrapFbEvidencia").classList.toggle("hidden", !precisa);
+    }
+
+    function renderFeedback() {
+      const p = permUi("feedback");
+      syncCtaVisivel("btnRegistrarFeedback", p.showCta);
+      const tbody = document.getElementById("tbodyFeedback");
+      const { col, dir } = sortState.feedback;
+      const mult = dir === "asc" ? 1 : -1;
+      let rows = FEEDBACK_ROWS.slice();
+      if (p.filterProprios) rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
+      rows.sort((a, b) => {
+        const map = {
+          data: (r) => r.dataIso,
+          lideranca: (r) => r.lideranca,
+          prestador: (r) => r.prestador,
+          recomendacao: (r) => r.recomLabel,
+          status: (r) => r.status,
+          origem: (r) => origemFbLabel(r.origem),
+        };
+        const va = (map[col](a) || "").toLowerCase();
+        const vb = (map[col](b) || "").toLowerCase();
+        return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
+      });
+      tbody.innerHTML = rows.map((r) => {
+        const showAtender = p.showAtender && r.status === "em_analise";
+        const actions = p.showAcoes
+          ? `<div class="actions">
+              ${p.showVer ? `<button type="button" class="icon-btn" data-fb-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>` : ""}
+              ${showAtender ? `<button type="button" class="icon-btn" data-fb-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
+            </div>`
+          : "";
+        return `<tr>
+          <td>${r.dataLabel}</td>
+          <td>${r.lideranca}</td>
+          <td>${r.prestador}</td>
+          <td>${r.recomLabel}</td>
+          <td>${badgeHtml(r.status)}</td>
+          <td>${origemFbLabel(r.origem)}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="7" style="padding:40px;color:var(--text-muted)">Nenhuma solicitação encontrada.</td></tr>`;
+      syncSortHeaders("feedback");
+      renderEspelhoCtFeedback();
+    }
+
+    function openModalRegistrarFeedback(origem) {
+      registrarFbOrigem = origem === "controle_turno" ? "controle_turno" : "solicitacoes";
+      document.getElementById("errRegistrarFeedback").classList.remove("show");
+      fillTimeFeedback();
+      document.getElementById("fbRecomendacao").value = "";
+      document.getElementById("fbObs").value = "";
+      fillPrestadorFeedback("");
+      const title = document.getElementById("modalRegistrarFeedbackTitle");
+      title.textContent =
+        registrarFbOrigem === "controle_turno"
+          ? "Registrar Feedback (Controle de Turno)"
+          : "Registrar Feedback";
+      openOverlay("modalRegistrarFeedback");
+    }
+
+    function openModalVerFeedback(r) {
+      verFbRow = r;
+      verFbAba = "dados";
+      document.getElementById("modalVerFeedbackSub").textContent = subtituloFeedback(r);
+      setActiveTabs("data-ver-fb-tab", "dados");
+      document.getElementById("modalVerFeedbackBody").innerHTML = corpoDadosFeedback(r);
+      openOverlay("modalVerFeedback");
+    }
+
+    function renderModalVerFeedbackBody() {
+      if (!verFbRow) return;
+      setActiveTabs("data-ver-fb-tab", verFbAba);
+      document.getElementById("modalVerFeedbackBody").innerHTML =
+        verFbAba === "historico" ? renderHistoricoHtml(verFbRow.historico) : corpoDadosFeedback(verFbRow);
+    }
+
+    function openModalAtenderFeedback(r) {
+      fbAtenderRow = r;
+      fbAtenderAba = "dados";
+      document.getElementById("errAtenderFeedback").classList.remove("show");
+      document.getElementById("modalAtenderFeedbackSub").textContent = subtituloFeedback(r);
+      document.getElementById("modalAtenderFeedbackDados").innerHTML = corpoDadosFeedback(r);
+      document.getElementById("modalAtenderFeedbackDados").classList.remove("hidden");
+      document.getElementById("modalAtenderFeedbackForm").classList.add("hidden");
+      document.querySelectorAll("[data-atender-fb-tab]").forEach((btn) => {
+        const on = btn.getAttribute("data-atender-fb-tab") === "dados";
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      document.getElementById("atenderFbStatus").value = "";
+      document.getElementById("atenderFbObs").value = "";
+      document.getElementById("atenderFbEvidencia").value = "";
+      syncFbEvidencia();
+      openOverlay("modalAtenderFeedback");
+    }
+
+    document.getElementById("btnRegistrarFeedback").addEventListener("click", () => {
+      openModalRegistrarFeedback("solicitacoes");
+    });
+    document.getElementById("btnSimularCtFeedback").addEventListener("click", () => {
+      openModalRegistrarFeedback("controle_turno");
+    });
+    document.getElementById("mockPermFeedback").addEventListener("change", () => {
+      renderFeedback();
+      if (document.getElementById("modalRegistrarFeedback").classList.contains("open")) fillTimeFeedback();
+    });
+    document.getElementById("fbTime").addEventListener("change", (e) => {
+      fillPrestadorFeedback(e.target.value);
+    });
+    document.getElementById("atenderFbStatus").addEventListener("change", syncFbEvidencia);
+
+    document.getElementById("btnConfirmarRegistrarFeedback").addEventListener("click", () => {
+      const err = document.getElementById("errRegistrarFeedback");
+      const timeId = document.getElementById("fbTime").value;
+      const prestador = document.getElementById("fbPrestador").value;
+      const recom = document.getElementById("fbRecomendacao").value;
+      const obs = document.getElementById("fbObs").value.trim();
+      if (!timeId || !prestador || !recom || !obs) {
+        err.textContent = "Preencha todos os campos obrigatórios.";
+        err.classList.add("show");
+        return;
+      }
+      const org = ORGANOGRAMAS_MOCK.find((o) => o.id === timeId);
+      const agora = new Date();
+      const y = agora.getFullYear();
+      const m = String(agora.getMonth() + 1).padStart(2, "0");
+      const d = String(agora.getDate()).padStart(2, "0");
+      const dataIso = `${y}-${m}-${d}`;
+      const dataLabel = fmtDataBr(dataIso);
+      const isCt = registrarFbOrigem === "controle_turno";
+      const isOrientacao = recom === "orientacao";
+      /* CT: Orientação → Aplicado; demais → Revisar. Solicitações (CTA): sempre Em análise. */
+      const ctStatus = isOrientacao ? "aplicado" : "revisar";
+      const solStatus = isCt ? mapStatusCtParaSolicitacoes(ctStatus) : "em_analise";
+      const lideranca = isCt ? LIDERANCA_CT_MOCK : USUARIO_MOCK_FB;
+
+      fbIdSeq += 1;
+      const solId = "f" + fbIdSeq;
+      let ctId = null;
+      if (isCt) {
+        ctFbIdSeq += 1;
+        ctId = "ct" + ctFbIdSeq;
+        CT_FEEDBACK_ROWS.unshift({
+          id: ctId,
+          dataIso,
+          dataLabel,
+          lideranca,
+          prestador,
+          recomKey: recom,
+          recomLabel: RECOM_LABEL[recom],
+          status: ctStatus,
+          solId,
+        });
+      }
+
+      FEEDBACK_ROWS.unshift({
+        id: solId,
+        dataIso,
+        dataLabel,
+        lideranca,
+        timeId,
+        time: org.label,
+        gerencia: org.gerencia,
+        prestador,
+        recomKey: recom,
+        recomLabel: RECOM_LABEL[recom],
+        obs,
+        status: solStatus,
+        origem: isCt ? "controle_turno" : "solicitacoes",
+        ctId,
+        historico: [{ tipo: "criacao", usuario: lideranca, dataHora: agoraLabelMock() }],
+      });
+      closeOverlay("modalRegistrarFeedback");
+      renderFeedback();
+    });
+
+    document.getElementById("tbodyFeedback").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-fb-acao]");
+      if (!btn) return;
+      const row = FEEDBACK_ROWS.find((r) => r.id === btn.getAttribute("data-id"));
+      if (!row) return;
+      if (btn.getAttribute("data-fb-acao") === "ver") openModalVerFeedback(row);
+      if (btn.getAttribute("data-fb-acao") === "atender") openModalAtenderFeedback(row);
+    });
+
+    document.querySelectorAll("[data-atender-fb-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        fbAtenderAba = btn.getAttribute("data-atender-fb-tab");
+        document.querySelectorAll("[data-atender-fb-tab]").forEach((b) => {
+          const on = b.getAttribute("data-atender-fb-tab") === fbAtenderAba;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        document.getElementById("modalAtenderFeedbackDados").classList.toggle("hidden", fbAtenderAba !== "dados");
+        document.getElementById("modalAtenderFeedbackForm").classList.toggle("hidden", fbAtenderAba !== "atendimento");
+      });
+    });
+
+    document.getElementById("btnSalvarAtenderFeedback").addEventListener("click", () => {
+      const err = document.getElementById("errAtenderFeedback");
+      const st = document.getElementById("atenderFbStatus").value;
+      const obs = document.getElementById("atenderFbObs").value.trim();
+      if (!st || !obs) {
+        err.textContent = "Preencha Status e Observação.";
+        err.classList.add("show");
+        return;
+      }
+      if (st === "aprovado" && fbAtenderRow && RECOM_EXIGE_EVIDENCIA.has(fbAtenderRow.recomKey)) {
+        const file = document.getElementById("atenderFbEvidencia").files;
+        if (!file || !file.length) {
+          err.textContent = "Anexe a Evidência para aprovar esta recomendação.";
+          err.classList.add("show");
+          return;
+        }
+      }
+      if (!fbAtenderRow) return;
+      const statusAntes = statusLabelPt(fbAtenderRow.status);
+      const fileInput = document.getElementById("atenderFbEvidencia");
+      const evidenciaNome =
+        st === "aprovado" && RECOM_EXIGE_EVIDENCIA.has(fbAtenderRow.recomKey) && fileInput.files?.[0]
+          ? fileInput.files[0].name
+          : "";
+
+      /* Decisão no Atender: Aprovado | Rejeitado.
+         Origem CT: Aprovado → Aplicado (ambas); Rejeitado → Rejeitado (ambas).
+         Origem Solicitações: mantém Aprovado | Rejeitado (sem tocar no CT). */
+      let statusFinal = st;
+      if (fbAtenderRow.origem === "controle_turno") {
+        statusFinal = st === "aprovado" ? "aplicado" : "rejeitado";
+        const ct = CT_FEEDBACK_ROWS.find((c) => c.id === fbAtenderRow.ctId);
+        if (ct) ct.status = statusFinal;
+      }
+
+      fbAtenderRow.status = statusFinal;
+      if (!fbAtenderRow.historico) fbAtenderRow.historico = [];
+      const camposFb = [{ label: "Observação", value: obs }];
+      if (evidenciaNome) camposFb.push({ label: "Evidência", value: evidenciaNome });
+      fbAtenderRow.historico.push({
+        tipo: "atendimento",
+        usuario: USUARIO_MOCK_FB,
+        dataHora: agoraLabelMock(),
+        statusDe: statusAntes,
+        statusPara: statusLabelPt(statusFinal),
+        campos: camposFb,
+      });
+      closeOverlay("modalAtenderFeedback");
+      renderFeedback();
+    });
+
+    function badgeHtml(st) {
+      if (st === "aprovado" || st === "aplicado") return `<span class="badge ok">${st === "aplicado" ? "Aplicado" : "Aprovado"}</span>`;
+      if (st === "rejeitado") return '<span class="badge no">Rejeitado</span>';
+      return '<span class="badge em">Em análise</span>';
+    }
+
+    function infoLine(label, value) {
+      return `<div class="info-line"><div class="info-label">${label}</div><div class="info-value">${value}</div></div>`;
+    }
+
+    function corpoDetalhesAtestado(r) {
+      return [
+        infoLine("Data da solicitação", r.data),
+        infoLine("Solicitante", r.nome),
+        infoLine("Tipo de solicitação", "Atestado"),
+        `<div class="info-line"><div class="info-label">Status</div>${badgeHtml(r.status)}</div>`,
+        infoLine("Descrição", r.desc),
+        infoLine("Período do atestado", r.periodo),
+        `<div class="info-line"><div class="info-label">Anexo</div><button type="button" class="info-link" title="Mock — não abre arquivo">${r.anexo}</button></div>`,
+      ].join("");
+    }
+
+    function corpoAbaSolicitacaoVer(r) {
+      return [
+        infoLine("Data da solicitação", r.data),
+        infoLine("Solicitante", r.nome),
+        infoLine("Tipo de solicitação", "Atestado"),
+        infoLine("Descrição", r.desc),
+        infoLine("Período do atestado", r.periodo),
+        `<div class="info-line"><div class="info-label">Anexo</div><button type="button" class="info-link" title="Mock — não abre arquivo">${r.anexo}</button></div>`,
+      ].join("");
+    }
+
+    function corpoAbaAtendimentoVer(r) {
+      const a = r.atendimento || { data: "—", atendido: "—", obs: "—", abono: "—" };
+      return [
+        infoLine("Data de Atendimento", a.data),
+        infoLine("Atendido", a.atendido),
+        infoLine("Observação do RH", a.obs),
+        infoLine("Abono remunerado?", a.abono),
+      ].join("");
+    }
+
+    function openOverlay(id) {
+      document.getElementById(id).classList.add("open");
+    }
+    function closeOverlay(id) {
+      document.getElementById(id).classList.remove("open");
+    }
+
+    function renderModalVerBody() {
+      const r = modalVerRow;
+      if (!r) return;
+      setActiveTabs("data-ver-tab", modalVerAba);
+      const body = document.getElementById("modalVerBody");
+      if (modalVerAba === "historico") {
+        body.innerHTML = renderHistoricoHtml(r.historico);
+        return;
+      }
+      const parts = [corpoAbaSolicitacaoVer(r)];
+      if (r.status === "aprovado" || r.status === "rejeitado") {
+        parts.push(corpoAbaAtendimentoVer(r));
+      } else {
+        parts.unshift(
+          `<div class="info-line"><div class="info-label">Status</div>${badgeHtml(r.status)}</div>`
+        );
+      }
+      body.innerHTML = parts.join("");
+    }
+
+    function openModalVer(r) {
+      modalVerRow = r;
+      modalVerAba = "dados";
+      renderModalVerBody();
+      openOverlay("modalVer");
+    }
+
+    function syncAtenderForm() {
+      const status = document.getElementById("atenderStatus").value;
+      const wrapAbono = document.getElementById("wrapAbono");
+      const labelObs = document.getElementById("labelObsRh");
+      const statusAlterado = modalAtenderRow && status !== modalAtenderRow.status;
+      wrapAbono.classList.toggle("hidden", status !== "aprovado");
+      labelObs.innerHTML = statusAlterado
+        ? 'Observação do RH<span class="req" aria-hidden="true">*</span>'
+        : "Observação do RH";
+    }
+
+    function openModalAtender(r) {
+      modalAtenderRow = r;
+      modalAtenderAba = "dados";
+      document.getElementById("modalAtenderDados").innerHTML = corpoDetalhesAtestado(r);
+      document.getElementById("modalAtenderDados").classList.remove("hidden");
+      document.getElementById("modalAtenderForm").classList.add("hidden");
+      document.querySelectorAll("[data-atender-tab]").forEach((btn) => {
+        const on = btn.getAttribute("data-atender-tab") === "dados";
+        btn.classList.toggle("active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      document.getElementById("atenderStatus").value = r.status;
+      document.getElementById("atenderAbono").value = "";
+      document.getElementById("atenderObs").value = "";
+      syncAtenderForm();
+      openOverlay("modalAtender");
+    }
+
+    function syncStatusUi() {
+      if (todosStatus) {
+        statusLabel.textContent = "Todos Status";
+        btnTodos.classList.add("active");
+        btnTodos.setAttribute("aria-pressed", "true");
+        atestadoSub.textContent = "todos os status";
+      } else {
+        const s = STATUS[statusIdx];
+        statusLabel.textContent = s.label;
+        btnTodos.classList.remove("active");
+        btnTodos.setAttribute("aria-pressed", "false");
+        if (s.key === "em_analise") atestadoSub.textContent = "solicitações em análise";
+        else if (s.key === "aprovado") atestadoSub.textContent = "solicitações aprovadas";
+        else atestadoSub.textContent = "solicitações rejeitadas";
+      }
+      renderAtestados();
+    }
+
+    function renderAtestados() {
+      const p = permUi("atestados");
+      const filterKey = todosStatus ? null : STATUS[statusIdx].key;
+      const { col, dir } = sortState.atestados;
+      const mult = dir === "asc" ? 1 : -1;
+      let rows = ATESTADOS_ROWS.filter((r) => !filterKey || r.status === filterKey);
+      if (p.filterProprios) rows = rows.filter((r) => MINHA_GERENCIA.includes(r.gerencia));
+      rows = rows.slice().sort((a, b) => {
+        let va;
+        let vb;
+        if (col === "data") {
+          va = a.data;
+          vb = b.data;
+        } else if (col === "solicitante") {
+          va = a.nome;
+          vb = b.nome;
+        } else if (col === "descricao") {
+          va = a.periodo;
+          vb = b.periodo;
+        } else {
+          va = a.status;
+          vb = b.status;
+        }
+        return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
+      });
+      tbodyAtestados.innerHTML = rows.map((r) => {
+        const showAtender = p.showAtender && r.status === "em_analise" && r.atender;
+        const actions = p.showAcoes
+          ? `<div class="actions">
+            ${p.showVer ? `<button type="button" class="icon-btn" data-acao="ver" data-id="${r.id}" title="Ver solicitação" aria-label="Ver solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-eye"/></svg></button>` : ""}
+            ${showAtender ? `<button type="button" class="icon-btn" data-acao="atender" data-id="${r.id}" title="Atender solicitação" aria-label="Atender solicitação"><svg class="ico-svg" aria-hidden="true"><use href="#i-pencil"/></svg></button>` : ""}
+          </div>`
+          : "";
+        return `<tr>
+          <td>${r.data}</td>
+          <td>${r.nome}</td>
+          <td>${r.periodo}</td>
+          <td>${badgeHtml(r.status)}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="5" style="padding:40px;color:var(--text-muted)">Nenhuma solicitação encontrada.</td></tr>`;
+      syncSortHeaders("atestados");
+    }
+
+    function syncSortHeaders(tableKey) {
+      const st = sortState[tableKey];
+      document.querySelectorAll(`th.th-sort[data-sort-table="${tableKey}"]`).forEach((th) => {
+        const c = th.getAttribute("data-sort-col");
+        if (c === st.col) th.setAttribute("aria-sort", st.dir === "desc" ? "descending" : "ascending");
+        else th.setAttribute("aria-sort", "none");
+      });
+    }
+
+    function sortStaticTbody(tableKey) {
+      const tbodyId = TBODY_BY_TABLE[tableKey];
+      if (!tbodyId) return;
+      const tbody = document.getElementById(tbodyId);
+      const { col, dir } = sortState[tableKey];
+      const mult = dir === "asc" ? 1 : -1;
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      rows.sort((a, b) => {
+        const va = (a.getAttribute("data-sort-" + col) || "").toLowerCase();
+        const vb = (b.getAttribute("data-sort-" + col) || "").toLowerCase();
+        return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
+      });
+      rows.forEach((r) => tbody.appendChild(r));
+      syncSortHeaders(tableKey);
+    }
+
+    function onSortClick(tableKey, col) {
+      const st = sortState[tableKey];
+      if (st.col === col) st.dir = st.dir === "asc" ? "desc" : "asc";
+      else {
+        st.col = col;
+        st.dir = col === "data" || col === "dataSolicitada" ? "desc" : "asc";
+      }
+      if (tableKey === "atestados") renderAtestados();
+      else if (tableKey === "reunioes") renderReunioes();
+      else if (tableKey === "vagas") renderVagas();
+      else if (tableKey === "feedback") renderFeedback();
+      else sortStaticTbody(tableKey);
+    }
+
+    document.querySelectorAll("th.th-sort").forEach((th) => {
+      const activate = () => onSortClick(th.getAttribute("data-sort-table"), th.getAttribute("data-sort-col"));
+      th.addEventListener("click", activate);
+      th.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          activate();
+        }
+      });
+    });
+
+    // Estado inicial
+    document.getElementById("mockPermAtestado").addEventListener("change", renderAtestados);
+    renderReunioes();
+    renderVagas();
+    renderFeedback();
+    renderAtestados();
+
+    tbodyAtestados.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-acao]");
+      if (!btn) return;
+      const row = ATESTADOS_ROWS.find((r) => r.id === btn.getAttribute("data-id"));
+      if (!row) return;
+      if (btn.getAttribute("data-acao") === "ver") openModalVer(row);
+      if (btn.getAttribute("data-acao") === "atender") openModalAtender(row);
+    });
+
+    document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+      btn.addEventListener("click", () => closeOverlay(btn.getAttribute("data-close-modal")));
+    });
+    document.querySelectorAll(".modal-overlay").forEach((ov) => {
+      ov.addEventListener("click", (e) => {
+        if (e.target === ov) closeOverlay(ov.id);
+      });
+    });
+
+    document.getElementById("modalVerTabs").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-ver-tab]");
+      if (!btn) return;
+      modalVerAba = btn.getAttribute("data-ver-tab");
+      renderModalVerBody();
+    });
+
+    document.querySelectorAll("[data-ver-reuniao-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        verReuniaoAba = btn.getAttribute("data-ver-reuniao-tab");
+        renderModalVerReuniaoBody();
+      });
+    });
+    document.querySelectorAll("[data-ver-vaga-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        verVagaAba = btn.getAttribute("data-ver-vaga-tab");
+        renderModalVerVagaBody();
+      });
+    });
+    document.querySelectorAll("[data-ver-fb-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        verFbAba = btn.getAttribute("data-ver-fb-tab");
+        renderModalVerFeedbackBody();
+      });
+    });
+
+    document.querySelectorAll("[data-atender-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        modalAtenderAba = btn.getAttribute("data-atender-tab");
+        document.querySelectorAll("[data-atender-tab]").forEach((b) => {
+          const on = b.getAttribute("data-atender-tab") === modalAtenderAba;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        document.getElementById("modalAtenderDados").classList.toggle("hidden", modalAtenderAba !== "dados");
+        document.getElementById("modalAtenderForm").classList.toggle("hidden", modalAtenderAba !== "atendimento");
+      });
+    });
+
+    document.getElementById("atenderStatus").addEventListener("change", syncAtenderForm);
+    document.getElementById("btnSalvarAtender").addEventListener("click", () => {
+      if (!modalAtenderRow) return;
+      const st = document.getElementById("atenderStatus").value;
+      const obs = document.getElementById("atenderObs").value.trim();
+      const abono = document.getElementById("atenderAbono").value;
+      const statusAntesKey = modalAtenderRow.status;
+      const statusAntes = statusLabelPt(statusAntesKey);
+      if (st !== statusAntesKey && !obs) {
+        return;
+      }
+      if (st === "aprovado" && !abono) {
+        return;
+      }
+      const camposAt = [];
+      if (obs) camposAt.push({ label: "Observação do RH", value: obs });
+      if (st === "aprovado" && abono) {
+        camposAt.push({ label: "Abono remunerado?", value: abono === "sim" ? "SIM" : "NÃO" });
+      }
+      if (st === "aprovado" || st === "rejeitado") {
+        modalAtenderRow.atendimento = {
+          data: agoraLabelMock(),
+          atendido: "Você (RH)",
+          obs: obs || "—",
+          abono: st === "aprovado" ? (abono === "sim" ? "SIM" : "NÃO") : "—",
+        };
+      }
+      if (!modalAtenderRow.historico) modalAtenderRow.historico = [];
+      if (st !== statusAntesKey) {
+        modalAtenderRow.historico.push({
+          tipo: "atendimento",
+          usuario: "Você (RH)",
+          dataHora: agoraLabelMock(),
+          statusDe: statusAntes,
+          statusPara: statusLabelPt(st),
+          campos: camposAt,
+        });
+      }
+      modalAtenderRow.status = st;
+      modalAtenderRow.atender = st === "em_analise";
+      closeOverlay("modalAtender");
+      renderAtestados();
+    });
+
+    document.getElementById("btnPrev").addEventListener("click", () => {
+      if (todosStatus) {
+        todosStatus = false;
+        statusIdx = STATUS.length - 1;
+      } else {
+        statusIdx = (statusIdx - 1 + STATUS.length) % STATUS.length;
+      }
+      syncStatusUi();
+    });
+    document.getElementById("btnNext").addEventListener("click", () => {
+      if (todosStatus) {
+        todosStatus = false;
+        statusIdx = 0;
+      } else {
+        statusIdx = (statusIdx + 1) % STATUS.length;
+      }
+      syncStatusUi();
+    });
+    btnTodos.addEventListener("click", () => {
+      if (todosStatus) {
+        todosStatus = false;
+        statusIdx = 0;
+      } else {
+        todosStatus = true;
+      }
+      syncStatusUi();
+    });
+
+    document.querySelectorAll(".filter-row-tabs .tab[data-tab]").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".filter-row-tabs .tab[data-tab]").forEach((t) => {
+          t.classList.remove("active");
+          t.setAttribute("aria-selected", "false");
+        });
+        tab.classList.add("active");
+        tab.setAttribute("aria-selected", "true");
+        const id = tab.getAttribute("data-tab");
+        document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+        document.getElementById("panel-" + id).classList.add("active");
+      });
+    });
+
+    syncStatusUi();
+  </script>
+</body>
+</html>

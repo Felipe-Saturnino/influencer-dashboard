@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_LISTA_PAGE,
   extractAutorizacoesPlanilhaUrl,
   extractListaAtualizadaEm,
   extractPaginasListaAutorizacoes,
   extractSharePointPlanilhaUrl,
   parseSpaAutorizacoesHtmlTable,
+  pickFonteFromHtml,
   toSharePointDownloadUrl,
 } from "../../../src/lib/comercialSpaListaFonte";
 
@@ -56,11 +58,43 @@ const HTML_TABLE = `
 </table>
 `;
 
+/** Página real 2026: tabela HTML + link morto sob Transparência Ativa. */
+const EMPRESAS_AUTORIZADAS_COM_XLSX_404 = `
+<p>Atualizado em 04/09/2026 17h01</p>
+<p>Além da consulta à lista disponibilizada nesta página,
+<a href="https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/transparencia-ativa-processos-de-autorizacao-de-apostas-de-quota-fixa/planilha-de-autorizacoes-1.xlsx">planilha</a>
+</p>
+${HTML_TABLE}
+`;
+
 describe("comercialSpaListaFonte", () => {
+  it("aponta DEFAULT_LISTA_PAGE para empresas-autorizadas", () => {
+    expect(DEFAULT_LISTA_PAGE).toContain("/empresas-autorizadas");
+  });
+
   it("extrai XLSX legado no gov.br e ignora CSV judicial", () => {
     expect(extractAutorizacoesPlanilhaUrl(LEGACY_PLANILHA_HTML)).toBe(
       "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas/planilha-de-autorizacoes.xlsx",
     );
+  });
+
+  it("ignora planilha sob Transparência Ativa (URL 404)", () => {
+    expect(extractAutorizacoesPlanilhaUrl(EMPRESAS_AUTORIZADAS_COM_XLSX_404)).toBeNull();
+  });
+
+  it("prefere tabela HTML ao link .xlsx morto na mesma página", () => {
+    const picked = pickFonteFromHtml(EMPRESAS_AUTORIZADAS_COM_XLSX_404, DEFAULT_LISTA_PAGE);
+    expect(picked?.kind).toBe("html");
+    expect(picked?.url).toBe(DEFAULT_LISTA_PAGE);
+  });
+
+  it("usa planilha legado só quando não há tabela HTML", () => {
+    const picked = pickFonteFromHtml(LEGACY_PLANILHA_HTML, DEFAULT_LISTA_PAGE);
+    expect(picked).toEqual({
+      kind: "arquivo",
+      url: "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas/planilha-de-autorizacoes.xlsx",
+      listaAtualizadaEm: "13/05/2026",
+    });
   });
 
   it("converte link SharePoint de partilha em download.aspx", () => {

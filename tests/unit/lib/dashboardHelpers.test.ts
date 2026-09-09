@@ -11,6 +11,7 @@ import {
   HISTORICO_COMPETENCIAS_MESES,
   isDataNoPeriodoHistoricoCompetencias,
   getStatusROI,
+  preencherDetalhamentoDiarioZerado,
 } from "@/lib/dashboardHelpers";
 
 describe("fmtBRL", () => {
@@ -163,5 +164,43 @@ describe("getStatusROI", () => {
     const s = getStatusROI(10, 100, 50);
     expect(s.label).toBe("Rentável");
     expect(s.roiStr).toBe("+10%");
+  });
+});
+
+describe("preencherDetalhamentoDiarioZerado", () => {
+  it("preenche dias sem dado com zero e ordena do mais novo ao mais antigo", () => {
+    const rows = preencherDetalhamentoDiarioZerado({
+      rows: [{ dia: "2026-09-04", ggr: -7 }],
+      getDia: (r) => r.dia,
+      inicio: "2026-09-01",
+      fim: "2026-09-07",
+      fimMax: "2026-09-07",
+      criarVazio: (dia) => ({ dia, ggr: 0 }),
+    });
+    expect(rows.map((r) => r.dia)).toEqual([
+      "2026-09-07",
+      "2026-09-06",
+      "2026-09-05",
+      "2026-09-04",
+      "2026-09-03",
+      "2026-09-02",
+      "2026-09-01",
+    ]);
+    expect(rows.find((r) => r.dia === "2026-09-04")?.ggr).toBe(-7);
+    expect(rows.find((r) => r.dia === "2026-09-01")?.ggr).toBe(0);
+  });
+
+  it("respeita fimMax e não inclui dias futuros ao período", () => {
+    const rows = preencherDetalhamentoDiarioZerado({
+      rows: [],
+      getDia: (r: { dia: string }) => r.dia,
+      inicio: "2026-09-01",
+      fim: "2026-09-30",
+      fimMax: "2026-09-07",
+      criarVazio: (dia) => ({ dia }),
+    });
+    expect(rows[0]?.dia).toBe("2026-09-07");
+    expect(rows.at(-1)?.dia).toBe("2026-09-01");
+    expect(rows).toHaveLength(7);
   });
 });

@@ -32,7 +32,15 @@ export type RotacaoGpPool = {
   horarioTurno?: string;
   /** Célula da Escala Estúdio no dia (MRN / AFT / NGT). */
   gradeValor?: string;
+  /**
+   * Controle de Turno: HH:MM de saída (Saída Antecipada / Hora Adicional).
+   * Slots com início ≥ este horário ficam «X» na grade.
+   */
+  saidaLimiteHhmm?: string;
 };
+
+/** Janela HH:MM do `staff_horario_turno` (ex.: 08-20 → 08:00–20:00). */
+export type RotacaoIntervaloHorario = { inicio: string; fim: string };
 
 export type RotacaoMesa = {
   id: string;
@@ -55,11 +63,11 @@ export type RotacaoContextoDia = {
   gps: RotacaoGpPool[];
   /** GPs do mesmo turno em outro estúdio efetivo (para mover). */
   gpsOutros: RotacaoGpPool[];
-  /** Shift Leads escalados (reserva automática do mesmo turno). */
+  /** Shift Leads do mesmo turno (RPC) — legado; a UI só inclui liderança via «Incluir Liderança». */
   shiftLeads: RotacaoGpPool[];
   /**
    * Shift Leaders + Service Managers escalados no dia (qualquer célula MRN/AFT/NGT),
-   * para o seletor «Incluir Liderança» — filtrar com `liderancaCompativelComTurnoRotacao`.
+   * para o seletor «Incluir Liderança».
    */
   liderancas: RotacaoGpPool[];
   mesas: RotacaoMesa[];
@@ -132,6 +140,21 @@ function hashRotacaoSeed(s: string): number {
 }
 
 /**
+ * Fisher–Yates. Usado para embaralhar a ordem das linhas de GP na prévia
+ * (evita sequência alfabética fixa dia após dia). `rng` opcional para testes.
+ */
+export function embaralharListaRotacao<T>(lista: T[], rng: () => number = Math.random): T[] {
+  const out = [...lista];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = out[i]!;
+    out[i] = out[j]!;
+    out[j] = tmp;
+  }
+  return out;
+}
+
+/**
  * Cor da célula na grade: base = identidade do jogo;
  * tonalidades distintas por Número da Mesa (evita confusão entre mesas do mesmo jogo).
  */
@@ -189,6 +212,271 @@ export function minutosDesdeMeiaNoite(hhmm: string): number {
   const m = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim());
   if (!m) return 0;
   return parseInt(m[1]!, 10) * 60 + parseInt(m[2]!, 10);
+}
+
+/** Turno imediatamente anterior (Manhã ← Noite do dia civil anterior). */
+export function turnoAnteriorRotacao(
+  diaIso: string,
+  turno: RotacaoTurnoKey,
+): { diaIso: string; turno: RotacaoTurnoKey } {
+  if (turno === "tarde") return { diaIso, turno: "manha" };
+  if (turno === "noite") return { diaIso, turno: "tarde" };
+  return { diaIso: shiftDiaIso(diaIso, -1), turno: "noite" };
+}
+
+/**
+ * True se o início do slot é ≥ saída, relativo ao início do turno (suporta overnight).
+ * Usado para marcar «X» após Saída Antecipada / Hora Adicional.
+ */
+export function slotAtingiuOuPassouSaidaRotacao(
+  slotHhmm: string,
+  saidaHhmm: string,
+  turnoInicio: string,
+): boolean {
+  const start = minutosDesdeMeiaNoite(turnoInicio);
+  const norm = (hhmm: string) => {
+    let m = minutosDesdeMeiaNoite(hhmm) - start;
+    if (m < 0) m += 24 * 60;
+    return m;
+  };
+  return norm(slotHhmm) >= norm(saidaHhmm);
+}
+
+/**
+ * Converte chave `staff_horario_turno` (ex.: `08-20`, `20-08`, `18-06`) em HH:MM início/fim.
+ */
+export function parseIntervaloHorarioStaffRotacao(
+  valor: string | null | undefined,
+): RotacaoIntervaloHorario | null {
+  const raw = (valor ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  const v = raw.replace(/\s/g, "");
+  // 08-20 | 08:00-20:00 | 8-20
+  const m = /^(\d{1,2})(?::(\d{2}))?-(\d{1,2})(?::(\d{2}))?$/.exec(v);
+  if (m) {
+    const hi = parseInt(m[1]!, 10);
+    const mi = parseInt(m[2] ?? "0", 10);
+    const hf = parseInt(m[3]!, 10);
+    const mf = parseInt(m[4] ?? "0", 10);
+    if (hi > 23 || hf > 23 || mi > 59 || mf > 59) return null;
+    return {
+      inicio: `${String(hi).padStart(2, "0")}:${String(mi).padStart(2, "0")}`,
+      fim: `${String(hf).padStart(2, "0")}:${String(mf).padStart(2, "0")}`,
+    };
+  }
+  // 08h às 20h | 08h30 as 20h00
+  const m2 = /^(\d{1,2})h(\d{2})?(?:às|as|-|–)(\d{1,2})h(\d{2})?$/.exec(v.replace(/à/g, "a"));
+  if (m2) {
+    const hi = parseInt(m2[1]!, 10);
+    const mi = parseInt(m2[2] ?? "0", 10);
+    const hf = parseInt(m2[3]!, 10);
+    const mf = parseInt(m2[4] ?? "0", 10);
+    if (hi > 23 || hf > 23 || mi > 59 || mf > 59) return null;
+    return {
+      inicio: `${String(hi).padStart(2, "0")}:${String(mi).padStart(2, "0")}`,
+      fim: `${String(hf).padStart(2, "0")}:${String(mf).padStart(2, "0")}`,
+    };
+  }
+  return null;
+}
+
+/**
+ * Slot dentro da janela de trabalho (relógio civil). Janela overnight (20–08) cobre
+ * [20:00, 24:00) ∪ [00:00, 08:00). Fim exclusivo (slot 20:00 com fim 20:00 → fora).
+ */
+export function slotDentroJanelaHorarioRotacao(
+  slotHhmm: string,
+  janelaInicio: string,
+  janelaFim: string,
+): boolean {
+  const s = minutosDesdeMeiaNoite(slotHhmm);
+  const a = minutosDesdeMeiaNoite(janelaInicio);
+  const b = minutosDesdeMeiaNoite(janelaFim);
+  if (a === b) return true;
+  if (a < b) return s >= a && s < b;
+  return s >= a || s < b;
+}
+
+/**
+ * Janela efetiva da liderança na rotação.
+ * 1) `staff_horario_turno` (08-20, 20-08, 18-06, …)
+ * 2) célula do dia (MRN/AFT → 08–20; NGT → 20–08)
+ * 3) padrão diurno 08–20 (SL/SM sem cadastro de horário)
+ */
+export function janelaHorarioLiderancaRotacao(pessoa: {
+  horarioTurno?: string | null;
+  gradeValor?: string | null;
+}): RotacaoIntervaloHorario {
+  const fromKey = parseIntervaloHorarioStaffRotacao(pessoa.horarioTurno);
+  if (fromKey) return fromKey;
+  const g = siglaTurnoGradeRotacao(pessoa.gradeValor);
+  if (g === "NGT") return { inicio: "20:00", fim: "08:00" };
+  return { inicio: "08:00", fim: "20:00" };
+}
+
+/**
+ * Máscara de disponibilidade por slot: liderança (08–20 / 20–08 / …) + saída CT.
+ * `undefined` = sem restrição (GP típico do turno).
+ * Liderança (`isShiftLead` / `cargoLideranca`) **sempre** tem janela — nunca cobre o turno inteiro
+ * sem filtrar (ex.: Tarde até 22h30 com saída às 20h → X a partir de 20:00).
+ */
+export function disponivelPorSlotPessoaRotacao(
+  slots: string[],
+  pessoa: {
+    horarioTurno?: string;
+    gradeValor?: string;
+    saidaLimiteHhmm?: string;
+    isShiftLead?: boolean;
+    cargoLideranca?: RotacaoCargoLideranca;
+  },
+  turnoInicio: string,
+): boolean[] | undefined {
+  const usarJanelaLid = Boolean(pessoa.isShiftLead || pessoa.cargoLideranca);
+  const janela = usarJanelaLid ? janelaHorarioLiderancaRotacao(pessoa) : null;
+  const saida = pessoa.saidaLimiteHhmm?.trim() || "";
+  if (!janela && !saida) return undefined;
+  return slots.map((slot) => {
+    if (janela && !slotDentroJanelaHorarioRotacao(slot, janela.inicio, janela.fim)) {
+      return false;
+    }
+    if (saida && slotAtingiuOuPassouSaidaRotacao(slot, saida, turnoInicio)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Sobrescreve com «X» slots fora da janela da liderança e/ou ≥ saída (CT).
+ * Preferir gerar a grade já com `disponivelPorSlot` para não deixar mesa descoberta.
+ */
+export function aplicarLimitesDisponibilidadeNaMatrixRotacao(
+  slots: string[],
+  matrix: string[][],
+  pessoas: ReadonlyArray<{
+    horarioTurno?: string;
+    gradeValor?: string;
+    saidaLimiteHhmm?: string;
+    isShiftLead?: boolean;
+    cargoLideranca?: RotacaoCargoLideranca;
+  }>,
+  turnoInicio: string,
+): string[][] {
+  return matrix.map((row, i) => {
+    const mask = disponivelPorSlotPessoaRotacao(slots, pessoas[i] ?? {}, turnoInicio);
+    if (!mask) return [...row];
+    return row.map((val, si) => (mask[si] === false ? "X" : val));
+  });
+}
+
+/** @deprecated Preferir `aplicarLimitesDisponibilidadeNaMatrixRotacao`. */
+export function aplicarLimiteSaidaNaMatrixRotacao(
+  slots: string[],
+  matrix: string[][],
+  pessoas: ReadonlyArray<{
+    horarioTurno?: string;
+    gradeValor?: string;
+    saidaLimiteHhmm?: string;
+    isShiftLead?: boolean;
+    cargoLideranca?: RotacaoCargoLideranca;
+  }>,
+  turnoInicio: string,
+): string[][] {
+  return aplicarLimitesDisponibilidadeNaMatrixRotacao(slots, matrix, pessoas, turnoInicio);
+}
+
+/**
+ * Troca quem ocupa cada linha da prévia: os padrões de mesa (matrix) ficam no índice;
+ * só as pessoas (`gps`) trocam de lugar — assim quem vai para a linha da Amanda herda 6130….
+ * Reaplica X fora da janela da liderança / saída CT; X órfão do ocupante anterior vira Break.
+ */
+export function trocarPessoasLinhasPreviaRotacao(opts: {
+  gps: RotacaoGpPool[];
+  matrix: string[][];
+  fromIndex: number;
+  toIndex: number;
+  slots: string[];
+  turnoInicio: string;
+}): { gps: RotacaoGpPool[]; matrix: string[][] } | null {
+  const { fromIndex: a, toIndex: b, slots, turnoInicio } = opts;
+  if (a === b) return null;
+  if (a < 0 || b < 0 || a >= opts.gps.length || b >= opts.gps.length) return null;
+  if (opts.matrix.length !== opts.gps.length) return null;
+
+  const gps = opts.gps.map((g) => ({ ...g }));
+  const tmp = gps[a]!;
+  gps[a] = gps[b]!;
+  gps[b] = tmp;
+
+  const masks = gps.map((p) => disponivelPorSlotPessoaRotacao(slots, p, turnoInicio));
+  const matrix = opts.matrix.map((row, i) => {
+    const mask = masks[i];
+    return row.map((val, si) => {
+      if (mask && mask[si] === false) return "X";
+      if (val === "X" && (!mask || mask[si] === true)) return "Break";
+      return val;
+    });
+  });
+
+  return { gps, matrix };
+}
+
+/** Presença da Escala do Turno (shape mínimo) para filtrar o pool da Rotação no CT. */
+export type PresencaRotacaoCt = {
+  id: string;
+  status: string;
+  saida: string;
+};
+
+const STATUS_POOL_TURNO_ATUAL = new Set([
+  "presente",
+  "pendente",
+  "saida_antecipada",
+  "hora_adicional",
+]);
+
+/**
+ * Pool da Rotação (CT): Presente / Pendente / Saída Antecipada / Hora Adicional do turno atual;
+ * Hora Adicional do turno anterior (mesmo estúdio) também entra até a saída registrada (células ≥ saída = X).
+ */
+export function filtrarPoolRotacaoPorPresencaCt(opts: {
+  gps: RotacaoGpPool[];
+  presencaAtual: PresencaRotacaoCt[];
+  presencaAnterior: PresencaRotacaoCt[];
+  gpsTurnoAnteriorMesmoEstudio: RotacaoGpPool[];
+}): RotacaoGpPool[] {
+  const byIdAtual = new Map(opts.presencaAtual.map((r) => [r.id, r]));
+  const pool: RotacaoGpPool[] = [];
+  const ids = new Set<string>();
+
+  for (const g of opts.gps) {
+    const p = byIdAtual.get(g.funcionarioId);
+    if (!p || !STATUS_POOL_TURNO_ATUAL.has(p.status)) continue;
+    const saida = p.saida.trim();
+    const comLimite =
+      (p.status === "saida_antecipada" || p.status === "hora_adicional") && saida
+        ? saida
+        : undefined;
+    pool.push({ ...g, saidaLimiteHhmm: comLimite });
+    ids.add(g.funcionarioId);
+  }
+
+  const byIdAnt = new Map(opts.presencaAnterior.map((r) => [r.id, r]));
+  for (const g of opts.gpsTurnoAnteriorMesmoEstudio) {
+    if (ids.has(g.funcionarioId)) continue;
+    const p = byIdAnt.get(g.funcionarioId);
+    if (!p || p.status !== "hora_adicional") continue;
+    const saida = p.saida.trim();
+    pool.push({
+      ...g,
+      falta: false,
+      isShiftLead: false,
+      saidaLimiteHhmm: saida || undefined,
+    });
+    ids.add(g.funcionarioId);
+  }
+
+  return pool;
 }
 
 export function gerarSlotsRotacao(inicio: string, fim: string, stepMin: number): string[] {
@@ -313,10 +601,12 @@ function alocarSlotRotacao(
   estado: EstadoPessoaRotacao[],
   mesas: string[],
   maxConsec: number,
+  disponivel?: (idx: number) => boolean,
 ): { workers: number[]; mesasAttr: string[] } | null {
   const M = mesas.length;
   const forcar = mesas.length >= 2;
-  let workers = escolherWorkersSlot(estado, M, maxConsec);
+  const ok = disponivel ?? (() => true);
+  let workers = escolherWorkersSlot(estado, M, maxConsec, ok);
   if (workers.length < M) return null;
 
   let mesasAttr = atribuirMesasSemRepeticao(workers, mesas, estado, forcar);
@@ -327,7 +617,7 @@ function alocarSlotRotacao(
     return mesasAttr ? { workers, mesasAttr } : null;
   }
 
-  const resting = estado.map((_, i) => i).filter((i) => !workers.includes(i));
+  const resting = estado.map((_, i) => i).filter((i) => !workers.includes(i) && ok(i));
   const workerSet = new Set(workers);
 
   for (let round = 0; round < resting.length + 3; round++) {
@@ -358,7 +648,7 @@ function alocarSlotRotacao(
 
   // Busca exaustiva só em pools pequenos (evita explosão combinatória)
   if (estado.length <= 12) {
-    const todos = estado.map((_, i) => i);
+    const todos = estado.map((_, i) => i).filter((i) => ok(i));
     const escolha: number[] = [];
     const comb = (start: number): boolean => {
       if (escolha.length === M) {
@@ -389,6 +679,7 @@ function escolherWorkersSlot(
   estado: EstadoPessoaRotacao[],
   mesasCount: number,
   maxConsec: number,
+  disponivel: (idx: number) => boolean = () => true,
 ): number[] {
   const M = mesasCount;
   const gpOk: number[] = [];
@@ -396,6 +687,7 @@ function escolherWorkersSlot(
   const slIdx: number[] = [];
 
   for (let i = 0; i < estado.length; i++) {
+    if (!disponivel(i)) continue;
     const e = estado[i]!;
     if (e.isShiftLead) {
       slIdx.push(i);
@@ -466,6 +758,11 @@ function escolherWorkersSlot(
 export type RotacaoGeracaoPessoa = {
   funcionarioId: string;
   isShiftLead: boolean;
+  /**
+   * Por índice de slot: `false` = fora da janela (liderança) ou ≥ saída CT — célula «X»,
+   * não entra como worker.
+   */
+  disponivelPorSlot?: boolean[];
 };
 
 export type RotacaoGeracaoResultado = {
@@ -483,7 +780,9 @@ export type RotacaoGeracaoResultado = {
  * — 1 GP/SL por mesa;
  * — GP não repete a mesma mesa no slot seguinte (intercala com outras; com 2+ mesas é regra rígida);
  * — GP no máximo ~2h contínuas (4×30 min ou 6×20 min) antes do Break;
- * — Shift Lead entra só para cobrir e faz o mínimo de mesas.
+ * — Shift Lead entra só para cobrir e faz o mínimo de mesas;
+ * — ordem das linhas de GP é **aleatória** em geração completa (não alfabética),
+ *   para não repetir a mesma sequência de mesas/breaks todos os dias.
  */
 export function gerarGradeRotacao(opts: {
   mesasLabels: string[];
@@ -498,9 +797,16 @@ export function gerarGradeRotacao(opts: {
    */
   fromSlotIndex?: number;
   matrixBase?: string[][];
+  /**
+   * Em geração completa (`fromSlot` 0), embaralha a ordem dos GPs (default `true`).
+   * Desligar ao incluir liderança sem querer trocar quem herda cada sequência.
+   */
+  embaralharGps?: boolean;
+  /** RNG opcional (testes). */
+  rng?: () => number;
 }): RotacaoGeracaoResultado {
   const mesas = opts.mesasLabels.filter((m) => m.trim());
-  const gps = opts.gps.filter((p) => !p.isShiftLead);
+  let gps = opts.gps.filter((p) => !p.isShiftLead);
   const shiftLeads = opts.shiftLeads.filter((p) => p.isShiftLead);
   const nSlots = opts.nSlots;
   const slotMin = opts.slotMinutos === 20 ? 20 : 30;
@@ -520,9 +826,14 @@ export function gerarGradeRotacao(opts: {
     };
   }
 
+  const deveEmbaralhar = fromSlot === 0 && opts.embaralharGps !== false;
+  if (deveEmbaralhar) {
+    gps = embaralharListaRotacao(gps, opts.rng);
+  }
+
   const pessoas: RotacaoGeracaoPessoa[] = [
-    ...gps.map((p) => ({ ...p, isShiftLead: false })),
-    ...shiftLeads.map((p) => ({ ...p, isShiftLead: true })),
+    ...gps.map((p) => ({ ...p, isShiftLead: false as const })),
+    ...shiftLeads.map((p) => ({ ...p, isShiftLead: true as const })),
   ];
   const estado: EstadoPessoaRotacao[] = pessoas.map((p) => ({
     isShiftLead: p.isShiftLead,
@@ -531,6 +842,12 @@ export function gerarGradeRotacao(opts: {
     totalMesas: 0,
   }));
   const rows: string[][] = Array.from({ length: pessoas.length }, () => []);
+
+  const disponivelEm = (pIdx: number, slotIdx: number): boolean => {
+    const mask = pessoas[pIdx]?.disponivelPorSlot;
+    if (!mask) return true;
+    return mask[slotIdx] !== false;
+  };
 
   // Replay slots passados para restaurar estado (reingresso)
   if (fromSlot > 0 && opts.matrixBase) {
@@ -552,11 +869,11 @@ export function gerarGradeRotacao(opts: {
   }
 
   for (let s = fromSlot; s < nSlots; s++) {
-    const aloc = alocarSlotRotacao(estado, mesas, maxConsec);
+    const aloc = alocarSlotRotacao(estado, mesas, maxConsec, (i) => disponivelEm(i, s));
     if (!aloc) {
       return {
         ok: false,
-        erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Use o aviso para incluir Shift Lead ou intervalo de 20 min.`,
+        erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Use Incluir Liderança ou Rotação de 20min.`,
       };
     }
     const { workers, mesasAttr } = aloc;
@@ -566,10 +883,11 @@ export function gerarGradeRotacao(opts: {
     }
 
     for (let p = 0; p < pessoas.length; p++) {
-      const v = assignment[p]!;
+      let v = assignment[p]!;
+      if (!disponivelEm(p, s)) v = "X";
       rows[p]!.push(v);
       const e = estado[p]!;
-      if (v === "Break") {
+      if (v === "Break" || v === "X" || v === "F") {
         e.consecutiveWork = 0;
         e.lastMesa = null;
       } else {
@@ -630,45 +948,29 @@ function mapPessoaPool(row: Record<string, unknown>, isShiftLead: boolean): Rota
 }
 
 /**
- * Liderança 08h–20h cobre Manhã/Tarde; 20h–08h (ou 18h–06h) cobre Tarde/Noite.
- * Fallback pela célula da Escala (MRN / AFT / NGT) quando o horário não veio no cadastro.
+ * Normaliza célula da Escala Estúdio para sigla de turno (MRN/AFT/NGT).
+ * Inclui Compra - Turno (Marketplace); Venda/Troca/Folga → null.
+ */
+export function siglaTurnoGradeRotacao(
+  valor: string | null | undefined,
+): "MRN" | "AFT" | "NGT" | null {
+  const v = (valor ?? "").trim();
+  if (v === "MRN" || v === "Manhã" || v === "Compra - Manhã") return "MRN";
+  if (v === "AFT" || v === "Tarde" || v === "Compra - Tarde") return "AFT";
+  if (v === "NGT" || v === "Noite" || v === "Compra - Noite") return "NGT";
+  return null;
+}
+
+/**
+ * Incluir Liderança: SL e SM escalados no dia ficam disponíveis em **qualquer** turno
+ * (Manhã / Tarde / Noite) para inclusão sob demanda — sem filtro por janela 08h–20h / 20h–08h.
+ * A disponibilidade por slot (X fora da janela) é tratada em `disponivelPorSlotPessoaRotacao`.
  */
 export function liderancaCompativelComTurnoRotacao(
-  turno: RotacaoTurnoKey,
-  opts: { horarioTurno?: string | null; gradeValor?: string | null },
+  _turno: RotacaoTurnoKey,
+  _opts?: { horarioTurno?: string | null; gradeValor?: string | null },
 ): boolean {
-  const h = (opts.horarioTurno ?? "").trim().toLowerCase().replace(/\s/g, "");
-  const g = (opts.gradeValor ?? "").trim().toUpperCase();
-
-  const janelaDia =
-    h === "08-20" ||
-    h === "08:00-20:00" ||
-    h.startsWith("08-") ||
-    (h.includes("08h") && h.includes("20"));
-  const janelaNoite =
-    h === "20-08" ||
-    h === "18-06" ||
-    h === "20:00-08:00" ||
-    h === "18:00-06:00" ||
-    h.startsWith("20-") ||
-    h.startsWith("18-") ||
-    (h.includes("20h") && h.includes("08")) ||
-    (h.includes("18h") && h.includes("06"));
-
-  if (janelaDia && !janelaNoite) {
-    return turno === "manha" || turno === "tarde";
-  }
-  if (janelaNoite && !janelaDia) {
-    return turno === "noite" || turno === "tarde";
-  }
-
-  if (g === "MRN") return turno === "manha" || turno === "tarde";
-  if (g === "NGT") return turno === "noite" || turno === "tarde";
-  if (g === "AFT") return turno === "tarde" || turno === "manha";
-
-  // Sem horário/célula: não esconder — deixa a liderança escolher
-  if (!h && !g) return true;
-  return turno === "manha" || turno === "tarde" || turno === "noite";
+  return true;
 }
 
 export function labelCargoLiderancaRotacao(cargo?: RotacaoCargoLideranca): string {
@@ -1107,11 +1409,13 @@ export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ gera
           const slots = gerarSlotsRotacao(ctx.turnoInicio, ctx.turnoFim, slotMin);
           const gerado = gerarGradeRotacao({
             mesasLabels: mesas,
-            gps: gps.map((g) => ({ funcionarioId: g.funcionarioId, isShiftLead: false })),
-            shiftLeads: ctx.shiftLeads.map((g) => ({
+            gps: gps.map((g) => ({
               funcionarioId: g.funcionarioId,
-              isShiftLead: true,
+              isShiftLead: false,
+              disponivelPorSlot: disponivelPorSlotPessoaRotacao(slots, g, ctx.turnoInicio),
             })),
+            // Prévia do mês: só GPs — liderança entra depois via «Incluir Liderança» na UI.
+            shiftLeads: [],
             nSlots: slots.length,
             slotMinutos: slotMin,
           });
@@ -1119,10 +1423,29 @@ export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ gera
             erros += 1;
             continue;
           }
-          const porId = new Map(gps.concat(ctx.shiftLeads).map((g) => [g.funcionarioId, g]));
+          const porId = new Map(gps.map((g) => [g.funcionarioId, g]));
+          const linhas = gerado.pessoas.map((p) => {
+            const g = porId.get(p.funcionarioId);
+            return (
+              g ?? {
+                funcionarioId: p.funcionarioId,
+                nomeCompleto: "—",
+                nomeExibicao: "—",
+                nickname: "—",
+                falta: false,
+                isShiftLead: p.isShiftLead,
+              }
+            );
+          });
+          const matrix = aplicarLimitesDisponibilidadeNaMatrixRotacao(
+            slots,
+            gerado.matrix,
+            linhas,
+            ctx.turnoInicio,
+          );
           const celulas: RotacaoCelulaPayload[] = [];
           gerado.pessoas.forEach((p, i) => {
-            const g = porId.get(p.funcionarioId);
+            const g = linhas[i];
             slots.forEach((slot, si) => {
               celulas.push({
                 funcionario_id: p.funcionarioId,
@@ -1130,7 +1453,7 @@ export async function gerarPreviewsMesRotacao(refMesIso: string): Promise<{ gera
                 nickname: g?.nickname === "—" ? "" : (g?.nickname ?? ""),
                 linha_ordem: i,
                 slot_inicio: slot,
-                valor: gerado.matrix[i]?.[si] ?? "Break",
+                valor: matrix[i]?.[si] ?? "Break",
               });
             });
           });

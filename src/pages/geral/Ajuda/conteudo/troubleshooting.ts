@@ -7,7 +7,7 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
     {
       subtitulo: "Pesquisei sem acento e não encontrei o nome (ou o contrário)?",
       texto:
-        "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
+        "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Com **várias palavras**, cada uma precisa aparecer no cadastro — a ordem e o nome do meio não importam (ex.: «Alexandre Zanchetta» encontra «Alexandre Galvão Zanchetta»). Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período, time, estúdio, turno) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
     },
     {
       subtitulo: "A página ficou em «Atualizando...» ou pedindo para recarregar?",
@@ -104,7 +104,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Posicionamento não carrega ou aparece vazia?",
         texto:
-          "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet estão OK. Com **Todas Operadoras**, as quatro parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
+          "O Posicionamento tenta o snapshot do **dia civil de Brasília**. Se o monitor horário ainda não executou hoje, a aba mostra o **último horário** válido (em geral ontem) — não fica vazia só por falta de coleta do dia. Confira **Última atualização** no bloco de mesas e, em **Status Técnico**, se Lobby Blaze / CDA / Esportiva Bet / Jonbet / Bateu Bet / Rico Bet / BRX Bet / Donald Bet / BetPontoBet estão OK. Com **Todas Operadoras**, as nove parceiras aparecem lado a lado; com operadora específica, só aquela. Se a aba continuar vazia após **Tentar de novo** e hard refresh (Ctrl+Shift+R), avise o time de produto.",
       },
       {
         subtitulo: "Os dados do Histórico parecem diferentes do mês selecionado individualmente?",
@@ -1311,6 +1311,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "Verifique conexão e permissão de Editar. A interface exibe mensagem genérica em português — detalhes técnicos ficam no console do navegador para suporte.",
       },
+      {
+        subtitulo: "Sync da Lista SPA falhou com erro de planilha ou HTTP 404?",
+        texto:
+          "A lista oficial é a tabela **Empresas Autorizadas** no portal do Ministério da Fazenda. O sync lê essa página HTML; links antigos de planilha sob Transparência Ativa podem estar quebrados e são ignorados. Em Status Técnico, use **Sync** na linha **Lista SPA**. Se o erro persistir após o deploy da Edge Function, entre em contato com o suporte.",
+      },
     ],
   },
   comercial_pipeline_agregadoras: {
@@ -1384,7 +1389,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O botão Sync não aparece para uma integração?",
         texto:
-          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Painel de Notícias RSS**, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet operam via job automatizado externo e não têm ação disponível na interface.\n\nSe a TV em `/painel-noticias` ficar vazia ou em «Aguardando notícias…», use **Sync** na linha Painel de Notícias (RSS) e confira se o job horário está ativo.",
+          "Apenas as integrações **CDA Influencers**, **CDA Afiliados**, Social Media KPIs, Spin na Rede RSS, **Painel de Notícias RSS**, **Lista SPA**, **Validação de domínios de Marcas** e **Estado / Cidade** possuem sync manual. Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet, Lobby BRX Bet, Lobby Donald Bet e Lobby BetPontoBet operam via job automatizado externo e não têm ação disponível na interface.\n\nSe a TV em `/painel-noticias` ficar vazia ou em «Aguardando notícias…», use **Sync** na linha Painel de Notícias (RSS) e confira se o job horário está ativo.",
       },
       {
         subtitulo: "Um prestador não consegue fazer check-in?",
@@ -1424,7 +1429,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Ao clicar em Solicitar aparece erro genérico?",
         texto:
-          "Confirme se a migration de correção da Ordem de Saída foi aplicada no Supabase e se o usuário tem permissão de **Criar** ou **Editar** em Gestão de Usuários. Se o erro continuar após o deploy, entre em contato com o suporte.",
+          "Confirme se as correções da Ordem de Saída foram aplicadas no Supabase (reserva de código da OS e permissão de criação) e se o usuário tem permissão de **Criar** ou **Editar** em Gestão de Usuários. Se o erro continuar, entre em contato com o suporte.",
       },
       {
         subtitulo: "A data de retorno foi recusada?",
@@ -1571,6 +1576,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
   rh_staff: {
     titulo: "Gestão de Staff",
     blocos: [
+      {
+        subtitulo: "Busquei pelo primeiro e último nome e não apareceu?",
+        texto:
+          "A busca aceita várias palavras em qualquer ordem — «Alexandre Zanchetta» encontra «Alexandre Galvão Zanchetta». Confira também o carrossel de time, **Todos Estúdios** e **Todos Turnos**: filtros ativos restringem a tabela além do texto digitado.",
+      },
       {
         subtitulo: "Só vejo o meu time na Gestão de Staff?",
         texto:
@@ -1754,82 +1764,47 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Controle de Turno no menu?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Controle de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Controle de Turno** (seção **Estúdio**). A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
       },
       {
         subtitulo: "O pool da Rotação está vazio no Controle de Turno?",
         texto:
-          "A aba **Rotação** usa os Game Presenters da **Escala Estúdio** **aprovada** no dia, turno e estúdio selecionados, com **Chegou** / **Não chegou** do check-in do Calendário. Sem aprovação do mês ou sem GPs naquele turno, o pool fica vazio.",
+          "A aba **Rotação** mostra um bloco por estúdio. Cada pool usa os Game Presenters da **Escala Estúdio** **aprovada** no dia e turno, com **Chegou** / **Não chegou** do check-in do Calendário. Sem aprovação do mês ou sem GPs naquele turno, o pool do bloco fica vazio.",
       },
       {
         subtitulo: "Não consigo salvar Notificações ou o Relatório?",
         texto:
           "As abas **Notificações** e **Relatório de Turno** gravam no banco. Confirme permissão de **Criar** / **Editar** em Gestão de Usuários → Permissões → **Controle de Turno** e faça logout e login. Se o erro persistir, entre em contato com o suporte técnico para validar se o schema do Controle de Turno foi aplicado.",
       },
-    ],
-  },
-  escala_relatorio_turno: {
-    titulo: "Relatório de Turno",
-    blocos: [
       {
-        subtitulo: "Não vejo Relatório de Turno no menu?",
+        subtitulo: "A mesa fechada sumiu nos dias seguintes depois de reabrir?",
         texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Relatório de Turno**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
+          "O **Fechamento de Mesa** usa data e hora de fechamento e de abertura. O registro deve aparecer em todos os dias entre o fechamento e a abertura (inclusive). Ao reabrir, informe a **Data de Abertura** correta (não só a hora). Se um registro antigo ainda parecer só no dia do fechamento, edite e ajuste a data de abertura — ou confira se a migração `data_reabertura` foi aplicada no banco.",
       },
       {
-        subtitulo: "Não consigo criar um novo relatório?",
+        subtitulo: "A coluna Aprovado continua Não depois de Registrar?",
         texto:
-          "É necessária permissão de **Criar** na mesma linha. Sem ela, o botão **Novo Relatório** não aparece. O responsável fica travado no usuário logado; a **Data do turno** pode ser ontem ou hoje (dia em que o turno começou).",
+          "É esperado: Falta, Saída Antecipada, Hora Adicional e Registrar Horário **não** marcam **Aprovado**. Use a ação **Aprovar** (ícone de check) quando Entrada e Saída estiverem preenchidas **ou** depois de registrar **Falta**. Sem horários e sem Falta, o botão Aprovar não aparece.",
       },
       {
-        subtitulo: "Qual data usar no turno noturno?",
+        subtitulo: "Falta alguém no pool da Rotação no Controle de Turno?",
         texto:
-          "Use a data em que o turno **começou**. Ex.: Noite que começa às 20h ou 23h de segunda e fecha na manhã de terça → selecione a data de **segunda**. Antes do meio-dia, o sistema já sugere **ontem** por padrão.",
-      },
-      {
-        subtitulo: "Falta a roleta do Sports Club no checklist?",
-        texto:
-          "A lista vem das mesas cadastradas com tipo ou nome de Roleta em Gestão de Estúdios / Mesas. Confirme o vínculo da mesa ao estúdio Sports Club e o tipo de jogo. Se a migração recente ainda não foi aplicada no banco, a listagem antiga pode omitir algumas roletas.",
-      },
-      {
-        subtitulo: "Faltam blocos de estúdio no modal?",
-        texto:
-          "Os blocos seguem os estúdios **ativos** em Gestão de Estúdios. Cadastre ou reative o estúdio para ele aparecer automaticamente no próximo relatório.",
-      },
-    ],
-  },
-  escala_rotacao: {
-    titulo: "Rotação",
-    blocos: [
-      {
-        subtitulo: "Não vejo Rotação no menu?",
-        texto:
-          "Confirme permissão de **Ver** em Gestão de Usuários → Permissões → linha **Rotação**. A página nasce bloqueada para todos os perfis exceto Administrador. Após liberar, faça logout e login (ou atualize a sessão).",
-      },
-      {
-        subtitulo: "Pool vazio ou sem escala aprovada?",
-        texto:
-          "A rotação usa Game Presenters com célula de trabalho (Manhã/Tarde/Noite) na **Escala Estúdio** **aprovada** do dia e estúdio efetivo (Staff ou override na própria Rotação). O pool segue o **valor da célula do dia**. Sem aprovação ou sem GPs naquele turno/dia, o pool fica vazio. Se a escala do dia está aprovada e o pool continua vazio, entre em contato com o suporte técnico.",
+          "No Controle de Turno, o pool inclui quem está na **Escala do Turno** como **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. **Hora Adicional** do turno anterior também entra no turno seguinte (mesmo estúdio). **Falta** fica de fora. Confirme o status na aba Escala do Turno e o bloco do estúdio.",
       },
       {
         subtitulo: "Não consigo publicar a rotação?",
         texto:
-          "É necessária permissão de **Criar**. Selecione um estúdio (não «Todos Estúdios»), gere a prévia com gente suficiente para cobrir as mesas e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
+          "É necessária permissão de **Criar** em **Controle de Turno**. Em cada bloco de estúdio, gere a prévia com gente suficiente para cobrir as mesas e use **Publicar**. A publicação anterior do mesmo dia/turno/estúdio é arquivada automaticamente.",
       },
       {
         subtitulo: "A prévia mostra mesas a menos ou dois GPs na mesma mesa?",
         texto:
-          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar o **Shift Lead** só como reserva. Se a cobertura falhar, use **Aviso — intervalo 20 min** ou **Aviso — incluir Shift Lead**. Clique de novo em **Gerar prévia** após atualizar a página.",
-      },
-      {
-        subtitulo: "Chegou no meio do turno — como incluir?",
-        texto:
-          "Não recalcule slots já passados. Com check-in (**Chegou**) use **Incluir na rotação**: a grade redistribui só a partir do **próximo slot**. Se ainda faltar cobertura, use os botões de **Aviso** (20 min ou Shift Lead).",
+          "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar a liderança só como reserva. Se a cobertura falhar, use **Rotação de 20min** (depois **Rotação de 30min** para voltar) ou **Incluir Liderança**. Clique de novo em **Gerar prévia** no bloco do estúdio.",
       },
       {
         subtitulo: "Mover entre estúdios não funciona?",
         texto:
-          "O move é **só na Rotação** (turno inteiro) e exige o SQL de alocação (`escala_rotacao_cockpit.sql`). Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
+          "O move é **só na aba Rotação** do Controle de Turno (turno inteiro), via **Mover estúdio…** no chip. Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
       },
     ],
   },
@@ -1839,7 +1814,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Confundi com Solicitações do RH?",
         texto:
-          "A seção **Escala → Solicitações** trata pedidos operacionais de escala (trocas, coberturas). A seção **RH → Solicitações** trata atestados, reuniões com RH e vagas — são páginas distintas no menu.",
+          "A seção **Escala → Solicitações** trata pedidos operacionais de escala (trocas, coberturas). A seção **RH → Solicitações** trata atestados, reuniões, vagas e feedback — são páginas distintas no menu.",
       },
     ],
   },
@@ -1919,12 +1894,22 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Atestado do Calendário não aparece aqui?",
         texto:
-          "Justificativas **Médico** registradas no Calendário criam solicitação **Atestado** com status **Em análise**. Use o filtro **Tipo de solicitação** e o carrossel **Em análise**. Aguarde alguns segundos e recarregue se acabou de salvar no Calendário.",
+          "Justificativas **Médico** registradas no Calendário criam solicitação **Atestado** com status **Em análise**. Abra a aba **Atestados** e o carrossel **Em análise**. Aguarde alguns segundos e recarregue se acabou de salvar no Calendário.",
+      },
+      {
+        subtitulo: "Feedback do Controle de Turno não aparece?",
+        texto:
+          "Cada feedback registrado em **Controle de Turno → Notificações → Feedbacks** cria uma linha na aba **Feedback** (origem Controle de Turno). **Revisar** no CT = **Em análise** aqui; **Aplicado** é igual nas duas. Confirme a aba **Feedback** e o carrossel de status. Feedback criado só pelo CTA **Registrar Feedback** nesta página **não** aparece no Controle de Turno.",
       },
       {
         subtitulo: "Não consigo atender solicitação?",
         texto:
-          "O ícone **Atender** exige permissão de **Editar** nesta página (RH). Sem Editar, use apenas **Ver**.",
+          "O ícone **Atender** exige permissão de **Editar** nesta página (RH). Com **Ver = Sim** sem Editar não há ícones de ação — use só a leitura da lista. Com Editar, **Atender** só aparece em status **Em análise**.",
+      },
+      {
+        subtitulo: "Não vejo Agendar Reunião no Calendário?",
+        texto:
+          "O CTA **Agendar Reunião** fica na aba **Compromissos**, na mesma linha do filtro de compromissos. Com **Ver = Sim**, ele só aparece quando **Meu Calendário** está selecionado. Com **Próprios** ou **Editar**, permanece disponível na sua visão.",
       },
     ],
   },

@@ -53,7 +53,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Detalhamento Diário / Mensal",
         texto:
-          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") ou por mês no modo Histórico (subtítulo \"mês a mês\"). No modo **Todas Operadoras**, cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
+          "Tabela com uma linha por dia no mês selecionado (subtítulo \"dia a dia\") — inclusive dias sem movimentação da operadora, com valores zerados — ou por mês no modo Histórico (subtítulo \"mês a mês\"). No mês corrente a grade vai até o último dia fechado (D-1). No modo **Todas Operadoras**, cada linha pode ser expandida clicando na seta à esquerda da data para ver o desdobramento por plataforma.\n\nAlterne para o modo Gráfico usando o botão no canto superior direito da seção. No gráfico, escolha o KPI a ser exibido pelas opções acima do gráfico.",
       },
       {
         subtitulo: "Comparativo de Jogo",
@@ -73,7 +73,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Posicionamento",
         texto:
-          "Monitora a posição das mesas Spin no lobby das plataformas parceiras. A navegação por mês e o botão Histórico da barra não se aplicam nesta aba.\n\nSe ainda não houver coleta no dia de hoje, a aba mostra o **último horário** válido (em geral ontem) e os KPIs comparam **vs último horário**, em vez de vs ontem no mesmo horário.\n\nCom **Todas Operadoras**, cada card (Blaze, Casa de Apostas, Esportiva Bet, Jonbet) é uma mini-tabela com colunas Atual (posição com cores), Estúdio, Mesa e Anterior (última posição diferente nos últimos 7 dias). O bloco **Alertas do período** lista todas as mudanças de posição dia a dia nessa janela de 7 dias, por operadora.\n\nCom uma operadora específica: os KPIs mostram Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição. A lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓). O rótulo usa Estúdio - Mesa.\n\n'Concorrentes à frente' mostra, por tipo de jogo Spin, quantos jogos de outras plataformas estão à frente (máximo entre as mesas daquele tipo). O hover lista esses jogos.\n\n'Ranking de concorrentes' lista esses mesmos jogos únicos (posição e provedor), alinhado ao bloco Concorrentes à frente.\n\nO Histórico de Posicionamento (operadora específica) exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período.",
+          "Monitora a posição das mesas Spin no lobby das plataformas parceiras. A navegação por mês e o botão Histórico da barra não se aplicam nesta aba.\n\nSe ainda não houver coleta no dia de hoje, a aba mostra o **último horário** válido (em geral ontem) e os KPIs comparam **vs último horário**, em vez de vs ontem no mesmo horário.\n\nCom **Todas Operadoras**, cada card (Blaze, Casa de Apostas, Esportiva Bet, Jonbet, Bateu Bet, Rico Bet, BRX Bet, Donald Bet, BetPontoBet) é uma mini-tabela com colunas Atual (posição com cores), Estúdio, Mesa e Anterior (última posição diferente nos últimos 7 dias). O bloco **Alertas do período** lista todas as mudanças de posição dia a dia nessa janela de 7 dias, por operadora.\n\nCom uma operadora específica: os KPIs mostram Visibilidade na vitrine (% das mesas no top 20 do lobby), Mesas no top 10, Melhor posição registrada no dia e Maior queda de posição. A lista 'Posição atual das mesas' exibe a posição de cada mesa no último snapshot, com indicador de melhora (↑) ou piora (↓). O rótulo usa Estúdio - Mesa.\n\n'Concorrentes à frente' mostra, por tipo de jogo Spin, quantos jogos de outras plataformas estão à frente (máximo entre as mesas daquele tipo). O hover lista esses jogos.\n\n'Ranking de concorrentes' lista esses mesmos jogos únicos (posição e provedor), alinhado ao bloco Concorrentes à frente.\n\nO Histórico de Posicionamento (operadora específica) exibe um heatmap das posições nos últimos dias — use os botões Dia / 7 dias / 30 dias para controlar o período.",
       },
       {
         subtitulo: "Navegação entre abas",
@@ -267,7 +267,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Aba Contratação",
         texto:
-          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse, quantidade de candidatos e status. No Histórico, os mesmos blocos consideram as 13 competências.",
+          "KPIs de vagas abertas, em andamento e fechadas. Origem das candidaturas (campo «Como chegou até nós?») em pizza; funil com as etapas das candidaturas. Tabela com vagas abertas e em andamento — título, datas, repasse (vagas externas), quantidade de candidatos e status. No Histórico, os mesmos blocos consideram as 13 competências.",
       },
       {
         subtitulo: "Aba Distratos",
@@ -607,7 +607,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nova vaga",
         texto:
-          "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, **repasse inicial** (valor em reais), descrição e responsabilidades. Em vagas **Externas**, o campo **Tags** é obrigatório — adicione ao menos um rótulo (digite e pressione Enter). Vagas **Internas** não exibem Tags. Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
+          "No modal **Nova Vaga**, preencha título, tipo, organograma, datas, descrição e responsabilidades. Em vagas **Externas**, **repasse inicial** (valor em reais) e **Tags** são obrigatórios — adicione ao menos um rótulo (digite e pressione Enter). Vagas **Internas** não exibem repasse nem Tags. Requisitos e Escala de trabalho não fazem mais parte do cadastro.",
       },
       {
         subtitulo: "Compartilhar vaga externa",
@@ -926,55 +926,32 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool real da Escala Estúdio aprovada, check-in, prévia e publicação — o mesmo motor da página **Rotação**); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação. A página dedicada **Relatório de Turno** no menu Escala permanece até a migração completa.",
+          "Hub operacional do turno: presença e consolidado na aba **Escala do Turno**; **Rotação** (pool filtrado pela Escala do Turno — Presente, Pendente, Saída Antecipada e Hora Adicional; Hora Adicional do turno anterior também no turno seguinte, com **X** após a saída); **Relatório de Turno** e **Notificações** com registro persistido. Use o carrossel de dia e o atalho **Hoje**; o filtro Manhã/Tarde/Noite aparece nas abas Escala e Rotação.",
+      },
+      {
+        subtitulo: "Escala do Turno",
+        texto:
+          "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado. Tutorial: `/Ajuda/Tutoriais/ControleTurnoAprovacaoEscala`.",
+      },
+      {
+        subtitulo: "Rotação",
+        texto:
+          "Cada **estúdio ativo** tem o próprio bloco (**Pool do turno** + ações). O pool usa a Escala Estúdio, restrito aos prestadores da **Escala do Turno** com status **Presente**, **Pendente**, **Saída Antecipada** ou **Hora Adicional**. KPIs do bloco: **Escalados**, **Não Chegaram**, **Horas Adicionais** e **Disponíveis**. Com horário de saída, a grade marca **X** a partir desse horário. **Hora Adicional** do turno anterior também entra no turno seguinte. **Falta** fica de fora. Em cada chip use **Mover estúdio…** (ou **Restaurar estúdio**) para realocar no turno. Fluxo por bloco: **Gerar prévia** → **Incluir Liderança** / **Rotação de 20min–30min** / **Publicar** → após publicar só **Regenerar** (volta ao pool). A cada **Gerar prévia** / **Regenerar**, a ordem das linhas de GP é **aleatória** (não alfabética), para variar mesas e breaks. Na prévia, arraste o nome na coluna **Equipe** para trocar a sequência de mesas. **Shift Leaders** e **Service Managers** só entram por **Incluir Liderança**; a grade marca **X** fora da janela **08h–20h** / **20h–08h**."
       },
       {
         subtitulo: "Notificações",
         texto:
-          "Com permissão de **Criar**, registre fechamentos, ausências, feedbacks e manutenções do dia. Com **Editar**, atualize fechamentos/ausências, aplique feedbacks em revisão e cancele manutenções abertas. Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos.",
+          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. No **Fechamento de Mesa**, informe **data e hora** de fechamento e de abertura; se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a reabertura. No **Registrar Feedback**, se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais tipos permanece **Observação**. Com **Editar**, atualize fechamentos/ausências e cancele manutenções abertas — a aplicação de feedbacks fica em **Solicitações** (RH). Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos. Tutorial: `/Ajuda/Tutoriais/ControleTurnoNotificacoes`.",
       },
       {
         subtitulo: "Relatório de Turno",
         texto:
-          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno.",
-      },
-    ],
-  },
-  escala_relatorio_turno: {
-    titulo: "Relatório de Turno",
-    blocos: [
-      {
-        texto:
-          "Registre a passagem de turno e o relatório de estúdio de forma estruturada — substitui o fluxo informal de mensagens. Duas abas: **Relatório do Turno** (escalados e absenteísmo por estúdio e Shufflers) e **Relatório de Estúdio** (SOS, sinais, payout e checklist de manutenção).",
+          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**. Tutorial: `/Ajuda/Tutoriais/ControleTurnoRelatorio`.",
       },
       {
-        subtitulo: "Relatório do Turno",
+        subtitulo: "Tutoriais (Ajuda)",
         texto:
-          "Com permissão de **Criar**, use **Novo Relatório**. A **Data do turno** é o dia em que o turno começou (ontem ou hoje) — não a data da publicação; o responsável fica travado no usuário logado. Informe o turno (Manhã, Tarde ou Noite), preencha um bloco por estúdio ativo (Game Presenters escalados e atrasos/faltas/atestados; Resumo é opcional), o bloco Shufflers e o campo Geral; depois **Publicar**. A lista mostra Escalados e Absenteísmo somados de todos os blocos.",
-      },
-      {
-        subtitulo: "Relatório de Estúdio",
-        texto:
-          "Turno Manhã ou Noite. Campos obrigatórios numéricos: SOSs, Sinais e Payout, além do Resumo. A **Data do turno** é o dia em que o turno começou (não a data da publicação) — útil no turno noturno que fecha na manhã seguinte. Manutenção (Roletas, Mesas, Troca de Cartas por estúdio, CC Machine, Cartas Contadas) é checklist opcional.",
-      },
-    ],
-  },
-  escala_rotacao: {
-    titulo: "Rotação",
-    blocos: [
-      {
-        texto:
-          "Cockpit operacional da **rotação** dos Game Presenters nas mesas — use ~30 min antes do turno. Substitui o Excel de Month Shift and Rotation. Duas abas: **Gerar Rotação** (pool, check-in, avisos e prévia) e **Rotação Atual** (consulta da publicada). Ao **aprovar** a Escala Estúdio na aba Game Presenter, a plataforma pode gerar **prévias** de todos os dias do mês.",
-      },
-      {
-        subtitulo: "Gerar Rotação",
-        texto:
-          "Escolha o dia, o turno (Manhã, Tarde ou Noite) e um **estúdio**. O pool vem dos Game Presenters **escalados** na **Escala Estúdio** **aprovada** e, como reserva, dos **Shift Leads** do mesmo dia/turno. Cada chip mostra **Chegou** / **Não chegou** (ponto do Calendário). Marque faltas, **mova** um GP para outro estúdio só neste turno (figurino: 1 GP = 1 estúdio no turno) ou traga alguém de outro estúdio. **Gerar prévia** usa todos os GPs elegíveis: cobre **todas** as mesas; 1 pessoa por mesa; **intercala** mesas (não repete a mesma no horário seguinte); no máximo **2h** contínuas em mesa antes do Break (4×30 min ou 6×20 min); Shift Lead só para cobrir, com o mínimo de mesas. Intervalo padrão **30 min**. Se a cobertura ficar apertada, use **Aviso — intervalo 20 min** ou **Aviso — incluir Shift Lead** (nunca «emergência»). Chegada no meio do turno: **Incluir na rotação** redistribui só os slots futuros. Com permissão de **Criar**, **Publicar** grava a rotação.",
-      },
-      {
-        subtitulo: "Rotação Atual",
-        texto:
-          "Consulta a rotação **publicada** para o mesmo dia, turno e estúdio. Células: **Número da Mesa**, **Break** ou **X** (falta). Sem publicação, a mensagem de vazio indica ausência de rotação no período.",
+          "Na aba **Escala do Turno**, o atalho roxo abre **Aprovação de Escala de Turno** — sinalizar falta, saída antecipada, hora adicional ou horário e aprovar os dias.\n\nNa aba **Relatório de Turno**, **Relatório de Turno** cobre gerar rascunho, publicar e consultar dias anteriores.\n\nNa aba **Notificações**, **Notificação** explica os quatro blocos e o acompanhamento dos atendimentos.\n\nVisibilidade inicial: Shift Leader, Service Manager e Gestor de Operações (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
       },
     ],
   },
@@ -1211,17 +1188,17 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
     blocos: [
       {
         texto:
-          "Centraliza o atendimento de pedidos de prestadores ao RH — atestados médicos, reuniões com RH e solicitações ligadas a vagas internas. Perfis com permissão de Editar podem registrar o parecer e alterar o status.\n\nAo registrar uma justificativa **Médico** no **Calendário** (Controle de Presença), uma solicitação do tipo **Atestado** é criada automaticamente nesta fila, com status **Em análise**.\n\nAo **agendar reunião com RH** no **Calendário** (Compromissos), uma solicitação do tipo **Reunião com RH** entra nesta fila. A reunião só aparece nos calendários do solicitante e do RH que aprovar após o atendimento.",
+          "Centraliza o atendimento de pedidos ao RH em quatro abas: **Atestados**, **Reuniões**, **Vagas** e **Feedback**. Perfis com permissão de **Editar** podem registrar o parecer e alterar o status; com **Ver = Sim** sem Editar a lista é só leitura (sem ícones nem CTAs).\n\n**Atestados:** justificativa **Médico** no **Calendário** (Controle de Presença) cria a solicitação automaticamente (**Em análise**).\n\n**Reuniões:** agende pelo **Calendário** (**Agendar Reunião**, na aba Compromissos) ou pelo CTA **Agendar Reunião** nesta página (RH escolhe o prestador). Reunião com RH ou Liderança fica **Em análise** até o atendimento; só depois do **Aprovado** a reunião aparece como **Agendado** no calendário.\n\n**Vagas:** CTA **Solicitar Vaga** (com Editar).\n\n**Feedback:** registros da liderança e espelho do **Controle de Turno → Notificações → Feedbacks**. Status **Revisar** no CT corresponde a **Em análise** aqui; **Aplicado** é o mesmo nas duas. Ao atender (**Aprovado** → **Aplicado** / **Rejeitado** → **Rejeitado**), o Controle de Turno atualiza **somente** se a origem for Controle de Turno. Feedback criado só em Solicitações **não** cria linha no CT.",
       },
       {
         subtitulo: "Filtros",
         texto:
-          "O carrossel de status navega entre Em análise, Aprovado e Rejeitado (padrão ao abrir: Em análise). O botão **Todos Status** amplia a lista para qualquer situação.\n\nÀ direita, o filtro **Tipo de solicitação** restringe a Atestado, **Reunião com RH** ou Vagas, ou exibe **Todas Solicitações**.",
+          "O carrossel de status navega entre Em análise, Aprovado e Rejeitado (padrão ao abrir: Em análise). O botão **Todos Status** amplia a lista. No filtro **Aprovado**, a aba Feedback também inclui status **Aplicado** (espelho do CT).\n\nAs abas **Atestados**, **Reuniões**, **Vagas** e **Feedback** substituem o antigo filtro Tipo de solicitação.",
       },
       {
         subtitulo: "Tabela e ações",
         texto:
-          "Com o carrossel em **Em análise**, a tabela mostra descrição (período do atestado ou data da reunião com RH) e os ícones **Ver** e **Atender** (com permissão de Editar). Em **Todos Status**, a coluna **Status** substitui a descrição; **Atender** só aparece para solicitações ainda **Em análise**.\n\nCom o carrossel em **Aprovado** ou **Rejeitado**, as colunas passam a **Atendido** (quem aprovou ou rejeitou) e **Data do Atendimento**; só o ícone **Ver** fica disponível.\n\nNo **Ver** de solicitações já atendidas, use as abas **Solicitação** (dados do pedido; atestado inclui período e anexo) e **Atendimento** (data, responsável, observação do RH; atestado inclui abono remunerado). No **Atender** (Em análise), defina status e observação do RH (obrigatória ao alterar o status). Com status **Aprovado** em **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**).\n\nAo **aprovar** um atestado: a **Escala** grava **Atestado** em todos os dias entre início e fim (incluindo Folga e Venda); vendas de Folga ainda abertas no **Marketplace** nesse período são **canceladas**. No **Calendário** (Controle de Presença), com abono **SIM** o Status fica **Abonado** nos dias que eram Escalado, Troca ou Compra (demais dias mantêm o Status anterior); com abono **NÃO** o Status fica **Atestado** em todos os dias do período.\n\nAo **rejeitar** um atestado, o Status no Calendário volta a **Falta** nos dias cobertos."
+          "Com o carrossel em **Em análise**, a tabela mostra a descrição (ou colunas próprias na aba Feedback) e os ícones **Ver** e **Atender** (com permissão de Editar). Em **Todos Status**, a coluna **Status** substitui a descrição; **Atender** só aparece para solicitações ainda **Em análise**.\n\nCom o carrossel em **Aprovado** ou **Rejeitado**, as colunas passam a **Atendido** e **Data do Atendimento**; só o ícone **Ver** fica disponível.\n\nNo **Ver** de solicitações já atendidas, use as abas **Solicitação** / **Dados** e **Atendimento**. No **Atender**, defina status e observação do RH (obrigatória). Com status **Aprovado** em **Atestado**, informe **Abono remunerado?** (**SIM** ou **NÃO**).\n\nAo **aprovar** um atestado: a **Escala** grava **Atestado** em todos os dias entre início e fim (incluindo Folga e Venda); vendas de Folga ainda abertas no **Marketplace** nesse período são **canceladas**. No **Calendário** (Controle de Presença), com abono **SIM** o Status fica **Abonado** nos dias que eram Escalado, Troca ou Compra; com abono **NÃO** o Status fica **Atestado** em todos os dias do período.\n\nAo **rejeitar** um atestado, o Status no Calendário volta a **Falta** nos dias cobertos."
       },
     ],
   },

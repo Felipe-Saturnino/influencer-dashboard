@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_fechamento_mesa (
   mesa_id                     uuid NOT NULL REFERENCES public.mesas_spin_cadastro (id) ON DELETE RESTRICT,
   hora_fechamento             time NOT NULL,
   hora_reabertura             time,
+  data_reabertura             date,
   nao_reaberta                boolean NOT NULL DEFAULT true,
   observacao                  text NOT NULL,
   lideranca_fechamento_user_id uuid REFERENCES auth.users (id),
@@ -190,8 +191,13 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_fechamento_mesa (
   updated_at                  timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT escala_ct_fechamento_obs_chk CHECK (btrim(observacao) <> ''),
   CONSTRAINT escala_ct_fechamento_reab_chk CHECK (
-    (nao_reaberta = true AND hora_reabertura IS NULL)
-    OR (nao_reaberta = false AND hora_reabertura IS NOT NULL)
+    (nao_reaberta = true AND hora_reabertura IS NULL AND data_reabertura IS NULL)
+    OR (
+      nao_reaberta = false
+      AND hora_reabertura IS NOT NULL
+      AND data_reabertura IS NOT NULL
+      AND data_reabertura >= data_registro
+    )
   )
 );
 
@@ -202,9 +208,12 @@ CREATE INDEX IF NOT EXISTS escala_ct_fechamento_mesa_idx
 CREATE INDEX IF NOT EXISTS escala_ct_fechamento_abertos_idx
   ON public.escala_ct_fechamento_mesa (data_registro)
   WHERE nao_reaberta = true;
+CREATE INDEX IF NOT EXISTS escala_ct_fechamento_intervalo_idx
+  ON public.escala_ct_fechamento_mesa (data_registro, data_reabertura);
 
 COMMENT ON TABLE public.escala_ct_fechamento_mesa IS
-  'Controle de Turno → Notificações: fechamento/reabertura de mesa. Persiste nos dias seguintes enquanto nao_reaberta.';
+  'Controle de Turno → Notificações: fechamento/reabertura de mesa. Visível em cada dia D com data_registro ≤ D ≤ data_reabertura (ou aberto se nao_reaberta).';
+
 
 -- ─── 5) Ausências ────────────────────────────────────────────────────────────
 
@@ -367,6 +376,7 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_presenca_registro (
   turno               text NOT NULL CHECK (turno IN ('manha', 'tarde', 'noite')),
   prestador_id        uuid NOT NULL REFERENCES public.rh_funcionarios (id) ON DELETE RESTRICT,
   tipo                text NOT NULL CHECK (tipo IN (
+                        'aprovar',
                         'falta',
                         'saida_antecipada',
                         'hora_adicional',
@@ -382,12 +392,15 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_presenca_registro (
                       )),
   entrada_hhmm        text,
   saida_hhmm          text,
-  motivo              text NOT NULL,
+  motivo              text NOT NULL DEFAULT '',
   lideranca_user_id   uuid REFERENCES auth.users (id),
   lideranca_nome      text NOT NULL DEFAULT '',
+  aprovado            boolean NOT NULL DEFAULT false,
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT escala_ct_presenca_motivo_chk CHECK (btrim(motivo) <> ''),
+  CONSTRAINT escala_ct_presenca_motivo_chk CHECK (
+    tipo = 'aprovar' OR btrim(motivo) <> ''
+  ),
   CONSTRAINT escala_ct_presenca_entrada_chk CHECK (
     entrada_hhmm IS NULL
     OR btrim(entrada_hhmm) = ''
@@ -407,7 +420,10 @@ CREATE INDEX IF NOT EXISTS escala_ct_presenca_prestador_idx
   ON public.escala_ct_presenca_registro (prestador_id, data DESC);
 
 COMMENT ON TABLE public.escala_ct_presenca_registro IS
-  'Controle de Turno → aba Escala do Turno: registro da liderança por prestador/dia/turno. Sobrepõe o status derivado do ponto.';
+  'Controle de Turno → aba Escala do Turno: registro da liderança por prestador/dia/turno. Coluna aprovado = Sim só após ação Aprovar; demais tipos não alteram o flag.';
+
+COMMENT ON COLUMN public.escala_ct_presenca_registro.aprovado IS
+  'True somente após a ação Aprovar. Demais registros não alteram este flag.';
 
 -- ─── 9) updated_at triggers ──────────────────────────────────────────────────
 
@@ -618,8 +634,8 @@ COMMENT ON FUNCTION public.escala_controle_turno_prestadores_gp_shuffler() IS
   'Lista GP + Shuffler ativos/indisponíveis para selects de Ausência/Feedback.';
 
 -- ─── 12) Presença do dia/turno (aba Escala do Turno) ─────────────────────────
--- Escalados GP/Shuffler da grade aprovada do dia + ponto (check-in/out) +
--- overlay de `escala_ct_presenca_registro`. Um registro CT sobrepõe o display.
+-- Escalados GP/Shuffler da grade (MRN/AFT/NGT, Manhã/Tarde/Noite, Compra - Turno;
+-- exclui Venda/Troca/Folga) + ponto (check-in/out) + overlay de `escala_ct_presenca_registro`.
 
 CREATE OR REPLACE FUNCTION public.escala_controle_turno_presenca_dia(
   p_dia date,
@@ -698,7 +714,7 @@ BEGIN
               FROM public.estudios_spin_operadoras j
               LEFT JOIN public.estudios_spin es ON es.slug = j.estudio_slug
               WHERE j.operadora_slug = btrim(f.staff_operadora_slug)
-              ORDER BY CASE WHEN j.tipo = 'dedicado' THEN 0 ELSE 1 END, j.estudio_slug
+              ORDER BY CASE WHEN es.tipo = 'dedicado' THEN 0 ELSE 1 END, j.estudio_slug
               LIMIT 1
             ),
             '—'
@@ -712,7 +728,21 @@ BEGIN
      AND gr.ref_mes = v_ref
      AND gr.dia_iso = p_dia
      AND gr.area_key IN ('game_presenter', 'shuffler')
-     AND btrim(COALESCE(gr.valor, '')) = v_valor
+     AND (
+       -- Escalado no turno: sigla (MRN/AFT/NGT), rótulo Manhã/Tarde/Noite ou Compra - Turno.
+       -- Venda, Troca, Folga e demais valores não entram.
+       btrim(COALESCE(gr.valor, '')) = v_valor
+       OR btrim(COALESCE(gr.valor, '')) = CASE v_turno
+         WHEN 'manha' THEN 'Manhã'
+         WHEN 'tarde' THEN 'Tarde'
+         ELSE 'Noite'
+       END
+       OR btrim(COALESCE(gr.valor, '')) = CASE v_turno
+         WHEN 'manha' THEN 'Compra - Manhã'
+         WHEN 'tarde' THEN 'Compra - Tarde'
+         ELSE 'Compra - Noite'
+       END
+     )
     WHERE f.status IN ('ativo', 'indisponivel')
       AND (
         lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%game presenter%'
@@ -747,7 +777,12 @@ BEGIN
     GROUP BY COALESCE(r.funcionario_id, uids.funcionario_id)
   ),
   reg AS (
-    SELECT pr.prestador_id, pr.status_presenca, pr.entrada_hhmm, pr.saida_hhmm
+    SELECT
+      pr.prestador_id,
+      pr.status_presenca,
+      pr.entrada_hhmm,
+      pr.saida_hhmm,
+      COALESCE(pr.aprovado, false) AS aprovado
     FROM public.escala_ct_presenca_registro pr
     WHERE pr.data = p_dia
       AND pr.turno = v_turno
@@ -776,7 +811,7 @@ BEGIN
         WHEN p.check_in_at IS NOT NULL THEN 'presente'
         ELSE 'pendente'
       END AS status,
-      (r.prestador_id IS NOT NULL) AS registrado
+      COALESCE(r.aprovado, false) AS registrado
     FROM escalados e
     LEFT JOIN ponto p ON p.funcionario_id = e.funcionario_id
     LEFT JOIN reg r ON r.prestador_id = e.funcionario_id
@@ -806,7 +841,39 @@ REVOKE ALL ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) FRO
 GRANT EXECUTE ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) TO authenticated;
 
 COMMENT ON FUNCTION public.escala_controle_turno_presenca_dia(date, text) IS
-  'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno com ponto, overlay de escala_ct_presenca_registro e estúdio do cadastro Gestão de Staff.';
+  'Controle de Turno → Escala do Turno: escalados GP/Shuffler do dia/turno (MRN/AFT/NGT, Manhã/Tarde/Noite e Compra - Turno; exclui Venda/Troca/Folga) com ponto, overlay de escala_ct_presenca_registro. Campo registrado = aprovado (só ação Aprovar).';
+
+-- ─── 12b) Evolução: tipo Aprovar + motivo opcional ───────────────────────────
+
+ALTER TABLE public.escala_ct_presenca_registro
+  DROP CONSTRAINT IF EXISTS escala_ct_presenca_registro_tipo_check;
+ALTER TABLE public.escala_ct_presenca_registro
+  ADD CONSTRAINT escala_ct_presenca_registro_tipo_check
+  CHECK (tipo IN (
+    'aprovar',
+    'falta',
+    'saida_antecipada',
+    'hora_adicional',
+    'registrar_horario'
+  ));
+
+ALTER TABLE public.escala_ct_presenca_registro
+  DROP CONSTRAINT IF EXISTS escala_ct_presenca_motivo_chk;
+ALTER TABLE public.escala_ct_presenca_registro
+  ADD CONSTRAINT escala_ct_presenca_motivo_chk
+  CHECK (tipo = 'aprovar' OR btrim(motivo) <> '');
+
+ALTER TABLE public.escala_ct_presenca_registro
+  ALTER COLUMN motivo SET DEFAULT '';
+
+-- ─── 12c) Flag aprovado — só ação Aprovar marca Sim ──────────────────────────
+
+ALTER TABLE public.escala_ct_presenca_registro
+  ADD COLUMN IF NOT EXISTS aprovado boolean NOT NULL DEFAULT false;
+
+UPDATE public.escala_ct_presenca_registro
+SET aprovado = true
+WHERE tipo = 'aprovar' AND aprovado = false;
 
 -- ─── 13) Seed permissões (reforço) ───────────────────────────────────────────
 

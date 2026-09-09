@@ -132,9 +132,9 @@ BEGIN
         AND lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%game presenter%'
         AND lower(replace(regexp_replace(COALESCE(f.escala, ''), '\s+', '', 'g'), '×', 'x')) = '4x2'
         AND (
-          (v_turno = 'manha' AND btrim(COALESCE(gr.valor, '')) = 'MRN')
-          OR (v_turno = 'tarde' AND btrim(COALESCE(gr.valor, '')) = 'AFT')
-          OR (v_turno = 'noite' AND btrim(COALESCE(gr.valor, '')) = 'NGT')
+          (v_turno = 'manha' AND btrim(COALESCE(gr.valor, '')) IN ('MRN', 'Manhã', 'Compra - Manhã'))
+          OR (v_turno = 'tarde' AND btrim(COALESCE(gr.valor, '')) IN ('AFT', 'Tarde', 'Compra - Tarde'))
+          OR (v_turno = 'noite' AND btrim(COALESCE(gr.valor, '')) IN ('NGT', 'Noite', 'Compra - Noite'))
         )
     )
     SELECT
@@ -217,9 +217,9 @@ BEGIN
     WHERE f.status IN ('ativo', 'indisponivel')
       AND lower(regexp_replace(btrim(t.nome), '\s+', ' ', 'g')) LIKE '%shift leader%'
       AND (
-        (v_turno = 'manha' AND btrim(COALESCE(gr.valor, '')) = 'MRN')
-        OR (v_turno = 'tarde' AND btrim(COALESCE(gr.valor, '')) = 'AFT')
-        OR (v_turno = 'noite' AND btrim(COALESCE(gr.valor, '')) = 'NGT')
+        (v_turno = 'manha' AND btrim(COALESCE(gr.valor, '')) IN ('MRN', 'Manhã', 'Compra - Manhã'))
+        OR (v_turno = 'tarde' AND btrim(COALESCE(gr.valor, '')) IN ('AFT', 'Tarde', 'Compra - Tarde'))
+        OR (v_turno = 'noite' AND btrim(COALESCE(gr.valor, '')) IN ('NGT', 'Noite', 'Compra - Noite'))
       )
       AND (
         COALESCE(NULLIF(btrim(a.estudio_slug), ''), public._escala_rotacao_estudio_staff(f)) = v_estudio
@@ -285,7 +285,11 @@ BEGIN
        AND gr.ref_mes = v_ref
        AND gr.dia_iso = p_dia
        AND gr.area_key IN ('shift_leader', 'service_manager')
-       AND btrim(COALESCE(gr.valor, '')) IN ('MRN', 'AFT', 'NGT')
+       AND btrim(COALESCE(gr.valor, '')) IN (
+         'MRN', 'AFT', 'NGT',
+         'Manhã', 'Tarde', 'Noite',
+         'Compra - Manhã', 'Compra - Tarde', 'Compra - Noite'
+       )
       LEFT JOIN public.rh_gestao_escala_turno_mes tm
         ON tm.ref_mes = v_ref
        AND tm.area_key = gr.area_key
@@ -326,7 +330,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) IS
-  'Pool GPs/SL + liderancas (SL/SM do dia) + gps_outros + mesas.';
+  'Pool GPs/SL + liderancas (SL/SM do dia) + gps_outros + mesas. Escalados: MRN/AFT/NGT, Manhã/Tarde/Noite e Compra - Turno (exclui Venda/Troca/Folga).';
 
 REVOKE ALL ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.escala_rotacao_contexto_dia(date, text, text) TO authenticated;

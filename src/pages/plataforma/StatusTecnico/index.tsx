@@ -41,6 +41,11 @@ import {
   LABEL_UI_CS_ATENDIMENTO_OUTLOOK,
   LABEL_UI_LOBBY_ESPORTIVA,
   LABEL_UI_LOBBY_JONBET,
+  LABEL_UI_LOBBY_BATEU,
+  LABEL_UI_LOBBY_RICO,
+  LABEL_UI_LOBBY_BRX,
+  LABEL_UI_LOBBY_DONALD,
+  LABEL_UI_LOBBY_BETPONTO,
   nomeIntegracaoStatusTecnicoUi,
   ERRO_SYNC_COMERCIAL_DOMINIO,
   ERRO_SYNC_COMERCIAL_CNPJ,
@@ -147,6 +152,16 @@ interface FluxoDia {
   lobbyEsportiva: number;
   /** Mesas localizadas no lobby Jonbet (sync_logs lobby_jonbet). */
   lobbyJonbet: number;
+  /** Mesas localizadas no lobby Bateu (sync_logs lobby_bateu). */
+  lobbyBateu: number;
+  /** Mesas localizadas no lobby Rico (sync_logs lobby_rico). */
+  lobbyRico: number;
+  /** Mesas localizadas no lobby BRX (sync_logs lobby_brx). */
+  lobbyBrx: number;
+  /** Mesas localizadas no lobby Donald (sync_logs lobby_donald). */
+  lobbyDonald: number;
+  /** Mesas localizadas no lobby BetPonto (sync_logs lobby_betponto). */
+  lobbyBetponto: number;
   /** Empresas enriquecidas (cidade/UF) — sync_logs comercial_cnpj_enriquecimento. */
   comercialCnpj: number;
   emails: Record<string, number>; // tipo -> destinatarios_count
@@ -272,7 +287,15 @@ export default function StatusTecnico() {
       supabase
         .from("lobby_monitor_execucao")
         .select("operadora_slug, executado_em, status, mesas_encontradas")
-        .in("operadora_slug", ["blaze", "casa_apostas", "esportiva_bet", "jonbet"])
+        .in("operadora_slug", [
+          "blaze",
+          "casa_apostas",
+          "esportiva_bet",
+          "jonbet",
+          "bateu_bet",
+          "rico_bet",
+          "brx_bet",
+        ])
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(400),
@@ -316,7 +339,22 @@ export default function StatusTecnico() {
     setRegistrosHoje(count ?? 0);
 
     // Fluxo de dados (últimos 14 dias) — CDA, Social Media, E-mails (datas civis em SP)
-    const [resCda, resSocial, resEmails, resSpinSync, resLobbyBlazeSync, resLobbyCdaSync, resLobbyEsportivaSync, resLobbyJonbetSync, resComercialCnpjSync] = await Promise.all([
+    const [
+      resCda,
+      resSocial,
+      resEmails,
+      resSpinSync,
+      resLobbyBlazeSync,
+      resLobbyCdaSync,
+      resLobbyEsportivaSync,
+      resLobbyJonbetSync,
+      resLobbyBateuSync,
+      resLobbyRicoSync,
+      resLobbyBrxSync,
+      resLobbyDonaldSync,
+      resLobbyBetpontoSync,
+      resComercialCnpjSync,
+    ] = await Promise.all([
       supabase.from("influencer_metricas").select("data").gte("data", dataInicioStr),
       supabase.from("kpi_daily").select("date").gte("date", dataInicioStr),
       supabase.from("email_envios").select("data, tipo, destinatarios_count, created_at").gte("data", dataInicioStr),
@@ -352,6 +390,41 @@ export default function StatusTecnico() {
         .from("sync_logs")
         .select("executado_em, registros_inseridos, status")
         .eq("integracao_slug", "lobby_jonbet")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_bateu")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_rico")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_brx")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_donald")
+        .gte("executado_em", syncDesdeUtc)
+        .order("executado_em", { ascending: false })
+        .limit(500),
+      supabase
+        .from("sync_logs")
+        .select("executado_em, registros_inseridos, status")
+        .eq("integracao_slug", "lobby_betponto")
         .gte("executado_em", syncDesdeUtc)
         .order("executado_em", { ascending: false })
         .limit(500),
@@ -407,6 +480,41 @@ export default function StatusTecnico() {
       (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
       "jonbet",
     );
+    const lobbyBateuPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyBateuSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "bateu_bet",
+    );
+    const lobbyRicoPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyRicoSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "rico_bet",
+    );
+    const lobbyBrxPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyBrxSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "brx_bet",
+    );
+    const lobbyDonaldPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyDonaldSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "donald_bet",
+    );
+    const lobbyBetpontoPorData = mesclarLobbyFluxoPorData(
+      agregarSyncPorData(
+        (resLobbyBetpontoSync.data ?? []) as { executado_em: string; registros_inseridos: number | null; status: string }[],
+      ),
+      (lobbyExecRes.data ?? []) as LobbyExecucaoMonitorRow[],
+      "betponto_bet",
+    );
     const comercialCnpjPorData = agregarSyncPorData(
       (resComercialCnpjSync.data ?? []) as {
         executado_em: string;
@@ -451,6 +559,11 @@ export default function StatusTecnico() {
       ...Object.keys(lobbyCdaPorData),
       ...Object.keys(lobbyEsportivaPorData),
       ...Object.keys(lobbyJonbetPorData),
+      ...Object.keys(lobbyBateuPorData),
+      ...Object.keys(lobbyRicoPorData),
+      ...Object.keys(lobbyBrxPorData),
+      ...Object.keys(lobbyDonaldPorData),
+      ...Object.keys(lobbyBetpontoPorData),
       ...Object.keys(comercialCnpjPorData),
       ...Object.keys(emailsPorData),
       hoje,
@@ -466,6 +579,11 @@ export default function StatusTecnico() {
         const lobbyCda = lobbyCdaPorData[data] ?? 0;
         const lobbyEsportiva = lobbyEsportivaPorData[data] ?? 0;
         const lobbyJonbet = lobbyJonbetPorData[data] ?? 0;
+        const lobbyBateu = lobbyBateuPorData[data] ?? 0;
+        const lobbyRico = lobbyRicoPorData[data] ?? 0;
+        const lobbyBrx = lobbyBrxPorData[data] ?? 0;
+        const lobbyDonald = lobbyDonaldPorData[data] ?? 0;
+        const lobbyBetponto = lobbyBetpontoPorData[data] ?? 0;
         const comercialCnpj = comercialCnpjPorData[data] ?? 0;
         const emails = emailsPorData[data] ?? {};
         const emailTotal = Object.values(emails).reduce((s, n) => s + n, 0);
@@ -478,9 +596,28 @@ export default function StatusTecnico() {
           lobbyCda,
           lobbyEsportiva,
           lobbyJonbet,
+          lobbyBateu,
+          lobbyRico,
+          lobbyBrx,
+          lobbyDonald,
+          lobbyBetponto,
           comercialCnpj,
           emails,
-          total: cda + social + spinRss + lobbyBlaze + lobbyCda + lobbyEsportiva + lobbyJonbet + comercialCnpj + emailTotal,
+          total:
+            cda +
+            social +
+            spinRss +
+            lobbyBlaze +
+            lobbyCda +
+            lobbyEsportiva +
+            lobbyJonbet +
+            lobbyBateu +
+            lobbyRico +
+            lobbyBrx +
+            lobbyDonald +
+            lobbyBetponto +
+            comercialCnpj +
+            emailTotal,
         };
       });
     setFluxoDados(fluxoArray);
@@ -1454,6 +1591,41 @@ export default function StatusTecnico() {
     lobbyExecucoes,
   );
 
+  const ultimoSyncLobbyBateuLog = syncLogs.find((l) => l.integracao_slug === "lobby_bateu");
+  const lobbyBateuStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_bateu",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_bateu"),
+    lobbyExecucoes,
+  );
+
+  const ultimoSyncLobbyRicoLog = syncLogs.find((l) => l.integracao_slug === "lobby_rico");
+  const lobbyRicoStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_rico",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_rico"),
+    lobbyExecucoes,
+  );
+
+  const ultimoSyncLobbyBrxLog = syncLogs.find((l) => l.integracao_slug === "lobby_brx");
+  const lobbyBrxStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_brx",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_brx"),
+    lobbyExecucoes,
+  );
+
+  const ultimoSyncLobbyDonaldLog = syncLogs.find((l) => l.integracao_slug === "lobby_donald");
+  const lobbyDonaldStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_donald",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_donald"),
+    lobbyExecucoes,
+  );
+
+  const ultimoSyncLobbyBetpontoLog = syncLogs.find((l) => l.integracao_slug === "lobby_betponto");
+  const lobbyBetpontoStatusOk = lobbyIntegracaoStatusOk(
+    "lobby_betponto",
+    syncLogs.filter((l) => l.integracao_slug === "lobby_betponto"),
+    lobbyExecucoes,
+  );
+
   const ultimoPipelineRun = pipelineRuns.reduce<PipelineRun | null>((max, r) => {
     if (!max) return r;
     return new Date(r.created_at) > new Date(max.created_at) ? r : max;
@@ -1501,10 +1673,15 @@ export default function StatusTecnico() {
     lobbyCdaStatusOk,
     lobbyEsportivaStatusOk,
     lobbyJonbetStatusOk,
+    lobbyBateuStatusOk,
+    lobbyRicoStatusOk,
+    lobbyBrxStatusOk,
+    lobbyDonaldStatusOk,
+    lobbyBetpontoStatusOk,
     emailStatusDiretoriaOk,
     emailStatusAgendaOk,
   ].filter(Boolean).length;
-  const totalIntegracoes = 13;
+  const totalIntegracoes = 18;
 
   // Último Sync: mais recente entre CDA, Social, Spin na Rede RSS e e-mails (por data de execução)
   const timestamps: Array<{ ts: string; label: string }> = [];
@@ -1535,7 +1712,22 @@ export default function StatusTecnico() {
     timestamps.push({ ts: ultimoSyncLobbyEsportivaLog.executado_em, label: "Lobby Esportiva Bet" });
   }
   if (ultimoSyncLobbyJonbetLog?.executado_em) {
-    timestamps.push({ ts: ultimoSyncLobbyJonbetLog.executado_em, label: "Lobby Jonbet" });
+    timestamps.push({ ts: ultimoSyncLobbyJonbetLog.executado_em, label: LABEL_UI_LOBBY_JONBET });
+  }
+  if (ultimoSyncLobbyBateuLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyBateuLog.executado_em, label: LABEL_UI_LOBBY_BATEU });
+  }
+  if (ultimoSyncLobbyRicoLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyRicoLog.executado_em, label: LABEL_UI_LOBBY_RICO });
+  }
+  if (ultimoSyncLobbyBrxLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyBrxLog.executado_em, label: LABEL_UI_LOBBY_BRX });
+  }
+  if (ultimoSyncLobbyDonaldLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyDonaldLog.executado_em, label: LABEL_UI_LOBBY_DONALD });
+  }
+  if (ultimoSyncLobbyBetpontoLog?.executado_em) {
+    timestamps.push({ ts: ultimoSyncLobbyBetpontoLog.executado_em, label: LABEL_UI_LOBBY_BETPONTO });
   }
   if (emailUltimoDiretoria) timestamps.push({ ts: emailUltimoDiretoria, label: "E-mail Diretoria" });
   if (emailUltimoAgenda) timestamps.push({ ts: emailUltimoAgenda, label: "E-mail Agenda" });
@@ -1576,6 +1768,26 @@ export default function StatusTecnico() {
   const lobbyJonbetFalhas = syncLogs.filter(
     (l) => l.integracao_slug === "lobby_jonbet" && l.status === "falha",
   ).length;
+  const lobbyBateuTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_bateu").length;
+  const lobbyBateuFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_bateu" && l.status === "falha",
+  ).length;
+  const lobbyRicoTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_rico").length;
+  const lobbyRicoFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_rico" && l.status === "falha",
+  ).length;
+  const lobbyBrxTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_brx").length;
+  const lobbyBrxFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_brx" && l.status === "falha",
+  ).length;
+  const lobbyDonaldTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_donald").length;
+  const lobbyDonaldFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_donald" && l.status === "falha",
+  ).length;
+  const lobbyBetpontoTotal = syncLogs.filter((l) => l.integracao_slug === "lobby_betponto").length;
+  const lobbyBetpontoFalhas = syncLogs.filter(
+    (l) => l.integracao_slug === "lobby_betponto" && l.status === "falha",
+  ).length;
   const socialTotal = pipelineRuns.length;
   const socialFalhas = pipelineRuns.filter((r) => r.status === "error").length;
   const emailFalhas = techLogs.filter((l) =>
@@ -1596,6 +1808,11 @@ export default function StatusTecnico() {
     lobbyCdaTotal +
     lobbyEsportivaTotal +
     lobbyJonbetTotal +
+    lobbyBateuTotal +
+    lobbyRicoTotal +
+    lobbyBrxTotal +
+    lobbyDonaldTotal +
+    lobbyBetpontoTotal +
     socialTotal +
     Math.max(emailTotal, 1);
   const totalFalhas =
@@ -1609,6 +1826,11 @@ export default function StatusTecnico() {
     lobbyCdaFalhas +
     lobbyEsportivaFalhas +
     lobbyJonbetFalhas +
+    lobbyBateuFalhas +
+    lobbyRicoFalhas +
+    lobbyBrxFalhas +
+    lobbyDonaldFalhas +
+    lobbyBetpontoFalhas +
     socialFalhas +
     emailFalhas;
   const taxaErro = totalTentativas > 0 ? ((totalFalhas / totalTentativas) * 100).toFixed(1) : "0";
@@ -1963,6 +2185,168 @@ export default function StatusTecnico() {
     });
   }
 
+  // ── Lobby Bateu Bet ──
+  const syncLogsLobbyBateu = syncLogs.filter((l) => l.integracao_slug === "lobby_bateu");
+  const taxaErroLobbyBateu =
+    syncLogsLobbyBateu.length > 0
+      ? ((syncLogsLobbyBateu.filter((l) => l.status === "falha").length /
+          syncLogsLobbyBateu.length) *
+          100).toFixed(1)
+      : "0";
+
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_bateu", syncLogsLobbyBateu, lobbyExecucoes) &&
+    (syncLogsLobbyBateu.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "bateu_bet"))
+  ) {
+    alertas.push({ nivel: "erro", msg: `Nenhuma coleta ${LABEL_UI_LOBBY_BATEU} com sucesso` });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_bateu", syncLogsLobbyBateu, lobbyExecucoes);
+    if (ultimoOkEm) {
+      const exec = new Date(ultimoOkEm);
+      if (exec < vinteQuatroHoras) {
+        alertas.push({
+          nivel: "aviso",
+          msg: `Coleta ${LABEL_UI_LOBBY_BATEU} atrasada (> 24h sem execução OK)`,
+        });
+      }
+    }
+  }
+  if (parseFloat(taxaErroLobbyBateu) > 5 && syncLogsLobbyBateu.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no ${LABEL_UI_LOBBY_BATEU} (${taxaErroLobbyBateu}%)`,
+    });
+  }
+
+  // ── Lobby Rico Bet ──
+  const syncLogsLobbyRico = syncLogs.filter((l) => l.integracao_slug === "lobby_rico");
+  const taxaErroLobbyRico =
+    syncLogsLobbyRico.length > 0
+      ? ((syncLogsLobbyRico.filter((l) => l.status === "falha").length /
+          syncLogsLobbyRico.length) *
+          100).toFixed(1)
+      : "0";
+
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_rico", syncLogsLobbyRico, lobbyExecucoes) &&
+    (syncLogsLobbyRico.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "rico_bet"))
+  ) {
+    alertas.push({ nivel: "erro", msg: `Nenhuma coleta ${LABEL_UI_LOBBY_RICO} com sucesso` });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_rico", syncLogsLobbyRico, lobbyExecucoes);
+    if (ultimoOkEm) {
+      const exec = new Date(ultimoOkEm);
+      if (exec < vinteQuatroHoras) {
+        alertas.push({
+          nivel: "aviso",
+          msg: `Coleta ${LABEL_UI_LOBBY_RICO} atrasada (> 24h sem execução OK)`,
+        });
+      }
+    }
+  }
+  if (parseFloat(taxaErroLobbyRico) > 5 && syncLogsLobbyRico.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no ${LABEL_UI_LOBBY_RICO} (${taxaErroLobbyRico}%)`,
+    });
+  }
+
+  // ── Lobby BRX Bet ──
+  const syncLogsLobbyBrx = syncLogs.filter((l) => l.integracao_slug === "lobby_brx");
+  const taxaErroLobbyBrx =
+    syncLogsLobbyBrx.length > 0
+      ? ((syncLogsLobbyBrx.filter((l) => l.status === "falha").length /
+          syncLogsLobbyBrx.length) *
+          100).toFixed(1)
+      : "0";
+
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_brx", syncLogsLobbyBrx, lobbyExecucoes) &&
+    (syncLogsLobbyBrx.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "brx_bet"))
+  ) {
+    alertas.push({ nivel: "erro", msg: `Nenhuma coleta ${LABEL_UI_LOBBY_BRX} com sucesso` });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_brx", syncLogsLobbyBrx, lobbyExecucoes);
+    if (ultimoOkEm) {
+      const exec = new Date(ultimoOkEm);
+      if (exec < vinteQuatroHoras) {
+        alertas.push({
+          nivel: "aviso",
+          msg: `Coleta ${LABEL_UI_LOBBY_BRX} atrasada (> 24h sem execução OK)`,
+        });
+      }
+    }
+  }
+  if (parseFloat(taxaErroLobbyBrx) > 5 && syncLogsLobbyBrx.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no ${LABEL_UI_LOBBY_BRX} (${taxaErroLobbyBrx}%)`,
+    });
+  }
+
+  const syncLogsLobbyDonald = syncLogs.filter((l) => l.integracao_slug === "lobby_donald");
+  const taxaErroLobbyDonald =
+    syncLogsLobbyDonald.length > 0
+      ? ((syncLogsLobbyDonald.filter((l) => l.status === "falha").length /
+          syncLogsLobbyDonald.length) *
+          100
+        ).toFixed(1)
+      : "0";
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_donald", syncLogsLobbyDonald, lobbyExecucoes) &&
+    (syncLogsLobbyDonald.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "donald_bet"))
+  ) {
+    alertas.push({ nivel: "erro", msg: `Nenhuma coleta ${LABEL_UI_LOBBY_DONALD} com sucesso` });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_donald", syncLogsLobbyDonald, lobbyExecucoes);
+    if (ultimoOkEm && new Date(ultimoOkEm) < vinteQuatroHoras) {
+      alertas.push({
+        nivel: "aviso",
+        msg: `Coleta ${LABEL_UI_LOBBY_DONALD} atrasada (> 24h sem execução OK)`,
+      });
+    }
+  }
+  if (parseFloat(taxaErroLobbyDonald) > 5 && syncLogsLobbyDonald.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no ${LABEL_UI_LOBBY_DONALD} (${taxaErroLobbyDonald}%)`,
+    });
+  }
+
+  const syncLogsLobbyBetponto = syncLogs.filter((l) => l.integracao_slug === "lobby_betponto");
+  const taxaErroLobbyBetponto =
+    syncLogsLobbyBetponto.length > 0
+      ? ((syncLogsLobbyBetponto.filter((l) => l.status === "falha").length /
+          syncLogsLobbyBetponto.length) *
+          100
+        ).toFixed(1)
+      : "0";
+  if (
+    !lobbyIntegracaoTemColetaComSucesso("lobby_betponto", syncLogsLobbyBetponto, lobbyExecucoes) &&
+    (syncLogsLobbyBetponto.length > 0 ||
+      lobbyExecucoes.some((e) => e.operadora_slug === "betponto_bet"))
+  ) {
+    alertas.push({ nivel: "erro", msg: `Nenhuma coleta ${LABEL_UI_LOBBY_BETPONTO} com sucesso` });
+  } else {
+    const ultimoOkEm = ultimaColetaLobbyOkEm("lobby_betponto", syncLogsLobbyBetponto, lobbyExecucoes);
+    if (ultimoOkEm && new Date(ultimoOkEm) < vinteQuatroHoras) {
+      alertas.push({
+        nivel: "aviso",
+        msg: `Coleta ${LABEL_UI_LOBBY_BETPONTO} atrasada (> 24h sem execução OK)`,
+      });
+    }
+  }
+  if (parseFloat(taxaErroLobbyBetponto) > 5 && syncLogsLobbyBetponto.length > 0) {
+    alertas.push({
+      nivel: "erro",
+      msg: `Taxa de erro alta no ${LABEL_UI_LOBBY_BETPONTO} (${taxaErroLobbyBetponto}%)`,
+    });
+  }
+
   // Status por integração (última execução)
   const statusPorIntegracao = useMemo(
     () =>
@@ -2015,6 +2399,16 @@ export default function StatusTecnico() {
                     ? ("lobby_esportiva" as const)
                     : int.slug === "lobby_jonbet"
                       ? ("lobby_jonbet" as const)
+                      : int.slug === "lobby_bateu"
+                        ? ("lobby_bateu" as const)
+                        : int.slug === "lobby_rico"
+                          ? ("lobby_rico" as const)
+                          : int.slug === "lobby_brx"
+                            ? ("lobby_brx" as const)
+                            : int.slug === "lobby_donald"
+                              ? ("lobby_donald" as const)
+                              : int.slug === "lobby_betponto"
+                                ? ("lobby_betponto" as const)
                   : ("none" as const);
         return {
           ...int,
@@ -2184,13 +2578,33 @@ export default function StatusTecnico() {
     [rowFromSyncLogsFallback],
   );
 
-  /** Lobby Esportiva / Jonbet — sempre na tabela Operadoras (mesmo sem row em `integrations`). */
+  /** Lobby Esportiva / Jonbet / Bateu / Rico / BRX / Donald / BetPonto — sempre na tabela Operadoras (mesmo sem row em `integrations`). */
   const lobbyEsportivaRow = useMemo(
     () => rowFromSyncLogsFallback("lobby_esportiva", LABEL_UI_LOBBY_ESPORTIVA, "lobby_esportiva"),
     [rowFromSyncLogsFallback],
   );
   const lobbyJonbetRow = useMemo(
     () => rowFromSyncLogsFallback("lobby_jonbet", LABEL_UI_LOBBY_JONBET, "lobby_jonbet"),
+    [rowFromSyncLogsFallback],
+  );
+  const lobbyBateuRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_bateu", LABEL_UI_LOBBY_BATEU, "lobby_bateu"),
+    [rowFromSyncLogsFallback],
+  );
+  const lobbyRicoRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_rico", LABEL_UI_LOBBY_RICO, "lobby_rico"),
+    [rowFromSyncLogsFallback],
+  );
+  const lobbyBrxRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_brx", LABEL_UI_LOBBY_BRX, "lobby_brx"),
+    [rowFromSyncLogsFallback],
+  );
+  const lobbyDonaldRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_donald", LABEL_UI_LOBBY_DONALD, "lobby_donald"),
+    [rowFromSyncLogsFallback],
+  );
+  const lobbyBetpontoRow = useMemo(
+    () => rowFromSyncLogsFallback("lobby_betponto", LABEL_UI_LOBBY_BETPONTO, "lobby_betponto"),
     [rowFromSyncLogsFallback],
   );
 
@@ -2205,11 +2619,26 @@ export default function StatusTecnico() {
             pickIntegracaoRow("lobby_cda"),
             lobbyEsportivaRow,
             lobbyJonbetRow,
+            lobbyBateuRow,
+            lobbyRicoRow,
+            lobbyBrxRow,
+            lobbyDonaldRow,
+            lobbyBetpontoRow,
           ] as (StatusIntegracaoRow | null)[]
         ).filter(Boolean) as StatusIntegracaoRow[],
         sortOperadoras,
       ),
-    [pickIntegracaoRow, lobbyEsportivaRow, lobbyJonbetRow, sortOperadoras],
+    [
+      pickIntegracaoRow,
+      lobbyEsportivaRow,
+      lobbyJonbetRow,
+      lobbyBateuRow,
+      lobbyRicoRow,
+      lobbyBrxRow,
+      lobbyDonaldRow,
+      lobbyBetpontoRow,
+      sortOperadoras,
+    ],
   );
 
   const linhasExternas = useMemo(
@@ -2293,7 +2722,17 @@ export default function StatusTecnico() {
                 : log.integracao_slug === "lobby_esportiva"
                   ? "Lobby Esportiva Bet"
                   : log.integracao_slug === "lobby_jonbet"
-                    ? "Lobby Jonbet"
+                    ? LABEL_UI_LOBBY_JONBET
+                    : log.integracao_slug === "lobby_bateu"
+                      ? LABEL_UI_LOBBY_BATEU
+                      : log.integracao_slug === "lobby_rico"
+                        ? LABEL_UI_LOBBY_RICO
+                        : log.integracao_slug === "lobby_brx"
+                          ? LABEL_UI_LOBBY_BRX
+                          : log.integracao_slug === "lobby_donald"
+                            ? LABEL_UI_LOBBY_DONALD
+                            : log.integracao_slug === "lobby_betponto"
+                              ? LABEL_UI_LOBBY_BETPONTO
                 : log.integracao_slug);
         return nomeIntegracaoStatusTecnicoUi(log.integracao_slug, nomeDb);
       }
@@ -2318,7 +2757,12 @@ export default function StatusTecnico() {
           lobby_blaze: "Lobby Blaze",
           lobby_cda: "Lobby Casa de Apostas",
           lobby_esportiva: "Lobby Esportiva Bet",
-          lobby_jonbet: "Lobby Jonbet",
+          lobby_jonbet: LABEL_UI_LOBBY_JONBET,
+          lobby_bateu: LABEL_UI_LOBBY_BATEU,
+          lobby_rico: LABEL_UI_LOBBY_RICO,
+          lobby_brx: LABEL_UI_LOBBY_BRX,
+          lobby_donald: LABEL_UI_LOBBY_DONALD,
+          lobby_betponto: LABEL_UI_LOBBY_BETPONTO,
           diagnostico_plataforma: "Diagnóstico da plataforma",
           diagnostico_ok: "Diagnóstico da plataforma",
           diagnostico_aviso: "Diagnóstico da plataforma",
@@ -2365,7 +2809,12 @@ export default function StatusTecnico() {
       lobby_blaze: "Lobby Blaze",
       lobby_cda: "Lobby CDA",
       lobby_esportiva: "Lobby Esportiva Bet",
-      lobby_jonbet: "Lobby Jonbet",
+      lobby_jonbet: LABEL_UI_LOBBY_JONBET,
+      lobby_bateu: LABEL_UI_LOBBY_BATEU,
+      lobby_rico: LABEL_UI_LOBBY_RICO,
+      lobby_brx: LABEL_UI_LOBBY_BRX,
+      lobby_donald: LABEL_UI_LOBBY_DONALD,
+      lobby_betponto: LABEL_UI_LOBBY_BETPONTO,
       relatorio_diretoria: "E-mail: Relatório",
       email_agenda_diaria: "E-mail: Agenda",
       boas_vindas: "E-mail: Boas-vindas",
@@ -2381,6 +2830,11 @@ export default function StatusTecnico() {
       lobby_cda: "#0ea5e9",
       lobby_esportiva: "#22c55e",
       lobby_jonbet: "#a855f7",
+      lobby_bateu: "#84cc16",
+      lobby_rico: "#f43f5e",
+      lobby_brx: "#06b6d4",
+      lobby_donald: "#eab308",
+      lobby_betponto: "#d946ef",
       relatorio_diretoria: BRAND.verde,
       email_agenda_diaria: "#14b8a6",
       boas_vindas: "#8b5cf6",
@@ -2721,7 +3175,12 @@ export default function StatusTecnico() {
             { key: "lobby_blaze", label: "Lobby Blaze" },
             { key: "lobby_cda", label: "Lobby CDA" },
             { key: "lobby_esportiva", label: "Lobby Esportiva" },
-            { key: "lobby_jonbet", label: "Lobby Jonbet" },
+            { key: "lobby_jonbet", label: LABEL_UI_LOBBY_JONBET },
+            { key: "lobby_bateu", label: LABEL_UI_LOBBY_BATEU },
+            { key: "lobby_rico", label: LABEL_UI_LOBBY_RICO },
+            { key: "lobby_brx", label: LABEL_UI_LOBBY_BRX },
+            { key: "lobby_donald", label: LABEL_UI_LOBBY_DONALD },
+            { key: "lobby_betponto", label: LABEL_UI_LOBBY_BETPONTO },
             { key: "comercial_cnpj", label: LABEL_UI_COMERCIAL_CNPJ_ESTADO_CIDADE },
             { key: "relatorio_diretoria", label: "E-mail de Relatório" },
             { key: "email_agenda_diaria", label: "E-mail de Agenda" },
@@ -2801,6 +3260,36 @@ export default function StatusTecnico() {
                         style={{ width: `${pct(f.lobbyJonbet)}%`, minWidth: f.lobbyJonbet > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_jonbet"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
                       />
                     )}
+                    {f.lobbyBateu > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_bateu")}: ${f.lobbyBateu.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyBateu)}%`, minWidth: f.lobbyBateu > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_bateu"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
+                    {f.lobbyRico > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_rico")}: ${f.lobbyRico.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyRico)}%`, minWidth: f.lobbyRico > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_rico"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
+                    {f.lobbyBrx > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_brx")}: ${f.lobbyBrx.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyBrx)}%`, minWidth: f.lobbyBrx > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_brx"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
+                    {f.lobbyDonald > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_donald")}: ${f.lobbyDonald.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyDonald)}%`, minWidth: f.lobbyDonald > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_donald"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
+                    {f.lobbyBetponto > 0 && (
+                      <div
+                        title={`${fluxoLabel("lobby_betponto")}: ${f.lobbyBetponto.toLocaleString("pt-BR")}`}
+                        style={{ width: `${pct(f.lobbyBetponto)}%`, minWidth: f.lobbyBetponto > 0 ? 8 : 0, height: "100%", background: fluxoCor("lobby_betponto"), opacity: isHover ? 1 : 0.88, transition: "opacity 0.15s" }}
+                      />
+                    )}
                     {f.comercialCnpj > 0 && (
                       <div
                         title={`${fluxoLabel("comercial_cnpj")}: ${f.comercialCnpj.toLocaleString("pt-BR")}`}
@@ -2846,6 +3335,11 @@ export default function StatusTecnico() {
                       {f.lobbyCda > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_cda"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_cda")}: {f.lobbyCda.toLocaleString("pt-BR")}</div>}
                       {f.lobbyEsportiva > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_esportiva"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_esportiva")}: {f.lobbyEsportiva.toLocaleString("pt-BR")}</div>}
                       {f.lobbyJonbet > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_jonbet"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_jonbet")}: {f.lobbyJonbet.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyBateu > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_bateu"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_bateu")}: {f.lobbyBateu.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyRico > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_rico"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_rico")}: {f.lobbyRico.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyBrx > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_brx"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_brx")}: {f.lobbyBrx.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyDonald > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_donald"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_donald")}: {f.lobbyDonald.toLocaleString("pt-BR")}</div>}
+                      {f.lobbyBetponto > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("lobby_betponto"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("lobby_betponto")}: {f.lobbyBetponto.toLocaleString("pt-BR")}</div>}
                       {f.comercialCnpj > 0 && <div style={{ padding: "2px 0" }}><span style={{ color: fluxoCor("comercial_cnpj"), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel("comercial_cnpj")}: {f.comercialCnpj.toLocaleString("pt-BR")}</div>}
                       {Object.entries(f.emails).filter(([, n]) => n > 0).map(([tipo, n]) => (
                         <div key={tipo} style={{ padding: "2px 0" }}><span style={{ color: fluxoCor(tipo), fontWeight: 600 }} aria-hidden="true">●</span> {fluxoLabel(tipo)}: {n.toLocaleString("pt-BR")}</div>
@@ -3226,6 +3720,21 @@ export default function StatusTecnico() {
                   ["Nenhuma coleta Lobby Jonbet com sucesso", "Último sync_logs com falha, nenhum OK (slug lobby_jonbet)"],
                   ["Coleta Lobby Jonbet atrasada", "> 24h sem sync_logs OK"],
                   ["Taxa de erro alta no Lobby Jonbet", "> 5% em sync_logs (slug lobby_jonbet)"],
+                  [`Nenhuma coleta ${LABEL_UI_LOBBY_BATEU} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_bateu)"],
+                  [`Coleta ${LABEL_UI_LOBBY_BATEU} atrasada`, "> 24h sem sync_logs OK"],
+                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_BATEU}`, "> 5% em sync_logs (slug lobby_bateu)"],
+                  [`Nenhuma coleta ${LABEL_UI_LOBBY_RICO} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_rico)"],
+                  [`Coleta ${LABEL_UI_LOBBY_RICO} atrasada`, "> 24h sem sync_logs OK"],
+                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_RICO}`, "> 5% em sync_logs (slug lobby_rico)"],
+                  [`Nenhuma coleta ${LABEL_UI_LOBBY_BRX} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_brx)"],
+                  [`Coleta ${LABEL_UI_LOBBY_BRX} atrasada`, "> 24h sem sync_logs OK"],
+                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_BRX}`, "> 5% em sync_logs (slug lobby_brx)"],
+                  [`Nenhuma coleta ${LABEL_UI_LOBBY_DONALD} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_donald)"],
+                  [`Coleta ${LABEL_UI_LOBBY_DONALD} atrasada`, "> 24h sem sync_logs OK"],
+                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_DONALD}`, "> 5% em sync_logs (slug lobby_donald)"],
+                  [`Nenhuma coleta ${LABEL_UI_LOBBY_BETPONTO} com sucesso`, "Último sync_logs com falha, nenhum OK (slug lobby_betponto)"],
+                  [`Coleta ${LABEL_UI_LOBBY_BETPONTO} atrasada`, "> 24h sem sync_logs OK"],
+                  [`Taxa de erro alta no ${LABEL_UI_LOBBY_BETPONTO}`, "> 5% em sync_logs (slug lobby_betponto)"],
                 ].map(([alerta, condicao], idx) => (
                   <tr
                     key={alerta}

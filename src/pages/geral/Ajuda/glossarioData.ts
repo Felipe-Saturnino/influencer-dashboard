@@ -949,8 +949,8 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Rotação",
         definicao:
-          "Cockpit que posiciona Game Presenters nas mesas do estúdio ao longo do turno (intervalos de 30 min, ou 20 min sob aviso). O pool vem da Escala Estúdio aprovada; Shift Lead entra só como reserva. Células: Número da Mesa, Break ou X (falta). Permite mover GP entre estúdios só no dia/turno, ver Chegou/Não chegou e republicar sem reescrever slots já passados.",
-        referencia: "Rotação",
+          "Aba do **Controle de Turno** que posiciona Game Presenters nas mesas do estúdio ao longo do turno (intervalos de 30 min, ou 20 min sob demanda). Cada estúdio tem o próprio bloco; o pool vem da Escala Estúdio aprovada filtrada pela Escala do Turno; liderança entra só via Incluir Liderança. A ordem das linhas de GP na prévia é aleatória a cada geração completa. Células: Número da Mesa, Break ou X. Permite mover GP entre estúdios só no dia/turno e republicar sem reescrever slots já passados.",
+        referencia: "Controle de Turno",
       },
       {
         termo: "Calendário (RH)",
@@ -1013,24 +1013,18 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Solicitações",
       },
       {
-        termo: "Relatório do Turno",
+        termo: "Relatório de Turno",
         definicao:
-          "Registro estruturado da passagem de turno: um bloco por estúdio ativo com Game Presenters escalados e absenteísmo (atrasos, faltas e atestados), mais o bloco de Shufflers e o campo Geral.",
+          "Aba do Controle de Turno com cards por Manhã, Tarde e Noite (Não iniciado, Rascunho ou Publicado). Registra SOS, Figurino, Equipamentos, checklist de manutenção e comentários gerais do turno.",
         nota:
-          "A Data do turno é o dia em que o turno começou — não a data da publicação. Importante no turno noturno, que fecha na manhã seguinte.",
-        referencia: "Relatório de Turno",
-      },
-      {
-        termo: "Relatório de Estúdio",
-        definicao:
-          "Segunda aba do Relatório de Turno (Manhã ou Noite), com SOSs, Sinais, Payout e Resumo obrigatórios, além do checklist opcional de manutenção — roletas, mesas, troca de cartas, CC Machine e cartas contadas.",
-        referencia: "Relatório de Turno",
+          "Para publicar, todos os horários dos prestadores precisam estar aprovados na aba Escala do Turno.",
+        referencia: "Controle de Turno",
       },
       {
         termo: "Absenteísmo",
         definicao:
-          "Total de ausências e desvios de presença no turno — atrasos, faltas e atestados somados dos blocos do relatório.",
-        referencia: "Relatório de Turno · Overview Prestador",
+          "Total de ausências e desvios de presença — atrasos, faltas e atestados — usado em indicadores de Overview Prestador e consolidados de escala.",
+        referencia: "Overview Prestador · Controle de Turno",
       },
     ],
   },
@@ -1175,7 +1169,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Sync manual",
         definicao:
-          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico (inclui Painel de Notícias RSS). Lobby Blaze, Lobby CDA, Lobby Esportiva Bet e Lobby Jonbet rodam por job automatizado e não têm essa ação.",
+          "Execução sob demanda de uma integração, disponível para quem tem permissão de Editar em Status Técnico (inclui Painel de Notícias RSS). Lobby Blaze, Lobby CDA, Lobby Esportiva Bet, Lobby Jonbet, Lobby Bateu Bet, Lobby Rico Bet, Lobby BRX Bet, Lobby Donald Bet e Lobby BetPontoBet rodam por job automatizado e não têm essa ação.",
         referencia: "Status Técnico",
       },
       {
@@ -1475,19 +1469,16 @@ export const GLOSSARIO_CATEGORIA_PAGE_KEYS: Record<string, PageKey[]> = {
   midias_sociais: ["dash_midias_sociais"],
   afiliados: ["afiliados", "afiliados_network", "dash_afiliados", "dash_overview_afiliado"],
   financeiro_operacional: ["financeiro", "banca_jogo"],
-  estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa", "incidentes"],
+  estudio: ["gestao_dealers", "central_notificacoes", "rh_figurinos", "roteiro_mesa", "incidentes", "escala_controle_turno"],
   marketing_digital: ["campanhas", "gestao_links", "galeria_fotos"],
   comercial: ["comercial_overview", "comercial_integracao", "comercial_pipeline_b2b", "comercial_pipeline_agregadoras"],
   customer_success: ["cs_atendimento"],
   rh_portal: ["rh_portal", "spin_na_rede", "informativos", "academy_portal"],
   escala: [
     "rh_staff",
-    "escala_controle_turno",
-    "escala_relatorio_turno",
     "escala_solicitacoes",
     "rh_gestao_escala",
     "escala_escritorio",
-    "escala_rotacao",
     "rh_calendario",
     "escala_marketplace_turnos",
     "dash_overview_prestador",

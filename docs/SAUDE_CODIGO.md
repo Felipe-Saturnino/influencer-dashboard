@@ -74,7 +74,7 @@ Pendências conscientes (ondas futuras): split completo de monólitos restantes 
 | Área | Correção |
 |------|----------|
 | **Ordem de Saída** | Fetch com janela 13 competências + OS abertas; colunas explícitas; catálogo lean para Nova OS; estúdios no `Promise.all`; histórico de ações com `.limit(200)`. Histórico alinhado ao Global (13 competências). |
-| **Relatório de Turno** | `dataIni`/`dataFim` = `getPeriodoHistoricoCompetencias()` no load. |
+| **Controle de Turno** | Fetch por dia/turno; relatório e notificações em `escala_ct_*`. |
 | **Performance Hub** | Avaliações com janela 13 competências + `fetchAllPages`. |
 | **Headcount** | `fetchAllPages` (evita truncamento ~1000); vagas na janela + abertas; candidaturas filtradas aos IDs; organograma com colunas explícitas. |
 | **Portal Academy / Portal RH** | Colunas explícitas; receipts via `.in(content_id)` do conjunto carregado. |
