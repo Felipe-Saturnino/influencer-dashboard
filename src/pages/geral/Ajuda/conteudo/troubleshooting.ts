@@ -1474,7 +1474,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um registro sumiu da tabela, mas eu não excluí nada?",
         texto:
-          "A página não possui exclusão. Verifique os filtros ativos: um card de KPI selecionado (Estoque, Em uso ou Manutenção), o filtro de Categoria, o filtro de Estúdio ou o texto na busca restringem o catálogo. Clique no card Total (ou no card ativo) e limpe busca e filtros para ver a lista completa.",
+          "A página não possui exclusão. Verifique os filtros ativos: um card de KPI selecionado (Estoque, Em uso ou Manutenção), o filtro de Categoria, o filtro de Local ou o texto na busca restringem o catálogo. O Catálogo também pagina de 15 em 15 — use as setas abaixo da tabela para ver as demais linhas. Clique no card Total (ou no card ativo) e limpe busca e filtros para ver a lista completa.",
       },
       {
         subtitulo: "O Estoque ou a Qtd Atual não batem com o que digitei?",

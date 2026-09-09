@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Eye, Pencil } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -11,6 +11,8 @@ import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { FONT } from "../../../constants/theme";
 import { SectionTitle, SortTableTh, CtaCriarButton, type SortDir } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_ESTOQUE } from "../../../lib/tablePagination";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import type { Permissoes } from "../../../hooks/usePermission";
 import {
@@ -71,6 +73,16 @@ export function AbaFornecedores({
     });
   }, [rows, busca, sort]);
 
+  const [pagina, setPagina] = useState(0);
+  useEffect(() => {
+    setPagina(0);
+  }, [filtrados, sort.col, sort.dir]);
+  const paginaSafe = clampPageIndex(pagina, filtrados.length, TABELA_PAGE_SIZE_ESTOQUE);
+  const linhasPagina = useMemo(
+    () => slicePage(filtrados, paginaSafe, TABELA_PAGE_SIZE_ESTOQUE),
+    [filtrados, paginaSafe],
+  );
+
   function onSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" }));
   }
@@ -100,6 +112,7 @@ export function AbaFornecedores({
         ) : filtrados.length === 0 ? (
           <VazioEstoque>Nenhum fornecedor encontrado.</VazioEstoque>
         ) : (
+          <>
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Catálogo de fornecedores</caption>
@@ -117,15 +130,17 @@ export function AbaFornecedores({
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((r, i) => (
+                {linhasPagina.map((r, i) => {
+                  const zebraIdx = paginaSafe * TABELA_PAGE_SIZE_ESTOQUE + i;
+                  return (
                   <tr
                     key={r.id}
-                    style={{ background: dataTable.zebraRow(i) }}
+                    style={{ background: dataTable.zebraRow(zebraIdx) }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = dataTable.totalRowBg;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = dataTable.zebraRow(i);
+                      e.currentTarget.style.background = dataTable.zebraRow(zebraIdx);
                     }}
                   >
                     <td
@@ -187,10 +202,19 @@ export function AbaFornecedores({
                       </span>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          <TabelaPaginacaoBar
+            t={t}
+            page={paginaSafe}
+            pageSize={TABELA_PAGE_SIZE_ESTOQUE}
+            totalItems={filtrados.length}
+            onPageChange={setPagina}
+          />
+          </>
         )}
       </div>
 

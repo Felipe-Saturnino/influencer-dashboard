@@ -6,6 +6,8 @@ export const TABELA_PAGE_SIZE_OVERVIEW_PRESTADOR = 50;
 export const TABELA_PAGE_SIZE_INCIDENTES = 50;
 /** Ranking Overview / Comparativo de Taxas (Streamers). */
 export const TABELA_PAGE_SIZE_STREAMERS = 50;
+/** Catálogo da Gestão de Estoque (Itens, Equipamentos, Jogo, Fornecedores). */
+export const TABELA_PAGE_SIZE_ESTOQUE = 15;
 
 export function totalPaginasTabela(totalItems: number, pageSize: number): number {
   if (totalItems <= 0) return 1;

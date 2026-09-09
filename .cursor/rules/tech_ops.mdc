@@ -31,6 +31,8 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 
 **Filtro Local (abas Itens, Equipamentos, Jogo):** agregadora **Todos Locais**; opções = estúdios ativos (`estudios_spin`) + Shuffler Room, OCR e Academy (`ESTOQUE_LOCAIS_FIXOS_FILTRO` em `techOpsEstoque.ts`) — alinhado a Itens Alocados (sem Estoque central).
 
+**Catálogo — paginação de vista:** 15 linhas/página (`TabelaPaginacaoBar` + `TABELA_PAGE_SIZE_ESTOQUE`) nas quatro abas (Itens, Equipamentos, Jogo, Fornecedores). KPIs e filtros usam o conjunto filtrado completo. A barra some quando há uma única página. Busca, filtro, ordenação ou clique em KPI voltam à página 1.
+
 **Ajuda contextual:** `AjudaContextualAcoes` fica à direita da mesma linha das abas.
 
 ---
