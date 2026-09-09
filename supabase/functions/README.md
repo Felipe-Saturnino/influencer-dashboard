@@ -44,6 +44,17 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `trigger-social-kpis` |
 | `purge-academy-performance-hub-videos` |
 
+### `index.ts` + `rhCalendarioIcs.ts`
+
+**Function:** `rh-calendario-ics` — feed iCal público (`GET ?token=`). Sem JWT; o token do prestador é o segredo. URL da app: `/ics/calendario/{token}` (Pages Function + proxy Vite).
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+| `rhCalendarioIcs.ts` |
+
+Espelho do builder: `src/lib/rhCalendarioIcs.ts`. `verify_jwt = false` no Dashboard.
+
 **`sync-painel-noticias-rss`:** ingestão RSS → `painel_noticia` (TV `/painel-noticias`). Secret **`PAINEL_NOTICIAS_INGEST_SECRET`** (mesmo valor no GitHub Actions e nos Secrets da Edge). Cron envia o header `x-painel-noticias-ingest-secret`. Status Técnico → Sync usa a sessão logada (JWT). Feeds só de `PAINEL_NOTICIAS_RSS_URLS` — o body **não** substitui a lista. Sem o secret, o job horário falha com 401.
 
 **`purge-academy-performance-hub-videos`:** retenção dos vídeos do Performance Hub (cron semanal). Sem secrets próprios — usa `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`, e só aceita chamada cujo `Authorization` seja a service role key. Simulação: `{"dry_run": true}` no body. Regras: `.cursor/rules/academy.mdc` § Vídeo — limite e retenção.

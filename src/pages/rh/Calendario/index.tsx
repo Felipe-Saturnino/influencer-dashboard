@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   CalendarDays,
+  CalendarPlus,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -127,6 +128,7 @@ import {
   ordenarLinhasRelatorioPresencaPorNome,
 } from "../../../lib/rhCalendarioRelatorioPresenca";
 import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
+import { ModalAdicionarAgendaCalendario } from "./ModalAdicionarAgendaCalendario";
 import {
   ModalAprovacaoPresencaCalendario,
   type PresencaTurnoAlvo,
@@ -730,6 +732,7 @@ export default function RhCalendarioPage() {
   const [filtroTipoCompromisso, setFiltroTipoCompromisso] = useState<TipoCompromissoCalFiltroValue>("todos");
   const [modalDia, setModalDia] = useState<Date | null>(null);
   const [modalAgendarAberto, setModalAgendarAberto] = useState(false);
+  const [modalAdicionarAgendaAberto, setModalAdicionarAgendaAberto] = useState(false);
   const [baixandoCalendarioPdf, setBaixandoCalendarioPdf] = useState(false);
   const [erroCalendarioPdf, setErroCalendarioPdf] = useState<string | null>(null);
 
@@ -3183,6 +3186,32 @@ export default function RhCalendarioPage() {
                   {baixandoCalendarioPdf ? "Gerando…" : "Download"}
                 </button>
               ) : null}
+              {abaPrincipal === "compromissos" && meuRhFuncionarioId && !simulacaoSomenteLeitura ? (
+                <button
+                  type="button"
+                  onClick={() => setModalAdicionarAgendaAberto(true)}
+                  aria-label="Adicionar à agenda"
+                  title="Adicionar à agenda"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "10px 20px",
+                    borderRadius: 10,
+                    border: `1px solid ${t.cardBorder}`,
+                    background: t.inputBg,
+                    color: t.text,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    fontFamily: FONT.body,
+                    cursor: "pointer",
+                  }}
+                >
+                  <CalendarPlus size={14} aria-hidden="true" />
+                  Adicionar à agenda
+                </button>
+              ) : null}
               {abaPrincipal === "presenca" && mostrarBotaoCheckInPresenca ? (
                 <button
                   type="button"
@@ -4228,6 +4257,10 @@ export default function RhCalendarioPage() {
           </div>
         </ModalBase>
       )}
+
+      {modalAdicionarAgendaAberto && meuRhFuncionarioId && !simulacaoSomenteLeitura ? (
+        <ModalAdicionarAgendaCalendario onClose={() => setModalAdicionarAgendaAberto(false)} />
+      ) : null}
 
       {modalAgendarAberto && solicitanteAgendarId && !simulacaoSomenteLeitura ? (
         <ModalAgendarReuniaoCalendario

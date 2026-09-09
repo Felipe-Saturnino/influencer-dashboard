@@ -49,7 +49,12 @@ export const TUTORIAL_CALENDARIO_PRESTADOR: TutorialDef = {
       texto:
         "1. Depois do agendamento, a reunião aparece no quadro da data escolhida.\n2. Clique no dia para conferir os detalhes.\n3. Reunião com RH fica Em Análise até a resposta do RH; depois aparece como Aprovada ou Recusada.\n4. Os demais destinos entram como Agendado.",
     },
+    {
+      titulo: "5. Adicionar à agenda (Google, Outlook ou Apple)",
+      texto:
+        "1. Na aba **Compromissos**, ao lado de **Download**, clique em **Adicionar à agenda**.\n2. Copie o link e cole na agenda (passos Google, Outlook ou Apple no próprio modal).\n3. Passam a aparecer os **seus** turnos e as reuniões **aprovadas**. A agenda externa costuma atualizar cerca de uma vez por dia.\n4. Se o link vazar, use **Gerar novo link** — o endereço antigo deixa de funcionar.",
+    },
   ],
   notasFinais:
-    "— O Calendário reflete a escala aprovada do mês.\n— Quadro sem cartão de turno significa folga somente quando a escala do mês estiver aprovada.\n— O botão Download gera um PDF do seu calendário pessoal.",
+    "— O Calendário reflete a escala aprovada do mês.\n— Quadro sem cartão de turno significa folga somente quando a escala do mês estiver aprovada.\n— O botão Download gera um PDF do seu calendário pessoal.\n— O botão Adicionar à agenda gera um link para o Google Agenda, Outlook ou Apple (atualização cerca de uma vez por dia).",
 };

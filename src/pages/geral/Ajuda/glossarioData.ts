@@ -959,6 +959,12 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Calendário",
       },
       {
+        termo: "Adicionar à agenda",
+        definicao:
+          "No Calendário (aba Compromissos), gera um link secreto para o prestador colar no Google Agenda, Outlook ou Apple. Só entram os **próprios** turnos e as reuniões **aprovadas**. A agenda externa costuma atualizar cerca de uma vez por dia; a fonte da verdade continua sendo a página Calendário.",
+        referencia: "Calendário",
+      },
+      {
         termo: "Overview Prestador",
         definicao:
           "Dashboard de escala e presença por time (Game Presenter, Shuffler, Shift Leader, Service Manager) ou visão individual (próprios): jornadas/dias, aderência, aproveitamento, movimentações de turno (quando o time negocia) e cobertura por turno/estúdio. A aba **KPIs de Mesa** cobre Game Presenter (Grafana + incidentes) e Shuffler (incidentes); a aba **KPIs de OCR** cobre Service Manager (sinais + tickets como relator).",

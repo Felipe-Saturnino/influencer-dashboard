@@ -1686,6 +1686,21 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         texto:
           "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar: Sim** no Calendário (Gestão de Usuários → Permissões → linha Calendário → coluna Editar). **Editar: Próprios** não libera a aba. Administradores vêem sempre. Sem **Editar: Sim**, usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
       },
+      {
+        subtitulo: "Não vejo o botão Adicionar à agenda?",
+        texto:
+          "O botão fica na aba **Compromissos**, ao lado de **Download**, e só aparece com vínculo de colaborador no RH. No **Simulador de Login** ele fica oculto. Sem o botão, confirme o cadastro em Gestão de Prestadores e a permissão de **Ver** no Calendário.",
+      },
+      {
+        subtitulo: "A agenda Google / Outlook / Apple não atualiza os turnos?",
+        texto:
+          "As plataformas de Agenda costumam atualizar **cerca de uma vez por dia**. Trocas no Marketplace ou alterações de escala podem aparecer só no dia seguinte. A fonte da verdade continua sendo a página **Calendário**. Confirme se o link colado é o atual (gerar um novo link invalida o anterior).",
+      },
+      {
+        subtitulo: "O link da agenda deixou de funcionar?",
+        texto:
+          "Se você usou **Gerar novo link**, o endereço antigo deixa de funcionar — cole o link novo na agenda. Prestador encerrado também perde o feed. Se o problema continuar, entre em contato com o suporte.",
+      },
     ],
   },
   escala_marketplace_turnos: {
