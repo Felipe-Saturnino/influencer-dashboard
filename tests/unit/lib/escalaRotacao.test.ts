@@ -11,6 +11,7 @@ import {
   isBlocoRotacaoShuffler,
   labelsMesasRotacao,
   liderancaCompativelComTurnoRotacao,
+  mapaCoresMesasRotacao,
   maxMinutosMesaContinuaNaGrade,
   maxSlotsSeguidosAntesBreak,
   mensagemAvisoMesaContinuaPublicar,
@@ -19,7 +20,9 @@ import {
   parseIntervaloHorarioStaffRotacao,
   ROTACAO_MAX_MESAS_SEGUIDAS,
   ROTACAO_SHUFFLER_ESTUDIO_SLUG,
+  ROTACAO_SHUFFLER_MESA_COR,
   ROTACAO_SHUFFLER_MESA_LABEL,
+  corMesaRotacao,
   slotDentroJanelaHorarioRotacao,
   tempoMesaContinuaQueExigeAviso,
   formatarTempoMesaContinuoPt,
@@ -593,6 +596,8 @@ describe("bloco Shuffler (TODOS)", () => {
     expect(isBlocoRotacaoShuffler(ctx.estudioSlug)).toBe(true);
     expect(labelsMesasRotacao(ctx.mesas)).toEqual([ROTACAO_SHUFFLER_MESA_LABEL]);
     expect(ctx.liderancas).toEqual([]);
+    expect(mapaCoresMesasRotacao(ctx.mesas)[ROTACAO_SHUFFLER_MESA_LABEL]).toBe(ROTACAO_SHUFFLER_MESA_COR);
+    expect(corMesaRotacao("", ROTACAO_SHUFFLER_MESA_LABEL)).toBe(ROTACAO_SHUFFLER_MESA_COR);
   });
 
   it("filtra pool Shuffler pela presença CT", () => {

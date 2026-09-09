@@ -1806,20 +1806,22 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
     );
   };
 
-  const confirmarAlteracaoCelulaAprovada = useCallback(
-    (
-      funcionarioId: string,
-      diaIso: string,
-      valor: string,
-      metaAlteracao: EscalaAlteracaoCelulaMeta,
-    ) => {
+  const confirmarAlteracaoCelulasAprovadas = useCallback(
+    (funcionarioId: string, itens: { diaIso: string; valor: string; meta: EscalaAlteracaoCelulaMeta }[]) => {
+      if (itens.length === 0) return;
       setGerarPorFiltro((prev) => {
         const areaKey = filtroArea;
         const cur = prev[areaKey];
         if (!cur) return prev;
-        const k = chaveCelulaGerar(funcionarioId, diaIso);
-        const merged = { ...cur.celulas, [k]: valor };
-        const alteracoes = { ...(cur.alteracoesPorCelula ?? {}), [k]: metaAlteracao };
+        const merged = { ...cur.celulas };
+        const alteracoes = { ...(cur.alteracoesPorCelula ?? {}) };
+        const baseline = cur.baseline ? { ...cur.baseline } : undefined;
+        for (const item of itens) {
+          const k = chaveCelulaGerar(funcionarioId, item.diaIso);
+          merged[k] = item.valor;
+          alteracoes[k] = item.meta;
+          if (baseline) baseline[k] = item.valor;
+        }
         const linhasF = filtrarPorArea(prestadoresRaw, areaKey).map((r) =>
           linhaComTurnoMesArea(r, areaKey, true, turnoMesMap),
         );
@@ -1829,7 +1831,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           [areaKey]: {
             ...cur,
             celulas: merged,
-            baseline: cur.baseline ? { ...cur.baseline, [k]: valor } : cur.baseline,
+            baseline: baseline ?? cur.baseline,
             celulasSincronizadasComDb: snap,
             alteracoesPorCelula: alteracoes,
           },
@@ -3042,7 +3044,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
           labelExibicaoCelula={(_sigla, valor) => labelExibicaoCelulaAlterarEscala(valor, modo, filtroArea)}
           chaveCelula={chaveCelulaGerar}
           onClose={() => setAlterarEscalaModalAberto(false)}
-          onCelulaAlterada={confirmarAlteracaoCelulaAprovada}
+          onCelulasAlteradas={confirmarAlteracaoCelulasAprovadas}
         />
       ) : null}
 

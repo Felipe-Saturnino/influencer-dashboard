@@ -20,7 +20,6 @@ import {
   corMesaRotacao,
   diaIsoLocal,
   disponivelPorSlotPessoaRotacao,
-  escalaAreaRotacaoAprovada,
   filtrarPoolRotacaoPorPresencaCt,
   gerarGradeRotacao,
   gerarSlotsRotacao,
@@ -37,8 +36,11 @@ import {
   publicarRotacao,
   ROTACAO_SHUFFLER_ESTUDIO_NOME,
   ROTACAO_SHUFFLER_ESTUDIO_SLUG,
+  ROTACAO_SHUFFLER_MESA_COR,
+  ROTACAO_SHUFFLER_MESA_LABEL,
   salvarRascunhoRotacao,
   tempoMesaContinuaQueExigeAviso,
+  timeIndicaShufflerRotacao,
   trocarPessoasLinhasPreviaRotacao,
   turnoAnteriorRotacao,
   type RotacaoCelulaPayload,
@@ -288,12 +290,10 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       });
 
       let horario: { inicio: string; fim: string; horarioTexto: string };
-      let aprovada: boolean;
       let pub: Awaited<ReturnType<typeof carregarRotacaoPublicada>>;
       try {
-        [horario, aprovada, pub] = await Promise.all([
+        [horario, pub] = await Promise.all([
           carregarHorarioTurnoRotacaoShuffler(turnoKey),
-          escalaAreaRotacaoAprovada(diaIso, "shuffler"),
           carregarRotacaoPublicada({
             diaIso,
             turno: turnoKey,
@@ -342,13 +342,19 @@ export function AbaRotacao({ diaIso, turno }: Props) {
         };
       });
 
+      // Fonte da verdade = Escala do Turno (mesma lista da aba Escala). Não consultar
+      // rh_gestao_escala_grade_status no cliente (RLS/RPC) — gerava aviso falso com pool cheio.
+      const temShufflerNaEscalaDoTurno = presencaAtual.some((p) =>
+        timeIndicaShufflerRotacao(p.time),
+      );
+
       const ctx = montarContextoRotacaoShuffler({
         diaIso,
         turno: turnoKey,
         turnoInicio: horario.inicio,
         turnoFim: horario.fim,
         horarioTexto: horario.horarioTexto,
-        escalaAprovada: aprovada,
+        escalaAprovada: temShufflerNaEscalaDoTurno || pool.length > 0,
         shufflers: pool,
       });
 
@@ -1179,7 +1185,7 @@ function BlocoRotacaoEstudio({
         </div>
       ) : null}
 
-      {bloco.ctx && !bloco.ctx.escalaAprovada ? (
+      {bloco.ctx && !bloco.ctx.escalaAprovada && !ehShuffler ? (
         <div
           style={{
             marginBottom: 14,
@@ -1192,9 +1198,8 @@ function BlocoRotacaoEstudio({
             fontFamily: FONT.body,
           }}
         >
-          {ehShuffler
-            ? "A escala de Shuffler do mês ainda não está aprovada em Escala Estúdio. O pool fica vazio até a aprovação."
-            : "A escala de Game Presenter do mês ainda não está aprovada em Escala Estúdio. O pool fica vazio até a aprovação."}
+          A escala de Game Presenter do mês ainda não está aprovada em Escala Estúdio. O pool fica vazio até a
+          aprovação.
         </div>
       ) : null}
 
@@ -1777,7 +1782,10 @@ function CelulaPill({ valor, cor, t }: { valor: string; cor?: string; t: ReturnT
       </span>
     );
   }
-  const hex = cor ?? "#6b7280";
+  const hex =
+    valor === ROTACAO_SHUFFLER_MESA_LABEL
+      ? (cor ?? ROTACAO_SHUFFLER_MESA_COR)
+      : (cor ?? "#6b7280");
   return (
     <span
       style={{

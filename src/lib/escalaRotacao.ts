@@ -16,6 +16,8 @@ export const ROTACAO_SHUFFLER_ESTUDIO_SLUG = "shuffler";
 export const ROTACAO_SHUFFLER_ESTUDIO_NOME = "Shuffler";
 /** Valor da célula / «mesa» na grade de Shuffler. */
 export const ROTACAO_SHUFFLER_MESA_LABEL = "TODOS";
+/** Cor da pill TODOS — distinta do Break (#6b7280). */
+export const ROTACAO_SHUFFLER_MESA_COR = "#0891b2";
 
 export function isBlocoRotacaoShuffler(estudioSlug: string): boolean {
   return estudioSlug === ROTACAO_SHUFFLER_ESTUDIO_SLUG;
@@ -191,6 +193,7 @@ export function mapaCoresMesasRotacao(
   for (const m of mesas) {
     const n = m.numeroMesa.trim();
     if (!n) continue;
+    if (n === ROTACAO_SHUFFLER_MESA_LABEL) continue;
     const list = porTipo.get(m.tipoJogo) ?? [];
     if (!list.includes(n)) list.push(n);
     porTipo.set(m.tipoJogo, list);
@@ -203,11 +206,15 @@ export function mapaCoresMesasRotacao(
       out[n] = tomVarianteJogo(base, i);
     });
   }
+  if (mesas.some((m) => m.numeroMesa.trim() === ROTACAO_SHUFFLER_MESA_LABEL)) {
+    out[ROTACAO_SHUFFLER_MESA_LABEL] = ROTACAO_SHUFFLER_MESA_COR;
+  }
   return out;
 }
 
 /** Fallback estável quando só há o rótulo da célula (ex.: rotação publicada sem catálogo). */
 export function corMesaRotacao(tipoJogo: string, numeroMesa: string): string {
+  if (numeroMesa.trim() === ROTACAO_SHUFFLER_MESA_LABEL) return ROTACAO_SHUFFLER_MESA_COR;
   const base = corMesaPorTipoJogo(tipoJogo);
   if (base === "#6b7280" || !numeroMesa.trim()) return base;
   return tomVarianteJogo(base, hashRotacaoSeed(numeroMesa.trim()) % 8);
@@ -698,24 +705,6 @@ export async function carregarHorarioTurnoRotacaoShuffler(
     fim,
     horarioTexto: `${fmt(inicio)} às ${fmt(fim)}`,
   };
-}
-
-export async function escalaAreaRotacaoAprovada(
-  diaIso: string,
-  areaKey: "game_presenter" | "shuffler",
-): Promise<boolean> {
-  const refMes = `${diaIso.slice(0, 7)}-01`;
-  const { data, error } = await supabase
-    .from("rh_gestao_escala_grade_status")
-    .select("status")
-    .eq("ref_mes", refMes)
-    .eq("area_key", areaKey)
-    .maybeSingle();
-  if (error) {
-    console.error(error);
-    return false;
-  }
-  return String(data?.status ?? "").toLowerCase() === "aprovada";
 }
 
 export function gerarSlotsRotacao(inicio: string, fim: string, stepMin: number): string[] {
