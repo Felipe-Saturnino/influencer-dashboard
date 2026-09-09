@@ -61,7 +61,7 @@ export function SelectOrganogramaMultiForm({
     return base;
   }, [options, incluirTodosPrestadores]);
 
-  const enableSearch = allOptions.length > 5;
+  const enableSearch = true;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {

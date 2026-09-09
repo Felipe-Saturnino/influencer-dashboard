@@ -10,7 +10,7 @@ export type FiltroCalendarioStaffSelectProps = Omit<
   triggerEmptyLabel?: string;
 };
 
-/** Filtro Staff no Calendário — pill padrão, ícone `IdCard`, busca no painel quando >5 itens. */
+/** Filtro Staff no Calendário — pill padrão, ícone `IdCard`, busca no painel. */
 export function FiltroCalendarioStaffSelect({
   enableSearch = true,
   triggerEmptyLabel = "Staff",

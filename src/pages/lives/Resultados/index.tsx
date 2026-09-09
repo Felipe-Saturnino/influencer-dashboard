@@ -16,6 +16,8 @@ import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
 import { FiltroInfluencerSelect } from "../../../components/dashboard";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import { PlatLogo } from "../../../components/PlatLogo";
 import { DashboardPageHeader, FiltroOperadoraSelect } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -445,17 +447,21 @@ function ModalValidacao({
               Operadora
               <CampoObrigatorioMark />
             </label>
-            <select
+            <SelectListaComBusca
+              variant="campo"
+              label="Operadora"
+              searchPlaceholder={placeholderPesquisaFiltro("Operadora")}
               value={operadoraSlug}
-              onChange={e => setOperadoraSlug(e.target.value)}
+              onChange={setOperadoraSlug}
               style={{ ...inputStyle, cursor: "pointer" }}
-            >
-              <option value="">Selecione a operadora...</option>
-              {operadorasList
-                .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
-                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                .map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-            </select>
+              options={[
+                { value: "", label: "Selecione a operadora..." },
+                ...operadorasList
+                  .filter((o) => escoposVisiveis.operadorasVisiveis.length === 0 || escoposVisiveis.operadorasVisiveis.includes(o.slug))
+                  .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                  .map((o) => ({ value: o.slug, label: o.nome })),
+              ]}
+            />
             <span style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, marginTop: 4, display: "block" }}>
               Obrigatório para salvar. Em lives realizadas, o Financeiro usa a operadora no cálculo de pagamentos.
             </span>

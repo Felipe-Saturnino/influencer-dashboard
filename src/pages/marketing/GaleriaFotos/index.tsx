@@ -1310,7 +1310,6 @@ export default function GaleriaFotos() {
                   ariaFilterPrefix="Filtrar por colaborador"
                   listboxAriaLabel="Colaboradores"
                   searchPlaceholder={placeholderPesquisaFiltro("Colaborador")}
-                  enableSearch={prestadorItensMinhas.length > 5}
                 />
               ) : meuRhFuncionarioId ? (
                 <FiltroEntidadeBarSelect

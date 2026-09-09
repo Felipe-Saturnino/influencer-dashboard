@@ -1,6 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
-import { FONT } from "../../constants/theme";
-import { useApp } from "../../context/AppContext";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { extractSelectOptionsFromChildren } from "../../lib/selectListaComBuscaOptions";
+import { SelectListaComBusca } from "../SelectListaComBusca";
 
 export interface SelectComIconeProps {
   icon: ReactNode;
@@ -15,8 +15,13 @@ export interface SelectComIconeProps {
   style?: CSSProperties;
   id?: string;
   disabled?: boolean;
+  searchPlaceholder?: string;
 }
 
+/**
+ * Select da barra / formulário com painel pesquisável (padrão Staff/Time do Calendário).
+ * Os filhos continuam a ser `<option>` / `<optgroup>` por compatibilidade.
+ */
 export function SelectComIcone({
   icon,
   value,
@@ -28,67 +33,23 @@ export function SelectComIcone({
   style,
   id,
   disabled = false,
+  searchPlaceholder,
 }: SelectComIconeProps) {
-  const { theme: t } = useApp();
-  const borderRadius = pill ? 999 : 10;
-  const padLeft = pill ? 30 : 32;
-  const padRight = 28;
+  const options = useMemo(() => extractSelectOptionsFromChildren(children), [children]);
 
   return (
-    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-      <span
-        style={{
-          position: "absolute",
-          left: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
-          pointerEvents: "none",
-          display: "flex",
-          alignItems: "center",
-          color: t.textMuted,
-          zIndex: 1,
-        }}
-      >
-        {icon}
-      </span>
-      <select
-        id={id}
-        aria-label={label}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          padding: `6px ${padRight}px 6px ${padLeft}px`,
-          borderRadius,
-          border: `1px solid ${t.cardBorder}`,
-          background: t.inputBg ?? t.cardBg,
-          color: t.text,
-          fontSize: 13,
-          fontFamily: FONT.body,
-          lineHeight: 1.25,
-          cursor: "pointer",
-          outline: "none",
-          appearance: "none" as const,
-          minWidth,
-          ...style,
-        }}
-      >
-        {children}
-      </select>
-      <span
-        style={{
-          position: "absolute",
-          right: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
-          pointerEvents: "none",
-          color: t.textMuted,
-          fontSize: 10,
-          lineHeight: 1,
-        }}
-      >
-        ▾
-      </span>
-    </div>
+    <SelectListaComBusca
+      id={id}
+      value={value}
+      onChange={onChange}
+      options={options}
+      label={label}
+      searchPlaceholder={searchPlaceholder}
+      icon={icon}
+      variant={pill ? "pill" : "campo"}
+      minWidth={minWidth}
+      disabled={disabled}
+      style={style}
+    />
   );
 }

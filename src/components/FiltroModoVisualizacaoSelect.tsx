@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, useMemo, useId, useCallback, type CSSProperties } from "react";
+import { useState, useRef, useLayoutEffect, useMemo, useId, useCallback, useEffect, type CSSProperties } from "react";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { FilterBarIcons } from "../lib/filterBarIconCatalog";
 import { FONT } from "../constants/theme";
@@ -10,6 +10,9 @@ import {
   getFiltroBarPillStateStyle,
   getFiltroCampoAtivoStyle,
 } from "../lib/filterBarStyles";
+import { placeholderPesquisaFiltro } from "../lib/searchBarConstants";
+import { textoContemBusca } from "../lib/searchText";
+import { BarraPesquisaFiltroPainel } from "./BarraPesquisaFiltroPainel";
 
 export type ModoVisualizacaoOption = { value: string; label: string };
 
@@ -61,6 +64,7 @@ export function FiltroModoVisualizacaoSelect({
   const accentColor = activeOptionStyle.color;
 
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const uid = useId();
@@ -77,12 +81,21 @@ export function FiltroModoVisualizacaoSelect({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open, closePanel]);
 
-  const alignRight = useDropdownAlign(open, triggerRef, 160);
+  useEffect(() => {
+    if (!open) setSearchQuery("");
+  }, [open]);
+
+  const alignRight = useDropdownAlign(open, triggerRef, 240);
 
   const triggerLabel = useMemo(
     () => options.find((o) => o.value === value)?.label ?? value,
     [options, value]
   );
+
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return options;
+    return options.filter((o) => textoContemBusca(o.label, searchQuery));
+  }, [options, searchQuery]);
 
   const panelStyle: CSSProperties = {
     position: "absolute",
@@ -94,10 +107,11 @@ export function FiltroModoVisualizacaoSelect({
     border: `1px solid ${t.cardBorder}`,
     borderRadius: 12,
     padding: 8,
-    minWidth: 160,
+    minWidth: 240,
     boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-    maxHeight: 240,
-    overflowY: "auto",
+    maxHeight: "min(320px, 55vh)",
+    display: "flex",
+    flexDirection: "column",
   };
 
   return (
@@ -135,7 +149,26 @@ export function FiltroModoVisualizacaoSelect({
 
       {open && (
         <div id={listboxId} role="listbox" aria-label={listboxAriaLabel} style={panelStyle}>
-          {options.map((opt) => {
+          <BarraPesquisaFiltroPainel
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={placeholderPesquisaFiltro("visualização")}
+          />
+          <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+          {filtered.length === 0 ? (
+            <div
+              style={{
+                padding: "10px 12px",
+                fontSize: 12,
+                color: t.textMuted,
+                fontFamily: FONT.body,
+                textAlign: "center",
+              }}
+            >
+              Nenhum resultado para a pesquisa.
+            </div>
+          ) : (
+          filtered.map((opt) => {
             const selected = opt.value === value;
             return (
               <div
@@ -190,7 +223,9 @@ export function FiltroModoVisualizacaoSelect({
                 {opt.label}
               </div>
             );
-          })}
+          })
+          )}
+          </div>
         </div>
       )}
     </div>

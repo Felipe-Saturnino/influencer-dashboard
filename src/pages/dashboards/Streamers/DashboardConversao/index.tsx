@@ -21,6 +21,8 @@ import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { TabelaPaginacaoBar } from "../../../../components/TabelaPaginacaoBar";
+import { SelectListaComBusca } from "../../../../components/SelectListaComBusca";
+import { placeholderPesquisaFiltro } from "../../../../lib/searchBarConstants";
 import { slicePage, TABELA_PAGE_SIZE_STREAMERS } from "../../../../lib/tablePagination";
 import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
 import {
@@ -844,16 +846,22 @@ export default function DashboardConversao() {
 
         {/* Selects com badge "vs" estilizado */}
         <div className="app-conversao-vs-row">
-          <select aria-label="Influencer A no comparativo de funil" value={compA} onChange={(e) => setCompA(e.target.value)}
-            style={{ ...selectStyleSimple, borderColor: compA ? COR_A.border : undefined, width: "100%" }}>
-            <option value="">— Selecione —</option>
-            {rowsFiltradosEscopo
-              .filter((r) => r.influencer_id !== compB)
-              .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-              .map((r) => (
-                <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-              ))}
-          </select>
+          <SelectListaComBusca
+            variant="campo"
+            label="Influencer A no comparativo de funil"
+            searchPlaceholder={placeholderPesquisaFiltro("Influencer")}
+            value={compA}
+            onChange={setCompA}
+            wrapperStyle={{ flex: 1, minWidth: 120 }}
+            style={{ ...selectStyleSimple, borderColor: compA ? COR_A.border : undefined, width: "100%" }}
+            options={[
+              { value: "", label: "— Selecione —" },
+              ...rowsFiltradosEscopo
+                .filter((r) => r.influencer_id !== compB)
+                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                .map((r) => ({ value: r.influencer_id, label: r.nome })),
+            ]}
+          />
 
           {/* Badge "vs" com peso visual */}
           <div
@@ -873,16 +881,22 @@ export default function DashboardConversao() {
             VS
           </div>
 
-          <select aria-label="Influencer B no comparativo de funil" value={compB} onChange={(e) => setCompB(e.target.value)}
-            style={{ ...selectStyleSimple, borderColor: compB ? COR_B.border : undefined, width: "100%" }}>
-            <option value="">— Selecione —</option>
-            {rowsFiltradosEscopo
-              .filter((r) => r.influencer_id !== compA)
-              .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-              .map((r) => (
-                <option key={r.influencer_id} value={r.influencer_id}>{r.nome}</option>
-              ))}
-          </select>
+          <SelectListaComBusca
+            variant="campo"
+            label="Influencer B no comparativo de funil"
+            searchPlaceholder={placeholderPesquisaFiltro("Influencer")}
+            value={compB}
+            onChange={setCompB}
+            wrapperStyle={{ flex: 1, minWidth: 120 }}
+            style={{ ...selectStyleSimple, borderColor: compB ? COR_B.border : undefined, width: "100%" }}
+            options={[
+              { value: "", label: "— Selecione —" },
+              ...rowsFiltradosEscopo
+                .filter((r) => r.influencer_id !== compA)
+                .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                .map((r) => ({ value: r.influencer_id, label: r.nome })),
+            ]}
+          />
         </div>
 
         {/* Cabeçalhos coloridos */}

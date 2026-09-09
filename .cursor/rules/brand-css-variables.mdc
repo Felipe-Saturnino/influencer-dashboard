@@ -11,7 +11,7 @@ alwaysApply: true
 
 | Origem | Pode citar |
 |--------|------------|
-| **Global** | Este MDC (marca, filtros, headers, ações) + semântica, **identidade por jogo**, permissões, ordenação de tabelas, comportamento de filtros (`Todos`, busca >5) |
+| **Global** | Este MDC (marca, filtros, headers, ações) + semântica, **identidade por jogo**, permissões, ordenação de tabelas, comportamento de filtros (`Todos`, busca no painel) |
 | **Brand (este)** | Global (limite semântica vs marca vs jogo); MDC **Dashboards** (KpiCard, funil, A/B, MoM) |
 | **Secções** (`dashboards`, `lives`, `estudio`, …) | **Global** + **Brand** — sem citar outras secções para marca |
 
@@ -584,7 +584,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - Paleta semântica de dados (verde = bom, vermelho = ruim, amarelo, roxo FTD/Hora).
 - **Identidade por jogo** (Baccarat, Roleta, Blackjack, Futebol Brasileiro) — `lib/gameIdentityColors.ts` + `lib/gameIdentityIcons.tsx`; Global § Identidade visual por jogo; **nunca** whitelabel.
 - `useApp()` / `t.*` para superfícies neutras.
-- `CampoObrigatorioMark`, classes `app-*`, `tableStyles`, `SortTableTh`, ordenação default, permissões (Gestão de Usuários / admin irrestrito), filtros (`Todos` default, busca se >5 opções), strings de vazio/loading.
+- `CampoObrigatorioMark`, classes `app-*`, `tableStyles`, `SortTableTh`, ordenação default, permissões (Gestão de Usuários / admin irrestrito), filtros (`Todos` default, busca no painel), strings de vazio/loading.
 - Título alinhado ao menu + subtítulo: regra de conteúdo no Global; implementação visual neste MDC (secção 4).
 
 ---
@@ -630,7 +630,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - [ ] Carrossel de período (se aplicável) com `aria-label` nas setas + lista **antigo → recente** (§7)
 - [ ] Histórico: `FiltroHistoricoButton` + `aria-pressed` + rótulo carrossel `Todo o período`
 - [ ] Abas de módulo: `FiltroBarTabButton` + ícone Lucide 16px **por aba** + `onFiltroBarTabsKeyDown` no `tablist`
-- [ ] Filtro/select com busca no painel: `BarraPesquisaFiltroPainel` (foco automático ao abrir — Global § Pesquisa dentro do filtro)
+- [ ] Filtro/select com busca no painel **sempre**: `BarraPesquisaFiltroPainel` / `SelectListaComBusca` (foco automático ao abrir — Global § Pesquisa dentro do filtro)
 - [ ] Toolbar com texto; ações de **linha** em ícone + `aria-label` + `title`
 - [ ] CTA de criação na barra ou toolbar: **`CtaCriarButton`** (`borderRadius` 10, `10px 20px`, `Plus` 14) — não confundir com pills filtro `999` / `6px 14px`
 - [ ] CTA primário com gradiente canónico; spinner `#fff` dentro do CTA

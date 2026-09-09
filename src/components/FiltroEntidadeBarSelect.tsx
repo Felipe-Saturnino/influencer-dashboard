@@ -18,7 +18,7 @@ import {
   FILTRO_BAR_PILL_PADDING,
   getFiltroBarPillStateStyle,
 } from "../lib/filterBarStyles";
-import { FILTER_SEARCH_STAFF } from "../lib/searchBarConstants";
+import { placeholderPesquisaFiltro } from "../lib/searchBarConstants";
 import { textoContemBusca } from "../lib/searchText";
 import { BarraPesquisaFiltroPainel } from "./BarraPesquisaFiltroPainel";
 
@@ -54,7 +54,7 @@ export function FiltroEntidadeBarSelect({
   ariaFilterPrefix,
   listboxAriaLabel,
   enableSearch: enableSearchProp,
-  searchPlaceholder = FILTER_SEARCH_STAFF,
+  searchPlaceholder: searchPlaceholderProp,
   disabled = false,
   mode = "multiple",
 }: FiltroEntidadeBarSelectProps) {
@@ -69,7 +69,8 @@ export function FiltroEntidadeBarSelect({
   const uid = useId();
   const listboxId = `filtro-entidade-bar-${uid.replace(/:/g, "")}`;
 
-  const enableSearch = enableSearchProp ?? items.length > 5;
+  const enableSearch = enableSearchProp ?? true;
+  const searchPlaceholder = searchPlaceholderProp ?? placeholderPesquisaFiltro(triggerEmptyLabel);
   const dropdownMinWidth = enableSearch ? 240 : 190;
   const isActive = selected.length > 0;
   const activeStyle = getFiltroBarPillStateStyle(t, brand, isActive);

@@ -130,14 +130,12 @@ export function FiltroColunaDiaEscala({ t, diaLabel, opcoes, selecionados, onCha
           color: t.text,
         }}
       >
-        {opcoes.length > 5 ? (
-          <BarraPesquisaFiltroPainel
+        <BarraPesquisaFiltroPainel
             value={busca}
             onChange={setBusca}
             placeholder={placeholderPesquisaFiltro("valor")}
             aria-label="Pesquisar valor da coluna"
           />
-        ) : null}
         <label
           style={{
             display: "flex",

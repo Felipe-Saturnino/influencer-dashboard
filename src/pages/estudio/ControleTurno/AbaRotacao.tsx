@@ -28,8 +28,10 @@ import {
   limparAlocacaoRotacao,
   listarEstudiosAtivosRotacao,
   mapaCoresMesasRotacao,
+  mensagemAvisoMesaContinuaPublicar,
   publicarRotacao,
   salvarRascunhoRotacao,
+  tempoMesaContinuaQueExigeAviso,
   trocarPessoasLinhasPreviaRotacao,
   turnoAnteriorRotacao,
   type RotacaoCelulaPayload,
@@ -39,6 +41,7 @@ import {
   type RotacaoTurnoKey,
 } from "../../../lib/escalaRotacao";
 import { listPresencaDiaTurno, type CtPresencaRow } from "../../../lib/escalaControleTurno";
+import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { formatDiaBr, labelTurnoCurto } from "./helpers";
 import type { ControleTurnoTurno } from "./types";
 
@@ -136,6 +139,10 @@ export function AbaRotacao({ diaIso, turno }: Props) {
   const [presencaAtualMap, setPresencaAtualMap] = useState<Map<string, CtPresencaRow>>(new Map());
   const [presencaAntMap, setPresencaAntMap] = useState<Map<string, CtPresencaRow>>(new Map());
   const [movendoId, setMovendoId] = useState<string | null>(null);
+  const [confirmPublicar, setConfirmPublicar] = useState<{
+    slug: string;
+    tempoLabel: string;
+  } | null>(null);
 
   const loadGen = useRef(0);
 
@@ -603,7 +610,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
     patchBloco(slug, { previa: next });
   };
 
-  const handlePublicar = async (slug: string) => {
+  const executarPublicar = async (slug: string) => {
     const b = blocos[slug];
     if (!b?.ctx || !b.previa || !podeGerar) return;
     patchBloco(slug, { publicando: true, erroAcao: null });
@@ -660,6 +667,23 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       publicada: pub.ok ? pub.data : null,
       bannerOk: `Rotação publicada — ${formatDiaBr(diaIso)} · ${labelTurnoCurto(turno)} · ${b.nome}.`,
     });
+  };
+
+  const handlePublicar = (slug: string) => {
+    const b = blocos[slug];
+    if (!b?.ctx || !b.previa || !podeGerar) return;
+    const tempoLabel = tempoMesaContinuaQueExigeAviso(b.previa.matrix, b.previa.slotMin);
+    if (tempoLabel) {
+      setConfirmPublicar({ slug, tempoLabel });
+      return;
+    }
+    void executarPublicar(slug);
+  };
+
+  const confirmarPublicarComAviso = () => {
+    const slug = confirmPublicar?.slug;
+    setConfirmPublicar(null);
+    if (slug) void executarPublicar(slug);
   };
 
   const handleRegenerar = (slug: string) => {
@@ -754,7 +778,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
               patchBloco(est.slug, { painelLideranca: !b.painelLideranca })
             }
             onIncluirLideranca={(p) => handleIncluirLideranca(est.slug, p)}
-            onPublicar={() => void handlePublicar(est.slug)}
+            onPublicar={() => handlePublicar(est.slug)}
             onRegenerar={() => handleRegenerar(est.slug)}
             onToggleFaltaGp={(id) => {
               patchBloco(est.slug, {
@@ -781,6 +805,18 @@ export function AbaRotacao({ diaIso, turno }: Props) {
           />
         );
       })}
+      {confirmPublicar ? (
+        <ModalConfirmDelete
+          title="Publicar rotação"
+          texto={mensagemAvisoMesaContinuaPublicar(confirmPublicar.tempoLabel)}
+          confirmLabel="Publicar"
+          destructive={false}
+          loading={!!blocos[confirmPublicar.slug]?.publicando}
+          loadingLabel="Publicando…"
+          onCancel={() => setConfirmPublicar(null)}
+          onConfirm={confirmarPublicarComAviso}
+        />
+      ) : null}
     </>
   );
 }

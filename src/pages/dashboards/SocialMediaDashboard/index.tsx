@@ -20,6 +20,8 @@ import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { useRouteTab } from "../../../hooks/useRouteTab"
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
 import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar"
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca"
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants"
 import {
   DashboardPageHeader,
   FiltroHistoricoButton,
@@ -1104,25 +1106,25 @@ export default function SocialMediaDashboard() {
                   Comparativo de funil
                 </SectionTitle>
                 <div className="app-conversao-vs-row" style={{ marginBottom: 14 }}>
-                  <select
-                    aria-label="Campanha A no comparativo de funil"
+                  <SelectListaComBusca
+                    variant="campo"
+                    label="Campanha A no comparativo de funil"
+                    searchPlaceholder={placeholderPesquisaFiltro("Campanha")}
                     value={compCampA}
-                    onChange={(e) => setCompCampA(e.target.value)}
+                    onChange={setCompCampA}
+                    wrapperStyle={{ flex: 1, minWidth: 120 }}
                     style={{
                       ...selectCampStyle,
                       borderColor: compCampA ? corFunilComparativoCampanhaA.border : undefined,
                     }}
-                  >
-                    <option value="">— Selecione —</option>
-                    {campanhasPerf
-                      .filter((c) => c.campanha_id !== compCampB)
-                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
-                      .map((c) => (
-                        <option key={c.campanha_id} value={c.campanha_id}>
-                          {c.campanha_nome}
-                        </option>
-                      ))}
-                  </select>
+                    options={[
+                      { value: "", label: "— Selecione —" },
+                      ...campanhasPerf
+                        .filter((c) => c.campanha_id !== compCampB)
+                        .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                        .map((c) => ({ value: c.campanha_id, label: c.campanha_nome })),
+                    ]}
+                  />
                   <div
                     style={{
                       padding: "5px 12px",
@@ -1142,25 +1144,25 @@ export default function SocialMediaDashboard() {
                   >
                     VS
                   </div>
-                  <select
-                    aria-label="Campanha B no comparativo de funil"
+                  <SelectListaComBusca
+                    variant="campo"
+                    label="Campanha B no comparativo de funil"
+                    searchPlaceholder={placeholderPesquisaFiltro("Campanha")}
                     value={compCampB}
-                    onChange={(e) => setCompCampB(e.target.value)}
+                    onChange={setCompCampB}
+                    wrapperStyle={{ flex: 1, minWidth: 120 }}
                     style={{
                       ...selectCampStyle,
                       borderColor: compCampB ? corFunilComparativoCampanhaB.border : undefined,
                     }}
-                  >
-                    <option value="">— Selecione —</option>
-                    {campanhasPerf
-                      .filter((c) => c.campanha_id !== compCampA)
-                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
-                      .map((c) => (
-                        <option key={c.campanha_id} value={c.campanha_id}>
-                          {c.campanha_nome}
-                        </option>
-                      ))}
-                  </select>
+                    options={[
+                      { value: "", label: "— Selecione —" },
+                      ...campanhasPerf
+                        .filter((c) => c.campanha_id !== compCampA)
+                        .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                        .map((c) => ({ value: c.campanha_id, label: c.campanha_nome })),
+                    ]}
+                  />
                 </div>
                 {(campanhaA || campanhaB) && (
                   <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>

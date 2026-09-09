@@ -669,7 +669,6 @@ export default function Incidentes() {
               triggerEmptyLabel="Todos Incidentes"
               ariaFilterPrefix="Filtrar por incidente"
               listboxAriaLabel="Incidentes"
-              enableSearch={false}
             />
             <FiltroEntidadeBarSelect
               mode="single"

@@ -52,7 +52,7 @@ export function SelectItemOs({
   const listboxId = `os-item-${(id ?? uid).replace(/:/g, "")}`;
 
   const options = useMemo(() => catalogoParaOpcoes(catalogo), [catalogo]);
-  const enableSearch = options.length > 5;
+  const enableSearch = true;
 
   const selected = options.find((o) => o.key === value) ?? null;
   const triggerLabel = selected?.label ?? "Selecione…";

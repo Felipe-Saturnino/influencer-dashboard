@@ -467,21 +467,16 @@ function ListaOpcoesRadio({
   buscaPlaceholder?: string;
 }) {
   const [busca, setBusca] = useState("");
-  const mostrarBusca = opcoes.length > 5;
-  const filtradas = mostrarBusca
-    ? opcoes.filter((op) => textoContemBuscaEmAlgum(busca, op.label))
-    : opcoes;
+  const filtradas = opcoes.filter((op) => textoContemBuscaEmAlgum(busca, op.label));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {mostrarBusca && buscaPlaceholder ? (
-        <BarraPesquisaFiltroPainel
+      <BarraPesquisaFiltroPainel
           value={busca}
           onChange={setBusca}
-          placeholder={buscaPlaceholder}
-          aria-label={buscaPlaceholder.replace(/\.{3}$/, "")}
+          placeholder={buscaPlaceholder ?? "Pesquisar..."}
+          aria-label={(buscaPlaceholder ?? "Pesquisar").replace(/\.{3}$/, "")}
         />
-      ) : null}
       <div
         role="radiogroup"
         aria-label={ariaLabel}

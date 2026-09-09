@@ -11,9 +11,13 @@ import {
   labelsMesasRotacao,
   liderancaCompativelComTurnoRotacao,
   maxSlotsSeguidosAntesBreak,
+  mensagemAvisoMesaContinuaPublicar,
   parseIntervaloHorarioStaffRotacao,
   ROTACAO_MAX_MESAS_SEGUIDAS,
   slotDentroJanelaHorarioRotacao,
+  tempoMesaContinuaQueExigeAviso,
+  formatarTempoMesaContinuoPt,
+  maxMinutosMesaContinuaNaGrade,
   trocarPessoasLinhasPreviaRotacao,
   type RotacaoGeracaoPessoa,
   type RotacaoGpPool,
@@ -532,5 +536,40 @@ describe("filtrarPoolRotacaoPorPresencaCt", () => {
     });
     expect(pool.map((g) => g.funcionarioId).sort()).toEqual(["a", "x"]);
     expect(pool.find((g) => g.funcionarioId === "x")?.saidaLimiteHhmm).toBe("10:00");
+  });
+});
+
+describe("aviso de mesa contínua ao publicar", () => {
+  it("mede o maior trecho contínuo em mesa", () => {
+    const matrix = [
+      ["1", "2", "3", "4", "Break", "1"],
+      ["Break", "1", "2", "Break", "3", "4"],
+    ];
+    expect(maxMinutosMesaContinuaNaGrade(matrix, 30)).toBe(120);
+    expect(maxMinutosMesaContinuaNaGrade(matrix, 20)).toBe(80);
+  });
+
+  it("formata tempo em pt-BR", () => {
+    expect(formatarTempoMesaContinuoPt(120)).toBe("2 horas");
+    expect(formatarTempoMesaContinuoPt(140)).toBe("2 horas e 20 min");
+    expect(formatarTempoMesaContinuoPt(60)).toBe("1 hora");
+  });
+
+  it("exige aviso a partir de 2h e monta a mensagem", () => {
+    const ok = [
+      ["1", "2", "3", "Break"],
+      ["Break", "1", "2", "3"],
+    ];
+    expect(tempoMesaContinuaQueExigeAviso(ok, 30)).toBeNull();
+
+    const limiar = [["1", "2", "3", "4", "Break"]];
+    expect(tempoMesaContinuaQueExigeAviso(limiar, 30)).toBe("2 horas");
+
+    const acima = [["1", "2", "3", "4", "5"]];
+    expect(tempoMesaContinuaQueExigeAviso(acima, 30)).toBe("2 horas e 30 min");
+
+    expect(mensagemAvisoMesaContinuaPublicar("2 horas e 20 min")).toBe(
+      "Nesta rotação temos Prestadores realizando 2 horas e 20 min tempo direto de mesa, quer seguir com esta rotação?",
+    );
   });
 });

@@ -78,7 +78,7 @@ function useActiveFilterStyle(isActive: boolean) {
 
 /**
  * Filtro de influencers padronizado: pill 999, ícone User 15px, agregadora "Todos Influencers",
- * pesquisa no painel quando há mais de 5 opções. Modos `single` e `multiple` — regras de negócio na página.
+ * pesquisa no painel (sempre). Modos `single` e `multiple` — regras de negócio na página.
  */
 export function FiltroInfluencerSelect(props: FiltroInfluencerSelectProps) {
   const { influencers, disabled = false } = props;
@@ -92,8 +92,8 @@ export function FiltroInfluencerSelect(props: FiltroInfluencerSelectProps) {
   const uid = useId();
   const listboxId = `filtro-influencer-${uid.replace(/:/g, "")}`;
 
-  const enableSearch = influencers.length > 5;
-  const dropdownMinWidth = enableSearch ? 240 : 190;
+  const enableSearch = true;
+  const dropdownMinWidth = 240;
   const alignRight = useDropdownAlign(open, triggerRef, dropdownMinWidth);
 
   const closePanel = useCallback(() => setOpen(false), []);

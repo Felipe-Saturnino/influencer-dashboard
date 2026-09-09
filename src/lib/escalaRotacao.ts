@@ -208,6 +208,63 @@ export function celulaEhFalta(valor: string): boolean {
   return valor === "X" || valor === "F";
 }
 
+/** True se a célula é mesa (não Break / X / F / vazia). */
+export function celulaEhMesaRotacao(valor: string): boolean {
+  const v = (valor || "").trim();
+  if (!v || v === "—" || v === "-") return false;
+  return v !== "Break" && v !== "X" && v !== "F";
+}
+
+/**
+ * Maior sequência contínua de mesa na grade, em minutos
+ * (Break / X / F zeram a contagem).
+ */
+export function maxMinutosMesaContinuaNaGrade(matrix: string[][], slotMinutos: number): number {
+  const step = slotMinutos === 20 ? 20 : 30;
+  let max = 0;
+  for (const row of matrix) {
+    let run = 0;
+    for (const cell of row) {
+      if (celulaEhMesaRotacao(cell)) {
+        run += step;
+        if (run > max) max = run;
+      } else {
+        run = 0;
+      }
+    }
+  }
+  return max;
+}
+
+/** Ex.: 120 → «2 horas»; 140 → «2 horas e 20 min». */
+export function formatarTempoMesaContinuoPt(minutos: number): string {
+  const m = Math.max(0, Math.round(minutos));
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  if (h <= 0) return `${rest} min`;
+  const horas = h === 1 ? "1 hora" : `${h} horas`;
+  if (rest === 0) return horas;
+  return `${horas} e ${rest} min`;
+}
+
+export function mensagemAvisoMesaContinuaPublicar(tempoLabel: string): string {
+  return `Nesta rotação temos Prestadores realizando ${tempoLabel} tempo direto de mesa, quer seguir com esta rotação?`;
+}
+
+/**
+ * Se algum prestador tem ≥ limiar (default 2h) contínuos em mesa, devolve o rótulo
+ * do maior trecho; senão null (publicar sem aviso).
+ */
+export function tempoMesaContinuaQueExigeAviso(
+  matrix: string[][],
+  slotMinutos: number,
+  limiarMinutos: number = 120,
+): string | null {
+  const max = maxMinutosMesaContinuaNaGrade(matrix, slotMinutos);
+  if (max < limiarMinutos) return null;
+  return formatarTempoMesaContinuoPt(max);
+}
+
 export function minutosDesdeMeiaNoite(hhmm: string): number {
   const m = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim());
   if (!m) return 0;

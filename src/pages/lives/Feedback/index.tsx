@@ -29,6 +29,8 @@ import {
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import {
   getPageContentBoxStyle,
@@ -882,19 +884,26 @@ function ModalFeedbackEdit({ live, res, operadorasList, t, isDark: _isDark, onCl
             <label style={labelStyle}>
               Operadora {showResultFields && <span style={{ color: BRAND.vermelho }}>*</span>}
             </label>
-            <select
+            <SelectListaComBusca
+              variant="campo"
+              label="Operadora"
+              searchPlaceholder={placeholderPesquisaFiltro("Operadora")}
               value={operadoraSlug}
-              onChange={e => setOperadoraSlug(e.target.value)}
+              onChange={setOperadoraSlug}
               style={{
-                width: "100%", boxSizing: "border-box", padding: "10px 14px",
+                width: "100%", boxSizing: "border-box",
                 borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`,
                 background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text,
-                fontSize: 13, fontFamily: FONT.body, outline: "none", cursor: "pointer",
+                fontSize: 13, fontFamily: FONT.body, cursor: "pointer",
               }}
-            >
-              <option value="">Selecione a operadora...</option>
-              {[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map(o => <option key={o.slug} value={o.slug}>{o.nome}</option>)}
-            </select>
+              options={[
+                { value: "", label: "Selecione a operadora..." },
+                ...[...operadorasList].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((o) => ({
+                  value: o.slug,
+                  label: o.nome,
+                })),
+              ]}
+            />
           </div>
         )}
 
