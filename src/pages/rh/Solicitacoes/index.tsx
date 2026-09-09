@@ -36,6 +36,9 @@ import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes";
 import { TUTORIAL_RH_SOLICITACOES_APROVAR } from "../../geral/Ajuda/tutoriais/rhSolicitacoesAprovar";
+import { TUTORIAL_RH_SOLICITACOES_FEEDBACK } from "../../geral/Ajuda/tutoriais/rhSolicitacoesFeedback";
+import { TUTORIAL_RH_SOLICITACOES_REUNIOES } from "../../geral/Ajuda/tutoriais/rhSolicitacoesReunioes";
+import { TUTORIAL_RH_SOLICITACOES_VAGAS } from "../../geral/Ajuda/tutoriais/rhSolicitacoesVagas";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
@@ -98,10 +101,40 @@ const RH_SOLICITACOES_SELECT = `
   vaga:rh_vagas!rh_solicitacoes_rh_vaga_id_fkey ( id, titulo )
 `.trim();
 
-const TUTORIAL_CTX_RH_SOLICITACOES: AjudaContextualTutorial = {
+const TUTORIAL_CTX_ATESTADOS: AjudaContextualTutorial = {
   id: TUTORIAL_RH_SOLICITACOES_APROVAR.id,
   urlSlug: TUTORIAL_RH_SOLICITACOES_APROVAR.urlSlug,
+  titulo: TUTORIAL_RH_SOLICITACOES_APROVAR.titulo,
+  descricao: "Atender atestado como RH — abono remunerado e efeitos no Calendário e na Escala.",
 };
+
+const TUTORIAL_CTX_REUNIOES: AjudaContextualTutorial = {
+  id: TUTORIAL_RH_SOLICITACOES_REUNIOES.id,
+  urlSlug: TUTORIAL_RH_SOLICITACOES_REUNIOES.urlSlug,
+  titulo: TUTORIAL_RH_SOLICITACOES_REUNIOES.titulo,
+  descricao: "Agendar reunião com o prestador ou atender (aprovar/rejeitar) pedidos pendentes.",
+};
+
+const TUTORIAL_CTX_VAGAS: AjudaContextualTutorial = {
+  id: TUTORIAL_RH_SOLICITACOES_VAGAS.id,
+  urlSlug: TUTORIAL_RH_SOLICITACOES_VAGAS.urlSlug,
+  titulo: TUTORIAL_RH_SOLICITACOES_VAGAS.titulo,
+  descricao: "Solicitar abertura de vaga e acompanhar o parecer do RH.",
+};
+
+const TUTORIAL_CTX_FEEDBACK: AjudaContextualTutorial = {
+  id: TUTORIAL_RH_SOLICITACOES_FEEDBACK.id,
+  urlSlug: TUTORIAL_RH_SOLICITACOES_FEEDBACK.urlSlug,
+  titulo: TUTORIAL_RH_SOLICITACOES_FEEDBACK.titulo,
+  descricao: "Registrar feedback ou aprovar feedbacks da liderança vindos do Controle de Turno.",
+};
+
+function tutorialCtxPorAba(aba: RhSolicitacaoAba): AjudaContextualTutorial {
+  if (aba === "reunioes") return TUTORIAL_CTX_REUNIOES;
+  if (aba === "vagas") return TUTORIAL_CTX_VAGAS;
+  if (aba === "feedback") return TUTORIAL_CTX_FEEDBACK;
+  return TUTORIAL_CTX_ATESTADOS;
+}
 
 type SortCol =
   | "data"
@@ -543,7 +576,10 @@ export default function RhSolicitacoesPage() {
           </div>
 
           <div className="app-marketplace-filtro-minhas__cta">
-            <AjudaContextualAcoes pageKey="rh_solicitacoes" tutorial={TUTORIAL_CTX_RH_SOLICITACOES} />
+            <AjudaContextualAcoes
+              pageKey="rh_solicitacoes"
+              tutorial={tutorialCtxPorAba(aba)}
+            />
           </div>
         </div>
 

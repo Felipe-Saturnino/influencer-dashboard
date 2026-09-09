@@ -15,6 +15,7 @@ import {
   formatDataBrOs,
   labelLocalOs,
   labelStatusOrdemSaida,
+  ordemSaidaPodeMostrarAtualizar,
   ordemVisivelNoMes,
   OS_STATUS_COLOR,
   type OrdemSaidaRow,
@@ -162,9 +163,7 @@ export function AbaInterna({
                               <Check size={13} aria-hidden />
                             </BtnIconeAcaoLinha>
                           ) : null}
-                          {permissoesRow.podeAtualizar &&
-                          r.status !== "concluida" &&
-                          r.status !== "cancelada" ? (
+                          {permissoesRow.podeAtualizar && ordemSaidaPodeMostrarAtualizar(r) ? (
                             <BtnIconeAcaoLinha label={tooltipAcao("Atualizar O.S.")} onClick={() => setUpdRow(r)}>
                               <RefreshCw size={13} aria-hidden />
                             </BtnIconeAcaoLinha>
@@ -212,8 +211,7 @@ export function AbaInterna({
         />
       ) : null}
       {updRow &&
-      updRow.status !== "concluida" &&
-      updRow.status !== "cancelada" &&
+      ordemSaidaPodeMostrarAtualizar(updRow) &&
       getOrdemSaidaPermissoesUi(perm, user, updRow).podeAtualizar ? (
         <ModalAtualizarOs
           row={updRow}

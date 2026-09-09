@@ -25,6 +25,9 @@ import { TUTORIAL_PERFORMANCE_HUB_AVALIAR } from "./performanceHubAvaliar";
 import { TUTORIAL_PERFORMANCE_HUB_CONFIGURACAO_PESOS } from "./performanceHubConfiguracaoPesos";
 import { TUTORIAL_POSTAGEM_ACADEMY_APROVACAO } from "./postagemAcademyAprovacao";
 import { TUTORIAL_RH_SOLICITACOES_APROVAR } from "./rhSolicitacoesAprovar";
+import { TUTORIAL_RH_SOLICITACOES_FEEDBACK } from "./rhSolicitacoesFeedback";
+import { TUTORIAL_RH_SOLICITACOES_REUNIOES } from "./rhSolicitacoesReunioes";
+import { TUTORIAL_RH_SOLICITACOES_VAGAS } from "./rhSolicitacoesVagas";
 import type { TutorialDef, TutorialSecaoNav } from "./types";
 
 /** Catálogo de tutoriais — ordem das secções alinhada ao menu quando possível. */
@@ -40,6 +43,9 @@ export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS,
   TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS,
   TUTORIAL_RH_SOLICITACOES_APROVAR,
+  TUTORIAL_RH_SOLICITACOES_REUNIOES,
+  TUTORIAL_RH_SOLICITACOES_VAGAS,
+  TUTORIAL_RH_SOLICITACOES_FEEDBACK,
   TUTORIAL_DADOS_CADASTRO_ATUALIZACAO,
   TUTORIAL_CALENDARIO_PRESTADOR,
   TUTORIAL_CONTROLE_PRESENCA,

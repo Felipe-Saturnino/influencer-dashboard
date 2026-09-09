@@ -309,7 +309,10 @@ export function ModalAtualizarOs({
 }) {
   const { theme: t } = useApp();
 
-  const opcoes = useMemo(() => opcoesTipoAtualizacaoOs(contexto, row.status), [contexto, row.status]);
+  const opcoes = useMemo(
+    () => opcoesTipoAtualizacaoOs(contexto, row.status, row.sem_retorno),
+    [contexto, row.status, row.sem_retorno],
+  );
   const [tipo, setTipo] = useState<OsTipoAtualizacao | null>(opcoes[0] ?? null);
 
   const [motivo, setMotivo] = useState("");

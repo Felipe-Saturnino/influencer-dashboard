@@ -15,6 +15,7 @@ import {
   formatDataBrOs,
   formatSolicitanteOs,
   labelStatusOrdemSaida,
+  ordemSaidaPodeMostrarAtualizar,
   ordemVisivelNoMes,
   OS_STATUS_COLOR,
   type OrdemSaidaRow,
@@ -99,7 +100,7 @@ export function AbaExterna({
     [base],
   );
 
-  function acoes(r: OrdemSaidaRow, contexto: OsModalContexto, soVer: boolean) {
+  function acoes(r: OrdemSaidaRow, contexto: OsModalContexto) {
     const permissoesRow = getOrdemSaidaPermissoesUi(perm, user, r);
     return (
       <div style={{ display: "inline-flex", gap: 4, justifyContent: "center" }}>
@@ -114,10 +115,7 @@ export function AbaExterna({
             <Check size={13} aria-hidden />
           </BtnIconeAcaoLinha>
         ) : null}
-        {!soVer &&
-        permissoesRow.podeAtualizar &&
-        r.status !== "concluida" &&
-        r.status !== "cancelada" ? (
+        {permissoesRow.podeAtualizar && ordemSaidaPodeMostrarAtualizar(r) ? (
           <BtnIconeAcaoLinha
             label={tooltipAcao("Atualizar O.S.")}
             onClick={() => setUpdInfo({ row: r, contexto })}
@@ -202,7 +200,7 @@ export function AbaExterna({
                           />
                         </span>
                       </td>
-                      <td style={dataTable.tdCenter}>{acoes(r, "externa_futuras", false)}</td>
+                      <td style={dataTable.tdCenter}>{acoes(r, "externa_futuras")}</td>
                     </tr>
                   );
                 })}
@@ -269,7 +267,7 @@ export function AbaExterna({
                           />
                         </span>
                       </td>
-                      <td style={dataTable.tdCenter}>{acoes(r, "externa_abertas", false)}</td>
+                      <td style={dataTable.tdCenter}>{acoes(r, "externa_abertas")}</td>
                     </tr>
                   );
                 })}
@@ -319,7 +317,7 @@ export function AbaExterna({
                           />
                         </span>
                       </td>
-                      <td style={dataTable.tdCenter}>{acoes(r, "externa_encerradas", true)}</td>
+                      <td style={dataTable.tdCenter}>{acoes(r, "externa_encerradas")}</td>
                     </tr>
                   );
                 })}
@@ -360,8 +358,7 @@ export function AbaExterna({
         />
       ) : null}
       {updInfo &&
-      updInfo.row.status !== "concluida" &&
-      updInfo.row.status !== "cancelada" &&
+      ordemSaidaPodeMostrarAtualizar(updInfo.row) &&
       getOrdemSaidaPermissoesUi(perm, user, updInfo.row).podeAtualizar ? (
         <ModalAtualizarOs
           row={updInfo.row}

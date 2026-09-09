@@ -1432,6 +1432,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Confirme se as correções da Ordem de Saída foram aplicadas no Supabase (reserva de código da OS e permissão de criação) e se o usuário tem permissão de **Criar** ou **Editar** em Gestão de Usuários. Se o erro continuar, entre em contato com o suporte.",
       },
       {
+        subtitulo: "Aprovei uma OS e o equipamento continua em Estoque?",
+        texto:
+          "Ao aprovar, a Gestão de Estoque deve marcar equipamentos como Em uso (ou Manutenção na O.S. de Manutenção) e aumentar Em uso nos itens. Confirme se a migration de sincronização foi aplicada no Supabase. Ordens já aprovadas sem retorno entram no backfill dessa migration. Se o problema continuar, entre em contato com o suporte.",
+      },
+      {
         subtitulo: "A data de retorno foi recusada?",
         texto:
           "A data de retorno (ou previsão) deve ser posterior à data de saída. Use o formato DD/MM/AAAA. Em Interna e Manutenção, marque Sem retorno / Sem previsão quando não houver data.",

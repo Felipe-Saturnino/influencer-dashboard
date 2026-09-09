@@ -43,7 +43,7 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 |------|-------|
 | Subtítulo | Solicite e acompanhe as ordens de saída internas, externas e de manutenção dos ativos. |
 | Tabelas | `tech_ops_ordem_saida`, `tech_ops_ordem_saida_itens`, `tech_ops_ordem_saida_historico`, `tech_ops_ordem_saida_anotacoes`, `tech_ops_ordem_saida_codigo_counters` |
-| Migração | `20261018120000_tech_ops_ordem_saida.sql` · `20261018210000_tech_ops_ordem_saida_modais.sql` · `20261018220000_tech_ops_ordem_saida_permissoes.sql` · `20261129120000_tech_ops_ordem_saida_fix_criar.sql` · `20261209120000_tech_ops_ordem_saida_proximo_codigo_ambiguity.sql` |
+| Migração | `20261018120000_tech_ops_ordem_saida.sql` · `20261018210000_tech_ops_ordem_saida_modais.sql` · `20261018220000_tech_ops_ordem_saida_permissoes.sql` · `20261129120000_tech_ops_ordem_saida_fix_criar.sql` · `20261209120000_tech_ops_ordem_saida_proximo_codigo_ambiguity.sql` · `20261210120000_tech_ops_ordem_saida_sync_estoque.sql` |
 | RLS | `_tech_ops_ordem_saida_perm(need)` + `_pode_nova` / `_pode_atualizar`; INSERT força `solicitante_user_id = auth.uid()` (trigger + client) |
 | Código | RPC `tech_ops_ordem_saida_proximo_codigo` → `OS/{INT\|EXT\|MAN}-MMAA-####` |
 | Lib | `src/lib/techOpsOrdemSaida.ts` |
@@ -72,19 +72,20 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 - **Multi-mês:** OS `solicitada`/`aberta` de competências anteriores aparecem no mês seguinte até Concluída/Cancelada (`ordemVisivelNoMes`).
 - **Status:** `solicitada` → `aberta` → `concluida` \| `cancelada`. Manutenção: `solicitada` exibe **Registrada**.
 - **Criação e agrupamento:** Nova Interna → `solicitada` na Listagem; Nova Externa → `solicitada` em Ordens Futuras; Externa `aberta` → Ordens em Aberto; Externa `concluida`/`cancelada` → Ordens Encerradas; Nova Manutenção → `solicitada` em Ordens em Aberto; Manutenção `concluida`/`cancelada` → Ordens Encerradas.
-- **Atualizar:** disponível somente para OS `solicitada` ou `aberta`; nunca renderizar ação/modal para `concluida` ou `cancelada`.
-- **Aprovar:** ação disponível em todas as abas somente quando `status=solicitada` e há permissão de Editar. Modal reutiliza Dados / Anotações / Histórico. Aprovar → `aberta`; se `sem_retorno=true`, → `concluida`. Recusar exige Motivo do Cancelamento → `cancelada`.
+- **Atualizar:** disponível para OS `solicitada` ou `aberta`; também para OS `concluida` com `sem_retorno` (só opção **Alterar OS**). Nunca para `cancelada` nem concluída com retorno.
+- **Aprovar:** ação disponível em todas as abas somente quando `status=solicitada` e há permissão de Editar. Modal reutiliza Dados / Anotações / Histórico. Aprovar → `aberta`; se `sem_retorno=true`, → `concluida`. Recusar exige Motivo do Cancelamento → `cancelada`. Ao aprovar, RPC `tech_ops_ordem_saida_sincronizar_estoque(alocar)` atualiza a Gestão de Estoque: equipamentos → **Em uso** (Interna/Externa) ou **Manutenção** (O.S. Manutenção); itens → `+quantidade_em_uso`; alocação `estudio_slug` quando o destino é estúdio. Confirmar retorno / cancelar OS aberta / Alterar OS aberta → `devolver`.
+- **Estoque × OS:** OS `aberta` ou `concluida` com `sem_retorno` mantém itens em uso. Concluída com retorno devolve ao Estoque. Flag `estoque_aplicado` evita dupla aplicação.
 - **Matriz UI/RLS:** Ver libera todas as abas e o modal Ver. Criar Sim libera Nova + Atualizar todas; Criar Próprios libera Nova + Atualizar próprias. Editar Sim libera Nova + Atualizar/Ver/Aprovar todas; Editar Próprios libera Nova + Atualizar/Ver todas e Aprovar próprias. Própria = `solicitante_user_id` ou nome do usuário igual ao solicitante/responsável.
 - **Locais (Interna):** `estudios_spin` (`estudio:<slug>`) + Estoque, Shuffler Room, OCR, Academy. Origem ≠ Destino.
 - **Itens:** `tech_ops_ordem_saida_itens` → estoque. Equipamento: qty = **1**. Item: qty ≤ **Estoque**; Jogo: qty ≤ **Qtd Atual** (clamp no campo + validação no Solicitar).
 - **Modais Ver:** campos por `OsModalContexto`; Itens no bloco Dados; Anotações = observação de abertura + tabela + motivo/obs. retorno; Histórico = ações.
-- **Modais Atualizar:** Cancelar → `cancelada` + motivo; Confirmar Retorno → `concluida` + checkboxes por item + obs.; Alterar → edita dados/itens e volta a `solicitada`.
+- **Modais Atualizar:** Cancelar → `cancelada` + motivo; Confirmar Retorno → `concluida` + checkboxes por item + obs.; Alterar (solicitada/aberta) → edita dados/itens e volta a `solicitada`; Alterar (concluída sem retorno) → mantém `concluida` (ou vira `aberta` se remover Sem retorno), realoca estoque e registra no histórico os campos alterados.
 - **Datas:** DD/MM/AAAA; retorno > saída; Sem retorno / Sem previsão.
 - **Vazio:** `Nenhuma ordem encontrada.`
 
 ## Fora do escopo v1
 
-Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN, baixa automática de estoque ao abrir OS.
+Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN. (Baixa de estoque na aprovação da OS: implementada via `tech_ops_ordem_saida_sincronizar_estoque`.)
 
 ## Anti-patterns
 

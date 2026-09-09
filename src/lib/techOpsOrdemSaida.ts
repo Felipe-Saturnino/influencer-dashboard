@@ -152,11 +152,18 @@ export function subtituloModalOs(row: OrdemSaidaRow): string {
 export function opcoesTipoAtualizacaoOs(
   contexto: OsModalContexto,
   status: OrdemSaidaStatus,
+  semRetorno = false,
 ): OsTipoAtualizacao[] {
-  if (status === "concluida" || status === "cancelada") return [];
+  if (status === "cancelada") return [];
+  if (status === "concluida") {
+    return semRetorno ? ["alterar"] : [];
+  }
   if (contexto === "interna") return ["cancelar", "confirmar_retorno", "alterar"];
   if (contexto === "externa_futuras") return ["cancelar", "alterar"];
   if (contexto === "externa_abertas") return ["cancelar", "confirmar_retorno"];
+  if (contexto === "externa_encerradas" || contexto === "manutencao_encerradas") {
+    return [];
+  }
   if (contexto === "manutencao_abertas") {
     const out: OsTipoAtualizacao[] = ["cancelar"];
     if (status === "aberta") out.push("confirmar_retorno");
@@ -164,6 +171,13 @@ export function opcoesTipoAtualizacaoOs(
     return out;
   }
   return [];
+}
+
+/** Atualizar/editar: abertas/solicitadas, ou concluídas com Sem retorno / Sem previsão. */
+export function ordemSaidaPodeMostrarAtualizar(row: Pick<OrdemSaidaRow, "status" | "sem_retorno">): boolean {
+  if (row.status === "cancelada") return false;
+  if (row.status === "concluida") return row.sem_retorno;
+  return row.status === "solicitada" || row.status === "aberta";
 }
 
 export interface OsItemDisponivel {
@@ -698,6 +712,19 @@ export async function criarOrdemSaida(params: {
   return id;
 }
 
+export async function sincronizarEstoqueOrdemSaida(params: {
+  ordemId: string;
+  acao: "alocar" | "devolver";
+  autorNome: string;
+}): Promise<void> {
+  const { error } = await supabase.rpc("tech_ops_ordem_saida_sincronizar_estoque", {
+    p_ordem_id: params.ordemId,
+    p_acao: params.acao,
+    p_autor_nome: params.autorNome,
+  });
+  if (error) throw error;
+}
+
 export async function atualizarStatusOrdemSaida(params: {
   row: OrdemSaidaRow;
   status: OrdemSaidaStatus;
@@ -727,6 +754,15 @@ export async function cancelarOrdemSaida(params: {
 }): Promise<void> {
   const motivo = params.motivo.trim();
   if (!motivo) throw new Error("motivo obrigatório");
+
+  if (params.row.status === "aberta") {
+    await sincronizarEstoqueOrdemSaida({
+      ordemId: params.row.id,
+      acao: "devolver",
+      autorNome: params.autorNome,
+    });
+  }
+
   const agora = new Date().toISOString();
   const { error } = await supabase
     .from("tech_ops_ordem_saida")
@@ -764,6 +800,12 @@ export async function aprovarOrdemSaida(params: {
     .eq("status", "solicitada");
   if (error) throw error;
 
+  await sincronizarEstoqueOrdemSaida({
+    ordemId: params.row.id,
+    acao: "alocar",
+    autorNome: params.autorNome,
+  });
+
   await registrarHistoricoOrdemSaida({
     ordemId: params.row.id,
     acao: "Aprovação",
@@ -782,6 +824,12 @@ export async function confirmarRetornoOrdemSaida(params: {
   observacoesRetorno: string;
   autorNome: string;
 }): Promise<void> {
+  await sincronizarEstoqueOrdemSaida({
+    ordemId: params.row.id,
+    acao: "devolver",
+    autorNome: params.autorNome,
+  });
+
   const agora = new Date().toISOString();
   const obs = params.observacoesRetorno.trim();
   const payload: Record<string, unknown> = {
@@ -826,27 +874,51 @@ export async function alterarOrdemSaida(params: {
   itens: OsItemInput[];
   autorNome: string;
 }): Promise<void> {
-  const { error } = await supabase
-    .from("tech_ops_ordem_saida")
-    .update({
-      status: "solicitada",
-      origem_chave: params.origem_chave ?? null,
-      destino_chave: params.destino_chave ?? null,
-      destino_texto: params.destino_texto ?? null,
-      fornecedor_id: params.fornecedor_id ?? null,
-      data_saida: params.data_saida,
-      data_retorno: params.sem_retorno ? null : (params.data_retorno ?? null),
-      sem_retorno: params.sem_retorno ?? false,
-      data_saida_realizada: null,
-      data_retorno_realizada: null,
-      motivo_cancelamento: "",
-      cancelado_por_nome: "",
-      cancelado_em: null,
-      observacoes_retorno: "",
-      concluido_por_nome: "",
-      concluido_em: null,
-    })
-    .eq("id", params.row.id);
+  const edicaoConcluidaSemRetorno = params.row.status === "concluida" && params.row.sem_retorno;
+  const semRetornoNovo = params.sem_retorno ?? false;
+
+  if (params.row.status === "aberta" || edicaoConcluidaSemRetorno) {
+    await sincronizarEstoqueOrdemSaida({
+      ordemId: params.row.id,
+      acao: "devolver",
+      autorNome: params.autorNome,
+    });
+  }
+
+  const payload: Record<string, unknown> = {
+    origem_chave: params.origem_chave ?? null,
+    destino_chave: params.destino_chave ?? null,
+    destino_texto: params.destino_texto ?? null,
+    fornecedor_id: params.fornecedor_id ?? null,
+    data_saida: params.data_saida,
+    data_retorno: semRetornoNovo ? null : (params.data_retorno ?? null),
+    sem_retorno: semRetornoNovo,
+  };
+
+  if (edicaoConcluidaSemRetorno) {
+    if (semRetornoNovo) {
+      payload.status = "concluida";
+      payload.estoque_aplicado = false;
+    } else {
+      payload.status = "aberta";
+      payload.concluido_por_nome = "";
+      payload.concluido_em = null;
+      payload.estoque_aplicado = false;
+    }
+  } else {
+    payload.status = "solicitada";
+    payload.data_saida_realizada = null;
+    payload.data_retorno_realizada = null;
+    payload.motivo_cancelamento = "";
+    payload.cancelado_por_nome = "";
+    payload.cancelado_em = null;
+    payload.observacoes_retorno = "";
+    payload.concluido_por_nome = "";
+    payload.concluido_em = null;
+    payload.estoque_aplicado = false;
+  }
+
+  const { error } = await supabase.from("tech_ops_ordem_saida").update(payload).eq("id", params.row.id);
   if (error) throw error;
 
   const { error: errDel } = await supabase.from("tech_ops_ordem_saida_itens").delete().eq("ordem_id", params.row.id);
@@ -866,10 +938,72 @@ export async function alterarOrdemSaida(params: {
     if (errItens) throw errItens;
   }
 
+  if (edicaoConcluidaSemRetorno) {
+    await sincronizarEstoqueOrdemSaida({
+      ordemId: params.row.id,
+      acao: "alocar",
+      autorNome: params.autorNome,
+    });
+  }
+
+  const detalheHistorico = resumoHistoricoAlteracaoOs(params.row, {
+    origem_chave: params.origem_chave ?? null,
+    destino_chave: params.destino_chave ?? null,
+    destino_texto: params.destino_texto ?? null,
+    fornecedor_id: params.fornecedor_id ?? null,
+    data_saida: params.data_saida,
+    data_retorno: semRetornoNovo ? null : (params.data_retorno ?? null),
+    sem_retorno: semRetornoNovo,
+    itens: params.itens,
+    statusFinal: edicaoConcluidaSemRetorno ? (semRetornoNovo ? "concluida" : "aberta") : "solicitada",
+  });
+
   await registrarHistoricoOrdemSaida({
     ordemId: params.row.id,
     acao: "Alteração da OS",
-    detalhe: "Dados e itens atualizados — status Solicitada",
+    detalhe: detalheHistorico,
     autorNome: params.autorNome,
   });
+}
+
+function resumoHistoricoAlteracaoOs(
+  antes: OrdemSaidaRow,
+  depois: {
+    origem_chave: string | null;
+    destino_chave: string | null;
+    destino_texto: string | null;
+    fornecedor_id: string | null;
+    data_saida: string;
+    data_retorno: string | null;
+    sem_retorno: boolean;
+    itens: OsItemInput[];
+    statusFinal: OrdemSaidaStatus;
+  },
+): string {
+  const mudancas: string[] = [];
+  if ((antes.origem_chave ?? null) !== depois.origem_chave) mudancas.push("origem");
+  if ((antes.destino_chave ?? null) !== depois.destino_chave) mudancas.push("destino");
+  if ((antes.destino_texto ?? null) !== depois.destino_texto) mudancas.push("destino");
+  if ((antes.fornecedor_id ?? null) !== depois.fornecedor_id) mudancas.push("fornecedor");
+  if ((antes.data_saida ?? null) !== depois.data_saida) mudancas.push("saída");
+  if ((antes.data_retorno ?? null) !== depois.data_retorno) mudancas.push("retorno");
+  if (antes.sem_retorno !== depois.sem_retorno) mudancas.push(depois.sem_retorno ? "sem retorno" : "com retorno");
+
+  const itensAntes = [...antes.itens]
+    .map((i) => `${i.entidade_tipo}:${i.entidade_id}:${i.quantidade}`)
+    .sort()
+    .join("|");
+  const itensDepois = [...depois.itens]
+    .map((i) => `${i.entidade_tipo}:${i.entidade_id}:${i.quantidade}`)
+    .sort()
+    .join("|");
+  if (itensAntes !== itensDepois) mudancas.push("itens");
+
+  const statusTxt =
+    antes.status !== depois.statusFinal
+      ? `status ${labelStatusOrdemSaida(antes.status, antes.tipo)} → ${labelStatusOrdemSaida(depois.statusFinal, antes.tipo)}`
+      : null;
+
+  const campos = mudancas.length ? `Campos: ${mudancas.join(", ")}` : "Dados revisados";
+  return statusTxt ? `${campos} — ${statusTxt}` : campos;
 }
