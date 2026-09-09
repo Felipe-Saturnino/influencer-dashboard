@@ -679,6 +679,8 @@ function DashboardPosicionamentoTodas({
   const bateu = useLobbyPosicionamentoData("bateu_bet", refDate, optsConsolidados);
   const rico = useLobbyPosicionamentoData("rico_bet", refDate, optsConsolidados);
   const brx = useLobbyPosicionamentoData("brx_bet", refDate, optsConsolidados);
+  const donald = useLobbyPosicionamentoData("donald_bet", refDate, optsConsolidados);
+  const betponto = useLobbyPosicionamentoData("betponto_bet", refDate, optsConsolidados);
 
   const loadingHistoricoAlertas =
     blaze.loadingHistorico ||
@@ -687,7 +689,9 @@ function DashboardPosicionamentoTodas({
     jonbet.loadingHistorico ||
     bateu.loadingHistorico ||
     rico.loadingHistorico ||
-    brx.loadingHistorico;
+    brx.loadingHistorico ||
+    donald.loadingHistorico ||
+    betponto.loadingHistorico;
 
   const alertasConsolidados = useMemo(() => {
     const prefix = (slug: string, lista: AlertaPos[]) =>
@@ -703,6 +707,8 @@ function DashboardPosicionamentoTodas({
       ...prefix("bateu_bet", bateu.alertasAlteracoes7d),
       ...prefix("rico_bet", rico.alertasAlteracoes7d),
       ...prefix("brx_bet", brx.alertasAlteracoes7d),
+      ...prefix("donald_bet", donald.alertasAlteracoes7d),
+      ...prefix("betponto_bet", betponto.alertasAlteracoes7d),
     ].sort((a, b) => (b.sortTs ?? 0) - (a.sortTs ?? 0));
   }, [
     blaze.alertasAlteracoes7d,
@@ -712,6 +718,8 @@ function DashboardPosicionamentoTodas({
     bateu.alertasAlteracoes7d,
     rico.alertasAlteracoes7d,
     brx.alertasAlteracoes7d,
+    donald.alertasAlteracoes7d,
+    betponto.alertasAlteracoes7d,
     slugToNome,
   ]);
 
@@ -807,6 +815,32 @@ function DashboardPosicionamentoTodas({
           prevDiferenteMap={brx.prevDiferenteMap}
           layout="consolidado"
           ultimaExecutadoEm={brx.snapshotExec?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("donald_bet")}`}
+          loading={donald.loading}
+          semDados={donald.semDados}
+          erro={donald.erro}
+          onRetry={() => void donald.recarregar()}
+          mesasOrdenadas={donald.mesasOrdenadas}
+          prevMap={donald.prevMap}
+          prevDiferenteMap={donald.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={donald.snapshotExec?.executado_em}
+          cardStyle={{ ...card, marginBottom: 0 }}
+        />
+        <PosicaoAtualMesasBlock
+          titulo={`Mesas ${slugToNome("betponto_bet")}`}
+          loading={betponto.loading}
+          semDados={betponto.semDados}
+          erro={betponto.erro}
+          onRetry={() => void betponto.recarregar()}
+          mesasOrdenadas={betponto.mesasOrdenadas}
+          prevMap={betponto.prevMap}
+          prevDiferenteMap={betponto.prevDiferenteMap}
+          layout="consolidado"
+          ultimaExecutadoEm={betponto.snapshotExec?.executado_em}
           cardStyle={{ ...card, marginBottom: 0 }}
         />
       </div>

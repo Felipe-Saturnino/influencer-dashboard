@@ -125,7 +125,19 @@ export function ModalLerConteudo({
   return (
     <ModalBase maxWidth={720} onClose={onClose} zIndex={1100}>
       <ModalHeader title="Ler manual" onClose={onClose} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, maxHeight: "min(75dvh, 640px)", overflowY: "auto" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          maxHeight: "min(75dvh, 640px)",
+          overflowY: "auto",
+          paddingTop: 8,
+          paddingLeft: 8,
+          paddingRight: 8,
+          paddingBottom: 8,
+        }}
+      >
         <div style={{ fontSize: 18, fontWeight: 900, color: t.text, fontFamily: FONT_TITLE }}>{titulo}</div>
         {introducao?.trim() ? (
           <div>

@@ -118,8 +118,10 @@ No Superset/ClickHouse, `operator_name = EsportivaBet` e `brand_name` vem vazio 
 | `bateubetbr_*` | Bateu Bet | `bateu_bet` |
 | `brxbetbr_*` | BRX Bet | `brx_bet` |
 | `ricobetbr_*` | Rico Bet | `rico_bet` |
+| `donaldbetbr_*` | Donald Bet | `donald_bet` |
+| `betpontobetbetbr_*` | Bet.Bet | `betponto_bet` |
 
-Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
+Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesas-spin-run.mjs`. Operadoras do split (`bateu_bet`, `brx_bet`, `rico_bet`, `donald_bet`, `betponto_bet`, `esportiva_bet`) devem existir em **Gestão de Operadoras** (e IDs Network em Gestão de Estúdios / Mesas, se aplicável).
 
 ### Atualização diária (padrão agent)
 

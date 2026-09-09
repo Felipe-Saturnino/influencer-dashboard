@@ -34,9 +34,11 @@ Histórico / reload: usar `--de` / `--ate` **inclusivos** no runner (`filtrarDia
 | `bateu` | `bateu_bet` | `bateubetbr_*` |
 | `brx` | `brx_bet` | `brxbetbr_*` |
 | `rico` | `rico_bet` | `ricobetbr_*` |
+| `donald` | `donald_bet` | `donaldbetbr_*` |
+| `betponto` | `betponto_bet` | `betpontobetbetbr_*` (Bet.Bet) |
 | `casa` / `blaze` / `jonbet` | `casa_apostas` / `blaze` / `jonbet` | como antes (`brand_name` na Blaze/Jon) |
 
-Volume Bateu/BRX/Rico pode ser **zero** em alguns dias — OK; ainda assim correr os 4 cenários.
+Volume Bateu/BRX/Rico/Donald/BetPonto pode ser **zero** em alguns dias — OK; ainda assim correr os 6 cenários Esportiva.
 
 Detalhe de domínio: `business.mdc` § Grupo EsportivaBet.
 
@@ -64,7 +66,7 @@ Detalhe de domínio: `business.mdc` § Grupo EsportivaBet.
    ```
    Carga só dos faltantes: acrescentar `--preencher-faltantes` (ignora dias ≤ último no Supabase).
 8. Env: `.env.gp-kpi` + `.env` — `VITE_SUPABASE_URL` / `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (mesmo `loadEnv` do runner).
-9. **Validar** após gravar: linhas em `bateu_bet` / `brx_bet` / `rico_bet` / `esportiva_bet` (daily + monthly) no intervalo.
+9. **Validar** após gravar: linhas em `bateu_bet` / `brx_bet` / `rico_bet` / `donald_bet` / `betponto_bet` / `esportiva_bet` (daily + monthly) no intervalo.
 10. Informar o usuário (dias, slugs novos com volume) e: alterações locais uncommitted — commit/push manual.
 
 Scripts canónicos: `scripts/superset-mesas-spin-extract-browser.js`, `scripts/superset-mesas-spin-run.mjs`, helpers em `tmp/make-compact-extract.mjs`.

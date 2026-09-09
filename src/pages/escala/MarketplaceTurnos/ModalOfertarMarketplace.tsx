@@ -298,7 +298,7 @@ export function ModalOfertarMarketplace({
                 border: `1px solid ${t.cardBorder}`,
                 borderRadius: 10,
                 background: t.inputBg,
-                padding: 6,
+                padding: 8,
                 maxHeight: 240,
                 overflowY: "auto",
               }}

@@ -12,7 +12,7 @@ import type { RhVagaRow } from "../../../types/rhVaga";
 import type { RhFuncionario } from "../../../types/rhFuncionario";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { CampoUploadArquivos } from "../../CampoUploadArquivos";
-import { ModalBase, ModalHeader } from "../../OperacoesModal";
+import { ModalBase, ModalHeader, MODAL_SCROLL_FOCUS_SAFE_PAD } from "../../OperacoesModal";
 
 const CARTA_PLACEHOLDER =
   "Destaque de forma objetiva a sua experiência como prestador na empresa, qual o interesse em assumir a nova posição, suas principais competências e como suas habilidades agregam para esta vaga.";
@@ -219,7 +219,14 @@ export function ModalCandidaturaVaga({
         Vaga: <strong style={{ color: t.text }}>{vaga.titulo}</strong>
       </p>
 
-      <div style={{ maxHeight: "min(70dvh, 620px)", overflowY: "auto", paddingRight: 4, paddingBottom: 24 }}>
+      <div
+        style={{
+          ...MODAL_SCROLL_FOCUS_SAFE_PAD,
+          maxHeight: "min(70dvh, 620px)",
+          overflowY: "auto",
+          paddingBottom: 24,
+        }}
+      >
         {carregandoPrestador ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
             <Loader2 size={16} className="app-lucide-spin" aria-hidden />

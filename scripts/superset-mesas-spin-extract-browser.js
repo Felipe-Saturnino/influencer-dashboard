@@ -13,10 +13,12 @@
  *
  * Grupo EsportivaBet (operator_name=EsportivaBet, brand_name vazio):
  *   separa marcas pelo sufixo de player_id (último segmento após o ponto):
- *     bateubetbr_*      → bateu     (slug plataforma: bateu_bet)
- *     brxbetbr_*        → brx       (slug: brx_bet)
- *     ricobetbr_*       → rico      (slug: rico_bet)
- *     esportivabetbr_*  → esportiva (slug: esportiva_bet)
+ *     bateubetbr_*         → bateu     (slug plataforma: bateu_bet)
+ *     brxbetbr_*           → brx       (slug: brx_bet)
+ *     ricobetbr_*          → rico      (slug: rico_bet)
+ *     donaldbetbr_*        → donald    (slug: donald_bet)
+ *     betpontobetbetbr_*   → betponto  (slug: betponto_bet) — Bet.Bet
+ *     esportivabetbr_*     → esportiva (slug: esportiva_bet)
  *     sem prefixo (só número/UUID) → esportiva (junto com Esportiva Bet)
  *
  * ATE é exclusivo no time_range do Superset (usar o dia seguinte ao último dia).
@@ -64,6 +66,8 @@
   const WHERE_BATEU = `match(${PLAYER_LAST_SEG}, '^bateubetbr_')`;
   const WHERE_BRX = `match(${PLAYER_LAST_SEG}, '^brxbetbr_')`;
   const WHERE_RICO = `match(${PLAYER_LAST_SEG}, '^ricobetbr_')`;
+  const WHERE_DONALD = `match(${PLAYER_LAST_SEG}, '^donaldbetbr_')`;
+  const WHERE_BETPONTO = `match(${PLAYER_LAST_SEG}, '^betpontobetbetbr_')`;
 
   const SCENARIOS = {
     network: [
@@ -71,6 +75,8 @@
       { key: "bateu", op: "EsportivaBet", brand: null, playerWhere: WHERE_BATEU, tables: SC },
       { key: "brx", op: "EsportivaBet", brand: null, playerWhere: WHERE_BRX, tables: SC },
       { key: "rico", op: "EsportivaBet", brand: null, playerWhere: WHERE_RICO, tables: SC },
+      { key: "donald", op: "EsportivaBet", brand: null, playerWhere: WHERE_DONALD, tables: SC },
+      { key: "betponto", op: "EsportivaBet", brand: null, playerWhere: WHERE_BETPONTO, tables: SC },
       { key: "casa", op: "Casa De Apostas", brand: null, tables: SC },
       { key: "blaze", op: "Blaze", brand: "Blaze.br", tables: SC },
       { key: "jonbet", op: "Blaze", brand: "jonbet.bet.br", tables: SC },
@@ -86,6 +92,8 @@
       { key: "net_bateu", op: "EsportivaBet", brand: null, playerWhere: WHERE_BATEU, tables: SC },
       { key: "net_brx", op: "EsportivaBet", brand: null, playerWhere: WHERE_BRX, tables: SC },
       { key: "net_rico", op: "EsportivaBet", brand: null, playerWhere: WHERE_RICO, tables: SC },
+      { key: "net_donald", op: "EsportivaBet", brand: null, playerWhere: WHERE_DONALD, tables: SC },
+      { key: "net_betponto", op: "EsportivaBet", brand: null, playerWhere: WHERE_BETPONTO, tables: SC },
       { key: "net_casa", op: "Casa De Apostas", brand: null, tables: SC },
       { key: "net_blaze", op: "Blaze", brand: "Blaze.br", tables: SC },
       { key: "net_jonbet", op: "Blaze", brand: "jonbet.bet.br", tables: SC },

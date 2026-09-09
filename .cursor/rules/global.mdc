@@ -833,11 +833,51 @@ Preferir `ModalBase` e `ModalHeader` de `src/components/OperacoesModal.tsx` — 
 |---|---|
 | **Tab / Shift+Tab** | Percorrem somente os controles do formulário, na ordem visual. Opções internas de dropdown/listbox usam `tabIndex={-1}` e não viram paradas individuais. |
 | **Indicador visual** | Todo controle focado por teclado dentro de `[role="dialog"]` recebe o anel global `:focus-visible` de `src/styles/global.css` (2px em `--brand-primary` + halo). Não remover com `outline: none` inline. |
+| **Anel de foco vs overflow (obrigatório)** | Ver subsecção **Anel de foco e overflow** abaixo — padding ≥ `MODAL_FOCUS_RING_PAD_PX` em qualquer área rolável com inputs/botões. |
 | **Setas em `<select>` nativo** | Mantêm o comportamento nativo do navegador. |
 | **Setas em lista pesquisável customizada** | **↑/↓** percorrem resultados, **Home/End** saltam para início/fim e **Enter** seleciona. **Escape** fecha só o painel (`onEscape`) e **não** propaga — nunca fecha o modal. Usar `useListboxKeyboardNavigation`; input com `aria-activedescendant`, lista `role="listbox"` e opções `role="option"`. |
 | **Escape** | **Nunca fecha o modal.** Pode fechar somente um painel/dropdown interno aberto, sem propagar para fechamento do diálogo. |
 
 **Implementação compartilhada:** `useListboxKeyboardNavigation` (`src/hooks/`) — setas, Home/End, Enter e Escape (`onEscape` + `stopPropagation`) + props `onKeyDown` / `aria-activedescendant` de `BarraPesquisaPagina` e `BarraPesquisaFiltroPainel`. Não duplicar índice ativo, wrap de setas, `scrollIntoView` nem Escape local em novos campos.
+
+### Anel de foco e overflow (obrigatório)
+
+O anel `:focus-visible` em `[role="dialog"]` (`global.css`: outline 2px + `outline-offset` 2px + `box-shadow` ~4px) é **pintado fora** da caixa do controle. Qualquer ancestral com `overflow: auto|hidden|scroll` **corta** esse anel se o controle estiver colado à borda do contentor.
+
+| Peça | Regra |
+|------|--------|
+| Constante | **`MODAL_FOCUS_RING_PAD_PX = 8`** em `OperacoesModal.tsx` |
+| Formulário longo (criar/editar) | Preferir **`ModalBase panelOverflow="hidden"`** + **`MODAL_FORM_SHELL_STYLE`** + **`MODAL_FORM_SCROLL_BODY_STYLE`** + rodapé **`MODAL_FORM_FOOTER_STYLE`** — header fora do scroll; corpo com padding ≥ 8; CTA fora do overflow |
+| Wrapper ad hoc com `overflowY: "auto"` | Espalhar **`MODAL_SCROLL_FOCUS_SAFE_PAD`** (ou `paddingTop/Left/Right ≥ MODAL_FOCUS_RING_PAD_PX`) **antes** dos campos — **proibido** só `paddingRight: 2` / `4` |
+| Listbox / checklist dentro do modal | Container com `overflowY: auto` deve ter **padding ≥ 8** em todos os lados que tocam controles focáveis |
+| Dialog legado (sem `ModalBase`) | Mesma regra: padding interno ≥ 8 no contentor que rola, ou campos insetados (≥ 20px lateral já costuma bastar) |
+
+```tsx
+import {
+  ModalBase,
+  ModalHeader,
+  MODAL_FORM_SHELL_STYLE,
+  MODAL_FORM_SCROLL_BODY_STYLE,
+  MODAL_FORM_FOOTER_STYLE,
+  MODAL_SCROLL_FOCUS_SAFE_PAD,
+} from "../components/OperacoesModal";
+
+// Formulário longo (referência: Nova Vaga)
+<ModalBase panelOverflow="hidden" onClose={fechar} maxWidth={560}>
+  <ModalHeader title="…" onClose={fechar} />
+  <div style={MODAL_FORM_SHELL_STYLE}>
+    <div style={MODAL_FORM_SCROLL_BODY_STYLE}>{/* campos */}</div>
+    <div style={MODAL_FORM_FOOTER_STYLE}>{/* Salvar */}</div>
+  </div>
+</ModalBase>
+
+// Corpo rolável pontual (sem shell completo)
+<div style={{ ...MODAL_SCROLL_FOCUS_SAFE_PAD, maxHeight: "min(70dvh, 620px)", overflowY: "auto", paddingBottom: 24 }}>
+  {/* inputs */}
+</div>
+```
+
+**Proibido:** corpo rolável com inputs em `width: 100%` e padding lateral 0–4px; reduzir `paddingLeft`/`paddingRight` de `MODAL_FORM_SCROLL_BODY_STYLE` abaixo de 8; confiar só no padding do `ModalBase` quando existir **outro** `overflowY: auto` interno sem pad próprio.
 
 - **Nunca** `window.confirm()` — confirmação de exclusão em lista/card/tabela: **`ModalConfirmExcluirPadrao`** (ver § abaixo); demais fluxos: modal dedicado (ver Brand §8).
 - **Nunca** `alert()` — erros com estado local + bloco inline:
@@ -1393,6 +1433,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - Modal de edição com abas: desmontar painel com `{aba === … &&}`; `useEffect` que reseta campos ao trocar aba; **Salvar** só da aba ativa — ver § Modais pré-save.
 - Upload em **modal** sem **`CampoUploadArquivos`** (input file nativo visível, label dashed ou dropzone local) — ver § Modais → Upload de arquivo; não unificar `accept`/tamanho/labels de domínio.
 - Header de modal que some ao scroll; X de fechar em `t.textMuted`; rodapé com **Cancelar**/**Fechar** só para `onClose` quando já existe X — ver § Modais → Cabeçalho sticky + fechar.
+- Corpo rolável de modal com inputs e padding lateral **&lt; 8px** (ex.: só `paddingRight: 4`) — corta o anel `:focus-visible`; usar `MODAL_FORM_SCROLL_BODY_STYLE` / `MODAL_SCROLL_FOCUS_SAFE_PAD` — § Modais → Anel de foco e overflow.
 - Exclusão sem **`BtnExcluirLinha`** / **`BtnExcluirComTexto`** + **`ModalConfirmExcluirPadrao`** (Global § Modais → Exclusão).
 - Arquivamento (Informativos / Portal RH Gerenciamento) sem **`BtnArquivarLinha`** + **`ModalConfirmArquivarPadrao`** ou com confirmação em 2 cliques no botão.
 - `90vh` em modais — usar `90dvh`.

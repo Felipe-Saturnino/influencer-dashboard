@@ -13,7 +13,7 @@ E-mail automático enviado **todo dia pela manhã (~6h BRT via GitHub Actions)**
    - Resultado de Mídias Sociais (investimento = Meta Ads)
 2. **Posicionamento** — última leitura antes do envio
    - **Mesas Dedicadas:** Mesa · Blaze · CDA — posição **somente** por **ID Spin** dedicado ligado à operadora (sem fallback por nome); sem leitura → —
-   - **Mesas Network:** Mesa · Blaze · CDA · Esportiva · Jonbet · Bateu · Rico · BRX (match exclusivo por ID Spin network)
+   - **Mesas Network:** Mesa · Blaze · CDA · Esportiva · Jonbet · Bateu · Rico · BRX · Donald · BetPonto (match exclusivo por ID Spin network)
 3. **Streamers**
    - Agenda do dia (`dataHoje`)
    - Resultado de Influencers do dia anterior (`dataOntem`)

@@ -21,6 +21,13 @@ const DialogTitleIdContext = createContext<string>("");
 /** Padding interno do painel `ModalBase` — usar em `ModalHeader` sticky para alinhar ao topo. */
 export const MODAL_BASE_PADDING_PX = 28;
 
+/**
+ * Padding mínimo em qualquer área com `overflow` que contenha controles focáveis do dialog.
+ * Cobre o anel `:focus-visible` de `global.css` (outline 2 + offset 2 + halo ~4).
+ * Sem isso o overflow corta a borda roxa à esquerda/direita/topo (ex.: textareas em formulários longos).
+ */
+export const MODAL_FOCUS_RING_PAD_PX = 8;
+
 /** Shell flex: corpo rolável + rodapé fixo dentro de `ModalBase` (postagens, vagas, etc.). */
 export const MODAL_FORM_SHELL_STYLE: CSSProperties = {
   display: "flex",
@@ -30,9 +37,8 @@ export const MODAL_FORM_SHELL_STYLE: CSSProperties = {
 };
 
 /**
- * Área rolável do formulário.
- * Padding lateral/topo ≥ anel `:focus-visible` do dialog (outline 2 + offset 2 + halo 4)
- * — sem isso o `overflowY` corta a seleção roxa na borda esquerda/direita.
+ * Área rolável do formulário — usar com `ModalBase panelOverflow="hidden"` + `MODAL_FORM_SHELL_STYLE`.
+ * Padding ≥ `MODAL_FOCUS_RING_PAD_PX` para o anel de foco não ser clipado.
  */
 export const MODAL_FORM_SCROLL_BODY_STYLE: CSSProperties = {
   display: "flex",
@@ -41,10 +47,17 @@ export const MODAL_FORM_SCROLL_BODY_STYLE: CSSProperties = {
   flex: 1,
   minHeight: 0,
   overflowY: "auto",
-  paddingTop: 8,
-  paddingLeft: 8,
-  paddingRight: 8,
+  paddingTop: MODAL_FOCUS_RING_PAD_PX,
+  paddingLeft: MODAL_FOCUS_RING_PAD_PX,
+  paddingRight: MODAL_FOCUS_RING_PAD_PX,
   paddingBottom: 24,
+};
+
+/** Padding de foco seguro para wrappers ad hoc com `overflowY: auto` (sem o layout flex do shell). */
+export const MODAL_SCROLL_FOCUS_SAFE_PAD: CSSProperties = {
+  paddingTop: MODAL_FOCUS_RING_PAD_PX,
+  paddingLeft: MODAL_FOCUS_RING_PAD_PX,
+  paddingRight: MODAL_FOCUS_RING_PAD_PX,
 };
 
 export const MODAL_FORM_FOOTER_STYLE: CSSProperties = {

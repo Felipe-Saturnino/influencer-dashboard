@@ -26,7 +26,7 @@ import {
 import type { RhVagaCandidaturaEtapa, RhVagaCandidaturaRow } from "../../../types/rhVagaCandidatura";
 import type { RhVagaTipo } from "../../../types/rhVaga";
 import { CampoUploadArquivos } from "../../CampoUploadArquivos";
-import { ModalBase, ModalHeader } from "../../OperacoesModal";
+import { ModalBase, ModalHeader, MODAL_SCROLL_FOCUS_SAFE_PAD } from "../../OperacoesModal";
 
 type Theme = { text: string; textMuted: string; cardBorder: string; inputBg: string; cardBg?: string; isDark?: boolean };
 type TabVer = "candidatura" | "anotacoes" | "etapas";
@@ -325,7 +325,14 @@ export function ModalCandidaturaVer({
           {erro}
         </div>
       ) : !c ? null : (
-        <div style={{ maxHeight: "min(68dvh, 560px)", overflowY: "auto", paddingRight: 4, paddingBottom: 24 }}>
+        <div
+          style={{
+            ...MODAL_SCROLL_FOCUS_SAFE_PAD,
+            maxHeight: "min(68dvh, 560px)",
+            overflowY: "auto",
+            paddingBottom: 24,
+          }}
+        >
           {tab === "candidatura" ? (
             tipoInterna(c.vaga?.tipo_vaga as RhVagaTipo) ? (
               <>

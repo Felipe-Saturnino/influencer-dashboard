@@ -19,7 +19,7 @@ import type { RhVagaRow, RhVagaStatus, RhVagaTipo } from "../../../types/rhVaga"
 import { BarraPesquisaPagina } from "../../BarraPesquisaPagina";
 import { CampoObrigatorioMark } from "../../CampoObrigatorioMark";
 import { FILTER_SEARCH_STAFF } from "../../../lib/searchBarConstants";
-import { ModalBase, ModalHeader } from "../../OperacoesModal";
+import { ModalBase, ModalHeader, MODAL_FORM_SCROLL_BODY_STYLE } from "../../OperacoesModal";
 import { orgVinculoDeRow, orgVinculoTemSelecao, orgVinculoVazio, type RhVagaOrgVinculo } from "../../../lib/rhVagaOrganograma";
 import { CampoOrganogramaVaga } from "./CampoOrganogramaVaga";
 import { CampoTagsVaga } from "./CampoTagsVaga";
@@ -443,7 +443,7 @@ export function ModalAtualizarVaga({
           </div>
         </div>
       ) : (
-        <div style={{ maxHeight: "min(70dvh, 640px)", overflowY: "auto", paddingRight: 4, paddingBottom: 24, fontFamily: FONT.body }}>
+        <div style={{ ...MODAL_FORM_SCROLL_BODY_STYLE, maxHeight: "min(70dvh, 640px)", fontFamily: FONT.body }}>
           <button
             type="button"
             onClick={voltarEscolha}

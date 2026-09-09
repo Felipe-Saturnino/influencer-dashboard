@@ -570,7 +570,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
             }
             onClose={fecharModal}
           />
-          <div style={{ ...MODAL_FORM_SCROLL_BODY_STYLE, paddingLeft: 6, paddingRight: 6 }}>
+          <div style={MODAL_FORM_SCROLL_BODY_STYLE}>
             {formErr ? (
               <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginBottom: 8 }}>
                 {formErr}

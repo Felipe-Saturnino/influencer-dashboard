@@ -336,7 +336,7 @@ Ordem típica Relatório Diretoria: **Consolidado MTD** (até última data Overv
 
 **Posicionamento — Mesas Dedicadas:** colunas **Blaze | CDA**. Cruza a última execução `lobby_monitor_*` com o catálogo de estúdios **dedicados**: posição **somente** pelo **ID Spin** da mesa ligada àquela operadora (estúdio dedicado → `estudios_spin_operadoras` ou `operadora_slug` legado). **Sem** fallback por nome normalizado — evita exibir posição de mesa Network com o mesmo rótulo de jogo. Sem ID dedicado na operadora → **—**.
 
-**Posicionamento — Mesas Network:** colunas **Blaze | CDA | Esportiva | Jonbet | Bateu | Rico | BRX**. Match **exclusivo por ID Spin** da mesa network no cadastro. Células de posição com prefixo **`P`** (ex. `P3`); sem leitura → **—**.
+**Posicionamento — Mesas Network:** colunas **Blaze | CDA | Esportiva | Jonbet | Bateu | Rico | BRX | Donald | BetPonto**. Match **exclusivo por ID Spin** da mesa network no cadastro. Células de posição com prefixo **`P`** (ex. `P3`); sem leitura → **—**.
 
 **Largura do card:** `EMAIL_CARD_MAX_WIDTH_PX = 960` em `common.ts` (`width:100%` + media query ≤640px).
 ---
