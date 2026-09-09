@@ -951,7 +951,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Tutoriais (Ajuda)",
         texto:
-          "Na aba **Escala do Turno**, o atalho roxo abre **Aprovação de Escala de Turno** — sinalizar falta, saída antecipada, hora adicional ou horário e aprovar os dias.\n\nNa aba **Relatório de Turno**, **Relatório de Turno** cobre gerar rascunho, publicar e consultar dias anteriores.\n\nNa aba **Notificações**, **Notificação** explica os quatro blocos e o acompanhamento dos atendimentos.\n\nVisibilidade inicial: Shift Leader, Service Manager e Gestor de Operações (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
+          "Na aba **Escala do Turno**, o atalho roxo abre **Aprovação de Escala de Turno** — sinalizar falta, saída antecipada, hora adicional ou horário e aprovar os dias.\n\nNa aba **Rotação**, **Gerar Rotação** cobre prévia, incluir liderança, protocolo de 20/30 min, mover entre estúdios, arrastar linhas na grade e publicar.\n\nNa aba **Relatório de Turno**, **Relatório de Turno** cobre gerar rascunho, publicar e consultar dias anteriores.\n\nNa aba **Notificações**, **Notificação** explica os quatro blocos e o acompanhamento dos atendimentos.\n\nVisibilidade inicial: Shift Leader, Service Manager e Gestor de Operações (Administrador vê todos). Ajuste em Ajuda → Tutoriais → ícone Editar ao lado do título.",
       },
     ],
   },
