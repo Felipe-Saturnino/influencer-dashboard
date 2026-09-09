@@ -1559,8 +1559,8 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",
         texto:
-          "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um ou vários dias de um prestador no mês já aprovado, use **Alterar Escala** (grade do mês + observação).",
-      },
+          "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um ou vários dias de um prestador no mês já aprovado, use **Alterar Escala** (grade do mês com select por dia + observação obrigatória → **Salvar alterações**). Compra e Venda do Marketplace não se editam nesse modal.",
+        },
       {
         subtitulo: "A célula de Compra, Venda ou Troca não mostra o comentário?",
         texto:

@@ -117,7 +117,7 @@ function mensagemErroAlterarCelula(code: string): string {
 }
 
 /** Compra/Venda do Marketplace — não editáveis no modal (só automação). */
-export function ehCelulaMarketplaceTravadaAlterarEscala(valor: string): boolean {
+function ehCelulaMarketplaceTravadaAlterarEscala(valor: string): boolean {
   const v = (valor ?? "").trim();
   return v === "Compra" || v === "Venda" || v.startsWith("Compra - ");
 }

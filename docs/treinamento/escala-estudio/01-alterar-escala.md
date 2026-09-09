@@ -1,10 +1,11 @@
 # Tutorial — Alterar Escala (Escala Estúdio)
 
-**Perfil de referência:** Service Manager (mesmo acesso de Editar que Shift Leader)  
+**URL:** `/Ajuda/Tutoriais/AlterarEscala`  
+**Perfil de referência:** Service Manager / Shift Leader (permissão de **Editar**)  
 **Página:** Escala Estúdio (`/EscalaEstudio`)  
-**Objetivo:** alterar o status de **um dia pontual** de **outro** prestador do Estúdio, com a escala do mês já **aprovada**.
+**Objetivo:** alterar **um ou vários dias** de **um** prestador na grade do mês, com a escala já **aprovada**.
 
-Imagens também em `public/tutoriais/escala/alterar-escala/` (aba Ajuda → Tutoriais).
+Imagens em `public/tutoriais/escala/alterar-escala/` (Ajuda → Tutoriais).
 
 ---
 
@@ -35,31 +36,34 @@ Imagens também em `public/tutoriais/escala/alterar-escala/` (aba Ajuda → Tuto
 
 ![Lista de prestadores](imagens/02-modal-alterar-escala.png)
 
-### 3. Dia
+### 3. Editar a grade do mês
 
-1. Confira Nome, Nickname, Escala e Turno (somente leitura).
-2. Em **Dia**, escolha uma data **≥ hoje**.
-3. Veja o **Status atual** do dia.
+1. Confira mês, selo **Escala aprovada** e dados do prestador.
+2. A grade lista **todos os dias do mês**, cada um com seletor de status.
+3. Dias **antes de hoje** = **travado**.
+4. **Compra** / **Venda** (Marketplace) = travadas (**Mkt**).
+5. Opções manuais: **Folga**, **Manhã**, **Tarde**, **Noite**, **Troca** (Academy pode incluir **Comercial**).
+6. Dias alterados nesta sessão aparecem como **editado**.
 
-![Prestador e dia](imagens/03-alterar-escala-prestador-selecionado.png)
+![Grade do mês](imagens/03-alterar-escala-prestador-selecionado.png)
 
-### 4. Status + observação → Salvar
+### 4. Observação e salvar
 
-1. **Status do dia:** Folga · Manhã / Tarde / Noite · Compra / Venda / Troca.
-2. **Observação** obrigatória (motivo claro).
-3. **Salvar alteração** — ou **Cancelar** para sair sem gravar.
+1. **Observação** obrigatória (vale para todos os dias alterados nesta gravação).
+2. Rodapé: contador **N dia(s) alterado(s)**.
+3. **Salvar alterações** — ou feche pelo **X** sem gravar.
 
 ![Formulário completo](imagens/04-alterar-escala-formulario-completo.png)
 
 ### 5. Conferência
 
-- Célula na Escala Diária com o novo status + ícone de comentário (hover: autor, anterior, observação).
-- Histórico de ações do mês (ícone na barra de filtros) inclui a linha **Alterar Escala**.
+- Células na Escala Diária com o novo status + ícone de comentário (hover: autor, anterior, observação).
+- Histórico de ações do mês (ícone na barra de filtros) inclui linhas **Alterar Escala**.
 
 ---
 
 ## Notas
 
-- Só para **ajuste pontual** em escala aprovada — não substitui montagem de rascunho.
-- A alteração reflete no **Calendário** do prestador.
-- Capturas feitas sem gravar alteração real em produção (Cancelar após o formulário completo).
+- Ajuste de um ou vários dias em escala aprovada — não substitui montagem de rascunho / **Nova Escala**.
+- A alteração reflete no **Calendário** e na **Rotação**.
+- Compra/Venda não se escolhem neste modal (só Marketplace).
