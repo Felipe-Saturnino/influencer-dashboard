@@ -3,6 +3,8 @@
 
 BEGIN;
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 CREATE TABLE IF NOT EXISTS public.rh_calendario_ics_feed (
   funcionario_id uuid PRIMARY KEY REFERENCES public.rh_funcionarios (id) ON DELETE CASCADE,
   token text NOT NULL,
@@ -27,7 +29,7 @@ CREATE OR REPLACE FUNCTION public._rh_calendario_ics_token_novo()
 RETURNS text
 LANGUAGE sql
 VOLATILE
-SET search_path = public
+SET search_path = public, extensions
 AS $$
   SELECT replace(replace(rtrim(encode(gen_random_bytes(24), 'base64'), '='), '+', '-'), '/', '_');
 $$;
