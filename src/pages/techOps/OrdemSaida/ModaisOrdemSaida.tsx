@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ClipboardList, ListOrdered, MessageSquareText, Plus, Trash2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
