@@ -31,7 +31,9 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 
 **Filtro Local (abas Itens, Equipamentos, Jogo):** agregadora **Todos Locais**; opções = estúdios ativos (`estudios_spin`) + Shuffler Room, OCR e Academy (`ESTOQUE_LOCAIS_FIXOS_FILTRO` em `techOpsEstoque.ts`) — alinhado a Itens Alocados (sem Estoque central).
 
-**Catálogo — paginação de vista:** 15 linhas/página (`TabelaPaginacaoBar` + `TABELA_PAGE_SIZE_ESTOQUE`) nas quatro abas (Itens, Equipamentos, Jogo, Fornecedores). KPIs e filtros usam o conjunto filtrado completo. A barra some quando há uma única página. Busca, filtro, ordenação ou clique em KPI voltam à página 1.
+**Catálogo Equipamentos (tabela):** Código · Categoria · Nome · Número de Série · Status · Alocação · Ações (Marca/Modelo ficam no modal Ver/Editar).
+
+**Catálogo — paginação de vista:** 20 linhas/página (`TabelaPaginacaoBar` + `TABELA_PAGE_SIZE`) nas quatro abas (Itens, Equipamentos, Jogo, Fornecedores). KPIs e filtros usam o conjunto filtrado completo. A barra some quando há uma única página. Busca, filtro, ordenação ou clique em KPI voltam à página 1.
 
 **Ajuda contextual:** `AjudaContextualAcoes` fica à direita da mesma linha das abas.
 
@@ -65,6 +67,7 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 | `ModaisOrdemSaida.tsx` | Nova OS (3 tipos) + reexport Ver/Atualizar |
 | `ModalVerOs.tsx` | Ver — título código, subtítulo status−pessoa, abas Dados / Anotações / Histórico |
 | `ModalAtualizarOs.tsx` | Atualizar — Cancelar / Confirmar Retorno / Alterar (conforme contexto) |
+| `SelectItemOs.tsx` | Seletor de item/equipamento/jogo na aba Itens — painel com busca e altura limitada (não `<select>` nativo) |
 | `ordemSaidaUi.tsx` | Estilos, KPI, badge, máscara DD/MM/AAAA |
 
 ## Regras
@@ -79,11 +82,12 @@ Códigos **ITM/EQP/JOG-####** (4 dígitos). Quantidades Estoque/Qtd Atual deriva
 - **Estoque × OS:** OS `aberta` ou `concluida` com `sem_retorno` mantém itens em uso. Concluída com retorno devolve ao Estoque. Flag `estoque_aplicado` evita dupla aplicação.
 - **Matriz UI/RLS:** Ver libera todas as abas e o modal Ver. Criar Sim libera Nova + Atualizar todas; Criar Próprios libera Nova + Atualizar próprias. Editar Sim libera Nova + Atualizar/Ver/Aprovar todas; Editar Próprios libera Nova + Atualizar/Ver todas e Aprovar próprias. Própria = `solicitante_user_id` ou nome do usuário igual ao solicitante/responsável.
 - **Locais (Interna):** `estudios_spin` (`estudio:<slug>`) + Estoque, Shuffler Room, OCR, Academy. Origem ≠ Destino.
-- **Itens:** `tech_ops_ordem_saida_itens` → estoque. Equipamento: qty = **1**. Item: qty ≤ **Estoque**; Jogo: qty ≤ **Qtd Atual** (clamp no campo + validação no Solicitar).
+- **Itens:** `tech_ops_ordem_saida_itens` → estoque. Equipamento: qty = **1**. Item: qty ≤ **Estoque**; Jogo: qty ≤ **Qtd Atual** (clamp no campo + validação no Solicitar). Seletor na aba **Itens da OS** / Alterar: `SelectItemOs` (grupos Itens/Equipamentos/Jogo, busca se >5 opções, painel `maxHeight` limitado — Escape fecha só o painel).
 - **Modais Ver:** campos por `OsModalContexto`; Itens no bloco Dados; Anotações = observação de abertura + tabela + motivo/obs. retorno; Histórico = ações.
 - **Modais Atualizar:** Cancelar → `cancelada` + motivo; Confirmar Retorno → `concluida` + checkboxes por item + obs.; Alterar (solicitada/aberta) → edita dados/itens e volta a `solicitada`; Alterar (concluída sem retorno) → mantém `concluida` (ou vira `aberta` se remover Sem retorno), realoca estoque e registra no histórico os campos alterados.
 - **Datas:** DD/MM/AAAA; retorno > saída; Sem retorno / Sem previsão.
 - **Vazio:** `Nenhuma ordem encontrada.`
+- **Paginação de vista:** 20 linhas/página (`TabelaComPaginacao` + `TABELA_PAGE_SIZE`) na Listagem (Interna), nas três tabelas da Externa (Futuras / Em Aberto / Encerradas, independentes) e nas duas da Manutenção. KPIs e filtros usam o conjunto completo. A barra some quando há uma única página. Busca, filtro de status, mês ou Histórico voltam à página 1.
 
 ## Fora do escopo v1
 
@@ -130,7 +134,7 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN. (Baixa de estoque na apro
 
 ## Regras
 
-- **Set:** OS internas `status=aberta` com `destino_chave` = local; join estoque; status em `tech_ops_itens_alocados_status` (default Em Uso).
+- **Set:** OS internas `status=aberta` com `destino_chave` = local; join estoque; status em `tech_ops_itens_alocados_status` (default Em Uso). Tabelas Set / Limpeza / Manutenção: paginação 20/página.
 - **Locais:** estúdios ativos (`estudios_spin`) + Shuffler Room / OCR / Academy — **sem Estoque**.
 - **Limpeza:** estúdio ou Academy → equipamentos **Roleta** alocados no Set (OS interna aberta); Shuffler Room ou OCR → **Máquina de Cartas**. Modal exibe `Nome - Número de Série`; select se >1; insert em `tech_ops_itens_alocados_limpeza` com `data_hora` atual e responsável logado.
 - **Manutenção (registro):** estúdio ou Academy → select de **mesa** cadastrada (`Nome da Mesa - Número`); após seleção, **Tipo de Manutenção** + **Observação** obrigatórios. Roleta: tipos incl. Nivelamento no padrão / Feito nivelamento (exige foto evidência), Calibração, Troca de peça, Cabos, Nano Poller, Fonte, Outros. Demais jogos: Troca de Tecido, Dispense, scanners, mouse, microfone, LED, Outros. Shuffler Room ou OCR → **Máquina de Cartas** alocada no Set aberto; tipos: Regular a lâmina, Reiniciar o sistema, Limpeza detalhada, Troca de Cabo, Outros. Insert em `tech_ops_itens_alocados_manutencao` (migration `20261125210000_*` — `observacao`, `evidencia_storage_path`, mesa **ou** equipamento).
@@ -139,6 +143,7 @@ Recados, Tarefas, Horas Extras, Admin/Telemetria, PIN. (Baixa de estoque na apro
 - **Status da página:** Em Uso / Verificar / Manutenção (próprios desta página).
 - **Permissões UI:** Ver → dados + Ver/Histórico; Criar → Checklist, Registrar Limpeza, Registrar Manutenção.
 - **Vazio Set:** `Nenhum item alocado neste local.` · Limpeza/Manutenção: mensagens específicas de local/mês.
+- **Paginação de vista:** 20 linhas/página (`TabelaComPaginacao` + `TABELA_PAGE_SIZE`) na tabela **Itens** (Set) e nas tabelas **Limpeza** / **Manutenção** (independentes). KPIs do Set usam o conjunto completo. A barra some quando há uma única página. Filtro de KPI ou ordenação no Set voltam à página 1.
 
 ## Fora do escopo (próxima etapa)
 

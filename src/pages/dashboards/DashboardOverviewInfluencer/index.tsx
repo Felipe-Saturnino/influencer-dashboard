@@ -44,6 +44,7 @@ import {
 } from "../../../lib/pageContentBoxStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -1332,6 +1333,12 @@ export default function DashboardOverviewInfluencer() {
             </div>
 
           {modoVisualizacaoComparativo === "tabela" ? (
+            <TabelaComPaginacao
+              items={diasDataComparativoExibicao}
+              t={t}
+              resetKey={`${historico}|${idxMes}|${filtroInfluencer}|${filtroOperadora}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 900 })}>
                 <caption style={{ display: "none" }}>
@@ -1363,8 +1370,8 @@ export default function DashboardOverviewInfluencer() {
                   </tr>
                 </thead>
                 <tbody>
-                  {diasDataComparativoExibicao.map((d, i) => (
-                    <tr key={d.data} style={{ background: dataTable.zebraRow(i) }}>
+                  {linhas.map((d, i) => (
+                    <tr key={d.data} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={dataTable.tdCenter}>
                         {historico ? fmtMesAnoCurtoInfluencer(d.data.slice(0, 7)) : fmtDia(d.data)}
                       </td>
@@ -1393,6 +1400,8 @@ export default function DashboardOverviewInfluencer() {
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           ) : dadosGraficoComparativo.length === 0 ? (
             <div
               style={{

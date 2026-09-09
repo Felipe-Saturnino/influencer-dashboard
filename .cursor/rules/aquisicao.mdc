@@ -47,7 +47,7 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - Empty ciclos: copy para influencer vs gestor; detalhes técnicos só em `<details>` para gestor.
 - Alertas: `AlertTriangle` Lucide — nunca emoji ⚠️ sozinho.
 - Ciclo aberto: banner amarelo “Prévia em tempo real…” com `role="status"`.
-- Tabelas **Ciclo** e **Consolidado:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`, cabeçalho/zebra/linha total); sub-tabela de histórico no expand usa `thHeaderSub`.
+- Tabelas **Ciclo** e **Consolidado:** padrão canónico Global (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`, cabeçalho/zebra/linha total); sub-tabela de histórico no expand usa `thHeaderSub`. Paginação 20/página (`TabelaPaginacaoBar`) nas listagens.
 - Expand no Consolidado: `aria-expanded`; coluna **Perfil** para classificação de influencer.
 - Responsivo: &lt;768px ocultar Horas; &lt;480px colunas mínimas (ver handoff).
 - **Handoff:** aprovação pagamento, edição manual, consolidado.
@@ -69,6 +69,7 @@ Perfis: Gestor, Operador, Influencer, Agência — escopo e ações por perfil.
 - Vazio filtro: `Nenhuma solicitação em aberto neste filtro.`
 - Responsivo: &lt;768px ocultar CPF/Data; &lt;480px cards verticais.
 - FilterBar: **`FiltroInfluencerSelect`** (`mode="multiple"`, agregadora **Todos Influencers**) + **`FiltroOperadoraSelect`** (`pill`, Todas Operadoras) — Financeiro e Banca de Jogo.
+- Tabelas **Solicitações** e **Consolidado de bancas:** paginação 20/página (`TabelaPaginacaoBar`).
 - CTA nova solicitação (influencer/agência): **`CtaCriarButton`** no bloco Solicitações — rótulo visível **`Solicitar Banca`** (ícone `Plus` 14px no componente; sem `+` no texto). Confirmação no modal: botão **Solicitar** no rodapé (`ModalSolicitar`) — migração de modais em fase seguinte.
 - **Handoff:** liberar banca, operadora, histórico.
 

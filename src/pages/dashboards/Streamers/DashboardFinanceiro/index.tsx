@@ -15,6 +15,7 @@ import { BRAND, MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants"
 import { FiltroHistoricoButton, FiltroInfluencerSelect, FiltroOperadoraSelect, SectionTitle, KpiCard, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import { fetchInfluencerAnalyticsPeriodoCached } from "../../../../lib/influencerAnalyticsQuery";
 import { buscarInvestimentoPago, filtrosInvestimentoPorEscopo } from "../../../../lib/investimentoPago";
 import { MSG_ERRO_STREAMERS } from "../streamersInfluencerFilterHelpers";
@@ -814,6 +815,12 @@ export default function DashboardFinanceiro() {
         ) : rowsParaExibir.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted }}>{MSG_SEM_DADOS_FILTRO}</div>
         ) : (
+          <TabelaComPaginacao
+            items={rowsFinOrdenadas}
+            t={t}
+            resetKey={`${historico}|${idxMes}|${filtroInfluencer}|${operadoraFiltro}|${sortFinRank.col}|${sortFinRank.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 1080 })}>
               <caption style={{ display: "none" }}>
@@ -910,10 +917,10 @@ export default function DashboardFinanceiro() {
                 </tr>
               </thead>
               <tbody>
-                {rowsFinOrdenadas.map((r, i) => {
+                {linhas.map((r, i) => {
                   const st = PERFIL_CORES[r.perfil_jogador];
                   return (
-                    <tr key={r.influencer_id} style={{ background: dataTable.zebraRow(i) }}>
+                    <tr key={r.influencer_id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{r.nome}</td>
                       <td style={dataTable.tdCenter}>{fmtBRL(r.ftd_total)}</td>
                       <td style={dataTable.tdCenter}>{r.ftds > 0 ? fmtBRL(r.ftd_ticket_medio) : "—"}</td>
@@ -942,6 +949,8 @@ export default function DashboardFinanceiro() {
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
       </>

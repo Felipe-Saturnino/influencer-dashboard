@@ -31,6 +31,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -374,6 +375,8 @@ export default function RhSolicitacoesPage() {
 
   function renderTabelaFeedback() {
     return (
+      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle({ minWidth: 860 })}>
           <caption style={{ display: "none" }}>Feedback</caption>
@@ -393,18 +396,18 @@ export default function RhSolicitacoesPage() {
             </tr>
           </thead>
           <tbody>
-            {listaOrdenada.map((row, i) => (
+            {linhas.map((row, i) => (
               <tr
                 key={row.id}
-                style={{ background: dataTable.zebraRow(i) }}
+                style={{ background: dataTable.zebraRow(zebraIdx(i)) }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = dataTable.zebraRow(i);
+                  e.currentTarget.style.background = dataTable.zebraRow(zebraIdx(i));
                 }}
               >
-                <td style={dataTable.tdSticky({ rowIndex: i })}>{fmtDataSolicitacao(row.created_at)}</td>
+                <td style={dataTable.tdSticky({ rowIndex: zebraIdx(i) })}>{fmtDataSolicitacao(row.created_at)}</td>
                 <td style={dataTable.tdCenter}>{row.lideranca_nome?.trim() || "—"}</td>
                 <td style={dataTable.tdCenter}>{nomeSolicitante(row)}</td>
                 <td style={dataTable.tdCenter}>{labelFeedbackRecomendacao(row.feedback_recomendacao)}</td>
@@ -418,6 +421,8 @@ export default function RhSolicitacoesPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 
@@ -426,6 +431,8 @@ export default function RhSolicitacoesPage() {
     const isVagas = aba === "vagas";
 
     return (
+      <TabelaComPaginacao items={listaOrdenada} t={t} resetKey={`${aba}-${sort.col}-${sort.dir}-${filtroStatus}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle({ minWidth: 720 })}>
           <caption style={{ display: "none" }}>{RH_SOLICITACAO_ABA_OPTIONS.find((a) => a.key === aba)?.label}</caption>
@@ -471,18 +478,18 @@ export default function RhSolicitacoesPage() {
             </tr>
           </thead>
           <tbody>
-            {listaOrdenada.map((row, i) => (
+            {linhas.map((row, i) => (
               <tr
                 key={row.id}
-                style={{ background: dataTable.zebraRow(i) }}
+                style={{ background: dataTable.zebraRow(zebraIdx(i)) }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = dataTable.zebraRow(i);
+                  e.currentTarget.style.background = dataTable.zebraRow(zebraIdx(i));
                 }}
               >
-                <td style={dataTable.tdSticky({ rowIndex: i })}>
+                <td style={dataTable.tdSticky({ rowIndex: zebraIdx(i) })}>
                   {isReunioes ? fmtDataCurta(row.reuniao_dia_iso) : fmtDataSolicitacao(row.created_at)}
                 </td>
                 <td style={dataTable.tdCenter} title={nomeSolicitante(row)}>
@@ -522,6 +529,8 @@ export default function RhSolicitacoesPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 

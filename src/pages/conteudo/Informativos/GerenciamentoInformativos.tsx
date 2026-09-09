@@ -11,6 +11,7 @@ import { descricaoModalArquivarItem, tooltipArquivar } from "../../../lib/arquiv
 import {tooltipExcluir} from "../../../lib/excluirItemUi";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { FiltroBarCampoSelect, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
@@ -417,6 +418,12 @@ export function GerenciamentoInformativos({
           Sem dados para o período selecionado.
         </div>
       ) : (
+        <TabelaComPaginacao
+          items={rowsOrdenadas}
+          t={t}
+          resetKey={`${buscaDeb}|${filtroStatus}|${modoHistorico}|${idxMes}|${sortCol}|${sortDir}`}
+        >
+          {(linhas, zebraIdx) => (
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ minWidth: 960 })}>
             <caption style={{ display: "none" }}>Gerenciamento de informativos</caption>
@@ -436,7 +443,7 @@ export function GerenciamentoInformativos({
               </tr>
             </thead>
             <tbody>
-              {rowsOrdenadas.map((row, i) => {
+              {linhas.map((row, i) => {
                 const acoes = acoesPorStatus(row.status).filter((a) => {
                   if (a === "editar") {
                     return podeEditarInformativoGerenciamento(
@@ -460,7 +467,7 @@ export function GerenciamentoInformativos({
                   return true;
                 });
                 const busy = acaoLoading === row.id;
-                const zebraBg = dataTable.zebraRow(i);
+                const zebraBg = dataTable.zebraRow(zebraIdx(i));
                 return (
                   <tr
                     key={row.id}
@@ -550,6 +557,8 @@ export function GerenciamentoInformativos({
             </tbody>
           </table>
         </div>
+          )}
+        </TabelaComPaginacao>
       )}
 
       <ModalCriarInformativo

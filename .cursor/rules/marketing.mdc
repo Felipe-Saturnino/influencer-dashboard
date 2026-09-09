@@ -49,7 +49,7 @@ Perfis: Gestor (operação interna).
 ### Aba Campanhas
 
 - **KPIs do topo:** grelha `app-grid-kpi-3` + `getPageKpiSectionGapStyle()` — layout igual Financeiro/Banca de Jogo (`borderLeft` 3px, rótulo em caixa alta acima: **TOTAL**, **ATIVAS**, **INATIVAS**; `brand.blockBg`; sem caixa pai).
-- **Campanhas cadastradas:** `getPageContentBoxStyle` + **`SectionTitle`** `compact` na mesma linha que **`CtaCriarButton`** **Nova Campanha** quando `canCriarOk`.
+- **Campanhas cadastradas:** `getPageContentBoxStyle` + **`SectionTitle`** `compact` na mesma linha que **`CtaCriarButton`** **Nova Campanha** quando `canCriarOk`. Paginação 20/página (`TabelaPaginacaoBar`).
 - Toggle status: dois botões pill **Ativa / Inativa** com `aria-pressed` — nunca botão único alternante.
 - `autoFocus` em modal: ref + `setTimeout(100)`.
 - Vazio: `Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.`
@@ -57,7 +57,7 @@ Perfis: Gestor (operação interna).
 ### Aba Geração de Links
 
 - **KPIs:** **TOTAL** (links na tabela), **ATIVOS** (métricas/resultados nos últimos 30 dias em `utm_metricas_diarias`), **INATIVOS** (resto) — mesma grelha KPI da aba Campanhas.
-- **Links cadastrados:** `SectionTitle` `compact` + **`CtaCriarButton`** **Novo Link** (`canCriarOk`) — abre **`ModalNovoLink`**.
+- **Links cadastrados:** `SectionTitle` `compact` + **`CtaCriarButton`** **Novo Link** (`canCriarOk`) — abre **`ModalNovoLink`**. Paginação 20/página.
 - **Modal Novo Link:** Operadora obrigatória (só ativas). Operadoras com geração: **Casa de Apostas** (`utm_source`) e **Blaze** (`utm_campaign`). Select obrigatório **Campanha** (ativas da mesma operadora). Campo **UTM** só com o valor editável (sem URL base no formulário). Demais operadoras: aviso «em breve». **Gerar Link** monta a URL completa (base fixa da operadora + UTM), chama RPC `gerar_campanha_link` — grava `campanha_links` + mapeia `utm_aliases` (`status = mapeado`, `campanha_id`). Valor sanitizado e persistido em `utm_source` (identificador interno); URL completa só no resultado + **Copiar**.
 - Tabela: UTM, Operadora, Criado em, Usuário (nome em `profiles`), Status (Ativo/Inativo), Última Visita — `SortTableTh`; default **Criado em** `desc`. Fonte: tabela `campanha_links` (`src/lib/campanhaLinks.ts`).
 - Vazio: `Nenhum link cadastrado.`
@@ -71,7 +71,7 @@ Perfis: Gestor (operação interna).
 - Abas `pendentes | mapeados | ignorados`: ARIA completo (tablist, tab, tabpanel, teclado).
 - **Busca:** `BarraPesquisaPagina` abaixo das abas, no mesmo bloco de filtros — filtra por **UTM Source** (`textoContemBusca`, insensível a acentos); placeholder `PAGE_SEARCH.utmSource`. Vazio com busca: `Nenhum link encontrado para a busca.`
 - Info box: linguagem de produto — **nunca** nomes de tabelas/RPC.
-- Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal). Coluna **Proprietário** = influencer (nome artístico), afiliado (nome) ou campanha.
+- Tabela: padrão canónico (`useDataTableBlock`, `getDataTableWrapStyle`, `getDataTableStyle`); `tableLayout: fixed`; scroll horizontal em mobile via `app-table-wrap`. Paginação 20/página. Métricas Depósitos/GGR no painel de detalhe do link (não colunas da grade principal). Coluna **Proprietário** = influencer (nome artístico), afiliado (nome) ou campanha.
 - **Pendentes — coluna Origem:** `cda_conta` gravado pelo sync CDA (`influencers` | `afiliados`) → rótulos **TAP Influencers** / **TAP Afiliados**. Também coluna **Visitas** (`total_visits`). Ordenação default por visitas. Modal Mapear pré-seleciona tipo **Afiliado** quando origem = TAP Afiliados.
 - **Modal Mapear:** tipos **Influencer** | **Afiliado** | **Campanha**. Afiliado e Influencer gravam em `influencer_id` (mesma FK; papel vem de `profiles.role`). Listas separadas por role; exibição via `nomeExibicaoLinksEntidade`. O catálogo é carregado em duas consultas explícitas (`profiles` → IDs; `influencer_perfil` por `.in("id", ids)`) — não usar embed PostgREST, pois falha na relação não pode esvaziar silenciosamente os dois selects.
 - **Proteção de volume:** cada aba consulta no máximo 500 aliases; Pendentes ordena por `total_visits`, demais por `total_ftds`.

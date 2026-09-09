@@ -5,7 +5,9 @@ import {
   extractListaAtualizadaEm,
   extractPaginasListaAutorizacoes,
   extractSharePointPlanilhaUrl,
+  mergeBlocosSpaPorCnpj,
   parseSpaAutorizacoesHtmlTable,
+  parseSpaJudicialHtmlTable,
   pickFonteFromHtml,
   toSharePointDownloadUrl,
 } from "../../../src/lib/comercialSpaListaFonte";
@@ -67,6 +69,39 @@ const EMPRESAS_AUTORIZADAS_COM_XLSX_404 = `
 ${HTML_TABLE}
 `;
 
+/** Duas empresas / 6 marcas — estrutura real da página de determinação judicial. */
+const HTML_JUDICIAL = `
+<table class="black">
+<caption>Empresa explorando … determinação judicial … 5007941-50.2025.4.03.6100.</caption>
+<thead>
+<tr><th>Empresa</th><th>CNPJ</th><th>Marcas</th><th>Domínio</th><th>Informações Judiciais</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ZEROUMBET PLATAFORMA DIGITAL LTDA</strong></td>
+<td>55.997.392/0001-05</td>
+<td><ul><li>ZEROUM</li><li>ENERGIA</li><li>SPORTVIP</li></ul></td>
+<td>zeroum.bet<br />energia.bet<br />sportvip.bet</td>
+<td>5007941-50.2025.4.03.6100, em trâmite na 14ª Vara Federal Cível da Seção Judiciária de São Paulo</td>
+</tr>
+</tbody>
+</table>
+<table class="black">
+<thead>
+<tr><th>Empresa</th><th>CNPJ</th><th>Marcas</th><th>Domínio</th><th>Informações Judiciais</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ZONA DE JOGO NEGÓCIOS E PARTICIPAÇÕES LTDA</strong></td>
+<td>57.163.072/0001-77</td>
+<td><ul><li>ZONA DE JOGO</li><li>APOSTAONLINE</li><li>ONLYBETS</li></ul></td>
+<td>zonadejogo.bet.br<br />apostaonline.bet.br<br />onlybets.bet.br</td>
+<td>1096849-60.2025.4.01.3400, em trâmite na 4ª Vara Federal Cível da Seção Judiciária do Distrito Federal</td>
+</tr>
+</tbody>
+</table>
+`;
+
 describe("comercialSpaListaFonte", () => {
   it("aponta DEFAULT_LISTA_PAGE para empresas-autorizadas", () => {
     expect(DEFAULT_LISTA_PAGE).toContain("/empresas-autorizadas");
@@ -108,7 +143,7 @@ describe("comercialSpaListaFonte", () => {
     );
   });
 
-  it("descobre a subpágina empresas-autorizadas e ignora determinação judicial", () => {
+  it("descobre a subpágina empresas-autorizadas e ignora determinação judicial no índice lista-de-empresas", () => {
     const pages = extractPaginasListaAutorizacoes(
       INDEX_HTML,
       "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas",
@@ -142,6 +177,56 @@ describe("comercialSpaListaFonte", () => {
     expect(blocos[1]?.marcas).toEqual([
       { nome: "JOGA JUNTO", dominio: "https://jogajunto.bet.br" },
     ]);
+  });
+
+  it("interpreta tabelas de determinação judicial (2 empresas / 6 marcas)", () => {
+    const blocos = parseSpaJudicialHtmlTable(HTML_JUDICIAL);
+    expect(blocos).toHaveLength(2);
+    expect(blocos[0]).toMatchObject({
+      cnpj: "55.997.392/0001-05",
+      razao_social: "ZEROUMBET PLATAFORMA DIGITAL LTDA",
+      requerimento_numero: null,
+      requerimento_ano: null,
+    });
+    expect(blocos[0]?.portaria).toMatch(/^Determinação judicial —/);
+    expect(blocos[0]?.marcas).toEqual([
+      { nome: "ZEROUM", dominio: "https://zeroum.bet" },
+      { nome: "ENERGIA", dominio: "https://energia.bet" },
+      { nome: "SPORTVIP", dominio: "https://sportvip.bet" },
+    ]);
+    expect(blocos[1]).toMatchObject({
+      cnpj: "57.163.072/0001-77",
+      razao_social: "ZONA DE JOGO NEGÓCIOS E PARTICIPAÇÕES LTDA",
+    });
+    expect(blocos[1]?.marcas).toHaveLength(3);
+    expect(blocos[1]?.marcas.map((m) => m.nome)).toEqual([
+      "ZONA DE JOGO",
+      "APOSTAONLINE",
+      "ONLYBETS",
+    ]);
+  });
+
+  it("une lista por portaria com judicial sem sobrescrever CNPJ já presente", () => {
+    const principais = parseSpaAutorizacoesHtmlTable(HTML_TABLE);
+    const judiciais = parseSpaJudicialHtmlTable(HTML_JUDICIAL);
+    const merged = mergeBlocosSpaPorCnpj(principais, judiciais);
+    expect(merged).toHaveLength(4);
+    expect(merged.map((b) => b.cnpj)).toEqual([
+      "55.590.815/0001-60",
+      "55.997.392/0001-05",
+      "57.163.072/0001-77",
+      "60.828.451/0001-43",
+    ]);
+    const overlap = mergeBlocosSpaPorCnpj(principais, [
+      {
+        ...judiciais[0]!,
+        cnpj: principais[0]!.cnpj,
+        razao_social: "NÃO DEVE PREVALECER",
+      },
+    ]);
+    expect(overlap.find((b) => b.cnpj === principais[0]!.cnpj)?.razao_social).toBe(
+      "BPX BETS SPORTS GROUP LTDA",
+    );
   });
 
   it("lê data de atualização no texto legado e no HTML Plone", () => {

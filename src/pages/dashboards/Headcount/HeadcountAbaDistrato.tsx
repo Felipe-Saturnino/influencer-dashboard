@@ -16,6 +16,7 @@ import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSor
 import { SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import type { HeadcountDistratoMetricas } from "../../../lib/headcountMetrics";
 import { HeadcountKpiCard } from "./HeadcountKpiCard";
 
@@ -229,6 +230,12 @@ export function HeadcountAbaDistrato({ historico, metricas, anterior, loading }:
 
       <div style={pageBox}>
         <SectionTitle sub="desligamentos do mês">Distratos</SectionTitle>
+        <TabelaComPaginacao
+          items={rows}
+          t={t}
+          resetKey={`${historico}|${sort.col}|${sort.dir}|${metricas.tabela[0]?.id ?? ""}|${metricas.tabela.length}`}
+        >
+          {(linhas, zebraIdx) => (
         <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ minWidth: 840 })}>
             <caption style={{ display: "none" }}>Distratos do período</caption>
@@ -243,8 +250,8 @@ export function HeadcountAbaDistrato({ historico, metricas, anterior, loading }:
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => (
-                <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
+              {linhas.map((row, i) => (
+                <tr key={row.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                   <td style={dataTable.tdSticky()}>{row.nome}</td>
                   <td style={dataTable.tdCenter}>{row.timeLabel}</td>
                   <td style={dataTable.tdCenter}>{fmtData(row.dataAdmissao)}</td>
@@ -256,6 +263,8 @@ export function HeadcountAbaDistrato({ historico, metricas, anterior, loading }:
             </tbody>
           </table>
         </div>
+          )}
+        </TabelaComPaginacao>
       </div>
     </>
   );

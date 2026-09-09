@@ -9,6 +9,7 @@ import { MSG_SEM_DADOS_FILTRO } from "../../../../lib/dashboardConstants";
 import { SectionTitle, SortTableTh, SelectComIcone, type SortDir } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import { FilterBarIcons } from "../../../../lib/filterBarIconCatalog";
 
 type TaxasSortCol = "nome" | "acessos" | "acessoReg" | "registros" | "regFtd" | "ftds";
@@ -199,6 +200,12 @@ export default function DashboardConversao() {
             {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={taxasOrdenadas}
+            t={t}
+            resetKey={`${historico}|${sf?.idxMes ?? ""}|${sf?.filtroAfiliado ?? ""}|${sf?.filtroOperadora ?? ""}|${sort.col}|${sort.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Comparativo de taxas por afiliado</caption>
@@ -213,9 +220,9 @@ export default function DashboardConversao() {
                 </tr>
               </thead>
               <tbody>
-                {taxasOrdenadas.map((r, i) => (
-                  <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(i) }}>
-                    <td style={dataTable.tdSticky({ rowIndex: i })}>{r.nome}</td>
+                {linhas.map((r, i) => (
+                  <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
+                    <td style={dataTable.tdSticky({ rowIndex: zebraIdx(i) })}>{r.nome}</td>
                     <td style={dataTable.tdCenter}>{r.acessos.toLocaleString("pt-BR")}</td>
                     <td style={dataTable.tdCenter}>{fmtPct(r.registros, r.acessos)}</td>
                     <td style={dataTable.tdCenter}>{r.registros.toLocaleString("pt-BR")}</td>
@@ -226,6 +233,8 @@ export default function DashboardConversao() {
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </div>

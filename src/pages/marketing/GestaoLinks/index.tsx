@@ -36,6 +36,7 @@ import {
 } from "../../../lib/pageContentBoxStyles";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 
 const COR = {
   vermelho: "#e84025",
@@ -755,6 +756,12 @@ export default function GestaoLinks() {
         </div>
       ) : (
         <div style={getPageContentBoxStyle(brand, t, { padding: 0 })}>
+          <TabelaComPaginacao
+            items={aliasesOrdenados}
+            t={t}
+            resetKey={`${aba}|${buscaUtm}|${operadoraFiltro}|${sortLinks.col}|${sortLinks.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ fontSize: 13, tableLayout: "fixed" })}>
             <caption style={{ display: "none" }}>Links por status</caption>
@@ -893,14 +900,14 @@ export default function GestaoLinks() {
               </tr>
             </thead>
             <tbody>
-              {aliasesOrdenados.length === 0 ? (
+              {linhas.length === 0 ? (
                 <tr>
                   <td colSpan={colunasPorAba(aba)} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 40, whiteSpace: "normal" }}>
                     {mensagemVazia}
                   </td>
                 </tr>
-              ) : aliasesOrdenados.map((alias, idx) => {
-                const zebraBg = dataTable.zebraRow(idx);
+              ) : linhas.map((alias, idx) => {
+                const zebraBg = dataTable.zebraRow(zebraIdx(idx));
                 const utmAccent = brand.accent;
                 const nomeOperadora =
                   operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—";
@@ -987,6 +994,8 @@ export default function GestaoLinks() {
             </tbody>
           </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         </div>
       )}
       </div>

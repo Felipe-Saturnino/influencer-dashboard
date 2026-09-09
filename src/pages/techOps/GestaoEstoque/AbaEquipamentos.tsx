@@ -37,7 +37,7 @@ import { ModalNovoEquipamentoEstoque } from "./ModaisNovoEstoque";
 import { ModalEditarEquipamentoEstoque } from "./ModaisEditarEstoque";
 
 type StatusKpi = "" | EstoqueEquipStatus;
-type SortCol = "codigo" | "categoria" | "nome" | "numero_serie" | "marca" | "modelo" | "status" | "alocacao";
+type SortCol = "codigo" | "categoria" | "nome" | "numero_serie" | "status" | "alocacao";
 
 const KPI_COR = {
   total: "var(--brand-primary, #7c3aed)",
@@ -126,10 +126,6 @@ export function AbaEquipamentos({
           return compareLocaleTexto(a.nome, b.nome, dir);
         case "numero_serie":
           return compareLocaleTexto(a.numero_serie, b.numero_serie, dir);
-        case "marca":
-          return compareLocaleTexto(a.marca, b.marca, dir);
-        case "modelo":
-          return compareLocaleTexto(a.modelo, b.modelo, dir);
         case "status":
           return compareLocaleTexto(ESTOQUE_EQUIP_STATUS_LABEL[a.status], ESTOQUE_EQUIP_STATUS_LABEL[b.status], dir);
         case "alocacao":
@@ -224,7 +220,7 @@ export function AbaEquipamentos({
         ) : (
           <>
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: 960 })}>
+            <table style={getDataTableStyle({ minWidth: 800 })}>
               <caption style={{ display: "none" }}>Catálogo de equipamentos</caption>
               <thead>
                 <tr>
@@ -232,8 +228,6 @@ export function AbaEquipamentos({
                   <SortTableTh label="Categoria" col="categoria" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Nome" col="nome" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Número de Série" col="numero_serie" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
-                  <SortTableTh label="Marca" col="marca" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
-                  <SortTableTh label="Modelo" col="modelo" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Status" col="status" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Alocação" col="alocacao" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <th scope="col" style={dataTable.thHeader}>
@@ -261,8 +255,6 @@ export function AbaEquipamentos({
                       {r.nome}
                     </td>
                     <td style={dataTable.tdCenter}>{r.numero_serie}</td>
-                    <td style={dataTable.tdCenter}>{r.marca}</td>
-                    <td style={dataTable.tdCenter}>{r.modelo}</td>
                     <td style={dataTable.tdCenter}>
                       <span style={{ display: "flex", justifyContent: "center" }}>
                         <BadgeEstoque

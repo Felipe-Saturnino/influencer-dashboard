@@ -22,6 +22,7 @@ import {
   getDataTableWrapStyle,
 } from "../../../../lib/dataTableStyles";
 import SectionTitle from "../../../../components/dashboard/SectionTitle";
+import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import { SkeletonKpiCard, SortTableTh, type SortDir, FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../../components/dashboard";
 import { compareLocaleTexto, compareNumber } from "../../../../lib/classificacaoSort";
 import {
@@ -1252,6 +1253,12 @@ function DashboardPosicionamentoOperadora({
             })}
           </div>
         </div>
+        <TabelaComPaginacao
+          items={heatMesasOrdenadas}
+          t={t}
+          resetKey={`${sortHistMesa.dir}|${historicoModo}|${operadoraSlug}`}
+        >
+          {(mesasPagina, zebraIdx) => (
         <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ fontFamily: FONT.body, fontSize: 12 })}>
             <caption style={{ display: "none" }}>Histórico de posicionamento das mesas</caption>
@@ -1274,7 +1281,8 @@ function DashboardPosicionamentoOperadora({
               </tr>
             </thead>
             <tbody>
-              {heatMesasOrdenadas.map((mid, rowIdx) => {
+              {mesasPagina.map((mid, i) => {
+                const rowIdx = zebraIdx(i);
                 const nome = nomeMesaHist(mid);
                 return (
                   <tr key={mid} style={{ background: dataTable.zebraRow(rowIdx) }} {...dataTableRowHoverHandlers(dataTable.zebraRow(rowIdx))}>
@@ -1309,6 +1317,8 @@ function DashboardPosicionamentoOperadora({
             </tbody>
           </table>
         </div>
+          )}
+        </TabelaComPaginacao>
       </div>
 
       <div className="app-grid-2" style={getPageKpiSectionGapStyle()}>

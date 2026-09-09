@@ -5,6 +5,11 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
   titulo: "Plataforma",
   blocos: [
     {
+      subtitulo: "A tabela só mostra 20 linhas e parece incompleta?",
+      texto:
+        "Comportamento esperado: nas tabelas densas da plataforma (catálogos, rankings, detalhamentos e listagens de gestão), a vista mostra **20 linhas** por vez. Totais e KPIs acima da tabela continuam no conjunto completo. Use as setas **Página anterior** / **Próxima página** abaixo da tabela — o texto indica o intervalo (ex.: 21–40 de 85). A barra some quando há 20 linhas ou menos. Busca, filtro ou ordenação voltam para a primeira página.",
+    },
+    {
       subtitulo: "Pesquisei sem acento e não encontrei o nome (ou o contrário)?",
       texto:
         "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Com **várias palavras**, cada uma precisa aparecer no cadastro — a ordem e o nome do meio não importam (ex.: «Alexandre Zanchetta» encontra «Alexandre Galvão Zanchetta»). Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período, time, estúdio, turno) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
@@ -1314,7 +1319,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Sync da Lista SPA falhou com erro de planilha ou HTTP 404?",
         texto:
-          "A lista oficial é a tabela **Empresas Autorizadas** no portal do Ministério da Fazenda. O sync lê essa página HTML; links antigos de planilha sob Transparência Ativa podem estar quebrados e são ignorados. Em Status Técnico, use **Sync** na linha **Lista SPA**. Se o erro persistir após o deploy da Edge Function, entre em contato com o suporte.",
+          "A lista oficial junta a tabela **Empresas Autorizadas** (portaria SPA/MF) e a página **Autorizadas por Determinação Judicial** no portal do Ministério da Fazenda. O sync lê as duas páginas HTML; links antigos de planilha sob Transparência Ativa podem estar quebrados e são ignorados. Em Status Técnico, use **Sync** na linha **Lista SPA** (pode ser necessário **force** após incluir a fonte judicial, se o hash anterior ainda for o da lista só por portaria). Se o erro persistir após o deploy da Edge Function, entre em contato com o suporte.",
       },
     ],
   },
@@ -1427,6 +1432,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Os itens vêm da Gestão de Estoque: só entram materiais com quantidade em estoque, equipamentos com status Estoque e lotes de jogo com quantidade atual maior que zero (na Manutenção a lista é mais ampla). Cadastre ou libere itens na Gestão de Estoque antes de solicitar a OS.",
       },
       {
+        subtitulo: "A lista de itens na OS fica enorme ou difícil de achar um código?",
+        texto:
+          "Na aba Itens da OS, abra o campo Item e use a busca no painel (Pesquisar Item…) para filtrar por código ou nome. A lista fica limitada em altura e agrupada em Itens, Equipamentos e Jogo — Escape fecha só o painel, sem fechar o modal.",
+      },
+      {
         subtitulo: "Ao clicar em Solicitar aparece erro genérico?",
         texto:
           "Confirme se as correções da Ordem de Saída foram aplicadas no Supabase (reserva de código da OS e permissão de criação) e se o usuário tem permissão de **Criar** ou **Editar** em Gestão de Usuários. Se o erro continuar, entre em contato com o suporte.",
@@ -1474,7 +1484,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um registro sumiu da tabela, mas eu não excluí nada?",
         texto:
-          "A página não possui exclusão. Verifique os filtros ativos: um card de KPI selecionado (Estoque, Em uso ou Manutenção), o filtro de Categoria, o filtro de Local ou o texto na busca restringem o catálogo. O Catálogo também pagina de 15 em 15 — use as setas abaixo da tabela para ver as demais linhas. Clique no card Total (ou no card ativo) e limpe busca e filtros para ver a lista completa.",
+          "A página não possui exclusão. Verifique os filtros ativos: um card de KPI selecionado (Estoque, Em uso ou Manutenção), o filtro de Categoria, o filtro de Local ou o texto na busca restringem o catálogo. O Catálogo também pagina de 20 em 20 — use as setas abaixo da tabela para ver as demais linhas. Clique no card Total (ou no card ativo) e limpe busca e filtros para ver a lista completa.",
       },
       {
         subtitulo: "O Estoque ou a Qtd Atual não batem com o que digitei?",

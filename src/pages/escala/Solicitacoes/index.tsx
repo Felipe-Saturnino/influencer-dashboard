@@ -18,6 +18,7 @@ import {
   type SortDir,
 } from "../../../components/dashboard";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
@@ -463,6 +464,8 @@ export default function EscalaSolicitacoesPage() {
       );
     }
     return (
+      <TabelaComPaginacao items={sorted} t={t} resetKey={`${aba}-${sortSolicitacao.col}-${sortSolicitacao.dir}-${filtroTipo}-${filtroTimeSlug}-${staffFiltroId ?? ""}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Solicitações</caption>
@@ -548,8 +551,8 @@ export default function EscalaSolicitacoesPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) => {
-              const zebra = dataTable.zebraRow(i);
+            {linhas.map((r, i) => {
+              const zebra = dataTable.zebraRow(zebraIdx(i));
               return (
                 <tr
                   key={r.id}
@@ -598,6 +601,8 @@ export default function EscalaSolicitacoesPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 

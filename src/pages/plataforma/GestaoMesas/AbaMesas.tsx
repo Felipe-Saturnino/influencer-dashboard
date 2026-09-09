@@ -9,6 +9,7 @@ import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -243,6 +244,12 @@ export function AbaMesas({
                   : "Nenhuma mesa cadastrada."}
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={rowsOrdenadas}
+            t={t}
+            resetKey={`${buscaMesa}|${filtroOperadora}|${sortMesa.col}|${sortMesa.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle()}>
               <caption style={{ display: "none" }}>Cadastro de mesas por estúdio</caption>
@@ -326,8 +333,8 @@ export function AbaMesas({
                 </tr>
               </thead>
               <tbody>
-                {rowsOrdenadas.map((r, i) => {
-                  const zebra = dataTable.zebraRow(i);
+                {linhas.map((r, i) => {
+                  const zebra = dataTable.zebraRow(zebraIdx(i));
                   const estudioNome = nomeEstudioJoin(r, estudios);
                   return (
                     <tr
@@ -391,6 +398,8 @@ export function AbaMesas({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

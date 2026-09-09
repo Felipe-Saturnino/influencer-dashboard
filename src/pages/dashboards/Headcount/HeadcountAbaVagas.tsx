@@ -17,6 +17,7 @@ import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSor
 import { SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import type { HeadcountVagasMetricas } from "../../../lib/headcountMetrics";
 import { OverviewGenericFunnel } from "../../comercial/OverviewComercial/OverviewGenericFunnel";
 import { HeadcountKpiCard } from "./HeadcountKpiCard";
@@ -185,6 +186,12 @@ export function HeadcountAbaVagas({ historico, metricas, anterior, loading }: Pr
             Sem dados para o período selecionado.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={rows}
+            t={t}
+            resetKey={`${historico}|${sort.col}|${sort.dir}|${metricas.tabela[0]?.id ?? ""}|${metricas.tabela.length}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 960 })}>
               <caption style={{ display: "none" }}>Vagas em andamento</caption>
@@ -200,8 +207,8 @@ export function HeadcountAbaVagas({ historico, metricas, anterior, loading }: Pr
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, i) => (
-                  <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
+                {linhas.map((row, i) => (
+                  <tr key={row.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                     <td style={dataTable.tdSticky()}>{row.titulo}</td>
                     <td style={dataTable.tdCenter}>{row.tipoLabel}</td>
                     <td style={dataTable.tdCenter}>{fmtData(row.dataAbertura)}</td>
@@ -216,6 +223,8 @@ export function HeadcountAbaVagas({ historico, metricas, anterior, loading }: Pr
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </>

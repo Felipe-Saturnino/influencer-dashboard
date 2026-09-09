@@ -8,6 +8,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { SectionTitle, CtaCriarButton } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import type { Permissoes } from "../../../hooks/usePermission";
 import type { EstoqueFornecedorRow } from "../../../lib/techOpsEstoque";
@@ -166,6 +167,12 @@ export function AbaManutencao({
         ) : abertas.length === 0 ? (
           <VazioOs>Nenhuma ordem encontrada.</VazioOs>
         ) : (
+          <TabelaComPaginacao
+            items={abertas}
+            t={t}
+            resetKey={`${busca}|${statusFiltro}|${mesKey}|${historico}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 900 })}>
               <caption style={{ display: "none" }}>Ordens de manutenção em aberto</caption>
@@ -190,10 +197,10 @@ export function AbaManutencao({
                 </tr>
               </thead>
               <tbody>
-                {abertas.map((r, i) => {
+                {linhas.map((r, i) => {
                   const codigo = formatCodigoOrdemSaida(r.tipo, r.competencia, r.codigo_num);
                   return (
-                    <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                    <tr key={r.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{codigo}</td>
                       <td style={dataTable.tdCenter}>{r.fornecedor_razao_social || "—"}</td>
                       <td style={dataTable.tdCenter}>{formatDataBrOs(r.data_saida)}</td>
@@ -221,6 +228,8 @@ export function AbaManutencao({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -231,6 +240,12 @@ export function AbaManutencao({
         ) : encerradas.length === 0 ? (
           <VazioOs>Nenhuma ordem encontrada.</VazioOs>
         ) : (
+          <TabelaComPaginacao
+            items={encerradas}
+            t={t}
+            resetKey={`${busca}|${statusFiltro}|${mesKey}|${historico}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 820 })}>
               <caption style={{ display: "none" }}>Ordens de manutenção encerradas</caption>
@@ -254,10 +269,10 @@ export function AbaManutencao({
                 </tr>
               </thead>
               <tbody>
-                {encerradas.map((r, i) => {
+                {linhas.map((r, i) => {
                   const codigo = formatCodigoOrdemSaida(r.tipo, r.competencia, r.codigo_num);
                   return (
-                    <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                    <tr key={r.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{codigo}</td>
                       <td style={dataTable.tdCenter}>
                         <CelulaItensOs itens={r.itens} labelOverride={labelEquipamento(r)} />
@@ -280,6 +295,8 @@ export function AbaManutencao({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

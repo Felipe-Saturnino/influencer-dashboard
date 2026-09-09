@@ -20,6 +20,7 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { ModalConfirmExcluirPadrao } from "../../../components/OperacoesModal";
 import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import {descricaoModalExcluirItem, tooltipExcluir} from "../../../lib/excluirItemUi";
@@ -3389,10 +3390,12 @@ export default function StatusTecnico() {
             Nenhum alerta no momento.
           </p>
         ) : (
+          <TabelaComPaginacao items={alertas} t={t} resetKey={alertas.length}>
+            {(linhas, zebraIdx) => (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {alertas.map((a, i) => (
+            {linhas.map((a, i) => (
               <div
-                key={i}
+                key={zebraIdx(i)}
                 style={{
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "12px 16px", borderRadius: 10,
@@ -3417,6 +3420,8 @@ export default function StatusTecnico() {
               </div>
             ))}
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -3467,6 +3472,12 @@ export default function StatusTecnico() {
         ) : techLogsFiltrados.length === 0 ? (
           <p style={{ color: t.textMuted, fontFamily: FONT.body, margin: 0 }}>Nenhum log de erro no período.</p>
         ) : (
+          <TabelaComPaginacao
+            items={techLogsOrdenados}
+            t={t}
+            resetKey={`${logFiltro}|${sortLog.col}|${sortLog.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle()}>
               <caption style={{ display: "none" }}>Logs de erro recentes das integrações</caption>
@@ -3531,9 +3542,9 @@ export default function StatusTecnico() {
                 </tr>
               </thead>
               <tbody>
-                {techLogsOrdenados.map((log, idx) => {
+                {linhas.map((log, idx) => {
                   const integracaoLabel = labelIntegracaoLog(log);
-                  const zebra = dataTable.zebraRow(idx);
+                  const zebra = dataTable.zebraRow(zebraIdx(idx));
                   return (
                     <tr
                       key={log.id}
@@ -3557,6 +3568,8 @@ export default function StatusTecnico() {
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

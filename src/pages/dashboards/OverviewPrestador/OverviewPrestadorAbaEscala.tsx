@@ -37,7 +37,7 @@ import type { OverviewPrestadorTimeCaps } from "../../../lib/overviewPrestadorTe
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { KpiCard, SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
-import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
+import { TabelaComPaginacao, TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
 import { compareLocaleTexto } from "../../../lib/classificacaoSort";
 import {
   clampPageIndex,
@@ -668,6 +668,12 @@ export function OverviewPrestadorAbaEscala({
               Sem dados para o período selecionado.
             </div>
           ) : (
+            <TabelaComPaginacao
+              items={pontosAtencao}
+              t={t}
+              resetKey={`${pontosAtencao.length}|${pontosAtencao[0]?.prestadorId ?? ""}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 720 })}>
                 <caption style={{ display: "none" }}>Prestadores com desvios de escala</caption>
@@ -683,8 +689,8 @@ export function OverviewPrestadorAbaEscala({
                   </tr>
                 </thead>
                 <tbody>
-                  {pontosAtencao.map((r, i) => (
-                    <tr key={r.prestadorId} style={{ background: dataTable.zebraRow(i) }}>
+                  {linhas.map((r, i) => (
+                    <tr key={r.prestadorId} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={dataTable.tdCenter}>{r.nome}</td>
                       <td style={dataTable.tdCenter}>{r.timeRotulo}</td>
                       <td style={dataTable.tdCenter}>{fmtPct(r.presencaPct)}</td>
@@ -699,6 +705,8 @@ export function OverviewPrestadorAbaEscala({
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       ) : null}

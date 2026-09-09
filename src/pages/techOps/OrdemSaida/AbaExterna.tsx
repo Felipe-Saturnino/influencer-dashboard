@@ -8,6 +8,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { SectionTitle, CtaCriarButton } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import type { Permissoes } from "../../../hooks/usePermission";
 import {
@@ -152,6 +153,12 @@ export function AbaExterna({
         ) : futuras.length === 0 ? (
           <VazioOs>Nenhuma ordem encontrada.</VazioOs>
         ) : (
+          <TabelaComPaginacao
+            items={futuras}
+            t={t}
+            resetKey={`${busca}|${statusFiltro}|${mesKey}|${historico}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 880 })}>
               <caption style={{ display: "none" }}>Ordens externas futuras</caption>
@@ -176,10 +183,10 @@ export function AbaExterna({
                 </tr>
               </thead>
               <tbody>
-                {futuras.map((r, i) => {
+                {linhas.map((r, i) => {
                   const codigo = formatCodigoOrdemSaida(r.tipo, r.competencia, r.codigo_num);
                   return (
-                    <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                    <tr key={r.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{codigo}</td>
                       <td style={dataTable.tdCenter}>{r.destino_texto || "—"}</td>
                       <td style={dataTable.tdCenter}>{formatDataBrOs(r.data_saida)}</td>
@@ -207,6 +214,8 @@ export function AbaExterna({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -217,6 +226,12 @@ export function AbaExterna({
         ) : abertas.length === 0 ? (
           <VazioOs>Nenhuma ordem encontrada.</VazioOs>
         ) : (
+          <TabelaComPaginacao
+            items={abertas}
+            t={t}
+            resetKey={`${busca}|${statusFiltro}|${mesKey}|${historico}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 880 })}>
               <caption style={{ display: "none" }}>Ordens externas em aberto</caption>
@@ -241,10 +256,10 @@ export function AbaExterna({
                 </tr>
               </thead>
               <tbody>
-                {abertas.map((r, i) => {
+                {linhas.map((r, i) => {
                   const codigo = formatCodigoOrdemSaida(r.tipo, r.competencia, r.codigo_num);
                   return (
-                    <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                    <tr key={r.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{codigo}</td>
                       <td style={dataTable.tdCenter}>{r.destino_texto || "—"}</td>
                       <td style={dataTable.tdCenter}>
@@ -274,6 +289,8 @@ export function AbaExterna({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -284,6 +301,12 @@ export function AbaExterna({
         ) : encerradas.length === 0 ? (
           <VazioOs>Nenhuma ordem encontrada.</VazioOs>
         ) : (
+          <TabelaComPaginacao
+            items={encerradas}
+            t={t}
+            resetKey={`${busca}|${statusFiltro}|${mesKey}|${historico}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Ordens externas encerradas</caption>
@@ -299,10 +322,10 @@ export function AbaExterna({
                 </tr>
               </thead>
               <tbody>
-                {encerradas.map((r, i) => {
+                {linhas.map((r, i) => {
                   const codigo = formatCodigoOrdemSaida(r.tipo, r.competencia, r.codigo_num);
                   return (
-                    <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                    <tr key={r.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{codigo}</td>
                       <td style={dataTable.tdCenter}>{formatDataBrOs(r.data_saida_realizada)}</td>
                       <td style={dataTable.tdCenter}>{formatDataBrOs(r.data_retorno_realizada)}</td>
@@ -324,6 +347,8 @@ export function AbaExterna({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

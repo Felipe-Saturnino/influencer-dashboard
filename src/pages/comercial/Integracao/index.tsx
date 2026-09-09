@@ -21,6 +21,7 @@ import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -515,8 +516,15 @@ export default function Integracao() {
             Carregando…
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={tableRows}
+            t={t}
+            resetKey={`${tab}|${busca}|${prioridadeFiltro}|${kpiStatus ?? ""}|${sort.col}|${sort.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <IntegracaoTable
-            rows={tableRows}
+            rows={linhas}
+            zebraIdx={zebraIdx}
             agregadoraOpcoes={agregadoraOpcoes}
             sort={sort}
             onSort={toggleSort}
@@ -531,6 +539,8 @@ export default function Integracao() {
             onUpdatePam={updatePam}
             t={t}
           />
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

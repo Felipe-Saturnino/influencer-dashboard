@@ -1,11 +1,12 @@
 /**
  * Edge Function: sync-comercial-spa-lista
  * Importa lista oficial SPA/MF (tabela HTML, CSV `;` ou XLSX) → comercial_empresas + comercial_marcas.
+ * Junta Empresas Autorizadas (portaria) + Autorizadas por Determinação Judicial (Transparência Ativa).
  * Não altera status_pipeline, status_folha, comercial_user_id, agregadora, ultimo_contato, status_dominio.
  *
  * Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  * Opcional: COMERCIAL_SPA_CSV_URL — URL direta do CSV/XLSX (senão descobre tabela HTML ou planilha na página gov.br)
- * Opcional: COMERCIAL_SPA_LISTA_PAGE_URL — página de listagem (default gov.br)
+ * Opcional: COMERCIAL_SPA_LISTA_PAGE_URL — página de listagem (default gov.br empresas-autorizadas)
  *
  * POST JSON: { dry_run?: boolean, force?: boolean, csv_url?: string }
  *
@@ -370,8 +371,14 @@ function extractSharePointPlanilhaUrl(html: string): string | null {
 const LISTA_EMPRESAS_PREFIX =
   "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas/";
 
+const TRANSPARENCIA_ATIVA_PREFIX =
+  "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/transparencia-ativa-processos-de-autorizacao-de-apostas-de-quota-fixa/";
+
 /** Página canónica com a tabela HTML oficial (índice `lista-de-empresas` mudou de conteúdo). */
 const DEFAULT_LISTA_PAGE = `${LISTA_EMPRESAS_PREFIX}empresas-autorizadas`;
+
+/** Autorizadas por determinação judicial (HTML sob Transparência Ativa). */
+const DEFAULT_JUDICIAL_PAGE = `${TRANSPARENCIA_ATIVA_PREFIX}autorizadas-por-determinacao-judicial`;
 
 const FALLBACK_PAGINAS_LISTA = [
   DEFAULT_LISTA_PAGE,
@@ -427,6 +434,18 @@ function findAutorizacoesTableHtml(html: string): string | null {
     tables.find(
       (t) => /CNPJ/i.test(t) && /Marcas/i.test(t) && /Dom[ií]nio/i.test(t) && /Portaria/i.test(t),
     ) ?? null
+  );
+}
+
+function findAllJudicialTablesHtml(html: string): string[] {
+  const tables = [...html.matchAll(/<table\b[^>]*>[\s\S]*?<\/table>/gi)].map((m) => m[0]);
+  return tables.filter(
+    (t) =>
+      /CNPJ/i.test(t) &&
+      /Marcas/i.test(t) &&
+      /Dom[ií]nio/i.test(t) &&
+      /Informa[cç][oõ]es\s+Judiciais|Judicial/i.test(t) &&
+      !/Portaria/i.test(t),
   );
 }
 
@@ -494,6 +513,70 @@ function parseSpaAutorizacoesHtmlTable(html: string): ParsedEmpresaBloco[] {
     });
   }
   return blocos.filter((b) => b.cnpj && b.razao_social);
+}
+
+function parseSpaJudicialHtmlTable(html: string): ParsedEmpresaBloco[] {
+  const blocos: ParsedEmpresaBloco[] = [];
+  for (const table of findAllJudicialTablesHtml(html)) {
+    for (const rm of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+      const cells = [...(rm[1] ?? "").matchAll(/<(td|th)\b[^>]*>([\s\S]*?)<\/\1>/gi)].map(
+        (c) => c[2] ?? "",
+      );
+      if (cells.length < 5) continue;
+      let offset = 0;
+      if (/^\d+$/.test(htmlToPlainText(cells[0] ?? ""))) offset = 1;
+      const razao = htmlToPlainText(cells[offset] ?? "").replace(/\s+/g, " ").trim();
+      const cnpj = normalizeCnpj(htmlToPlainText(cells[offset + 1] ?? ""));
+      if (!cnpj || !razao || /^empresa$/i.test(razao)) continue;
+      const infoJudicial = htmlToPlainText(cells[offset + 4] ?? "")
+        .replace(/\s+/g, " ")
+        .trim();
+      blocos.push({
+        cnpj,
+        razao_social: razao,
+        portaria: infoJudicial
+          ? `Determinação judicial — ${infoJudicial}`
+          : "Determinação judicial",
+        portaria_retificacoes: [],
+        requerimento_numero: null,
+        requerimento_ano: null,
+        marcas: zipMarcasDominiosHtml(
+          splitListaItens(htmlToPlainText(cells[offset + 2] ?? "")),
+          splitListaItens(htmlToPlainText(cells[offset + 3] ?? "")),
+        ),
+      });
+    }
+  }
+  return blocos.filter((b) => b.cnpj && b.razao_social);
+}
+
+function mergeBlocosSpaPorCnpj(
+  principais: ParsedEmpresaBloco[],
+  judiciais: ParsedEmpresaBloco[],
+): ParsedEmpresaBloco[] {
+  const map = new Map<string, ParsedEmpresaBloco>();
+  for (const b of principais) {
+    if (b.cnpj) map.set(b.cnpj, b);
+  }
+  for (const b of judiciais) {
+    if (!b.cnpj || map.has(b.cnpj)) continue;
+    map.set(b.cnpj, b);
+  }
+  return [...map.values()].sort((a, b) => a.cnpj.localeCompare(b.cnpj));
+}
+
+async function carregarBlocosJudiciais(): Promise<ParsedEmpresaBloco[]> {
+  const page = await fetchText(DEFAULT_JUDICIAL_PAGE);
+  if (!page.ok) {
+    console.error("[sync-comercial-spa-lista] Página judicial indisponível:", page.erro);
+    return [];
+  }
+  try {
+    return parseSpaJudicialHtmlTable(page.text);
+  } catch (e) {
+    console.error("[sync-comercial-spa-lista] Falha ao interpretar página judicial:", e);
+    return [];
+  }
 }
 
 function blocosToCanonicalText(blocos: ParsedEmpresaBloco[]): string {
@@ -1047,6 +1130,14 @@ serve(async (req) => {
     }
   }
 
+  const blocosJudiciais = await carregarBlocosJudiciais();
+  const blocosPortaria = blocos.length;
+  const judiciaisNovos = blocosJudiciais.filter((j) => !blocos.some((b) => b.cnpj === j.cnpj)).length;
+  if (blocosJudiciais.length > 0) {
+    blocos = mergeBlocosSpaPorCnpj(blocos, blocosJudiciais);
+    canonicalText = blocosToCanonicalText(blocos);
+  }
+
   const contentHash = await sha256Hex(canonicalText);
   const ultimoHash = dry_run ? null : await getUltimoHash(supabase);
 
@@ -1097,6 +1188,9 @@ serve(async (req) => {
       formato,
       content_hash: contentHash,
       blocos: blocos.length,
+      blocos_portaria: blocosPortaria,
+      blocos_judiciais: blocosJudiciais.length,
+      blocos_judiciais_novos: judiciaisNovos,
       marcas: totalMarcas,
       lista_atualizada_em: listaAtualizada,
       amostra: blocos.slice(0, 3).map((b) => ({
@@ -1143,6 +1237,9 @@ serve(async (req) => {
     formato,
     lista_atualizada_em: listaAtualizada,
     blocos: blocos.length,
+    blocos_portaria: blocosPortaria,
+    blocos_judiciais: blocosJudiciais.length,
+    blocos_judiciais_novos: judiciaisNovos,
     marcas_parseadas: totalMarcas,
     empresas_inseridas: result.empresas_inseridas,
     empresas_atualizadas: result.empresas_atualizadas,

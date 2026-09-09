@@ -5,6 +5,8 @@ import { useMediaQuery } from "../../../hooks/useMediaQuery"
 import { FONT } from "../../../constants/theme"
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { useTabelaPaginacao } from "../../../hooks/useTabelaPaginacao"
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar"
 import { supabase } from "../../../lib/supabase"
 import { CtaCriarButton } from "../../../components/CtaCriarButton"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
@@ -162,6 +164,11 @@ export function BlocoSolicitacoes({
     });
     return arr;
   }, [lista, perfilMap, sortSolic]);
+
+  const pagSolic = useTabelaPaginacao(
+    listaOrdenada,
+    `${sortSolic.col}|${sortSolic.dir}|${historico}|${mesFiltro}|${filterOperadora}|${filterInfluencers.join(",")}`,
+  );
 
   async function executarLiberar(row: BancaRowDb) {
     if (!user?.id) return;
@@ -337,7 +344,7 @@ export function BlocoSolicitacoes({
                 </td>
               </tr>
             ) : (
-              listaOrdenada.map((r, i) => {
+              pagSolic.linhasPagina.map((r, i) => {
                 const perf = perfilMap[r.influencer_id];
                 const st = STATUS_BANCA[r.status];
                 const sk = (perf?.perfil_status ?? "ativo").toLowerCase();
@@ -355,7 +362,7 @@ export function BlocoSolicitacoes({
                 const cpfDigits = (perf?.cpf ?? "").replace(/\D/g, "");
                 const cpfMascaravel = cpfDigits.length >= 11;
                 const cpfVisivel = cpfRevelados.has(r.id);
-                const zebraBg = dataTable.zebraRow(i);
+                const zebraBg = dataTable.zebraRow(pagSolic.zebraIdx(i));
                 const nomeInf = perf?.nome ?? r.influencer_id;
                 return (
                   <tr
@@ -475,6 +482,15 @@ export function BlocoSolicitacoes({
           </tbody>
         </table>
       </div>
+      {lista.length > 0 ? (
+        <TabelaPaginacaoBar
+          t={t}
+          page={pagSolic.paginaSafe}
+          pageSize={pagSolic.pageSize}
+          totalItems={pagSolic.totalItems}
+          onPageChange={pagSolic.setPagina}
+        />
+      ) : null}
 
       {bloqueioSolicitacao ? (
         <ModalBloqueioSolicitacaoCampanha

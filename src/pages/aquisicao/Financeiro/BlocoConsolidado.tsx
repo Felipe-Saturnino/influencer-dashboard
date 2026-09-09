@@ -5,6 +5,8 @@ import { FONT } from "../../../constants/theme"
 import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers"
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { useTabelaPaginacao } from "../../../hooks/useTabelaPaginacao"
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar"
 import { supabase } from "../../../lib/supabase"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
 import { compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort"
@@ -118,6 +120,8 @@ export function BlocoConsolidado({
     });
     return arr;
   }, [filtered, sortCons]);
+
+  const pagCons = useTabelaPaginacao(ordenados, `${busca}|${sortCons.col}|${sortCons.dir}`);
 
   const pageBox = getPageContentBoxStyle(brand, t);
 
@@ -247,11 +251,11 @@ export function BlocoConsolidado({
                     Nenhum influencer encontrado.
                   </td>
                 </tr>
-              ) : ordenados.map((row, i) => {
+              ) : pagCons.linhasPagina.map((row, i) => {
                 const isOpen = expandido === row.influencer_id;
                 const hist = ordenarHistoricoPorCicloDesc(historicoPagamentos[row.influencer_id] ?? []);
                 const sl = STATUS_INFLUENCER[row.statusInfluencer] ?? { label: row.statusInfluencer, color: "#94a3b8" };
-                const zebraBg = dataTable.zebraRow(i);
+                const zebraBg = dataTable.zebraRow(pagCons.zebraIdx(i));
 
                 const histPanelId = `hist-${row.influencer_id}`;
                 return (
@@ -416,6 +420,15 @@ export function BlocoConsolidado({
           </table>
         </div>
       )}
+      {!loadingMes && (ordenados.length > 0 || agentesRow) ? (
+        <TabelaPaginacaoBar
+          t={t}
+          page={pagCons.paginaSafe}
+          pageSize={pagCons.pageSize}
+          totalItems={pagCons.totalItems}
+          onPageChange={pagCons.setPagina}
+        />
+      ) : null}
     </div>
   );
 }

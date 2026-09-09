@@ -12,8 +12,17 @@ import {
 const LISTA_EMPRESAS_PREFIX =
   "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/lista-de-empresas/";
 
+const TRANSPARENCIA_ATIVA_PREFIX =
+  "https://www.gov.br/fazenda/pt-br/composicao/orgaos/secretaria-de-premios-e-apostas/transparencia-ativa-processos-de-autorizacao-de-apostas-de-quota-fixa/";
+
 /** Página canónica com a tabela HTML oficial (índice `lista-de-empresas` mudou de conteúdo). */
 export const DEFAULT_LISTA_PAGE = `${LISTA_EMPRESAS_PREFIX}empresas-autorizadas`;
+
+/**
+ * Empresas autorizadas por determinação judicial (tabelas HTML sob Transparência Ativa).
+ * Distinto da lista por portaria SPA/MF — o sync junta as duas fontes.
+ */
+export const DEFAULT_JUDICIAL_PAGE = `${TRANSPARENCIA_ATIVA_PREFIX}autorizadas-por-determinacao-judicial`;
 
 /** Páginas conhecidas quando o índice não aponta mais para a lista. */
 export const FALLBACK_PAGINAS_LISTA = [
@@ -177,6 +186,10 @@ export function looksLikeSpaAutorizacoesHtmlTable(html: string): boolean {
   return findAutorizacoesTableHtml(html) != null;
 }
 
+export function looksLikeSpaJudicialHtmlTable(html: string): boolean {
+  return findAllJudicialTablesHtml(html).length > 0;
+}
+
 function findAutorizacoesTableHtml(html: string): string | null {
   const tables = [...html.matchAll(/<table\b[^>]*>[\s\S]*?<\/table>/gi)].map((m) => m[0]);
   return (
@@ -187,6 +200,19 @@ function findAutorizacoesTableHtml(html: string): string | null {
         /Dom[ií]nio/i.test(t) &&
         /Portaria/i.test(t),
     ) ?? null
+  );
+}
+
+/** Tabelas judiciais: Empresa / CNPJ / Marcas / Domínio / Informações Judiciais (sem Portaria). */
+function findAllJudicialTablesHtml(html: string): string[] {
+  const tables = [...html.matchAll(/<table\b[^>]*>[\s\S]*?<\/table>/gi)].map((m) => m[0]);
+  return tables.filter(
+    (t) =>
+      /CNPJ/i.test(t) &&
+      /Marcas/i.test(t) &&
+      /Dom[ií]nio/i.test(t) &&
+      /Informa[cç][oõ]es\s+Judiciais|Judicial/i.test(t) &&
+      !/Portaria/i.test(t),
   );
 }
 
@@ -258,12 +284,46 @@ function zipMarcasDominios(nomes: string[], dominios: string[]): ParsedMarca[] {
 }
 
 /**
- * Parser da tabela HTML oficial (`/empresas-autorizadas`).
+ * Parser da tabela HTML oficial (`/empresas-autorizadas`) — Portaria SPA/MF.
  */
 export function parseSpaAutorizacoesHtmlTable(html: string): ParsedEmpresaBloco[] {
   const table = findAutorizacoesTableHtml(html);
   if (!table) return [];
+  return parseOficialTableRows(table);
+}
 
+/**
+ * Parser das tabelas HTML de autorização por determinação judicial
+ * (`…/autorizadas-por-determinacao-judicial`). Pode haver uma tabela por empresa.
+ */
+export function parseSpaJudicialHtmlTable(html: string): ParsedEmpresaBloco[] {
+  const blocos: ParsedEmpresaBloco[] = [];
+  for (const table of findAllJudicialTablesHtml(html)) {
+    blocos.push(...parseJudicialTableRows(table));
+  }
+  return blocos.filter((b) => b.cnpj && b.razao_social);
+}
+
+/**
+ * Une listas SPA (portaria + judicial). Em CNPJ duplicado, prevalece a entrada da
+ * lista por portaria (primeiro argumento).
+ */
+export function mergeBlocosSpaPorCnpj(
+  principais: ParsedEmpresaBloco[],
+  judiciais: ParsedEmpresaBloco[],
+): ParsedEmpresaBloco[] {
+  const map = new Map<string, ParsedEmpresaBloco>();
+  for (const b of principais) {
+    if (b.cnpj) map.set(b.cnpj, b);
+  }
+  for (const b of judiciais) {
+    if (!b.cnpj || map.has(b.cnpj)) continue;
+    map.set(b.cnpj, b);
+  }
+  return [...map.values()].sort((a, b) => a.cnpj.localeCompare(b.cnpj));
+}
+
+function parseOficialTableRows(table: string): ParsedEmpresaBloco[] {
   const blocos: ParsedEmpresaBloco[] = [];
   for (const rm of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
     const cells = extractRowCells(rm[1] ?? "");
@@ -303,6 +363,42 @@ export function parseSpaAutorizacoesHtmlTable(html: string): ParsedEmpresaBloco[
   }
 
   return blocos.filter((b) => b.cnpj && b.razao_social);
+}
+
+function parseJudicialTableRows(table: string): ParsedEmpresaBloco[] {
+  const blocos: ParsedEmpresaBloco[] = [];
+  for (const rm of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = extractRowCells(rm[1] ?? "");
+    if (cells.length < 5) continue;
+
+    let offset = 0;
+    const firstPlain = htmlToPlainText(cells[0] ?? "");
+    if (/^\d+$/.test(firstPlain)) offset = 1;
+
+    const razao = htmlToPlainText(cells[offset] ?? "").replace(/\s+/g, " ").trim();
+    const cnpj = normalizeCnpj(htmlToPlainText(cells[offset + 1] ?? ""));
+    if (!cnpj || !razao || /^empresa$/i.test(razao)) continue;
+
+    const infoJudicial = htmlToPlainText(cells[offset + 4] ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    blocos.push({
+      cnpj,
+      razao_social: razao,
+      portaria: infoJudicial
+        ? `Determinação judicial — ${infoJudicial}`
+        : "Determinação judicial",
+      portaria_retificacoes: [],
+      requerimento_numero: null,
+      requerimento_ano: null,
+      marcas: zipMarcasDominios(
+        splitListaItens(htmlToPlainText(cells[offset + 2] ?? "")),
+        splitListaItens(htmlToPlainText(cells[offset + 3] ?? "")),
+      ),
+    });
+  }
+  return blocos;
 }
 
 export function extractListaAtualizadaEm(htmlOrCsvHint: string): string | null {

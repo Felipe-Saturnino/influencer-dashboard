@@ -14,6 +14,7 @@ import { formatDataHoraHistoricoPerformanceHub } from "../../../lib/academyPerfo
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 
@@ -150,6 +151,12 @@ export function PerformanceHubAbaFeedback({
             Nenhum feedback pendente para o período selecionado.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={pendentes}
+            t={t}
+            resetKey={`${sortPendente.col}|${sortPendente.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 980 })}>
               <caption style={{ display: "none" }}>Tabela de feedbacks pendentes</caption>
@@ -201,8 +208,8 @@ export function PerformanceHubAbaFeedback({
                 </tr>
               </thead>
               <tbody>
-                {pendentes.map((row, i) => (
-                  <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
+                {linhas.map((row, i) => (
+                  <tr key={row.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                     <td style={dataTable.tdCenter}>{row.data}</td>
                     <td style={dataTable.tdCenter}>{row.avaliadoNome}</td>
                     <td style={dataTable.tdCenter}>{labelTimePerformanceHub(row.time)}</td>
@@ -228,6 +235,8 @@ export function PerformanceHubAbaFeedback({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -238,6 +247,12 @@ export function PerformanceHubAbaFeedback({
             Nenhum feedback aplicado para o período selecionado.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={aplicados}
+            t={t}
+            resetKey={`${sortAplicado.col}|${sortAplicado.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 1060 })}>
               <caption style={{ display: "none" }}>Tabela de feedbacks aplicados</caption>
@@ -297,8 +312,8 @@ export function PerformanceHubAbaFeedback({
                 </tr>
               </thead>
               <tbody>
-                {aplicados.map((row, i) => (
-                  <tr key={row.id} style={{ background: dataTable.zebraRow(i) }}>
+                {linhas.map((row, i) => (
+                  <tr key={row.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                     <td style={dataTable.tdCenter}>{row.data}</td>
                     <td style={dataTable.tdCenter}>{row.avaliadoNome}</td>
                     <td style={dataTable.tdCenter}>{labelTimePerformanceHub(row.time)}</td>
@@ -323,6 +338,8 @@ export function PerformanceHubAbaFeedback({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </>

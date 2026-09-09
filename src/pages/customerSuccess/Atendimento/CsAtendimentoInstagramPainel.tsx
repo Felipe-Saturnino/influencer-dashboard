@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Eye, Loader2, Pencil } from "lucide-react";
 import type { CSSProperties } from "react";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import SectionTitle from "../../../components/dashboard/SectionTitle";
 import { SortTableTh, type SortDir } from "../../../components/dashboard";
 import { FONT } from "../../../constants/theme";
@@ -164,6 +165,7 @@ function TabelaBloco({
   t,
   dataTable,
   minWidth,
+  resetKey,
 }: {
   titulo: string;
   sub: string;
@@ -179,6 +181,7 @@ function TabelaBloco({
   t: Theme;
   dataTable: DataTable;
   minWidth: number;
+  resetKey?: unknown;
 }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -193,6 +196,8 @@ function TabelaBloco({
           Nenhum chamado encontrado.
         </div>
       ) : (
+        <TabelaComPaginacao items={rows} t={t} resetKey={`${sortCol}|${sortDir}|${resetKey ?? ""}`}>
+          {(linhas, zebraIdx) => (
         <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ minWidth })}>
             <caption style={{ display: "none" }}>{caption}</caption>
@@ -218,9 +223,11 @@ function TabelaBloco({
                 )}
               </tr>
             </thead>
-            <tbody>{rows.map((row, i) => renderLinha(row, i))}</tbody>
+            <tbody>{linhas.map((row, i) => renderLinha(row, zebraIdx(i)))}</tbody>
           </table>
         </div>
+          )}
+        </TabelaComPaginacao>
       )}
     </div>
   );
@@ -405,6 +412,7 @@ export function CsAtendimentoInstagramPainel({
           t={t}
           dataTable={dataTable}
           minWidth={800}
+          resetKey={filtroStatus}
         />
       </div>
 
@@ -424,6 +432,7 @@ export function CsAtendimentoInstagramPainel({
           t={t}
           dataTable={dataTable}
           minWidth={720}
+          resetKey={filtroStatus}
         />
       </div>
     </div>

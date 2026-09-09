@@ -21,6 +21,7 @@ import {
 } from "../../../components/dashboard";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
@@ -646,6 +647,12 @@ export default function CsAtendimentoPage() {
               Nenhum chamado encontrado.
             </div>
           ) : (
+            <TabelaComPaginacao
+              items={listaOrdenada}
+              t={t}
+              resetKey={`${abaOrigem}|${filtroStatus}|${filtroAtendente}|${isAbaEmail ? `${sortEmail.col}|${sortEmail.dir}` : `${sortSite.col}|${sortSite.dir}`}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: isAbaEmail ? 960 : 720 })}>
                 <caption style={{ display: "none" }}>
@@ -686,11 +693,13 @@ export default function CsAtendimentoPage() {
                 </thead>
                 <tbody>
                   {isAbaEmail
-                    ? listaOrdenada.map((row, i) => renderLinhaEmail(row, i, colunasEmail))
-                    : listaOrdenada.map((row, i) => renderLinhaSite(row, i, colunasSite))}
+                    ? linhas.map((row, i) => renderLinhaEmail(row, zebraIdx(i), colunasEmail))
+                    : linhas.map((row, i) => renderLinhaSite(row, zebraIdx(i), colunasSite))}
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       )}

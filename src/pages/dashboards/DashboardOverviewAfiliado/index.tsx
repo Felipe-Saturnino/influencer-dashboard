@@ -47,6 +47,7 @@ import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { getPageCanonicalSubtitle } from "../../../lib/pageCanonicalCopy";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { FunilAfiliados } from "../AfiliadosDash/FunilAfiliados";
 
 type DetalheSortCol =
@@ -444,6 +445,12 @@ export default function DashboardOverviewAfiliado() {
               {MSG_SEM_DADOS_FILTRO}
             </div>
           ) : (
+            <TabelaComPaginacao
+              items={detalheOrdenado}
+              t={t}
+              resetKey={`${historico}|${idxMes}|${filtroAfiliado}|${filtroOperadora}|${sort.col}|${sort.dir}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 960 })}>
                 <caption style={{ display: "none" }}>Detalhamento de métricas por afiliado</caption>
@@ -484,9 +491,9 @@ export default function DashboardOverviewAfiliado() {
                 <tbody>
                   {loading
                     ? null
-                    : detalheOrdenado.map((r, i) => (
-                        <tr key={r.afiliado_id ?? `${r.nome}-${i}`} style={{ background: dataTable.zebraRow(i) }}>
-                          <td style={dataTable.tdSticky({ rowIndex: i })}>{r.nome ?? "—"}</td>
+                    : linhas.map((r, i) => (
+                        <tr key={r.afiliado_id ?? `${r.nome}-${zebraIdx(i)}`} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
+                          <td style={dataTable.tdSticky({ rowIndex: zebraIdx(i) })}>{r.nome ?? "—"}</td>
                           <td style={dataTable.tdCenter}>{r.acessos.toLocaleString("pt-BR")}</td>
                           <td style={dataTable.tdCenter}>{r.registros.toLocaleString("pt-BR")}</td>
                           <td style={dataTable.tdCenter}>{r.ftd_count.toLocaleString("pt-BR")}</td>
@@ -501,6 +508,8 @@ export default function DashboardOverviewAfiliado() {
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       </div>

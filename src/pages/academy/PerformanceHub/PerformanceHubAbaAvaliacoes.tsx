@@ -28,6 +28,7 @@ import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { LinkAssistirVideoPerformanceHub } from "../../../components/LinkAssistirVideoPerformanceHub";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { textoContemBusca } from "../../../lib/searchText";
@@ -260,6 +261,12 @@ export function PerformanceHubAbaAvaliacoes({
             Sem dados para o período selecionado.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={rowsVisiveis}
+            t={t}
+            resetKey={`${busca}|${sort.col}|${sort.dir}|${timeSelecionado}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: isProprios ? 720 : 980 })}>
               <caption style={{ display: "none" }}>Avaliações de desempenho no período</caption>
@@ -282,10 +289,10 @@ export function PerformanceHubAbaAvaliacoes({
                 </tr>
               </thead>
               <tbody>
-                {rowsVisiveis.map((row, idx) => {
+                {linhas.map((row, idx) => {
                   const statusColor = PERFORMANCE_HUB_STATUS_COLOR[row.status];
                   return (
-                    <tr key={row.id} style={{ background: dataTable.zebraRow(idx) }}>
+                    <tr key={row.id} style={{ background: dataTable.zebraRow(zebraIdx(idx)) }}>
                       <td style={dataTable.tdCenter}>{row.data}</td>
                       {!isProprios ? <td style={dataTable.tdCenter}>{row.avaliadoNome}</td> : null}
                       <td style={dataTable.tdCenter}>{renderNotaCell(row.notaTotal)}</td>
@@ -367,6 +374,8 @@ export function PerformanceHubAbaAvaliacoes({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </>

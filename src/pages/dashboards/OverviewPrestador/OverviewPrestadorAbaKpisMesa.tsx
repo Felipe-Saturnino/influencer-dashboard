@@ -39,6 +39,7 @@ import {
 } from "../../../lib/gpKpiStatusFaixa";
 import type { OverviewPrestadorKpisMesaMode } from "../../../lib/overviewPrestadorTeamConfig";
 import { KpiCard, SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { OverviewPrestadorKpiDuplaCard } from "./OverviewPrestadorKpiDuplaCard";
 import {
   useOverviewPrestadorGpKpi,
@@ -727,6 +728,12 @@ function OverviewPrestadorAbaKpisMesaConteudo({
           {atencaoOrdenados.length === 0 ? (
             vazio
           ) : (
+            <TabelaComPaginacao
+              items={atencaoOrdenados}
+              t={t}
+              resetKey={`${sortAtencao.col}|${sortAtencao.dir}|${historico}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 640 })}>
                 <caption style={{ display: "none" }}>Prestadores com incidentes</caption>
@@ -741,8 +748,8 @@ function OverviewPrestadorAbaKpisMesaConteudo({
                   </tr>
                 </thead>
                 <tbody>
-                  {atencaoOrdenados.map((r, i) => (
-                    <tr key={r.prestadorId} style={{ background: dataTable.zebraRow(i) }}>
+                  {linhas.map((r, i) => (
+                    <tr key={r.prestadorId} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={dataTable.tdCenter}>{r.nome}</td>
                       <td style={dataTable.tdCenter}>{r.total}</td>
                       <td style={dataTable.tdCenter}>{r.casos}</td>
@@ -754,6 +761,8 @@ function OverviewPrestadorAbaKpisMesaConteudo({
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       ) : null}
@@ -773,9 +782,14 @@ function OverviewPrestadorAbaKpisMesaConteudo({
           </SectionTitle>
           {(mode === "gp" ? diasGpOrdenados.length === 0 : diasShufOrdenados.length === 0) ? (
             vazio
-          ) : (
+          ) : mode === "gp" ? (
+            <TabelaComPaginacao
+              items={diasGpOrdenados}
+              t={t}
+              resetKey={`${sortDia.col}|${sortDia.dir}|${historico}|${mode}`}
+            >
+              {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
-            {mode === "gp" ? (
               <table style={getDataTableStyle({ minWidth: 720 })}>
                 <caption style={{ display: "none" }}>Rodadas e incidentes por dia</caption>
                 <thead>
@@ -789,9 +803,11 @@ function OverviewPrestadorAbaKpisMesaConteudo({
                   </tr>
                 </thead>
                 <tbody>
-                  {diasGpOrdenados.map((row, i) => (
-                    <tr key={row.dia_brt} style={{ background: dataTable.zebraRow(i) }}>
-                      <td style={dataTable.tdSticky({ rowIndex: i })}>
+                  {linhas.map((row, i) => {
+                    const z = zebraIdx(i);
+                    return (
+                    <tr key={row.dia_brt} style={{ background: dataTable.zebraRow(z) }}>
+                      <td style={dataTable.tdSticky({ rowIndex: z })}>
                         <span style={{ fontWeight: 600 }}>{fmtDiaBr(row.dia_brt)}</span>
                       </td>
                       <td style={dataTable.tdCenter}>{row.rodadas.toLocaleString("pt-BR")}</td>
@@ -800,10 +816,21 @@ function OverviewPrestadorAbaKpisMesaConteudo({
                       <td style={dataTable.tdCenter}>{row.erros.toLocaleString("pt-BR")}</td>
                       <td style={dataTable.tdCenter}>{row.outros.toLocaleString("pt-BR")}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
-            ) : (
+          </div>
+              )}
+            </TabelaComPaginacao>
+          ) : (
+            <TabelaComPaginacao
+              items={diasShufOrdenados}
+              t={t}
+              resetKey={`${sortDia.col}|${sortDia.dir}|${historico}|${mode}`}
+            >
+              {(linhas, zebraIdx) => (
+          <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 560 })}>
                 <caption style={{ display: "none" }}>Incidentes por dia — Shuffler</caption>
                 <thead>
@@ -816,9 +843,11 @@ function OverviewPrestadorAbaKpisMesaConteudo({
                   </tr>
                 </thead>
                 <tbody>
-                  {diasShufOrdenados.map((row, i) => (
-                    <tr key={row.dia} style={{ background: dataTable.zebraRow(i) }}>
-                      <td style={dataTable.tdSticky({ rowIndex: i })}>
+                  {linhas.map((row, i) => {
+                    const z = zebraIdx(i);
+                    return (
+                    <tr key={row.dia} style={{ background: dataTable.zebraRow(z) }}>
+                      <td style={dataTable.tdSticky({ rowIndex: z })}>
                         <span style={{ fontWeight: 600 }}>{fmtDiaBr(row.dia)}</span>
                       </td>
                       <td style={dataTable.tdCenter}>{row.total.toLocaleString("pt-BR")}</td>
@@ -826,11 +855,13 @@ function OverviewPrestadorAbaKpisMesaConteudo({
                       <td style={dataTable.tdCenter}>{row.erros.toLocaleString("pt-BR")}</td>
                       <td style={dataTable.tdCenter}>{row.outros.toLocaleString("pt-BR")}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
-            )}
           </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       ) : null}
