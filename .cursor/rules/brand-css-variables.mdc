@@ -219,7 +219,7 @@ Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por defe
 
 - **Exceção — chips semânticos Status / Plataforma:** `borderRadius: **10**`, `padding: 10px 18px`, `minHeight: 44` — **`FiltroStatusSemanticoPill`**, **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos; referência visual: abas Overview Spin). Ativo na cor do domínio, não `brand.accent`.
 - **Não** usar `borderRadius: 20` na barra salvo exceção documentada na secção.
-- `SelectComIcone` **sem** `pill` permanece válido **fora** da barra (formulários, modais, comparativos A/B, domínios que não sejam filtro de lista na strip).
+- `SelectComIcone` / `SelectListaComBusca` **sem** `pill` permanece válido **fora** da barra (formulários, modais, comparativos A/B) — o painel **sempre** tem busca (Global § Pesquisa dentro do filtro).
 
 Wrapper obrigatório — moldura de página + **gap 14px** até o próximo bloco (**Global** § Blocos de página):
 
@@ -286,11 +286,12 @@ Quando a página usar **`AjudaContextualAcoes`**, posicionar o grupo no bloco de
 | **`FiltroPlataformaSemanticoPill`** | `src/components/FiltroPlataformaSemanticoPill.tsx` | Chips de **plataforma** (`PlatLogo` + cor ativa; `count` opcional) — Agenda, Influencers, Scout |
 | **`FiltroSemanticoTabPill`** | `src/components/dashboard/FiltroSemanticoTabPill.tsx` | Chips **sem** bolinha — domínio (ex.: **Jogo** / Tipo no Roteiro de Mesa); ativo na cor do domínio, **não** marca |
 | **`FiltroBarTabButton`** | `src/components/dashboard/FiltroBarTabButton.tsx` | **Único** padrão para botões de **aba** (`role="tab"`) — página, barra de filtros ou modal |
-| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | `<select>` único (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
-| **`FiltroBarCampoSelect`** | `src/components/FiltroBarCampoSelect.tsx` | `<select>` pill na barra (domínios RH, Vagas, Portal RH, Denúncias) — ícone via catálogo |
-| **`FiltroEntidadeBarSelect`** | `src/components/FiltroEntidadeBarSelect.tsx` | Multi na barra (ex.: tipos de denúncia) — ícone via catálogo ou domínio |
-| **`FiltroCalendarioTimeSelect`** | `src/components/FiltroCalendarioTimeSelect.tsx` | Time na barra (Calendário RH) |
-| **`FiltroCalendarioStaffSelect`** | `src/components/FiltroCalendarioStaffSelect.tsx` | Staff na barra (Calendário RH) |
+| **`SelectListaComBusca`** | `src/components/SelectListaComBusca.tsx` | Seleção única com painel + **`BarraPesquisaFiltroPainel`** (padrão Staff/Time). `variant="pill"` na barra; `campo` em modal/formulário |
+| `SelectComIcone` | `src/components/dashboard/SelectComIcone.tsx` | Wrapper de `SelectListaComBusca` com filhos `<option>` (**não** para operadora, influencer nem modo Mês/Semana/Dia na barra) |
+| **`FiltroBarCampoSelect`** | `src/components/FiltroBarCampoSelect.tsx` | Pill na barra (domínios RH, Vagas, Portal RH, Denúncias) — ícone via catálogo; busca no painel |
+| **`FiltroEntidadeBarSelect`** | `src/components/FiltroEntidadeBarSelect.tsx` | Single/multi na barra (ex.: tipos de denúncia, Staff/Time) — busca **sempre** no painel |
+| **`FiltroCalendarioTimeSelect`** | `src/components/FiltroCalendarioTimeSelect.tsx` | Time na barra — referência visual **Calendário → Compromissos** |
+| **`FiltroCalendarioStaffSelect`** | `src/components/FiltroCalendarioStaffSelect.tsx` | Staff na barra — referência visual **Calendário → Compromissos** |
 | Input com ícone | `BarraPesquisaPagina` / `BarraPesquisaFiltroPainel` | Busca de lista na página e no painel do filtro — **não** duplicar markup |
 
 **Catálogo de ícones (código):** `src/lib/filterBarIconCatalog.tsx` — `FilterBarIcons` + `FILTRO_BAR_ICON_PROPS` (15px, `strokeWidth` 2). **Sempre** importar daqui em componentes partilhados e em filtros novos; ícones só de domínio (ex.: `Newspaper` no Portal RH) ficam na página com o mesmo tamanho e documentados abaixo.
@@ -331,14 +332,14 @@ import { Network, LayoutList } from "lucide-react";
 
 **Filtro de jogo (`FiltroSemanticoTabPill`):** ícone de **`GAME_IDENTITY_ICONS`** (13px); `semanticColor={gameIdentityTextColor(key, isDark)}` — Global § Identidade visual por jogo. **Não** `brand.accent`, **não** pill única para todos os jogos. Exceção só com pedido explícito no MDC da secção.
 
-`SelectComIcone`: prop `label` = `aria-label` obrigatório; `pill` default **true** na barra; indicador ▾ embutido no componente. Espaçamento entre controlos na linha: **`gap: 10`** (`lib/filterBarStyles.ts`).
+`SelectComIcone` / `SelectListaComBusca`: prop `label` = `aria-label` obrigatório; `pill` default **true** na barra; chevron Lucide (`ChevronDown` / `ChevronUp` 9px) — **não** `▾` unicode. Painel com **`BarraPesquisaFiltroPainel`** sempre visível ao abrir (Global § Pesquisa dentro do filtro). Espaçamento entre controlos na linha: **`gap: 10`** (`lib/filterBarStyles.ts`).
 
 ### Filtro de operadora — contrato visual (obrigatório)
 
 Import: `FiltroOperadoraSelect` de `components/dashboard` (reexporta constantes `OPERADORA_FILTRO_TODAS_VALUE`, `OPERADORA_FILTRO_TODAS_LABEL`).
 
-- Ícone **Shield** Lucide 15px dentro do campo (via `SelectComIcone` interno).
-- Primeira opção do select: valor `todas`, texto visível **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`).
+- Ícone **Shield** Lucide 15px no trigger (via `SelectComIcone` / `SelectListaComBusca` interno).
+- Primeira opção do painel: valor `todas`, texto visível **`Todas Operadoras`** (`OPERADORA_FILTRO_TODAS_LABEL`).
 - `aria-label` do controlo: **`Operadoras`** (`OPERADORA_FILTRO_ARIA_LABEL`).
 - **Lista:** somente operadoras **ativas** (`.eq("ativo", true)` — Global § Filtro de operadora).
 - **Sem** rótulo de texto ao lado (“Operadora”, “Filtrar por operadora”).
@@ -364,7 +365,7 @@ Regras de dados e `extraOptions` (“Nenhuma”): **Global** § Filtro de operad
 |----------------|----------------|------------------|-------------------------------|
 | Operadora | `Shield` | `.operadora` | **`FiltroOperadoraSelect`** — **Todas Operadoras** |
 | Influencer | `User` | `.influencer` | **`FiltroInfluencerSelect`** — **Todos Influencers** |
-| Status (`<select>` pill) | **`ShieldAlert`** | `.status` | **`FiltroBarCampoSelect`** — **Todos Status** (Gestão Prestadores, Vagas, Portal RH Gerenciamento, Central de Denúncias) |
+| Status (pill na barra) | **`ShieldAlert`** | `.status` | **`FiltroBarCampoSelect`** — **Todos Status** (Gestão Prestadores, Vagas, Portal RH Gerenciamento, Central de Denúncias) |
 | Time | `UsersRound` | `.time` | **`FiltroCalendarioTimeSelect`**, **`FiltroTodosTimesButton`** (Staff) |
 | Staff | `IdCard` | `.staff` | **`FiltroCalendarioStaffSelect`** |
 | Turno | `Clock` | `.turno` | **`FiltroTurnoSelect`** (Gestão de Staff) |
@@ -617,6 +618,7 @@ import { BtnExcluirComTexto } from "../components/BtnExcluirComTexto";
 - Tag, filtro, KPI, faixa de título ou série de gráfico **por jogo** com `--brand-*`, `brand.accent` ou hex local — usar Global § Identidade visual por jogo (exceção só com pedido explícito no MDC da secção).
 - `FiltroSemanticoTabPill` de **jogo** ativo em cor de marca ou pill única para todos os jogos.
 - Painel de filtro/select com `BarraPesquisaFiltroPainel` sem foco automático ao abrir (Global § Pesquisa dentro do filtro — `autoFocusOnMount`).
+- Filtro de lista na barra ou em modal com `<select>` nativo (sem painel pesquisável).
 
 ---
 

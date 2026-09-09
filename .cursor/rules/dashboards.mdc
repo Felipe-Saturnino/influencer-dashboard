@@ -334,7 +334,7 @@ import { FiltroHistoricoButton } from "../../../components/dashboard";
 
 Padrão visual = **Overview Influencer** (`FiltroHistoricoButton`): pill 999, `Calendar` 15px, estados `getFiltroBarPillStateStyle` (igual Operadora/Influencer). **Proibido** markup inline, fundo transparente/`textMuted` no inativo, ou `GiCalendar`.
 
-**Selects na FilterBar:** **Influencer:** `FiltroInfluencerSelect` (`mode="single"` em Streamers / Overview Influencer) — agregadora **Todos Influencers**, pill 999, `User` 15px. **Operadora:** `FiltroOperadoraSelect` — **Todas Operadoras**, Shield 15px. Outros domínios na barra: `SelectComIcone` só com exceção documentada. Nunca markup inline duplicado para operadora/influencer.
+**Selects na FilterBar:** **Influencer:** `FiltroInfluencerSelect` (`mode="single"` em Streamers / Overview Influencer) — agregadora **Todos Influencers**, pill 999, `User` 15px, **busca no painel**. **Operadora:** `FiltroOperadoraSelect` — **Todas Operadoras**, Shield 15px, **busca no painel**. Comparativo A/B (funil): **`SelectListaComBusca`** `variant="campo"`. Outros domínios na barra: `SelectComIcone` só com exceção documentada. Nunca markup inline duplicado para operadora/influencer.
 
 **Loading indicator na FilterBar:** sempre o último item da barra, sem bloquear os controles. Usar exclusivamente neste contexto:
 

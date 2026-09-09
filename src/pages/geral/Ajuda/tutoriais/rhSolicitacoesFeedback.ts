@@ -43,12 +43,6 @@ export const TUTORIAL_RH_SOLICITACOES_FEEDBACK: TutorialDef = {
         "1. Feedbacks criados em **Controle de Turno → Notificações → Feedbacks** aparecem aqui com origem **Controle de Turno** e status **Em análise** (no CT o status equivalente é **Revisar**).\n2. Clique em **Atender solicitação** na linha.\n3. Na aba **Dados**, confira prestador, recomendação, liderança, origem e a observação/ata.\n4. Na aba **Atendimento**, escolha **Aprovado** (passa a **Aplicado** no espelho do Controle de Turno) ou **Rejeitado**.\n5. Preencha **Observação do RH** e clique em **Salvar**.\n6. No Controle de Turno, o status e o campo **Aplicado Por** atualizam quando a origem for Controle de Turno.",
       aviso:
         "Feedback registrado só nesta página (origem Solicitações) **não** cria linha no Controle de Turno. O espelho bidirecional vale para origem Controle de Turno.",
-      imagens: [
-        {
-          src: `${IMG}/03-atender-feedback.png`,
-          alt: "Modal Atender feedback com origem Controle de Turno",
-        },
-      ],
     },
     {
       titulo: "4. Acompanhar Aplicado e Rejeitado",

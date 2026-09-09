@@ -43,12 +43,6 @@ export const TUTORIAL_RH_SOLICITACOES_REUNIOES: TutorialDef = {
         "1. Em **Em análise**, na linha desejada, clique no ícone de lápis (**Atender solicitação**).\n2. Na aba **Dados**, confira tipo, **Data da reunião**, turno (se houver) e o motivo.\n3. Na aba **Atendimento**, escolha **Status** **Aprovado** ou **Rejeitado**.\n4. Preencha **Observação do RH** (obrigatória ao mudar o status).\n5. Clique em **Salvar**.\n6. Com **Aprovado**, a reunião passa a constar no **Calendário**. Com **Rejeitado**, o pedido encerra e o prestador vê o parecer.",
       aviso:
         "Pedidos feitos pelo prestador no Calendário (**Agendar Reunião**) também chegam aqui em Em análise — o gestor ou o RH conclui o atendimento nesta aba.",
-      imagens: [
-        {
-          src: `${IMG}/03-atender-reuniao.png`,
-          alt: "Modal Atender solicitação de reunião",
-        },
-      ],
     },
     {
       titulo: "4. Consultar reuniões já atendidas",
