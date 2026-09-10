@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
-import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { STAFF_ESTUDIO_CADASTRO_TODOS, staffEstudioAtendeTodos } from "./gestaoStaffEstudioHelpers";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
 
 const VALOR_VAZIO = "";
 
@@ -24,7 +25,6 @@ export function StaffEstudioCampoSelect({
   id?: string;
   disabled?: boolean;
 }) {
-  const { theme: t } = useApp();
   const todosAtivo = staffEstudioAtendeTodos(value);
   const slugAtivo = todosAtivo ? STAFF_ESTUDIO_CADASTRO_TODOS : (value[0] ?? VALOR_VAZIO);
   const selectValue = todosAtivo
@@ -35,11 +35,6 @@ export function StaffEstudioCampoSelect({
 
   const selectStyle: CSSProperties = {
     width: "100%",
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: `1px solid ${t.cardBorder}`,
-    background: t.inputBg ?? t.cardBg,
-    color: t.text,
     fontFamily: FONT.body,
     fontSize: 13,
     boxSizing: "border-box",
@@ -48,26 +43,27 @@ export function StaffEstudioCampoSelect({
   };
 
   return (
-    <select
+    <SelectListaComBusca
       id={id}
-      aria-label="Estúdio do staff"
+      label="Estúdio do staff"
+      searchPlaceholder={placeholderPesquisaFiltro("Estúdio")}
+      variant="campo"
       disabled={disabled}
       value={selectValue}
-      onChange={(e) => {
-        const v = e.target.value;
+      onChange={(v) => {
         if (v === VALOR_VAZIO) onChange([]);
         else if (v === STAFF_ESTUDIO_CADASTRO_TODOS) onChange([STAFF_ESTUDIO_CADASTRO_TODOS]);
         else onChange([v]);
       }}
       style={selectStyle}
-    >
-      <option value={VALOR_VAZIO}>—</option>
-      <option value={STAFF_ESTUDIO_CADASTRO_TODOS}>Todos Estúdios</option>
-      {estudioSlugs.map((slug) => (
-        <option key={slug} value={slug}>
-          {estudiosNome[slug] ?? slug}
-        </option>
-      ))}
-    </select>
+      options={[
+        { value: VALOR_VAZIO, label: "—" },
+        { value: STAFF_ESTUDIO_CADASTRO_TODOS, label: "Todos Estúdios" },
+        ...estudioSlugs.map((slug) => ({
+          value: slug,
+          label: estudiosNome[slug] ?? slug,
+        })),
+      ]}
+    />
   );
 }

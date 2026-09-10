@@ -11,6 +11,18 @@ import { carregarPontoRegistrosDiaLote } from "./rhCalendarioPresencaGestaoDb";
 
 export type RotacaoTurnoKey = "manha" | "tarde" | "noite";
 
+/** Bloco único da Rotação para Shufflers (atendem todos os estúdios). */
+export const ROTACAO_SHUFFLER_ESTUDIO_SLUG = "shuffler";
+export const ROTACAO_SHUFFLER_ESTUDIO_NOME = "Shuffler";
+/** Valor da célula / «mesa» na grade de Shuffler. */
+export const ROTACAO_SHUFFLER_MESA_LABEL = "TODOS";
+/** Cor da pill TODOS — distinta do Break (#6b7280). */
+export const ROTACAO_SHUFFLER_MESA_COR = "#0891b2";
+
+export function isBlocoRotacaoShuffler(estudioSlug: string): boolean {
+  return estudioSlug === ROTACAO_SHUFFLER_ESTUDIO_SLUG;
+}
+
 export type RotacaoCargoLideranca = "shift_leader" | "service_manager";
 
 export type RotacaoGpPool = {
@@ -181,6 +193,7 @@ export function mapaCoresMesasRotacao(
   for (const m of mesas) {
     const n = m.numeroMesa.trim();
     if (!n) continue;
+    if (n === ROTACAO_SHUFFLER_MESA_LABEL) continue;
     const list = porTipo.get(m.tipoJogo) ?? [];
     if (!list.includes(n)) list.push(n);
     porTipo.set(m.tipoJogo, list);
@@ -193,11 +206,15 @@ export function mapaCoresMesasRotacao(
       out[n] = tomVarianteJogo(base, i);
     });
   }
+  if (mesas.some((m) => m.numeroMesa.trim() === ROTACAO_SHUFFLER_MESA_LABEL)) {
+    out[ROTACAO_SHUFFLER_MESA_LABEL] = ROTACAO_SHUFFLER_MESA_COR;
+  }
   return out;
 }
 
 /** Fallback estável quando só há o rótulo da célula (ex.: rotação publicada sem catálogo). */
 export function corMesaRotacao(tipoJogo: string, numeroMesa: string): string {
+  if (numeroMesa.trim() === ROTACAO_SHUFFLER_MESA_LABEL) return ROTACAO_SHUFFLER_MESA_COR;
   const base = corMesaPorTipoJogo(tipoJogo);
   if (base === "#6b7280" || !numeroMesa.trim()) return base;
   return tomVarianteJogo(base, hashRotacaoSeed(numeroMesa.trim()) % 8);
@@ -206,6 +223,63 @@ export function corMesaRotacao(tipoJogo: string, numeroMesa: string): string {
 /** True se a linha inteira é falta (legado F ou X). */
 export function celulaEhFalta(valor: string): boolean {
   return valor === "X" || valor === "F";
+}
+
+/** True se a célula é mesa (não Break / X / F / vazia). */
+export function celulaEhMesaRotacao(valor: string): boolean {
+  const v = (valor || "").trim();
+  if (!v || v === "—" || v === "-") return false;
+  return v !== "Break" && v !== "X" && v !== "F";
+}
+
+/**
+ * Maior sequência contínua de mesa na grade, em minutos
+ * (Break / X / F zeram a contagem).
+ */
+export function maxMinutosMesaContinuaNaGrade(matrix: string[][], slotMinutos: number): number {
+  const step = slotMinutos === 20 ? 20 : 30;
+  let max = 0;
+  for (const row of matrix) {
+    let run = 0;
+    for (const cell of row) {
+      if (celulaEhMesaRotacao(cell)) {
+        run += step;
+        if (run > max) max = run;
+      } else {
+        run = 0;
+      }
+    }
+  }
+  return max;
+}
+
+/** Ex.: 120 → «2 horas»; 140 → «2 horas e 20 min». */
+export function formatarTempoMesaContinuoPt(minutos: number): string {
+  const m = Math.max(0, Math.round(minutos));
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  if (h <= 0) return `${rest} min`;
+  const horas = h === 1 ? "1 hora" : `${h} horas`;
+  if (rest === 0) return horas;
+  return `${horas} e ${rest} min`;
+}
+
+export function mensagemAvisoMesaContinuaPublicar(tempoLabel: string): string {
+  return `Nesta rotação temos Prestadores realizando ${tempoLabel} tempo direto de mesa, quer seguir com esta rotação?`;
+}
+
+/**
+ * Se algum prestador tem ≥ limiar (default 2h) contínuos em mesa, devolve o rótulo
+ * do maior trecho; senão null (publicar sem aviso).
+ */
+export function tempoMesaContinuaQueExigeAviso(
+  matrix: string[][],
+  slotMinutos: number,
+  limiarMinutos: number = 120,
+): string | null {
+  const max = maxMinutosMesaContinuaNaGrade(matrix, slotMinutos);
+  if (max < limiarMinutos) return null;
+  return formatarTempoMesaContinuoPt(max);
 }
 
 export function minutosDesdeMeiaNoite(hhmm: string): number {
@@ -477,6 +551,160 @@ export function filtrarPoolRotacaoPorPresencaCt(opts: {
   }
 
   return pool;
+}
+
+/** True se o nome do time Organograma indica Shuffler. */
+export function timeIndicaShufflerRotacao(time: string | null | undefined): boolean {
+  return (time ?? "").toLowerCase().includes("shuffler");
+}
+
+/**
+ * Monta o pool de Shufflers a partir da Escala do Turno (presença CT).
+ * Mesma regra de status que GPs; Hora Adicional do turno anterior também entra.
+ */
+export function montarPoolShufflerRotacaoDePresenca(opts: {
+  presencaAtual: Array<{
+    id: string;
+    nome: string;
+    nickname: string;
+    time: string;
+    status: string;
+    saida: string;
+  }>;
+  presencaAnterior: Array<{
+    id: string;
+    nome: string;
+    nickname: string;
+    time: string;
+    status: string;
+    saida: string;
+  }>;
+}): RotacaoGpPool[] {
+  const toGp = (p: {
+    id: string;
+    nome: string;
+    nickname: string;
+  }): RotacaoGpPool => {
+    const nome = (p.nome || "").trim() || "—";
+    const nick = (p.nickname || "").trim();
+    return {
+      funcionarioId: p.id,
+      nomeCompleto: nome,
+      nomeExibicao: primeiroUltimoNome(nome) || nome,
+      nickname: nick || nome.split(/\s+/)[0] || "—",
+      falta: false,
+      isShiftLead: false,
+      estudioStaff: "todos",
+      estudioEfetivo: "todos",
+      alocacaoOrigem: "staff",
+    };
+  };
+
+  const atuais = opts.presencaAtual.filter((p) => timeIndicaShufflerRotacao(p.time));
+  const anteriores = opts.presencaAnterior.filter((p) => timeIndicaShufflerRotacao(p.time));
+  const gps = atuais.map(toGp);
+  const gpsAnt = anteriores.map(toGp);
+
+  return filtrarPoolRotacaoPorPresencaCt({
+    gps,
+    presencaAtual: atuais,
+    presencaAnterior: anteriores,
+    gpsTurnoAnteriorMesmoEstudio: gpsAnt,
+  });
+}
+
+export function mesaRotacaoShufflerTodos(): RotacaoMesa {
+  return {
+    id: "todos",
+    mesaIdentificacao: ROTACAO_SHUFFLER_MESA_LABEL,
+    numeroMesa: ROTACAO_SHUFFLER_MESA_LABEL,
+    nomeMesa: "Todos Estúdios",
+    tipoJogo: "",
+  };
+}
+
+/** Contexto sintético do bloco Shuffler — uma «mesa» TODOS, sem move entre estúdios. */
+export function montarContextoRotacaoShuffler(opts: {
+  diaIso: string;
+  turno: RotacaoTurnoKey;
+  turnoInicio: string;
+  turnoFim: string;
+  horarioTexto?: string;
+  escalaAprovada: boolean;
+  shufflers: RotacaoGpPool[];
+}): RotacaoContextoDia {
+  const label =
+    opts.turno === "manha" ? "Manhã" : opts.turno === "tarde" ? "Tarde" : "Noite";
+  return {
+    dia: opts.diaIso.slice(0, 10),
+    turno: opts.turno,
+    turnoLabel: label,
+    estudioSlug: ROTACAO_SHUFFLER_ESTUDIO_SLUG,
+    estudioNome: ROTACAO_SHUFFLER_ESTUDIO_NOME,
+    escalaAprovada: opts.escalaAprovada,
+    turnoInicio: opts.turnoInicio,
+    turnoFim: opts.turnoFim,
+    horarioTexto:
+      opts.horarioTexto?.trim() ||
+      `${opts.turnoInicio} às ${opts.turnoFim}`,
+    gps: opts.shufflers,
+    gpsOutros: [],
+    shiftLeads: [],
+    liderancas: [],
+    mesas: [mesaRotacaoShufflerTodos()],
+  };
+}
+
+function hhmmMaisHoras(hhmm: string, horas: number): string {
+  const base = minutosDesdeMeiaNoite(hhmm) + horas * 60;
+  const norm = ((base % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(norm / 60);
+  const m = norm % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** Horário do turno para o bloco Shuffler (1º estúdio ativo com horário, +8h). */
+export async function carregarHorarioTurnoRotacaoShuffler(
+  turno: RotacaoTurnoKey,
+): Promise<{ inicio: string; fim: string; horarioTexto: string }> {
+  const fallbackInicio =
+    turno === "manha" ? "06:00" : turno === "tarde" ? "12:00" : "18:00";
+  const col =
+    turno === "manha"
+      ? "turno_manha_inicio"
+      : turno === "tarde"
+        ? "turno_tarde_inicio"
+        : "turno_noite_inicio";
+
+  const { data, error } = await supabase
+    .from("estudios_spin")
+    .select(`slug, ${col}`)
+    .eq("ativo", true)
+    .order("slug", { ascending: true });
+
+  if (error) {
+    console.error(error);
+  }
+
+  let inicio = fallbackInicio;
+  for (const row of data ?? []) {
+    const raw = String((row as Record<string, unknown>)[col] ?? "").trim();
+    const m = /^(\d{1,2}):(\d{2})/.exec(raw);
+    if (m) {
+      inicio = `${m[1]!.padStart(2, "0")}:${m[2]}`;
+      break;
+    }
+  }
+  const fim = hhmmMaisHoras(inicio, 8);
+  const fmt = (hhmm: string) => {
+    const [h, m] = hhmm.split(":");
+    return m === "00" ? `${h}h` : `${h}h${m}`;
+  };
+  return {
+    inicio,
+    fim,
+    horarioTexto: `${fmt(inicio)} às ${fmt(fim)}`,
+  };
 }
 
 export function gerarSlotsRotacao(inicio: string, fim: string, stepMin: number): string[] {

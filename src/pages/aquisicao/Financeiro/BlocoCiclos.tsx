@@ -8,6 +8,8 @@ import { FONT_TITLE } from "../../../lib/dashboardConstants"
 import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers"
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { useTabelaPaginacao } from "../../../hooks/useTabelaPaginacao"
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar"
 import { supabase } from "../../../lib/supabase"
 import { fetchLiveResultadosBatched } from "../../../lib/supabasePaginate"
 import { enviarPagamentoEmailCiclo } from "../../../lib/financeiroEnviarPagamentoEmail"
@@ -500,6 +502,11 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
     return arr;
   }, [rows, sortCiclo, operadorasList]);
 
+  const pagCiclo = useTabelaPaginacao(
+    rowsOrdenados,
+    `${cicloId}|${sortCiclo.col}|${sortCiclo.dir}|${filterOperadora}|${filterInfluencers.join(",")}`,
+  );
+
   const kpi = useMemo(() => ({
     em: rows.filter(r => r.status === "em_analise").length,
     ap: rows.filter(r => r.status === "a_pagar").length,
@@ -776,14 +783,14 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
                     </div>
                   </td>
                 </tr>
-              ) : rowsOrdenados.map((row, i) => {
+              ) : pagCiclo.linhasPagina.map((row, i) => {
                 const sk = (row.statusInfluencer ?? "ativo").toLowerCase();
                 const slInf = STATUS_INFLUENCER[sk] ?? { label: row.statusInfluencer ?? "Ativo", color: "#94a3b8" };
-                const zebraBg = dataTable.zebraRow(i);
+                const zebraBg = dataTable.zebraRow(pagCiclo.zebraIdx(i));
                 return (
                 <tr
                   key={row.id}
-                  style={{ borderBottom: i < rowsOrdenados.length - 1 ? `1px solid ${t.cardBorder}` : "none", background: zebraBg }}
+                  style={{ borderBottom: i < pagCiclo.linhasPagina.length - 1 ? `1px solid ${t.cardBorder}` : "none", background: zebraBg }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)";
                   }}
@@ -914,6 +921,15 @@ export function BlocoCiclos({ ciclos, onRecarregar, filtros }: {
           </table>
         </div>
       )}
+      {rows.length > 0 ? (
+        <TabelaPaginacaoBar
+          t={t}
+          page={pagCiclo.paginaSafe}
+          pageSize={pagCiclo.pageSize}
+          totalItems={pagCiclo.totalItems}
+          onPageChange={pagCiclo.setPagina}
+        />
+      ) : null}
 
       {/* Modais */}
       {modalAnalisar && ciclo && (

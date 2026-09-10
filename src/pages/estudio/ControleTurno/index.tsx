@@ -42,6 +42,13 @@ const TUTORIAL_CTX_APROVACAO_ESCALA: AjudaContextualTutorial = {
   descricao: "Registrar falta, saída antecipada, hora adicional ou horário e aprovar os dias.",
 };
 
+const TUTORIAL_CTX_ROTACAO: AjudaContextualTutorial = {
+  id: "controle-turno-rotacao",
+  urlSlug: "ControleTurnoRotacao",
+  titulo: "Gerar Rotação",
+  descricao: "Gerar prévia, incluir liderança, protocolo 20 min, mover estúdio/linhas e publicar.",
+};
+
 const TUTORIAL_CTX_RELATORIO: AjudaContextualTutorial = {
   id: "controle-turno-relatorio",
   urlSlug: "ControleTurnoRelatorio",
@@ -193,11 +200,13 @@ export default function EscalaControleTurnoPage() {
               tutorial={
                 aba === "escala"
                   ? TUTORIAL_CTX_APROVACAO_ESCALA
-                  : aba === "relatorio"
-                    ? TUTORIAL_CTX_RELATORIO
-                    : aba === "notificacoes"
-                      ? TUTORIAL_CTX_NOTIFICACOES
-                      : null
+                  : aba === "rotacao"
+                    ? TUTORIAL_CTX_ROTACAO
+                    : aba === "relatorio"
+                      ? TUTORIAL_CTX_RELATORIO
+                      : aba === "notificacoes"
+                        ? TUTORIAL_CTX_NOTIFICACOES
+                        : null
               }
             />
           </div>

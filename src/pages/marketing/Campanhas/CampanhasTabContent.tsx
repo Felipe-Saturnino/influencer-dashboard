@@ -14,6 +14,7 @@ import { BtnExcluirLinha } from "../../../components/BtnExcluirLinha";
 import { descricaoModalExcluirItem, tooltipExcluir } from "../../../lib/excluirItemUi";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 import { useState } from "react";
@@ -210,6 +211,12 @@ export function CampanhasTabContent({
             Nenhuma campanha cadastrada. Crie campanhas e mapeie UTMs na Gestão de Links.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={campanhasOrdenadas}
+            t={t}
+            resetKey={`${sortCamp.col}|${sortCamp.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle()}>
               <caption style={{ display: "none" }}>Campanhas cadastradas</caption>
@@ -279,8 +286,8 @@ export function CampanhasTabContent({
                 </tr>
               </thead>
               <tbody>
-                {campanhasOrdenadas.map((c, idx) => {
-                  const zebraBg = dataTable.zebraRow(idx);
+                {linhas.map((c, idx) => {
+                  const zebraBg = dataTable.zebraRow(zebraIdx(idx));
                   return (
                     <tr
                       key={c.id}
@@ -375,6 +382,8 @@ export function CampanhasTabContent({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

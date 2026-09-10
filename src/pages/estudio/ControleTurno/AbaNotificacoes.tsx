@@ -7,6 +7,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
 import {
@@ -1265,6 +1266,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         ) : fechVisiveis.length === 0 ? (
           <EmptyDia msg="Sem fechamentos registrados no dia." />
         ) : (
+          <TabelaComPaginacao items={fechVisiveis} t={t} resetKey={`${sortFech.col}-${sortFech.dir}-${busca}-${diaIso}`}>
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Fechamentos de mesa do dia</caption>
@@ -1319,7 +1322,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 </tr>
               </thead>
               <tbody>
-                {fechVisiveis.map((f, i) => {
+                {linhas.map((f, i) => {
                   const herdado = (f.data_registro || diaIso) < diaIso;
                   const aindaFechada = fechamentoAindaFechadoNoDia(f, diaIso);
                   const lideranca = liderancaFechamento(f, diaIso);
@@ -1327,7 +1330,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   return (
                     <tr
                       key={f.id}
-                      style={trStyle(key, i)}
+                      style={trStyle(key, zebraIdx(i))}
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
@@ -1370,6 +1373,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -1386,6 +1391,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         ) : ausVisiveis.length === 0 ? (
           <EmptyDia msg="Sem ausências prolongadas registradas no dia." />
         ) : (
+          <TabelaComPaginacao items={ausVisiveis} t={t} resetKey={`${sortAus.col}-${sortAus.dir}-${busca}-${diaIso}`}>
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Ausências prolongadas do dia</caption>
@@ -1440,12 +1447,12 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 </tr>
               </thead>
               <tbody>
-                {ausVisiveis.map((a, i) => {
+                {linhas.map((a, i) => {
                   const key = `aus-${a.id}`;
                   return (
                     <tr
                       key={a.id}
-                      style={trStyle(key, i)}
+                      style={trStyle(key, zebraIdx(i))}
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
@@ -1477,6 +1484,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -1493,6 +1502,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         ) : fbVisiveis.length === 0 ? (
           <EmptyDia msg="Sem feedbacks registrados no dia." />
         ) : (
+          <TabelaComPaginacao items={fbVisiveis} t={t} resetKey={`${sortFb.col}-${sortFb.dir}-${busca}-${diaIso}`}>
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 800 })}>
               <caption style={{ display: "none" }}>Feedbacks do dia</caption>
@@ -1556,12 +1567,12 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 </tr>
               </thead>
               <tbody>
-                {fbVisiveis.map((f, i) => {
+                {linhas.map((f, i) => {
                   const key = `fb-${f.id}`;
                   return (
                     <tr
                       key={f.id}
-                      style={trStyle(key, i)}
+                      style={trStyle(key, zebraIdx(i))}
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
@@ -1598,6 +1609,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -1614,6 +1627,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         ) : manutVisiveis.length === 0 ? (
           <EmptyDia msg="Sem solicitações de manutenção no dia." />
         ) : (
+          <TabelaComPaginacao items={manutVisiveis} t={t} resetKey={`${sortManut.col}-${sortManut.dir}-${busca}-${diaIso}`}>
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Solicitações de manutenção do dia</caption>
@@ -1668,7 +1683,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 </tr>
               </thead>
               <tbody>
-                {manutVisiveis.map((m, i) => {
+                {linhas.map((m, i) => {
                   const key = `manut-${m.id}`;
                   const podeCancelar =
                     podeEditar && (m.status === "aberto" || m.status === "em_andamento");
@@ -1681,7 +1696,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                   return (
                     <tr
                       key={m.id}
-                      style={trStyle(key, i)}
+                      style={trStyle(key, zebraIdx(i))}
                       onMouseEnter={() => setHoverKey(key)}
                       onMouseLeave={() => setHoverKey(null)}
                     >
@@ -1721,6 +1736,8 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

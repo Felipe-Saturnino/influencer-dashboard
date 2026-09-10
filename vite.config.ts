@@ -129,6 +129,26 @@ export default defineConfig(({ mode }) => {
             });
           },
         },
+        "/ics/calendario": {
+          target: supabaseUrl || "https://dzyuqibobeujzedomlsc.supabase.co",
+          changeOrigin: true,
+          rewrite: (path) => {
+            const m = path.match(/\/ics\/calendario\/([^/?#]+)/);
+            const token = m?.[1] ? encodeURIComponent(m[1]) : "";
+            return `/functions/v1/rh-calendario-ics${token ? `?token=${token}` : ""}`;
+          },
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq, _req) => {
+              const key = env.VITE_SUPABASE_ANON_KEY;
+              if (key) {
+                proxyReq.setHeader("Apikey", key);
+                if (!proxyReq.getHeader("Authorization")) {
+                  proxyReq.setHeader("Authorization", `Bearer ${key}`);
+                }
+              }
+            });
+          },
+        },
       },
     },
   };

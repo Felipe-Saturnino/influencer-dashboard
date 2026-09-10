@@ -53,7 +53,8 @@ $functions = @(
   "prospecto-scout-site",
   "prospecto-afiliados-network-site",
   "relatorio-diario-diretoria",
-  "email-agenda-diaria"
+  "email-agenda-diaria",
+  "rh-calendario-ics"
 )
 
 Write-Host ""

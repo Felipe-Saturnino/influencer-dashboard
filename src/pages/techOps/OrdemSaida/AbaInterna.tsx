@@ -8,6 +8,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { SectionTitle, CtaCriarButton } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import type { Permissoes } from "../../../hooks/usePermission";
 import {
@@ -15,6 +16,7 @@ import {
   formatDataBrOs,
   labelLocalOs,
   labelStatusOrdemSaida,
+  ordemSaidaPodeMostrarAtualizar,
   ordemVisivelNoMes,
   OS_STATUS_COLOR,
   type OrdemSaidaRow,
@@ -114,6 +116,12 @@ export function AbaInterna({
         ) : filtrados.length === 0 ? (
           <VazioOs>Nenhuma ordem encontrada.</VazioOs>
         ) : (
+          <TabelaComPaginacao
+            items={filtrados}
+            t={t}
+            resetKey={`${busca}|${statusFiltro}|${mesKey}|${historico}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 920 })}>
               <caption style={{ display: "none" }}>Ordens de saída internas</caption>
@@ -129,12 +137,12 @@ export function AbaInterna({
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((r, i) => {
+                {linhas.map((r, i) => {
                   const codigo = formatCodigoOrdemSaida(r.tipo, r.competencia, r.codigo_num);
                   const retorno = r.sem_retorno ? "Sem retorno" : formatDataBrOs(r.data_retorno);
                   const permissoesRow = getOrdemSaidaPermissoesUi(perm, user, r);
                   return (
-                    <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                    <tr key={r.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                       <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{codigo}</td>
                       <td style={dataTable.tdCenter}>{labelLocalOs(r.origem_chave, estudioNomePorSlug)}</td>
                       <td style={dataTable.tdCenter}>{formatDataBrOs(r.data_saida)}</td>
@@ -162,9 +170,7 @@ export function AbaInterna({
                               <Check size={13} aria-hidden />
                             </BtnIconeAcaoLinha>
                           ) : null}
-                          {permissoesRow.podeAtualizar &&
-                          r.status !== "concluida" &&
-                          r.status !== "cancelada" ? (
+                          {permissoesRow.podeAtualizar && ordemSaidaPodeMostrarAtualizar(r) ? (
                             <BtnIconeAcaoLinha label={tooltipAcao("Atualizar O.S.")} onClick={() => setUpdRow(r)}>
                               <RefreshCw size={13} aria-hidden />
                             </BtnIconeAcaoLinha>
@@ -177,6 +183,8 @@ export function AbaInterna({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -212,8 +220,7 @@ export function AbaInterna({
         />
       ) : null}
       {updRow &&
-      updRow.status !== "concluida" &&
-      updRow.status !== "cancelada" &&
+      ordemSaidaPodeMostrarAtualizar(updRow) &&
       getOrdemSaidaPermissoesUi(perm, user, updRow).podeAtualizar ? (
         <ModalAtualizarOs
           row={updRow}

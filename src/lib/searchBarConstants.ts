@@ -4,7 +4,7 @@
  */
 export const SEARCH_PLACEHOLDER_ELLIPSIS = "...";
 
-/** Busca no painel de um filtro dropdown (>5 opções): `Pesquisar [Nome do filtro]...` */
+/** Busca no painel de um filtro dropdown: `Pesquisar [Nome do filtro]...` */
 export function placeholderPesquisaFiltro(nomeFiltro: string): string {
   return `Pesquisar ${nomeFiltro}${SEARCH_PLACEHOLDER_ELLIPSIS}`;
 }

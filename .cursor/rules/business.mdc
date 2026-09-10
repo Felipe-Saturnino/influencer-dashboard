@@ -125,7 +125,7 @@ Carga: `scripts/superset-mesas-spin-extract-browser.js` + `scripts/superset-mesa
 
 ### Atualização diária (padrão agent)
 
-Quando o usuário pedir **atualizar / carregar** dados Mesas Spin neste chat: seguir **`.cursor/rules/mesas-spin-carga.mdc`** — extract Superset (dashboard 15) com split EsportivaBet → JSON em `tmp/` → UPSERT direto (`--gravar`). Não carregar o dia corrente incompleto; `ATE` exclusivo no Superset.
+Quando o usuário pedir **atualizar / carregar** dados Mesas Spin neste chat: seguir **`.cursor/rules/mesas-spin-carga.mdc`** — extract Superset (dashboard 15) com split EsportivaBet → JSON em `tmp/` → UPSERT direto (`--gravar`). Não carregar o dia corrente incompleto; `ATE` exclusivo no Superset. **Zeros no Detalhamento Diário:** após o 1º dia com dado de uma operadora na janela, preencher dias seguintes (mesmo sem volume no Superset) — ver `mesas-spin-carga.mdc` § Preenchimento com zero.
 
 ### Regras de reconciliação (carga)
 

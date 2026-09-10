@@ -107,7 +107,7 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **UAP no Overview consolidado:** soma dos UAP de cada canal (não é UAP único entre Dedicado e Network) — documentar em Ajuda.
 - **MoM dos KPIs Consolidados:** mesma regra em **Overview**, **Estúdio Dedicado** e **Estúdio Network** (só muda a origem: Overview = soma Dedicado+Network; Dedicado/Network = tabelas do canal). GGR/Turnover/Apostas/Margem/Aposta média = daily **MTD até D-1** vs o **mesmo recorte** do mês anterior (ETL fecha ontem). **UAP** = snapshot do `monthly_summary` do mês (sobrescrito; não há histórico diário). **ARPU atual** = GGR do período em tela ÷ UAP mensal. No MoM, **UAP e ARPU anteriores** = mês civil anterior **fechado** (`monthly_summary.uap` / `.arpu`), com legenda **«período completo do mês ant.»**. Sem dado anterior, ou quando o anterior é irrisório (< ~1% do atual), ocultar o comparativo (não exibir % inflado).
 - **Carga financeira em duas fases:** fase 1 (KPIs + Detalhamento) = daily + monthly; libera o primeiro paint. Fase 2 (Comparativo de Jogo / mesa / Dados por mesa) = `por_tabela` + UAP por jogo em background; blocos secundários mostram **Carregando…**. Erro de fetch ≠ vazio — banner + **Tentar de novo**.
-- **Detalhamento Diário:** uma linha por dia do período (mês civil completo ou MTD até **D-1**), inclusive dias sem movimentação da operadora filtrada — GGR/Turnover/Apostas/UAP em **0**; Margem/Aposta Média/ARPU em **—** quando o cálculo é impossível. Helper `preencherDetalhamentoDiarioZerado` em `useOverviewSpinTabelaRows`. **Proibido** omitir dias sem volume (parece dado incompleto).
+- **Detalhamento Diário:** uma linha por dia do período (mês civil completo ou MTD até **D-1**), inclusive dias sem movimentação da operadora filtrada — GGR/Turnover/Apostas/UAP em **0**; Margem/Aposta Média/ARPU em **—** quando o cálculo é impossível. Helper `preencherDetalhamentoDiarioZerado` em `useOverviewSpinTabelaRows`. Vista da tabela pagina 20 linhas (`TabelaComPaginacao`); o gráfico **não** pagina. **Proibido** omitir dias sem volume (parece dado incompleto).
 - **Todas Operadoras:** KPIs e Detalhamento somam as operadoras visíveis; **Comparativo de mesa** e **Dados por mesa** ficam **ocultos** até selecionar uma operadora (exceto **Ver = Próprios**, que segue o escopo forçado). O Histórico da barra **não** zera ao ir/voltar de Posicionamento.
 - **Abas financeiras** partilham a mesma FilterBar (mês, Histórico, operadora).
 - **Janela do carrossel:** mês civil atual + **2 meses anteriores** (ordem cronológica crescente). O modo **Histórico** consulta **13 competências mensais inclusivas** (competência atual + 12 anteriores), via helper canônico do Global; não voltar a buscar desde o início da base.
@@ -122,8 +122,8 @@ Alinhado ao **Global** § Hierarquia visual da página. Rollout **página a pág
 - **Concorrentes à frente / Ranking de concorrentes:** mesma fonte (`concorrentes_a_frente` por mesa no snapshot). Contagens por tipo vs lista única ordenada por posição — **não** usar só `jogos_a_frente_pior_mesa` no Ranking.
 - **KpiPosCard** é componente local aceito nesta página (delta vs ontem, não MoM). Não replicar noutras páginas — usar `KpiCard` com adaptações.
 - **Tabelas em bloco:** padrão canónico **Global** § Tabelas → `dataTableStyles.ts`. **Overview (aba):** Detalhamento Diário, Comparativo de Jogo (cabeçalho duplo + linha Total), Comparativo de mesa e Dados por mesa (`renderMesaDiaTabela`). **Posicionamento (aba):** Histórico de posicionamento (heatmap) e Visibilidade por categoria.
-- **Heatmap:** coluna **Mesa** sticky + `thHeader` nas colunas de período; sort só em Mesa. Pills de posição mantêm cores semânticas de `lobbyMonitorHelpers`.
-- **`renderMesaDiaTabela`:** linha Total no **topo** do `<tbody>` com `totalRowBgStrong` — exceção documentada.
+- **Heatmap:** coluna **Mesa** sticky + `thHeader` nas colunas de período; sort só em Mesa. Pills de posição mantêm cores semânticas de `lobbyMonitorHelpers`. Vista pagina 20 mesas (`TabelaComPaginacao`); Comparativo de Jogo **não** pagina.
+- **`renderMesaDiaTabela`:** linha Total no **topo** do `<tbody>` com `totalRowBgStrong` — exceção documentada. Total no conjunto completo; vista pagina 20 linhas (`TabelaComPaginacao`).
 - **Comparativo de mesa** (só Blackjack): faixas de título e bordas dos selects — **`getGameMesaTituloMix(GAME_IDENTITY_HEX.blackjack)`** para mesa A e B (mesma cor verde). **Não exibir** na aba **Estúdio Network** (não há par de mesas BJ para comparar) — carrossel e Histórico.
 - **Comparativo de Jogo:** colunas, células e séries de gráfico — **`JOGOS_IDENTIDADE_LISTA`** / **`GAME_IDENTITY_HEX`** (`lib/gameIdentityColors.ts`).
 - **Dados por mesa:** faixas `Speed Baccarat`, `Roleta` e `Futebol Brasileiro` — **`getGameMesaTituloStripStyle(GAME_IDENTITY_HEX.*)`** (azul / ouro / laranja); **não** tokens whitelabel. Na aba **Estúdio Network**: ordem **Blackjack | Roleta** (linha 1) e **Speed Baccarat | Futebol Brasileiro** (linha 2); componente `OverviewSpinDadosPorMesa` (`layoutNetwork`).
@@ -145,8 +145,8 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **KPIs:** `HeadcountKpiCard` — MoM só com «vs valor · mês ant.» no modo mês (sem seta e sem percentual); no Histórico sem linha MoM.
 - **Overview (mês):** KPIs HC Ativo / Contratação / Distrato + Variação / Turnover / Permanência; pizza HC por gerência (centro = HC Total) + lista com hover por time; barras por tipo de contrato.
 - **Overview (histórico):** KPIs snapshot + tabela Mês a Mês (Data, Headcount, Contratação, Distrato, Turnover). Turnover consolidado = distratos da janela ÷ média dos HC mensais (não extremos início/fim da janela).
-- **Contratação:** KPIs Abertas / Em andamento / Fechadas; pizza origem (`rh_vaga_candidaturas.origem`); funil `OverviewGenericFunnel` com `showTaxas={false}`; tabela vagas **abertas + em andamento**.
-- **Distratos:** KPIs Distratos / Voluntário / Não voluntário / Permanência (só no modo mês; dias ≤30 ou meses se >30); lista por área + pizza contrato; tabela ordenada por Data de Término desc.
+- **Contratação:** KPIs Abertas / Em andamento / Fechadas; pizza origem (`rh_vaga_candidaturas.origem`); funil `OverviewGenericFunnel` com `showTaxas={false}`; tabela vagas **abertas + em andamento** — paginação 20/página (`TabelaComPaginacao`); KPIs/pizza/funil no conjunto completo.
+- **Distratos:** KPIs Distratos / Voluntário / Não voluntário / Permanência (só no modo mês; dias ≤30 ou meses se >30); lista por área + pizza contrato; tabela de listagem ordenada por Data de Término desc — paginação 20/página (`TabelaComPaginacao`); Áreas/Tipo de Contrato sem paginar.
 - **Dados:** `lib/headcountMetrics.ts` + `useHeadcountDados` — organograma via `carregarOpcoesTimesOrganograma`; listagens com **`fetchAllPages`** (evitar truncamento PostgREST ~1000); vagas na janela 13 competências + abertas; candidaturas filtradas aos IDs carregados.
 - **Migrations:** `20261023120000_dash_headcount_page.sql`, `20261023130000_dash_headcount_candidaturas_rls.sql`.
 
@@ -178,10 +178,10 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Resumo / KPIs (aba Escala):** visão time = **Jornadas** escaladas/realizadas; individual = **Dias**. Horas em ambos. **Escalado** = mês civil publicado (`getPeriodoComparativoMesCompleto`) — bate com a Escala Estúdio. **Realizado / presença / pontualidade / controle** = até **hoje** no mês corrente (`capFimAderenciaMesCorrente` / `periodoFimAderencia`); competências fechadas e Histórico usam o fim do período. **Não** usar `getPeriodoComparativoMoM` / recorte MTD no card de escaladas. Histórico: MoM desligado.
 - **Aderência (time) / Absenteísmo (individual):** Presença % (só time) = realizadas ÷ `diasEscaladoAderencia` (`pctPresencaAderencia`). Denominador **0** (início do mês / ainda sem jornada até hoje) → **«—»** — **proibido** cair para `diasEscalado` / `jornadasEscaladas` do mês publicado (isso marca o time como 0% / alta). Pontualidade e **Controle de Presença** usam o mesmo denominador.
 - **Gráficos:** Recharts — Aproveitamento (barras: escalados/horas **até hoje** via `diasEscaladoAderencia` / `horasEscaladasAderenciaMin` vs realizados no mesmo recorte; KPIs de Escalado/Horas Escaladas continuam o mês publicado); Movimentações (donut, se `negocia`); Distribuição por estúdio (donut, só GP individual). Donut = `GraficoDonut` local (anel com total no centro + legenda em lista com valor e %) — **sem** `label` textual no `Pie` nem `Legend` do Recharts (rótulos longos saíam do bloco). **Movimentações:** fatias **Trocas realizadas**, **Turnos vendidos** (`venda_turno`) e **Folgas vendidas** (`venda_folga`) — **não** exibir Compra (espelha a Venda). Classificação via `tipo_oferta` da RPC `dash_overview_prestador_movimentacoes_mes`. Layout GP individual: Aproveitamento em linha cheia; Movimentações + Distribuição lado a lado.
-- **Blocos só visão time:** Pontos de atenção (coluna **Controle de Presença** = check-in/out não registrados); Cobertura por turno; Cobertura por estúdio (só GP).
+- **Blocos só visão time:** Pontos de atenção (coluna **Controle de Presença** = check-in/out não registrados; paginação 20 com `TabelaComPaginacao`); Cobertura por turno; Cobertura por estúdio (só GP).
 - **Cobertura — contagem:** coluna **Prestadores** conta distintos **com jornada** no bucket (Escalado ou turno adquirido); dia só de `Troca` entra em Movimentações, não aloca prestador. **Estúdio:** o snapshot Marketplace traz o **rótulo** e o cadastro do Staff o **slug** — resolver para slug único (`resolverSlugEstudio`) antes de agregar, senão a mesma unidade rende duas linhas.
-- **Detalhamento Diário (KPIs de Mesa / OCR):** uma linha por dia do período, inclusive dias sem evento (valores zerados / «—» em TMA). **KPIs de Mesa:** grade até **D-1**. **KPIs de OCR:** grade até **hoje**. Nunca inclui o dia seguinte (futuro). Helper `preencherDetalhamentoDiarioZerado` (`dashboardHelpers.ts`).
-- **Detalhamento Diário (Escala):** tabela canónica — Data [, Prestador na visão time], Ocorrência, Detalhe; `SortTableTh` default **desc** em Data; paginação `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE_OVERVIEW_PRESTADOR` (50). Troca/Compra/Venda enriquecidos pelo snapshot Marketplace.
+- **Detalhamento Diário (KPIs de Mesa / OCR):** uma linha por dia do período, inclusive dias sem evento (valores zerados / «—» em TMA). **KPIs de Mesa:** grade até **D-1**; Pontos de atenção + Detalhamento paginam 20. **KPIs de OCR:** grade até **hoje**; só o Detalhamento pagina 20 — Por Jogo não pagina. Nunca inclui o dia seguinte (futuro). Helper `preencherDetalhamentoDiarioZerado` (`dashboardHelpers.ts`).
+- **Detalhamento Diário (Escala):** tabela canónica — Data [, Prestador na visão time], Ocorrência, Detalhe; `SortTableTh` default **desc** em Data; paginação `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE` (20). Troca/Compra/Venda enriquecidos pelo snapshot Marketplace.
 - **Migration:** `20260630180000_dash_overview_prestador_page.sql`; `20261105210000_dash_overview_prestador_movimentacoes_mes.sql`; `20261106120000_dash_overview_prestador_movimentacoes_tipo_oferta.sql` (`tipo_oferta` no snapshot).
 - **Mockup de produto:** `docs/mockups/overview-prestador-visoes.html`.
 
@@ -210,7 +210,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 - **Ícone do header:** `Tv` (Lucide) — nunca `GiTv` (react-icons/gi).
 - **Carga Overview / Financeiro:** fase 1 = período atual (libera paint); fase 2 = MoM em background. Falha do MoM **não** apaga o mês já pintado (`momPronto` / `isHistorico` até o comparativo chegar).
 - **Erro de carga:** mensagem canónica + **Tentar de novo** (`erroCarga` / `reloadTick`) — não tratar falha como vazio.
-- **Tabelas densas:** Ranking Overview e Comparativo de Taxas usam `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE_STREAMERS` (50); KPIs usam o conjunto completo.
+- **Tabelas densas:** Ranking Overview, Comparativo de Taxas e Ranking Financeiro usam `TabelaPaginacaoBar` + `TABELA_PAGE_SIZE` (20); KPIs usam o conjunto completo. Em **Afiliados**: Ranking de Afiliados, Comparativo de Taxas (não o Funil) e Ranking Financeiro. Em **Overview Influencer**: Detalhamento Diário/Mensal. Em **Overview Afiliado**: Detalhamento por Afiliado.
 - **Conversão:** `influencerIds` do filtro da barra entra no fetch (igual Overview/Financeiro).
 ---
 
@@ -237,6 +237,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
   mesmo cálculo, canal diferente (UTMs mapeadas).
 - **Campanhas inativas:** RPCs `get_campanhas_performance` / funil — no **mês** do carrossel, inativa só aparece (e entra nos totais) se gerou métricas no período; com **Histórico**, inativas **sempre** entram na listagem (`p_modo_historico`). Funil e série temporal somam UTMs mapeadas a campanhas ativas **ou** inativas.
 - **`getMesesDisponiveis`:** importar de `lib/dashboardHelpers` com `MES_INICIO` local (Jan/2026) — não declarar cópia local da função.
+- **Tabelas densas:** Detalhamento diário/mensal, Comparativo de campanha, Comparativo de taxas e Detalhamento por anúncio usam `TabelaComPaginacao` + `TABELA_PAGE_SIZE` (20); KPIs e Comparativo de funil no conjunto completo.
 
 ---
 
@@ -333,7 +334,7 @@ import { FiltroHistoricoButton } from "../../../components/dashboard";
 
 Padrão visual = **Overview Influencer** (`FiltroHistoricoButton`): pill 999, `Calendar` 15px, estados `getFiltroBarPillStateStyle` (igual Operadora/Influencer). **Proibido** markup inline, fundo transparente/`textMuted` no inativo, ou `GiCalendar`.
 
-**Selects na FilterBar:** **Influencer:** `FiltroInfluencerSelect` (`mode="single"` em Streamers / Overview Influencer) — agregadora **Todos Influencers**, pill 999, `User` 15px. **Operadora:** `FiltroOperadoraSelect` — **Todas Operadoras**, Shield 15px. Outros domínios na barra: `SelectComIcone` só com exceção documentada. Nunca markup inline duplicado para operadora/influencer.
+**Selects na FilterBar:** **Influencer:** `FiltroInfluencerSelect` (`mode="single"` em Streamers / Overview Influencer) — agregadora **Todos Influencers**, pill 999, `User` 15px, **busca no painel**. **Operadora:** `FiltroOperadoraSelect` — **Todas Operadoras**, Shield 15px, **busca no painel**. Comparativo A/B (funil): **`SelectListaComBusca`** `variant="campo"`. Outros domínios na barra: `SelectComIcone` só com exceção documentada. Nunca markup inline duplicado para operadora/influencer.
 
 **Loading indicator na FilterBar:** sempre o último item da barra, sem bloquear os controles. Usar exclusivamente neste contexto:
 
@@ -655,7 +656,7 @@ Quando `historico === true`:
 
 ## Paginação
 
-Sempre contexto `{inicio + 1}–{fim} de {total} itens`; resetar página ao mudar dados.
+Vista client-side de **20 linhas** (`TABELA_PAGE_SIZE` / `TabelaComPaginacao` / `TabelaPaginacaoBar`). KPIs e totais usam o conjunto completo. `resetKey` em busca/filtro/ordenação. Barra oculta com uma só página (`hideIfSinglePage`). Rótulo «Mostrando X–Y de Z» em PT-BR.
 
 ---
 

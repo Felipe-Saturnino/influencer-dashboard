@@ -1,7 +1,8 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FONT } from "../constants/theme";
 import type { Theme } from "../constants/theme";
+import { useTabelaPaginacao } from "../hooks/useTabelaPaginacao";
 import {
   clampPageIndex,
   labelFaixaPaginacao,
@@ -97,5 +98,33 @@ export function TabelaPaginacaoBar({
         <ChevronRight size={14} aria-hidden />
       </button>
     </div>
+  );
+}
+
+type TabelaComPaginacaoProps<T> = {
+  items: T[];
+  t: Theme;
+  /** Volta à página 1 quando muda (busca, filtro, ordenação, aba). */
+  resetKey?: unknown;
+  children: (linhas: T[], zebraIdx: (i: number) => number) => ReactNode;
+};
+
+/**
+ * Envolve uma tabela já filtrada/ordenada e pagina a vista (20 linhas).
+ * O pai trata o estado vazio antes de montar este componente.
+ */
+export function TabelaComPaginacao<T>({ items, t, resetKey, children }: TabelaComPaginacaoProps<T>) {
+  const pag = useTabelaPaginacao(items, resetKey);
+  return (
+    <>
+      {children(pag.linhasPagina, pag.zebraIdx)}
+      <TabelaPaginacaoBar
+        t={t}
+        page={pag.paginaSafe}
+        pageSize={pag.pageSize}
+        totalItems={pag.totalItems}
+        onPageChange={pag.setPagina}
+      />
+    </>
   );
 }

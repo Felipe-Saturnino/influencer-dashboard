@@ -16,6 +16,7 @@ import { TUTORIAL_NOVO_INCIDENTE } from "./novoIncidente";
 import { TUTORIAL_CONTROLE_TURNO_APROVACAO_ESCALA } from "./controleTurnoAprovacaoEscala";
 import { TUTORIAL_CONTROLE_TURNO_NOTIFICACOES } from "./controleTurnoNotificacoes";
 import { TUTORIAL_CONTROLE_TURNO_RELATORIO } from "./controleTurnoRelatorio";
+import { TUTORIAL_CONTROLE_TURNO_ROTACAO } from "./controleTurnoRotacao";
 import { TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS } from "./portalRhCienciaPoliticas";
 import { TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS } from "./portalRhComunicadosLidos";
 import { TUTORIAL_PORTAL_RH_GERENCIAMENTO } from "./portalRhGerenciamento";
@@ -25,12 +26,16 @@ import { TUTORIAL_PERFORMANCE_HUB_AVALIAR } from "./performanceHubAvaliar";
 import { TUTORIAL_PERFORMANCE_HUB_CONFIGURACAO_PESOS } from "./performanceHubConfiguracaoPesos";
 import { TUTORIAL_POSTAGEM_ACADEMY_APROVACAO } from "./postagemAcademyAprovacao";
 import { TUTORIAL_RH_SOLICITACOES_APROVAR } from "./rhSolicitacoesAprovar";
+import { TUTORIAL_RH_SOLICITACOES_FEEDBACK } from "./rhSolicitacoesFeedback";
+import { TUTORIAL_RH_SOLICITACOES_REUNIOES } from "./rhSolicitacoesReunioes";
+import { TUTORIAL_RH_SOLICITACOES_VAGAS } from "./rhSolicitacoesVagas";
 import type { TutorialDef, TutorialSecaoNav } from "./types";
 
 /** Catálogo de tutoriais — ordem das secções alinhada ao menu quando possível. */
 export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_NOVO_INCIDENTE,
   TUTORIAL_CONTROLE_TURNO_APROVACAO_ESCALA,
+  TUTORIAL_CONTROLE_TURNO_ROTACAO,
   TUTORIAL_CONTROLE_TURNO_RELATORIO,
   TUTORIAL_CONTROLE_TURNO_NOTIFICACOES,
   TUTORIAL_FIGURINO_RETIRADA_DEVOLUCAO,
@@ -40,6 +45,9 @@ export const TUTORIAIS_CATALOG: TutorialDef[] = [
   TUTORIAL_PORTAL_RH_CIENCIA_POLITICAS,
   TUTORIAL_PORTAL_RH_COMUNICADOS_LIDOS,
   TUTORIAL_RH_SOLICITACOES_APROVAR,
+  TUTORIAL_RH_SOLICITACOES_REUNIOES,
+  TUTORIAL_RH_SOLICITACOES_VAGAS,
+  TUTORIAL_RH_SOLICITACOES_FEEDBACK,
   TUTORIAL_DADOS_CADASTRO_ATUALIZACAO,
   TUTORIAL_CALENDARIO_PRESTADOR,
   TUTORIAL_CONTROLE_PRESENCA,

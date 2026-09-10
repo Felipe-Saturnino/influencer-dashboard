@@ -10,6 +10,7 @@ import type { CampanhaLink } from "../../../types";
 import { Loader2 } from "lucide-react";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { compareAtivoBoolean, compareLocaleTexto } from "../../../lib/classificacaoSort";
 import { getPageContentBoxStyle, getPageKpiSectionGapStyle } from "../../../lib/pageContentBoxStyles";
 
@@ -189,6 +190,12 @@ export function GeracaoLinksTabContent({
             Nenhum link cadastrado.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={linksOrdenados}
+            t={t}
+            resetKey={`${sortLinks.col}|${sortLinks.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Links cadastrados</caption>
@@ -251,8 +258,8 @@ export function GeracaoLinksTabContent({
                 </tr>
               </thead>
               <tbody>
-                {linksOrdenados.map((l, idx) => {
-                  const zebraBg = dataTable.zebraRow(idx);
+                {linhas.map((l, idx) => {
+                  const zebraBg = dataTable.zebraRow(zebraIdx(idx));
                   const ativo = !!l.ativo_30d;
                   return (
                     <tr
@@ -303,6 +310,8 @@ export function GeracaoLinksTabContent({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </>

@@ -3,7 +3,7 @@ import type { TutorialDef } from "./types";
 
 const IMG = "/tutoriais/escala/alterar-escala";
 
-/** Tutorial: alteração pontual de um dia na Escala Estúdio (Service Manager / Shift Leader). */
+/** Tutorial: alteração da grade de um prestador na Escala Estúdio (Service Manager / Shift Leader). */
 export const TUTORIAL_ALTERAR_ESCALA: TutorialDef = {
   id: "alterar-escala",
   urlSlug: "AlterarEscala",
@@ -12,12 +12,12 @@ export const TUTORIAL_ALTERAR_ESCALA: TutorialDef = {
   icon: CalendarCog,
   relatedPageKey: "rh_gestao_escala",
   objetivo:
-    "Alterar o status de um dia pontual de outro prestador do Estúdio na Escala Estúdio (escala já aprovada).",
+    "Alterar um ou vários dias de um prestador na Escala Estúdio com a escala já aprovada — sem regenerar a grade do time.",
   passos: [
     {
       titulo: "1. Abrir a Escala Estúdio",
       texto:
-        "1. No menu, seção Escala, clique em Escala Estúdio.\n2. Escolha o mês no carrossel (ex.: Julho 2026).\n3. Selecione a aba da área — para Game Presenters, clique em Game Presenter.\n4. Confirme que a escala do mês está aprovada: o botão Alterar Escala (azul) aparece na toolbar da Escala Diária.\n5. Clique em Alterar Escala.",
+        "1. No menu, seção Escala, clique em **Escala Estúdio**.\n2. Escolha o mês no carrossel.\n3. Selecione a aba da área (ex.: **Game Presenter**).\n4. Confirme que a escala do mês está **aprovada**: o botão **Alterar Escala** (azul) aparece na toolbar da Escala Diária.\n5. Clique em **Alterar Escala**.\n6. O modal exige permissão de **Editar** (não usa a permissão de Criar da toolbar de rascunho).",
       imagens: [
         {
           src: `${IMG}/01-escala-estudio-game-presenter.png`,
@@ -28,7 +28,7 @@ export const TUTORIAL_ALTERAR_ESCALA: TutorialDef = {
     {
       titulo: "2. Buscar o prestador",
       texto:
-        "1. No modal Alterar Escala, use a busca por nome ou nickname.\n2. Clique na linha do prestador que terá o dia alterado (ex.: outro Game Presenter do Estúdio).\n3. Se escolher a pessoa errada, use Trocar prestador para voltar à lista.",
+        "1. No modal **Alterar Escala**, use a busca por **nome** ou **nickname**.\n2. Clique na linha do prestador cuja escala do mês será editada.\n3. Se escolher a pessoa errada, use **Trocar prestador** para voltar à lista.",
       imagens: [
         {
           src: `${IMG}/02-modal-alterar-escala.png`,
@@ -37,35 +37,37 @@ export const TUTORIAL_ALTERAR_ESCALA: TutorialDef = {
       ],
     },
     {
-      titulo: "3. Conferir dados e escolher o dia",
+      titulo: "3. Editar a grade do mês",
       texto:
-        "1. Confira Nome, Nickname, Escala (ex.: 4×2) e Turno padrão do prestador (somente leitura).\n2. Em Dia, selecione a data da alteração. Só entram dias a partir de hoje (datas passadas não aparecem).\n3. Veja o Status atual do dia escolhido (ex.: Manhã) antes de mudar.",
+        "1. No topo, confira o **mês**, o selo **Escala aprovada** e os dados do prestador (nome, nickname, escala e turno).\n2. A grade mostra **todos os dias do mês**, cada um com um seletor de status.\n3. Dias **anteriores a hoje** ficam **travados** (não editáveis).\n4. Células de **Compra** ou **Venda** do Marketplace também ficam travadas (marcação **Mkt**) — esses estados só mudam pela automação do Marketplace.\n5. Altere quantos dias precisar a partir de hoje: **Folga**, **Manhã**, **Tarde**, **Noite** ou **Troca** (na aba Academy também pode haver **Comercial**).\n6. Dias alterados nesta sessão ficam destacados como **editado** (legenda no modal).",
+      aviso:
+        "Só este prestador é atualizado ao salvar — o restante da escala aprovada permanece intacto.",
       imagens: [
         {
           src: `${IMG}/03-alterar-escala-prestador-selecionado.png`,
-          alt: "Prestador selecionado — campos e seletor de dia",
+          alt: "Modal Alterar Escala — grade do mês do prestador",
         },
       ],
     },
     {
-      titulo: "4. Definir o novo status e a observação",
+      titulo: "4. Observação e salvar",
       texto:
-        "1. Em Status do dia, escolha o novo valor:\n— Folga\n— Manhã, Tarde ou Noite (troca o turno daquele dia)\n— Compra, Venda ou Troca\n2. Em Observação, descreva o motivo (campo obrigatório).\n3. Clique em Salvar alteração.\n4. Se desistir, clique em Cancelar — nada é gravado.",
+        "1. Em **Observação**, descreva o motivo (campo **obrigatório** — a mesma observação vale para todos os dias alterados nesta gravação).\n2. Confira no rodapé o contador **N dia(s) alterado(s)**.\n3. Clique em **Salvar alterações**.\n4. Se desistir, feche pelo **X** — nada é gravado enquanto não salvar (não há botão Cancelar no rodapé).",
       aviso:
-        "A observação é obrigatória e fica registrada no histórico da escala. Escreva de forma clara (ex.: troca pontual, folga solicitada, venda de plantão).",
+        "A observação fica registrada no histórico da escala em cada dia alterado. Escreva de forma clara (ex.: admissão no meio do mês, troca pontual, folga solicitada).",
       imagens: [
         {
           src: `${IMG}/04-alterar-escala-formulario-completo.png`,
-          alt: "Formulário completo pronto para salvar",
+          alt: "Grade com dias editados, observação e Salvar alterações",
         },
       ],
     },
     {
       titulo: "5. Conferir na grade e no histórico",
       texto:
-        "1. Na Escala Diária, a célula do dia alterado passa a mostrar o novo status.\n2. Um ícone de comentário aparece no canto da célula: ao passar o mouse, veja autor, data/hora, valor anterior e a observação.\n3. Opcional: no ícone de histórico da barra de filtros (relógio), abra o Histórico de ações do mês — a linha Alterar Escala lista prestador, dia e observação.",
+        "1. Na **Escala Diária**, as células alteradas passam a mostrar o novo status.\n2. Um ícone de comentário aparece no canto de cada célula alterada: ao passar o mouse, veja autor, data/hora, valor anterior e a observação.\n3. Opcional: no ícone de histórico da barra de filtros (relógio), abra o **Histórico de ações** do mês — as linhas **Alterar Escala** listam prestador, dia, valor anterior → novo e observação.",
     },
   ],
   notasFinais:
-    "— Use Alterar Escala apenas para ajuste pontual de um dia em escala já aprovada.\n— A alteração reflete no Calendário do prestador (compromissos daquele dia).",
+    "— Use Alterar Escala com a escala já aprovada para ajustar um ou vários dias de um único prestador.\n— Não é necessário regenerar a escala do time (**Nova Escala**).\n— A alteração reflete no **Calendário** e na **Rotação** do prestador.",
 };

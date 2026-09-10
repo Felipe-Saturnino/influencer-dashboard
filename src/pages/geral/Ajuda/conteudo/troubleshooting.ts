@@ -5,6 +5,11 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
   titulo: "Plataforma",
   blocos: [
     {
+      subtitulo: "A tabela só mostra 20 linhas e parece incompleta?",
+      texto:
+        "Comportamento esperado: nas tabelas densas da plataforma (catálogos, rankings, detalhamentos e listagens de gestão), a vista mostra **20 linhas** por vez. Totais e KPIs acima da tabela continuam no conjunto completo. Use as setas **Página anterior** / **Próxima página** abaixo da tabela — o texto indica o intervalo (ex.: 21–40 de 85). A barra some quando há 20 linhas ou menos. Busca, filtro ou ordenação voltam para a primeira página.",
+    },
+    {
       subtitulo: "Pesquisei sem acento e não encontrei o nome (ou o contrário)?",
       texto:
         "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Com **várias palavras**, cada uma precisa aparecer no cadastro — a ordem e o nome do meio não importam (ex.: «Alexandre Zanchetta» encontra «Alexandre Galvão Zanchetta»). Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período, time, estúdio, turno) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
@@ -1314,7 +1319,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Sync da Lista SPA falhou com erro de planilha ou HTTP 404?",
         texto:
-          "A lista oficial é a tabela **Empresas Autorizadas** no portal do Ministério da Fazenda. O sync lê essa página HTML; links antigos de planilha sob Transparência Ativa podem estar quebrados e são ignorados. Em Status Técnico, use **Sync** na linha **Lista SPA**. Se o erro persistir após o deploy da Edge Function, entre em contato com o suporte.",
+          "A lista oficial junta a tabela **Empresas Autorizadas** (portaria SPA/MF) e a página **Autorizadas por Determinação Judicial** no portal do Ministério da Fazenda. O sync lê as duas páginas HTML; links antigos de planilha sob Transparência Ativa podem estar quebrados e são ignorados. Em Status Técnico, use **Sync** na linha **Lista SPA** (pode ser necessário **force** após incluir a fonte judicial, se o hash anterior ainda for o da lista só por portaria). Se o erro persistir após o deploy da Edge Function, entre em contato com o suporte.",
       },
     ],
   },
@@ -1427,9 +1432,19 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Os itens vêm da Gestão de Estoque: só entram materiais com quantidade em estoque, equipamentos com status Estoque e lotes de jogo com quantidade atual maior que zero (na Manutenção a lista é mais ampla). Cadastre ou libere itens na Gestão de Estoque antes de solicitar a OS.",
       },
       {
+        subtitulo: "A lista de itens na OS fica enorme ou difícil de achar um código?",
+        texto:
+          "Na aba Itens da OS, abra o campo Item e use a busca no painel (Pesquisar Item…) para filtrar por código ou nome. A lista fica limitada em altura e agrupada em Itens, Equipamentos e Jogo — Escape fecha só o painel, sem fechar o modal.",
+      },
+      {
         subtitulo: "Ao clicar em Solicitar aparece erro genérico?",
         texto:
           "Confirme se as correções da Ordem de Saída foram aplicadas no Supabase (reserva de código da OS e permissão de criação) e se o usuário tem permissão de **Criar** ou **Editar** em Gestão de Usuários. Se o erro continuar, entre em contato com o suporte.",
+      },
+      {
+        subtitulo: "Aprovei uma OS e o equipamento continua em Estoque?",
+        texto:
+          "Ao aprovar, a Gestão de Estoque deve marcar equipamentos como Em uso (ou Manutenção na O.S. de Manutenção) e aumentar Em uso nos itens. Confirme se a migration de sincronização foi aplicada no Supabase. Ordens já aprovadas sem retorno entram no backfill dessa migration. Se o problema continuar, entre em contato com o suporte.",
       },
       {
         subtitulo: "A data de retorno foi recusada?",
@@ -1469,7 +1484,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Um registro sumiu da tabela, mas eu não excluí nada?",
         texto:
-          "A página não possui exclusão. Verifique os filtros ativos: um card de KPI selecionado (Estoque, Em uso ou Manutenção), o filtro de Categoria, o filtro de Estúdio ou o texto na busca restringem o catálogo. Clique no card Total (ou no card ativo) e limpe busca e filtros para ver a lista completa.",
+          "A página não possui exclusão. Verifique os filtros ativos: um card de KPI selecionado (Estoque, Em uso ou Manutenção), o filtro de Categoria, o filtro de Local ou o texto na busca restringem o catálogo. O Catálogo também pagina de 20 em 20 — use as setas abaixo da tabela para ver as demais linhas. Clique no card Total (ou no card ativo) e limpe busca e filtros para ver a lista completa.",
       },
       {
         subtitulo: "O Estoque ou a Qtd Atual não batem com o que digitei?",
@@ -1544,8 +1559,8 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",
         texto:
-          "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um dia pontual no mês já aprovado, use **Alterar Escala** (escolhe o turno do dia + observação).",
-      },
+          "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um ou vários dias de um prestador no mês já aprovado, use **Alterar Escala** (grade do mês com select por dia + observação obrigatória → **Salvar alterações**). Compra e Venda do Marketplace não se editam nesse modal.",
+        },
       {
         subtitulo: "A célula de Compra, Venda ou Troca não mostra o comentário?",
         texto:
@@ -1674,12 +1689,27 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Posso fazer Check-in em uma Folga?",
         texto:
-          "Sim. Check-in e Check-out ficam disponíveis independentemente da Situação do dia para coberturas e plantões emergenciais. O dia continua identificado como **Folga**, e os horários realizados ficam pendentes de aprovação do gestor.",
+          "Na maioria dos times, sim — Check-in e Check-out ficam disponíveis independentemente da Situação do dia para coberturas e plantões emergenciais. O dia continua identificado como **Folga**, e os horários realizados ficam pendentes de aprovação do gestor. **Game Presenter** e **Shuffler** não registram em Folga/Venda: só em dia trabalhado e dentro da janela de 15 minutos do turno.",
       },
       {
-        subtitulo: "Não vejo a aba Relatório de Presença?",
+        subtitulo: "Não vejo a aba Relatório de Justificativas?",
         texto:
-          "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar: Sim** no Calendário (Gestão de Usuários → Permissões → linha Calendário → coluna Editar). **Editar: Próprios** não libera a aba. Administradores vêem sempre. Sem **Editar: Sim**, usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
+          "A aba **Relatório de Justificativas** aparece para Administrador, quem tem **Criar: Sim** no Calendário, ou **Ver: Sim** e **Editar: Sim** juntos. Com **Meu Calendário** ativo a aba fica oculta. **Ver/Editar: Próprios** não libera a aba. Sem acesso usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
+      },
+      {
+        subtitulo: "Não vejo o botão Adicionar à agenda?",
+        texto:
+          "O botão fica na aba **Compromissos**, ao lado de **Download**, e só aparece com vínculo de colaborador no RH. No **Simulador de Login** ele fica oculto. Sem o botão, confirme o cadastro em Gestão de Prestadores e a permissão de **Ver** no Calendário.",
+      },
+      {
+        subtitulo: "A agenda Google / Outlook / Apple não atualiza os turnos?",
+        texto:
+          "As plataformas de Agenda costumam atualizar **cerca de uma vez por dia**. Trocas no Marketplace ou alterações de escala podem aparecer só no dia seguinte. A fonte da verdade continua sendo a página **Calendário**. Confirme se o link colado é o atual (gerar um novo link invalida o anterior).",
+      },
+      {
+        subtitulo: "O link da agenda deixou de funcionar?",
+        texto:
+          "Se você usou **Gerar novo link**, o endereço antigo deixa de funcionar — cole o link novo na agenda. Prestador encerrado também perde o feed. Se o problema continuar, entre em contato com o suporte.",
       },
     ],
   },
@@ -2032,9 +2062,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O menu combina a matriz de permissões do perfil simulado com o escopo (operadora ou área). Confirme a operadora/área escolhida no modal e as marcações em Gestão de Usuários (Permissões e abas de escopo). Algumas páginas de plataforma ficam ocultas de propósito na simulação.",
       },
       {
-        subtitulo: "No Calendário ainda vejo Relatório de Presença e filtros de Time/Staff?",
+        subtitulo: "No Calendário ainda vejo Relatório de Justificativas e filtros de Time/Staff?",
         texto:
-          "Comportamento esperado só para perfis com permissão de Editar Sim ou Ver Sim no Calendário. Ao simular um Game Presenter (ou outro perfil com Ver Próprios), a página deve mostrar só Compromissos e Controle de Presença daquela pessoa, sem Relatório nem filtros de gestão. Encerrar a visualização e iniciar de novo. Se continuar com a visão de administrador, recarregue a página; se persistir, entre em contato com o suporte.",
+          "Comportamento esperado só para perfis com Criar Sim, ou Ver Sim + Editar Sim, ou Administrador no Calendário. Ao simular um Game Presenter (ou outro perfil com Ver Próprios), a página deve mostrar só Compromissos e Controle de Presença daquela pessoa, sem Relatório nem filtros de gestão. Encerrar a visualização e iniciar de novo. Se continuar com a visão de administrador, recarregue a página; se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Na Galeria de Fotos ainda vejo fotos de outros colaboradores?",

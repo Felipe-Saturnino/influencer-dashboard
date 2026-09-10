@@ -8,12 +8,24 @@ import {
   gerarPatternRotacao,
   gerarSlotsRotacao,
   janelaHorarioLiderancaRotacao,
+  isBlocoRotacaoShuffler,
   labelsMesasRotacao,
   liderancaCompativelComTurnoRotacao,
+  mapaCoresMesasRotacao,
+  maxMinutosMesaContinuaNaGrade,
   maxSlotsSeguidosAntesBreak,
+  mensagemAvisoMesaContinuaPublicar,
+  montarContextoRotacaoShuffler,
+  montarPoolShufflerRotacaoDePresenca,
   parseIntervaloHorarioStaffRotacao,
   ROTACAO_MAX_MESAS_SEGUIDAS,
+  ROTACAO_SHUFFLER_ESTUDIO_SLUG,
+  ROTACAO_SHUFFLER_MESA_COR,
+  ROTACAO_SHUFFLER_MESA_LABEL,
+  corMesaRotacao,
   slotDentroJanelaHorarioRotacao,
+  tempoMesaContinuaQueExigeAviso,
+  formatarTempoMesaContinuoPt,
   trocarPessoasLinhasPreviaRotacao,
   type RotacaoGeracaoPessoa,
   type RotacaoGpPool,
@@ -532,5 +544,92 @@ describe("filtrarPoolRotacaoPorPresencaCt", () => {
     });
     expect(pool.map((g) => g.funcionarioId).sort()).toEqual(["a", "x"]);
     expect(pool.find((g) => g.funcionarioId === "x")?.saidaLimiteHhmm).toBe("10:00");
+  });
+});
+
+describe("aviso de mesa contínua ao publicar", () => {
+  it("mede o maior trecho contínuo em mesa", () => {
+    const matrix = [
+      ["1", "2", "3", "4", "Break", "1"],
+      ["Break", "1", "2", "Break", "3", "4"],
+    ];
+    expect(maxMinutosMesaContinuaNaGrade(matrix, 30)).toBe(120);
+    expect(maxMinutosMesaContinuaNaGrade(matrix, 20)).toBe(80);
+  });
+
+  it("formata tempo em pt-BR", () => {
+    expect(formatarTempoMesaContinuoPt(120)).toBe("2 horas");
+    expect(formatarTempoMesaContinuoPt(140)).toBe("2 horas e 20 min");
+    expect(formatarTempoMesaContinuoPt(60)).toBe("1 hora");
+  });
+
+  it("exige aviso a partir de 2h e monta a mensagem", () => {
+    const ok = [
+      ["1", "2", "3", "Break"],
+      ["Break", "1", "2", "3"],
+    ];
+    expect(tempoMesaContinuaQueExigeAviso(ok, 30)).toBeNull();
+
+    const limiar = [["1", "2", "3", "4", "Break"]];
+    expect(tempoMesaContinuaQueExigeAviso(limiar, 30)).toBe("2 horas");
+
+    const acima = [["1", "2", "3", "4", "5"]];
+    expect(tempoMesaContinuaQueExigeAviso(acima, 30)).toBe("2 horas e 30 min");
+
+    expect(mensagemAvisoMesaContinuaPublicar("2 horas e 20 min")).toBe(
+      "Nesta rotação temos Prestadores realizando 2 horas e 20 min tempo direto de mesa, quer seguir com esta rotação?",
+    );
+  });
+});
+
+describe("bloco Shuffler (TODOS)", () => {
+  it("monta contexto com mesa TODOS e slug shuffler", () => {
+    const ctx = montarContextoRotacaoShuffler({
+      diaIso: "2026-09-09",
+      turno: "tarde",
+      turnoInicio: "12:00",
+      turnoFim: "20:00",
+      escalaAprovada: true,
+      shufflers: [gpFake("s1", "Ana Shuffler")],
+    });
+    expect(ctx.estudioSlug).toBe(ROTACAO_SHUFFLER_ESTUDIO_SLUG);
+    expect(isBlocoRotacaoShuffler(ctx.estudioSlug)).toBe(true);
+    expect(labelsMesasRotacao(ctx.mesas)).toEqual([ROTACAO_SHUFFLER_MESA_LABEL]);
+    expect(ctx.liderancas).toEqual([]);
+    expect(mapaCoresMesasRotacao(ctx.mesas)[ROTACAO_SHUFFLER_MESA_LABEL]).toBe(ROTACAO_SHUFFLER_MESA_COR);
+    expect(corMesaRotacao("", ROTACAO_SHUFFLER_MESA_LABEL)).toBe(ROTACAO_SHUFFLER_MESA_COR);
+  });
+
+  it("filtra pool Shuffler pela presença CT", () => {
+    const pool = montarPoolShufflerRotacaoDePresenca({
+      presencaAtual: [
+        {
+          id: "s1",
+          nome: "Ana Silva",
+          nickname: "Ana",
+          time: "Shuffler",
+          status: "presente",
+          saida: "",
+        },
+        {
+          id: "g1",
+          nome: "Beto GP",
+          nickname: "Beto",
+          time: "Game Presenter",
+          status: "presente",
+          saida: "",
+        },
+        {
+          id: "s2",
+          nome: "Carla",
+          nickname: "Carla",
+          time: "Shuffler",
+          status: "falta",
+          saida: "",
+        },
+      ],
+      presencaAnterior: [],
+    });
+    expect(pool.map((p) => p.funcionarioId)).toEqual(["s1"]);
   });
 });

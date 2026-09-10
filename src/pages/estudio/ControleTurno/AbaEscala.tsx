@@ -5,6 +5,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { FONT } from "../../../constants/theme";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { CampoObrigatorioMark } from "../../../components/CampoObrigatorioMark";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
@@ -435,7 +436,17 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
               Carregando…
             </span>
           </div>
+        ) : filtradas.length === 0 ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
+            Sem dados para o período selecionado.
+          </div>
         ) : (
+          <TabelaComPaginacao
+            items={filtradas}
+            t={t}
+            resetKey={`${busca}-${filtroTime ?? ""}-${sortPresenca.col}-${sortPresenca.dir}-${diaIso}-${turno}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 800 })}>
               <caption style={{ display: "none" }}>Controle de presença do turno</caption>
@@ -468,18 +479,11 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 24 }}>
-                      Sem dados para o período selecionado.
-                    </td>
-                  </tr>
-                ) : (
-                  filtradas.map((r, i) => (
+                  {linhas.map((r, i) => (
                     <tr
                       key={r.id}
                       style={{
-                        background: hoverKey === r.id ? rowHoverBg : dataTable.zebraRow(i),
+                        background: hoverKey === r.id ? rowHoverBg : dataTable.zebraRow(zebraIdx(i)),
                       }}
                       onMouseEnter={() => setHoverKey(r.id)}
                       onMouseLeave={() => setHoverKey(null)}
@@ -557,11 +561,12 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
+                  ))}
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

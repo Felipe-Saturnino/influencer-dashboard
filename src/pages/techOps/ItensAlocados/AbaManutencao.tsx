@@ -7,6 +7,7 @@ import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { formatDataHoraEstoque, type LimpezaRow, type ManutencaoRegRow } from "../../../lib/techOpsItensAlocados";
 import { SectionTitle, CtaCriarButton } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
@@ -86,6 +87,8 @@ export function AbaManutencaoPainel({
             Nenhum registro de limpeza neste local e mês.
           </div>
         ) : (
+          <TabelaComPaginacao items={limpezas} t={t} resetKey={`${localChave}|${limpezas.length}|${limpezas[0]?.id ?? ""}`}>
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Registros de limpeza</caption>
@@ -109,8 +112,8 @@ export function AbaManutencaoPainel({
                 </tr>
               </thead>
               <tbody>
-                {limpezas.map((r, i) => (
-                  <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                {linhas.map((r, i) => (
+                  <tr key={r.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                     <td style={dataTable.tdCenter}>{formatDataHoraEstoque(r.data_hora)}</td>
                     <td style={dataTable.tdCenter}>{r.equipamento_label}</td>
                     <td style={dataTable.tdCenter}>{r.mesa_label}</td>
@@ -127,6 +130,8 @@ export function AbaManutencaoPainel({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -157,6 +162,12 @@ export function AbaManutencaoPainel({
             Nenhum registro de manutenção neste local e mês.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={manutencoes}
+            t={t}
+            resetKey={`${localChave}|${manutencoes.length}|${manutencoes[0]?.id ?? ""}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 800 })}>
               <caption style={{ display: "none" }}>Registros de manutenção</caption>
@@ -183,8 +194,8 @@ export function AbaManutencaoPainel({
                 </tr>
               </thead>
               <tbody>
-                {manutencoes.map((r, i) => (
-                  <tr key={r.id} style={{ background: dataTable.zebraRow(i) }}>
+                {linhas.map((r, i) => (
+                  <tr key={r.id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                     <td style={dataTable.tdCenter}>{formatDataHoraEstoque(r.data_hora)}</td>
                     <td style={dataTable.tdCenter}>{r.equipamento_label}</td>
                     <td style={dataTable.tdCenter}>{r.mesa_label}</td>
@@ -202,6 +213,8 @@ export function AbaManutencaoPainel({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

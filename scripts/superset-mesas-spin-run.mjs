@@ -249,7 +249,9 @@ function temAtividade(block, dia) {
   const to = block?.TO?.byDay?.[dia] ?? [];
   const ggr = block?.GGR?.byDay?.[dia] ?? [];
   const bet = block?.BET?.byDay?.[dia] ?? [];
-  return to.length + ggr.length + bet.length > 0;
+  const uap = block?.UAP?.byDay?.[dia] ?? [];
+  const uapTot = block?.UAP_TOT?.byDay?.[dia] ?? [];
+  return to.length + ggr.length + bet.length + uap.length + uapTot.length > 0;
 }
 
 function montarDia(opKey, canal, block, dia) {
@@ -306,7 +308,7 @@ function montarDia(opKey, canal, block, dia) {
 function opsDoExtract(raw, canal) {
   const keys =
     canal === "network"
-      ? ["esportiva", "bateu", "brx", "rico", "casa", "blaze", "jonbet"]
+      ? ["esportiva", "bateu", "brx", "rico", "donald", "betponto", "casa", "blaze", "jonbet"]
       : ["casa", "blaze"];
   const out = [];
   for (const k of keys) {
@@ -327,6 +329,34 @@ function diasDoExtract(raw, opKeys) {
 
 function filtrarDias(dias, de, ate) {
   return dias.filter((d) => (!de || d >= de) && (!ate || d <= ate));
+}
+
+/** Soma dias civis a YYYY-MM-DD (UTC date-only). */
+function addDays(iso, n) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Dias civis inclusivos [de, ate] (YYYY-MM-DD). */
+function enumerarDias(de, ate) {
+  if (!de || !ate || de > ate) return [];
+  const out = [];
+  let d = de;
+  while (d <= ate) {
+    out.push(d);
+    d = addDays(d, 1);
+  }
+  return out;
+}
+
+/**
+ * Com --de/--ate: calendário completo (preenche buracos no Detalhamento Diário).
+ * Sem ambos: une dias presentes no extract.
+ */
+function diasParaCarga(raw, opKeys, de, ate) {
+  if (de && ate) return enumerarDias(de, ate);
+  return filtrarDias(diasDoExtract(raw, opKeys), de, ate);
 }
 
 function pad(n, w) {
@@ -527,11 +557,23 @@ function registrosUap(rows) {
   );
 }
 
+/**
+ * A partir do 1º dia com volume no extract, gera linha em todos os dias seguintes
+ * (zeros se Superset vazio) — evita buracos no Detalhamento Diário.
+ */
 function montarRows(raw, canal, dias) {
   const rows = [];
   for (const opKey of opsDoExtract(raw, canal)) {
+    let primeiroComDado = null;
     for (const dia of dias) {
-      if (!temAtividade(raw[opKey], dia)) continue;
+      if (temAtividade(raw[opKey], dia)) {
+        primeiroComDado = dia;
+        break;
+      }
+    }
+    if (!primeiroComDado) continue;
+    for (const dia of dias) {
+      if (dia < primeiroComDado) continue;
       rows.push(montarDia(opKey, canal, raw[opKey], dia));
     }
   }
@@ -584,7 +626,7 @@ async function main() {
   if (networkPath) {
     const raw = lerJson(networkPath);
     const opKeys = opsDoExtract(raw, "network");
-    let dias = filtrarDias(diasDoExtract(raw, opKeys), de, ate);
+    let dias = diasParaCarga(raw, opKeys, de, ate);
     if (preencherFaltantes && lastNet) {
       dias = dias.filter((d) => d > lastNet);
     }
@@ -600,7 +642,7 @@ async function main() {
   if (dedicadoPath) {
     const raw = lerJson(dedicadoPath);
     const opKeys = opsDoExtract(raw, "dedicado");
-    let dias = filtrarDias(diasDoExtract(raw, opKeys), de, ate);
+    let dias = diasParaCarga(raw, opKeys, de, ate);
     if (preencherFaltantes && lastDed) {
       dias = dias.filter((d) => d > lastDed);
     }

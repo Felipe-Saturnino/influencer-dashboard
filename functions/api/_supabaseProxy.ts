@@ -123,6 +123,107 @@ export function supabaseProxyOptionsResponse(): Response {
   });
 }
 
+export function supabaseProxyGetOptionsResponse(): Response {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+      "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
+      "Access-Control-Max-Age": "86400",
+    },
+  });
+}
+
+function icsCorsHeaders(extra?: HeadersInit): Headers {
+  const h = new Headers(extra);
+  h.set("Access-Control-Allow-Origin", "*");
+  return h;
+}
+
+/**
+ * Repasse GET/HEAD para Edge Function — preserva Content-Type (ex.: text/calendar).
+ * Query extra (token) entra em `searchParams`.
+ */
+export async function proxyGetToSupabaseEdge(
+  context: SupabaseProxyContext,
+  functionName: string,
+  options?: { searchParams?: Record<string, string> },
+): Promise<Response> {
+  const { url, anonKey } = resolveProxySupabaseEnv(context);
+  const method = context.request.method === "HEAD" ? "HEAD" : "GET";
+
+  if (!url || !anonKey) {
+    return new Response("Service Unavailable", {
+      status: 503,
+      headers: icsCorsHeaders({ "Content-Type": "text/plain; charset=utf-8" }),
+    });
+  }
+
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.endsWith(".pages.dev") || host.endsWith(".cloudflareapp.com")) {
+      return new Response("Service Unavailable", {
+        status: 503,
+        headers: icsCorsHeaders({ "Content-Type": "text/plain; charset=utf-8" }),
+      });
+    }
+  } catch {
+    return new Response("Service Unavailable", {
+      status: 503,
+      headers: icsCorsHeaders({ "Content-Type": "text/plain; charset=utf-8" }),
+    });
+  }
+
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(options?.searchParams ?? {})) {
+    if (v) qs.set(k, v);
+  }
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), UPSTREAM_MS);
+
+  try {
+    const res = await fetch(`${url.replace(/\/$/, "")}/functions/v1/${functionName}${suffix}`, {
+      method,
+      headers: {
+        Authorization: context.request.headers.get("Authorization") || `Bearer ${anonKey}`,
+        Apikey: anonKey,
+      },
+      signal: ctrl.signal,
+    });
+
+    const headers = icsCorsHeaders();
+    const ct = res.headers.get("Content-Type");
+    if (ct) headers.set("Content-Type", ct);
+    const cd = res.headers.get("Content-Disposition");
+    if (cd) headers.set("Content-Disposition", cd);
+    const cc = res.headers.get("Cache-Control");
+    if (cc) headers.set("Cache-Control", cc);
+
+    if (method === "HEAD") {
+      return new Response(null, { status: res.status, headers });
+    }
+    const data = await res.arrayBuffer();
+    return new Response(data, { status: res.status, headers });
+  } catch (e) {
+    if (isAbortError(e)) {
+      return new Response("Gateway Timeout", {
+        status: 504,
+        headers: icsCorsHeaders({ "Content-Type": "text/plain; charset=utf-8" }),
+      });
+    }
+    console.error("[proxyGetToSupabaseEdge]", functionName, e);
+    return new Response("Bad Gateway", {
+      status: 502,
+      headers: icsCorsHeaders({ "Content-Type": "text/plain; charset=utf-8" }),
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Repasse de multipart/form-data (arquivos) — não força Content-Type JSON.
  * Usado por formulários com upload (ex.: candidatura a vaga).

@@ -23,6 +23,8 @@ export type RelatorioPresencaLinha = {
   horasEsc: string;
   horasRealExib: string;
   status: string;
+  /** Comentário do overlay CT (Aprovado/Registrado pela Liderança), se houver. */
+  overlayComentario?: string | null;
   entRealDesvio: boolean;
   saiRealDesvio: boolean;
   horasRealDesvio: boolean;
@@ -88,8 +90,8 @@ export function RelatorioPresencaPainel({
 
   return (
     <div style={contentBox}>
-      <SectionTitle sub="Presença dos prestadores no dia selecionado. Atestado de vários dias: confira também o mês no Controle de Presença.">
-        Controle de Presença
+      <SectionTitle sub="Justificativas em análise no mês selecionado. Atestado de vários dias: confira também o mês no Controle de Presença.">
+        Relatório de Justificativas
       </SectionTitle>
       {semTime ? (
         <div
@@ -101,7 +103,7 @@ export function RelatorioPresencaPainel({
             fontFamily: FONT.body,
           }}
         >
-          Selecione um time ou prestador para ver o relatório de presença do dia.
+          Selecione um time ou prestador para ver o relatório de justificativas do mês.
         </div>
       ) : (
         <div className="app-table-wrap" style={getDataTableWrapStyle()}>
@@ -131,15 +133,18 @@ export function RelatorioPresencaPainel({
                 fontFamily: FONT.body,
               }}
             >
-              Nenhum prestador encontrado para os filtros selecionados.
+              Nenhuma justificativa pendente para o período e filtros selecionados.
             </div>
           ) : (
             <table style={getDataTableStyle({ minWidth: 960 })}>
               <caption style={{ display: "none" }}>
-                Relatório de presença por prestador no dia selecionado
+                Relatório de justificativas por prestador no mês selecionado
               </caption>
               <thead>
                 <tr>
+                  <th rowSpan={2} scope="col" style={{ ...dataTable.thHeader, whiteSpace: "normal" }}>
+                    Data
+                  </th>
                   <SortTableTh
                     col="nome"
                     label="Prestador"
@@ -241,8 +246,18 @@ export function RelatorioPresencaPainel({
               <tbody>
                 {linhas.map((row, i) => {
                   const zebraBg = dataTable.zebraRow(i);
+                  const diaLabel = row.dia.toLocaleDateString("pt-BR", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                  });
                   return (
-                  <tr key={row.funcionarioId} style={{ background: zebraBg }} {...dataTableRowHoverHandlers(zebraBg)}>
+                  <tr
+                    key={`${row.funcionarioId}:${row.dia.getFullYear()}-${row.dia.getMonth()}-${row.dia.getDate()}`}
+                    style={{ background: zebraBg }}
+                    {...dataTableRowHoverHandlers(zebraBg)}
+                  >
+                    <td style={dataTable.tdCenter}>{diaLabel}</td>
                     <td style={dataTable.tdCenter} title={row.nome}>
                       {row.nome}
                     </td>
@@ -254,6 +269,7 @@ export function RelatorioPresencaPainel({
                         position: "relative",
                         ...(row.entRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                       }}
+                      title={row.overlayComentario || undefined}
                     >
                       {row.entRealExib}
                       {row.exibirIndicadorMedico && row.justificativaMedico ? (
@@ -284,6 +300,7 @@ export function RelatorioPresencaPainel({
                         position: "relative",
                         ...(row.saiRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                       }}
+                      title={row.overlayComentario || undefined}
                     >
                       {row.saiRealExib}
                       {row.exibirIndicadorMedico && row.justificativaMedico ? (
@@ -316,7 +333,22 @@ export function RelatorioPresencaPainel({
                     >
                       {row.horasRealExib}
                     </td>
-                    <td style={dataTable.tdCenter}>{row.status}</td>
+                    <td style={dataTable.tdCenter}>
+                      <div>{row.status}</div>
+                      {row.overlayComentario ? (
+                        <div
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 500,
+                            color: t.textMuted,
+                            marginTop: 2,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {row.overlayComentario}
+                        </div>
+                      ) : null}
+                    </td>
                     <td style={{ ...dataTable.tdCenter, verticalAlign: "middle" }}>
                       <div style={acoesCellInner}>
                         {row.acoesLinha.mostrarTravessaoAcoes ? (

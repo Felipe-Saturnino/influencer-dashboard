@@ -21,6 +21,7 @@ import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import {
   FiltroBarTabButton,
   FILTRO_BAR_TAB_ICON_PROPS,
@@ -467,8 +468,15 @@ export default function PipelineAgregadoras() {
             Carregando…
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={tableRows}
+            t={t}
+            resetKey={`${tab}|${busca}|${comercialFiltro}|${kpiStatus ?? ""}|${sort.col}|${sort.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <AgregadorasTable
-            rows={tableRows}
+            rows={linhas}
+            zebraIdx={zebraIdx}
             comerciais={comerciais}
             sort={sort}
             onSort={toggleSort}
@@ -481,6 +489,8 @@ export default function PipelineAgregadoras() {
             onUpdateUltimoContato={updateUltimoContato}
             t={t}
           />
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

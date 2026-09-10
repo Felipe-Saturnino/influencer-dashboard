@@ -20,7 +20,15 @@ alwaysApply: true
 3. No Superset, `ATE` é **exclusivo** — último dia a incluir = `ATE − 1 dia`.
 4. Ex.: hoje 07/09 → carregar até **06/09** → `ATE=2026-09-07`.
 
-Histórico / reload: usar `--de` / `--ate` **inclusivos** no runner (`filtrarDias`).
+Histórico / reload: usar `--de` / `--ate` **inclusivos** no runner (`diasParaCarga` / `enumerarDias`).
+
+### Preenchimento com zero (Detalhamento Diário) — obrigatório
+
+Se uma operadora tiver **pelo menos 1 dia** com dado no extract da janela, **todos os dias seguintes** até o fim da carga (`--ate`) devem existir no daily (e mesas/UAP do catálogo) — com **0** quando o Superset não trouxer volume ou o dia estiver ausente.
+
+- Evita buracos no Detalhamento Diário (impressão de “sem dado”).
+- Com `--de` + `--ate`, o runner usa o **calendário completo** (não só dias presentes no JSON).
+- Operadora sem nenhum dia com atividade na janela: **não** inventar linhas (ex.: Donald/BetPonto antes do 1º volume).
 
 ---
 
@@ -82,7 +90,8 @@ Seguir `business.mdc` § Regras de reconciliação. Discrepância mesas vs daily
 ## Anti-patterns
 
 - Agregar todo EsportivaBet num único `esportiva_bet` (ignorar split).
-- Filtrar Bateu/BRX/Rico com `brand_name`.
+- Filtrar Bateu/BRX/Rico/Donald/BetPonto com `brand_name`.
 - Carregar D-0 incompleto.
+- Deixar buraco no Detalhamento Diário após o 1º dia com dado da operadora (deve preencher com 0).
 - Depender de `recv-json-server` / porta local se CDP dump funcionar.
 - Cloud Agent / commit automático após a carga.

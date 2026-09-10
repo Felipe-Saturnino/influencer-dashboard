@@ -949,13 +949,19 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Rotação",
         definicao:
-          "Aba do **Controle de Turno** que posiciona Game Presenters nas mesas do estúdio ao longo do turno (intervalos de 30 min, ou 20 min sob demanda). Cada estúdio tem o próprio bloco; o pool vem da Escala Estúdio aprovada filtrada pela Escala do Turno; liderança entra só via Incluir Liderança. A ordem das linhas de GP na prévia é aleatória a cada geração completa. Células: Número da Mesa, Break ou X. Permite mover GP entre estúdios só no dia/turno e republicar sem reescrever slots já passados.",
+          "Aba do **Controle de Turno** que posiciona Game Presenters nas mesas do estúdio e Shufflers na posição **TODOS** (todos os estúdios) ao longo do turno (intervalos de 30 min, ou 20 min sob demanda). Cada estúdio tem o próprio bloco de GP; o bloco Shuffler é único e sem mover estúdio. O pool vem da Escala Estúdio / Escala do Turno; liderança entra só via Incluir Liderança nos blocos de estúdio. A ordem das linhas na prévia é aleatória a cada geração completa. Células: Número da Mesa (ou TODOS), Break ou X. Permite mover GP entre estúdios só no dia/turno, arrastar linhas na prévia e publicar (com aviso se ≥2h contínuas em mesa). Tutorial: Gerar Rotação.",
         referencia: "Controle de Turno",
       },
       {
         termo: "Calendário (RH)",
         definicao:
           "Calendário operacional com turnos, trocas, compromissos e presença. Espelha as grades **aprovadas** de Escala Estúdio e Escala Escritório; sem Escala Escritório aprovada, prestadores de Escritório (e Estúdio Comercial 5×2) recebem escala comercial automática.",
+        referencia: "Calendário",
+      },
+      {
+        termo: "Adicionar à agenda",
+        definicao:
+          "No Calendário (aba Compromissos), gera um link secreto para o prestador colar no Google Agenda, Outlook ou Apple. Só entram os **próprios** turnos e as reuniões **aprovadas**. A agenda externa costuma atualizar cerca de uma vez por dia; a fonte da verdade continua sendo a página Calendário.",
         referencia: "Calendário",
       },
       {
@@ -1036,7 +1042,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Solicitações (RH)",
         definicao:
-          "Fila de pedidos de prestadores ao RH — atestados, reuniões com RH e vagas internas — com status Em análise, Aprovado ou Rejeitado. Atestados podem ser gerados automaticamente a partir de justificativa Médico no Calendário; reuniões com RH, ao agendar no Calendário (só visíveis no calendário após aprovação).",
+          "Fila de pedidos ao RH em quatro abas — Atestados, Reuniões, Vagas e Feedback — com status Em análise, Aprovado, Rejeitado ou Aplicado (feedback). Atestados podem nascer da justificativa Médico no Calendário; reuniões ficam Em análise até o atendimento e só então constam como Agendado no Calendário; feedback da liderança no Controle de Turno espelha aqui para aprovação.",
         nota: "Distinto de Solicitações na seção Escala (ofertas e trocas de turno).",
         referencia: "Solicitações",
       },

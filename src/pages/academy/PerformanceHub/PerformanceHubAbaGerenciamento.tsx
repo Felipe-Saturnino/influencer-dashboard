@@ -15,6 +15,7 @@ import { formatNotaPerformanceHub } from "../../../lib/academyPerformanceHubScor
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
@@ -107,6 +108,12 @@ export function PerformanceHubAbaGerenciamento({
             Sem dados para o período selecionado.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={avaliacoesPendentes}
+            t={t}
+            resetKey={`${sortAvaliacao.col}|${sortAvaliacao.dir}|${timeSelecionado}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 740 })}>
               <caption style={{ display: "none" }}>Tabela de avaliações em rascunho</caption>
@@ -120,8 +127,8 @@ export function PerformanceHubAbaGerenciamento({
                 </tr>
               </thead>
               <tbody>
-                {avaliacoesPendentes.map((row, idx) => (
-                  <tr key={row.id} style={{ background: dataTable.zebraRow(idx) }}>
+                {linhas.map((row, idx) => (
+                  <tr key={row.id} style={{ background: dataTable.zebraRow(zebraIdx(idx)) }}>
                     <td style={dataTable.tdCenter}>{row.data}</td>
                     <td style={dataTable.tdCenter}>{row.avaliadoNome}</td>
                     <td style={dataTable.tdCenter}>{PERFORMANCE_HUB_STATUS_LABEL[row.status]}</td>
@@ -139,6 +146,8 @@ export function PerformanceHubAbaGerenciamento({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 
@@ -160,6 +169,12 @@ export function PerformanceHubAbaGerenciamento({
             Sem dados para o período selecionado.
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={agendaFiltrada}
+            t={t}
+            resetKey={`${buscaAgenda}|${sortAgenda.col}|${sortAgenda.dir}|${timeSelecionado}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 840 })}>
               <caption style={{ display: "none" }}>Tabela de agenda de avaliações</caption>
@@ -174,8 +189,8 @@ export function PerformanceHubAbaGerenciamento({
                 </tr>
               </thead>
               <tbody>
-                {agendaFiltrada.map((item, idx) => (
-                  <tr key={item.id} style={{ background: dataTable.zebraRow(idx) }}>
+                {linhas.map((item, idx) => (
+                  <tr key={item.id} style={{ background: dataTable.zebraRow(zebraIdx(idx)) }}>
                     <td style={dataTable.tdCenter}>{item.nome}</td>
                     <td style={dataTable.tdCenter}>{item.goLive}</td>
                     <td style={dataTable.tdCenter}>{item.turno}</td>
@@ -194,6 +209,8 @@ export function PerformanceHubAbaGerenciamento({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </>

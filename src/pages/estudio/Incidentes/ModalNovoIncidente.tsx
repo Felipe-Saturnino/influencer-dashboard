@@ -94,7 +94,6 @@ function ComboBuscavel({
   onChange,
   options,
   disabled,
-  forceSearch,
   searchPlaceholder,
 }: {
   id: string;
@@ -104,8 +103,6 @@ function ComboBuscavel({
   onChange: (id: string) => void;
   options: ComboOption[];
   disabled?: boolean;
-  /** Exibe a barra de pesquisa mesmo com ≤5 opções. */
-  forceSearch?: boolean;
   searchPlaceholder?: string;
 }) {
   const { theme: t } = useApp();
@@ -125,7 +122,7 @@ function ComboBuscavel({
   }, []);
 
   const selecionado = options.find((o) => o.id === value);
-  const showSearch = forceSearch || options.length > 5;
+  const showSearch = true;
   const filtered = useMemo(() => {
     if (!query.trim()) return options;
     return options.filter((o) =>
@@ -867,7 +864,6 @@ export function ModalNovoIncidente({
         onChange={setPrestadorId}
         options={prestadorComboOptions}
         disabled={loadingStaff}
-        forceSearch
         searchPlaceholder="Pesquisar por nome ou nickname..."
       />
     </Campo>

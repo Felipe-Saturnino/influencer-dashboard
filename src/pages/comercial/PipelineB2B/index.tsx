@@ -18,6 +18,8 @@ import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { AjudaContextualAcoes } from "../../../components/AjudaContextualAcoes";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
+import { agruparContiguo } from "../../../lib/tablePagination";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
@@ -176,6 +178,11 @@ export default function PipelineB2B() {
     const filtered = filterMarcas(rows, tab, busca, comercialFiltro, kpiFolha, comerciais);
     return sortMarcas(filtered, sort.col, sort.dir, comerciais);
   }, [rows, tab, busca, comercialFiltro, kpiFolha, sort, comerciais]);
+
+  const gruposRazao = useMemo(
+    () => agruparContiguo(tableRows, (r) => r.empresa.cnpj),
+    [tableRows],
+  );
 
   async function insertHistorico(
     marcaId: string,
@@ -522,9 +529,15 @@ export default function PipelineB2B() {
             Carregando…
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={gruposRazao}
+            t={t}
+            resetKey={`${tab}|${busca}|${comercialFiltro}|${kpiFolha ?? ""}|${sort.col}|${sort.dir}`}
+          >
+            {(gruposPagina) => (
           <PipelineTable
             tab={tab}
-            rows={tableRows}
+            rows={gruposPagina.flat()}
             comerciais={comerciais}
             agregadoraOpcoes={agregadoraOpcoes}
             sort={sort}
@@ -541,6 +554,8 @@ export default function PipelineB2B() {
             onUpdateAgregadora={updateAgregadora}
             t={t}
           />
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

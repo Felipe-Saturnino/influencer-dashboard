@@ -50,8 +50,8 @@ Dashboard analítico **somente leitura** — agrega Pipeline B2B (Operadoras), P
 
 | Aba | Filtros abaixo | Conteúdo |
 |-----|----------------|----------|
-| **Operadoras** | Só Comercial (abaixo das abas principais; mesma posição que Agregadoras) | KPIs, funil completo (visão Todos), produto Dedicada/Network, geo, carteira, novas marcas, movimentação — **sem** chips de status pipeline nem filtro de UF |
-| **Agregadoras** | Só Comercial | KPIs sem legenda inferior; **Funil** em largura total; **Carteira** + **Movimentação** lado a lado (→ Conexão · → Negociação / → Fechado · Alterações totais) |
+| **Operadoras** | Só Comercial (abaixo das abas principais; mesma posição que Agregadoras) | KPIs, funil completo (visão Todos), produto Dedicada/Network, geo, carteira, novas marcas, movimentação — **sem** chips de status pipeline nem filtro de UF. **Novas marcas** e listas do tooltip **Movimentação recente**: paginação 20/página (`TabelaComPaginacao`). **Não** paginar funil, KPIs nem carteira. |
+| **Agregadoras** | Só Comercial | KPIs sem legenda inferior; **Funil** em largura total; **Carteira** + **Movimentação** lado a lado (→ Conexão · → Negociação / → Fechado · Alterações totais). Tooltip **Movimentação recente**: paginação 20/página. **Não** paginar funil, KPIs nem carteira. |
 | **Integrações** | Só Prioridade (**Todas Prioridades** / Baixo / Médio / Alta) | KPIs sem legenda; **SLA por etapa** (tempos médios Não Iniciado / Em andamento / Concluído via histórico de status); Produto (Tipo); Caminho; Agregadores |
 
 ### Dados (Supabase)
@@ -93,6 +93,7 @@ Quatro cards: **Total de Operadores**, **Concluídos**, **Em andamento**, **Não
 - Clique no **Operador**: abre o mesmo modal Ver do Pipeline B2B (domínio, portaria, requerimento, produtos, contatos e marcas da mesma licença) — **somente leitura** nesta página.
 - Ações: **Histórico** e **Comentar** (`BtnIconeAcaoLinha`).
 - Com **Editar:** Prioridade, Status e Agregador via popover (Agregador com **barra de pesquisa**); Caminho e PAM via clique inline.
+- Paginação 20/página (`TabelaComPaginacao`); KPIs usam o conjunto filtrado completo.
 - Vazio: `Nenhuma integração encontrada para os filtros selecionados.`
 
 ### Criação automática (Pipeline B2B)
@@ -133,7 +134,7 @@ Contagens e filtro KPI derivados da **tabela** (`rowMatchesConsolidadoFolha` em 
 
 ### Tabela
 
-- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato** — **sem** sort em Marca, Contato, Comercial, Status.
+- Padrão canónico: `useDataTableBlock`, `getDataTableWrapStyle`, `SortTableTh`, coluna **Razão Social** fixa + `rowSpan` por CNPJ. **Zebra** por razão social (CNPJ): todas as marcas da mesma empresa compartilham a mesma cor de linha; intercalação segue ordem de primeira aparição na lista. **Ordenação** (`SortTableTh`): Razão Social, Dedicada, Network, **Agregadora**, **Último Contato** — **sem** sort em Marca, Contato, Comercial, Status. Paginação 20/página (`TabelaPaginacaoBar`).
 - Colunas variam por aba (`TAB_TABLE_CONFIG` em `constants.ts`).
 - Edição inline (Comercial, Status, Dedicada, Network, **Agregadora**): popover + permissão **Editar**; grava em `comercial_marca_historico`. **Agregadora:** opções = **Nome** das linhas de `comercial_agregadoras` (página **Pipeline Agregadoras**), em ordem alfabética, ou **—** para limpar; popover com **barra de pesquisa** (`BarraPesquisaFiltroPainel` + `textoContemBusca`); valor legado fora do catálogo continua visível e permanece na lista até alteração. Coluna `comercial_marcas.agregadora` é texto livre (sem CHECK). **Último Contato:** campo `date` editável inline (`<input type="date">`) com permissão **Editar**; grava em `comercial_marcas.ultimo_contato` + histórico. Badges **Dedicada** / **Network** usam `STATUS_PRODUTO_COLOR` com **`badgeProdutoStyle(status)`** — fundo, borda e texto em `color-mix` translúcido (não pill sólida); progressão pior → melhor: Sem interesse → Desinteresse Comercial → … → Ativo (hex em `constants.ts`).
 - **Colunas (todas as abas, mesma ordem):** Razão Social · Marca · Contato · Comercial · Status · Dedicada · Network · Agregadora · Último Contato · Ação (`PIPELINE_TABLE_COLS`). Campo `ultima_comunicacao` permanece no banco para o fluxo **Comunicar** (futuro) — **sem** coluna na tabela.
@@ -165,8 +166,8 @@ Edge Function **`sync-comercial-spa-lista`** — import diário da planilha ofic
 | Regra | Valor |
 |-------|-------|
 | Agendamento | GitHub Actions `sync-comercial-spa-lista-daily.yml` — **7h30 BRT** (~10h30 UTC) |
-| Fonte | Página canónica **`/empresas-autorizadas`** (tabela HTML); planilha **`planilha-de-autorizacoes.xlsx`/`csv`** sob `lista-de-empresas/` só se não houver tabela; **ignora** links sob `transparencia-ativa` (processos / XLSX 404). SharePoint só como último recurso. Override: secret **`COMERCIAL_SPA_CSV_URL`** |
-| Formato | **HTML** (tabela `/empresas-autorizadas`), **XLSX** (legado) ou **CSV `;`** — XLSX convertido pela Edge (1ª aba) |
+| Fonte | Página canónica **`/empresas-autorizadas`** (tabela HTML por Portaria SPA/MF) **+** **`…/autorizadas-por-determinacao-judicial`** (Transparência Ativa — determinação judicial). Planilha **`planilha-de-autorizacoes.xlsx`/`csv`** sob `lista-de-empresas/` só se não houver tabela; **ignora** ficheiros `.xlsx` sob `transparencia-ativa` (404). SharePoint só como último recurso. Override: secret **`COMERCIAL_SPA_CSV_URL`** |
+| Formato | **HTML** (tabelas oficiais + judiciais), **XLSX** (legado) ou **CSV `;`** — XLSX convertido pela Edge (1ª aba). Judicial: colunas Empresa/CNPJ/Marcas/Domínio/Informações Judiciais; `portaria` grava «Determinação judicial — …». CNPJ já na lista por portaria não é sobrescrito. |
 | Chave empresa | **CNPJ** — bloco = linhas até o próximo CNPJ |
 | Chave marca | **`empresa_id` + nome** (normalizado) |
 | Atualiza | razão social, portaria, retificações, requerimento, nome/dominio da marca |
@@ -222,6 +223,7 @@ Quatro cards clicáveis: **Disponíveis**, **Conexão**, **Negociação**, **Fec
 - Com **Editar:** Status e Comercial via popover; Jogos e Último Contato via clique (vazio = **—** até selecionar/editar).
 - Nome **sem** hiperlink (só texto). Site permanece link externo.
 - Cadastro novo: status inicial **`conexao`**; campos modal Nome*, Site*, Jogos, Comercial*.
+- Paginação 20/página (`TabelaComPaginacao`); KPIs usam o conjunto filtrado completo.
 - Vazio: `Nenhuma agregadora encontrada para os filtros selecionados.`
 
 ### Dados (Supabase)

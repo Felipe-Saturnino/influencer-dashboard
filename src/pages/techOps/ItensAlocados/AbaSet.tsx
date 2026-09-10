@@ -7,6 +7,7 @@ import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { formatDataHoraEstoque, type ItemAlocadoSetRow, type ItemAlocadoStatus } from "../../../lib/techOpsItensAlocados";
 import { SectionTitle, CtaCriarButton, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
@@ -150,6 +151,8 @@ export function AbaSet({
             Nenhum item alocado neste local.
           </div>
         ) : (
+          <TabelaComPaginacao items={filtrados} t={t} resetKey={`${kpi}|${sort.col}|${sort.dir}|${localChave}`}>
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 920 })}>
               <caption style={{ display: "none" }}>Itens alocados no local</caption>
@@ -170,8 +173,8 @@ export function AbaSet({
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((r, i) => (
-                  <tr key={`${r.entidade_tipo}:${r.entidade_id}`} style={{ background: dataTable.zebraRow(i) }}>
+                {linhas.map((r, i) => (
+                  <tr key={`${r.entidade_tipo}:${r.entidade_id}`} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                     <td style={{ ...dataTable.tdCenter, fontWeight: 600 }}>{r.codigo}</td>
                     <td style={dataTable.tdCenter}>{r.nome}</td>
                     <td style={dataTable.tdCenter}>{r.categoria}</td>
@@ -200,6 +203,8 @@ export function AbaSet({
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

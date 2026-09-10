@@ -182,8 +182,8 @@ export const APP_ROUTE_CATALOG: AppRouteDef[] = [
     { tabId: "presenca", slug: "ControleDePresenca", label: "Controle de Presença", access: "always" },
     {
       tabId: "relatorio",
-      slug: "RelatorioDePresenca",
-      label: "Relatório de Presença",
+      slug: "RelatorioDeJustificativas",
+      label: "Relatório de Justificativas",
       access: "calendario_relatorio_presenca",
     },
   ]),
@@ -449,7 +449,15 @@ export function parseAppPathname(pathname: string): ParsedAppPath {
   }
 
   if (segments.length === 2 && seg2) {
-    const tab = route.tabs.find((t) => t.slug.toLowerCase() === seg2.toLowerCase());
+    let tab = route.tabs.find((t) => t.slug.toLowerCase() === seg2.toLowerCase());
+    // Legado: RelatorioDePresenca → Relatório de Justificativas (mesma aba).
+    if (
+      !tab &&
+      route.pageKey === "rh_calendario" &&
+      seg2.toLowerCase() === "relatoriodepresenca"
+    ) {
+      tab = route.tabs.find((t) => t.tabId === "relatorio");
+    }
     if (!tab) return { kind: "not_found" };
     return { kind: "app", pageKey: route.pageKey, tabId: tab.tabId, tabSlug: tab.slug };
   }
@@ -513,6 +521,7 @@ export function isTabAllowedForUser(
   tab: AppRouteTabDefFull,
   role: Role | undefined,
   acoes: PermissoesAcoesMapa,
+  permissions?: Record<PageKey, PermissaoValor | null | undefined>,
 ): boolean {
   if (role === "admin") return true;
   switch (tab.access) {
@@ -537,9 +546,12 @@ export function isTabAllowedForUser(
       return (acoes.academy_performance_hub?.criar ?? null) === "sim";
     case "academy_portal_gerenciamento":
       return podeExecutarPerm(acoes.academy_portal?.editar ?? null);
-    case "calendario_relatorio_presenca":
-      /** Só Editar = Sim — Próprios não acessa Relatório de Presença. */
-      return (acoes.rh_calendario?.editar ?? null) === "sim";
+    case "calendario_relatorio_presenca": {
+      /** Admin | Criar = Sim | (Editar = Sim e Ver = Sim). Não Meu Calendário/Controle. */
+      if ((acoes.rh_calendario?.criar ?? null) === "sim") return true;
+      const ver = permissions?.rh_calendario ?? null;
+      return (acoes.rh_calendario?.editar ?? null) === "sim" && ver === "sim";
+    }
     default:
       return true;
   }
@@ -581,7 +593,7 @@ export function resolveRouteAccess(
     if (parsed.tabId && route?.tabs) {
       const tabDef = route.tabs.find((t) => t.tabId === parsed.tabId);
       if (!tabDef) return { ok: false, reason: "not_found" };
-      if (!isTabAllowedForUser(parsed.pageKey, tabDef, role, acoes)) {
+      if (!isTabAllowedForUser(parsed.pageKey, tabDef, role, acoes, permissions)) {
         return { ok: false, reason: "forbidden" };
       }
     }
@@ -602,7 +614,7 @@ export function resolveRouteAccess(
   if (parsed.tabId && route?.tabs) {
     const tabDef = route.tabs.find((t) => t.tabId === parsed.tabId);
     if (!tabDef) return { ok: false, reason: "not_found" };
-    if (!isTabAllowedForUser(parsed.pageKey, tabDef, role, acoes)) {
+    if (!isTabAllowedForUser(parsed.pageKey, tabDef, role, acoes, permissions)) {
       return { ok: false, reason: "forbidden" };
     }
   }

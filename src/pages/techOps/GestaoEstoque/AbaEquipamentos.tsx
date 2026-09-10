@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Eye, Pencil } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -11,6 +11,8 @@ import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { tooltipAcao } from "../../../lib/iconOnlyButtonA11y";
 import { SectionTitle, SortTableTh, CtaCriarButton, type SortDir } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar";
+import { clampPageIndex, slicePage, TABELA_PAGE_SIZE_ESTOQUE } from "../../../lib/tablePagination";
 import type { Permissoes } from "../../../hooks/usePermission";
 import {
   codigoEstoqueEquipamento,
@@ -35,7 +37,7 @@ import { ModalNovoEquipamentoEstoque } from "./ModaisNovoEstoque";
 import { ModalEditarEquipamentoEstoque } from "./ModaisEditarEstoque";
 
 type StatusKpi = "" | EstoqueEquipStatus;
-type SortCol = "codigo" | "categoria" | "nome" | "numero_serie" | "marca" | "modelo" | "status" | "alocacao";
+type SortCol = "codigo" | "categoria" | "nome" | "numero_serie" | "status" | "alocacao";
 
 const KPI_COR = {
   total: "var(--brand-primary, #7c3aed)",
@@ -124,10 +126,6 @@ export function AbaEquipamentos({
           return compareLocaleTexto(a.nome, b.nome, dir);
         case "numero_serie":
           return compareLocaleTexto(a.numero_serie, b.numero_serie, dir);
-        case "marca":
-          return compareLocaleTexto(a.marca, b.marca, dir);
-        case "modelo":
-          return compareLocaleTexto(a.modelo, b.modelo, dir);
         case "status":
           return compareLocaleTexto(ESTOQUE_EQUIP_STATUS_LABEL[a.status], ESTOQUE_EQUIP_STATUS_LABEL[b.status], dir);
         case "alocacao":
@@ -138,6 +136,16 @@ export function AbaEquipamentos({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- alocacao depende só de estudioNomePorSlug
   }, [filtradosBase, statusKpi, sort, estudioNomePorSlug]);
+
+  const [pagina, setPagina] = useState(0);
+  useEffect(() => {
+    setPagina(0);
+  }, [filtrados, sort.col, sort.dir]);
+  const paginaSafe = clampPageIndex(pagina, filtrados.length, TABELA_PAGE_SIZE_ESTOQUE);
+  const linhasPagina = useMemo(
+    () => slicePage(filtrados, paginaSafe, TABELA_PAGE_SIZE_ESTOQUE),
+    [filtrados, paginaSafe],
+  );
 
   function onSort(col: SortCol) {
     setSort((prev) => (prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" }));
@@ -210,8 +218,9 @@ export function AbaEquipamentos({
         ) : filtrados.length === 0 ? (
           <VazioEstoque>Nenhum equipamento encontrado.</VazioEstoque>
         ) : (
+          <>
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
-            <table style={getDataTableStyle({ minWidth: 960 })}>
+            <table style={getDataTableStyle({ minWidth: 800 })}>
               <caption style={{ display: "none" }}>Catálogo de equipamentos</caption>
               <thead>
                 <tr>
@@ -219,8 +228,6 @@ export function AbaEquipamentos({
                   <SortTableTh label="Categoria" col="categoria" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Nome" col="nome" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Número de Série" col="numero_serie" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
-                  <SortTableTh label="Marca" col="marca" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
-                  <SortTableTh label="Modelo" col="modelo" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Status" col="status" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <SortTableTh label="Alocação" col="alocacao" sortCol={sort.col} sortDir={sort.dir} onSort={onSort} thStyle={dataTable.thHeader} align="center" />
                   <th scope="col" style={dataTable.thHeader}>
@@ -229,15 +236,17 @@ export function AbaEquipamentos({
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((r, i) => (
+                {linhasPagina.map((r, i) => {
+                  const zebraIdx = paginaSafe * TABELA_PAGE_SIZE_ESTOQUE + i;
+                  return (
                   <tr
                     key={r.id}
-                    style={{ background: dataTable.zebraRow(i) }}
+                    style={{ background: dataTable.zebraRow(zebraIdx) }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = dataTable.totalRowBg;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = dataTable.zebraRow(i);
+                      e.currentTarget.style.background = dataTable.zebraRow(zebraIdx);
                     }}
                   >
                     <td style={{ ...dataTable.tdCenter, fontWeight: 700 }}>{codigoEstoqueEquipamento(r)}</td>
@@ -246,8 +255,6 @@ export function AbaEquipamentos({
                       {r.nome}
                     </td>
                     <td style={dataTable.tdCenter}>{r.numero_serie}</td>
-                    <td style={dataTable.tdCenter}>{r.marca}</td>
-                    <td style={dataTable.tdCenter}>{r.modelo}</td>
                     <td style={dataTable.tdCenter}>
                       <span style={{ display: "flex", justifyContent: "center" }}>
                         <BadgeEstoque
@@ -270,10 +277,19 @@ export function AbaEquipamentos({
                       </span>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          <TabelaPaginacaoBar
+            t={t}
+            page={paginaSafe}
+            pageSize={TABELA_PAGE_SIZE_ESTOQUE}
+            totalItems={filtrados.length}
+            onPageChange={setPagina}
+          />
+          </>
         )}
       </div>
 

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Calendário · Adicionar à agenda</title>
+  <style>
+    :root {
+      --brand-primary: #4a2082;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #1e36f8;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --card-border: #e5e7eb;
+      --input-bg: #f9fafb;
+      --page-bg: #f3f4f6;
+      --block-bg: #ffffff;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 14px rgba(74,32,130,.06);
+      --radius: 14px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI", system-ui, sans-serif;
+      --verde: #22c55e;
+      --amarelo: #f59e0b;
+      --vermelho: #e84025;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--page-bg); color: var(--text); font-size: 13px; line-height: 1.45; }
+    .hidden { display: none !important; }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; text-align: center; padding: 10px 16px; font-size: 12px; font-weight: 600;
+    }
+
+    .shell { max-width: 1180px; margin: 0 auto; padding: 24px 20px 72px; }
+
+    .page-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 18px; }
+    .page-header-icon {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary);
+    }
+    .page-header h1 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); line-height: 32px;
+    }
+    .page-header p { font-size: 13px; color: var(--text-muted); margin: 5px 0 0; padding-left: 0; }
+
+    .filter-box {
+      background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 12px 20px; margin-bottom: 14px;
+    }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .filter-row {
+      display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+      gap: 10px; width: 100%;
+    }
+    .filter-row-tabs {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+      width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border);
+    }
+    .cta-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .carousel-btn {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border);
+      background: var(--input-bg); cursor: pointer; font-size: 14px;
+    }
+    .carousel-label { min-width: 160px; text-align: center; font-size: 18px; font-weight: 800; }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 999px; padding: 6px 14px; border: 1px solid var(--card-border);
+      background: var(--input-bg); color: var(--text); font-size: 13px; font-weight: 600;
+    }
+    .pill.active {
+      border-color: var(--brand-accent);
+      background: color-mix(in srgb, var(--brand-accent) 15%, #fff);
+      color: var(--brand-accent); font-weight: 700;
+    }
+
+    .tab {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .tab.active {
+      border-color: var(--brand-accent);
+      background: color-mix(in srgb, var(--brand-accent) 15%, #fff);
+      color: var(--brand-accent); font-weight: 700;
+    }
+
+    .btn-sec {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 20px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer;
+    }
+    .btn-sec:hover { border-color: color-mix(in srgb, var(--brand-primary) 35%, var(--card-border)); }
+
+    .content-box {
+      background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 14px; font-weight: 800;
+      text-transform: uppercase; color: var(--brand-primary); margin-bottom: 14px;
+    }
+    .section-title span { font-weight: 400; text-transform: none; color: var(--text-muted); font-size: 11px; }
+
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .cal-dow {
+      text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 0;
+    }
+    .cal-cell {
+      min-height: 88px; border: 1px solid var(--card-border); border-radius: 10px;
+      padding: 8px; background: var(--input-bg);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .cal-cell.out { opacity: 0.35; }
+    .cal-cell.today { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand-primary) 35%, transparent); }
+    .cal-daynum { font-size: 12px; font-weight: 700; }
+    .cal-chip {
+      display: inline-flex; max-width: 100%; padding: 2px 6px; border-radius: 6px;
+      font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      background: color-mix(in srgb, var(--brand-primary) 12%, #fff);
+      color: var(--brand-primary); border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+    }
+    .cal-chip.folga {
+      background: #6b728022; color: #6b7280; border-color: #6b728044;
+    }
+
+    /* Modal — alinhado a ModalBase + ModalHeader (sem Cancelar/Fechar no rodapé) */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: #00000090; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-panel {
+      width: min(560px, 100%); max-height: 90dvh; overflow: auto;
+      background: var(--block-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.22);
+    }
+    .modal-header {
+      position: sticky; top: -28px; z-index: 2;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin: -28px -28px 20px; padding: 28px 28px 16px;
+      background: var(--block-bg);
+      border-bottom: 1px solid var(--card-border);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+    }
+    .modal-header h2 {
+      margin: 0; font-size: 17px; font-weight: 900; color: var(--text); font-family: var(--font-title);
+    }
+    .modal-close {
+      width: 30px; height: 30px; border: none; background: none; cursor: pointer;
+      color: var(--text); display: flex; align-items: center; justify-content: center; padding: 4px;
+    }
+    .modal-intro {
+      margin: 0 0 16px; font-size: 13px; color: var(--text-muted); line-height: 1.55;
+    }
+
+    .field-label {
+      display: block; font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 8px;
+    }
+    .link-row { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; margin-bottom: 14px; }
+    .link-box {
+      flex: 1 1 240px; min-width: 0;
+      padding: 12px 14px; border-radius: 12px;
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      background: color-mix(in srgb, var(--brand-primary) 10%, #fff);
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 12px; color: var(--text); word-break: break-all; line-height: 1.5;
+      display: flex; align-items: center;
+    }
+    .btn-copy {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 18px; border-radius: 12px; cursor: pointer;
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      background: color-mix(in srgb, var(--brand-primary) 10%, #fff);
+      color: var(--text); font-weight: 600; font-size: 13px; font-family: var(--font);
+    }
+    .btn-copy.ok { color: var(--verde); }
+
+    .notice {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 18px;
+      background: #f59e0b14; border: 1px solid #f59e0b44; color: var(--text);
+    }
+    .notice .dot {
+      width: 8px; height: 8px; border-radius: 99px; background: var(--amarelo);
+      margin-top: 5px; flex-shrink: 0;
+    }
+    .notice p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text); }
+    .notice strong { font-weight: 700; }
+
+    .steps-label {
+      font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--brand-primary); margin: 0 0 10px;
+    }
+    .steps-tabs {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+    }
+    .steps-body {
+      padding: 14px 16px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg); margin-bottom: 18px;
+    }
+    .steps-body ol { margin: 0; padding-left: 18px; color: var(--text); }
+    .steps-body li { margin-bottom: 8px; }
+    .steps-body li:last-child { margin-bottom: 0; }
+
+    .regen {
+      padding-top: 4px; border-top: 1px solid var(--card-border);
+    }
+    .regen p { margin: 0 0 10px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 12px; border-radius: 10px; cursor: pointer;
+      border: 1px solid var(--card-border); background: transparent;
+      color: var(--text-muted); font-size: 12px; font-weight: 700; font-family: var(--font);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+
+    .confirm-box {
+      margin-top: 12px; padding: 14px 16px; border-radius: 12px;
+      border: 1px solid rgba(232,64,37,0.35); background: #e8402514;
+    }
+    .confirm-box p { margin: 0 0 12px; font-size: 13px; color: var(--text); line-height: 1.5; }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .btn-keep {
+      padding: 10px 18px; border-radius: 10px; cursor: pointer;
+      border: 1px solid var(--card-border); background: #fff;
+      color: var(--text); font-size: 13px; font-weight: 700; font-family: var(--font);
+    }
+    .btn-danger {
+      padding: 10px 18px; border-radius: 10px; cursor: pointer; border: none;
+      background: var(--vermelho); color: #fff;
+      font-size: 13px; font-weight: 700; font-family: var(--font);
+    }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #111827; color: #fff; font-size: 13px; font-weight: 600;
+      padding: 10px 16px; border-radius: 10px; z-index: 1100;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    }
+
+    @media (max-width: 720px) {
+      .filter-grid { grid-template-columns: 1fr; }
+      .cta-group { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    Mockup de UI — não é a plataforma. Clique em <strong>Adicionar à agenda</strong> (o modal já abre nesta prévia).
+  </div>
+
+  <div class="shell">
+    <header class="page-header">
+      <div class="page-header-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+      <div>
+        <h1>Calendário</h1>
+        <p>Acompanhe turnos, folgas, reuniões e o registro de presença do mês.</p>
+      </div>
+    </header>
+
+    <div class="filter-box">
+      <div class="filter-grid">
+        <div class="filter-row">
+          <button type="button" class="carousel-btn" aria-label="Mês anterior">‹</button>
+          <span class="carousel-label">Setembro 2026</span>
+          <button type="button" class="carousel-btn" aria-label="Próximo mês">›</button>
+          <span class="pill active">Meu Calendário</span>
+        </div>
+        <div class="cta-group">
+          <button type="button" class="btn-sec" title="Download do calendário em PDF">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download
+          </button>
+          <button type="button" class="btn-sec" id="btnAbrir" title="Adicionar à agenda" aria-label="Adicionar à agenda">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></svg>
+            Adicionar à agenda
+          </button>
+        </div>
+      </div>
+      <div class="filter-row-tabs" role="tablist" aria-label="Abas do calendário">
+        <button type="button" class="tab active">Compromissos</button>
+        <button type="button" class="tab">Controle de Presença</button>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <div class="section-title">Compromissos <span>— Turnos e reuniões do mês</span></div>
+      <div class="cal-grid" aria-hidden="true">
+        <div class="cal-dow">Dom</div><div class="cal-dow">Seg</div><div class="cal-dow">Ter</div>
+        <div class="cal-dow">Qua</div><div class="cal-dow">Qui</div><div class="cal-dow">Sex</div><div class="cal-dow">Sáb</div>
+        <div class="cal-cell out"><span class="cal-daynum">30</span></div>
+        <div class="cal-cell"><span class="cal-daynum">31</span><span class="cal-chip">Noite — 18h às 06h</span></div>
+        <div class="cal-cell today"><span class="cal-daynum">1</span><span class="cal-chip">Tarde — 14h às 22h</span></div>
+        <div class="cal-cell"><span class="cal-daynum">2</span><span class="cal-chip folga">Folga</span></div>
+        <div class="cal-cell"><span class="cal-daynum">3</span><span class="cal-chip">Noite — 18h às 06h</span></div>
+        <div class="cal-cell"><span class="cal-daynum">4</span><span class="cal-chip">Noite — 18h às 06h</span></div>
+        <div class="cal-cell"><span class="cal-daynum">5</span><span class="cal-chip folga">Folga</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay open" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 id="modalTitle">Adicionar à agenda</h2>
+        <button type="button" class="modal-close" id="btnFechar" aria-label="Fechar modal" title="Fechar modal">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <p class="modal-intro">
+        Cole este link na agenda Google, Outlook ou Apple. Passam a aparecer os seus turnos e as reuniões
+        <strong style="color: var(--text); font-weight: 700;">aprovadas</strong>.
+      </p>
+
+      <label class="field-label" for="linkFake">Link da sua agenda</label>
+      <div class="link-row">
+        <div class="link-box" id="linkFake">https://app.spingaming.com.br/ics/calendario/7f3a9c2e1b84d0f6a91c</div>
+        <button type="button" class="btn-copy" id="btnCopiar" aria-label="Copiar link" title="Copiar link">
+          <svg id="iconCopy" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg id="iconCheck" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <span id="lblCopiar">Copiar</span>
+        </button>
+      </div>
+
+      <div class="notice" role="note">
+        <span class="dot" aria-hidden="true"></span>
+        <p>
+          As plataformas de Agenda costumam atualizar <strong>cerca de uma vez por dia</strong>.
+          Trocas no Marketplace ou alterações de escala podem aparecer apenas no dia seguinte.
+          A fonte da verdade continua sendo esta página.
+        </p>
+      </div>
+
+      <div class="steps-label">Como conectar</div>
+      <div class="steps-tabs" role="tablist" aria-label="Instruções por agenda">
+        <button type="button" class="tab active" data-tab="google" id="tab-google">Google</button>
+        <button type="button" class="tab" data-tab="outlook" id="tab-outlook">Outlook</button>
+        <button type="button" class="tab" data-tab="apple" id="tab-apple">Apple</button>
+      </div>
+      <div class="steps-body" id="panel-google">
+        <ol>
+          <li>No computador, abra o <strong>Google Agenda</strong>.</li>
+          <li>Clique na engrenagem → <strong>Configurações</strong>.</li>
+          <li>À esquerda, <strong>Adicionar agenda</strong> → <strong>Por URL</strong>.</li>
+          <li>Cole o link copiado e clique em <strong>Adicionar agenda</strong>.</li>
+        </ol>
+      </div>
+      <div class="steps-body hidden" id="panel-outlook">
+        <ol>
+          <li>Abra o <strong>Outlook na web</strong>.</li>
+          <li><strong>Adicionar calendário</strong> → <strong>Inscrever-se a partir da web</strong>.</li>
+          <li>Cole o link e salve. O calendário aparece na lista à esquerda.</li>
+        </ol>
+      </div>
+      <div class="steps-body hidden" id="panel-apple">
+        <ol>
+          <li>No Mac: app <strong>Calendário</strong> → Arquivo → <strong>Nova assinatura de calendário</strong>.</li>
+          <li>No iPhone: Ajustes → Apps → Calendário → Contas → <strong>Adicionar conta inscrita</strong>.</li>
+          <li>Cole o link. A agenda passa a atualizar sozinha.</li>
+        </ol>
+      </div>
+
+      <div class="regen">
+        <p>Se o link vazar ou deixar de funcionar, gere um novo. O link antigo para de atualizar na agenda em que já foi colado.</p>
+        <button type="button" class="btn-ghost" id="btnRegen">Gerar novo link</button>
+        <div class="confirm-box hidden" id="confirmRegen">
+          <p>Deseja gerar um novo link?<br /><br />O endereço atual deixa de funcionar. Será preciso colar o link novo na agenda.</p>
+          <div class="confirm-actions">
+            <button type="button" class="btn-keep" id="btnRegenCancel">Manter link atual</button>
+            <button type="button" class="btn-danger" id="btnRegenOk">Gerar novo link</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast" role="status"></div>
+
+  <script>
+    const LINKS = [
+      "https://app.spingaming.com.br/ics/calendario/7f3a9c2e1b84d0f6a91c",
+      "https://app.spingaming.com.br/ics/calendario/b2e91f04c8a73d15e06a",
+    ];
+    let linkIdx = 0;
+    let copyTimer;
+
+    const overlay = document.getElementById("modal");
+    const linkBox = document.getElementById("linkFake");
+    const btnCopiar = document.getElementById("btnCopiar");
+    const lblCopiar = document.getElementById("lblCopiar");
+    const iconCopy = document.getElementById("iconCopy");
+    const iconCheck = document.getElementById("iconCheck");
+    const confirmRegen = document.getElementById("confirmRegen");
+    const toast = document.getElementById("toast");
+
+    function abrir() { overlay.classList.add("open"); }
+    function fechar() {
+      overlay.classList.remove("open");
+      confirmRegen.classList.add("hidden");
+    }
+
+    document.getElementById("btnAbrir").addEventListener("click", abrir);
+    document.getElementById("btnFechar").addEventListener("click", fechar);
+    overlay.addEventListener("mousedown", (e) => {
+      if (e.target === overlay) fechar();
+    });
+
+    btnCopiar.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(linkBox.textContent.trim());
+      } catch (_) { /* mockup: ainda assim mostra Copiado */ }
+      btnCopiar.classList.add("ok");
+      lblCopiar.textContent = "Copiado";
+      btnCopiar.title = "Link copiado";
+      btnCopiar.setAttribute("aria-label", "Link copiado");
+      iconCopy.classList.add("hidden");
+      iconCheck.classList.remove("hidden");
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => {
+        btnCopiar.classList.remove("ok");
+        lblCopiar.textContent = "Copiar";
+        btnCopiar.title = "Copiar link";
+        btnCopiar.setAttribute("aria-label", "Copiar link");
+        iconCopy.classList.remove("hidden");
+        iconCheck.classList.add("hidden");
+      }, 2000);
+    });
+
+    document.querySelectorAll(".steps-tabs .tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".steps-tabs .tab").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        ["google", "outlook", "apple"].forEach((id) => {
+          document.getElementById("panel-" + id).classList.toggle("hidden", tab.dataset.tab !== id);
+        });
+      });
+    });
+
+    document.getElementById("btnRegen").addEventListener("click", () => {
+      confirmRegen.classList.remove("hidden");
+    });
+    document.getElementById("btnRegenCancel").addEventListener("click", () => {
+      confirmRegen.classList.add("hidden");
+    });
+    document.getElementById("btnRegenOk").addEventListener("click", () => {
+      linkIdx = 1 - linkIdx;
+      linkBox.textContent = LINKS[linkIdx];
+      confirmRegen.classList.add("hidden");
+      toast.textContent = "Novo link gerado. Cole-o de novo na sua agenda.";
+      toast.classList.remove("hidden");
+      setTimeout(() => toast.classList.add("hidden"), 2800);
+    });
+  </script>
+</body>
+</html>

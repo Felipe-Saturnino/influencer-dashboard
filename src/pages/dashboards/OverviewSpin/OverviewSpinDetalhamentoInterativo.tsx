@@ -10,6 +10,7 @@ import {
   getDataTableWrapStyle,
 } from "../../../lib/dataTableStyles";
 import { MarginBadge } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import type { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import type { useApp } from "../../../context/AppContext";
 import {
@@ -197,6 +198,12 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
           </div>
     
           {modoVisualizacaoDetalhe === "tabela" ? (
+            <TabelaComPaginacao
+              items={tabelaRows}
+              t={t}
+              resetKey={`${historico}|${colTempoLabel}|${mesSelecionadoLabel ?? ""}|${modoAgregadoTodasOperadoras}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 720 })}>
                 <caption style={{ display: "none" }}>
@@ -231,7 +238,7 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                   </tr>
                 </thead>
                 <tbody>
-                  {tabelaRows.map((r, i) => {
+                  {linhas.map((r, i) => {
                     const ggr = r.ggr ?? 0;
                     const drillId = r.drillId;
                     const isDrillParent = modoAgregadoTodasOperadoras && drillId != null;
@@ -244,12 +251,13 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                               : agregaDailyRawPorOperadoraNoDia(dailyRawUnmerged, normalizeMesasYmd(drillId))
                           ).filter((sl) => podeVerOperadora(sl.operadora_slug))
                         : [];
-                    const rowKey = drillId ?? `${r.label}-${i}`;
-                    const zebra = dataTable.zebraRow(i);
+                    const z = zebraIdx(i);
+                    const rowKey = drillId ?? `${r.label}-${z}`;
+                    const zebra = dataTable.zebraRow(z);
                     return (
                       <Fragment key={rowKey}>
                         <tr style={{ background: zebra }} {...dataTableRowHoverHandlers(zebra)}>
-                          <td style={dataTable.tdSticky({ rowIndex: i })}>
+                          <td style={dataTable.tdSticky({ rowIndex: z })}>
                             <div
                               style={{
                                 display: "flex",
@@ -340,7 +348,7 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                           aberto &&
                           subLinhas.map((sl, j) => {
                             const gg = sl.ggr ?? 0;
-                            const zebraSub = dataTable.zebraRow(i + j + 1, "action");
+                            const zebraSub = dataTable.zebraRow(z + j + 1, "action");
                             return (
                               <tr
                                 key={`${rowKey}-${sl.operadora_slug}`}
@@ -354,7 +362,7 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                                   scope="row"
                                   style={{
                                     ...dataTable.tdSticky({
-                                      rowIndex: i + j + 1,
+                                      rowIndex: z + j + 1,
                                       paddingLeft: 32,
                                       stripeAccent: "action",
                                     }),
@@ -402,6 +410,8 @@ export function OverviewSpinDetalhamentoInterativo(props: OverviewSpinDetalhamen
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           ) : dadosGraficoDetalheOperadoras.length === 0 || slugsGraficoDetalhe.length === 0 ? (
             <div
               style={{

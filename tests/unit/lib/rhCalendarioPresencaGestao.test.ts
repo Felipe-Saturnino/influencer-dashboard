@@ -170,6 +170,51 @@ describe("resolverAcoesPresencaLinha / resolverStatusPresencaLinha — Compra e 
   });
 });
 
+describe("resolverAcoesPresencaLinha — fluxo GP/Shuffler", () => {
+  const baseGp = {
+    situacao: "Escalado",
+    diaIso: "2026-07-18",
+    entEsc: "07:00",
+    saiEsc: "15:00",
+    statusBase: "Registrado",
+    fluxoGpShuffler: true,
+  };
+
+  it("com overlay CT prioriza Aprovar mesmo sem Check-in/out", () => {
+    expect(
+      resolverAcoesPresencaLinha({
+        ...baseGp,
+        temCheckIn: false,
+        temCheckOut: false,
+        ctLiderancaOverlay: true,
+      }).acaoPrimaria,
+    ).toBe("aprovar");
+  });
+
+  it("sem overlay e incompleto oferece Justificar", () => {
+    expect(
+      resolverAcoesPresencaLinha({
+        ...baseGp,
+        temCheckIn: true,
+        temCheckOut: false,
+        ctLiderancaOverlay: false,
+      }).acaoPrimaria,
+    ).toBe("justificar");
+  });
+
+  it("Troca com overlay CT também permite Aprovar", () => {
+    expect(
+      resolverAcoesPresencaLinha({
+        ...baseGp,
+        situacao: "Troca",
+        temCheckIn: false,
+        temCheckOut: false,
+        ctLiderancaOverlay: true,
+      }).acaoPrimaria,
+    ).toBe("aprovar");
+  });
+});
+
 describe("presencaCorrecao — análise por campo", () => {
   const correcaoBase = {
     entradaRealAnterior: "08:00",

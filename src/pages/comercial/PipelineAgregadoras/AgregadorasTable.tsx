@@ -45,6 +45,7 @@ type PopoverKind = "status" | "comercial";
 
 export function AgregadorasTable({
   rows,
+  zebraIdx,
   comerciais,
   sort,
   onSort,
@@ -58,6 +59,7 @@ export function AgregadorasTable({
   t,
 }: {
   rows: AgregadoraRow[];
+  zebraIdx?: (i: number) => number;
   comerciais: ComercialOpcao[];
   sort: { col: TableColAgregadora; dir: SortDir };
   onSort: (col: TableColAgregadora) => void;
@@ -186,8 +188,8 @@ export function AgregadorasTable({
                 style={{
                   background:
                     hoverId === row.id
-                      ? `color-mix(in srgb, ${t.cardBorder} 35%, ${dataTable.zebraRow(i)})`
-                      : dataTable.zebraRow(i),
+                      ? `color-mix(in srgb, ${t.cardBorder} 35%, ${dataTable.zebraRow(zebraIdx ? zebraIdx(i) : i)})`
+                      : dataTable.zebraRow(zebraIdx ? zebraIdx(i) : i),
                 }}
                 onMouseEnter={() => setHoverId(row.id)}
                 onMouseLeave={() => setHoverId(null)}

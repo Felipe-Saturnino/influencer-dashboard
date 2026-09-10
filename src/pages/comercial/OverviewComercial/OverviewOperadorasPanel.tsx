@@ -1,4 +1,6 @@
 import { SectionTitle } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
+import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { getCtaCriarGradient } from "../../../lib/ctaCriarStyles";
 import {
@@ -52,6 +54,7 @@ export function OverviewOperadorasPanel({
   onGoPipeline: (tabSlug?: string) => void;
 }) {
   const brand = useDashboardBrand();
+  const { theme } = useApp();
   const grad = getCtaCriarGradient(brand);
 
   const funnel = useMemo(() => pipelineFunnelCounts(filtered), [filtered]);
@@ -304,8 +307,10 @@ export function OverviewOperadorasPanel({
               Nenhuma marca cadastrada nos últimos 30 dias.
             </p>
           ) : (
+            <TabelaComPaginacao items={novasMarcas} t={theme} resetKey={novasMarcas.length}>
+              {(linhas) => (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {novasMarcas.map((m) => (
+              {linhas.map((m) => (
                 <div
                   key={m.id}
                   style={{
@@ -346,6 +351,8 @@ export function OverviewOperadorasPanel({
                 </div>
               ))}
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       </div>

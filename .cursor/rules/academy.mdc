@@ -107,7 +107,7 @@ Se essa migration ainda não estiver aplicada, a listagem de Gerenciamento refaz
 
 **Tutorial (Ajuda → Tutoriais):** **Dicas Academy** (`postagem-academy-aprovacao`, URL `/Ajuda/Tutoriais/DicasAcademy`) — criar Dica/Comunicado e enviar para aprovação; imagens em `public/tutoriais/academy/postagem-aprovacao/`.
 
-Ações por status: rascunho → Editar + Ver; **aprovacao** → Editar + **Aprovar** (só Sim) + Ver; publicado → Editar + Arquivar + Ver; arquivado → Ver. **Ver** abre **`ModalVerPostagem`** com abas **Ver** (campos preenchidos, só leitura) e **Histórico** (`academy_portal_postagem_status_historico`, mesma lista do modal de histórico anterior). Tabela: Assunto, Autor, Tipo, Categoria, Criado em, Status, **Data de Aprovação**, **Aprovador**, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 50/página (`TabelaPaginacaoBar`).
+Ações por status: rascunho → Editar + Ver; **aprovacao** → Editar + **Aprovar** (só Sim) + Ver; publicado → Editar + Arquivar + Ver; arquivado → Ver. **Ver** abre **`ModalVerPostagem`** com abas **Ver** (campos preenchidos, só leitura) e **Histórico** (`academy_portal_postagem_status_historico`, mesma lista do modal de histórico anterior). Tabela: Assunto, Autor, Tipo, Categoria, Criado em, Status, **Data de Aprovação**, **Aprovador**, Publicado em, Ações. Tabelas Supabase **independentes** do Portal de RH (`academy_portal_*`). **Carga:** `fetchAllPages` + janela 13 competências em `created_at`; paginação de vista 20/página (`TabelaPaginacaoBar`).
 
 ### Filtros
 
@@ -255,7 +255,7 @@ Estado **`PerformanceHubScoringPorTime`** — configs independentes por time.
 - Carrossel de mês + **Histórico** (`Todo o período`) — lista derivada das avaliações no banco (**sempre** inclui o mês civil corrente); ao abrir a página (e ao sair do Histórico / trocar Time) o índice inicia no **mês corrente**, sem bloquear navegação para competências anteriores.
 - Time: select obrigatório GP / Shuffler (oculto com Ver = Próprios).
 - Staff: multi quando escopo amplo; oculto na aba **Configuração**; oculto ou fixo em **Próprios**.
-- No bloco **Avaliações** (aba Avaliações), com **Ver = Sim**: busca por nome + filtros **Turno** (`FiltroTurnoSelect` — Todos Turnos / Manhã / Tarde / Noite) e **Status** (`FiltroBarCampoSelect` — Todos Status / Aguardando / Feedback / Aprovado) na mesma fileira. Com Ver = Próprios esses filtros não aparecem.
+- No bloco **Avaliações** (aba Avaliações), com **Ver = Sim**: busca por nome + filtros **Turno** (`FiltroTurnoSelect` — Todos Turnos / Manhã / Tarde / Noite) e **Status** (`FiltroBarCampoSelect` — Todos Status / Aguardando / Feedback / Aprovado) na mesma fileira. Com Ver = Próprios esses filtros não aparecem. Tabelas de Avaliações, Feedbacks e Gerenciamento: paginação 20/página (`TabelaPaginacaoBar`).
 - Centralização de fileiras: Global § Alinhamento no bloco de filtros.
 
 ### Dados (Supabase)

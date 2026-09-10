@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ClipboardList, ListOrdered, MessageSquareText, Plus, Trash2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
@@ -29,6 +29,7 @@ import {
   OS_FORM_GRID,
   previewCodigoOs,
 } from "./ordemSaidaUi";
+import { SelectItemOs } from "./SelectItemOs";
 
 type AbaModalNova = "dados" | "itens" | "obs";
 type LocalOption = { chave: string; label: string };
@@ -58,10 +59,6 @@ function parseEntidadeKey(key: string): { entidade_tipo: OsItemDisponivel["entid
   const tipo = key.slice(0, i) as OsItemDisponivel["entidade_tipo"];
   if (tipo !== "item" && tipo !== "equipamento" && tipo !== "jogo") return null;
   return { entidade_tipo: tipo, entidade_id: key.slice(i + 1) };
-}
-
-function entidadeKeyOf(it: OsItemDisponivel): string {
-  return `${it.entidade_tipo}:${it.entidade_id}`;
 }
 
 type MontarItensResult =
@@ -176,13 +173,6 @@ function PainelItensOs({
   const labelStyle = getOsLabelStyle(t);
   const inputStyle = getOsInputStyle(t);
 
-  const grupos = useMemo(() => {
-    const itens = catalogo.filter((c) => c.entidade_tipo === "item");
-    const equips = catalogo.filter((c) => c.entidade_tipo === "equipamento");
-    const jogos = catalogo.filter((c) => c.entidade_tipo === "jogo");
-    return { itens, equips, jogos };
-  }, [catalogo]);
-
   return (
     <ModalTabPanel active={active} id={`panel-${idPrefix}-itens`} labelledBy={`tab-${idPrefix}-itens`}>
       <div style={{ display: "grid", gap: 12 }}>
@@ -197,21 +187,21 @@ function PainelItensOs({
               key={d.key}
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 88px 36px",
+                gridTemplateColumns: "minmax(0, 1fr) 88px 36px",
                 gap: 10,
                 alignItems: "end",
               }}
             >
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <label style={labelStyle}>
                   Item
                   <CampoObrigatorioMark />
                 </label>
-                <select
+                <SelectItemOs
+                  id={`${idPrefix}-item-${d.key}`}
                   value={d.entidadeKey}
-                  aria-label="Item da ordem"
-                  onChange={(e) => {
-                    const key = e.target.value;
+                  catalogo={catalogo}
+                  onChange={(key) => {
                     const p = parseEntidadeKey(key);
                     const selected = p
                       ? catalogo.find((c) => c.entidade_tipo === p.entidade_tipo && c.entidade_id === p.entidade_id)
@@ -232,37 +222,7 @@ function PainelItensOs({
                       }),
                     );
                   }}
-                  style={inputStyle}
-                >
-                  <option value="">Selecione…</option>
-                  {grupos.itens.length ? (
-                    <optgroup label="Itens">
-                      {grupos.itens.map((c) => (
-                        <option key={entidadeKeyOf(c)} value={entidadeKeyOf(c)}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null}
-                  {grupos.equips.length ? (
-                    <optgroup label="Equipamentos">
-                      {grupos.equips.map((c) => (
-                        <option key={entidadeKeyOf(c)} value={entidadeKeyOf(c)}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null}
-                  {grupos.jogos.length ? (
-                    <optgroup label="Jogo">
-                      {grupos.jogos.map((c) => (
-                        <option key={entidadeKeyOf(c)} value={entidadeKeyOf(c)}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null}
-                </select>
+                />
               </div>
               <div>
                 <label style={labelStyle}>

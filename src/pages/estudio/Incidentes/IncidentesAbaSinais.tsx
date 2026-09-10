@@ -14,6 +14,7 @@ import {
 import { FilterBarIcons } from "../../../lib/filterBarIconCatalog";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 import { compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort";
 import { formatDataIsoBr, labelPrestadorIncidente } from "../../../lib/estudioIncidentesHelpers";
@@ -377,6 +378,12 @@ export function useIncidentesAbaSinais(opts: {
               Sem dados para o período selecionado.
             </div>
           ) : (
+            <TabelaComPaginacao
+              items={rowsTabela}
+              t={t}
+              resetKey={`${sort.col}-${sort.dir}-${staffFiltroId}-${relatorFiltroId}-${opts.estudioFiltro}-${opts.historico}-${opts.periodoAtual.inicio}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 640 })}>
                 <caption style={{ display: "none" }}>Sinais e TMA por dia America/Sao_Paulo</caption>
@@ -390,8 +397,8 @@ export function useIncidentesAbaSinais(opts: {
                   </tr>
                 </thead>
                 <tbody>
-                  {rowsTabela.map((row, i) => {
-                    const zebra = dataTable.zebraRow(i);
+                  {linhas.map((row, i) => {
+                    const zebra = dataTable.zebraRow(zebraIdx(i));
                     return (
                     <tr
                       key={row.diaBrt}
@@ -403,7 +410,7 @@ export function useIncidentesAbaSinais(opts: {
                         e.currentTarget.style.background = zebra;
                       }}
                     >
-                      <td style={dataTable.tdSticky({ rowIndex: i, fontWeight: 600 })}>
+                      <td style={dataTable.tdSticky({ rowIndex: zebraIdx(i), fontWeight: 600 })}>
                         {formatDataIsoBr(row.diaBrt)}
                       </td>
                       <td style={dataTable.tdCenter}>{row.sinais.toLocaleString("pt-BR")}</td>
@@ -416,6 +423,8 @@ export function useIncidentesAbaSinais(opts: {
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       </div>

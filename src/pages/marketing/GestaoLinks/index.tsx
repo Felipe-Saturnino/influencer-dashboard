@@ -27,7 +27,8 @@ import {
 import { compareLocaleTexto, compareNumber, comparePerfilStatusNullable } from "../../../lib/classificacaoSort";
 import { fmtBRL } from "../../../lib/dashboardHelpers";
 import { textoContemBusca } from "../../../lib/searchText";
-import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
+import { PAGE_SEARCH, placeholderPesquisaFiltro } from "../../../lib/searchBarConstants";
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca";
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles";
 import {
@@ -36,6 +37,7 @@ import {
 } from "../../../lib/pageContentBoxStyles";
 import { getFilterBarRowStyle } from "../../../lib/filterBarStyles";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 
 const COR = {
   vermelho: "#e84025",
@@ -755,6 +757,12 @@ export default function GestaoLinks() {
         </div>
       ) : (
         <div style={getPageContentBoxStyle(brand, t, { padding: 0 })}>
+          <TabelaComPaginacao
+            items={aliasesOrdenados}
+            t={t}
+            resetKey={`${aba}|${buscaUtm}|${operadoraFiltro}|${sortLinks.col}|${sortLinks.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
           <table style={getDataTableStyle({ fontSize: 13, tableLayout: "fixed" })}>
             <caption style={{ display: "none" }}>Links por status</caption>
@@ -893,14 +901,14 @@ export default function GestaoLinks() {
               </tr>
             </thead>
             <tbody>
-              {aliasesOrdenados.length === 0 ? (
+              {linhas.length === 0 ? (
                 <tr>
                   <td colSpan={colunasPorAba(aba)} style={{ ...dataTable.tdCenter, color: t.textMuted, padding: 40, whiteSpace: "normal" }}>
                     {mensagemVazia}
                   </td>
                 </tr>
-              ) : aliasesOrdenados.map((alias, idx) => {
-                const zebraBg = dataTable.zebraRow(idx);
+              ) : linhas.map((alias, idx) => {
+                const zebraBg = dataTable.zebraRow(zebraIdx(idx));
                 const utmAccent = brand.accent;
                 const nomeOperadora =
                   operadorasList.find((o) => o.slug === alias.operadora_slug)?.nome ?? alias.operadora_slug ?? "—";
@@ -987,6 +995,8 @@ export default function GestaoLinks() {
             </tbody>
           </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         </div>
       )}
       </div>
@@ -1079,22 +1089,31 @@ export default function GestaoLinks() {
                   Influencer
                   <CampoObrigatorioMark />
                 </label>
-                <select value={influencerSelecionado} onChange={(e) => setInfluencerSelecionado(e.target.value)}
+                <SelectListaComBusca
+                  variant="campo"
+                  label="Influencer"
+                  searchPlaceholder={placeholderPesquisaFiltro("Influencer")}
+                  value={influencerSelecionado}
+                  onChange={setInfluencerSelecionado}
                   disabled={loadingEntidades || erroEntidades}
-                  style={{ width: "100%", padding: "10px 12px", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
-                  <option value="">
-                    {loadingEntidades
-                      ? "Carregando…"
-                      : erroEntidades
-                        ? "Membros indisponíveis"
-                        : "Selecione o influencer..."}
-                  </option>
-                  {[...(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers)]
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((inf) => (
-                      <option key={inf.id} value={inf.id}>{inf.nome}{inf.status !== "ativo" ? ` (${inf.status})` : ""}</option>
-                    ))}
-                </select>
+                  style={{ width: "100%", marginBottom: 16, fontSize: 14 }}
+                  options={[
+                    {
+                      value: "",
+                      label: loadingEntidades
+                        ? "Carregando…"
+                        : erroEntidades
+                          ? "Membros indisponíveis"
+                          : "Selecione o influencer...",
+                    },
+                    ...[...(perm.canEditar === "proprios" ? influencers.filter((inf) => podeVerInfluencer(inf.id)) : influencers)]
+                      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                      .map((inf) => ({
+                        value: inf.id,
+                        label: `${inf.nome}${inf.status !== "ativo" ? ` (${inf.status})` : ""}`,
+                      })),
+                  ]}
+                />
               </>
             ) : tipoMapeamento === "afiliado" ? (
               <>
@@ -1102,22 +1121,31 @@ export default function GestaoLinks() {
                   Afiliado
                   <CampoObrigatorioMark />
                 </label>
-                <select value={afiliadoSelecionado} onChange={(e) => setAfiliadoSelecionado(e.target.value)}
+                <SelectListaComBusca
+                  variant="campo"
+                  label="Afiliado"
+                  searchPlaceholder={placeholderPesquisaFiltro("Afiliado")}
+                  value={afiliadoSelecionado}
+                  onChange={setAfiliadoSelecionado}
                   disabled={loadingEntidades || erroEntidades}
-                  style={{ width: "100%", padding: "10px 12px", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
-                  <option value="">
-                    {loadingEntidades
-                      ? "Carregando…"
-                      : erroEntidades
-                        ? "Membros indisponíveis"
-                        : "Selecione o afiliado..."}
-                  </option>
-                  {[...(perm.canEditar === "proprios" ? afiliados.filter((af) => podeVerInfluencer(af.id)) : afiliados)]
-                    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-                    .map((af) => (
-                      <option key={af.id} value={af.id}>{af.nome}{af.status !== "ativo" ? ` (${af.status})` : ""}</option>
-                    ))}
-                </select>
+                  style={{ width: "100%", marginBottom: 16, fontSize: 14 }}
+                  options={[
+                    {
+                      value: "",
+                      label: loadingEntidades
+                        ? "Carregando…"
+                        : erroEntidades
+                          ? "Membros indisponíveis"
+                          : "Selecione o afiliado...",
+                    },
+                    ...[...(perm.canEditar === "proprios" ? afiliados.filter((af) => podeVerInfluencer(af.id)) : afiliados)]
+                      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+                      .map((af) => ({
+                        value: af.id,
+                        label: `${af.nome}${af.status !== "ativo" ? ` (${af.status})` : ""}`,
+                      })),
+                  ]}
+                />
               </>
             ) : (
               <>
@@ -1125,13 +1153,21 @@ export default function GestaoLinks() {
                   Campanha
                   <CampoObrigatorioMark />
                 </label>
-                <select value={campanhaSelecionada} onChange={(e) => setCampanhaSelecionada(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", background: t.inputBg ?? t.cardBg, border: `1px solid ${t.cardBorder}`, borderRadius: 10, color: t.text, fontSize: 14, marginBottom: 16, outline: "none", fontFamily: FONT.body, cursor: "pointer" }}>
-                  <option value="">Selecione a campanha...</option>
-                  {[...campanhas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((c) => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
-                </select>
+                <SelectListaComBusca
+                  variant="campo"
+                  label="Campanha"
+                  searchPlaceholder={placeholderPesquisaFiltro("Campanha")}
+                  value={campanhaSelecionada}
+                  onChange={setCampanhaSelecionada}
+                  style={{ width: "100%", marginBottom: 16, fontSize: 14 }}
+                  options={[
+                    { value: "", label: "Selecione a campanha..." },
+                    ...[...campanhas].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((c) => ({
+                      value: c.id,
+                      label: c.nome,
+                    })),
+                  ]}
+                />
               </>
             )}
 

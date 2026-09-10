@@ -6,6 +6,8 @@ import { FONT } from "../../../constants/theme"
 import { MSG_SEM_DADOS_FILTRO } from "../../../lib/dashboardConstants"
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
+import { useTabelaPaginacao } from "../../../hooks/useTabelaPaginacao"
+import { TabelaPaginacaoBar } from "../../../components/TabelaPaginacaoBar"
 import { SectionTitle, SortTableTh, type SortDir } from "../../../components/dashboard"
 import { compareAtivoBoolean, compareInfluencerPerfilStatus, compareLocaleTexto, compareNumber } from "../../../lib/classificacaoSort"
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText"
@@ -157,6 +159,11 @@ export function BlocoConsolidadoBanca({
     return arr;
   }, [filtradaBusca, sortBancaCons]);
 
+  const pagBanca = useTabelaPaginacao(
+    filtradaOrdenada,
+    `${busca}|${sortBancaCons.col}|${sortBancaCons.dir}|${historico}|${mesFiltro}|${filterOperadora}|${filterInfluencers.join(",")}`,
+  );
+
   const contaLabel = (st: BancaStatusConta) => {
     if (st === "liberada") return { label: "Liberada", color: "#10b981" };
     return { label: "Bloqueada", color: "#ef4444" };
@@ -299,7 +306,7 @@ export function BlocoConsolidadoBanca({
                 </td>
               </tr>
             ) : (
-              filtradaOrdenada.map((row, i) => {
+              pagBanca.linhasPagina.map((row, i) => {
                 const open = expandido === row.influencer_id;
                 const histPanelId = `banca-hist-${row.influencer_id}`;
                 const sl = contaLabel(row.statusContaBanca);
@@ -311,7 +318,7 @@ export function BlocoConsolidadoBanca({
                       ? { label: "Cancelado", color: "#ef4444" }
                       : { label: "Ativo", color: "#10b981" };
                 const itens = rowsFiltradas.filter((r) => r.influencer_id === row.influencer_id).sort((a, b) => (b.solicitado_em ?? "").localeCompare(a.solicitado_em ?? ""));
-                const zebraBg = dataTable.zebraRow(i);
+                const zebraBg = dataTable.zebraRow(pagBanca.zebraIdx(i));
                 return (
                   <Fragment key={row.influencer_id}>
                     <tr
@@ -462,6 +469,15 @@ export function BlocoConsolidadoBanca({
           </tbody>
         </table>
       </div>
+      {filtradaOrdenada.length > 0 ? (
+        <TabelaPaginacaoBar
+          t={t}
+          page={pagBanca.paginaSafe}
+          pageSize={pagBanca.pageSize}
+          totalItems={pagBanca.totalItems}
+          onPageChange={pagBanca.setPagina}
+        />
+      ) : null}
       {modalStatus ? (
         <ModalAlterarStatusConta
           influencerId={modalStatus.id}

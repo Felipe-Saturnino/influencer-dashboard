@@ -40,16 +40,24 @@ Este documento define o padrão visual e de ícones que **toda página** deve se
 | **Histórico** (acumulado) | `Calendar` | `.historico` | `FiltroHistoricoButton` |
 | **Influencer(s)** | `User` | `.influencer` | `FiltroInfluencerSelect` |
 | **Operadora(s)** | `Shield` | `.operadora` | `FiltroOperadoraSelect` |
-| **Status** (`<select>`) | **`ShieldAlert`** | `.status` | `FiltroBarCampoSelect` — agregadora **Todos Status** |
+| **Status** (pill) | **`ShieldAlert`** | `.status` | `FiltroBarCampoSelect` — agregadora **Todos Status** |
 | **Time** | `UsersRound` | `.time` | `FiltroCalendarioTimeSelect`, `FiltroTodosTimesButton` |
 | **Staff** | `IdCard` | `.staff` | `FiltroCalendarioStaffSelect` |
 | **Turno** | `Clock` | `.turno` | `FiltroTurnoSelect` |
 | **Modo Mês / Semana / Dia** | `CalendarRange` | `.modoVisualizacao` | `FiltroModoVisualizacaoSelect` |
 | **Hoje** (Agenda) | `History` | `.hoje` | `FiltroHojeButton` |
 
-**Não usar** `GiCalendar`, `GiShield`, `ListFilter` / `CircleDot` / `ShieldEllipsis` para status em `<select>` na barra.
+**Não usar** `GiCalendar`, `GiShield`, `ListFilter` / `CircleDot` / `ShieldEllipsis` para status em pill na barra.
 
 **Status semântico (chips):** `FiltroStatusSemanticoPill` com bolinha 8px — **não** `ShieldAlert` (Lives, Afiliados, etc.).
+
+---
+
+## Busca no painel do filtro (obrigatória)
+
+Referência visual: **Calendário → Compromissos → Staff / Time**.
+
+Todo filtro de seleção única ou multi na barra **e** listas de filtro em modal abre um painel com **`BarraPesquisaFiltroPainel`** (foco no input ao abrir). **Não** depende de ter mais de 5 opções. Implementação: `SelectListaComBusca` / `SelectComIcone` / `FiltroInfluencerSelect` / `FiltroEntidadeBarSelect`. Detalhe e exceções (chips, abas, matriz de permissões, células da Escala Diária): **Global § Pesquisa dentro do filtro**.
 
 ---
 
@@ -177,7 +185,8 @@ Na linha: `getFilterBarRowStyle()` (`gap: 10`) — CTA na mesma fileira que carr
 - [ ] Linha com **`gap: 10`**
 - [ ] Histórico: `FiltroHistoricoButton` (estados partilhados)
 - [ ] Agenda: `FiltroHojeButton` + `FiltroModoVisualizacaoSelect` com `defaultValue="mes"`
-- [ ] Operadora + Influencer nos componentes canónicos
+- [ ] Operadora + Influencer nos componentes canónicos (painel com busca)
+- [ ] Dropdown de filtro na barra com **`BarraPesquisaFiltroPainel`** (sempre, não só >5 opções)
 - [ ] Carrossel: `lib/carouselNavStyles.ts`
 
 ---

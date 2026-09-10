@@ -15,6 +15,7 @@ import {
 } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -310,6 +311,12 @@ export default function DashboardFinanceiro() {
             {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={rankingOrdenado}
+            t={t}
+            resetKey={`${historico}|${sf?.idxMes ?? ""}|${sf?.filtroAfiliado ?? ""}|${sf?.filtroOperadora ?? ""}|${sort.col}|${sort.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 900 })}>
               <caption style={{ display: "none" }}>Ranking financeiro de afiliados</caption>
@@ -327,9 +334,9 @@ export default function DashboardFinanceiro() {
                 </tr>
               </thead>
               <tbody>
-                {rankingOrdenado.map((r, i) => (
-                  <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(i) }}>
-                    <td style={dataTable.tdSticky({ rowIndex: i })}>{r.nome}</td>
+                {linhas.map((r, i) => (
+                  <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
+                    <td style={dataTable.tdSticky({ rowIndex: zebraIdx(i) })}>{r.nome}</td>
                     <td style={dataTable.tdCenter}>{r.ftds.toLocaleString("pt-BR")}</td>
                     <td style={dataTable.tdCenter}>{fmtBRL(r.ftd_total)}</td>
                     <td style={dataTable.tdCenter}>{r.depositos_qtd.toLocaleString("pt-BR")}</td>
@@ -343,6 +350,8 @@ export default function DashboardFinanceiro() {
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </div>

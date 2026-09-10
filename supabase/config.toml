@@ -111,3 +111,7 @@ verify_jwt = false
 verify_jwt = true
 # Retenção de vídeos do Performance Hub (cron semanal / service_role). A function também
 # compara o Bearer com SUPABASE_SERVICE_ROLE_KEY — nenhum usuário logado consegue executar.
+
+[functions.rh-calendario-ics]
+verify_jwt = false
+# Feed iCal público do Calendário do prestador — o token na URL é o segredo.

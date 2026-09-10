@@ -19,6 +19,9 @@ import {
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { useRouteTab } from "../../../hooks/useRouteTab"
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../lib/dataTableStyles"
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar"
+import { SelectListaComBusca } from "../../../components/SelectListaComBusca"
+import { placeholderPesquisaFiltro } from "../../../lib/searchBarConstants"
 import {
   DashboardPageHeader,
   FiltroHistoricoButton,
@@ -924,6 +927,12 @@ export default function SocialMediaDashboard() {
                   Detalhamento {historico ? "mensal" : "diário"}
                 </SectionTitle>
                 {serieFunilOrdenado.length > 0 ? (
+                  <TabelaComPaginacao
+                    items={serieFunilOrdenado}
+                    t={t}
+                    resetKey={`${historico}|${idxMes}|${filtroOperadora}`}
+                  >
+                    {(linhas, zebraIdx) => (
                   <div className="app-table-wrap" style={getDataTableWrapStyle()}>
                     <table style={getDataTableStyle({ minWidth: 900 })}>
                       <caption style={{ display: "none" }}>
@@ -950,10 +959,10 @@ export default function SocialMediaDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {serieFunilOrdenado.map((row, i) => {
+                        {linhas.map((row, i) => {
                           const ggr = (row.deposit_total ?? 0) - (row.withdrawal_total ?? 0);
                           return (
-                            <tr key={row.periodo} style={{ background: dataTable.zebraRow(i) }}>
+                            <tr key={row.periodo} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                               <td
                                 style={{ ...dataTable.tdCenter, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}
                                 title={row.periodo}
@@ -975,6 +984,8 @@ export default function SocialMediaDashboard() {
                       </tbody>
                     </table>
                   </div>
+                    )}
+                  </TabelaComPaginacao>
                 ) : (
                   <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
                     Sem dados para o período selecionado.
@@ -987,6 +998,12 @@ export default function SocialMediaDashboard() {
                   Comparativo de campanha
                 </SectionTitle>
                 {campanhasPerf.length > 0 ? (
+                  <TabelaComPaginacao
+                    items={campanhasCmpOrdenadas}
+                    t={t}
+                    resetKey={`${historico}|${idxMes}|${filtroOperadora}|${sortCampCmp.col}|${sortCampCmp.dir}`}
+                  >
+                    {(linhas, zebraIdx) => (
                   <div className="app-table-wrap" style={getDataTableWrapStyle()}>
                     <table style={getDataTableStyle({ minWidth: 960 })}>
                       <caption style={{ display: "none" }}>
@@ -1018,10 +1035,10 @@ export default function SocialMediaDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {campanhasCmpOrdenadas.map((c, i) => {
+                        {linhas.map((c, i) => {
                             const ggr = (c.deposit_total ?? 0) - (c.withdrawal_total ?? 0);
                             return (
-                              <tr key={c.campanha_id} style={{ background: dataTable.zebraRow(i) }}>
+                              <tr key={c.campanha_id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                                 <td
                                   style={{ ...dataTable.tdCenter, fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
                                   title={c.campanha_nome}
@@ -1048,6 +1065,8 @@ export default function SocialMediaDashboard() {
                       </tbody>
                     </table>
                   </div>
+                    )}
+                  </TabelaComPaginacao>
                 ) : (
                   <div style={{ color: t.textMuted, fontSize: 12, padding: "24px 0", fontFamily: FONT.body }}>
                     Nenhuma campanha com UTMs mapeadas no período. Cadastre campanhas e mapeie UTMs na Gestão de Links.
@@ -1087,25 +1106,25 @@ export default function SocialMediaDashboard() {
                   Comparativo de funil
                 </SectionTitle>
                 <div className="app-conversao-vs-row" style={{ marginBottom: 14 }}>
-                  <select
-                    aria-label="Campanha A no comparativo de funil"
+                  <SelectListaComBusca
+                    variant="campo"
+                    label="Campanha A no comparativo de funil"
+                    searchPlaceholder={placeholderPesquisaFiltro("Campanha")}
                     value={compCampA}
-                    onChange={(e) => setCompCampA(e.target.value)}
+                    onChange={setCompCampA}
+                    wrapperStyle={{ flex: 1, minWidth: 120 }}
                     style={{
                       ...selectCampStyle,
                       borderColor: compCampA ? corFunilComparativoCampanhaA.border : undefined,
                     }}
-                  >
-                    <option value="">— Selecione —</option>
-                    {campanhasPerf
-                      .filter((c) => c.campanha_id !== compCampB)
-                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
-                      .map((c) => (
-                        <option key={c.campanha_id} value={c.campanha_id}>
-                          {c.campanha_nome}
-                        </option>
-                      ))}
-                  </select>
+                    options={[
+                      { value: "", label: "— Selecione —" },
+                      ...campanhasPerf
+                        .filter((c) => c.campanha_id !== compCampB)
+                        .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                        .map((c) => ({ value: c.campanha_id, label: c.campanha_nome })),
+                    ]}
+                  />
                   <div
                     style={{
                       padding: "5px 12px",
@@ -1125,25 +1144,25 @@ export default function SocialMediaDashboard() {
                   >
                     VS
                   </div>
-                  <select
-                    aria-label="Campanha B no comparativo de funil"
+                  <SelectListaComBusca
+                    variant="campo"
+                    label="Campanha B no comparativo de funil"
+                    searchPlaceholder={placeholderPesquisaFiltro("Campanha")}
                     value={compCampB}
-                    onChange={(e) => setCompCampB(e.target.value)}
+                    onChange={setCompCampB}
+                    wrapperStyle={{ flex: 1, minWidth: 120 }}
                     style={{
                       ...selectCampStyle,
                       borderColor: compCampB ? corFunilComparativoCampanhaB.border : undefined,
                     }}
-                  >
-                    <option value="">— Selecione —</option>
-                    {campanhasPerf
-                      .filter((c) => c.campanha_id !== compCampA)
-                      .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
-                      .map((c) => (
-                        <option key={c.campanha_id} value={c.campanha_id}>
-                          {c.campanha_nome}
-                        </option>
-                      ))}
-                  </select>
+                    options={[
+                      { value: "", label: "— Selecione —" },
+                      ...campanhasPerf
+                        .filter((c) => c.campanha_id !== compCampA)
+                        .sort((a, b) => a.campanha_nome.localeCompare(b.campanha_nome, "pt-BR"))
+                        .map((c) => ({ value: c.campanha_id, label: c.campanha_nome })),
+                    ]}
+                  />
                 </div>
                 {(campanhaA || campanhaB) && (
                   <div className="app-grid-2" style={{ gap: 16, marginBottom: 14 }}>
@@ -1223,6 +1242,12 @@ export default function SocialMediaDashboard() {
                   Comparativo de taxas
                 </SectionTitle>
                 {campanhasPerf.length > 0 ? (
+                  <TabelaComPaginacao
+                    items={campanhasTaxasOrdenadas}
+                    t={t}
+                    resetKey={`${historico}|${idxMes}|${filtroOperadora}|${sortTaxCmp.col}|${sortTaxCmp.dir}`}
+                  >
+                    {(linhas, zebraIdx) => (
                   <div className="app-table-wrap" style={getDataTableWrapStyle()}>
                     <table style={getDataTableStyle({ minWidth: 800 })}>
                       <caption style={{ display: "none" }}>Taxas de conversão por campanha no período.</caption>
@@ -1249,8 +1274,8 @@ export default function SocialMediaDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {campanhasTaxasOrdenadas.map((c, i) => (
-                          <tr key={c.campanha_id} style={{ background: dataTable.zebraRow(i) }}>
+                        {linhas.map((c, i) => (
+                          <tr key={c.campanha_id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                             <td
                               style={{ ...dataTable.tdCenter, fontWeight: 600, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
                               title={c.campanha_nome}
@@ -1273,6 +1298,8 @@ export default function SocialMediaDashboard() {
                       </tbody>
                     </table>
                   </div>
+                    )}
+                  </TabelaComPaginacao>
                 ) : (
                   <div style={{ color: t.textMuted, fontSize: 12, padding: "24px 0", fontFamily: FONT.body }}>
                     Nenhuma campanha com UTMs mapeadas no período. Cadastre campanhas e mapeie UTMs na Gestão de Links.
@@ -1381,6 +1408,12 @@ export default function SocialMediaDashboard() {
                 Detalhamento por anúncio
               </SectionTitle>
               {boostedPostsOrdenados.length > 0 ? (
+                <TabelaComPaginacao
+                  items={boostedPostsOrdenados}
+                  t={t}
+                  resetKey={`${historico}|${idxMes}|${sortBoost.col}|${sortBoost.dir}`}
+                >
+                  {(linhas, zebraIdx) => (
                 <div className="app-table-wrap" style={getDataTableWrapStyle()}>
                   <table style={getDataTableStyle({ minWidth: 920 })}>
                     <caption style={{ display: "none" }}>Anúncios impulsionados no período.</caption>
@@ -1403,11 +1436,11 @@ export default function SocialMediaDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {boostedPostsOrdenados.map((row, i) => {
+                      {linhas.map((row, i) => {
                         const campanha = row.campaign_name || "—";
                         const platLabel = row.platform === "instagram" ? "Instagram" : "Facebook";
                         return (
-                          <tr key={row.ad_id} style={{ background: dataTable.zebraRow(i) }}>
+                          <tr key={row.ad_id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
                             <td
                               style={{ ...dataTable.tdCenter, fontWeight: 600, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}
                               title={campanha}
@@ -1425,6 +1458,8 @@ export default function SocialMediaDashboard() {
                     </tbody>
                   </table>
                 </div>
+                  )}
+                </TabelaComPaginacao>
               ) : (
                 <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
                   Nenhum impulsionamento registrado no período.

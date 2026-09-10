@@ -44,11 +44,22 @@ Ao alterar um template de e-mail, replique o ficheiro em **todas** as functions 
 | `trigger-social-kpis` |
 | `purge-academy-performance-hub-videos` |
 
+### `index.ts` + `rhCalendarioIcs.ts`
+
+**Function:** `rh-calendario-ics` — feed iCal público (`GET ?token=`). Sem JWT; o token do prestador é o segredo. URL da app: `/ics/calendario/{token}` (Pages Function + proxy Vite).
+
+| Ficheiro |
+|----------|
+| `index.ts` |
+| `rhCalendarioIcs.ts` |
+
+Espelho do builder: `src/lib/rhCalendarioIcs.ts`. `verify_jwt = false` no Dashboard.
+
 **`sync-painel-noticias-rss`:** ingestão RSS → `painel_noticia` (TV `/painel-noticias`). Secret **`PAINEL_NOTICIAS_INGEST_SECRET`** (mesmo valor no GitHub Actions e nos Secrets da Edge). Cron envia o header `x-painel-noticias-ingest-secret`. Status Técnico → Sync usa a sessão logada (JWT). Feeds só de `PAINEL_NOTICIAS_RSS_URLS` — o body **não** substitui a lista. Sem o secret, o job horário falha com 401.
 
 **`purge-academy-performance-hub-videos`:** retenção dos vídeos do Performance Hub (cron semanal). Sem secrets próprios — usa `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`, e só aceita chamada cujo `Authorization` seja a service role key. Simulação: `{"dry_run": true}` no body. Regras: `.cursor/rules/academy.mdc` § Vídeo — limite e retenção.
 
-**`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser CSV/XLSX/HTML inline). Testes locais: `src/lib/comercialSpaCsvParser.ts` + `src/lib/comercialSpaXlsx.ts` + `src/lib/comercialSpaListaFonte.ts`. A Edge abre **`/empresas-autorizadas`** (tabela HTML oficial). Planilha legado `planilha-de-autorizacoes.xlsx` sob `lista-de-empresas/` só se não houver tabela; links sob `transparencia-ativa` são ignorados (XLSX 404). SharePoint (`:x:/r/`) só entra se não houver tabela nem ficheiro no gov.br.
+**`sync-comercial-spa-lista`:** deploy no painel Supabase com **apenas** `index.ts` (parser CSV/XLSX/HTML inline). Testes locais: `src/lib/comercialSpaCsvParser.ts` + `src/lib/comercialSpaXlsx.ts` + `src/lib/comercialSpaListaFonte.ts`. A Edge abre **`/empresas-autorizadas`** (tabela HTML oficial) e **também** a página **Autorizadas por Determinação Judicial** sob Transparência Ativa (`DEFAULT_JUDICIAL_PAGE`), fazendo merge por CNPJ (portaria prevalece). Planilha legado `planilha-de-autorizacoes.xlsx` sob `lista-de-empresas/` só se não houver tabela; ficheiros `.xlsx` sob `transparencia-ativa` são ignorados (404). SharePoint (`:x:/r/`) só entra se não houver tabela nem ficheiro no gov.br.
 
 **`validate-comercial-dominios`:** deploy com **apenas** `index.ts`. Lógica HTTP espelhada em `src/lib/comercialDominioValidation.ts`.
 

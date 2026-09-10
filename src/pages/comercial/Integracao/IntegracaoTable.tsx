@@ -42,6 +42,7 @@ type PopoverKind = "prioridade" | "status" | "agregadora";
 
 export function IntegracaoTable({
   rows,
+  zebraIdx,
   agregadoraOpcoes,
   sort,
   onSort,
@@ -57,6 +58,7 @@ export function IntegracaoTable({
   t,
 }: {
   rows: IntegracaoRow[];
+  zebraIdx?: (i: number) => number;
   agregadoraOpcoes: string[];
   sort: { col: TableColIntegracao; dir: SortDir };
   onSort: (col: TableColIntegracao) => void;
@@ -180,12 +182,12 @@ export function IntegracaoTable({
                   background:
                     hoverId === row.id
                       ? `color-mix(in srgb, ${t.inputBg} 70%, var(--brand-primary, #7c3aed) 8%)`
-                      : dataTable.zebraRow(i),
+                      : dataTable.zebraRow(zebraIdx ? zebraIdx(i) : i),
                 }}
                 onMouseEnter={() => setHoverId(row.id)}
                 onMouseLeave={() => setHoverId(null)}
               >
-                <td style={{ ...dataTable.tdSticky({ rowIndex: i }), textAlign: "left" }}>
+                <td style={{ ...dataTable.tdSticky({ rowIndex: zebraIdx ? zebraIdx(i) : i }), textAlign: "left" }}>
                   <button
                     type="button"
                     onClick={() => onVerOperador(row)}

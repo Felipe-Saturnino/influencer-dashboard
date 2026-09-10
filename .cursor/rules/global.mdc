@@ -161,6 +161,7 @@ components/     # Compartilhados — usar antes de criar local
   FiltroModoVisualizacaoSelect.tsx
   FiltroEntidadeBarSelect.tsx
   FiltroCalendarioTimeSelect.tsx / FiltroCalendarioStaffSelect.tsx
+  SelectListaComBusca.tsx        # painel com busca (padrão Staff/Time)
   OperacoesModal.tsx (ModalBase, ModalHeader)
   CampoObrigatorioMark.tsx
   CampoUploadArquivos.tsx  # upload em modal (layout canónico Portal Academy)
@@ -235,11 +236,11 @@ import { compareLocaleTexto, compareNumber, comparePagamentoStatus } from "../li
 
 **Dashboard (`components/dashboard/`):** `KpiCard`, `KpiCardDepositos`, `SectionTitle`, `FunilVisual`, `SelectComIcone`, `FiltroOperadoraSelect`, `FiltroInfluencerSelect`, `FiltroModoVisualizacaoSelect`, `FiltroHojeButton`, `FiltroHistoricoButton`, `FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `FiltroSemanticoTabPill`, **`FiltroBarTabButton`** (abas `role="tab"` — Brand §6), `FiltroBarCampoSelect`, `SortTableTh`, `DashboardPageHeader`, `SkeletonCard` (quando existir), `CtaCriarButton` (reexport).
 
-**Ícones na barra de filtros:** catálogo canónico `src/lib/filterBarIconCatalog.tsx` (`FilterBarIcons`, `FILTRO_BAR_ICON_PROPS`) — tabela completa e exceções de domínio em **Brand MDC §6** e `docs/PADRAO-FILTROS-DASHBOARD.md`. Status em `<select>` pill: **`ShieldAlert`** via `FilterBarIcons.status` (**Todos Status**).
+**Ícones na barra de filtros:** catálogo canónico `src/lib/filterBarIconCatalog.tsx` (`FilterBarIcons`, `FILTRO_BAR_ICON_PROPS`) — tabela completa e exceções de domínio em **Brand MDC §6** e `docs/PADRAO-FILTROS-DASHBOARD.md`. Status em pill na barra: **`ShieldAlert`** via `FilterBarIcons.status` (**Todos Status**) — painel com busca (`FiltroBarCampoSelect` / `SelectListaComBusca`), **não** `<select>` nativo.
 
 **CTA de criação na página:** `CtaCriarButton` + `getCtaCriarGradient` (`lib/ctaCriarStyles.ts`) — Brand §3. Gradiente Spin igual para todos os perfis; whitelabel só com `useBrand` (action→contrast). Rótulo de inventário = **`children`** do componente (`data-cta-surface="page"`). Ver `docs/PADRAO-CTA-CRIAR.md` § Rótulo visível vs modal.
 
-**Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`, **`BarraPesquisaPagina`** (busca de lista na página), **`BarraPesquisaFiltroPainel`** (busca no painel do filtro). Staff/Time na barra: **`FiltroCalendarioTimeSelect`**, **`FiltroCalendarioStaffSelect`** ou **`FiltroEntidadeBarSelect`** (Brand §6).
+**Outros:** `PageHeader`, `CampoObrigatorioMark`, `ModalBase` / `ModalHeader` de `OperacoesModal`, **`BarraPesquisaPagina`** (busca de lista na página), **`BarraPesquisaFiltroPainel`** (busca no painel do filtro), **`SelectListaComBusca`** (seleção única com painel pesquisável — `pill` na barra, `campo` em formulário/modal). Staff/Time na barra: **`FiltroCalendarioTimeSelect`**, **`FiltroCalendarioStaffSelect`** ou **`FiltroEntidadeBarSelect`** (Brand §6).
 
 ```typescript
 import {
@@ -423,7 +424,7 @@ Sempre que a página exibir **seletor de influencer(s)** na barra de filtros, us
 | Opção agregadora — **multi** | `value={[]}` equivale a Todos Influencers |
 | `aria-label` do controlo | Prefixo `Filtrar por influencer — {rótulo atual}`; nome do filtro: **`Influencers`** (`INFLUENCER_FILTRO_ARIA_LABEL`) |
 | Estilo | Pill `borderRadius: 999`; ativo: `color-mix` com `--brand-action` 15% |
-| Pesquisa no painel | Automática quando `influencers.length > 5` — placeholder **`Pesquisar Influencer...`** (`FILTER_SEARCH_INFLUENCER`) |
+| Pesquisa no painel | Sempre — placeholder **`Pesquisar Influencer...`** (`FILTER_SEARCH_INFLUENCER`) |
 | Visibilidade | `showFiltroInfluencer` de `useDashboardFiltros()` — **não** alterar regras de escopo |
 
 ```tsx
@@ -501,7 +502,7 @@ Quando a página tiver **seletor de granularidade de calendário** na barra (ex.
 | Opções | Lista `{ value, label }` da página (ex.: `mes`, `semana`, `dia`) |
 | Estilo | Pill **999** + `getFiltroBarPillStateStyle` — inativo no valor `defaultValue` (Agenda: **`mes`**); ativo em Semana/Dia |
 | `defaultValue` | Valor “padrão” da página (ex.: `"mes"` na Agenda) |
-| Pesquisa no painel | Só se `options.length > 5` |
+| Pesquisa no painel | Sempre — `BarraPesquisaFiltroPainel` |
 | Carrossel | `carouselNavStyles` — passo e rótulo central dependem do modo (regra na página) |
 
 ```tsx
@@ -596,15 +597,17 @@ setBuscaDeb(normalizarTextoBusca(busca));
 - **Componentes de filtro** (`FiltroInfluencerSelect`, `FiltroEntidadeBarSelect`, …): já usam `textoContemBusca` no painel — não reimplementar.
 - **Exceção documentada:** **Central de Denúncias** — parte da busca via `ilike` no Postgres (sem `unaccent`); comportamento pode exigir acento até migração. Ajuda → Troubleshooting → bloco transversal **Plataforma**.
 
-### Pesquisa dentro do filtro (> 5 valores)
+### Pesquisa dentro do filtro (obrigatória)
 
-- Se o filtro (seleção única ou multi) tiver **mais de 5** opções vindas de cadastro/lista, incluir **campo de busca** dentro do painel do filtro por defeito.
-- **Influencer na barra:** `FiltroInfluencerSelect` aplica a regra automaticamente (`influencers.length > 5`) com **`BarraPesquisaFiltroPainel`**.
-- **Staff / Time / entidade na barra:** `FiltroCalendarioStaffSelect`, `FiltroCalendarioTimeSelect` ou `FiltroEntidadeBarSelect` — busca no painel via **`BarraPesquisaFiltroPainel`** quando `> 5` opções; placeholder Staff: **`Pesquisar Staff...`** (`FILTER_SEARCH_STAFF`).
-- **Outros domínios / selects em modal:** `BarraPesquisaFiltroPainel` ou equivalente; `<select>` nativo com >5 opções é **legado** — migrar quando tocar na página.
-- Placeholder no painel do filtro: **`Pesquisar [Nome do filtro]...`** (nome = rótulo do controlo: Influencer, Staff, …) — helper `placeholderPesquisaFiltro("Influencer")` em `searchBarConstants.ts`.
+- Todo filtro de **seleção única ou multi** (barra da página/aba **ou** lista em modal) inclui **campo de busca** no painel — referência visual: **Calendário → Compromissos → Staff / Time**. **Não** depende de ter mais de 5 opções.
+- Implementação: **`BarraPesquisaFiltroPainel`** / **`SelectListaComBusca`** (`SelectComIcone` e `FiltroBarCampoSelect` delegam nele) / `FiltroInfluencerSelect` / `FiltroAfiliadoSelect` / `FiltroEntidadeBarSelect`.
+- **Influencer na barra:** `FiltroInfluencerSelect` — placeholder **`Pesquisar Influencer...`** (`FILTER_SEARCH_INFLUENCER`).
+- **Staff / Time / entidade na barra:** `FiltroCalendarioStaffSelect`, `FiltroCalendarioTimeSelect` ou `FiltroEntidadeBarSelect` — placeholder **`Pesquisar [rótulo]...`** (`placeholderPesquisaFiltro`).
+- **Outros domínios / listas em modal:** `SelectListaComBusca` (`variant="campo"`) ou `BarraPesquisaFiltroPainel`. `<select>` nativo em filtro de lista é **legado**.
+- Placeholder no painel: **`Pesquisar [Nome do filtro]...`** — helper `placeholderPesquisaFiltro("Influencer")` em `searchBarConstants.ts`.
 - Filtrar por correspondência parcial no nome — **com** `textoContemBusca` / `textoContemBuscaEmAlgum` (§ Comportamento da busca — insensível a acentos).
 - **Foco ao abrir (obrigatório):** ao abrir o painel/dropdown que contém barra de pesquisa, o cursor deve ir **direto** para o input de busca (sem clique extra). Contrato: `BarraPesquisaFiltroPainel` com **`autoFocusOnMount` default `true`** — montar a barra **só com o painel aberto** (não deixar montada e oculta). Prop `autoFocusOnMount={false}` **somente** se a barra for permanente na página/modal e o foco inicial for outro campo. **Proibido** reimplementar `requestAnimationFrame`/`focus` local em cada filtro; usar o componente canónico.
+- **Fora deste contrato (não forçar painel com busca):** chips semânticos (`FiltroStatusSemanticoPill`, `FiltroPlataformaSemanticoPill`, `FiltroSemanticoTabPill`); abas `FiltroBarTabButton`; matriz de permissões em Gestão de Usuários; células `<select>` da grade da Escala Diária; campos curtos de formulário que não são filtro de lista (status/tipo com 2–4 valores fixos, sim/não).
 
 ---
 
@@ -1287,7 +1290,7 @@ Quando a UI pode renderizar **dezenas/centenas de linhas** (ou linha × muitas c
 | Grade editável densa (Escala Diária) | Paginar **linhas** na vista; save/sugestão/aprovação continuam sobre **todas** as linhas; cachear opções de `<select>` por tipo de turno (não alocar array novo por célula) |
 | Virtualização (`react-virtual` etc.) | Só com pedido explícito — risco alto em tabela editável (foco, sticky, campos desmontados) |
 
-Constantes: `TABELA_PAGE_SIZE_PRESTADORES` (50), `TABELA_PAGE_SIZE_ESCALA` (40), `TABELA_PAGE_SIZE_INCIDENTES` (50).
+Constante canónica: **`TABELA_PAGE_SIZE` = 20** (`lib/tablePagination.ts`); aliases de domínio (`TABELA_PAGE_SIZE_PRESTADORES`, `_ESCALA`, `_INCIDENTES`, `_ESTOQUE`, …) apontam para o mesmo valor. Hook `useTabelaPaginacao` / wrapper `TabelaComPaginacao`. **Exceção:** Calendário → Controle de Presença e Relatório de Justificativas **não** paginam.
 
 **Referências:** Fase 7 (fetch) — Ordem de Saída, Controle de Turno, Performance Hub, Headcount, Portais. Fase 8 (DOM) — Gestão de Prestadores, Gestão de Escala.
 
@@ -1413,7 +1416,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - Botão **Hoje** na Agenda sem `FiltroHojeButton` ou com pill retangular / ícone `Calendar`.
 - Botão **Histórico** na barra sem `FiltroHistoricoButton` (markup inline, `chipBase`, ícone `History` no lugar de `Calendar`, ou pill retangular).
 - Carrossel de período com lista do **corrente para trás** — seta esquerda deixa de ser “anterior” no tempo (Brand §7 / Global § Carrossel de período).
-- Lista >5 opções sem busca no painel do filtro.
+- Filtro de seleção única/multi sem busca no painel (`BarraPesquisaFiltroPainel` / `SelectListaComBusca`) — inclui `<select>` nativo em filtro de lista.
 - Painel/dropdown com barra de pesquisa sem foco automático no input ao abrir (`BarraPesquisaFiltroPainel` / `autoFocusOnMount`) — força clique extra para digitar.
 - Busca textual client-side com `toLowerCase().includes` ou `normalize("NFD")` duplicado em vez de `lib/searchText.ts` (`textoContemBusca`, `textoContemBuscaEmAlgum`, `normalizarTextoBusca`).
 - Fileira de chips/status/plataforma no bloco de filtros com `justifyContent: "flex-start"` sem pedido explícito de produto (usar `center` + `width: "100%"` — § Alinhamento no bloco de filtros).

@@ -18,6 +18,7 @@ import {
   onFiltroBarTabsKeyDown,
 } from "../../../components/dashboard";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { FiltroBarCampoSelect } from "../../../components/FiltroBarCampoSelect";
@@ -938,6 +939,8 @@ export default function EscalaMarketplaceTurnosPage() {
     const sorted = ordenarOfertas(rows, sortOferta);
     if (sorted.length === 0) return celulaVazia();
     return (
+      <TabelaComPaginacao items={sorted} t={t} resetKey={`${aba}-${sortOferta.col}-${sortOferta.dir}-${busca}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>{caption}</caption>
@@ -954,10 +957,10 @@ export default function EscalaMarketplaceTurnosPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) =>
+            {linhas.map((r, i) =>
               linhaTabela(
                 r,
-                i,
+                zebraIdx(i),
                 <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
@@ -971,6 +974,8 @@ export default function EscalaMarketplaceTurnosPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 
@@ -978,6 +983,8 @@ export default function EscalaMarketplaceTurnosPage() {
     const sorted = ordenarOfertas(rows, sortOferta);
     if (sorted.length === 0) return celulaVazia();
     return (
+      <TabelaComPaginacao items={sorted} t={t} resetKey={`${aba}-${sortOferta.col}-${sortOferta.dir}-${busca}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Ofertas de troca</caption>
@@ -995,10 +1002,10 @@ export default function EscalaMarketplaceTurnosPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) =>
+            {linhas.map((r, i) =>
               linhaTabela(
                 r,
-                i,
+                zebraIdx(i),
                 <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
@@ -1013,6 +1020,8 @@ export default function EscalaMarketplaceTurnosPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 
@@ -1025,6 +1034,8 @@ export default function EscalaMarketplaceTurnosPage() {
     const mostrarAcoes = variant === "abertas" || variant === "aceitei";
 
     return (
+      <TabelaComPaginacao items={sorted} t={t} resetKey={`${aba}-${sortOferta.col}-${sortOferta.dir}-${busca}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>Minhas ofertas no Marketplace</caption>
@@ -1047,10 +1058,10 @@ export default function EscalaMarketplaceTurnosPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) =>
+            {linhas.map((r, i) =>
               linhaTabela(
                 r,
-                i,
+                zebraIdx(i),
                 <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
                   <td style={dataTable.tdCenter}>{labelTipo(r)}</td>
@@ -1114,6 +1125,8 @@ export default function EscalaMarketplaceTurnosPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 
@@ -1125,6 +1138,8 @@ export default function EscalaMarketplaceTurnosPage() {
     const mostrarStatus = variant === "canceladas";
 
     return (
+      <TabelaComPaginacao items={sorted} t={t} resetKey={`${aba}-${sortOferta.col}-${sortOferta.dir}-${busca}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>
@@ -1144,10 +1159,10 @@ export default function EscalaMarketplaceTurnosPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) =>
+            {linhas.map((r, i) =>
               linhaTabela(
                 r,
-                i,
+                zebraIdx(i),
                 <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
                   <td style={dataTable.tdCenter}>{labelTipo(r)}</td>
@@ -1166,6 +1181,8 @@ export default function EscalaMarketplaceTurnosPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 
@@ -1178,6 +1195,8 @@ export default function EscalaMarketplaceTurnosPage() {
     const mostrarAcoes = variant === "abertas";
 
     return (
+      <TabelaComPaginacao items={sorted} t={t} resetKey={`${aba}-${sortOferta.col}-${sortOferta.dir}-${busca}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>
@@ -1205,10 +1224,10 @@ export default function EscalaMarketplaceTurnosPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) =>
+            {linhas.map((r, i) =>
               linhaTabela(
                 r,
-                i,
+                zebraIdx(i),
                 <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
                   <td style={dataTable.tdCenter}>{labelTipo(r)}</td>
@@ -1239,6 +1258,8 @@ export default function EscalaMarketplaceTurnosPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 
@@ -1247,6 +1268,8 @@ export default function EscalaMarketplaceTurnosPage() {
     if (sorted.length === 0) return celulaVazia();
     const mostrarStatus = sorted.some((r) => r.status === "em_analise" && r.propostaSpinGestao);
     return (
+      <TabelaComPaginacao items={sorted} t={t} resetKey={`${aba}-${sortOferta.col}-${sortOferta.dir}-${busca}`}>
+        {(linhas, zebraIdx) => (
       <div className="app-table-wrap" style={getDataTableWrapStyle()}>
         <table style={getDataTableStyle()}>
           <caption style={{ display: "none" }}>
@@ -1267,10 +1290,10 @@ export default function EscalaMarketplaceTurnosPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) =>
+            {linhas.map((r, i) =>
               linhaTabela(
                 r,
-                i,
+                zebraIdx(i),
                 <>
                   <td style={dataTable.tdCenter}>{r.dataOfertaIso}</td>
                   <td style={dataTable.tdCenter}>{r.turnoOferta}</td>
@@ -1304,6 +1327,8 @@ export default function EscalaMarketplaceTurnosPage() {
           </tbody>
         </table>
       </div>
+        )}
+      </TabelaComPaginacao>
     );
   }
 

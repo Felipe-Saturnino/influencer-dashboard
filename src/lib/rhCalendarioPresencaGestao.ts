@@ -504,6 +504,13 @@ export type ResolverPresencaLinhaParams = {
   statusBase: string;
   gestao?: PresencaDiaGestao;
   agora?: Date;
+  /**
+   * Game Presenter / Shuffler: sem Aprovar até overlay CT;
+   * Registrado → Justificar; incompleto → Justificar.
+   */
+  fluxoGpShuffler?: boolean;
+  /** CT Escala do Turno com Aprovado = Sim — libera Aprovar no Calendário. */
+  ctLiderancaOverlay?: boolean;
 };
 
 export function chavePresencaGestao(funcionarioId: string, diaIso: string): string {
@@ -795,7 +802,19 @@ function historicoAcaoVisivel(gestao?: PresencaDiaGestao): boolean {
 }
 
 export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams): PresencaAcoesLinha {
-  const { situacao, diaIso, entEsc, saiEsc, temCheckIn, temCheckOut, statusBase, gestao, agora } = params;
+  const {
+    situacao,
+    diaIso,
+    entEsc,
+    saiEsc,
+    temCheckIn,
+    temCheckOut,
+    statusBase,
+    gestao,
+    agora,
+    fluxoGpShuffler = false,
+    ctLiderancaOverlay = false,
+  } = params;
   const temHistorico = historicoAcaoVisivel(gestao);
 
   if (situacao === "—") {
@@ -822,6 +841,13 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
   }
 
   if (situacaoPresencaComoFolga(situacao)) {
+    if (fluxoGpShuffler) {
+      return {
+        acaoPrimaria: null,
+        mostrarHistorico: temHistorico,
+        mostrarTravessaoAcoes: !temHistorico,
+      };
+    }
     if (
       temCheckIn &&
       temCheckOut &&
@@ -882,11 +908,28 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
     }
   }
 
+  // GP/Shuffler: overlay CT → Aprovar primeiro; incompleto → Justificar;
+  // Registrado sem overlay → Justificar (ajustar). Inclui Troca como dia trabalhado.
+  // Após early-return de statusGestao === "aprovado", resta só em_analise | undefined.
+  const situacaoTrabalhoGpShuffler =
+    situacaoPresencaComoEscalado(situacao) || situacao === "Troca";
+  if (fluxoGpShuffler && situacaoTrabalhoGpShuffler) {
+    if (ctLiderancaOverlay) {
+      return { acaoPrimaria: "aprovar", mostrarHistorico: temHistorico, mostrarTravessaoAcoes: false };
+    }
+    if (!temCheckIn || !temCheckOut) {
+      return { acaoPrimaria: "justificar", mostrarHistorico: temHistorico, mostrarTravessaoAcoes: false };
+    }
+    if (statusBase === "Registrado") {
+      return { acaoPrimaria: "justificar", mostrarHistorico: temHistorico, mostrarTravessaoAcoes: false };
+    }
+  }
+
   const passouLimite =
     situacaoPresencaComoEscalado(situacao) &&
     passouHorarioSaidaEscaladaMais30Min(diaIso, saiEsc, agora, entEsc);
 
-  if (passouLimite && !temJustificativaRegistrada(gestao)) {
+  if (passouLimite && !temJustificativaRegistrada(gestao) && !fluxoGpShuffler) {
     if (!temCheckIn && !temCheckOut) {
       return { acaoPrimaria: "justificar", mostrarHistorico: temHistorico, mostrarTravessaoAcoes: false };
     }
@@ -899,7 +942,8 @@ export function resolverAcoesPresencaLinha(params: ResolverPresencaLinhaParams):
     situacaoPresencaComoEscalado(situacao) &&
     temCheckIn &&
     temCheckOut &&
-    statusBase === "Registrado";
+    statusBase === "Registrado" &&
+    (!fluxoGpShuffler || ctLiderancaOverlay);
 
   if (podeAprovar) {
     return { acaoPrimaria: "aprovar", mostrarHistorico: temHistorico, mostrarTravessaoAcoes: false };

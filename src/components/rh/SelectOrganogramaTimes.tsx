@@ -5,11 +5,13 @@ import type {
   RhOrgPrestadorVinculoOpcao,
 } from "../../types/rhOrganograma";
 import { encontrarVinculoPorSelectValue, vinculoParaSelectValue } from "../../lib/rhOrganogramaTree";
+import { SelectListaComBusca, type SelectListaComBuscaOption } from "../SelectListaComBusca";
+import { placeholderPesquisaFiltro } from "../../lib/searchBarConstants";
 
 const DEFAULT_LEVELS: RhOrgPrestadorVinculoNivel[] = ["diretoria", "gerencia", "time"];
 
 /**
- * Select com optgroup por Diretoria ou Diretoria › Gerência.
+ * Select com grupos por Diretoria ou Diretoria › Gerência, painel com busca.
  * Por padrão aceita vínculo na diretoria, na gerência ou no time; use `acceptLevels` para restringir (ex.: só time em vagas).
  */
 export function SelectOrganogramaTimes({
@@ -33,14 +35,39 @@ export function SelectOrganogramaTimes({
   style: CSSProperties;
 }) {
   const allow = new Set(acceptLevels);
+  const options: SelectListaComBuscaOption[] = [
+    { value: "", label: "— Selecione —" },
+    ...grupos.flatMap((gr) => {
+      const filtrados = gr.vinculos.filter((v) => allow.has(v.nivel));
+      if (filtrados.length === 0) {
+        return [
+          {
+            value: `__empty_${gr.key}`,
+            label: gr.emptyTimesPlaceholder ?? "Nenhuma opção neste ramo.",
+            disabled: true,
+            group: gr.label,
+          },
+        ];
+      }
+      return filtrados.map((o) => ({
+        value: vinculoParaSelectValue(o),
+        label: o.nivel === "time" ? o.timeNome : o.label,
+        group: gr.label,
+      }));
+    }),
+  ];
+
   return (
-    <select
+    <SelectListaComBusca
       id={id}
-      aria-label={ariaLabel}
-      disabled={disabled}
+      label={ariaLabel ?? "Organograma"}
+      searchPlaceholder={placeholderPesquisaFiltro("time")}
       value={value}
-      onChange={(e) => {
-        const idSel = e.target.value;
+      disabled={disabled}
+      variant="campo"
+      options={options}
+      style={style}
+      onChange={(idSel) => {
         if (!idSel) {
           onPick(null, null);
           return;
@@ -53,28 +80,6 @@ export function SelectOrganogramaTimes({
         }
         onPick(null, null);
       }}
-      style={style}
-    >
-      <option value="">— Selecione —</option>
-      {grupos.map((gr) => {
-        const filtrados = gr.vinculos.filter((v) => allow.has(v.nivel));
-        const placeholder = gr.emptyTimesPlaceholder ?? "Nenhuma opção neste ramo.";
-        return (
-          <optgroup key={gr.key} label={gr.label}>
-            {filtrados.length > 0 ? (
-              filtrados.map((o) => (
-                <option key={`${gr.key}-${o.nivel}-${vinculoParaSelectValue(o)}`} value={vinculoParaSelectValue(o)}>
-                  {o.nivel === "time" ? o.timeNome : o.label}
-                </option>
-              ))
-            ) : (
-              <option value="" disabled>
-                {placeholder}
-              </option>
-            )}
-          </optgroup>
-        );
-      })}
-    </select>
+    />
   );
 }

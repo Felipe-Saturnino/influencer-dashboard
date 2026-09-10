@@ -83,6 +83,8 @@ Dois blocos empilhados na mesma aba — filtros globais (status + Staff) aplicam
 
 **Vazio:** `Nenhum chamado encontrado.` (por bloco)
 
+**Paginação:** 20 linhas/página (`TabelaComPaginacao`) nas tabelas Site Spin, E-mail, Instagram Mensagens e Instagram Comentários. A barra some com uma única página; busca/filtro/sort/aba voltam à página 1.
+
 ---
 
 ## Filtros

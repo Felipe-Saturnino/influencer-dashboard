@@ -16,6 +16,7 @@ import {
 import { GAME_IDENTITY_ICONS } from "../../../lib/gameIdentityIcons";
 import { fmtDuracaoMs } from "../../../lib/smSinaisHelpers";
 import { KpiCard, SectionTitle, SkeletonKpiCard, SortTableTh, type SortDir } from "../../../components/dashboard";
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar";
 import type { MesCarrosselEscalaEntry } from "../../../lib/escalaMesCarrosselOverviewStyle";
 import { useOverviewPrestadorSmOcr } from "./useOverviewPrestadorSmOcr";
 
@@ -560,6 +561,12 @@ function OverviewPrestadorAbaKpisOcrConteudo({
           {diasOrdenados.length === 0 ? (
             vazio
           ) : (
+            <TabelaComPaginacao
+              items={diasOrdenados}
+              t={t}
+              resetKey={`${sortDia.col}|${sortDia.dir}|${historico}`}
+            >
+              {(linhas, zebraIdx) => (
             <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
               <table style={getDataTableStyle({ minWidth: 720 })}>
                 <caption style={{ display: "none" }}>KPIs de OCR por dia</caption>
@@ -574,9 +581,11 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                   </tr>
                 </thead>
                 <tbody>
-                  {diasOrdenados.map((row, i) => (
-                    <tr key={row.dia} style={{ background: dataTable.zebraRow(i) }}>
-                      <td style={dataTable.tdSticky({ rowIndex: i })}>
+                  {linhas.map((row, i) => {
+                    const z = zebraIdx(i);
+                    return (
+                    <tr key={row.dia} style={{ background: dataTable.zebraRow(z) }}>
+                      <td style={dataTable.tdSticky({ rowIndex: z })}>
                         <span style={{ fontWeight: 600 }}>{fmtDiaBr(row.dia)}</span>
                       </td>
                       <td style={dataTable.tdCenter}>{row.total.toLocaleString("pt-BR")}</td>
@@ -585,10 +594,13 @@ function OverviewPrestadorAbaKpisOcrConteudo({
                       <td style={dataTable.tdCenter}>{fmtDuracaoMs(row.tmaResolucaoMs)}</td>
                       <td style={dataTable.tdCenter}>{row.tickets.toLocaleString("pt-BR")}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+              )}
+            </TabelaComPaginacao>
           )}
         </div>
       ) : null}

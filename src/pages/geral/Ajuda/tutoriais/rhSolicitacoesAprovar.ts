@@ -3,32 +3,35 @@ import type { TutorialDef } from "./types";
 
 const IMG = "/tutoriais/rh/solicitacoes";
 
-/** Tutorial: aprovar atestado e reunião com RH em Solicitações (seção RH). */
+/** Tutorial: aprovar atestado em Solicitações (seção RH) — visão do time de RH. */
 export const TUTORIAL_RH_SOLICITACOES_APROVAR: TutorialDef = {
   id: "rh-solicitacoes-aprovar",
   urlSlug: "RhSolicitacoesAprovar",
-  titulo: "Aprovar Atestado e Reunião",
+  titulo: "Aprovar Atestado",
   section: "RH",
   icon: ClipboardList,
   relatedPageKey: "rh_solicitacoes",
+  relatedTabId: "atestados",
   objetivo:
-    "Atender solicitações de Atestado e de Reunião com RH — status, abono remunerado e o que muda no Calendário, na Escala e no Marketplace.",
+    "Como membro do RH, atender a solicitação de atestado — conferir o documento, definir abono remunerado e gravar o parecer.",
   passos: [
     {
-      titulo: "1. Abrir Solicitações",
+      titulo: "1. Abrir a aba Atestados",
       texto:
-        "1. No menu, seção RH, clique em Solicitações.\n2. O carrossel de status abre em Em análise — é a fila das solicitações pendentes.\n3. Na segunda linha da barra, escolha a aba **Atestados**.\n4. Atestados entram sozinhos nesta fila quando alguém registra justificativa Médico no Calendário (Controle de Presença), já com status Em análise.",
+        "1. No menu, seção RH, clique em **Solicitações**.\n2. O carrossel de status abre em **Em análise** — fila dos pedidos pendentes.\n3. Na segunda linha da barra, a aba **Atestados** já lista só esse tipo.\n4. Atestados entram nesta fila quando o prestador registra justificativa **Médico** no **Calendário** (Controle de Presença), com status **Em análise**.",
+      aviso:
+        "Gestores e outros perfis com permissão de **Ver** podem acompanhar os atestados na lista. A **aprovação** (ação **Atender** e parecer) é exclusiva do time de **RH**, com permissão de **Editar**.",
       imagens: [
         {
           src: `${IMG}/01-lista-em-analise.png`,
-          alt: "Página Solicitações com status Em análise e lista de atestados",
+          alt: "Solicitações — aba Atestados em Em análise",
         },
       ],
     },
     {
-      titulo: "2. Abrir Atender",
+      titulo: "2. Abrir Atender e conferir os dados",
       texto:
-        "1. Com o carrossel em Em análise, na coluna Ações clique no ícone de lápis (Atender solicitação). Essa ação exige permissão de Editar.\n2. No modal Atender solicitação, a aba Dados mostra solicitante, tipo, status Em análise e os detalhes do pedido.\n3. Confira o período do atestado e abra o anexo do documento antes de decidir.",
+        "1. Com o carrossel em **Em análise**, na coluna **Ações** clique no ícone de lápis (**Atender solicitação**).\n2. No modal **Atender solicitação**, a aba **Dados** mostra solicitante, tipo, status **Em análise** e o período do atestado.\n3. Abra o **anexo** do documento e confira se o período e o arquivo estão corretos antes de decidir.",
       imagens: [
         {
           src: `${IMG}/02-atender-atestado-dados.png`,
@@ -37,9 +40,9 @@ export const TUTORIAL_RH_SOLICITACOES_APROVAR: TutorialDef = {
       ],
     },
     {
-      titulo: "3. Aprovar um atestado",
+      titulo: "3. Aprovar o atestado",
       texto:
-        "1. Clique na aba Atendimento.\n2. Em Status, escolha Aprovado.\n3. Em Abono remunerado?, selecione SIM ou NÃO — o campo é obrigatório neste tipo.\n4. Preencha Observação do RH (obrigatória ao mudar o status).\n5. Clique em Salvar.\n6. A solicitação sai de Em análise e passa para o carrossel Aprovado. A ação Atender some; fica só Ver.",
+        "1. Clique na aba **Atendimento**.\n2. Em **Status**, escolha **Aprovado**.\n3. Em **Abono remunerado?**, selecione **SIM** ou **NÃO** — o campo é obrigatório neste tipo.\n4. Preencha **Observação do RH** (obrigatória ao mudar o status).\n5. Clique em **Salvar**.\n6. A solicitação sai de **Em análise** e passa para o carrossel **Aprovado**. A ação **Atender** some; fica só **Ver**.",
       imagens: [
         {
           src: `${IMG}/03-atender-atestado-aprovacao.png`,
@@ -48,33 +51,18 @@ export const TUTORIAL_RH_SOLICITACOES_APROVAR: TutorialDef = {
       ],
     },
     {
-      titulo: "4. O que muda após aprovar",
+      titulo: "4. Abono remunerado = SIM",
       texto:
-        "1. Com Abono remunerado = SIM, no Calendário (Controle de Presença) o Status fica Abonado só nos dias que eram Escalado, Troca ou Compra. Os demais dias do período mantêm o Status que já tinham.\n2. Com Abono remunerado = NÃO, o Status fica Atestado em todos os dias do período.\n3. Em ambos os casos, a Escala grava Atestado em todo o período — inclusive dias de Folga ou Venda.\n4. Vendas de Folga ainda abertas no Marketplace nesse intervalo são canceladas.",
+        "Ao aprovar com **Abono remunerado? = SIM**:\n\n1. O prestador **recebe o pagamento** correspondente aos **dias em que estava escalado** no período do afastamento (dias de **Escalado**, **Troca** ou **Compra** no Calendário).\n2. No **Calendário** (Controle de Presença), o Status desses dias passa a **Abonado**. Dias do período que não eram escala (ex.: Folga) mantêm o Status que já tinham — **não** entram no pagamento do abono.\n3. Na **Escala**, o período inteiro grava **Atestado** (inclusive Folga ou Venda).\n4. Vendas de Folga ainda abertas no **Marketplace** nesse intervalo são **canceladas**.",
+      aviso:
+        "Abono = SIM não é só um rótulo no Calendário: impacta o pagamento dos dias escalados em que o membro esteve afastado.",
     },
     {
-      titulo: "5. Abrir a aba Reuniões",
+      titulo: "5. Abono remunerado = NÃO e rejeição",
       texto:
-        "1. Na barra de filtros, clique na aba **Reuniões**.\n2. Em Em análise, use Atender na linha desejada — o fluxo é o mesmo do atestado.\n3. Na aba Dados, confira data da reunião, turno e motivo.",
-      imagens: [
-        {
-          src: `${IMG}/04-filtro-reuniao-rh.png`,
-          alt: "Lista filtrada por Reunião com RH",
-        },
-      ],
-    },
-    {
-      titulo: "6. Aprovar uma reunião",
-      texto:
-        "1. Na aba Atendimento, escolha Status Aprovado.\n2. Preencha Observação do RH.\n3. Clique em Salvar — não há campo de abono remunerado neste tipo.\n4. Depois de aprovada, a reunião passa a aparecer no Calendário para o solicitante e para quem atendeu.",
-      imagens: [
-        {
-          src: `${IMG}/05-reuniao-ver.png`,
-          alt: "Solicitação de Reunião com RH (detalhes após o atendimento)",
-        },
-      ],
+        "1. Com **Abono remunerado? = NÃO**, o Status no Calendário fica **Atestado** em **todos** os dias do período — **sem** pagamento de abono pelos dias escalados.\n2. A Escala ainda grava **Atestado** em todo o período e o Marketplace cancela vendas de Folga abertas no intervalo.\n3. Para **rejeitar**: na aba **Atendimento**, Status **Rejeitado**, **Observação do RH** e **Salvar**. No Calendário, o Status desses dias volta a **Falta**. A solicitação fica no carrossel **Rejeitado**, só com a ação **Ver**.",
     },
   ],
   notasFinais:
-    "— Para rejeitar um atestado: na aba Atendimento, Status Rejeitado, Observação do RH e Salvar. No Calendário, o Status desses dias volta a Falta. A solicitação fica no carrossel Rejeitado, só com a ação Ver.\n— Solicitações já aprovadas ou rejeitadas ficam só com a ação Ver.",
+    "— Solicitações já aprovadas ou rejeitadas ficam só com a ação **Ver**.\n— Reuniões, vagas e feedbacks nesta página têm fluxos próprios nas respectivas abas — este tutorial cobre apenas **Atestados**.",
 };

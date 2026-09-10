@@ -16,6 +16,7 @@ import {
 } from "../../../../components/dashboard";
 import { useDataTableBlock } from "../../../../hooks/useDataTableBlock";
 import { getDataTableWrapStyle, getDataTableStyle } from "../../../../lib/dataTableStyles";
+import { TabelaComPaginacao } from "../../../../components/TabelaPaginacaoBar";
 import { BarChart2, Coins, Receipt, TrendingUp, Trophy, UserPlus, Wallet } from "lucide-react";
 
 type RankingSortCol = "nome" | "acessos" | "registros" | "ftds" | "ggr" | "investimento" | "roi";
@@ -276,6 +277,12 @@ export default function DashboardOverview() {
             {MSG_SEM_DADOS_FILTRO}
           </div>
         ) : (
+          <TabelaComPaginacao
+            items={rankingOrdenado}
+            t={t}
+            resetKey={`${historico}|${sf?.idxMes ?? ""}|${sf?.filtroAfiliado ?? ""}|${sf?.filtroOperadora ?? ""}|${sortRanking.col}|${sortRanking.dir}`}
+          >
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap app-table-wrap--sticky-col" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 720 })}>
               <caption style={{ display: "none" }}>Ranking de afiliados por performance</caption>
@@ -293,9 +300,9 @@ export default function DashboardOverview() {
               <tbody>
                 {loading
                   ? null
-                  : rankingOrdenado.map((r, i) => (
-                      <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(i) }}>
-                        <td style={dataTable.tdSticky({ rowIndex: i })}>{r.nome}</td>
+                  : linhas.map((r, i) => (
+                      <tr key={r.afiliado_id} style={{ background: dataTable.zebraRow(zebraIdx(i)) }}>
+                        <td style={dataTable.tdSticky({ rowIndex: zebraIdx(i) })}>{r.nome}</td>
                         <td style={dataTable.tdCenter}>{r.acessos.toLocaleString("pt-BR")}</td>
                         <td style={dataTable.tdCenter}>{r.registros.toLocaleString("pt-BR")}</td>
                         <td style={dataTable.tdCenter}>{r.ftds.toLocaleString("pt-BR")}</td>
@@ -309,6 +316,8 @@ export default function DashboardOverview() {
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
     </div>

@@ -14,6 +14,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { useDataTableBlock } from "../../../hooks/useDataTableBlock"
 import { buscarRhFuncionarioIdsPorEmailLogin } from "../../../lib/rhFuncionarioLoginMatch"
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina"
+import { TabelaComPaginacao } from "../../../components/TabelaPaginacaoBar"
 import { PageHeader } from "../../../components/PageHeader"
 import { PageMenuIcon } from "../../../components/PageMenuIcon"
 import { AjudaContextualAcoes, type AjudaContextualTutorial } from "../../../components/AjudaContextualAcoes"
@@ -772,6 +773,8 @@ export default function FigurinosPage() {
               : emptyMsgAba(aba)}
           </div>
         ) : (
+          <TabelaComPaginacao items={pecasOrdenadas} t={t} resetKey={`${aba}-${busca}-${sortFig.col}-${sortFig.dir}`}>
+            {(linhas, zebraIdx) => (
           <div className="app-table-wrap" style={getDataTableWrapStyle()}>
             <table style={getDataTableStyle({ minWidth: 900 })}>
               <caption style={{ display: "none" }}>Inventário de figurinos — {labelAba(aba)}</caption>
@@ -833,9 +836,9 @@ export default function FigurinosPage() {
                 </tr>
               </thead>
               <tbody>
-                {pecasOrdenadas.map((p, i) => {
+                {linhas.map((p, i) => {
                   const emp = empPorItem[p.id];
-                  const zebra = dataTable.zebraRow(i);
+                  const zebra = dataTable.zebraRow(zebraIdx(i));
                   const emprestadoPara = labelEmprestadoParaTabela(emp);
                   const emprestadoParaCompleto = (emp?.borrower_name ?? "").trim() || "—";
                   return (
@@ -1033,6 +1036,8 @@ export default function FigurinosPage() {
               </tbody>
             </table>
           </div>
+            )}
+          </TabelaComPaginacao>
         )}
       </div>
 

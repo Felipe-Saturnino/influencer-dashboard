@@ -14,7 +14,7 @@ export function CellSelectPopover<T extends string>({
   labelOption,
   isOptionDisabled,
   disabledOptionTitle,
-  /** Ativa busca no painel. Default: automaticamente se `options.length > 5`. */
+  /** Ativa busca no painel. Default: sempre ligada. */
   enableSearch,
   searchPlaceholder,
   t,
@@ -34,7 +34,7 @@ export function CellSelectPopover<T extends string>({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [busca, setBusca] = useState("");
-  const searchable = enableSearch ?? options.length > 5;
+  const searchable = enableSearch ?? true;
 
   useEffect(() => {
     if (!open) {

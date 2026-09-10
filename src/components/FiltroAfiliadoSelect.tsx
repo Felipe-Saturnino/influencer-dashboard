@@ -78,7 +78,7 @@ function useActiveFilterStyle(isActive: boolean) {
 
 /**
  * Filtro de afiliados padronizado: pill 999, ícone Users 15px, agregadora "Todos Afiliados",
- * pesquisa no painel quando há mais de 5 opções. Modos `single` e `multiple` — regras de negócio na página.
+ * pesquisa no painel (sempre). Modos `single` e `multiple` — regras de negócio na página.
  */
 export function FiltroAfiliadoSelect(props: FiltroAfiliadoSelectProps) {
   const { afiliados, disabled = false } = props;
@@ -92,8 +92,8 @@ export function FiltroAfiliadoSelect(props: FiltroAfiliadoSelectProps) {
   const uid = useId();
   const listboxId = `filtro-afiliado-${uid.replace(/:/g, "")}`;
 
-  const enableSearch = afiliados.length > 5;
-  const dropdownMinWidth = enableSearch ? 240 : 190;
+  const enableSearch = true;
+  const dropdownMinWidth = 240;
   const alignRight = useDropdownAlign(open, triggerRef, dropdownMinWidth);
 
   const closePanel = useCallback(() => setOpen(false), []);
