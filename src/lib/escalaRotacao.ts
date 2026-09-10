@@ -18,6 +18,8 @@ export const ROTACAO_SHUFFLER_ESTUDIO_NOME = "Shuffler";
 export const ROTACAO_SHUFFLER_MESA_LABEL = "TODOS";
 /** Cor da pill TODOS — distinta do Break (#6b7280). */
 export const ROTACAO_SHUFFLER_MESA_COR = "#0891b2";
+/** Máximo de slots TODOS seguidos por prestador no bloco Shuffler. */
+export const ROTACAO_SHUFFLER_MAX_TODOS_SEGUIDOS = 3;
 
 export function isBlocoRotacaoShuffler(estudioSlug: string): boolean {
   return estudioSlug === ROTACAO_SHUFFLER_ESTUDIO_SLUG;
@@ -1003,6 +1005,47 @@ export type RotacaoGeracaoResultado = {
 };
 
 /**
+ * Bloco Shuffler: posição compartilhada TODOS (não é mesa 1:1).
+ * — com ≥2 disponíveis: exatamente **1** Break;
+ * — com 1 disponível: Break só se já atingiu o teto de TODOS seguidos;
+ * — no máximo {@link ROTACAO_SHUFFLER_MAX_TODOS_SEGUIDOS} TODOS seguidos por pessoa.
+ * Com mais de 4 disponíveis, o teto de 3 TODOS pode ceder a quem já passou do limite
+ * (só há 1 Break por slot) — prioriza quem tem mais TODOS contínuos.
+ */
+function escolherBreakShufflerSlot(
+  estado: EstadoPessoaRotacao[],
+  disponivel: (idx: number) => boolean,
+  maxTodosSeguidos: number,
+): number | null {
+  const disponiveis: number[] = [];
+  for (let i = 0; i < estado.length; i++) {
+    if (disponivel(i)) disponiveis.push(i);
+  }
+  if (disponiveis.length === 0) return null;
+
+  if (disponiveis.length === 1) {
+    const only = disponiveis[0]!;
+    return estado[only]!.consecutiveWork >= maxTodosSeguidos ? only : null;
+  }
+
+  const deveDescansar = disponiveis.filter((i) => estado[i]!.consecutiveWork >= maxTodosSeguidos);
+  const pool = deveDescansar.length > 0 ? deveDescansar : disponiveis;
+
+  pool.sort((a, b) => {
+    const ea = estado[a]!;
+    const eb = estado[b]!;
+    if (ea.consecutiveWork !== eb.consecutiveWork) return eb.consecutiveWork - ea.consecutiveWork;
+    if (ea.totalMesas !== eb.totalMesas) return eb.totalMesas - ea.totalMesas;
+    return a - b;
+  });
+  return pool[0] ?? null;
+}
+
+function ehModoRotacaoShuffler(mesas: string[]): boolean {
+  return mesas.length === 1 && mesas[0] === ROTACAO_SHUFFLER_MESA_LABEL;
+}
+
+/**
  * Gera a grade de rotação com as regras de produto:
  * — todas as mesas cobertas em todo slot;
  * — 1 GP/SL por mesa;
@@ -1011,6 +1054,7 @@ export type RotacaoGeracaoResultado = {
  * — Shift Lead entra só para cobrir e faz o mínimo de mesas;
  * — ordem das linhas de GP é **aleatória** em geração completa (não alfabética),
  *   para não repetir a mesma sequência de mesas/breaks todos os dias.
+ * — **Shuffler** (mesa TODOS): 1 Break por vez; ≤3 TODOS seguidos por prestador.
  */
 export function gerarGradeRotacao(opts: {
   mesasLabels: string[];
@@ -1038,19 +1082,29 @@ export function gerarGradeRotacao(opts: {
   const shiftLeads = opts.shiftLeads.filter((p) => p.isShiftLead);
   const nSlots = opts.nSlots;
   const slotMin = opts.slotMinutos === 20 ? 20 : 30;
-  const maxConsec = maxSlotsSeguidosAntesBreak(slotMin);
+  const modoShuffler = ehModoRotacaoShuffler(mesas);
+  const maxConsec = modoShuffler
+    ? ROTACAO_SHUFFLER_MAX_TODOS_SEGUIDOS
+    : maxSlotsSeguidosAntesBreak(slotMin);
   const fromSlot = Math.max(0, Math.min(opts.fromSlotIndex ?? 0, nSlots));
 
   if (mesas.length === 0) {
-    return { ok: false, erro: "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas." };
+    return {
+      ok: false,
+      erro: modoShuffler
+        ? "Não foi possível montar a posição TODOS para Shuffler."
+        : "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.",
+    };
   }
   if (nSlots <= 0) {
     return { ok: false, erro: "Não foi possível montar os horários do turno." };
   }
-  if (gps.length + shiftLeads.length < mesas.length) {
+  if (gps.length + shiftLeads.length < (modoShuffler ? 1 : mesas.length)) {
     return {
       ok: false,
-      erro: `Pessoas insuficientes (${gps.length} GPs + ${shiftLeads.length} Shift Lead) para cobrir ${mesas.length} mesa(s).`,
+      erro: modoShuffler
+        ? `Shufflers insuficientes (${gps.length}) para cobrir a posição TODOS.`
+        : `Pessoas insuficientes (${gps.length} GPs + ${shiftLeads.length} Shift Lead) para cobrir ${mesas.length} mesa(s).`,
     };
   }
 
@@ -1097,22 +1151,38 @@ export function gerarGradeRotacao(opts: {
   }
 
   for (let s = fromSlot; s < nSlots; s++) {
-    const aloc = alocarSlotRotacao(estado, mesas, maxConsec, (i) => disponivelEm(i, s));
-    if (!aloc) {
-      return {
-        ok: false,
-        erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Use Incluir Liderança ou Rotação de 20min.`,
-      };
-    }
-    const { workers, mesasAttr } = aloc;
     const assignment = Array.from({ length: pessoas.length }, () => "Break");
-    for (let w = 0; w < workers.length; w++) {
-      assignment[workers[w]!] = mesasAttr[w]!;
+
+    if (modoShuffler) {
+      const breakIdx = escolherBreakShufflerSlot(estado, (i) => disponivelEm(i, s), maxConsec);
+      for (let p = 0; p < pessoas.length; p++) {
+        if (!disponivelEm(p, s)) {
+          assignment[p] = "X";
+        } else if (breakIdx !== null && p === breakIdx) {
+          assignment[p] = "Break";
+        } else {
+          assignment[p] = ROTACAO_SHUFFLER_MESA_LABEL;
+        }
+      }
+    } else {
+      const aloc = alocarSlotRotacao(estado, mesas, maxConsec, (i) => disponivelEm(i, s));
+      if (!aloc) {
+        return {
+          ok: false,
+          erro: `Não foi possível cobrir todas as mesas no horário ${s + 1}. Use Incluir Liderança ou Rotação de 20min.`,
+        };
+      }
+      const { workers, mesasAttr } = aloc;
+      for (let w = 0; w < workers.length; w++) {
+        assignment[workers[w]!] = mesasAttr[w]!;
+      }
+      for (let p = 0; p < pessoas.length; p++) {
+        if (!disponivelEm(p, s)) assignment[p] = "X";
+      }
     }
 
     for (let p = 0; p < pessoas.length; p++) {
-      let v = assignment[p]!;
-      if (!disponivelEm(p, s)) v = "X";
+      const v = assignment[p]!;
       rows[p]!.push(v);
       const e = estado[p]!;
       if (v === "Break" || v === "X" || v === "F") {

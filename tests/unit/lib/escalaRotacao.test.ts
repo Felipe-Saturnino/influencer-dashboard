@@ -22,6 +22,7 @@ import {
   ROTACAO_SHUFFLER_ESTUDIO_SLUG,
   ROTACAO_SHUFFLER_MESA_COR,
   ROTACAO_SHUFFLER_MESA_LABEL,
+  ROTACAO_SHUFFLER_MAX_TODOS_SEGUIDOS,
   corMesaRotacao,
   slotDentroJanelaHorarioRotacao,
   tempoMesaContinuaQueExigeAviso,
@@ -631,5 +632,67 @@ describe("bloco Shuffler (TODOS)", () => {
       presencaAnterior: [],
     });
     expect(pool.map((p) => p.funcionarioId)).toEqual(["s1"]);
+  });
+
+  it("gera grade com 1 Break por slot e no máximo 3 TODOS seguidos", () => {
+    const gps = [gpFake("s1"), gpFake("s2"), gpFake("s3"), gpFake("s4")].map((g) => ({
+      funcionarioId: g.funcionarioId,
+      isShiftLead: false,
+    }));
+    const res = gerarGradeRotacao({
+      mesasLabels: [ROTACAO_SHUFFLER_MESA_LABEL],
+      gps,
+      shiftLeads: [],
+      nSlots: 12,
+      slotMinutos: 30,
+      embaralharGps: false,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+
+    for (let s = 0; s < 12; s++) {
+      let breaks = 0;
+      let todos = 0;
+      for (let p = 0; p < res.matrix.length; p++) {
+        const v = res.matrix[p]![s]!;
+        if (v === "Break") breaks += 1;
+        else if (v === ROTACAO_SHUFFLER_MESA_LABEL) todos += 1;
+      }
+      expect(breaks).toBe(1);
+      expect(todos).toBe(3);
+    }
+
+    for (const row of res.matrix) {
+      let streak = 0;
+      let maxStreak = 0;
+      for (const v of row) {
+        if (v === ROTACAO_SHUFFLER_MESA_LABEL) {
+          streak += 1;
+          maxStreak = Math.max(maxStreak, streak);
+        } else {
+          streak = 0;
+        }
+      }
+      expect(maxStreak).toBeLessThanOrEqual(ROTACAO_SHUFFLER_MAX_TODOS_SEGUIDOS);
+    }
+  });
+
+  it("com 1 shuffler, Break só após 3 TODOS seguidos", () => {
+    const res = gerarGradeRotacao({
+      mesasLabels: [ROTACAO_SHUFFLER_MESA_LABEL],
+      gps: [{ funcionarioId: "s1", isShiftLead: false }],
+      shiftLeads: [],
+      nSlots: 5,
+      embaralharGps: false,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.matrix[0]).toEqual([
+      ROTACAO_SHUFFLER_MESA_LABEL,
+      ROTACAO_SHUFFLER_MESA_LABEL,
+      ROTACAO_SHUFFLER_MESA_LABEL,
+      "Break",
+      ROTACAO_SHUFFLER_MESA_LABEL,
+    ]);
   });
 });

@@ -79,6 +79,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 6. Slot padrão **30 min**; toggle **Rotação de 20min** / **Rotação de 30min**.
 7. Ordem das linhas de GP na prévia é **aleatória** a cada geração completa (não alfabética), para variar sequência de mesas/breaks entre dias e regenerações. Incluir Liderança e regeneração parcial (slots futuros) **não** reshufflam as linhas.
 8. **Publicar:** se a prévia tiver algum prestador com **≥ 2h** contínuas em mesa, abrir confirmação com o tempo máximo (ex.: «2 horas», «2 horas e 20 min») antes de gravar.
+9. **Shuffler (TODOS):** posição compartilhada (vários em TODOS no mesmo slot). Com ≥2 disponíveis: **exatamente 1 Break** por slot; cada prestador no máximo **3 TODOS seguidos**. Com 1 disponível: Break só após o teto de 3.
 ### Check-in e reingresso
 
 - Antes do início: **Não chegou** / falta → regenerar prévia.
@@ -102,7 +103,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 ### Implementação
 
 - UI: **Controle de Turno → Rotação** — um bloco por estúdio (GPs) + bloco **Shuffler** (`estudio.mdc`).
-- Shuffler: slug interno `shuffler`; sem move entre estúdios; células/posição **TODOS**; pool da Escala do Turno (área Shuffler).
+- Shuffler: slug interno `shuffler`; sem move entre estúdios; células/posição **TODOS**; pool da Escala do Turno (área Shuffler). Regras próprias: **1 Break por slot** (com ≥2 disponíveis) e **≤ 3 TODOS seguidos** por prestador (`ROTACAO_SHUFFLER_MAX_TODOS_SEGUIDOS`).
 - Pool GP: `escala_rotacao_contexto_dia` + filtro Escala do Turno; `gerarGradeRotacao`; publicar/rascunho em `escala_rotacao` / células.
 - Ao aprovar Escala Estúdio (Game Presenter): `gerarPreviewsMesRotacao`.
 

@@ -1832,6 +1832,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "A sugestão deve: cobrir **todas** as mesas do estúdio; colocar só **uma** pessoa por mesa; **não** repetir a mesma mesa no horário seguinte; limitar o GP a **no máximo 2h** contínuas em mesa antes do Break (4 slots de 30 min ou 6 de 20 min); usar a liderança só como reserva. Se a cobertura falhar, use **Rotação de 20min** (depois **Rotação de 30min** para voltar) ou **Incluir Liderança**. Clique de novo em **Gerar prévia** no bloco do estúdio.",
       },
       {
+        subtitulo: "No bloco Shuffler, vários estão em Break ao mesmo tempo?",
+        texto:
+          "No **Shuffler**, a posição **TODOS** é compartilhada: com dois ou mais disponíveis, a prévia deve ter **apenas 1 Break** por horário e cada pessoa no máximo **3 TODOS seguidos**. Clique de novo em **Gerar prévia** no bloco Shuffler. Arrastar linhas na coluna Equipe só troca a ordem das sequências — não altera essas regras.",
+      },
+      {
         subtitulo: "Mover entre estúdios não funciona?",
         texto:
           "O move é **só na aba Rotação** do Controle de Turno (turno inteiro), via **Mover estúdio…** no chip. Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
