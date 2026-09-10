@@ -120,13 +120,19 @@ import {
   RelatorioPresencaPainel,
   type RelatorioPresencaLinha,
 } from "./RelatorioPresencaPainel";
+import { ordenarLinhasRelatorioPresencaPorNome } from "../../../lib/rhCalendarioRelatorioPresenca";
 import {
-  clamarDiaCarrosselRelatorioPresenca,
-  diaMaximoCarrosselRelatorioPresenca,
-  diaMinimoCarrosselRelatorioPresenca,
-  labelCarrosselDiaRelatorioPresenca,
-  ordenarLinhasRelatorioPresencaPorNome,
-} from "../../../lib/rhCalendarioRelatorioPresenca";
+  checkInDentroJanelaTurno,
+  checkOutDentroJanelaTurno,
+  comentarioOverlayLiderancaCt,
+  horarioJustificativaDentroJanela,
+  MSG_CHECKIN_FORA_JANELA,
+  MSG_CHECKOUT_FORA_JANELA,
+  podeVerAbaRelatorioJustificativas,
+  prestadorTimeAplicaJanelaTurnoCalendario,
+  resolverTurnoEfetivoHhmm,
+  situacaoPermitePontoJanelaTurno,
+} from "../../../lib/calendarioPresencaJanelaTurno";
 import { ModalAgendarReuniaoCalendario } from "./ModalAgendarReuniaoCalendario";
 import { ModalAdicionarAgendaCalendario } from "./ModalAdicionarAgendaCalendario";
 import {
@@ -169,8 +175,6 @@ import {
   type PresencaMesAprovacaoLinha,
 } from "../../../lib/rhCalendarioPresencaGestao";
 import {
-  carregarPontoRegistrosDiaLote,
-  carregarPresencaGestaoDiaLote,
   carregarPresencaGestaoMes,
 } from "../../../lib/rhCalendarioPresencaGestaoDb";
 import {
@@ -750,11 +754,7 @@ export default function RhCalendarioPage() {
    */
   const [filterStaffIds, setFilterStaffIds] = useState<string[]>([]);
   const [filterTimeIds, setFilterTimeIds] = useState<string[]>([]);
-  const [relatorioDia, setRelatorioDia] = useState(() => {
-    const hoje = new Date();
-    return new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-  });
-  const [pontoRelatorioPorFid, setPontoRelatorioPorFid] = useState<
+  const [pontoRelatorioPorChave, setPontoRelatorioPorChave] = useState<
     Map<string, { check_in_at: string | null; check_out_at: string | null }>
   >(() => new Map());
   const [gestaoRelatorioPorChave, setGestaoRelatorioPorChave] = useState<Map<string, PresencaDiaGestao>>(
@@ -764,6 +764,14 @@ export default function RhCalendarioPage() {
   const [erroRelatorioPresenca, setErroRelatorioPresenca] = useState<string | null>(null);
   const [relatorioReloadTick, setRelatorioReloadTick] = useState(0);
   const [sortRelatorioNomeDir, setSortRelatorioNomeDir] = useState<SortDir>("asc");
+  /** Overlay CT (Aprovado) por `funcionarioId:diaIso` — libera Aprovar no fluxo GP/Shuffler. */
+  const [ctOverlayPorDia, setCtOverlayPorDia] = useState<
+    Map<string, { entrada: string; saida: string; comentario: string }>
+  >(() => new Map());
+  /** Hora Adicional do CT por `funcionarioId:diaIso` — turno efetivo da janela ±15. */
+  const [haEfetivoPorDia, setHaEfetivoPorDia] = useState<
+    Map<string, { entrada: string; saida: string }>
+  >(() => new Map());
 
   const [rawGradeRowsRpc, setRawGradeRowsRpc] = useState<RpcGradeCalendarioRow[]>([]);
   /** Horário/turno congelados na aprovação da Gestão de Escala (mês da grade). */
@@ -1019,23 +1027,26 @@ export default function RhCalendarioPage() {
       .sort((a, b) => (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR"));
   }, [prestadores, filtroTimeAtivo, filtroTimeIdsReais, filtroStaffAtivo, filterStaffIds]);
 
-  /** Relatório de Presença: só Editar = Sim no perfil efetivo. Admin real vê a aba; simulação de GP/prestador não. */
+  /** Relatório de Justificativas — admin / Criar sim / (Ver+Editar sim); oculto em Meu Calendário/Controle. */
+  const meuModoCalendarioAtivo =
+    Boolean(meuRhFuncionarioId) &&
+    filterStaffIds.length === 1 &&
+    filterStaffIds[0] === meuRhFuncionarioId;
   const podeVerAbaRelatorioPresenca =
-    !perm.loading && (effectiveRole === "admin" || perm.canEditar === "sim");
+    !perm.loading &&
+    podeVerAbaRelatorioJustificativas({
+      isAdmin: effectiveRole === "admin",
+      canView: perm.canView,
+      canEditar: perm.canEditar,
+      canCriar: perm.canCriar,
+      meuModoAtivo: meuModoCalendarioAtivo,
+    });
 
   useEffect(() => {
     if (!perm.loading && abaPrincipal === "relatorio" && !podeVerAbaRelatorioPresenca) {
-      setAbaPrincipal("compromissos");
+      setAbaPrincipal(meuModoCalendarioAtivo ? "presenca" : "compromissos");
     }
-  }, [perm.loading, abaPrincipal, podeVerAbaRelatorioPresenca, setAbaPrincipal]);
-
-  useEffect(() => {
-    if (abaPrincipal !== "relatorio") return;
-    const mesAlvo = new Date(relatorioDia.getFullYear(), relatorioDia.getMonth(), 1);
-    if (current.getFullYear() !== mesAlvo.getFullYear() || current.getMonth() !== mesAlvo.getMonth()) {
-      setCurrent(mesAlvo);
-    }
-  }, [abaPrincipal, relatorioDia, current]);
+  }, [perm.loading, abaPrincipal, podeVerAbaRelatorioPresenca, meuModoCalendarioAtivo, setAbaPrincipal]);
 
   /** Controle / Relatório usam seleção única — colapsa multi da aba Compromissos. */
   useEffect(() => {
@@ -1472,7 +1483,7 @@ export default function RhCalendarioPage() {
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao" || abaPrincipal !== "relatorio" || !podeVerAbaRelatorioPresenca) {
-      setPontoRelatorioPorFid(new Map());
+      setPontoRelatorioPorChave(new Map());
       setGestaoRelatorioPorChave(new Map());
       setLoadingRelatorioPresenca(false);
       setErroRelatorioPresenca(null);
@@ -1483,7 +1494,7 @@ export default function RhCalendarioPage() {
         ? prestadoresRelatorioTime.map((p) => p.id)
         : [];
     if (fids.length === 0) {
-      setPontoRelatorioPorFid(new Map());
+      setPontoRelatorioPorChave(new Map());
       setGestaoRelatorioPorChave(new Map());
       setLoadingRelatorioPresenca(false);
       setErroRelatorioPresenca(null);
@@ -1492,29 +1503,56 @@ export default function RhCalendarioPage() {
     let cancelled = false;
     setLoadingRelatorioPresenca(true);
     setErroRelatorioPresenca(null);
-    const diaIso = toISO(relatorioDia);
+    const refIso = refMesPrimeiroDiaISO(current);
     void (async () => {
-      // 2 RPCs em lote (antes: 3N — ponto mês + gestão mês atual + gestão mês anterior por fid).
-      const [pontoRes, gestaoRes] = await Promise.all([
-        carregarPontoRegistrosDiaLote(supabase, fids, diaIso),
-        carregarPresencaGestaoDiaLote(supabase, fids, diaIso),
+      const [gestaoResults, pontoResults] = await Promise.all([
+        Promise.all(fids.map((fid) => carregarPresencaGestaoMes(supabase, fid, refIso))),
+        Promise.all(
+          fids.map(async (fid) => {
+            const { data, error } = await supabase.rpc("rh_calendario_ponto_registros_mes", {
+              p_funcionario_id: fid,
+              p_ref_mes: refIso,
+            });
+            return { fid, data, error };
+          }),
+        ),
       ]);
       if (cancelled) return;
       setLoadingRelatorioPresenca(false);
-      if (pontoRes.error || gestaoRes.error) {
-        console.error("[calendario-relatorio-presenca]", {
-          ponto: pontoRes.error,
-          gestao: gestaoRes.error,
-        });
-        setPontoRelatorioPorFid(new Map());
+      const gestaoErro = gestaoResults.some((r) => r.error);
+      const pontoErro = pontoResults.some((r) => r.error);
+      if (gestaoErro || pontoErro) {
+        console.error("[calendario-relatorio-justificativas]", { gestaoErro, pontoErro });
+        setPontoRelatorioPorChave(new Map());
         setGestaoRelatorioPorChave(new Map());
         setErroRelatorioPresenca(
-          "Não foi possível carregar o relatório de presença do dia. Se o problema persistir, entre em contato com o suporte.",
+          "Não foi possível carregar o relatório de justificativas do mês. Se o problema persistir, entre em contato com o suporte.",
         );
         return;
       }
-      setPontoRelatorioPorFid(pontoRes.mapa);
-      setGestaoRelatorioPorChave(gestaoRes.mapa);
+      const gestaoMap = new Map<string, PresencaDiaGestao>();
+      for (const r of gestaoResults) {
+        for (const [k, v] of r.mapa) gestaoMap.set(k, v);
+      }
+      const pontoMap = new Map<string, { check_in_at: string | null; check_out_at: string | null }>();
+      for (const { fid, data } of pontoResults) {
+        const rows = (data ?? []) as {
+          dia_sp: string | Date;
+          check_in_at: string | null;
+          check_out_at: string | null;
+        }[];
+        for (const row of rows) {
+          const raw = row.dia_sp;
+          const ds =
+            typeof raw === "string" ? String(raw).slice(0, 10) : toISO(new Date(raw as Date));
+          pontoMap.set(chavePresencaGestao(fid, ds), {
+            check_in_at: row.check_in_at,
+            check_out_at: row.check_out_at,
+          });
+        }
+      }
+      setGestaoRelatorioPorChave(gestaoMap);
+      setPontoRelatorioPorChave(pontoMap);
     })();
     return () => {
       cancelled = true;
@@ -1527,11 +1565,139 @@ export default function RhCalendarioPage() {
     prestadoresRelatorioTime,
     filtroTimeAtivo,
     filtroStaffAtivo,
-    relatorioDia,
+    current,
     presencaGestaoTick,
     pontoMesTick,
     relatorioReloadTick,
   ]);
+
+  /** CT aprovado no mês — overlay de liderança (GP/Shuffler). */
+  useEffect(() => {
+    if (perm.loading || perm.canView === "nao") {
+      setCtOverlayPorDia(new Map());
+      setHaEfetivoPorDia(new Map());
+      return;
+    }
+    let fids: string[] =
+      abaPrincipal === "relatorio"
+        ? filtroTimeAtivo || filtroStaffAtivo
+          ? prestadoresRelatorioTime.map((p) => p.id)
+          : []
+        : abaPrincipal === "presenca" && filterStaffIds[0]
+          ? [filterStaffIds[0]]
+          : [];
+    // Compromissos / ponto: garantir HA/overlay do próprio login para o botão Check-in.
+    if (meuRhFuncionarioId && !fids.includes(meuRhFuncionarioId)) {
+      if (abaPrincipal === "compromissos" || abaPrincipal === "presenca") {
+        fids = [...fids, meuRhFuncionarioId];
+      }
+    }
+    if (fids.length === 0) {
+      setCtOverlayPorDia(new Map());
+      setHaEfetivoPorDia(new Map());
+      return;
+    }
+    let cancelled = false;
+    const y = current.getFullYear();
+    const m = current.getMonth();
+    const inicio = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+    const fim = toISO(new Date(y, m + 1, 0));
+    void (async () => {
+      const { data, error } = await supabase
+        .from("escala_ct_presenca_registro")
+        .select(
+          "prestador_id, data, entrada_hhmm, saida_hhmm, aprovado, status_presenca, tipo, created_at",
+        )
+        .in("prestador_id", fids)
+        .gte("data", inicio)
+        .lte("data", fim)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (error) {
+        console.error("[calendario-ct-overlay]", error);
+        setCtOverlayPorDia(new Map());
+        setHaEfetivoPorDia(new Map());
+        return;
+      }
+      const nextOverlay = new Map<string, { entrada: string; saida: string; comentario: string }>();
+      const nextHa = new Map<string, { entrada: string; saida: string }>();
+      for (const row of (data ?? []) as {
+        prestador_id: string;
+        data: string;
+        entrada_hhmm: string | null;
+        saida_hhmm: string | null;
+        aprovado: boolean | null;
+        status_presenca: string | null;
+        tipo: string | null;
+        created_at: string | null;
+      }[]) {
+        const fid = String(row.prestador_id ?? "");
+        const diaIso = String(row.data ?? "").slice(0, 10);
+        if (!fid || !diaIso) continue;
+        const chave = chavePresencaGestao(fid, diaIso);
+        const entradaCt = String(row.entrada_hhmm ?? "").trim().slice(0, 5);
+        const saidaCt = String(row.saida_hhmm ?? "").trim().slice(0, 5);
+        const st = String(row.status_presenca ?? "").toLowerCase();
+        const tipo = String(row.tipo ?? "").toLowerCase();
+        const ehHa = st === "hora_adicional" || tipo === "hora_adicional";
+        if (ehHa && !nextHa.has(chave) && entradaCt && saidaCt) {
+          const turnoHa = resolverTurnoEfetivoHhmm("—", "—", {
+            entrada: entradaCt,
+            saida: saidaCt,
+          });
+          if (turnoHa?.origem === "hora_adicional") {
+            nextHa.set(chave, { entrada: turnoHa.entrada, saida: turnoHa.saida });
+          }
+        }
+        if (row.aprovado === true && !nextOverlay.has(chave)) {
+          nextOverlay.set(chave, {
+            entrada: entradaCt || "—",
+            saida: saidaCt || "—",
+            comentario: "", // preenchido no useMemo com ponto
+          });
+        }
+      }
+      setCtOverlayPorDia(nextOverlay);
+      setHaEfetivoPorDia(nextHa);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    perm.loading,
+    perm.canView,
+    abaPrincipal,
+    filterStaffIds,
+    filtroTimeAtivo,
+    filtroStaffAtivo,
+    prestadoresRelatorioTime,
+    current,
+    pontoMesTick,
+    relatorioReloadTick,
+    meuRhFuncionarioId,
+  ]);
+
+  const ctOverlayPorDiaComComentario = useMemo(() => {
+    const next = new Map<string, { entrada: string; saida: string; comentario: string }>();
+    for (const [chave, overlay] of ctOverlayPorDia) {
+      const [fid, diaIso] = chave.split(":");
+      const pt =
+        pontoRelatorioPorChave.get(chave) ??
+        (fid && filterStaffIds[0] === fid ? mapaPontoPorDiaIso.get(diaIso ?? "") : undefined);
+      const entradaPt = pt?.check_in_at ? horaRegistoSP(pt.check_in_at) : "—";
+      const saidaPt = pt?.check_out_at ? horaRegistoSP(pt.check_out_at) : "—";
+      next.set(chave, {
+        ...overlay,
+        comentario: comentarioOverlayLiderancaCt(
+          overlay.entrada,
+          overlay.saida,
+          entradaPt,
+          saidaPt,
+        ),
+      });
+    }
+    return next;
+  }, [ctOverlayPorDia, pontoRelatorioPorChave, mapaPontoPorDiaIso, filterStaffIds]);
 
   useEffect(() => {
     if (perm.loading || perm.canView === "nao") return;
@@ -1697,14 +1863,6 @@ export default function RhCalendarioPage() {
   }
 
   function prev() {
-    if (abaPrincipal === "relatorio") {
-      const minD = diaMinimoCarrosselRelatorioPresenca(CALENDARIO_ANO_MIN, CALENDARIO_MES0_MIN);
-      const maxD = diaMaximoCarrosselRelatorioPresenca(mesMaximoCarrosselCalendarioRh());
-      const d = new Date(relatorioDia);
-      d.setDate(d.getDate() - 1);
-      setRelatorioDia(clamarDiaCarrosselRelatorioPresenca(d, minD, maxD));
-      return;
-    }
     if (!podeRetrocederMesCalendario(current)) return;
     const d = new Date(current);
     d.setMonth(d.getMonth() - 1);
@@ -1712,14 +1870,6 @@ export default function RhCalendarioPage() {
     else setCurrent(d);
   }
   function next() {
-    if (abaPrincipal === "relatorio") {
-      const minD = diaMinimoCarrosselRelatorioPresenca(CALENDARIO_ANO_MIN, CALENDARIO_MES0_MIN);
-      const maxD = diaMaximoCarrosselRelatorioPresenca(mesMaximoCarrosselCalendarioRh());
-      const d = new Date(relatorioDia);
-      d.setDate(d.getDate() + 1);
-      setRelatorioDia(clamarDiaCarrosselRelatorioPresenca(d, minD, maxD));
-      return;
-    }
     if (!podeAvancarMesCalendario(current)) return;
     const d = new Date(current);
     d.setMonth(d.getMonth() + 1);
@@ -1728,7 +1878,6 @@ export default function RhCalendarioPage() {
   }
 
   function headerTitle() {
-    if (abaPrincipal === "relatorio") return labelCarrosselDiaRelatorioPresenca(relatorioDia);
     return `${MONTHS[current.getMonth()]} ${current.getFullYear()}`;
   }
 
@@ -2369,6 +2518,99 @@ export default function RhCalendarioPage() {
     setPontoMsgModal(null);
     setPontoSucessoModal(null);
     const tipoRegistro = pontoEstado?.proximoTipo;
+    const meuFidGate = pontoEstado?.rhFuncionarioId ?? meuRhFuncionarioId;
+    if (
+      meuFidGate &&
+      (tipoRegistro === "check_in" || tipoRegistro === "check_out")
+    ) {
+      const pRow = prestadorPorId.get(meuFidGate);
+      let timeNome = "";
+      if (pRow?.org_time_id) {
+        const tRow = times.find((x) => x.id === pRow.org_time_id);
+        timeNome = (tRow?.nome ?? "").trim();
+      } else if (pRow?.org_gerencia_id) {
+        const gSemTime = times.find((x) => x.id === pRow.org_gerencia_id && x.id === x.gerencia_id);
+        timeNome = (gSemTime?.nome ?? "").trim();
+      }
+      const agoraGate = new Date();
+      const diaIsoGate = String(
+        pontoEstado?.turnoDiaSp ?? pontoEstado?.diaSp ?? toISO(agoraGate),
+      ).slice(0, 10);
+      const areaKeyGate = areaKeyGradeDia(rawGradeRows, meuFidGate, diaIsoGate);
+      if (prestadorTimeAplicaJanelaTurnoCalendario(timeNome, areaKeyGate)) {
+        const valorG = primeiroValorGradeDia(rawGradeRows, meuFidGate, diaIsoGate);
+        const situacao = situacaoGestaoEscalaParaDia(valorG);
+        if (!situacaoPermitePontoJanelaTurno(situacao)) {
+          setPontoMsgModal(
+            tipoRegistro === "check_out" ? MSG_CHECKOUT_FORA_JANELA : MSG_CHECKIN_FORA_JANELA,
+          );
+          return;
+        }
+        const chaveHa = chavePresencaGestao(meuFidGate, diaIsoGate);
+        let ha = haEfetivoPorDia.get(chaveHa) ?? null;
+        if (!ha) {
+          // Fallback: buscar HA do dia se o mapa ainda não carregou (ex.: aba Compromissos).
+          const { data: haRows } = await supabase
+            .from("escala_ct_presenca_registro")
+            .select("entrada_hhmm, saida_hhmm, status_presenca, tipo, created_at")
+            .eq("prestador_id", meuFidGate)
+            .eq("data", diaIsoGate)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          for (const row of (haRows ?? []) as {
+            entrada_hhmm: string | null;
+            saida_hhmm: string | null;
+            status_presenca: string | null;
+            tipo: string | null;
+          }[]) {
+            const st = String(row.status_presenca ?? "").toLowerCase();
+            const tipo = String(row.tipo ?? "").toLowerCase();
+            if (st !== "hora_adicional" && tipo !== "hora_adicional") continue;
+            const e = String(row.entrada_hhmm ?? "").trim().slice(0, 5);
+            const s = String(row.saida_hhmm ?? "").trim().slice(0, 5);
+            const tHa = resolverTurnoEfetivoHhmm("—", "—", { entrada: e, saida: s });
+            if (tHa?.origem === "hora_adicional") {
+              ha = { entrada: tHa.entrada, saida: tHa.saida };
+              break;
+            }
+          }
+        }
+        const opRow = turnosHorarioPrestador(pRow);
+        const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, meuFidGate, diaIsoGate);
+        const turnoEfetivo = resolverTurnoEfetivoHhmm(esc?.entrada ?? "—", esc?.saida ?? "—", ha);
+        if (!turnoEfetivo) {
+          setPontoMsgModal(
+            tipoRegistro === "check_out" ? MSG_CHECKOUT_FORA_JANELA : MSG_CHECKIN_FORA_JANELA,
+          );
+          return;
+        }
+        const ent = turnoEfetivo.entrada;
+        const sai = turnoEfetivo.saida;
+        if (tipoRegistro === "check_in") {
+          const janela = checkInDentroJanelaTurno(agoraGate, diaIsoGate, ent, sai);
+          if (!janela.ok) {
+            setPontoMsgModal(janela.mensagem);
+            return;
+          }
+        } else {
+          const checkInAt =
+            mapaPontoPorDiaIso.get(diaIsoGate)?.check_in_at ??
+            pontoEstado?.checkInAbertoAt ??
+            null;
+          const janela = checkOutDentroJanelaTurno(
+            agoraGate,
+            diaIsoGate,
+            ent,
+            sai,
+            checkInAt,
+          );
+          if (!janela.ok) {
+            setPontoMsgModal(janela.mensagem);
+            return;
+          }
+        }
+      }
+    }
     const { data: { session } } = await supabase.auth.getSession();
     const tok = session?.access_token;
     if (!tok) return;
@@ -2474,7 +2716,18 @@ export default function RhCalendarioPage() {
     } finally {
       setPontoSubmitting(false);
     }
-  }, [pontoEstado?.proximoTipo, mapaPontoPorDiaIso]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal / turnosHorarioPrestador helpers do render
+  }, [
+    pontoEstado,
+    mapaPontoPorDiaIso,
+    meuRhFuncionarioId,
+    prestadorPorId,
+    times,
+    rawGradeRows,
+    turnosHorarioPrestador,
+    turnoMesMap,
+    haEfetivoPorDia,
+  ]);
 
   /** Com a grade restrita ao recorte ativo, só alertar quando o próprio recorte tem gente de estúdio. */
   const gradeEstudioAusenteNoMes =
@@ -2540,14 +2793,9 @@ export default function RhCalendarioPage() {
   const temLimparFiltrosCompromissos =
     hasStaffFilterComp || hasTimeFilterComp || filtroTipoCompromisso !== "todos";
 
-  const diaMinRelatorio = diaMinimoCarrosselRelatorioPresenca(CALENDARIO_ANO_MIN, CALENDARIO_MES0_MIN);
-  const diaMaxRelatorio = diaMaximoCarrosselRelatorioPresenca(mesMaximoCarrosselCalendarioRh());
-  const podeRetrocederDiaRelatorio = toISO(relatorioDia) > toISO(diaMinRelatorio);
-  const podeAvancarDiaRelatorio = toISO(relatorioDia) < toISO(diaMaxRelatorio);
   const podeAvancarMes = podeAvancarMesCalendario(current);
-  const podeRetrocederCarrossel =
-    abaPrincipal === "relatorio" ? podeRetrocederDiaRelatorio : podeRetrocederMesCalendario(current);
-  const podeAvancarCarrossel = abaPrincipal === "relatorio" ? podeAvancarDiaRelatorio : podeAvancarMes;
+  const podeRetrocederCarrossel = podeRetrocederMesCalendario(current);
+  const podeAvancarCarrossel = podeAvancarMes;
 
   const diasDoMesPresenca = useMemo(() => {
     const y = current.getFullYear();
@@ -2783,133 +3031,163 @@ export default function RhCalendarioPage() {
 
   const linhasRelatorioPresenca = useMemo((): RelatorioPresencaLinha[] => {
     if (!filtroTimeAtivo && !filtroStaffAtivo) return [];
-    const iso = toISO(relatorioDia);
+    const y = current.getFullYear();
+    const m = current.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
     const out: RelatorioPresencaLinha[] = [];
     for (const pRow of prestadoresRelatorioTime) {
       const fid = pRow.id;
-      const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+      const timeNomeRel =
+        (pRow.org_time_id
+          ? times.find((x) => x.id === pRow.org_time_id)?.nome
+          : pRow.org_gerencia_id
+            ? times.find((x) => x.id === pRow.org_gerencia_id && x.id === x.gerencia_id)?.nome
+            : null) ?? "";
       const opRow = turnosHorarioPrestador(pRow);
-      const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
-      const pt = pontoRelatorioPorFid.get(fid);
-      const entEsc = esc ? esc.entrada : "—";
-      const saiEsc = esc ? esc.saida : "—";
-      const entReal = horaRegistoSP(pt?.check_in_at);
-      const saiReal = horaRegistoSP(pt?.check_out_at);
-      const horasEsc = esc ? formatoDuracaoFmtHorasTotal(entEsc, saiEsc) : "—";
-      const horasReal = duracaoEntreTimestamps(pt?.check_in_at ?? null, pt?.check_out_at ?? null);
-      const situacao = situacaoGestaoEscalaParaDia(valorG);
-      const temCheckIn = Boolean(pt?.check_in_at);
-      const temCheckOut = Boolean(pt?.check_out_at);
-      const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
-      const chave = chavePresencaGestao(fid, iso);
-      const gestaoBase = gestaoRelatorioPorChave.get(chave);
-      const indiceMedicoFid = construirIndiceJustificativaMedicoPorDia(
-        Array.from(gestaoRelatorioPorChave.entries())
-          .filter(([k]) => k.startsWith(`${fid}:`))
-          .map(([k, gestao]) => ({ chave: k, gestao })),
-        fid,
-        (dIso) => situacaoGestaoEscalaParaDia(primeiroValorGradeDia(rawGradeRows, fid, dIso)),
-      );
-      const gestaoDia = fundirGestaoPresencaComJustificativaMedico(
-        gestaoBase,
-        iso,
-        situacao,
-        indiceMedicoFid,
-      );
-      const paramsPresencaLinha = {
-        situacao,
-        diaIso: iso,
-        entEsc,
-        saiEsc,
-        temCheckIn,
-        temCheckOut,
-        statusBase: stBase,
-        gestao: gestaoDia,
-      };
-      const st = resolverStatusPresencaLinha(paramsPresencaLinha);
-      const acoesBase = resolverAcoesPresencaLinha(paramsPresencaLinha);
-      const acaoOk =
-        acoesBase.acaoPrimaria === "justificar"
-          ? podeJustificarPresencaStaff(fid)
-          : acoesBase.acaoPrimaria === "aprovar"
-            ? gestaoDia?.justificativa?.motivo === "outro" &&
-                gestaoDia.statusGestao === "em_analise" &&
-                !gestaoDia.correcao
-              ? podeAnalisarCorrecaoPresencaStaff(fid)
-              : podeGerirPresencaStaff(fid)
-            : true;
-      const acoesLinha: typeof acoesBase = !acaoOk
-        ? {
-            acaoPrimaria: null,
-            mostrarHistorico: acoesBase.mostrarHistorico,
-            mostrarTravessaoAcoes: !acoesBase.mostrarHistorico,
-          }
-        : acoesBase;
-      const correcao = gestaoDia?.correcao;
-      const exibirIndicadorMedico = presencaJustificativaMedicoExibirIndicador(gestaoDia, iso, situacao);
-      const justificativaMedico =
-        gestaoDia?.justificativa?.motivo === "medico" ? gestaoDia.justificativa : null;
-      const correcaoEntradaAlterada = correcao ? presencaCorrecaoCampoAlterado("entrada", correcao) : false;
-      const correcaoSaidaAlterada = correcao ? presencaCorrecaoCampoAlterado("saida", correcao) : false;
-      const entAprovada = presencaCorrecaoCampoAprovado(correcao, "entrada");
-      const saiAprovada = presencaCorrecaoCampoAprovado(correcao, "saida");
-      const entRealExib = entAprovada && correcao ? correcao.entradaCorrigida : entReal;
-      const saiRealExib = saiAprovada && correcao ? correcao.saidaCorrigida : saiReal;
-      const horasRealExib =
-        (entAprovada || saiAprovada) && correcao
-          ? formatoDuracaoFmtHorasTotal(entRealExib, saiRealExib)
-          : horasReal;
-      const podeAnalisarCorrecao = Boolean(
-        correcao &&
-          presencaCorrecaoTemCampoPendenteAnalise(correcao) &&
-          podeAnalisarCorrecaoPresencaStaff(fid),
-      );
-      out.push({
-        funcionarioId: fid,
-        nome: (pRow.nome ?? "").trim() || "—",
-        situacao,
-        entEsc,
-        saiEsc,
-        entRealExib,
-        saiRealExib,
-        horasEsc,
-        horasRealExib,
-        status: st,
-        entRealDesvio: presencaDesvioRelogioMaior5Min(entEsc, entRealExib),
-        saiRealDesvio: presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib),
-        horasRealDesvio:
-          (entAprovada || saiAprovada) && correcao
-            ? (() => {
-                const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
-                const realMin = duracaoMinutosRelogioHHMM(entRealExib, saiRealExib);
-                if (escMin == null || realMin == null) return false;
-                return Math.abs(realMin - escMin) > 5;
-              })()
-            : presencaDesvioHorasMaior5Min(entEsc, saiEsc, pt?.check_in_at ?? null, pt?.check_out_at ?? null),
-        acoesLinha,
-        exibirIndicadorMedico,
-        justificativaMedico,
-        correcao,
-        correcaoEntradaAlterada,
-        correcaoSaidaAlterada,
-        podeAnalisarCorrecao,
-        dia: new Date(relatorioDia),
-        entReal,
-        saiReal,
-        horasReal,
-      });
+      for (let d = 1; d <= last; d++) {
+        const dia = new Date(y, m, d);
+        const iso = toISO(dia);
+        const chave = chavePresencaGestao(fid, iso);
+        const gestaoBase = gestaoRelatorioPorChave.get(chave);
+        if (!gestaoBase || gestaoBase.statusGestao !== "em_analise" || !gestaoBase.justificativa) {
+          continue;
+        }
+        const valorG = primeiroValorGradeDia(rawGradeRows, fid, iso);
+        const esc = obterEntradaSaidaDiaCal(pRow, valorG, opRow, fid, iso);
+        const pt = pontoRelatorioPorChave.get(chave);
+        const entEsc = esc ? esc.entrada : "—";
+        const saiEsc = esc ? esc.saida : "—";
+        const entReal = horaRegistoSP(pt?.check_in_at);
+        const saiReal = horaRegistoSP(pt?.check_out_at);
+        const horasEsc = esc ? formatoDuracaoFmtHorasTotal(entEsc, saiEsc) : "—";
+        const horasReal = duracaoEntreTimestamps(pt?.check_in_at ?? null, pt?.check_out_at ?? null);
+        const situacao = situacaoGestaoEscalaParaDia(valorG);
+        const temCheckIn = Boolean(pt?.check_in_at);
+        const temCheckOut = Boolean(pt?.check_out_at);
+        const stBase = statusPresencaNoDia(esc, pt?.check_in_at, pt?.check_out_at);
+        const areaKey = areaKeyGradeDia(rawGradeRows, fid, iso);
+        const fluxoGpShuffler = prestadorTimeAplicaJanelaTurnoCalendario(timeNomeRel, areaKey);
+        const ctLiderancaOverlay = ctOverlayPorDiaComComentario.has(chave);
+        const indiceMedicoFid = construirIndiceJustificativaMedicoPorDia(
+          Array.from(gestaoRelatorioPorChave.entries())
+            .filter(([k]) => k.startsWith(`${fid}:`))
+            .map(([k, gestao]) => ({ chave: k, gestao })),
+          fid,
+          (dIso) => situacaoGestaoEscalaParaDia(primeiroValorGradeDia(rawGradeRows, fid, dIso)),
+        );
+        const gestaoDia = fundirGestaoPresencaComJustificativaMedico(
+          gestaoBase,
+          iso,
+          situacao,
+          indiceMedicoFid,
+        );
+        const paramsPresencaLinha = {
+          situacao,
+          diaIso: iso,
+          entEsc,
+          saiEsc,
+          temCheckIn,
+          temCheckOut,
+          statusBase: stBase,
+          gestao: gestaoDia,
+          fluxoGpShuffler,
+          ctLiderancaOverlay,
+        };
+        const st = resolverStatusPresencaLinha(paramsPresencaLinha);
+        const acoesBase = resolverAcoesPresencaLinha(paramsPresencaLinha);
+        const acaoOk =
+          acoesBase.acaoPrimaria === "justificar"
+            ? podeJustificarPresencaStaff(fid)
+            : acoesBase.acaoPrimaria === "aprovar"
+              ? gestaoDia?.justificativa?.motivo === "outro" &&
+                  gestaoDia.statusGestao === "em_analise" &&
+                  !gestaoDia.correcao
+                ? podeAnalisarCorrecaoPresencaStaff(fid)
+                : podeGerirPresencaStaff(fid)
+              : true;
+        const acoesLinha: typeof acoesBase = !acaoOk
+          ? {
+              acaoPrimaria: null,
+              mostrarHistorico: acoesBase.mostrarHistorico,
+              mostrarTravessaoAcoes: !acoesBase.mostrarHistorico,
+            }
+          : acoesBase;
+        const correcao = gestaoDia?.correcao;
+        const exibirIndicadorMedico = presencaJustificativaMedicoExibirIndicador(gestaoDia, iso, situacao);
+        const justificativaMedico =
+          gestaoDia?.justificativa?.motivo === "medico" ? gestaoDia.justificativa : null;
+        const correcaoEntradaAlterada = correcao ? presencaCorrecaoCampoAlterado("entrada", correcao) : false;
+        const correcaoSaidaAlterada = correcao ? presencaCorrecaoCampoAlterado("saida", correcao) : false;
+        const entAprovada = presencaCorrecaoCampoAprovado(correcao, "entrada");
+        const saiAprovada = presencaCorrecaoCampoAprovado(correcao, "saida");
+        const overlayCt = ctOverlayPorDiaComComentario.get(chave);
+        let entRealExib = entReal;
+        let saiRealExib = saiReal;
+        if (overlayCt) {
+          if (overlayCt.entrada !== "—") entRealExib = overlayCt.entrada;
+          if (overlayCt.saida !== "—") saiRealExib = overlayCt.saida;
+        }
+        if (entAprovada && correcao) entRealExib = correcao.entradaCorrigida;
+        if (saiAprovada && correcao) saiRealExib = correcao.saidaCorrigida;
+        const horasRealExib =
+          overlayCt || entAprovada || saiAprovada
+            ? formatoDuracaoFmtHorasTotal(entRealExib, saiRealExib)
+            : horasReal;
+        const podeAnalisarCorrecao = Boolean(
+          correcao &&
+            presencaCorrecaoTemCampoPendenteAnalise(correcao) &&
+            podeAnalisarCorrecaoPresencaStaff(fid),
+        );
+        out.push({
+          funcionarioId: fid,
+          nome: (pRow.nome ?? "").trim() || "—",
+          situacao,
+          entEsc,
+          saiEsc,
+          entRealExib,
+          saiRealExib,
+          horasEsc,
+          horasRealExib,
+          status: st,
+          overlayComentario: overlayCt?.comentario || null,
+          entRealDesvio: presencaDesvioRelogioMaior5Min(entEsc, entRealExib),
+          saiRealDesvio: presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib),
+          horasRealDesvio:
+            overlayCt || ((entAprovada || saiAprovada) && correcao)
+              ? (() => {
+                  const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
+                  const realMin = duracaoMinutosRelogioHHMM(entRealExib, saiRealExib);
+                  if (escMin == null || realMin == null) return false;
+                  return Math.abs(realMin - escMin) > 5;
+                })()
+              : presencaDesvioHorasMaior5Min(entEsc, saiEsc, pt?.check_in_at ?? null, pt?.check_out_at ?? null),
+          acoesLinha,
+          exibirIndicadorMedico,
+          justificativaMedico,
+          correcao,
+          correcaoEntradaAlterada,
+          correcaoSaidaAlterada,
+          podeAnalisarCorrecao,
+          dia,
+          entReal,
+          saiReal,
+          horasReal,
+        });
+      }
     }
     return out;
   // eslint-disable-next-line react-hooks/exhaustive-deps -- obterEntradaSaidaDiaCal helper local do render
   }, [
     filtroTimeAtivo,
     filtroStaffAtivo,
-    relatorioDia,
+    current,
     prestadoresRelatorioTime,
+    times,
     rawGradeRows,
     turnosHorarioPrestador,
-    pontoRelatorioPorFid,
+    pontoRelatorioPorChave,
     gestaoRelatorioPorChave,
+    ctOverlayPorDiaComComentario,
     podeGerirPresencaStaff,
     podeAnalisarCorrecaoPresencaStaff,
     podeJustificarPresencaStaff,
@@ -2992,18 +3270,14 @@ export default function RhCalendarioPage() {
                 disabled={!podeRetrocederCarrossel}
                 style={getCarouselBtnNavStyle(t, !podeRetrocederCarrossel)}
                 aria-label={
-                  abaPrincipal === "relatorio"
-                    ? podeRetrocederCarrossel
-                      ? "Dia anterior"
-                      : "Primeiro dia disponível"
-                    : podeRetrocederCarrossel
-                      ? "Mês anterior"
-                      : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
+                  podeRetrocederCarrossel
+                    ? "Mês anterior"
+                    : `Primeiro mês disponível: ${MONTHS[CALENDARIO_MES0_MIN]} de ${CALENDARIO_ANO_MIN}`
                 }
               >
                 <ChevronLeft size={14} aria-hidden="true" />
               </button>
-              <span style={getCarouselPeriodLabelStyle(t, { minWidth: abaPrincipal === "relatorio" ? 220 : 180 })}>
+              <span style={getCarouselPeriodLabelStyle(t, { minWidth: 180 })}>
                 {headerTitle()}
               </span>
               <button
@@ -3012,13 +3286,9 @@ export default function RhCalendarioPage() {
                 disabled={!podeAvancarCarrossel}
                 style={getCarouselBtnNavStyle(t, !podeAvancarCarrossel)}
                 aria-label={
-                  abaPrincipal === "relatorio"
-                    ? podeAvancarCarrossel
-                      ? "Próximo dia"
-                      : "Último dia disponível"
-                    : podeAvancarCarrossel
-                      ? "Próximo mês"
-                      : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
+                  podeAvancarCarrossel
+                    ? "Próximo mês"
+                    : `Último mês disponível: ${MONTHS[mesMaximoCarrosselCalendarioRh().getMonth()]} de ${mesMaximoCarrosselCalendarioRh().getFullYear()}`
                 }
               >
                 <ChevronRight size={14} aria-hidden="true" />
@@ -3370,7 +3640,7 @@ export default function RhCalendarioPage() {
                   onClick={() => setAbaPrincipal("relatorio")}
                   icon={<ClipboardList {...FILTRO_BAR_TAB_ICON_PROPS} />}
                 >
-                  Relatório de Presença
+                  Relatório de Justificativas
                 </FiltroBarTabButton>
               ) : null}
             </div>
@@ -3825,6 +4095,16 @@ export default function RhCalendarioPage() {
                         temCheckOut,
                         statusBase: stBase,
                         gestao: gestaoDia,
+                        fluxoGpShuffler: prestadorTimeAplicaJanelaTurnoCalendario(
+                          pRow?.org_time_id
+                            ? times.find((x) => x.id === pRow.org_time_id)?.nome
+                            : pRow?.org_gerencia_id
+                              ? times.find((x) => x.id === pRow.org_gerencia_id && x.id === x.gerencia_id)
+                                  ?.nome
+                              : null,
+                          areaKeyGradeDia(rawGradeRows, fid, iso),
+                        ),
+                        ctLiderancaOverlay: ctOverlayPorDiaComComentario.has(chavePresencaGestao(fid, iso)),
                       };
                       const st = resolverStatusPresencaLinha(paramsPresencaLinha);
                       const acoesLinha = resolverAcoesPresencaLinha(paramsPresencaLinha);
@@ -3840,16 +4120,24 @@ export default function RhCalendarioPage() {
                       const correcaoSaidaAlterada = correcao ? presencaCorrecaoCampoAlterado("saida", correcao) : false;
                       const entAprovada = presencaCorrecaoCampoAprovado(correcao, "entrada");
                       const saiAprovada = presencaCorrecaoCampoAprovado(correcao, "saida");
-                      const entRealExib = entAprovada && correcao ? correcao.entradaCorrigida : entReal;
-                      const saiRealExib = saiAprovada && correcao ? correcao.saidaCorrigida : saiReal;
+                      const chaveOverlay = chavePresencaGestao(fid, iso);
+                      const overlayCt = ctOverlayPorDiaComComentario.get(chaveOverlay);
+                      let entRealExib = entReal;
+                      let saiRealExib = saiReal;
+                      if (overlayCt) {
+                        if (overlayCt.entrada !== "—") entRealExib = overlayCt.entrada;
+                        if (overlayCt.saida !== "—") saiRealExib = overlayCt.saida;
+                      }
+                      if (entAprovada && correcao) entRealExib = correcao.entradaCorrigida;
+                      if (saiAprovada && correcao) saiRealExib = correcao.saidaCorrigida;
                       const horasRealExib =
-                        (entAprovada || saiAprovada) && correcao
+                        overlayCt || entAprovada || saiAprovada
                           ? formatoDuracaoFmtHorasTotal(entRealExib, saiRealExib)
                           : horasReal;
                       const entRealDesvio = presencaDesvioRelogioMaior5Min(entEsc, entRealExib);
                       const saiRealDesvio = presencaDesvioRelogioMaior5Min(saiEsc, saiRealExib);
                       const horasRealDesvio =
-                        (entAprovada || saiAprovada) && correcao
+                        overlayCt || ((entAprovada || saiAprovada) && correcao)
                           ? (() => {
                               const escMin = duracaoMinutosRelogioHHMM(entEsc, saiEsc);
                               const realMin = duracaoMinutosRelogioHHMM(entRealExib, saiRealExib);
@@ -3933,6 +4221,7 @@ export default function RhCalendarioPage() {
                               position: "relative",
                               ...(entRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
+                            title={overlayCt?.comentario || undefined}
                           >
                             {entRealExib}
                             {exibirIndicadorMedico && justificativaMedico ? (
@@ -3970,6 +4259,7 @@ export default function RhCalendarioPage() {
                               position: "relative",
                               ...(saiRealDesvio ? { color: COR_DESVIO_PONTO } : {}),
                             }}
+                            title={overlayCt?.comentario || undefined}
                           >
                             {saiRealExib}
                             {exibirIndicadorMedico && justificativaMedico ? (
@@ -4009,7 +4299,22 @@ export default function RhCalendarioPage() {
                           >
                             {horasRealExib}
                           </td>
-                          <td style={dataTable.tdCenter}>{st}</td>
+                          <td style={dataTable.tdCenter}>
+                            <div>{st}</div>
+                            {overlayCt?.comentario ? (
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 500,
+                                  color: t.textMuted,
+                                  marginTop: 2,
+                                  lineHeight: 1.2,
+                                }}
+                              >
+                                {overlayCt.comentario}
+                              </div>
+                            ) : null}
+                          </td>
                           <td style={{ ...dataTable.tdCenter, verticalAlign: "middle" }}>
                             <div style={acoesCellInner}>
                               {acoesLinha.mostrarTravessaoAcoes || semAcaoPresencaVisivel ? (
@@ -4333,6 +4638,40 @@ export default function RhCalendarioPage() {
         onSalvar={salvarJustificativaPresenca}
         t={t}
         brand={brand}
+        validarJanela={(entrada, saida) => {
+          if (!presencaJustificarAlvo) return null;
+          const fid = presencaJustificarAlvo.funcionarioId;
+          const diaIso = toISO(presencaJustificarAlvo.dia);
+          const pRow = prestadorPorId.get(fid);
+          const timeNome =
+            (pRow?.org_time_id
+              ? times.find((x) => x.id === pRow.org_time_id)?.nome
+              : pRow?.org_gerencia_id
+                ? times.find((x) => x.id === pRow.org_gerencia_id && x.id === x.gerencia_id)?.nome
+                : null) ?? "";
+          const areaKey = areaKeyGradeDia(rawGradeRows, fid, diaIso);
+          if (!prestadorTimeAplicaJanelaTurnoCalendario(timeNome, areaKey)) return null;
+          const valorG = primeiroValorGradeDia(rawGradeRows, fid, diaIso);
+          const esc = obterEntradaSaidaDiaCal(
+            pRow,
+            valorG,
+            turnosHorarioPrestador(pRow),
+            fid,
+            diaIso,
+          );
+          const ha = haEfetivoPorDia.get(chavePresencaGestao(fid, diaIso)) ?? null;
+          const turnoEfetivo = resolverTurnoEfetivoHhmm(esc?.entrada ?? "—", esc?.saida ?? "—", ha);
+          if (!turnoEfetivo) return MSG_CHECKIN_FORA_JANELA;
+          const entTurno = turnoEfetivo.entrada;
+          const saiTurno = turnoEfetivo.saida;
+          if (!horarioJustificativaDentroJanela("entrada", entrada, diaIso, entTurno, saiTurno)) {
+            return MSG_CHECKIN_FORA_JANELA;
+          }
+          if (!horarioJustificativaDentroJanela("saida", saida, diaIso, entTurno, saiTurno)) {
+            return MSG_CHECKOUT_FORA_JANELA;
+          }
+          return null;
+        }}
       />
 
       {pontoSucessoModal ? (

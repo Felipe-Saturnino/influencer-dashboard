@@ -1290,7 +1290,7 @@ Quando a UI pode renderizar **dezenas/centenas de linhas** (ou linha × muitas c
 | Grade editável densa (Escala Diária) | Paginar **linhas** na vista; save/sugestão/aprovação continuam sobre **todas** as linhas; cachear opções de `<select>` por tipo de turno (não alocar array novo por célula) |
 | Virtualização (`react-virtual` etc.) | Só com pedido explícito — risco alto em tabela editável (foco, sticky, campos desmontados) |
 
-Constante canónica: **`TABELA_PAGE_SIZE` = 20** (`lib/tablePagination.ts`); aliases de domínio (`TABELA_PAGE_SIZE_PRESTADORES`, `_ESCALA`, `_INCIDENTES`, `_ESTOQUE`, …) apontam para o mesmo valor. Hook `useTabelaPaginacao` / wrapper `TabelaComPaginacao`. **Exceção:** Calendário → Controle de Presença e Relatório de Presença **não** paginam.
+Constante canónica: **`TABELA_PAGE_SIZE` = 20** (`lib/tablePagination.ts`); aliases de domínio (`TABELA_PAGE_SIZE_PRESTADORES`, `_ESCALA`, `_INCIDENTES`, `_ESTOQUE`, …) apontam para o mesmo valor. Hook `useTabelaPaginacao` / wrapper `TabelaComPaginacao`. **Exceção:** Calendário → Controle de Presença e Relatório de Justificativas **não** paginam.
 
 **Referências:** Fase 7 (fetch) — Ordem de Saída, Controle de Turno, Performance Hub, Headcount, Portais. Fase 8 (DOM) — Gestão de Prestadores, Gestão de Escala.
 

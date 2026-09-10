@@ -43,6 +43,8 @@ type Props = {
   onSalvar: (payload: PresencaJustificativaSubmitPayload) => Promise<boolean>;
   t: Theme;
   brand: ReturnType<typeof useDashboardBrand>;
+  /** GP/Shuffler: valida HH:MM de esquecimento/outro na janela do turno. Retorna mensagem ou null. */
+  validarJanela?: (entrada: string, saida: string) => string | null;
 };
 
 const MONTHS = [
@@ -96,7 +98,15 @@ function validarDatasAtestado(inicio: string, fim: string): string | null {
   return null;
 }
 
-export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalvar, t, brand }: Props) {
+export function ModalJustificarPresencaCalendario({
+  open,
+  alvo,
+  onClose,
+  onSalvar,
+  t,
+  brand,
+  validarJanela,
+}: Props) {
   const [motivo, setMotivo] = useState<PresencaJustificativaMotivo | "">("");
   const [atestadoInicio, setAtestadoInicio] = useState("");
   const [atestadoFim, setAtestadoFim] = useState("");
@@ -178,6 +188,11 @@ export function ModalJustificarPresencaCalendario({ open, alvo, onClose, onSalva
       }
       if (!validarHorarioPresencaHHMM(sai)) {
         setErr("Informe a correção de saída no formato HH:MM.");
+        return;
+      }
+      const errJanela = validarJanela?.(ent, sai) ?? null;
+      if (errJanela) {
+        setErr(errJanela);
         return;
       }
       setSalvando(true);

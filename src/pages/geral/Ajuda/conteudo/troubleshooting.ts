@@ -1689,12 +1689,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Posso fazer Check-in em uma Folga?",
         texto:
-          "Sim. Check-in e Check-out ficam disponíveis independentemente da Situação do dia para coberturas e plantões emergenciais. O dia continua identificado como **Folga**, e os horários realizados ficam pendentes de aprovação do gestor.",
+          "Na maioria dos times, sim — Check-in e Check-out ficam disponíveis independentemente da Situação do dia para coberturas e plantões emergenciais. O dia continua identificado como **Folga**, e os horários realizados ficam pendentes de aprovação do gestor. **Game Presenter** e **Shuffler** não registram em Folga/Venda: só em dia trabalhado e dentro da janela de 15 minutos do turno.",
       },
       {
-        subtitulo: "Não vejo a aba Relatório de Presença?",
+        subtitulo: "Não vejo a aba Relatório de Justificativas?",
         texto:
-          "A aba **Relatório de Presença** só aparece para quem tem permissão de **Editar: Sim** no Calendário (Gestão de Usuários → Permissões → linha Calendário → coluna Editar). **Editar: Próprios** não libera a aba. Administradores vêem sempre. Sem **Editar: Sim**, usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
+          "A aba **Relatório de Justificativas** aparece para Administrador, quem tem **Criar: Sim** no Calendário, ou **Ver: Sim** e **Editar: Sim** juntos. Com **Meu Calendário** ativo a aba fica oculta. **Ver/Editar: Próprios** não libera a aba. Sem acesso usam-se só **Compromissos** e **Controle de Presença**. Após alterar permissões, faça logout e login (ou atualize a sessão) para o menu refletir a mudança.",
       },
       {
         subtitulo: "Não vejo o botão Adicionar à agenda?",
@@ -2062,9 +2062,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O menu combina a matriz de permissões do perfil simulado com o escopo (operadora ou área). Confirme a operadora/área escolhida no modal e as marcações em Gestão de Usuários (Permissões e abas de escopo). Algumas páginas de plataforma ficam ocultas de propósito na simulação.",
       },
       {
-        subtitulo: "No Calendário ainda vejo Relatório de Presença e filtros de Time/Staff?",
+        subtitulo: "No Calendário ainda vejo Relatório de Justificativas e filtros de Time/Staff?",
         texto:
-          "Comportamento esperado só para perfis com permissão de Editar Sim ou Ver Sim no Calendário. Ao simular um Game Presenter (ou outro perfil com Ver Próprios), a página deve mostrar só Compromissos e Controle de Presença daquela pessoa, sem Relatório nem filtros de gestão. Encerrar a visualização e iniciar de novo. Se continuar com a visão de administrador, recarregue a página; se persistir, entre em contato com o suporte.",
+          "Comportamento esperado só para perfis com Criar Sim, ou Ver Sim + Editar Sim, ou Administrador no Calendário. Ao simular um Game Presenter (ou outro perfil com Ver Próprios), a página deve mostrar só Compromissos e Controle de Presença daquela pessoa, sem Relatório nem filtros de gestão. Encerrar a visualização e iniciar de novo. Se continuar com a visão de administrador, recarregue a página; se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Na Galeria de Fotos ainda vejo fotos de outros colaboradores?",
