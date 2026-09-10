@@ -63,7 +63,7 @@ Componente partilhado: `escala/components/MesCarrosselPeriodo.tsx` — carrossel
 |------|---------|
 | **Move entre estúdios** | **Só na aba Rotação do CT** (override do dia/turno). Escala Estúdio continua “quem trabalha”; Staff continua cadastro permanente. |
 | **Prévia do mês** | Ao **aprovar / gerar** a Escala Estúdio do mês, pode materializar prévias de **todos os dias** (turno × estúdio) para ajuste fino depois. |
-| **Check-in** | Exibir **Chegou** / **Não chegou** (fonte: ponto do Calendário / Escala do Turno no CT). |
+| **Check-in** | Exibir **Chegou** / **Não chegou** (fonte: **Escala do Turno** no CT — Presente / Saída Antecipada / Hora Adicional = Chegou; Pendente = Não chegou). |
 | **Chegada no meio do turno** | Ver § Reingresso — a rotação já publicada continua; o GP entra a partir de um **slot futuro**, sem reescrever o passado. |
 | **Protocolo 20 min / SL** | Toggle **Rotação de 20min** / **Rotação de 30min** e inclusão de liderança (nunca «emergência» na UI). |
 | **Headcount ideal** | **Não** fixar CDA 8 / Blaze 7 / Sports Club 6. Ideal = mínimo de GPs para cobrir **todas** as mesas do estúdio com **≤ 2h contínuas** em mesa antes do Break. |

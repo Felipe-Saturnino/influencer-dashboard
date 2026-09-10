@@ -23,6 +23,7 @@ import {
   ROTACAO_SHUFFLER_MESA_COR,
   ROTACAO_SHUFFLER_MESA_LABEL,
   ROTACAO_SHUFFLER_MAX_TODOS_SEGUIDOS,
+  anexarChegadaRotacaoDePresencaCt,
   corMesaRotacao,
   slotDentroJanelaHorarioRotacao,
   tempoMesaContinuaQueExigeAviso,
@@ -580,6 +581,34 @@ describe("aviso de mesa contínua ao publicar", () => {
     expect(mensagemAvisoMesaContinuaPublicar("2 horas e 20 min")).toBe(
       "Nesta rotação temos Prestadores realizando 2 horas e 20 min tempo direto de mesa, quer seguir com esta rotação?",
     );
+  });
+});
+
+describe("chegada Rotação via Escala do Turno", () => {
+  it("marca Presente/HA/Saída Antecipada como chegou e Pendente como não", () => {
+    const gps = [gpFake("a"), gpFake("b"), gpFake("c"), gpFake("d")];
+    const out = anexarChegadaRotacaoDePresencaCt(
+      gps,
+      [
+        { id: "a", status: "presente", saida: "" },
+        { id: "b", status: "pendente", saida: "" },
+        { id: "c", status: "saida_antecipada", saida: "16:00" },
+        { id: "d", status: "hora_adicional", saida: "22:00" },
+      ],
+    );
+    expect(out.find((p) => p.funcionarioId === "a")?.chegou).toBe(true);
+    expect(out.find((p) => p.funcionarioId === "b")?.chegou).toBe(false);
+    expect(out.find((p) => p.funcionarioId === "c")?.chegou).toBe(true);
+    expect(out.find((p) => p.funcionarioId === "d")?.chegou).toBe(true);
+  });
+
+  it("usa Hora Adicional do turno anterior quando não há linha no turno atual", () => {
+    const out = anexarChegadaRotacaoDePresencaCt(
+      [gpFake("ha1")],
+      [],
+      [{ id: "ha1", status: "hora_adicional", saida: "14:00" }],
+    );
+    expect(out[0]?.chegou).toBe(true);
   });
 });
 

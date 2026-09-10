@@ -511,6 +511,43 @@ const STATUS_POOL_TURNO_ATUAL = new Set([
   "hora_adicional",
 ]);
 
+/** Status da Escala do Turno que contam como «Chegou» na Rotação. */
+const STATUS_CHEGOU_ROTACAO = new Set([
+  "presente",
+  "saida_antecipada",
+  "hora_adicional",
+]);
+
+/**
+ * Chegou / Não chegou a partir do status da Escala do Turno (mesma fonte da aba CT).
+ * Evita `rh_calendario_ponto_registros_dia_lote`, que filtra pelo Organograma e
+ * faz a liderança ver todos como «Não chegou» mesmo com Presente na Escala do Turno.
+ */
+export function statusPresencaIndicaChegadaRotacao(status: string): boolean {
+  return STATUS_CHEGOU_ROTACAO.has(status);
+}
+
+export function anexarChegadaRotacaoDePresencaCt(
+  pessoas: RotacaoGpPool[],
+  presencaAtual: PresencaRotacaoCt[],
+  presencaAnterior: PresencaRotacaoCt[] = [],
+): RotacaoGpPool[] {
+  if (!pessoas.length) return pessoas;
+  const byAtual = new Map(presencaAtual.map((r) => [r.id, r]));
+  const byAnt = new Map(presencaAnterior.map((r) => [r.id, r]));
+  return pessoas.map((p) => {
+    const atual = byAtual.get(p.funcionarioId);
+    if (atual) {
+      if (STATUS_CHEGOU_ROTACAO.has(atual.status)) return { ...p, chegou: true };
+      if (atual.status === "pendente" || atual.status === "falta") return { ...p, chegou: false };
+      return { ...p, chegou: null };
+    }
+    const ant = byAnt.get(p.funcionarioId);
+    if (ant?.status === "hora_adicional") return { ...p, chegou: true };
+    return { ...p, chegou: null };
+  });
+}
+
 /**
  * Pool da Rotação (CT): Presente / Pendente / Saída Antecipada / Hora Adicional do turno atual;
  * Hora Adicional do turno anterior (mesmo estúdio) também entra até a saída registrada (células ≥ saída = X).
@@ -1572,7 +1609,7 @@ export async function limparAlocacaoRotacao(opts: {
   return { ok: true };
 }
 
-/** Enriquece o pool com Chegou / Não chegou (ponto do dia). */
+/** @deprecated Preferir {@link anexarChegadaRotacaoDePresencaCt} (Escala do Turno). */
 export async function anexarCheckinRotacao(
   diaIso: string,
   pessoas: RotacaoGpPool[],

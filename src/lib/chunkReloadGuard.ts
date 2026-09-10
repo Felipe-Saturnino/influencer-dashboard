@@ -74,13 +74,30 @@ function messageMatchesChunkFailure(msg: string, allowSafariLoadFailed: boolean)
 }
 
 /**
- * Safari no ErrorBoundary: `TypeError` vazio ou genérico após lazy load — quase sempre chunk/HTML em cache.
+ * Após `import()` falhar ou devolver módulo sem `default`, o React/Safari costuma
+ * relançar TypeError/Error de propriedade — não a mensagem de chunk. Sem isso o
+ * ErrorBoundary mostra «Erro ao carregar a página» em vez de forçar recarga.
+ */
+function messageMatchesSafariLazyCascade(msg: string): boolean {
+  if (!msg) return false;
+  if (msg.includes("element type is invalid")) return true;
+  if (msg.includes("reading 'default'") || msg.includes('reading "default"')) return true;
+  if (msg.includes(".default") && (msg.includes("undefined is not an object") || msg.includes("null is not an object"))) {
+    return true;
+  }
+  if (msg.includes("evaluating") && msg.includes(".default")) return true;
+  return false;
+}
+
+/**
+ * Safari no ErrorBoundary: `TypeError` vazio ou cascata pós-lazy — quase sempre chunk/HTML em cache.
  */
 export function isLikelySafariModuleLoadFailure(err: unknown): boolean {
   if (!isSafariWebKit() && !isIOSDevice()) return false;
   if (isChunkLoadError(err)) return true;
-  if (!(err instanceof TypeError)) return false;
   const msg = normalizeErrorMessage(err);
+  if (messageMatchesSafariLazyCascade(msg)) return true;
+  if (!(err instanceof TypeError)) return false;
   if (!msg || msg === "typeerror") return true;
   return messageMatchesChunkFailure(msg, true);
 }

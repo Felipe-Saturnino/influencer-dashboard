@@ -12,7 +12,7 @@ import { getDataTableStyle, getDataTableWrapStyle } from "../../../lib/dataTable
 import { labelHorarioTurnoStaffPorValor } from "../../../lib/rhStaffHorarioTurno";
 import {
   alocarEstudioRotacao,
-  anexarCheckinRotacao,
+  anexarChegadaRotacaoDePresencaCt,
   aplicarLimitesDisponibilidadeNaMatrixRotacao,
   carregarContextoRotacaoDia,
   carregarHorarioTurnoRotacaoShuffler,
@@ -234,7 +234,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
       });
 
       const todos = [...gpsFiltrados, ...res.data.liderancas];
-      const comCheckin = await anexarCheckinRotacao(diaIso, todos);
+      const comCheckin = anexarChegadaRotacaoDePresencaCt(todos, presencaAtual, presencaAnt);
       if (gen !== loadGen.current) return;
       const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
       const limById = new Map(
@@ -324,8 +324,11 @@ export function AbaRotacao({ diaIso, turno }: Props) {
         presencaAnterior: presencaAnt,
       });
 
-      const comCheckin = await anexarCheckinRotacao(diaIso, gpsFiltrados);
-      if (gen !== loadGen.current) return;
+      const comCheckin = anexarChegadaRotacaoDePresencaCt(
+        gpsFiltrados,
+        presencaAtual,
+        presencaAnt,
+      );
       const byId = new Map(comCheckin.map((p) => [p.funcionarioId, p]));
       const limById = new Map(
         gpsFiltrados

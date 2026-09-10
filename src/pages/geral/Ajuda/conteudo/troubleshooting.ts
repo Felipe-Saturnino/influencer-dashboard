@@ -1799,7 +1799,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O pool da Rotação está vazio no Controle de Turno?",
         texto:
-          "A aba **Rotação** mostra um bloco por estúdio. Cada pool usa os Game Presenters da **Escala Estúdio** **aprovada** no dia e turno, com **Chegou** / **Não chegou** do check-in do Calendário. Sem aprovação do mês ou sem GPs naquele turno, o pool do bloco fica vazio.",
+          "A aba **Rotação** mostra um bloco por estúdio. Cada pool usa os Game Presenters da **Escala Estúdio** **aprovada** no dia e turno, com **Chegou** / **Não chegou** alinhados à **Escala do Turno** (Presente, Saída Antecipada e Hora Adicional = Chegou; Pendente = Não chegou). Sem aprovação do mês ou sem GPs naquele turno, o pool do bloco fica vazio.",
       },
       {
         subtitulo: "Não consigo salvar Notificações ou o Relatório?",
@@ -1815,6 +1815,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "A coluna Aprovado continua Não depois de Registrar?",
         texto:
           "É esperado: Falta, Saída Antecipada, Hora Adicional e Registrar Horário **não** marcam **Aprovado**. Use a ação **Aprovar** (ícone de check) quando Entrada e Saída estiverem preenchidas **ou** depois de registrar **Falta**. Sem horários e sem Falta, o botão Aprovar não aparece.",
+      },
+      {
+        subtitulo: "Na Rotação todos aparecem como Não chegou, mas na Escala do Turno estão Presente?",
+        texto:
+          "Os badges **Chegou** / **Não chegou** da Rotação seguem o status da **Escala do Turno** do mesmo dia e turno. Atualize a página (ou troque de aba e volte) para recarregar o pool. Se na Escala do Turno a pessoa estiver **Presente** e na Rotação continuar **Não chegou**, entre em contato com o suporte.",
       },
       {
         subtitulo: "Falta alguém no pool da Rotação no Controle de Turno?",
