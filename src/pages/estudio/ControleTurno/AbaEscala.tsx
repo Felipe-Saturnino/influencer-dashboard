@@ -23,9 +23,13 @@ import {
   MSG_ERRO_CT,
   MSG_ERRO_CT_SALVAR,
   getCurrentUserNome,
+  listEstudiosHorariosTurnoCt,
   listHistoricoPresenca,
   listPresencaDiaTurno,
+  prefillRegistrarHorarioCt,
+  resolverHorarioPrevistoPresencaCt,
   upsertPresencaRegistro,
+  type CtEstudioHorarioTurno,
   type CtPresencaRegistroRow,
   type CtPresencaRow,
   type CtPresencaStatus,
@@ -191,6 +195,7 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
     col: "nome",
     dir: "asc",
   });
+  const [estudiosHorario, setEstudiosHorario] = useState<CtEstudioHorarioTurno[]>([]);
 
   const loadSeq = useRef(0);
   const rowHoverBg = t.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)";
@@ -200,9 +205,13 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
     setLoading(true);
     setErroPagina("");
     try {
-      const lista = await listPresencaDiaTurno(diaIso, turno);
+      const [lista, estudios] = await Promise.all([
+        listPresencaDiaTurno(diaIso, turno),
+        listEstudiosHorariosTurnoCt(),
+      ]);
       if (seq !== loadSeq.current) return;
       setRows(lista);
+      setEstudiosHorario(estudios);
     } catch (e) {
       if (seq !== loadSeq.current) return;
       console.error(e);
@@ -220,6 +229,29 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
   useEffect(() => {
     setFiltroTime(null);
   }, [diaIso, turno]);
+
+  function aplicarCamposHorarioAoEscolherTipo(
+    nextTipo: CtPresencaTipo | "",
+    row: CtPresencaRow,
+  ) {
+    if (nextTipo === "registrar_horario") {
+      const previsto = resolverHorarioPrevistoPresencaCt({
+        turno,
+        estudioLabel: row.estudio,
+        estudios: estudiosHorario,
+      });
+      const filled = prefillRegistrarHorarioCt({
+        entradaAtual: row.entrada,
+        saidaAtual: row.saida,
+        previsto,
+      });
+      setEntrada(filled.entrada);
+      setSaida(filled.saida);
+      return;
+    }
+    setEntrada(row.entrada);
+    setSaida(row.saida);
+  }
 
   const filtradas = useMemo(() => {
     const filtered = rows.filter((r) => {
@@ -608,7 +640,9 @@ export function AbaEscala({ diaIso, turno, busca }: Props) {
                 value={tipo}
                 onChange={(e) => {
                   setErroModal("");
-                  setTipo(e.target.value as CtPresencaTipo | "");
+                  const next = e.target.value as CtPresencaTipo | "";
+                  setTipo(next);
+                  if (alvoRegistrar) aplicarCamposHorarioAoEscolherTipo(next, alvoRegistrar);
                 }}
                 style={inputStyle(t)}
               >

@@ -1021,9 +1021,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Relatório de Turno",
         definicao:
-          "Aba do Controle de Turno com cards por Manhã, Tarde e Noite (Não iniciado, Rascunho ou Publicado). Registra SOS, Figurino, Equipamentos, checklist de manutenção e comentários gerais do turno.",
+          "Aba do Controle de Turno com cards por Manhã, Tarde e Noite (Não iniciado, Rascunho ou Publicado). Os indicadores Escalados, Presentes, Atrasados e Faltas vêm da Escala do Turno do dia. Também registra SOS, Figurino, Equipamentos, checklist de manutenção e comentários gerais.",
         nota:
-          "Para publicar, todos os horários dos prestadores precisam estar aprovados na aba Escala do Turno.",
+          "Para publicar, todos os horários dos prestadores precisam estar aprovados na aba Escala do Turno. Atrasados: entrada realizada mais de 5 minutos após o horário previsto do estúdio.",
         referencia: "Controle de Turno",
       },
       {

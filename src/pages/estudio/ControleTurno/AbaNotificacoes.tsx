@@ -56,6 +56,7 @@ import {
   type CtMesaOpt,
   type CtMotivoAusencia,
   type CtPrestadorOpt,
+  type CtTipoAusenciaPessoal,
 } from "../../../lib/escalaControleTurno";
 import { formatDiaBr, formatDiaCurto } from "./helpers";
 
@@ -71,6 +72,20 @@ const RECOMENDACAO_LABEL: Record<CtFeedbackRecomendacao, string> = {
   notif_suspensao: "Notificação de Suspensão da Execução Contratual",
   persistencia: "Persistência do Descumprimento",
 };
+
+const TIPO_AUSENCIA_PESSOAL_LABEL: Record<CtTipoAusenciaPessoal, string> = {
+  programada: "Programada (aviso com 24h)",
+  nao_programada: "Não Programada (aviso com menos de 24h)",
+};
+
+function motivoAusLabel(m: CtMotivoAusencia): string {
+  return m === "medico" ? "Médico" : "Pessoal";
+}
+
+function tipoAusenciaLabel(t: CtTipoAusenciaPessoal | null | undefined): string {
+  if (!t) return "—";
+  return TIPO_AUSENCIA_PESSOAL_LABEL[t] ?? "—";
+}
 
 const MANUT_TIPO_LABEL: Record<CtManutTipo, string> = {
   ti: "TI",
@@ -93,10 +108,6 @@ type MesaDraft = {
   naoReaberta: boolean;
   observacao: string;
 };
-
-function motivoAusLabel(m: CtMotivoAusencia): string {
-  return m === "medico" ? "Médico" : "Pessoal";
-}
 
 type SortFechCol = "mesa" | "horaFechamento" | "horaReabertura" | "status" | "lideranca";
 type SortAusCol = "prestador" | "motivo" | "inicio" | "fim" | "lideranca";
@@ -620,6 +631,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     timeFiltro: "" as "" | "gp" | "shuffler",
     prestadorId: "",
     motivo: "" as "" | CtMotivoAusencia,
+    tipoAusencia: "" as "" | CtTipoAusenciaPessoal,
     inicio: "",
     fim: "",
     fimNaoInformado: false,
@@ -759,6 +771,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         busca,
         a.prestador_nome,
         motivoAusLabel(a.motivo),
+        tipoAusenciaLabel(a.tipo_ausencia),
         a.lideranca_nome,
         a.observacao,
       ),
@@ -1018,6 +1031,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       timeFiltro: "",
       prestadorId: "",
       motivo: "",
+      tipoAusencia: "",
       inicio: "",
       fim: "",
       fimNaoInformado: false,
@@ -1034,6 +1048,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       timeFiltro: grupoTimePrestador(p?.time ?? "") || "gp",
       prestadorId: row.prestador_id,
       motivo: row.motivo,
+      tipoAusencia: row.tipo_ausencia ?? "",
       inicio: row.inicio,
       fim: row.fim_nao_informado ? "" : row.fim ?? "",
       fimNaoInformado: row.fim_nao_informado,
@@ -1056,6 +1071,10 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
       setAusErro("Selecione o Motivo.");
       return;
     }
+    if (ausForm.motivo === "pessoal" && !ausForm.tipoAusencia) {
+      setAusErro("Selecione o Tipo de Ausência.");
+      return;
+    }
     if (!ausForm.inicio) {
       setAusErro("Informe o Início da Ausência.");
       return;
@@ -1076,11 +1095,13 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
     setSalvando(true);
     setAusErro("");
     try {
+      const tipoAusencia = ausForm.motivo === "pessoal" ? ausForm.tipoAusencia || null : null;
       if (ausEditId) {
         await updateAusencia({
           id: ausEditId,
           prestadorId: ausForm.prestadorId,
           motivo: ausForm.motivo,
+          tipoAusencia,
           inicio: ausForm.inicio,
           fim: ausForm.fimNaoInformado ? null : ausForm.fim,
           fimNaoInformado: ausForm.fimNaoInformado,
@@ -1090,6 +1111,7 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
         await createAusencia({
           prestadorId: ausForm.prestadorId,
           motivo: ausForm.motivo,
+          tipoAusencia,
           inicio: ausForm.inicio,
           fim: ausForm.fimNaoInformado ? null : ausForm.fim,
           fimNaoInformado: ausForm.fimNaoInformado,
@@ -2042,9 +2064,14 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 id="aus-motivo"
                 aria-label="Motivo"
                 value={ausForm.motivo}
-                onChange={(e) =>
-                  setAusForm((f) => ({ ...f, motivo: e.target.value as "" | CtMotivoAusencia }))
-                }
+                onChange={(e) => {
+                  const motivo = e.target.value as "" | CtMotivoAusencia;
+                  setAusForm((f) => ({
+                    ...f,
+                    motivo,
+                    tipoAusencia: motivo === "pessoal" ? f.tipoAusencia : "",
+                  }));
+                }}
                 style={inputStyle(t)}
               >
                 <option value="">Selecionar...</option>
@@ -2052,6 +2079,30 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
                 <option value="pessoal">Pessoal</option>
               </select>
             </div>
+            {ausForm.motivo === "pessoal" ? (
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelCampoStyle(t)} htmlFor="aus-tipo">
+                  Tipo de Ausência
+                  <CampoObrigatorioMark />
+                </label>
+                <select
+                  id="aus-tipo"
+                  aria-label="Tipo de Ausência"
+                  value={ausForm.tipoAusencia}
+                  onChange={(e) =>
+                    setAusForm((f) => ({
+                      ...f,
+                      tipoAusencia: e.target.value as "" | CtTipoAusenciaPessoal,
+                    }))
+                  }
+                  style={inputStyle(t)}
+                >
+                  <option value="">Selecionar...</option>
+                  <option value="programada">{TIPO_AUSENCIA_PESSOAL_LABEL.programada}</option>
+                  <option value="nao_programada">{TIPO_AUSENCIA_PESSOAL_LABEL.nao_programada}</option>
+                </select>
+              </div>
+            ) : null}
             <div className="app-grid-2" style={{ gap: 12, marginBottom: 14 }}>
               <div>
                 <label style={labelCampoStyle(t)} htmlFor="aus-inicio">
@@ -2158,6 +2209,11 @@ export default function AbaNotificacoes({ diaIso, busca }: AbaNotificacoesProps)
             <div className="app-grid-2" style={{ gap: 8 }}>
               <CampoDetalhe label="Prestador">{verAusencia.prestador_nome}</CampoDetalhe>
               <CampoDetalhe label="Motivo">{motivoAusLabel(verAusencia.motivo)}</CampoDetalhe>
+              {verAusencia.motivo === "pessoal" ? (
+                <CampoDetalhe label="Tipo de Ausência">
+                  {tipoAusenciaLabel(verAusencia.tipo_ausencia)}
+                </CampoDetalhe>
+              ) : null}
               <CampoDetalhe label="Início da Ausência">{formatDiaBr(verAusencia.inicio)}</CampoDetalhe>
               <CampoDetalhe label="Fim da Ausência">
                 {verAusencia.fim_nao_informado ? "Não informado" : formatDiaBr(verAusencia.fim ?? "")}

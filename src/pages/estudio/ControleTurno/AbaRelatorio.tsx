@@ -23,23 +23,22 @@ import {
   MSG_ERRO_CT,
   MSG_ERRO_CT_SALVAR,
   getCurrentUserNome,
+  listEstudiosHorariosTurnoCt,
+  listPresencaDiaTurno,
   listRelatoriosTurnoCt,
   presencaTurnoTotalmenteAprovada,
+  statsPresencaRelatorioCt,
   upsertRelatorioTurnoCt,
   type CtRelatorioManutencaoJson,
   type CtRelatorioTurnoRow,
+  type CtStatsPresencaBloco,
 } from "../../../lib/escalaControleTurno";
 import { formatDiaBr, labelTurnoCurto } from "./helpers";
 import type { ControleTurnoTurno } from "./types";
 
 type RelStatus = "publicado" | "rascunho" | "nao_iniciado";
 
-type StatsBloco = {
-  escalados: number;
-  presentes: number;
-  atrasados: number;
-  faltas: number;
-};
+type StatsBloco = CtStatsPresencaBloco;
 
 type RelCampos = {
   sos: string;
@@ -307,11 +306,48 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
     setLoading(true);
     setErroPagina("");
     try {
-      const rows = await listRelatoriosTurnoCt(diaIso);
+      const [rows, estudios, presencaManha, presencaTarde, presencaNoite] =
+        await Promise.all([
+          listRelatoriosTurnoCt(diaIso),
+          listEstudiosHorariosTurnoCt(),
+          listPresencaDiaTurno(diaIso, "manha"),
+          listPresencaDiaTurno(diaIso, "tarde"),
+          listPresencaDiaTurno(diaIso, "noite"),
+        ]);
+      const statsPorTurno: Record<
+        ControleTurnoTurno,
+        { gp: StatsBloco; shuffler: StatsBloco }
+      > = {
+        manha: statsPresencaRelatorioCt(presencaManha, {
+          turno: "manha",
+          estudios,
+        }),
+        tarde: statsPresencaRelatorioCt(presencaTarde, {
+          turno: "tarde",
+          estudios,
+        }),
+        noite: statsPresencaRelatorioCt(presencaNoite, {
+          turno: "noite",
+          estudios,
+        }),
+      };
       const next = emptyRelatorios();
+      for (const turno of TURNOS) {
+        const st = statsPorTurno[turno];
+        next[turno] = {
+          ...next[turno],
+          gp: st.gp,
+          shuffler: st.shuffler,
+        };
+      }
       for (const row of rows) {
         if (row.turno === "manha" || row.turno === "tarde" || row.turno === "noite") {
-          next[row.turno] = rowToRelData(row);
+          const st = statsPorTurno[row.turno];
+          next[row.turno] = {
+            ...rowToRelData(row),
+            gp: st.gp,
+            shuffler: st.shuffler,
+          };
         }
       }
       setRelatorios(next);
@@ -407,27 +443,32 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
       const turno = modalTurno;
       const quando = agoraLabel(diaIso);
       try {
-        const saved = await upsertRelatorioTurnoCt({
-          data: diaIso,
-          turno,
-          status: publicar ? "publicado" : "rascunho",
-          relatorNome,
-          sos: form.sos,
-          sosNenhum: form.sosNao,
-          figurino: form.figurino,
-          figurinoNenhum: form.figurinoNao,
-          equipamentos: form.equipamentos,
-          equipamentosNenhum: form.equipamentosNao,
-          manutencao: manutJson,
-          manutencaoResumo: campos.manutencao,
-          comentarios: form.comentarios,
-        });
+        const [saved, estudios, presenca] = await Promise.all([
+          upsertRelatorioTurnoCt({
+            data: diaIso,
+            turno,
+            status: publicar ? "publicado" : "rascunho",
+            relatorNome,
+            sos: form.sos,
+            sosNenhum: form.sosNao,
+            figurino: form.figurino,
+            figurinoNenhum: form.figurinoNao,
+            equipamentos: form.equipamentos,
+            equipamentosNenhum: form.equipamentosNao,
+            manutencao: manutJson,
+            manutencaoResumo: campos.manutencao,
+            comentarios: form.comentarios,
+          }),
+          listEstudiosHorariosTurnoCt(),
+          listPresencaDiaTurno(diaIso, turno),
+        ]);
+        const st = statsPresencaRelatorioCt(presenca, { turno, estudios });
         setRelatorios((prev) => ({
           ...prev,
           [turno]: {
             ...rowToRelData(saved),
-            gp: prev[turno].gp,
-            shuffler: prev[turno].shuffler,
+            gp: st.gp,
+            shuffler: st.shuffler,
           },
         }));
         setHistoricos((prev) => {

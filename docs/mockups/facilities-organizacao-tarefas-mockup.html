@@ -185,6 +185,13 @@
       color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
     }
     .cta-criar:hover { filter: brightness(1.05); }
+    .cta-rascunho {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: var(--radius-tab);
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .cta-rascunho:hover { border-color: color-mix(in srgb, var(--brand-primary) 35%, var(--card-border)); }
 
     .table-wrap {
       overflow-x: auto; border-radius: var(--radius-box);
@@ -241,7 +248,7 @@
     }
     .overlay.open { display: flex; }
     .modal {
-      background: var(--card-bg); border-radius: 16px; width: 100%; max-width: 780px;
+      background: var(--card-bg); border-radius: 16px; width: 100%; max-width: 860px;
       max-height: 90dvh; overflow: hidden; display: flex; flex-direction: column;
       box-shadow: 0 20px 50px rgba(0,0,0,0.25); border: 1px solid var(--card-border);
     }
@@ -268,6 +275,8 @@
     }
     .modal-tabs {
       display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+      position: sticky; top: 0; z-index: 1; background: #fff;
+      padding: 0 0 12px;
     }
     .modal-tab {
       display: inline-flex; align-items: center; gap: 8px;
@@ -285,12 +294,23 @@
 
     .check-block {
       border: 1px solid var(--card-border); border-radius: 12px;
-      padding: 14px; margin-bottom: 14px; background: var(--input-bg);
+      padding: 12px 14px; margin-bottom: 14px; background: var(--input-bg);
     }
+    .check-block-toggle {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      background: none; border: none; padding: 2px 0; cursor: pointer;
+      text-align: left; color: var(--brand-primary); font-family: inherit;
+    }
+    .check-block-chevron {
+      flex-shrink: 0; transition: transform 0.15s ease;
+    }
+    .check-block.is-open .check-block-chevron { transform: rotate(90deg); }
     .check-block-title {
       font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--brand-primary); margin-bottom: 12px;
+      letter-spacing: 0.08em; color: var(--brand-primary);
     }
+    .check-block-body { display: none; margin-top: 12px; }
+    .check-block.is-open .check-block-body { display: block; }
     .check-group-title {
       font-size: 11px; font-weight: 700; color: var(--text-muted);
       text-transform: uppercase; letter-spacing: 0.06em;
@@ -446,6 +466,9 @@
         <ul>
           <li>Carrossel só com <strong>hoje e dias anteriores</strong> — seta direita desabilitada no dia corrente.</li>
           <li>Filtro de Staff lista apenas membros do time <strong>Copa</strong> (agregadora: Todos Staff).</li>
+          <li>Cada bloco do modal começa <strong>recolhido</strong> — clique no título (seta) para expandir. Itens OK / Não OK (observação só em Não OK) + Comentário obrigatório + Arquivos opcional.</li>
+          <li><strong>Publicar</strong> exige pelo menos 1 bloco iniciado e completo. Blocos não iniciados podem ficar vazios. <strong>Salvar Rascunho</strong> grava sem exigir preenchimento.</li>
+          <li>Campo <strong>Troca de bucha</strong> (Copa Dealers) só aparece se o dia selecionado no carrossel for <strong>segunda-feira</strong>.</li>
           <li>Aba Reposição de Materiais: placeholder. Modais Ver / Editar / Analisar: próxima rodada.</li>
         </ul>
       </div>
@@ -561,54 +584,13 @@
         </button>
       </div>
       <div class="modal-body">
-        <div class="form-err" id="errRegistrar" role="alert" aria-live="polite">
-          Preencha o status OK / Não OK de todos os itens. Em Não OK, a observação é obrigatória. O comentário do bloco Banheiros masculinos também é obrigatório. Se o problema persistir, entre em contato com o suporte.
-        </div>
-        <div class="modal-tabs" role="tablist" aria-label="Áreas do checklist">
-          <button type="button" class="modal-tab active" role="tab" id="mtab-dealers" aria-controls="mpanel-dealers" aria-selected="true" data-mpanel="dealers">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Área dos Dealers
-          </button>
-          <button type="button" class="modal-tab" role="tab" id="mtab-floor" aria-controls="mpanel-floor" aria-selected="false" data-mpanel="floor">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-            Game Floor
-          </button>
-        </div>
-
-        <div class="modal-panel active" id="mpanel-dealers" role="tabpanel" aria-labelledby="mtab-dealers">
-          <div class="check-block">
-            <div class="check-block-title">Banheiros masculinos</div>
-            <div id="listaBanheiros"></div>
-            <div class="block-footer-fields">
-              <div>
-                <label class="field-label" for="comentarioBanheiros">Comentário <span class="req" aria-hidden="true">*</span></label>
-                <textarea class="field-input" id="comentarioBanheiros" rows="3" placeholder="Comente o checklist deste bloco..."></textarea>
-              </div>
-              <div>
-                <span class="field-label-muted" id="labelArquivosBanheiros">Arquivos</span>
-                <input type="file" id="inputArquivosBanheiros" accept="image/*,video/*" multiple hidden aria-labelledby="labelArquivosBanheiros" />
-                <div class="upload-zone" id="zonaArquivosBanheiros" tabindex="0" role="group" aria-label="Adicionar imagem ou vídeo — arraste, solte ou cole (Ctrl+V) imagem ou vídeo nesta área">
-                  <button type="button" class="upload-btn" id="btnArquivosBanheiros">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                    Adicionar imagem ou vídeo
-                  </button>
-                  <div class="upload-micro" id="microArquivosBanheiros">ou arraste, solte ou cole (Ctrl+V) aqui</div>
-                </div>
-                <p class="upload-empty" id="emptyArquivosBanheiros">Nenhum arquivo adicionado.</p>
-                <ul class="upload-cards hidden" id="listaArquivosBanheiros"></ul>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-panel" id="mpanel-floor" role="tabpanel" aria-labelledby="mtab-floor">
-          <div class="check-block">
-            <div class="check-block-title">Estúdios</div>
-            <div id="listaEstudios"></div>
-          </div>
-        </div>
+        <div class="form-err" id="errRegistrar" role="alert" aria-live="polite"></div>
+        <div class="modal-tabs" id="modalTabs" role="tablist" aria-label="Áreas do checklist"></div>
+        <div id="modalPanels"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="cta-criar" id="btnSalvarTarefa">Salvar</button>
+        <button type="button" class="cta-rascunho" id="btnRascunhoTarefa">Salvar Rascunho</button>
+        <button type="button" class="cta-criar" id="btnPublicarTarefa">Publicar</button>
       </div>
     </div>
   </div>
@@ -625,38 +607,188 @@
       { id: "juliana", nome: "Juliana Ferreira" },
       { id: "fernanda", nome: "Fernanda Souza" },
     ];
-    const BANHEIROS = [
-      "Lixeiras lavadas",
-      "Vasos sanitários / mictórios lavados e secos",
-      "Bombear desentupidor",
-      "Pias lavadas e secas",
-      "Espelhos limpos sem mancha",
-      "Reposição de papel higiênico",
-      "Reposição de papel de mão",
-      "Reposição de sabonete",
-      "Piso lavado, limpo nos cantos e seco",
-      "Colmeias limpas e sapatos organizados",
-      "Paredes e teto limpos",
-      "Portas limpas",
-    ];
-    const ESTUDIOS = [
-      { grupo: "Geral", itens: [
-        "Chão passado com vassoura mágica",
-        "Bancadas limpas",
-        "Lixo recolhido",
-      ]},
-      { grupo: "Sala Jacob", itens: [
-        "Sala Jacob — prateleiras limpas",
-        "Lixeiras limpas",
-        "Portas limpas",
-      ]},
-      { grupo: "Sala de embaralhar", itens: [
-        "Sala de embaralhar — chão limpo",
-        "Sala de embaralhar — portas limpas",
-      ]},
-      { grupo: "Saída", itens: [
-        "Porta de saída do estúdio limpa",
-      ]},
+    const ICO = {
+      dealers: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+      externas: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
+      escritorios: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>`,
+      floor: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
+      comum: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M2 11v5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H6v-2a2 2 0 0 0-4 0Z"/><path d="M4 18v2"/><path d="M20 18v2"/></svg>`,
+    };
+    const ABAS_CHECKLIST = [
+      {
+        id: "dealers",
+        label: "Área dos Dealers",
+        icon: ICO.dealers,
+        blocos: [
+          {
+            id: "ban-masc",
+            titulo: "Banheiros masculinos",
+            campos: [
+              "Lixeiras",
+              "Vasos sanitários/mictórios",
+              "Pias",
+              "Espelhos",
+              "Piso",
+              "Colmeias e sapatos organizados",
+              "Paredes e teto",
+              "Portas",
+              "Reposição de papel higiênico",
+              "Reposição papel de Mão",
+              "Reposição de sabonete",
+            ],
+          },
+          {
+            id: "ban-fem",
+            titulo: "Banheiros feminino",
+            campos: [
+              "Lixeiras",
+              "Vasos sanitários",
+              "Pias",
+              "Espelhos",
+              "Piso",
+              "Colmeias e sapatos organizados",
+              "Paredes e teto",
+              "Portas",
+              "Reposição de papel higiênico",
+              "Reposição papel de Mão",
+              "Reposição de sabonete",
+            ],
+          },
+          {
+            id: "copa-dealers",
+            titulo: "Copa Dealers",
+            campos: [
+              "Pia e bancada",
+              "Armários e gavetas",
+              "Lixeira",
+              "Armário dos micro-ondas, micro-ondas e forninho",
+              "Mesas e cadeiras",
+              "Geladeiras",
+              "Chão, parede e teto",
+              { label: "Troca de bucha", soSegunda: true },
+            ],
+          },
+          {
+            id: "comum-dealers",
+            titulo: "Área Comum Dealers",
+            campos: [
+              "Rack da TV e TV",
+              "Sofás",
+              "Porta de vidro",
+              "Estantes",
+              "TVs da parede",
+              "Chão e tapetes",
+              "Área das catracas",
+              "Catracas",
+              "Suportes e filtro",
+            ],
+          },
+        ],
+      },
+      {
+        id: "externas",
+        label: "Áreas Externas",
+        icon: ICO.externas,
+        blocos: [
+          {
+            id: "armarios",
+            titulo: "Área dos Armários",
+            campos: [
+              "Sofá",
+              "Mesas e cadeiras",
+              "Lustres e paredes",
+              "Sala de máquina",
+              "Chão",
+              "Armários",
+              "Lixeiras",
+            ],
+          },
+          {
+            id: "fumantes",
+            titulo: "Área de Fumantes",
+            campos: ["Cinzeiros", "Chão"],
+          },
+        ],
+      },
+      {
+        id: "escritorios",
+        label: "Escritórios",
+        icon: ICO.escritorios,
+        blocos: [
+          {
+            id: "diretoria",
+            titulo: "Sala da Diretoria",
+            campos: ["Lixeiras", "Mesas", "Sofás", "Máquina de café", "Mesa e xícaras"],
+          },
+          {
+            id: "sms",
+            titulo: "Sala dos SMs",
+            campos: [
+              "Lixeiras",
+              "Mesas e computadores",
+              "Cadeiras",
+              "Chão",
+              "Paredes e porta",
+              "Hall, suportes de álcool e escada",
+            ],
+          },
+          {
+            id: "rh",
+            titulo: "Sala do RH",
+            campos: ["Lixeiras", "Mesas e computadores", "Cadeiras", "Chão", "Paredes e porta"],
+          },
+        ],
+      },
+      {
+        id: "floor",
+        label: "Game Floor",
+        icon: ICO.floor,
+        blocos: [
+          {
+            id: "estudios",
+            titulo: "Estúdios",
+            campos: ["Chão", "Bancadas", "Lixo", "Portas de Saída"],
+          },
+          {
+            id: "almox",
+            titulo: "Almoxarifado",
+            campos: ["Prateleiras", "Lixeiras", "Portas"],
+          },
+          {
+            id: "embaralhamento",
+            titulo: "Sala de Embaralhamento",
+            campos: ["Chão", "Portas"],
+          },
+        ],
+      },
+      {
+        id: "comum",
+        label: "Área Comum",
+        icon: ICO.comum,
+        blocos: [
+          {
+            id: "deck",
+            titulo: "Deck",
+            campos: ["Pia", "Mesas e cadeiras", "Lixo", "Piso"],
+          },
+          {
+            id: "ban-comum",
+            titulo: "Banheiros",
+            campos: [
+              "Lixeiras",
+              "Vasos sanitários/mictórios",
+              "Pias",
+              "Espelhos",
+              "Piso",
+              "Paredes e teto",
+              "Portas",
+              "Reposição de papel higiênico",
+              "Reposição papel de Mão",
+              "Reposição de sabonete",
+            ],
+          },
+        ],
+      },
     ];
 
     const REGISTROS = [
@@ -670,7 +802,7 @@
     let offsetDias = 0; /* 0 = hoje, 1 = ontem… */
     let staffId = "todos";
     let staffPanelOpen = false;
-    let arquivosBanheiros = [];
+    let arquivosPorBloco = {};
     let arquivoSeq = 0;
 
     function pad(n) { return String(n).padStart(2, "0"); }
@@ -788,6 +920,14 @@
       return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
     }
 
+    function diaEhSegunda() {
+      return dataOffset(offsetDias).getDay() === 1;
+    }
+
+    function campoNorm(campo) {
+      return typeof campo === "string" ? { label: campo, soSegunda: false } : campo;
+    }
+
     function itemHtml(label, prefix) {
       const id = `${prefix}-${slug(label)}`;
       return `
@@ -807,11 +947,62 @@
       `;
     }
 
-    function montarChecklist() {
-      document.getElementById("listaBanheiros").innerHTML = BANHEIROS.map((l) => itemHtml(l, "ban")).join("");
-      document.getElementById("listaEstudios").innerHTML = ESTUDIOS.map((g) => `
-        <div class="check-group-title">${g.grupo}</div>
-        ${g.itens.map((l) => itemHtml(l, "est")).join("")}
+    function blocoUploadHtml(blocoId) {
+      return `
+        <div>
+          <span class="field-label-muted">Arquivos</span>
+          <input type="file" class="input-arquivos" data-bloco="${blocoId}" accept="image/*,video/*" multiple hidden />
+          <div class="upload-zone" data-bloco="${blocoId}" tabindex="0" role="group" aria-label="Adicionar imagem ou vídeo — arraste, solte ou cole (Ctrl+V) imagem ou vídeo nesta área">
+            <button type="button" class="upload-btn" data-bloco="${blocoId}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Adicionar imagem ou vídeo
+            </button>
+            <div class="upload-micro">ou arraste, solte ou cole (Ctrl+V) aqui</div>
+          </div>
+          <p class="upload-empty" data-empty="${blocoId}">Nenhum arquivo adicionado.</p>
+          <ul class="upload-cards hidden" data-lista="${blocoId}"></ul>
+        </div>
+      `;
+    }
+
+    function blocoHtml(bloco, tabId) {
+      const segunda = diaEhSegunda();
+      const campos = bloco.campos.map(campoNorm).filter((c) => !c.soSegunda || segunda);
+      const items = campos.map((c) => itemHtml(c.label, `${tabId}-${bloco.id}`)).join("");
+      return `
+        <div class="check-block" data-bloco="${bloco.id}" data-tab="${tabId}">
+          <button type="button" class="check-block-toggle" aria-expanded="false" aria-controls="body-${bloco.id}" id="toggle-${bloco.id}">
+            <svg class="check-block-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            <span class="check-block-title">${bloco.titulo}</span>
+          </button>
+          <div class="check-block-body" id="body-${bloco.id}">
+            <div class="check-items">${items}</div>
+            <div class="block-footer-fields">
+              <div>
+                <label class="field-label" for="comentario-${bloco.id}">Comentário <span class="req" aria-hidden="true">*</span></label>
+                <textarea class="field-input comentario-bloco" id="comentario-${bloco.id}" rows="3" placeholder="Comente o checklist deste bloco..."></textarea>
+              </div>
+              ${blocoUploadHtml(bloco.id)}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function montarModalChecklist() {
+      limparTodosArquivos();
+      const tabsEl = document.getElementById("modalTabs");
+      const panelsEl = document.getElementById("modalPanels");
+      tabsEl.innerHTML = ABAS_CHECKLIST.map((aba, i) => `
+        <button type="button" class="modal-tab${i === 0 ? " active" : ""}" role="tab" id="mtab-${aba.id}" aria-controls="mpanel-${aba.id}" aria-selected="${i === 0}" data-mpanel="${aba.id}">
+          ${aba.icon}
+          ${aba.label}
+        </button>
+      `).join("");
+      panelsEl.innerHTML = ABAS_CHECKLIST.map((aba, i) => `
+        <div class="modal-panel${i === 0 ? " active" : ""}" id="mpanel-${aba.id}" role="tabpanel" aria-labelledby="mtab-${aba.id}" data-panel="${aba.id}">
+          ${aba.blocos.map((b) => blocoHtml(b, aba.id)).join("")}
+        </div>
       `).join("");
     }
 
@@ -830,19 +1021,21 @@
       return (file.type || "").startsWith("image/") || (file.type || "").startsWith("video/");
     }
 
-    function renderArquivosBanheiros() {
-      const empty = document.getElementById("emptyArquivosBanheiros");
-      const list = document.getElementById("listaArquivosBanheiros");
-      empty.classList.toggle("hidden", arquivosBanheiros.length > 0);
-      list.classList.toggle("hidden", arquivosBanheiros.length === 0);
-      list.innerHTML = arquivosBanheiros.map((a) => {
+    function renderArquivos(blocoId) {
+      const lista = arquivosPorBloco[blocoId] || [];
+      const empty = document.querySelector(`[data-empty="${blocoId}"]`);
+      const list = document.querySelector(`[data-lista="${blocoId}"]`);
+      if (!empty || !list) return;
+      empty.classList.toggle("hidden", lista.length > 0);
+      list.classList.toggle("hidden", lista.length === 0);
+      list.innerHTML = lista.map((a) => {
         let preview = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`;
         if (a.kind === "image") preview = `<img src="${a.url}" alt="" />`;
         if (a.kind === "video") preview = `<video src="${a.url}" muted></video>`;
         return `
           <li class="upload-card">
             <span class="badge-pendente">Pendente</span>
-            <button type="button" class="upload-card-x" data-remove-arquivo="${a.key}" aria-label="Remover arquivo" title="Remover arquivo">
+            <button type="button" class="upload-card-x" data-remove-arquivo="${a.key}" data-bloco="${blocoId}" aria-label="Remover arquivo" title="Remover arquivo">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
             <div class="upload-card-preview">${preview}</div>
@@ -852,24 +1045,25 @@
       }).join("");
     }
 
-    function addArquivosBanheiros(files) {
-      const aceitos = [...files].filter(arquivoEhMidia);
-      aceitos.forEach((file) => {
+    function addArquivos(blocoId, files) {
+      if (!arquivosPorBloco[blocoId]) arquivosPorBloco[blocoId] = [];
+      [...files].filter(arquivoEhMidia).forEach((file) => {
         arquivoSeq += 1;
-        arquivosBanheiros.push({
+        arquivosPorBloco[blocoId].push({
           key: `arq-${arquivoSeq}`,
           name: file.name || `arquivo-${arquivoSeq}`,
           kind: (file.type || "").startsWith("video/") ? "video" : "image",
           url: URL.createObjectURL(file),
         });
       });
-      renderArquivosBanheiros();
+      renderArquivos(blocoId);
     }
 
-    function limparArquivosBanheiros() {
-      arquivosBanheiros.forEach((a) => URL.revokeObjectURL(a.url));
-      arquivosBanheiros = [];
-      renderArquivosBanheiros();
+    function limparTodosArquivos() {
+      Object.values(arquivosPorBloco).forEach((lista) => {
+        lista.forEach((a) => URL.revokeObjectURL(a.url));
+      });
+      arquivosPorBloco = {};
     }
 
     function resetForm() {
@@ -877,18 +1071,14 @@
         b.classList.remove("on");
         b.setAttribute("aria-pressed", "false");
       });
-      document.querySelectorAll(".obs-input").forEach((el) => {
+      document.querySelectorAll(".obs-input, .comentario-bloco").forEach((el) => {
         el.value = "";
         el.classList.remove("invalid");
       });
       document.querySelectorAll(".obs-wrap").forEach((el) => el.classList.remove("show"));
       document.querySelectorAll(".check-item").forEach((el) => el.classList.remove("invalid"));
-      const comentario = document.getElementById("comentarioBanheiros");
-      comentario.value = "";
-      comentario.classList.remove("invalid");
-      limparArquivosBanheiros();
       document.getElementById("errRegistrar").classList.remove("show");
-      setModalTab("dealers");
+      setModalTab(ABAS_CHECKLIST[0].id);
     }
 
     function setModalTab(key) {
@@ -898,11 +1088,12 @@
         t.setAttribute("aria-selected", String(on));
       });
       document.querySelectorAll(".modal-panel").forEach((p) => {
-        p.classList.toggle("active", p.id === `mpanel-${key}`);
+        p.classList.toggle("active", p.dataset.panel === key);
       });
     }
 
     function openRegistrar() {
+      montarModalChecklist();
       resetForm();
       document.getElementById("overlayRegistrar").classList.add("open");
     }
@@ -910,32 +1101,62 @@
       document.getElementById("overlayRegistrar").classList.remove("open");
     }
 
-    function validarForm() {
+    function setBlocoAberto(block, aberto) {
+      block.classList.toggle("is-open", aberto);
+      const btn = block.querySelector(".check-block-toggle");
+      if (btn) btn.setAttribute("aria-expanded", String(aberto));
+    }
+
+    function blocoIniciado(block) {
+      const temStatus = Boolean(block.querySelector(".ok-btn.on"));
+      const temObs = [...block.querySelectorAll(".obs-input")].some((el) => el.value.trim());
+      const temComentario = Boolean(block.querySelector(".comentario-bloco")?.value.trim());
+      const temArquivo = (arquivosPorBloco[block.dataset.bloco] || []).length > 0;
+      return temStatus || temObs || temComentario || temArquivo;
+    }
+
+    function limparInvalidos() {
+      document.querySelectorAll(".check-item, .obs-input, .comentario-bloco").forEach((el) => {
+        el.classList.remove("invalid");
+      });
+    }
+
+    function validarPublicacao() {
+      limparInvalidos();
       let ok = true;
       let firstFailTab = null;
-      document.querySelectorAll(".check-item").forEach((item) => {
-        const statusOn = item.querySelector(".ok-btn.on");
-        const nok = item.querySelector(".ok-btn.nok.on");
-        const obs = item.querySelector(".obs-input");
-        const obsVazia = Boolean(nok) && !obs.value.trim();
-        const fail = !statusOn || obsVazia;
-        item.classList.toggle("invalid", fail);
-        obs.classList.toggle("invalid", obsVazia);
-        if (fail) {
-          ok = false;
-          if (!firstFailTab) {
-            firstFailTab = item.closest("#mpanel-dealers") ? "dealers" : "floor";
-          }
-        }
-      });
-      const comentario = document.getElementById("comentarioBanheiros");
-      const comentarioVazio = !comentario.value.trim();
-      comentario.classList.toggle("invalid", comentarioVazio);
-      if (comentarioVazio) {
+      let firstFailBlock = null;
+      let msg = "";
+      function marcarFalha(el, texto) {
         ok = false;
-        if (!firstFailTab) firstFailTab = "dealers";
+        if (!msg) msg = texto;
+        if (!firstFailTab) firstFailTab = el?.closest(".modal-panel")?.dataset.panel || null;
+        if (!firstFailBlock) firstFailBlock = el?.closest(".check-block") || null;
       }
-      return { ok, firstFailTab };
+      const blocos = [...document.querySelectorAll(".check-block")];
+      const iniciados = blocos.filter(blocoIniciado);
+      if (iniciados.length === 0) {
+        marcarFalha(blocos[0] || null, "Inicie e complete pelo menos um bloco para publicar. Se o problema persistir, entre em contato com o suporte.");
+        return { ok, firstFailTab, firstFailBlock, msg };
+      }
+      const msgBloco = "O bloco iniciado deve estar completo: status OK / Não OK em todos os itens, observação em Não OK e comentário. Se o problema persistir, entre em contato com o suporte.";
+      iniciados.forEach((block) => {
+        block.querySelectorAll(".check-item").forEach((item) => {
+          const statusOn = item.querySelector(".ok-btn.on");
+          const nok = item.querySelector(".ok-btn.nok.on");
+          const obs = item.querySelector(".obs-input");
+          const obsVazia = Boolean(nok) && !obs.value.trim();
+          const fail = !statusOn || obsVazia;
+          item.classList.toggle("invalid", fail);
+          obs.classList.toggle("invalid", obsVazia);
+          if (fail) marcarFalha(item, msgBloco);
+        });
+        const comentario = block.querySelector(".comentario-bloco");
+        const comentarioVazio = !comentario.value.trim();
+        comentario.classList.toggle("invalid", comentarioVazio);
+        if (comentarioVazio) marcarFalha(comentario, msgBloco);
+      });
+      return { ok, firstFailTab, firstFailBlock, msg };
     }
 
     function toast(msg) {
@@ -988,38 +1209,124 @@
 
     document.getElementById("btnRegistrar").addEventListener("click", openRegistrar);
     document.getElementById("btnFecharRegistrar").addEventListener("click", closeRegistrar);
-    document.getElementById("overlayRegistrar").addEventListener("click", (e) => {
+    const overlay = document.getElementById("overlayRegistrar");
+    overlay.addEventListener("click", (e) => {
       if (e.target === e.currentTarget) closeRegistrar();
     });
-    document.querySelectorAll(".modal-tab").forEach((t) => {
-      t.addEventListener("click", () => setModalTab(t.dataset.mpanel));
+    overlay.addEventListener("click", (e) => {
+      const tab = e.target.closest(".modal-tab");
+      if (tab) {
+        setModalTab(tab.dataset.mpanel);
+        return;
+      }
+      const toggle = e.target.closest(".check-block-toggle");
+      if (toggle) {
+        const block = toggle.closest(".check-block");
+        setBlocoAberto(block, !block.classList.contains("is-open"));
+        return;
+      }
+      const okBtn = e.target.closest(".ok-btn");
+      if (okBtn) {
+        const pair = okBtn.parentElement;
+        pair.querySelectorAll(".ok-btn").forEach((b) => {
+          b.classList.remove("on");
+          b.setAttribute("aria-pressed", "false");
+        });
+        okBtn.classList.add("on");
+        okBtn.setAttribute("aria-pressed", "true");
+        const item = okBtn.closest(".check-item");
+        item.classList.remove("invalid");
+        syncObsDoItem(item);
+        return;
+      }
+      const upBtn = e.target.closest(".upload-btn");
+      if (upBtn) {
+        const blocoId = upBtn.dataset.bloco;
+        overlay.querySelector(`.input-arquivos[data-bloco="${blocoId}"]`)?.click();
+        return;
+      }
+      const rm = e.target.closest("[data-remove-arquivo]");
+      if (rm) {
+        const blocoId = rm.dataset.bloco;
+        const key = rm.getAttribute("data-remove-arquivo");
+        const lista = arquivosPorBloco[blocoId] || [];
+        const idx = lista.findIndex((a) => a.key === key);
+        if (idx < 0) return;
+        URL.revokeObjectURL(lista[idx].url);
+        lista.splice(idx, 1);
+        renderArquivos(blocoId);
+      }
     });
-    document.getElementById("overlayRegistrar").addEventListener("click", (e) => {
-      const btn = e.target.closest(".ok-btn");
-      if (!btn) return;
-      const pair = btn.parentElement;
-      pair.querySelectorAll(".ok-btn").forEach((b) => {
-        b.classList.remove("on");
-        b.setAttribute("aria-pressed", "false");
-      });
-      btn.classList.add("on");
-      btn.setAttribute("aria-pressed", "true");
-      const item = btn.closest(".check-item");
-      item.classList.remove("invalid");
-      syncObsDoItem(item);
+    overlay.addEventListener("change", (e) => {
+      const input = e.target.closest(".input-arquivos");
+      if (!input) return;
+      addArquivos(input.dataset.bloco, input.files || []);
+      input.value = "";
     });
-    document.getElementById("btnSalvarTarefa").addEventListener("click", () => {
-      const { ok, firstFailTab } = validarForm();
+    function zonaArquivos(e) {
+      return e.target.closest(".upload-zone");
+    }
+    overlay.addEventListener("dragenter", (e) => {
+      const zona = zonaArquivos(e);
+      if (!zona) return;
+      e.preventDefault();
+      zona.classList.add("drag");
+      const micro = zona.querySelector(".upload-micro");
+      if (micro) micro.textContent = "Solte os arquivos aqui.";
+    });
+    overlay.addEventListener("dragover", (e) => {
+      if (!zonaArquivos(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+    overlay.addEventListener("dragleave", (e) => {
+      const zona = zonaArquivos(e);
+      if (!zona || zona.contains(e.relatedTarget)) return;
+      zona.classList.remove("drag");
+      const micro = zona.querySelector(".upload-micro");
+      if (micro) micro.textContent = "ou arraste, solte ou cole (Ctrl+V) aqui";
+    });
+    overlay.addEventListener("drop", (e) => {
+      const zona = zonaArquivos(e);
+      if (!zona) return;
+      e.preventDefault();
+      zona.classList.remove("drag");
+      const micro = zona.querySelector(".upload-micro");
+      if (micro) micro.textContent = "ou arraste, solte ou cole (Ctrl+V) aqui";
+      addArquivos(zona.dataset.bloco, e.dataTransfer.files || []);
+    });
+    overlay.addEventListener("paste", (e) => {
+      const zona = e.target.closest(".upload-zone");
+      if (!zona) return;
+      const files = [...(e.clipboardData?.files || [])];
+      if (!files.length) return;
+      e.preventDefault();
+      addArquivos(zona.dataset.bloco, files);
+      const micro = zona.querySelector(".upload-micro");
+      if (micro) {
+        micro.textContent = "Arquivo colado.";
+        setTimeout(() => { micro.textContent = "ou arraste, solte ou cole (Ctrl+V) aqui"; }, 450);
+      }
+    });
+    document.getElementById("btnRascunhoTarefa").addEventListener("click", () => {
+      document.getElementById("errRegistrar").classList.remove("show");
+      closeRegistrar();
+      toast("Rascunho salvo (mockup — nenhum dado foi gravado).");
+    });
+    document.getElementById("btnPublicarTarefa").addEventListener("click", () => {
+      const { ok, firstFailTab, firstFailBlock, msg } = validarPublicacao();
       const err = document.getElementById("errRegistrar");
       if (!ok) {
+        err.textContent = msg;
         err.classList.add("show");
         if (firstFailTab) setModalTab(firstFailTab);
+        if (firstFailBlock) setBlocoAberto(firstFailBlock, true);
         err.scrollIntoView({ block: "nearest" });
         return;
       }
       err.classList.remove("show");
       closeRegistrar();
-      toast("Tarefa registrada (mockup — nenhum dado foi gravado).");
+      toast("Tarefa publicada (mockup — nenhum dado foi gravado).");
     });
 
     document.getElementById("tbodyChecklist").addEventListener("click", (e) => {
@@ -1028,55 +1335,6 @@
       toast(`Modal ${btn.getAttribute("title")} entra na próxima rodada deste mockup.`);
     });
 
-    const inputArquivos = document.getElementById("inputArquivosBanheiros");
-    const zonaArquivos = document.getElementById("zonaArquivosBanheiros");
-    const microArquivos = document.getElementById("microArquivosBanheiros");
-    document.getElementById("btnArquivosBanheiros").addEventListener("click", () => inputArquivos.click());
-    inputArquivos.addEventListener("change", (e) => {
-      addArquivosBanheiros(e.target.files || []);
-      e.target.value = "";
-    });
-    zonaArquivos.addEventListener("dragenter", (e) => {
-      e.preventDefault();
-      zonaArquivos.classList.add("drag");
-      microArquivos.textContent = "Solte os arquivos aqui.";
-    });
-    zonaArquivos.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-    });
-    zonaArquivos.addEventListener("dragleave", (e) => {
-      if (!zonaArquivos.contains(e.relatedTarget)) {
-        zonaArquivos.classList.remove("drag");
-        microArquivos.textContent = "ou arraste, solte ou cole (Ctrl+V) aqui";
-      }
-    });
-    zonaArquivos.addEventListener("drop", (e) => {
-      e.preventDefault();
-      zonaArquivos.classList.remove("drag");
-      microArquivos.textContent = "ou arraste, solte ou cole (Ctrl+V) aqui";
-      addArquivosBanheiros(e.dataTransfer.files || []);
-    });
-    zonaArquivos.addEventListener("paste", (e) => {
-      const files = [...(e.clipboardData?.files || [])];
-      if (!files.length) return;
-      e.preventDefault();
-      addArquivosBanheiros(files);
-      microArquivos.textContent = "Arquivo colado.";
-      setTimeout(() => { microArquivos.textContent = "ou arraste, solte ou cole (Ctrl+V) aqui"; }, 450);
-    });
-    document.getElementById("listaArquivosBanheiros").addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-remove-arquivo]");
-      if (!btn) return;
-      const key = btn.getAttribute("data-remove-arquivo");
-      const idx = arquivosBanheiros.findIndex((a) => a.key === key);
-      if (idx < 0) return;
-      URL.revokeObjectURL(arquivosBanheiros[idx].url);
-      arquivosBanheiros.splice(idx, 1);
-      renderArquivosBanheiros();
-    });
-
-    montarChecklist();
     renderStaffList("");
     syncFiltros();
   </script>

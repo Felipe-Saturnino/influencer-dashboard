@@ -221,6 +221,7 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_ausencia (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   prestador_id        uuid NOT NULL REFERENCES public.rh_funcionarios (id) ON DELETE RESTRICT,
   motivo              text NOT NULL CHECK (motivo IN ('medico', 'pessoal')),
+  tipo_ausencia       text,
   inicio              date NOT NULL,
   fim                 date,
   fim_nao_informado   boolean NOT NULL DEFAULT false,
@@ -233,6 +234,16 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_ausencia (
   CONSTRAINT escala_ct_ausencia_fim_chk CHECK (
     (fim_nao_informado = true AND fim IS NULL)
     OR (fim_nao_informado = false AND fim IS NOT NULL AND fim >= inicio)
+  ),
+  CONSTRAINT escala_ct_ausencia_tipo_chk CHECK (
+    (
+      motivo = 'pessoal'
+      AND tipo_ausencia IN ('programada', 'nao_programada')
+    )
+    OR (
+      motivo IS DISTINCT FROM 'pessoal'
+      AND tipo_ausencia IS NULL
+    )
   )
 );
 
@@ -242,7 +253,9 @@ CREATE INDEX IF NOT EXISTS escala_ct_ausencia_prestador_idx
   ON public.escala_ct_ausencia (prestador_id);
 
 COMMENT ON TABLE public.escala_ct_ausencia IS
-  'Controle de Turno → Notificações: ausências operacionais (GP/Shuffler). Visível enquanto fim não informado ou fim >= dia.';
+  'Controle de Turno → Notificações: ausências operacionais (GP/Shuffler). Motivo pessoal exige tipo_ausencia (programada|nao_programada). Visível enquanto fim não informado ou fim >= dia.';
+COMMENT ON COLUMN public.escala_ct_ausencia.tipo_ausencia IS
+  'Só com motivo=pessoal: programada (aviso ≥24h) | nao_programada (aviso <24h).';
 
 -- ─── 6) Feedbacks ────────────────────────────────────────────────────────────
 

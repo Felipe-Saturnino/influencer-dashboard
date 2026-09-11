@@ -4,11 +4,14 @@
  * Fluxo diário (quando o usuário pedir para atualizar) — padrão canónico:
  *   ver .cursor/rules/mesas-spin-carga.mdc (+ business.mdc § Grupo EsportivaBet).
  *   1. Abrir o dashboard 15 logado no navegador controlado.
- *   2. Extract Network (split esportiva/bateu/brx/rico/donald/betponto) → Dedicado → Monthly;
- *      helpers tmp/make-compact-extract.mjs + inject CDP; JSON em tmp/.
+ *   2. Extract Network (split esportiva/bateu/brx/rico/donald/betponto via coluna marca) →
+ *      Dedicado → Monthly; preferir tmp/make-oneshot-inject.mjs (Console 1 passo) ou
+ *      tmp/make-compact-extract.mjs + CDP; JSON em tmp/.
  *   3. Este script com --gravar (UPSERT direto). Carga incremental:
  *      --preencher-faltantes (só dias > último no Supabase).
  *   4. Não carregar D-0 incompleto; ATE exclusivo no extract.
+ *   5. Com credenciais Supabase: emite zeros para slugs que já têm daily antes da janela
+ *      mesmo se o extract veio vazio (evita buraco donald/betponto).
  *
  * Uso:
  *   node scripts/superset-mesas-spin-run.mjs --network=tmp/n.json --dedicado=tmp/d.json --sql
@@ -16,7 +19,7 @@
  *   node scripts/superset-mesas-spin-run.mjs --network=… --dedicado=… --preencher-faltantes --gravar
  *   node scripts/superset-mesas-spin-run.mjs --network=… --de=2026-08-04 --ate=2026-08-11 --escrever-sql
  *
- * Env para --gravar / --preencher-faltantes: VITE_SUPABASE_URL (ou SUPABASE_URL)
+ * Env para --gravar / --preencher-faltantes / zeros por histórico: VITE_SUPABASE_URL (ou SUPABASE_URL)
  * e SUPABASE_SERVICE_ROLE_KEY no .env.
  *
  * Regras: TO/GGR arredondados por mesa (Math.round); daily = soma das mesas;
@@ -521,6 +524,21 @@ async function ultimoDia(url, key, tabela) {
   return rows[0]?.data ?? null;
 }
 
+/**
+ * Slugs que já têm pelo menos 1 daily antes de `antesDe` (exclusivo).
+ * Usado para emitir zeros no dia da carga quando o extract veio vazio
+ * (ex.: donald/betponto sem volume) sem inventar histórico pré-1º volume.
+ */
+async function slugsComHistoricoAntes(url, key, tabela, slugs, antesDe) {
+  if (!slugs.length || !antesDe) return new Set();
+  const inList = slugs.map((s) => `"${s}"`).join(",");
+  const path =
+    `${tabela}?select=operadora_slug&operadora_slug=in.(${inList})` +
+    `&data=lt.${antesDe}&limit=1000`;
+  const rows = await supabaseGet(url, key, path);
+  return new Set((rows || []).map((r) => r.operadora_slug).filter(Boolean));
+}
+
 function registrosDaily(rows) {
   return rows.map((r) => ({
     data: r.dia,
@@ -560,10 +578,15 @@ function registrosUap(rows) {
 /**
  * A partir do 1º dia com volume no extract, gera linha em todos os dias seguintes
  * (zeros se Superset vazio) — evita buracos no Detalhamento Diário.
+ *
+ * Se o extract não tem atividade na janela mas o slug já existe no Supabase
+ * antes de `dias[0]` (`priorSlugs`), emite zeros para todos os dias da janela
+ * (ex.: donald/betponto no D-1 sem volume).
  */
-function montarRows(raw, canal, dias) {
+function montarRows(raw, canal, dias, priorSlugs = null) {
   const rows = [];
   for (const opKey of opsDoExtract(raw, canal)) {
+    const slug = OPS[opKey]?.slug;
     let primeiroComDado = null;
     for (const dia of dias) {
       if (temAtividade(raw[opKey], dia)) {
@@ -571,7 +594,12 @@ function montarRows(raw, canal, dias) {
         break;
       }
     }
-    if (!primeiroComDado) continue;
+    if (!primeiroComDado) {
+      if (slug && priorSlugs?.has(slug)) {
+        for (const dia of dias) rows.push(montarDia(opKey, canal, raw[opKey] || {}, dia));
+      }
+      continue;
+    }
     for (const dia of dias) {
       if (dia < primeiroComDado) continue;
       rows.push(montarDia(opKey, canal, raw[opKey], dia));
@@ -622,6 +650,7 @@ async function main() {
 
   const monthlyRaw = monthlyPath ? monthlyDoExtract(lerJson(monthlyPath)) : null;
   const canais = [];
+  const podeConsultarHistorico = Boolean(supabaseUrl && serviceKey);
 
   if (networkPath) {
     const raw = lerJson(networkPath);
@@ -630,7 +659,21 @@ async function main() {
     if (preencherFaltantes && lastNet) {
       dias = dias.filter((d) => d > lastNet);
     }
-    const rows = montarRows(raw, "network", dias);
+    let priorNet = null;
+    if (podeConsultarHistorico && dias.length) {
+      const slugs = opKeys.map((k) => OPS[k].slug);
+      priorNet = await slugsComHistoricoAntes(
+        supabaseUrl,
+        serviceKey,
+        "relatorio_network_daily_summary",
+        slugs,
+        dias[0],
+      );
+      if (priorNet.size) {
+        console.log(`Network — zeros para slugs com histórico pré-${dias[0]}: ${[...priorNet].join(", ")}`);
+      }
+    }
+    const rows = montarRows(raw, "network", dias, priorNet);
     canais.push({
       canal: "network",
       rows,
@@ -646,7 +689,18 @@ async function main() {
     if (preencherFaltantes && lastDed) {
       dias = dias.filter((d) => d > lastDed);
     }
-    const rows = montarRows(raw, "dedicado", dias);
+    let priorDed = null;
+    if (podeConsultarHistorico && dias.length) {
+      const slugs = opKeys.map((k) => OPS[k].slug);
+      priorDed = await slugsComHistoricoAntes(
+        supabaseUrl,
+        serviceKey,
+        "relatorio_daily_summary",
+        slugs,
+        dias[0],
+      );
+    }
+    const rows = montarRows(raw, "dedicado", dias, priorDed);
     canais.push({
       canal: "dedicado",
       rows,

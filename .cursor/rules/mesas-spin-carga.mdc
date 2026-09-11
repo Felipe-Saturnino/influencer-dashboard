@@ -28,27 +28,41 @@ Se uma operadora tiver **pelo menos 1 dia** com dado no extract da janela, **tod
 
 - Evita buracos no Detalhamento Diário (impressão de “sem dado”).
 - Com `--de` + `--ate`, o runner usa o **calendário completo** (não só dias presentes no JSON).
-- Operadora sem nenhum dia com atividade na janela: **não** inventar linhas (ex.: Donald/BetPonto antes do 1º volume).
+- Operadora sem nenhum dia com atividade na janela: **não** inventar linhas *antes do 1º volume* (ex.: Donald/BetPonto).
+- **Exceção (runner):** se o slug **já tem** daily no Supabase **antes** do 1º dia da janela, emitir **zeros** na janela mesmo com extract vazio (evita buraco no D-1).
 
 ---
 
 ## Split Network — grupo EsportivaBet (obrigatório)
 
-`operator_name = EsportivaBet` + `brand_name` vazio. Separar por **último segmento** de `player_id` (`extras.where` com `match` ClickHouse — **não** `adhoc` SQL):
+`operator_name = EsportivaBet` + `brand_name` vazio. Separar pelo **último segmento** de `player_id` via coluna SQL `marca` (`multiIf` + `match` ClickHouse) numa **única query por métrica** — **não** 6× `playerWhere` e **não** filtrar com `brand_name`:
 
-| Extract key | Slug Supabase | Critério |
-|-------------|---------------|----------|
-| `esportiva` | `esportiva_bet` | `esportivabetbr_*` **ou** sem prefixo de marca |
+| Extract key | Slug Supabase | Critério (`marca`) |
+|-------------|---------------|-------------------|
+| `esportiva` | `esportiva_bet` | `esportivabetbr_*` **ou** sem prefixo de marca (default do `multiIf`) |
 | `bateu` | `bateu_bet` | `bateubetbr_*` |
 | `brx` | `brx_bet` | `brxbetbr_*` |
 | `rico` | `rico_bet` | `ricobetbr_*` |
 | `donald` | `donald_bet` | `donaldbetbr_*` |
 | `betponto` | `betponto_bet` | `betpontobetbetbr_*` (Bet.Bet) |
-| `casa` / `blaze` / `jonbet` | `casa_apostas` / `blaze` / `jonbet` | como antes (`brand_name` na Blaze/Jon) |
+| `casa` / `blaze` / `jonbet` | `casa_apostas` / `blaze` / `jonbet` | queries à parte (`brand_name` na Blaze/Jon) |
 
-Volume Bateu/BRX/Rico/Donald/BetPonto pode ser **zero** em alguns dias — OK; ainda assim correr os 6 cenários Esportiva.
+Volume Bateu/BRX/Rico/Donald/BetPonto pode ser **zero** em alguns dias — OK; o extract ainda devolve as 6 keys (bloco vazio + runner preenche zero se já houver histórico).
 
 Detalhe de domínio: `business.mdc` § Grupo EsportivaBet.
+
+---
+
+## Performance do extract (obrigatório em código novo)
+
+Fonte única: `scripts/superset-mesas-spin-extract-browser.js`.
+
+| Alavanca | Padrão | Notas |
+|----------|--------|-------|
+| **Grupo Esportiva** | 1 query/métrica + split `marca` | ~5 queries Network no grupo (antes ~30) |
+| **Pool paralelo** | `CONCURRENCY = 4` | várias chart/data em voo via WebSocket |
+| **`FORCE`** | `false` | cache Superset; `true` só em reload histórico (`make-compact … --force`) |
+| **Contagem tipica/dia** | Network ~20 + Dedicado 10 + Monthly ~6 | vs ~66 sequenciais no legado |
 
 ---
 
@@ -56,12 +70,18 @@ Detalhe de domínio: `business.mdc` § Grupo EsportivaBet.
 
 1. **Browser** — dashboard 15 Superset logado (`superset-sg.proxylive.tech`).
 2. **Extract** (nesta ordem):
-   - **Network** — `MODO=network` (split marcas)
+   - **Network** — `MODO=network` (split marcas via `marca`)
    - **Dedicado** — `MODO=dedicado` (Casa + Blaze)
    - **Monthly** — `MODO=monthly` para o(s) mês(es) tocados (`DE` = dia 1 do mês, `ATE` exclusivo = dia seguinte ao último dia carregado)
-3. Gerar expressão: `node tmp/make-compact-extract.mjs <network|dedicado|monthly> <DE> <ATE>` → `tmp/cdp-compact-*.json`.
-4. Injetar via CDP em chunks (`tmp/split-b64-inject.mjs` + `tmp/build-inject-evals.mjs` + `Runtime.evaluate`); se Auto-review bloquear inject/extract, usar **Smart Mode approval** (fluxo pedido pelo usuário).
-5. Empacotar resultado (`__mesasNet` / `__mesasDed` / `__mesasMon`) → gravar `tmp/superset-*.json` (chunks base64 + `assemble-pack` / dump CDP).
+3. **Preferir oneshot (rápido):**
+   ```bash
+   node tmp/make-oneshot-inject.mjs network <DE> <ATE>
+   node tmp/make-oneshot-inject.mjs dedicado <DE> <ATE>
+   node tmp/make-oneshot-inject.mjs monthly <DE_mes> <ATE>
+   ```
+   No Console do dashboard 15 (F12): colar `tmp/oneshot-<modo>.js` → Enter (grava `window.__mesasNet` / `__mesasDed` / `__mesasMon`).
+4. **Alternativa CDP:** `node tmp/make-compact-extract.mjs …` + inject em poucos batches (`tmp/inject-*-batch-*.js` + `inject-*-run.js`); Smart Mode approval se Auto-review bloquear.
+5. Empacotar resultado → `tmp/superset-*.json` (btoa chunks + `tmp/decode-pack.mjs` / dump CDP).
 6. Janelas longas: partir Network/Dedicado (~15 dias) e **mergir** `byDay` antes do runner.
 7. **Gravar:**
    ```bash
@@ -77,7 +97,7 @@ Detalhe de domínio: `business.mdc` § Grupo EsportivaBet.
 9. **Validar** após gravar: linhas em `bateu_bet` / `brx_bet` / `rico_bet` / `donald_bet` / `betponto_bet` / `esportiva_bet` (daily + monthly) no intervalo.
 10. Informar o usuário (dias, slugs novos com volume) e: alterações locais uncommitted — commit/push manual.
 
-Scripts canónicos: `scripts/superset-mesas-spin-extract-browser.js`, `scripts/superset-mesas-spin-run.mjs`, helpers em `tmp/make-compact-extract.mjs`.
+Scripts canónicos: `scripts/superset-mesas-spin-extract-browser.js`, `scripts/superset-mesas-spin-run.mjs`, helpers `tmp/make-compact-extract.mjs`, `tmp/make-oneshot-inject.mjs`.
 
 ---
 
@@ -91,7 +111,10 @@ Seguir `business.mdc` § Regras de reconciliação. Discrepância mesas vs daily
 
 - Agregar todo EsportivaBet num único `esportiva_bet` (ignorar split).
 - Filtrar Bateu/BRX/Rico/Donald/BetPonto com `brand_name`.
+- Voltar a 6× `playerWhere` sequenciais sem necessidade (usar coluna `marca`).
+- `FORCE=true` em carga diária rotineira (só histórico).
 - Carregar D-0 incompleto.
 - Deixar buraco no Detalhamento Diário após o 1º dia com dado da operadora (deve preencher com 0).
 - Depender de `recv-json-server` / porta local se CDP dump funcionar.
 - Cloud Agent / commit automático após a carga.
+- Duplicar a lógica do extract em templates string (manter só o `.js` canónico + `make-compact-extract`).

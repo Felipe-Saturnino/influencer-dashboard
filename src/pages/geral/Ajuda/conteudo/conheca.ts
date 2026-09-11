@@ -931,7 +931,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Escala do Turno",
         texto:
-          "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado. Tutorial: `/Ajuda/Tutoriais/ControleTurnoAprovacaoEscala`.",
+          "Lista os Game Presenters e Shufflers escalados no dia/turno (incluindo **Compra - Turno**). A coluna **Aprovado** (Sim/Não) só muda para **Sim** pela ação **Aprovar** — disponível quando Entrada e Saída estão preenchidas **ou** quando o Status é **Falta**. **Registrar** (Falta, Saída Antecipada, Hora Adicional, Registrar Horário) atualiza status e horários, mas **não** marca Aprovado. Em **Registrar Horário**, Entrada/Saída em branco são pré-preenchidas com o horário previsto do turno no estúdio; valores já registrados no check-in são mantidos. Tutorial: `/Ajuda/Tutoriais/ControleTurnoAprovacaoEscala`.",
       },
       {
         subtitulo: "Rotação",
@@ -941,12 +941,12 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Notificações",
         texto:
-          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. No **Fechamento de Mesa**, informe **data e hora** de fechamento e de abertura; se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a reabertura. No **Registrar Feedback**, se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais tipos permanece **Observação**. Com **Editar**, atualize fechamentos/ausências e cancele manutenções abertas — a aplicação de feedbacks fica em **Solicitações** (RH). Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos. Tutorial: `/Ajuda/Tutoriais/ControleTurnoNotificacoes`.",
+          "Com permissão de **Criar**, registre fechamentos, ausências prolongadas, feedbacks e manutenções do dia. No **Fechamento de Mesa**, informe **data e hora** de fechamento e de abertura; se a mesa ficar fechada de um dia para o outro, o registro aparece em **todos** os dias do intervalo até a reabertura. Em **Registrar Ausência**, se o Motivo for **Pessoal**, o **Tipo de Ausência** é obrigatório: **Programada** quando o prestador avisou com pelo menos 24h antes do início do turno; **Não Programada** quando avisou com menos de 24h. No **Registrar Feedback**, se a recomendação for **Orientação**, o campo de texto chama-se **Ata da Orientação**; nos demais tipos permanece **Observação**. Com **Editar**, atualize fechamentos/ausências e cancele manutenções abertas — a aplicação de feedbacks fica em **Solicitações** (RH). Itens em aberto (mesa não aberta, ausência sem fim, feedback a revisar, manutenção aberta ou em andamento) continuam visíveis nos dias seguintes até serem resolvidos. Tutorial: `/Ajuda/Tutoriais/ControleTurnoNotificacoes`.",
       },
       {
         subtitulo: "Relatório de Turno",
         texto:
-          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**. Tutorial: `/Ajuda/Tutoriais/ControleTurnoRelatorio`.",
+          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Os indicadores **Escalados**, **Presentes**, **Atrasados** e **Faltas** (Game Presenters e Shuffler) vêm da **Escala do Turno** do mesmo dia e turno — **Atrasados** quando a entrada realizada passa de 5 minutos do horário previsto do estúdio. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**. Tutorial: `/Ajuda/Tutoriais/ControleTurnoRelatorio`.",
       },
       {
         subtitulo: "Tutoriais (Ajuda)",

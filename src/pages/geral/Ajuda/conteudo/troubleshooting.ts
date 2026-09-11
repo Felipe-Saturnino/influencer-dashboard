@@ -1807,6 +1807,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "As abas **Notificações** e **Relatório de Turno** gravam no banco. Confirme permissão de **Criar** / **Editar** em Gestão de Usuários → Permissões → **Controle de Turno** e faça logout e login. Se o erro persistir, entre em contato com o suporte técnico para validar se o schema do Controle de Turno foi aplicado.",
       },
       {
+        subtitulo: "Os indicadores Escalados / Presentes / Atrasados / Faltas estão zerados no Relatório?",
+        texto:
+          "Esses números vêm da **Escala do Turno** do mesmo dia e turno (não do texto de Comentários). Confirme na aba **Escala do Turno** se há prestadores no dia selecionado e se Entrada/Status estão preenchidos. **Atrasados** entram quando a entrada passa de 5 minutos do horário previsto do estúdio. Atualize a página após registrar presença.",
+      },
+      {
         subtitulo: "A mesa fechada sumiu nos dias seguintes depois de reabrir?",
         texto:
           "O **Fechamento de Mesa** usa data e hora de fechamento e de abertura. O registro deve aparecer em todos os dias entre o fechamento e a abertura (inclusive). Ao reabrir, informe a **Data de Abertura** correta (não só a hora). Se um registro antigo ainda parecer só no dia do fechamento, edite e ajuste a data de abertura — ou confira se a migração `data_reabertura` foi aplicada no banco.",

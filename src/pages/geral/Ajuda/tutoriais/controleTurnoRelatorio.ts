@@ -18,7 +18,7 @@ export const TUTORIAL_CONTROLE_TURNO_RELATORIO: TutorialDef = {
     {
       titulo: "1. Abrir a aba Relatório de Turno",
       texto:
-        "1. No menu, seção Estúdio, clique em **Controle de Turno**.\n2. Na barra de abas, clique em **Relatório de Turno**.\n3. Escolha o **dia** no carrossel (ou **Hoje**). Nesta aba o filtro Manhã/Tarde/Noite some — os três turnos aparecem juntos.\n4. O bloco **Controle dos Turnos** mostra o status de cada turno: **Relatório não Iniciado**, **Relatório em Rascunho** ou **Relatório Publicado**.\n5. Abaixo, um card por turno (Manhã, Tarde, Noite) com indicadores de Escalados, Presentes, Atrasados e Faltas.",
+        "1. No menu, seção Estúdio, clique em **Controle de Turno**.\n2. Na barra de abas, clique em **Relatório de Turno**.\n3. Escolha o **dia** no carrossel (ou **Hoje**). Nesta aba o filtro Manhã/Tarde/Noite some — os três turnos aparecem juntos.\n4. O bloco **Controle dos Turnos** mostra o status de cada turno: **Relatório não Iniciado**, **Relatório em Rascunho** ou **Relatório Publicado**.\n5. Abaixo, um card por turno (Manhã, Tarde, Noite) com indicadores de Escalados, Presentes, Atrasados e Faltas — calculados pela Escala do Turno daquele dia (entrada atrasada conta a partir de 5 minutos após o horário previsto).",
       imagens: [
         {
           src: `${IMG}/01-aba-relatorio.png`,
