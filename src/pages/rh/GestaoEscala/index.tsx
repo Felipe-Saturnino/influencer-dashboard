@@ -432,7 +432,7 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const mostrarFiltroArea = perm.canView === "sim" || perm.canView === "proprios";
 
   /** Dia civil America/Sao_Paulo — paridade com RPC `rh_gestao_escala_grade_alterar_celula`. */
-  const hojeIso = useMemo(() => hojeIsoBrasil(), [hoje]);
+  const hojeIso = useMemo(() => hojeIsoBrasil(), []);
 
   const mesHydratingRef = useRef(false);
   /** Áreas já hidratadas da BD no mês corrente (`refMes|areaKey`). */
