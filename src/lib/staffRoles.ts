@@ -1,6 +1,6 @@
 import type { Role } from "../types";
 
-/** Mesmo contrato de escopo que Influenciador: `user_scopes` operadora + `influencer_perfil` / `influencer_operadoras`. */
+/** Mesmo contrato de escopo que Influencer: `user_scopes` operadora + `influencer_perfil` / `influencer_operadoras`. */
 export const ROLES_PARIDADE_INFLUENCER: readonly Role[] = ["influencer", "afiliado"];
 
 export function roleParidadeInfluencer(role: Role | undefined | null): boolean {

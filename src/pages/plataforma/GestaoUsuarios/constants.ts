@@ -41,7 +41,7 @@ export const ROLES: { value: Role; label: string }[] = [
   { value: "prestador", label: "Prestadores" },
   { value: "operador", label: "Operador" },
   { value: "agencia", label: "Agência" },
-  { value: "influencer", label: "Influenciador" },
+  { value: "influencer", label: "Influencer" },
   { value: "afiliado", label: "Afiliado" },
   { value: "investidor", label: "Investidor" },
 ];
@@ -86,7 +86,7 @@ const PAGES_META: {
   // Dashboards
   { key: "mesas_spin", label: "Overview Spin", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "streamers", label: "Streamers", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
-  { key: "dash_afiliados", label: "Afiliados", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
+  { key: "dash_afiliados", label: "Overview Afiliados", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_midias_sociais", label: "Mídias Sociais", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_influencer", label: "Overview Influencer", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
   { key: "dash_overview_afiliado", label: "Overview Afiliado", secao: "Dashboards", hasCriar: false, hasEditar: false, hasExcluir: false },
@@ -148,7 +148,7 @@ const PAGES_META: {
   },
   // Escala (ordem = menu.ts)
   { key: "rh_staff", label: "Gestão de Staff", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
-  { key: "escala_solicitacoes", label: "Solicitações", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
+  { key: "escala_solicitacoes", label: "Solicitações de Cliente", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_gestao_escala", label: "Escala Estúdio", secao: "Escala", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_calendario", label: "Calendário", secao: "Escala", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
@@ -165,7 +165,7 @@ const PAGES_META: {
   { key: "rh_organograma", label: "Organograma", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
   { key: "escala_escritorio", label: "Escala Escritório", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: false },
   { key: "rh_vagas", label: "Vagas", secao: "RH", hasCriar: true, hasEditar: true, hasExcluir: true },
-  { key: "rh_solicitacoes", label: "Solicitações", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
+  { key: "rh_solicitacoes", label: "Solicitações de RH", secao: "RH", hasCriar: false, hasEditar: true, hasExcluir: false },
   {
     key: "rh_central_denuncias",
     label: "Central de Denúncias",

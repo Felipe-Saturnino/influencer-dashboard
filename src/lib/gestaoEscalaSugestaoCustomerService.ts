@@ -1,5 +1,5 @@
 /**
- * Sugestão de escala Customer Service — lógica alinhada ao simulado de Março/2026,
+ * SuEscala Estúdio Customer Service — lógica alinhada ao simulado de Março/2026,
  * com sequência contínua entre meses (usa offset de dias + fase K).
  * Se existirem células salvas do mês anterior, infere a **fase φ mod 6** por prestador a partir
  * dos dias operacionais (MRN/AFT/NGT/Folga). Compra, Venda, Troca e Compra - Turno ficam fora

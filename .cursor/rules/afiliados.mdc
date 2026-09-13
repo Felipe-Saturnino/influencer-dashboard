@@ -94,7 +94,7 @@ Atualizar `geral/Ajuda` (`afiliados`, `afiliados_network`) — ver `geral.mdc` (
 
 - Nunca `CTA_GRADIENT` de módulo com tokens de dashboard
 - Nunca `--brand-action-12` / `--brand-action-border` em tabs ou banner de visualização
-- Nunca `"este dashboard"` na permissão negada
+- Nunca `"este dashboard"` na permissão negada — usar `"esta página"`
 - Nunca texto visível `Carregando…` (ASCII `Carregando...`) no loading principal (só `aria-label` no spinner)
 - Nunca `role="alert"` sem `aria-live="polite"` em erros
 - Nunca tabs sem ARIA completo e teclado

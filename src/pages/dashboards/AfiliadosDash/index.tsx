@@ -262,7 +262,7 @@ export default function AfiliadosDash() {
           background: t.bg,
         }}
       >
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }

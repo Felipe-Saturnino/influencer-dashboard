@@ -12,7 +12,7 @@ export type RhDocumentoClassificacao = "uso_interno" | "uso_publico" | "confiden
 export const PORTAL_RH_APLICAVEL_TODOS = "Todos os prestadores";
 
 /**
- * Perfis que participam do fluxo de ciência no Portal RH — alinhado a Gestão de Usuários
+ * Perfis que participam do fluxo de ciência no Portal de RH — alinhado a Gestão de Usuários
  * (`FILTROS_PERFIL_LINHAS`: Perfis Gerenciais + Estúdio + Escritório).
  */
 export const PORTAL_RH_ROLES_CIENCIA: readonly Role[] = [

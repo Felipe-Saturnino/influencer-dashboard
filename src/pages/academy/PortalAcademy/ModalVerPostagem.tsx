@@ -431,7 +431,7 @@ export function ModalVerPostagem({
                 <CampoLeitura label="Versão">
                   <TextoOuTraco value={postagem.versao} />
                 </CampoLeitura>
-                <CampoLeitura label="Exige ciência do colaborador">
+                <CampoLeitura label="Exige ciência do prestador">
                   <TextoOuTraco value={postagem.exigeCiencia ? "Sim" : "Não"} />
                 </CampoLeitura>
                 {postagem.exigeCiencia ? (

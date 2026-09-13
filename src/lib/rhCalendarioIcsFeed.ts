@@ -19,7 +19,7 @@ export function mensagemErroCalendarioIcsFeed(code: RhCalendarioIcsFeedErro): st
     return "Não foi possível gerar o link. Confirme o vínculo de prestador no cadastro. Se o problema persistir, entre em contato com o suporte.";
   }
   if (code === "sem_permissao") {
-    return "Você não tem permissão para visualizar este dashboard.";
+    return "Você não tem permissão para visualizar esta página.";
   }
   return "Não foi possível gerar o link. Se o problema persistir, entre em contato com o suporte.";
 }

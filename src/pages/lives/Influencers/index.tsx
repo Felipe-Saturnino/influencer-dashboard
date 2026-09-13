@@ -275,7 +275,7 @@ export default function Influencers() {
       <DashboardPageHeader
         icon={<PageMenuIcon pageKey="influencers" />}
         title={getPageMenuLabel("influencers")}
-        subtitle={showManagementUI ? "Gerencie o cadastro completo dos parceiros — perfil, canais e financeiro." : "Seu perfil completo na plataforma."}
+        subtitle={showManagementUI ? "Gerencie o cadastro completo dos influencers — perfil, canais e financeiro." : "Seu perfil completo na plataforma."}
         brand={brand}
         t={t}
         right={showManagementUI ? undefined : <AjudaContextualAcoes pageKey="influencers" />}

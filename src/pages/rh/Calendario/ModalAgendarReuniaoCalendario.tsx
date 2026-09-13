@@ -139,8 +139,8 @@ export function ModalAgendarReuniaoCalendario({
       <div style={{ padding: "4px 4px 0", fontFamily: FONT.body, color: t.text }}>
         {diasEscalados.length === 0 ? (
           <p style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.55, color: t.textMuted }}>
-            Não há dias futuros com escala de trabalho neste mês na gestão de escala. Avance o mês ou confirme a
-            sua escala na Gestão de Escala.
+            Não há dias futuros com escala de trabalho neste mês na Escala Estúdio. Avance o mês ou confirme a
+            sua escala na Escala Estúdio.
           </p>
         ) : null}
 

@@ -13,16 +13,16 @@ export const TUTORIAL_RH_SOLICITACOES_VAGAS: TutorialDef = {
   relatedPageKey: "rh_solicitacoes",
   relatedTabId: "vagas",
   objetivo:
-    "Como gestor, solicitar a abertura de uma vaga na aba Vagas de Solicitações (RH).",
+    "Como gestor, solicitar a abertura de uma vaga na aba Vagas de Solicitações de RH.",
   passos: [
     {
       titulo: "1. Abrir a aba Vagas",
       texto:
-        "1. No menu, seção RH, clique em **Solicitações**.\n2. Clique na aba **Vagas**.\n3. O carrossel abre em **Em análise** — pedidos de abertura aguardando atendimento.\n4. Com permissão de **Editar**, o botão **Solicitar Vaga** aparece no bloco da lista.",
+        "1. No menu, seção RH, clique em **Solicitações de RH**.\n2. Clique na aba **Vagas**.\n3. O carrossel abre em **Em análise** — pedidos de abertura aguardando atendimento.\n4. Com permissão de **Editar**, o botão **Solicitar Vaga** aparece no bloco da lista.",
       imagens: [
         {
           src: `${IMG}/01-aba-vagas.png`,
-          alt: "Solicitações — aba Vagas com CTA Solicitar Vaga",
+          alt: "Solicitações — aba Vagas com botão Solicitar Vaga",
         },
       ],
     },

@@ -1,6 +1,6 @@
 /**
  * Escala Escritório — grade mensal para prestadores com area_atuacao = escritorio.
- * Reutiliza a mesma UI/engine de Escala Estúdio (Gestão de Escala) em modo escritório.
+ * Reutiliza a mesma UI/engine de Escala Estúdio em modo escritório.
  * Gestão de Prestadores não é alterada por esta página.
  */
 import GestaoEscalaPage from "../GestaoEscala";

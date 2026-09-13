@@ -8,7 +8,7 @@ export const ERRO_PRESTADOR_SYNC =
   "O cadastro foi gravado, mas não foi possível sincronizar o acesso à plataforma. Se o problema persistir, entre em contato com o suporte.";
 
 export const ERRO_PRESTADOR_SYNC_DEALER =
-  "O cadastro foi gravado, mas não foi possível sincronizar o dealer. Se o problema persistir, entre em contato com o suporte.";
+  "O cadastro foi gravado, mas não foi possível sincronizar o Game Presenter. Se o problema persistir, entre em contato com o suporte.";
 
 export const ERRO_PRESTADOR_EXCLUIR =
   "Não foi possível excluir o prestador. Se o problema persistir, entre em contato com o suporte.";

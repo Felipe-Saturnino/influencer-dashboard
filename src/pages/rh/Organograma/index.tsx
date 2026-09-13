@@ -748,7 +748,7 @@ export default function RhOrganogramaPage() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }

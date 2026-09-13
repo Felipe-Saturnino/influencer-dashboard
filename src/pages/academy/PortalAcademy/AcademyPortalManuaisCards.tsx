@@ -70,7 +70,7 @@ function borderLeftCiencia(
   return "3px solid #22c55e";
 }
 
-/** Cards em lista (padrão Portal RH Políticas) — Introdução + Visualizar + Ver ciência (Editar + exige ciência). */
+/** Cards em lista (padrão Portal de RH Políticas) — Introdução + Visualizar + Ver ciência (Editar + exige ciência). */
 export function AcademyPortalManuaisCards({
   rows,
   cienciaPendenteIds,

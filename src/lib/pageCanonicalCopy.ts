@@ -28,7 +28,7 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
   tech_ops_itens_alocados:
     "Checklist de itens e equipamentos alocados por local e mesa, com limpeza e manutenção.",
   galeria_fotos:
-    "Faça o Upload das fotos de eventos, publique materiais gerais e vincule imagens individuais aos colaboradores.",
+    "Faça o Upload das fotos de eventos, publique materiais gerais e vincule imagens individuais aos prestadores.",
 };
 
 export function getPageCanonicalSubtitle(pageKey: PageKey): string {

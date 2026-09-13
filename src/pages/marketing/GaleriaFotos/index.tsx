@@ -871,7 +871,7 @@ export default function GaleriaFotos() {
       return;
     }
     if (uploadTipo === "prestador" && !uploadPrestadorId) {
-      setUploadErro("Selecione o colaborador para fotos individuais.");
+      setUploadErro("Selecione o prestador para fotos individuais.");
       return;
     }
     setUploading(true);
@@ -1138,7 +1138,7 @@ export default function GaleriaFotos() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -1148,7 +1148,7 @@ export default function GaleriaFotos() {
       <PageHeader
         icon={<PageMenuIcon pageKey="galeria_fotos" />}
         title={getPageMenuLabel("galeria_fotos")}
-        subtitle="Organize fotos de eventos, publique materiais gerais e vincule imagens individuais aos colaboradores."
+        subtitle="Organize fotos de eventos, publique materiais gerais e vincule imagens individuais aos prestadores."
       />
 
       <div style={getPageFilterBoxStyle(brand, t)}>
@@ -1272,12 +1272,12 @@ export default function GaleriaFotos() {
                 placeholder={
                   galeriaSubAba === "gerais"
                     ? "Pesquisar evento ou arquivo..."
-                    : "Pesquisar colaborador ou arquivo..."
+                    : "Pesquisar prestador ou arquivo..."
                 }
                 aria-label={
                   galeriaSubAba === "gerais"
                     ? "Buscar fotos gerais por evento ou arquivo"
-                    : "Buscar minhas fotos por colaborador ou arquivo"
+                    : "Buscar minhas fotos por prestador ou arquivo"
                 }
                 wrapperStyle={{ width: "100%", maxWidth: 420, flex: "1 1 240px" }}
               />
@@ -1306,10 +1306,10 @@ export default function GaleriaFotos() {
                   }
                   items={prestadorItensMinhas}
                   icon={<User size={15} aria-hidden />}
-                  triggerEmptyLabel="Todos Colaboradores"
-                  ariaFilterPrefix="Filtrar por colaborador"
-                  listboxAriaLabel="Colaboradores"
-                  searchPlaceholder={placeholderPesquisaFiltro("Colaborador")}
+                  triggerEmptyLabel="Todos Prestadores"
+                  ariaFilterPrefix="Filtrar por prestador"
+                  listboxAriaLabel="Prestadores"
+                  searchPlaceholder={placeholderPesquisaFiltro("Prestador")}
                 />
               ) : meuRhFuncionarioId ? (
                 <FiltroEntidadeBarSelect
@@ -1318,14 +1318,14 @@ export default function GaleriaFotos() {
                   onChange={() => {}}
                   items={prestadorItensMinhas}
                   icon={<User size={15} aria-hidden />}
-                  triggerEmptyLabel={meuRhFuncionarioNome ?? "Colaborador"}
-                  ariaFilterPrefix="Colaborador"
-                  listboxAriaLabel="Colaborador"
+                  triggerEmptyLabel={meuRhFuncionarioNome ?? "Prestador"}
+                  ariaFilterPrefix="Prestador"
+                  listboxAriaLabel="Prestador"
                   disabled
                 />
               ) : (
                 <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
-                  Nenhum colaborador vinculado ao seu login.
+                  Nenhum prestador vinculado ao seu login.
                 </span>
               )}
             </div>
@@ -1346,7 +1346,7 @@ export default function GaleriaFotos() {
             <div style={pageBox}>
               <div style={{ padding: "40px 0", textAlign: "center", color: t.textMuted, fontSize: 13, fontFamily: FONT.body }}>
                 {galeriaSubAba === "minhas_fotos" && !podeFiltrarPrestador && !meuRhFuncionarioId
-                  ? "Nenhum colaborador vinculado ao seu login."
+                  ? "Nenhum prestador vinculado ao seu login."
                   : "Nenhuma foto encontrada para os filtros selecionados."}
               </div>
             </div>
@@ -1527,7 +1527,7 @@ export default function GaleriaFotos() {
           tabIndex={0}
         >
           <div style={pageBox}>
-            <SectionTitle sub="fotos gerais e individuais de colaboradores">Enviar fotos</SectionTitle>
+            <SectionTitle sub="fotos gerais e individuais de prestadores">Enviar fotos</SectionTitle>
 
             {uploadErro ? (
               <div role="alert" aria-live="polite" style={{ color: "#e84025", fontSize: 12, fontFamily: FONT.body, marginTop: 12 }}>
@@ -1554,7 +1554,7 @@ export default function GaleriaFotos() {
                   }}
                 />
                 <FiltroSemanticoTabPill
-                  label="Fotos de colaborador"
+                  label="Fotos de prestador"
                   semanticColor="#1e36f8"
                   active={uploadTipo === "prestador"}
                   onClick={() => {
@@ -1622,7 +1622,7 @@ export default function GaleriaFotos() {
             ) : (
               <div style={{ marginTop: 16, maxWidth: 360 }}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 6, fontFamily: FONT.body }}>
-                  Colaborador
+                  Prestador
                   <CampoObrigatorioMark />
                 </label>
                 <FiltroEntidadeBarSelect
@@ -1631,10 +1631,10 @@ export default function GaleriaFotos() {
                   onChange={(ids) => setUploadPrestadorId(ids[0] ?? "")}
                   items={prestadorItens}
                   icon={<User size={15} aria-hidden />}
-                  triggerEmptyLabel="Selecione o colaborador"
-                  ariaFilterPrefix="Filtrar por colaborador"
-                  listboxAriaLabel="Colaboradores"
-                  searchPlaceholder={placeholderPesquisaFiltro("Colaborador")}
+                  triggerEmptyLabel="Selecione o prestador"
+                  ariaFilterPrefix="Filtrar por prestador"
+                  listboxAriaLabel="Prestadores"
+                  searchPlaceholder={placeholderPesquisaFiltro("Prestador")}
                   enableSearch
                 />
               </div>

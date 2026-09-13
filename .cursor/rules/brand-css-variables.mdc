@@ -215,7 +215,7 @@ import { getPageMenuLabel } from "../lib/pageHeaderMenu";
 
 ### Pill `borderRadius: 999` (padrão de controles na barra)
 
-Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por defeito — alinhado a **Histórico** (`FiltroHistoricoButton`), **Operadora** (`FiltroOperadoraSelect` com `pill`), **Influencer** (`FiltroInfluencerSelect`) e **novos filtros** da barra em código novo.
+Filtros e toggles repetíveis na **barra de filtros** usam pill **999** por padrão — alinhado a **Histórico** (`FiltroHistoricoButton`), **Operadora** (`FiltroOperadoraSelect` com `pill`), **Influencer** (`FiltroInfluencerSelect`) e **novos filtros** da barra em código novo.
 
 - **Exceção — chips semânticos Status / Plataforma:** `borderRadius: **10**`, `padding: 10px 18px`, `minHeight: 44` — **`FiltroStatusSemanticoPill`**, **`FiltroPlataformaSemanticoPill`** (Global § Filtros semânticos; referência visual: abas Overview Spin). Ativo na cor do domínio, não `brand.accent`.
 - **Não** usar `borderRadius: 20` na barra salvo exceção documentada na secção.
@@ -482,7 +482,7 @@ Ações de **fluxo da página** (**Nova Escala**, **Salvar Alterações**, **Sug
 
 ### Linha de tabela, card ou lista densa
 
-Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por defeito.
+Ações por registro (**Editar, Ver, Histórico, Aprovar, Arquivar, Excluir, …**): botão **somente ícone**, sem texto visível por padrão.
 
 - **`aria-label` descritivo** obrigatório.
 - **`title` obrigatório** — tooltip nativo no hover; **mesmo texto** que `aria-label`.

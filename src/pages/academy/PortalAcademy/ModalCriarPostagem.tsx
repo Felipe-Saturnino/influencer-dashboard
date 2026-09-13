@@ -680,7 +680,7 @@ export function ModalCriarPostagem({
                     />
                   </div>
                   <div>
-                    {lbl("ap-exige-ciencia", "Exige ciência do colaborador?", true)}
+                    {lbl("ap-exige-ciencia", "Exige ciência do prestador?", true)}
                     <select
                       id="ap-exige-ciencia"
                       value={exigeCiencia}
@@ -690,7 +690,7 @@ export function ModalCriarPostagem({
                         if (v === "nao") setAplicavelA([]);
                       }}
                       style={{ ...selectStyle, borderColor: fieldErr.exigeCiencia ? "#e84025" : t.cardBorder }}
-                      aria-label="Exige ciência do colaborador"
+                      aria-label="Exige ciência do prestador"
                     >
                       <option value="">Selecione…</option>
                       <option value="sim">Sim</option>

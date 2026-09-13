@@ -432,7 +432,7 @@ function diaIsoChaveGrade(row: RpcGradeCalendarioRow): string {
   }
 }
 
-/** Rótulo no Calendário para o valor gravado na grade (Gestão de Escala). Folgas não entram na grelha. */
+/** Rótulo no Calendário para o valor gravado na grade (Escala Estúdio). Folgas não entram na grelha. */
 function turnoExibicaoDeValorCelulaEscala(valor: string): string | null {
   const v = (valor ?? "").trim();
   if (!v) return null;
@@ -447,7 +447,7 @@ function turnoCalendarioEhCompraVendaTroca(turnoNome: string): boolean {
   return turnoNome === "Compra" || turnoNome === "Venda" || turnoNome === "Troca" || turnoNome === "Atestado";
 }
 
-/** Situação na grade (Gestão de Escala) para o dia — Folga vs escalado de turno; CVT mantém o rótulo. */
+/** Situação na grade (Escala Estúdio) para o dia — Folga vs escalado de turno; CVT mantém o rótulo. */
 function situacaoGestaoEscalaParaDia(valorCelulaRaw: string | null | undefined): string {
   const v = (valorCelulaRaw ?? "").trim();
   if (!v) return "—";
@@ -774,7 +774,7 @@ export default function RhCalendarioPage() {
   >(() => new Map());
 
   const [rawGradeRowsRpc, setRawGradeRowsRpc] = useState<RpcGradeCalendarioRow[]>([]);
-  /** Horário/turno congelados na aprovação da Gestão de Escala (mês da grade). */
+  /** Horário/turno congelados na aprovação da Escala Estúdio (mês da grade). */
   const [turnoMesMap, setTurnoMesMap] = useState<EscalaTurnoMesMap>({});
   const [loadingEscala, setLoadingEscala] = useState(false);
   const [erroEscala, setErroEscala] = useState<string | null>(null);
@@ -2875,7 +2875,7 @@ export default function RhCalendarioPage() {
 
   /**
    * Análise de correção / esquecimento / Outro: só líder imediato (gerenciáveis), admin ou Editar sim.
-   * O próprio prestador nunca aprova a própria correção — atestado médico segue em Solicitações (RH).
+   * O próprio prestador nunca aprova a própria correção — atestado médico segue em Solicitações de RH.
    */
   const podeAnalisarCorrecaoPresencaStaff = useCallback(
     (fid: string | undefined | null) => {
@@ -3241,7 +3241,7 @@ export default function RhCalendarioPage() {
   if (perm.canView === "nao") {
     return (
       <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }
@@ -3735,7 +3735,7 @@ export default function RhCalendarioPage() {
           }}
           role="status"
         >
-          Não há escala de estúdio <strong>aprovada</strong> para este mês. A Escala Diária é gerada e aprovada pela liderança e só então os turnos passam a refletir aqui.
+          Não há escala de estúdio <strong>aprovada</strong> para este mês. A grade Escala Diária (em Escala Estúdio) é gerada e aprovada pela liderança e só então os turnos passam a refletir aqui.
         </div>
       ) : null}
 

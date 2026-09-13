@@ -90,7 +90,7 @@ export function useHomePortalRhFeed() {
           try {
             return { rows: await fetchAllPages(run), falhou: false };
           } catch (e) {
-            console.error(`[Home] Portal RH feed (${label}):`, e);
+            console.error(`[Home] Portal de RH feed (${label}):`, e);
             return { rows: [], falhou: true };
           }
         };
@@ -133,7 +133,7 @@ export function useHomePortalRhFeed() {
           }),
           precisaSetores && emailEfetivo?.trim()
             ? buscarRhFuncionarioAtivoPorEmailLoginCached(emailEfetivo).catch((e) => {
-                console.error("[Home] Portal RH feed (funcionario):", e);
+                console.error("[Home] Portal de RH feed (funcionario):", e);
                 return null;
               })
             : Promise.resolve(null),
@@ -213,7 +213,7 @@ export function useHomePortalRhFeed() {
         try {
           meta = await carregarNomesAutoresPortalRh(autorIds);
         } catch (e) {
-          console.error("[Home] Portal RH feed (autores):", e);
+          console.error("[Home] Portal de RH feed (autores):", e);
         }
         if (cancelled) return;
 
@@ -230,7 +230,7 @@ export function useHomePortalRhFeed() {
         setLista(listaFinal);
         setErro(fontesFalharam && listaFinal.length === 0);
       } catch (e) {
-        console.error("[Home] Portal RH feed:", e);
+        console.error("[Home] Portal de RH feed:", e);
         if (!cancelled) {
           setErro(true);
           setLista([]);

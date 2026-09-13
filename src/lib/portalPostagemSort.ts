@@ -1,5 +1,5 @@
 /**
- * Ordenação das abas de leitura do Portal RH / Portal Academy (não Gerenciamento).
+ * Ordenação das abas de leitura do Portal de RH / Portal Academy (não Gerenciamento).
  * 1) Ciência pendente no topo
  * 2) Dentro de cada grupo: mais nova → mais antiga (`published_at`)
  */

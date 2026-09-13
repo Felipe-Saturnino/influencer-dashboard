@@ -112,7 +112,7 @@ export function ModalSolicitacao({ dealer, operadoraSlug, onClose, onEnviado }: 
           style={pill(tipo === "troca_dealer")}
           onClick={() => setTipo("troca_dealer")}
         >
-          Solicitar troca de dealer
+          Solicitar troca de Game Presenter
         </button>
         <button
           type="button"

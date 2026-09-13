@@ -73,7 +73,7 @@ export const TUTORIAL_CONTROLE_TURNO_NOTIFICACOES: TutorialDef = {
     {
       titulo: "6. Acompanhar atendimentos no dia a dia",
       texto:
-        "1. Volte à aba **Notificações** nos dias seguintes com o carrossel — itens não resolvidos **reaparecem** até fecharem.\n2. **Fechamento:** espere **Reaberta** (ou edite a abertura quando a mesa voltar).\n3. **Ausência:** complete o **Fim da Ausência** quando souber.\n4. **Feedback:** acompanhe **Revisar** → **Aplicado** (ou **Rejeitado**) após o RH em Solicitações.\n5. **Manutenção:** acompanhe **Aberto** → **Em andamento** → **Concluído** (ou cancele se não for mais necessário).\n6. Use a busca por mesa, prestador ou palavra-chave e o ícone **Ver** em cada linha para o detalhe completo.",
+        "1. Volte à aba **Notificações** nos dias seguintes com o carrossel — itens não resolvidos **reaparecem** até fecharem.\n2. **Fechamento:** espere **Reaberta** (ou edite a abertura quando a mesa voltar).\n3. **Ausência:** complete o **Fim da Ausência** quando souber.\n4. **Feedback:** acompanhe **Revisar** → **Aplicado** (ou **Rejeitado**) após o RH em Solicitações de RH.\n5. **Manutenção:** acompanhe **Aberto** → **Em andamento** → **Concluído** (ou cancele se não for mais necessário).\n6. Use a busca por mesa, prestador ou palavra-chave e o ícone **Ver** em cada linha para o detalhe completo.",
       imagens: [
         {
           src: `${IMG}/06-acompanhar-status.png`,

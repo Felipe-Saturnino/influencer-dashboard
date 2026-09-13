@@ -1130,7 +1130,7 @@ export function gerarGradeRotacao(opts: {
       ok: false,
       erro: modoShuffler
         ? "Não foi possível montar a posição TODOS para Shuffler."
-        : "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.",
+        : "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Estúdios.",
     };
   }
   if (nSlots <= 0) {

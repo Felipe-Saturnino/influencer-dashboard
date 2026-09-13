@@ -17,7 +17,7 @@ export type SolicitacaoStatus = "pendente" | "em_andamento" | "resolvido" | "can
 export type AguardaResposta = "operadora" | "gestor";
 
 export function labelTipoSolicitacao(tipo: SolicitacaoTipo): string {
-  if (tipo === "troca_dealer") return "Troca de dealer";
+  if (tipo === "troca_dealer") return "Troca de Game Presenter";
   return "Feedback";
 }
 

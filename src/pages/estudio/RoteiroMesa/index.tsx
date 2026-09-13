@@ -85,7 +85,7 @@ const BLOCOS: { key: BlocoRoteiro; label: string }[] = [
 ];
 
 const JOGOS: { key: JogoTag; label: string }[] = [
-  { key: "todos",              label: "Todos os Jogos" },
+  { key: "todos",              label: "Todos Jogos" },
   { key: "blackjack",          label: "BlackJack" },
   { key: "roleta",             label: "Roleta" },
   { key: "baccarat",           label: "Baccarat" },
@@ -439,7 +439,7 @@ function ModalRoteiro({ estudioSlug, estudiosList, bloco, onClose, onSalvo, opPa
           Texto
           <CampoObrigatorioMark />
         </p>
-        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? "Olá Jogadores, meu nome é [Nome]..." : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o dealer..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none", marginBottom: 18 }} />
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={tipo === "script" ? "Olá Jogadores, meu nome é [Nome]..." : tipo === "alerta" ? "Descreva o alerta ou regra operacional..." : "Descreva a orientação para o Game Presenter..."} rows={4} style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1px solid ${t.inputBorder ?? t.cardBorder}`, background: t.inputBg ?? t.cardBg, color: t.inputText ?? t.text, fontFamily: FONT.body, fontSize: 13, lineHeight: 1.5, resize: "vertical", boxSizing: "border-box", outline: "none", marginBottom: 18 }} />
 
         {erroSalvar ? (
           <div role="alert" aria-live="polite" style={{ color: "#ef4444", fontSize: 12, marginBottom: 12, fontFamily: FONT.body }}>
@@ -671,7 +671,7 @@ function ModalCampanha({ estudioSlug, estudiosList, onClose, onSalvo, opParaEstu
           Texto
           <CampoObrigatorioMark />
         </label>
-        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='O que o dealer deve falar...' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder='O que o Game Presenter deve falar...' rows={4} style={{ ...inp, resize: "vertical", marginBottom: 18 }} />
 
         {erroSalvar ? (
           <p role="alert" aria-live="polite" style={{ margin: "0 0 14px", fontSize: 12, color: BRAND.vermelho, fontFamily: FONT.body }}>
@@ -1360,7 +1360,7 @@ export default function RoteiroMesa() {
       <PageHeader
         icon={<PageMenuIcon pageKey="roteiro_mesa" />}
         title={getPageMenuLabel("roteiro_mesa")}
-        subtitle="Scripts e orientações de live por estúdio para o dealer usar em mesa."
+        subtitle="Scripts e orientações de live por estúdio para o Game Presenter usar em mesa."
       />
 
       {/* ── BLOCO DE FILTROS — tudo em uma linha, estúdio à direita com ícone ── */}

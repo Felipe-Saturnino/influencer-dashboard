@@ -70,7 +70,7 @@ export default function Login({ onLogin }: Props) {
       .eq("id", authData.user.id)
       .single();
     if (profileError || !profile) {
-      setError("Perfil não encontrado. Contate o administrador.");
+      setError("Perfil não encontrado. Entre em contato com o administrador.");
       await supabase.auth.signOut();
       setLoading(false);
       return;

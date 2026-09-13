@@ -95,7 +95,7 @@ export function HeadcountFiltroBar({
           icon={FilterBarIcons.diretoria}
           ariaLabel="Diretorias"
           todasValue="todas"
-          todasLabel="Todas as diretorias"
+          todasLabel="Todas Diretorias"
           minWidth={200}
         />
 

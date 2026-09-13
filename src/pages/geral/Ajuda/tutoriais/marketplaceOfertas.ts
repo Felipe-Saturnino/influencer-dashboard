@@ -17,7 +17,7 @@ export const TUTORIAL_MARKETPLACE_OFERTAS: TutorialDef = {
     {
       titulo: "1. Abrir o Marketplace",
       texto:
-        "1. No menu, seção Escala, clique em Marketplace.\n2. A aba Todas as Ofertas mostra o mural em três blocos: Ofertas de Turno, Ofertas de Folga e Ofertas de Troca. Cada linha traz a data, o turno, o estúdio, o ofertante e a observação de quem publicou.\n3. Na barra de filtros, o filtro Todos os Dias lista apenas os dias que têm oferta no período — escolha um dia para ver só ele.\n4. Use Nova Oferta para publicar.\n5. Em Minhas Ofertas você acompanha o que publicou, o que aceitou e o histórico.",
+        "1. No menu, seção Escala, clique em Marketplace.\n2. A aba Todas as Ofertas mostra o mural em três blocos: Ofertas de Turno, Ofertas de Folga e Ofertas de Troca. Cada linha traz a data, o turno, o estúdio, o ofertante e a observação de quem publicou.\n3. Na barra de filtros, o filtro Todos Dias lista apenas os dias que têm oferta no período — escolha um dia para ver só ele.\n4. Use Nova Oferta para publicar.\n5. Em Minhas Ofertas você acompanha o que publicou, o que aceitou e o histórico.",
       imagens: [
         {
           src: `${IMG}/01-marketplace-todas-ofertas.png`,

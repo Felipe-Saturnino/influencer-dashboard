@@ -3,7 +3,7 @@ export const MODAL_ARQUIVAR_TITULO = "Arquivar";
 
 const SUFIXO_IRREVERSIVEL = "Esta ação não poderá ser desfeita.";
 
-/** Botão ícone — dimensões (referência: Gerenciamento Informativos / Portal RH). */
+/** Botão ícone — dimensões (referência: Gerenciamento Informativos / Portal de RH). */
 export const BTN_ARQUIVAR_LINHA_SIZE = 30;
 export const BTN_ARQUIVAR_LINHA_ICON_SIZE = 13;
 export const BTN_ARQUIVAR_LINHA_BORDER_RADIUS = 8;

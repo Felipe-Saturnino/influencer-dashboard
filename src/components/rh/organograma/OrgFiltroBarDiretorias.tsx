@@ -79,7 +79,7 @@ export function OrgFiltroBarDiretorias({
   };
 
   const labelCentro = todas
-    ? "Todas as diretorias"
+    ? "Todas Diretorias"
     : sorted.length === 0
       ? "—"
       : idxValido
@@ -152,7 +152,7 @@ export function OrgFiltroBarDiretorias({
                 todas ? "Ver uma diretoria de cada vez" : "Ver todas as diretorias de uma vez"
               }
             >
-              Todas as diretorias
+              Todas Diretorias
             </FiltroBarPillButton>
 
             {loading ? (

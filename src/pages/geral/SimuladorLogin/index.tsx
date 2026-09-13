@@ -232,7 +232,7 @@ export default function SimuladorLogin() {
         className="app-page-shell"
         style={{ padding: 48, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}
       >
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }

@@ -216,7 +216,7 @@ export default function RhPrestadoresPage() {
   const perm = usePermission("rh_funcionarios");
 
   // Remuneração e dados financeiros: visíveis a quem tem permissão de Ver na página
-  // (valores ocultos por defeito — Eye/EyeOff na tabela). Edição segue gated por canEditarOk.
+  // (valores ocultos por padrão — Eye/EyeOff na tabela). Edição segue gated por canEditarOk.
   const podeVerDadosSensiveis = perm.canView === "sim" || perm.canView === "proprios";
   const [erroGlobal, setErroGlobal] = useState<string | null>(null);
   const [sucessoMsg, setSucessoMsg] = useState<string | null>(null);
@@ -1466,7 +1466,7 @@ export default function RhPrestadoresPage() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }

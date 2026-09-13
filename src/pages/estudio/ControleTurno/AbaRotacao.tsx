@@ -481,7 +481,7 @@ export function AbaRotacao({ diaIso, turno }: Props) {
         opts.setErro(
           isBlocoRotacaoShuffler(ctx.estudioSlug)
             ? "Não foi possível montar a posição TODOS para Shuffler."
-            : "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Mesas.",
+            : "Este estúdio não tem mesas com Número da Mesa cadastrado em Gestão de Estúdios.",
         );
         return null;
       }

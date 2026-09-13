@@ -3,7 +3,7 @@ import type { TutorialDef } from "./types";
 
 const IMG = "/tutoriais/rh/solicitacoes";
 
-/** Tutorial: aprovar atestado em Solicitações (seção RH) — visão do time de RH. */
+/** Tutorial: aprovar atestado em Solicitações de RH — visão do time de RH. */
 export const TUTORIAL_RH_SOLICITACOES_APROVAR: TutorialDef = {
   id: "rh-solicitacoes-aprovar",
   urlSlug: "RhSolicitacoesAprovar",
@@ -18,7 +18,7 @@ export const TUTORIAL_RH_SOLICITACOES_APROVAR: TutorialDef = {
     {
       titulo: "1. Abrir a aba Atestados",
       texto:
-        "1. No menu, seção RH, clique em **Solicitações**.\n2. O carrossel de status abre em **Em análise** — fila dos pedidos pendentes.\n3. Na segunda linha da barra, a aba **Atestados** já lista só esse tipo.\n4. Atestados entram nesta fila quando o prestador registra justificativa **Médico** no **Calendário** (Controle de Presença), com status **Em análise**.",
+        "1. No menu, seção RH, clique em **Solicitações de RH**.\n2. O carrossel de status abre em **Em análise** — fila dos pedidos pendentes.\n3. Na segunda linha da barra, a aba **Atestados** já lista só esse tipo.\n4. Atestados entram nesta fila quando o prestador registra justificativa **Médico** no **Calendário** (Controle de Presença), com status **Em análise**.",
       aviso:
         "Gestores e outros perfis com permissão de **Ver** podem acompanhar os atestados na lista. A **aprovação** (ação **Atender** e parecer) é exclusiva do time de **RH**, com permissão de **Editar**.",
       imagens: [

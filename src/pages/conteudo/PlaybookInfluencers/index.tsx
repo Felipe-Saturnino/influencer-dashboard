@@ -157,12 +157,12 @@ function TituloSecao({ children, accent, compactTop }: { children: React.ReactNo
 const ConteudoPosicionamento: React.FC<{ dark: boolean }> = ({ dark }) => (
   <div>
     <p style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.7, marginTop: 0 }}>
-      A <strong>Spin Gaming</strong> é um estúdio 100% brasileiro, com operação nacional e dealers brasileiros. Sempre que possível, reforce esses pontos de forma orgânica durante a transmissão.
+      A <strong>Spin Gaming</strong> é um estúdio 100% brasileiro, com operação nacional e Game Presenters brasileiros. Sempre que possível, reforce esses pontos de forma orgânica durante a transmissão.
     </p>
     <TituloSecao accent={BRAND.azul}>Diferenciais para explorar na live</TituloSecao>
     <ListaOK dark={dark} items={[
       "Estrutura totalmente localizada no Brasil",
-      "Dealers brasileiros treinados internamente",
+      "Game Presenters brasileiros treinados internamente",
       "Operação própria com alto padrão técnico",
     ]} />
     <BlocoInfo dark={dark}>
@@ -180,23 +180,23 @@ const ConteudoPosicionamento: React.FC<{ dark: boolean }> = ({ dark }) => (
 const ConteudoDealers: React.FC<{ dark: boolean }> = ({ dark }) => (
   <div>
     <p style={{ fontFamily: FONT.body, fontSize: 14, color: dark ? "#d0d0ee" : "#1a1a3e", lineHeight: 1.7, marginTop: 0 }}>
-      A interação com os dealers é um dos principais diferenciais da <strong>Spin Gaming</strong>. Use isso para aumentar o engajamento da sua live.
+      A interação com os Game Presenters é um dos principais diferenciais da <strong>Spin Gaming</strong>. Use isso para aumentar o engajamento da sua live.
     </p>
     <TituloSecao accent={BRAND.azul}>Boas práticas</TituloSecao>
     <ListaOK dark={dark} items={[
-      "Utilize o chat da mesa para interagir com a/o dealer sempre que possível",
-      "O chat da mesa é apenas entre cada jogador e o dealer. Então você não verá as mensagens de outros jogadores, assim como eles não verão as suas se você não mostrar na live",
-      "Estimule a interação entre você, a dealer e o público",
+      "Utilize o chat da mesa para interagir com a/o Game Presenter sempre que possível",
+      "O chat da mesa é apenas entre cada jogador e o Game Presenter. Então você não verá as mensagens de outros jogadores, assim como eles não verão as suas se você não mostrar na live",
+      "Estimule a interação entre você, o/a Game Presenter e o público",
       "Utilize essa dinâmica para aumentar o engajamento da live",
       "Utilize sempre os nomes profissionais apresentados na plataforma",
     ]} />
     <BlocoAlerta dark={dark}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div>
-          <strong>Importante¹:</strong> Evite incentivar ou solicitar informações pessoais das dealers. Não estimule busca por redes sociais ou nomes reais.
+          <strong>Importante¹:</strong> Evite incentivar ou solicitar informações pessoais dos Game Presenters. Não estimule busca por redes sociais ou nomes reais.
         </div>
         <div>
-          <strong>Importante²:</strong> Nunca use o nome real do(a) dealer, sempre utilizar o Nickname da tela
+          <strong>Importante²:</strong> Nunca use o nome real do(a) Game Presenter, sempre utilizar o Nickname da tela
         </div>
       </div>
     </BlocoAlerta>
@@ -280,7 +280,7 @@ const ConteudoTecnico: React.FC<{ dark: boolean }> = ({ dark }) => (
     </BlocoInfo>
     <TituloSecao accent={BRAND.azul}>Situações que podem ocorrer</TituloSecao>
     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-      {["Instabilidade técnica", "Parada de dealer", "Comportamento fora do padrão"].map((item, i) => (
+      {["Instabilidade técnica", "Parada de Game Presenter", "Comportamento fora do padrão"].map((item, i) => (
         <div key={i} style={{ padding: "10px 14px", borderRadius: 8, background: dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)", border: `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`, fontFamily: FONT.body, fontSize: 13, color: dark ? "#9898be" : "#4a4a6a" }}>
           {item}
         </div>
@@ -324,8 +324,8 @@ const ConteudoFunFacts: React.FC<{ dark: boolean }> = ({ dark }) => {
   ];
   const operacao = [
     { label: "Baralhos em operação", value: "18.000+" },
-    { label: "Dealers treinados internamente", value: "210+" },
-    { label: "Academia própria de dealers", value: "Sim" },
+    { label: "Game Presenters treinados internamente", value: "210+" },
+    { label: "Academia própria de Game Presenters", value: "Sim" },
     { label: "Treinadores com certificação internacional", value: "Sim" },
   ];
   const suporte = [
@@ -411,7 +411,7 @@ const ConteudoAcesso: React.FC<{ dark: boolean }> = ({ dark }) => (
 
 const ABAS: AbaConfig[] = [
   { key: "posicionamento", label: "Posicionamento", icon: <Star size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoPosicionamento },
-  { key: "dealers", label: "Dealers", icon: <Users size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: true, itemKey: "dealers_boas_praticas", accentColor: BRAND.vermelho, content: ConteudoDealers },
+  { key: "dealers", label: "Game Presenters", icon: <Users size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: true, itemKey: "dealers_boas_praticas", accentColor: BRAND.vermelho, content: ConteudoDealers },
   { key: "agendamento", label: "Agendamento", icon: <Calendar size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: true, itemKey: "agendamento_lives", accentColor: BRAND.vermelho, content: ConteudoAgendamento },
   { key: "jogos", label: "Jogos", icon: <Gamepad2 size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: true, itemKey: "prioridade_jogos", accentColor: BRAND.vermelho, content: ConteudoJogos },
   { key: "blackjack", label: "Side Bets", icon: <Zap size={FILTRO_BAR_TAB_ICON_SIZE} strokeWidth={2} aria-hidden="true" />, obrigatoria: false, accentColor: BRAND.azul, content: ConteudoBlackjack },

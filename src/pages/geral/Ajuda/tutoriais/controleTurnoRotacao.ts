@@ -66,7 +66,7 @@ export const TUTORIAL_CONTROLE_TURNO_ROTACAO: TutorialDef = {
     {
       titulo: "5. Mover pessoas entre estúdios",
       texto:
-        "1. No **pool** (chips dos prestadores), use o seletor **Mover estúdio…** no chip da pessoa.\n2. Escolha o estúdio de destino — a alocação vale só para aquele **dia e turno** (não altera o cadastro permanente em Staff nem a Escala Estúdio do mês).\n3. Se a pessoa já tiver sido movida manualmente, aparece **Restaurar estúdio** para voltar ao estúdio original da escala.\n4. O mesmo prestador **não** pode ficar em dois estúdios no mesmo dia/turno.\n5. Depois de mover, regenere ou ajuste a prévia do(s) bloco(s) afetado(s) para a grade refletir o novo pool.",
+        "1. No **pool** (lista dos prestadores), use o seletor **Mover estúdio…** no card da pessoa.\n2. Escolha o estúdio de destino — a alocação vale só para aquele **dia e turno** (não altera o cadastro permanente em Staff nem a Escala Estúdio do mês).\n3. Se a pessoa já tiver sido movida manualmente, aparece **Restaurar estúdio** para voltar ao estúdio original da escala.\n4. O mesmo prestador **não** pode ficar em dois estúdios no mesmo dia/turno.\n5. Depois de mover, regenere ou ajuste a prévia do(s) bloco(s) afetado(s) para a grade refletir o novo pool.",
       imagens: [
         {
           src: `${IMG}/05-mover-estudio.png`,

@@ -119,7 +119,7 @@ const MARKETPLACE_TIME_OPCOES: { value: MarketplaceTimeFiltro; label: string }[]
 const MSG_VAZIO_OFERTAS = "Sem ofertas para os filtros selecionados.";
 
 /** Filtro de dia na barra (aba Todas as Ofertas) — vazio = todos os dias do período. */
-const MARKETPLACE_DIA_TODOS_LABEL = "Todos os Dias";
+const MARKETPLACE_DIA_TODOS_LABEL = "Todos Dias";
 const MARKETPLACE_DIA_ARIA_PREFIX = "Filtrar por dia";
 const MARKETPLACE_DIA_LISTBOX_LABEL = "Dias com ofertas";
 const GRADE_VAZIA: MarketplaceMinhaGrade = { aprovada: false, areaKey: "", valorPorIso: new Map() };
@@ -694,7 +694,7 @@ export default function EscalaMarketplaceTurnosPage() {
   if (perm.canView === "nao") {
     return (
       <div className="app-page-shell" style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-        Você não tem permissão para visualizar este dashboard.
+        Você não tem permissão para visualizar esta página.
       </div>
     );
   }

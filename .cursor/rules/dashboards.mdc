@@ -156,7 +156,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 |----------|--------|
 | Sem dados no período/filtros | Sem dados para o período selecionado. |
 | Modo Histórico | Overview: snapshot + Mês a Mês (13 meses). Contratação/Distratos: mesmos blocos na janela de 13 meses. |
-| Sem permissão | Você não tem permissão para visualizar este dashboard. |
+| Sem permissão | Você não tem permissão para visualizar esta página. |
 
 ---
 
@@ -192,7 +192,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 | Sem time (gestor, edge) | Selecione um time para visualizar os resultados. |
 | Time/staff com dados vazios | Sem dados para o período selecionado. |
 | KPIs de Mesa / OCR — sem linhas no período | Sem dados para o período selecionado. |
-| Sem permissão | Você não tem permissão para visualizar este dashboard. |
+| Sem permissão | Você não tem permissão para visualizar esta página. |
 
 ---
 
@@ -257,7 +257,7 @@ Nenhuma exceção documentada. Comparativo de Jogo, Comparativo de mesa e Dados 
 |---|---|---|
 | Série temporal — mês corrente | **Detalhamento Diário** | Sub: `"dia a dia"` |
 | Série temporal — modo histórico | **Detalhamento Mensal** | Sub: `"mês a mês"` |
-| Comparação de duas entidades (A vs B) | **Comparativo de [X]** | Ex.: `Comparativo de Funil`, `Comparativo de Mesa`, `Comparativo de Jogo` |
+| Comparação de duas entidades (A vs B) | **Comparativo de [X]** | Ex.: `Comparativo de Funil`, `Comparativo de mesa`, `Comparativo de Jogo` |
 | KPIs de uma seção da plataforma | **KPIs [Contexto]** | Ex.: `KPIs Executivos`, `KPIs Consolidados`, `KPIs Financeiros`, `KPIs de Mídias Sociais` |
 
 **Proibido:** usar `"Comparativo Diário"` ou `"Comparativo Mensal"` para série temporal — `"Comparativo"` é reservado para blocos A vs B.
@@ -402,7 +402,7 @@ isBRL        // boolean — formata referência MoM como BRL
 </div>
 ```
 
-Ícones Lucide: usar o **`strokeWidth` por defeito (2)** — não passar `strokeWidth` explícito nos KPIs, salvo exceção pontual do cabeçalho de página (ícone maior). **`SectionTitle` de bloco não leva ícone** (nível 3).
+Ícones Lucide: usar o **`strokeWidth` por padrão (2)** — não passar `strokeWidth` explícito nos KPIs, salvo exceção pontual do cabeçalho de página (ícone maior). **`SectionTitle` de bloco não leva ícone** (nível 3).
 
 ---
 

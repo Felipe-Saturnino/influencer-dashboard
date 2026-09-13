@@ -53,7 +53,7 @@ export function TurnosDealersFields({
   return (
     <>
       <div style={{ ...labelStyle, marginBottom: 10, textTransform: "none", letterSpacing: "0.04em", fontSize: 12, color: t.text }}>
-        Horário de turno dos dealers
+        Horário de turno dos Game Presenters
       </div>
       <div className="app-grid-2-tight">
         <div style={fieldStyle}>

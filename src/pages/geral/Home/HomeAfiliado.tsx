@@ -255,7 +255,7 @@ export default function HomeAfiliado() {
               ) : (
                 <>
                   Você ainda não confirmou todos os itens obrigatórios do Playbook. Acesse as abas{" "}
-                  <strong>Dealers</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para
+                  <strong>Game Presenters</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para
                   dar sua ciência.
                 </>
               )}

@@ -32,7 +32,7 @@ import {
 } from "../../../lib/pageContentBoxStyles";
 
 const JOGO_ROTEIRO_LABEL: Record<string, string> = {
-  todos: "Todos os Jogos",
+  todos: "Todos Jogos",
   blackjack: "BlackJack",
   roleta: "Roleta",
   baccarat: "Baccarat",
@@ -188,7 +188,7 @@ const TAB_STAFF_DOM_ID: Record<AbaStaff, string> = {
 };
 
 const STAFF_TAB_META: Record<AbaStaff, { label: string; panelId: string; icon: ReactNode }> = {
-  troca: { label: "Troca de dealer", panelId: "panel-central-troca", icon: <Inbox {...FILTRO_BAR_TAB_ICON_PROPS} /> },
+  troca: { label: "Troca de Game Presenter", panelId: "panel-central-troca", icon: <Inbox {...FILTRO_BAR_TAB_ICON_PROPS} /> },
   feedback: { label: "Feedbacks", panelId: "panel-central-feedback", icon: <MessageSquare {...FILTRO_BAR_TAB_ICON_PROPS} /> },
   campanha_roteiro: { label: "Campanhas", panelId: "panel-central-campanha-roteiro", icon: <Megaphone {...FILTRO_BAR_TAB_ICON_PROPS} /> },
   roteiro_mesa: { label: "Roteiros", panelId: "panel-central-roteiro-mesa", icon: <FileText {...FILTRO_BAR_TAB_ICON_PROPS} /> },

@@ -99,7 +99,7 @@ Cinza    #6b7280 → neutro, sem dados
 
 ---
 
-## Identidade visual por jogo (imutável — obrigatório por defeito)
+## Identidade visual por jogo (imutável — obrigatório por padrão)
 
 **Regra de produto:** em **todo** desenvolvimento novo ou alteração de UI que distinga **Baccarat, Roleta, Blackjack ou Futebol Brasileiro** (tag, badge, filtro, coluna de tabela, série de gráfico, KPI, faixa de título de mesa, especialidade de dealer, etc.), usar **`src/lib/gameIdentityColors.ts`** (e **`src/lib/gameIdentityIcons.tsx`** para ícones Lucide 13px quando aplicável).
 
@@ -290,7 +290,7 @@ const perm = usePermission("page_key");
 if (perm.canView === "nao") {
   return (
     <div style={{ padding: 24, textAlign: "center", color: t.textMuted, fontFamily: FONT.body }}>
-      Você não tem permissão para visualizar este dashboard.
+      Você não tem permissão para visualizar esta página.
     </div>
   );
 }
@@ -324,7 +324,7 @@ Se o botão de **criar / adicionar** ficar **dentro** do bloco de filtros, usar 
 - **Pills da barra** (Operadora, Influencer, **Histórico**, Hoje): mesmo `borderRadius` **999**, `padding` **6px 14px**, `gap` interno **6**, estados via `getFiltroBarPillStateStyle` — referência **Overview Influencer**.
 - **Chips semânticos** (Status, Plataforma em Lives/Afiliados): `borderRadius` **10**, `10px 18px`, `minHeight` **44** — `FiltroStatusSemanticoPill` / `FiltroPlataformaSemanticoPill` (§ Filtros semânticos abaixo); **não** misturar com pill 999 de marca.
 
-### Opção “Todos” por defeito
+### Opção “Todos” por padrão
 
 - Filtro alimentado por base/cadastro (influencer, status, área, etc.) deve incluir opção agregadora conforme domínio (`Todos`, `Todas`, …).
 - Só mudar do agregador quando o usuário escolher um valor específico.
@@ -720,7 +720,7 @@ Sem dados para o período selecionado.
 **Sem permissão (string exata):**
 
 ```
-Você não tem permissão para visualizar este dashboard.
+Você não tem permissão para visualizar esta página.
 ```
 
 ```tsx
@@ -1335,12 +1335,12 @@ O `index.html` gerado **não** deve ter `modulepreload` para `vendor-*-icons-*`;
 | **500** num `.js` referenciado no `index.html`, outros assets **200** | Asset não publicado ou chunk isolado problemático (histórico: ícones) | Rollback no Cloudflare → corrigir `vite.config.ts` (fundir chunk no `vendor-react` ou num vendor que já sobe) → novo deploy |
 | **404** em chunk após deploy com app já aberta | Hash antigo em cache | `ErrorBoundary` + listener em `main.tsx` recarregam; usuário pode Ctrl+Shift+R |
 | **200** num `.js` com `Content-Type: text/html` | Asset ausente + fallback SPA de `public/_redirects` (`/* /index.html 200`) devolve HTML no lugar do módulo | Confirmar que o deploy publicou **todos** os `/assets/`; validar `public/_headers` (HTML sem cache) |
-| Tela **Nova versão disponível** / «Atualizando...» presa após login | `ChunkLoadError`: chunk da rota não carregou; guard parou em `MAX_AUTO_RELOADS` | Testar em janela anônima (o guard usa `sessionStorage`); ver Network para o `.js` em falta |
+| Tela **Nova versão disponível** / «Atualizando…» presa após login | `ChunkLoadError`: chunk da rota não carregou; guard parou em `MAX_AUTO_RELOADS` | Testar em janela anônima (o guard usa `sessionStorage`); ver Network para o `.js` em falta |
 | Build CI verde, site quebrado | Desalinhamento CDN vs `index.html` | Validar Network no URL de **produção**, não só preview local |
 
 **Cache (`public/_headers`):** HTML com `no-cache, must-revalidate`; `/assets/*` com `max-age=31536000, immutable`. `index.html` em cache aponta para hashes que já não existem após deploy — é a origem mais comum de `ChunkLoadError` em produção. **Não** cachear HTML nem remover este ficheiro.
 
-**Recarga automática (`lib/chunkReloadGuard.ts`):** 1ª tentativa usa `location.reload()`; a **última** navega para a mesma URL com o param descartável **`_spinv`**, porque `reload()` pode reaproveitar o `index.html` em cache — justamente o ficheiro que aponta para o chunk inexistente. O param é removido do histórico em `main.tsx` (`limparParamCacheBustDaUrl`) **antes** do render, portanto nenhuma rota o observa. Esgotado o limite, a UI mostra **Nova versão disponível** com botão de recarga manual — **não** deixar o utilizador preso em «Atualizando...». O botão manual chama **`recarregarAposErroDeChunk()`** (limpa o guard **e** navega com `_spinv`); **proibido** `location.reload()` puro nesse caminho, senão o mesmo `index.html` em cache volta a pedir o chunk inexistente.
+**Recarga automática (`lib/chunkReloadGuard.ts`):** 1ª tentativa usa `location.reload()`; a **última** navega para a mesma URL com o param descartável **`_spinv`**, porque `reload()` pode reaproveitar o `index.html` em cache — justamente o ficheiro que aponta para o chunk inexistente. O param é removido do histórico em `main.tsx` (`limparParamCacheBustDaUrl`) **antes** do render, portanto nenhuma rota o observa. Esgotado o limite, a UI mostra **Nova versão disponível** com botão de recarga manual — **não** deixar o utilizador preso em «Atualizando…». O botão manual chama **`recarregarAposErroDeChunk()`** (limpa o guard **e** navega com `_spinv`); **proibido** `location.reload()` puro nesse caminho, senão o mesmo `index.html` em cache volta a pedir o chunk inexistente.
 
 **Domínio custom vs `*.pages.dev`:** produção passa pelas *Cache Rules* / *Browser Cache TTL* da zona Cloudflare; staging em `*.pages.dev` não. Sintoma exclusivo de produção com staging saudável ⇒ suspeitar de override de cache na zona (**Browser Cache TTL** deve ser *Respect Existing Headers*) antes de procurar regressão no código.
 
@@ -1407,7 +1407,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - **`usePermission` com query Supabase por página** — usar só `permissions` / `permissionsAcoes` do `AppContext` (§ Permissões).
 - **`PageKey` nova em `menu.ts` / `App.tsx` / `PAGES` sem entrada em `ALL_PAGE_KEYS` (`src/lib/allPageKeys.ts`)** — item não aparece no menu lateral (inclusive para admin).
 - Pré-liberar permissão `sim` para roles em página nova.
-- Filtro sem opção agregadora ou sem ela selecionada por defeito.
+- Filtro sem opção agregadora ou sem ela selecionada por padrão.
 - Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
 - **`FiltroOperadoraSelect` com operadoras inativas** na barra — lista do filtro deve usar `.eq("ativo", true)` (§ Filtro de operadora).
 - Abas de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone Lucide 16px por aba, ou com `borderRadius` 20/999 (padrão Organograma: radius 10 — Brand §6).

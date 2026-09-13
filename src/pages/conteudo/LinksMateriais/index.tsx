@@ -142,8 +142,8 @@ export default function LinksMateriais() {
   const [linkCompleto, setLinkCompleto] = useState("");
   const [loadingPerfil, setLoadingPerfil] = useState(true);
   const [loadingAliasInfluencer, setLoadingAliasInfluencer] = useState(false);
-  const [loadingInfluenciadores, setLoadingInfluenciadores] = useState(false);
-  const [influenciadores, setInfluenciadores] = useState<EntidadeOpcao[]>([]);
+  const [loadingInfluenceres, setLoadingInfluenceres] = useState(false);
+  const [influenceres, setInfluenceres] = useState<EntidadeOpcao[]>([]);
   const [influencerSelecionado, setInfluencerSelecionado] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -221,13 +221,13 @@ export default function LinksMateriais() {
   useEffect(() => {
     if (perm.loading) return;
     if (!user || isSelfMode || perm.canView === "nao" || !precisaSelecionarInfluencer) {
-      setInfluenciadores([]);
+      setInfluenceres([]);
       setInfluencerSelecionado("");
-      setLoadingInfluenciadores(false);
+      setLoadingInfluenceres(false);
       return;
     }
     let cancelled = false;
-    setLoadingInfluenciadores(true);
+    setLoadingInfluenceres(true);
     void (async () => {
       const roleFiltro = canal === "afiliado" ? "afiliado" : "influencer";
       // Mesmo padrão da página Influencers: profiles + perfil em duas queries (evita falha do embed).
@@ -239,9 +239,9 @@ export default function LinksMateriais() {
       if (cancelled) return;
       if (error) {
         console.error("[LinksMateriais] lista entidades:", error.message);
-        setInfluenciadores([]);
+        setInfluenceres([]);
         setInfluencerSelecionado("");
-        setLoadingInfluenciadores(false);
+        setLoadingInfluenceres(false);
         return;
       }
       type ProfileRow = { id: string; name: string | null; role: string | null };
@@ -282,10 +282,10 @@ export default function LinksMateriais() {
           }),
         };
       });
-      setInfluenciadores(rows);
+      setInfluenceres(rows);
       if (rows.length === 1) setInfluencerSelecionado(rows[0].id);
       else setInfluencerSelecionado("");
-      setLoadingInfluenciadores(false);
+      setLoadingInfluenceres(false);
     })();
     return () => {
       cancelled = true;
@@ -322,7 +322,7 @@ export default function LinksMateriais() {
         setUtmInput(existente);
         setLinkCompleto(`${trackingBasePorCanal(canal)}${encodeURIComponent(existente)}`);
       } else {
-        const row = influenciadores.find((i) => i.id === influencerSelecionado);
+        const row = influenceres.find((i) => i.id === influencerSelecionado);
         setUtmInput(sanitizarUtm((row?.nome ?? "").trim()));
       }
       setLoadingAliasInfluencer(false);
@@ -330,7 +330,7 @@ export default function LinksMateriais() {
     return () => {
       cancelled = true;
     };
-  }, [influencerSelecionado, influenciadores, user?.role, canal, isSelfMode]);
+  }, [influencerSelecionado, influenceres, user?.role, canal, isSelfMode]);
 
   useEffect(() => {
     if (!linkCompleto) {
@@ -368,7 +368,7 @@ export default function LinksMateriais() {
     isSelfMode
       ? loadingPerfil
       : precisaSelecionarInfluencer &&
-          (loadingInfluenciadores || (!!influencerSelecionado && loadingAliasInfluencer));
+          (loadingInfluenceres || (!!influencerSelecionado && loadingAliasInfluencer));
 
   async function emitir() {
     if (!podeEmitir || !user?.id) return;
@@ -518,7 +518,7 @@ export default function LinksMateriais() {
     aguardandoOpcoes ||
     salvando ||
     verificandoGateEmissao ||
-    (precisaSelecionarInfluencer && influenciadores.length === 0);
+    (precisaSelecionarInfluencer && influenceres.length === 0);
 
   const emitirTitle =
     !podeEmitir
@@ -529,7 +529,7 @@ export default function LinksMateriais() {
           ? "Verificando elegibilidade…"
           : aguardandoOpcoes
             ? "Carregando opções…"
-            : precisaSelecionarInfluencer && influenciadores.length === 0
+            : precisaSelecionarInfluencer && influenceres.length === 0
               ? filtrarEscopoAgencia
                 ? `Nenhum ${labelEntidadeLower} disponível no seu escopo`
                 : `Nenhum ${labelEntidadeLower} cadastrado`
@@ -622,9 +622,9 @@ export default function LinksMateriais() {
 
         {precisaSelecionarInfluencer &&
           podeEmitir &&
-          !loadingInfluenciadores &&
+          !loadingInfluenceres &&
           !perm.loading &&
-          influenciadores.length === 0 && (
+          influenceres.length === 0 && (
           <div style={{
             display: "flex",
             alignItems: "flex-start",
@@ -686,7 +686,7 @@ export default function LinksMateriais() {
                 <select
                   value={influencerSelecionado}
                   onChange={(e) => setInfluencerSelecionado(e.target.value)}
-                  disabled={!podeEmitir || loadingInfluenciadores || salvando || influenciadores.length === 0}
+                  disabled={!podeEmitir || loadingInfluenceres || salvando || influenceres.length === 0}
                   aria-label={labelEntidade}
                   style={{
                     width: "100%",
@@ -698,17 +698,17 @@ export default function LinksMateriais() {
                     color: t.text,
                     fontSize: 14,
                     fontFamily: FONT.body,
-                    cursor: loadingInfluenciadores || influenciadores.length === 0 ? "not-allowed" : "pointer",
+                    cursor: loadingInfluenceres || influenceres.length === 0 ? "not-allowed" : "pointer",
                   }}
                 >
                   <option value="">
-                    {loadingInfluenciadores
+                    {loadingInfluenceres
                       ? "Carregando…"
-                      : influenciadores.length === 0
+                      : influenceres.length === 0
                         ? `Nenhum ${labelEntidadeLower} encontrado`
                         : "Selecione…"}
                   </option>
-                  {influenciadores.map((inf) => (
+                  {influenceres.map((inf) => (
                     <option key={inf.id} value={inf.id}>
                       {inf.nome.trim() || inf.id.slice(0, 8)}
                     </option>

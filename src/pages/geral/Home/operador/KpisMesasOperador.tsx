@@ -46,7 +46,7 @@ export function KpisMesasOperador() {
 
       {semOperadora ? (
         <p style={{ ...HOME_BODY_MUTED, color: t.textMuted }}>
-          Nenhuma operadora vinculada ao seu perfil. Contate o administrador para configurar o escopo.
+          Nenhuma operadora vinculada ao seu perfil. Entre em contato com o administrador para configurar o escopo.
         </p>
       ) : loading ? (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "20px 0" }}>

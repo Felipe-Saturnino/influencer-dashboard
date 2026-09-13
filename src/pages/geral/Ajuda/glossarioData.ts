@@ -470,22 +470,22 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Jogos Spin",
         definicao:
-          "Os tipos de mesa ao vivo operados pela Spin Gaming nas plataformas parceiras:\n\n— Blackjack: disponível em múltiplas mesas (Blackjack 1, Blackjack 2, Blackjack VIP), cada uma com limites e perfis de aposta distintos.\n— Roleta: mesa única por operadora.\n— Speed Baccarat: versão acelerada do Baccarat, com rodadas mais rápidas.\n— Futebol Brasileiro: jogo ao vivo com mesas configuráveis por operadora (inicialmente na Casa de Apostas).",
+          "Os tipos de mesa ao vivo operados pela Spin Gaming nas operadoras parceiras:\n\n— Blackjack: disponível em múltiplas mesas (Blackjack 1, Blackjack 2, Blackjack VIP), cada uma com limites e perfis de aposta distintos.\n— Roleta: mesa única por operadora.\n— Speed Baccarat: versão acelerada do Baccarat, com rodadas mais rápidas.\n— Futebol Brasileiro: jogo ao vivo com mesas configuráveis por operadora (inicialmente na Casa de Apostas).",
         nota:
-          "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta, Speed Baccarat e Futebol Brasileiro lado a lado. O Comparativo de Mesa permite analisar as mesas de Blackjack individualmente. Em Dados por Mesa, a Casa de Apostas também exibe Futebol Brasileiro abaixo de Baccarat e Roleta.",
+          "O Comparativo de Jogo na Overview Spin exibe os dados de Blackjack (soma de todas as mesas), Roleta, Speed Baccarat e Futebol Brasileiro lado a lado. O Comparativo de mesa permite analisar as mesas de Blackjack individualmente. Em Dados por Mesa, a Casa de Apostas também exibe Futebol Brasileiro abaixo de Baccarat e Roleta.",
         referencia: "Overview Spin",
       },
       {
         termo: "Visibilidade na Vitrine",
         definicao:
-          "Percentual das mesas Spin Gaming que aparecem nas primeiras posições do lobby da plataforma parceira. Calculado com base no número de mesas ranqueadas dentro do top 20 em relação ao total de mesas ativas.",
+          "Percentual das mesas Spin Gaming que aparecem nas primeiras posições do lobby da operadora parceira. Calculado com base no número de mesas ranqueadas dentro do top 20 em relação ao total de mesas ativas.",
         nota: "Atualizado ao longo do dia conforme os snapshots automáticos do lobby. Compara com o mesmo horário do dia anterior.",
         referencia: "Overview Spin · Posicionamento",
       },
       {
         termo: "Snapshot de Lobby",
         definicao:
-          "Captura automática das posições de todos os jogos no lobby de uma plataforma parceira em um momento específico. Cada snapshot registra a posição absoluta de cada mesa Spin em relação aos concorrentes.",
+          "Captura automática das posições de todos os jogos no lobby de uma operadora parceira em um momento específico. Cada snapshot registra a posição absoluta de cada mesa Spin em relação aos concorrentes.",
         nota: "Os snapshots são executados em intervalos regulares ao longo do dia. A aba Posicionamento exibe o snapshot mais recente do dia como 'posição atual'.",
         referencia: "Overview Spin · Posicionamento",
       },
@@ -585,7 +585,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Operação",
         definicao:
-          "Campo de texto livre no perfil do afiliado que descreve o modelo de trabalho, os canais utilizados e as estratégias de aquisição do parceiro.",
+          "Campo de texto livre no perfil do afiliado que descreve o modelo de trabalho, os canais utilizados e as estratégias de aquisição do afiliado.",
         referencia: "Afiliados · Network",
       },
     ],
@@ -643,11 +643,11 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     accentColor: "#a78bfa",
     termos: [
       {
-        termo: "Dealer",
+        termo: "Game Presenter",
         definicao:
           "Profissional de cassino ao vivo no elenco Spin: nome artístico, especialidades por jogo (Blackjack, Roleta, Baccarat, Futebol Brasileiro), turno, gênero, fotos e o **estúdio** onde atua.",
         nota:
-          "Dealer e Game Presenter são a mesma função: RH define o time em Gestão de Prestadores; o gestor configura perfil e estúdio em Gestão de Staff; a operadora vê o catálogo em Gestão de Dealers — não cadastra dealer nesta página. O card espelha o estúdio do Staff (sem tag de operadora). O Operador vê os estúdios associados à sua parceira (dedicado e network) e filtra por eles; solicitações usam o vínculo comercial da operadora.",
+          "O catálogo para a operadora fica em **Gestão de Dealers**. RH define o time em Gestão de Prestadores; o gestor configura perfil e estúdio em Gestão de Staff; a operadora **não** cadastra Game Presenter na página de Dealers. O card espelha o estúdio do Staff (sem tag de operadora). O perfil Operador vê os estúdios associados à sua operadora (dedicado e network) e filtra por eles; solicitações usam o vínculo comercial da operadora.",
         referencia: "Gestão de Dealers · Gestão de Staff · Gestão de Prestadores",
       },
       {
@@ -659,13 +659,13 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Script",
         definicao:
-          "Tipo de sugestão de roteiro com texto falado ou roteirizado para o dealer seguir na mesa. Identificado visualmente no card do bloco.",
+          "Tipo de sugestão de roteiro com texto falado ou roteirizado para o Game Presenter seguir na mesa. Identificado visualmente no card do bloco.",
         referencia: "Roteiro de Mesa",
       },
       {
         termo: "Orientação",
         definicao:
-          "Tipo de sugestão com instruções de conduta ou foco para o dealer durante a sessão, sem necessariamente ser texto literal a ser lido.",
+          "Tipo de sugestão com instruções de conduta ou foco para o Game Presenter durante a sessão, sem necessariamente ser texto literal a ser lido.",
         referencia: "Roteiro de Mesa",
       },
       {
@@ -675,9 +675,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Roteiro de Mesa",
       },
       {
-        termo: "Troca de Dealer",
+        termo: "Troca de Game Presenter",
         definicao:
-          "Solicitação enviada pela operadora ao estúdio para substituir ou revisar o dealer de uma mesa. Fluxo tratado na Central de Notificações e iniciado na Gestão de Dealers.",
+          "Solicitação enviada pela operadora ao estúdio para substituir ou revisar o Game Presenter de uma mesa. Fluxo tratado na Central de Notificações e iniciado na Gestão de Dealers.",
         referencia: "Gestão de Dealers · Central de Notificações",
       },
       {
@@ -884,7 +884,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "RH Talk",
         definicao:
-          "Reunião periódica conduzida pelo RH da Spin Gaming com grupos de colaboradores para alinhamento, comunicação de políticas e abertura de espaço para perguntas. Cada sessão gera uma ata numerada sequencialmente.",
+          "Reunião periódica conduzida pelo RH da Spin Gaming com grupos de prestadores para alinhamento, comunicação de políticas e abertura de espaço para perguntas. Cada sessão gera uma ata numerada sequencialmente.",
         nota: "A ata publicada fica disponível no Portal de RH para quem tem permissão de Ver (Sim ou Próprios). Participantes da reunião são registrados em Anotações RH para controle operacional.",
         referencia: "Portal de RH",
       },
@@ -898,7 +898,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Lido e Ciente",
         definicao:
-          "Confirmação formal de que o colaborador leu e tomou conhecimento de um documento que exige ciência — no Portal de RH (política ou normativa) ou no Portal da Academy (manuais), com registro de data e hora.",
+          "Confirmação formal de que o prestador leu e tomou conhecimento de um documento que exige ciência — no Portal de RH (política ou normativa) ou no Portal da Academy (manuais), com registro de data e hora.",
         nota:
           "No Portal de RH, quem **vê** o documento na lista e o item exige ciência deve registrar o aceite (perfis internos/gerenciais). Diferente de apenas marcar um comunicado como Lido, e diferente das reações com emoji no card (gesto de leitura, sem registro de ciência). No Portal da Academy, a coluna Sua Ciência mostra Pendente até o aceite; travessão (—) indica que o manual não exige ciência. Para o gate de transmissão do influencer, ver o termo Playbook Influencers na categoria Operação de Lives.",
         referencia: "Portal de RH · Portal da Academy",
@@ -912,7 +912,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Read Receipt",
         definicao:
-          "Registro de leitura de um comunicado ou documento pelo usuário, com data e hora. Usado para rastrear quais colaboradores já visualizaram comunicados obrigatórios.",
+          "Registro de leitura de um comunicado ou documento pelo usuário, com data e hora. Usado para rastrear quais prestadores já visualizaram comunicados obrigatórios.",
         referencia: "Portal de RH",
       },
     ],
@@ -925,7 +925,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Escala Estúdio",
         definicao:
-          "Planejamento da escala diária do estúdio por área (time), colaborador e dia do mês — alocação de turnos (Manhã/Tarde/Noite), aprovação (com turno congelado no mês) e alteração pontual após aprovação. Compartilha o motor de grade com a Escala Escritório.",
+          "Planejamento da escala diária do estúdio por área (time), prestador e dia do mês — alocação de turnos (Manhã/Tarde/Noite), aprovação (com turno congelado no mês) e alteração pontual após aprovação. Compartilha o motor de grade com a Escala Escritório.",
         referencia: "Escala Estúdio",
       },
       {
@@ -937,7 +937,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Gestão de Staff",
         definicao:
-          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. Para **Game Presenters** (dealers), o gestor de estúdio configura nickname, turno, estúdio(s), skills, fotos e bio — dados que alimentam **Gestão de Dealers**. Cards consolidados (somente GP) indicam lacunas operacionais, cadastrais ou de jogo. No time **Service Manager**, o **ID TOS** é o UUID do SM no TOS/Proxylive para vincular sinais atendidos.",
+          "Visão e gestão dos prestadores dos times de Game Floor e Operation Management vinculados à operação de mesa ao vivo. Para **Game Presenters**, o gestor de estúdio configura nickname, turno, estúdio(s), skills, fotos e bio — dados que alimentam **Gestão de Dealers**. Cards consolidados (somente GP) indicam lacunas operacionais, cadastrais ou de jogo. No time **Service Manager**, o **ID TOS** é o UUID do SM no TOS/Proxylive para vincular sinais atendidos.",
         referencia: "Gestão de Staff",
       },
       {
@@ -1013,10 +1013,10 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         referencia: "Marketplace",
       },
       {
-        termo: "Solicitações (Escala)",
+        termo: "Solicitações de Cliente",
         definicao:
-          "Fila de pedidos de escala em aberto e histórico arquivado, filtrável por período, time e colaborador.",
-        referencia: "Solicitações",
+          "Fila de pedidos de escala em aberto e histórico arquivado, filtrável por período, time e prestador.",
+        referencia: "Solicitações de Cliente",
       },
       {
         termo: "Relatório de Turno",
@@ -1047,11 +1047,11 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
     accentColor: "#22c55e",
     termos: [
       {
-        termo: "Solicitações (RH)",
+        termo: "Solicitações de RH",
         definicao:
           "Fila de pedidos ao RH em quatro abas — Atestados, Reuniões, Vagas e Feedback — com status Em análise, Aprovado, Rejeitado ou Aplicado (feedback). Atestados podem nascer da justificativa Médico no Calendário; reuniões ficam Em análise até o atendimento e só então constam como Agendado no Calendário; feedback da liderança no Controle de Turno espelha aqui para aprovação.",
-        nota: "Distinto de Solicitações na seção Escala (ofertas e trocas de turno).",
-        referencia: "Solicitações",
+        nota: "Distinto de Solicitações de Cliente na seção Escala (ofertas e trocas de turno).",
+        referencia: "Solicitações de RH",
       },
       {
         termo: "Headcount",
@@ -1071,9 +1071,9 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Gestão de Prestadores",
         definicao:
-          "Cadastro central de colaboradores (prestadores): head count, contratação, organograma, remuneração, ações de RH e anotações.",
+          "Cadastro central de prestadores: head count, contratação, organograma, remuneração, ações de RH e anotações.",
         nota:
-          "Ao alocar no time Game Presenter, o perfil operacional é configurado em Gestão de Staff e o catálogo para operadora em Gestão de Dealers. Término da prestação (Encerrado) desativa o login e remove o dealer do catálogo. RH Talks: publique no Portal de RH; em Anotações RH registre participantes e data. Modal Ver/Editar: aba **Acesso a Plataforma** (somente leitura) mostra login, liberação e histórico de acessos.",
+          "Ao alocar no time Game Presenter, o perfil operacional é configurado em Gestão de Staff e o catálogo para operadora em Gestão de Dealers. Término da prestação (Encerrado) desativa o login e remove o Game Presenter do catálogo. RH Talks: publique no Portal de RH; em Anotações RH registre participantes e data. Modal Ver/Editar: aba **Acesso a Plataforma** (somente leitura) mostra login, liberação e histórico de acessos.",
         referencia: "Gestão de Prestadores · Dados de Cadastro",
       },
       {
@@ -1219,7 +1219,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Central Academy",
         definicao:
-          "Bloco da Home de perfis de Estúdio com Comunicados, Dicas e Manuais publicados no Portal da Academy (últimos 10 dias, «Li e Ocultar»). Manuais que exigem ciência do colaborador permanecem até o aceite no Portal da Academy, sem «Li e Ocultar». Comunicados e Dicas também mostram reações com emoji — gesto opcional, sem ciência.",
+          "Bloco da Home de perfis de Estúdio com Comunicados, Dicas e Manuais publicados no Portal da Academy (últimos 10 dias, «Li e Ocultar»). Manuais que exigem ciência do prestador permanecem até o aceite no Portal da Academy, sem «Li e Ocultar». Comunicados e Dicas também mostram reações com emoji — gesto opcional, sem ciência.",
         referencia: "Home · Portal da Academy",
       },
       {
@@ -1244,7 +1244,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Brandguide / Whitelabel",
         definicao:
-          "Conjunto de cores, logo e fonte da operadora aplicados na interface quando o usuário tem perfil operador e operadora ativa — substitui a paleta Spin padrão.",
+          "Conjunto de cores, logo e fonte da operadora aplicados na interface quando o usuário tem **perfil Operador** e **operadora** ativa no escopo — substitui a paleta Spin padrão.",
         nota:
           "Configurado na aba Brandguide em Gestão de Operadoras. Dashboards analíticos usam tokens --brand-action e --brand-contrast; identidade por jogo (Baccarat, Roleta, etc.) permanece fixa Spin.",
         referencia: "Gestão de Operadoras",

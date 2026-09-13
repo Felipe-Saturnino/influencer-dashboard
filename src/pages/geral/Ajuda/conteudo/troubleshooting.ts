@@ -15,7 +15,7 @@ export const TROUBLESHOOTING_TRANSVERSAL = {
         "Comportamento esperado: as barras de pesquisa da plataforma ignoram acentos e diferença de maiúsculas/minúsculas. Exemplos: «Flavia» encontra «Flávia»; «jose» encontra «José»; «Sao Paulo» encontra «São Paulo». Com **várias palavras**, cada uma precisa aparecer no cadastro — a ordem e o nome do meio não importam (ex.: «Alexandre Zanchetta» encontra «Alexandre Galvão Zanchetta»). Vale para listas com **BarraPesquisaPagina**, busca em consolidados (Financeiro, Banca de Jogo), glossário e campo de busca dentro de filtros com muitas opções (Influencer, Staff, etc.).\n\nSe ainda não aparecer, confira outros filtros ativos na página (status, operadora, período, time, estúdio, turno) — a busca só restringe o que já está visível no escopo dos demais filtros.\n\nExceção: na **Central de Denúncias**, parte da busca é feita no servidor e pode exigir o mesmo acento do cadastro até migração completa.",
     },
     {
-      subtitulo: "A página ficou em «Atualizando...» ou pedindo para recarregar?",
+      subtitulo: "A página ficou em «Atualizando…» ou pedindo para recarregar?",
       texto:
         "Isso acontece logo após uma nova versão da plataforma entrar no ar: o navegador ainda tem em cache a versão anterior e não encontra um dos arquivos atualizados.\n\nA plataforma tenta se atualizar sozinha. Se a mensagem **Nova versão disponível** permanecer, clique em **Recarregar página**.\n\nSe continuar, force a atualização com **Ctrl+Shift+R** (ou **Cmd+Shift+R** no Mac) e, em último caso, abra numa janela anônima. Persistindo, entre em contato com o suporte.",
     },
@@ -44,7 +44,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Os dados mudaram ao trocar de aba, mas eu não alterei os filtros?",
         texto:
-          "Comportamento esperado: todas as abas compartilham os mesmos filtros, mas cada uma busca seus dados de forma independente ao ser carregada pela primeira vez. O indicador 'Carregando…' na barra de filtros indica que a aba atual ainda está buscando os dados. Aguarde o término do carregamento. Use ← → do teclado nas abas quando o foco estiver na tablist.",
+          "Comportamento esperado: todas as abas compartilham os mesmos filtros, mas cada uma busca seus dados de forma independente ao ser carregada pela primeira vez. O indicador 'Carregando…' na barra de filtros indica que a aba atual ainda está buscando os dados. Aguarde o término do carregamento. Use ← → do teclado nas abas quando o foco estiver nelas.",
       },
       {
         subtitulo: "O Comparativo de Funil não mostra nenhum influencer nas opções?",
@@ -64,7 +64,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O Investimento do Relatório Diário veio R$ 0 e o Streamers mostra valor?",
         texto:
-          "O e-mail Relatório Diário (bloco Resultado de Streamers) usa a mesma regra da página Streamers: só pagamentos com status Pago, no mês do consolidado, pela data de fim do ciclo — não pela data em que o pagamento foi marcado como Pago. A visão é global (Todas Operadoras / Todos Influencers).\n\nO valor deve coincidir com o KPI Investimento do Overview Streamers no mês corrente. Não compare com um único ciclo na página Financeiro: o KPI soma todos os ciclos pagos do mês. Se o e-mail do mesmo dia continuar zerado e a página mostrar valor, entre em contato com o suporte.",
+          "O e-mail Relatório Diário (bloco Streamers) usa a mesma regra da página Streamers: só pagamentos com status Pago, no mês do consolidado, pela data de fim do ciclo — não pela data em que o pagamento foi marcado como Pago. A visão é global (Todas Operadoras / Todos Influencers).\n\nO valor deve coincidir com o KPI Investimento da página Streamers no mês corrente. Não compare com um único ciclo na página Financeiro: o KPI soma todos os ciclos pagos do mês. Se o e-mail do mesmo dia continuar zerado e a página mostrar valor, entre em contato com o suporte.",
       },
       {
         subtitulo: "O PVI está como 0 ou parece inconsistente?",
@@ -87,9 +87,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Confirme o período no carrossel (ou Histórico), o filtro de afiliado e a operadora. As métricas vêm do sync CDA — conta Afiliados (Status Técnico → Casa de Apostas (CDA) — Afiliados). O afiliado precisa ter UTM mapeado (Links e Materiais ou Gestão de Links → Mapear como Afiliado) e o sync precisa ter rodado após o mapeamento. Links só com visita na TAP e ainda não mapeados aparecem em Gestão de Links → Pendentes (Origem = TAP Afiliados). Se o filtro de afiliados estiver vazio, verifique cadastros na página Afiliados.",
       },
       {
-        subtitulo: "Não vejo Afiliados no menu de Dashboards?",
+        subtitulo: "Não vejo Overview Afiliados no menu de Dashboards?",
         texto:
-          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para a página Afiliados na seção Dashboards. Administradores têm acesso total. Não confunda com a página Afiliados da seção de cadastro.",
+          "Confirme em Gestão de Usuários se seu perfil tem permissão de Ver para a página **Overview Afiliados** na seção Dashboards. Administradores têm acesso total. Não confunda com a página **Afiliados** da seção de cadastro.",
       },
     ],
   },
@@ -102,7 +102,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Causa mais provável: não há dados carregados para o período. Verifique se o filtro de operadora está correto — se uma operadora específica estiver selecionada mas não tiver dados naquele mês, todos os KPIs exibem '—'. Tente selecionar **Todas Operadoras** no filtro para confirmar se existem dados consolidados. Se o problema persistir para o mês atual, pode ser que o processamento diário ainda não tenha sido executado.",
       },
       {
-        subtitulo: "O Comparativo de Mesa não aparece mesmo com dados no mês?",
+        subtitulo: "O Comparativo de mesa não aparece mesmo com dados no mês?",
         texto:
           "Com **Todas Operadoras**, o Comparativo de mesa e Dados por mesa pedem que você selecione uma operadora. Escolha uma operadora no filtro e verifique se há dados de mesa individuais no período. Se não houver registros de mesas (somente resumo diário), a seção permanece vazia.",
       },
@@ -119,7 +119,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O modo gráfico do Detalhamento mostra barras muito pequenas para uma operadora?",
         texto:
-          "No gráfico por operadora, cada plataforma é representada por uma barra separada no mesmo dia. Se uma operadora tem volume muito menor que outra, as barras ficam proporcionalmente pequenas. Isso é comportamento correto — use a tabela para ver os valores exatos. Alterne para o modo Tabela clicando no botão 'Tabela' no canto superior direito da seção.",
+          "No gráfico por operadora, cada operadora é representada por uma barra separada no mesmo dia. Se uma operadora tem volume muito menor que outra, as barras ficam proporcionalmente pequenas. Isso é comportamento correto — use a tabela para ver os valores exatos. Alterne para o modo Tabela clicando no botão 'Tabela' no canto superior direito da seção.",
       },
       {
         subtitulo: "Não consigo selecionar operadoras no filtro?",
@@ -299,7 +299,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Apareceu um modal de 'Agendamento indisponível'?",
         texto:
-          "O bloqueio vale para perfis **Influencer** e **Agência** — gestores e operadores não passam por esta verificação ao agendar.\n\n— **Influencer:** cadastro incompleto em Influencers ou Playbook pendente impedem o uso da Agenda. A própria página mostra o que falta e os atalhos para corrigir.\n— **Agência:** ao salvar uma Nova Live, o sistema verifica o cadastro e o Playbook do influencer selecionado. Use os botões **Ir para Influencers** ou **Ir para Playbook Influencers** no modal quando aparecerem.\n\nItens verificados: dados obrigatórios do cadastro e ciência nos três termos obrigatórios do Playbook (Dealers, Agendamento e Jogos).",
+          "O bloqueio vale para perfis **Influencer** e **Agência** — gestores e operadores não passam por esta verificação ao agendar.\n\n— **Influencer:** cadastro incompleto em Influencers ou Playbook pendente impedem o uso da Agenda. A própria página mostra o que falta e os atalhos para corrigir.\n— **Agência:** ao salvar uma Nova Live, o sistema verifica o cadastro e o Playbook do influencer selecionado. Use os botões **Ir para Influencers** ou **Ir para Playbook Influencers** no modal quando aparecerem.\n\nItens verificados: dados obrigatórios do cadastro e ciência nos três termos obrigatórios do Playbook (Game Presenters, Agendamento e Jogos).",
       },
       {
         subtitulo: "O calendário não carrega ou apareceu um aviso vermelho?",
@@ -389,12 +389,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Os KPIs do topo estão zerados?",
         texto:
-          "Os KPIs consideram todas as lives do período independentemente do chip de status da lista. Se os KPIs estão zero, não há lives validadas no período selecionado. Tente ativar Histórico para confirmar se existem lives em outros períodos.",
+          "Os KPIs consideram todas as lives do período independentemente do filtro de status da lista. Se os KPIs estão zero, não há lives validadas no período selecionado. Tente ativar Histórico para confirmar se existem lives em outros períodos.",
       },
       {
         subtitulo: "Uma live específica não aparece?",
         texto:
-          "Confirme se o filtro de status, influencer ou operadora não está excluindo essa live. O chip de status padrão é 'Todos', mas se estiver em Realizada ou Não Realizada, lives do outro tipo ficam ocultas.\n\nVerifique também se a live foi validada em Resultados. Se ainda está como Agendada, não aparecerá no Feedback.",
+          "Confirme se o filtro de status, influencer ou operadora não está excluindo essa live. O filtro de status padrão é 'Todos', mas se estiver em Realizada ou Não Realizada, lives do outro tipo ficam ocultas.\n\nVerifique também se a live foi validada em Resultados. Se ainda está como Agendada, não aparecerá no Feedback.",
       },
       {
         subtitulo: "A Média de Views no KPI parece diferente do esperado?",
@@ -469,7 +469,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Nenhum prospecto aparece na lista?",
         texto:
-          "Na vista padrão, prospectos com status Fechado não são exibidos na lista. Para visualizá-los, clique no card **Fechado** do Funil de Prospecção. Verifique também se algum chip de plataforma está ativo na barra de filtros. Os sliders de cachê e views podem estar reduzindo o escopo da busca.",
+          "Na vista padrão, prospectos com status Fechado não são exibidos na lista. Para visualizá-los, clique no card **Fechado** do Funil de Prospecção. Verifique também se algum filtro de plataforma está ativo na barra de filtros. Os sliders de cachê e views podem estar reduzindo o escopo da busca.",
       },
       {
         subtitulo: "Não consigo fechar a parceria — aparece uma mensagem de erro?",
@@ -507,9 +507,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
     titulo: "Gestão de Dealers",
     blocos: [
       {
-        subtitulo: "Um dealer não aparece na listagem?",
+        subtitulo: "Um Game Presenter não aparece na listagem?",
         texto:
-          "A página lista apenas Game Presenters (dealers) com prestador **ativo** ou **indisponível** no time Game Presenter. Se o colaborador existe em RH mas não aparece aqui, confira o organograma em **Gestão de Prestadores** e o **estúdio** em **Gestão de Staff** — o card espelha o que está no Staff. Não use esta página para cadastrar dealer.\n\nVerifique também filtros ativos — turno, gênero, jogo, estúdio ou busca por nome/nickname. Perfil Operador só vê dealers dos estúdios ligados à sua operadora (ex.: Blaze vê GPs da Blaze e do Sports Club).",
+          "A página lista apenas Game Presenters com prestador **ativo** ou **indisponível** no time Game Presenter. Se o prestador existe em RH mas não aparece aqui, confira o organograma em **Gestão de Prestadores** e o **estúdio** em **Gestão de Staff** — o card espelha o que está no Staff. Não use esta página para cadastrar Game Presenter.\n\nVerifique também filtros ativos — turno, gênero, jogo, estúdio ou busca por nome/nickname. Perfil Operador só vê Game Presenters dos estúdios ligados à sua operadora (ex.: Blaze vê GPs da Blaze e do Sports Club).",
       },
       {
         subtitulo: "O card mostra a operadora em vez do estúdio?",
@@ -527,14 +527,14 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "O botão Histórico requer permissão de visualização na Central de Notificações (configurada em Gestão de Usuários → Permissões). Verifique se a permissão de visualização para a página 'Central de Notificações' está ativa no perfil do usuário.\n\nPara o perfil Operador, o Histórico também exige que a operadora ativa esteja definida no escopo — sem ela, o botão não é renderizado.",
       },
       {
-        subtitulo: "Não encontro botão para criar ou editar dealer?",
+        subtitulo: "Não encontro botão para criar ou editar Game Presenter?",
         texto:
-          "Comportamento esperado: **Gestão de Dealers** é catálogo e canal de solicitações — não há CTA de cadastro nem formulário de edição nesta página. Cadastre o prestador e defina o time **Game Presenter** em **Gestão de Prestadores**; complete perfil, estúdio e skills em **Gestão de Staff**. Quando o sync estiver correto, o card aparecerá aqui com ação **Ver** (somente leitura).",
+          "Comportamento esperado: **Gestão de Dealers** é catálogo e canal de solicitações — não há botão de cadastro nem formulário de edição nesta página. Cadastre o prestador e defina o time **Game Presenter** em **Gestão de Prestadores**; complete perfil, estúdio e skills em **Gestão de Staff**. Quando o sync estiver correto, o card aparecerá aqui com ação **Ver** (somente leitura).",
       },
       {
-        subtitulo: "O histórico de solicitações do dealer está vazio?",
+        subtitulo: "O histórico de solicitações do Game Presenter está vazio?",
         texto:
-          "O modal de Histórico exibe as solicitações já registradas para aquele dealer. Se estiver vazio, significa que nenhuma solicitação foi criada para esse dealer ainda — isso é comportamento esperado para dealers recém-cadastrados ou sem interação da operadora.\n\nPara o perfil Operador, o Histórico é filtrado pela operadora do escopo — solicitações de outras operadoras para o mesmo dealer não são exibidas.",
+          "O modal de Histórico exibe as solicitações já registradas para aquele Game Presenter. Se estiver vazio, significa que nenhuma solicitação foi criada para esse Game Presenter ainda — isso é comportamento esperado para Game Presenters recém-cadastrados ou sem interação da operadora.\n\nPara o perfil Operador, o Histórico é filtrado pela operadora do escopo — solicitações de outras operadoras para o mesmo Game Presenter não são exibidas.",
       },
     ],
   },
@@ -609,7 +609,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não apareço na Gestão de Dealers / Figurinos?",
         texto:
-          "Essas páginas dependem do vínculo do prestador em Gestão de Prestadores (ex.: Game Presenter para elenco de dealers). Dados de Cadastro não substitui o cadastro operacional em RH — complete o que falta em Gestão de Prestadores ou fale com o time de RH.",
+          "Essas páginas dependem do vínculo do prestador em Gestão de Prestadores (ex.: Game Presenter para o elenco). Dados de Cadastro não substitui o cadastro operacional em RH — complete o que falta em Gestão de Prestadores ou fale com o time de RH.",
       },
     ],
   },
@@ -734,17 +734,17 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparecem scripts na Descrição?",
         texto:
-          "Os scripts só aparecem depois de escolher um **Tipo** que tenha template cadastrado. Se o tipo não tiver script, escreva a descrição livremente. Com mais de um script, os chips mostram a variante (por exemplo Rescan ou Cancelou) — o texto continua editável após aplicar.",
+          "Os scripts só aparecem depois de escolher um **Tipo** que tenha template cadastrado. Se o tipo não tiver script, escreva a descrição livremente. Com mais de um script, as opções mostram a variante (por exemplo Rescan ou Cancelou) — o texto continua editável após aplicar.",
       },
       {
         subtitulo: "A mesa que eu procuro não aparece na lista do formulário?",
         texto:
-          "Mesas de Roleta não aparecem na lista quando o time selecionado é Shuffler, pois esse time não atua nesse jogo. Confirme também se a mesa está cadastrada e ativa em Gestão de Mesas.",
+          "Mesas de Roleta não aparecem na lista quando o time selecionado é Shuffler, pois esse time não atua nesse jogo. Confirme também se a mesa está cadastrada e ativa em Gestão de Estúdios.",
       },
       {
         subtitulo: "Não encontro o prestador na lista do formulário?",
         texto:
-          "A lista de prestadores é filtrada pelo time selecionado (Game Presenter ou Shuffler) e inclui apenas funcionários ativos ou indisponíveis vinculados a esse time (ou papéis de apoio como Service Manager, Shift Leader, Performance Coach e Academy). Verifique o cadastro em Gestão de Prestadores se o nome não aparece.",
+          "A lista de prestadores é filtrada pelo time selecionado (Game Presenter ou Shuffler) e inclui apenas prestadores ativos ou indisponíveis vinculados a esse time (ou papéis de apoio como Service Manager, Shift Leader, Performance Coach e Academy). Verifique o cadastro em Gestão de Prestadores se o nome não aparece.",
       },
       {
         subtitulo: "As setas ou a tecla Tab não funcionam como esperado no formulário?",
@@ -784,7 +784,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Alguns prestadores não aparecem para avaliar?",
         texto:
-          "A lista inclui só prestadores **ativos** ou **indisponíveis** do time **Game Presenter** ou **Shuffler** no Organograma (Gestão de Prestadores). Encerrados não entram.\n\nNa **Agenda de Avaliações**, quem ainda não chegou na data de go-live / início no mês selecionado fica de fora até essa competência — use o carrossel para o mês em que a pessoa já está no estúdio.\n\nSe o colaborador aparece em **Gestão de Staff** no time certo e mesmo assim falta no Performance Hub, entre em contato com o suporte.",
+          "A lista inclui só prestadores **ativos** ou **indisponíveis** do time **Game Presenter** ou **Shuffler** no Organograma (Gestão de Prestadores). Encerrados não entram.\n\nNa **Agenda de Avaliações**, quem ainda não chegou na data de go-live / início no mês selecionado fica de fora até essa competência — use o carrossel para o mês em que a pessoa já está no estúdio.\n\nSe o prestador aparece em **Gestão de Staff** no time certo e mesmo assim falta no Performance Hub, entre em contato com o suporte.",
       },
       {
         subtitulo: "Não encontro o botão Analisar?",
@@ -854,7 +854,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparece o botão Ver ciência no manual?",
         texto:
-          "O botão **Ver ciência** nos cards de Manuais só aparece com permissão de **Editar = Sim** no Portal da Academy **e** quando a postagem foi cadastrada com **Exige ciência do colaborador? = Sim**. Com apenas Ver, você registra a própria ciência no modal (**Lido e Ciente**), mas não consulta quem já aceitou.",
+          "O botão **Ver ciência** nos cards de Manuais só aparece com permissão de **Editar = Sim** no Portal da Academy **e** quando a postagem foi cadastrada com **Exige ciência do prestador? = Sim**. Com apenas Ver, você registra a própria ciência no modal (**Lido e Ciente**), mas não consulta quem já aceitou.",
       },
     ],
   },
@@ -864,7 +864,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O bloco de confirmação não aparece na aba?",
         texto:
-          "O bloco de ciência só aparece para usuários com perfil de influencer ativo. Verifique se o seu usuário está cadastrado com o papel correto na plataforma. Se o perfil estiver correto e o bloco ainda não aparecer, recarregue a página. Caso persista, contate o administrador para verificar as permissões da sua conta.",
+          "O bloco de ciência só aparece para usuários com perfil de influencer ativo. Verifique se o seu usuário está cadastrado com o papel correto na plataforma. Se o perfil estiver correto e o bloco ainda não aparecer, recarregue a página. Caso persista, entre em contato com o administrador para verificar as permissões da sua conta.",
       },
       {
         subtitulo: "Cliquei em Confirmar Ciência mas nada aconteceu?",
@@ -874,7 +874,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A barra de progresso não avança mesmo após confirmar?",
         texto:
-          "Após confirmar, a barra deve atualizar imediatamente. Se não atualizar, recarregue a página para sincronizar o estado. Verifique também se a aba que você confirmou é realmente uma das três obrigatórias (Dealers, Agendamento e Jogos).",
+          "Após confirmar, a barra deve atualizar imediatamente. Se não atualizar, recarregue a página para sincronizar o estado. Verifique também se a aba que você confirmou é realmente uma das três obrigatórias (Game Presenters, Agendamento e Jogos).",
       },
       {
         subtitulo: "O Painel de Auditoria não aparece para mim?",
@@ -889,7 +889,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A página não carrega ou aparece em branco?",
         texto:
-          "Verifique a sua conexão com a internet. Se o problema persistir, recarregue a página ou faça logout e login novamente. Se o acesso ao Playbook Influencers sumir completamente do menu, o seu perfil pode ter tido a permissão de visualização removida — contate o administrador.",
+          "Verifique a sua conexão com a internet. Se o problema persistir, recarregue a página ou faça logout e login novamente. Se o acesso ao Playbook Influencers sumir completamente do menu, o seu perfil pode ter tido a permissão de visualização removida — entre em contato com o administrador.",
       },
     ],
   },
@@ -944,7 +944,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A página não carrega ou fica em branco?",
         texto:
-          "Verifique sua conexão com a internet e recarregue a página. Se o problema persistir, faça logout e login novamente. Caso a Spin na Rede não apareça mais no menu, seu acesso à seção Conteúdo pode ter sido removido — contate o administrador.",
+          "Verifique sua conexão com a internet e recarregue a página. Se o problema persistir, faça logout e login novamente. Caso a Spin na Rede não apareça mais no menu, seu acesso à seção Conteúdo pode ter sido removido — entre em contato com o administrador.",
       },
       {
         subtitulo: "Não aparece nenhuma menção mesmo com o agregador ativo?",
@@ -979,7 +979,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo aprovar um informativo?",
         texto:
-          "O botão Aprovar só aparece em status Aprovação e para quem a regra dos perfis alvo autoriza: Investidor/Operador → Administrador ou Executivo; Agência/Influenciador/Afiliado → Administrador, Executivo ou Gestor de Aquisição; gestores de departamento → Administrador, Executivo ou Gestor de RH. Misturas usam a regra mais restritiva. Exceto Administrador, ninguém aprova a própria postagem.",
+          "O botão Aprovar só aparece em status Aprovação e para quem a regra dos perfis alvo autoriza: Investidor/Operador → Administrador ou Executivo; Agência/Influencer/Afiliado → Administrador, Executivo ou Gestor de Aquisição; gestores de departamento → Administrador, Executivo ou Gestor de RH. Misturas usam a regra mais restritiva. Exceto Administrador, ninguém aprova a própria postagem.",
       },
     ],
   },
@@ -1024,7 +1024,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não aparece o botão Ver ciência no documento?",
         texto:
-          "O botão **Ver ciência** nos cards de Políticas e normativas só aparece com permissão de **Editar = Sim** **e** quando a postagem foi cadastrada com **Exige ciência do colaborador? = Sim**. Com apenas Ver, você registra a própria ciência no modal do PDF (**Li e estou ciente**), mas não consulta quem já aceitou.",
+          "O botão **Ver ciência** nos cards de Políticas e normativas só aparece com permissão de **Editar = Sim** **e** quando a postagem foi cadastrada com **Exige ciência do prestador? = Sim**. Com apenas Ver, você registra a própria ciência no modal do PDF (**Li e estou ciente**), mas não consulta quem já aceitou.",
       },
       {
         subtitulo: "O time do autor no card está errado?",
@@ -1069,7 +1069,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O Status da Conta no Consolidado não está correto?",
         texto:
-          "O status Liberada/Bloqueada reflete o registro manual feito pela equipe de gestão. Se você acredita que o status está desatualizado, contate o gestor responsável para que ele altere diretamente pelo badge da linha no Consolidado de Bancas.",
+          "O status Liberada/Bloqueada reflete o registro manual feito pela equipe de gestão. Se você acredita que o status está desatualizado, entre em contato com o gestor responsável para que ele altere diretamente pelo badge da linha no Consolidado de Bancas.",
       },
       {
         subtitulo: "O CPF aparece sempre mascarado — como revelar?",
@@ -1104,7 +1104,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O afiliado não aparece na lista?",
         texto:
-          "Verifique os filtros ativos: Status (chip colorido), Operadora e Busca por texto. O botão Limpar filtros remove todos de uma vez. Lembre que o filtro de status seleciona apenas o status clicado — afiliados de outros status ficam ocultos.",
+          "Verifique os filtros ativos: Status (filtro colorido), Operadora e Busca por texto. O botão Limpar filtros remove todos de uma vez. Lembre que o filtro de status seleciona apenas o status clicado — afiliados de outros status ficam ocultos.",
       },
       {
         subtitulo: "Dados sensíveis não aparecem?",
@@ -1244,12 +1244,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não encontro fotos em Minhas Fotos?",
         texto:
-          "Com permissão de **Editar**, todas as fotos individuais de colaboradores aparecem em **Minhas Fotos** — confira o filtro de colaborador e a busca. Com **Ver (próprios)** (perfil prestador ou equivalente), você vê todas as fotos em **Gerais** e, em **Minhas Fotos**, só as fotos atribuídas ao seu cadastro; o filtro de colaborador fica fixo no seu nome. Se não houver vínculo entre login e cadastro RH, a mensagem será **Nenhum colaborador vinculado ao seu login.** Confira se o e-mail de login coincide com o e-mail ou e-mail Spin em **Dados de Cadastro**.",
+          "Com permissão de **Editar**, todas as fotos individuais de prestadores aparecem em **Minhas Fotos** — confira o filtro de prestador e a busca. Com **Ver (próprios)** (perfil prestador ou equivalente), você vê todas as fotos em **Gerais** e, em **Minhas Fotos**, só as fotos atribuídas ao seu cadastro; o filtro de prestador fica fixo no seu nome. Se não houver vínculo entre login e cadastro RH, a mensagem será **Nenhum prestador vinculado ao seu login.** Confira se o e-mail de login coincide com o e-mail ou e-mail Spin em **Dados de Cadastro**.",
       },
       {
         subtitulo: "O envio de fotos falhou?",
         texto:
-          "Confirme o tipo de foto, o evento (gerais) ou o colaborador (individuais) e que cada arquivo está em JPG, PNG ou WebP com até 25 MB. Se o problema persistir, entre em contato com o suporte.",
+          "Confirme o tipo de foto, o evento (gerais) ou o prestador (individuais) e que cada arquivo está em JPG, PNG ou WebP com até 25 MB. Se o problema persistir, entre em contato com o suporte.",
       },
     ],
   },
@@ -1269,7 +1269,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "KPIs zerados mas há marcas no Pipeline?",
         texto:
-          "Na aba **Operadoras**, verifique o filtro **Comercial** (**Todos Comerciais**). Na aba **Integrações**, confira **Prioridade** (**Todas Prioridades**). Os KPIs e gráficos da aba ativa respeitam só esses filtros — não há mais chips de status do funil nem filtro de Estados no Overview.",
+          "Na aba **Operadoras**, verifique o filtro **Comercial** (**Todos Comerciais**). Na aba **Integrações**, confira **Prioridade** (**Todas Prioridades**). Os KPIs e gráficos da aba ativa respeitam só esses filtros — não há mais filtros de status do funil nem filtro de Estados no Overview.",
       },
     ],
   },
@@ -1519,7 +1519,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "As abas Permissões, Escopos e Simulador de Login não aparecem?",
         texto:
-          "Essas abas são exibidas somente para o perfil Administrador com permissão de Editar em Gestão de Usuários. Se você é administrador e as abas não aparecem, verifique se sua sessão está ativa e recarregue a página.",
+          "Essas abas são exibidas somente para o perfil Administrador com permissão de **Editar** em Gestão de Usuários. Se você é administrador e as abas não aparecem, verifique se sua sessão está ativa e recarregue a página.",
+      },
+      {
+        subtitulo: "Onde configuro o que cada perfil pode simular?",
+        texto:
+          "Na aba **Simulador de Login** (não na página Simulador de Login do menu). Escolha o perfil viewer e marque os perfis simuláveis. O usuário ainda precisa de permissão de **Ver** em Simulador de Login na matriz de Permissões.",
       },
       {
         subtitulo: "Erro ao salvar permissões ou páginas?",
@@ -1529,7 +1534,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo criar um novo usuário?",
         texto:
-          "O botão Novo Usuário (pill com ícone +) só aparece para administradores com permissão de Criar ativa. Verifique na aba Permissões se o perfil Administrador está configurado corretamente (o admin tem acesso total fixo, portanto o botão deve sempre aparecer). Se o e-mail informado já estiver cadastrado, o sistema retornará erro — use a busca para localizar o usuário existente.",
+          "O botão Novo Usuário só aparece para administradores com permissão de Criar ativa. Verifique na aba Permissões se o perfil Administrador está configurado corretamente (o admin tem acesso total fixo, portanto o botão deve sempre aparecer). Se o e-mail informado já estiver cadastrado, o sistema retornará erro — use a busca para localizar o usuário existente.",
       },
     ],
   },
@@ -1552,12 +1557,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Com permissão de **Ver = Próprios**, a Escala Estúdio mostra apenas a aba do seu time no Organograma (a grade dessa aba continua com todo o time). Com **Ver = Sim**, aparecem todas as áreas (Game Presenter, Shuffler, etc.). Ajuste em Gestão de Usuários → Permissões.",
       },
       {
-        subtitulo: "A lista da Escala Diária não bate com o número do Consolidado?",
+        subtitulo: "A grade da Escala Estúdio (Escala Diária) não bate com o número do Consolidado?",
         texto:
           "O clique no turno do Consolidado filtra pela **situação do dia** (Manhã, Compra - Manhã, etc.), não pelo turno cadastrado na Staff. Quem teve Compra ou Alterar Escala para outro turno no dia entra na contagem e na lista desse turno.",
       },
       {
-        subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",
+        subtitulo: "Mudei o turno na Staff e a grade da Escala Estúdio mudou?",
         texto:
           "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um ou vários dias de um prestador no mês já aprovado, use **Alterar Escala** (grade do mês com select por dia + observação obrigatória → **Salvar alterações**). Compra e Venda do Marketplace não se editam nesse modal.",
       },
@@ -1649,7 +1654,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Turnos não aparecem no calendário?",
         texto:
-          "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da Escala Diária **aprovada** em **Escala Estúdio**. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, se existir **Escala Escritório** aprovada, essa grade prevalece; caso contrário, verifique se a área de atuação está cadastrada corretamente e use a escala automática de segunda a sexta-feira.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
+          "Para prestadores do Estúdio, a Situação (Escalado/Folga) e os turnos só vêm da grade **Escala Diária** **aprovada** em **Escala Estúdio**. Rascunho, sugestão ou células só no navegador **não** alimentam o Calendário — use **Salvar** e depois **Aprovar Escala** em cada área (Game Presenter, Shuffler, etc.). Confirme também se os filtros de Time ou Staff não estão restringindo a visão. Para Escritório, se existir **Escala Escritório** aprovada, essa grade prevalece; caso contrário, verifique se a área de atuação está cadastrada corretamente e use a escala automática de segunda a sexta-feira.\n\nCom **Ver = Próprios**, líderes imediatos veem os ramos subordinados definidos no Organograma; quem não lidera vê somente o próprio calendário. Se alguém esperado não aparecer, revise o vínculo de Diretoria, Gerência ou Time no cadastro do prestador.",
       },
       {
         subtitulo: "Aparece «Não foi possível carregar a escala do calendário»?",
@@ -1664,7 +1669,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A Situação no Controle de Presença aparece em branco (—)?",
         texto:
-          "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a Escala Diária já **Aprovada** em Escala Estúdio pode indicar falha na carga da grade — atualize a página e, se persistir, entre em contato com o suporte técnico. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
+          "Para **Escritório** sem Escala Escritório aprovada e para **Estúdio com Horário Comercial** (5×2), a Situação deve preencher o mês inteiro: úteis Escalado 09:00–18:00; fins de semana e feriados nacionais/SP capital = Folga. Se faltar dias, atualize a plataforma. Com **Escala Escritório** aprovada, a Situação segue as células da grade (Comercial/Folga/…). Para **Estúdio** com turnos Manhã/Tarde/Noite, Situação `—` com a grade Escala Diária já **Aprovada** em Escala Estúdio pode indicar falha na carga da grade — atualize a página e, se persistir, entre em contato com o suporte técnico. Confirme também: mesmo mês do carrossel; a **área do time** do prestador aprovada; célula preenchida na grade.",
       },
       {
         subtitulo: "O card Trocas fica zerado mesmo depois de uma troca aprovada?",
@@ -1704,7 +1709,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo o botão Adicionar à agenda?",
         texto:
-          "O botão fica na aba **Compromissos**, ao lado de **Download**, e só aparece com vínculo de colaborador no RH. No **Simulador de Login** ele fica oculto. Sem o botão, confirme o cadastro em Gestão de Prestadores e a permissão de **Ver** no Calendário.",
+          "O botão fica na aba **Compromissos**, ao lado de **Download**, e só aparece com vínculo de prestador no RH. No **Simulador de Login** ele fica oculto. Sem o botão, confirme o cadastro em Gestão de Prestadores e a permissão de **Ver** no Calendário.",
       },
       {
         subtitulo: "A agenda Google / Outlook / Apple não atualiza os turnos?",
@@ -1784,7 +1789,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "O filtro de dia não mostra a data que eu quero?",
         texto:
-          "O filtro (**Todos os Dias**) lista somente dias com oferta **em aberto** dentro do período e dos demais filtros ativos. Se a data não aparecer, verifique o mês do carrossel (ou ative **Histórico**), limpe o filtro de tipo de ação, o filtro de times e a busca. A seleção é limpa automaticamente quando o dia deixa de ter oferta — por exemplo, após alguém aceitar a última oferta daquele dia.",
+          "O filtro (**Todos Dias**) lista somente dias com oferta **em aberto** dentro do período e dos demais filtros ativos. Se a data não aparecer, verifique o mês do carrossel (ou ative **Histórico**), limpe o filtro de tipo de ação, o filtro de times e a busca. A seleção é limpa automaticamente quando o dia deixa de ter oferta — por exemplo, após alguém aceitar a última oferta daquele dia.",
       },
       {
         subtitulo: "Aceitei uma oferta e a escala não mudou?",
@@ -1854,17 +1859,27 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Mover entre estúdios não funciona?",
         texto:
-          "O move é **só na aba Rotação** do Controle de Turno (turno inteiro), via **Mover estúdio…** no chip. Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
+          "O move é **só na aba Rotação** do Controle de Turno (turno inteiro), via **Mover estúdio…** no filtro do prestador. Não altera Gestão de Staff nem a Escala Estúdio. Não é permitido o mesmo GP em dois estúdios no mesmo turno.",
       },
     ],
   },
   escala_solicitacoes: {
-    titulo: "Solicitações",
+    titulo: "Solicitações de Cliente",
     blocos: [
       {
-        subtitulo: "Confundi com Solicitações do RH?",
+        subtitulo: "Confundi com Solicitações de RH?",
         texto:
-          "A seção **Escala → Solicitações** trata pedidos operacionais de escala (trocas, coberturas). A seção **RH → Solicitações** trata atestados, reuniões, vagas e feedback — são páginas distintas no menu.",
+          "A seção **Escala → Solicitações de Cliente** trata pedidos operacionais de escala (trocas, coberturas). A seção **RH → Solicitações de RH** trata atestados, reuniões, vagas e feedback — são páginas distintas no menu.",
+      },
+      {
+        subtitulo: "Não acho a solicitação na aba em Aberto?",
+        texto:
+          "Pedidos **cancelados**, **aprovados** ou **recusados** saem da fila ativa e aparecem em **Solicitações Arquivadas**. Confira também o mês do carrossel (ou desligue **Histórico**), o tipo de ação e os filtros de Time/Staff.",
+      },
+      {
+        subtitulo: "A aba Arquivadas está vazia no período?",
+        texto:
+          "O período usa a **data de abertura**. Amplie o mês ou ative **Histórico** (**Todo o período**). Com **Ver = Próprios**, você só vê as solicitações do seu escopo.",
       },
     ],
   },
@@ -1932,14 +1947,19 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Publicar vaga exige **Criar**; alterar etapa ou status do candidato exige **Editar**. Confirme a matriz em Gestão de Usuários → Permissões.",
       },
       {
+        subtitulo: "Não vejo Gerenciamento de Vagas ou Candidaturas?",
+        texto:
+          "**Gerenciamento de Vagas** aparece com permissão de **Criar** ou **Excluir**. **Candidaturas** aparece com **Criar**. Com apenas **Ver**, ficam as abas **Vagas Abertas** e **Vagas em Andamento**.",
+      },
+      {
         subtitulo: "Onde fica o link para compartilhar a vaga?",
         texto:
-          "Em vagas **Externas** na aba **Abertas**, o botão **Compartilhar** abre o modal com o link da página de Carreiras. Use **Copiar** e envie ao candidato. Vagas internas não têm compartilhamento para o site.",
+          "Em vagas **Externas** na aba **Vagas Abertas**, o botão **Compartilhar** abre o modal com o link da página de Carreiras. Use **Copiar** e envie ao candidato. Vagas internas não têm compartilhamento para o site.",
       },
     ],
   },
   rh_solicitacoes: {
-    titulo: "Solicitações",
+    titulo: "Solicitações de RH",
     blocos: [
       {
         subtitulo: "Atestado do Calendário não aparece aqui?",
@@ -1949,7 +1969,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Feedback do Controle de Turno não aparece?",
         texto:
-          "Cada feedback registrado em **Controle de Turno → Notificações → Feedbacks** cria uma linha na aba **Feedback** (origem Controle de Turno). **Revisar** no CT = **Em análise** aqui; **Aplicado** é igual nas duas. Confirme a aba **Feedback** e o carrossel de status. Feedback criado só pelo CTA **Registrar Feedback** nesta página **não** aparece no Controle de Turno.",
+          "Cada feedback registrado em **Controle de Turno → Notificações → Feedbacks** cria uma linha na aba **Feedback** (origem Controle de Turno). **Revisar** no CT = **Em análise** aqui; **Aplicado** é igual nas duas. Confirme a aba **Feedback** e o carrossel de status. Feedback criado só pelo botão **Registrar Feedback** nesta página **não** aparece no Controle de Turno.",
       },
       {
         subtitulo: "Não consigo atender solicitação?",
@@ -1959,7 +1979,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não vejo Agendar Reunião no Calendário?",
         texto:
-          "O CTA **Agendar Reunião** fica na aba **Compromissos**, na mesma linha do filtro de compromissos. Com **Ver = Sim**, ele só aparece quando **Meu Calendário** está selecionado. Com **Próprios** ou **Editar**, permanece disponível na sua visão.",
+          "O botão **Agendar Reunião** fica na aba **Compromissos**, na mesma linha do filtro de compromissos. Com **Ver = Sim**, ele só aparece quando **Meu Calendário** está selecionado. Com **Próprios** ou **Editar**, permanece disponível na sua visão.",
       },
     ],
   },
@@ -2087,9 +2107,9 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Comportamento esperado só para perfis com Criar Sim, ou Ver Sim + Editar Sim, ou Administrador no Calendário. Ao simular um Game Presenter (ou outro perfil com Ver Próprios), a página deve mostrar só Compromissos e Controle de Presença daquela pessoa, sem Relatório nem filtros de gestão. Encerrar a visualização e iniciar de novo. Se continuar com a visão de administrador, recarregue a página; se persistir, entre em contato com o suporte.",
       },
       {
-        subtitulo: "Na Galeria de Fotos ainda vejo fotos de outros colaboradores?",
+        subtitulo: "Na Galeria de Fotos ainda vejo fotos de outros prestadores?",
         texto:
-          "Na aba **Gerais** as fotos de evento são compartilhadas — isso é esperado. Em **Minhas Fotos**, a simulação deve mostrar só o colaborador da pessoa escolhida. Recarregue a página com a visualização ativa. Se persistir, entre em contato com o suporte.",
+          "Na aba **Gerais** as fotos de evento são compartilhadas — isso é esperado. Em **Minhas Fotos**, a simulação deve mostrar só o prestador da pessoa escolhida. Recarregue a página com a visualização ativa. Se persistir, entre em contato com o suporte.",
       },
       {
         subtitulo: "Como sair da simulação?",
