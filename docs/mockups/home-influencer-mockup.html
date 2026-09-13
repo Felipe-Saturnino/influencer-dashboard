@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mockup — Home Influencer (todos os blocos ativos)</title>
+  <title>Mockup — Home Influencer (proposta · todos os blocos ativos)</title>
   <style>
     :root {
       --brand-primary: #7c3aed;
@@ -13,6 +13,7 @@
       --brand-azul: #1e36f8;
       --brand-ciano: #70cae4;
       --vermelho: #e84025;
+      --amarelo: #f59e0b;
       --verde: #22c55e;
 
       --page-bg: #f4f4f8;
@@ -22,6 +23,8 @@
       --text: #1a1a2e;
       --text-muted: #666688;
       --section-title: #1a1a2e;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
 
       --font: "Segoe UI", system-ui, -apple-system, sans-serif;
       --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
@@ -35,6 +38,8 @@
       --text: #ffffff;
       --text-muted: #e5dce1;
       --section-title: #ffffff;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -58,7 +63,8 @@
     }
 
     .page-shell {
-      max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px;
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px;
+      display: flex; flex-direction: column; gap: 14px;
     }
 
     .block-tag {
@@ -66,15 +72,14 @@
       font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
       color: var(--brand-primary); background: rgba(124, 58, 237, 0.12);
       border: 1px dashed rgba(124, 58, 237, 0.45);
-      padding: 3px 8px; border-radius: 999px; margin: 0 0 8px; width: max-content;
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
     }
     body.dark .block-tag { color: var(--brand-ciano); }
 
-    /* Boas-vindas — radius 20, margin-bottom 28 */
     .welcome-card {
       position: relative; overflow: hidden;
       background: var(--card-bg); border: 1px solid var(--card-border);
-      border-radius: 20px; padding: 28px; margin-bottom: 28px;
+      border-radius: 20px; padding: 28px; box-shadow: var(--box-shadow);
     }
     .welcome-card .topbar {
       position: absolute; top: 0; left: 0; right: 0; height: 4px;
@@ -93,13 +98,12 @@
       letter-spacing: .02em; margin: 0 0 6px;
     }
     .role-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
-    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.55; white-space: pre-line; }
 
-    /* Alertas AÇÃO NECESSÁRIA — alertBoxStyle */
     .alert-box {
       display: flex; gap: 14px; padding: 16px 18px; border-radius: 14px;
       background: rgba(232,64,37,0.05); border: 1px solid rgba(232,64,37,0.28);
-      border-left: 4px solid var(--vermelho); margin-bottom: 24px;
+      border-left: 4px solid var(--vermelho);
     }
     body.dark .alert-box { background: rgba(232,64,37,0.08); }
     .alert-box .alert-icon { flex-shrink: 0; margin-top: 2px; color: var(--vermelho); }
@@ -115,19 +119,17 @@
       color: var(--vermelho); font-size: 12px; font-weight: 700; text-decoration: none;
     }
 
-    /* Blocos de conteúdo — radius 16, margin-bottom 24 */
     .content-box {
       background: var(--card-bg); border: 1px solid var(--card-border);
-      border-radius: 16px; padding: 20px; margin-bottom: 24px;
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
     }
-    .content-box:last-child { margin-bottom: 0; }
     .section-title {
       font-family: var(--font-title); font-size: 13px; font-weight: 800;
       letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
       margin: 0 0 14px;
     }
+    .hint { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0 0 16px; }
 
-    /* Cards de live / feedback */
     .grid-cards {
       display: grid; gap: 12px;
       grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
@@ -155,55 +157,72 @@
       display: grid; gap: 6px; font-size: 12px; color: var(--text-muted);
       border-top: 1px solid var(--card-border); padding-top: 10px; margin-top: 10px;
     }
-    .metrics span.lbl { font-weight: 600; color: var(--section-title); }
+    .metrics .lbl { font-weight: 600; color: var(--section-title); }
 
-    /* Acesso rápido — sem subtítulo por atalho (legado Home) */
-    .hint { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin-bottom: 16px; }
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card h3 {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 800; margin: 0; color: var(--text);
+    }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
+    .feed-body a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+    .btn-li-ocultar {
+      display: inline-flex; align-items: center; margin-top: 14px;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
     .grid-atalhos {
       display: grid; gap: 12px;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
     }
     .atalho {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px 16px; border-radius: 12px;
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
       border: 1px solid var(--card-border); background: var(--input-bg);
-      color: var(--text); text-decoration: none; font-size: 13px; font-weight: 600;
-      transition: all .15s;
+      color: var(--text); text-decoration: none;
     }
-    .atalho:hover {
-      background: rgba(124, 58, 237, 0.12);
-      border-color: var(--brand-primary);
-    }
+    .atalho:hover { border-color: var(--brand-primary); background: rgba(124, 58, 237, 0.08); }
     .atalho .ic {
       width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
       background: rgba(74,32,130,0.2); color: var(--brand-accent);
       display: flex; align-items: center; justify-content: center;
     }
-    .atalho .label { flex: 1; }
-    .atalho .arrow { color: var(--text-muted); flex-shrink: 0; }
-
-    .info-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
-    .info-text a { font-weight: 700; color: var(--brand-accent); text-decoration: none; }
+    .atalho .tit { display: flex; align-items: flex-start; gap: 8px; }
+    .atalho .tit span { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
     .nota-mock {
-      display: flex; align-items: flex-start; gap: 6px; margin-top: 10px;
+      display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
       font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
       background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
     }
-    body.dark .nota-mock { color: #f59e0b; }
+    body.dark .nota-mock { color: var(--amarelo); }
 
     .legenda {
       max-width: 1100px; margin: 0 auto; padding: 0 20px 48px;
     }
-    .legenda .content-box { font-size: 12px; color: var(--text-muted); margin-bottom: 0; border-radius: 14px; }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
     .legenda ul { padding-left: 18px; margin-top: 10px; }
     .legenda li { margin-bottom: 6px; }
     .legenda strong { color: var(--text); }
+    .removed {
+      text-decoration: line-through; opacity: .7;
+    }
   </style>
 </head>
 <body>
   <div class="mock-banner">
-    <span>Mockup — Home · perfil <strong>Influencer</strong> (legado <code>Home/index.tsx</code>) · todos os blocos ativos</span>
+    <span>Mockup 1/N — Home · perfil <strong>Influencer</strong> · proposta para aprovação · todos os blocos ativos</span>
     <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
   </div>
 
@@ -218,64 +237,51 @@
         <div style="flex:1;min-width:200px">
           <h1>Olá, Marina Silva!</h1>
           <p class="role-label">Influenciador</p>
-          <p class="welcome-sub">Spin. Play. Win. Acompanhe cada passo da sua jornada.</p>
+          <p class="welcome-sub">Spin. Play. Win.
+Acompanhe cada passo da sua jornada.</p>
         </div>
       </div>
     </div>
 
-    <!-- 2 — Atualização cadastral RH (condicional — raro em influencer) -->
-    <span class="block-tag">Bloco 2 · Atualização cadastral de 6 meses (só quando pendente + permissão Dados de Cadastro)</span>
-    <div class="alert-box">
-      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
-      </svg>
-      <div style="flex:1;min-width:0">
-        <div class="alert-title">Marina, AÇÃO NECESSÁRIA!</div>
-        <p class="alert-body" style="margin-bottom:12px">
-          Sua atualização cadastral de 6 meses está pendente. Acesse Dados de Cadastro, revise seus dados e documentos ou confirme que nada mudou no período. Você não conseguirá realizar nenhuma ação na plataforma até que este processo seja concluído, caso tenha dúvidas de como realizar o processo procure orientação com a liderança ou RH.
-        </p>
-        <a class="alert-cta" href="#">Ir para Dados de Cadastro</a>
-        <p class="nota-mock">Nota: na prática este bloco só aparece se o perfil tiver permissão de editar Dados de Cadastro (próprios). Influencers puros costumam não ver.</p>
-      </div>
-    </div>
-
-    <!-- 3 — Cadastro incompleto -->
-    <span class="block-tag">Bloco 3 · Cadastro incompleto (perfil ativo + campos pendentes)</span>
+    <!-- 2 — Cadastro incompleto -->
+    <span class="block-tag">Bloco 2 · Cadastro incompleto (só quando pendente)</span>
     <div class="alert-box">
       <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
       </svg>
       <div style="flex:1;min-width:0">
         <div class="alert-title">AÇÃO NECESSÁRIA</div>
-        <p class="alert-body" style="margin-bottom:12px">
+        <p class="alert-body">
           Você ainda não concluiu o seu cadastro, isso impede o pagamento das lives realizadas. Acesse a página Influencers e preencha todos os itens pendentes das suas informações.
         </p>
         <a class="alert-cta" href="#">Ir para Influencers</a>
+        <p class="nota-mock">Link: página <strong>Influencers</strong> (<code>/Influencers</code>) — perfil próprio.</p>
       </div>
     </div>
 
-    <!-- 4 — Playbook pendente -->
-    <span class="block-tag">Bloco 4 · Playbook pendente (itens obrigatórios sem ciência)</span>
+    <!-- 3 — Playbook -->
+    <span class="block-tag">Bloco 3 · Playbook pendente (só quando faltar ciência)</span>
     <div class="alert-box">
       <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
       </svg>
       <div style="flex:1;min-width:0">
         <div class="alert-title">AÇÃO NECESSÁRIA</div>
-        <p class="alert-body" style="margin-bottom:12px">
+        <p class="alert-body">
           Você ainda não confirmou todos os itens obrigatórios do Playbook. Acesse as abas <strong>Dealers</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para dar sua ciência.
         </p>
         <a class="alert-cta" href="#">Ir para Playbook</a>
+        <p class="nota-mock">Link: <strong>Playbook Influencers</strong>. Gate da Agenda exige cadastro + Playbook.</p>
       </div>
     </div>
 
-    <!-- 5 — Próximas lives -->
-    <span class="block-tag">Bloco 5 · Próximas lives (lives agendadas com data/hora futura)</span>
+    <!-- 4 — Próximas lives -->
+    <span class="block-tag">Bloco 4 · Próximas lives (agendadas futuras)</span>
     <div class="content-box">
       <h2 class="section-title">Próximas lives</h2>
       <div class="grid-cards">
         <article class="mini-card">
-          <div class="datetime">sáb., 23 ago. 2026, 20:00</div>
+          <div class="datetime">sáb., 13 set. 2026, 20:00</div>
           <div class="plat-row">
             <span class="plat-dot twitch">Tw</span>
             <span class="plat-name">Twitch</span>
@@ -283,7 +289,7 @@
           <p class="live-title">Live Roleta VIP — Blaze</p>
         </article>
         <article class="mini-card">
-          <div class="datetime">dom., 24 ago. 2026, 15:30</div>
+          <div class="datetime">dom., 14 set. 2026, 15:30</div>
           <div class="plat-row">
             <span class="plat-dot kick">K</span>
             <span class="plat-name">Kick</span>
@@ -291,7 +297,7 @@
           <p class="live-title">Blackjack ao vivo</p>
         </article>
         <article class="mini-card">
-          <div class="datetime">ter., 26 ago. 2026, 19:00</div>
+          <div class="datetime">ter., 16 set. 2026, 19:00</div>
           <div class="plat-row">
             <span class="plat-dot youtube">Yt</span>
             <span class="plat-name">YouTube</span>
@@ -300,14 +306,14 @@
       </div>
     </div>
 
-    <!-- 6 — Feedbacks recentes -->
-    <span class="block-tag">Bloco 6 · Feedbacks recentes (até 4 lives realizadas)</span>
+    <!-- 5 — Feedbacks -->
+    <span class="block-tag">Bloco 5 · Feedbacks recentes (até 4 lives realizadas)</span>
     <div class="content-box">
       <h2 class="section-title">Feedbacks recentes</h2>
       <div class="grid-cards wide">
         <article class="mini-card">
-          <div class="datetime">qui., 21 ago. 2026, 21:00</div>
-          <div class="plat-row">
+          <div class="datetime">qui., 11 set. 2026, 21:00</div>
+          <div class="plat-row" style="margin-bottom:10px">
             <span class="plat-dot twitch">Tw</span>
             <span class="plat-name">Twitch</span>
           </div>
@@ -319,12 +325,12 @@
           </div>
         </article>
         <article class="mini-card">
-          <div class="datetime">seg., 18 ago. 2026, 20:00</div>
-          <div class="plat-row">
+          <div class="datetime">seg., 08 set. 2026, 20:00</div>
+          <div class="plat-row" style="margin-bottom:10px">
             <span class="plat-dot kick">K</span>
             <span class="plat-name">Kick</span>
           </div>
-          <div class="metrics" style="border-top:none;padding-top:0;margin-top:10px">
+          <div class="metrics" style="border-top:none;padding-top:0;margin-top:0">
             <div><span class="lbl">Duração: </span>1h 45min</div>
             <div><span class="lbl">Média de views: </span>956</div>
             <div><span class="lbl">Pico de views: </span>1.120</div>
@@ -333,8 +339,47 @@
       </div>
     </div>
 
+    <!-- 6 — Informações (proposta: feed Informativos) -->
+    <span class="block-tag">Bloco 6 · Informações — Informativos (proposta · 10 dias + «Li e Ocultar»)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+              </svg>
+              Novas diretrizes de divulgação Blaze
+            </h3>
+            <div class="feed-body">
+              <p>Atualizamos as regras de menção à marca nas lives. Confira o <a href="#">Playbook</a> e confirme a ciência se ainda estiver pendente.</p>
+            </div>
+            <p class="feed-footer">Equipe Aquisição · 10/09/26 - 14:00</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+              </svg>
+              Calendário de lives — setembro
+            </h3>
+            <div class="feed-body">
+              <p>Abra a <a href="#">Agenda</a> para conferir os horários confirmados da sua grade neste mês.</p>
+            </div>
+            <p class="feed-footer">Equipe Aquisição · 05/09/26 - 09:30</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+      <p class="nota-mock">Proposta vs. legado: hoje a Home mostra só texto fixo + link Ajuda. Aqui sugerimos o feed de <strong>Informativos</strong> com perfil <code>influencer</code> (janela 10 dias), alinhado a Investidor/Operador/staff. Sem Portal de RH nem Academy nesta Home.</p>
+    </div>
+
     <!-- 7 — Acesso rápido -->
-    <span class="block-tag">Bloco 7 · Acesso rápido (páginas com permissão Ver)</span>
+    <span class="block-tag">Bloco 7 · Acesso rápido (atalhos curados · não dump do menu)</span>
     <div class="content-box">
       <h2 class="section-title">Acesso rápido</h2>
       <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
@@ -343,73 +388,114 @@
           <span class="ic">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
           </span>
-          <span class="label">Overview Influencer</span>
-          <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </a>
-        <a class="atalho" href="#">
-          <span class="ic">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          </span>
-          <span class="label">Influencers</span>
-          <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Overview Influencer</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Resumo executivo de financeiro, operação e conversão do canal de influencers.</p>
+          </div>
         </a>
         <a class="atalho" href="#">
           <span class="ic">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
           </span>
-          <span class="label">Agenda</span>
-          <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Agenda</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Organize e acompanhe as lives agendadas no período.</p>
+          </div>
         </a>
         <a class="atalho" href="#">
           <span class="ic">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
           </span>
-          <span class="label">Resultados</span>
-          <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Resultados</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Consulte o desempenho das lives realizadas.</p>
+          </div>
         </a>
         <a class="atalho" href="#">
           <span class="ic">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </span>
-          <span class="label">Feedback</span>
-          <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Feedback</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Veja observações e métricas das lives recentes.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Influencers</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Seu perfil de influencer na plataforma.</p>
+          </div>
         </a>
         <a class="atalho" href="#">
           <span class="ic">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
           </span>
-          <span class="label">Playbook Influencers</span>
-          <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Playbook Influencers</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Financeiro</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Ajuda</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Conheça as funcionalidades da plataforma, o glossário, tutoriais e soluções para problemas comuns.</p>
+          </div>
         </a>
       </div>
-      <p class="nota-mock" style="margin-top:14px">Overview Influencer fica primeiro na lista quando o perfil tem acesso (regra de ordenação na Home legada).</p>
-    </div>
-
-    <!-- 8 — Informações -->
-    <span class="block-tag">Bloco 8 · Informações (texto fixo — não é feed)</span>
-    <div class="content-box">
-      <h2 class="section-title">Informações</h2>
-      <p class="info-text">
-        Use o menu lateral para navegar entre as seções. Em caso de dúvidas, acesse a página de
-        <a href="#">AJUDA</a>
-        da plataforma ou pelo ícone do seu perfil no canto superior direito.
-      </p>
+      <p class="nota-mock">Atalhos só aparecem se o perfil tiver permissão de Ver. Ordem sugerida: Overview Influencer primeiro. Opcionais conforme matriz: Banca de Jogo, Links e Materiais, Streamers.</p>
     </div>
 
   </div>
 
   <div class="legenda">
     <div class="content-box">
-      <h2 class="section-title">Notas do cenário</h2>
+      <h2 class="section-title">Notas para aprovação — Home Influencer</h2>
       <ul>
-        <li><strong>Fonte:</strong> Home legada em <code>src/pages/geral/Home/index.tsx</code> — hoje compartilhada por <strong>Influencer</strong> e <strong>Afiliado</strong> (<code>roleParidadeInfluencer</code>).</li>
-        <li><strong>Blocos 2 a 4</strong> são alertas condicionais — neste mockup todos aparecem juntos para revisão de copy e links.</li>
-        <li><strong>Bloco 2</strong> (revisão cadastral RH) exige permissão de editar Dados de Cadastro (próprios); influencers puros normalmente não veem.</li>
-        <li><strong>Bloco 3</strong> usa <code>isPerfilIncompleto</code> em <code>influencer_perfil</code> — é o alerta que hoje manda para <strong>Influencers</strong> (problema reportado para afiliados).</li>
-        <li><strong>Blocos 5 e 6</strong> só aparecem quando há lives agendadas futuras / realizadas recentes no banco.</li>
-        <li><strong>Bloco 7</strong> lista dinâmica conforme permissões do menu — sem subtítulo por atalho (diferente da Home staff).</li>
-        <li><strong>Bloco 8</strong> é texto estático com link para Ajuda — não há feed de Informativos/Portal RH nesta Home legada.</li>
-        <li><strong>Como abrir:</strong> salve o arquivo e abra direto no navegador (duplo clique). Evite colar em «gerador de HTML» — pode quebrar o layout.</li>
+        <li><strong>Fora desta Home (proposital):</strong> <span class="removed">atualização cadastral RH de 6 meses</span> — não se aplica a Influencer/Afiliado.</li>
+        <li><strong>Fora desta Home:</strong> Portal de RH, Central Academy, Marketplace, aniversários de staff.</li>
+        <li><strong>Blocos 2 e 3</strong> são condicionais — neste mockup aparecem juntos para revisão de copy e CTAs.</li>
+        <li><strong>Bloco 6</strong> é a mudança principal vs. legado (texto fixo → feed Informativos). Se preferir manter só o texto + Ajuda, diga na aprovação.</li>
+        <li><strong>Implantação:</strong> após aprovação → <code>HomeInfluencer.tsx</code> dedicada (sair da Home legada), espelhando o padrão do Afiliado.</li>
+        <li><strong>Como abrir:</strong> duplo clique no arquivo no Explorer / navegador. Botão no topo alterna tema claro/escuro.</li>
       </ul>
     </div>
   </div>

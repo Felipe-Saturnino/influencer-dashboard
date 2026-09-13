@@ -3,13 +3,24 @@ import { ShieldCheck, AlertCircle } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { FONT } from "../../../constants/theme";
 import type { Operadora } from "../../../types";
 import { BRAND, PAGES, secoesMenuFromPages } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
-import { brandTintBg, ctaGradientSalvar, getEscopoSecaoHeaderStyle } from "./gestaoUsuariosHelpers";
+import {
+  brandTintBg,
+  ctaGradientSalvar,
+  getEscopoSecaoHeaderStyle,
+  MSG_ERRO_CARREGAR_GESTAO,
+  MSG_ERRO_SALVAR_GESTAO,
+  MSG_ERRO_SALVAR_RECARREGAR,
+  sincronizarLinhasTabela,
+} from "./gestaoUsuariosHelpers";
 import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+
+type OpPageRow = { operadora_slug: string; page_key: string };
 
 export function AbaOperadora() {
   const { theme: t } = useApp();
@@ -17,24 +28,47 @@ export function AbaOperadora() {
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [operadoraPages, setOperadoraPages] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
+  const [erroCarregar, setErroCarregar] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [salvoOk, setSalvoOk] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [{ data: ops }, { data: opPages }] = await Promise.all([
-      supabase.from("operadoras").select("*").order("nome"),
-      supabase.from("operadora_pages").select("operadora_slug, page_key"),
-    ]);
-    setOperadoras(ops ?? []);
-    const mapa: Record<string, Set<string>> = {};
-    (opPages ?? []).forEach((r) => {
-      if (!mapa[r.operadora_slug]) mapa[r.operadora_slug] = new Set();
-      mapa[r.operadora_slug].add(r.page_key);
-    });
-    setOperadoraPages(mapa);
-    setLoading(false);
+    setErroCarregar(null);
+    try {
+      const [ops, opPages] = await Promise.all([
+        fetchAllPages<{ slug: string; nome: string; ativo: boolean | null }>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("operadoras")
+            .select("slug, nome, ativo")
+            .order("nome")
+            .range(from, to);
+          return { data, error };
+        }),
+        fetchAllPages<OpPageRow>(async (from, to) => {
+          const { data, error } = await supabase
+            .from("operadora_pages")
+            .select("operadora_slug, page_key")
+            .range(from, to);
+          return { data, error };
+        }),
+      ]);
+      setOperadoras(ops as Operadora[]);
+      const mapa: Record<string, Set<string>> = {};
+      opPages.forEach((r) => {
+        if (!mapa[r.operadora_slug]) mapa[r.operadora_slug] = new Set();
+        mapa[r.operadora_slug].add(r.page_key);
+      });
+      setOperadoraPages(mapa);
+    } catch (err) {
+      console.error("[GestaoUsuarios] carregar Escopos Operadora:", err);
+      setErroCarregar(MSG_ERRO_CARREGAR_GESTAO);
+      setOperadoras([]);
+      setOperadoraPages({});
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -61,36 +95,67 @@ export function AbaOperadora() {
     setErroSalvar(null);
 
     const slugsAtivos = operadoras.map((o) => o.slug);
-    const { error: delErr } = await supabase.from("operadora_pages").delete().in("operadora_slug", slugsAtivos);
-    if (delErr) {
-      setSalvando(false);
-      setErroSalvar("Erro ao salvar. Tente novamente.");
-      return;
-    }
-
-    const toInsert = slugsAtivos.flatMap((slug) =>
-      [...(operadoraPages[slug] ?? [])].map((pageKey) => ({
+    const desired: OpPageRow[] = slugsAtivos.flatMap((slug) =>
+      [...(operadoraPages[slug] ?? [])].map((page_key) => ({
         operadora_slug: slug,
-        page_key: pageKey,
+        page_key,
       })),
     );
 
-    if (toInsert.length > 0) {
-      const { error: insErr } = await supabase.from("operadora_pages").insert(toInsert);
-      if (insErr) {
+    try {
+      const existing = await fetchAllPages<OpPageRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("operadora_pages")
+          .select("operadora_slug, page_key")
+          .in("operadora_slug", slugsAtivos)
+          .range(from, to);
+        return { data, error };
+      });
+
+      const result = await sincronizarLinhasTabela({
+        table: "operadora_pages",
+        existing,
+        desired,
+        keyOf: (r) => `${r.operadora_slug}::${r.page_key}`,
+        deleteEq: (r) =>
+          supabase
+            .from("operadora_pages")
+            .delete()
+            .eq("operadora_slug", r.operadora_slug)
+            .eq("page_key", r.page_key),
+      });
+
+      if (result === "insert") {
+        setErroSalvar(MSG_ERRO_SALVAR_GESTAO);
         setSalvando(false);
-        setErroSalvar("Erro ao salvar. Recarregue a página para verificar o estado atual.");
         return;
       }
-    }
+      if (result === "delete") {
+        setErroSalvar(MSG_ERRO_SALVAR_RECARREGAR);
+        setSalvando(false);
+        return;
+      }
 
-    setSalvando(false);
-    setSalvoOk(true);
-    setTimeout(() => setSalvoOk(false), 2500);
+      setSalvoOk(true);
+      setTimeout(() => setSalvoOk(false), 2500);
+    } catch (err) {
+      console.error("[GestaoUsuarios] salvar Escopos Operadora:", err);
+      setErroSalvar(MSG_ERRO_SALVAR_GESTAO);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   if (loading) {
     return <GestaoUsuariosLoading />;
+  }
+
+  if (erroCarregar) {
+    return (
+      <div role="alert" style={{ padding: 24, color: "#e84025", fontFamily: FONT.body, textAlign: "center" }}>
+        {erroCarregar}
+      </div>
+    );
   }
 
   if (operadoras.length === 0) {

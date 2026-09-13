@@ -3,35 +3,61 @@ import { ShieldCheck, AlertCircle } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { supabase } from "../../../lib/supabase";
+import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { FONT } from "../../../constants/theme";
 import { BRAND, PAGES, PRESTADOR_TIPOS, secoesMenuFromPages } from "./constants";
 import { Checkbox } from "./Checkbox";
 import { GestaoUsuariosLoading, SalvarCtaContent } from "./gestaoUsuariosUi";
-import { brandTintBg, ctaGradientSalvar, getEscopoSecaoHeaderStyle } from "./gestaoUsuariosHelpers";
+import {
+  brandTintBg,
+  ctaGradientSalvar,
+  getEscopoSecaoHeaderStyle,
+  MSG_ERRO_CARREGAR_GESTAO,
+  MSG_ERRO_SALVAR_GESTAO,
+  MSG_ERRO_SALVAR_RECARREGAR,
+  sincronizarLinhasTabela,
+} from "./gestaoUsuariosHelpers";
 import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
+
+type PrestadorPageRow = { prestador_tipo_slug: string; page_key: string };
 
 export function AbaPrestadores() {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const [prestadorTipoPages, setPrestadorTipoPages] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState(true);
+  const [erroCarregar, setErroCarregar] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [salvoOk, setSalvoOk] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const { data: rows } = await supabase.from("prestador_tipo_pages").select("prestador_tipo_slug, page_key");
-    const mapa: Record<string, Set<string>> = {};
-    PRESTADOR_TIPOS.forEach((pt) => {
-      mapa[pt.slug] = new Set();
-    });
-    (rows ?? []).forEach((r: { prestador_tipo_slug: string; page_key: string }) => {
-      if (!mapa[r.prestador_tipo_slug]) mapa[r.prestador_tipo_slug] = new Set();
-      mapa[r.prestador_tipo_slug].add(r.page_key);
-    });
-    setPrestadorTipoPages(mapa);
-    setLoading(false);
+    setErroCarregar(null);
+    try {
+      const rows = await fetchAllPages<PrestadorPageRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("prestador_tipo_pages")
+          .select("prestador_tipo_slug, page_key")
+          .range(from, to);
+        return { data, error };
+      });
+      const mapa: Record<string, Set<string>> = {};
+      PRESTADOR_TIPOS.forEach((pt) => {
+        mapa[pt.slug] = new Set();
+      });
+      rows.forEach((r) => {
+        if (!mapa[r.prestador_tipo_slug]) mapa[r.prestador_tipo_slug] = new Set();
+        mapa[r.prestador_tipo_slug].add(r.page_key);
+      });
+      setPrestadorTipoPages(mapa);
+    } catch (err) {
+      console.error("[GestaoUsuarios] carregar Escopos Prestadores:", err);
+      setErroCarregar(MSG_ERRO_CARREGAR_GESTAO);
+      setPrestadorTipoPages({});
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -58,36 +84,67 @@ export function AbaPrestadores() {
     setErroSalvar(null);
 
     const slugsTipos = PRESTADOR_TIPOS.map((p) => p.slug);
-    const { error: delErr } = await supabase.from("prestador_tipo_pages").delete().in("prestador_tipo_slug", slugsTipos);
-    if (delErr) {
-      setSalvando(false);
-      setErroSalvar("Erro ao salvar. Tente novamente.");
-      return;
-    }
-
-    const toInsert = slugsTipos.flatMap((slug) =>
-      [...(prestadorTipoPages[slug] ?? [])].map((pageKey) => ({
+    const desired: PrestadorPageRow[] = slugsTipos.flatMap((slug) =>
+      [...(prestadorTipoPages[slug] ?? [])].map((page_key) => ({
         prestador_tipo_slug: slug,
-        page_key: pageKey,
+        page_key,
       })),
     );
 
-    if (toInsert.length > 0) {
-      const { error: insErr } = await supabase.from("prestador_tipo_pages").insert(toInsert);
-      if (insErr) {
+    try {
+      const existing = await fetchAllPages<PrestadorPageRow>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("prestador_tipo_pages")
+          .select("prestador_tipo_slug, page_key")
+          .in("prestador_tipo_slug", slugsTipos)
+          .range(from, to);
+        return { data, error };
+      });
+
+      const result = await sincronizarLinhasTabela({
+        table: "prestador_tipo_pages",
+        existing,
+        desired,
+        keyOf: (r) => `${r.prestador_tipo_slug}::${r.page_key}`,
+        deleteEq: (r) =>
+          supabase
+            .from("prestador_tipo_pages")
+            .delete()
+            .eq("prestador_tipo_slug", r.prestador_tipo_slug)
+            .eq("page_key", r.page_key),
+      });
+
+      if (result === "insert") {
+        setErroSalvar(MSG_ERRO_SALVAR_GESTAO);
         setSalvando(false);
-        setErroSalvar("Erro ao salvar. Recarregue a página para verificar o estado atual.");
         return;
       }
-    }
+      if (result === "delete") {
+        setErroSalvar(MSG_ERRO_SALVAR_RECARREGAR);
+        setSalvando(false);
+        return;
+      }
 
-    setSalvando(false);
-    setSalvoOk(true);
-    setTimeout(() => setSalvoOk(false), 2500);
+      setSalvoOk(true);
+      setTimeout(() => setSalvoOk(false), 2500);
+    } catch (err) {
+      console.error("[GestaoUsuarios] salvar Escopos Prestadores:", err);
+      setErroSalvar(MSG_ERRO_SALVAR_GESTAO);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   if (loading) {
     return <GestaoUsuariosLoading />;
+  }
+
+  if (erroCarregar) {
+    return (
+      <div role="alert" style={{ padding: 24, color: "#e84025", fontFamily: FONT.body, textAlign: "center" }}>
+        {erroCarregar}
+      </div>
+    );
   }
 
   const pagesDaTipo = PAGES;

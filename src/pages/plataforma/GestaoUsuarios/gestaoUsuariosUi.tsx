@@ -30,7 +30,7 @@ export function GestaoUsuariosLoading() {
 export function SalvarCtaContent({
   salvando,
   label,
-  labelSalvando = "Salvando...",
+  labelSalvando = "Salvando…",
 }: {
   salvando: boolean;
   label: string;

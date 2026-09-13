@@ -1,6 +1,51 @@
 import type { CSSProperties, KeyboardEvent } from "react";
 import { handleFiltroBarTabsArrowKeyDown } from "../../../lib/filterBarStyles";
 import { FONT } from "../../../constants/theme";
+import { supabase } from "../../../lib/supabase";
+
+/** Copy canónica de erro de save (Global § Erros). */
+export const MSG_ERRO_SALVAR_GESTAO =
+  "Não foi possível salvar. Se o problema persistir, entre em contato com o suporte.";
+
+export const MSG_ERRO_SALVAR_RECARREGAR =
+  "Não foi possível concluir o salvamento. Recarregue a página para verificar o estado atual. Se o problema persistir, entre em contato com o suporte.";
+
+export const MSG_ERRO_CARREGAR_GESTAO =
+  "Não foi possível carregar os dados. Se o problema persistir, entre em contato com o suporte.";
+
+/**
+ * Sync seguro: INSERT dos novos primeiro, depois DELETE dos removidos.
+ * Se o insert falhar, a matriz antiga permanece; se só o delete falhar, sobram extras (não fica vazia).
+ */
+export async function sincronizarLinhasTabela<T extends Record<string, string>>(opts: {
+  table: string;
+  existing: T[];
+  desired: T[];
+  keyOf: (row: T) => string;
+  deleteEq: (row: T) => PromiseLike<{ error: { message: string } | null }>;
+}): Promise<"ok" | "insert" | "delete"> {
+  const existingKeys = new Set(opts.existing.map(opts.keyOf));
+  const desiredKeys = new Set(opts.desired.map(opts.keyOf));
+  const toInsert = opts.desired.filter((r) => !existingKeys.has(opts.keyOf(r)));
+  const toDelete = opts.existing.filter((r) => !desiredKeys.has(opts.keyOf(r)));
+
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from(opts.table).insert(toInsert);
+    if (error) {
+      console.error(`[GestaoUsuarios] insert ${opts.table}:`, error);
+      return "insert";
+    }
+  }
+
+  for (const row of toDelete) {
+    const { error } = await opts.deleteEq(row);
+    if (error) {
+      console.error(`[GestaoUsuarios] delete ${opts.table}:`, error);
+      return "delete";
+    }
+  }
+  return "ok";
+}
 
 export const BRAND_FOCUS_BORDER = "var(--brand-primary, #7c3aed)";
 

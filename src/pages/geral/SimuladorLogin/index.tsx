@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Eye, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { PageHeader } from "../../../components/PageHeader";
-import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+import { ModalBase, ModalHeader, MODAL_SCROLL_FOCUS_SAFE_PAD } from "../../../components/OperacoesModal";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -170,9 +171,16 @@ export default function SimuladorLogin() {
     navigateTo("home");
   }
 
-  function confirmarModal() {
+  async function confirmarModal() {
     if (!rolePendente || !modalOpcao) return;
     if (modalOpcao === "confirmar_troca") {
+      setEncerrando(true);
+      const falha = await encerrarSimulacaoLogin();
+      setEncerrando(false);
+      if (falha) {
+        setErr(falha);
+        return;
+      }
       abrirFluxo(rolePendente);
       return;
     }
@@ -260,7 +268,7 @@ export default function SimuladorLogin() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<Eye size={16} aria-hidden />}
+        icon={<PageMenuIcon pageKey="simulador_login" />}
         title="Simulador de Login"
         subtitle="Visualize a plataforma com o menu e a identidade de outro perfil, sem trocar sua conta."
       />
@@ -271,8 +279,21 @@ export default function SimuladorLogin() {
             Visualização ativa: <strong>{simulacaoLogin.labelExibicao}</strong> (somente leitura). Sua conta não
             muda.
           </p>
-          <button type="button" onClick={() => void encerrar()} disabled={encerrando} style={btnSecundario(t)}>
-            {encerrando ? "Encerrando…" : "Encerrar visualização"}
+          <button
+            type="button"
+            onClick={() => void encerrar()}
+            disabled={encerrando}
+            aria-busy={encerrando || undefined}
+            style={btnSecundario(t)}
+          >
+            {encerrando ? (
+              <>
+                <Loader2 size={14} className="app-lucide-spin" aria-hidden />
+                Encerrando…
+              </>
+            ) : (
+              "Encerrar visualização"
+            )}
           </button>
         </div>
       ) : null}
@@ -480,7 +501,15 @@ function ListaOpcoesRadio({
       <div
         role="radiogroup"
         aria-label={ariaLabel}
-        style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "min(52dvh, 360px)", overflowY: "auto" }}
+        style={{
+          ...MODAL_SCROLL_FOCUS_SAFE_PAD,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          maxHeight: "min(52dvh, 360px)",
+          overflowY: "auto",
+          paddingBottom: 8,
+        }}
       >
         {filtradas.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>
@@ -562,6 +591,9 @@ function btnPerfil(
 
 function btnSecundario(t: { text: string; cardBorder: string; inputBg?: string }): CSSProperties {
   return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
     padding: "10px 18px",
     borderRadius: 10,
     border: `1px solid ${t.cardBorder}`,

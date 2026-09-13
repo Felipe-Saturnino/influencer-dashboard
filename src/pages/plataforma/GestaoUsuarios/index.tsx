@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { PageHeader } from "../../../components/PageHeader";
 import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { getPageMenuLabel } from "../../../lib/pageHeaderMenu";
+import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -20,7 +21,7 @@ import {
   type ContagensFiltroUsuarios,
 } from "./GestaoUsuariosFiltroBar";
 import type { Role } from "../../../types";
-import type { FiltroStatusUsuarios } from "./constants";
+import { roleLabel, type FiltroStatusUsuarios } from "./constants";
 import { ROLES_GESTOR_DEPARTAMENTO } from "../../../lib/staffRoles";
 
 const CONTAGENS_VAZIAS: ContagensFiltroUsuarios = {
@@ -36,6 +37,8 @@ export default function GestaoUsuarios() {
   const [aba, setAba] = useRouteTab("gestao_usuarios", "usuarios", ["usuarios", "permissoes", "escopos", "simulador"] as const);
   const [escopoSubAba, setEscopoSubAba] = useState<AbaGestaoEscopo>("operadora");
   const [roleAtivo, setRoleAtivo] = useState<Role>(ROLES_GESTOR_DEPARTAMENTO[0] ?? "executivo");
+  const [matrizSuja, setMatrizSuja] = useState(false);
+  const [rolePendenteTroca, setRolePendenteTroca] = useState<Role | null>(null);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatusUsuarios>("ativo");
   const [filtroPerfilSet, setFiltroPerfilSet] = useState<Set<Role>>(() => new Set());
@@ -43,6 +46,23 @@ export default function GestaoUsuarios() {
 
   const isAdmin = user?.role === "admin";
   const mostrarAbasAdmin = isAdmin && perm.canEditarOk;
+
+  const onDirtyChange = useCallback((dirty: boolean) => {
+    setMatrizSuja(dirty);
+  }, []);
+
+  const solicitarTrocaRole = useCallback(
+    (next: Role) => {
+      if (next === roleAtivo) return;
+      if ((aba === "permissoes" || aba === "simulador") && matrizSuja) {
+        setRolePendenteTroca(next);
+        return;
+      }
+      setRoleAtivo(next);
+      setMatrizSuja(false);
+    },
+    [aba, matrizSuja, roleAtivo],
+  );
 
   useEffect(() => {
     if (perm.loading) return;
@@ -53,6 +73,10 @@ export default function GestaoUsuarios() {
     if (perm.loading) return;
     if (isAdmin && !perm.canEditarOk && aba !== "usuarios") setAba("usuarios");
   }, [perm.loading, isAdmin, perm.canEditarOk, aba, setAba]);
+
+  useEffect(() => {
+    setMatrizSuja(false);
+  }, [aba]);
 
   const card = useMemo(
     () => getPageContentBoxStyle(brand, t, { padding: 28 }),
@@ -87,11 +111,7 @@ export default function GestaoUsuarios() {
   const panelId =
     aba === "escopos"
       ? `panel-gestao-${escopoSubAba}`
-      : aba === "permissoes"
-        ? "panel-permissoes-matriz"
-        : aba === "simulador"
-          ? "panel-gestao-simulador"
-          : "panel-gestao-usuarios";
+      : `panel-gestao-${aba}`;
 
   return (
     <div className="app-page-shell">
@@ -111,7 +131,7 @@ export default function GestaoUsuarios() {
         onTogglePerfil={toggleFiltroPerfil}
         contagens={contagensFiltro}
         roleAtivo={roleAtivo}
-        onRoleAtivoChange={setRoleAtivo}
+        onRoleAtivoChange={solicitarTrocaRole}
         escopoSubAba={escopoSubAba}
         onEscopoSubAbaChange={setEscopoSubAba}
       />
@@ -145,11 +165,29 @@ export default function GestaoUsuarios() {
             onContagensChange={setContagensFiltro}
           />
         )}
-        {aba === "permissoes" && <AbaPermissoes roleAtivo={roleAtivo} />}
+        {aba === "permissoes" && (
+          <AbaPermissoes roleAtivo={roleAtivo} onDirtyChange={onDirtyChange} />
+        )}
         {aba === "escopos" && escopoSubAba === "operadora" && <AbaOperadora />}
         {aba === "escopos" && escopoSubAba === "prestadores" && <AbaPrestadores />}
-        {aba === "simulador" && <AbaSimuladorLogin viewerRole={roleAtivo} />}
+        {aba === "simulador" && (
+          <AbaSimuladorLogin viewerRole={roleAtivo} onDirtyChange={onDirtyChange} />
+        )}
       </div>
+
+      {rolePendenteTroca ? (
+        <ModalConfirmDelete
+          title="Descartar alterações?"
+          texto={`Há alterações não salvas em ${roleLabel(roleAtivo)}. Deseja descartá-las e abrir ${roleLabel(rolePendenteTroca)}?`}
+          onCancel={() => setRolePendenteTroca(null)}
+          onConfirm={() => {
+            setRoleAtivo(rolePendenteTroca);
+            setRolePendenteTroca(null);
+            setMatrizSuja(false);
+          }}
+          confirmLabel="Descartar"
+        />
+      ) : null}
     </div>
   );
 }

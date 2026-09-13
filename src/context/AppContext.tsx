@@ -37,6 +37,7 @@ import {
   recortarEscoposSimulacao,
   resolverOperadoraNome,
   toSimulacaoState,
+  validarEscopoUsuarioSimulacao,
   validarInputSimulacao,
   writeSimulacaoSession,
 } from "../lib/simuladorLogin";
@@ -748,6 +749,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return "Este usuário não está mais ativo. Escolha outro usuário ativo.";
       }
 
+      const escopoErr = await validarEscopoUsuarioSimulacao(input.userId, input);
+      if (escopoErr) return escopoErr;
+
       let operadoraNome: string | undefined;
       if (input.operadoraSlug) {
         operadoraNome = (await resolverOperadoraNome(input.operadoraSlug)) ?? input.operadoraSlug;
@@ -814,6 +818,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const usuarioAtivo = await carregarUsuarioAtivoSimulavel(saved.userId, saved.role);
       if (!usuarioAtivo) {
+        writeSimulacaoSession(null);
+        return;
+      }
+      const escopoErr = await validarEscopoUsuarioSimulacao(saved.userId, {
+        operadoraSlug: saved.operadoraSlug,
+        prestadorTipoSlug: saved.prestadorTipoSlug,
+      });
+      if (escopoErr) {
         writeSimulacaoSession(null);
         return;
       }

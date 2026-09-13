@@ -1,17 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AlertCircle, ShieldCheck } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { useMediaQuery } from "../../../hooks/useMediaQuery";
 import { supabase } from "../../../lib/supabase";
 import { FONT } from "../../../constants/theme";
 import type { Role, PageKey, PermissaoValor, RolePermission } from "../../../types";
 import { BRAND, PAGES, PERM_OPCOES, roleLabel } from "./constants";
-import { SalvarCtaContent } from "./gestaoUsuariosUi";
-import { ctaGradientSalvar } from "./gestaoUsuariosHelpers";
+import { SalvarCtaContent, GestaoUsuariosLoading } from "./gestaoUsuariosUi";
+import {
+  ctaGradientSalvar,
+  MSG_ERRO_CARREGAR_GESTAO,
+  MSG_ERRO_SALVAR_GESTAO,
+} from "./gestaoUsuariosHelpers";
 import { getDataTableWrapStyle } from "../../../lib/dataTableStyles";
 
 interface AbaPermissoesProps {
   roleAtivo: Role;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 /** Verde #22c55e / vermelho #e84025 — paleta semântica global; leve tinte nos selects da matriz. */
@@ -34,36 +40,90 @@ function estiloSelectPermissao(val: PermissaoValor | null, isDark: boolean): { b
   };
 }
 
-export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
+type PermRow = {
+  page_key: string;
+  can_view: PermissaoValor | null;
+  can_criar: PermissaoValor | null;
+  can_editar: PermissaoValor | null;
+  can_excluir: PermissaoValor | null;
+};
+
+function mapaFromRows(rows: PermRow[]): Record<string, Partial<RolePermission>> {
+  const mapa: Record<string, Partial<RolePermission>> = {};
+  rows.forEach((r) => {
+    mapa[r.page_key] = r as Partial<RolePermission>;
+  });
+  return mapa;
+}
+
+function serializarPerms(mapa: Record<string, Partial<RolePermission>>, role: Role): string {
+  return JSON.stringify(
+    PAGES.map((p) => ({
+      role,
+      page_key: p.key,
+      can_view: mapa[p.key]?.can_view ?? null,
+      can_criar: p.hasCriar ? (mapa[p.key]?.can_criar ?? null) : null,
+      can_editar: p.hasEditar ? (mapa[p.key]?.can_editar ?? null) : null,
+      can_excluir: p.hasExcluir ? (mapa[p.key]?.can_excluir ?? null) : null,
+    })),
+  );
+}
+
+export function AbaPermissoes({ roleAtivo, onDirtyChange }: AbaPermissoesProps) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
+  const isMobile = useMediaQuery("(max-width: 720px)");
   const [perms, setPerms] = useState<Record<string, Partial<RolePermission>>>({});
+  const baselineRef = useRef("");
+  const [loading, setLoading] = useState(true);
+  const [erroCarregar, setErroCarregar] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [salvoOk, setSalvoOk] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
-  useEffect(() => {
-    supabase
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    setErroCarregar(null);
+    setErroSalvar(null);
+    const { data, error } = await supabase
       .from("role_permissions")
-      .select("*")
-      .eq("role", roleAtivo)
-      .then(({ data }) => {
-        const mapa: Record<string, Partial<RolePermission>> = {};
-        (data ?? []).forEach((r) => { mapa[r.page_key] = r; });
-        setPerms(mapa);
-      });
-  }, [roleAtivo]);
+      .select("page_key, can_view, can_criar, can_editar, can_excluir")
+      .eq("role", roleAtivo);
+    if (error) {
+      console.error("[GestaoUsuarios] carregar permissões:", error);
+      setPerms({});
+      baselineRef.current = "";
+      setErroCarregar(MSG_ERRO_CARREGAR_GESTAO);
+      onDirtyChange?.(false);
+      setLoading(false);
+      return;
+    }
+    const mapa = mapaFromRows((data ?? []) as PermRow[]);
+    setPerms(mapa);
+    baselineRef.current = serializarPerms(mapa, roleAtivo);
+    onDirtyChange?.(false);
+    setLoading(false);
+  }, [roleAtivo, onDirtyChange]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
   const setPerm = (pageKey: string, campo: keyof RolePermission, valor: PermissaoValor) => {
-    setPerms((prev) => ({
-      ...prev,
-      [pageKey]: { ...prev[pageKey], role: roleAtivo, page_key: pageKey as PageKey, [campo]: valor },
-    }));
+    setPerms((prev) => {
+      const next = {
+        ...prev,
+        [pageKey]: { ...prev[pageKey], role: roleAtivo, page_key: pageKey as PageKey, [campo]: valor },
+      };
+      onDirtyChange?.(serializarPerms(next, roleAtivo) !== baselineRef.current);
+      return next;
+    });
   };
 
   const salvar = async () => {
     setSalvando(true);
     setSalvoOk(false);
+    setErroSalvar(null);
     const rows = PAGES.map((p) => ({
       role: roleAtivo,
       page_key: p.key,
@@ -78,23 +138,17 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
     setSalvando(false);
     if (error) {
       console.error("[GestaoUsuarios] Erro ao salvar permissões:", error);
-      setErroSalvar("Erro ao salvar permissões. Tente novamente.");
+      setErroSalvar(MSG_ERRO_SALVAR_GESTAO);
       return;
     }
+    setErroSalvar(null);
     setSalvoOk(true);
     setTimeout(() => setSalvoOk(false), 2500);
-    supabase
-      .from("role_permissions")
-      .select("*")
-      .eq("role", roleAtivo)
-      .then(({ data }) => {
-        const mapa: Record<string, Partial<RolePermission>> = {};
-        (data ?? []).forEach((r) => { mapa[r.page_key] = r; });
-        setPerms(mapa);
-      });
+    baselineRef.current = serializarPerms(perms, roleAtivo);
+    onDirtyChange?.(false);
+    void carregar();
   };
 
-  // ── Estilos da tabela ────────────────────────────────────────────────────────
   const thStyle: React.CSSProperties = {
     fontFamily: FONT.body,
     fontSize: 11,
@@ -114,19 +168,43 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
     padding: "10px 14px",
   };
 
-  /** Secções na ordem em que aparecem em `PAGES` (alinhado ao menu lateral; Geral por último). */
   const secoes = [...new Set(PAGES.map((p) => p.secao))];
 
-  // ── Renderização das linhas ──────────────────────────────────────────────────
-  // Estratégia: para cada seção, inserimos:
-  //   1. Uma <tr> separadora de ponta a ponta (exceto antes da primeira seção)
-  //   2. As <tr> normais das páginas, com zebra striping
+  if (loading) {
+    return <GestaoUsuariosLoading />;
+  }
+
+  if (erroCarregar) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center", padding: 24 }}>
+        <div role="alert" style={{ color: "#e84025", fontFamily: FONT.body, fontSize: 13, textAlign: "center" }}>
+          {erroCarregar}
+        </div>
+        <button
+          type="button"
+          onClick={() => void carregar()}
+          style={{
+            border: `1px solid ${t.cardBorder}`,
+            background: t.inputBg,
+            color: t.text,
+            borderRadius: 10,
+            padding: "8px 16px",
+            cursor: "pointer",
+            fontFamily: FONT.body,
+            fontSize: 13,
+          }}
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
   const linhas: React.ReactNode[] = [];
 
   secoes.forEach((secao, secaoIdx) => {
     const pagesDaSec = PAGES.filter((p) => p.secao === secao);
 
-    // Linha separadora de seção — colspan 6, de ponta a ponta
     if (secaoIdx > 0) {
       linhas.push(
         <tr key={`sep-${secao}`}>
@@ -138,7 +216,7 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
               background: t.cardBorder,
             }}
           />
-        </tr>
+        </tr>,
       );
     }
 
@@ -223,7 +301,7 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
               </td>
             );
           })}
-        </tr>
+        </tr>,
       );
     });
   });
@@ -248,104 +326,106 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
         </p>
       ) : null}
       <div
-        id="panel-permissoes-matriz"
         style={{
           borderRadius: 12,
           border: `1px solid ${t.cardBorder}`,
         }}
       >
-        <div className="app-table-wrap app-permissoes-table-wrap" style={getDataTableWrapStyle()}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-            }}
+        {!isMobile ? (
+          <div className="app-table-wrap app-permissoes-table-wrap" style={getDataTableWrapStyle()}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "separate",
+                borderSpacing: 0,
+              }}
+            >
+              <caption style={{ display: "none" }}>
+                Matriz de permissões por página — perfil {roleLabel(roleAtivo)}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
+                    Seção
+                  </th>
+                  <th scope="col" style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
+                    Página
+                  </th>
+                  <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Ver</th>
+                  <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Criar</th>
+                  <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Editar</th>
+                  <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Excluir</th>
+                </tr>
+              </thead>
+              <tbody>{linhas}</tbody>
+            </table>
+          </div>
+        ) : (
+          <div
+            className="app-permissoes-cards"
+            style={{ ["--perm-card-border" as string]: t.cardBorder, display: "flex" }}
           >
-            <caption style={{ display: "none" }}>
-              Matriz de permissões por página — perfil {roleLabel(roleAtivo)}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col" style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
-                  Seção
-                </th>
-                <th scope="col" style={{ ...thStyle, textAlign: "left", borderBottom: `2px solid ${t.cardBorder}` }}>
-                  Página
-                </th>
-                <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Ver</th>
-                <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Criar</th>
-                <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Editar</th>
-                <th scope="col" style={{ ...thStyle, borderBottom: `2px solid ${t.cardBorder}` }}>Excluir</th>
-              </tr>
-            </thead>
-            <tbody>{linhas}</tbody>
-          </table>
-        </div>
-        <div
-          className="app-permissoes-cards"
-          style={{ ["--perm-card-border" as string]: t.cardBorder }}
-        >
-          {PAGES.map((page) => (
-            <div key={page.key} className="app-permissoes-card">
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  {page.secao}
+            {PAGES.map((page) => (
+              <div key={page.key} className="app-permissoes-card">
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    {page.secao}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginTop: 4 }}>
+                    {page.label}
+                  </div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: FONT.body, marginTop: 4 }}>
-                  {page.label}
+                <div className="app-permissoes-card__acoes">
+                  {(["can_view", "can_criar", "can_editar", "can_excluir"] as const).map((campo) => {
+                    const temAcao =
+                      campo === "can_view"
+                        ? true
+                        : campo === "can_criar"
+                          ? page.hasCriar
+                          : campo === "can_editar"
+                            ? page.hasEditar
+                            : page.hasExcluir;
+                    if (!temAcao) return null;
+                    const val = (perms[page.key]?.[campo] as PermissaoValor) ?? null;
+                    const tint = estiloSelectPermissao(val, !!t.isDark);
+                    const labelCampo =
+                      campo === "can_view" ? "Ver" : campo === "can_criar" ? "Criar" : campo === "can_editar" ? "Editar" : "Excluir";
+                    return (
+                      <div key={campo} className="app-permissoes-card__acao">
+                        <label htmlFor={`perm-mobile-${page.key}-${campo}`}>{labelCampo}</label>
+                        <select
+                          id={`perm-mobile-${page.key}-${campo}`}
+                          value={val ?? ""}
+                          aria-label={`${page.label}: ${labelCampo}`}
+                          onChange={(e) =>
+                            setPerm(page.key, campo, (e.target.value as PermissaoValor) || null)
+                          }
+                          style={{
+                            background: tint.background || (t.inputBg ?? t.cardBg),
+                            border: `1px solid ${tint.borderColor || t.cardBorder}`,
+                            borderRadius: 8,
+                            color: t.text,
+                            fontFamily: FONT.body,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <option value="">—</option>
+                          {[...PERM_OPCOES]
+                            .sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "", "pt-BR"))
+                            .map((o) => (
+                              <option key={o.value} value={o.value ?? ""}>
+                                {o.label}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="app-permissoes-card__acoes">
-                {(["can_view", "can_criar", "can_editar", "can_excluir"] as const).map((campo) => {
-                  const temAcao =
-                    campo === "can_view"
-                      ? true
-                      : campo === "can_criar"
-                        ? page.hasCriar
-                        : campo === "can_editar"
-                          ? page.hasEditar
-                          : page.hasExcluir;
-                  if (!temAcao) return null;
-                  const val = (perms[page.key]?.[campo] as PermissaoValor) ?? null;
-                  const tint = estiloSelectPermissao(val, !!t.isDark);
-                  const labelCampo =
-                    campo === "can_view" ? "Ver" : campo === "can_criar" ? "Criar" : campo === "can_editar" ? "Editar" : "Excluir";
-                  return (
-                    <div key={campo} className="app-permissoes-card__acao">
-                      <label htmlFor={`perm-mobile-${page.key}-${campo}`}>{labelCampo}</label>
-                      <select
-                        id={`perm-mobile-${page.key}-${campo}`}
-                        value={val ?? ""}
-                        aria-label={`${page.label}: ${labelCampo}`}
-                        onChange={(e) =>
-                          setPerm(page.key, campo, (e.target.value as PermissaoValor) || null)
-                        }
-                        style={{
-                          background: tint.background || (t.inputBg ?? t.cardBg),
-                          border: `1px solid ${tint.borderColor || t.cardBorder}`,
-                          borderRadius: 8,
-                          color: t.text,
-                          fontFamily: FONT.body,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <option value="">—</option>
-                        {[...PERM_OPCOES]
-                          .sort((a, b) => (a.label ?? "").localeCompare(b.label ?? "", "pt-BR"))
-                          .map((o) => (
-                            <option key={o.value} value={o.value ?? ""}>
-                              {o.label}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "stretch" }}>
@@ -386,7 +466,7 @@ export function AbaPermissoes({ roleAtivo }: AbaPermissoesProps) {
           )}
           <button
             type="button"
-            onClick={salvar}
+            onClick={() => void salvar()}
             disabled={salvando}
             style={{
               background: ctaGradientSalvar(brand, salvando, BRAND.cinza),
