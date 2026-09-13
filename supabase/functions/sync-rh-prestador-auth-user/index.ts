@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
+import { registrarHistoricoPerfil } from './common.ts'
 
 /**
  * Edge: sync-rh-prestador-auth-user
@@ -578,6 +579,13 @@ serve(async (req) => {
             headers: { ...cors, 'Content-Type': 'application/json' },
           })
         }
+        await registrarHistoricoPerfil(supabase, {
+          profileId: perfil.id as string,
+          tipo: 'desativacao',
+          origem: 'destrato',
+          realizadoPor: whoami.userId,
+          resumo: 'Destrato — prestador encerrado na Gestão de Prestadores',
+        })
       }
       break
     }
@@ -642,6 +650,31 @@ serve(async (req) => {
         status: 500,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
+    }
+
+    const estavaInativo = (perfilExistente as { ativo?: boolean | null }).ativo === false
+    if (estavaInativo || roleAnterior !== perfilRole) {
+      if (estavaInativo) {
+        await registrarHistoricoPerfil(supabase, {
+          profileId: perfilExistente.id,
+          tipo: 'ativacao',
+          origem: 'contrato_ativado',
+          realizadoPor: whoami.userId,
+          resumo: 'Contrato Ativado — Gestão de Prestadores',
+          preservarAccessGrantedAt: true,
+        })
+      }
+      if (roleAnterior !== perfilRole) {
+        await registrarHistoricoPerfil(supabase, {
+          profileId: perfilExistente.id,
+          tipo: 'alteracao_perfil',
+          origem: 'contrato_ativado',
+          realizadoPor: whoami.userId,
+          resumo: `Perfil: ${roleAnterior || '—'} → ${perfilRole}`,
+          valorAnterior: roleAnterior || null,
+          valorNovo: perfilRole,
+        })
+      }
     }
 
     const authUp = await goTrueAdminUpdateUser(supabaseUrl, serviceRoleKey, perfilExistente.id, {
@@ -710,6 +743,7 @@ serve(async (req) => {
       must_change_password: true,
       access_granted_by: whoami.userId,
       access_granted_at: new Date().toISOString(),
+      access_granted_origem: 'contrato_ativado',
     },
     { onConflict: 'id' },
   )
@@ -721,6 +755,15 @@ serve(async (req) => {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
+
+  await registrarHistoricoPerfil(supabase, {
+    profileId: uid,
+    tipo: 'ativacao',
+    origem: 'contrato_ativado',
+    realizadoPor: whoami.userId,
+    resumo: 'Contrato Ativado — Gestão de Prestadores',
+    preservarAccessGrantedAt: true,
+  })
 
   const escoposCreate = await syncEscoposRhPrestador(supabase, uid, perfilRole, tipoSlug)
   if (escoposCreate.error) {

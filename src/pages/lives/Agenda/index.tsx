@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useApp } from "../../../context/AppContext";
 import { verificarElegibilidadeAgendaLive } from "../../../lib/influencerAgendaGate";
+import { verificarPodeAgendarPorStatus, type PersonaBloqueioAgendaCota } from "../../../lib/influencerHorasCota";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { useDashboardFiltros } from "../../../hooks/useDashboardFiltros";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
@@ -15,6 +16,7 @@ import { fetchAllPages } from "../../../lib/supabasePaginate";
 import { Live } from "../../../types";
 import ModalLive from "./ModalLive";
 import ModalBloqueioAgendaLive from "./ModalBloqueioAgendaLive";
+import ModalBloqueioInfluencerInativo from "./ModalBloqueioInfluencerInativo";
 import { ViewMes, ViewSemana, ViewDia, type ViewMode } from "./AgendaCalendarViews";
 import {
   FiltroHojeButton,
@@ -133,12 +135,13 @@ export default function Agenda() {
   const [lives,   setLives]   = useState<Live[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [modal,   setModal]   = useState<{ open: boolean; live?: Live }>({ open: false });
+  const [modal,   setModal]   = useState<{ open: boolean; live?: Live; influencerIdInicial?: string }>({ open: false });
   const [bloqueioNovaLive, setBloqueioNovaLive] = useState<{
     perfilIncompleto: boolean;
     faltaPlaybook: boolean;
     erroVerificacao?: boolean;
   } | null>(null);
+  const [bloqueioInativo, setBloqueioInativo] = useState<PersonaBloqueioAgendaCota | null>(null);
   const [checandoNovaLive, setChecandoNovaLive] = useState(false);
 
   const [filterStatus,      setFilterStatus]      = useState<string | null>(null);
@@ -385,10 +388,25 @@ export default function Agenda() {
 
   async function tentarAbrirNovaLive() {
     if (!user) return;
-    if (roleParidadeInfluencer(roleEfetivo ?? user?.role)) {
-      setChecandoNovaLive(true);
-      try {
-        const gate = await verificarElegibilidadeAgendaLive(userIdEfetivo ?? user.id);
+    const personaCota: PersonaBloqueioAgendaCota =
+      roleParidadeInfluencer(roleEfetivo ?? user?.role) || roleEfetivo === "agencia"
+        ? "contrato"
+        : "interno";
+
+    setChecandoNovaLive(true);
+    try {
+      if (roleParidadeInfluencer(roleEfetivo ?? user?.role)) {
+        const alvoId = userIdEfetivo ?? user.id;
+        const statusGate = await verificarPodeAgendarPorStatus(alvoId);
+        if (statusGate.erroVerificacao) {
+          setBloqueioNovaLive({ perfilIncompleto: false, faltaPlaybook: false, erroVerificacao: true });
+          return;
+        }
+        if (!statusGate.podeAgendar) {
+          setBloqueioInativo("contrato");
+          return;
+        }
+        const gate = await verificarElegibilidadeAgendaLive(alvoId);
         if (gate.erroVerificacao) {
           setBloqueioNovaLive({ perfilIncompleto: false, faltaPlaybook: false, erroVerificacao: true });
           return;
@@ -400,11 +418,29 @@ export default function Agenda() {
           });
           return;
         }
-      } finally {
-        setChecandoNovaLive(false);
+        setModal({ open: true });
+        return;
       }
+
+      const unicoFiltro = filterInfluencers.length === 1 ? filterInfluencers[0] : null;
+      if (unicoFiltro) {
+        const statusGate = await verificarPodeAgendarPorStatus(unicoFiltro);
+        if (statusGate.erroVerificacao) {
+          setBloqueioNovaLive({ perfilIncompleto: false, faltaPlaybook: false, erroVerificacao: true });
+          return;
+        }
+        if (!statusGate.podeAgendar) {
+          setBloqueioInativo(personaCota);
+          return;
+        }
+        setModal({ open: true, influencerIdInicial: unicoFiltro });
+        return;
+      }
+
+      setModal({ open: true });
+    } finally {
+      setChecandoNovaLive(false);
     }
-    setModal({ open: true });
   }
 
   if (perm.canView === "nao") {
@@ -722,8 +758,13 @@ export default function Agenda() {
       {modal.open && (
         <ModalLive
           live={modal.live}
+          influencerIdInicial={modal.influencerIdInicial}
           onClose={() => setModal({ open: false })}
           onSave={() => { setModal({ open: false }); void loadLives(); }}
+          onBloqueioInativo={(persona) => {
+            setModal({ open: false });
+            setBloqueioInativo(persona);
+          }}
         />
       )}
 
@@ -749,6 +790,16 @@ export default function Agenda() {
         onIrPlaybook={() => {
           setBloqueioNovaLive(null);
           setActivePage("playbook_influencers");
+        }}
+      />
+
+      <ModalBloqueioInfluencerInativo
+        open={bloqueioInativo !== null}
+        persona={bloqueioInativo ?? "interno"}
+        onClose={() => setBloqueioInativo(null)}
+        onIrInfluencers={() => {
+          setBloqueioInativo(null);
+          setActivePage("influencers");
         }}
       />
     </div>

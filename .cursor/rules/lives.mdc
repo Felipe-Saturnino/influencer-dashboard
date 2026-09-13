@@ -354,6 +354,8 @@ Toda string visível ao usuário deve estar em português do Brasil. Padrão com
 
 **Gate cadastro + Playbook (somente Influencer e Agência):** perfil **Influencer** — a página Agenda só libera o calendário após cadastro completo e ciência nos três itens obrigatórios do Playbook (`verificarElegibilidadeAgendaLive` + painel `ModalBloqueioAgendaLive` `embedded` / contexto `agenda_acesso`). Falha na consulta → `erroVerificacao` (bloqueio conservador + **Tentar de novo**). Perfil **Agência** — consulta o calendário do escopo; ao **salvar** Nova Live, o gate verifica o influencer selecionado (`ModalLive.handleSave`). **Gestores, operadores e demais perfis internos não passam pelo gate** ao agendar em nome de terceiros. Ajuda: Conheça/Troubleshooting Agenda + glossário Playbook.
 
+**Gate cota / cadastro Inativo (Nova Live):** o clique em **Nova Live** (não o Salvar) bloqueia Inativo/Cancelado (`verificarPodeAgendarPorStatus` + trigger `trg_lives_bloquear_influencer_inativo` no INSERT). Copy **contrato** (Influencer/Afiliado/Agência): *«Sem horas acordadas / contrato ativo, fale com o Gestor do Contrato.»* Copy **interno** (gestor/admin/operador): *«Influencer está com cadastro inativo. Realize a ativação na página **Influencers** para agendar.»* — **Influencers** é link SPA. Gestor com um único influencer inativo no filtro: pop-up no clique. Gestor com seletor vazio: ao **escolher** o inativo no `ModalLive`, fecha o formulário e abre o mesmo pop-up. Lives já agendadas **não** são canceladas; overshoot de duração é permitido (só conta o validado em Resultados). Legado sem `influencer_perfil` agenda (status tratado como Ativo). Ajuda: Conheça/Troubleshooting Agenda + glossário Horas Acordadas.
+
 **ModalLive — link:** auto-preenchimento do perfil só em **Nova Live** ou ao **trocar plataforma** na edição; ao abrir edição, preservar o link salvo da live.
 
 **ModalLive — exclusão:** `handleDelete` fecha o modal e atualiza a lista **somente em sucesso**; erro canónico inline no modal.
@@ -500,6 +502,10 @@ const [idxSemana, setIdxSemana] = useState(
 
 **Lista:** carregar `profiles` só com `role = influencer`. **Não** usar `ROLES_PARIDADE_INFLUENCER` nesta página — afiliados (Network / página Afiliados) compartilham `influencer_perfil`, mas **não** devem aparecer em Influencers. A constante de paridade permanece para Financeiro, Agenda, escopos, etc.
 
+**Reativação de acesso:** ao mudar `influencer_perfil.status` para **ativo** (badge ou modal), o trigger `trg_influencer_perfil_reativar_usuario` chama a Edge `admin-usuario-acao` (`ativar`): reativa a conta, redefine a senha para a padrão, exige troca no próximo login e envia o **e-mail de boas-vindas**. Conta desativada na plataforma aparece com pill **Desativado** no card.
+
+**Cota de horas (ciclo operacional, não financeiro):** Influencer **novo** (Scout Fechado e Gestão de Usuários) nasce **Inativo**, sem `horas_acordadas`. Ativar (só Inativo/Cancelado → Ativo) abre `ModalAtivarHoras` — **Horas Acordadas** obrigatório (> 0); grava `horas_ciclo_iniciado_em`. Inativo/Cancelado **limpa** a cota. Modal **Ver**: aba **Horas** após Cadastral — Pendentes = `max(0, acordadas − realizadas da cota)`; Realizadas = `live_resultados` de lives `realizada` com `data >=` início do ciclo (fuso SP). Cumprir a cota (validação em Resultados ou edição de duração no Feedback) → **Inativo** automático (`influencer_perfil_reavaliar_cota_horas`); reduzir duração **não** reativa. Ativos antigos **sem** cota **não** auto-inativam. Afiliado **não** usa esta regra.
+
 **`StatusBadge` — ARIA completo (ver seção "Dropdowns de Status" acima).**
 
 **`SensitiveField` — `aria-label` dinâmico obrigatório:**
@@ -604,6 +610,8 @@ if (!val.ok) {
   return;
 }
 ```
+
+**Fechado → Influencers:** o usuário é criado com `influencer_perfil.status = inativo` (sem cota). Não agenda até o gestor ativar em **Influencers** com Horas Acordadas.
 
 **Erros de vincularOperadora — inline, nunca alert():**
 ```tsx

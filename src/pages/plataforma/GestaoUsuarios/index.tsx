@@ -108,10 +108,7 @@ export default function GestaoUsuarios() {
     );
   }
 
-  const panelId =
-    aba === "escopos"
-      ? `panel-gestao-${escopoSubAba}`
-      : `panel-gestao-${aba}`;
+  const panelId = `panel-gestao-${aba}`;
 
   return (
     <div className="app-page-shell">
@@ -144,7 +141,7 @@ export default function GestaoUsuarios() {
               id: panelId,
               "aria-labelledby":
                 aba === "escopos"
-                  ? `tab-escopo-${escopoSubAba}`
+                  ? `tab-gestao-escopos`
                   : aba === "permissoes" || aba === "simulador"
                     ? `tab-perm-${roleAtivo}`
                     : `tab-gestao-usuarios`,
@@ -168,8 +165,15 @@ export default function GestaoUsuarios() {
         {aba === "permissoes" && (
           <AbaPermissoes roleAtivo={roleAtivo} onDirtyChange={onDirtyChange} />
         )}
-        {aba === "escopos" && escopoSubAba === "operadora" && <AbaOperadora />}
-        {aba === "escopos" && escopoSubAba === "prestadores" && <AbaPrestadores />}
+        {aba === "escopos" && (
+          <div
+            id={`panel-gestao-${escopoSubAba}`}
+            role="tabpanel"
+            aria-labelledby={`tab-escopo-${escopoSubAba}`}
+          >
+            {escopoSubAba === "operadora" ? <AbaOperadora /> : <AbaPrestadores />}
+          </div>
+        )}
         {aba === "simulador" && (
           <AbaSimuladorLogin viewerRole={roleAtivo} onDirtyChange={onDirtyChange} />
         )}

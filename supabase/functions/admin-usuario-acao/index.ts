@@ -2,10 +2,13 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { jwtVerify } from 'https://esm.sh/jose@5.2.0'
 import { enviarEmailRecuperacaoSenhaConta } from './enviarRecuperacaoSenha.ts'
+import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
+import { registrarHistoricoPerfil } from './common.ts'
 
 // Edge Function: admin-usuario-acao — desativar/ativar perfil (sem excluir) e reset de senha padrão + must_change_password + e-mail
-// Usa service_role; apenas admins (JWT) podem chamar.
+// Ativar (reativar): senha padrão + must_change_password + e-mail de boas-vindas + acesso_referencia_em.
+// Chamada interna (service_role + pg_net): reativação por status Ativo em Influencers/Afiliados.
 
 type Acao = 'desativar' | 'ativar' | 'reset_senha'
 
@@ -86,6 +89,10 @@ interface Body {
   userId?: string
   action?: string
   loginUrl?: string
+  /** Chamada via pg_net / service_role (trigger Influencers/Afiliados). */
+  internal?: boolean
+  origem?: string
+  realizadoPor?: string | null
 }
 
 function corsHeaders(req: Request) {
@@ -131,39 +138,8 @@ serve(async (req) => {
     })
   }
 
-  const token = authHeader.replace('Bearer ', '')
-
-  const whoami = await (async (): Promise<
-    { ok: true; userId: string } | { ok: false; error: string; status: number }
-  > => {
-    const secret = readJwtSecretFromEnv()
-    if (secret) {
-      const v = await verifySupabaseUserAccessToken(token, secret)
-      if (v.ok) return { ok: true, userId: v.userId }
-    }
-    return await goTrueGetUserId(supabaseUrl, anonKey, token)
-  })()
-  if (!whoami.ok) {
-    return new Response(JSON.stringify({ error: whoami.error }), {
-      status: whoami.status >= 400 && whoami.status < 600 ? whoami.status : 401,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
-  const callerId = whoami.userId
-
-  const supabasePre = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
-  const { data: callerProfile } = await supabasePre
-    .from('profiles')
-    .select('role')
-    .eq('id', callerId)
-    .single()
-
-  if (callerProfile?.role !== 'admin') {
-    return new Response(JSON.stringify({ error: 'Apenas administradores podem executar esta ação' }), {
-      status: 403,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
+  const token = authHeader.replace('Bearer ', '').trim()
+  const isServiceRoleCall = token === serviceRoleKey
 
   let body: Body
   try {
@@ -178,6 +154,9 @@ serve(async (req) => {
   const userId = (body.userId ?? '').trim()
   const action = body.action as Acao | undefined
   const loginUrl = (body.loginUrl ?? '').trim() || DEFAULT_LOGIN_URL
+  const origemBody = (body.origem ?? '').trim()
+  const realizadoPorBody =
+    typeof body.realizadoPor === 'string' && body.realizadoPor.trim() ? body.realizadoPor.trim() : null
 
   const acoesValidas: Acao[] = ['desativar', 'ativar', 'reset_senha']
   if (!userId || !action || !acoesValidas.includes(action)) {
@@ -187,14 +166,77 @@ serve(async (req) => {
     )
   }
 
-  if (action === 'desativar' && userId === callerId) {
+  let callerId: string | null = null
+  let origemAtivacao = 'manual'
+  let resumoAtivacao = 'Reativação na Gestão de Usuários'
+
+  if (isServiceRoleCall || body.internal === true) {
+    if (!isServiceRoleCall) {
+      return new Response(JSON.stringify({ error: 'Chamada interna exige service_role' }), {
+        status: 403,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+    if (action !== 'ativar') {
+      return new Response(JSON.stringify({ error: 'Chamada interna só permite action=ativar' }), {
+        status: 403,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+    if (origemBody !== 'ativacao_influencer_afiliado') {
+      return new Response(
+        JSON.stringify({ error: 'Chamada interna exige origem=ativacao_influencer_afiliado' }),
+        { status: 403, headers: { ...cors, 'Content-Type': 'application/json' } },
+      )
+    }
+    callerId = realizadoPorBody
+    origemAtivacao = 'ativacao_influencer_afiliado'
+    resumoAtivacao = 'Reativação — status Ativo (Influencers/Afiliados)'
+  } else {
+    const whoami = await (async (): Promise<
+      { ok: true; userId: string } | { ok: false; error: string; status: number }
+    > => {
+      const secret = readJwtSecretFromEnv()
+      if (secret) {
+        const v = await verifySupabaseUserAccessToken(token, secret)
+        if (v.ok) return { ok: true, userId: v.userId }
+      }
+      return await goTrueGetUserId(supabaseUrl, anonKey, token)
+    })()
+    if (!whoami.ok) {
+      return new Response(JSON.stringify({ error: whoami.error }), {
+        status: whoami.status >= 400 && whoami.status < 600 ? whoami.status : 401,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+    callerId = whoami.userId
+
+    const supabasePre = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
+    const { data: callerProfile } = await supabasePre
+      .from('profiles')
+      .select('role')
+      .eq('id', callerId)
+      .single()
+
+    if (callerProfile?.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Apenas administradores podem executar esta ação' }), {
+        status: 403,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+  }
+
+  if (action === 'desativar' && callerId && userId === callerId) {
     return new Response(JSON.stringify({ error: 'Não é possível desativar sua própria conta.' }), {
       status: 403,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
 
-  if (action === 'reset_senha' && (!senhaPadrao || senhaPadrao.length < 8)) {
+  if (
+    (action === 'reset_senha' || action === 'ativar') &&
+    (!senhaPadrao || senhaPadrao.length < 8)
+  ) {
     return new Response(
       JSON.stringify({
         error:
@@ -204,7 +246,7 @@ serve(async (req) => {
     )
   }
 
-  const supabase = supabasePre
+  const supabase = createClient(supabaseUrl, serviceRoleKey, supabaseServiceOptions)
 
   try {
     if (action === 'desativar') {
@@ -215,14 +257,129 @@ serve(async (req) => {
           headers: { ...cors, 'Content-Type': 'application/json' },
         })
       }
+      await registrarHistoricoPerfil(supabase, {
+        profileId: userId,
+        tipo: 'desativacao',
+        origem: 'manual',
+        realizadoPor: callerId,
+        resumo: 'Desativação manual na Gestão de Usuários',
+      })
     } else if (action === 'ativar') {
-      const { error } = await supabase.from('profiles').update({ ativo: true }).eq('id', userId)
+      const { data: targetProfile, error: targetErr } = await supabase
+        .from('profiles')
+        .select('id, name, email, ativo, role')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (targetErr) {
+        return new Response(JSON.stringify({ error: `Erro ao buscar usuário: ${targetErr.message}` }), {
+          status: 500,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+      if (!targetProfile?.id) {
+        return new Response(JSON.stringify({ error: 'Usuário não encontrado.' }), {
+          status: 404,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+
+      if (origemAtivacao === 'ativacao_influencer_afiliado') {
+        const role = String((targetProfile as { role?: string }).role ?? '')
+        if (role !== 'influencer' && role !== 'afiliado') {
+          return new Response(
+            JSON.stringify({ error: 'Reativação por status só se aplica a Influencer ou Afiliado.' }),
+            { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } },
+          )
+        }
+      }
+
+      const jaAtivo = (targetProfile as { ativo?: boolean | null }).ativo !== false
+      if (jaAtivo) {
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: 'ja_ativo' }), {
+          status: 200,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const targetEmail =
+        ((targetProfile as { email?: string | null }).email ?? '').trim().toLowerCase()
+      if (!targetEmail) {
+        return new Response(
+          JSON.stringify({ error: 'Usuário sem e-mail cadastrado — não foi possível reativar com envio de senha.' }),
+          { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      const { error: authErr } = await supabase.auth.admin.updateUserById(userId, {
+        password: senhaPadrao,
+      })
+      if (authErr) {
+        return new Response(JSON.stringify({ error: authErr.message ?? 'Erro ao redefinir senha no Auth' }), {
+          status: 400,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ativo: true,
+          acesso_referencia_em: new Date().toISOString(),
+          must_change_password: true,
+        })
+        .eq('id', userId)
       if (error) {
         return new Response(JSON.stringify({ error: `Erro ao ativar: ${error.message}` }), {
           status: 500,
           headers: { ...cors, 'Content-Type': 'application/json' },
         })
       }
+
+      await registrarHistoricoPerfil(supabase, {
+        profileId: userId,
+        tipo: 'ativacao',
+        origem: origemAtivacao,
+        realizadoPor: callerId,
+        resumo: resumoAtivacao,
+        preservarAccessGrantedAt: true,
+      })
+      await registrarHistoricoPerfil(supabase, {
+        profileId: userId,
+        tipo: 'reset_senha',
+        origem: 'manual',
+        realizadoPor: callerId,
+        resumo: 'Reset de senha na reativação (senha padrão + e-mail de boas-vindas)',
+      })
+
+      const nome =
+        ((targetProfile as { name?: string | null }).name ?? '').trim() || targetEmail
+      const mail = await enviarEmailBoasVindasConta({
+        supabaseUrl,
+        supabase,
+        to: targetEmail,
+        nome,
+        senhaTemporaria: senhaPadrao,
+        loginUrl,
+      })
+
+      if (!mail.ok) {
+        console.error('[admin-usuario-acao] Falha ao enviar e-mail de boas-vindas na reativação:', mail.error)
+        return new Response(
+          JSON.stringify({
+            success: true,
+            emailEnviado: false,
+            emailErro:
+              'Usuário reativado e senha redefinida, mas não foi possível enviar o e-mail. Verifique RESEND_API_KEY e RESEND_FROM_SISTEMA no Supabase.',
+          }),
+          { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      return new Response(JSON.stringify({ success: true, emailEnviado: true }), {
+        status: 200,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
     } else if (action === 'reset_senha') {
       const { data: targetProfile, error: targetErr } = await supabase
         .from('profiles')
@@ -264,6 +421,14 @@ serve(async (req) => {
           headers: { ...cors, 'Content-Type': 'application/json' },
         })
       }
+
+      await registrarHistoricoPerfil(supabase, {
+        profileId: userId,
+        tipo: 'reset_senha',
+        origem: 'manual',
+        realizadoPor: callerId,
+        resumo: 'Reset de senha na Gestão de Usuários',
+      })
 
       const nome = (targetProfile?.name as string | null)?.trim() || targetEmail
       const mail = await enviarEmailRecuperacaoSenhaConta({

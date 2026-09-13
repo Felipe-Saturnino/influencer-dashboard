@@ -352,6 +352,8 @@ export interface UsuarioCompleto {
   ativo?:           boolean;
   created_at?:      string;
   last_sign_in_at?: string | null;
+  /** Âncora do relógio de inatividade (cadastro/reativação) — ver `profilesInatividade`. */
+  acesso_referencia_em?: string | null;
   /** Alinhado ao vínculo «Emprestado para» (filtro quando can_view = próprios em Gestão de Usuários). */
   emprestado_para?: string | null;
   scopes?:          UserScope[];

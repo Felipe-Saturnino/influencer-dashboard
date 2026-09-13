@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Loader2 } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { PageHeader } from "../../../components/PageHeader";
-import { PageMenuIcon } from "../../../components/PageMenuIcon";
 import { ModalBase, ModalHeader, MODAL_SCROLL_FOCUS_SAFE_PAD } from "../../../components/OperacoesModal";
 import { BarraPesquisaFiltroPainel } from "../../../components/BarraPesquisaFiltroPainel";
 import { usePermission } from "../../../hooks/usePermission";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
 import { getPageContentBoxStyle } from "../../../lib/pageContentBoxStyles";
+import { PAGE_HEADER_ICON_PROPS } from "../../../lib/pageHeaderStyles";
 import { FILTER_SEARCH_OPERADORA, FILTER_SEARCH_USUARIO } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
 import {
@@ -268,7 +268,7 @@ export default function SimuladorLogin() {
   return (
     <div className="app-page-shell">
       <PageHeader
-        icon={<PageMenuIcon pageKey="simulador_login" />}
+        icon={<Eye {...PAGE_HEADER_ICON_PROPS} />}
         title="Simulador de Login"
         subtitle="Visualize a plataforma com o menu e a identidade de outro perfil, sem trocar sua conta."
       />

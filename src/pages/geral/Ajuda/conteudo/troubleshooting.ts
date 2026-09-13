@@ -299,7 +299,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Apareceu um modal de 'Agendamento indisponível'?",
         texto:
-          "O bloqueio vale para perfis **Influencer** e **Agência** — gestores e operadores não passam por esta verificação ao agendar.\n\n— **Influencer:** cadastro incompleto em Influencers ou Playbook pendente impedem o uso da Agenda. A própria página mostra o que falta e os atalhos para corrigir.\n— **Agência:** ao salvar uma Nova Live, o sistema verifica o cadastro e o Playbook do influencer selecionado. Use os botões **Ir para Influencers** ou **Ir para Playbook Influencers** no modal quando aparecerem.\n\nItens verificados: dados obrigatórios do cadastro e ciência nos três termos obrigatórios do Playbook (Game Presenters, Agendamento e Jogos).",
+          "Há dois avisos com esse título:\n\n**Cadastro Inativo / sem cota** — aparece ao clicar em **Nova Live** (ou ao escolher um influencer inativo no formulário), para qualquer perfil.\n— **Influencer / Agência:** a mensagem pede para falar com o Gestor do Contrato.\n— **Gestor e demais internos:** ative o cadastro na página **Influencers** (há um atalho no aviso). Novo influencer (Scout ou Gestão de Usuários) nasce Inativo até informar as Horas Acordadas.\n\n**Cadastro incompleto ou Playbook** — vale para perfis **Influencer** e **Agência**; gestores e operadores não passam por esta verificação ao agendar.\n— **Influencer:** cadastro incompleto em Influencers ou Playbook pendente impedem o uso da Agenda. A própria página mostra o que falta e os atalhos para corrigir.\n— **Agência:** ao salvar uma Nova Live, o sistema verifica o cadastro e o Playbook do influencer selecionado. Use os botões **Ir para Influencers** ou **Ir para Playbook Influencers** no modal quando aparecerem.\n\nItens do segundo bloqueio: dados obrigatórios do cadastro e ciência nos três termos obrigatórios do Playbook (Game Presenters, Agendamento e Jogos).",
       },
       {
         subtitulo: "O calendário não carrega ou apareceu um aviso vermelho?",
@@ -434,7 +434,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Não consigo alterar o status ou o cachê de um influencer?",
         texto:
-          "Alterações de status e cachê por hora são restritas a Admin e Gestor. Para outros perfis, o badge de status no card é somente leitura e o campo de cachê fica bloqueado no formulário de edição. Se você é Gestor e ainda não consegue alterar, verifique com o administrador se sua permissão de edição está configurada corretamente.",
+          "Alterações de status e cachê por hora são restritas a Admin e Gestor. Para outros perfis, o badge de status no card é somente leitura e o campo de cachê fica bloqueado no formulário de edição. Se você é Gestor e ainda não consegue alterar, verifique com o administrador se sua permissão de edição está configurada corretamente.\n\nPara ativar (Inativo ou Cancelado → Ativo) é obrigatório informar as **Horas Acordadas** no modal que abre. Sem esse valor o cadastro não fica Ativo.",
       },
       {
         subtitulo: "Um influencer aparece como 'Perfil Incompleto'?",
@@ -449,7 +449,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "A aba Histórico não aparece no formulário de edição?",
         texto:
-          "A aba Histórico está disponível apenas no modal de Visualização (botão Ver). O formulário de edição tem quatro abas — Cadastral, Canais, Financeiro e Operadoras — e não inclui a aba Histórico.",
+          "A aba Histórico está disponível apenas no modal de Visualização (botão Ver), junto com a aba **Horas**. O formulário de edição tem quatro abas — Cadastral, Canais, Financeiro e Operadoras.",
+      },
+      {
+        subtitulo: "A aba Horas está vazia?",
+        texto:
+          "Horas Pendentes e Horas Realizadas só aparecem com cota ativa (cadastro Ativo com Horas Acordadas). Influencers Inativos, Cancelados ou Ativos antigos sem cota mostram os campos vazios. As horas da aba são as validadas **desta cota**, não o acumulado all-time dos dashboards.",
       },
       {
         subtitulo: "Os dados sensíveis somem sozinhos?",
@@ -494,7 +499,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Posso editar um prospecto já Fechado?",
         texto:
-          "Sim — é possível editar dados de contato, canais e adicionar anotações mesmo após o fechamento. Alterar o status de Fechado para outro não desfaz a criação do usuário — o influencer continua ativo na plataforma.",
+          "Sim — é possível editar dados de contato, canais e adicionar anotações mesmo após o fechamento. Alterar o status de Fechado para outro não desfaz a criação do usuário — o influencer continua na plataforma. O cadastro em Influencers nasce **Inativo** até a ativação com Horas Acordadas.",
       },
       {
         subtitulo: "As views do Scout diferem dos dados nos dashboards?",
@@ -1535,6 +1540,11 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Não consigo criar um novo usuário?",
         texto:
           "O botão Novo Usuário só aparece para administradores com permissão de Criar ativa. Verifique na aba Permissões se o perfil Administrador está configurado corretamente (o admin tem acesso total fixo, portanto o botão deve sempre aparecer). Se o e-mail informado já estiver cadastrado, o sistema retornará erro — use a busca para localizar o usuário existente.",
+      },
+      {
+        subtitulo: "Um usuário foi desativado sem ninguém ter clicado em Desativar?",
+        texto:
+          "A plataforma desativa automaticamente contas ativas em dois casos: **60 dias** seguidos sem login (quem já acessou) ou **30 dias** após o cadastro/convite sem nenhum acesso. Na Gestão de Usuários, use **Reativar Usuário** — isso reinicia o prazo. Se a pessoa precisar manter o acesso sem entrar com frequência, oriente-a a fazer login periodicamente ou reative quando necessário.",
       },
     ],
   },

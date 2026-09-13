@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
+import { accessGrantedByPayload, registrarHistoricoPerfil } from './common.ts'
 
 /** Cria utilizador Afiliado + influencer_perfil + vínculos a partir de um card em afiliados_network. */
 
@@ -196,6 +197,8 @@ serve(async (req) => {
     }
     const uid = created.uid
 
+    const accessAudit = await accessGrantedByPayload(supabase)
+
     const { error: profileErr } = await supabase.from('profiles').upsert(
       {
         id: uid,
@@ -203,6 +206,9 @@ serve(async (req) => {
         email,
         role: 'afiliado',
         must_change_password: true,
+        access_granted_by: accessAudit.access_granted_by,
+        access_granted_at: accessAudit.access_granted_at,
+        access_granted_origem: 'ativacao_influencer_afiliado',
       },
       { onConflict: 'id' },
     )
@@ -211,6 +217,15 @@ serve(async (req) => {
       await goTrueAdminDeleteUser(supabaseUrl, serviceRoleKey, uid)
       return new Response(JSON.stringify({ error: profileErr.message }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
+
+    await registrarHistoricoPerfil(supabase, {
+      profileId: uid,
+      tipo: 'ativacao',
+      origem: 'ativacao_influencer_afiliado',
+      realizadoPor: accessAudit.access_granted_by,
+      resumo: 'Ativação de Influencer/Afiliado',
+      preservarAccessGrantedAt: true,
+    })
 
     const { error: scopeErr } = await supabase.from('user_scopes').insert({
       user_id: uid,

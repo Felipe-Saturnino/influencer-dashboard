@@ -2,7 +2,7 @@ import { BRAND } from "../../../lib/dashboardConstants";
 import type { InfluencerOperadora } from "../../../types";
 import type { Plataforma } from "../../../constants/platforms";
 
-export type InfluencerModalTab = "cadastral" | "canais" | "financeiro" | "operadoras" | "historico";
+export type InfluencerModalTab = "cadastral" | "horas" | "canais" | "financeiro" | "operadoras" | "historico";
 
 export type StatusInfluencer = "ativo" | "inativo" | "cancelado";
 
@@ -37,6 +37,8 @@ export interface Perfil {
   link_whatsapp?: string;
   link_telegram?: string;
   cache_hora?: number;
+  horas_acordadas?: number | null;
+  horas_ciclo_iniciado_em?: string | null;
   banco?: string;
   agencia?: string;
   conta?: string;
@@ -72,6 +74,8 @@ export const emptyPerfil = (id: string): Perfil => ({
   link_whatsapp: "",
   link_telegram: "",
   cache_hora: 0,
+  horas_acordadas: null,
+  horas_ciclo_iniciado_em: null,
   banco: "",
   agencia: "",
   conta: "",

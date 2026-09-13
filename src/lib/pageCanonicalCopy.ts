@@ -9,12 +9,21 @@ export const PAGE_CANONICAL_SUBTITLE: Partial<Record<PageKey, string>> = {
   mesas_spin: "Resultados financeiros e operacionais das mesas ao vivo por operadora.",
   streamers: "Acompanhe performance, conversão e financeiro do canal de influencers.",
   dash_afiliados: "Acompanhe performance, conversão e financeiro do canal de afiliados.",
+  dash_overview_influencer:
+    "Resumo executivo de financeiro, operação e conversão do canal de influencers.",
   dash_overview_afiliado:
     "Resumo executivo de financeiro e conversão do canal de afiliados.",
   dash_headcount:
     "Visão executiva de headcount, movimentação e pipeline de contratação.",
   dash_overview_prestador:
     "Acompanhe escala, presença, absenteísmo e movimentações de turno por time ou visão individual.",
+  resultados: "Consulte o desempenho das lives realizadas.",
+  feedback: "Veja observações e métricas das lives recentes.",
+  influencers: "Seu perfil de influencer na plataforma.",
+  playbook_influencers:
+    "Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir.",
+  financeiro: "Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago.",
+  afiliados: "Seu perfil de afiliado na plataforma.",
   ajuda: "Conheça as funcionalidades da plataforma, o glossário, tutoriais passo a passo e soluções para problemas comuns.",
   rh_calendario:
     "Organize a rotina operacional com visibilidade completa de turnos e compromissos.",

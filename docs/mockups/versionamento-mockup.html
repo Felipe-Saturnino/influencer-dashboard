@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Versionamento (releases semanais)</title>
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-roxo: #4a2082;
+      --brand-azul: #1e36f8;
+      --vermelho: #e84025;
+      --amarelo: #f59e0b;
+      --verde: #22c55e;
+      --roxo-item: #a78bfa;
+      --page-bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --input-bg: #f8f8fc;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --header-bg: #ffffff;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+    body.dark {
+      --page-bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --input-bg: rgba(255,255,255,0.07);
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --header-bg: #141428;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    button, input, select { font-family: inherit; }
+    button { cursor: pointer; }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    }
+    .mock-banner button[aria-pressed="true"] { background: #fff; color: #4a2082; border-color: #fff; }
+
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 20px; background: var(--header-bg);
+      border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 40;
+    }
+    .app-header-left { display: flex; align-items: center; gap: 12px; }
+    .logo-dot {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+    }
+    .header-section {
+      font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .avatar-wrap { position: relative; }
+    .avatar-btn {
+      width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(124,58,237,.45);
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font-weight: 800; font-size: 12px;
+    }
+    .dropdown {
+      position: absolute; top: calc(100% + 8px); right: 0;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      min-width: 210px; z-index: 50; padding: 6px 0; display: none;
+    }
+    .dropdown.open { display: block; }
+    .dropdown button {
+      width: 100%; display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; background: transparent; border: 0;
+      color: var(--text); font-size: 13px; text-align: left;
+    }
+    .dropdown button:hover { background: var(--input-bg); }
+    .dropdown button.active {
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      color: var(--brand-primary); font-weight: 700;
+    }
+    .dropdown .sep { height: 1px; background: var(--card-border); margin: 6px 0; }
+    .dropdown .sair { color: var(--vermelho); font-weight: 600; }
+    .dropdown svg { flex-shrink: 0; }
+    .new-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--verde); margin-left: auto;
+    }
+
+    .page { max-width: 1100px; margin: 0 auto; padding: 24px 20px 72px; }
+
+    .page-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 18px; }
+    .page-header-icon {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+      display: flex; align-items: center; justify-content: center; color: var(--brand-primary);
+    }
+    .page-header h1 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--brand-primary);
+    }
+    .page-header p {
+      font-size: 13px; color: var(--text-muted); margin: 5px 0 0; padding-left: 40px; margin-left: -40px;
+    }
+
+    .filter-box, .content-box, .note, .featured {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow);
+    }
+    .filter-box { padding: 12px 20px; margin-bottom: 14px; }
+    .filter-row {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      justify-content: center; width: 100%;
+    }
+    .filter-row + .filter-row { margin-top: 10px; }
+
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; min-height: 44px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      font-size: 13px; font-weight: 500; color: var(--text-muted);
+    }
+    .tab-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .tab-btn.active { font-weight: 700; }
+    .tab-btn[data-tipo="todos"].active {
+      border-color: var(--brand-primary);
+      background: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+      color: var(--brand-primary);
+    }
+    .tab-btn[data-tipo="novo"].active {
+      border-color: var(--roxo-item);
+      background: color-mix(in srgb, var(--roxo-item) 15%, transparent);
+      color: var(--roxo-item);
+    }
+    .tab-btn[data-tipo="melhoria"].active {
+      border-color: var(--brand-azul);
+      background: color-mix(in srgb, var(--brand-azul) 15%, transparent);
+      color: var(--brand-azul);
+    }
+    .tab-btn[data-tipo="correcao"].active {
+      border-color: var(--verde);
+      background: color-mix(in srgb, var(--verde) 15%, transparent);
+      color: var(--verde);
+    }
+
+    .pill-select {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px; min-height: 36px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); font-size: 12px; font-weight: 600;
+    }
+    .pill-select.active {
+      border-color: var(--brand-primary);
+      background: color-mix(in srgb, var(--brand-primary) 15%, transparent);
+      color: var(--brand-primary);
+    }
+    .search-wrap { position: relative; width: min(360px, 100%); }
+    .search-wrap svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none;
+    }
+    .search {
+      width: 100%; padding: 10px 14px 10px 38px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); font-size: 13px;
+    }
+    .cta-criar {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: 10px; border: 0;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font-size: 13px; font-weight: 700;
+    }
+    .cta-criar.hidden { display: none; }
+
+    .note {
+      padding: 14px 16px; margin-bottom: 14px; font-size: 12px; line-height: 1.55;
+      border-left: 3px solid var(--brand-azul);
+    }
+    .note strong { color: var(--text); }
+    .note code {
+      font-size: 11px; background: var(--input-bg); padding: 1px 6px; border-radius: 6px;
+    }
+
+    .featured {
+      padding: 20px; margin-bottom: 14px; position: relative; overflow: hidden;
+    }
+    .featured::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-azul));
+    }
+    .featured-top {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .ver { font-size: 13px; font-weight: 800; color: var(--brand-primary); letter-spacing: 0.04em; }
+    .week-meta { font-size: 12px; color: var(--text-muted); }
+    .badge {
+      display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+      padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .badge-now { background: #22c55e22; color: var(--verde); border: 1px solid #22c55e44; }
+    .featured h2 {
+      font-family: var(--font-title); font-size: 18px; font-weight: 800;
+      margin: 6px 0 8px; line-height: 1.3;
+    }
+    .featured .lead { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin-bottom: 16px; }
+
+    .change-list { display: flex; flex-direction: column; gap: 10px; }
+    .change {
+      display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: start;
+      padding: 12px 14px; border: 1px solid var(--card-border); border-radius: 12px;
+      background: var(--input-bg);
+    }
+    .change-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .change-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .change-desc a { color: var(--brand-primary); font-weight: 700; }
+    .change-sec {
+      display: inline-flex; margin-top: 8px; font-size: 10px; font-weight: 700;
+      padding: 3px 8px; border-radius: 20px;
+      background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+      color: var(--brand-primary); border: 1px solid color-mix(in srgb, var(--brand-primary) 22%, transparent);
+    }
+    .tipo {
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 4px 8px; border-radius: 20px; margin-top: 2px; width: fit-content;
+    }
+    .tipo-novo { background: #a78bfa22; color: var(--roxo-item); border: 1px solid #a78bfa44; }
+    .tipo-melhoria { background: #1e36f822; color: var(--brand-azul); border: 1px solid #1e36f844; }
+    .tipo-correcao { background: #22c55e22; color: var(--verde); border: 1px solid #22c55e44; }
+
+    .content-box { padding: 20px; }
+    .block-title {
+      font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--brand-primary); font-family: var(--font-title);
+    }
+    .block-sub { font-size: 11px; color: var(--text-muted); margin: 0 0 16px; }
+    .block-sub::before { content: "—"; margin: 0 6px 0 0; font-size: 12px; }
+
+    .week {
+      border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden;
+      background: var(--card-bg); margin-bottom: 12px;
+    }
+    .week:last-child { margin-bottom: 0; }
+    .week-btn {
+      width: 100%; display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px; background: transparent; border: 0; color: inherit; text-align: left;
+    }
+    .week.open .week-btn { border-bottom: 1px solid var(--card-border); }
+    .week-accent { width: 3px; height: 16px; border-radius: 2px; background: var(--brand-primary); flex-shrink: 0; }
+    .week-btn h3 {
+      font-family: var(--font-title); font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; flex: 1;
+    }
+    .week-counts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .count {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+      background: var(--input-bg); color: var(--text-muted); border: 1px solid var(--card-border);
+    }
+    .chevron { color: var(--text-muted); transition: transform .2s; }
+    .week.open .chevron { transform: rotate(90deg); }
+    .week-body { display: none; padding: 16px 18px 18px; }
+    .week.open .week-body { display: block; }
+
+    .empty {
+      padding: 40px 0; text-align: center; color: var(--text-muted); font-size: 13px;
+    }
+
+    .overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 80;
+      display: none; align-items: flex-start; justify-content: center; padding: 48px 16px;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg); border-radius: var(--box-radius); border: 1px solid var(--card-border);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18); width: 100%; max-width: 560px;
+      max-height: 90dvh; overflow: auto;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--card-border);
+      position: sticky; top: 0; background: var(--card-bg);
+    }
+    .modal-header h2 { font-size: 16px; font-weight: 800; font-family: var(--font-title); }
+    .btn-x {
+      width: 32px; height: 32px; border-radius: 10px; border: 0; background: transparent;
+      color: var(--text); font-size: 22px; line-height: 1;
+    }
+    .modal-body { padding: 16px 20px 8px; }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); font-size: 13px;
+    }
+    .field textarea { min-height: 72px; resize: vertical; }
+    .modal-foot {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 12px 20px 20px;
+    }
+    .btn-save {
+      padding: 10px 20px; border-radius: 10px; border: 0;
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; font-size: 13px; font-weight: 700;
+    }
+
+    .hidden-item { display: none !important; }
+    @media (max-width: 640px) {
+      .change { grid-template-columns: 1fr; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    MOCKUP — Versionamento · proposta de página (não implementado)
+    <button type="button" id="btn-theme">Tema claro / escuro</button>
+    <button type="button" id="btn-admin" aria-pressed="false">Visão: usuário</button>
+  </div>
+
+  <header class="app-header">
+    <div class="app-header-left">
+      <div class="logo-dot" aria-hidden="true"></div>
+      <span class="header-section">Versionamento</span>
+    </div>
+    <div class="avatar-wrap">
+      <button type="button" class="avatar-btn" id="btn-avatar" aria-haspopup="menu" aria-expanded="false" title="Menu da conta">FS</button>
+      <div class="dropdown open" id="menu-avatar" role="menu">
+        <button type="button" role="menuitem">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Configurações
+        </button>
+        <button type="button" role="menuitem">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Simulador de Login
+        </button>
+        <button type="button" role="menuitem">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Ajuda
+        </button>
+        <button type="button" role="menuitem" class="active">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>
+          Versionamento
+          <span class="new-dot" title="Release desta semana"></span>
+        </button>
+        <div class="sep"></div>
+        <button type="button" role="menuitem" class="sair">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sair
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page">
+    <header class="page-header">
+      <div class="page-header-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>
+      </div>
+      <div>
+        <h1>Versionamento</h1>
+        <p>Acompanhe as novidades, melhorias e correções publicadas a cada semana na plataforma.</p>
+      </div>
+    </header>
+
+    <div class="filter-box">
+      <div class="filter-row" role="tablist" aria-label="Tipo de mudança">
+        <button type="button" class="tab-btn active" data-tipo="todos">Todos</button>
+        <button type="button" class="tab-btn" data-tipo="novo"><span class="dot" style="color:#a78bfa"></span>Novo</button>
+        <button type="button" class="tab-btn" data-tipo="melhoria"><span class="dot" style="color:#1e36f8"></span>Melhoria</button>
+        <button type="button" class="tab-btn" data-tipo="correcao"><span class="dot" style="color:#22c55e"></span>Correção</button>
+      </div>
+      <div class="filter-row">
+        <button type="button" class="pill-select" id="filtro-secao" aria-pressed="false">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span id="filtro-secao-label">Todas Seções</span>
+        </button>
+        <div class="search-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search" id="busca" type="search" placeholder="Pesquisar release..." aria-label="Buscar por título ou descrição" />
+        </div>
+        <button type="button" class="cta-criar hidden" id="cta-nova">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Release
+        </button>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Proposta de produto.</strong>
+      Página irmã de Ajuda — acesso pelo menu do avatar (canto superior), <strong>abaixo de Ajuda</strong> e acima de Sair.
+      Cadência semanal com identificador <code>AAAA.SS</code> (ano + semana). A semana corrente fica em destaque; as anteriores entram no histórico em acordeão.
+      Conteúdo em linguagem de produto (sem citar tabelas, RPC ou deploy). Administrador publica a release; demais perfis só leem.
+    </div>
+
+    <article class="featured" data-week="2026.37">
+      <div class="featured-top">
+        <span class="badge badge-now">Esta semana</span>
+        <span class="ver">2026.37</span>
+        <span class="week-meta">07 a 13 set 2026</span>
+      </div>
+      <h2>Home do Influencer e controle de inatividade</h2>
+      <p class="lead">
+        A semana concentra a nova Home do perfil influencer e as regras de reativação de cadastro,
+        para o time de Lives acompanhar o canal sem sair do ponto de entrada da plataforma.
+      </p>
+      <div class="change-list">
+        <div class="change" data-tipo="novo" data-secao="Home" data-q="home influencer alertas próximas lives atalhos">
+          <span class="tipo tipo-novo">Novo</span>
+          <div>
+            <div class="change-title">Home do Influencer com agenda, alertas e atalhos</div>
+            <p class="change-desc">
+              O perfil influencer passa a ter uma Home própria: boas-vindas, próximas lives, feedbacks recentes e atalhos para Agenda, Resultados e Financeiro.
+              <a href="#">Acesse a página AQUI</a>
+            </p>
+            <span class="change-sec">Home</span>
+          </div>
+        </div>
+        <div class="change" data-tipo="novo" data-secao="Plataforma" data-q="histórico acesso usuário gestão">
+          <span class="tipo tipo-novo">Novo</span>
+          <div>
+            <div class="change-title">Histórico de acesso na Gestão de Usuários</div>
+            <p class="change-desc">
+              Quem tem permissão de Ver em Gestão de Usuários consulta o histórico de login e ações da conta em um modal dedicado.
+            </p>
+            <span class="change-sec">Plataforma</span>
+          </div>
+        </div>
+        <div class="change" data-tipo="melhoria" data-secao="Lives" data-q="reativar perfil e-mail boas-vindas horas cota">
+          <span class="tipo tipo-melhoria">Melhoria</span>
+          <div>
+            <div class="change-title">Reativar influencer volta a enviar o e-mail de boas-vindas</div>
+            <p class="change-desc">
+              Ao reativar um perfil, a plataforma reabre o acesso e dispara o convite de boas-vindas. A cota de horas também volta a valer no cadastro.
+            </p>
+            <span class="change-sec">Lives</span>
+          </div>
+        </div>
+        <div class="change" data-tipo="correcao" data-secao="Lives" data-q="agenda bloqueio influencer inativo">
+          <span class="tipo tipo-correcao">Correção</span>
+          <div>
+            <div class="change-title">Agenda impede live de influencer inativo</div>
+            <p class="change-desc">
+              Ao tentar agendar, a Agenda avisa e bloqueia o fluxo se o influencer estiver inativo — evita live órfã no calendário.
+            </p>
+            <span class="change-sec">Lives</span>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <div class="content-box">
+      <div class="block-title">Histórico de releases</div>
+      <p class="block-sub">Semanas anteriores, da mais recente para a mais antiga</p>
+
+      <div id="historico">
+        <article class="week" data-week="2026.36">
+          <button type="button" class="week-btn" aria-expanded="false">
+            <span class="week-accent" aria-hidden="true"></span>
+            <h3>2026.36 · 31 ago a 06 set</h3>
+            <span class="week-counts">
+              <span class="count">2 novo</span>
+              <span class="count">1 melhoria</span>
+              <span class="count">1 correção</span>
+            </span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="week-body">
+            <p style="font-size:13px;font-weight:700;margin-bottom:12px;">Tutoriais na Ajuda e ciência no Portal de RH</p>
+            <div class="change-list">
+              <div class="change" data-tipo="novo" data-secao="Geral" data-q="tutoriais ajuda visibilidade perfil">
+                <span class="tipo tipo-novo">Novo</span>
+                <div>
+                  <div class="change-title">Aba Tutoriais na Ajuda, por perfil</div>
+                  <p class="change-desc">Passos ilustrados para fluxos como Controle de Presença, Marketplace e Incidentes. O administrador define quais perfis veem cada tutorial.</p>
+                  <span class="change-sec">Geral</span>
+                </div>
+              </div>
+              <div class="change" data-tipo="novo" data-secao="RH" data-q="portal rh políticas ciência">
+                <span class="tipo tipo-novo">Novo</span>
+                <div>
+                  <div class="change-title">Registro de ciência nas políticas do Portal de RH</div>
+                  <p class="change-desc">Quem tem permissão de Editar consulta quem leu cada documento, no mesmo padrão dos comunicados.</p>
+                  <span class="change-sec">RH</span>
+                </div>
+              </div>
+              <div class="change" data-tipo="melhoria" data-secao="Estúdio" data-q="incidentes scripts descrição">
+                <span class="tipo tipo-melhoria">Melhoria</span>
+                <div>
+                  <div class="change-title">Scripts de incidente com descrição mais clara</div>
+                  <p class="change-desc">Os textos de apoio ao abrir incidente descrevem o procedimento em linguagem de operação, sem jargão interno.</p>
+                  <span class="change-sec">Estúdio</span>
+                </div>
+              </div>
+              <div class="change" data-tipo="correcao" data-secao="Escala" data-q="calendário presença justificativa">
+                <span class="tipo tipo-correcao">Correção</span>
+                <div>
+                  <div class="change-title">Calendário de presença deixa de duplicar justificativa no mesmo dia</div>
+                  <p class="change-desc">Uma justificativa já registrada no dia não gera um segundo lançamento ao salvar de novo.</p>
+                  <span class="change-sec">Escala</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="week" data-week="2026.35">
+          <button type="button" class="week-btn" aria-expanded="false">
+            <span class="week-accent" aria-hidden="true"></span>
+            <h3>2026.35 · 24 a 30 ago</h3>
+            <span class="week-counts">
+              <span class="count">1 novo</span>
+              <span class="count">2 melhoria</span>
+            </span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="week-body">
+            <p style="font-size:13px;font-weight:700;margin-bottom:12px;">Overview Prestador e busca nos filtros</p>
+            <div class="change-list">
+              <div class="change" data-tipo="novo" data-secao="Dashboards" data-q="overview prestador escala presença">
+                <span class="tipo tipo-novo">Novo</span>
+                <div>
+                  <div class="change-title">Overview Prestador com visão de time e individual</div>
+                  <p class="change-desc">KPIs de escala, presença e movimentação de turno no mesmo recorte de período dos demais dashboards.</p>
+                  <span class="change-sec">Dashboards</span>
+                </div>
+              </div>
+              <div class="change" data-tipo="melhoria" data-secao="Geral" data-q="busca filtro acentos painel">
+                <span class="tipo tipo-melhoria">Melhoria</span>
+                <div>
+                  <div class="change-title">Busca nos filtros ignora acentos e aceita várias palavras</div>
+                  <p class="change-desc">«Flavia» encontra «Flávia»; nome e sobrenome em qualquer ordem. O painel do filtro já abre com o cursor no campo de pesquisa.</p>
+                  <span class="change-sec">Geral</span>
+                </div>
+              </div>
+              <div class="change" data-tipo="melhoria" data-secao="Dashboards" data-q="histórico 13 competências">
+                <span class="tipo tipo-melhoria">Melhoria</span>
+                <div>
+                  <div class="change-title">Histórico cobre 13 competências mensais</div>
+                  <p class="change-desc">O botão Histórico continua com o rótulo Todo o período e passa a incluir o mês atual mais os 12 anteriores, para comparação no mesmo mês do ano passado.</p>
+                  <span class="change-sec">Dashboards</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="week" data-week="2026.34">
+          <button type="button" class="week-btn" aria-expanded="false">
+            <span class="week-accent" aria-hidden="true"></span>
+            <h3>2026.34 · 17 a 23 ago</h3>
+            <span class="week-counts">
+              <span class="count">1 melhoria</span>
+              <span class="count">2 correção</span>
+            </span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="week-body">
+            <p style="font-size:13px;font-weight:700;margin-bottom:12px;">Ajustes de Agenda e Financeiro</p>
+            <div class="change-list">
+              <div class="change" data-tipo="melhoria" data-secao="Lives" data-q="agenda modo dia semana mês hoje">
+                <span class="tipo tipo-melhoria">Melhoria</span>
+                <div>
+                  <div class="change-title">Agenda com atalho Hoje no modo Dia</div>
+                  <p class="change-desc">Um clique leva o calendário para o dia corrente, sem navegar o carrossel mês a mês.</p>
+                  <span class="change-sec">Lives</span>
+                </div>
+              </div>
+              <div class="change" data-tipo="correcao" data-secao="Aquisição" data-q="financeiro status pagamento">
+                <span class="tipo tipo-correcao">Correção</span>
+                <div>
+                  <div class="change-title">Status Aguard. pagamento deixa de sumir após filtro de operadora</div>
+                  <p class="change-desc">Ciclos nesse status voltam a aparecer na lista filtrada, com o mesmo total do consolidado.</p>
+                  <span class="change-sec">Aquisição</span>
+                </div>
+              </div>
+              <div class="change" data-tipo="correcao" data-secao="Afiliados" data-q="network cadastro e-mail">
+                <span class="tipo tipo-correcao">Correção</span>
+                <div>
+                  <div class="change-title">Cadastro de afiliado na Network valida o e-mail antes de salvar</div>
+                  <p class="change-desc">Endereço inválido ou já usado mostra o erro no modal, sem criar um segundo acesso.</p>
+                  <span class="change-sec">Afiliados</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="empty" id="vazio" hidden>Nenhuma release encontrada para os filtros selecionados.</div>
+    </div>
+  </div>
+
+  <div class="overlay" id="modal-nova" role="dialog" aria-modal="true" aria-labelledby="nova-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="nova-title">Nova Release</h2>
+        <button type="button" class="btn-x" id="fechar-nova" aria-label="Fechar modal" title="Fechar modal">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Somente administrador. A release da semana corrente substitui o destaque; semanas passadas entram no histórico.</p>
+        <div class="field">
+          <label>Semana <span style="color:#e84025">*</span></label>
+          <select><option>2026.37 · 07 a 13 set 2026 (atual)</option><option>2026.38 · 14 a 20 set 2026</option></select>
+        </div>
+        <div class="field">
+          <label>Título da semana <span style="color:#e84025">*</span></label>
+          <input type="text" value="Home do Influencer e controle de inatividade" />
+        </div>
+        <div class="field">
+          <label>Resumo <span style="color:#e84025">*</span></label>
+          <textarea>A semana concentra a nova Home do perfil influencer e as regras de reativação de cadastro.</textarea>
+        </div>
+        <div class="field">
+          <label>Itens (um por linha: Tipo | Seção | Título — descrição)</label>
+          <textarea style="min-height:110px;">Novo | Home | Home do Influencer — agenda, alertas e atalhos
+Correção | Lives | Agenda impede live de influencer inativo</textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-save" id="salvar-nova">Publicar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const body = document.body;
+    const menu = document.getElementById("menu-avatar");
+    const btnAvatar = document.getElementById("btn-avatar");
+    const btnAdmin = document.getElementById("btn-admin");
+    const cta = document.getElementById("cta-nova");
+    const overlay = document.getElementById("modal-nova");
+    const busca = document.getElementById("busca");
+    const vazio = document.getElementById("vazio");
+    const filtroSecao = document.getElementById("filtro-secao");
+    const secoes = ["Todas Seções", "Home", "Lives", "Plataforma", "Geral", "RH", "Estúdio", "Escala", "Dashboards", "Aquisição", "Afiliados"];
+    let secaoIdx = 0;
+    let tipo = "todos";
+
+    document.getElementById("btn-theme").addEventListener("click", () => body.classList.toggle("dark"));
+
+    btnAvatar.addEventListener("click", () => {
+      const open = !menu.classList.contains("open");
+      menu.classList.toggle("open", open);
+      btnAvatar.setAttribute("aria-expanded", String(open));
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".avatar-wrap")) {
+        menu.classList.remove("open");
+        btnAvatar.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    btnAdmin.addEventListener("click", () => {
+      const on = btnAdmin.getAttribute("aria-pressed") !== "true";
+      btnAdmin.setAttribute("aria-pressed", String(on));
+      btnAdmin.textContent = on ? "Visão: administrador" : "Visão: usuário";
+      cta.classList.toggle("hidden", !on);
+    });
+
+    cta.addEventListener("click", () => overlay.classList.add("open"));
+    document.getElementById("fechar-nova").addEventListener("click", () => overlay.classList.remove("open"));
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+    document.getElementById("salvar-nova").addEventListener("click", () => overlay.classList.remove("open"));
+
+    document.querySelectorAll(".tab-btn[data-tipo]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn[data-tipo]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        tipo = btn.dataset.tipo;
+        aplicarFiltro();
+      });
+    });
+
+    const filtroSecaoLabel = document.getElementById("filtro-secao-label");
+    filtroSecao.addEventListener("click", () => {
+      secaoIdx = (secaoIdx + 1) % secoes.length;
+      filtroSecaoLabel.textContent = secoes[secaoIdx];
+      filtroSecao.classList.toggle("active", secaoIdx !== 0);
+      filtroSecao.setAttribute("aria-pressed", String(secaoIdx !== 0));
+      aplicarFiltro();
+    });
+
+    busca.addEventListener("input", aplicarFiltro);
+
+    document.querySelectorAll(".week-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const week = btn.closest(".week");
+        const open = !week.classList.contains("open");
+        week.classList.toggle("open", open);
+        btn.setAttribute("aria-expanded", String(open));
+      });
+    });
+
+    function norm(s) {
+      return (s || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+    }
+    function aplicarFiltro() {
+      const q = norm(busca.value);
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const secao = secoes[secaoIdx];
+      let visiveis = 0;
+
+      document.querySelectorAll(".change").forEach((el) => {
+        const okTipo = tipo === "todos" || el.dataset.tipo === tipo;
+        const okSecao = secao === "Todas Seções" || el.dataset.secao === secao;
+        const hay = norm(el.dataset.q + " " + el.textContent);
+        const okBusca = tokens.every((t) => hay.includes(t));
+        const show = okTipo && okSecao && okBusca;
+        el.classList.toggle("hidden-item", !show);
+        if (show) visiveis++;
+      });
+
+      document.querySelectorAll("[data-week]").forEach((block) => {
+        const any = [...block.querySelectorAll(".change")].some((c) => !c.classList.contains("hidden-item"));
+        block.classList.toggle("hidden-item", !any);
+        if (block.classList.contains("week") && any && (tipo !== "todos" || secaoIdx !== 0 || tokens.length)) {
+          block.classList.add("open");
+        }
+      });
+
+      vazio.hidden = visiveis > 0;
+    }
+  </script>
+</body>
+</html>

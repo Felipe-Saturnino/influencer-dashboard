@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type CSSProperties, type ReactNode } from "react";
-import { ChevronDown, Eye, EyeOff, Contact, Share2, Coins, Building2, History } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Contact, Share2, Coins, Building2, History, Clock } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { FiltroBarTabButton, FILTRO_BAR_TAB_ICON_PROPS, onFiltroBarTabsKeyDown } from "../../../components/dashboard";
@@ -13,6 +13,7 @@ import {
 
 const INFLUENCER_TAB_ICONS: Record<InfluencerModalTab, ReactNode> = {
   cadastral: <Contact {...FILTRO_BAR_TAB_ICON_PROPS} />,
+  horas: <Clock {...FILTRO_BAR_TAB_ICON_PROPS} />,
   canais: <Share2 {...FILTRO_BAR_TAB_ICON_PROPS} />,
   financeiro: <Coins {...FILTRO_BAR_TAB_ICON_PROPS} />,
   operadoras: <Building2 {...FILTRO_BAR_TAB_ICON_PROPS} />,

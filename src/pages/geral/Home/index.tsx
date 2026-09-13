@@ -4,11 +4,7 @@ import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { MENU } from "../../../constants/menu";
-import { Role, Live, LiveResultado, type PageKey } from "../../../types";
-import { supabase } from "../../../lib/supabase";
-import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
-import { PLAYBOOK_ITENS_OBRIGATORIOS } from "../../../constants/playbookGuia";
-import { PLAT_LOGO, PLAT_LOGO_DARK } from "../../../constants/platforms";
+import { Role, type PageKey } from "../../../types";
 import {
   GiMicrophone,
   GiTv,
@@ -61,16 +57,7 @@ const HomeShiftLeader = lazy(() => import("./HomeShiftLeader"));
 const HomeRh = lazy(() => import("./HomeRh"));
 const HomeOperadorRouter = lazy(() => import("./operador/HomeOperadorRouter"));
 const HomeAfiliado = lazy(() => import("./HomeAfiliado"));
-
-const LIVE_HOME_COLS = "id, data, horario, plataforma, titulo, observacao, status";
-const LIVE_RESULTADO_HOME_COLS = "live_id, duracao_horas, duracao_min, media_views, max_views";
-
-function dataLocalIso(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+const HomeInfluencer = lazy(() => import("./HomeInfluencer"));
 
 function HomeChunkFallback() {
   const { theme: t } = useApp();
@@ -111,69 +98,6 @@ const BRAND = {
   verde: "#22c55e",
   vermelho: "#e84025",
 } as const;
-
-function parseLiveLocal(data: string, horario: string): Date {
-  const [y, mo, d] = data.split("-").map((x) => parseInt(x, 10));
-  const parts = (horario || "00:00").split(":");
-  const hh = parseInt(parts[0] ?? "0", 10) || 0;
-  const mm = parseInt(parts[1] ?? "0", 10) || 0;
-  const ss = parseInt(parts[2] ?? "0", 10) || 0;
-  return new Date(y, mo - 1, d, hh, mm, ss);
-}
-
-function fmtDataHoraLive(data: string, horario: string): string {
-  const dt = parseLiveLocal(data, horario);
-  return dt.toLocaleString("pt-BR", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function fmtDuracao(r: LiveResultado | undefined): string {
-  if (!r) return "—";
-  const h = r.duracao_horas ?? 0;
-  const m = r.duracao_min ?? 0;
-  if (h && m) return `${h}h ${m}min`;
-  if (h) return `${h}h`;
-  if (m) return `${m}min`;
-  return "—";
-}
-
-function PlatLogoHome({
-  plataforma,
-  size = 20,
-  isDark,
-}: {
-  plataforma: string;
-  size?: number;
-  isDark: boolean;
-}) {
-  const [err, setErr] = useState(false);
-  const src = isDark
-    ? PLAT_LOGO_DARK[plataforma] ?? PLAT_LOGO[plataforma]
-    : PLAT_LOGO[plataforma];
-  if (err || !src) {
-    return (
-      <span style={{ fontSize: size * 0.65, opacity: 0.6 }} title={plataforma}>
-        ●
-      </span>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt={plataforma}
-      width={size}
-      height={size}
-      onError={() => setErr(true)}
-      style={{ display: "block", flexShrink: 0 }}
-    />
-  );
-}
 
 const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrador",
@@ -344,19 +268,6 @@ const PAGE_ICONS: Record<string, React.ComponentType<{ size?: number; color?: st
   status_tecnico: GiRadarSweep,
 };
 
-type PerfilRow = {
-  nome_artistico?: string | null;
-  nome_completo?: string | null;
-  telefone?: string | null;
-  cpf?: string | null;
-  cache_hora?: number | null;
-  chave_pix?: string | null;
-  banco?: string | null;
-  agencia?: string | null;
-  conta?: string | null;
-  status?: string | null;
-};
-
 export default function Home() {
   const {
     theme: t,
@@ -368,17 +279,10 @@ export default function Home() {
     isDark,
     simulacaoLogin,
     simulacaoSomenteLeitura,
-    dadosUsuarioEfetivo,
   } = useApp();
   const { name: nomeEfetivo } = useIdentidadeEfetiva();
   const { propsFor } = useAppPageNav();
 
-  const [influencerHomeReady, setInfluencerHomeReady] = useState(false);
-  const [perfilRow, setPerfilRow] = useState<PerfilRow | null>(null);
-  const [playbookPendente, setPlaybookPendente] = useState(false);
-  const [livesFuturas, setLivesFuturas] = useState<Live[]>([]);
-  const [livesRealizadasRecentes, setLivesRealizadasRecentes] = useState<Live[]>([]);
-  const [resultadosPorLive, setResultadosPorLive] = useState<Record<string, LiveResultado>>({});
   const [revisaoCadastralPendenteHome, setRevisaoCadastralPendenteHome] = useState(false);
   const [revisaoCadastralHomeReady, setRevisaoCadastralHomeReady] = useState(false);
   const [buscaAtalho, setBuscaAtalho] = useState("");
@@ -439,90 +343,6 @@ export default function Home() {
       window.removeEventListener("rh-cadastro-revisao-atualizada", onAtualizado);
     };
   }, [user, permissionsAcoes.rh_dados_cadastro?.editar, simulacaoSomenteLeitura, effectiveRole]);
-
-  useEffect(() => {
-    const roleDados = effectiveRole ?? user?.role;
-    if (!user || roleDados !== "influencer") {
-      setInfluencerHomeReady(true);
-      setPerfilRow(null);
-      setPlaybookPendente(false);
-      setLivesFuturas([]);
-      setLivesRealizadasRecentes([]);
-      return;
-    }
-
-    let cancelled = false;
-    const uid = dadosUsuarioEfetivo?.id ?? user.id;
-
-    async function loadInfluencerHome() {
-      setInfluencerHomeReady(false);
-      const hojeIso = dataLocalIso(new Date());
-      const [perfilRes, confRes, agRes, realRes] = await Promise.all([
-        supabase
-          .from("influencer_perfil")
-          .select(
-            "nome_artistico, nome_completo, telefone, cpf, cache_hora, chave_pix, banco, agencia, conta, status"
-          )
-          .eq("id", uid)
-          .maybeSingle(),
-        supabase.from("guia_confirmacoes").select("item_key").eq("influencer_id", uid),
-        supabase
-          .from("lives")
-          .select(LIVE_HOME_COLS)
-          .eq("influencer_id", uid)
-          .eq("status", "agendada")
-          .gte("data", hojeIso)
-          .order("data", { ascending: true })
-          .order("horario", { ascending: true }),
-        supabase
-          .from("lives")
-          .select(LIVE_HOME_COLS)
-          .eq("influencer_id", uid)
-          .eq("status", "realizada")
-          .order("data", { ascending: false })
-          .order("horario", { ascending: false })
-          .limit(4),
-      ]);
-
-      if (cancelled) return;
-
-      setPerfilRow((perfilRes.data as PerfilRow) ?? null);
-
-      const keysOk = new Set((confRes.data ?? []).map((r: { item_key: string }) => r.item_key));
-      const faltaPlaybook = PLAYBOOK_ITENS_OBRIGATORIOS.some((k) => !keysOk.has(k));
-      setPlaybookPendente(faltaPlaybook);
-
-      const now = new Date();
-      const agendadas = (agRes.data ?? []) as Live[];
-      setLivesFuturas(
-        agendadas.filter((l) => parseLiveLocal(l.data, l.horario).getTime() > now.getTime())
-      );
-
-      const realizadas = (realRes.data ?? []) as Live[];
-      setLivesRealizadasRecentes(realizadas);
-
-      const ids = realizadas.map((l) => l.id);
-      const map: Record<string, LiveResultado> = {};
-      if (ids.length > 0) {
-        const { data: resRows } = await supabase
-          .from("live_resultados")
-          .select(LIVE_RESULTADO_HOME_COLS)
-          .in("live_id", ids);
-        if (resRows) {
-          (resRows as LiveResultado[]).forEach((r) => {
-            map[r.live_id] = r;
-          });
-        }
-      }
-      if (!cancelled) setResultadosPorLive(map);
-      if (!cancelled) setInfluencerHomeReady(true);
-    }
-
-    void loadInfluencerHome();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, effectiveRole, dadosUsuarioEfetivo?.id]);
 
   if (!user) return null;
 
@@ -588,6 +408,10 @@ export default function Home() {
     return withHomeSuspense(<HomeAfiliado />);
   }
 
+  if (roleHome === "influencer") {
+    return withHomeSuspense(<HomeInfluencer />);
+  }
+
   const role = roleHome;
   const welcome = ROLE_WELCOME[role];
   const useBrand = false;
@@ -606,7 +430,7 @@ export default function Home() {
   }
 
   const atalhosOrdenados = [...atalhos];
-  if (role === "influencer" || role === "agencia") {
+  if (role === "agencia") {
     const idxOverview = atalhosOrdenados.findIndex((a) => a.key === "dash_overview_influencer");
     if (idxOverview > 0) {
       const [item] = atalhosOrdenados.splice(idxOverview, 1);
@@ -619,29 +443,14 @@ export default function Home() {
   const accentColor = useBrand ? "var(--brand-primary)" : BRAND.roxoVivo;
   const cardBg = useBrand && operadoraBrand?.brand_bg ? operadoraBrand.brand_bg : t.cardBg;
 
-  const nomePerfil = perfilRow?.nome_artistico?.trim() || dadosUsuarioEfetivo?.name || user.name;
-  const nomeBoasVindas =
-    (perfilRow?.nome_artistico || nomeEfetivo || user.name || "").trim() || "usuário";
+  const nomeBoasVindas = (nomeEfetivo || user.name || "").trim() || "usuário";
   const welcomeAvatarLabel = simulacaoSomenteLeitura
     ? (user.name || user.email || "?")
-    : (perfilRow?.nome_artistico?.trim() || user.name || user.email || "?");
+    : (user.name || user.email || "?");
   const welcomeInitial = welcomeAvatarLabel[0]?.toUpperCase() ?? "?";
-
-  const showPerfilIncompleto =
-    role === "influencer" &&
-    influencerHomeReady &&
-    (perfilRow?.status ?? "ativo") === "ativo" &&
-    isPerfilIncompleto(perfilRow, nomePerfil);
-
-  const showPlaybookAlert = role === "influencer" && influencerHomeReady && playbookPendente;
 
   const showRevisaoCadastralAlert =
     revisaoCadastralHomeReady && revisaoCadastralPendenteHome;
-
-  const showProximasLives = role === "influencer" && influencerHomeReady && livesFuturas.length > 0;
-
-  const showFeedbacksRecentes =
-    role === "influencer" && influencerHomeReady && livesRealizadasRecentes.length > 0;
 
   const alertBoxStyle: React.CSSProperties = {
     display: "flex",
@@ -732,24 +541,6 @@ export default function Home() {
         </div>
       </div>
 
-      {role === "influencer" && !influencerHomeReady ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 0 24px",
-            color: t.textMuted,
-            fontSize: 13,
-            fontFamily: FONT.body,
-          }}
-          role="status"
-        >
-          <Loader2 className="app-lucide-spin" size={16} color="var(--brand-primary, #7c3aed)" aria-hidden />
-          Carregando…
-        </div>
-      ) : null}
-
       {showRevisaoCadastralAlert && (
         <div style={alertBoxStyle}>
           <AlertTriangle size={20} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -787,242 +578,6 @@ export default function Home() {
             >
               {REVISAO_CADASTRO_GATE_MODAL_CTA}
             </a>
-          </div>
-        </div>
-      )}
-
-      {showPerfilIncompleto && (
-        <div style={alertBoxStyle}>
-          <AlertTriangle size={20} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: isDark ? "#ff9980" : "#b02a14",
-                letterSpacing: "0.06em",
-                marginBottom: 8,
-                fontFamily: FONT_TITLE,
-              }}
-            >
-              AÇÃO NECESSÁRIA
-            </div>
-            <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
-              {simulacaoLogin
-                ? `Cadastro incompleto no usuário visualizado${simulacaoLogin.userName ? ` (${simulacaoLogin.userName})` : ""}. Na visualização, o menu segue esse perfil (somente leitura).`
-                : "Você ainda não concluiu o seu cadastro, isso impede o pagamento das lives realizadas. Acesse a página Influencers e preencha todos os itens pendentes das suas informações."}
-            </p>
-            <a
-              {...propsFor("influencers")}
-              style={{
-                display: "inline-block",
-                padding: "8px 16px",
-                borderRadius: 10,
-                border: `1px solid ${BRAND.vermelho}`,
-                background: `${BRAND.vermelho}18`,
-                color: BRAND.vermelho,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                textDecoration: "none",
-              }}
-            >
-              Ir para Influencers
-            </a>
-          </div>
-        </div>
-      )}
-
-      {showPlaybookAlert && (
-        <div style={alertBoxStyle}>
-          <AlertTriangle size={20} color={BRAND.vermelho} style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: isDark ? "#ff9980" : "#b02a14",
-                letterSpacing: "0.06em",
-                marginBottom: 8,
-                fontFamily: FONT_TITLE,
-              }}
-            >
-              AÇÃO NECESSÁRIA
-            </div>
-            <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.65, marginBottom: 12 }}>
-              {simulacaoLogin ? (
-                `Playbook pendente no usuário visualizado${simulacaoLogin.userName ? ` (${simulacaoLogin.userName})` : ""}. A visualização é somente leitura.`
-              ) : (
-                <>
-                  Você ainda não confirmou todos os itens obrigatórios do Playbook. Acesse as abas{" "}
-                  <strong>Game Presenters</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para
-                  dar sua ciência.
-                </>
-              )}
-            </p>
-            <a
-              {...propsFor("playbook_influencers")}
-              style={{
-                display: "inline-block",
-                padding: "8px 16px",
-                borderRadius: 10,
-                border: `1px solid ${BRAND.vermelho}`,
-                background: `${BRAND.vermelho}18`,
-                color: BRAND.vermelho,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: FONT.body,
-                textDecoration: "none",
-              }}
-            >
-              Ir para Playbook
-            </a>
-          </div>
-        </div>
-      )}
-
-      {showProximasLives && (
-        <div
-          style={{
-            background: cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 14px 0",
-              fontSize: 13,
-              fontWeight: 800,
-              color: t.sectionTitle,
-              fontFamily: FONT_TITLE,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Próximas lives
-          </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))",
-              gap: 12,
-            }}
-          >
-            {livesFuturas.map((live) => (
-              <div
-                key={live.id}
-                style={{
-                  border: `1px solid ${t.cardBorder}`,
-                  borderRadius: 12,
-                  padding: "14px 16px",
-                  background: t.inputBg ?? t.cardBg,
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 10, lineHeight: 1.4 }}>
-                  {fmtDataHoraLive(live.data, live.horario)}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <PlatLogoHome plataforma={live.plataforma} size={22} isDark={isDark} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>{live.plataforma}</span>
-                </div>
-                {live.titulo ? (
-                  <p style={{ margin: "10px 0 0 0", fontSize: 12, color: t.textMuted, lineHeight: 1.45 }}>
-                    {live.titulo}
-                  </p>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {showFeedbacksRecentes && (
-        <div
-          style={{
-            background: cardBg,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 14px 0",
-              fontSize: 13,
-              fontWeight: 800,
-              color: t.sectionTitle,
-              fontFamily: FONT_TITLE,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Feedbacks recentes
-          </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))",
-              gap: 12,
-            }}
-          >
-            {livesRealizadasRecentes.map((live) => {
-              const res = resultadosPorLive[live.id];
-              const obs = live.observacao?.trim();
-              return (
-                <div
-                  key={live.id}
-                  style={{
-                    border: `1px solid ${t.cardBorder}`,
-                    borderRadius: 12,
-                    padding: "14px 16px",
-                    background: t.inputBg ?? t.cardBg,
-                  }}
-                >
-                  <div style={{ fontSize: 13, fontWeight: 700, color: t.text, marginBottom: 10, lineHeight: 1.4 }}>
-                    {fmtDataHoraLive(live.data, live.horario)}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <PlatLogoHome plataforma={live.plataforma} size={22} isDark={isDark} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: t.textMuted }}>{live.plataforma}</span>
-                  </div>
-                  {obs ? (
-                    <p style={{ margin: "0 0 10px 0", fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
-                      <span style={{ fontWeight: 700, color: t.text }}>Obs.: </span>
-                      {obs}
-                    </p>
-                  ) : null}
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 6,
-                      fontSize: 12,
-                      color: t.textMuted,
-                      borderTop: `1px solid ${t.cardBorder}`,
-                      paddingTop: 10,
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontWeight: 600, color: t.sectionTitle }}>Duração: </span>
-                      {fmtDuracao(res)}
-                    </div>
-                    <div>
-                      <span style={{ fontWeight: 600, color: t.sectionTitle }}>Média de views: </span>
-                      {res?.media_views != null ? res.media_views.toLocaleString("pt-BR") : "—"}
-                    </div>
-                    <div>
-                      <span style={{ fontWeight: 600, color: t.sectionTitle }}>Pico de views: </span>
-                      {res?.max_views != null ? res.max_views.toLocaleString("pt-BR") : "—"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}

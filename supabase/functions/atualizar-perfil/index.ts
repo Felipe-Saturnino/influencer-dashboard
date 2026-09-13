@@ -51,6 +51,41 @@ function paridadeInfluencer(role: string): boolean {
   return role === 'influencer' || role === 'afiliado'
 }
 
+function fingerprintScopes(rows: { scope_type: string; scope_ref: string }[]): string {
+  if (!rows.length) return '(sem escopo)'
+  return rows
+    .map((r) => `${r.scope_type}:${r.scope_ref}`)
+    .sort((a, b) => a.localeCompare(b))
+    .join(', ')
+}
+
+async function registrarHistoricoPerfil(
+  supabase: ReturnType<typeof createClient>,
+  params: {
+    profileId: string
+    tipo: string
+    origem: string
+    realizadoPor?: string | null
+    resumo?: string | null
+    valorAnterior?: string | null
+    valorNovo?: string | null
+  },
+): Promise<void> {
+  const { error } = await supabase.rpc('profiles_historico_registrar', {
+    p_profile_id: params.profileId,
+    p_tipo: params.tipo,
+    p_origem: params.origem,
+    p_realizado_por: params.realizadoPor ?? null,
+    p_resumo: params.resumo ?? null,
+    p_valor_anterior: params.valorAnterior ?? null,
+    p_valor_novo: params.valorNovo ?? null,
+    p_preservar_access_granted_at: true,
+  })
+  if (error) {
+    console.error('[profiles_historico_registrar]', error.message)
+  }
+}
+
 const supabaseServiceOptions = {
   auth: { autoRefreshToken: false, persistSession: false },
 } as const
@@ -264,6 +299,22 @@ serve(async (req) => {
   }
 
   try {
+    const { data: antesPerfil } = await supabase
+      .from('profiles')
+      .select('name, role')
+      .eq('id', userId)
+      .maybeSingle()
+    const { data: antesScopes } = await supabase
+      .from('user_scopes')
+      .select('scope_type, scope_ref')
+      .eq('user_id', userId)
+
+    const nomeAntes = String((antesPerfil as { name?: string } | null)?.name ?? '').trim()
+    const roleAntes = String((antesPerfil as { role?: string } | null)?.role ?? '').trim()
+    const escopoAntes = fingerprintScopes(
+      ((antesScopes ?? []) as { scope_type: string; scope_ref: string }[]),
+    )
+
     const patch: Record<string, unknown> = { name: name.trim(), role }
     if ('emprestadoPara' in body) {
       const raw = body.emprestadoPara
@@ -370,6 +421,50 @@ serve(async (req) => {
           }
         }
       }
+    }
+
+    const { data: depoisScopes } = await supabase
+      .from('user_scopes')
+      .select('scope_type, scope_ref')
+      .eq('user_id', userId)
+    const escopoDepois = fingerprintScopes(
+      ((depoisScopes ?? []) as { scope_type: string; scope_ref: string }[]),
+    )
+    const nomeNovo = name.trim()
+    const roleNovo = role.trim()
+
+    if (nomeAntes !== nomeNovo) {
+      await registrarHistoricoPerfil(supabase, {
+        profileId: userId,
+        tipo: 'alteracao_nome',
+        origem: 'manual',
+        realizadoPor: callerId,
+        resumo: `Nome: ${nomeAntes || '—'} → ${nomeNovo}`,
+        valorAnterior: nomeAntes || null,
+        valorNovo: nomeNovo,
+      })
+    }
+    if (roleAntes !== roleNovo) {
+      await registrarHistoricoPerfil(supabase, {
+        profileId: userId,
+        tipo: 'alteracao_perfil',
+        origem: 'manual',
+        realizadoPor: callerId,
+        resumo: `Perfil: ${roleAntes || '—'} → ${roleNovo}`,
+        valorAnterior: roleAntes || null,
+        valorNovo: roleNovo,
+      })
+    }
+    if (escopoAntes !== escopoDepois) {
+      await registrarHistoricoPerfil(supabase, {
+        profileId: userId,
+        tipo: 'alteracao_escopo',
+        origem: 'manual',
+        realizadoPor: callerId,
+        resumo: `Escopo: ${escopoAntes} → ${escopoDepois}`,
+        valorAnterior: escopoAntes,
+        valorNovo: escopoDepois,
+      })
     }
 
     return new Response(JSON.stringify({ success: true }), {

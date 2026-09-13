@@ -30,8 +30,22 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Horas Realizadas",
         definicao:
-          "Soma total de horas de transmissão ao vivo no período. Calculado a partir da duração individual de cada live. Exibido no formato HH:MM.",
-        referencia: "Streamers → Overview · Feedback · Overview Influencer",
+          "Soma das horas de transmissão ao vivo validadas. Nos dashboards e no Feedback, é o acumulado do período filtrado. Na aba **Horas** de Influencers, é só o volume **desta cota** (lives Realizadas com data a partir da ativação).",
+        referencia: "Streamers → Overview · Feedback · Overview Influencer · Influencers",
+      },
+      {
+        termo: "Horas Acordadas",
+        definicao:
+          "Cota de horas combinada na ativação do cadastro do influencer. Não segue o ciclo de pagamento: a cota permanece até as horas validadas serem cumpridas.",
+        nota:
+          "Obrigatório ao passar de Inativo ou Cancelado para Ativo. Inativo e Cancelado limpam a cota. Influencers novos (Scout Fechado ou Gestão de Usuários) nascem Inativos, sem cota.",
+        referencia: "Influencers · Agenda",
+      },
+      {
+        termo: "Horas Pendentes",
+        definicao:
+          "Saldo da cota atual: Horas Acordadas menos Horas Realizadas desta cota. Nunca fica negativo — se a última live ultrapassar o combinado, o pendente aparece como zero.",
+        referencia: "Influencers",
       },
       {
         termo: "Validação de Live",
@@ -113,7 +127,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Classificação do estado do relacionamento comercial com o influencer na plataforma.",
         nota:
-          "Ativo: influencer com parceria vigente, habilitado para agendar lives e gerar links.\nInativo: parceria pausada — o influencer continua cadastrado mas não pode ser agendado.\nCancelado: parceria encerrada definitivamente.\n\nAlterações de status são restritas a Admin e Gestor. A data da última alteração de status é registrada automaticamente e pode ser consultada na aba Histórico do modal de visualização.",
+          "Ativo: parceria vigente, com cota de Horas Acordadas — habilitado para agendar lives (cadastros antigos sem cota também permanecem Ativos).\nInativo: parceria pausada ou cota cumprida — o influencer continua cadastrado mas não agenda novas lives. Novo cadastro (Scout Fechado ou Gestão de Usuários) nasce Inativo até a ativação.\nCancelado: parceria encerrada — também não agenda.\n\nAtivar exige Horas Acordadas. Alterações de status são restritas a Admin e Gestor. A data da última alteração de status é registrada automaticamente e pode ser consultada na aba Histórico do modal de visualização.",
         referencia: "Influencers",
       },
       {
@@ -144,7 +158,7 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
         definicao:
           "Etapas do processo de negociação com um candidato a parceiro, desde o primeiro contato até o fechamento.",
         nota:
-          "Visualizado → Contato → Negociação → Fechado.\n\nNo **Scout**, a criação do usuário influencer ocorre ao marcar **Fechado** com todos os campos obrigatórios preenchidos. No **Network** (afiliados), a criação pode ocorrer em qualquer etapa ao salvar um prospecto sem usuário — ver termo Network (Afiliados).",
+          "Visualizado → Contato → Negociação → Fechado.\n\nNo **Scout**, a criação do usuário influencer ocorre ao marcar **Fechado** com todos os campos obrigatórios preenchidos. O cadastro em Influencers nasce **Inativo** até a ativação com Horas Acordadas. No **Network** (afiliados), a criação pode ocorrer em qualquer etapa ao salvar um prospecto sem usuário — ver termo Network (Afiliados).",
         referencia: "Scout · Network",
       },
       {

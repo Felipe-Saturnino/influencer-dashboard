@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { KeyRound, Loader2, Pencil, UserCheck, UserX } from "lucide-react";
+import { History, KeyRound, Loader2, Pencil, UserCheck, UserX } from "lucide-react";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { PAGE_SEARCH } from "../../../lib/searchBarConstants";
 import { textoContemBuscaEmAlgum } from "../../../lib/searchText";
@@ -13,6 +13,7 @@ import type { Role } from "../../../types";
 import { BRAND, roleLabel, roleBadgeColor, PRESTADOR_TIPOS, ROLES, type FiltroStatusUsuarios } from "./constants";
 import { MSG_ERRO_CARREGAR_GESTAO } from "./gestaoUsuariosHelpers";
 import { ModalUsuario } from "./ModalUsuario";
+import { ModalHistoricoUsuario } from "./ModalHistoricoUsuario";
 import { ModalConfirmDelete } from "../../../components/OperacoesModal";
 import { CtaCriarButton } from "../../../components/CtaCriarButton";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
@@ -153,6 +154,7 @@ export function AbaUsuarios({
   const [editando, setEditando] = useState<UsuarioCompleto | null>(null);
   const [modalDesativar, setModalDesativar] = useState<UsuarioCompleto | null>(null);
   const [modalResetSenha, setModalResetSenha] = useState<UsuarioCompleto | null>(null);
+  const [modalHistorico, setModalHistorico] = useState<UsuarioCompleto | null>(null);
   const [feedbackAcao, setFeedbackAcao] = useState<{ tipo: "erro" | "ok"; msg: string } | null>(null);
   /** `${userId}:${action}` enquanto a Edge Function processa */
   const [acaoEmAndamento, setAcaoEmAndamento] = useState<string | null>(null);
@@ -252,12 +254,24 @@ export function AbaUsuarios({
               msg: "Senha redefinida para a padrão e e-mail enviado ao usuário. No próximo login será obrigatório definir uma nova senha.",
             });
           }
+        } else if (action === "ativar") {
+          if (res && typeof res === "object" && "emailEnviado" in res && res.emailEnviado === false) {
+            setFeedbackAcao({
+              tipo: "erro",
+              msg:
+                "Usuário reativado e senha redefinida, mas não foi possível enviar o e-mail. Se o problema persistir, entre em contato com o suporte.",
+            });
+          } else {
+            setFeedbackAcao({
+              tipo: "ok",
+              msg: "Usuário reativado. Senha redefinida para a padrão e e-mail de boas-vindas enviado. No próximo login será obrigatório definir uma nova senha.",
+            });
+          }
         } else {
-          const okMsg =
-            action === "desativar"
-              ? "Usuário desativado. O acesso à plataforma foi bloqueado."
-              : "Usuário ativado novamente.";
-          setFeedbackAcao({ tipo: "ok", msg: okMsg });
+          setFeedbackAcao({
+            tipo: "ok",
+            msg: "Usuário desativado. O acesso à plataforma foi bloqueado.",
+          });
         }
         await carregar();
       } catch (e) {
@@ -588,6 +602,13 @@ export function AbaUsuarios({
                       {mostrarAcoes ? (
                         <td style={dataTable.tdCenter}>
                           <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+                            <BtnIconeAcaoLinha
+                              label={tooltipAcao("Histórico do Usuário")}
+                              disabled={linhaBusy}
+                              onClick={() => setModalHistorico(u)}
+                            >
+                              <History size={14} aria-hidden />
+                            </BtnIconeAcaoLinha>
                             {podeEditarUsuario ? (
                               <BtnIconeAcaoLinha
                                 label={tooltipAcao("Editar Usuário")}
@@ -597,7 +618,7 @@ export function AbaUsuarios({
                                 <Pencil size={14} aria-hidden />
                               </BtnIconeAcaoLinha>
                             ) : null}
-                            {podeEditarUsuario ? (
+                            {linha.ativo && podeEditarUsuario ? (
                               <BtnIconeAcaoLinha
                                 label={tooltipAcao("Redefinir Senha")}
                                 disabled={linhaBusy}
@@ -705,6 +726,10 @@ export function AbaUsuarios({
           }}
         />
       )}
+
+      {modoAdmin && modalHistorico ? (
+        <ModalHistoricoUsuario usuario={modalHistorico} onClose={() => setModalHistorico(null)} />
+      ) : null}
     </div>
   );
 }

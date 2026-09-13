@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Building2, ExternalLink, Eye, X } from "lucide-react";
+import { Building2, ExternalLink, Eye, Loader2, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { FONT } from "../../../constants/theme";
@@ -7,9 +7,10 @@ import { BRAND, FONT_TITLE } from "../../../lib/dashboardConstants";
 import type { Operadora } from "../../../types";
 import { PLAT_COLOR } from "../../../constants/platforms";
 import { PlatLogo } from "../../../components/PlatLogo";
-import { fmtBRL } from "../../../lib/dashboardHelpers";
+import { fmtBRL, fmtHorasTotal } from "../../../lib/dashboardHelpers";
+import { buscarHorasRealizadasCiclo, horasPendentesCota } from "../../../lib/influencerHorasCota";
 import { InfluencerModalTabs, SensitiveField, StatusBadge } from "./influencerUiComponents";
-import type { Influencer, Perfil } from "./influencerTypes";
+import type { Influencer, InfluencerModalTab, Perfil } from "./influencerTypes";
 
 export function ModalVisualizar({ influencer, operadorasList, onClose, isDark }: {
   influencer: Influencer; operadorasList: Operadora[]; onClose: () => void; isDark?: boolean;
@@ -18,15 +19,42 @@ export function ModalVisualizar({ influencer, operadorasList, onClose, isDark }:
   const brand = useDashboardBrand();
   const containerRef = useRef<HTMLDivElement>(null);
   const p = influencer.perfil;
-  const [tab, setTab] = useState<"cadastral" | "canais" | "financeiro" | "operadoras" | "historico">("cadastral");
+  const [tab, setTab] = useState<InfluencerModalTab>("cadastral");
+  const [horasRealizadasCiclo, setHorasRealizadasCiclo] = useState<number | null>(null);
+  const [horasCicloErro, setHorasCicloErro] = useState(false);
 
   useEffect(() => {
     const id = window.setTimeout(() => containerRef.current?.focus(), 50);
     return () => window.clearTimeout(id);
   }, []);
 
+  useEffect(() => {
+    if (tab !== "horas") return;
+    const ciclo = p?.horas_ciclo_iniciado_em;
+    const acordadas = p?.horas_acordadas;
+    if (!ciclo || acordadas == null || acordadas <= 0) {
+      setHorasRealizadasCiclo(null);
+      setHorasCicloErro(false);
+      return;
+    }
+    let cancelado = false;
+    setHorasRealizadasCiclo(null);
+    setHorasCicloErro(false);
+    void buscarHorasRealizadasCiclo(influencer.id, ciclo)
+      .then((h) => {
+        if (!cancelado) setHorasRealizadasCiclo(h);
+      })
+      .catch(() => {
+        if (!cancelado) setHorasCicloErro(true);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [tab, influencer.id, p?.horas_ciclo_iniciado_em, p?.horas_acordadas]);
+
   const tabs = [
     { key: "cadastral"   as const, label: "Cadastral"  },
+    { key: "horas"       as const, label: "Horas"      },
     { key: "canais"      as const, label: "Canais"     },
     { key: "financeiro"  as const, label: "Financeiro" },
     { key: "operadoras"  as const, label: "Operadoras" },
@@ -52,6 +80,13 @@ export function ModalVisualizar({ influencer, operadorasList, onClose, isDark }:
       {v || "—"}
     </span>
   );
+
+  const acordadas = p?.horas_acordadas;
+  const temCota = acordadas != null && acordadas > 0 && !!p?.horas_ciclo_iniciado_em;
+  const pendentes = temCota && horasRealizadasCiclo != null
+    ? horasPendentesCota(acordadas, horasRealizadasCiclo)
+    : null;
+  const horasCarregando = temCota && horasRealizadasCiclo == null && !horasCicloErro;
 
   return (
     <div className="app-modal-overlay-pad" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
@@ -117,6 +152,42 @@ export function ModalVisualizar({ influencer, operadorasList, onClose, isDark }:
               <SensitiveField value={p?.cpf} label="CPF" labelStyle={labelStyle} textStyle={{ fontSize: 13, color: t.text, fontFamily: FONT.body }} />
             </div>
           </>
+        )}
+
+        {tab === "horas" && (
+            <>
+              <div style={row}>
+                <label style={labelStyle}>Horas Pendentes</label>
+                {horasCarregando
+                  ? (
+                    <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <Loader2 size={12} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+                      Carregando…
+                    </span>
+                  )
+                  : val(pendentes != null ? fmtHorasTotal(pendentes) : "")}
+              </div>
+              <div style={row}>
+                <label style={labelStyle}>Horas Realizadas</label>
+                {horasCicloErro
+                  ? (
+                    <span style={{ fontSize: 13, color: "#e84025", fontFamily: FONT.body }}>
+                      Não foi possível carregar as horas. Se o problema persistir, entre em contato com o suporte.
+                    </span>
+                  )
+                  : horasCarregando
+                    ? (
+                      <span style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <Loader2 size={12} className="app-lucide-spin" aria-hidden="true" color="var(--brand-primary, #7c3aed)" />
+                        Carregando…
+                      </span>
+                    )
+                    : val(temCota && horasRealizadasCiclo != null ? fmtHorasTotal(horasRealizadasCiclo) : "")}
+              </div>
+              <p style={{ fontSize: 11, color: t.textMuted, fontFamily: FONT.body, margin: 0, lineHeight: 1.45 }}>
+                Horas desta cota operacional — não seguem o ciclo de pagamento. Sem cota ativa os campos ficam vazios.
+              </p>
+            </>
         )}
 
         {tab === "canais" && (

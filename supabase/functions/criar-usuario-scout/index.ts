@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
+import { accessGrantedByPayload, registrarHistoricoPerfil } from './common.ts'
 
 type SupabaseAdmin = ReturnType<typeof createClient>
 
@@ -309,6 +310,7 @@ serve(async (req) => {
       })
     }
     const uid = created.uid
+    const accessAudit = await accessGrantedByPayload(supabase)
 
     let { error: profileErr } = await supabase.from('profiles').upsert(
       {
@@ -317,6 +319,9 @@ serve(async (req) => {
         email,
         role: 'influencer',
         must_change_password: true,
+        access_granted_by: accessAudit.access_granted_by,
+        access_granted_at: accessAudit.access_granted_at,
+        access_granted_origem: 'ativacao_influencer_afiliado',
       },
       { onConflict: 'id', ignoreDuplicates: false }
     )
@@ -327,6 +332,9 @@ serve(async (req) => {
         email,
         role: 'influencer',
         must_change_password: true,
+        access_granted_by: accessAudit.access_granted_by,
+        access_granted_at: accessAudit.access_granted_at,
+        access_granted_origem: 'ativacao_influencer_afiliado',
       }).eq('id', uid)
       if (!updateErr) profileErr = null
     }
@@ -339,12 +347,21 @@ serve(async (req) => {
       })
     }
 
+    await registrarHistoricoPerfil(supabase, {
+      profileId: uid,
+      tipo: 'ativacao',
+      origem: 'ativacao_influencer_afiliado',
+      realizadoPor: accessAudit.access_granted_by,
+      resumo: 'Ativação de Influencer/Afiliado',
+      preservarAccessGrantedAt: true,
+    })
+
     const { error: perfilErr } = await supabase.from('influencer_perfil').upsert(
       {
         id: uid,
         nome_artistico: nome,
         nome_completo: nome,
-        status: 'ativo',
+        status: 'inativo',
         telefone: String(raw.telefone ?? '').trim() || undefined,
         cache_hora: cacheHora,
         canais: plat.length > 0 ? plat : undefined,

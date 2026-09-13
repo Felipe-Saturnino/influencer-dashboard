@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mockup — Home Afiliado (proposta · todos os blocos ativos)</title>
+  <style>
+    :root {
+      --brand-primary: #7c3aed;
+      --brand-secondary: #1e36f8;
+      --brand-accent: #7c3aed;
+      --brand-roxo: #4a2082;
+      --brand-azul: #1e36f8;
+      --brand-ciano: #70cae4;
+      --vermelho: #e84025;
+      --amarelo: #f59e0b;
+      --verde: #22c55e;
+
+      --page-bg: #f4f4f8;
+      --card-bg: #ffffff;
+      --card-border: #e8e8f0;
+      --input-bg: #f8f8fc;
+      --text: #1a1a2e;
+      --text-muted: #666688;
+      --section-title: #1a1a2e;
+      --box-radius: 14px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --font-title: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    }
+
+    body.dark {
+      --page-bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --card-border: #2a2a4e;
+      --input-bg: rgba(255,255,255,0.07);
+      --text: #ffffff;
+      --text-muted: #e5dce1;
+      --section-title: #ffffff;
+      --box-radius: 18px;
+      --box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--page-bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mock-banner {
+      background: linear-gradient(135deg, #4a2082, #1e36f8);
+      color: #fff; padding: 10px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    }
+    .mock-banner button {
+      border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff;
+      padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .page-shell {
+      max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .block-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--brand-primary); background: rgba(124, 58, 237, 0.12);
+      border: 1px dashed rgba(124, 58, 237, 0.45);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: -6px; width: max-content;
+    }
+    body.dark .block-tag { color: var(--brand-ciano); }
+
+    .welcome-card {
+      position: relative; overflow: hidden;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 28px; box-shadow: var(--box-shadow);
+    }
+    .welcome-card .topbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-azul));
+    }
+    .welcome-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .avatar {
+      width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--brand-roxo), var(--brand-azul));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 20px;
+      border: 2px solid rgba(124, 58, 237, 0.45);
+    }
+    .welcome-card h1 {
+      font-family: var(--font-title); font-size: 22px; font-weight: 800;
+      letter-spacing: .02em; margin: 0 0 6px;
+    }
+    .role-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .welcome-sub { font-size: 14px; color: var(--text-muted); line-height: 1.55; white-space: pre-line; }
+
+    .alert-box {
+      display: flex; gap: 14px; padding: 16px 18px; border-radius: 14px;
+      background: rgba(232,64,37,0.05); border: 1px solid rgba(232,64,37,0.28);
+      border-left: 4px solid var(--vermelho);
+    }
+    body.dark .alert-box { background: rgba(232,64,37,0.08); }
+    .alert-box .alert-icon { flex-shrink: 0; margin-top: 2px; color: var(--vermelho); }
+    .alert-title {
+      font-size: 12px; font-weight: 800; letter-spacing: .06em;
+      color: #b02a14; margin-bottom: 8px; font-family: var(--font-title);
+    }
+    body.dark .alert-title { color: #ff9980; }
+    .alert-body { font-size: 13px; line-height: 1.65; margin-bottom: 12px; }
+    .alert-cta {
+      display: inline-block; padding: 8px 16px; border-radius: 10px;
+      border: 1px solid var(--vermelho); background: rgba(232,64,37,0.09);
+      color: var(--vermelho); font-size: 12px; font-weight: 700; text-decoration: none;
+    }
+
+    .content-box {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--box-radius); box-shadow: var(--box-shadow); padding: 20px;
+    }
+    .section-title {
+      font-family: var(--font-title); font-size: 13px; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--section-title);
+      margin: 0 0 14px;
+    }
+    .hint { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0 0 16px; }
+
+    .feed-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .feed-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 18px; box-shadow: var(--box-shadow);
+    }
+    .feed-card h3 {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 800; margin: 0; color: var(--text);
+    }
+    .feed-body { margin-top: 12px; font-size: 13px; line-height: 1.55; color: var(--text); }
+    .feed-body a { font-weight: 700; color: var(--brand-accent); text-decoration: underline; }
+    .feed-footer { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; }
+    .btn-li-ocultar {
+      display: inline-flex; align-items: center; margin-top: 14px;
+      padding: 8px 14px; border-radius: 10px;
+      border: 1px solid var(--card-border);
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--brand-accent); font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: var(--font);
+    }
+
+    .grid-atalhos {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    }
+    .atalho {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 1px solid var(--card-border); background: var(--input-bg);
+      color: var(--text); text-decoration: none;
+    }
+    .atalho:hover { border-color: var(--brand-primary); background: rgba(124, 58, 237, 0.08); }
+    .atalho .ic {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(74,32,130,0.2); color: var(--brand-accent);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .atalho .tit { display: flex; align-items: flex-start; gap: 8px; }
+    .atalho .tit span { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; }
+    .atalho .tit svg { color: var(--text-muted); flex-shrink: 0; margin-top: 2px; }
+    .atalho p { margin: 8px 0 0; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .nota-mock {
+      display: flex; align-items: flex-start; gap: 6px; margin-top: 12px;
+      font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px;
+      background: rgba(245,158,11,.12); color: #a16207; border: 1px dashed rgba(245,158,11,.55);
+    }
+    body.dark .nota-mock { color: var(--amarelo); }
+
+    .legenda {
+      max-width: 1100px; margin: 0 auto; padding: 0 20px 48px;
+    }
+    .legenda .content-box { font-size: 12px; color: var(--text-muted); }
+    .legenda ul { padding-left: 18px; margin-top: 10px; }
+    .legenda li { margin-bottom: 6px; }
+    .legenda strong { color: var(--text); }
+    .removed {
+      text-decoration: line-through; opacity: .7;
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-banner">
+    <span>Mockup 2/N — Home · perfil <strong>Afiliado</strong> · proposta para aprovação · alinhado ao Influencer aprovado</span>
+    <button type="button" id="btn-tema">Alternar tema claro / escuro</button>
+  </div>
+
+  <div class="page-shell">
+
+    <!-- 1 — Boas-vindas -->
+    <span class="block-tag">Bloco 1 · Boas-vindas</span>
+    <div class="welcome-card">
+      <div class="topbar"></div>
+      <div class="welcome-row">
+        <div class="avatar" aria-hidden="true">R</div>
+        <div style="flex:1;min-width:200px">
+          <h1>Olá, Rafael Costa!</h1>
+          <p class="role-label">Afiliado</p>
+          <p class="welcome-sub">Spin. Play. Win.
+Acompanhe cada passo da sua jornada.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 — Cadastro incompleto -->
+    <span class="block-tag">Bloco 2 · Cadastro incompleto (só quando pendente)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Você ainda não concluiu o seu cadastro, isso impede o pagamento das comissões realizadas. Acesse a página Afiliados e preencha todos os itens pendentes das suas informações.
+        </p>
+        <a class="alert-cta" href="#">Ir para Afiliados</a>
+        <p class="nota-mock">Link: página <strong>Afiliados</strong> — perfil próprio. Copy de <strong>comissões</strong> (não lives).</p>
+      </div>
+    </div>
+
+    <!-- 3 — Playbook -->
+    <span class="block-tag">Bloco 3 · Playbook pendente (só quando faltar ciência)</span>
+    <div class="alert-box">
+      <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div class="alert-title">AÇÃO NECESSÁRIA</div>
+        <p class="alert-body">
+          Você ainda não confirmou todos os itens obrigatórios do Playbook. Acesse as abas <strong>Dealers</strong>, <strong>Agendamento</strong> e <strong>Jogos</strong> na página Playbook para dar sua ciência.
+        </p>
+        <a class="alert-cta" href="#">Ir para Playbook</a>
+        <p class="nota-mock">Mesmo fluxo do Influencer — página <strong>Playbook Influencers</strong>.</p>
+      </div>
+    </div>
+
+    <!-- 4 — Informações (feed Informativos) -->
+    <span class="block-tag">Bloco 4 · Informações — Informativos (proposta · 10 dias + «Li e Ocultar»)</span>
+    <div class="content-box">
+      <h2 class="section-title">Informações</h2>
+      <ul class="feed-list">
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+              </svg>
+              Atualização de comissões — setembro
+            </h3>
+            <div class="feed-body">
+              <p>Revise as regras de atribuição de comissão no canal de afiliados. Em dúvida, abra a <a href="#">Ajuda</a> ou fale com a equipe de Aquisição.</p>
+            </div>
+            <p class="feed-footer">Equipe Aquisição · 10/09/26 - 14:00</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+        <li>
+          <article class="feed-card">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+              </svg>
+              Materiais de divulgação
+            </h3>
+            <div class="feed-body">
+              <p>Novos criativos disponíveis para o seu fluxo. Confira o perfil em <a href="#">Afiliados</a> e mantenha os dados bancários atualizados.</p>
+            </div>
+            <p class="feed-footer">Equipe Aquisição · 05/09/26 - 09:30</p>
+            <button type="button" class="btn-li-ocultar">Li e Ocultar</button>
+          </article>
+        </li>
+      </ul>
+      <p class="nota-mock">Feed de <strong>Informativos</strong> com perfil <code>afiliado</code> (janela 10 dias + «Li e Ocultar»), igual ao Influencer aprovado. Sem Portal RH nem Academy.</p>
+    </div>
+
+    <!-- 5 — Acesso rápido -->
+    <span class="block-tag">Bloco 5 · Acesso rápido (atalhos curados · não dump do menu)</span>
+    <div class="content-box">
+      <h2 class="section-title">Acesso rápido</h2>
+      <p class="hint">Clique em um atalho abaixo para ir diretamente à página desejada.</p>
+      <div class="grid-atalhos">
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Overview Afiliado</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Resumo executivo de financeiro e conversão do canal de afiliados.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Afiliados</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Seu perfil de afiliado na plataforma.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Overview Afiliados</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Acompanhe performance, conversão e financeiro do canal de afiliados.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Network</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Gerencie a rede de afiliados e o desempenho dos parceiros.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Playbook Influencers</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Financeiro</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Gerencie os ciclos de pagamento dos influencers e afiliados, do rascunho ao pago.</p>
+          </div>
+        </a>
+        <a class="atalho" href="#">
+          <span class="ic">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          </span>
+          <div style="flex:1;min-width:0">
+            <div class="tit">
+              <span>Ajuda</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+            <p>Conheça as funcionalidades da plataforma, o glossário, tutoriais e soluções para problemas comuns.</p>
+          </div>
+        </a>
+      </div>
+      <p class="nota-mock">Atalhos só se Ver = sim/proprios. Ordem: Overview Afiliado → Afiliados → Overview Afiliados → Network → Playbook → Financeiro → Ajuda. <strong>Sem</strong> Agenda / Resultados / Feedback (sem lives).</p>
+    </div>
+
+  </div>
+
+  <div class="legenda">
+    <div class="content-box">
+      <h2 class="section-title">Notas para aprovação — Home Afiliado</h2>
+      <ul>
+        <li><strong>Alinhado ao Influencer aprovado:</strong> Informativos no bloco Informações; atalhos curados; sem revisão cadastral RH de 6 meses; sem Portal RH / Academy.</li>
+        <li><strong>Fora desta Home:</strong> <span class="removed">Próximas lives</span> e <span class="removed">Feedbacks recentes</span> — afiliado não opera lives.</li>
+        <li><strong>Blocos 2 e 3</strong> condicionais — neste mockup juntos para revisão de copy/CTAs. Cadastro → <strong>Ir para Afiliados</strong> (comissões).</li>
+        <li><strong>Estado atual no código:</strong> já existe <code>HomeAfiliado.tsx</code> com alerta correto, mas Informações ainda é texto fixo e atalhos ainda dumpam o menu — esta proposta fecha o gap.</li>
+        <li><strong>Como abrir:</strong> duplo clique no arquivo / navegador. Botão no topo alterna tema claro/escuro.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("btn-tema").addEventListener("click", function () {
+      document.body.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>

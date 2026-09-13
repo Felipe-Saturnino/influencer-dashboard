@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { enviarEmailBoasVindasConta } from './enviarBoasVindas.ts'
 import { DEFAULT_LOGIN_URL } from './transacionalShell.ts'
-import { accessGrantedByPayload } from './common.ts'
+import { accessGrantedByPayload, registrarHistoricoPerfil } from './common.ts'
 
 // Edge Function: criar-usuario — senha padrão + e-mail de boas-vindas + troca obrigatória no primeiro login
 
@@ -342,6 +342,8 @@ serve(async (req) => {
     console.log('[criar-usuario] auth user criado', uid)
 
     const accessAudit = await accessGrantedByPayload(supabase)
+    const origemAtivacao =
+      role === 'influencer' || role === 'afiliado' ? 'ativacao_influencer_afiliado' : 'manual'
 
     // 2. Upsert profile (trigger já pode ter inserido; atualiza role e must_change_password)
     const { error: profileErr } = await supabase.from('profiles').upsert(
@@ -354,6 +356,7 @@ serve(async (req) => {
         emprestado_para: emprestadoParaDb,
         access_granted_by: accessAudit.access_granted_by,
         access_granted_at: accessAudit.access_granted_at,
+        access_granted_origem: origemAtivacao,
       },
       { onConflict: 'id' }
     )
@@ -366,6 +369,18 @@ serve(async (req) => {
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
+
+    await registrarHistoricoPerfil(supabase, {
+      profileId: uid,
+      tipo: 'ativacao',
+      origem: origemAtivacao,
+      realizadoPor: accessAudit.access_granted_by,
+      resumo:
+        origemAtivacao === 'ativacao_influencer_afiliado'
+          ? 'Ativação de Influencer/Afiliado'
+          : 'Liberação de acesso na Gestão de Usuários',
+      preservarAccessGrantedAt: true,
+    })
 
     // 3. Escopos (user_scopes)
     if (role === 'prestador') {
@@ -421,7 +436,7 @@ serve(async (req) => {
             id: uid,
             nome_artistico: nome.trim(),
             nome_completo: nome.trim(),
-            status: 'ativo',
+            status: role === 'influencer' ? 'inativo' : 'ativo',
             cache_hora: cacheHoraScout,
           },
           { onConflict: 'id', ignoreDuplicates: false }
