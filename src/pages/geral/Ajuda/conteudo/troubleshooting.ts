@@ -1560,7 +1560,12 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
         subtitulo: "Mudei o turno na Staff e a Escala Diária mudou?",
         texto:
           "Em **rascunho**, a coluna Turno acompanha o cadastro atual da Gestão de Staff. Depois de **Aprovar Escala**, o turno daquele mês/área fica congelado — alterações na Staff só passam a valer no próximo rascunho/aprovação. Para mudar um ou vários dias de um prestador no mês já aprovado, use **Alterar Escala** (grade do mês com select por dia + observação obrigatória → **Salvar alterações**). Compra e Venda do Marketplace não se editam nesse modal.",
-        },
+      },
+      {
+        subtitulo: "Alterar Escala diz «Só é possível alterar dias a partir de hoje» no dia de hoje?",
+        texto:
+          "O dia editável é o **hoje civil em São Paulo**. Se a célula do dia atual está liberada no modal e o salvamento ainda mostra essa mensagem, a validação no servidor pode estar desatualizada — peça ao suporte para aplicar a correção da RPC **Alterar Escala** (fuso America/Sao_Paulo). Dias anteriores a hoje e células de **Compra**/**Venda** do Marketplace continuam travados.",
+      },
       {
         subtitulo: "A célula de Compra, Venda ou Troca não mostra o comentário?",
         texto:

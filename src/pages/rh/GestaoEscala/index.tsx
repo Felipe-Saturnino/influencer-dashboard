@@ -13,6 +13,7 @@ import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
 import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { supabase } from "../../../lib/supabase";
+import { hojeIsoBrasil } from "../../../lib/dateBrasil";
 import { FONT } from "../../../constants/theme";
 import { getCarouselBtnNavStyle, getCarouselPeriodLabelStyle } from "../../../lib/carouselNavStyles";
 import { getFiltroBarPillStateStyle } from "../../../lib/filterBarStyles";
@@ -430,12 +431,8 @@ export default function RhGestaoEscalaPage({ modo = "estudio" }: GestaoEscalaPag
   const podeAlterarEscalaAprovada = perm.canEditarOk;
   const mostrarFiltroArea = perm.canView === "sim" || perm.canView === "proprios";
 
-  const hojeIso = useMemo(() => {
-    const y = hoje.getFullYear();
-    const m = String(hoje.getMonth() + 1).padStart(2, "0");
-    const d = String(hoje.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  }, [hoje]);
+  /** Dia civil America/Sao_Paulo — paridade com RPC `rh_gestao_escala_grade_alterar_celula`. */
+  const hojeIso = useMemo(() => hojeIsoBrasil(), [hoje]);
 
   const mesHydratingRef = useRef(false);
   /** Áreas já hidratadas da BD no mês corrente (`refMes|areaKey`). */
