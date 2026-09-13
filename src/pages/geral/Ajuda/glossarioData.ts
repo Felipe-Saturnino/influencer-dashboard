@@ -1021,9 +1021,16 @@ export const GLOSSARIO_CATEGORIAS: GlossarioCategoria[] = [
       {
         termo: "Relatório de Turno",
         definicao:
-          "Aba do Controle de Turno com cards por Manhã, Tarde e Noite (Não iniciado, Rascunho ou Publicado). Os indicadores Escalados, Presentes, Atrasados e Faltas vêm da Escala do Turno do dia. Também registra SOS, Figurino, Equipamentos, checklist de manutenção e comentários gerais.",
+          "Aba do Controle de Turno com cards por Manhã, Tarde e Noite (Não iniciado, Rascunho ou Publicado). Os indicadores Escalados, Presentes, Atrasados e Faltas vêm da Escala do Turno do dia. Também registra Termômetro do Turno (0–5 estrelas), SOS, Figurino, Equipamentos, checklist de manutenção e comentários gerais.",
         nota:
-          "Para publicar, todos os horários dos prestadores precisam estar aprovados na aba Escala do Turno. Atrasados: entrada realizada mais de 5 minutos após o horário previsto do estúdio.",
+          "Para publicar, todos os horários dos prestadores precisam estar aprovados na aba Escala do Turno. Atrasados: entrada realizada mais de 5 minutos após o horário previsto do estúdio. Termômetro: 0 = turno horrível · 5 = turno maravilhoso.",
+        referencia: "Controle de Turno",
+      },
+      {
+        termo: "Termômetro do Turno",
+        definicao:
+          "Nota de 0 a 5 estrelas no Relatório de Turno (aba Anotações) que resume como foi a complexidade/qualidade do turno.",
+        nota: "0 estrelas = turno horrível; 5 estrelas = turno maravilhoso. Obrigatório para publicar o relatório.",
         referencia: "Controle de Turno",
       },
       {

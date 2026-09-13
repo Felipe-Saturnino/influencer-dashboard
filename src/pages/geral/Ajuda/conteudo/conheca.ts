@@ -946,7 +946,7 @@ export const CONTEUDO_CONHECA: Record<string, { titulo: string; blocos: { subtit
       {
         subtitulo: "Relatório de Turno",
         texto:
-          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Os indicadores **Escalados**, **Presentes**, **Atrasados** e **Faltas** (Game Presenters e Shuffler) vêm da **Escala do Turno** do mesmo dia e turno — **Atrasados** quando a entrada realizada passa de 5 minutos do horário previsto do estúdio. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. SOS, Figurino, Equipamentos, checklist de manutenção e comentários são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**. Tutorial: `/Ajuda/Tutoriais/ControleTurnoRelatorio`.",
+          "Cards por turno (Manhã, Tarde, Noite): **Não iniciado**, **Rascunho** ou **Publicado**. Os indicadores **Escalados**, **Presentes**, **Atrasados** e **Faltas** (Game Presenters e Shuffler) vêm da **Escala do Turno** do mesmo dia e turno — **Atrasados** quando a entrada realizada passa de 5 minutos do horário previsto do estúdio. Com permissão de **Criar**, use **Gerar Relatório**; com **Editar**, continue o rascunho. Na aba **Anotações**, informe o **Termômetro do Turno** (0 a 5 estrelas: 0 = horrível, 5 = maravilhoso) e os **Comentários Gerais** — ambos obrigatórios para publicar. SOS, Figurino, Equipamentos e checklist de manutenção também são gravados por data e turno. Para publicar, todos os prestadores da Escala do Turno precisam estar com **Aprovado Sim**. Tutorial: `/Ajuda/Tutoriais/ControleTurnoRelatorio`.",
       },
       {
         subtitulo: "Tutoriais (Ajuda)",

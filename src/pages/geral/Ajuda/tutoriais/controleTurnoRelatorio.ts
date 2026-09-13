@@ -29,7 +29,7 @@ export const TUTORIAL_CONTROLE_TURNO_RELATORIO: TutorialDef = {
     {
       titulo: "2. Gerar o relatório (rascunho)",
       texto:
-        "1. No card do turno desejado (status **não Iniciado**), clique em **Gerar Relatório** (exige permissão de **Criar**).\n2. Abre o modal **Gerar Relatório — [turno]** com três abas:\n   — **Andamento do Turno** — SOS, Figurino e Equipamentos (texto ou marque «Não houveram…»).\n   — **Manutenção** — checklists (Limpeza das Roletas, Limpeza das Mesas, Trocas de Cartas, Limpeza da CC Machine, Cartas Contadas).\n   — **Anotações** — **Comentários Gerais** (obrigatório).\n3. Preencha o que ocorreu no turno. Troque de aba sem perder o preenchimento.\n4. Clique em **Salvar rascunho** para gravar sem publicar. O status do card passa a **Relatório em Rascunho**.",
+        "1. No card do turno desejado (status **não Iniciado**), clique em **Gerar Relatório** (exige permissão de **Criar**).\n2. Abre o modal **Gerar Relatório — [turno]** com três abas:\n   — **Andamento do Turno** — SOS, Figurino e Equipamentos (texto ou marque «Não houveram…»).\n   — **Manutenção** — checklists (Limpeza das Roletas, Limpeza das Mesas, Trocas de Cartas, Limpeza da CC Machine, Cartas Contadas).\n   — **Anotações** — **Termômetro do Turno** (0 a 5 estrelas; 0 = horrível · 5 = maravilhoso) e **Comentários Gerais** (ambos obrigatórios para publicar).\n3. Preencha o que ocorreu no turno. Troque de aba sem perder o preenchimento.\n4. Clique em **Salvar rascunho** para gravar sem publicar. O status do card passa a **Relatório em Rascunho**.",
       imagens: [
         {
           src: `${IMG}/02-gerar-relatorio.png`,
@@ -51,7 +51,7 @@ export const TUTORIAL_CONTROLE_TURNO_RELATORIO: TutorialDef = {
     {
       titulo: "4. Publicar o relatório",
       texto:
-        "1. No modal (gerar ou editar), clique em **Publicar**.\n2. Para publicar, **todos** os prestadores da **Escala do Turno** daquele dia/turno precisam estar com **Aprovado Sim**.\n3. Se ainda faltar aprovação, aparece o aviso **Não é possível publicar** — o sistema oferece **Salvar como Rascunho** até a Escala do Turno estar completa.\n4. Com a escala aprovada, **Publicar** grava o relatório final. O status vira **Relatório Publicado**.",
+        "1. No modal (gerar ou editar), clique em **Publicar**.\n2. Na aba **Anotações**, o **Termômetro do Turno** (0–5) e os **Comentários Gerais** precisam estar preenchidos.\n3. Para publicar, **todos** os prestadores da **Escala do Turno** daquele dia/turno precisam estar com **Aprovado Sim**.\n4. Se ainda faltar aprovação, aparece o aviso **Não é possível publicar** — o sistema oferece **Salvar como Rascunho** até a Escala do Turno estar completa.\n5. Com a escala aprovada, **Publicar** grava o relatório final. O status vira **Relatório Publicado**.",
       aviso:
         "Publique só depois de concluir as sinalizações e aprovações na aba Escala do Turno.",
       imagens: [

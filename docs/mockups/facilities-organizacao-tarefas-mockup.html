@@ -466,8 +466,9 @@
         <ul>
           <li>Carrossel só com <strong>hoje e dias anteriores</strong> — seta direita desabilitada no dia corrente.</li>
           <li>Filtro de Staff lista apenas membros do time <strong>Copa</strong> (agregadora: Todos Staff).</li>
-          <li>Cada bloco do modal começa <strong>recolhido</strong> — clique no título (seta) para expandir. Itens OK / Não OK (observação só em Não OK) + Comentário obrigatório + Arquivos opcional.</li>
+          <li>Cada bloco do modal começa <strong>recolhido</strong> — clique no título (seta) para expandir. Itens OK / Não OK (observação só em Não OK) + Comentário obrigatório + Imagens opcional.</li>
           <li><strong>Publicar</strong> exige pelo menos 1 bloco iniciado e completo. Blocos não iniciados podem ficar vazios. <strong>Salvar Rascunho</strong> grava sem exigir preenchimento.</li>
+          <li>Status de Realização: rascunho → <strong>Em andamento</strong>; publicado → <strong>Realizado</strong>.</li>
           <li>Campo <strong>Troca de bucha</strong> (Copa Dealers) só aparece se o dia selecionado no carrossel for <strong>segunda-feira</strong>.</li>
           <li>Aba Reposição de Materiais: placeholder. Modais Ver / Editar / Analisar: próxima rodada.</li>
         </ul>
@@ -792,9 +793,9 @@
     ];
 
     const REGISTROS = [
-      { iso: "2026-09-09", hora: "08:15", staffId: "maria", prestador: "Maria Aparecida", realizacao: "Realizado", avaliacao: "Pendente" },
+      { iso: "2026-09-09", hora: "08:15", staffId: "maria", prestador: "Maria Aparecida", realizacao: "Em andamento", avaliacao: "—" },
       { iso: "2026-09-09", hora: "07:40", staffId: "ana", prestador: "Ana Beatriz", realizacao: "Realizado", avaliacao: "Aprovado" },
-      { iso: "2026-09-08", hora: "08:02", staffId: "juliana", prestador: "Juliana Ferreira", realizacao: "Realizado", avaliacao: "Reprovado" },
+      { iso: "2026-09-08", hora: "08:02", staffId: "juliana", prestador: "Juliana Ferreira", realizacao: "Em andamento", avaliacao: "—" },
       { iso: "2026-09-08", hora: "07:55", staffId: "fernanda", prestador: "Fernanda Souza", realizacao: "Realizado", avaliacao: "Aprovado" },
       { iso: "2026-09-07", hora: "08:10", staffId: "maria", prestador: "Maria Aparecida", realizacao: "Realizado", avaliacao: "Aprovado" },
     ];
@@ -820,6 +821,7 @@
 
     function badgeRealizacao(v) {
       if (v === "Realizado") return `<span class="badge badge-ok">${v}</span>`;
+      if (v === "Em andamento") return `<span class="badge badge-pend">${v}</span>`;
       return `<span class="badge badge-muted">${v}</span>`;
     }
     function badgeAvaliacao(v) {
@@ -835,7 +837,10 @@
     function renderTabela() {
       const d = dataOffset(offsetDias);
       const iso = isoOf(d);
-      const rows = REGISTROS.filter((r) => r.iso === iso && (staffId === "todos" || r.staffId === staffId));
+      const rows = REGISTROS
+        .filter((r) => r.iso === iso && (staffId === "todos" || r.staffId === staffId))
+        .slice()
+        .sort((a, b) => b.hora.localeCompare(a.hora));
       const tbody = document.getElementById("tbodyChecklist");
       const empty = document.getElementById("emptyChecklist");
       const wrap = tbody.closest(".table-wrap");
@@ -950,7 +955,7 @@
     function blocoUploadHtml(blocoId) {
       return `
         <div>
-          <span class="field-label-muted">Arquivos</span>
+          <span class="field-label-muted">Imagens</span>
           <input type="file" class="input-arquivos" data-bloco="${blocoId}" accept="image/*,video/*" multiple hidden />
           <div class="upload-zone" data-bloco="${blocoId}" tabindex="0" role="group" aria-label="Adicionar imagem ou vídeo — arraste, solte ou cole (Ctrl+V) imagem ou vídeo nesta área">
             <button type="button" class="upload-btn" data-bloco="${blocoId}">
@@ -1308,10 +1313,38 @@
         setTimeout(() => { micro.textContent = "ou arraste, solte ou cole (Ctrl+V) aqui"; }, 450);
       }
     });
-    document.getElementById("btnRascunhoTarefa").addEventListener("click", () => {
+    function agoraHora() {
+      const n = new Date();
+      return `${pad(n.getHours())}:${pad(n.getMinutes())}`;
+    }
+
+    function prestadorAtual() {
+      if (staffId !== "todos") {
+        const s = STAFF.find((x) => x.id === staffId);
+        return { staffId, prestador: s?.nome || "Maria Aparecida" };
+      }
+      return { staffId: "maria", prestador: "Maria Aparecida" };
+    }
+
+    function gravarTarefa(realizacao) {
+      const d = dataOffset(offsetDias);
+      const quem = prestadorAtual();
+      REGISTROS.unshift({
+        iso: isoOf(d),
+        hora: agoraHora(),
+        staffId: quem.staffId,
+        prestador: quem.prestador,
+        realizacao,
+        avaliacao: realizacao === "Realizado" ? "Pendente" : "—",
+      });
       document.getElementById("errRegistrar").classList.remove("show");
       closeRegistrar();
-      toast("Rascunho salvo (mockup — nenhum dado foi gravado).");
+      renderTabela();
+    }
+
+    document.getElementById("btnRascunhoTarefa").addEventListener("click", () => {
+      gravarTarefa("Em andamento");
+      toast("Rascunho salvo — status Em andamento.");
     });
     document.getElementById("btnPublicarTarefa").addEventListener("click", () => {
       const { ok, firstFailTab, firstFailBlock, msg } = validarPublicacao();
@@ -1324,9 +1357,8 @@
         err.scrollIntoView({ block: "nearest" });
         return;
       }
-      err.classList.remove("show");
-      closeRegistrar();
-      toast("Tarefa publicada (mockup — nenhum dado foi gravado).");
+      gravarTarefa("Realizado");
+      toast("Tarefa publicada — status Realizado.");
     });
 
     document.getElementById("tbodyChecklist").addEventListener("click", (e) => {

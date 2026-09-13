@@ -134,6 +134,8 @@ export type CtRelatorioTurnoRow = {
   manutencao: CtRelatorioManutencaoJson;
   manutencao_resumo: string;
   comentarios: string;
+  /** 0–5; null = não informado. */
+  termometro: number | null;
   publicado_em: string | null;
   updated_at: string | null;
 };
@@ -938,6 +940,19 @@ export async function updateManutencao(input: {
   }
 }
 
+/** Select canónico do Relatório de Turno. */
+const RELATORIO_TURNO_SELECT =
+  "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, termometro, publicado_em, updated_at";
+
+/** Normaliza termômetro 0–5; inválido → null. */
+export function parseTermometroCt(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.trunc(n);
+  return i >= 0 && i <= 5 ? i : null;
+}
+
 function mapRelatorio(row: Record<string, unknown>): CtRelatorioTurnoRow {
   const rawManut = row.manutencao;
   const manut =
@@ -960,6 +975,7 @@ function mapRelatorio(row: Record<string, unknown>): CtRelatorioTurnoRow {
     manutencao: manut,
     manutencao_resumo: String(row.manutencao_resumo ?? ""),
     comentarios: String(row.comentarios ?? ""),
+    termometro: parseTermometroCt(row.termometro),
     publicado_em: row.publicado_em ? String(row.publicado_em) : null,
     updated_at: row.updated_at ? String(row.updated_at) : null,
   };
@@ -969,9 +985,7 @@ export async function listRelatoriosTurnoCt(diaIso: string): Promise<CtRelatorio
   const dia = diaIso.slice(0, 10);
   const { data, error } = await supabase
     .from("escala_ct_relatorio_turno")
-    .select(
-      "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, publicado_em, updated_at",
-    )
+    .select(RELATORIO_TURNO_SELECT)
     .eq("data", dia)
     .order("turno", { ascending: true });
 
@@ -989,9 +1003,7 @@ export async function getRelatorioTurnoCt(
   const dia = diaIso.slice(0, 10);
   const { data, error } = await supabase
     .from("escala_ct_relatorio_turno")
-    .select(
-      "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, publicado_em, updated_at",
-    )
+    .select(RELATORIO_TURNO_SELECT)
     .eq("data", dia)
     .eq("turno", turno)
     .maybeSingle();
@@ -1018,6 +1030,7 @@ export async function upsertRelatorioTurnoCt(input: {
   manutencao: CtRelatorioManutencaoJson;
   manutencaoResumo: string;
   comentarios: string;
+  termometro: number | null;
 }): Promise<CtRelatorioTurnoRow> {
   const uid = await authUserId();
   if (!uid) throw new Error(MSG_ERRO_CT_SALVAR);
@@ -1025,6 +1038,7 @@ export async function upsertRelatorioTurnoCt(input: {
   const dia = input.data.slice(0, 10);
   const existing = await getRelatorioTurnoCt(dia, input.turno).catch(() => null);
   const nome = getCurrentUserNome(input.relatorNome);
+  const termometro = parseTermometroCt(input.termometro);
   const payload = {
     data: dia,
     turno: input.turno,
@@ -1040,6 +1054,7 @@ export async function upsertRelatorioTurnoCt(input: {
     manutencao: input.manutencao,
     manutencao_resumo: input.manutencaoResumo.trim(),
     comentarios: input.comentarios.trim(),
+    termometro,
     publicado_em: input.status === "publicado" ? new Date().toISOString() : existing?.publicado_em ?? null,
   };
 
@@ -1048,9 +1063,7 @@ export async function upsertRelatorioTurnoCt(input: {
       .from("escala_ct_relatorio_turno")
       .update(payload)
       .eq("id", existing.id)
-      .select(
-        "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, publicado_em, updated_at",
-      )
+      .select(RELATORIO_TURNO_SELECT)
       .single();
     if (error || !data) {
       console.error(error);
@@ -1062,9 +1075,7 @@ export async function upsertRelatorioTurnoCt(input: {
   const { data, error } = await supabase
     .from("escala_ct_relatorio_turno")
     .insert({ ...payload, relator_user_id: uid, relator_nome: nome })
-    .select(
-      "id, data, turno, status, relator_user_id, relator_nome, sos, sos_nenhum, figurino, figurino_nenhum, equipamentos, equipamentos_nenhum, manutencao, manutencao_resumo, comentarios, publicado_em, updated_at",
-    )
+    .select(RELATORIO_TURNO_SELECT)
     .single();
   if (error || !data) {
     console.error(error);

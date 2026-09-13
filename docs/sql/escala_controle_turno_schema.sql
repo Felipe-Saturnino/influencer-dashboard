@@ -346,6 +346,7 @@ CREATE TABLE IF NOT EXISTS public.escala_ct_relatorio_turno (
   manutencao          jsonb NOT NULL DEFAULT '{}'::jsonb,
   manutencao_resumo   text NOT NULL DEFAULT '',
   comentarios         text NOT NULL DEFAULT '',
+  termometro          smallint,
   publicado_em        timestamptz,
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now(),
@@ -374,6 +375,20 @@ $$;
 
 ALTER TABLE public.escala_ct_relatorio_turno
   ADD COLUMN IF NOT EXISTS equipamentos text NOT NULL DEFAULT '';
+
+ALTER TABLE public.escala_ct_relatorio_turno
+  ADD COLUMN IF NOT EXISTS termometro smallint;
+
+ALTER TABLE public.escala_ct_relatorio_turno
+  DROP CONSTRAINT IF EXISTS escala_ct_relatorio_termometro_chk;
+
+ALTER TABLE public.escala_ct_relatorio_turno
+  ADD CONSTRAINT escala_ct_relatorio_termometro_chk CHECK (
+    termometro IS NULL OR (termometro >= 0 AND termometro <= 5)
+  );
+
+COMMENT ON COLUMN public.escala_ct_relatorio_turno.termometro IS
+  'Complexidade/qualidade do turno: 0 = horrível · 5 = maravilhoso. NULL = não informado.';
 
 CREATE INDEX IF NOT EXISTS escala_ct_relatorio_data_idx
   ON public.escala_ct_relatorio_turno (data DESC);

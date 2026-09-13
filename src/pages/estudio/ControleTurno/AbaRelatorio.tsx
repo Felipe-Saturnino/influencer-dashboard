@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { ClipboardList, Eye, FileText, Loader2, Wrench } from "lucide-react";
+import { ClipboardList, Eye, FileText, Loader2, Star, Wrench } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { usePermission } from "../../../hooks/usePermission";
@@ -46,6 +46,8 @@ type RelCampos = {
   equipamentos: string;
   manutencao: string;
   comentarios: string;
+  /** 0–5; null = não informado. */
+  termometro: number | null;
 };
 
 type ModalRelAba = "andamento" | "manutencao" | "anotacoes";
@@ -58,6 +60,7 @@ type RelFormState = {
   equipamentos: string;
   equipamentosNao: boolean;
   comentarios: string;
+  termometro: number | null;
   roletas: Record<string, boolean>;
   limpezaMesas: Record<string, boolean>;
   trocaCartas: Record<string, boolean>;
@@ -87,6 +90,7 @@ const EMPTY_FORM: RelFormState = {
   equipamentos: "",
   equipamentosNao: false,
   comentarios: "",
+  termometro: null,
   roletas: {},
   limpezaMesas: {},
   trocaCartas: {},
@@ -108,6 +112,7 @@ function camposToForm(campos: RelCampos, manut?: CtRelatorioManutencaoJson, flag
     equipamentos: campos.equipamentos,
     equipamentosNao: flags?.equipamentosNenhum ?? !campos.equipamentos.trim(),
     comentarios: campos.comentarios,
+    termometro: campos.termometro,
     roletas: { ...(manut?.roletas ?? {}) },
     limpezaMesas: { ...(manut?.limpezaMesas ?? {}) },
     trocaCartas: { ...(manut?.trocaCartas ?? {}) },
@@ -142,6 +147,7 @@ function formToCampos(form: RelFormState): RelCampos {
     equipamentos: form.equipamentosNao ? "" : form.equipamentos.trim(),
     manutencao: buildManutencaoSummary(form),
     comentarios: form.comentarios.trim(),
+    termometro: form.termometro,
   };
 }
 
@@ -161,6 +167,7 @@ function validarPublicar(form: RelFormState): string | null {
   if (!form.equipamentosNao && !form.equipamentos.trim()) {
     return "Preencha Equipamentos ou marque que não houveram situações.";
   }
+  if (form.termometro == null) return "Selecione o Termômetro do Turno (0 a 5 estrelas).";
   if (!form.comentarios.trim()) return "Preencha Comentários Gerais.";
   return null;
 }
@@ -188,6 +195,7 @@ const EMPTY_CAMPOS: RelCampos = {
   equipamentos: "",
   manutencao: "",
   comentarios: "",
+  termometro: null,
 };
 
 const EMPTY_STATS: StatsBloco = { escalados: 0, presentes: 0, atrasados: 0, faltas: 0 };
@@ -247,6 +255,7 @@ function rowToRelData(row: CtRelatorioTurnoRow): RelTurnoData {
       equipamentos: row.equipamentos_nenhum ? "" : row.equipamentos,
       manutencao: row.manutencao_resumo,
       comentarios: row.comentarios,
+      termometro: row.termometro,
     },
     manutJson: row.manutencao ?? {},
   };
@@ -269,6 +278,7 @@ function keywordsRel(r: RelTurnoData): string {
     c.equipamentos,
     c.manutencao,
     c.comentarios,
+    c.termometro != null ? `termometro ${c.termometro}` : "",
     STATUS_PILL[r.status].label,
     "Aguardando geração do Relatório",
   ].join(" ");
@@ -458,6 +468,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
             manutencao: manutJson,
             manutencaoResumo: campos.manutencao,
             comentarios: form.comentarios,
+            termometro: form.termometro,
           }),
           listEstudiosHorariosTurnoCt(),
           listPresencaDiaTurno(diaIso, turno),
@@ -767,6 +778,38 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
             </ModalTabPanel>
 
             <ModalTabPanel active={modalAba === "anotacoes"} id="panel-rel-anotacoes" labelledBy="tab-rel-anotacoes">
+              <div style={{ marginBottom: 14 }}>
+                <div
+                  style={{
+                    display: "block",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: FONT.body,
+                    color: t.text,
+                    marginBottom: 6,
+                  }}
+                  id="rel-termometro-label"
+                >
+                  Termômetro do Turno
+                  <CampoObrigatorioMark />
+                </div>
+                <p
+                  style={{
+                    margin: "0 0 10px",
+                    fontSize: 12,
+                    color: t.textMuted,
+                    fontFamily: FONT.body,
+                  }}
+                >
+                  0 estrelas = turno horrível · 5 estrelas = turno maravilhoso
+                </p>
+                <TermometroEstrelasInput
+                  value={form.termometro}
+                  onChange={(v) => setForm((f) => ({ ...f, termometro: v }))}
+                  labelledBy="rel-termometro-label"
+                  t={t}
+                />
+              </div>
               <div>
                 <label
                   htmlFor="rel-comentarios"
@@ -787,7 +830,7 @@ export function AbaRelatorio({ diaIso, busca }: Props) {
                   value={form.comentarios}
                   onChange={(e) => setForm((f) => ({ ...f, comentarios: e.target.value }))}
                   rows={6}
-                  placeholder="Comentários gerais do turno…"
+                  placeholder="Comentários gerais do turno..."
                   style={textareaStyle(t)}
                 />
               </div>
@@ -1015,15 +1058,22 @@ function CardTurno({
             t={t}
           />
         </div>
-        <div className="app-grid-2" style={{ gap: 12, marginBottom: 12 }}>
+        <div className="app-grid-2" style={{ gap: 12, marginBottom: 12, width: "100%" }}>
           <CampoLeituraLinhas
             label="Manutenção"
             valor={data.campos.manutencao}
             empty="Não houveram Manutenções no Turno"
             t={t}
           />
-          <CampoLeitura label="Comentários Gerais" valor={data.campos.comentarios} empty="—" t={t} />
+          <CampoTermometroLeitura value={data.campos.termometro} t={t} />
         </div>
+        <CampoLeitura
+          label="Comentários Gerais"
+          valor={data.campos.comentarios}
+          empty="—"
+          t={t}
+          full
+        />
 
         <div
           style={{
@@ -1128,6 +1178,138 @@ function StatCell({
   );
 }
 
+const TERMOMETRO_STAR_COR = "#f59e0b";
+const TERMOMETRO_VALORES = [0, 1, 2, 3, 4, 5] as const;
+
+function TermometroEstrelasInput({
+  value,
+  onChange,
+  labelledBy,
+  t,
+}: {
+  value: number | null;
+  onChange: (v: number) => void;
+  labelledBy: string;
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-labelledby={labelledBy}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}
+    >
+      {TERMOMETRO_VALORES.map((n) => {
+        const ativo = value === n;
+        const estrelaPreenchida = value != null && n > 0 && n <= value;
+        if (n === 0) {
+          return (
+            <button
+              key={n}
+              type="button"
+              role="radio"
+              aria-checked={ativo}
+              aria-label="0 estrelas — turno horrível"
+              onClick={() => onChange(0)}
+              style={{
+                minWidth: 36,
+                height: 36,
+                padding: "0 10px",
+                borderRadius: 10,
+                border: `1px solid ${ativo ? TERMOMETRO_STAR_COR : t.cardBorder}`,
+                background: ativo
+                  ? `color-mix(in srgb, ${TERMOMETRO_STAR_COR} 18%, ${t.inputBg})`
+                  : t.inputBg,
+                color: ativo ? TERMOMETRO_STAR_COR : t.text,
+                fontWeight: 800,
+                fontSize: 14,
+                fontFamily: FONT.body,
+                cursor: "pointer",
+              }}
+            >
+              0
+            </button>
+          );
+        }
+        return (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={ativo}
+            aria-label={`${n} ${n === 1 ? "estrela" : "estrelas"}${n === 5 ? " — turno maravilhoso" : ""}`}
+            onClick={() => onChange(n)}
+            title={`${n} ${n === 1 ? "estrela" : "estrelas"}`}
+            style={{
+              width: 36,
+              height: 36,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 10,
+              border: `1px solid ${ativo ? TERMOMETRO_STAR_COR : t.cardBorder}`,
+              background: ativo
+                ? `color-mix(in srgb, ${TERMOMETRO_STAR_COR} 18%, ${t.inputBg})`
+                : t.inputBg,
+              cursor: "pointer",
+              color: estrelaPreenchida || ativo ? TERMOMETRO_STAR_COR : t.textMuted,
+              padding: 0,
+            }}
+          >
+            <Star
+              size={18}
+              aria-hidden
+              fill={estrelaPreenchida ? TERMOMETRO_STAR_COR : "none"}
+              strokeWidth={2}
+            />
+          </button>
+        );
+      })}
+      {value != null ? (
+        <span style={{ fontSize: 12, color: t.textMuted, fontFamily: FONT.body, marginLeft: 4 }}>
+          {value} {value === 1 ? "estrela" : "estrelas"}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function TermometroEstrelasLeitura({
+  value,
+  t,
+}: {
+  value: number | null;
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  if (value == null) {
+    return (
+      <div style={{ fontSize: 13, color: t.textMuted, fontFamily: FONT.body }}>—</div>
+    );
+  }
+  return (
+    <div
+      style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+      aria-label={`Termômetro do Turno: ${value} de 5`}
+    >
+      {[1, 2, 3, 4, 5].map((n) => {
+        const on = n <= value;
+        return (
+          <Star
+            key={n}
+            size={16}
+            aria-hidden
+            fill={on ? TERMOMETRO_STAR_COR : "none"}
+            color={on ? TERMOMETRO_STAR_COR : t.textMuted}
+            strokeWidth={2}
+          />
+        );
+      })}
+      <span style={{ fontSize: 13, color: t.text, fontFamily: FONT.body, marginLeft: 6, fontWeight: 600 }}>
+        {value}/5
+      </span>
+    </div>
+  );
+}
+
 function CampoLeitura({
   label,
   valor,
@@ -1143,7 +1325,7 @@ function CampoLeitura({
 }) {
   const vazio = !valor.trim();
   return (
-    <div style={full ? { marginBottom: 12 } : undefined}>
+    <div style={full ? { width: "100%", marginBottom: 12 } : undefined}>
       <div
         style={{
           fontSize: 10,
@@ -1163,10 +1345,38 @@ function CampoLeitura({
           fontFamily: FONT.body,
           color: vazio ? t.textMuted : t.text,
           fontStyle: vazio ? "italic" : "normal",
+          whiteSpace: full ? "pre-wrap" : undefined,
         }}
       >
         {vazio ? empty : valor}
       </div>
+    </div>
+  );
+}
+
+function CampoTermometroLeitura({
+  value,
+  t,
+}: {
+  value: number | null;
+  t: ReturnType<typeof useApp>["theme"];
+}) {
+  return (
+    <div style={{ width: "100%" }}>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: t.textMuted,
+          marginBottom: 4,
+          fontFamily: FONT.body,
+        }}
+      >
+        Termômetro do Turno
+      </div>
+      <TermometroEstrelasLeitura value={value} t={t} />
     </div>
   );
 }
