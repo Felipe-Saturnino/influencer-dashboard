@@ -153,7 +153,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **`service_manager`:** `HomeServiceManager.tsx` — informativos `service_manager`. RLS: `20260531200000_home_service_manager_feed_rls.sql`.
 - **`customer_service`:** `HomeCustomerService.tsx` — atalhos Atendimento + Ajuda + Organograma; RLS: `20260707213000_role_customer_service.sql`.
 - **`game_presenter`:** `HomeGamePresenter.tsx` — informativos `game_presenter`; atalhos Calendário + Ajuda + Organograma. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
-- **`shuffler`:** `HomeShuffler.tsx` — informativos `shuffler`. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
+- **`shuffler`:** `HomeShuffler.tsx` — informativos `shuffler`; atalhos Calendário + Marketplace + Ajuda + Organograma. RLS: `20260708170000_roles_game_presenter_shuffler.sql`.
 - **`tech_ops`:** `HomeTechOps.tsx` — informativos `tech_ops`. RLS: `20260706180000_role_tech_ops.sql`.
 - **`shift_leader`:** `HomeShiftLeader.tsx` — informativos `shift_leader`. RLS: `20260601200000_home_shift_leader_feed_rls.sql`.
 - **`rh`:** `HomeRh.tsx` — baseline Prestador (copy a personalizar); informativos `rh`. RLS: `20260710200000_home_rh_feed_rls.sql`.
@@ -162,7 +162,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Dados Home Investidor/Operador:** não dependem de `usePermission` das páginas fonte; RLS em `supabase/migrations/20260526120000_home_investidor_feed_rls.sql` e `20260526140000_home_operador_feed_rls.sql` (aplicar no Supabase).
 - **Período KPI / Aquisição (Home Investidor, Executivo e Operador Padrão):** `getHomeKpiReferenciaMes` / `getHomeKpiPeriodo` em `lib/homeInvestidorMtd.ts` — dia 1 do mês civil → mês anterior (ETL D-1); demais dias → MTD do mês de referência até ontem. Subtítulo do bloco: `HomeSectionMesSubtitle` com label `"Maio 2026"`.
 - **`afiliado`:** layout dedicado em `HomeAfiliado.tsx` — boas-vindas com rótulo «Afiliado»; alerta de cadastro incompleto com copy de comissões e CTA **Ir para Afiliados** (`afiliados`); playbook pendente (mesmo fluxo do influencer); **sem** revisão cadastral RH de 6 meses; **sem** blocos Próximas lives / Feedbacks recentes; acesso rápido (Overview Afiliado primeiro quando liberado) + Informações.
-- **Demais perfis:** Home legada (`index.tsx`) — atalhos dinâmicos pelo menu + blocos **influencer** / agência. Influencer e afiliado **não** exibem revisão cadastral RH de 6 meses na Home.
+- **Demais perfis:** Home legada (`index.tsx`) — atalhos dinâmicos pelo menu (busca no Acesso rápido quando há mais de 8) + blocos **influencer** / agência. Homes por role em `React.lazy`. Influencer/Afiliado: «Olá» e «Li e Ocultar» usam `useIdentidadeEfetiva`; loading «Carregando…» até o feed pronto. Influencer e afiliado **não** exibem revisão cadastral RH de 6 meses na Home.
 
 ---
 
@@ -189,7 +189,8 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 ## Configurações (`geral/Configuracoes/`)
 
 - Preferências de conta/tema; CTAs de marca quando aplicável.
-- **Handoff:** abas e campos por perfil.
+- **Alterar senha:** mesmos 4 requisitos + CTA desabilitado até cumprir (paridade com Trocar senha obrigatória); `<form>` + `htmlFor`; loading «Salvando…» (U+2026); erros Auth mapeados com suporte; vermelho semântico `#e84025`.
+- Sem permissão: string Global «Você não tem permissão para visualizar esta página.»
 
 ## Simulador de Login (`geral/SimuladorLogin/`)
 
@@ -203,7 +204,7 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Quem usa o simulador** precisa ler as matrizes de escopo no Supabase — políticas RLS `_pode_usar_simulador_login()` em `operadora_pages`, `gestor_tipo_pages`, `prestador_tipo_pages` (migration `20260708160000_simulador_login_rls_scope_pages.sql`).
 - **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner` (texto **Encerrar visualização**); sessão em `sessionStorage`. Trocar de perfil com visualização ativa pede confirmação **Substituir visualização**. Encerrar só limpa a faixa depois de restaurar o perfil real; falha mostra aviso.
 - **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado). **Gestão de Estúdios** permanece visível se o perfil simulado tiver acesso.
-- **Identidade:** o nome no avatar continua o da conta real («sua conta não muda»). A **Home de perfil** (boas-vindas) e os dados pessoais usam o usuário visualizado. **Toda página** que resolve «eu» (cadastro RH, Minhas Fotos, recibos, Ver = Próprios, Overview Prestador, Marketplace, Figurinos, Incidentes, Performance Hub, Dados de Cadastro, Portais) deve usar `useIdentidadeEfetiva()` / `dadosUsuarioEfetivo` — **proibido** `user.email` / `user.id` / `user.role === admin` da conta viewer. RPCs com `auth.uid()` continuam da conta real: recortar no cliente pelo e-mail simulado. Check-in, uploads e demais escritas ficam ocultos (somente leitura).
+- **Identidade:** o nome no avatar continua o da conta real («sua conta não muda»). A **Home de perfil** (boas-vindas «Olá») e os dados pessoais usam o usuário visualizado (`useIdentidadeEfetiva`). **«Li e Ocultar»** nos feeds da Home grava/lê com `userId` efetivo — **proibido** `user.id` do viewer. **Toda página** que resolve «eu» (cadastro RH, Minhas Fotos, recibos, Ver = Próprios, Overview Prestador, Marketplace, Figurinos, Incidentes, Performance Hub, Dados de Cadastro, Portais) deve usar `useIdentidadeEfetiva()` / `dadosUsuarioEfetivo` — **proibido** `user.email` / `user.id` / `user.role === admin` da conta viewer. RPCs com `auth.uid()` continuam da conta real: recortar no cliente pelo e-mail simulado. Check-in, uploads e demais escritas ficam ocultos (somente leitura).
 - **Calendário:** com Ver = Próprios no perfil simulado, a grade/filtros seguem o cadastro RH do **usuário escolhido** (não o viewer); **Relatório de Justificativas** (nome canónico; legado «Relatório de Presença») e filtros Time/Staff só aparecem se o perfil efetivo tiver essa permissão. **Adicionar à agenda** fica oculto no Simulador (o token iCal segue o `auth.uid()` do viewer, não da pessoa simulada).
 - **Galeria de Fotos:** Gerais = fotos de evento (partilhadas). **Minhas Fotos** = só o colaborador do e-mail simulado — sem listar todos os prestadores só porque o JWT é de administrador.
 

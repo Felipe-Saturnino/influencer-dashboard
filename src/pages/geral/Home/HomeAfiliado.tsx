@@ -1,4 +1,5 @@
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { MENU } from "../../../constants/menu";
@@ -23,7 +24,7 @@ import {
   GiShare,
   GiRoundTable,
 } from "react-icons/gi";
-import { ArrowRight, AlertTriangle, Handshake, Users, Network, BookOpen } from "lucide-react";
+import { ArrowRight, AlertTriangle, Handshake, Users, Network, BookOpen, Loader2 } from "lucide-react";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
 import { isPerfilIncompleto } from "../../../lib/influencerPerfilCompleto";
@@ -80,6 +81,7 @@ export default function HomeAfiliado() {
     simulacaoSomenteLeitura,
     dadosUsuarioEfetivo,
   } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
   const { propsFor } = useAppPageNav();
 
   const uid = dadosUsuarioEfetivo?.id ?? user?.id;
@@ -112,6 +114,8 @@ export default function HomeAfiliado() {
   const cardBg = t.cardBg;
 
   const nomePerfil = perfilRow?.nome_artistico?.trim() || dadosUsuarioEfetivo?.name || user.name;
+  const nomeBoasVindas =
+    (perfilRow?.nome_artistico || nomeEfetivo || user.name || "").trim() || "usuário";
   const welcomeAvatarLabel = simulacaoSomenteLeitura
     ? (user.name || user.email || "?")
     : (perfilRow?.nome_artistico?.trim() || user.name || user.email || "?");
@@ -214,7 +218,7 @@ export default function HomeAfiliado() {
                 marginBottom: 6,
               }}
             >
-              Olá, {user.name}!
+              Olá, {nomeBoasVindas}!
             </h1>
             <p style={{ margin: 0, fontSize: 12, color: t.textMuted, marginBottom: 8 }}>{ROLE_LABEL_AFILIADO}</p>
             <p style={{ margin: 0, fontSize: 14, color: t.textMuted, lineHeight: 1.5 }}>{WELCOME_SUBTITLE}</p>
@@ -226,6 +230,24 @@ export default function HomeAfiliado() {
           </div>
         </div>
       </div>
+
+      {!ready ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 0 24px",
+            color: t.textMuted,
+            fontSize: 13,
+            fontFamily: FONT.body,
+          }}
+          role="status"
+        >
+          <Loader2 className="app-lucide-spin" size={16} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          Carregando…
+        </div>
+      ) : null}
 
       {showPerfilIncompleto ? (
         <div style={alertBoxStyle}>

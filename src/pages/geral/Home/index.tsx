@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, type ReactNode } from "react";
 import { useApp } from "../../../context/AppContext";
+import { useIdentidadeEfetiva } from "../../../hooks/useIdentidadeEfetiva";
 import { FONT } from "../../../constants/theme";
 import { FONT_TITLE } from "../../../lib/dashboardConstants";
 import { MENU } from "../../../constants/menu";
@@ -28,25 +29,13 @@ import {
   GiShare,
   GiRoundTable,
 } from "react-icons/gi";
-import { ArrowRight, AlertTriangle } from "lucide-react";
+import { ArrowRight, AlertTriangle, Loader2 } from "lucide-react";
 import { roleParidadeInfluencer } from "../../../lib/staffRoles";
-import HomeInvestidor from "./HomeInvestidor";
-import HomeExecutivo from "./HomeExecutivo";
-import HomePrestador from "./HomePrestador";
-import HomeFigurino from "./HomeFigurino";
-import HomeComunicacao from "./HomeComunicacao";
-import HomePerformanceCoach from "./HomePerformanceCoach";
-import HomeServiceManager from "./HomeServiceManager";
-import HomeCustomerService from "./HomeCustomerService";
-import HomeGamePresenter from "./HomeGamePresenter";
-import HomeShuffler from "./HomeShuffler";
-import HomeTechOps from "./HomeTechOps";
-import HomeShiftLeader from "./HomeShiftLeader";
-import HomeRh from "./HomeRh";
-import HomeOperadorRouter from "./operador/HomeOperadorRouter";
-import HomeAfiliado from "./HomeAfiliado";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
+import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
+import { SEARCH_PLACEHOLDER_ELLIPSIS } from "../../../lib/searchBarConstants";
+import { textoContemBusca } from "../../../lib/searchText";
 import {
   buscarFuncionarioRevisaoCadastralPorEmail,
   revisaoCadastralPendenteParaFuncionario,
@@ -56,6 +45,63 @@ import {
   tituloAtualizacaoCadastralPendente,
 } from "../../../lib/rhCadastroRevisao";
 import { extrairPrimeiroNome } from "../../../lib/aniversarioHoje";
+
+const HomeInvestidor = lazy(() => import("./HomeInvestidor"));
+const HomeExecutivo = lazy(() => import("./HomeExecutivo"));
+const HomePrestador = lazy(() => import("./HomePrestador"));
+const HomeFigurino = lazy(() => import("./HomeFigurino"));
+const HomeComunicacao = lazy(() => import("./HomeComunicacao"));
+const HomePerformanceCoach = lazy(() => import("./HomePerformanceCoach"));
+const HomeServiceManager = lazy(() => import("./HomeServiceManager"));
+const HomeCustomerService = lazy(() => import("./HomeCustomerService"));
+const HomeGamePresenter = lazy(() => import("./HomeGamePresenter"));
+const HomeShuffler = lazy(() => import("./HomeShuffler"));
+const HomeTechOps = lazy(() => import("./HomeTechOps"));
+const HomeShiftLeader = lazy(() => import("./HomeShiftLeader"));
+const HomeRh = lazy(() => import("./HomeRh"));
+const HomeOperadorRouter = lazy(() => import("./operador/HomeOperadorRouter"));
+const HomeAfiliado = lazy(() => import("./HomeAfiliado"));
+
+const LIVE_HOME_COLS = "id, data, horario, plataforma, titulo, observacao, status";
+const LIVE_RESULTADO_HOME_COLS = "live_id, duracao_horas, duracao_min, media_views, max_views";
+
+function dataLocalIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function HomeChunkFallback() {
+  const { theme: t } = useApp();
+  return (
+    <div
+      className="app-page-shell"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 320,
+        fontFamily: FONT.body,
+      }}
+    >
+      <div style={{ textAlign: "center", color: t.textMuted }}>
+        <Loader2
+          size={24}
+          className="app-lucide-spin"
+          color="var(--brand-primary, #7c3aed)"
+          aria-hidden
+          style={{ marginBottom: 12 }}
+        />
+        <div style={{ fontSize: 13 }}>Carregando…</div>
+      </div>
+    </div>
+  );
+}
+
+function withHomeSuspense(node: ReactNode) {
+  return <Suspense fallback={<HomeChunkFallback />}>{node}</Suspense>;
+}
 
 const BRAND = {
   roxo: "#4a2082",
@@ -196,7 +242,7 @@ const ROLE_WELCOME: Record<Role, { title: string; subtitle: string }> = {
   prestador: {
     title: "Área de atuação",
     subtitle:
-      "Seu menu reflete as áreas atribuídas ao seu perfil. Em caso de dúvida sobre acessos, fale com o administrador.",
+      "Seu menu reflete as áreas atribuídas ao seu perfil. Em caso de dúvida sobre acessos, fale com o suporte.",
   },
   executivo: {
     title: "Dashboard executivo",
@@ -324,6 +370,7 @@ export default function Home() {
     simulacaoSomenteLeitura,
     dadosUsuarioEfetivo,
   } = useApp();
+  const { name: nomeEfetivo } = useIdentidadeEfetiva();
   const { propsFor } = useAppPageNav();
 
   const [influencerHomeReady, setInfluencerHomeReady] = useState(false);
@@ -334,6 +381,7 @@ export default function Home() {
   const [resultadosPorLive, setResultadosPorLive] = useState<Record<string, LiveResultado>>({});
   const [revisaoCadastralPendenteHome, setRevisaoCadastralPendenteHome] = useState(false);
   const [revisaoCadastralHomeReady, setRevisaoCadastralHomeReady] = useState(false);
+  const [buscaAtalho, setBuscaAtalho] = useState("");
 
   useEffect(() => {
     const roleGate = effectiveRole ?? user?.role;
@@ -408,6 +456,7 @@ export default function Home() {
 
     async function loadInfluencerHome() {
       setInfluencerHomeReady(false);
+      const hojeIso = dataLocalIso(new Date());
       const [perfilRes, confRes, agRes, realRes] = await Promise.all([
         supabase
           .from("influencer_perfil")
@@ -419,14 +468,15 @@ export default function Home() {
         supabase.from("guia_confirmacoes").select("item_key").eq("influencer_id", uid),
         supabase
           .from("lives")
-          .select("*")
+          .select(LIVE_HOME_COLS)
           .eq("influencer_id", uid)
           .eq("status", "agendada")
+          .gte("data", hojeIso)
           .order("data", { ascending: true })
           .order("horario", { ascending: true }),
         supabase
           .from("lives")
-          .select("*")
+          .select(LIVE_HOME_COLS)
           .eq("influencer_id", uid)
           .eq("status", "realizada")
           .order("data", { ascending: false })
@@ -454,7 +504,10 @@ export default function Home() {
       const ids = realizadas.map((l) => l.id);
       const map: Record<string, LiveResultado> = {};
       if (ids.length > 0) {
-        const { data: resRows } = await supabase.from("live_resultados").select("*").in("live_id", ids);
+        const { data: resRows } = await supabase
+          .from("live_resultados")
+          .select(LIVE_RESULTADO_HOME_COLS)
+          .in("live_id", ids);
         if (resRows) {
           (resRows as LiveResultado[]).forEach((r) => {
             map[r.live_id] = r;
@@ -476,63 +529,63 @@ export default function Home() {
   const roleHome = effectiveRole ?? user.role;
 
   if (roleHome === "investidor") {
-    return <HomeInvestidor />;
+    return withHomeSuspense(<HomeInvestidor />);
   }
 
   if (roleHome === "executivo") {
-    return <HomeExecutivo />;
+    return withHomeSuspense(<HomeExecutivo />);
   }
 
   if (roleHome === "prestador") {
-    return <HomePrestador />;
+    return withHomeSuspense(<HomePrestador />);
   }
 
   if (roleHome === "figurino") {
-    return <HomeFigurino />;
+    return withHomeSuspense(<HomeFigurino />);
   }
 
   if (roleHome === "comunicacao") {
-    return <HomeComunicacao />;
+    return withHomeSuspense(<HomeComunicacao />);
   }
 
   if (roleHome === "performance_coach") {
-    return <HomePerformanceCoach />;
+    return withHomeSuspense(<HomePerformanceCoach />);
   }
 
   if (roleHome === "service_manager") {
-    return <HomeServiceManager />;
+    return withHomeSuspense(<HomeServiceManager />);
   }
 
   if (roleHome === "customer_service") {
-    return <HomeCustomerService />;
+    return withHomeSuspense(<HomeCustomerService />);
   }
 
   if (roleHome === "game_presenter") {
-    return <HomeGamePresenter />;
+    return withHomeSuspense(<HomeGamePresenter />);
   }
 
   if (roleHome === "shuffler") {
-    return <HomeShuffler />;
+    return withHomeSuspense(<HomeShuffler />);
   }
 
   if (roleHome === "tech_ops") {
-    return <HomeTechOps />;
+    return withHomeSuspense(<HomeTechOps />);
   }
 
   if (roleHome === "shift_leader") {
-    return <HomeShiftLeader />;
+    return withHomeSuspense(<HomeShiftLeader />);
   }
 
   if (roleHome === "rh") {
-    return <HomeRh />;
+    return withHomeSuspense(<HomeRh />);
   }
 
   if (roleHome === "operador") {
-    return <HomeOperadorRouter />;
+    return withHomeSuspense(<HomeOperadorRouter />);
   }
 
   if (roleHome === "afiliado") {
-    return <HomeAfiliado />;
+    return withHomeSuspense(<HomeAfiliado />);
   }
 
   const role = roleHome;
@@ -560,10 +613,15 @@ export default function Home() {
       atalhosOrdenados.unshift(item);
     }
   }
+  const atalhosVisiveis = buscaAtalho.trim()
+    ? atalhosOrdenados.filter((a) => textoContemBusca(a.label, buscaAtalho))
+    : atalhosOrdenados;
   const accentColor = useBrand ? "var(--brand-primary)" : BRAND.roxoVivo;
   const cardBg = useBrand && operadoraBrand?.brand_bg ? operadoraBrand.brand_bg : t.cardBg;
 
   const nomePerfil = perfilRow?.nome_artistico?.trim() || dadosUsuarioEfetivo?.name || user.name;
+  const nomeBoasVindas =
+    (perfilRow?.nome_artistico || nomeEfetivo || user.name || "").trim() || "usuário";
   const welcomeAvatarLabel = simulacaoSomenteLeitura
     ? (user.name || user.email || "?")
     : (perfilRow?.nome_artistico?.trim() || user.name || user.email || "?");
@@ -657,7 +715,7 @@ export default function Home() {
                 marginBottom: 6,
               }}
             >
-              Olá, {user.name}!
+              Olá, {nomeBoasVindas}!
             </h1>
             <p style={{ margin: 0, fontSize: 12, color: t.textMuted, marginBottom: 8 }}>
               {ROLE_LABELS[role]}
@@ -673,6 +731,24 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {role === "influencer" && !influencerHomeReady ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 0 24px",
+            color: t.textMuted,
+            fontSize: 13,
+            fontFamily: FONT.body,
+          }}
+          role="status"
+        >
+          <Loader2 className="app-lucide-spin" size={16} color="var(--brand-primary, #7c3aed)" aria-hidden />
+          Carregando…
+        </div>
+      ) : null}
 
       {showRevisaoCadastralAlert && (
         <div style={alertBoxStyle}>
@@ -978,9 +1054,25 @@ export default function Home() {
           Clique em um atalho abaixo para ir diretamente à página desejada.
         </p>
 
+        {atalhosOrdenados.length > 8 ? (
+          <div style={{ marginBottom: 14 }}>
+            <BarraPesquisaPagina
+              value={buscaAtalho}
+              onChange={setBuscaAtalho}
+              placeholder={`Pesquisar atalho${SEARCH_PLACEHOLDER_ELLIPSIS}`}
+              aria-label="Pesquisar atalho no acesso rápido"
+              wrapperStyle={{ width: "100%" }}
+            />
+          </div>
+        ) : null}
+
         {atalhosOrdenados.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: t.textMuted }}>
             Nenhuma página disponível no momento.
+          </p>
+        ) : atalhosVisiveis.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, color: t.textMuted }}>
+            Nenhum atalho encontrado para a busca.
           </p>
         ) : (
           <div
@@ -990,7 +1082,7 @@ export default function Home() {
               gap: 12,
             }}
           >
-            {atalhosOrdenados.map((atalho) => {
+            {atalhosVisiveis.map((atalho) => {
               const Icon = atalho.icon;
               return (
                 <a

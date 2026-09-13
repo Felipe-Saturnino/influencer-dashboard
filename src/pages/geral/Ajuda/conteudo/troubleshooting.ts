@@ -1132,7 +1132,7 @@ export const CONTEUDO_TROUBLE: Record<string, { titulo: string; blocos: { subtit
           "Ao salvar (+ Adicionar ou primeiro Salvar), o sistema sempre tenta criar o usuário afiliado na plataforma. Nesse momento são obrigatórios: Nome, E-mail e Operadora (aba Contato). Se faltar e-mail ou operadora, a mensagem em vermelho indica o campo. Para apenas rascunhar no funil sem criar usuário, ainda não há fluxo separado — qualquer Salvar com registro sem usuário dispara a criação.",
       },
       {
-        subtitulo: "O botão ficou em 'Salvando...' por muito tempo?",
+        subtitulo: "O botão ficou em 'Salvando…' por muito tempo?",
         texto:
           "Ao salvar um prospecto sem usuário criado, a plataforma aciona uma função de servidor para criar o cadastro. Em caso de lentidão, aguarde até 30 segundos. Se aparecer mensagem de erro, verifique se o e-mail já não está cadastrado na plataforma — cada e-mail aceita apenas um usuário.",
       },

@@ -195,8 +195,57 @@
     background: color-mix(in srgb, var(--brand-contrast) 15%, transparent);
     color: var(--brand-contrast); font-weight: 700;
   }
-
   .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-4 + .grid-4 { margin-top: 12px; }
+  .btn-ver {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--card-border); background: var(--input-bg); color: var(--text);
+  }
+  .btn-ver:hover { border-color: var(--brand-contrast); color: var(--brand-contrast); }
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(15, 15, 26, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay[hidden] { display: none !important; }
+  .modal-panel {
+    width: min(480px, 100%);
+    max-height: 90dvh;
+    overflow: auto;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--box-radius);
+    box-shadow: var(--box-shadow);
+  }
+  .modal-header {
+    position: sticky; top: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 18px;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--card-border);
+  }
+  .modal-header h2 {
+    margin: 0; font-family: var(--font-title); font-size: 16px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .04em; color: var(--text);
+  }
+  .modal-close {
+    width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+    border: none; background: transparent; color: var(--text);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .modal-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .modal-field label {
+    display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .modal-field .val {
+    font-size: 14px; color: var(--text); line-height: 1.45;
+    padding: 10px 12px; border-radius: 10px;
+    background: var(--input-bg); border: 1px solid var(--card-border);
+  }
+
   .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -575,118 +624,67 @@
     </section>
   </div>
 
-  <!-- ═══════════════ ABA KPIs DE PERFORMANCE (NOVA) ═══════════════ -->
+  <!-- ═══════════════ ABA KPIs DE PERFORMANCE ═══════════════ -->
   <div class="panel hidden" id="panel-perf" role="tabpanel">
-    <div class="note note--warn" style="margin-bottom:14px">
-      <b>Proposta de produto — aba nova.</b> Consolida avaliações do <b>Performance Hub</b> (Academy)
-      no Overview Prestador, com bloco de <b>punições / medidas</b> (ainda sem domínio dedicado —
-      mock sugere vínculo com Notificação de Suspensão / advertências do Controle de Turno e Solicitações RH).
-      Times com avaliações hoje: <b>Game Presenter</b> e <b>Shuffler</b>. SL/SM: mensagem de indisponibilidade.
-    </div>
-
     <div id="perf-disponivel">
       <section class="box">
         <div class="section-title">
           <strong>KPIs de Performance</strong><span class="dash">—</span>
-          <span class="sub" id="s-perf-kpi">avaliações publicadas no mês · vs mês anterior</span>
+          <span class="sub" id="s-perf-kpi">avaliações publicadas · Performance Hub</span>
         </div>
-        <div class="grid-5" id="grid-perf-kpi"></div>
+        <div class="grid-4" id="grid-perf-linha1"></div>
+        <div class="grid-4" id="grid-perf-linha2" style="margin-top:12px"></div>
       </section>
 
       <section class="box">
         <div class="section-title">
-          <strong>Dimensões</strong><span class="dash">—</span>
-          <span class="sub" id="s-perf-dim">médias 0–10 · pesos do Performance Hub</span>
-        </div>
-        <div class="grid-3" id="grid-perf-dim"></div>
-      </section>
-
-      <section class="box" id="box-perf-equipe">
-        <div class="section-title">
-          <strong>Equipe</strong><span class="dash">—</span>
-          <span class="sub">ranking do time — só visão de time</span>
+          <strong>KPIs de Feedback</strong><span class="dash">—</span>
+          <span class="sub">Solicitações RH · só status Aprovado</span>
         </div>
         <div class="table-wrap">
           <table>
-            <caption>Equipe Performance</caption>
-            <thead>
-              <tr>
-                <th scope="col">#</th>
-                <th class="left" scope="col">Prestador</th>
-                <th scope="col">Nota média</th>
-                <th scope="col" id="th-dim-a">Imagem</th>
-                <th scope="col" id="th-dim-b">Comunicação</th>
-                <th scope="col" id="th-dim-c">Mesa</th>
-                <th scope="col">Avaliações</th>
-                <th scope="col">Último status</th>
-              </tr>
-            </thead>
-            <tbody id="tb-perf-equipe"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="box">
-        <div class="section-title">
-          <strong id="t-perf-avaliacoes">Avaliações no período</strong><span class="dash">—</span>
-          <span class="sub">fonte: Performance Hub (Aguardando / Feedback / Aprovado)</span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <caption>Avaliações</caption>
+            <caption>Feedbacks aprovados</caption>
             <thead>
               <tr>
                 <th scope="col">Data</th>
-                <th class="left" scope="col" id="th-av-prestador">Prestador</th>
-                <th scope="col">Nota</th>
-                <th scope="col">Imagem</th>
-                <th scope="col">Comunicação</th>
-                <th scope="col" id="th-av-tech">Mesa</th>
-                <th scope="col">Status</th>
+                <th class="left" scope="col">Tipo</th>
+                <th scope="col">Visualizar</th>
               </tr>
             </thead>
-            <tbody id="tb-perf-avaliacoes"></tbody>
+            <tbody id="tb-perf-feedback"></tbody>
           </table>
-        </div>
-      </section>
-
-      <section class="box">
-        <div class="section-title">
-          <strong>Punições e medidas</strong><span class="dash">—</span>
-          <span class="sub">proposta — medidas ativas / no período</span>
-        </div>
-        <div class="grid-3" id="grid-perf-punicoes-kpi" style="margin-bottom:14px"></div>
-        <div class="table-wrap">
-          <table>
-            <caption>Punições</caption>
-            <thead>
-              <tr>
-                <th scope="col">Data</th>
-                <th class="left" scope="col" id="th-pun-prestador">Prestador</th>
-                <th scope="col">Tipo</th>
-                <th class="left" scope="col">Motivo</th>
-                <th scope="col">Origem</th>
-                <th scope="col">Status</th>
-              </tr>
-            </thead>
-            <tbody id="tb-perf-punicoes"></tbody>
-          </table>
-        </div>
-        <div class="note">
-          <b>Decisão em aberto:</b> (1) só listar medidas já existentes (Notificação de Suspensão / Descumprimento do Controle de Turno + Solicitações RH)?
-          (2) criar entidade própria de punição ligada à avaliação? (3) o prestador em Próprios vê as próprias medidas?
-          Neste mock, visão de time vê o time; individual vê só as suas.
         </div>
       </section>
     </div>
+  </div>
+</div>
 
-    <div id="perf-indisponivel" class="hidden">
-      <section class="box">
-        <div style="padding:48px 16px; text-align:center; color:var(--text-muted); font-size:13px">
-          KPIs de Performance ainda não se aplicam a este time.<br/>
-          Avaliações do Performance Hub cobrem <b>Game Presenter</b> e <b>Shuffler</b>.
-        </div>
-      </section>
+<!-- Modal Ver Feedback -->
+<div class="modal-overlay" id="modal-fb" hidden>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-fb-title">
+    <div class="modal-header">
+      <h2 id="modal-fb-title">Ver Feedback</h2>
+      <button type="button" class="modal-close" id="modal-fb-close" aria-label="Fechar modal" title="Fechar modal">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Tipo</label>
+        <div class="val" id="modal-fb-tipo">—</div>
+      </div>
+      <div class="modal-field">
+        <label>Data da Aplicação</label>
+        <div class="val" id="modal-fb-data">—</div>
+      </div>
+      <div class="modal-field">
+        <label>Aplicador</label>
+        <div class="val" id="modal-fb-aplicador">—</div>
+      </div>
+      <div class="modal-field">
+        <label>Observação</label>
+        <div class="val" id="modal-fb-obs">—</div>
+      </div>
     </div>
   </div>
 </div>
@@ -720,14 +718,57 @@ function mom(pct, dir, inv = false) {
 function kpi(label, value, momHtml = "") {
   return `<div class="kpi"><div class="kpi__label">${label}</div><div class="kpi__value">${value}</div>${momHtml}</div>`;
 }
-function dimCard(label, nota, peso) {
-  const pct = Math.max(0, Math.min(100, (nota / 10) * 100));
-  const cor = nota >= 8.5 ? "var(--pos)" : nota >= 7 ? "var(--warn)" : "var(--neg)";
-  return `<div class="kpi">
-    <div class="kpi__label">${label} · peso ${peso}</div>
-    <div class="kpi__value" style="color:${cor}">${nota.toFixed(2).replace(".", ",")}</div>
-    <div class="dim-bar"><i style="width:${pct}%;background:${cor}"></i></div>
-  </div>`;
+/** Feedbacks Aprovados — Solicitações RH. Orientação = data solicitação; demais = data atendimento. */
+const FEEDBACKS_MOCK = [
+  {
+    id: "fb1",
+    tipo: "orientacao",
+    tipoLabel: "Orientação",
+    dataTabela: "12/08/2026",
+    dataAplicacao: "12/08/2026",
+    aplicador: "Carla Mendes",
+    observacao: "Alinhamento de postura em mesa VIP e ritmo de abertura.",
+  },
+  {
+    id: "fb2",
+    tipo: "alinhamento",
+    tipoLabel: "Alinhamento de Execução",
+    dataTabela: "08/08/2026",
+    dataAplicacao: "08/08/2026",
+    aplicador: "RH — Juliana Prado",
+    observacao: "Reforço do procedimento de embaralhamento e validação visual.",
+  },
+  {
+    id: "fb3",
+    tipo: "notif_descumprimento",
+    tipoLabel: "Notificação de Descumprimento Contratual",
+    dataTabela: "02/08/2026",
+    dataAplicacao: "02/08/2026",
+    aplicador: "RH — Marcos Vieira",
+    observacao: "Descumprimento de pontualidade após orientação prévia.",
+  },
+  {
+    id: "fb4",
+    tipo: "notif_suspensao",
+    tipoLabel: "Notificação de Suspensão da Execução Contratual",
+    dataTabela: "22/07/2026",
+    dataAplicacao: "22/07/2026",
+    aplicador: "RH — Juliana Prado",
+    observacao: "Suspensão temporária da execução contratual — 1 turno.",
+  },
+  {
+    id: "fb5",
+    tipo: "persistencia",
+    tipoLabel: "Persistência do Descumprimento",
+    dataTabela: "15/07/2026",
+    dataAplicacao: "15/07/2026",
+    aplicador: "RH — Marcos Vieira",
+    observacao: "Reincidência após Notificação de Descumprimento Contratual.",
+  },
+];
+
+function fmtNota(n) {
+  return n.toFixed(2).replace(".", ",");
 }
 
 function render() {
@@ -756,18 +797,24 @@ function render() {
   // abas produto
   const tabKpis = document.getElementById("tab-kpis");
   const tabPerf = document.getElementById("tab-perf");
+  const temPerf = timeKey === "gp" || timeKey === "shuf";
+
   if (timeKey === "sl") {
     tabKpis.hidden = true;
-    if (aba === "kpis") setAba("escala");
+    if (aba === "kpis") aba = "escala";
   } else {
     tabKpis.hidden = false;
     document.getElementById("tab-kpis-label").textContent = timeKey === "sm" ? "KPIs de OCR" : "KPIs de Mesa";
   }
 
+  // KPIs de Performance só GP / Shuffler
+  tabPerf.hidden = !temPerf;
+  if (!temPerf && aba === "perf") aba = "escala";
+
   // panels
   document.getElementById("panel-escala").classList.toggle("hidden", aba !== "escala");
   document.getElementById("panel-kpis").classList.toggle("hidden", aba !== "kpis");
-  document.getElementById("panel-perf").classList.toggle("hidden", aba !== "perf");
+  document.getElementById("panel-perf").classList.toggle("hidden", aba !== "perf" || !temPerf);
   document.querySelectorAll(".tab").forEach((t) => {
     const on = t.dataset.aba === aba;
     t.classList.toggle("tab--on", on);
@@ -776,7 +823,7 @@ function render() {
 
   renderEscala(isTime);
   renderKpis(isTime);
-  renderPerf(isTime);
+  if (temPerf) renderPerf(isTime);
 }
 
 function renderEscala(isTime) {
@@ -1052,66 +1099,67 @@ function renderKpis(isTime) {
 }
 
 function renderPerf(isTime) {
-  const temPerf = timeKey === "gp" || timeKey === "shuf";
-  document.getElementById("perf-disponivel").classList.toggle("hidden", !temPerf);
-  document.getElementById("perf-indisponivel").classList.toggle("hidden", temPerf);
-  if (!temPerf) return;
-
   const techLabel = timeKey === "gp" ? "Mesa" : "Procedimentos";
-  document.getElementById("th-dim-c").textContent = techLabel;
-  document.getElementById("th-av-tech").textContent = techLabel;
   document.getElementById("s-perf-kpi").textContent = isTime
-    ? "média do time · avaliações publicadas · vs mês anterior"
-    : "suas avaliações publicadas · vs mês anterior";
+    ? "avaliações publicadas do time · Performance Hub"
+    : "avaliações publicadas · Performance Hub";
 
-  document.getElementById("grid-perf-kpi").innerHTML = [
-    kpi("Nota média", isTime ? "8,42" : "8,70", mom("0,18", "up")),
-    kpi("Última nota", isTime ? "8,90" : "8,90", mom("0,40", "up")),
-    kpi("Avaliações", isTime ? "36" : "2", mom("4", "up")),
-    kpi("Em Feedback", isTime ? "3" : "0", mom("1", "down", true)),
-    kpi("Aprovadas", isTime ? "28" : "2", mom("3", "up")),
+  document.getElementById("grid-perf-linha1").innerHTML = [
+    kpi("Avaliações", isTime ? "36" : "4"),
+    kpi("Aguardando", isTime ? "5" : "1"),
+    kpi("Em feedback", isTime ? "3" : "1"),
+    kpi("Aprovados", isTime ? "28" : "2"),
   ].join("");
 
-  document.getElementById("grid-perf-dim").innerHTML = timeKey === "gp"
-    ? [dimCard("Imagem", 8.6, 1), dimCard("Comunicação", 8.3, 2), dimCard("Mesa", 8.4, 2)].join("")
-    : [dimCard("Imagem", 8.1, 1), dimCard("Comunicação", 8.0, 1), dimCard("Procedimentos", 8.5, 2)].join("");
-
-  const boxEq = document.getElementById("box-perf-equipe");
-  boxEq.classList.toggle("hidden", !isTime);
-  document.getElementById("th-av-prestador").classList.toggle("hidden", !isTime);
-  document.getElementById("th-pun-prestador").classList.toggle("hidden", !isTime);
-  document.getElementById("t-perf-avaliacoes").textContent = isTime ? "Avaliações no período" : "Minhas avaliações";
-
-  if (isTime) {
-    document.getElementById("tb-perf-equipe").innerHTML = timeKey === "gp"
-      ? `<tr><td>1</td><td class="left">Ana Souza</td><td>8,70</td><td>8,9</td><td>8,6</td><td>8,7</td><td>2</td><td><span class="badge b-ok">Aprovado</span></td></tr>
-         <tr><td>2</td><td class="left">Lia Fernandes</td><td>8,35</td><td>8,4</td><td>8,2</td><td>8,4</td><td>2</td><td><span class="badge b-ok">Aprovado</span></td></tr>
-         <tr><td>3</td><td class="left">Marina Costa</td><td>7,80</td><td>7,9</td><td>7,6</td><td>7,9</td><td>2</td><td><span class="badge b-fb">Feedback</span></td></tr>
-         <tr><td>4</td><td class="left">Pedro Santos</td><td>7,55</td><td>7,4</td><td>7,5</td><td>7,7</td><td>1</td><td><span class="badge b-wait">Aguardando</span></td></tr>`
-      : `<tr><td>1</td><td class="left">Bruno Lima</td><td>8,50</td><td>8,4</td><td>8,3</td><td>8,7</td><td>2</td><td><span class="badge b-ok">Aprovado</span></td></tr>
-         <tr><td>2</td><td class="left">Helena Rocha</td><td>8,10</td><td>8,0</td><td>8,1</td><td>8,2</td><td>2</td><td><span class="badge b-ok">Aprovado</span></td></tr>
-         <tr><td>3</td><td class="left">Igor Mendes</td><td>7,40</td><td>7,2</td><td>7,3</td><td>7,6</td><td>1</td><td><span class="badge b-fb">Feedback</span></td></tr>`;
-  }
-
-  document.getElementById("tb-perf-avaliacoes").innerHTML = isTime
-    ? `<tr><td>10/08</td><td class="left">Ana Souza</td><td>8,90</td><td>9,0</td><td>8,8</td><td>8,9</td><td><span class="badge b-ok">Aprovado</span></td></tr>
-       <tr><td>08/08</td><td class="left">Marina Costa</td><td>7,60</td><td>7,8</td><td>7,4</td><td>7,7</td><td><span class="badge b-fb">Feedback</span></td></tr>
-       <tr><td>05/08</td><td class="left">Pedro Santos</td><td>7,55</td><td>7,4</td><td>7,5</td><td>7,7</td><td><span class="badge b-wait">Aguardando</span></td></tr>
-       <tr><td>02/08</td><td class="left">Lia Fernandes</td><td>8,40</td><td>8,5</td><td>8,3</td><td>8,4</td><td><span class="badge b-ok">Aprovado</span></td></tr>`
-    : `<tr><td>10/08</td><td class="hidden"></td><td>8,90</td><td>9,0</td><td>8,8</td><td>8,9</td><td><span class="badge b-ok">Aprovado</span></td></tr>
-       <tr><td>28/07</td><td class="hidden"></td><td>8,50</td><td>8,6</td><td>8,4</td><td>8,5</td><td><span class="badge b-ok">Aprovado</span></td></tr>`;
-
-  document.getElementById("grid-perf-punicoes-kpi").innerHTML = [
-    kpi("Ativas", isTime ? "2" : "0"),
-    kpi("No período", isTime ? "3" : "0"),
-    kpi("Suspensões", isTime ? "1" : "0"),
+  const notaTotal = isTime ? 8.42 : 8.7;
+  const imagem = isTime ? (timeKey === "gp" ? 8.55 : 8.2) : timeKey === "gp" ? 8.9 : 8.4;
+  const comunicacao = isTime ? (timeKey === "gp" ? 8.3 : 8.05) : timeKey === "gp" ? 8.6 : 8.3;
+  const tech = isTime ? (timeKey === "gp" ? 8.4 : 8.55) : timeKey === "gp" ? 8.7 : 8.7;
+  document.getElementById("grid-perf-linha2").innerHTML = [
+    kpi("Nota Total", fmtNota(notaTotal)),
+    kpi("Imagem", fmtNota(imagem)),
+    kpi("Comunicação", fmtNota(comunicacao)),
+    kpi(techLabel, fmtNota(tech)),
   ].join("");
 
-  document.getElementById("tb-perf-punicoes").innerHTML = isTime
-    ? `<tr><td>09/08</td><td class="left">Marina Costa</td><td><span class="badge b-warn">Advertência</span></td><td class="left">Reincidência de erro em Roleta</td><td>Controle de Turno</td><td><span class="badge b-ok">Ativa</span></td></tr>
-       <tr><td>03/08</td><td class="left">Pedro Santos</td><td><span class="badge b-fb">Suspensão</span></td><td class="left">Notificação de Suspensão da Execução Contratual</td><td>Solicitações RH</td><td><span class="badge b-wait">Em andamento</span></td></tr>
-       <tr><td>22/07</td><td class="left">Igor Mendes</td><td><span class="badge b-neutral">Descumprimento</span></td><td class="left">Notificação de Descumprimento</td><td>Controle de Turno</td><td><span class="badge b-neutral">Encerrada</span></td></tr>`
-    : `<tr><td colspan="6" style="color:var(--text-muted);padding:28px">Nenhuma medida no período.</td></tr>`;
+  const rows = isTime
+    ? FEEDBACKS_MOCK
+    : FEEDBACKS_MOCK.filter((f) => f.id === "fb1" || f.id === "fb2" || f.id === "fb3");
+
+  const eye = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
+  document.getElementById("tb-perf-feedback").innerHTML = rows
+    .map(
+      (f) => `
+    <tr>
+      <td>${f.dataTabela}</td>
+      <td class="left">${f.tipoLabel}</td>
+      <td>
+        <button type="button" class="btn-ver" data-fb-id="${f.id}" aria-label="Ver feedback" title="Ver">
+          ${eye}
+        </button>
+      </td>
+    </tr>`,
+    )
+    .join("");
+
+  document.querySelectorAll("[data-fb-id]").forEach((btn) => {
+    btn.addEventListener("click", () => openFeedbackModal(btn.getAttribute("data-fb-id")));
+  });
+}
+
+function openFeedbackModal(id) {
+  const f = FEEDBACKS_MOCK.find((x) => x.id === id);
+  if (!f) return;
+  document.getElementById("modal-fb-tipo").textContent = f.tipoLabel;
+  document.getElementById("modal-fb-data").textContent = f.dataAplicacao;
+  document.getElementById("modal-fb-aplicador").textContent = f.aplicador;
+  document.getElementById("modal-fb-obs").textContent = f.observacao;
+  document.getElementById("modal-fb").hidden = false;
+}
+
+function closeFeedbackModal() {
+  document.getElementById("modal-fb").hidden = true;
 }
 
 function setAba(next) {
@@ -1159,6 +1207,11 @@ document.getElementById("btn-theme").addEventListener("click", () => {
   document.body.setAttribute("data-theme", dark ? "dark" : "light");
   document.getElementById("btn-theme").setAttribute("aria-pressed", dark ? "true" : "false");
   document.getElementById("btn-theme").textContent = dark ? "Light" : "Dark";
+});
+
+document.getElementById("modal-fb-close").addEventListener("click", closeFeedbackModal);
+document.getElementById("modal-fb").addEventListener("click", (e) => {
+  if (e.target === document.getElementById("modal-fb")) closeFeedbackModal();
 });
 
 render();

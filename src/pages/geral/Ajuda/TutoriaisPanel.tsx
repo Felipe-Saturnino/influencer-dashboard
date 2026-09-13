@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BRAND_SEMANTIC, FONT, FONT_TITLE, type Theme } from "../../../constants/theme";
 import type { Role } from "../../../types";
+import { useApp } from "../../../context/AppContext";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { BarraPesquisaPagina } from "../../../components/BarraPesquisaPagina";
 import { BtnIconeAcaoLinha } from "../../../components/BtnIconeAcaoLinha";
@@ -49,6 +50,7 @@ export function TutoriaisPanel({
   visibility,
   onVisibilityChange,
 }: Props) {
+  const { navigateTo } = useApp();
   const brand = useDashboardBrand();
   const [busca, setBusca] = useState("");
   const [tutorialId, setTutorialId] = useState<string | null>(null);
@@ -103,18 +105,18 @@ export function TutoriaisPanel({
     if (nextTutorial) {
       const canonicalPath = buildAppPath("ajuda", "Tutoriais", nextTutorial.urlSlug);
       if (!areAppPathsEqual(window.location.pathname, canonicalPath)) {
-        window.history.replaceState(window.history.state, "", canonicalPath);
+        navigateTo("ajuda", "Tutoriais", { replace: true, detailSlug: nextTutorial.urlSlug });
         setRouteTutorialSlug(nextTutorial.urlSlug);
       }
     }
-  }, [nav, primeiroId, routeTutorialSlug, tutorialAtivoVisivel, tutorialId]);
+  }, [nav, primeiroId, routeTutorialSlug, tutorialAtivoVisivel, tutorialId, navigateTo]);
 
   const selecionarTutorial = (item: TutorialDef) => {
     setTutorialId(item.id);
     setRouteTutorialSlug(item.urlSlug);
     const path = buildAppPath("ajuda", "Tutoriais", item.urlSlug);
     if (!areAppPathsEqual(window.location.pathname, path)) {
-      window.history.pushState(window.history.state, "", path);
+      navigateTo("ajuda", "Tutoriais", { detailSlug: item.urlSlug });
     }
   };
 

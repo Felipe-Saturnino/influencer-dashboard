@@ -11,11 +11,13 @@ import type { Role } from "../../../../types";
 import { useHomeInformativos } from "../hooks/useHomeInformativos";
 import { useConteudoReacoes } from "../../../../hooks/useConteudoReacoes";
 import { homeSectionTitleStyle, HOME_BODY_MUTED } from "./homeSharedUi";
+import { getHomeStaffFeedNovidadeDesdeIso } from "../../../../lib/homePrestadorGaleriaNovidades";
 
 export function InformativosHome({ perfil, sectionIdPrefix }: { perfil: Role; sectionIdPrefix: string }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
-  const { loading, erro, lista } = useHomeInformativos(perfil);
+  const publicadoDesdeIso = useMemo(() => getHomeStaffFeedNovidadeDesdeIso(), []);
+  const { loading, erro, lista } = useHomeInformativos(perfil, { publicadoDesdeIso });
   const box = getPageContentBoxStyle(brand, t);
   const cardShadow = getPageContentBoxShadow(t.isDark ?? false);
   const chavesReacao = useMemo(

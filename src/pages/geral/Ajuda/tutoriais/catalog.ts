@@ -79,10 +79,4 @@ export function buildTutoriaisNav(
   return [...bySection.entries()].map(([section, items]) => ({ section, items }));
 }
 
-export function temAlgumTutorialVisivel(
-  role: Role | null | undefined,
-  visibility: TutorialVisibilidadeMap,
-  isAdmin: boolean,
-): boolean {
-  return TUTORIAIS_CATALOG.some((t) => tutorialVisivelParaRole(t.id, role, visibility, isAdmin));
-}
+export { temAlgumTutorialVisivel } from "./temAlgumTutorialVisivel";
