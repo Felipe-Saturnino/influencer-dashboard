@@ -270,12 +270,20 @@ export async function fetchRelatorioDiretoriaData(
   ])
 
   const nameMap: Record<string, string> = {}
+  /** Rótulo canónico no e-mail (cadastro pode ainda ter nome legado). */
+  const NOME_OPERADORA_EMAIL: Record<string, string> = {
+    betponto_bet: 'Bet.Bet',
+  }
+  const nomeExibicaoOperadora = (slug: string, nomeCadastro: string) =>
+    NOME_OPERADORA_EMAIL[slug] ?? nomeCadastro
+
   const nomePorSlug = new Map<string, string>()
   const operadorasAtivasMtd: { slug: string; nome: string }[] = []
   for (const o of (operadorasRes.data ?? []) as { slug: string; nome: string }[]) {
-    nomePorSlug.set(o.slug, o.nome)
+    const nome = nomeExibicaoOperadora(o.slug, o.nome)
+    nomePorSlug.set(o.slug, nome)
     if (!OPERADORAS_EXCLUIDAS_MTD.has(o.slug)) {
-      operadorasAtivasMtd.push({ slug: o.slug, nome: o.nome })
+      operadorasAtivasMtd.push({ slug: o.slug, nome })
     }
   }
 
