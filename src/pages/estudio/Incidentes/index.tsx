@@ -84,12 +84,8 @@ import {
   labelMesaIncidente,
   labelPrestadorIncidente,
   labelRelatorIncidente,
-  labelTipoJogoIncidente,
-  normalizarTipoJogoIncidente,
   timeAlvoLabel,
 } from "../../../lib/estudioIncidentesHelpers";
-import { GAME_IDENTITY_ICONS, isGameIdentityKey } from "../../../lib/gameIdentityIcons";
-import { getGameTagChipStyle } from "../../../lib/gameIdentityColors";
 import { ModalVerIncidente } from "./ModalVerIncidente";
 import { ModalNovoIncidente, type NovoIncidenteMesaOption } from "./ModalNovoIncidente";
 import { useIncidentesAbaSinais } from "./IncidentesAbaSinais";
@@ -102,7 +98,7 @@ const INCIDENTES_PAGE_SUBTITLE_PROPRIOS =
 
 type TimeFiltro = "todos" | IncidenteTimeAlvo;
 type AbaIncidentes = "tickets" | "sinais";
-type SortCol = "protocolo" | "data" | "prestador" | "time" | "jogo" | "incidente" | "tipo" | "relator";
+type SortCol = "protocolo" | "data" | "prestador" | "time" | "incidente" | "tipo" | "relator";
 
 const TIME_FILTRO_OPTIONS: { value: TimeFiltro; label: string }[] = [
   { value: "gp", label: "Game Presenter" },
@@ -145,12 +141,6 @@ const TIPOS_FILTRO_OPTIONS = Array.from(
   .sort((a, b) => a.localeCompare(b, "pt-BR"))
   .map((tipo) => ({ id: tipo, name: tipo }));
 
-function gameIdentityKeyFromJogo(jogo: string) {
-  const k = normalizarTipoJogoIncidente(jogo);
-  const candidato = k === "fb" ? "futebol_brasileiro" : k;
-  return isGameIdentityKey(candidato) ? candidato : null;
-}
-
 function contarPorCategoria(rows: EstudioIncidenteRow[]): Record<IncidenteCategoria, number> {
   const out: Record<IncidenteCategoria, number> = {
     caso: 0,
@@ -181,8 +171,6 @@ function sortRows(
         return compareLocaleTexto(a.prestador_nome, b.prestador_nome, dir);
       case "time":
         return compareLocaleTexto(timeAlvoLabel(a.time_alvo), timeAlvoLabel(b.time_alvo), dir);
-      case "jogo":
-        return compareLocaleTexto(labelTipoJogoIncidente(a.jogo), labelTipoJogoIncidente(b.jogo), dir);
       case "incidente":
         return compareLocaleTexto(incidenteCategoriaLabel(a.incidente), incidenteCategoriaLabel(b.incidente), dir);
       case "tipo":
@@ -827,7 +815,6 @@ export default function Incidentes() {
                       {th("data", "Abertura")}
                       {!isProprios ? th("prestador", "Prestador") : null}
                       {!isProprios && timeFiltro === "todos" ? th("time", "Time") : null}
-                      {th("jogo", "Jogo")}
                       {th("incidente", "Incidente")}
                       {th("tipo", "Tipo")}
                       {!isProprios ? th("relator", "Relator") : null}
@@ -839,8 +826,6 @@ export default function Incidentes() {
                   <tbody>
                     {rowsPagina.map((r, i) => {
                       const zebra = dataTable.zebraRow(i);
-                      const gameKey = gameIdentityKeyFromJogo(r.jogo);
-                      const chip = gameKey ? getGameTagChipStyle(gameKey, t.isDark) : null;
                       const categoriaMeta = INCIDENTE_CATEGORIA_META[r.incidente];
                       return (
                         <tr
@@ -859,30 +844,6 @@ export default function Incidentes() {
                           {!isProprios && timeFiltro === "todos" ? (
                             <td style={dataTable.tdCenter}>{timeAlvoLabel(r.time_alvo)}</td>
                           ) : null}
-                          <td style={dataTable.tdCenter}>
-                            {gameKey && chip ? (
-                              <span
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: 5,
-                                  padding: "3px 9px",
-                                  borderRadius: 20,
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  background: chip.bg,
-                                  border: `1px solid ${chip.border}`,
-                                  color: chip.color,
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {GAME_IDENTITY_ICONS[gameKey]}
-                                {labelTipoJogoIncidente(r.jogo)}
-                              </span>
-                            ) : (
-                              labelTipoJogoIncidente(r.jogo)
-                            )}
-                          </td>
                           <td style={dataTable.tdCenter}>
                             <span
                               style={{

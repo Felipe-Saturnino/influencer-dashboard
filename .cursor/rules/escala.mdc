@@ -16,7 +16,7 @@ alwaysApply: false
 
 # Seção Escala
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `business.mdc` (quando tocar estúdio vs operadora) → `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
 **Marca / filtros / headers:** Brand MDC. **`PageHeader`:** `title` = `menu.ts` + `subtitle` obrigatório (Brand §4). **Toolbar** de escala (Nova Escala, Salvar, Aprovar): botões com **texto** (Brand sec. 8).
 

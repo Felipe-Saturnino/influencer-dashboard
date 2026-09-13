@@ -385,7 +385,7 @@ function Root() {
             style={{ animation: "spin 1s linear infinite", marginBottom: 8 }}
           />
           <span style={{ fontSize: 14, color: effectiveRole === "operador" ? "var(--brand-text, #e5dce1)" : "#e5dce1" }}>
-            Carregando…
+            {user ? "Preparando sua conta…" : "Carregando…"}
           </span>
         </div>
       </div>

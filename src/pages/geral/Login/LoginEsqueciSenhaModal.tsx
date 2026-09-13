@@ -1,15 +1,15 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { ModalBase, ModalHeader } from "../../../components/OperacoesModal";
+import { AUTH_DARK } from "../../../constants/authScreen";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import {
   LOGIN_ACCESS_CONTACT_LINK_COLOR,
   LOGIN_ACCESS_CONTACT_MAILTO,
 } from "../../../lib/loginAccessContact";
 import { solicitarRecuperarSenha } from "../../../lib/recuperarSenha";
-import { useApp } from "../../../context/AppContext";
 
-type ModalPhase = "form" | "not_found" | "inactive" | "success" | "email_error";
+type ModalPhase = "form" | "not_found" | "inactive" | "success" | "email_error" | "config_error";
 
 interface Props {
   open: boolean;
@@ -20,10 +20,10 @@ interface Props {
 const inputStyle: CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
-  background: "rgba(255,255,255,0.07)",
-  border: "1px solid rgba(229,220,225,0.15)",
+  background: AUTH_DARK.inputBg,
+  border: `1px solid ${AUTH_DARK.inputBorder}`,
   borderRadius: "12px",
-  color: "#fff",
+  color: AUTH_DARK.heading,
   fontSize: "14px",
   padding: "14px 16px",
   outline: "none",
@@ -42,7 +42,6 @@ function LoginEntreEmContatoLink() {
 }
 
 export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
-  const { theme: t } = useApp();
   const [modalEmail, setModalEmail] = useState(initialEmail);
   const [phase, setPhase] = useState<ModalPhase>("form");
   const [formError, setFormError] = useState("");
@@ -92,20 +91,26 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
       case "email_error":
         setPhase("email_error");
         break;
+      case "config_error":
+        setPhase("config_error");
+        break;
       default:
         setFormError(
-          "Não foi possível concluir a redefinição. Se o problema persistir, entre em contato com o suporte."
+          "Não foi possível concluir a redefinição. Se o problema persistir, entre em contato com o suporte.",
         );
     }
   }
 
+  const bodyMuted = AUTH_DARK.textMuted;
+  const bodyText = AUTH_DARK.text;
+
   return (
-    <ModalBase onClose={onClose} maxWidth={440}>
-      <ModalHeader title="Reset de senha" onClose={onClose} />
+    <ModalBase onClose={onClose} maxWidth={440} appearance="auth-dark">
+      <ModalHeader title="Redefinir senha" onClose={onClose} appearance="auth-dark" />
 
       {phase === "form" && (
         <>
-          <p style={{ margin: "0 0 16px", fontSize: 13, color: t.textMuted, lineHeight: 1.55, fontFamily: FONT.body }}>
+          <p style={{ margin: "0 0 16px", fontSize: 13, color: bodyMuted, lineHeight: 1.55, fontFamily: FONT.body }}>
             Informe o e-mail da sua conta. Se estiver cadastrado, redefiniremos sua senha e enviaremos um
             e-mail com os passos para acessar a plataforma novamente.
           </p>
@@ -114,7 +119,7 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
             htmlFor="login-reset-email"
             style={{
               display: "block",
-              color: t.text,
+              color: bodyText,
               fontSize: 11,
               fontWeight: 700,
               marginBottom: 8,
@@ -138,9 +143,6 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
             onKeyDown={(e) => e.key === "Enter" && void handleSubmit()}
             style={{
               ...inputStyle,
-              background: t.inputBg,
-              border: `1px solid ${t.cardBorder}`,
-              color: t.text,
               marginBottom: formError ? 12 : 20,
             }}
           />
@@ -205,10 +207,10 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
 
       {phase === "not_found" && (
         <div role="status" style={{ fontFamily: FONT.body }}>
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.55 }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
             Este e-mail não pertence a um usuário cadastrado na plataforma.
           </p>
-          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
+          <p style={{ margin: 0, fontSize: 13, color: bodyMuted, lineHeight: 1.55 }}>
             Caso precise de acesso, <LoginEntreEmContatoLink />.
           </p>
         </div>
@@ -216,10 +218,10 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
 
       {phase === "inactive" && (
         <div role="status" style={{ fontFamily: FONT.body }}>
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.55 }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
             Este e-mail está vinculado a uma conta desativada.
           </p>
-          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
+          <p style={{ margin: 0, fontSize: 13, color: bodyMuted, lineHeight: 1.55 }}>
             Para solicitar a reativação ou um novo acesso, <LoginEntreEmContatoLink />.
           </p>
         </div>
@@ -229,12 +231,12 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
         <div role="status" style={{ fontFamily: FONT.body }}>
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 12 }}>
             <CheckCircle2 size={20} color="#22c55e" strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
-            <p style={{ margin: 0, fontSize: 13, color: t.text, lineHeight: 1.55 }}>
+            <p style={{ margin: 0, fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
               Senha redefinida. Enviamos um e-mail para <strong>{modalEmail.trim().toLowerCase()}</strong> com a
               senha temporária e o passo a passo para entrar na plataforma.
             </p>
           </div>
-          <p style={{ margin: 0, fontSize: 12, color: t.textMuted, lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 12, color: bodyMuted, lineHeight: 1.5 }}>
             Confira também a caixa de spam. No primeiro acesso, será necessário criar uma nova senha pessoal.
           </p>
         </div>
@@ -242,35 +244,24 @@ export function LoginEsqueciSenhaModal({ open, onClose, initialEmail }: Props) {
 
       {phase === "email_error" && (
         <div role="alert" aria-live="polite" style={{ fontFamily: FONT.body }}>
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: t.text, lineHeight: 1.55 }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
             A senha foi redefinida, mas não foi possível enviar o e-mail com as instruções.
           </p>
-          <p style={{ margin: 0, fontSize: 13, color: t.textMuted, lineHeight: 1.55 }}>
+          <p style={{ margin: 0, fontSize: 13, color: bodyMuted, lineHeight: 1.55 }}>
             <LoginEntreEmContatoLink /> com o suporte para receber os dados de acesso.
           </p>
         </div>
       )}
 
-      {phase !== "form" && (
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            width: "100%",
-            marginTop: 20,
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: 12,
-            padding: "12px",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            background: t.inputBg,
-            color: t.text,
-            fontFamily: FONT.body,
-          }}
-        >
-          Fechar
-        </button>
+      {phase === "config_error" && (
+        <div role="alert" aria-live="polite" style={{ fontFamily: FONT.body }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, color: bodyText, lineHeight: 1.55 }}>
+            Não foi possível concluir a redefinição por uma falha de configuração no servidor.
+          </p>
+          <p style={{ margin: 0, fontSize: 13, color: bodyMuted, lineHeight: 1.55 }}>
+            Se o problema persistir, <LoginEntreEmContatoLink /> com o suporte.
+          </p>
+        </div>
       )}
     </ModalBase>
   );

@@ -11,7 +11,7 @@ alwaysApply: false
 
 # Seção Geral
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro. Domínio (estúdio vs operadora): `business.mdc` primeiro.
 
 **Marca / filtros / headers de páginas logadas:** Brand MDC — não duplicar aqui.
 
@@ -168,17 +168,20 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 
 ## Login (`geral/Login/`)
 
-- Fora do `app-page-shell` logado.
-- CTA com gradiente Brand; spinner `#fff` dentro do botão.
-- **Destino após login:** sempre a **Home** (não restaura o endereço anterior nem `after_login`). Refresh de sessão já autenticada continua na página atual.
-- **Esqueci senha:** link «Esqueceu sua senha?» abaixo do campo senha → modal «Reset de senha» → Edge `recuperar-senha` (senha padrão + e-mail Resend + `must_change_password`). E-mail inexistente: mensagem explícita + link «entre em contato» (`lib/loginAccessContact.ts`).
-- **Handoff:** fluxos whitelabel adicionais, erros inline.
+- Fora do `app-page-shell` logado; `useDisableAppUiZoom(true)` (hit-testing sem zoom `#root`).
+- `<form onSubmit>` + labels com `htmlFor`/`id`; cartão `app-auth-card-scroll--login` (sem scroll duplo).
+- CTA com gradiente Brand; spinner `#fff` dentro do botão; loading **Entrando…** (elipse Unicode).
+- **Destino após login:** sempre a **Home** (não restaura o endereço anterior nem `after_login`). Refresh de sessão já autenticada continua na página atual. Boot com usuário: «Preparando sua conta…»; bootstrap paralelo em `carregarBootstrapAuth` (`AppContext`).
+- **Logout por idle:** `markIdleSessionLogout` → mensagem no Login via `consumeIdleSessionLogoutFlag`.
+- **Esqueci senha:** link «Esqueceu sua senha?» → modal **Redefinir senha** (`appearance="auth-dark"`, só X) → Edge `recuperar-senha`. Status: success / not_found / inactive / email_error / **config_error**. Contato: `lib/loginAccessContact.ts`.
+- Blur/glows: `backdrop-filter` e `.auth-glow` desligados em viewport ≤720px (`responsive.css`).
 
 ## Trocar senha obrigatória (`geral/TrocarSenhaObrigatorio/`)
 
-- Gate bloqueante após login com `must_change_password`.
+- Gate bloqueante após login com `must_change_password`; `useDisableAppUiZoom(true)`.
 - Botão **Definir nova senha** só habilita com os 4 requisitos (8+ caracteres, maiúsculas e minúsculas, número, caractere especial) e confirmação igual; Enter envia o formulário.
-- Cartão com scroll (`app-auth-card-scroll`) para o botão permanecer acessível.
+- Cartão com scroll (`app-auth-card` + `app-auth-card-scroll`) para o botão permanecer acessível.
+- Após sucesso Auth: limpa `must_change_password` com **retry** uma vez; falha → mensagem com suporte. Loading **Salvando…** / **Redirecionando…**.
 - Após sucesso: `finalizarTrocaSenhaObrigatoria()` → Home (sem recarregar permissões).
 
 ---
@@ -194,14 +197,14 @@ Páginas fora do menu lateral (`configuracoes`, `simulador_login`) aparecem no *
 - **Permissão:** Gestão de Usuários → **Simulador de Login** → Ver = Sim (ou Próprios); admin acesso implícito; demais perfis seed `Não`.
 - **Perfis simuláveis:** catálogo em `ROLES_SIMULAVEIS` (`ROLES` menos `admin`/`executivo`). **Quem vê o quê** na página do simulador: matriz **`simulador_login_roles`** configurável em **Gestão de Usuários → aba Simulador de Login** (perfil viewer × perfis simuláveis). Admin ignora a matriz (vê todos do catálogo).
 - **Checklist perfil novo:** incluir em `ROLES` + `FILTROS_PERFIL_LINHAS`; marcar na aba **Simulador de Login** quais viewers podem simulá-lo; seed opcional na migration.
-- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`; busca no painel se >5. Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
+- **Operador:** modal com **todas** as operadoras cadastradas (ativas e inativas); rótulo `(inativa)` quando `ativo = false`; **busca no painel sempre** (Global § Pesquisa dentro do filtro). Menu simulado = `role_permissions(operador)` ∩ `operadora_pages` da operadora escolhida.
 - **Gestor / Prestadores:** modal de tipo ou área; menu = `role_permissions` ∩ `gestor_tipo_pages` ou `prestador_tipo_pages`.
-- **Usuário ativo (obrigatório):** após o perfil (e operadora/área, quando houver), a simulação escolhe um **usuário ativo** daquele perfil no momento — lista dinâmica (`profiles.ativo !== false`, exclui a conta viewer), pré-seleciona o de login mais recente (contas rotativas; sem pessoa fixa). Busca no painel se >5. Sem usuário ativo: mensagem específica (perfil / operadora / área). Restaurar sessão revalida se o usuário ainda está ativo.
+- **Usuário ativo (obrigatório):** após o perfil (e operadora/área, quando houver), a simulação escolhe um **usuário ativo** daquele perfil no momento — lista dinâmica (`profiles.ativo !== false`, exclui a conta viewer), pré-seleciona o de login mais recente (contas rotativas; sem pessoa fixa). **Busca no painel sempre.** Sem usuário ativo: mensagem específica (perfil / operadora / área). Restaurar sessão revalida se o usuário ainda está ativo.
 - **Quem usa o simulador** precisa ler as matrizes de escopo no Supabase — políticas RLS `_pode_usar_simulador_login()` em `operadora_pages`, `gestor_tipo_pages`, `prestador_tipo_pages` (migration `20260708160000_simulador_login_rls_scope_pages.sql`).
 - **Modo:** somente leitura (Criar/Editar/Excluir bloqueados); faixa global `SimuladorLoginBanner` (texto **Encerrar visualização**); sessão em `sessionStorage`. Trocar de perfil com visualização ativa pede confirmação **Substituir visualização**. Encerrar só limpa a faixa depois de restaurar o perfil real; falha mostra aviso.
 - **Oculto na simulação:** Gestão de Usuários, Gestão de Operadoras, Status Técnico (menu simulado). **Gestão de Estúdios** permanece visível se o perfil simulado tiver acesso.
 - **Identidade:** o nome no avatar continua o da conta real («sua conta não muda»). A **Home de perfil** (boas-vindas) e os dados pessoais usam o usuário visualizado. **Toda página** que resolve «eu» (cadastro RH, Minhas Fotos, recibos, Ver = Próprios, Overview Prestador, Marketplace, Figurinos, Incidentes, Performance Hub, Dados de Cadastro, Portais) deve usar `useIdentidadeEfetiva()` / `dadosUsuarioEfetivo` — **proibido** `user.email` / `user.id` / `user.role === admin` da conta viewer. RPCs com `auth.uid()` continuam da conta real: recortar no cliente pelo e-mail simulado. Check-in, uploads e demais escritas ficam ocultos (somente leitura).
-- **Calendário:** com Ver = Próprios no perfil simulado, a grade/filtros seguem o cadastro RH do **usuário escolhido** (não o viewer); Relatório de Presença e filtros Time/Staff só aparecem se o perfil efetivo tiver essa permissão. **Adicionar à agenda** fica oculto no Simulador (o token iCal segue o `auth.uid()` do viewer, não da pessoa simulada).
+- **Calendário:** com Ver = Próprios no perfil simulado, a grade/filtros seguem o cadastro RH do **usuário escolhido** (não o viewer); **Relatório de Justificativas** (nome canónico; legado «Relatório de Presença») e filtros Time/Staff só aparecem se o perfil efetivo tiver essa permissão. **Adicionar à agenda** fica oculto no Simulador (o token iCal segue o `auth.uid()` do viewer, não da pessoa simulada).
 - **Galeria de Fotos:** Gerais = fotos de evento (partilhadas). **Minhas Fotos** = só o colaborador do e-mail simulado — sem listar todos os prestadores só porque o JWT é de administrador.
 
 ---

@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { BASE_COLORS, FONT } from "../../../constants/theme";
 import { AUTH_PLATFORM_TAGLINE, AUTH_TAGLINE_STYLE } from "../../../constants/authScreen";
 import { SectionTitle } from "../../../components/SectionTitle";
+import { useDisableAppUiZoom } from "../../../hooks/useDisableAppUiZoom";
 
 const EYE_TOGGLE_COLOR = "rgba(229,220,225,0.6)";
 const SEMANTIC_GREEN = "#22c55e";
@@ -18,7 +19,7 @@ function mapPasswordUpdateError(raw: string | undefined): string {
   if (m.includes("session") || m.includes("missing") || m.includes("jwt") || m.includes("expired")) {
     return "Sessão expirada. Faça login novamente.";
   }
-  return "Erro ao atualizar senha. Tente novamente.";
+  return "Não foi possível atualizar a senha. Se o problema persistir, entre em contato com o suporte.";
 }
 
 /**
@@ -26,6 +27,7 @@ function mapPasswordUpdateError(raw: string | undefined): string {
  * Não permite pular — usuário acabou de logar com a senha temporária.
  */
 export default function TrocarSenhaObrigatorio() {
+  useDisableAppUiZoom(true);
   const { user, finalizarTrocaSenhaObrigatoria, theme: t } = useApp();
   const [newPass, setNewPass] = useState("");
   const [confPass, setConfPass] = useState("");
@@ -59,6 +61,14 @@ export default function TrocarSenhaObrigatorio() {
     { ok: /[^a-zA-Z0-9]/.test(newPass), label: "Pelo menos um caractere especial" },
   ];
 
+  async function limparMustChangePassword(): Promise<boolean> {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ must_change_password: false })
+      .eq("id", user!.id);
+    return !error;
+  }
+
   async function handleTrocar() {
     setErr("");
     setOk(false);
@@ -73,30 +83,35 @@ export default function TrocarSenhaObrigatorio() {
     if (newPass !== confPass) return setErr("As senhas não coincidem.");
 
     setSaving(true);
-    const { error } = await supabase.auth.updateUser({ password: newPass });
-    setSaving(false);
-    if (error) {
-      setErr(mapPasswordUpdateError(error.message));
-      return;
-    }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPass });
+      if (error) {
+        setErr(mapPasswordUpdateError(error.message));
+        return;
+      }
 
-    const { error: updErr } = await supabase
-      .from("profiles")
-      .update({ must_change_password: false })
-      .eq("id", user!.id);
-    if (updErr) {
-      setErr("Senha alterada, mas houve um erro ao atualizar o perfil. Faça logout e login novamente.");
-      return;
-    }
+      let cleared = await limparMustChangePassword();
+      if (!cleared) {
+        cleared = await limparMustChangePassword();
+      }
+      if (!cleared) {
+        setErr(
+          "Senha alterada, mas não foi possível atualizar o perfil. Tente novamente ou entre em contato com o suporte.",
+        );
+        return;
+      }
 
-    setOk(true);
-    setNewPass("");
-    setConfPass("");
-    if (redirectTimerRef.current != null) clearTimeout(redirectTimerRef.current);
-    redirectTimerRef.current = setTimeout(() => {
-      redirectTimerRef.current = null;
-      finalizarTrocaSenhaObrigatoria();
-    }, 1500);
+      setOk(true);
+      setNewPass("");
+      setConfPass("");
+      if (redirectTimerRef.current != null) clearTimeout(redirectTimerRef.current);
+      redirectTimerRef.current = setTimeout(() => {
+        redirectTimerRef.current = null;
+        finalizarTrocaSenhaObrigatoria();
+      }, 1500);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const requisitosOk = reqs.every((r) => r.ok);
@@ -186,10 +201,9 @@ export default function TrocarSenhaObrigatorio() {
         </div>
 
         <div
-          className="app-auth-card-scroll"
+          className="app-auth-card app-auth-card-scroll"
           style={{
             background: "rgba(15,15,26,0.85)",
-            backdropFilter: "blur(20px)",
             border: "1px solid #1a1a2e",
             borderRadius: 24,
             padding: "clamp(20px, 5vw, 32px)",
@@ -222,7 +236,7 @@ export default function TrocarSenhaObrigatorio() {
               }}
             >
               <CheckCircle2 size={14} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
-              <span>Senha alterada! Redirecionando...</span>
+              <span>Senha alterada! Redirecionando…</span>
             </div>
           )}
           {err && (
@@ -254,9 +268,10 @@ export default function TrocarSenhaObrigatorio() {
             }}
           >
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Nova senha</label>
+            <label htmlFor="trocar-senha-nova" style={labelStyle}>Nova senha</label>
             <div style={{ position: "relative" }}>
               <input
+                id="trocar-senha-nova"
                 type={showNew ? "text" : "password"}
                 autoComplete="new-password"
                 className="app-auth-input"
@@ -340,9 +355,10 @@ export default function TrocarSenhaObrigatorio() {
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={labelStyle}>Confirmar nova senha</label>
+            <label htmlFor="trocar-senha-confirmar" style={labelStyle}>Confirmar nova senha</label>
             <div style={{ position: "relative" }}>
               <input
+                id="trocar-senha-confirmar"
                 type={showConf ? "text" : "password"}
                 autoComplete="new-password"
                 className="app-auth-input"
@@ -419,7 +435,7 @@ export default function TrocarSenhaObrigatorio() {
             {saving ? (
               <>
                 <Loader2 className="app-lucide-spin" size={14} strokeWidth={2} color="#fff" aria-hidden />
-                Salvando...
+                Salvando…
               </>
             ) : (
               <>

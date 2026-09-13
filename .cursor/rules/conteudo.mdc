@@ -8,11 +8,11 @@ alwaysApply: false
 
 # Seção Conteúdo
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro. Domínio (estúdio vs operadora): `business.mdc` primeiro.
 
 **Escopo:** `src/pages/conteudo/` — LinksMateriais, PlaybookInfluencers, SpinNaRede, PortalRh. **Roteiro de Mesa** está em `estudio/` → `estudio.mdc`.
 
-**Marca / filtros / headers:** Brand MDC. Portal RH usa **Família B** (`PageHeader` 28/22). Playbook/Links: Família A (32/18) até decisão de produto.
+**Marca / filtros / headers:** Brand MDC. **`PageHeader`** (`h1` 18px, badge 32×32 — Brand §4). CTA gerenciamento: **`CtaCriarButton`**.
 
 **Semântica:** barra de progresso Playbook (vermelho→azul legado), estados de ciência — não trocar por `--brand-primary` só por whitelabel.
 
@@ -28,50 +28,30 @@ alwaysApply: false
 | PlaybookInfluencers | Influencer (leitura + ciência) / Gestor (auditoria) | Garantir leitura e confirmação das seções obrigatórias antes de transmitir |
 | SpinNaRede | Todos (leitura) / gestão (excluir menção) | Vitrine de menções públicas à Spin via RSS |
 | PortalRh | Colaborador (leitura) / Gestor RH (CRUD + aprovação) | Comunicados, políticas, RH Talks e gerenciamento |
-| RoteiroMesa | Gestor / Admin | CRUD de roteiros e campanhas de mesa por bloco e operadora |
 
 ---
 
-## Header de Página — título, subtítulo e família visual
+## Header de Página — título e subtítulo
 
-Regra global: **Brand MDC §4** + **Ajuda** com `titulo` = nome do menu (`geral.mdc`).
+Regra global: **Brand MDC §4** (`PageHeader`, `h1` 18px, badge 32×32) + **Ajuda** com `titulo` = nome do menu (`geral.mdc`). **Não** usar “Família A / Família B” nem header 28/22 — isso está unificado.
 
-**Conteúdo** (e várias **Lives**) usam **`fontSize: 18`** no `h1` e ícone **32×32** (Família A) — diferente de **`PageHeader`** 28/22 (Família B). Até unificação explícita de produto, **manter 18 / 32** nas páginas desta secção que já usam Família A.
-
-**Subtítulo obrigatório:** `<p>` sob o bloco ícone + `h1`, `fontSize: 13`, `t.textMuted`, `FONT.body`, tipicamente `paddingLeft: 40` para alinhar ao ícone.
+**Subtítulo obrigatório:** prop `subtitle` do `PageHeader` (ou `<p>` equivalente: `fontSize: 13`, `t.textMuted`, `FONT.body`, `paddingLeft: 40`).
 
 | PageKey | h1 (menu) | Subtítulo canónico | Notas |
 |---|---|---|---|
-| `playbook_influencers` | Playbook Influencers | Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir. | `PageHeader` alinhado ao menu; parágrafos introdutórios longos no corpo da página |
-| `links_materiais` | Links e Materiais | Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação. | |
-| `spin_na_rede` | Spin na Rede | Acompanhe as menções e aparições públicas da Spin Gaming na mídia. | |
-| `rh_portal` | Portal de RH | Comunicados oficiais, políticas internas e atas das RH Talks. | Usa **Família B** (`PageHeader`) · CTA gerenciamento: **`CtaCriarButton`** **`Nova Postagem`** |
-| `informativos` | Informativos | Comunicados e avisos para a Home de cada Perfil. | **Família B** · abas Informativos + Gerenciamento de Informativos (esta só com `canEditarOk`) · CTA **`Novo Informativo`** |
-
-```tsx
-// Família A — ícone + h1 + subtítulo
-<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-  <span style={{ width: 32, height: 32, borderRadius: 9, /* brand.primaryIcon* */ }}>
-    <Icone size={16} aria-hidden="true" />
-  </span>
-  <h1 style={{ fontSize: 18, fontWeight: 800, color: brand.primary, fontFamily: FONT_TITLE, margin: 0, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-    Links e Materiais
-  </h1>
-</div>
-<p style={{ color: t.textMuted, fontFamily: FONT.body, fontSize: 13, margin: "5px 0 0", paddingLeft: 40, lineHeight: 1.45 }}>
-  Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação.
-</p>
-```
+| `playbook_influencers` | Playbook Influencers | Leia as diretrizes obrigatórias e registre sua ciência antes de transmitir. | `PageHeader`; parágrafos introdutórios longos no corpo da página |
+| `links_materiais` | Links e Materiais | Gere seu link rastreado exclusivo e exporte QR Codes prontos para divulgação. | `PageHeader` |
+| `spin_na_rede` | Spin na Rede | Acompanhe as menções e aparições públicas da Spin Gaming na mídia. | `PageHeader` |
+| `rh_portal` | Portal de RH | Comunicados oficiais, políticas internas e atas das RH Talks. | `PageHeader` · CTA gerenciamento: **`CtaCriarButton`** **`Nova Postagem`** |
+| `informativos` | Informativos | Comunicados e avisos para a Home de cada Perfil. | `PageHeader` · abas Informativos + Gerenciamento de Informativos (esta só com `canEditarOk`) · CTA **`Novo Informativo`** |
 
 **Playbook:** o subtítulo curto **não** substitui `PLAYBOOK_SUBTITULO_PARAGRAFOS` (corpo introdutório) — evoluir parágrafos em handoff separado.
-
-*Opcional:* página só com título + ações pode usar `PageHeader` (Família B) — já inclui slot de `subtitle`.
 
 ---
 
 ## Bloco de Filtros — Padrão Obrigatório
 
-Mesmo padrão das demais secções — fundo transparente de marca (ex. **RoteiroMesa** envolve com `marginBottom` + wrapper externo quando aplicável).
+Mesmo padrão das demais secções — `getPageFilterBoxStyle` / strip `primaryTransparent*` (Brand §5). **Roteiro de Mesa** não vive nesta pasta — ver `estudio.mdc`.
 
 ```tsx
 <div style={{
@@ -83,8 +63,6 @@ Mesmo padrão das demais secções — fundo transparente de marca (ex. **Roteir
 ```
 
 **LinksMateriais:** manter `primaryTransparent*` em strips e secções conforme implementação atual.
-
-**RoteiroMesa:** filtro de lista de operadoras via **`FiltroOperadoraSelect`** (`pill` na direita da barra) — agregadora **Todas Operadoras**; ver Global § Filtro de operadora.
 
 ---
 
@@ -329,7 +307,7 @@ const dark = t.isDark ?? false;
 ```
 
 - Badge do header (32×32): **Lucide** (`BookOpen`, `Share2`, …) com `aria-hidden="true"`.
-- **Proibido** `GiShare` ou outro GameIcon no badge — GameIcons só no menu lateral.
+- Nunca `GiShare` ou outro GameIcon no badge — header e menu usam **Lucide** (Brand §4 / `menu.ts`).
 - `strokeWidth` default (2) em Lucide — não customizar sem documentar.
 
 ## Loading
@@ -443,13 +421,7 @@ Gesto opcional no card — **não** é ciência, **não** é `read_receipt`, **n
 - **Gerenciamento — ações por status:** Rascunho: Editar + Ver; Em aprovação: Editar + Aprovar + Ver; **Publicado: Editar + Arquivar + Ver**; Arquivado: só Ver. Edição de publicado: **`ModalCriarPostagem`** com **Salvar alterações** (mantém `publicado`, não sobrescreve `created_by` / `published_at`).
 - **`.sr-only`:** só em `global.css` — proibido `<style>` inline no JSX.
 
-### RoteiroMesa (`src/pages/estudio/RoteiroMesa/index.tsx`)
-
-- Exclusão: dois cliques, nunca `window.confirm()`; `aria-label` com identificador do item.
-- Modais: sem blur; ARIA + foco inicial e visível; **Escape não fecha o modal**; Salvar brand-aware (sem `BRAND.azul` / `BRAND.ciano` hardcoded no primário).
-- FilterChips: `aria-pressed` sempre; separadores entre grupos — manter.
-- **`ROTEIRO_IDENT_COL_PX = 108`:** constante centralizada; em mobile estreito, `Math.min(108, viewportWidth * 0.30)` se necessário.
-- **`BLOCO_CONFIG` / `TIPO_CONFIG`:** fonte única de cor/gradiente/ícone — não duplicar inline.
+**Roteiro de Mesa** (`estudio/RoteiroMesa/`): regras em **`estudio.mdc`** — filtro **`FiltroEstudioSelect`** (**Todos Estúdios**), não `FiltroOperadoraSelect`. Não duplicar fluxo aqui.
 
 ---
 

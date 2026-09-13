@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Seção Dashboards
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `business.mdc` (quando tocar mesas/operadora/estúdio) → `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
 **Escopo (Cursor):** globs em `src/pages/dashboards/**` — páginas atuais e futuras da secção.
 
@@ -711,13 +711,13 @@ Quando um handoff desta seção pedir atualização de Ajuda: **fundir** conteú
 - Nunca mostrar KPIs com zeros iniciais durante `loading` — usar `SkeletonKpiCard`
 - Nunca usar `Clock` como spinner em **seções de conteúdo** — usar `Loader2` + `app-lucide-spin`
 - Nunca esconder bloco silenciosamente em modo histórico
-- Nunca listas enormes sem virtualização quando > 50 itens
+- Nunca listas densas de tabela sem paginação de vista **20** (`TabelaComPaginacao` / Global § Eficiência de fetch §6). Virtualização (`react-virtual` etc.) **só** com pedido explícito de produto.
 - Nunca `"Nenhum dado encontrado"` / `"N/A"` / `"Loading..."` — mensagens canónicas e `MSG_SEM_DADOS_FILTRO`
 - Nunca `rgba(124,58,237,0.15)` em estados ativos — usar `color-mix` com `var(--brand-action, #7c3aed)`
 - Nunca botão Histórico na FilterBar sem **`FiltroHistoricoButton`** (markup inline / `GiCalendar`)
 - Nunca `"Comparativo Diário"` / `"Comparativo Mensal"` para série temporal
 - Nunca omitir cabeçalho de página (ícone + h1 + subtítulo)
-- Nunca `GiXxx` no badge do header de página — apenas `Tv`, `Video`, `BarChart2` etc. de Lucide. GameIcons só no menu lateral.
+- Nunca `GiXxx` no badge do header de página — apenas Lucide (`PageMenuIcon` / `menu.ts`). **Menu lateral também é Lucide** (Brand) — GameIcons não são padrão de navegação.
 - Nunca `GiXxx` em KPI cards ou botão Histórico — usar `FiltroHistoricoButton`; exceção decorativa: pódio FTD/Hora
 - Nunca `icon` em `SectionTitle` de bloco de informação — só ícone no cabeçalho de página (nível 1)
 - Nunca subtítulo de bloco em `<p>` 12px — usar prop `sub` do `SectionTitle`

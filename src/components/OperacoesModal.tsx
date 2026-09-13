@@ -11,6 +11,7 @@ import {
 import { X } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { useDashboardBrand } from "../hooks/useDashboardBrand";
+import { AUTH_DARK } from "../constants/authScreen";
 import { FONT } from "../constants/theme";
 import { MODAL_ARQUIVAR_TITULO, textoModalArquivar } from "../lib/arquivarItemUi";
 import { MODAL_EXCLUIR_TITULO, textoModalExcluir } from "../lib/excluirItemUi";
@@ -80,6 +81,7 @@ export function ModalBase({
   zIndex = 1000,
   closeOnBackdrop = true,
   panelOverflow = "auto",
+  appearance = "default",
 }: {
   children: ReactNode;
   maxWidth?: number;
@@ -89,11 +91,14 @@ export function ModalBase({
   closeOnBackdrop?: boolean;
   /** Overflow do painel. Use `hidden` com shell de formulário que já rola por dentro. Default `auto`. */
   panelOverflow?: "auto" | "hidden";
+  /** `auth-dark`: painel alinhado ao visual fixo das telas de autenticação. */
+  appearance?: "default" | "auth-dark";
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const titleId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
+  const authDark = appearance === "auth-dark";
 
   useEffect(() => {
     const first = containerRef.current?.querySelector<HTMLElement>(
@@ -131,8 +136,8 @@ export function ModalBase({
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: brand.blockBg,
-          border: `1px solid ${t.cardBorder}`,
+          background: authDark ? AUTH_DARK.cardBg : brand.blockBg,
+          border: `1px solid ${authDark ? AUTH_DARK.cardBorder : t.cardBorder}`,
           borderRadius: "20px",
           padding: MODAL_BASE_PADDING_PX,
           width: "100%",
@@ -159,16 +164,23 @@ export function ModalHeader({
   title,
   onClose,
   trailing,
+  appearance = "default",
 }: {
   title: string;
   onClose: () => void;
   /** Conteúdo à esquerda do X (ex.: atalho de tutorial no modal). */
   trailing?: ReactNode;
+  /** `auth-dark`: cabeçalho alinhado às telas de autenticação. */
+  appearance?: "default" | "auth-dark";
 }) {
   const { theme: t } = useApp();
   const brand = useDashboardBrand();
   const titleId = useDialogTitleId();
   const pad = MODAL_BASE_PADDING_PX;
+  const authDark = appearance === "auth-dark";
+  const headerBg = authDark ? AUTH_DARK.cardBg : brand.blockBg;
+  const headerBorder = authDark ? AUTH_DARK.cardBorder : t.cardBorder;
+  const headerText = authDark ? AUTH_DARK.heading : t.text;
   return (
     <div
       style={{
@@ -186,9 +198,10 @@ export function ModalHeader({
         paddingLeft: pad,
         paddingRight: pad,
         paddingBottom: 16,
-        background: brand.blockBg,
-        borderBottom: `1px solid ${t.cardBorder}`,
-        boxShadow: t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
+        background: headerBg,
+        borderBottom: `1px solid ${headerBorder}`,
+        boxShadow:
+          authDark || t.isDark ? "0 8px 16px rgba(0,0,0,0.35)" : "0 8px 16px rgba(0,0,0,0.06)",
       }}
     >
       <h2
@@ -197,7 +210,7 @@ export function ModalHeader({
           margin: 0,
           fontSize: "17px",
           fontWeight: 900,
-          color: t.text,
+          color: headerText,
           fontFamily: FONT.title,
         }}
       >
@@ -216,7 +229,7 @@ export function ModalHeader({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: t.text,
+            color: headerText,
             flexShrink: 0,
           }}
           {...propsBotaoFecharModal()}

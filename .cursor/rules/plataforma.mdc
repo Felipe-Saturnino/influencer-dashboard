@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Seção Plataforma
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `business.mdc` (estúdio vs operadora) → `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
 **Escopo:** `src/pages/plataforma/` — GestaoOperadoras, StatusTecnico, GestaoUsuarios, GestaoMesas (+ abas e modais).
 
@@ -22,7 +22,7 @@ alwaysApply: false
 
 ## Cabeçalho — título e subtítulo
 
-Header inline (badge 28×28 + `h1` 22px + `<p>` subtítulo) ou evoluir para `PageHeader`. **`h1`** = `label` em `menu.ts`.
+Header: **`PageHeader`** (Brand §4 — badge **32×32**, `h1` **18px**, subtítulo 13px). **`h1`** = `label` em `menu.ts`. Markup inline 28×28 / `h1` 22px é **legado a migrar** — não copiar em código novo.
 
 | PageKey | h1 | Subtítulo |
 |---|---|---|
@@ -44,19 +44,12 @@ Header inline (badge 28×28 + `h1` 22px + `<p>` subtítulo) ou evoluir para `Pag
 
 ```tsx
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
+import { PageHeader } from "../../../components/PageHeader";
+import { PageMenuIcon } from "../../../components/PageMenuIcon";
+
 const brand = useDashboardBrand();
 
-// Badge do header:
-<span style={{
-  width: 28, height: 28, borderRadius: 8,
-  background: brand.primaryIconBg,
-  border: brand.primaryIconBorder,
-  color: brand.primaryIconColor,
-  display: "flex", alignItems: "center", justifyContent: "center",
-  flexShrink: 0,
-}}>
-
-// h1: color: brand.primary
+// Header: PageHeader (Brand §4) — não badge 28×28 / h1 22px
 
 // CTA primário:
 background: brand.useBrand

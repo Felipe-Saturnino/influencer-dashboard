@@ -83,6 +83,25 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Login: evita scroll duplo (página + cartão) — o formulário é curto */
+.app-auth-card-scroll--login {
+  max-height: none;
+  overflow: visible;
+}
+
+.app-auth-card {
+  backdrop-filter: blur(20px);
+}
+
+@media (max-width: 720px) {
+  .app-auth-card {
+    backdrop-filter: none;
+  }
+  .auth-glow {
+    display: none;
+  }
+}
+
 /* Auth: landscape / viewport baixo — menos respiro para evitar scroll desnecessário */
 @media (max-height: 500px) {
   .app-auth-logo-block {

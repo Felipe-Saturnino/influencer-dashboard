@@ -44,7 +44,22 @@ Antes de criar ou alterar **job Telecom / monitor de lobby** (`scripts/monitor-l
 | **Brand** | `--brand-*`, `useDashboardBrand()`, headers, filtros com ícone, carrossel, CTAs, toolbar vs linha — **não** whitelabel para jogos Spin (ver Global § Identidade por jogo) — **não** inclui `vite.config` nem chunks de produção |
 | **Emails** | **Envio de e-mail** — Resend + Edge Functions: template HTML (crons), secrets remetente/destinatários, `sendResendEmail`, formatos de data — **`emails.mdc`** (consultar em todo fluxo que envia e-mail) |
 | **Telecom** | Jobs de monitor de lobby (máquina Telecom + Edge) — IDs só na Gestão de Estúdios; um script por operadora; expansão sem novo desenvolvimento Telecom — **`telecom.mdc`** |
+| **Carga Mesas Spin** | Extract Superset → JSON → UPSERT `--gravar` — **`mesas-spin-carga.mdc`** (quando o pedido for atualizar/carregar dados das mesas) |
 | **Secção** | Personas, modais, fluxos, validações e exceções da pasta |
+
+**Fonte da verdade (temas que atravessam vários MDCs):** se um ficheiro de secção contradisser a coluna da esquerda, **vale a fonte** — atualizar a secção, não inventar exceção silenciosa.
+
+| Tema | Fonte | Secção só |
+|------|-------|-----------|
+| Estúdio vs operadora, Dedicada/Network, glossário de mesas | `business.mdc` | UX da pasta |
+| Carga Mesas Spin (extract → `--gravar`) | `mesas-spin-carga.mdc` | — |
+| Busca no painel do filtro (**sempre**, não “se >5”) | este Global § Pesquisa dentro do filtro | listas/rótulos do domínio |
+| Paginação de vista **20** (`TABELA_PAGE_SIZE`) | este Global § Eficiência de fetch §6 | **quais** tabelas paginam; Calendário Presença/Justificativas **não** paginam (`escala.mdc`) |
+| Header (`h1` 18px, badge 32×32, `PageHeader`) | Brand §4 | subtítulos e `PageKey` |
+| Tokens `--brand-action` vs `--brand-primary` | Brand §1 | dashboards = canónico; resto = legado |
+| Identidade por jogo (Baccarat, Roleta, BJ, FB) | este Global § Identidade visual por jogo | exceção **só** com subsecção na MDC da pasta |
+| E-mail Resend | `emails.mdc` | — |
+| Jobs Telecom / lobby | `telecom.mdc` | — |
 
 ### Manutenção dos MDCs de secção
 
@@ -67,7 +82,7 @@ Em **todo** desenvolvimento novo ou mudança de UX/fluxo/regra de negócio visí
 
 ### Cabeçalho de página (título + subtítulo)
 
-Toda página logada de produto: **`h1` = label do menu** + **subtítulo de uma linha** (propósito em PT-BR). Implementação visual e famílias A/B: **`brand-css-variables.mdc` §4**. Textos canónicos por secção: MDC da pasta (`dashboards.mdc`, `lives.mdc`, …).
+Toda página logada de produto: **`h1` = label do menu** + **subtítulo de uma linha** (propósito em PT-BR). Implementação visual: **`brand-css-variables.mdc` §4** (`PageHeader`, `h1` **18px**, badge **32×32** — **não** há Família A 32/18 vs Família B 28/22). Textos canónicos por secção: MDC da pasta (`dashboards.mdc`, `lives.mdc`, …).
 
 ---
 
@@ -281,7 +296,7 @@ Se faltar helper em `tableStyles` ou `classificacaoSort`, estender lá — não 
 3. Item no menu (`constants/menu.ts`), lazy import + entrada no `PAGE_MAP` de `App.tsx`.
 4. **Incluir a mesma chave em `ALL_PAGE_KEYS`** (`src/lib/allPageKeys.ts`) — obrigatório para o item aparecer no menu (admin e universo de permissões no contexto). Verificar após implementação: admin deve ver o item na secção correta do menu sem alterar Gestão de Usuários.
 5. Se a página tiver abas ou segmento de URL: registrar em **`APP_ROUTE_CATALOG`** (`src/lib/appRoutes.ts`); sincronizar com `useRouteTab` quando aplicável.
-6. **Permissões iniciais (demais perfis):** migração SQL ou seed em `role_permissions` — para **todos os perfis exceto Admin**, Ver/Criar/Editar/Excluir **`Não`** (ou `null` onde a coluna não existir) até liberação explícita na aba **Permissões** (ou abas Gestores / Prestadores / Operadora, conforme o perfil). Replicar em `gestor_tipo_pages` / `prestador_tipo_pages` quando a secção usar essas matrizes.
+6. **Permissões iniciais (demais perfis):** migração SQL ou seed em `role_permissions` — para **todos os perfis exceto Admin**, Ver/Criar/Editar/Excluir **`Não`** (ou `null` onde a coluna não existir) até liberação explícita na aba **Permissões** (e abas **Prestadores** / **Operadora** / **Simulador de Login**, conforme o perfil). **Não** há aba Gestores na UI — gestores de departamento (`gestor_rh`, etc.) usam só `role_permissions` (`plataforma.mdc`). Replicar em `prestador_tipo_pages` / `operadora_pages` (e `gestor_tipo_pages` se o fluxo do Simulador ainda a usar — `geral.mdc`) quando a secção tocar essas matrizes.
 7. **Não** pré-conceder `sim` em seeds ou defaults de código para roles não-admin.
 8. Implementar gate no início da página:
 
@@ -332,6 +347,8 @@ Se o botão de **criar / adicionar** ficar **dentro** do bloco de filtros, usar 
 ### Filtro de operadora (lista de parceiras) — obrigatório
 
 Sempre que a página exibir **seletor de operadora** na barra de filtros (ou strip equivalente), usar **`FiltroOperadoraSelect`** — ver também Brand MDC §6 (catálogo de ícones).
+
+**Exceção — carrossel de operadoras** (não é lista dropdown): **Gestão de Estúdios** e **Campanhas** — setas + pill **Todas Operadoras** (`plataforma.mdc`, `marketing.mdc`). **Não** misturar carrossel e `FiltroOperadoraSelect` na mesma barra.
 
 | Regra | Valor |
 |--------|--------|
@@ -1408,7 +1425,7 @@ Detalhes operacionais: `docs/SETUP.md` (pre-commit e comandos).
 - **`PageKey` nova em `menu.ts` / `App.tsx` / `PAGES` sem entrada em `ALL_PAGE_KEYS` (`src/lib/allPageKeys.ts`)** — item não aparece no menu lateral (inclusive para admin).
 - Pré-liberar permissão `sim` para roles em página nova.
 - Filtro sem opção agregadora ou sem ela selecionada por padrão.
-- Filtro de **operadora** com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`.
+- Filtro de **operadora** (lista dropdown) com agregadora “Todas as operadoras”, “Operadoras” (sem “Todas”), label lateral “Operadora” ou `SelectComIcone`/`select` manual em vez de `FiltroOperadoraSelect`. Carrossel de operadoras (Gestão de Estúdios, Campanhas) é exceção — não misturar com o select na mesma barra.
 - **`FiltroOperadoraSelect` com operadoras inativas** na barra — lista do filtro deve usar `.eq("ativo", true)` (§ Filtro de operadora).
 - Abas de navegação (`role="tab"`) sem `FiltroBarTabButton`, sem ícone Lucide 16px por aba, ou com `borderRadius` 20/999 (padrão Organograma: radius 10 — Brand §6).
 - Filtro de **influencer(s)** na barra sem `FiltroInfluencerSelect`, agregadora diferente de **Todos Influencers**, ou ícone `User` ausente no trigger.

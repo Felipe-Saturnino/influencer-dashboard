@@ -4,6 +4,7 @@ import { useApp } from "../../../context/AppContext";
 import { FONT } from "../../../constants/theme";
 import { useDashboardBrand } from "../../../hooks/useDashboardBrand";
 import { useAppPageNav } from "../../../hooks/useAppPageNav";
+import { useDisableAppUiZoom } from "../../../hooks/useDisableAppUiZoom";
 import { AppPageLink } from "../../../components/AppPageLink";
 import { SEM_ACESSO_REASON_KEY, type SemAcessoReason } from "../../../lib/appRoutes";
 
@@ -13,6 +14,7 @@ const MSG_FORBIDDEN =
   "Você não tem acesso a esta página! Acesse a página de Ajuda para ver as páginas existentes ou retorne para a Home.";
 
 export default function SemAcesso() {
+  useDisableAppUiZoom(true);
   const { theme: t } = useApp();
   const { propsFor } = useAppPageNav();
   const brand = useDashboardBrand();

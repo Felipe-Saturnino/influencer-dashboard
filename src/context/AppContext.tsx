@@ -27,6 +27,7 @@ import {
 import {
   type IniciarSimulacaoInput,
   type SimulacaoLoginState,
+  SIMULADOR_LOGIN_SESSION_KEY,
   aplicarOverridesPermissoesSimulacao,
   aplicarSomenteLeituraAcoes,
   carregarRolesSimulaveisParaViewer,
@@ -83,7 +84,7 @@ export type LayoutView = "app" | "sem_acesso";
 interface AppContextValue {
   // Auth
   user:        User | null;
-  setUser:     (u: User | null) => void;
+  setUser:     (u: User | null) => void | Promise<void>;
   /** Perfil efetivo na UI (simulado ou real). */
   effectiveRole: Role | undefined;
   /** Modo visualização de outro perfil — somente leitura. */
@@ -399,6 +400,41 @@ async function carregarPermissoesAcoes(role: User["role"]): Promise<PermissoesAc
   });
 
   return mapa;
+}
+
+/** Escopos + permissões + ações com o máximo de paralelismo (ações não dependem de escopo). */
+async function carregarBootstrapAuth(u: User): Promise<{
+  escopos: EscoposVisiveis;
+  perms: PermissoesMapa;
+  acoes: PermissoesAcoesMapa;
+}> {
+  const needsEscoposForPerms = u.role === "operador" || u.role === "prestador";
+  if (needsEscoposForPerms) {
+    const [escopos, acoes] = await Promise.all([
+      carregarEscoposVisiveis(u.id, u.role),
+      carregarPermissoesAcoes(u.role),
+    ]);
+    const perms = await carregarPermissoes(u.role, {
+      operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
+      prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
+    });
+    return { escopos, perms, acoes };
+  }
+
+  const [escopos, acoes, perms] = await Promise.all([
+    carregarEscoposVisiveis(u.id, u.role),
+    carregarPermissoesAcoes(u.role),
+    carregarPermissoes(u.role),
+  ]);
+  return { escopos, perms, acoes };
+}
+
+function peekSimulacaoSessionRaw(): boolean {
+  try {
+    return sessionStorage.getItem(SIMULADOR_LOGIN_SESSION_KEY) != null;
+  } catch {
+    return false;
+  }
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -809,24 +845,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userRef.current = u;
       if (u) {
         try {
-          const escopos = await carregarEscoposVisiveis(u.id, u.role);
-          const [perms, acoes] = await Promise.all([
-            carregarPermissoes(u.role, {
-              operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
-              prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
-            }),
-            carregarPermissoesAcoes(u.role),
-          ]);
+          const { escopos, perms, acoes } = await carregarBootstrapAuth(u);
           setPermissionsReais(perms);
           setPermissionsAcoesReais(acoes);
           setEscoposReais(escopos);
-          const rolesSimulador = podeVerSimuladorLoginMapa(u.role, perms)
-            ? await carregarRolesSimulaveisParaViewer(u.role)
-            : [];
-          setSimuladorRolesPermitidos(rolesSimulador);
-          simuladorRolesPermitidosRef.current = rolesSimulador;
-          const savedSim = readSimulacaoSession(rolesSimulador);
-          if (savedSim && podeVerSimuladorLoginMapa(u.role, perms)) {
+          const canSim = podeVerSimuladorLoginMapa(u.role, perms);
+          const hasSavedSim = canSim && peekSimulacaoSessionRaw();
+          let rolesSimulador: Role[] = [];
+          if (canSim && hasSavedSim) {
+            rolesSimulador = await carregarRolesSimulaveisParaViewer(u.role);
+            setSimuladorRolesPermitidos(rolesSimulador);
+            simuladorRolesPermitidosRef.current = rolesSimulador;
+          } else {
+            setSimuladorRolesPermitidos([]);
+            simuladorRolesPermitidosRef.current = [];
+            if (canSim) {
+              void carregarRolesSimulaveisParaViewer(u.role).then((roles) => {
+                setSimuladorRolesPermitidos(roles);
+                simuladorRolesPermitidosRef.current = roles;
+              });
+            }
+          }
+          const savedSim = hasSavedSim ? readSimulacaoSession(rolesSimulador) : null;
+          if (savedSim && canSim) {
             await tentarRestaurarSimulacaoSessao(u, perms, rolesSimulador);
           } else {
             writeSimulacaoSession(null);
@@ -937,24 +978,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
             setUserState(u);
             userRef.current = u;
             try {
-              const escopos = await carregarEscoposVisiveis(u.id, u.role);
-              const [perms, acoes] = await Promise.all([
-                carregarPermissoes(u.role, {
-                  operadorasVisiveis: u.role === "operador" ? escopos.operadorasVisiveis : undefined,
-                  prestadorTiposVisiveis: u.role === "prestador" ? escopos.prestadorTiposVisiveis : undefined,
-                }),
-                carregarPermissoesAcoes(u.role),
-              ]);
+              const { escopos, perms, acoes } = await carregarBootstrapAuth(u);
               setPermissionsReais(perms);
               setPermissionsAcoesReais(acoes);
               setEscoposReais(escopos);
-              const rolesSimulador = podeVerSimuladorLoginMapa(u.role, perms)
-                ? await carregarRolesSimulaveisParaViewer(u.role)
-                : [];
-              setSimuladorRolesPermitidos(rolesSimulador);
-              simuladorRolesPermitidosRef.current = rolesSimulador;
-              const savedSim = readSimulacaoSession(rolesSimulador);
-              if (savedSim && podeVerSimuladorLoginMapa(u.role, perms)) {
+              const canSim = podeVerSimuladorLoginMapa(u.role, perms);
+              const hasSavedSim = canSim && peekSimulacaoSessionRaw();
+              let rolesSimulador: Role[] = [];
+              if (canSim && hasSavedSim) {
+                rolesSimulador = await carregarRolesSimulaveisParaViewer(u.role);
+                setSimuladorRolesPermitidos(rolesSimulador);
+                simuladorRolesPermitidosRef.current = rolesSimulador;
+              } else {
+                setSimuladorRolesPermitidos([]);
+                simuladorRolesPermitidosRef.current = [];
+                if (canSim) {
+                  void carregarRolesSimulaveisParaViewer(u.role).then((roles) => {
+                    setSimuladorRolesPermitidos(roles);
+                    simuladorRolesPermitidosRef.current = roles;
+                  });
+                }
+              }
+              const savedSim = hasSavedSim ? readSimulacaoSession(rolesSimulador) : null;
+              if (savedSim && canSim) {
                 await tentarRestaurarSimulacaoSessao(u, perms, rolesSimulador);
               } else {
                 writeSimulacaoSession(null);

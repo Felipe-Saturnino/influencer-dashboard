@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Seção Comercial
 
-**Antes de implementar:** `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
+**Antes de implementar:** `business.mdc` (Dedicada/Network, operadora vs estúdio) → `global.mdc` → `brand-css-variables.mdc` → este ficheiro.
 
 **Marca / filtros / headers:** Brand MDC — não duplicar aqui.
 
@@ -50,8 +50,8 @@ Dashboard analítico **somente leitura** — agrega Pipeline B2B (Operadoras), P
 
 | Aba | Filtros abaixo | Conteúdo |
 |-----|----------------|----------|
-| **Operadoras** | Só Comercial (abaixo das abas principais; mesma posição que Agregadoras) | KPIs, funil completo (visão Todos), produto Dedicada/Network, geo, carteira, novas marcas, movimentação — **sem** chips de status pipeline nem filtro de UF. **Novas marcas** e listas do tooltip **Movimentação recente**: paginação 20/página (`TabelaComPaginacao`). **Não** paginar funil, KPIs nem carteira. |
-| **Agregadoras** | Só Comercial | KPIs sem legenda inferior; **Funil** em largura total; **Carteira** + **Movimentação** lado a lado (→ Conexão · → Negociação / → Fechado · Alterações totais). Tooltip **Movimentação recente**: paginação 20/página. **Não** paginar funil, KPIs nem carteira. |
+| **Operadoras** | Só Comercial (abaixo das abas principais; mesma posição que Agregadoras) | KPIs, funil completo (visão Todos), produto Dedicada/Network, geo, carteira, novas marcas, movimentação — **sem** chips de status pipeline nem filtro de UF. **Novas marcas:** paginação 20/página (`TabelaComPaginacao`). Tooltip **Movimentação recente:** **não** paginar (hover — lista no card). **Não** paginar funil, KPIs nem carteira. |
+| **Agregadoras** | Só Comercial | KPIs sem legenda inferior; **Funil** em largura total; **Carteira** + **Movimentação** lado a lado (→ Conexão · → Negociação / → Fechado · Alterações totais). Tooltip **Movimentação recente:** **não** paginar. **Não** paginar funil, KPIs nem carteira. |
 | **Integrações** | Só Prioridade (**Todas Prioridades** / Baixo / Médio / Alta) | KPIs sem legenda; **SLA por etapa** (tempos médios Não Iniciado / Em andamento / Concluído via histórico de status); Produto (Tipo); Caminho; Agregadores |
 
 ### Dados (Supabase)

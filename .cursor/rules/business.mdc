@@ -21,14 +21,14 @@ alwaysApply: true
 
 ## 1. O que é a Spin Gaming
 
-A Spin Gaming opera **estúdios de live casino** e fornece **sinal de mesas ao vivo** para **operadoras parceiras** (casas de apostas / iGaming). A plataforma **Data Intelligence** centraliza:
+A Spin Gaming opera **estúdios de live cassino** e fornece **sinal de mesas ao vivo** para **operadoras parceiras** (casas de apostas / iGaming). A plataforma **Data Intelligence** centraliza:
 
 - Operação de estúdio (dealers, figurino, escala, roteiro, solicitações).
 - Performance comercial das mesas (dashboards Mesas Spin / Overview Spin).
 - Canais de aquisição (influencers, afiliados, campanhas, UTM).
 - RH, comercial B2B e gestão de parceiros.
 
-A plataforma **não substitui** o PLS/fornecedor de relatórios: hoje a carga financeira das mesas é **manual** (SQL no Supabase), com reconciliação diária entre blocos Per table, Daily, UAP por jogo e Monthly.
+A plataforma **não substitui** o PLS/fornecedor de relatórios. A origem continua sendo os prints/extracts; a carga operacional no Supabase segue **`mesas-spin-carga.mdc`** (Superset dashboard 15 → JSON em `tmp/` → UPSERT `--gravar`). **Não** pedir ao usuário colar SQL no Editor, salvo falha de `--gravar`. Reconciliação diária entre blocos Per table, Daily, UAP por jogo e Monthly.
 
 ---
 
